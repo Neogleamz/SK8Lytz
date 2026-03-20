@@ -50,31 +50,70 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
 
   const leds = useMemo(() => {
     const list = [];
-    for (let i = 0; i < numLeds; i++) {
-        const fract = i / numLeds; 
+    const numSamples = 500;
+    const pathSamples = [];
+    let totalLength = 0;
+    
+    // 1. Generate high-res path to measure arc lengths
+    for (let i = 0; i <= numSamples; i++) {
+        const fract = i / numSamples;
+        const angle = (fract * 2 * Math.PI) + (Math.PI / 2);
         let top = 0; let left = 0;
-        const angle = (fract * 2 * Math.PI) + (Math.PI / 2); 
         
         if (product === 'HALOZ') {
           const p = 0.6; // superellipse exponent
           const sgnCos = Math.sign(Math.cos(angle)) || 1;
           const sgnSin = Math.sign(Math.sin(angle)) || 1;
-          left = 80 - 5 + sgnCos * Math.pow(Math.abs(Math.cos(angle)), p) * 80;
-          top = 120 - 5 + sgnSin * Math.pow(Math.abs(Math.sin(angle)), p) * 120;
+          left = 80 + sgnCos * Math.pow(Math.abs(Math.cos(angle)), p) * 80;
+          top = 120 + sgnSin * Math.pow(Math.abs(Math.sin(angle)), p) * 120;
         } else {
-          top = 150 - 5 + Math.sin(angle) * 150;
+          top = 150 + Math.sin(angle) * 150;
           const verticalPos = Math.sin(angle);
           const pinch = 1 - 0.3 * Math.exp(-Math.pow(verticalPos - 0.1, 2) * 5); 
-          left = 70 - 5 + (Math.cos(angle) * 70 * pinch);
+          left = 70 + (Math.cos(angle) * 70 * pinch);
         }
 
+        if (i > 0) {
+            const prev = pathSamples[i - 1];
+            const dx = left - prev.left;
+            const dy = top - prev.top;
+            totalLength += Math.sqrt(dx*dx + dy*dy);
+        }
+        pathSamples.push({ top, left, length: totalLength });
+    }
+
+    // 2. Sample evenly along the path
+    for (let i = 0; i < numLeds; i++) {
+        const targetLength = (i / numLeds) * totalLength;
+        let p1 = pathSamples[0];
+        let p2 = pathSamples[1];
+        
+        for (let j = 1; j <= numSamples; j++) {
+            if (pathSamples[j].length >= targetLength) {
+                p1 = pathSamples[j-1];
+                p2 = pathSamples[j];
+                break;
+            }
+        }
+        
+        const segmentLength = p2.length - p1.length;
+        const t = segmentLength === 0 ? 0 : (targetLength - p1.length) / segmentLength;
+        
+        const dotSize = product === 'HALOZ' ? 14 : 12;
+        const offset = dotSize / 2;
+        
+        const left = p1.left + (p2.left - p1.left) * t - offset;
+        const top = p1.top + (p2.top - p1.top) * t - offset;
+
+        // Visual properties
+        const fract = i / numLeds;
         const mirroredFract = fract <= 0.5 ? fract * 2 : (1 - fract) * 2;
         let dotColor: any = color;
         let dotOpacity: any = 1;
 
         if (mode === 'PRESETS') {
            if (product === 'HALOZ') {
-             const rainbowColors = [0, 1/6, 2/6, 3/6, 4/6, 5/6, 1].map(t => HSLToHex((t - mirroredFract + 1) % 1 * 360, 100, 50));
+             const rainbowColors = [0, 1/6, 2/6, 3/6, 4/6, 5/6, 1].map(v => HSLToHex((v - mirroredFract + 1) % 1 * 360, 100, 50));
              dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
            } else {
              const ripple = (Math.sin(mirroredFract * Math.PI) + 1) / 2;
@@ -120,7 +159,11 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
             <Animated.View key={led.key} style={[
                product === 'HALOZ' ? styles.ledDot : styles.ledDotSmall, 
                led.position, 
-               { backgroundColor: led.activeColor, opacity: led.activeOpacity }
+               { 
+                 backgroundColor: led.activeColor, 
+                 opacity: led.activeOpacity,
+                 shadowColor: led.activeColor,
+               }
             ]} />
          ))}
       </View>
@@ -199,21 +242,21 @@ const styles = StyleSheet.create({
     width: 140, height: 300,
   },
   ledDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowRadius: 18,
+    elevation: 12,
   },
   ledDotSmall: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowRadius: 15,
+    elevation: 10,
   }
 });

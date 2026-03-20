@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { View, StyleSheet, PanResponder, LayoutChangeEvent } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../theme/theme';
 
 interface CustomSliderProps {
@@ -8,9 +9,10 @@ interface CustomSliderProps {
   minimumValue?: number;
   maximumValue?: number;
   style?: any;
+  gradientTrack?: boolean;
 }
 
-export default function CustomSlider({ value, onValueChange, minimumValue = 0, maximumValue = 100, style }: CustomSliderProps) {
+export default function CustomSlider({ value, onValueChange, minimumValue = 0, maximumValue = 100, style, gradientTrack = false }: CustomSliderProps) {
   const [containerWidth, setContainerWidth] = useState(0);
   const valueRef = useRef(value);
   valueRef.current = value;
@@ -51,8 +53,16 @@ export default function CustomSlider({ value, onValueChange, minimumValue = 0, m
       onLayout={(e: LayoutChangeEvent) => setContainerWidth(e.nativeEvent.layout.width)}
       {...panResponder.panHandlers}
     >
-      <View style={styles.track} pointerEvents="none">
-        <View style={[styles.fill, { width: `${percentage * 100}%` }]} />
+      <View style={[styles.track, gradientTrack && { backgroundColor: 'transparent' }]} pointerEvents="none">
+        {gradientTrack ? (
+          <LinearGradient 
+            colors={['#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#FF0000']} 
+            start={{x: 0, y: 0}} end={{x: 1, y: 0}}
+            style={StyleSheet.absoluteFill}
+          />
+        ) : (
+          <View style={[styles.fill, { width: `${percentage * 100}%` }]} />
+        )}
       </View>
       <View style={[styles.thumb, { left: `${percentage * 100}%`, transform: [{ translateX: -10 }] }]} pointerEvents="none" />
     </View>

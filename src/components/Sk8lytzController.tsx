@@ -97,7 +97,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
       <View style={styles.visualizerWrapper}>
         <ProductVisualizer 
           product={activeProduct} 
-          color={selectedColor} 
+          color={activeMode === 'FIXED' ? (fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor) : selectedColor} 
           mode={activeMode} 
           patternId={selectedPatternId} 
           isPaired={isPaired}
@@ -238,10 +238,17 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
 
               <View style={styles.sceneSlidersContainer}>
                 <View style={[styles.controlRow, { marginTop: 0, height: 40 }]}>
-                   <View style={styles.gradientSliderTrack} />
                    <CustomSlider 
+                    gradientTrack={true}
                     value={fixedHue}
-                    onValueChange={setFixedHue}
+                    onValueChange={(hue) => {
+                      setFixedHue(hue);
+                      const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                      const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+                      const hex = rgb2hex(f(5), f(3), f(1));
+                      if (fixedColorMode === 'FOREGROUND') setFixedFgColor(hex);
+                      else setFixedBgColor(hex);
+                    }}
                     minimumValue={0}
                     maximumValue={360}
                     style={{ position: 'absolute', width: '100%', height: 40 }}
