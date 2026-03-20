@@ -8,6 +8,7 @@ import ArcPatternWheel from './ArcPatternWheel';
 import SpectrumVisualizer from './SpectrumVisualizer';
 import { getRbmPatternName } from '../constants/RbmPatterns';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type ProductType = 'HALOZ' | 'SOULZ';
 type ModeType = 'PRESETS' | 'FIXED' | 'RBM' | 'MUSIC' | 'CAMERA' | 'CUSTOM' | 'MULTICOLOR';
@@ -61,6 +62,46 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
       setActiveProduct(lockedProduct);
     }
   }, [lockedProduct]);
+
+  React.useEffect(() => {
+    AsyncStorage.getItem('@Sk8lytz_ControllerState').then((saved) => {
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.activeMode) setActiveMode(parsed.activeMode);
+          if (parsed.selectedColor) setSelectedColor(parsed.selectedColor);
+          if (parsed.selectedPatternId) setSelectedPatternId(parsed.selectedPatternId);
+          if (parsed.brightness !== undefined) setBrightness(parsed.brightness);
+          if (parsed.speed !== undefined) setSpeed(parsed.speed);
+          if (parsed.micSensitivity !== undefined) setMicSensitivity(parsed.micSensitivity);
+          if (parsed.musicHue !== undefined) setMusicHue(parsed.musicHue);
+          if (parsed.musicMode) setMusicModeState(parsed.musicMode);
+          if (parsed.musicPatternId) setMusicPatternId(parsed.musicPatternId);
+          if (parsed.micSource) setMicSource(parsed.micSource);
+          if (parsed.musicOption) setMusicOption(parsed.musicOption);
+          if (parsed.musicSetting) setMusicSetting(parsed.musicSetting);
+          if (parsed.fixedPatternId) setFixedPatternId(parsed.fixedPatternId);
+          if (parsed.fixedColorMode) setFixedColorMode(parsed.fixedColorMode);
+          if (parsed.fixedFgColor) setFixedFgColor(parsed.fixedFgColor);
+          if (parsed.fixedBgColor) setFixedBgColor(parsed.fixedBgColor);
+          if (parsed.fixedHue !== undefined) setFixedHue(parsed.fixedHue);
+        } catch(e) {}
+      }
+    });
+  }, []);
+
+  React.useEffect(() => {
+    const stateBlob = {
+      activeMode, selectedColor, selectedPatternId, brightness, speed,
+      micSensitivity, musicHue, musicMode, musicPatternId, micSource, musicOption, musicSetting,
+      fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
+    };
+    AsyncStorage.setItem('@Sk8lytz_ControllerState', JSON.stringify(stateBlob)).catch(() => {});
+  }, [
+    activeMode, selectedColor, selectedPatternId, brightness, speed, 
+    micSensitivity, musicHue, musicMode, musicPatternId, micSource, musicOption, musicSetting,
+    fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
+  ]);
 
   const handleMusicChange = (
     patternId: number = musicPatternId,

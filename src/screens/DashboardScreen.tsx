@@ -221,7 +221,17 @@ export default function DashboardScreen() {
           AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups)).catch(() => {});
       }
 
+      setAllDevices(prev => prev.map(d => 
+        d.id === selectedDeviceForSettings.id 
+          ? { ...d, name: settings.name, type: settings.type, points: settings.points, groupId: finalGroupId } 
+          : d
+      ));
+      
       selectedDeviceForSettings.groupId = finalGroupId;
+      selectedDeviceForSettings.name = settings.name;
+      selectedDeviceForSettings.type = settings.type;
+      selectedDeviceForSettings.points = settings.points;
+      
       setUpdateTrigger(prev => prev + 1);
 
       try {
@@ -272,18 +282,30 @@ export default function DashboardScreen() {
                     </TouchableOpacity>
                   </View>
                 ) : (
-                  <TouchableOpacity
-                    style={[styles.scanButton, { marginTop: 0 }, isScanning && { opacity: 0.7 }]}
-                    onPress={handleScan}
-                    activeOpacity={0.8}
-                    disabled={isScanning}
-                  >
-                    {isScanning ? (
-                      <ActivityIndicator color={Colors.text} />
-                    ) : (
-                      <Text style={styles.scanButtonText}>SCAN FOR SK8LYTZ</Text>
-                    )}
-                  </TouchableOpacity>
+                  <View>
+                    <TouchableOpacity
+                      style={[styles.scanButton, { marginTop: 0 }, isScanning && { opacity: 0.7 }]}
+                      onPress={handleScan}
+                      activeOpacity={0.8}
+                      disabled={isScanning}
+                    >
+                      {isScanning ? (
+                        <ActivityIndicator color={Colors.text} />
+                      ) : (
+                        <Text style={styles.scanButtonText}>SCAN FOR SK8LYTZ</Text>
+                      )}
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={[styles.scanButton, { marginTop: 12, backgroundColor: 'transparent', borderWidth: 1, borderColor: Colors.primary }]}
+                      onPress={() => {
+                        setMockConnected(true);
+                        setMockConnectedDevice(allDevices[0]?.id || 'mock-1');
+                      }}
+                    >
+                       <Text style={[styles.scanButtonText, { color: Colors.primary }]}>TEST DEMO DATA (NO BLUETOOTH)</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
               </View>
