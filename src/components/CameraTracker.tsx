@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import jpeg from 'jpeg-js';
+import { Buffer } from 'buffer';
 import { Colors } from '../theme/theme';
 
 interface CameraTrackerProps {

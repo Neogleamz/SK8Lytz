@@ -15,16 +15,10 @@ type ProductType = 'HALOZ' | 'SOULZ';
 type ModeType = 'PRESETS' | 'FIXED' | 'RBM' | 'MUSIC' | 'CAMERA' | 'CUSTOM' | 'MULTICOLOR';
 
 const MUSIC_PATTERNS = [
-  'Energetic',
-  'Rhythm',
-  'Spectrum',
-  'Rolling',
-  'Pulse',
-  'Flash',
-  'Wave',
-  'Heartbeat',
-  'Breathing',
-  'Strobe'
+  'Rock',
+  'Normal',
+  'Jazz',
+  'Classical'
 ];
 
 
@@ -109,13 +103,12 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     sens: number = micSensitivity,
     bright: number = brightness,
     src: 'APP' | 'DEVICE' = micSource,
-    mType: 'SCREEN' | 'BAR' = musicMode,
     currentHue: number = musicHue
   ) => {
     if (!writeToDevice) return;
     
     const isDeviceMic = src === 'DEVICE';
-    const modeTypeVal = mType === 'BAR' ? 0x26 : 0x27;
+    const modeTypeVal = 0x26;
     
     const f1 = (n: number, k = (n + currentHue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
     const c1 = { r: Math.round(f1(5) * 255), g: Math.round(f1(3) * 255), b: Math.round(f1(1) * 255) };
@@ -135,14 +128,14 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     ));
   };
 
-  const modes: { id: ModeType; label: string }[] = [
-    { id: 'PRESETS', label: 'Neogleamz Presets' },
-    { id: 'FIXED', label: 'Fixed Colors' },
-    { id: 'RBM', label: '100+ RBM Modes' },
-    { id: 'MUSIC', label: 'Music Sync' },
-    { id: 'CAMERA', label: 'Camera Color' },
-    { id: 'MULTICOLOR', label: 'Multi-color' },
-    { id: 'CUSTOM', label: 'Custom' }
+  const modes: { id: ModeType; label: string; icon: string }[] = [
+    { id: 'PRESETS', label: 'Favorites', icon: '⭐' },
+    { id: 'FIXED', label: 'Fixed', icon: '🎨' },
+    { id: 'RBM', label: 'Programs', icon: '✨' },
+    { id: 'MUSIC', label: 'Music', icon: '🎵' },
+    { id: 'CAMERA', label: 'Camera', icon: '📸' },
+    { id: 'MULTICOLOR', label: 'Multi', icon: '🌈' },
+    { id: 'CUSTOM', label: 'DIY', icon: '⚙️' }
   ];
 
   return (
@@ -195,15 +188,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
       <View style={styles.controlsContainer}>
         <View style={{ marginBottom: 24 }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, gap: 12 }}>
-            {[
-              { id: 'FIXED', label: 'Fixed', icon: '🎨' },
-              { id: 'RBM', label: 'Programs', icon: '✨' },
-              { id: 'MUSIC', label: 'Music', icon: '🎵' },
-              { id: 'CAMERA', label: 'Camera', icon: '📸' },
-              { id: 'MULTICOLOR', label: 'Multi', icon: '🌈' },
-              { id: 'CUSTOM', label: 'DIY', icon: '⚙️' },
-              { id: 'PRESETS', label: 'Presets', icon: '🔥' }
-            ].map((mode: any) => (
+            {modes.map((mode: any) => (
               <TouchableOpacity 
                 key={mode.id}
                 style={[
@@ -524,49 +509,31 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
 
           {activeMode === 'MUSIC' && (
             <View style={styles.sceneContainer}>
-              <View style={styles.musicToggleHeader}>
-                <TouchableOpacity 
-                  style={[styles.musicToggleOption, musicMode === 'SCREEN' && styles.musicToggleActive]} 
-                  onPress={() => {
-                    setMusicModeState('SCREEN');
-                    handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, 'SCREEN');
-                  }}
-                >
-                  <Text style={[styles.musicToggleText, musicMode === 'SCREEN' && styles.musicToggleActiveText]}>LIGHT SCREEN MODE</Text>
-                </TouchableOpacity>
+              <View style={[styles.musicToggleHeader, { justifyContent: 'center' }]}>
                 <View style={[styles.musicModeIndicator, { alignItems: 'center' }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <TouchableOpacity onPress={() => {
-                      const pid = musicPatternId > 1 ? musicPatternId - 1 : 16;
+                      const pid = musicPatternId > 1 ? musicPatternId - 1 : MUSIC_PATTERNS.length;
                       setMusicPatternId(pid);
                       handleMusicChange(pid);
-                    }} style={{ paddingHorizontal: 10 }}>
-                      <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold' }}>{'<'}</Text>
+                    }} style={{ paddingHorizontal: 20 }}>
+                      <Text style={{ color: '#FFF', fontSize: 28, fontWeight: 'bold' }}>{'<'}</Text>
                     </TouchableOpacity>
-                    <View style={styles.musicModeCircle}>
-                      <Text style={[styles.musicModeNumber, { fontSize: 16 }]}>{musicPatternId}</Text>
+                    <View style={[styles.musicModeCircle, { width: 80, height: 80, borderRadius: 40 }]}>
+                      <Text style={[styles.musicModeNumber, { fontSize: 24 }]}>{musicPatternId}</Text>
                     </View>
                     <TouchableOpacity onPress={() => {
-                      const pid = musicPatternId < 16 ? musicPatternId + 1 : 1;
+                      const pid = musicPatternId < MUSIC_PATTERNS.length ? musicPatternId + 1 : 1;
                       setMusicPatternId(pid);
                       handleMusicChange(pid);
-                    }} style={{ paddingHorizontal: 10 }}>
-                      <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold' }}>{'>'}</Text>
+                    }} style={{ paddingHorizontal: 20 }}>
+                      <Text style={{ color: '#FFF', fontSize: 28, fontWeight: 'bold' }}>{'>'}</Text>
                     </TouchableOpacity>
                   </View>
-                  <Text style={[Typography.caption, { marginTop: 4, color: Colors.primary, fontWeight: '600' }]}>
+                  <Text style={[Typography.caption, { marginTop: 12, color: Colors.primary, fontWeight: 'bold', fontSize: 16 }]}>
                     {MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`}
                   </Text>
                 </View>
-                <TouchableOpacity 
-                  style={[styles.musicToggleOption, musicMode === 'BAR' && styles.musicToggleActive]} 
-                  onPress={() => {
-                    setMusicModeState('BAR');
-                    handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, 'BAR');
-                  }}
-                >
-                  <Text style={[styles.musicToggleText, musicMode === 'BAR' && styles.musicToggleActiveText]}>LIGHT BAR MODE</Text>
-                </TouchableOpacity>
               </View>
 
               <View style={styles.musicVisualizerSection}>
