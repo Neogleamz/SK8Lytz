@@ -1,0 +1,40 @@
+package com.google.android.gms.internal.mlkit_vision_barcode_bundled;
+/* loaded from: C:\Users\Magma\OneDrive - Neogleamz\General - Neogleamz\MobileApp\ZENGGE_extracted\blewv2_extracted\classes.dex */
+public final class o6 extends p2 implements y3 {
+    private static final o6 zza;
+    private int zzd;
+    private int zze;
+    private int zzf;
+    private int zzg;
+    private int zzh = 2;
+
+    static {
+        o6 o6Var = new o6();
+        zza = o6Var;
+        p2.B(o6.class, o6Var);
+    }
+
+    private o6() {
+    }
+
+    @Override // com.google.android.gms.internal.mlkit_vision_barcode_bundled.p2
+    public final Object H(int i8, Object obj, Object obj2) {
+        int i9 = i8 - 1;
+        if (i9 != 0) {
+            if (i9 != 2) {
+                if (i9 != 3) {
+                    if (i9 != 4) {
+                        if (i9 != 5) {
+                            return null;
+                        }
+                        return zza;
+                    }
+                    return new m6(null);
+                }
+                return new o6();
+            }
+            return p2.y(zza, "\u0001\u0004\u0000\u0001\u0001\u0004\u0004\u0000\u0000\u0000\u0001᠌\u0000\u0002င\u0001\u0003င\u0002\u0004င\u0003", new Object[]{"zzd", "zze", n6.f14822a, "zzf", "zzg", "zzh"});
+        }
+        return (byte) 1;
+    }
+}

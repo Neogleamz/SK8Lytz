@@ -37,7 +37,7 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
              </View>
           )}
           {showGroupIcon && <Text style={{ fontSize: 18, marginRight: 8 }}>👥</Text>}
-          <Text style={Typography.title}>{device.name || 'Unknown Device'}</Text>
+          <Text style={Typography.title}>{`SK8 - ${(device.id || '').replace(/:/g, '').slice(-6).toUpperCase()}`}</Text>
         </View>
         <Text style={[Typography.caption, isSelectionMode && { marginLeft: 34 }]}>{device.id} {device.rssi ? `• ${device.rssi} dBm` : ''}</Text>
       </View>

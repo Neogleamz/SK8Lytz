@@ -75,4 +75,28 @@ export class ZenggeProtocol {
   static turnOff(): number[] {
     return [0x71, 0x24, 0x0f, 0xa4];
   }
+
+  /**
+   * Set Hardware Strip Configuration (IC Type, Pixels, Color Order) 0x81 command
+   */
+  static setHardwareConfig(points: number, colorOrder: string, stripType: string): number[] {
+    const pointsHigh = (points >> 8) & 0xFF;
+    const pointsLow = points & 0xFF;
+
+    let orderByte = 3; // GRB default
+    if (colorOrder.includes('RGB')) orderByte = 1;
+    else if (colorOrder.includes('RBG')) orderByte = 2;
+    else if (colorOrder.includes('GRB')) orderByte = 3;
+    else if (colorOrder.includes('GBR')) orderByte = 4;
+    else if (colorOrder.includes('BRG')) orderByte = 5;
+    else if (colorOrder.includes('BGR')) orderByte = 6;
+
+    let icByte = 3; // WS2812B default
+    if (stripType.includes('WS2811')) icByte = 2;
+    // Note: Other IC types use specific bytes (e.g., SK6812=4), standard defaults apply.
+
+    const cmd = [0x81, pointsHigh, pointsLow, orderByte, icByte, 0x00, 0x00];
+    const checksum = this.calculateChecksum(cmd);
+    return [...cmd, checksum];
+  }
 }

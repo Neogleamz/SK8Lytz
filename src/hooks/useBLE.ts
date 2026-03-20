@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import * as ExpoDevice from 'expo-device';
+import { ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol';
 
 let BleManager: any;
 let State: any;
@@ -17,6 +18,7 @@ interface BluetoothLowEnergyApi {
   scanForPeripherals(): void;
   connectToDevice: (device: Device) => Promise<void>;
   disconnectFromDevice: () => void;
+  writeToDevice: (payload: number[]) => Promise<void>;
   connectedDevice: Device | null;
   allDevices: Device[];
   isScanning: boolean;
@@ -117,12 +119,18 @@ export default function useBLE(): BluetoothLowEnergyApi {
         return;
       }
       if (device) {
-        setAllDevices((prevState) => {
-          if (!isDuplicateDevice(prevState, device)) {
-            return [...prevState, device];
-          }
-          return prevState;
-        });
+        const nameLower = device.name?.toLowerCase() || '';
+        const hasZenggeService = device.serviceUUIDs?.includes(ZENGGE_SERVICE_UUID);
+        const isZenggeName = nameLower.includes('led') || nameLower.includes('zengge') || nameLower.includes('magic') || nameLower.startsWith('sp') || nameLower.includes('sk8');
+
+        if (hasZenggeService || isZenggeName) {
+          setAllDevices((prevState) => {
+            if (!isDuplicateDevice(prevState, device)) {
+              return [...prevState, device];
+            }
+            return prevState;
+          });
+        }
       }
     });
 
@@ -148,6 +156,26 @@ export default function useBLE(): BluetoothLowEnergyApi {
     }
   };
 
+  const writeToDevice = async (payload: number[]) => {
+    if (!connectedDevice || Platform.OS === 'web') return;
+    try {
+      // react-native-ble-plx requires base64 encoded payloads
+      /* global Buffer */ // Ensure Buffer is available
+      const buffer = require('buffer').Buffer;
+      const base64Payload = buffer.from(payload).toString('base64');
+      
+      // We import from the protocol file directly in the hook body if needed,
+      // but ZENGGE_SERVICE_UUID and CHARACTERISTIC are at the top already.
+      await connectedDevice.writeCharacteristicWithoutResponseForService(
+        '0000ffd5-0000-1000-8000-00805f9b34fb', // ZENGGE_SERVICE_UUID
+        '0000ffd9-0000-1000-8000-00805f9b34fb', // ZENGGE_CHARACTERISTIC_UUID
+        base64Payload
+      );
+    } catch (e) {
+      console.warn('Write failed', e);
+    }
+  };
+
   const disconnectFromDevice = () => {
     if (connectedDevice) {
       if (Platform.OS !== 'web') {
@@ -161,6 +189,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     scanForPeripherals,
     requestPermissions,
     connectToDevice,
+    writeToDevice,
     allDevices,
     connectedDevice,
     disconnectFromDevice,

@@ -1,0 +1,14 @@
+package z6;
+
+import android.os.IBinder;
+import android.os.IInterface;
+/* loaded from: C:\Users\Magma\OneDrive - Neogleamz\General - Neogleamz\MobileApp\ZENGGE_extracted\blewv2_extracted\classes.dex */
+public abstract class e extends b implements f {
+    public static f d(IBinder iBinder) {
+        if (iBinder == null) {
+            return null;
+        }
+        IInterface queryLocalInterface = iBinder.queryLocalInterface("com.google.android.gms.ads.identifier.internal.IAdvertisingIdService");
+        return queryLocalInterface instanceof f ? (f) queryLocalInterface : new d(iBinder);
+    }
+}
