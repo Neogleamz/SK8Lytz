@@ -3,19 +3,37 @@
  * Supports Magic Home / LEDnetWF / Zengge controllers
  */
 
-export const ZENGGE_SERVICE_UUID = '0000ffd5-0000-1000-8000-00805f9b34fb';
-export const ZENGGE_CHARACTERISTIC_UUID = '0000ffd9-0000-1000-8000-00805f9b34fb';
+export const ZENGGE_SERVICE_UUID = '0000ffff-0000-1000-8000-00805f9b34fb';
+export const ZENGGE_CHARACTERISTIC_UUID = '0000ff01-0000-1000-8000-00805f9b34fb';
 
 export class ZenggeProtocol {
   private static messageCounter = 0;
 
-  private static getCounterBytes(): number[] {
-    this.messageCounter = (this.messageCounter + 1) % 0xFFFF;
-    return [(this.messageCounter >> 8) & 0xFF, this.messageCounter & 0xFF];
+  private static getSequenceCounter(): number {
+    this.messageCounter = (this.messageCounter + 1) % 256;
+    return this.messageCounter;
   }
 
   private static calculateChecksum(payload: number[]): number {
     return payload.reduce((acc, val) => acc + val, 0) & 0xFF;
+  }
+
+  private static wrapCommand(rawPayload: number[], cmdFamily: number = 0x0b): number[] {
+    const payloadLen = rawPayload.length;
+    const seq = this.getSequenceCounter();
+    
+    const packet = [
+      0x00,                      // Header: version 0, not segmented
+      seq & 0xFF,                // Sequence number
+      0x80,                      // Frag control high byte
+      0x00,                      // Frag control low byte
+      (payloadLen >> 8) & 0xFF,  // Total length high byte
+      payloadLen & 0xFF,         // Total length low byte
+      (payloadLen + 1) & 0xFF,   // Payload length + 1
+      cmdFamily                  // cmdId
+    ];
+    
+    return [...packet, ...rawPayload];
   }
 
   /**
@@ -24,7 +42,7 @@ export class ZenggeProtocol {
   static setColor(r: number, g: number, b: number): number[] {
     const cmd = [0x31, r, g, b, 0x00, 0x00, 0x0f];
     const checksum = this.calculateChecksum(cmd);
-    return [...cmd, checksum];
+    return this.wrapCommand([...cmd, checksum]);
   }
 
   /**
@@ -32,12 +50,9 @@ export class ZenggeProtocol {
    * Pattern 1-100, Speed 0-100, Brightness 0-100
    */
   static setRbmMode(pattern: number, speed: number, brightness: number = 100): number[] {
-    const counter = this.getCounterBytes();
-    // [counterHigh, counterLow, 0x80, 0x00, 0x00, 0x05, 0x06, 0x0b, 0x42, pattern, speed, brightness, checksum]
-    const header = [...counter, 0x80, 0x00, 0x00, 0x05, 0x06, 0x0b];
     const payload = [0x42, pattern, speed, brightness];
     const checksum = this.calculateChecksum(payload);
-    return [...header, ...payload, checksum];
+    return this.wrapCommand([...payload, checksum]);
   }
 
   /**
@@ -55,7 +70,6 @@ export class ZenggeProtocol {
     sensitivity: number,
     brightness: number
   ): number[] {
-    const counter = this.getCounterBytes();
     const payload = [
       0x73, 
       isDeviceMic ? 0x01 : 0x00, 
@@ -68,19 +82,16 @@ export class ZenggeProtocol {
       brightness
     ];
     const checksum = this.calculateChecksum(payload);
-    const header = [...counter, 0x80, 0x00, 0x00, 0x0d, 0x0e, 0x0b];
-    return [...header, ...payload, checksum];
+    return this.wrapCommand([...payload, checksum]);
   }
 
   /**
    * Send Music Magnitude for App Mic (Live Data)
    */
   static sendMusicMagnitude(magnitude: number): number[] {
-    const counter = this.getCounterBytes();
     const payload = [0x74, magnitude];
     const checksum = this.calculateChecksum(payload);
-    const header = [...counter, 0x80, 0x00, 0x00, 0x02, 0x03, 0x0b];
-    return [...header, ...payload, checksum];
+    return this.wrapCommand([...payload, checksum]);
   }
 
   /**
@@ -106,9 +117,7 @@ export class ZenggeProtocol {
     payload[idx++] = direction;
     payload[idx] = this.calculateChecksum(payload.slice(0, totalLen - 1));
 
-    const counter = this.getCounterBytes();
-    const header = [...counter, 0x80, 0x00, 0x00, (totalLen >> 8) & 0xFF, (totalLen & 0xFF) + 1, 0x0b];
-    return [...header, ...payload];
+    return this.wrapCommand(payload);
   }
 
   /**
@@ -139,9 +148,7 @@ export class ZenggeProtocol {
     payload[289] = 0x0f; // Final byte
     payload[290] = this.calculateChecksum(payload.slice(0, 290));
 
-    const counter = this.getCounterBytes();
-    const header = [...counter, 0x80, 0x00, 0x00, 0x01, 0x24, 0x0b]; // 0x0124 = 292 total (header 6 bytes?)
-    return [...header, ...payload];
+    return this.wrapCommand(payload);
   }
 
   /**
@@ -150,21 +157,21 @@ export class ZenggeProtocol {
   static setLegacyPattern(mode: number, speed: number): number[] {
     const cmd = [0x25, mode, speed];
     const checksum = this.calculateChecksum(cmd);
-    return [...cmd, checksum];
+    return this.wrapCommand([...cmd, checksum]);
   }
 
   /**
    * Turn device ON
    */
   static turnOn(): number[] {
-    return [0x71, 0x23, 0x0f, 0xa3];
+    return this.wrapCommand([0x71, 0x23, 0x0f, 0xa3]);
   }
 
   /**
    * Turn device OFF
    */
   static turnOff(): number[] {
-    return [0x71, 0x24, 0x0f, 0xa4];
+    return this.wrapCommand([0x71, 0x24, 0x0f, 0xa4]);
   }
 
   /**
@@ -184,10 +191,9 @@ export class ZenggeProtocol {
 
     let icByte = 3; // WS2812B default
     if (stripType.includes('WS2811')) icByte = 2;
-    // Note: Other IC types use specific bytes (e.g., SK6812=4), standard defaults apply.
 
     const cmd = [0x81, pointsHigh, pointsLow, orderByte, icByte, 0x00, 0x00];
     const checksum = this.calculateChecksum(cmd);
-    return [...cmd, checksum];
+    return this.wrapCommand([...cmd, checksum]);
   }
 }

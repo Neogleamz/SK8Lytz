@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import * as ExpoDevice from 'expo-device';
-import { ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol';
+import { ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID } from '../protocols/ZenggeProtocol';
 
 let BleManager: any;
 let State: any;
@@ -167,8 +167,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
       // We import from the protocol file directly in the hook body if needed,
       // but ZENGGE_SERVICE_UUID and CHARACTERISTIC are at the top already.
       await connectedDevice.writeCharacteristicWithoutResponseForService(
-        '0000ffd5-0000-1000-8000-00805f9b34fb', // ZENGGE_SERVICE_UUID
-        '0000ffd9-0000-1000-8000-00805f9b34fb', // ZENGGE_CHARACTERISTIC_UUID
+        ZENGGE_SERVICE_UUID,
+        ZENGGE_CHARACTERISTIC_UUID,
         base64Payload
       );
     } catch (e) {
