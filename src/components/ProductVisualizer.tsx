@@ -1,11 +1,22 @@
 import React, { useEffect, useRef, useMemo } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { View, StyleSheet, Animated, Text, TouchableOpacity } from 'react-native';
+
+interface DeviceConfig {
+  id?: string;
+  name?: string;
+  type?: 'HALOZ' | 'SOULZ';
+  points?: number;
+}
 
 interface ProductVisualizerProps {
   product: 'HALOZ' | 'SOULZ';
   color: string;
   mode: string;
   patternId: number | null;
+  isPaired?: boolean;
+  points?: number;
+  devices?: DeviceConfig[];
+  onLongPressDevice?: (device: any) => void;
 }
 
 // Convert HSL to Hex manually as React Native Interpolate handles strict string maps better
@@ -32,11 +43,94 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-export default function ProductVisualizer({ product, color, mode, patternId }: ProductVisualizerProps) {
-  const animValue = useRef(new Animated.Value(0)).current;
+const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress }: any) => {
+  const product = device.type || fallbackProduct;
+  const pointsPerSide = device.points || fallbackPoints || (product === 'HALOZ' ? 24 : 43);
+  const numLeds = pointsPerSide * 2;
 
-  // Total number of discrete addressable pixels to simulate
-  const numLeds = product === 'HALOZ' ? 24 : 43;
+  const leds = useMemo(() => {
+    const list = [];
+    for (let i = 0; i < numLeds; i++) {
+        const fract = i / numLeds; 
+        let top = 0; let left = 0;
+        const angle = (fract * 2 * Math.PI) + (Math.PI / 2); 
+        
+        if (product === 'HALOZ') {
+          const p = 0.6; // superellipse exponent
+          const sgnCos = Math.sign(Math.cos(angle)) || 1;
+          const sgnSin = Math.sign(Math.sin(angle)) || 1;
+          left = 80 - 5 + sgnCos * Math.pow(Math.abs(Math.cos(angle)), p) * 80;
+          top = 120 - 5 + sgnSin * Math.pow(Math.abs(Math.sin(angle)), p) * 120;
+        } else {
+          top = 150 - 5 + Math.sin(angle) * 150;
+          const verticalPos = Math.sin(angle);
+          const pinch = 1 - 0.3 * Math.exp(-Math.pow(verticalPos - 0.1, 2) * 5); 
+          left = 70 - 5 + (Math.cos(angle) * 70 * pinch);
+        }
+
+        const mirroredFract = fract <= 0.5 ? fract * 2 : (1 - fract) * 2;
+        let dotColor: any = color;
+        let dotOpacity: any = 1;
+
+        if (mode === 'PRESETS') {
+           if (product === 'HALOZ') {
+             const rainbowColors = [0, 1/6, 2/6, 3/6, 4/6, 5/6, 1].map(t => HSLToHex((t - mirroredFract + 1) % 1 * 360, 100, 50));
+             dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
+           } else {
+             const ripple = (Math.sin(mirroredFract * Math.PI) + 1) / 2;
+             dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.2 + (ripple * 0.1), 1, 0.2 + (ripple * 0.1)] });
+             dotColor = '#FF6E00';
+           }
+        } else if (mode === 'RBM') {
+           dotOpacity = animValue.interpolate({
+              inputRange: [0, Math.max(0, mirroredFract - 0.15), mirroredFract, Math.min(1, mirroredFract + 0.15), 1],
+              outputRange: [0.1, 0.1, 1, 0.1, 0.1]
+           });
+           if (patternId && patternId % 2 === 0) {
+             dotColor = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['#FF6E00', '#FFD60A', '#FF6E00'] });
+           } else {
+             dotColor = animValue.interpolate({ inputRange: [0, 1], outputRange: ['#FF0000', '#FFFF00'] });
+           }
+        } else if (mode === 'MUSIC') {
+           dotOpacity = animValue.interpolate({
+              inputRange: [0, 0.5, 1],
+              outputRange: [0.1, 1.0 - (mirroredFract * 0.5), 0.1]
+           });
+           dotColor = '#00FF00'; 
+        }
+
+       list.push({
+         key: `led_${i}`,
+         position: { top, left, position: 'absolute' as const },
+         activeColor: dotColor,
+         activeOpacity: dotOpacity,
+       });
+    }
+    return list;
+  }, [product, mode, color, numLeds, patternId]);
+
+  return (
+    <TouchableOpacity 
+      activeOpacity={onLongPress ? 0.8 : 1}
+      onLongPress={onLongPress ? () => onLongPress(device) : undefined}
+      style={{ alignItems: 'center', marginHorizontal: 2 }}
+    >
+      <View style={[product === 'HALOZ' ? styles.haloBase : styles.soulBase, { transform: [{ scale: 0.55 }] }]}>
+         {leds.map(led => (
+            <Animated.View key={led.key} style={[
+               product === 'HALOZ' ? styles.ledDot : styles.ledDotSmall, 
+               led.position, 
+               { backgroundColor: led.activeColor, opacity: led.activeOpacity }
+            ]} />
+         ))}
+      </View>
+      <Text style={{ position: 'absolute', top: '50%', left: '50%', transform: [{ translateX: -40 }, { translateY: -10 }], color: 'white', fontWeight: 'bold', fontSize: 11, width: 80, textAlign: 'center', opacity: 0.9 }}>{device.name || product}</Text>
+    </TouchableOpacity>
+  );
+};
+
+export default function ProductVisualizer({ product, color, mode, patternId, isPaired, points, devices, onLongPressDevice }: ProductVisualizerProps) {
+  const animValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     animValue.stopAnimation();
@@ -57,106 +151,29 @@ export default function ProductVisualizer({ product, color, mode, patternId }: P
     }
   }, [product, mode, color, patternId]);
 
-  // Compute the position and phase of each individual WS2812B LED dot
-  const leds = useMemo(() => {
-    const list = [];
-    for (let i = 0; i < numLeds; i++) {
-       const fract = i / numLeds; // Dot position [0-1] around the ring
-       
-       // Calculate geometry position
-       let top = 0; let left = 0;
-       if (product === 'HALOZ') {
-         // Circle map
-         const angle = fract * 2 * Math.PI;
-         top = 32 - 3 + Math.sin(angle) * 32;
-         left = 32 - 3 + Math.cos(angle) * 32;
-       } else {
-         // SOULZ map (boot sole outline)
-         const angle = fract * 2 * Math.PI;
-         top = 55 - 3 + Math.sin(angle) * 55;
-         
-         // Pinch the middle to create a "waist" shape like a shoe sole
-         const verticalPos = Math.sin(angle); // 1 at top, -1 at bottom
-         const pinch = 1 - 0.3 * Math.exp(-Math.pow(verticalPos - 0.1, 2) * 5); 
-         left = 25 - 3 + (Math.cos(angle) * 25 * pinch);
-       }
-
-       let dotColor: any = color;
-       let dotOpacity: any = 1;
-
-       if (mode === 'PRESETS') {
-          if (product === 'HALOZ') {
-            // Rainbow Flow
-            const rainbowColors = [0, 1/6, 2/6, 3/6, 4/6, 5/6, 1].map(t => HSLToHex((t - fract + 1) % 1 * 360, 100, 50));
-            dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
-          } else {
-            // Cyan Pulse
-            const ripple = (Math.sin(fract * Math.PI * 2) + 1) / 2;
-            dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.2 + (ripple * 0.1), 1, 0.2 + (ripple * 0.1)] });
-            dotColor = '#00FFFF';
-          }
-       } else if (mode === 'RBM') {
-          // Addressable "Chase" effect with wrap-around logic
-          dotOpacity = animValue.interpolate({
-             inputRange: [
-               0, 
-               Math.max(0, fract - 0.15), 
-               fract, 
-               Math.min(1, fract + 0.15), 
-               1
-             ],
-             outputRange: [0.1, 0.1, 1, 0.1, 0.1]
-          });
-          
-          if (patternId && patternId % 2 === 0) {
-            dotColor = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['#FF00FF', '#00FFFF', '#FF00FF'] });
-          } else {
-            dotColor = animValue.interpolate({ inputRange: [0, 1], outputRange: ['#FF0000', '#FFFF00'] });
-          }
-       } else if (mode === 'MUSIC') {
-          // Audio Reactive Pulse (Addressable style - expanding from center)
-          const distFromCenter = Math.abs(fract - 0.5) * 2; // 0 at center, 1 at ends
-          dotOpacity = animValue.interpolate({
-             inputRange: [0, 0.5, 1],
-             outputRange: [0.1, 1.0 - (distFromCenter * 0.5), 0.1]
-          });
-          dotColor = '#00FF00'; 
-       }
-
-       list.push({
-         key: `led_${i}`,
-         position: { top, left, position: 'absolute' as const },
-         activeColor: dotColor,
-         activeOpacity: dotOpacity,
-       });
-    }
-    return list;
-  }, [product, mode, color, numLeds, patternId]);
+  // Fallback if no specific devices array is provided: construct one or two devices based on isPaired flag
+  const renderDevices = (devices && devices.length > 0) ? devices : (
+    isPaired 
+      ? [{ name: `${product} Left`, type: product, points }, { name: `${product} Right`, type: product, points }]
+      : [{ name: product, type: product, points }]
+  );
 
   return (
     <View style={styles.container}>
-      <View style={{ flexDirection: 'row' }}>
-         {/* Left Unit */}
-         <View style={product === 'HALOZ' ? styles.haloBase : styles.soulBase}>
-            {leds.map(led => (
-               <Animated.View key={led.key} style={[
-                  product === 'HALOZ' ? styles.ledDot : styles.ledDotSmall, 
-                  led.position, 
-                  { backgroundColor: led.activeColor, opacity: led.activeOpacity, shadowColor: led.activeColor }
-               ]} />
-            ))}
-         </View>
-         
-         {/* Right Unit */}
-         <View style={[product === 'HALOZ' ? styles.haloBase : styles.soulBase, { marginLeft: 32 }]}>
-            {leds.map(led => (
-               <Animated.View key={led.key} style={[
-                  product === 'HALOZ' ? styles.ledDot : styles.ledDotSmall, 
-                  led.position, 
-                  { backgroundColor: led.activeColor, opacity: led.activeOpacity, shadowColor: led.activeColor }
-               ]} />
-            ))}
-         </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
+         {renderDevices.map((dev, index) => (
+           <VisualizerUnit 
+             key={dev.id || index.toString()} 
+             device={dev}
+             color={color}
+             mode={mode}
+             patternId={patternId}
+             animValue={animValue}
+             fallbackProduct={product}
+             fallbackPoints={points}
+             onLongPress={onLongPressDevice}
+           />
+         ))}
       </View>
     </View>
   );
@@ -164,38 +181,39 @@ export default function ProductVisualizer({ product, color, mode, patternId }: P
 
 const styles = StyleSheet.create({
   container: {
-    padding: 32,
+    padding: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#050505', // near pitch black for max pop
+    backgroundColor: '#050505', 
     borderRadius: 16,
-    marginBottom: 20,
+    marginBottom: 0,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    minHeight: 180,
+    borderColor: 'rgba(255,255,255,0.08)',
+    minHeight: 120,
+    width: '100%',
   },
   haloBase: {
-    width: 64, height: 64,
+    width: 160, height: 240,
   },
   soulBase: {
-    width: 50, height: 110,
+    width: 140, height: 300,
   },
   ledDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
-    shadowRadius: 6,
-    elevation: 6,
+    shadowRadius: 12,
+    elevation: 8,
   },
   ledDotSmall: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowRadius: 10,
+    elevation: 6,
   }
 });

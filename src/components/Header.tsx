@@ -1,15 +1,19 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { Colors, Typography, Layout } from '../theme/theme';
 
 interface HeaderProps {
   title?: string;
 }
 
-export default function Header({ title = 'NEOGLEAMZ' }: HeaderProps) {
+export default function Header({ title }: HeaderProps) {
   return (
     <View style={styles.container}>
-      <Text style={[Typography.header, styles.brand]}>{title}</Text>
+      <Image 
+        source={require('../../assets/logo.png')} 
+        style={styles.logo} 
+        resizeMode="contain"
+        tintColor={Colors.text}
+      />
       <View style={styles.underline} />
     </View>
   );
@@ -18,16 +22,14 @@ export default function Header({ title = 'NEOGLEAMZ' }: HeaderProps) {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: Layout.padding,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 24,
+    paddingBottom: 8,
     backgroundColor: Colors.background,
     alignItems: 'center',
   },
-  brand: {
-    color: Colors.primary,
-    textShadowColor: 'rgba(255, 0, 127, 0.5)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
+  logo: {
+    width: 120,
+    height: 36,
   },
   underline: {
     height: 3,

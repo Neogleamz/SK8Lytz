@@ -1,14 +1,14 @@
 export const Colors = {
-  background: '#0A0E17',
-  surface: '#1A1D2D',
-  surfaceHighlight: '#262B42',
-  primary: '#FF007F', // Neon Pink
-  secondary: '#00F0FF', // Neon Blue
-  accent: '#B500FF', // Neon Purple
+  background: '#090B10',
+  surface: '#121622',
+  surfaceHighlight: '#1E2535',
+  primary: '#FF6E00', // Neogleamz Orange
+  secondary: '#FF9F0A', // Vibrant Orange
+  accent: '#FFD60A', // Gold/Yellow Accent
   text: '#FFFFFF',
-  textMuted: '#8E92A4',
-  success: '#00E676',
-  error: '#FF3D00',
+  textMuted: '#A0A4B8',
+  success: '#32D74B',
+  error: '#FF453A',
 };
 
 export const Typography = {

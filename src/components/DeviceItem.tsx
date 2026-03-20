@@ -3,12 +3,16 @@ import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { Colors, Typography, Layout } from '../theme/theme';
 
 interface DeviceItemProps {
-  device: { name: string | null; id: string; rssi?: number | null };
+  device: { name: string | null; id: string; rssi?: number | null; isGroup?: boolean };
   onPress: () => void;
+  onLongPress?: () => void;
   isConnected: boolean;
+  showGroupIcon?: boolean;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
 }
 
-export default function DeviceItem({ device, onPress, isConnected }: DeviceItemProps) {
+export default function DeviceItem({ device, onPress, onLongPress, isConnected, showGroupIcon, isSelectionMode, isSelected }: DeviceItemProps) {
   const isZengge = device.name?.toLowerCase().includes('led') || device.name?.toLowerCase().includes('zengge') || device.name?.toLowerCase().includes('magic');
 
   return (
@@ -16,19 +20,31 @@ export default function DeviceItem({ device, onPress, isConnected }: DeviceItemP
       style={[
         styles.container, 
         isConnected && styles.connectedContainer,
-        isZengge && !isConnected && styles.zenggeContainer
+        isZengge && !isConnected && styles.zenggeContainer,
+        showGroupIcon && { borderLeftWidth: 4, borderLeftColor: Colors.secondary },
+        isSelectionMode && isSelected && { borderColor: Colors.primary }
       ]} 
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={300}
       activeOpacity={0.7}
     >
       <View style={styles.info}>
-        <Text style={Typography.title}>{device.name || 'Unknown Device'}</Text>
-        <Text style={Typography.caption}>{device.id} {device.rssi ? `• ${device.rssi} dBm` : ''}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {isSelectionMode && (
+             <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: isSelected ? Colors.primary : Colors.textMuted, marginRight: 12, backgroundColor: isSelected ? Colors.primary : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+               {isSelected && <Text style={{color: 'white', fontSize: 12, fontWeight: 'bold'}}>✓</Text>}
+             </View>
+          )}
+          {showGroupIcon && <Text style={{ fontSize: 18, marginRight: 8 }}>👥</Text>}
+          <Text style={Typography.title}>{device.name || 'Unknown Device'}</Text>
+        </View>
+        <Text style={[Typography.caption, isSelectionMode && { marginLeft: 34 }]}>{device.id} {device.rssi ? `• ${device.rssi} dBm` : ''}</Text>
       </View>
       <View style={styles.status}>
         <Text style={[
           Typography.body, 
-          { color: isConnected ? Colors.success : Colors.primary, fontWeight: 'bold' }
+          { color: isConnected ? (showGroupIcon ? Colors.secondary : Colors.success) : Colors.primary, fontWeight: 'bold' }
         ]}>
           {isConnected ? 'CONNECTED' : 'CONNECT'}
         </Text>

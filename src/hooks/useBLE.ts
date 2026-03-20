@@ -100,9 +100,10 @@ export default function useBLE(): BluetoothLowEnergyApi {
     if (Platform.OS === 'web') {
       setTimeout(() => {
         setAllDevices([
-          { id: 'sim-haloz-1', name: 'SK8Lytz HALOZ (Demo)' } as Device,
-          { id: 'sim-soulz-1', name: 'SK8Lytz SOULZ (Demo)' } as Device,
-          { id: 'sim-unknown-1', name: 'Zengge App-110' } as Device,
+          { id: 'sim-halo-1', name: 'HALOZ' } as Device,
+          { id: 'sim-halo-2', name: 'HALOZ' } as Device,
+          { id: 'sim-soul-1', name: 'SOULZ' } as Device,
+          { id: 'sim-soul-2', name: 'SOULZ' } as Device,
         ]);
         setIsScanning(false);
       }, 1500);
