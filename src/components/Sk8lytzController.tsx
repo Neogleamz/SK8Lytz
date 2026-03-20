@@ -195,7 +195,6 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
               <Text style={[Typography.caption, { marginTop: 8 }]}>One-tap replicas of our official product showcase effects.</Text>
               
               <View style={styles.presetContainer}>
-                {activeProduct === 'HALOZ' ? (
                   <TouchableOpacity 
                     style={[styles.presetCard, { borderColor: Colors.primary }]}
                     onPress={() => {
@@ -203,33 +202,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     if (writeToDevice) writeToDevice(ZenggeProtocol.setColor(255, 0, 0));
                   }}
                   >
-                    <Text style={styles.presetTitle}>HALOZ Rainbow Flow</Text>
-                    <Text style={styles.presetDesc}>Continuous 360° full-spectrum color chase simulating individual WS2812B LEDs moving at moderate speed.</Text>
+                    <Text style={styles.presetTitle}>{activeProduct} Rainbow Flow</Text>
+                    <Text style={styles.presetDesc}>Continuous full-spectrum color chase simulating individual addressable LEDs moving at moderate speed.</Text>
                   </TouchableOpacity>
-                ) : (
-                  <>
-                    <TouchableOpacity 
-                      style={[styles.presetCard, { borderColor: Colors.secondary, marginBottom: 12 }]}
-                      onPress={() => {
-                        setSelectedColor('#00FFFF');
-                        if (writeToDevice) writeToDevice(ZenggeProtocol.setColor(0, 255, 255));
-                      }}
-                    >
-                      <Text style={styles.presetTitle}>SOULZ Cyan Pulse</Text>
-                      <Text style={styles.presetDesc}>Slow, breathing ice-cyan sequence cascading across your addressable underglow LEDs.</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.presetCard, { borderColor: Colors.primary }]}
-                      onPress={() => {
-                        setSelectedColor('#FF0000');
-                        if (writeToDevice) writeToDevice(ZenggeProtocol.setColor(255, 0, 0));
-                      }}
-                    >
-                      <Text style={styles.presetTitle}>SOULZ Rainbow Flow</Text>
-                      <Text style={styles.presetDesc}>Continuous full-spectrum color chase simulating individual addressable LEDs moving at moderate speed.</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
               </View>
             </View>
           )}

@@ -52,16 +52,25 @@ export default function DashboardScreen() {
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   
   useEffect(() => {
-    AsyncStorage.getItem('ng_custom_groups').then(res => {
-      if (res) setCustomGroups(JSON.parse(res));
-    });
-    AsyncStorage.getItem('ng_device_configs').then(res => {
-      if (res) {
-         const configs = JSON.parse(res);
-         // We merge the persisted configs into allDevices via useMemo below, 
-         // but since allDevices is passed from useBLE, we decorate them on render.
-      }
-    });
+    AsyncStorage.getItem('ng_custom_groups')
+      .then(res => {
+        if (res) {
+          try { 
+            setCustomGroups(JSON.parse(res)); 
+          } catch(e) { console.warn('JSON parse error custom groups', e); }
+        }
+      })
+      .catch(e => console.warn('AsyncStorage error custom groups', e));
+
+    AsyncStorage.getItem('ng_device_configs')
+      .then(res => {
+        if (res) {
+          try {
+            const configs = JSON.parse(res);
+          } catch(e) { console.warn('JSON parse error configs', e); }
+        }
+      })
+      .catch(e => console.warn('AsyncStorage error configs', e));
   }, []);
 
   const displayConnectedDevices = useMemo(() => {
@@ -179,13 +188,46 @@ export default function DashboardScreen() {
       selectedDeviceForSettings.type = settings.type;
       selectedDeviceForSettings.points = settings.points;
       selectedDeviceForSettings.grouped = settings.grouped;
-      selectedDeviceForSettings.groupId = settings.groupId;
+      
+      let finalGroupId = settings.groupId;
+
+      // Capture implicit group associations assigned through the Hardware settings modal
+      if (settings.grouped && settings.groupName && !settings.groupId) {
+        // Find existing group by name or create a fresh one natively
+        const existingGroup = customGroups.find(g => g.name.toLowerCase() === settings.groupName?.toLowerCase());
+        if (existingGroup) {
+          finalGroupId = existingGroup.id;
+          if (!existingGroup.deviceIds.includes(selectedDeviceForSettings.id)) {
+             const newGroups = customGroups.map(g => g.id === existingGroup.id ? {...g, deviceIds: [...g.deviceIds, selectedDeviceForSettings.id]} : g);
+             setCustomGroups(newGroups);
+             AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups)).catch(() => {});
+          }
+        } else {
+          finalGroupId = `group-${Date.now()}`;
+          const newGroups = [...customGroups, { id: finalGroupId, name: settings.groupName, isGroup: true, deviceIds: [selectedDeviceForSettings.id] }];
+          setCustomGroups(newGroups);
+          AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups)).catch(() => {});
+        }
+      } else if (settings.grouped && settings.groupId) {
+          const existingGroup = customGroups.find(g => g.id === settings.groupId);
+          if (existingGroup && !existingGroup.deviceIds.includes(selectedDeviceForSettings.id)) {
+             const newGroups = customGroups.map(g => g.id === existingGroup.id ? {...g, deviceIds: [...g.deviceIds, selectedDeviceForSettings.id]} : g);
+             setCustomGroups(newGroups);
+             AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups)).catch(() => {});
+          }
+      } else if (!settings.grouped) {
+          const newGroups = customGroups.map(g => ({...g, deviceIds: g.deviceIds.filter(id => id !== selectedDeviceForSettings.id)}));
+          setCustomGroups(newGroups);
+          AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups)).catch(() => {});
+      }
+
+      selectedDeviceForSettings.groupId = finalGroupId;
       setUpdateTrigger(prev => prev + 1);
 
       try {
         const stored = await AsyncStorage.getItem('ng_device_configs');
         const configs = stored ? JSON.parse(stored) : {};
-        configs[selectedDeviceForSettings.id] = settings;
+        configs[selectedDeviceForSettings.id] = { ...settings, groupId: finalGroupId };
         await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
       } catch (e) { console.error('Failed to persist settings', e); }
     }
