@@ -1,5 +1,0 @@
-package l6;
-/* loaded from: C:\Users\Magma\OneDrive - Neogleamz\General - Neogleamz\MobileApp\ZENGGE_extracted\blewv2_extracted\classes.dex */
-public interface i<T, U> {
-    void accept(T t8, U u8);
-}
