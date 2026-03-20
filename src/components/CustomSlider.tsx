@@ -6,13 +6,14 @@ import { Colors } from '../theme/theme';
 interface CustomSliderProps {
   value: number;
   onValueChange: (val: number) => void;
+  onSlidingComplete?: (val: number) => void;
   minimumValue?: number;
   maximumValue?: number;
   style?: any;
   gradientTrack?: boolean;
 }
 
-export default function CustomSlider({ value, onValueChange, minimumValue = 0, maximumValue = 100, style, gradientTrack = false }: CustomSliderProps) {
+export default function CustomSlider({ value, onValueChange, onSlidingComplete, minimumValue = 0, maximumValue = 100, style, gradientTrack = false }: CustomSliderProps) {
   const [containerWidth, setContainerWidth] = useState(0);
   const valueRef = useRef(value);
   valueRef.current = value;
@@ -44,6 +45,12 @@ export default function CustomSlider({ value, onValueChange, minimumValue = 0, m
         let newVal = startValRef.current + deltaVal;
         newVal = Math.max(minimumValue, Math.min(maximumValue, newVal));
         onValueChange(Math.round(newVal));
+      },
+      onPanResponderRelease: () => {
+        if (onSlidingComplete) onSlidingComplete(valueRef.current);
+      },
+      onPanResponderTerminate: () => {
+        if (onSlidingComplete) onSlidingComplete(valueRef.current);
       },
     })
   ).current;

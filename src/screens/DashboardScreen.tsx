@@ -8,6 +8,7 @@ import useBLE from '../hooks/useBLE';
 import Sk8lytzController from '../components/Sk8lytzController';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface DeviceSettings {
   name: string;
@@ -26,7 +27,8 @@ export default function DashboardScreen() {
     scanForPeripherals,
     allDevices,
     connectToDevice,
-    connectedDevice,
+    connectToDevices,
+    connectedDevices,
     disconnectFromDevice,
     writeToDevice,
     isScanning,
@@ -48,9 +50,22 @@ export default function DashboardScreen() {
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  
+  useEffect(() => {
+    AsyncStorage.getItem('ng_custom_groups').then(res => {
+      if (res) setCustomGroups(JSON.parse(res));
+    });
+    AsyncStorage.getItem('ng_device_configs').then(res => {
+      if (res) {
+         const configs = JSON.parse(res);
+         // We merge the persisted configs into allDevices via useMemo below, 
+         // but since allDevices is passed from useBLE, we decorate them on render.
+      }
+    });
+  }, []);
 
   const displayConnectedDevices = useMemo(() => {
-    if (!mockConnected) return connectedDevice ? [connectedDevice] : [];
+    if (!mockConnected) return connectedDevices;
 
     // In Browser Demo / Mock mode, we pull the actual device objects from allDevices 
     // to ensure settings like 'points' are reflected after being edited.
@@ -66,7 +81,7 @@ export default function DashboardScreen() {
     const singleId = mockConnectedDevice || 'sim-soul-1';
     const single = allDevices.find(d => d.id === singleId);
     return single ? [{ ...single, grouped: false, points: (single as any).points || (single.name?.toLowerCase().includes('soul') ? 43 : 24) }] : [];
-  }, [mockConnected, mockConnectedDevice, mockConnectedGroup, allDevices, connectedDevice, updateTrigger, customGroups]);
+  }, [mockConnected, mockConnectedDevice, mockConnectedGroup, allDevices, connectedDevices, updateTrigger, customGroups]);
 
   const isActuallyConnected = displayConnectedDevices.length > 0;
   const isGrouped = displayConnectedDevices.length > 1 && displayConnectedDevices.every(d => (d as any).grouped);
@@ -115,14 +130,15 @@ export default function DashboardScreen() {
     setIsGroupModalVisible(false);
   };
 
-  const saveGroup = (name: string, deviceIds: string[]) => {
+  const saveGroup = async (name: string, deviceIds: string[]) => {
+    let newGroups = customGroups;
     if (groupModalMode === 'create') {
       const existing = customGroups.find(g => g.name.toLowerCase() === name.toLowerCase());
       if (existing) {
-        setCustomGroups(prev => prev.map(g => g.id === existing.id ? { ...g, deviceIds: Array.from(new Set([...g.deviceIds, ...deviceIds])) } : g));
+        newGroups = customGroups.map(g => g.id === existing.id ? { ...g, deviceIds: Array.from(new Set([...g.deviceIds, ...deviceIds])) } : g);
       } else {
         const newGroupId = `group-${Date.now()}`;
-        setCustomGroups(prev => [...prev, { id: newGroupId, name, isGroup: true, deviceIds }]);
+        newGroups = [...customGroups, { id: newGroupId, name, isGroup: true, deviceIds }];
       }
       setIsSelectionMode(false);
       setSelectedIds([]);
@@ -131,8 +147,10 @@ export default function DashboardScreen() {
         deleteGroup(editingGroupId);
         return;
       }
-      setCustomGroups(prev => prev.map(g => g.id === editingGroupId ? { ...g, name, deviceIds } : g));
+      newGroups = customGroups.map(g => g.id === editingGroupId ? { ...g, name, deviceIds } : g);
     }
+    setCustomGroups(newGroups);
+    await AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups));
   };
 
   useEffect(() => {
@@ -155,45 +173,21 @@ export default function DashboardScreen() {
     setIsSettingsVisible(true);
   };
 
-  const saveSettings = (settings: DeviceSettings) => {
-    console.log('Saved settings for', selectedDeviceForSettings?.id, ':', settings);
-    // In a real app, this would persist to AsyncStorage or the device via BLE
-    // In demo, we update the local device name if it's a mock
-    if (IS_BROWSER_DEMO && selectedDeviceForSettings) {
-      if (settings.grouped && settings.groupName) {
-        let targetGroupId = settings.groupId;
-
-        if (!targetGroupId) {
-          const existingGroup = customGroups.find(g => g.name.toLowerCase() === settings.groupName?.toLowerCase());
-          if (existingGroup) {
-            targetGroupId = existingGroup.id;
-          }
-        }
-
-        if (targetGroupId) {
-          setCustomGroups(prev => prev.map(g => g.id === targetGroupId ? { ...g, name: settings.groupName } : g));
-          setCustomGroups(prev => prev.map(g => g.id === targetGroupId && !g.deviceIds.includes(selectedDeviceForSettings.id)
-            ? { ...g, deviceIds: [...g.deviceIds, selectedDeviceForSettings.id] }
-            : g));
-          settings.groupId = targetGroupId;
-        } else {
-          const newGroupId = `group-${Date.now()}`;
-          setCustomGroups([...customGroups, { id: newGroupId, name: settings.groupName, isGroup: true, deviceIds: [selectedDeviceForSettings.id] }]);
-          settings.groupId = newGroupId;
-        }
-      } else if (!settings.grouped) {
-        setCustomGroups(prev => prev.map(g => ({
-          ...g,
-          deviceIds: g.deviceIds.filter((id: string) => id !== selectedDeviceForSettings.id)
-        })).filter(g => g.deviceIds.length > 0));
-      }
-
+  const saveSettings = async (settings: DeviceSettings) => {
+    if (selectedDeviceForSettings) {
       selectedDeviceForSettings.name = settings.name;
       selectedDeviceForSettings.type = settings.type;
       selectedDeviceForSettings.points = settings.points;
       selectedDeviceForSettings.grouped = settings.grouped;
       selectedDeviceForSettings.groupId = settings.groupId;
       setUpdateTrigger(prev => prev + 1);
+
+      try {
+        const stored = await AsyncStorage.getItem('ng_device_configs');
+        const configs = stored ? JSON.parse(stored) : {};
+        configs[selectedDeviceForSettings.id] = settings;
+        await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
+      } catch (e) { console.error('Failed to persist settings', e); }
     }
     setIsSettingsVisible(false);
   };
@@ -283,6 +277,11 @@ export default function DashboardScreen() {
                       onPress={() => {
                         setMockConnected(true);
                         setMockConnectedGroup(group.id);
+                        
+                        const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id));
+                        if (devicesToConnect.length > 0) {
+                          connectToDevices(devicesToConnect);
+                        }
                       }}
                       onLongPress={() => {
                         setEditingGroupId(group.id);

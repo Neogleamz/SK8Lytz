@@ -1,11 +1,9 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, PanResponder, Animated, Dimensions, TouchableOpacity } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { Colors } from '../theme/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const WHEEL_RADIUS = SCREEN_WIDTH * 0.9;
-const ITEM_SPACING_ANGLE = 6.5; 
-const VISIBLE_ITEMS = 12;
+const ITEM_WIDTH = Math.floor(SCREEN_WIDTH / 5);
 
 interface ArcPatternWheelProps {
   value: number;
@@ -22,131 +20,77 @@ export default function ArcPatternWheel({
   max = 100,
   itemLabel 
 }: ArcPatternWheelProps) {
-  const rotation = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const [activeValue, setActiveValue] = useState(value);
-  
-  useEffect(() => {
-    const targetRotation = -(value - 1) * ITEM_SPACING_ANGLE;
-    Animated.spring(rotation, {
-      toValue: targetRotation,
-      useNativeDriver: true,
-      friction: 10,
-      tension: 30,
-    }).start();
-    setActiveValue(value);
-  }, [value]);
+  const flatListRef = useRef<FlatList>(null);
+
+  const data = [
+    { type: 'pad', id: 'pad-1' },
+    { type: 'pad', id: 'pad-2' },
+    ...Array.from({ length: max - min + 1 }, (_, i) => ({ type: 'item', id: String(min + i), val: min + i })),
+    { type: 'pad', id: 'pad-3' },
+    { type: 'pad', id: 'pad-4' },
+  ];
 
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.2, duration: 1000, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1.0, duration: 1000, useNativeDriver: true }),
-      ])
-    ).start();
+    setTimeout(() => {
+       const idx = value - min;
+       flatListRef.current?.scrollToOffset({ offset: idx * ITEM_WIDTH, animated: false });
+    }, 100);
   }, []);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, gestureState) => {
-        const sensitivity = 0.45;
-        const deltaRotation = gestureState.dx * sensitivity;
-        const baseRotation = -(value - 1) * ITEM_SPACING_ANGLE;
-        rotation.setValue(baseRotation + deltaRotation);
-        
-        const currentRot = baseRotation + deltaRotation;
-        const offset = Math.round(-currentRot / ITEM_SPACING_ANGLE);
-        const newValue = Math.max(min, Math.min(max, min + offset));
-        if (newValue !== activeValue) {
-          setActiveValue(newValue);
-        }
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const sensitivity = 0.45;
-        const deltaRotation = gestureState.dx * sensitivity;
-        const baseRotation = -(value - 1) * ITEM_SPACING_ANGLE;
-        const finalRot = baseRotation + deltaRotation;
-        
-        const offset = Math.round(-finalRot / ITEM_SPACING_ANGLE);
-        const newValue = Math.max(min, Math.min(max, min + offset));
-        
-        onValueChange(newValue);
-      },
-    })
-  ).current;
-
-  const renderItems = () => {
-    const items = [];
-    const start = Math.max(min, activeValue - VISIBLE_ITEMS);
-    const end = Math.min(max, activeValue + VISIBLE_ITEMS);
-    
-    for (let i = start; i <= end; i++) {
-      const itemAngle = (i - 1) * ITEM_SPACING_ANGLE;
-      const isSelected = i === activeValue;
-      
-      const opacity = rotation.interpolate({
-        inputRange: [-itemAngle - 30, -itemAngle, -itemAngle + 30],
-        outputRange: [0.15, 1, 0.15],
-        extrapolate: 'clamp',
-      });
-
-      const scale = rotation.interpolate({
-        inputRange: [-itemAngle - 8, -itemAngle, -itemAngle + 8],
-        outputRange: [0.75, 1.4, 0.75],
-        extrapolate: 'clamp',
-      });
-
-      items.push(
-        <Animated.View
-          key={i}
-          style={[
-            styles.itemContainer,
-            {
-              opacity,
-              transform: [
-                { rotate: rotation.interpolate({
-                    inputRange: [-360, 360],
-                    outputRange: ['-360deg', '360deg']
-                  }) 
-                },
-                { translateY: -WHEEL_RADIUS },
-                { rotate: `${itemAngle}deg` },
-                { translateY: WHEEL_RADIUS },
-                { scale }
-              ],
-            },
-          ]}
-        >
-          <Text style={[styles.itemText, isSelected && styles.selectedItemText]}>
-            {i}
-          </Text>
-        </Animated.View>
-      );
+  const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetX = e.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / ITEM_WIDTH);
+    const item = data[index + 2] as any;
+    if (item && item.type === 'item') {
+      if (item.val !== value) {
+        onValueChange(item.val);
+      }
     }
-    return items;
   };
 
   return (
     <View style={styles.container}>
-      {/* Decorative Glow Arc Line */}
-      <View style={styles.glowArcLine} />
-
       <View style={styles.header}>
-        <Animated.Text style={[styles.autoText, { opacity: pulseAnim.interpolate({ inputRange: [1, 1.2], outputRange: [0.6, 1] }) }]}>AUTO</Animated.Text>
-        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-          <Text style={styles.heartIcon}>❤️</Text>
-        </Animated.View>
+        <Text style={styles.autoText}>AUTO</Text>
+        <Text style={styles.heartIcon}>❤️</Text>
       </View>
       
-      <View style={styles.wheelWrapper} {...panResponder.panHandlers}>
-        {renderItems()}
+      <View style={styles.wheelWrapper}>
+        <FlatList
+          ref={flatListRef}
+          data={data}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={ITEM_WIDTH}
+          decelerationRate="fast"
+          onMomentumScrollEnd={onScrollEnd}
+          onScrollEndDrag={(e) => {
+            const velocity = e.nativeEvent.velocity?.x || 0;
+            if (Math.abs(velocity) < 0.5) onScrollEnd(e);
+          }}
+          getItemLayout={(_, index) => ({ length: ITEM_WIDTH, offset: ITEM_WIDTH * index, index })}
+          renderItem={({ item }) => {
+            if (item.type === 'pad') {
+              return <View style={{ width: ITEM_WIDTH, height: 60 }} />;
+            }
+            const itemVal = (item as any).val;
+            const isSelected = itemVal === value;
+            return (
+              <View style={[styles.itemContainer, { width: ITEM_WIDTH }]}>
+                <Text style={[styles.itemText, isSelected && styles.selectedItemText]}>
+                  {itemVal}
+                </Text>
+              </View>
+            );
+          }}
+        />
+        <View style={styles.pointer} pointerEvents="none" />
       </View>
       
       {itemLabel && (
         <View style={styles.labelContainer}>
-          <Text style={styles.labelText}>{itemLabel(activeValue)}</Text>
+          <Text style={styles.labelText}>{itemLabel(value)}</Text>
         </View>
       )}
     </View>
@@ -159,18 +103,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
-    overflow: 'visible',
-  },
-  glowArcLine: {
-    position: 'absolute',
-    top: -WHEEL_RADIUS + 70, 
-    width: WHEEL_RADIUS * 2,
-    height: WHEEL_RADIUS * 2,
-    borderRadius: WHEEL_RADIUS,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 110, 0, 0.3)',
-    backgroundColor: 'transparent',
+    backgroundColor: '#050505',
   },
   header: {
     position: 'absolute',
@@ -192,40 +125,54 @@ const styles = StyleSheet.create({
   },
   wheelWrapper: {
     width: SCREEN_WIDTH,
-    height: WHEEL_RADIUS * 2,
-    alignItems: 'center',
+    height: 80,
     justifyContent: 'center',
-    marginTop: -80,
+    alignItems: 'center',
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   itemContainer: {
-    position: 'absolute',
-    width: 60,
-    height: 40,
+    height: 80,
     justifyContent: 'center',
     alignItems: 'center',
   },
   itemText: {
     color: 'rgba(255,255,255,0.4)',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
   },
   selectedItemText: {
     color: Colors.primary,
-    fontSize: 26,
+    fontSize: 32,
     fontWeight: 'bold',
     textShadowColor: Colors.primary,
     textShadowRadius: 10,
   },
+  pointer: {
+    position: 'absolute',
+    bottom: 0,
+    width: 0, 
+    height: 0, 
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderBottomWidth: 10,
+    borderStyle: 'solid',
+    backgroundColor: 'transparent',
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: Colors.primary,
+  },
   labelContainer: {
     position: 'absolute',
-    bottom: -10,
+    bottom: 10,
     backgroundColor: 'rgba(255, 110, 0, 0.1)',
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 25,
     borderWidth: 1,
     borderColor: 'rgba(255, 110, 0, 0.2)',
-    zIndex: 20,
   },
   labelText: {
     color: '#FFF',

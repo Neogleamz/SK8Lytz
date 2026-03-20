@@ -17,9 +17,10 @@ interface BluetoothLowEnergyApi {
   requestPermissions(): Promise<boolean>;
   scanForPeripherals(): void;
   connectToDevice: (device: Device) => Promise<void>;
+  connectToDevices: (devices: Device[]) => Promise<void>;
   disconnectFromDevice: () => void;
   writeToDevice: (payload: number[]) => Promise<void>;
-  connectedDevice: Device | null;
+  connectedDevices: Device[];
   allDevices: Device[];
   isScanning: boolean;
   isBluetoothSupported: boolean;
@@ -32,7 +33,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
   }, []);
 
   const [allDevices, setAllDevices] = useState<Device[]>([]);
-  const [connectedDevice, setConnectedDevice] = useState<Device | null>(null);
+  const [connectedDevices, setConnectedDevices] = useState<Device[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [isBluetoothSupported, setIsBluetoothSupported] = useState(Platform.OS !== 'web');
 
@@ -143,11 +144,11 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const connectToDevice = async (device: Device) => {
     try {
       if (Platform.OS === 'web') {
-        setConnectedDevice(device);
+        setConnectedDevices([device]);
         return;
       }
       const deviceConnection = await bleManager.connectToDevice(device.id);
-      setConnectedDevice(deviceConnection);
+      setConnectedDevices([deviceConnection]);
       await deviceConnection.discoverAllServicesAndCharacteristics();
       bleManager.stopDeviceScan();
       setIsScanning(false);
@@ -156,32 +157,50 @@ export default function useBLE(): BluetoothLowEnergyApi {
     }
   };
 
-  const writeToDevice = async (payload: number[]) => {
-    if (!connectedDevice || Platform.OS === 'web') return;
+  const connectToDevices = async (devices: Device[]) => {
+    if (devices.length === 0) return;
     try {
-      // react-native-ble-plx requires base64 encoded payloads
-      /* global Buffer */ // Ensure Buffer is available
+      if (Platform.OS === 'web') {
+        setConnectedDevices(devices);
+        return;
+      }
+      
+      const connections = await Promise.all(devices.map(device => bleManager.connectToDevice(device.id)));
+      setConnectedDevices(connections);
+      
+      await Promise.all(connections.map(conn => conn.discoverAllServicesAndCharacteristics()));
+      bleManager.stopDeviceScan();
+      setIsScanning(false);
+    } catch (e) {
+      console.error('FAILED TO CONNECT TO GROUP', e);
+    }
+  };
+
+  const writeToDevice = async (payload: number[]) => {
+    if (connectedDevices.length === 0 || Platform.OS === 'web') return;
+    try {
+      /* global Buffer */
       const buffer = require('buffer').Buffer;
       const base64Payload = buffer.from(payload).toString('base64');
       
-      // We import from the protocol file directly in the hook body if needed,
-      // but ZENGGE_SERVICE_UUID and CHARACTERISTIC are at the top already.
-      await connectedDevice.writeCharacteristicWithoutResponseForService(
-        ZENGGE_SERVICE_UUID,
-        ZENGGE_CHARACTERISTIC_UUID,
-        base64Payload
-      );
+      await Promise.all(connectedDevices.map(device => 
+        device.writeCharacteristicWithoutResponseForService(
+          ZENGGE_SERVICE_UUID,
+          ZENGGE_CHARACTERISTIC_UUID,
+          base64Payload
+        )
+      ));
     } catch (e) {
       console.warn('Write failed', e);
     }
   };
 
   const disconnectFromDevice = () => {
-    if (connectedDevice) {
+    if (connectedDevices.length > 0) {
       if (Platform.OS !== 'web') {
-        bleManager.cancelDeviceConnection(connectedDevice.id);
+        connectedDevices.forEach(device => bleManager.cancelDeviceConnection(device.id));
       }
-      setConnectedDevice(null);
+      setConnectedDevices([]);
     }
   };
 
@@ -189,9 +208,10 @@ export default function useBLE(): BluetoothLowEnergyApi {
     scanForPeripherals,
     requestPermissions,
     connectToDevice,
+    connectToDevices,
     writeToDevice,
     allDevices,
-    connectedDevice,
+    connectedDevices,
     disconnectFromDevice,
     isScanning,
     isBluetoothSupported,

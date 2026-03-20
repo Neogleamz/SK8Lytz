@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Typography, Layout } from '../theme/theme';
 import ProductVisualizer from './ProductVisualizer';
 import CustomSlider from './CustomSlider';
@@ -108,14 +109,20 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
             style={[styles.tab, activeProduct === 'HALOZ' && styles.activeTab]} 
             onPress={() => setActiveProduct('HALOZ')}
           >
+            {activeProduct === 'HALOZ' && (
+              <LinearGradient colors={[Colors.primary, Colors.accent]} start={{x: 0, y: 0}} end={{x: 1, y: 1}} style={StyleSheet.absoluteFill} />
+            )}
             <Text style={[styles.tabText, activeProduct === 'HALOZ' && styles.activeTabText]}>
-              HALOZ
+               HALOZ
             </Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.tab, activeProduct === 'SOULZ' && styles.activeTab]} 
             onPress={() => setActiveProduct('SOULZ')}
           >
+            {activeProduct === 'SOULZ' && (
+              <LinearGradient colors={[Colors.secondary, Colors.accent]} start={{x: 0, y: 0}} end={{x: 1, y: 1}} style={StyleSheet.absoluteFill} />
+            )}
             <Text style={[styles.tabText, activeProduct === 'SOULZ' && styles.activeTabText]}>
               SOULZ
             </Text>
@@ -155,15 +162,22 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
               style={[
                 styles.modePill, 
                 { width: '31%', marginBottom: 8, paddingVertical: 10, alignSelf: 'stretch' },
-                activeMode === mode.id && styles.activeModePill
+                activeMode === mode.id && { borderWidth: 0, backgroundColor: 'transparent' }
               ]}
               onPress={() => setActiveMode(mode.id)}
             >
+              {activeMode === mode.id && (
+                <LinearGradient 
+                  colors={[Colors.primary, Colors.accent]} 
+                  start={{x: 0, y: 0}} end={{x: 1, y: 1}} 
+                  style={StyleSheet.absoluteFill} 
+                />
+              )}
               <Text 
                 style={[
                   styles.modePillText, 
                   activeMode === mode.id && styles.activeModePillText,
-                  { fontSize: 13, textAlign: 'center' }
+                  { fontSize: 13, textAlign: 'center', zIndex: 2 }
                 ]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
@@ -296,9 +310,10 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                       const hex = rgb2hex(f(5), f(3), f(1));
                       if (fixedColorMode === 'FOREGROUND') setFixedFgColor(hex);
                       else setFixedBgColor(hex);
-
-                      // Send to device
+                    }}
+                    onSlidingComplete={(hue) => {
                       if (writeToDevice) {
+                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
                         const r = Math.round(f(5) * 255);
                         const g = Math.round(f(3) * 255);
                         const b = Math.round(f(1) * 255);
@@ -316,15 +331,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     <Text style={{ color: Colors.textMuted, marginRight: 8 }}>☀️</Text>
                     <CustomSlider 
                       value={brightness}
-                      onValueChange={(val) => {
-                        setBrightness(val);
-                        if (writeToDevice) {
-                          // Brightness is handled differently in Zengge protocol depending on mode
-                          // For Fixed Color, we often just send setColor with scaled RGB
-                          // But Zengge also has specialized brightness commands.
-                          // For now, let's update brightness via the common protocol if it's RBM or setColor scaling.
-                        }
-                      }}
+                      onValueChange={setBrightness}
                       minimumValue={0}
                       maximumValue={100}
                       style={{ flex: 1 }}
@@ -338,10 +345,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     <Text style={{ color: Colors.textMuted, marginRight: 8 }}>🚀</Text>
                     <CustomSlider 
                       value={speed}
-                      onValueChange={(val) => {
-                        setSpeed(val);
+                      onValueChange={setSpeed}
+                      onSlidingComplete={(val) => {
                         if (writeToDevice) {
-                          // We are in FIXED mode block here, so we use Legacy Pattern
                           writeToDevice(ZenggeProtocol.setLegacyPattern(fixedPatternId, val));
                         }
                       }}
@@ -388,6 +394,11 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     <CustomSlider 
                       value={brightness}
                       onValueChange={setBrightness}
+                      onSlidingComplete={(val) => {
+                        if (writeToDevice) {
+                          writeToDevice(ZenggeProtocol.setRbmMode(selectedPatternId, speed, val));
+                        }
+                      }}
                       minimumValue={0}
                       maximumValue={100}
                     />
@@ -402,8 +413,8 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     </View>
                     <CustomSlider 
                       value={speed}
-                      onValueChange={(val) => {
-                        setSpeed(val);
+                      onValueChange={setSpeed}
+                      onSlidingComplete={(val) => {
                         if (writeToDevice) {
                           writeToDevice(ZenggeProtocol.setRbmMode(selectedPatternId, val, brightness));
                         }
@@ -531,6 +542,13 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   <CustomSlider 
                     value={musicSetting === 'SENSITIVITY' ? micSensitivity : brightness}
                     onValueChange={musicSetting === 'SENSITIVITY' ? setMicSensitivity : setBrightness}
+                    onSlidingComplete={(val) => {
+                      if (musicSetting === 'SENSITIVITY') {
+                        handleMusicChange(musicPatternId, val, brightness, micSource, musicMode);
+                      } else {
+                        handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicMode);
+                      }
+                    }}
                     minimumValue={0}
                     maximumValue={100}
                   />
@@ -599,6 +617,18 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   style={{ flex: 1, marginTop: 8 }}
                   value={speed}
                   onValueChange={setSpeed}
+                  onSlidingComplete={(val) => {
+                    if (writeToDevice) {
+                      const segmentColors = [
+                        { r: 255, g: 0, b: 0 },
+                        { r: 0, g: 255, b: 0 },
+                        { r: 0, g: 0, b: 255 },
+                        { r: 255, g: 255, b: 0 },
+                        { r: 0, g: 255, b: 255 }
+                      ];
+                      writeToDevice(ZenggeProtocol.setMultiColor(segmentColors, val, 1));
+                    }
+                  }}
                   minimumValue={0}
                   maximumValue={100}
                 />
@@ -664,32 +694,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: Colors.surfaceHighlight,
     borderRadius: Layout.borderRadius,
-    padding: 4,
-    marginBottom: 12,
+    padding: 6,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: Layout.borderRadius - 4,
+    borderRadius: Layout.borderRadius - 6,
+    overflow: 'hidden',
   },
   activeTab: {
-    backgroundColor: Colors.primary,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
   },
   tabText: {
     ...Typography.body,
     color: Colors.textMuted,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    letterSpacing: 1,
+    zIndex: 2,
   },
   activeTabText: {
-    color: Colors.text,
+    color: '#FFF',
   },
   controlsContainer: {
-    padding: 14,
-    backgroundColor: Colors.surface,
-    borderRadius: Layout.borderRadius,
+    padding: 16,
+    backgroundColor: 'rgba(21, 25, 40, 0.7)',
+    borderRadius: Layout.borderRadius + 4,
     borderWidth: 1,
-    borderColor: Colors.surfaceHighlight,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   modesScroll: {
     flexDirection: 'row',
@@ -698,15 +734,17 @@ const styles = StyleSheet.create({
   modePill: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: Layout.borderRadius,
     backgroundColor: Colors.background,
     marginRight: 12,
     borderWidth: 1,
-    borderColor: Colors.surfaceHighlight,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    overflow: 'hidden',
+    justifyContent: 'center',
   },
   activeModePill: {
-    backgroundColor: Colors.secondary,
-    borderColor: Colors.secondary,
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
   },
   modePillText: {
     color: Colors.textMuted,
