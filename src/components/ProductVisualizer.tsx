@@ -50,7 +50,7 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
 
   const leds = useMemo(() => {
     const list = [];
-    const numSamples = 500;
+    const numSamples = 5000; // Much higher density for a more precise arc-length measurement
     const pathSamples = [];
     let totalLength = 0;
     
@@ -61,7 +61,7 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
         let top = 0; let left = 0;
         
         if (product === 'HALOZ') {
-          const p = 0.6; // superellipse exponent
+          const p = 1.2; // Slightly more oval, less pointy than 0.6
           const sgnCos = Math.sign(Math.cos(angle)) || 1;
           const sgnSin = Math.sign(Math.sin(angle)) || 1;
           left = 80 + sgnCos * Math.pow(Math.abs(Math.cos(angle)), p) * 80;
@@ -83,30 +83,27 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
     }
 
     // 2. Sample evenly along the path
+    let lastSampleIdx = 0;
     for (let i = 0; i < numLeds; i++) {
         const targetLength = (i / numLeds) * totalLength;
-        let p1 = pathSamples[0];
-        let p2 = pathSamples[1];
+        let p1 = pathSamples[lastSampleIdx];
+        let p2 = pathSamples[lastSampleIdx + 1];
         
-        for (let j = 1; j <= numSamples; j++) {
-            if (pathSamples[j].length >= targetLength) {
-                p1 = pathSamples[j-1];
-                p2 = pathSamples[j];
+        // Linear search for the segment, starting from last found position for efficiency
+        for (let j = lastSampleIdx; j < numSamples; j++) {
+            if (pathSamples[j+1].length >= targetLength) {
+                p1 = pathSamples[j];
+                p2 = pathSamples[j+1];
+                lastSampleIdx = j;
                 break;
             }
         }
         
         const segmentLength = p2.length - p1.length;
-        const t = segmentLength === 0 ? 0 : (targetLength - p1.length) / segmentLength;
+        const t = segmentLength <= 0.0001 ? 0 : (targetLength - p1.length) / segmentLength;
         
-        const dotSize = product === 'HALOZ' ? 14 : 12;
-        const offset = dotSize / 2;
-        
-        const left = p1.left + (p2.left - p1.left) * t - offset;
-        const top = p1.top + (p2.top - p1.top) * t - offset;
-
         // Visual properties
-        const fract = i / numLeds;
+        const fract = (i / numLeds);
         const mirroredFract = fract <= 0.5 ? fract * 2 : (1 - fract) * 2;
         let dotColor: any = color;
         let dotOpacity: any = 1;
@@ -137,6 +134,11 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
            });
            dotColor = '#00FF00'; 
         }
+
+       const dotSize = product === 'HALOZ' ? 18 : 16; // Increased size for better diffusion overlap
+       const offset = dotSize / 2;
+       const left = p1.left + (p2.left - p1.left) * t - offset;
+       const top = p1.top + (p2.top - p1.top) * t - offset;
 
        list.push({
          key: `led_${i}`,
@@ -242,21 +244,21 @@ const styles = StyleSheet.create({
     width: 140, height: 300,
   },
   ledDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
-    shadowRadius: 18,
-    elevation: 12,
+    shadowRadius: 28,
+    elevation: 16,
   },
   ledDotSmall: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
-    shadowRadius: 15,
-    elevation: 10,
+    shadowRadius: 24,
+    elevation: 14,
   }
 });

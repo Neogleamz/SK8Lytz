@@ -47,8 +47,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "fab1cae6-3fd1-4a5f-83aa-ddb4ed84b5eb"
+        "projectId": "30f5cc5f-d918-40ea-b095-420e8355a3f8"
       }
-    }
+    },
+    "owner": "neogleamz"
   }
 }
