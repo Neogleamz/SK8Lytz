@@ -22,7 +22,10 @@ export default function CustomSlider({ value, onValueChange, minimumValue = 0, m
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
       onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
+      onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (evt, gestureState) => {
         // Record starting value
         startValRef.current = valueRef.current;

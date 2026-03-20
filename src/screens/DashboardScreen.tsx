@@ -204,8 +204,10 @@ export default function DashboardScreen() {
       <View style={styles.container}>
 
         <FlatList
+          style={{ flex: 1 }}
           ListHeaderComponent={
             <View style={{ paddingBottom: 16 }}>
+              <View style={{ paddingHorizontal: Layout.padding }}>
               <View style={[styles.card, isActuallyConnected ? { paddingVertical: 12, paddingHorizontal: 16 } : { padding: 16 }]}>
                 {isActuallyConnected ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -248,6 +250,7 @@ export default function DashboardScreen() {
                   </TouchableOpacity>
                 )}
               </View>
+              </View>
 
               {isActuallyConnected && (
                 <Sk8lytzController
@@ -260,6 +263,7 @@ export default function DashboardScreen() {
                 />
               )}
 
+              <View style={{ paddingHorizontal: Layout.padding }}>
               {!isBluetoothSupported && (
                 <View style={styles.errorContainer}>
                   <Text style={{ color: Colors.error, textAlign: 'center' }}>Bluetooth is not supported or powered on this device. (Are you running on a simulator?)</Text>
@@ -298,33 +302,36 @@ export default function DashboardScreen() {
                   </View>
                 </>
               )}
+              </View>
             </View>
           }
           data={!isActuallyConnected ? allDevices : []}
           extraData={updateTrigger}
           keyExtractor={(item) => item.id}
           renderItem={({ item }: { item: any }) => (
-            <DeviceItem
-              device={item}
-              isConnected={displayConnectedDevices.some(d => d.id === item.id)}
-              isSelectionMode={isSelectionMode}
-              isSelected={selectedIds.includes(item.id)}
-              onPress={() => {
-                if (isSelectionMode) {
-                  toggleSelect(item.id);
-                  return;
-                }
-                connectToDevice(item);
-                if (IS_BROWSER_DEMO) {
-                  setMockConnected(true);
-                  setMockConnectedDevice(item.id);
-                }
-              }}
-              onLongPress={() => {
-                openSettings(item);
-              }}
-              showGroupIcon={false}
-            />
+            <View style={{ paddingHorizontal: Layout.padding }}>
+              <DeviceItem
+                device={item}
+                isConnected={displayConnectedDevices.some(d => d.id === item.id)}
+                isSelectionMode={isSelectionMode}
+                isSelected={selectedIds.includes(item.id)}
+                onPress={() => {
+                  if (isSelectionMode) {
+                    toggleSelect(item.id);
+                    return;
+                  }
+                  connectToDevice(item);
+                  if (IS_BROWSER_DEMO) {
+                    setMockConnected(true);
+                    setMockConnectedDevice(item.id);
+                  }
+                }}
+                onLongPress={() => {
+                  openSettings(item);
+                }}
+                showGroupIcon={false}
+              />
+            </View>
           )}
           contentContainerStyle={{ paddingBottom: 100 }}
 
@@ -377,7 +384,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: Layout.padding,
+    paddingTop: 8,
   },
   card: {
     backgroundColor: Colors.surface,

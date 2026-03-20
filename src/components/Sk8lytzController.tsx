@@ -650,7 +650,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 0,
     paddingBottom: 20,
     paddingTop: 0,
   },
