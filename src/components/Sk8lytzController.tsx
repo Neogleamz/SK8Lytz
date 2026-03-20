@@ -6,6 +6,7 @@ import ProductVisualizer from './ProductVisualizer';
 import CustomSlider from './CustomSlider';
 import ArcPatternWheel from './ArcPatternWheel';
 import SpectrumVisualizer from './SpectrumVisualizer';
+import CameraTracker from './CameraTracker';
 import { getRbmPatternName } from '../constants/RbmPatterns';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -501,6 +502,23 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   </View>
                 </View>
               </View>
+            </View>
+          )}
+
+          {activeMode === 'CAMERA' && (
+            <View style={[styles.sceneContainer, { padding: 16, backgroundColor: 'transparent', borderWidth: 0 }]}>
+              <CameraTracker 
+                isActive={activeMode === 'CAMERA'} 
+                onColorDetected={(hex) => {
+                  setSelectedColor(hex);
+                  if (writeToDevice) {
+                    const r = parseInt(hex.substring(1, 3), 16);
+                    const g = parseInt(hex.substring(3, 5), 16);
+                    const b = parseInt(hex.substring(5, 7), 16);
+                    writeToDevice(ZenggeProtocol.setColor(r, g, b));
+                  }
+                }} 
+              />
             </View>
           )}
 

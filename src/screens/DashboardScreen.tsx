@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch } from 'react-native';
 import { Colors, Typography, Layout } from '../theme/theme';
 import Header from '../components/Header';
 import DeviceItem from '../components/DeviceItem';
@@ -26,6 +26,7 @@ export default function DashboardScreen() {
   const {
     scanForPeripherals,
     allDevices,
+    setAllDevices,
     connectToDevice,
     connectToDevices,
     connectedDevices,
@@ -296,15 +297,26 @@ export default function DashboardScreen() {
                       )}
                     </TouchableOpacity>
                     
-                    <TouchableOpacity
-                      style={[styles.scanButton, { marginTop: 12, backgroundColor: 'transparent', borderWidth: 1, borderColor: Colors.primary }]}
-                      onPress={() => {
-                        setMockConnected(true);
-                        setMockConnectedDevice(allDevices[0]?.id || 'mock-1');
-                      }}
-                    >
-                       <Text style={[styles.scanButtonText, { color: Colors.primary }]}>TEST DEMO DATA (NO BLUETOOTH)</Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16 }}>
+                      <Text style={{ color: Colors.text, marginRight: 12, fontWeight: 'bold' }}>Demo Mode (No Bluetooth)</Text>
+                      <Switch
+                        value={allDevices.some(d => d.id.startsWith('sim-'))}
+                        onValueChange={(val) => {
+                          if (!val) {
+                            setAllDevices(allDevices.filter(d => !d.id.startsWith('sim-')));
+                          } else {
+                            setAllDevices([...allDevices, 
+                              { id: 'sim-halo-1', name: 'HALOZ', points: 24 } as any,
+                              { id: 'sim-halo-2', name: 'HALOZ', points: 24 } as any,
+                              { id: 'sim-soul-1', name: 'SOULZ', points: 43 } as any,
+                              { id: 'sim-soul-2', name: 'SOULZ', points: 43 } as any,
+                            ]);
+                          }
+                        }}
+                        trackColor={{ false: 'rgba(255,255,255,0.1)', true: Colors.primary }}
+                        thumbColor={allDevices.some(d => d.id.startsWith('sim-')) ? '#000' : '#888'}
+                      />
+                    </View>
                   </View>
                 )}
               </View>
@@ -381,6 +393,11 @@ export default function DashboardScreen() {
                 onPress={() => {
                   if (isSelectionMode) {
                     toggleSelect(item.id);
+                    return;
+                  }
+                  if (item.id.startsWith('sim-')) {
+                    setMockConnected(true);
+                    setMockConnectedDevice(item.id);
                     return;
                   }
                   connectToDevice(item);

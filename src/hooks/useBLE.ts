@@ -22,6 +22,7 @@ interface BluetoothLowEnergyApi {
   writeToDevice: (payload: number[]) => Promise<void>;
   connectedDevices: Device[];
   allDevices: Device[];
+  setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   isScanning: boolean;
   isBluetoothSupported: boolean;
 }
@@ -100,16 +101,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
     setIsScanning(true);
     setAllDevices([]);
     
-    if (Platform.OS === 'web') {
-      setTimeout(() => {
-        setAllDevices([
-          { id: 'sim-halo-1', name: 'HALOZ' } as Device,
-          { id: 'sim-halo-2', name: 'HALOZ' } as Device,
-          { id: 'sim-soul-1', name: 'SOULZ' } as Device,
-          { id: 'sim-soul-2', name: 'SOULZ' } as Device,
-        ]);
-        setIsScanning(false);
-      }, 1500);
+    if (!bleManager) {
+      setTimeout(() => setIsScanning(false), 500);
       return;
     }
 
@@ -211,6 +204,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     connectToDevices,
     writeToDevice,
     allDevices,
+    setAllDevices,
     connectedDevices,
     disconnectFromDevice,
     isScanning,
