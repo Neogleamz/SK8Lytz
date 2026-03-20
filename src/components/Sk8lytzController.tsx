@@ -134,9 +134,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
       <View style={styles.visualizerWrapper}>
         <ProductVisualizer 
           product={activeProduct} 
-          color={activeMode === 'FIXED' ? (fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor) : selectedColor} 
+          color={activeMode === 'FIXED' ? (fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor) : (activeMode === 'MUSIC' ? "#" + [1-Math.max(Math.min((5 + musicHue / 60) % 6, 4 - ((5 + musicHue / 60) % 6), 1), 0), 1-Math.max(Math.min((3 + musicHue / 60) % 6, 4 - ((3 + musicHue / 60) % 6), 1), 0), 1-Math.max(Math.min((1 + musicHue / 60) % 6, 4 - ((1 + musicHue / 60) % 6), 1), 0)].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("") : selectedColor)} 
           mode={activeMode} 
-          patternId={selectedPatternId} 
+          patternId={activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'FIXED' ? fixedPatternId : selectedPatternId)} 
           isPaired={isPaired}
           points={points}
           devices={devices}
@@ -147,45 +147,57 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
       <Text style={[Typography.title, { marginBottom: 16, marginTop: 4, textAlign: 'center' }]}>SK8Lytz Controls</Text>
 
       <View style={styles.controlsContainer}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24 }}>
-          {[
-            { id: 'FIXED', label: 'Fixed' },
-            { id: 'RBM', label: 'Programs' },
-            { id: 'MUSIC', label: 'Music' },
-            { id: 'CAMERA', label: 'Camera' },
-            { id: 'MULTICOLOR', label: 'Multi' },
-            { id: 'CUSTOM', label: 'Custom' },
-            { id: 'PRESETS', label: 'Presets' }
-          ].map((mode: any) => (
-            <TouchableOpacity 
-              key={mode.id}
-              style={[
-                styles.modePill, 
-                { width: '31%', marginBottom: 8, paddingVertical: 10, alignSelf: 'stretch' },
-                activeMode === mode.id && { borderWidth: 0, backgroundColor: 'transparent' }
-              ]}
-              onPress={() => setActiveMode(mode.id)}
-            >
-              {activeMode === mode.id && (
-                <LinearGradient 
-                  colors={[Colors.primary, Colors.accent]} 
-                  start={{x: 0, y: 0}} end={{x: 1, y: 1}} 
-                  style={StyleSheet.absoluteFill} 
-                />
-              )}
-              <Text 
+        <View style={{ marginBottom: 24 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, gap: 12 }}>
+            {[
+              { id: 'FIXED', label: 'Fixed', icon: '🎨' },
+              { id: 'RBM', label: 'Programs', icon: '✨' },
+              { id: 'MUSIC', label: 'Music', icon: '🎵' },
+              { id: 'CAMERA', label: 'Camera', icon: '📸' },
+              { id: 'MULTICOLOR', label: 'Multi', icon: '🌈' },
+              { id: 'CUSTOM', label: 'DIY', icon: '⚙️' },
+              { id: 'PRESETS', label: 'Presets', icon: '🔥' }
+            ].map((mode: any) => (
+              <TouchableOpacity 
+                key={mode.id}
                 style={[
-                  styles.modePillText, 
-                  activeMode === mode.id && styles.activeModePillText,
-                  { fontSize: 13, textAlign: 'center', zIndex: 2 }
+                  styles.modePill, 
+                  { 
+                    width: 76, 
+                    height: 76, 
+                    paddingVertical: 12, 
+                    paddingHorizontal: 4, 
+                    marginRight: 0, 
+                    borderRadius: 16,
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    backgroundColor: activeMode === mode.id ? 'transparent' : Colors.background,
+                    borderWidth: activeMode === mode.id ? 0 : 1
+                  }
                 ]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
+                onPress={() => setActiveMode(mode.id)}
               >
-                {mode.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                {activeMode === mode.id && (
+                  <LinearGradient 
+                    colors={[Colors.primary, Colors.accent]} 
+                    start={{x: 0, y: 0}} end={{x: 1, y: 1}} 
+                    style={StyleSheet.absoluteFill} 
+                  />
+                )}
+                <Text style={{ fontSize: 24, marginBottom: 4, zIndex: 2 }}>{mode.icon}</Text>
+                <Text 
+                  style={[
+                    styles.modePillText, 
+                    activeMode === mode.id && styles.activeModePillText,
+                    { fontSize: 11, textAlign: 'center', zIndex: 2, fontWeight: activeMode === mode.id ? 'bold' : '600' }
+                  ]}
+                  numberOfLines={1}
+                >
+                  {mode.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
 
         <View style={styles.activeModeContainer}>
@@ -218,11 +230,35 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   { id: 2, label: 'Single Dot', dots: ['#00FFFF','transparent','transparent','transparent','transparent','transparent','transparent','transparent'] },
                   { id: 3, label: 'Comet', dots: ['#FF0000','rgba(255,0,0,0.6)','rgba(255,0,0,0.3)','rgba(255,0,0,0.1)','transparent','transparent','transparent','transparent'] },
                   { id: 4, label: 'Dashed', dots: ['#FFFF00','#FFFF00','transparent','transparent','#FFFF00','#FFFF00','transparent','transparent'] },
-                  { id: 5, label: 'Alternating', dots: ['#FF00FF','transparent','#FF00FF','transparent','#FFFFFF','transparent','#FFFFFF','transparent'] }
+                  { id: 5, label: 'Alternating', dots: ['#FF00FF','transparent','#FF00FF','transparent','#FFFFFF','transparent','#FFFFFF','transparent'] },
+                  { id: 6, label: 'Breath', dots: ['#00FF00', 'rgba(0,255,0,0.5)', 'transparent', 'rgba(0,255,0,0.5)', '#00FF00', 'rgba(0,255,0,0.5)', 'transparent', 'rgba(0,255,0,0.5)'] },
+                  { id: 7, label: 'Flash', dots: ['#00FFFF', 'transparent', '#00FFFF', 'transparent', '#00FFFF', 'transparent', '#00FFFF', 'transparent'] }
                 ].map(pattern => (
                   <TouchableOpacity 
                     key={pattern.id}
-                    onPress={() => setFixedPatternId(pattern.id)}
+                    onPress={() => {
+                      setFixedPatternId(pattern.id);
+                      if (writeToDevice) {
+                        const fgHex = fixedColorMode === 'FOREGROUND' ? fixedFgColor : (fixedFgColor || '#00FF00');
+                        const bgHex = fixedColorMode === 'BACKGROUND' ? fixedBgColor : (fixedBgColor || '#000000');
+                        const fg = { r: parseInt(fgHex.slice(1, 3), 16), g: parseInt(fgHex.slice(3, 5), 16), b: parseInt(fgHex.slice(5, 7), 16) };
+                        const bg = { r: parseInt(bgHex.slice(1, 3), 16), g: parseInt(bgHex.slice(3, 5), 16), b: parseInt(bgHex.slice(5, 7), 16) };
+                        if (pattern.id === 1) {
+                          writeToDevice(ZenggeProtocol.setColor(fg.r, fg.g, fg.b));
+                        } else if (pattern.id === 6) {
+                          writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 1, speed, color1: fg, color2: bg }, { mode: 1, speed, color1: bg, color2: fg }]));
+                        } else if (pattern.id === 7) {
+                          writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 2, speed, color1: fg, color2: bg }, { mode: 2, speed, color1: bg, color2: fg }]));
+                        } else {
+                          let arr: any[] = [];
+                          if (pattern.id === 2) arr = [fg, bg, bg, bg, bg, bg, bg, bg];
+                          if (pattern.id === 3) arr = [fg, {r: Math.floor(fg.r*0.5), g: Math.floor(fg.g*0.5), b: Math.floor(fg.b*0.5)}, {r: Math.floor(fg.r*0.2), g: Math.floor(fg.g*0.2), b: Math.floor(fg.b*0.2)}, bg, bg, bg];
+                          if (pattern.id === 4) arr = [fg, fg, fg, fg, bg, bg, bg, bg];
+                          if (pattern.id === 5) arr = [fg, fg, bg, bg];
+                          writeToDevice(ZenggeProtocol.setMultiColor(arr, speed, 1));
+                        }
+                      }
+                    }}
                     style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}
                   >
                     <Text style={{ marginRight: 12, fontSize: 18 }}>🎨</Text>
@@ -323,7 +359,27 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                       onValueChange={setSpeed}
                       onSlidingComplete={(val) => {
                         if (writeToDevice) {
-                          writeToDevice(ZenggeProtocol.setLegacyPattern(fixedPatternId, val));
+                          const fgHex = fixedColorMode === 'FOREGROUND' ? fixedFgColor : (fixedFgColor || '#00FF00');
+                          const bgHex = fixedColorMode === 'BACKGROUND' ? fixedBgColor : (fixedBgColor || '#000000');
+                          const fg = { r: parseInt(fgHex.slice(1, 3), 16), g: parseInt(fgHex.slice(3, 5), 16), b: parseInt(fgHex.slice(5, 7), 16) };
+                          const bg = { r: parseInt(bgHex.slice(1, 3), 16), g: parseInt(bgHex.slice(3, 5), 16), b: parseInt(bgHex.slice(5, 7), 16) };
+                          
+                          if (fixedPatternId === 1) {
+                            writeToDevice(ZenggeProtocol.setColor(fg.r, fg.g, fg.b));
+                          } else if (fixedPatternId === 6) { // Breath via 0x51 DIY (Mode 1: Gradual)
+                            const steps = [{ mode: 1, speed: val, color1: fg, color2: bg }, { mode: 1, speed: val, color1: bg, color2: fg }];
+                            writeToDevice(ZenggeProtocol.setCustomMode(steps));
+                          } else if (fixedPatternId === 7) { // Flash via 0x51 DIY (Mode 2: Jumping)
+                            const steps = [{ mode: 2, speed: val, color1: fg, color2: bg }, { mode: 2, speed: val, color1: bg, color2: fg }];
+                            writeToDevice(ZenggeProtocol.setCustomMode(steps));
+                          } else { // Segmented via 0x59 
+                            let arr: any[] = [];
+                            if (fixedPatternId === 2) arr = [fg, bg, bg, bg, bg, bg, bg, bg];
+                            if (fixedPatternId === 3) arr = [fg, {r: Math.floor(fg.r*0.5), g: Math.floor(fg.g*0.5), b: Math.floor(fg.b*0.5)}, {r: Math.floor(fg.r*0.2), g: Math.floor(fg.g*0.2), b: Math.floor(fg.b*0.2)}, bg, bg, bg];
+                            if (fixedPatternId === 4) arr = [fg, fg, fg, fg, bg, bg, bg, bg];
+                            if (fixedPatternId === 5) arr = [fg, fg, bg, bg];
+                            writeToDevice(ZenggeProtocol.setMultiColor(arr, val, 1));
+                          }
                         }
                       }}
                       minimumValue={0}
@@ -415,7 +471,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                 >
                   <Text style={[styles.musicToggleText, musicMode === 'SCREEN' && styles.musicToggleActiveText]}>LIGHT SCREEN MODE</Text>
                 </TouchableOpacity>
-                <View style={styles.musicModeIndicator}>
+                <View style={[styles.musicModeIndicator, { alignItems: 'center' }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <TouchableOpacity onPress={() => {
                       const pid = musicPatternId > 1 ? musicPatternId - 1 : 16;
@@ -435,6 +491,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                       <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold' }}>{'>'}</Text>
                     </TouchableOpacity>
                   </View>
+                  <Text style={[Typography.caption, { marginTop: 4, color: Colors.primary, fontWeight: '600' }]}>
+                    {MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`}
+                  </Text>
                 </View>
                 <TouchableOpacity 
                   style={[styles.musicToggleOption, musicMode === 'BAR' && styles.musicToggleActive]} 
@@ -660,7 +719,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   visualizerWrapper: {
-    transform: [{ scale: 1.15 }],
+    transform: [{ scale: 1.0 }],
     marginVertical: 4,
     alignItems: 'center',
     justifyContent: 'center',

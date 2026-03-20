@@ -17,6 +17,8 @@ interface ProductVisualizerProps {
   points?: number;
   devices?: DeviceConfig[];
   onLongPressDevice?: (device: any) => void;
+  fixedFgColor?: string;
+  fixedBgColor?: string;
 }
 
 // Convert HSL to Hex manually as React Native Interpolate handles strict string maps better
@@ -43,7 +45,7 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress }: any) => {
+const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor }: any) => {
   const product = device.type || fallbackProduct;
   const pointsPerSide = device.points || fallbackPoints || (product === 'HALOZ' ? 24 : 43);
   const numLeds = pointsPerSide * 2;
@@ -132,7 +134,36 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
               inputRange: [0, 0.5, 1],
               outputRange: [0.1, 1.0 - (mirroredFract * 0.5), 0.1]
            });
-           dotColor = '#00FF00'; 
+           dotColor = color; 
+        } else if (mode === 'FIXED') {
+           const fg = fixedFgColor || color;
+           const bg = fixedBgColor || '#000000';
+           
+           if (patternId === 1) { // Solid
+             dotColor = fg;
+           } else if (patternId === 2) { // Single Dot
+             dotOpacity = animValue.interpolate({
+                inputRange: [0, Math.max(0, mirroredFract - 0.1), mirroredFract, Math.min(1, mirroredFract + 0.1), 1],
+                outputRange: [0.1, 0.1, 1, 0.1, 0.1]
+             });
+             dotColor = fg;
+           } else if (patternId === 3) { // Comet
+             dotOpacity = animValue.interpolate({
+                inputRange: [0, Math.max(0, mirroredFract - 0.25), mirroredFract, Math.min(1, mirroredFract + 0.05), 1],
+                outputRange: [0.1, 0.1, 1, 0.1, 0.1]
+             });
+             dotColor = animValue.interpolate({ inputRange: [0, 1], outputRange: [fg, bg] });
+           } else if (patternId === 4) { // Dashed
+             dotColor = (i % 8 < 4) ? fg : bg;
+             dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.2, 1] });
+           } else if (patternId === 5) { // Alternating
+             dotColor = (i % 4 < 2) ? fg : bg;
+             dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.2, 1] });
+           } else if (patternId === 6) { // Breath
+             dotColor = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [fg, bg, fg] });
+           } else if (patternId === 7) { // Flash
+             dotColor = animValue.interpolate({ inputRange: [0, 0.49, 0.5, 0.99, 1], outputRange: [fg, fg, bg, bg, fg] });
+           }
         }
 
        const dotSize = product === 'HALOZ' ? 18 : 16; // Increased size for better diffusion overlap
@@ -174,15 +205,15 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
   );
 };
 
-export default function ProductVisualizer({ product, color, mode, patternId, isPaired, points, devices, onLongPressDevice }: ProductVisualizerProps) {
+export default function ProductVisualizer({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice }: ProductVisualizerProps) {
   const animValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     animValue.stopAnimation();
     
-    if (mode === 'PRESETS' || mode === 'RBM' || mode === 'MUSIC') {
+    if (mode === 'PRESETS' || mode === 'RBM' || mode === 'MUSIC' || mode === 'FIXED') {
       animValue.setValue(0);
-      const duration = (mode === 'MUSIC') ? 800 : (mode === 'RBM' ? 2000 : 3000);
+      const duration = (mode === 'MUSIC') ? 800 : (mode === 'RBM' ? 2000 : (mode === 'FIXED' ? 1500 : 3000));
       
       Animated.loop(
         Animated.timing(animValue, {
@@ -216,6 +247,8 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
              animValue={animValue}
              fallbackProduct={product}
              fallbackPoints={points}
+             fixedFgColor={fixedFgColor}
+             fixedBgColor={fixedBgColor}
              onLongPress={onLongPressDevice}
            />
          ))}
