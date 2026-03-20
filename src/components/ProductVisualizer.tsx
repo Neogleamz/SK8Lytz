@@ -130,11 +130,35 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
              dotColor = animValue.interpolate({ inputRange: [0, 1], outputRange: ['#FF0000', '#FFFF00'] });
            }
         } else if (mode === 'MUSIC') {
-           dotOpacity = animValue.interpolate({
-              inputRange: [0, 0.5, 1],
-              outputRange: [0.1, 1.0 - (mirroredFract * 0.5), 0.1]
-           });
-           dotColor = color; 
+           const h = 1 - mirroredFract; // Height mapping weighting
+           const colorVal = parseInt(color.replace('#',''), 16) || 0;
+           const r = (colorVal >> 16) & 255;
+           const g = (colorVal >> 8) & 255;
+           const b = colorVal & 255;
+           const compHex = '#' + ((255-r)<<16 | (255-g)<<8 | (255-b)).toString(16).padStart(6, '0');
+           
+           if (patternId === 1 || patternId === 2) { 
+             dotOpacity = animValue.interpolate({ 
+               inputRange: [0, 0.1, 0.5, 1], 
+               outputRange: [0.1, 1.0 * (h + 0.2), 0.5 * h, 0.1] 
+             });
+             dotColor = (h > 0.5) ? color : compHex;
+           } else if (patternId === 3 || patternId === 7) { 
+             dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.4, 1, 0.4] });
+             dotColor = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [color, compHex, color] });
+           } else if (patternId === 6 || patternId === 10) { 
+             dotOpacity = animValue.interpolate({ inputRange: [0, 0.2, 0.3, 1], outputRange: [0.1, 0.1, 1, 0.1] });
+             dotColor = color;
+           } else if (patternId === 8 || patternId === 9) { 
+             dotOpacity = animValue.interpolate({ inputRange: [0, 0.1, 0.2, 0.3, 1], outputRange: [0.2, 1, 0.2, 1, 0.2] });
+             dotColor = animValue.interpolate({ inputRange: [0, 1], outputRange: [color, compHex] });
+           } else { 
+             dotOpacity = animValue.interpolate({
+                inputRange: [0, Math.max(0, mirroredFract - 0.2), mirroredFract, Math.min(1, mirroredFract + 0.1), 1],
+                outputRange: [0.1, 0.1, 1, 0.1, 0.1]
+             });
+             dotColor = animValue.interpolate({ inputRange: [0, 1], outputRange: [color, compHex] });
+           }
         } else if (mode === 'FIXED') {
            const fg = fixedFgColor || color;
            const bg = fixedBgColor || '#000000';

@@ -67,16 +67,20 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     sens: number = micSensitivity,
     bright: number = brightness,
     src: 'APP' | 'DEVICE' = micSource,
-    mType: 'SCREEN' | 'BAR' = musicMode
+    mType: 'SCREEN' | 'BAR' = musicMode,
+    currentHue: number = musicHue
   ) => {
     if (!writeToDevice) return;
     
     const isDeviceMic = src === 'DEVICE';
     const modeTypeVal = mType === 'BAR' ? 0x26 : 0x27;
     
-    // Default colors for now
-    const c1 = { r: 255, g: 0, b: 0 };
-    const c2 = { r: 0, g: 0, b: 255 };
+    const f1 = (n: number, k = (n + currentHue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+    const c1 = { r: Math.round(f1(5) * 255), g: Math.round(f1(3) * 255), b: Math.round(f1(1) * 255) };
+    
+    const compHue = (currentHue + 180) % 360;
+    const f2 = (n: number, k = (n + compHue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+    const c2 = { r: Math.round(f2(5) * 255), g: Math.round(f2(3) * 255), b: Math.round(f2(1) * 255) };
     
     writeToDevice(ZenggeProtocol.setMusicConfig(
       isDeviceMic,
@@ -550,6 +554,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                    <CustomSlider 
                     value={musicHue}
                     onValueChange={setMusicHue}
+                    onSlidingComplete={(hue) => {
+                      handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicMode, hue);
+                    }}
                     minimumValue={0}
                     maximumValue={360}
                     style={{ position: 'absolute', width: '100%', height: 40 }}
