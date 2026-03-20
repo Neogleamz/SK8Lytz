@@ -1,10 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
-import * as ImageManipulator from 'expo-image-manipulator';
-import jpeg from 'jpeg-js';
 import { Buffer } from 'buffer';
 import { Colors } from '../theme/theme';
+
+let ImageManipulator: any = null;
+let jpeg: any = null;
+
+if (Platform.OS !== 'web') {
+  try {
+    ImageManipulator = require('expo-image-manipulator');
+    jpeg = require('jpeg-js');
+  } catch (e) {
+    console.warn("Optical native libraries bypassed on Web array.");
+  }
+}
 
 interface CameraTrackerProps {
   onColorDetected: (hex: string) => void;
@@ -15,9 +25,19 @@ interface CameraTrackerProps {
 const extractBase64Data = (uri: string) => uri.replace(/^data:image\/\w+;base64,/, '');
 
 export default function CameraTracker({ onColorDetected, isActive }: CameraTrackerProps) {
-  const [permission, requestPermission] = useCameraPermissions();
-  const [detectedHex, setDetectedHex] = useState<string>('#000000');
-  const cameraRef = useRef<CameraView>(null);
+  const [permission, requestPermission] = useCameraPermissions(); // Keep original permission hook
+  const [detectedHex, setDetectedHex] = useState<string>('#000000'); // Keep original state
+  const cameraRef = useRef<CameraView>(null); // Keep original ref type
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: Colors.text, textAlign: 'center', fontSize: 16 }}>
+          Camera Tracker Optical Telemetry is only supported on Native Android/iOS builds.
+        </Text>
+      </View>
+    );
+  }
 
   useEffect(() => {
     if (!isActive || !permission?.granted) return;
