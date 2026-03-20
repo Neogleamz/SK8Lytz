@@ -6,9 +6,10 @@ import CustomSlider from './CustomSlider';
 import ArcPatternWheel from './ArcPatternWheel';
 import SpectrumVisualizer from './SpectrumVisualizer';
 import { getRbmPatternName } from '../constants/RbmPatterns';
+import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 
 type ProductType = 'HALOZ' | 'SOULZ';
-type ModeType = 'PRESETS' | 'FIXED' | 'RBM' | 'MUSIC' | 'CAMERA' | 'CUSTOM';
+type ModeType = 'PRESETS' | 'FIXED' | 'RBM' | 'MUSIC' | 'CAMERA' | 'CUSTOM' | 'MULTICOLOR';
 
 const MUSIC_PATTERNS = [
   'Energetic',
@@ -30,9 +31,10 @@ interface Sk8lytzControllerProps {
   points?: number;
   devices?: any[];
   onLongPressDevice?: (device: any) => void;
+  writeToDevice?: (payload: number[]) => Promise<void>;
 }
 
-export default function Sk8lytzController({ lockedProduct, isPaired, points, devices, onLongPressDevice }: Sk8lytzControllerProps) {
+export default function Sk8lytzController({ lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice }: Sk8lytzControllerProps) {
   const [activeProduct, setActiveProduct] = useState<ProductType>(lockedProduct || 'HALOZ');
   const [activeMode, setActiveMode] = useState<ModeType>('PRESETS');
   const [selectedColor, setSelectedColor] = useState<string>('#00F0FF');
@@ -59,12 +61,40 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     }
   }, [lockedProduct]);
 
+  const handleMusicChange = (
+    patternId: number = musicPatternId,
+    sens: number = micSensitivity,
+    bright: number = brightness,
+    src: 'APP' | 'DEVICE' = micSource,
+    mType: 'SCREEN' | 'BAR' = musicMode
+  ) => {
+    if (!writeToDevice) return;
+    
+    const isDeviceMic = src === 'DEVICE';
+    const modeTypeVal = mType === 'BAR' ? 0x26 : 0x27;
+    
+    // Default colors for now
+    const c1 = { r: 255, g: 0, b: 0 };
+    const c2 = { r: 0, g: 0, b: 255 };
+    
+    writeToDevice(ZenggeProtocol.setMusicConfig(
+      isDeviceMic,
+      modeTypeVal,
+      patternId,
+      c1,
+      c2,
+      sens,
+      bright
+    ));
+  };
+
   const modes: { id: ModeType; label: string }[] = [
     { id: 'PRESETS', label: 'Neogleamz Presets' },
     { id: 'FIXED', label: 'Fixed Colors' },
     { id: 'RBM', label: '100+ RBM Modes' },
     { id: 'MUSIC', label: 'Music Sync' },
     { id: 'CAMERA', label: 'Camera Color' },
+    { id: 'MULTICOLOR', label: 'Multi-color' },
     { id: 'CUSTOM', label: 'Custom' }
   ];
 
@@ -116,6 +146,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
             { id: 'RBM', label: 'Programs' },
             { id: 'MUSIC', label: 'Music' },
             { id: 'CAMERA', label: 'Camera' },
+            { id: 'MULTICOLOR', label: 'Multi' },
             { id: 'CUSTOM', label: 'Custom' },
             { id: 'PRESETS', label: 'Presets' }
           ].map((mode: any) => (
@@ -153,7 +184,10 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                 {activeProduct === 'HALOZ' ? (
                   <TouchableOpacity 
                     style={[styles.presetCard, { borderColor: Colors.primary }]}
-                    onPress={() => setSelectedColor('#FF0000')}
+                    onPress={() => {
+                    setSelectedColor('#FF0000');
+                    if (writeToDevice) writeToDevice(ZenggeProtocol.setColor(255, 0, 0));
+                  }}
                   >
                     <Text style={styles.presetTitle}>HALOZ Rainbow Flow</Text>
                     <Text style={styles.presetDesc}>Continuous 360° full-spectrum color chase simulating individual WS2812B LEDs moving at moderate speed.</Text>
@@ -162,14 +196,20 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   <>
                     <TouchableOpacity 
                       style={[styles.presetCard, { borderColor: Colors.secondary, marginBottom: 12 }]}
-                      onPress={() => setSelectedColor('#00FFFF')}
+                      onPress={() => {
+                        setSelectedColor('#00FFFF');
+                        if (writeToDevice) writeToDevice(ZenggeProtocol.setColor(0, 255, 255));
+                      }}
                     >
                       <Text style={styles.presetTitle}>SOULZ Cyan Pulse</Text>
                       <Text style={styles.presetDesc}>Slow, breathing ice-cyan sequence cascading across your addressable underglow LEDs.</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                       style={[styles.presetCard, { borderColor: Colors.primary }]}
-                      onPress={() => setSelectedColor('#FF0000')}
+                      onPress={() => {
+                        setSelectedColor('#FF0000');
+                        if (writeToDevice) writeToDevice(ZenggeProtocol.setColor(255, 0, 0));
+                      }}
                     >
                       <Text style={styles.presetTitle}>SOULZ Rainbow Flow</Text>
                       <Text style={styles.presetDesc}>Continuous full-spectrum color chase simulating individual addressable LEDs moving at moderate speed.</Text>
@@ -226,7 +266,15 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                 {['#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#FFFFFF'].map(color => (
                   <TouchableOpacity 
                     key={color} 
-                    onPress={() => fixedColorMode === 'FOREGROUND' ? setFixedFgColor(color) : setFixedBgColor(color)}
+                    onPress={() => {
+                      const newColor = fixedColorMode === 'FOREGROUND' ? setFixedFgColor(color) : setFixedBgColor(color);
+                      if (writeToDevice) {
+                        const r = parseInt(color.slice(1, 3), 16);
+                        const g = parseInt(color.slice(3, 5), 16);
+                        const b = parseInt(color.slice(5, 7), 16);
+                        writeToDevice(ZenggeProtocol.setColor(r, g, b));
+                      }
+                    }}
                     style={[
                       styles.colorButton, 
                       { backgroundColor: color, flex: 1, marginHorizontal: 2, height: 40, borderRadius: 4 },
@@ -248,6 +296,14 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                       const hex = rgb2hex(f(5), f(3), f(1));
                       if (fixedColorMode === 'FOREGROUND') setFixedFgColor(hex);
                       else setFixedBgColor(hex);
+
+                      // Send to device
+                      if (writeToDevice) {
+                        const r = Math.round(f(5) * 255);
+                        const g = Math.round(f(3) * 255);
+                        const b = Math.round(f(1) * 255);
+                        writeToDevice(ZenggeProtocol.setColor(r, g, b));
+                      }
                     }}
                     minimumValue={0}
                     maximumValue={360}
@@ -260,7 +316,15 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     <Text style={{ color: Colors.textMuted, marginRight: 8 }}>☀️</Text>
                     <CustomSlider 
                       value={brightness}
-                      onValueChange={setBrightness}
+                      onValueChange={(val) => {
+                        setBrightness(val);
+                        if (writeToDevice) {
+                          // Brightness is handled differently in Zengge protocol depending on mode
+                          // For Fixed Color, we often just send setColor with scaled RGB
+                          // But Zengge also has specialized brightness commands.
+                          // For now, let's update brightness via the common protocol if it's RBM or setColor scaling.
+                        }
+                      }}
                       minimumValue={0}
                       maximumValue={100}
                       style={{ flex: 1 }}
@@ -274,7 +338,13 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     <Text style={{ color: Colors.textMuted, marginRight: 8 }}>🚀</Text>
                     <CustomSlider 
                       value={speed}
-                      onValueChange={setSpeed}
+                      onValueChange={(val) => {
+                        setSpeed(val);
+                        if (writeToDevice) {
+                          // We are in FIXED mode block here, so we use Legacy Pattern
+                          writeToDevice(ZenggeProtocol.setLegacyPattern(fixedPatternId, val));
+                        }
+                      }}
                       minimumValue={0}
                       maximumValue={100}
                       style={{ flex: 1 }}
@@ -296,7 +366,12 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
               <View style={styles.rbmWheelSection}>
                 <ArcPatternWheel 
                   value={selectedPatternId} 
-                  onValueChange={setSelectedPatternId} 
+                  onValueChange={(pid) => {
+                    setSelectedPatternId(pid);
+                    if (writeToDevice) {
+                      writeToDevice(ZenggeProtocol.setRbmMode(pid, speed, brightness));
+                    }
+                  }} 
                   min={1} 
                   max={100} 
                   itemLabel={(item: number) => getRbmPatternName(item)}
@@ -327,7 +402,12 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     </View>
                     <CustomSlider 
                       value={speed}
-                      onValueChange={setSpeed}
+                      onValueChange={(val) => {
+                        setSpeed(val);
+                        if (writeToDevice) {
+                          writeToDevice(ZenggeProtocol.setRbmMode(selectedPatternId, val, brightness));
+                        }
+                      }}
                       minimumValue={0}
                       maximumValue={100}
                     />
@@ -342,32 +422,40 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
               <View style={styles.musicToggleHeader}>
                 <TouchableOpacity 
                   style={[styles.musicToggleOption, musicMode === 'SCREEN' && styles.musicToggleActive]} 
-                  onPress={() => setMusicModeState('SCREEN')}
+                  onPress={() => {
+                    setMusicModeState('SCREEN');
+                    handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, 'SCREEN');
+                  }}
                 >
                   <Text style={[styles.musicToggleText, musicMode === 'SCREEN' && styles.musicToggleActiveText]}>LIGHT SCREEN MODE</Text>
                 </TouchableOpacity>
                 <View style={styles.musicModeIndicator}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <TouchableOpacity onPress={() => setMusicPatternId(prev => (prev > 1 ? prev - 1 : 10))} style={{ paddingHorizontal: 16 }}>
+                    <TouchableOpacity onPress={() => {
+                      const pid = musicPatternId > 1 ? musicPatternId - 1 : 16;
+                      setMusicPatternId(pid);
+                      handleMusicChange(pid);
+                    }} style={{ paddingHorizontal: 10 }}>
                       <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold' }}>{'<'}</Text>
                     </TouchableOpacity>
                     <View style={styles.musicModeCircle}>
                       <Text style={[styles.musicModeNumber, { fontSize: 16 }]}>{musicPatternId}</Text>
-                      <View style={styles.musicModeRefresh}>
-                        <Text style={{ color: '#000', fontSize: 10, fontWeight: 'bold' }}>↺</Text>
-                      </View>
                     </View>
-                    <TouchableOpacity onPress={() => setMusicPatternId(prev => (prev < 10 ? prev + 1 : 1))} style={{ paddingHorizontal: 16 }}>
+                    <TouchableOpacity onPress={() => {
+                      const pid = musicPatternId < 16 ? musicPatternId + 1 : 1;
+                      setMusicPatternId(pid);
+                      handleMusicChange(pid);
+                    }} style={{ paddingHorizontal: 10 }}>
                       <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold' }}>{'>'}</Text>
                     </TouchableOpacity>
                   </View>
-                  <Text style={{ color: Colors.primary, fontSize: 12, marginTop: 8, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 }}>
-                    {MUSIC_PATTERNS[musicPatternId - 1]}
-                  </Text>
                 </View>
                 <TouchableOpacity 
                   style={[styles.musicToggleOption, musicMode === 'BAR' && styles.musicToggleActive]} 
-                  onPress={() => setMusicModeState('BAR')}
+                  onPress={() => {
+                    setMusicModeState('BAR');
+                    handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, 'BAR');
+                  }}
                 >
                   <Text style={[styles.musicToggleText, musicMode === 'BAR' && styles.musicToggleActiveText]}>LIGHT BAR MODE</Text>
                 </TouchableOpacity>
@@ -455,34 +543,102 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
             <View style={{ marginBottom: 16 }}>
               <Text style={Typography.title}>Camera Color Picker</Text>
               <Text style={[Typography.caption, { marginTop: 8 }]}>Point your camera at any object to extract real-time ambient color.</Text>
-              <TouchableOpacity style={[styles.presetCard, { marginTop: 16, alignItems: 'center', justifyContent: 'center', paddingVertical: 16 }]} >
-                <Text style={[Typography.body, { color: Colors.primary, fontWeight: 'bold' }]}>+ Open Camera</Text>
+              <TouchableOpacity 
+                style={[styles.presetCard, { marginTop: 16, alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderLeftColor: Colors.primary }]} 
+                onPress={() => {
+                  // Simulate camera color update
+                  const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#00FFFF', '#FF00FF'];
+                  const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                  const r = parseInt(randomColor.slice(1, 3), 16);
+                  const g = parseInt(randomColor.slice(3, 5), 16);
+                  const b = parseInt(randomColor.slice(5, 7), 16);
+                  if (writeToDevice) writeToDevice(ZenggeProtocol.setColor(r, g, b));
+                }}
+              >
+                <Text style={[Typography.body, { color: Colors.primary, fontWeight: 'bold' }]}>📸 Extract Ambient Color</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          {activeMode === 'CUSTOM' && (
+          {activeMode === 'MULTICOLOR' && (
             <View style={{ marginBottom: 16 }}>
-              <Text style={Typography.title}>Custom Pattern Builder</Text>
-              <Text style={[Typography.caption, { marginTop: 8 }]}>Create your own LED sequences.</Text>
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
-                <TouchableOpacity style={styles.colorButton} />
-                <TouchableOpacity style={[styles.colorButton, { backgroundColor: '#FF00FF' }]} />
-                <TouchableOpacity style={[styles.colorButton, { backgroundColor: '#00FFFF' }]} />
-                <TouchableOpacity style={[styles.colorButton, { backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' }]}>
-                  <Text style={{ color: Colors.textMuted }}>+</Text>
-                </TouchableOpacity>
+              <Text style={Typography.title}>Multi-color Segments</Text>
+              <Text style={[Typography.caption, { marginTop: 8 }]}>Set unique colors for different parts of your boards.</Text>
+              
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+                {[1, 2, 3, 4, 5, 6, 7].map((seg) => (
+                  <TouchableOpacity 
+                    key={seg} 
+                    style={[styles.colorButton, { backgroundColor: seg === 1 ? '#FF0000' : (seg === 2 ? '#00FF00' : '#0000FF'), width: 40, height: 40, borderRadius: 20 }]} 
+                  />
+                ))}
               </View>
+
+              <TouchableOpacity 
+                style={[styles.presetCard, { marginTop: 20, borderLeftColor: Colors.secondary }]}
+                onPress={() => {
+                  if (writeToDevice) {
+                    const segmentColors = [
+                      { r: 255, g: 0, b: 0 },
+                      { r: 0, g: 255, b: 0 },
+                      { r: 0, g: 0, b: 255 },
+                      { r: 255, g: 255, b: 0 },
+                      { r: 0, g: 255, b: 255 }
+                    ];
+                    writeToDevice(ZenggeProtocol.setMultiColor(segmentColors, speed, 1));
+                  }
+                }}
+              >
+                <Text style={styles.presetTitle}>Apply Segmented Scene</Text>
+                <Text style={styles.presetDesc}>Push these colors to your controllers synchronously.</Text>
+              </TouchableOpacity>
+
               <View style={styles.controlRow}>
-                <Text style={Typography.caption}>Sequence Speed</Text>
+                <Text style={Typography.caption}>Movement Speed</Text>
                 <CustomSlider 
-                  style={{ flex: 1, marginLeft: 16 }}
+                  style={{ flex: 1, marginTop: 8 }}
                   value={speed}
                   onValueChange={setSpeed}
                   minimumValue={0}
                   maximumValue={100}
                 />
               </View>
+            </View>
+          )}
+
+          {activeMode === 'CUSTOM' && (
+            <View style={{ marginBottom: 16 }}>
+              <Text style={Typography.title}>DIY Pattern Builder</Text>
+              <Text style={[Typography.caption, { marginTop: 8 }]}>Stack up to 32 animated steps for a custom light show.</Text>
+              
+              <View style={{ backgroundColor: Colors.surfaceHighlight, borderRadius: 8, padding: 12, marginTop: 16, marginBottom: 12 }}>
+                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#FF0000', marginRight: 12 }} />
+                    <Text style={{ color: '#FFF', flex: 1 }}>Step 1: Gradual Red</Text>
+                    <Text style={{ color: Colors.textMuted }}>65%</Text>
+                 </View>
+                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#0000FF', marginRight: 12 }} />
+                    <Text style={{ color: '#FFF', flex: 1 }}>Step 2: Jumping Blue</Text>
+                    <Text style={{ color: Colors.textMuted }}>40%</Text>
+                 </View>
+              </View>
+
+              <TouchableOpacity 
+                style={[styles.presetCard, { borderLeftColor: Colors.primary }]}
+                onPress={() => {
+                  if (writeToDevice) {
+                    const steps = [
+                      { mode: 1, speed: 60, color1: { r: 255, g: 0, b: 0 }, color2: { r: 0, g: 0, b: 0 } },
+                      { mode: 2, speed: 40, color1: { r: 0, g: 0, b: 255 }, color2: { r: 0, g: 0, b: 0 } }
+                    ];
+                    writeToDevice(ZenggeProtocol.setCustomMode(steps));
+                  }
+                }}
+              >
+                <Text style={styles.presetTitle}>Save & Sync DIY</Text>
+                <Text style={styles.presetDesc}>Flash this sequence to the controller's permanent memory.</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>

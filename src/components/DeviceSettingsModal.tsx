@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
 import { Colors, Typography, Layout } from '../theme/theme';
+import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 
 interface DeviceSettings {
   name: string;
@@ -20,9 +21,10 @@ interface DeviceSettingsModalProps {
   onSave: (settings: DeviceSettings) => void;
   initialSettings: DeviceSettings;
   groups?: any[];
+  writeToDevice?: (payload: number[]) => Promise<void>;
 }
 
-export default function DeviceSettingsModal({ isVisible, onClose, onSave, initialSettings, groups }: DeviceSettingsModalProps) {
+export default function DeviceSettingsModal({ isVisible, onClose, onSave, initialSettings, groups, writeToDevice }: DeviceSettingsModalProps) {
   const [settings, setSettings] = useState<DeviceSettings>(initialSettings);
   const [namePreset, setNamePreset] = useState<string>(
     initialSettings.name.includes('Left') ? 'Left Skate' : (initialSettings.name.includes('Right') ? 'Right Skate' : 'Manual')
@@ -35,6 +37,17 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
 
   const handleSave = () => {
     onSave(settings);
+    
+    // Sync to hardware
+    if (writeToDevice) {
+      const payload = ZenggeProtocol.setHardwareConfig(
+        settings.points,
+        settings.sorting,
+        settings.stripType
+      );
+      writeToDevice(payload);
+    }
+    
     onClose();
   };
 

@@ -28,6 +28,7 @@ export default function DashboardScreen() {
     connectToDevice,
     connectedDevice,
     disconnectFromDevice,
+    writeToDevice,
     isScanning,
     isBluetoothSupported,
     requestPermissions
@@ -255,6 +256,7 @@ export default function DashboardScreen() {
                   points={(displayConnectedDevices[0] as any).points}
                   devices={displayConnectedDevices}
                   onLongPressDevice={(device) => openSettings(device)}
+                  writeToDevice={writeToDevice}
                 />
               )}
 
@@ -340,6 +342,7 @@ export default function DashboardScreen() {
           isVisible={isSettingsVisible}
           onClose={() => setIsSettingsVisible(false)}
           onSave={saveSettings}
+          writeToDevice={writeToDevice}
           initialSettings={{
             name: selectedDeviceForSettings?.name || 'SOULZ',
             type: (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'),

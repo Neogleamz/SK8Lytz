@@ -41,16 +41,107 @@ export class ZenggeProtocol {
   }
 
   /**
-   * Music Sync Mode (Firmware 0x56)
-   * Sensitivity 0-100, Brightness 0-100
+   * Music Sync Mode (Config)
+   * @param isDeviceMic true for Device Mic, false for App Mic
+   * @param modeType 0x26 for Light Bar, 0x27 for Light Screen
+   * @param patternId 1-16
    */
-  static setMusicMode(sensitivity: number, brightness: number, colorType: number = 1): number[] {
+  static setMusicConfig(
+    isDeviceMic: boolean,
+    modeType: number,
+    patternId: number,
+    color1: {r: number, g: number, b: number},
+    color2: {r: number, g: number, b: number},
+    sensitivity: number,
+    brightness: number
+  ): number[] {
     const counter = this.getCounterBytes();
-    const header = [...counter, 0x80, 0x00, 0x00, 0x0d, 0x0e, 0x0b];
-    // 73 00 26 [type] ff 00 00 ff 00 00 20 [sensitivity] [brightness]
-    const payload = [0x73, 0x00, 0x26, colorType, 0xff, 0x00, 0x00, 0xff, 0x00, 0x00, 0x20, sensitivity, brightness];
+    const payload = [
+      0x73, 
+      isDeviceMic ? 0x01 : 0x00, 
+      modeType, 
+      patternId, 
+      color1.r, color1.g, color1.b, 
+      color2.r, color2.g, color2.b, 
+      0x20, 
+      sensitivity, 
+      brightness
+    ];
     const checksum = this.calculateChecksum(payload);
+    const header = [...counter, 0x80, 0x00, 0x00, 0x0d, 0x0e, 0x0b];
     return [...header, ...payload, checksum];
+  }
+
+  /**
+   * Send Music Magnitude for App Mic (Live Data)
+   */
+  static sendMusicMagnitude(magnitude: number): number[] {
+    const counter = this.getCounterBytes();
+    const payload = [0x74, magnitude];
+    const checksum = this.calculateChecksum(payload);
+    const header = [...counter, 0x80, 0x00, 0x00, 0x02, 0x03, 0x0b];
+    return [...header, ...payload, checksum];
+  }
+
+  /**
+   * Multi-color / Segmented Mode (0x59)
+   */
+  static setMultiColor(colors: {r: number, g: number, b: number}[], speed: number, direction: number): number[] {
+    const numPoints = colors.length;
+    const totalLen = (numPoints * 3) + 9;
+    const payload = new Array(totalLen);
+    payload[0] = 0x59;
+    payload[1] = (totalLen >> 8) & 0xFF;
+    payload[2] = totalLen & 0xFF;
+    let idx = 3;
+    for (const c of colors) {
+      payload[idx++] = c.r;
+      payload[idx++] = c.g;
+      payload[idx++] = c.b;
+    }
+    payload[idx++] = (numPoints >> 8) & 0xFF;
+    payload[idx++] = numPoints & 0xFF;
+    payload[idx++] = 0x00; // Type
+    payload[idx++] = speed;
+    payload[idx++] = direction;
+    payload[idx] = this.calculateChecksum(payload.slice(0, totalLen - 1));
+
+    const counter = this.getCounterBytes();
+    const header = [...counter, 0x80, 0x00, 0x00, (totalLen >> 8) & 0xFF, (totalLen & 0xFF) + 1, 0x0b];
+    return [...header, ...payload];
+  }
+
+  /**
+   * Custom DIY Pattern Mode (0x51)
+   * Up to 32 steps. Each step: [active, mode, speed, r1, g1, b1, r2, g2, b2]
+   */
+  static setCustomMode(steps: {mode: number, speed: number, color1: {r: number, g: number, b: number}, color2: {r: number, g: number, b: number}}[]): number[] {
+    const payload = new Array(291).fill(0);
+    payload[0] = 0x51;
+    let idx = 1;
+    for (let i = 0; i < 32; i++) {
+        if (i < steps.length) {
+            const step = steps[i];
+            payload[idx++] = 0xf0; // Active
+            payload[idx++] = step.mode;
+            payload[idx++] = step.speed;
+            payload[idx++] = step.color1.r;
+            payload[idx++] = step.color1.g;
+            payload[idx++] = step.color1.b;
+            payload[idx++] = step.color2.r;
+            payload[idx++] = step.color2.g;
+            payload[idx++] = step.color2.b;
+        } else {
+            payload[idx++] = 0x0f; // Inactive
+            idx += 8; // Fill with 0
+        }
+    }
+    payload[289] = 0x0f; // Final byte
+    payload[290] = this.calculateChecksum(payload.slice(0, 290));
+
+    const counter = this.getCounterBytes();
+    const header = [...counter, 0x80, 0x00, 0x00, 0x01, 0x24, 0x0b]; // 0x0124 = 292 total (header 6 bytes?)
+    return [...header, ...payload];
   }
 
   /**

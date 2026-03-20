@@ -46,6 +46,8 @@ ZENGGE*.xapk
 ZENGGE*.zip
 app_strings.txt
 extract.js
+jadx_src_*/
+jadx_main/
 
 # Large media (keep GIFs, exclude raw video)
 *.mp4
