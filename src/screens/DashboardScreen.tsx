@@ -74,6 +74,55 @@ export default function DashboardScreen() {
       .catch(e => console.warn('AsyncStorage error configs', e));
   }, []);
 
+  useEffect(() => {
+    const soulzDevices = allDevices.filter(d => {
+      const p = (d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16);
+      return p >= 20;
+    });
+
+    if (soulzDevices.length >= 2) {
+      AsyncStorage.getItem('ng_auto_grouped').then(hasGrouped => {
+        if (!hasGrouped) {
+          const leftId = soulzDevices[0].id;
+          const rightId = soulzDevices[1].id;
+
+          // Auto-Group "my roller skates"
+          const newGroupId = `group-${Date.now()}`;
+          const newGroup = {
+            id: newGroupId,
+            name: 'my roller skates',
+            deviceIds: [leftId, rightId],
+            type: 'SOULZ'
+          };
+          
+          const updatedGroups = [...customGroups, newGroup];
+          setCustomGroups(updatedGroups);
+          AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups));
+
+          // Set Configs to Left / Right
+          AsyncStorage.getItem('ng_device_configs').then(res => {
+            let configs: any = {};
+            if (res) {
+              try { configs = JSON.parse(res); } catch(e) {}
+            }
+            
+            configs[leftId] = { ...configs[leftId], name: 'Left', type: 'SOULZ', points: 43 };
+            configs[rightId] = { ...configs[rightId], name: 'Right', type: 'SOULZ', points: 43 };
+            
+            AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
+            AsyncStorage.setItem('ng_auto_grouped', 'true');
+            
+            setAllDevices(allDevices.map(d => {
+              if (d.id === leftId) return { ...d, name: 'Left', points: 43 } as any;
+              if (d.id === rightId) return { ...d, name: 'Right', points: 43 } as any;
+              return d;
+            }));
+          });
+        }
+      });
+    }
+  }, [allDevices, customGroups, setAllDevices]);
+
   const displayConnectedDevices = useMemo(() => {
     if (!mockConnected) return connectedDevices;
 
