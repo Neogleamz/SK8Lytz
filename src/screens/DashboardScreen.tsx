@@ -52,6 +52,7 @@ export default function DashboardScreen() {
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(false);
+  const [isWaitingForScanResolution, setIsWaitingForScanResolution] = useState(false);
 
   const [demoHaloQueued, setDemoHaloQueued] = useState(false);
   const [demoSoulQueued, setDemoSoulQueued] = useState(false);
@@ -61,6 +62,7 @@ export default function DashboardScreen() {
       if (granted) {
         AsyncStorage.removeItem('ng_processed_devices');
         scanForPeripherals();
+        setIsWaitingForScanResolution(true);
         setTimeout(() => {
           setAllDevices(prev => {
             let newDevices = [...prev];
@@ -106,9 +108,10 @@ export default function DashboardScreen() {
   }, []);
 
   useEffect(() => {
-    if (isScanning || allDevices.length === 0) return;
+    if (isScanning || !isWaitingForScanResolution || allDevices.length === 0) return;
 
     const processAutoGrouping = async () => {
+      setIsWaitingForScanResolution(false);
       const soulzDevices = allDevices.filter(d => ((d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16)) >= 20);
       const halozDevices = allDevices.filter(d => ((d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16)) < 20);
       
@@ -185,7 +188,7 @@ export default function DashboardScreen() {
       }
     };
     processAutoGrouping();
-  }, [allDevices, customGroups, isScanning]);
+  }, [allDevices, customGroups, isScanning, isWaitingForScanResolution]);
 
   const displayConnectedDevices = useMemo(() => {
     if (!mockConnected) return connectedDevices;
