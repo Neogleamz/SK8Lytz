@@ -161,7 +161,7 @@ export default function DashboardScreen() {
         }
       };
 
-      checkAndGroup(soulzDevices, 'SOULZ', 'SOULZ', 43);
+      checkAndGroup(soulzDevices, 'SOULZ Roller Skate Lights', 'SOULZ', 43);
       checkAndGroup(halozDevices, 'HALOZ Roller Skate Lights', 'HALOZ', 16);
 
       if (didUpdateProcessed) await AsyncStorage.setItem('ng_processed_devices', JSON.stringify(processed));
