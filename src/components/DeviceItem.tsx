@@ -49,7 +49,15 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
           {showGroupIcon && <Text style={{ fontSize: 18, marginRight: 8 }}>👥</Text>}
           <Text style={Typography.title}>{device.name || `SK8 - ${(device.id || '').replace(/:/g, '').slice(-6).toUpperCase()}`}</Text>
         </View>
-        <Text style={[Typography.caption, isSelectionMode && { marginLeft: 34 }, {marginTop: 4}]}>{device.id} {device.rssi ? `• ${device.rssi} dBm` : ''}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+          {isSelectionMode && <View style={{ width: 34 }} />}
+          <Text style={[Typography.caption, { color: Colors.textMuted }]}>
+            {device.isGroup 
+              ? `${(device as any).deviceIds?.length || 0} Devices` 
+              : `MAC: ${device.id.toUpperCase()} ${device.rssi ? ` | RSSI: ${device.rssi} dBm` : ''}`
+            }
+          </Text>
+        </View>
       </View>
       <View style={styles.status}>
         <Text style={[

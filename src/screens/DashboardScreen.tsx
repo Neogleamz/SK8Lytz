@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch } from 'react-native';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform } from 'react-native';
 import { Colors, Typography, Layout } from '../theme/theme';
 import Header from '../components/Header';
 import DeviceItem from '../components/DeviceItem';
@@ -52,18 +52,12 @@ export default function DashboardScreen() {
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(false);
-  const [isWaitingForScanResolution, setIsWaitingForScanResolution] = useState(false);
   const lastProcessedRef = React.useRef<string>('');
   const allDevicesRef = React.useRef(allDevices);
   const customGroupsRef = React.useRef(customGroups);
+  const isProvisioningTriggered = React.useRef(false);
 
-  useEffect(() => {
-    allDevicesRef.current = allDevices;
-  }, [allDevices]);
-
-  useEffect(() => {
-    customGroupsRef.current = customGroups;
-  }, [customGroups]);
+  // Refs are now updated manually in setters to avoid reactive loops
 
   const [demoHaloQueued, setDemoHaloQueued] = useState(false);
   const [demoSoulQueued, setDemoSoulQueued] = useState(false);
@@ -71,35 +65,47 @@ export default function DashboardScreen() {
   const handleScan = () => {
     requestPermissions().then((granted) => {
       if (granted) {
+        console.log('[SK8Lytz] Manual Scan Initiated');
+        isProvisioningTriggered.current = true;
         AsyncStorage.removeItem('ng_processed_devices');
         lastProcessedRef.current = '';
+        allDevicesRef.current = []; // Clear ref immediately
+        
         scanForPeripherals();
-        // Delay resolution flag to ensure isScanning hook flips true first
-        setTimeout(() => {
-          setIsWaitingForScanResolution(true);
-        }, 50);
         
         setTimeout(() => {
           setAllDevices(prev => {
             let newDevices = [...prev];
-            if (demoHaloQueued && !newDevices.some(d => d.id.startsWith('sim-halo'))) {
-              newDevices.push(
-                { id: 'sim-halo-1', name: 'HALOZ', points: 16 } as any, 
-                { id: 'sim-halo-2', name: 'HALOZ', points: 16 } as any
-              );
+            const haloIds = ['sim-halo-1', 'sim-halo-2'];
+            const soulIds = ['sim-soul-1', 'sim-soul-2'];
+            
+            if (demoHaloQueued) {
+              haloIds.forEach((id, idx) => {
+                if (!newDevices.some(d => d.id === id)) {
+                  newDevices.push({ id, name: `HALOZ ${idx === 0 ? 'Left' : 'Right'} Skate`, points: 16, rssi: -45 - Math.floor(Math.random() * 20) } as any);
+                }
+              });
             }
-            if (demoSoulQueued && !newDevices.some(d => d.id.startsWith('sim-soul'))) {
-              newDevices.push(
-                { id: 'sim-soul-1', name: 'SOULZ', points: 43 } as any, 
-                { id: 'sim-soul-2', name: 'SOULZ', points: 43 } as any
-              );
+            if (demoSoulQueued) {
+              soulIds.forEach((id, idx) => {
+                if (!newDevices.some(d => d.id === id)) {
+                  newDevices.push({ id, name: `SOULZ ${idx === 0 ? 'Left' : 'Right'} Skate`, points: 43, rssi: -42 - Math.floor(Math.random() * 20) } as any);
+                }
+              });
             }
+            allDevicesRef.current = newDevices;
             return newDevices;
           });
         }, 150);
+
+        const waitTime = Platform.OS === 'web' ? 1800 : 7000;
+        setTimeout(() => {
+          runAutoProvisioning();
+        }, waitTime);
       }
     });
   };
+
 
   useEffect(() => {
     AsyncStorage.getItem('ng_custom_groups')
@@ -123,97 +129,111 @@ export default function DashboardScreen() {
       .catch(e => console.warn('AsyncStorage error configs', e));
   }, []);
 
-  useEffect(() => {
-    if (isScanning || !isWaitingForScanResolution || allDevicesRef.current.length === 0) return;
+  const runAutoProvisioning = useCallback(async () => {
+    if (!isProvisioningTriggered.current) return;
+    isProvisioningTriggered.current = false;
 
-    const currentIds = allDevicesRef.current.map(d => d.id).sort().join(',');
-    if (lastProcessedRef.current === currentIds) return;
+    console.log('[SK8Lytz] Provisioning...');
+    const currentDevices = allDevicesRef.current;
+    if (currentDevices.length === 0) return;
 
-    const processAutoGrouping = async () => {
-      setIsWaitingForScanResolution(false);
-      lastProcessedRef.current = currentIds;
+    const soulzDevices = currentDevices.filter(d => ((d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16)) >= 20);
+    const halozDevices = currentDevices.filter(d => ((d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16)) < 20);
+    
+    let updatedGroups = [...customGroupsRef.current];
+    let didUpdateGroups = false;
+    let didUpdateConfigs = false;
+    
+    const [resConfigs, resProcessed] = await Promise.all([
+      AsyncStorage.getItem('ng_device_configs'),
+      AsyncStorage.getItem('ng_processed_devices')
+    ]);
 
-      const soulzDevices = allDevicesRef.current.filter(d => ((d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16)) >= 20);
-      const halozDevices = allDevicesRef.current.filter(d => ((d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16)) < 20);
-      
-      let updatedGroups = [...customGroupsRef.current];
-      let didUpdateGroups = false;
-      let didUpdateConfigs = false;
-      
-      const resConfigs = await AsyncStorage.getItem('ng_device_configs');
-      let configs: any = {};
-      if (resConfigs) { try { configs = JSON.parse(resConfigs); } catch(e) {} }
+    let configs: any = {};
+    if (resConfigs) { try { configs = JSON.parse(resConfigs); } catch(e) {} }
 
-      const resProcessed = await AsyncStorage.getItem('ng_processed_devices');
-      let processed: string[] = [];
-      if (resProcessed) { try { processed = JSON.parse(resProcessed); } catch(e) {} }
-      let didUpdateProcessed = false;
-      
-      const checkAndGroup = (devices: any[], targetName: string, typeVal: 'HALOZ' | 'SOULZ', pointsVal: number) => {
-        // Only target devices that are NOT in the 'processed' tracking AND NOT in any existing group
-        const unprocessed = devices.filter(d => 
-          !processed.includes(d.id) && 
-          !updatedGroups.some(g => g.deviceIds.includes(d.id))
-        );
+    let processed: string[] = [];
+    if (resProcessed) { try { processed = JSON.parse(resProcessed); } catch(e) {} }
+    let didUpdateProcessed = false;
+    
+    const checkAndGroup = (devicesToProcess: any[], targetGroupName: string, typeVal: 'HALOZ' | 'SOULZ', pointsVal: number) => {
+      const unprocessed = devicesToProcess.filter(d => 
+        !processed.includes(d.id) && 
+        !updatedGroups.some(g => g.deviceIds.includes(d.id))
+      );
 
-        if (unprocessed.length >= 2) {
-          const leftId = unprocessed[0].id;
-          const rightId = unprocessed[1].id;
-          
-          processed.push(leftId, rightId);
-          didUpdateProcessed = true;
+      if (unprocessed.length >= 2) {
+        const leftId = unprocessed[0].id;
+        const rightId = unprocessed[1].id;
+        processed.push(leftId, rightId);
+        didUpdateProcessed = true;
 
-          const existingGroupIndex = updatedGroups.findIndex(g => g.name === targetName);
-          
-          if (existingGroupIndex > -1) {
-            let changed = false;
-            if (!updatedGroups[existingGroupIndex].deviceIds.includes(leftId)) { updatedGroups[existingGroupIndex].deviceIds.push(leftId); changed = true; }
-            if (!updatedGroups[existingGroupIndex].deviceIds.includes(rightId)) { updatedGroups[existingGroupIndex].deviceIds.push(rightId); changed = true; }
-            if (changed) didUpdateGroups = true;
-          } else {
-            updatedGroups.push({
-              id: `group-${Date.now()}-${typeVal}`,
-              name: targetName,
-              deviceIds: [leftId, rightId],
-              type: typeVal
-            });
+        const existingGroupIndex = updatedGroups.findIndex(g => g.name === targetGroupName);
+        if (existingGroupIndex > -1) {
+          let target = updatedGroups[existingGroupIndex];
+          if (!target.deviceIds.includes(leftId) || !target.deviceIds.includes(rightId)) {
+            const newIds = Array.from(new Set([...target.deviceIds, leftId, rightId]));
+            updatedGroups[existingGroupIndex] = { ...target, deviceIds: newIds };
             didUpdateGroups = true;
           }
-          
-          if (!configs[leftId]) {
-            configs[leftId] = { ...configs[leftId], name: `${typeVal} Left Skate`, type: typeVal, points: pointsVal };
-            didUpdateConfigs = true;
-          }
-          if (!configs[rightId]) {
-            configs[rightId] = { ...configs[rightId], name: `${typeVal} Right Skate`, type: typeVal, points: pointsVal };
-            didUpdateConfigs = true;
-          }
+        } else {
+          updatedGroups.push({
+            id: `group-${Date.now()}-${typeVal}-${Math.floor(Math.random() * 1000)}`,
+            name: targetGroupName,
+            deviceIds: [leftId, rightId],
+            type: typeVal,
+            isGroup: true
+          });
+          didUpdateGroups = true;
         }
-      };
-
-      checkAndGroup(soulzDevices, 'SOULZ Roller Skate Lights', 'SOULZ', 43);
-      checkAndGroup(halozDevices, 'HALOZ Roller Skate Lights', 'HALOZ', 16);
-
-      if (didUpdateProcessed) await AsyncStorage.setItem('ng_processed_devices', JSON.stringify(processed));
-
-      if (didUpdateGroups) {
-        setCustomGroups(updatedGroups);
-        await AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups));
-        setIsDeviceListCollapsed(true);
-      }
-      if (didUpdateConfigs) {
-        await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
-        setAllDevices(prev => prev.map(d => {
-           const c = configs[d.id];
-           if (c && d.name !== c.name) {
-             return { ...d, name: c.name, points: c.points } as any;
-           }
-           return d;
-        }));
+        
+        const names = [`${typeVal} Left Skate`, `${typeVal} Right Skate`];
+        [leftId, rightId].forEach((id, idx) => {
+          if (!configs[id] || configs[id].name !== names[idx]) {
+            configs[id] = { ...configs[id], name: names[idx], type: typeVal, points: pointsVal };
+            didUpdateConfigs = true;
+          }
+        });
       }
     };
-    processAutoGrouping();
-  }, [isScanning, isWaitingForScanResolution]);
+
+    checkAndGroup(soulzDevices, 'SOULZ Roller Skate Lights', 'SOULZ', 43);
+    checkAndGroup(halozDevices, 'HALOZ Roller Skate Lights', 'HALOZ', 16);
+
+    const storagePromises = [];
+    if (didUpdateProcessed) storagePromises.push(AsyncStorage.setItem('ng_processed_devices', JSON.stringify(processed)));
+    if (didUpdateGroups) storagePromises.push(AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups)));
+    if (didUpdateConfigs) storagePromises.push(AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs)));
+    if (storagePromises.length > 0) await Promise.all(storagePromises);
+
+    if (didUpdateGroups) {
+      customGroupsRef.current = updatedGroups;
+      setCustomGroups(updatedGroups);
+    }
+    
+    if (didUpdateConfigs) {
+      setAllDevices(prev => {
+        let morphed = false;
+        const next = prev.map(d => {
+          const c = configs[d.id];
+          if (c && d.name !== c.name) {
+            morphed = true;
+            return { ...d, name: c.name, points: c.points } as any;
+          }
+          return d;
+        });
+        if (morphed) allDevicesRef.current = next;
+        return morphed ? next : prev;
+      });
+    }
+    
+    // Explicitly collapse to focus on grouped controls
+    setIsDeviceListCollapsed(true);
+    console.log('[SK8Lytz] Provisioning Complete.');
+  }, []);
+
+
+
 
 
 
@@ -321,11 +341,7 @@ export default function DashboardScreen() {
 
   const saveSettings = async (settings: DeviceSettings) => {
     if (selectedDeviceForSettings) {
-      selectedDeviceForSettings.name = settings.name;
-      selectedDeviceForSettings.type = settings.type;
-      selectedDeviceForSettings.points = settings.points;
-      selectedDeviceForSettings.grouped = settings.grouped;
-      
+      // Avoid direct mutations, use functional state updates instead
       let finalGroupId = settings.groupId;
 
       // Capture implicit group associations assigned through the Hardware settings modal
@@ -358,16 +374,15 @@ export default function DashboardScreen() {
           AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups)).catch(() => {});
       }
 
-      setAllDevices(prev => prev.map(d => 
-        d.id === selectedDeviceForSettings.id 
-          ? { ...d, name: settings.name, type: settings.type, points: settings.points, groupId: finalGroupId } 
-          : d
-      ));
-      
-      selectedDeviceForSettings.groupId = finalGroupId;
-      selectedDeviceForSettings.name = settings.name;
-      selectedDeviceForSettings.type = settings.type;
-      selectedDeviceForSettings.points = settings.points;
+      setAllDevices(prev => {
+        const next = prev.map(d => 
+          d.id === selectedDeviceForSettings.id 
+            ? { ...d, name: settings.name, type: settings.type, points: settings.points, groupId: finalGroupId } 
+            : d
+        );
+        allDevicesRef.current = next;
+        return next;
+      });
       
       setUpdateTrigger(prev => prev + 1);
 
@@ -380,6 +395,56 @@ export default function DashboardScreen() {
     }
     setIsSettingsVisible(false);
   };
+
+  const MemoizedSk8lytzController = useMemo(() => {
+    if (!isActuallyConnected) return null;
+    return (
+      <Sk8lytzController
+        lockedProduct={
+          (displayConnectedDevices[0] as any)?.type || 
+          ((displayConnectedDevices[0] as any)?.points 
+            ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
+            : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
+        }
+        isPaired={isGrouped}
+        points={(displayConnectedDevices[0] as any).points}
+        devices={displayConnectedDevices}
+        onLongPressDevice={openSettings}
+        writeToDevice={writeToDevice}
+      />
+    );
+  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice]);
+
+  const renderItem = useCallback(({ item }: { item: any }) => (
+    <View style={{ paddingHorizontal: Layout.padding }}>
+      <DeviceItem
+        device={item}
+        isConnected={displayConnectedDevices.some(d => d.id === item.id)}
+        isSelectionMode={isSelectionMode}
+        isSelected={selectedIds.includes(item.id)}
+        onPress={() => {
+          if (isSelectionMode) {
+            toggleSelect(item.id);
+            return;
+          }
+          if (item.id.startsWith('sim-')) {
+            setMockConnected(true);
+            setMockConnectedDevice(item.id);
+            return;
+          }
+          connectToDevice(item);
+          if (IS_BROWSER_DEMO) {
+            setMockConnected(true);
+            setMockConnectedDevice(item.id);
+          }
+        }}
+        onLongPress={() => {
+          openSettings(item);
+        }}
+        showGroupIcon={false}
+      />
+    </View>
+  ), [displayConnectedDevices, isSelectionMode, selectedIds]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -459,21 +524,7 @@ export default function DashboardScreen() {
               </View>
               </View>
 
-              {isActuallyConnected && (
-                <Sk8lytzController
-                  lockedProduct={
-                    (displayConnectedDevices[0] as any)?.type || 
-                    ((displayConnectedDevices[0] as any)?.points 
-                      ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
-                      : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
-                  }
-                  isPaired={isGrouped}
-                  points={(displayConnectedDevices[0] as any).points}
-                  devices={displayConnectedDevices}
-                  onLongPressDevice={(device) => openSettings(device)}
-                  writeToDevice={writeToDevice}
-                />
-              )}
+              {MemoizedSk8lytzController}
 
               <View style={{ paddingHorizontal: Layout.padding }}>
               {!isBluetoothSupported && (
@@ -530,38 +581,8 @@ export default function DashboardScreen() {
             </View>
           }
           data={(!isActuallyConnected && !isDeviceListCollapsed) ? allDevices : []}
-          extraData={[updateTrigger, isDeviceListCollapsed]}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }: { item: any }) => (
-            <View style={{ paddingHorizontal: Layout.padding }}>
-              <DeviceItem
-                device={item}
-                isConnected={displayConnectedDevices.some(d => d.id === item.id)}
-                isSelectionMode={isSelectionMode}
-                isSelected={selectedIds.includes(item.id)}
-                onPress={() => {
-                  if (isSelectionMode) {
-                    toggleSelect(item.id);
-                    return;
-                  }
-                  if (item.id.startsWith('sim-')) {
-                    setMockConnected(true);
-                    setMockConnectedDevice(item.id);
-                    return;
-                  }
-                  connectToDevice(item);
-                  if (IS_BROWSER_DEMO) {
-                    setMockConnected(true);
-                    setMockConnectedDevice(item.id);
-                  }
-                }}
-                onLongPress={() => {
-                  openSettings(item);
-                }}
-                showGroupIcon={false}
-              />
-            </View>
-          )}
+          renderItem={renderItem}
           contentContainerStyle={{ paddingBottom: 100 }}
 
           ListEmptyComponent={
