@@ -54,30 +54,32 @@ export default function DashboardScreen() {
 
   const [demoHaloQueued, setDemoHaloQueued] = useState(false);
   const [demoSoulQueued, setDemoSoulQueued] = useState(false);
-  const prevIsScanningRef = useRef(isScanning);
 
-  const handleScanPress = () => {
-    scanForPeripherals();
+  const handleScan = () => {
+    requestPermissions().then((granted) => {
+      if (granted) {
+        scanForPeripherals();
+        setTimeout(() => {
+          setAllDevices(prev => {
+            let newDevices = [...prev];
+            if (demoHaloQueued && !newDevices.some(d => d.id.startsWith('sim-halo'))) {
+              newDevices.push(
+                { id: 'sim-halo-1', name: 'HALOZ', points: 16 } as any, 
+                { id: 'sim-halo-2', name: 'HALOZ', points: 16 } as any
+              );
+            }
+            if (demoSoulQueued && !newDevices.some(d => d.id.startsWith('sim-soul'))) {
+              newDevices.push(
+                { id: 'sim-soul-1', name: 'SOULZ', points: 43 } as any, 
+                { id: 'sim-soul-2', name: 'SOULZ', points: 43 } as any
+              );
+            }
+            return newDevices;
+          });
+        }, 100);
+      }
+    });
   };
-
-  useEffect(() => {
-    if (prevIsScanningRef.current === true && isScanning === false) {
-      setAllDevices(prev => {
-        let newDevices = [...prev];
-        let changed = false;
-        if (demoHaloQueued && !newDevices.some(d => d.id.startsWith('sim-halo'))) {
-          newDevices.push({ id: 'sim-halo-1', name: 'HALOZ', points: 16 } as any, { id: 'sim-halo-2', name: 'HALOZ', points: 16 } as any);
-          changed = true;
-        }
-        if (demoSoulQueued && !newDevices.some(d => d.id.startsWith('sim-soul'))) {
-          newDevices.push({ id: 'sim-soul-1', name: 'SOULZ', points: 43 } as any, { id: 'sim-soul-2', name: 'SOULZ', points: 43 } as any);
-          changed = true;
-        }
-        return changed ? newDevices : prev;
-      });
-    }
-    prevIsScanningRef.current = isScanning;
-  }, [isScanning, demoHaloQueued, demoSoulQueued, setAllDevices]);
 
   useEffect(() => {
     AsyncStorage.getItem('ng_custom_groups')
@@ -159,7 +161,7 @@ export default function DashboardScreen() {
         }
       };
 
-      checkAndGroup(soulzDevices, 'SOULZ Roller Skate Lights', 'SOULZ', 43);
+      checkAndGroup(soulzDevices, 'SOULZ', 'SOULZ', 43);
       checkAndGroup(halozDevices, 'HALOZ Roller Skate Lights', 'HALOZ', 16);
 
       if (didUpdateProcessed) await AsyncStorage.setItem('ng_processed_devices', JSON.stringify(processed));
@@ -275,13 +277,6 @@ export default function DashboardScreen() {
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [selectedDeviceForSettings, setSelectedDeviceForSettings] = useState<any>(null);
 
-  const handleScan = () => {
-    requestPermissions().then((granted) => {
-      if (granted) {
-        scanForPeripherals();
-      }
-    });
-  };
 
   const openSettings = (device: any) => {
     setSelectedDeviceForSettings(device);
