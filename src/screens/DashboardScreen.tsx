@@ -53,6 +53,17 @@ export default function DashboardScreen() {
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(false);
   const [isWaitingForScanResolution, setIsWaitingForScanResolution] = useState(false);
+  const lastProcessedRef = React.useRef<string>('');
+  const allDevicesRef = React.useRef(allDevices);
+  const customGroupsRef = React.useRef(customGroups);
+
+  useEffect(() => {
+    allDevicesRef.current = allDevices;
+  }, [allDevices]);
+
+  useEffect(() => {
+    customGroupsRef.current = customGroups;
+  }, [customGroups]);
 
   const [demoHaloQueued, setDemoHaloQueued] = useState(false);
   const [demoSoulQueued, setDemoSoulQueued] = useState(false);
@@ -61,8 +72,13 @@ export default function DashboardScreen() {
     requestPermissions().then((granted) => {
       if (granted) {
         AsyncStorage.removeItem('ng_processed_devices');
+        lastProcessedRef.current = '';
         scanForPeripherals();
-        setIsWaitingForScanResolution(true);
+        // Delay resolution flag to ensure isScanning hook flips true first
+        setTimeout(() => {
+          setIsWaitingForScanResolution(true);
+        }, 50);
+        
         setTimeout(() => {
           setAllDevices(prev => {
             let newDevices = [...prev];
@@ -80,7 +96,7 @@ export default function DashboardScreen() {
             }
             return newDevices;
           });
-        }, 100);
+        }, 150);
       }
     });
   };
@@ -108,14 +124,19 @@ export default function DashboardScreen() {
   }, []);
 
   useEffect(() => {
-    if (isScanning || !isWaitingForScanResolution || allDevices.length === 0) return;
+    if (isScanning || !isWaitingForScanResolution || allDevicesRef.current.length === 0) return;
+
+    const currentIds = allDevicesRef.current.map(d => d.id).sort().join(',');
+    if (lastProcessedRef.current === currentIds) return;
 
     const processAutoGrouping = async () => {
       setIsWaitingForScanResolution(false);
-      const soulzDevices = allDevices.filter(d => ((d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16)) >= 20);
-      const halozDevices = allDevices.filter(d => ((d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16)) < 20);
+      lastProcessedRef.current = currentIds;
+
+      const soulzDevices = allDevicesRef.current.filter(d => ((d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16)) >= 20);
+      const halozDevices = allDevicesRef.current.filter(d => ((d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16)) < 20);
       
-      let updatedGroups = [...customGroups];
+      let updatedGroups = [...customGroupsRef.current];
       let didUpdateGroups = false;
       let didUpdateConfigs = false;
       
@@ -129,7 +150,11 @@ export default function DashboardScreen() {
       let didUpdateProcessed = false;
       
       const checkAndGroup = (devices: any[], targetName: string, typeVal: 'HALOZ' | 'SOULZ', pointsVal: number) => {
-        const unprocessed = devices.filter(d => !processed.includes(d.id));
+        // Only target devices that are NOT in the 'processed' tracking AND NOT in any existing group
+        const unprocessed = devices.filter(d => 
+          !processed.includes(d.id) && 
+          !updatedGroups.some(g => g.deviceIds.includes(d.id))
+        );
 
         if (unprocessed.length >= 2) {
           const leftId = unprocessed[0].id;
@@ -188,7 +213,9 @@ export default function DashboardScreen() {
       }
     };
     processAutoGrouping();
-  }, [allDevices, customGroups, isScanning, isWaitingForScanResolution]);
+  }, [isScanning, isWaitingForScanResolution]);
+
+
 
   const displayConnectedDevices = useMemo(() => {
     if (!mockConnected) return connectedDevices;
