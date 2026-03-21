@@ -51,6 +51,7 @@ export default function DashboardScreen() {
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(false);
 
   const [demoHaloQueued, setDemoHaloQueued] = useState(false);
   const [demoSoulQueued, setDemoSoulQueued] = useState(false);
@@ -169,6 +170,7 @@ export default function DashboardScreen() {
       if (didUpdateGroups) {
         setCustomGroups(updatedGroups);
         await AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups));
+        setIsDeviceListCollapsed(true);
       }
       if (didUpdateConfigs) {
         await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
@@ -482,16 +484,23 @@ export default function DashboardScreen() {
 
               {!isActuallyConnected && (
                 <>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, marginBottom: 12, paddingHorizontal: 4 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12, paddingHorizontal: 4 }}>
                     <Text style={Typography.title}>Available Devices</Text>
+                    {allDevices.length > 0 && (
+                      <TouchableOpacity onPress={() => setIsDeviceListCollapsed(!isDeviceListCollapsed)}>
+                        <Text style={{ color: Colors.primary, fontWeight: 'bold', fontSize: 12 }}>
+                          {isDeviceListCollapsed ? 'SHOW ALL' : 'HIDE'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </>
               )}
               </View>
             </View>
           }
-          data={!isActuallyConnected ? allDevices : []}
-          extraData={updateTrigger}
+          data={(!isActuallyConnected && !isDeviceListCollapsed) ? allDevices : []}
+          extraData={[updateTrigger, isDeviceListCollapsed]}
           keyExtractor={(item) => item.id}
           renderItem={({ item }: { item: any }) => (
             <View style={{ paddingHorizontal: Layout.padding }}>
@@ -526,7 +535,7 @@ export default function DashboardScreen() {
           contentContainerStyle={{ paddingBottom: 100 }}
 
           ListEmptyComponent={
-            !isActuallyConnected ? (
+            (!isActuallyConnected && !isDeviceListCollapsed) ? (
               <View style={styles.emptyStateContainer}>
                 <Text style={Typography.caption}>
                   {isScanning ? 'Scanning...' : 'No devices found.'}
