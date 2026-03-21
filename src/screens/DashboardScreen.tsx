@@ -151,11 +151,11 @@ export default function DashboardScreen() {
           }
           
           if (!configs[leftId]) {
-            configs[leftId] = { ...configs[leftId], name: 'Left', type: typeVal, points: pointsVal };
+            configs[leftId] = { ...configs[leftId], name: `${typeVal} Left`, type: typeVal, points: pointsVal };
             didUpdateConfigs = true;
           }
           if (!configs[rightId]) {
-            configs[rightId] = { ...configs[rightId], name: 'Right', type: typeVal, points: pointsVal };
+            configs[rightId] = { ...configs[rightId], name: `${typeVal} Right`, type: typeVal, points: pointsVal };
             didUpdateConfigs = true;
           }
         }
@@ -173,6 +173,10 @@ export default function DashboardScreen() {
       if (didUpdateConfigs) {
         await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
         setAllDevices(prev => prev.map(d => {
+           if (d.id === soulzDevices[0]?.id && !configs[d.id]) return { ...d, name: 'SOULZ Left', points: 43 } as any;
+           if (d.id === soulzDevices[1]?.id && !configs[d.id]) return { ...d, name: 'SOULZ Right', points: 43 } as any;
+           if (d.id === halozDevices[0]?.id && !configs[d.id]) return { ...d, name: 'HALOZ Left', points: 16 } as any;
+           if (d.id === halozDevices[1]?.id && !configs[d.id]) return { ...d, name: 'HALOZ Right', points: 16 } as any;
            if (configs[d.id]) return { ...d, name: configs[d.id].name, points: configs[d.id].points } as any;
            return d;
         }));
