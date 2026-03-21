@@ -51,7 +51,26 @@ export default function DashboardScreen() {
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
-  
+
+  const [demoHaloQueued, setDemoHaloQueued] = useState(false);
+  const [demoSoulQueued, setDemoSoulQueued] = useState(false);
+
+  const handleScanPress = () => {
+    scanForPeripherals();
+    setTimeout(() => {
+      setAllDevices(prev => {
+        let newDevices = [...prev];
+        if (demoHaloQueued && !newDevices.some(d => d.id.startsWith('sim-halo'))) {
+          newDevices.push({ id: 'sim-halo-1', name: 'HALOZ', points: 16 } as any, { id: 'sim-halo-2', name: 'HALOZ', points: 16 } as any);
+        }
+        if (demoSoulQueued && !newDevices.some(d => d.id.startsWith('sim-soul'))) {
+          newDevices.push({ id: 'sim-soul-1', name: 'SOULZ', points: 43 } as any, { id: 'sim-soul-2', name: 'SOULZ', points: 43 } as any);
+        }
+        return newDevices;
+      });
+    }, 100);
+  };
+
   useEffect(() => {
     AsyncStorage.getItem('ng_custom_groups')
       .then(res => {
@@ -75,53 +94,82 @@ export default function DashboardScreen() {
   }, []);
 
   useEffect(() => {
-    const soulzDevices = allDevices.filter(d => {
-      const p = (d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16);
-      return p >= 20;
-    });
+    if (isScanning || allDevices.length === 0) return;
 
-    if (soulzDevices.length >= 2) {
-      AsyncStorage.getItem('ng_auto_grouped').then(hasGrouped => {
-        if (!hasGrouped) {
-          const leftId = soulzDevices[0].id;
-          const rightId = soulzDevices[1].id;
+    const processAutoGrouping = async () => {
+      const soulzDevices = allDevices.filter(d => ((d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16)) >= 20);
+      const halozDevices = allDevices.filter(d => ((d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16)) < 20);
+      
+      let updatedGroups = [...customGroups];
+      let didUpdateGroups = false;
+      let didUpdateConfigs = false;
+      
+      const resConfigs = await AsyncStorage.getItem('ng_device_configs');
+      let configs: any = {};
+      if (resConfigs) { try { configs = JSON.parse(resConfigs); } catch(e) {} }
 
-          // Auto-Group "my roller skates"
-          const newGroupId = `group-${Date.now()}`;
-          const newGroup = {
-            id: newGroupId,
-            name: 'my roller skates',
-            deviceIds: [leftId, rightId],
-            type: 'SOULZ'
-          };
+      const resProcessed = await AsyncStorage.getItem('ng_processed_devices');
+      let processed: string[] = [];
+      if (resProcessed) { try { processed = JSON.parse(resProcessed); } catch(e) {} }
+      let didUpdateProcessed = false;
+      
+      const checkAndGroup = (devices: any[], targetName: string, typeVal: 'HALOZ' | 'SOULZ', pointsVal: number) => {
+        const unprocessed = devices.filter(d => !processed.includes(d.id));
+
+        if (unprocessed.length >= 2) {
+          const leftId = unprocessed[0].id;
+          const rightId = unprocessed[1].id;
           
-          const updatedGroups = [...customGroups, newGroup];
-          setCustomGroups(updatedGroups);
-          AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups));
+          processed.push(leftId, rightId);
+          didUpdateProcessed = true;
 
-          // Set Configs to Left / Right
-          AsyncStorage.getItem('ng_device_configs').then(res => {
-            let configs: any = {};
-            if (res) {
-              try { configs = JSON.parse(res); } catch(e) {}
-            }
-            
-            configs[leftId] = { ...configs[leftId], name: 'Left', type: 'SOULZ', points: 43 };
-            configs[rightId] = { ...configs[rightId], name: 'Right', type: 'SOULZ', points: 43 };
-            
-            AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
-            AsyncStorage.setItem('ng_auto_grouped', 'true');
-            
-            setAllDevices(allDevices.map(d => {
-              if (d.id === leftId) return { ...d, name: 'Left', points: 43 } as any;
-              if (d.id === rightId) return { ...d, name: 'Right', points: 43 } as any;
-              return d;
-            }));
-          });
+          const existingGroupIndex = updatedGroups.findIndex(g => g.name === targetName);
+          
+          if (existingGroupIndex > -1) {
+            let changed = false;
+            if (!updatedGroups[existingGroupIndex].deviceIds.includes(leftId)) { updatedGroups[existingGroupIndex].deviceIds.push(leftId); changed = true; }
+            if (!updatedGroups[existingGroupIndex].deviceIds.includes(rightId)) { updatedGroups[existingGroupIndex].deviceIds.push(rightId); changed = true; }
+            if (changed) didUpdateGroups = true;
+          } else {
+            updatedGroups.push({
+              id: `group-${Date.now()}-${typeVal}`,
+              name: targetName,
+              deviceIds: [leftId, rightId],
+              type: typeVal
+            });
+            didUpdateGroups = true;
+          }
+          
+          if (!configs[leftId]) {
+            configs[leftId] = { ...configs[leftId], name: 'Left', type: typeVal, points: pointsVal };
+            didUpdateConfigs = true;
+          }
+          if (!configs[rightId]) {
+            configs[rightId] = { ...configs[rightId], name: 'Right', type: typeVal, points: pointsVal };
+            didUpdateConfigs = true;
+          }
         }
-      });
-    }
-  }, [allDevices, customGroups, setAllDevices]);
+      };
+
+      checkAndGroup(soulzDevices, 'SOULZ Roller Skate Lights', 'SOULZ', 43);
+      checkAndGroup(halozDevices, 'HALOZ Roller Skate Lights', 'HALOZ', 16);
+
+      if (didUpdateProcessed) await AsyncStorage.setItem('ng_processed_devices', JSON.stringify(processed));
+
+      if (didUpdateGroups) {
+        setCustomGroups(updatedGroups);
+        await AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups));
+      }
+      if (didUpdateConfigs) {
+        await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
+        setAllDevices(prev => prev.map(d => {
+           if (configs[d.id]) return { ...d, name: configs[d.id].name, points: configs[d.id].points } as any;
+           return d;
+        }));
+      }
+    };
+    processAutoGrouping();
+  }, [allDevices, customGroups, isScanning]);
 
   const displayConnectedDevices = useMemo(() => {
     if (!mockConnected) return connectedDevices;
@@ -350,38 +398,20 @@ export default function DashboardScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
                         <Text style={{ color: Colors.text, marginRight: 12, fontWeight: 'bold' }}>Demo HALOZ</Text>
                         <Switch
-                          value={allDevices.some(d => d.id.startsWith('sim-halo'))}
-                          onValueChange={(val) => {
-                            if (!val) {
-                              setAllDevices(allDevices.filter(d => !d.id.startsWith('sim-halo')));
-                            } else {
-                              setAllDevices([...allDevices, 
-                                { id: 'sim-halo-1', name: 'HALOZ', points: 16 } as any,
-                                { id: 'sim-halo-2', name: 'HALOZ', points: 16 } as any,
-                              ]);
-                            }
-                          }}
+                          value={demoHaloQueued}
+                          onValueChange={setDemoHaloQueued}
                           trackColor={{ false: 'rgba(255,255,255,0.1)', true: Colors.primary }}
-                          thumbColor={allDevices.some(d => d.id.startsWith('sim-halo')) ? '#000' : '#888'}
+                          thumbColor={demoHaloQueued ? '#000' : '#888'}
                         />
                       </View>
                       
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
                         <Text style={{ color: Colors.text, marginRight: 12, fontWeight: 'bold' }}>Demo SOULZ</Text>
                         <Switch
-                          value={allDevices.some(d => d.id.startsWith('sim-soul'))}
-                          onValueChange={(val) => {
-                            if (!val) {
-                              setAllDevices(allDevices.filter(d => !d.id.startsWith('sim-soul')));
-                            } else {
-                              setAllDevices([...allDevices, 
-                                { id: 'sim-soul-1', name: 'SOULZ', points: 43 } as any,
-                                { id: 'sim-soul-2', name: 'SOULZ', points: 43 } as any,
-                              ]);
-                            }
-                          }}
+                          value={demoSoulQueued}
+                          onValueChange={setDemoSoulQueued}
                           trackColor={{ false: 'rgba(255,255,255,0.1)', true: Colors.secondary }}
-                          thumbColor={allDevices.some(d => d.id.startsWith('sim-soul')) ? '#000' : '#888'}
+                          thumbColor={demoSoulQueued ? '#000' : '#888'}
                         />
                       </View>
                     </View>
