@@ -324,7 +324,12 @@ export default function DashboardScreen() {
 
               {isActuallyConnected && (
                 <Sk8lytzController
-                  lockedProduct={(displayConnectedDevices[0] as any)?.type || ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ')}
+                  lockedProduct={
+                    (displayConnectedDevices[0] as any)?.type || 
+                    ((displayConnectedDevices[0] as any)?.points 
+                      ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
+                      : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
+                  }
                   isPaired={isGrouped}
                   points={(displayConnectedDevices[0] as any).points}
                   devices={displayConnectedDevices}
