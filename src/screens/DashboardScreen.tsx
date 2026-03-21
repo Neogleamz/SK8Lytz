@@ -297,25 +297,44 @@ export default function DashboardScreen() {
                       )}
                     </TouchableOpacity>
                     
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16 }}>
-                      <Text style={{ color: Colors.text, marginRight: 12, fontWeight: 'bold' }}>Demo Mode (No Bluetooth)</Text>
-                      <Switch
-                        value={allDevices.some(d => d.id.startsWith('sim-'))}
-                        onValueChange={(val) => {
-                          if (!val) {
-                            setAllDevices(allDevices.filter(d => !d.id.startsWith('sim-')));
-                          } else {
-                            setAllDevices([...allDevices, 
-                              { id: 'sim-halo-1', name: 'HALOZ', points: 16 } as any,
-                              { id: 'sim-halo-2', name: 'HALOZ', points: 16 } as any,
-                              { id: 'sim-soul-1', name: 'SOULZ', points: 43 } as any,
-                              { id: 'sim-soul-2', name: 'SOULZ', points: 43 } as any,
-                            ]);
-                          }
-                        }}
-                        trackColor={{ false: 'rgba(255,255,255,0.1)', true: Colors.primary }}
-                        thumbColor={allDevices.some(d => d.id.startsWith('sim-')) ? '#000' : '#888'}
-                      />
+                    <View style={{ flexDirection: 'column', alignItems: 'center', marginTop: 16, gap: 12 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ color: Colors.text, marginRight: 12, fontWeight: 'bold' }}>Demo HALOZ</Text>
+                        <Switch
+                          value={allDevices.some(d => d.id.startsWith('sim-halo'))}
+                          onValueChange={(val) => {
+                            if (!val) {
+                              setAllDevices(allDevices.filter(d => !d.id.startsWith('sim-halo')));
+                            } else {
+                              setAllDevices([...allDevices, 
+                                { id: 'sim-halo-1', name: 'HALOZ', points: 16 } as any,
+                                { id: 'sim-halo-2', name: 'HALOZ', points: 16 } as any,
+                              ]);
+                            }
+                          }}
+                          trackColor={{ false: 'rgba(255,255,255,0.1)', true: Colors.primary }}
+                          thumbColor={allDevices.some(d => d.id.startsWith('sim-halo')) ? '#000' : '#888'}
+                        />
+                      </View>
+                      
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ color: Colors.text, marginRight: 12, fontWeight: 'bold' }}>Demo SOULZ</Text>
+                        <Switch
+                          value={allDevices.some(d => d.id.startsWith('sim-soul'))}
+                          onValueChange={(val) => {
+                            if (!val) {
+                              setAllDevices(allDevices.filter(d => !d.id.startsWith('sim-soul')));
+                            } else {
+                              setAllDevices([...allDevices, 
+                                { id: 'sim-soul-1', name: 'SOULZ', points: 43 } as any,
+                                { id: 'sim-soul-2', name: 'SOULZ', points: 43 } as any,
+                              ]);
+                            }
+                          }}
+                          trackColor={{ false: 'rgba(255,255,255,0.1)', true: Colors.secondary }}
+                          thumbColor={allDevices.some(d => d.id.startsWith('sim-soul')) ? '#000' : '#888'}
+                        />
+                      </View>
                     </View>
                   </View>
                 )}
