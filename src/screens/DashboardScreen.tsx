@@ -84,13 +84,13 @@ export default function DashboardScreen() {
       if (g) {
         return allDevices
           .filter(d => g.deviceIds.includes(d.id))
-          .map(d => ({ ...d, grouped: true, groupId: g.id, groupName: g.name, points: (d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 24) }));
+          .map(d => ({ ...d, grouped: true, groupId: g.id, groupName: g.name, points: (d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16) }));
       }
     }
 
     const singleId = mockConnectedDevice || 'sim-soul-1';
     const single = allDevices.find(d => d.id === singleId);
-    return single ? [{ ...single, grouped: false, points: (single as any).points || (single.name?.toLowerCase().includes('soul') ? 43 : 24) }] : [];
+    return single ? [{ ...single, grouped: false, points: (single as any).points || (single.name?.toLowerCase().includes('soul') ? 43 : 16) }] : [];
   }, [mockConnected, mockConnectedDevice, mockConnectedGroup, allDevices, connectedDevices, updateTrigger, customGroups]);
 
   const isActuallyConnected = displayConnectedDevices.length > 0;
@@ -306,8 +306,8 @@ export default function DashboardScreen() {
                             setAllDevices(allDevices.filter(d => !d.id.startsWith('sim-')));
                           } else {
                             setAllDevices([...allDevices, 
-                              { id: 'sim-halo-1', name: 'HALOZ', points: 24 } as any,
-                              { id: 'sim-halo-2', name: 'HALOZ', points: 24 } as any,
+                              { id: 'sim-halo-1', name: 'HALOZ', points: 16 } as any,
+                              { id: 'sim-halo-2', name: 'HALOZ', points: 16 } as any,
                               { id: 'sim-soul-1', name: 'SOULZ', points: 43 } as any,
                               { id: 'sim-soul-2', name: 'SOULZ', points: 43 } as any,
                             ]);
