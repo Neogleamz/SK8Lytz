@@ -54,22 +54,30 @@ export default function DashboardScreen() {
 
   const [demoHaloQueued, setDemoHaloQueued] = useState(false);
   const [demoSoulQueued, setDemoSoulQueued] = useState(false);
+  const prevIsScanningRef = useRef(isScanning);
 
   const handleScanPress = () => {
     scanForPeripherals();
-    setTimeout(() => {
+  };
+
+  useEffect(() => {
+    if (prevIsScanningRef.current === true && isScanning === false) {
       setAllDevices(prev => {
         let newDevices = [...prev];
+        let changed = false;
         if (demoHaloQueued && !newDevices.some(d => d.id.startsWith('sim-halo'))) {
           newDevices.push({ id: 'sim-halo-1', name: 'HALOZ', points: 16 } as any, { id: 'sim-halo-2', name: 'HALOZ', points: 16 } as any);
+          changed = true;
         }
         if (demoSoulQueued && !newDevices.some(d => d.id.startsWith('sim-soul'))) {
           newDevices.push({ id: 'sim-soul-1', name: 'SOULZ', points: 43 } as any, { id: 'sim-soul-2', name: 'SOULZ', points: 43 } as any);
+          changed = true;
         }
-        return newDevices;
+        return changed ? newDevices : prev;
       });
-    }, 100);
-  };
+    }
+    prevIsScanningRef.current = isScanning;
+  }, [isScanning, demoHaloQueued, demoSoulQueued, setAllDevices]);
 
   useEffect(() => {
     AsyncStorage.getItem('ng_custom_groups')
