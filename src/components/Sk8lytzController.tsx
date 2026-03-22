@@ -10,6 +10,7 @@ import CameraTracker from './CameraTracker';
 import { getRbmPatternName } from '../constants/RbmPatterns';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 type ProductType = 'HALOZ' | 'SOULZ';
 type ModeType = 'PRESETS' | 'FIXED' | 'RBM' | 'MUSIC' | 'CAMERA' | 'CUSTOM' | 'MULTICOLOR';
@@ -129,14 +130,14 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     ));
   };
 
-  const modes: { id: ModeType; label: string; icon: string }[] = [
-    { id: 'PRESETS', label: 'Favorites', icon: '⭐' },
-    { id: 'FIXED', label: 'Fixed', icon: '🎨' },
-    { id: 'RBM', label: 'Programs', icon: '✨' },
-    { id: 'MUSIC', label: 'Music', icon: '🎵' },
-    { id: 'CAMERA', label: 'Camera', icon: '📸' },
-    { id: 'MULTICOLOR', label: 'Multi', icon: '🌈' },
-    { id: 'CUSTOM', label: 'DIY', icon: '⚙️' }
+  const modes: { id: ModeType; label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
+    { id: 'PRESETS', label: 'Favorites', icon: 'star-outline' },
+    { id: 'FIXED', label: 'Fixed', icon: 'palette-outline' },
+    { id: 'RBM', label: 'Programs', icon: 'auto-fix' },
+    { id: 'MUSIC', label: 'Music', icon: 'music-note' },
+    { id: 'CAMERA', label: 'Camera', icon: 'camera-outline' },
+    { id: 'MULTICOLOR', label: 'Multi', icon: 'gradient-horizontal' },
+    { id: 'CUSTOM', label: 'DIY', icon: 'cog-outline' }
   ];
 
   return (
@@ -184,8 +185,6 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
         />
       </View>
 
-      <Text style={[Typography.title, { marginBottom: 16, marginTop: 4, textAlign: 'center' }]}>SK8Lytz Controls</Text>
-
       <View style={styles.controlsContainer}>
         <View style={{ marginBottom: 24 }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, gap: 12 }}>
@@ -216,7 +215,12 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     style={StyleSheet.absoluteFill} 
                   />
                 )}
-                <Text style={{ fontSize: 24, marginBottom: 4, zIndex: 2 }}>{mode.icon}</Text>
+                <MaterialCommunityIcons 
+                  name={mode.icon} 
+                  size={20} 
+                  color={activeMode === mode.id ? '#FFFFFF' : Colors.textMuted} 
+                  style={{ marginBottom: 4, zIndex: 2 }} 
+                />
                 <Text 
                   style={[
                     styles.modePillText, 
@@ -536,23 +540,30 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   <TouchableOpacity 
                     key={color} 
                     onPress={() => {
+                      const hueMap: {[key: string]: number} = {
+                        '#FF0000': 0, '#FFFF00': 60, '#00FF00': 120, 
+                        '#00FFFF': 180, '#0000FF': 240, '#FF00FF': 300, '#FFFFFF': 0
+                      };
                       if (activeMode === 'FIXED') {
                         if (fixedColorMode === 'FOREGROUND') setFixedFgColor(color);
                         else setFixedBgColor(color);
-                        const hueMap: {[key: string]: number} = {
-                          '#FF0000': 0, '#FFFF00': 60, '#00FF00': 120, 
-                          '#00FFFF': 180, '#0000FF': 240, '#FF00FF': 300
-                        };
                         if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
+                      } else if (activeMode === 'MUSIC') {
+                        if (hueMap[color] !== undefined) setMusicHue(hueMap[color]);
                       } else {
                         setSelectedColor(color);
+                        if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
                       }
 
                       if (writeToDevice) {
-                        const r = parseInt(color.slice(1, 3), 16);
-                        const g = parseInt(color.slice(3, 5), 16);
-                        const b = parseInt(color.slice(5, 7), 16);
-                        writeToDevice(ZenggeProtocol.setColor(r, g, b));
+                        if (activeMode === 'MUSIC') {
+                          handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hueMap[color] || 0);
+                        } else {
+                          const r = parseInt(color.slice(1, 3), 16);
+                          const g = parseInt(color.slice(3, 5), 16);
+                          const b = parseInt(color.slice(5, 7), 16);
+                          writeToDevice(ZenggeProtocol.setColor(r, g, b));
+                        }
                       }
                     }}
                     style={[
@@ -582,7 +593,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     } else {
                       setSelectedHue(hue);
                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                      const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+                      const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
                       setSelectedColor(rgb2hex(f(5), f(3), f(1)));
                     }
                   }}
