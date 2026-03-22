@@ -980,7 +980,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     backgroundColor: Colors.primary, 
   },
   musicToggleActiveText: {
-    color: '#000',
+    color: Colors.isDark ? '#FFF' : '#000',
     fontWeight: 'bold',
   },
   musicToggleText: {

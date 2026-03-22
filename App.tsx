@@ -1,7 +1,12 @@
+import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 import DashboardScreen from './src/screens/DashboardScreen';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { useFonts, Righteous_400Regular } from '@expo-google-fonts/righteous';
+import * as SplashScreen from 'expo-splash-screen';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function AppContent() {
   const { Colors, isDark } = useTheme();
@@ -14,6 +19,18 @@ function AppContent() {
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    'Righteous': Righteous_400Regular,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
+
   return (
     <ThemeProvider>
       <AppContent />

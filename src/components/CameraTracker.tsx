@@ -106,7 +106,7 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
       <View style={styles.container}>
         <Text style={styles.message}>We need your permission to show the camera</Text>
         <TouchableOpacity style={styles.button} onPress={requestPermission}>
-          <Text style={{ color: '#000', fontWeight: 'bold' }}>GRANT PERMISSION</Text>
+          <Text style={{ color: Colors.isDark ? '#FFF' : '#000', fontWeight: 'bold' }}>GRANT PERMISSION</Text>
         </TouchableOpacity>
       </View>
     );

@@ -649,7 +649,7 @@ export default function DashboardScreen() {
                           value={demoHaloQueued}
                           onValueChange={setDemoHaloQueued}
                           trackColor={{ false: 'rgba(255,255,255,0.1)', true: Colors.primary }}
-                          thumbColor={demoHaloQueued ? '#000' : '#888'}
+                          thumbColor={demoHaloQueued ? (Colors.isDark ? '#444' : '#000') : '#888'}
                         />
                       </View>
                       
@@ -659,7 +659,7 @@ export default function DashboardScreen() {
                           value={demoSoulQueued}
                           onValueChange={setDemoSoulQueued}
                           trackColor={{ false: 'rgba(255,255,255,0.1)', true: Colors.secondary }}
-                          thumbColor={demoSoulQueued ? '#000' : '#888'}
+                          thumbColor={demoSoulQueued ? (Colors.isDark ? '#444' : '#000') : '#888'}
                         />
                       </View>
                     </View>
@@ -845,7 +845,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     elevation: 8,
   },
   groupButtonText: {
-    color: Colors.background,
+    color: Colors.isDark ? '#FFF' : Colors.background,
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: 1,
