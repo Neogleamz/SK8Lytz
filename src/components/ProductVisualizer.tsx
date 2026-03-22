@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
-    minHeight: 120,
+    minHeight: 110,
     width: '100%',
   },
   haloBase: {

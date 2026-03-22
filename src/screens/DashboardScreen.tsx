@@ -519,7 +519,7 @@ export default function DashboardScreen() {
               {/* COMBINED HEADER & STATUS */}
               <View style={{ 
                 paddingHorizontal: Layout.padding, 
-                paddingTop: isActuallyConnected ? 2 : 15, 
+                paddingTop: isActuallyConnected ? 12 : 20, 
                 paddingBottom: isActuallyConnected ? 2 : 8,
                 position: 'relative',
               }}>
