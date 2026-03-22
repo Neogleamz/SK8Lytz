@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { Colors, Typography, Layout } from '../theme/theme';
 import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface DeviceItemProps {
   device: { name: string | null; id: string; rssi?: number | null; isGroup?: boolean };
@@ -11,9 +12,11 @@ interface DeviceItemProps {
   showGroupIcon?: boolean;
   isSelectionMode?: boolean;
   isSelected?: boolean;
+  onPowerToggle?: () => void;
+  isPoweredOn?: boolean;
 }
 
-export default function DeviceItem({ device, onPress, onLongPress, isConnected, showGroupIcon, isSelectionMode, isSelected }: DeviceItemProps) {
+export default function DeviceItem({ device, onPress, onLongPress, isConnected, showGroupIcon, isSelectionMode, isSelected, onPowerToggle, isPoweredOn = true }: DeviceItemProps) {
   const isZengge = device.name?.toLowerCase().includes('led') || device.name?.toLowerCase().includes('zengge') || device.name?.toLowerCase().includes('magic');
 
   return (
@@ -59,13 +62,24 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
           </Text>
         </View>
       </View>
-      <View style={styles.status}>
-        <Text style={[
-          Typography.body, 
-          { color: isConnected ? (showGroupIcon ? Colors.secondary : Colors.success) : Colors.primary, fontWeight: '800', letterSpacing: 1 }
-        ]}>
-          {isConnected ? 'CONNECTED' : 'CONNECT'}
-        </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', zIndex: 2 }}>
+        {onPowerToggle && (
+          <TouchableOpacity 
+            style={{ marginRight: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isPoweredOn ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255,255,255,0.2)' }}
+            onPress={onPowerToggle}
+            activeOpacity={0.6}
+          >
+            <MaterialCommunityIcons name="power" size={20} color={isPoweredOn ? Colors.primary : Colors.textMuted} />
+          </TouchableOpacity>
+        )}
+        <View style={styles.status}>
+          <Text style={[
+            Typography.body, 
+            { color: isConnected ? (showGroupIcon ? Colors.secondary : Colors.success) : Colors.primary, fontWeight: '800', letterSpacing: 1 }
+          ]}>
+            {isConnected ? 'CONNECTED' : 'CONNECT'}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );

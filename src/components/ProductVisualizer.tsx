@@ -63,11 +63,11 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
         let top = 0; let left = 0;
         
         if (product === 'HALOZ') {
-          const p = 1.2; // Slightly more oval, less pointy than 0.6
+          const p = 0.6; // Superellipse exponent: 0.6 provides very rounded corners
           const sgnCos = Math.sign(Math.cos(angle)) || 1;
           const sgnSin = Math.sign(Math.sin(angle)) || 1;
-          left = 80 + sgnCos * Math.pow(Math.abs(Math.cos(angle)), p) * 80;
-          top = 120 + sgnSin * Math.pow(Math.abs(Math.sin(angle)), p) * 120;
+          left = 80 + sgnCos * Math.pow(Math.abs(Math.cos(angle)), p) * 70;
+          top = 120 + sgnSin * Math.pow(Math.abs(Math.sin(angle)), p) * 110;
         } else {
           top = 150 + Math.sin(angle) * 150;
           const verticalPos = Math.sin(angle);
@@ -111,14 +111,8 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
         let dotOpacity: any = 1;
 
         if (mode === 'PRESETS') {
-           if (product === 'HALOZ') {
-             const rainbowColors = [0, 1/6, 2/6, 3/6, 4/6, 5/6, 1].map(v => HSLToHex((v - mirroredFract + 1) % 1 * 360, 100, 50));
-             dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
-           } else {
-             const ripple = (Math.sin(mirroredFract * Math.PI) + 1) / 2;
-             dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.2 + (ripple * 0.1), 1, 0.2 + (ripple * 0.1)] });
-             dotColor = '#FF6E00';
-           }
+           const rainbowColors = [0, 1/6, 2/6, 3/6, 4/6, 5/6, 1].map(v => HSLToHex((v - mirroredFract + 1) % 1 * 360, 100, 50));
+           dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
         } else if (mode === 'RBM') {
            dotOpacity = animValue.interpolate({
               inputRange: [0, Math.max(0, mirroredFract - 0.15), mirroredFract, Math.min(1, mirroredFract + 0.15), 1],
@@ -224,7 +218,9 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
             ]} />
          ))}
       </View>
-      <Text style={{ position: 'absolute', top: '50%', left: '50%', transform: [{ translateX: -40 }, { translateY: -10 }], color: 'white', fontWeight: 'bold', fontSize: 11, width: 80, textAlign: 'center', opacity: 0.9 }}>{device.name || product}</Text>
+      <View style={{ marginTop: -36, alignItems: 'center' }}>
+         <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 11, textAlign: 'center', opacity: 0.9 }}>{device.name || product}</Text>
+      </View>
     </TouchableOpacity>
   );
 };

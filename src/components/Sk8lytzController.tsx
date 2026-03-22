@@ -35,6 +35,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
   const [activeProduct, setActiveProduct] = useState<ProductType>(lockedProduct || 'HALOZ');
   const [activeMode, setActiveMode] = useState<ModeType>('PRESETS');
   const [selectedColor, setSelectedColor] = useState<string>('#00F0FF');
+  const [selectedHue, setSelectedHue] = useState<number>(180);
   const [selectedPatternId, setSelectedPatternId] = useState<number>(1);
   const [brightness, setBrightness] = useState<number>(80);
   const [speed, setSpeed] = useState<number>(65);
@@ -527,7 +528,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
             </View>
           )}
           {/* UNIVERSAL SLIDERS SECTION */}
-          {activeMode !== 'CAMERA' && activeMode !== 'CUSTOM' && (
+          {activeMode !== 'CAMERA' && activeMode !== 'CUSTOM' && activeMode !== 'PRESETS' && (
             <View style={[styles.sceneSlidersContainer, { marginTop: 16 }]}>
               {/* Color Grid */}
               <View style={[styles.colorGrid, { marginBottom: 16 }]}>
@@ -565,9 +566,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
 
               {/* Hue Slider */}
               <View style={[styles.controlRow, { marginTop: 0, height: 40 }]}>
-                 {activeMode !== 'MUSIC' ? <CustomSlider 
+                <CustomSlider 
                   gradientTrack={true}
-                  value={activeMode === 'FIXED' ? fixedHue : 0}
+                  value={activeMode === 'FIXED' ? fixedHue : (activeMode === 'MUSIC' ? musicHue : selectedHue)}
                   onValueChange={(hue) => {
                     if (activeMode === 'FIXED') {
                       setFixedHue(hue);
@@ -576,10 +577,19 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                       const hex = rgb2hex(f(5), f(3), f(1));
                       if (fixedColorMode === 'FOREGROUND') setFixedFgColor(hex);
                       else setFixedBgColor(hex);
+                    } else if (activeMode === 'MUSIC') {
+                      setMusicHue(hue);
+                    } else {
+                      setSelectedHue(hue);
+                      const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                      const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+                      setSelectedColor(rgb2hex(f(5), f(3), f(1)));
                     }
                   }}
                   onSlidingComplete={(hue) => {
-                    if (writeToDevice) {
+                    if (activeMode === 'MUSIC') {
+                      handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hue);
+                    } else if (writeToDevice) {
                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
                       const r = Math.round(f(5) * 255);
                       const g = Math.round(f(3) * 255);
@@ -590,19 +600,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   minimumValue={0}
                   maximumValue={360}
                   style={{ position: 'absolute', width: '100%', height: 40 }}
-                /> : <>
-                   <View style={styles.gradientSliderTrack} />
-                   <CustomSlider 
-                    value={musicHue}
-                    onValueChange={setMusicHue}
-                    onSlidingComplete={(hue) => {
-                      handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicMode);
-                    }}
-                    minimumValue={0}
-                    maximumValue={360}
-                    style={{ position: 'absolute', width: '100%', height: 40 }}
-                  />
-                </>}
+                />
               </View>
 
               {/* Brightness / Sensitivity Slider */}
@@ -635,9 +633,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                           writeToDevice(ZenggeProtocol.setRbmMode(selectedPatternId, speed, val));
                         } else if (activeMode === 'MUSIC') {
                           if (musicSetting === 'SENSITIVITY') {
-                            handleMusicChange(musicPatternId, val, brightness, micSource, musicMode);
+                            handleMusicChange(musicPatternId, val, brightness, micSource, musicHue);
                           } else {
-                            handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicMode);
+                            handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicHue);
                           }
                         }
                       }
