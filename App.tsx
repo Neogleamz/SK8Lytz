@@ -1,22 +1,28 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 import DashboardScreen from './src/screens/DashboardScreen';
-import { Colors } from './src/theme/theme';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+
+function AppContent() {
+  const { Colors, isDark } = useTheme();
+  return (
+    <View style={[styles.container, { backgroundColor: Colors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <DashboardScreen />
+    </View>
+  );
+}
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-      <DashboardScreen />
-    </View>
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
 });
-
-

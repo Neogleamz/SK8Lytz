@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Typography, Layout } from '../theme/theme';
+import { Typography, Layout } from '../theme/theme';
+import { useTheme } from '../context/ThemeContext';
 import ProductVisualizer from './ProductVisualizer';
 import CustomSlider from './CustomSlider';
 import ArcPatternWheel from './ArcPatternWheel';
@@ -34,6 +35,8 @@ interface Sk8lytzControllerProps {
 }
 
 export default function Sk8lytzController({ lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice, isPoweredOn = true }: Sk8lytzControllerProps) {
+  const { Colors } = useTheme();
+  const styles = createStyles(Colors);
   const [activeProduct, setActiveProduct] = useState<ProductType>(lockedProduct || 'HALOZ');
   const [activeMode, setActiveMode] = useState<ModeType>('PRESETS');
   const [selectedColor, setSelectedColor] = useState<string>('#00F0FF');
@@ -805,7 +808,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleSheet.create({
   container: {
     paddingHorizontal: 0,
     paddingBottom: 20,
@@ -823,7 +826,7 @@ const styles = StyleSheet.create({
     padding: 6,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
   },
   tab: {
     flex: 1,
@@ -844,14 +847,14 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   activeTabText: {
-    color: '#FFF',
+    color: Colors.isDark ? '#FFF' : Colors.accent,
   },
   controlsContainer: {
     padding: 16,
-    backgroundColor: 'rgba(21, 25, 40, 0.7)',
+    backgroundColor: Colors.isDark ? 'rgba(21, 25, 40, 0.7)' : Colors.surface,
     borderRadius: Layout.borderRadius + 4,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0,0,0,0.08)',
   },
   modesScroll: {
     flexDirection: 'row',
@@ -864,7 +867,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     marginRight: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: Colors.isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0,0,0,0.08)',
     overflow: 'hidden',
     justifyContent: 'center',
   },
@@ -877,7 +880,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   activeModePillText: {
-    color: Colors.background,
+    color: Colors.isDark ? Colors.background : Colors.surface,
     fontWeight: 'bold',
   },
   activeModeContainer: {
@@ -909,7 +912,7 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: Colors.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)',
   },
   selectedColorButton: {
     borderWidth: 3,
@@ -935,40 +938,41 @@ const styles = StyleSheet.create({
   presetDesc: {
     ...Typography.caption,
     marginTop: 4,
+    color: Colors.textMuted,
   },
   sceneContainer: {
-    backgroundColor: '#050505',
+    backgroundColor: Colors.isDark ? '#050505' : Colors.surfaceHighlight,
     borderRadius: 24,
     padding: 2,
     marginTop: 8,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
   },
   sceneHeader: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
     alignItems: 'center',
   },
   sceneTitle: {
     ...Typography.title,
-    color: '#FFF',
+    color: Colors.text,
     fontSize: 18,
   },
   rbmWheelSection: {
     height: 180,
-    backgroundColor: '#050505',
+    backgroundColor: Colors.isDark ? '#050505' : Colors.surfaceHighlight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   sceneSlidersContainer: {
     padding: 16,
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
   },
   sceneLabel: {
     ...Typography.caption,
-    color: 'rgba(255,255,255,0.7)',
+    color: Colors.textMuted,
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -976,13 +980,13 @@ const styles = StyleSheet.create({
   },
   musicToggleHeader: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : Colors.surfaceHighlight,
     borderRadius: 25,
     padding: 4,
     alignItems: 'center',
     margin: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
   },
   musicToggleOption: {
     flex: 1,
@@ -998,7 +1002,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   musicToggleText: {
-    color: 'rgba(255,255,255,0.5)',
+    color: Colors.textMuted,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -1015,10 +1019,10 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: Colors.isDark ? 'rgba(0,0,0,0.6)' : Colors.surfaceHighlight,
   },
   musicModeNumber: {
-    color: '#FFF',
+    color: Colors.text,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -1049,11 +1053,11 @@ const styles = StyleSheet.create({
   },
   micIconText: {
     fontSize: 32,
-    color: 'rgba(255,255,255,0.4)',
+    color: Colors.textMuted,
   },
   micSubText: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.3)',
+    color: Colors.textMuted,
     marginTop: 4,
     textTransform: 'uppercase',
     fontWeight: '600',
@@ -1090,7 +1094,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: Colors.textMuted,
     marginRight: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1105,14 +1109,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   radioLabel: {
-    color: '#FFF',
+    color: Colors.text,
     fontSize: 15,
     fontWeight: '600',
   },
   gradientSliderTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#333',
+    backgroundColor: Colors.surfaceHighlight,
     overflow: 'hidden',
   },
   musicSettingsToggleRow: {

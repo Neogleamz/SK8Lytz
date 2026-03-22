@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { View, StyleSheet, PanResponder, LayoutChangeEvent } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors } from '../theme/theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface CustomSliderProps {
   value: number;
@@ -14,6 +14,8 @@ interface CustomSliderProps {
 }
 
 export default function CustomSlider({ value, onValueChange, onSlidingComplete, minimumValue = 0, maximumValue = 100, style, gradientTrack = false }: CustomSliderProps) {
+  const { Colors } = useTheme();
+  const styles = createStyles(Colors);
   const [containerWidth, setContainerWidth] = useState(0);
   const containerWidthRef = useRef(0);
   
@@ -95,7 +97,7 @@ export default function CustomSlider({ value, onValueChange, onSlidingComplete, 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleSheet.create({
   container: {
     height: 40,
     justifyContent: 'center',
@@ -104,7 +106,7 @@ const styles = StyleSheet.create({
   track: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
     width: '100%',
     overflow: 'hidden',
   },
@@ -117,7 +119,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: Colors.text,
+    backgroundColor: Colors.isDark ? Colors.text : Colors.accent,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,

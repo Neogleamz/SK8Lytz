@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
-import { Colors, Typography, Layout } from '../theme/theme';
+import { Typography, Layout } from '../theme/theme';
+import { useTheme } from '../context/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -17,6 +18,8 @@ interface DeviceItemProps {
 }
 
 export default function DeviceItem({ device, onPress, onLongPress, isConnected, showGroupIcon, isSelectionMode, isSelected, onPowerToggle, isPoweredOn = true }: DeviceItemProps) {
+  const { Colors } = useTheme();
+  const styles = createStyles(Colors);
   const isZengge = device.name?.toLowerCase().includes('led') || device.name?.toLowerCase().includes('zengge') || device.name?.toLowerCase().includes('magic');
 
   return (
@@ -50,7 +53,7 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
              </View>
           )}
           {showGroupIcon && <Text style={{ fontSize: 18, marginRight: 8 }}>👥</Text>}
-          <Text style={Typography.title}>{device.name || `SK8 - ${(device.id || '').replace(/:/g, '').slice(-6).toUpperCase()}`}</Text>
+          <Text style={[Typography.title, { color: Colors.primary }]}>{device.name || `SK8 - ${(device.id || '').replace(/:/g, '').slice(-6).toUpperCase()}`}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
           {isSelectionMode && <View style={{ width: 34 }} />}
@@ -85,21 +88,21 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 18,
-    backgroundColor: 'rgba(15, 19, 29, 0.7)',
+    backgroundColor: Colors.isDark ? 'rgba(15, 19, 29, 0.7)' : Colors.surface,
     borderRadius: Layout.borderRadius,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
     overflow: 'hidden',
   },
   connectedContainer: {
-    borderColor: 'rgba(0, 240, 255, 0.4)',
+    borderColor: `${Colors.primary}66`,
     borderWidth: 1,
   },
   zenggeContainer: {

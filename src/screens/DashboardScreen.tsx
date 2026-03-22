@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking } from 'react-native';
-import { Colors, Typography, Layout } from '../theme/theme';
+import { Typography, Layout } from '../theme/theme';
+import { useTheme } from '../context/ThemeContext';
 import DeviceItem from '../components/DeviceItem';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import useBLE from '../hooks/useBLE';
@@ -24,6 +25,8 @@ interface DeviceSettings {
 }
 
 export default function DashboardScreen() {
+  const { Colors, isDark, toggleTheme } = useTheme();
+  const styles = createStyles(Colors);
   const {
     scanForPeripherals,
     allDevices,
@@ -518,15 +521,29 @@ export default function DashboardScreen() {
                 paddingHorizontal: Layout.padding, 
                 paddingTop: isActuallyConnected ? 16 : 40, 
                 paddingBottom: isActuallyConnected ? 20 : 30,
-                alignItems: isActuallyConnected ? 'stretch' : 'center'
+                position: 'relative',
               }}>
+                {/* Theme toggle: landing page only, absolutely pinned top-left */}
+                {!isActuallyConnected && (
+                  <TouchableOpacity 
+                    onPress={toggleTheme} 
+                    style={{ position: 'absolute', left: 0, top: 40, zIndex: 10, padding: 10 }}
+                  >
+                    <MaterialCommunityIcons 
+                      name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} 
+                      size={22} 
+                      color={Colors.primary} 
+                    />
+                  </TouchableOpacity>
+                )}
+
+                {/* Logo row — logo always centered, plus connected-state chips on right */}
                 <View style={{ 
                   flexDirection: 'row', 
                   alignItems: 'center', 
-                  justifyContent: 'center',
+                  justifyContent: isActuallyConnected ? 'flex-start' : 'center',
                   width: '100%'
                 }}>
-                  {!isActuallyConnected && <View style={{ flex: 1 }} />}
                   <Image 
                     source={require('../../assets/logo.png')} 
                     style={{ 
@@ -536,8 +553,7 @@ export default function DashboardScreen() {
                     resizeMode="contain"
                     tintColor={Colors.text}
                   />
-                  {!isActuallyConnected && <View style={{ flex: 1 }} />}
-                  
+
                   {isActuallyConnected && (
                     <View style={{ marginLeft: 16 }}>
                       {(() => {
@@ -551,8 +567,8 @@ export default function DashboardScreen() {
                         
                         let statusColor = Colors.success;
                         if (connectedCount === 0) statusColor = Colors.error;
-                        else if (connectedCount < expectedCount) statusColor = '#FFA500'; // Orange for partial
-                        else statusColor = Colors.success; // Green for all or 1/1
+                        else if (connectedCount < expectedCount) statusColor = '#FFA500';
+                        else statusColor = Colors.success;
 
                         return (
                           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -605,7 +621,7 @@ export default function DashboardScreen() {
                   )}
                 </View>
                 {!isActuallyConnected && (
-                  <View style={{ height: 2, width: 30, backgroundColor: Colors.secondary, marginTop: 6, borderRadius: 1 }} />
+                  <View style={{ height: 2, width: 30, backgroundColor: Colors.secondary, marginTop: 6, borderRadius: 1, alignSelf: 'center' }} />
                 )}
               </View>
 
@@ -659,7 +675,7 @@ export default function DashboardScreen() {
 
               {!isActuallyConnected && customGroups.length > 0 && (
                 <View style={{ marginTop: 20 }}>
-                  <Text style={[Typography.title, { marginBottom: 12, paddingHorizontal: 4 }]}>Groups</Text>
+                  <Text style={[Typography.title, { marginBottom: 12, paddingHorizontal: 4, color: Colors.primary }]}>Groups</Text>
                   {customGroups.map((group) => (
                     <DeviceItem
                       key={group.id}
@@ -698,7 +714,7 @@ export default function DashboardScreen() {
               {!isActuallyConnected && (
                 <>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12, paddingHorizontal: 4 }}>
-                    <Text style={Typography.title}>Available Devices</Text>
+                    <Text style={[Typography.title, { color: Colors.primary }]}>Available Devices</Text>
                     {allDevices.length > 0 && (
                       <TouchableOpacity onPress={() => setIsDeviceListCollapsed(!isDeviceListCollapsed)}>
                         <Text style={{ color: Colors.primary, fontWeight: 'bold', fontSize: 12 }}>
@@ -759,7 +775,7 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -794,7 +810,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   scanButtonText: {
-    color: Colors.text,
+    color: Colors.isDark ? Colors.text : '#FFF',
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: 1,

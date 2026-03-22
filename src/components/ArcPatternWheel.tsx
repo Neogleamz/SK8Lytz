@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, NativeSyntheticEvent, NativeScrollEvent, TouchableOpacity, LayoutChangeEvent, Platform } from 'react-native';
-import { Colors } from '../theme/theme';
+import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function ArcPatternWheel({ 
@@ -16,6 +16,8 @@ export default function ArcPatternWheel({
   max?: number;
   itemLabel?: (item: number) => string;
 }) {
+  const { Colors } = useTheme();
+  const styles = createStyles(Colors);
   const flatListRef = useRef<FlatList>(null);
   const holdTimerRef = useRef<any>(null);
   const skipIntervalRef = useRef<any>(null);
@@ -168,13 +170,13 @@ export default function ArcPatternWheel({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleSheet.create({
   container: {
-    height: 140, // Reduced from 180 to optimize for screen space
+    height: 140,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#050505',
+    backgroundColor: Colors.isDark ? '#050505' : Colors.surfaceHighlight,
     paddingVertical: 5,
   },
   wheelWrapper: {
@@ -199,7 +201,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   itemText: {
-    color: 'rgba(255,255,255,0.15)',
+    color: Colors.isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
     fontSize: 20,
     fontWeight: '700',
   },
@@ -235,7 +237,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255, 110, 0, 0.2)',
   },
   labelText: {
-    color: '#FFF',
+    color: Colors.text,
     fontSize: 14,
     fontWeight: '700',
     textTransform: 'uppercase',
