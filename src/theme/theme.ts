@@ -6,7 +6,7 @@ export const Colors = {
   secondary: '#FFB800',
   accent: '#FF3300',
   text: '#FFFFFF',
-  textMuted: '#6C7A9C',
+  textMuted: '#A0B4CF',
   success: '#00E88F',
   error: '#FF3D71',
 };

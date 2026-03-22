@@ -1,17 +1,7 @@
-import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Dimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, NativeSyntheticEvent, NativeScrollEvent, TouchableOpacity, LayoutChangeEvent, Platform } from 'react-native';
 import { Colors } from '../theme/theme';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const ITEM_WIDTH = Math.floor(SCREEN_WIDTH / 5);
-
-interface ArcPatternWheelProps {
-  value: number;
-  onValueChange: (val: number) => void;
-  min?: number;
-  max?: number;
-  itemLabel?: (item: number) => string;
-}
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function ArcPatternWheel({ 
   value, 
@@ -19,9 +9,21 @@ export default function ArcPatternWheel({
   min = 1, 
   max = 100,
   itemLabel 
-}: ArcPatternWheelProps) {
+}: {
+  value: number;
+  onValueChange: (val: number) => void;
+  min?: number;
+  max?: number;
+  itemLabel?: (item: number) => string;
+}) {
   const flatListRef = useRef<FlatList>(null);
+  const holdTimerRef = useRef<any>(null);
+  const skipIntervalRef = useRef<any>(null);
+  
+  const [containerWidth, setContainerWidth] = useState(0);
+  const itemWidth = containerWidth > 0 ? (containerWidth / 5.0) : 70;
 
+  // Generate data with padding for 5-visible-item wheel effect
   const data = [
     { type: 'pad', id: 'pad-1' },
     { type: 'pad', id: 'pad-2' },
@@ -30,17 +32,33 @@ export default function ArcPatternWheel({
     { type: 'pad', id: 'pad-4' },
   ];
 
-  useEffect(() => {
-    setTimeout(() => {
-       const idx = value - min;
-       flatListRef.current?.scrollToOffset({ offset: idx * ITEM_WIDTH, animated: false });
-    }, 100);
-  }, []);
+  const scrollToValue = (val: number, animated = true) => {
+    if (containerWidth === 0) return;
+    const idx = val - min;
+    // index + 2 because of the two pads at the start
+    // We want the item at idx+2 to be centered. 
+    // In a 5-item visible row, index i is centered if its start is at (i-2) * itemWidth
+    // So for val=min (idx=0), we want index 2 to be centered, which means offset 0.
+    flatListRef.current?.scrollToOffset({ 
+      offset: idx * itemWidth, 
+      animated 
+    });
+  };
 
-  const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+  useEffect(() => {
+    if (containerWidth > 0) {
+      const timer = setTimeout(() => {
+        scrollToValue(value, false);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [containerWidth]);
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (containerWidth === 0) return;
     const offsetX = e.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / ITEM_WIDTH);
-    const item = data[index + 2] as any;
+    const index = Math.round(offsetX / itemWidth);
+    const item = data[index + 2] as any; // The item that should be in center
     if (item && item.type === 'item') {
       if (item.val !== value) {
         onValueChange(item.val);
@@ -48,13 +66,35 @@ export default function ArcPatternWheel({
     }
   };
 
+  const handleJump = (delta: number) => {
+    let newVal = value + delta;
+    newVal = Math.max(min, Math.min(max, newVal));
+    if (newVal !== value) {
+      onValueChange(newVal);
+      scrollToValue(newVal, true);
+    }
+  };
+
+  const startHold = (delta: number) => {
+    handleJump(delta);
+    holdTimerRef.current = setTimeout(() => {
+      skipIntervalRef.current = setInterval(() => {
+        handleJump(delta > 0 ? 5 : -5);
+      }, 100); 
+    }, 3000);
+  };
+
+  const stopHold = () => {
+    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+    if (skipIntervalRef.current) clearInterval(skipIntervalRef.current);
+  };
+
+  const onLayout = (event: LayoutChangeEvent) => {
+    setContainerWidth(event.nativeEvent.layout.width);
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.autoText}>AUTO</Text>
-        <Text style={styles.heartIcon}>❤️</Text>
-      </View>
-      
+    <View style={styles.container} onLayout={onLayout}>
       <View style={styles.wheelWrapper}>
         <FlatList
           ref={flatListRef}
@@ -62,76 +102,96 @@ export default function ArcPatternWheel({
           keyExtractor={(item) => item.id}
           horizontal
           showsHorizontalScrollIndicator={false}
-          snapToInterval={ITEM_WIDTH}
+          snapToInterval={itemWidth}
+          snapToAlignment="start"
           decelerationRate="fast"
-          onMomentumScrollEnd={onScrollEnd}
-          onScrollEndDrag={(e) => {
-            const velocity = e.nativeEvent.velocity?.x || 0;
-            if (Math.abs(velocity) < 0.5) onScrollEnd(e);
-          }}
-          getItemLayout={(_, index) => ({ length: ITEM_WIDTH, offset: ITEM_WIDTH * index, index })}
+          scrollEventThrottle={16}
+          onScroll={onScroll}
+          onMomentumScrollEnd={onScroll}
+          getItemLayout={(_, index) => ({ length: itemWidth, offset: itemWidth * index, index })}
           renderItem={({ item }) => {
             if (item.type === 'pad') {
-              return <View style={{ width: ITEM_WIDTH, height: 60 }} />;
+              return <View style={{ width: itemWidth, height: 80 }} />;
             }
             const itemVal = (item as any).val;
             const isSelected = itemVal === value;
             return (
-              <View style={[styles.itemContainer, { width: ITEM_WIDTH }]}>
+              <TouchableOpacity 
+                activeOpacity={0.9} 
+                onPress={() => {
+                  onValueChange(itemVal);
+                  scrollToValue(itemVal, true);
+                }}
+                style={[styles.itemContainer, { width: itemWidth }]}
+              >
                 <Text style={[styles.itemText, isSelected && styles.selectedItemText]}>
                   {itemVal}
                 </Text>
-              </View>
+              </TouchableOpacity>
             );
           }}
         />
-        <View style={styles.pointer} pointerEvents="none" />
+
+        {/* Center Indicator Box */}
+        <View style={[styles.centerIndicator, { width: itemWidth, left: itemWidth * 2 }]} pointerEvents="none" />
       </View>
       
-      {itemLabel && (
-        <View style={styles.labelContainer}>
-          <Text style={styles.labelText}>{itemLabel(value)}</Text>
-        </View>
-      )}
+      {/* Name and Navigation Controls */}
+      <View style={styles.controlsRow}>
+        <TouchableOpacity 
+          onPress={() => handleJump(-1)}
+          onPressIn={() => startHold(-1)}
+          onPressOut={stopHold}
+          style={styles.navBtn}
+          activeOpacity={0.6}
+        >
+          <MaterialCommunityIcons name="chevron-left" size={28} color={Colors.primary} />
+        </TouchableOpacity>
+
+        {itemLabel && (
+          <View style={styles.labelWrapper}>
+            <Text style={styles.labelText} numberOfLines={1}>{itemLabel(value)}</Text>
+          </View>
+        )}
+
+        <TouchableOpacity 
+          onPress={() => handleJump(1)}
+          onPressIn={() => startHold(1)}
+          onPressOut={stopHold}
+          style={styles.navBtn}
+          activeOpacity={0.6}
+        >
+          <MaterialCommunityIcons name="chevron-right" size={28} color={Colors.primary} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    height: 180,
+    height: 140, // Reduced from 180 to optimize for screen space
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#050505',
-  },
-  header: {
-    position: 'absolute',
-    top: 5,
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  autoText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    letterSpacing: 3,
-  },
-  heartIcon: {
-    fontSize: 22,
-    marginTop: 4,
-    textShadowColor: 'rgba(255,0,0,0.5)',
-    textShadowRadius: 10,
+    paddingVertical: 5,
   },
   wheelWrapper: {
-    width: SCREEN_WIDTH,
+    width: '100%',
     height: 80,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  centerIndicator: {
+    position: 'absolute',
+    width: 60,
+    height: 50,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 110, 0, 0.4)',
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 110, 0, 0.05)',
+    zIndex: -1,
   },
   itemContainer: {
     height: 80,
@@ -139,45 +199,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   itemText: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 18,
-    fontWeight: '600',
+    color: 'rgba(255,255,255,0.15)',
+    fontSize: 20,
+    fontWeight: '700',
   },
   selectedItemText: {
     color: Colors.primary,
-    fontSize: 32,
+    fontSize: 38,
     fontWeight: 'bold',
-    textShadowColor: Colors.primary,
+    textShadowColor: 'rgba(255, 110, 0, 0.6)',
     textShadowRadius: 10,
   },
-  pointer: {
-    position: 'absolute',
-    bottom: 0,
-    width: 0, 
-    height: 0, 
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderBottomWidth: 10,
-    borderStyle: 'solid',
-    backgroundColor: 'transparent',
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: Colors.primary,
+  controlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+    width: '100%',
+    justifyContent: 'center',
+    gap: 10,
   },
-  labelContainer: {
-    position: 'absolute',
-    bottom: 10,
-    backgroundColor: 'rgba(255, 110, 0, 0.1)',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 110, 0, 0.2)',
+  navBtn: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 110, 0, 0.05)',
+    borderRadius: 18,
+    zIndex: 10,
+  },
+  labelWrapper: {
+    minWidth: 140,
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 110, 0, 0.2)',
   },
   labelText: {
     color: '#FFF',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
     textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    textAlign: 'center',
   }
 });

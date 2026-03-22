@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking } from 'react-native';
 import { Colors, Typography, Layout } from '../theme/theme';
 import DeviceItem from '../components/DeviceItem';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -35,6 +35,7 @@ export default function DashboardScreen() {
     writeToDevice,
     isScanning,
     isBluetoothSupported,
+    isBluetoothEnabled,
     requestPermissions
   } = useBLE();
 
@@ -76,7 +77,7 @@ export default function DashboardScreen() {
         scanForPeripherals();
         
         setTimeout(() => {
-          setAllDevices(prev => {
+          setAllDevices((prev: any[]) => {
             let newDevices = [...prev];
             const haloIds = ['sim-halo-1', 'sim-halo-2'];
             const soulIds = ['sim-soul-1', 'sim-soul-2'];
@@ -95,7 +96,7 @@ export default function DashboardScreen() {
                 }
               });
             }
-            allDevicesRef.current = newDevices;
+            allDevicesRef.current = newDevices as any;
             return newDevices;
           });
         }, 150);
@@ -314,7 +315,10 @@ export default function DashboardScreen() {
   };
 
   const deleteGroup = (id: string) => {
-    setCustomGroups(prev => prev.filter(g => g.id !== id));
+    const updatedGroups = customGroups.filter(g => g.id !== id);
+    setCustomGroups(updatedGroups);
+    AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
+    
     if (mockConnectedGroup === id) {
       setMockConnected(false);
       setMockConnectedGroup(null);
@@ -393,13 +397,13 @@ export default function DashboardScreen() {
           AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups)).catch(() => {});
       }
 
-      setAllDevices(prev => {
+      setAllDevices((prev: any[]) => {
         const next = prev.map(d => 
           d.id === selectedDeviceForSettings.id 
             ? { ...d, name: settings.name, type: settings.type, points: settings.points, sorting: settings.sorting, stripType: settings.stripType, groupId: finalGroupId } 
             : d
         );
-        allDevicesRef.current = next;
+        allDevicesRef.current = next as any;
         return next;
       });
       
@@ -430,9 +434,10 @@ export default function DashboardScreen() {
         devices={displayConnectedDevices}
         onLongPressDevice={openSettings}
         writeToDevice={writeToDevice}
+        isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
       />
     );
-  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice]);
+  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates]);
 
   const renderItem = useCallback(({ item }: { item: any }) => (
     <View style={{ paddingHorizontal: Layout.padding }}>
@@ -473,8 +478,35 @@ export default function DashboardScreen() {
     </View>
   ), [displayConnectedDevices, isSelectionMode, selectedIds]);
 
+  const BluetoothWarningBanner = useMemo(() => {
+    if (isBluetoothEnabled || Platform.OS === 'web') return null;
+    return (
+      <TouchableOpacity 
+        onPress={() => Linking.openSettings()}
+        style={{ 
+          backgroundColor: Colors.error, 
+          padding: 16, 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          flexDirection: 'row', 
+          gap: 12,
+          borderBottomWidth: 1,
+          borderBottomColor: 'rgba(255,255,255,0.2)'
+        }}
+        activeOpacity={0.9}
+      >
+        <MaterialCommunityIcons name="alert-circle" size={24} color="#FFF" />
+        <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 14, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          Bluetooth Disabled or Permissions Denied!
+        </Text>
+        <MaterialCommunityIcons name="chevron-right" size={20} color="#FFF" />
+      </TouchableOpacity>
+    );
+  }, [isBluetoothEnabled]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
+      {BluetoothWarningBanner}
       <View style={styles.container}>
 
         <FlatList
@@ -482,36 +514,86 @@ export default function DashboardScreen() {
           ListHeaderComponent={
             <View style={{ paddingBottom: 16 }}>
               {/* COMBINED HEADER & STATUS */}
-              <View style={{ paddingHorizontal: Layout.padding, paddingTop: 16, paddingBottom: 20 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ 
+                paddingHorizontal: Layout.padding, 
+                paddingTop: isActuallyConnected ? 16 : 40, 
+                paddingBottom: isActuallyConnected ? 20 : 30,
+                alignItems: isActuallyConnected ? 'stretch' : 'center'
+              }}>
+                <View style={{ 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  width: '100%'
+                }}>
+                  {!isActuallyConnected && <View style={{ flex: 1 }} />}
                   <Image 
                     source={require('../../assets/logo.png')} 
-                    style={{ width: 100, height: 30 }} 
+                    style={{ 
+                      width: isActuallyConnected ? 100 : 180, 
+                      height: isActuallyConnected ? 30 : 54 
+                    }} 
                     resizeMode="contain"
                     tintColor={Colors.text}
                   />
+                  {!isActuallyConnected && <View style={{ flex: 1 }} />}
                   
                   {isActuallyConnected && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <View style={{ marginRight: 12, alignItems: 'flex-end' }}>
-                        {isGrouped ? (
+                    <View style={{ marginLeft: 16 }}>
+                      {(() => {
+                        const connectedCount = displayConnectedDevices.length;
+                        let expectedCount = 1;
+                        const firstDevice = displayConnectedDevices[0] as any;
+                        if (firstDevice?.grouped && firstDevice?.groupId) {
+                          const group = customGroups.find(g => g.id === firstDevice.groupId);
+                          if (group) expectedCount = group.deviceIds.length;
+                        }
+                        
+                        let statusColor = Colors.success;
+                        if (connectedCount === 0) statusColor = Colors.error;
+                        else if (connectedCount < expectedCount) statusColor = '#FFA500'; // Orange for partial
+                        else statusColor = Colors.success; // Green for all or 1/1
+
+                        return (
                           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: displayConnectedDevices.length >= 2 ? Colors.success : (displayConnectedDevices.length === 1 ? '#FFA500' : Colors.error), marginRight: 6 }} />
-                            <Text style={[Typography.caption, { color: displayConnectedDevices.length >= 2 ? Colors.success : (displayConnectedDevices.length === 1 ? '#FFA500' : Colors.error), fontSize: 10, fontWeight: 'bold' }]}>
-                              SYNCED ({displayConnectedDevices.length})
+                            <View style={{ 
+                              width: 6, 
+                              height: 6, 
+                              borderRadius: 3, 
+                              backgroundColor: statusColor, 
+                              marginRight: 6 
+                            }} />
+                            <Text style={[Typography.caption, { 
+                              color: statusColor, 
+                              fontSize: 10, 
+                              fontWeight: 'bold' 
+                            }]}>
+                              PAIRED ({connectedCount})
                             </Text>
                           </View>
-                        ) : (
-                          <Text style={[Typography.caption, { fontSize: 10 }]}>Connected</Text>
-                        )}
-                      </View>
+                        );
+                      })()}
+                    </View>
+                  )}
+
+                  <View style={{ flex: 1 }} />
+
+                  {isActuallyConnected && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <TouchableOpacity
+                        style={[styles.disconnectButtonSmall, { paddingVertical: 4, paddingHorizontal: 8, marginRight: 8 }]}
+                        onPress={handleDisconnect}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.disconnectButtonTextSmall, { fontSize: 10 }]}>DISCONNECT</Text>
+                      </TouchableOpacity>
 
                       {(() => {
                         const allIds = displayConnectedDevices.map(d => d.id);
                         const isGlobalPoweredOn = allIds.every(id => powerStates[id] ?? true);
                         return (
                           <TouchableOpacity 
-                            style={{ marginRight: 8, width: 32, height: 32, borderRadius: 16, backgroundColor: isGlobalPoweredOn ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isGlobalPoweredOn ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255,255,255,0.2)' }}
+                            style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: isGlobalPoweredOn ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isGlobalPoweredOn ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255,255,255,0.2)' }}
                             onPress={() => handleGlobalPowerToggle(allIds)}
                             activeOpacity={0.6}
                           >
@@ -519,14 +601,6 @@ export default function DashboardScreen() {
                           </TouchableOpacity>
                         );
                       })()}
-
-                      <TouchableOpacity
-                        style={[styles.disconnectButtonSmall, { paddingVertical: 4, paddingHorizontal: 8 }]}
-                        onPress={handleDisconnect}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={[styles.disconnectButtonTextSmall, { fontSize: 10 }]}>DISCONNECT</Text>
-                      </TouchableOpacity>
                     </View>
                   )}
                 </View>
@@ -581,11 +655,7 @@ export default function DashboardScreen() {
               {MemoizedSk8lytzController}
 
               <View style={{ paddingHorizontal: Layout.padding }}>
-              {!isBluetoothSupported && (
-                <View style={styles.errorContainer}>
-                  <Text style={{ color: Colors.error, textAlign: 'center' }}>Bluetooth is not supported or powered on this device. (Are you running on a simulator?)</Text>
-                </View>
-              )}
+
 
               {!isActuallyConnected && customGroups.length > 0 && (
                 <View style={{ marginTop: 20 }}>

@@ -19,6 +19,10 @@ interface ProductVisualizerProps {
   onLongPressDevice?: (device: any) => void;
   fixedFgColor?: string;
   fixedBgColor?: string;
+  brightness?: number;
+  speed?: number;
+  isPoweredOn?: boolean;
+  statusText?: string;
 }
 
 // Convert HSL to Hex manually as React Native Interpolate handles strict string maps better
@@ -45,34 +49,36 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor }: any) => {
+const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, isPoweredOn = true }: any) => {
   const product = device.type || fallbackProduct;
   const pointsPerSide = device.points || fallbackPoints || (product === 'HALOZ' ? 24 : 43);
   const numLeds = pointsPerSide * 2;
 
   const leds = useMemo(() => {
     const list = [];
-    const numSamples = 5000; // Much higher density for a more precise arc-length measurement
+    const numSamples = 5000;
     const pathSamples = [];
     let totalLength = 0;
     
-    // 1. Generate high-res path to measure arc lengths
+    // SCALE FACTOR
+    const S = 0.55;
+
     for (let i = 0; i <= numSamples; i++) {
         const fract = i / numSamples;
         const angle = (fract * 2 * Math.PI) + (Math.PI / 2);
         let top = 0; let left = 0;
         
         if (product === 'HALOZ') {
-          const p = 0.6; // Superellipse exponent: 0.6 provides very rounded corners
+          const p = 0.6;
           const sgnCos = Math.sign(Math.cos(angle)) || 1;
           const sgnSin = Math.sign(Math.sin(angle)) || 1;
-          left = 80 + sgnCos * Math.pow(Math.abs(Math.cos(angle)), p) * 70;
-          top = 120 + sgnSin * Math.pow(Math.abs(Math.sin(angle)), p) * 110;
+          left = (80 + sgnCos * Math.pow(Math.abs(Math.cos(angle)), p) * 70) * S;
+          top = (120 + sgnSin * Math.pow(Math.abs(Math.sin(angle)), p) * 110) * S;
         } else {
-          top = 150 + Math.sin(angle) * 150;
+          top = (150 + Math.sin(angle) * 150) * S;
           const verticalPos = Math.sin(angle);
           const pinch = 1 - 0.3 * Math.exp(-Math.pow(verticalPos - 0.1, 2) * 5); 
-          left = 70 + (Math.cos(angle) * 70 * pinch);
+          left = (70 + (Math.cos(angle) * 70 * pinch)) * S;
         }
 
         if (i > 0) {
@@ -84,14 +90,12 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
         pathSamples.push({ top, left, length: totalLength });
     }
 
-    // 2. Sample evenly along the path
     let lastSampleIdx = 0;
     for (let i = 0; i < numLeds; i++) {
         const targetLength = (i / numLeds) * totalLength;
         let p1 = pathSamples[lastSampleIdx];
         let p2 = pathSamples[lastSampleIdx + 1];
         
-        // Linear search for the segment, starting from last found position for efficiency
         for (let j = lastSampleIdx; j < numSamples; j++) {
             if (pathSamples[j+1].length >= targetLength) {
                 p1 = pathSamples[j];
@@ -104,115 +108,111 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
         const segmentLength = p2.length - p1.length;
         const t = segmentLength <= 0.0001 ? 0 : (targetLength - p1.length) / segmentLength;
         
-        // Visual properties
         const fract = (i / numLeds);
         const mirroredFract = fract <= 0.5 ? fract * 2 : (1 - fract) * 2;
-        let dotColor: any = color;
-        let dotOpacity: any = 1;
+        let dotColor: any = isPoweredOn ? color : '#333333';
+        let dotOpacity: any = isPoweredOn ? 1 : 0.2;
 
-        if (mode === 'PRESETS') {
-           const rainbowColors = [0, 1/6, 2/6, 3/6, 4/6, 5/6, 1].map(v => HSLToHex((v - mirroredFract + 1) % 1 * 360, 100, 50));
-           dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
-        } else if (mode === 'RBM') {
-           dotOpacity = animValue.interpolate({
-              inputRange: [0, Math.max(0, mirroredFract - 0.15), mirroredFract, Math.min(1, mirroredFract + 0.15), 1],
-              outputRange: [0.1, 0.1, 1, 0.1, 0.1]
-           });
-           if (patternId && patternId % 2 === 0) {
-             dotColor = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['#FF6E00', '#FFD60A', '#FF6E00'] });
-           } else {
-             dotColor = animValue.interpolate({ inputRange: [0, 1], outputRange: ['#FF0000', '#FFFF00'] });
-           }
-        } else if (mode === 'MUSIC') {
-           const h = 1 - mirroredFract; // Height mapping weighting
-           const colorVal = parseInt(color.replace('#',''), 16) || 0;
-           const r = (colorVal >> 16) & 255;
-           const g = (colorVal >> 8) & 255;
-           const b = colorVal & 255;
-           const compHex = '#' + ((255-r)<<16 | (255-g)<<8 | (255-b)).toString(16).padStart(6, '0');
-           
-           if (patternId === 1 || patternId === 2) { 
-             dotOpacity = animValue.interpolate({ 
-               inputRange: [0, 0.1, 0.5, 1], 
-               outputRange: [0.1, 1.0 * (h + 0.2), 0.5 * h, 0.1] 
-             });
-             dotColor = (h > 0.5) ? color : compHex;
-           } else if (patternId === 3 || patternId === 7) { 
-             dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.4, 1, 0.4] });
-             dotColor = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [color, compHex, color] });
-           } else if (patternId === 6 || patternId === 10) { 
-             dotOpacity = animValue.interpolate({ inputRange: [0, 0.2, 0.3, 1], outputRange: [0.1, 0.1, 1, 0.1] });
-             dotColor = color;
-           } else if (patternId === 8 || patternId === 9) { 
-             dotOpacity = animValue.interpolate({ inputRange: [0, 0.1, 0.2, 0.3, 1], outputRange: [0.2, 1, 0.2, 1, 0.2] });
-             dotColor = animValue.interpolate({ inputRange: [0, 1], outputRange: [color, compHex] });
-           } else { 
+        if (isPoweredOn) {
+          if (mode === 'PRESETS') {
+             const rainbowColors = [0, 1/6, 2/6, 3/6, 4/6, 5/6, 1].map(v => HSLToHex((v - mirroredFract + 1) % 1 * 360, 100, 50));
+             dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
+          } else if (mode === 'RBM') {
              dotOpacity = animValue.interpolate({
-                inputRange: [0, Math.max(0, mirroredFract - 0.2), mirroredFract, Math.min(1, mirroredFract + 0.1), 1],
+                inputRange: [0, Math.max(0, mirroredFract - 0.15), mirroredFract, Math.min(1, mirroredFract + 0.15), 1],
                 outputRange: [0.1, 0.1, 1, 0.1, 0.1]
              });
-             dotColor = animValue.interpolate({ inputRange: [0, 1], outputRange: [color, compHex] });
-           }
-        } else if (mode === 'FIXED') {
-           const fg = fixedFgColor || color;
-           const bg = fixedBgColor || '#000000';
-           
-           if (patternId === 1) { // Solid
-             dotColor = fg;
-           } else if (patternId === 2) { // Single Dot
-             dotOpacity = animValue.interpolate({
-                inputRange: [0, Math.max(0, mirroredFract - 0.1), mirroredFract, Math.min(1, mirroredFract + 0.1), 1],
-                outputRange: [0.1, 0.1, 1, 0.1, 0.1]
-             });
-             dotColor = fg;
-           } else if (patternId === 3) { // Comet
-             dotOpacity = animValue.interpolate({
-                inputRange: [0, Math.max(0, mirroredFract - 0.25), mirroredFract, Math.min(1, mirroredFract + 0.05), 1],
-                outputRange: [0.1, 0.1, 1, 0.1, 0.1]
-             });
-             dotColor = animValue.interpolate({ inputRange: [0, 1], outputRange: [fg, bg] });
-           } else if (patternId === 4) { // Dashed
-             dotColor = (i % 8 < 4) ? fg : bg;
-             dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.2, 1] });
-           } else if (patternId === 5) { // Alternating
-             dotColor = (i % 4 < 2) ? fg : bg;
-             dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.2, 1] });
-           } else if (patternId === 6) { // Breath
-             dotColor = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [fg, bg, fg] });
-           } else if (patternId === 7) { // Flash
-             dotColor = animValue.interpolate({ inputRange: [0, 0.49, 0.5, 0.99, 1], outputRange: [fg, fg, bg, bg, fg] });
-           }
+             if (patternId && patternId % 2 === 0) {
+               dotColor = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['#FF6E00', '#FFD60A', '#FF6E00'] });
+             } else {
+               dotColor = animValue.interpolate({ inputRange: [0, 1], outputRange: ['#FF0000', '#FFFF00'] });
+             }
+          } else if (mode === 'MUSIC') {
+             const h = 1 - mirroredFract;
+             const colorVal = parseInt(color.replace('#',''), 16) || 0;
+             const r = (colorVal >> 16) & 255;
+             const g = (colorVal >> 8) & 255;
+             const b = colorVal & 255;
+             const compHex = '#' + ((255-r)<<16 | (255-g)<<8 | (255-b)).toString(16).padStart(6, '0');
+             
+             if (patternId === 1 || patternId === 2) { 
+               dotOpacity = animValue.interpolate({ 
+                 inputRange: [0, 0.1, 0.5, 1], 
+                 outputRange: [0.1, 1.0 * (h + 0.2), 0.5 * h, 0.1] 
+               });
+               dotColor = (h > 0.5) ? color : compHex;
+             } else if (patternId === 3 || patternId === 7) { 
+               dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.4, 1, 0.4] });
+               dotColor = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [color, compHex, color] });
+             } else if (patternId === 6 || patternId === 10) { 
+               dotOpacity = animValue.interpolate({ inputRange: [0, 0.2, 0.3, 1], outputRange: [0.1, 0.1, 1, 0.1] });
+               dotColor = color;
+             } else if (patternId === 8 || patternId === 9) { 
+               dotOpacity = animValue.interpolate({ inputRange: [0, 0.1, 0.2, 0.3, 1], outputRange: [0.2, 1, 0.2, 1, 0.2] });
+               dotColor = animValue.interpolate({ inputRange: [0, 1], outputRange: [color, compHex] });
+             } else { 
+               dotOpacity = animValue.interpolate({
+                  inputRange: [0, Math.max(0, mirroredFract - 0.2), mirroredFract, Math.min(1, mirroredFract + 0.1), 1],
+                  outputRange: [0.1, 0.1, 1, 0.1, 0.1]
+               });
+               dotColor = animValue.interpolate({ inputRange: [0, 1], outputRange: [color, compHex] });
+             }
+          } else if (mode === 'FIXED') {
+             const fg = fixedFgColor || color;
+             const bg = fixedBgColor || '#000000';
+             
+             if (patternId === 1) {
+               dotColor = fg;
+             } else if (patternId === 2) {
+               dotOpacity = animValue.interpolate({
+                  inputRange: [0, Math.max(0, mirroredFract - 0.1), mirroredFract, Math.min(1, mirroredFract + 0.1), 1],
+                  outputRange: [0.1, 0.1, 1, 0.1, 0.1]
+               });
+               dotColor = fg;
+             } else if (patternId === 3) {
+               dotOpacity = animValue.interpolate({
+                  inputRange: [0, Math.max(0, mirroredFract - 0.25), mirroredFract, Math.min(1, mirroredFract + 0.05), 1],
+                  outputRange: [0.1, 0.1, 1, 0.1, 0.1]
+               });
+               dotColor = animValue.interpolate({ inputRange: [0, 1], outputRange: [fg, bg] });
+             } else if (patternId === 4) {
+               dotColor = (i % 8 < 4) ? fg : bg;
+               dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.2, 1] });
+             } else if (patternId === 5) {
+               dotColor = (i % 4 < 2) ? fg : bg;
+               dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.2, 1] });
+             } else if (patternId === 6) {
+               dotColor = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [fg, bg, fg] });
+             } else if (patternId === 7) {
+               dotColor = animValue.interpolate({ inputRange: [0, 0.49, 0.5, 0.99, 1], outputRange: [fg, fg, bg, bg, fg] });
+             }
+          }
         }
 
-       const dotSize = product === 'HALOZ' ? 18 : 16; // Increased size for better diffusion overlap
-       const offset = dotSize / 2;
-       const left = p1.left + (p2.left - p1.left) * t - offset;
-       const top = p1.top + (p2.top - p1.top) * t - offset;
+        const dotSize = product === 'HALOZ' ? 12 : 10;
+        const offset = dotSize / 2;
+        const left = p1.left + (p2.left - p1.left) * t - offset;
+        const top = p1.top + (p2.top - p1.top) * t - offset;
 
-       list.push({
-         key: `led_${i}`,
-         position: { top, left, position: 'absolute' as const },
-         activeColor: dotColor,
-         activeOpacity: dotOpacity,
-       });
+        list.push({
+          key: `led_${i}`,
+          position: { top, left, position: 'absolute' as const },
+          activeColor: dotColor,
+          activeOpacity: dotOpacity,
+        });
     }
     return list;
-  }, [product, mode, color, numLeds, patternId]);
+  }, [product, mode, color, numLeds, patternId, isPoweredOn]);
 
   return (
     <TouchableOpacity 
       activeOpacity={onLongPress ? 0.8 : 1}
       onLongPress={onLongPress ? () => onLongPress(device) : undefined}
+      style={{ alignItems: 'center', marginHorizontal: 12, paddingVertical: 10 }}
     >
       <View style={[
         product === 'HALOZ' ? styles.haloBase : styles.soulBase, 
-        { 
-          transform: [{ scale: 0.55 }],
-          // Adjust layout to match visual size after scale
-          marginTop: product === 'HALOZ' ? -54 : -67.5,
-          marginBottom: product === 'HALOZ' ? -54 : -100, // Extra margin to account for text
-          alignSelf: 'center'
-        }
+        { alignSelf: 'center', opacity: isPoweredOn ? (brightness === 0 ? 0 : 0.08 + Math.pow(brightness / 100, 0.6) * 0.92) : 0.2 }
       ]}>
          {leds.map(led => (
             <Animated.View key={led.key} style={[
@@ -221,27 +221,37 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
                { 
                  backgroundColor: led.activeColor, 
                  opacity: led.activeOpacity,
-                 shadowColor: led.activeColor,
+                 shadowColor: isPoweredOn ? led.activeColor : 'transparent',
+                 width: product === 'HALOZ' ? 12 : 10,
+                 height: product === 'HALOZ' ? 12 : 10,
+                 borderRadius: product === 'HALOZ' ? 6 : 5,
                }
             ]} />
          ))}
       </View>
-      <View style={{ marginTop: product === 'HALOZ' ? 10 : 0, alignItems: 'center', zIndex: 10 }}>
-         <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 11, textAlign: 'center', opacity: 0.9 }}>{device.name || product}</Text>
+      <View style={{ marginTop: 10, alignItems: 'center', zIndex: 10, width: 100 }}>
+         <Text 
+           style={{ color: 'white', fontWeight: 'bold', fontSize: 11, textAlign: 'center', opacity: isPoweredOn ? 1.0 : 0.4 }}
+           numberOfLines={2}
+         >
+           {device.name || product}
+         </Text>
       </View>
     </TouchableOpacity>
   );
 };
 
-export default function ProductVisualizer({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice }: ProductVisualizerProps) {
+export default function ProductVisualizer({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText }: ProductVisualizerProps) {
   const animValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     animValue.stopAnimation();
     
-    if (mode === 'PRESETS' || mode === 'RBM' || mode === 'MUSIC' || mode === 'FIXED') {
+    if (isPoweredOn && (mode === 'PRESETS' || mode === 'RBM' || mode === 'MUSIC' || mode === 'FIXED')) {
       animValue.setValue(0);
-      const duration = (mode === 'MUSIC') ? 800 : (mode === 'RBM' ? 2000 : (mode === 'FIXED' ? 1500 : 3000));
+      const baseDuration = (mode === 'MUSIC') ? 800 : (mode === 'RBM' ? 2000 : (mode === 'FIXED' ? 1500 : 3000));
+      // Speed 0 = 5x slower, Speed 100 = 0.4x faster
+      const duration = baseDuration / (0.4 + (speed / 100) * 2.1); 
       
       Animated.loop(
         Animated.timing(animValue, {
@@ -253,7 +263,7 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
     } else {
       animValue.setValue(1);
     }
-  }, [product, mode, color, patternId]);
+  }, [product, mode, color, patternId, speed, isPoweredOn]);
 
   // Fallback if no specific devices array is provided: construct one or two devices based on isPaired flag
   const renderDevices = (devices && devices.length > 0) ? devices : (
@@ -264,6 +274,13 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
 
   return (
     <View style={styles.container}>
+      {statusText && (
+        <View style={{ width: '100%', alignItems: 'center', marginBottom: 12 }}>
+          <Text style={{ color: 'white', opacity: 0.8, fontSize: 10, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+            {statusText}
+          </Text>
+        </View>
+      )}
       <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
          {renderDevices.map((dev, index) => (
            <VisualizerUnit 
@@ -278,6 +295,8 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
              fixedFgColor={fixedFgColor}
              fixedBgColor={fixedBgColor}
              onLongPress={onLongPressDevice}
+             brightness={brightness}
+             isPoweredOn={isPoweredOn}
            />
          ))}
       </View>
@@ -287,39 +306,39 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
 
 const styles = StyleSheet.create({
   container: {
-    padding: 4,
+    padding: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#050505', 
-    borderRadius: 16,
+    backgroundColor: '#000000', 
+    borderRadius: 20,
     marginBottom: 0,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    minHeight: 180,
+    borderColor: 'rgba(255,255,255,0.12)',
+    minHeight: 200,
     width: '100%',
   },
   haloBase: {
-    width: 160, height: 240,
+    width: 88, height: 132,
   },
   soulBase: {
-    width: 140, height: 300,
+    width: 77, height: 165,
   },
   ledDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
-    shadowRadius: 28,
-    elevation: 16,
+    shadowRadius: 12,
+    elevation: 8,
   },
   ledDotSmall: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
-    shadowRadius: 24,
-    elevation: 14,
+    shadowRadius: 10,
+    elevation: 6,
   }
 });

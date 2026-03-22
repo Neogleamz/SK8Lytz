@@ -25,6 +25,7 @@ interface BluetoothLowEnergyApi {
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   isScanning: boolean;
   isBluetoothSupported: boolean;
+  isBluetoothEnabled: boolean;
 }
 
 export default function useBLE(): BluetoothLowEnergyApi {
@@ -37,13 +38,16 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const [connectedDevices, setConnectedDevices] = useState<Device[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [isBluetoothSupported, setIsBluetoothSupported] = useState(Platform.OS !== 'web');
+  const [isBluetoothEnabled, setIsBluetoothEnabled] = useState(Platform.OS === 'web');
 
   useEffect(() => {
     if (!bleManager || Platform.OS === 'web') return;
     const subscription = bleManager.onStateChange((state: any) => {
+      console.log('BLE State Change:', state);
       if (state === State.Unsupported) {
         setIsBluetoothSupported(false);
       }
+      setIsBluetoothEnabled(state === State.PoweredOn);
     }, true);
     return () => subscription.remove();
   }, [bleManager]);
@@ -170,6 +174,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
   };
 
   const writeToDevice = async (payload: number[]) => {
+    // Hex trace for browser/debug purposes
+    console.log('[BLE WRITE]', payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' '));
+    
     if (connectedDevices.length === 0 || Platform.OS === 'web') return;
     try {
       /* global Buffer */
@@ -209,5 +216,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
     disconnectFromDevice,
     isScanning,
     isBluetoothSupported,
+    isBluetoothEnabled,
   };
 }

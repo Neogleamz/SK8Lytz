@@ -30,16 +30,17 @@ interface Sk8lytzControllerProps {
   devices?: any[];
   onLongPressDevice?: (device: any) => void;
   writeToDevice?: (payload: number[]) => Promise<void>;
+  isPoweredOn?: boolean;
 }
 
-export default function Sk8lytzController({ lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice }: Sk8lytzControllerProps) {
+export default function Sk8lytzController({ lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice, isPoweredOn = true }: Sk8lytzControllerProps) {
   const [activeProduct, setActiveProduct] = useState<ProductType>(lockedProduct || 'HALOZ');
   const [activeMode, setActiveMode] = useState<ModeType>('PRESETS');
   const [selectedColor, setSelectedColor] = useState<string>('#00F0FF');
   const [selectedHue, setSelectedHue] = useState<number>(180);
   const [selectedPatternId, setSelectedPatternId] = useState<number>(1);
-  const [brightness, setBrightness] = useState<number>(80);
-  const [speed, setSpeed] = useState<number>(65);
+  const [brightness, setBrightness] = useState<number>(90);
+  const [speed, setSpeed] = useState<number>(50);
   const [micSensitivity, setMicSensitivity] = useState<number>(50);
   const [musicHue, setMusicHue] = useState<number>(180);
   const [musicMode, setMusicModeState] = useState<'SCREEN' | 'BAR'>('SCREEN');
@@ -69,7 +70,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           if (parsed.selectedColor) setSelectedColor(parsed.selectedColor);
           if (parsed.selectedPatternId) setSelectedPatternId(parsed.selectedPatternId);
           if (parsed.brightness !== undefined) setBrightness(parsed.brightness);
+          else setBrightness(90);
           if (parsed.speed !== undefined) setSpeed(parsed.speed);
+          else setSpeed(50);
           if (parsed.micSensitivity !== undefined) setMicSensitivity(parsed.micSensitivity);
           if (parsed.musicHue !== undefined) setMusicHue(parsed.musicHue);
           if (parsed.musicMode) setMusicModeState(parsed.musicMode);
@@ -130,6 +133,32 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     ));
   };
 
+  const getColorName = (hex: string) => {
+    const map: {[key: string]: string} = {
+      '#FF0000': 'Red', '#FFFF00': 'Yellow', '#00FF00': 'Green', 
+      '#00FFFF': 'Cyan', '#0000FF': 'Blue', '#FF00FF': 'Magenta', 
+      '#FFFFFF': 'White', '#000000': 'Black'
+    };
+    const upperHex = hex.toUpperCase();
+    return map[upperHex] || 'Custom';
+  };
+
+  const currentStatusText = React.useMemo(() => {
+    switch(activeMode) {
+      case 'FIXED':
+        return `Fixed - ${getColorName(fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor)}`;
+      case 'RBM':
+        return `Programs - ${getRbmPatternName(selectedPatternId)}`;
+      case 'MUSIC':
+        return `Music - ${MUSIC_PATTERNS[musicPatternId - 1] || 'Pattern ' + musicPatternId}`;
+      case 'CAMERA': return 'Camera';
+      case 'CUSTOM': return 'Custom';
+      case 'MULTICOLOR': return 'Multicolor';
+      case 'PRESETS': return 'Presets';
+      default: return activeMode;
+    }
+  }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, selectedPatternId, musicPatternId, selectedColor]);
+
   const modes: { id: ModeType; label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
     { id: 'PRESETS', label: 'Favorites', icon: 'star-outline' },
     { id: 'FIXED', label: 'Fixed', icon: 'palette-outline' },
@@ -173,6 +202,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
 
       {/* Visual Product Shape Selector/Indicator - ENLARGED FOCUS */}
       <View style={styles.visualizerWrapper}>
+      <View style={{ marginBottom: 16, width: '100%' }}>
         <ProductVisualizer 
           product={activeProduct} 
           color={activeMode === 'FIXED' ? (fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor) : (activeMode === 'MUSIC' ? "#" + [1-Math.max(Math.min((5 + musicHue / 60) % 6, 4 - ((5 + musicHue / 60) % 6), 1), 0), 1-Math.max(Math.min((3 + musicHue / 60) % 6, 4 - ((3 + musicHue / 60) % 6), 1), 0), 1-Math.max(Math.min((1 + musicHue / 60) % 6, 4 - ((1 + musicHue / 60) % 6), 1), 0)].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("") : selectedColor)} 
@@ -182,7 +212,14 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           points={points}
           devices={devices}
           onLongPressDevice={onLongPressDevice}
+          brightness={brightness}
+          speed={speed}
+          fixedFgColor={fixedFgColor}
+          fixedBgColor={fixedBgColor}
+          isPoweredOn={isPoweredOn}
+          statusText={currentStatusText}
         />
+      </View>
       </View>
 
       <View style={styles.controlsContainer}>
@@ -227,7 +264,6 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     activeMode === mode.id && styles.activeModePillText,
                     { fontSize: 11, textAlign: 'center', zIndex: 2, fontWeight: activeMode === mode.id ? 'bold' : '600' }
                   ]}
-                  numberOfLines={1}
                 >
                   {mode.label}
                 </Text>
@@ -268,7 +304,10 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   { id: 4, label: 'Dashed', dots: ['#FFFF00','#FFFF00','transparent','transparent','#FFFF00','#FFFF00','transparent','transparent'] },
                   { id: 5, label: 'Alternating', dots: ['#FF00FF','transparent','#FF00FF','transparent','#FFFFFF','transparent','#FFFFFF','transparent'] },
                   { id: 6, label: 'Breath', dots: ['#00FF00', 'rgba(0,255,0,0.5)', 'transparent', 'rgba(0,255,0,0.5)', '#00FF00', 'rgba(0,255,0,0.5)', 'transparent', 'rgba(0,255,0,0.5)'] },
-                  { id: 7, label: 'Flash', dots: ['#00FFFF', 'transparent', '#00FFFF', 'transparent', '#00FFFF', 'transparent', '#00FFFF', 'transparent'] }
+                  { id: 7, label: 'Flash', dots: ['#00FFFF', 'transparent', '#00FFFF', 'transparent', '#00FFFF', 'transparent', '#00FFFF', 'transparent'] },
+                  { id: 8, label: 'Strobe', dots: ['#FFFFFF', 'transparent', '#FFFFFF', 'transparent', '#FFFFFF', 'transparent', '#FFFFFF', 'transparent'] },
+                  { id: 9, label: 'Wave', dots: ['transparent', 'rgba(0,255,255,0.5)', '#00FFFF', '#00FFFF', 'rgba(0,255,255,0.5)', 'transparent', 'transparent', 'transparent'] },
+                  { id: 10, label: 'Pinch', dots: ['#FF00FF', 'rgba(255,0,255,0.5)', 'transparent', 'transparent', 'transparent', 'rgba(255,0,255,0.5)', '#FF00FF', 'transparent'] }
                 ].map(pattern => (
                   <TouchableOpacity 
                     key={pattern.id}
@@ -279,31 +318,36 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                         const bgHex = fixedColorMode === 'BACKGROUND' ? fixedBgColor : (fixedBgColor || '#000000');
                         const fg = { r: parseInt(fgHex.slice(1, 3), 16), g: parseInt(fgHex.slice(3, 5), 16), b: parseInt(fgHex.slice(5, 7), 16) };
                         const bg = { r: parseInt(bgHex.slice(1, 3), 16), g: parseInt(bgHex.slice(3, 5), 16), b: parseInt(bgHex.slice(5, 7), 16) };
+                        
                         if (pattern.id === 1) {
                           writeToDevice(ZenggeProtocol.setColor(fg.r, fg.g, fg.b));
                         } else if (pattern.id === 6) {
                           writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 1, speed, color1: fg, color2: bg }, { mode: 1, speed, color1: bg, color2: fg }]));
                         } else if (pattern.id === 7) {
                           writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 2, speed, color1: fg, color2: bg }, { mode: 2, speed, color1: bg, color2: fg }]));
+                        } else if (pattern.id === 8) {
+                          writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 2, speed: 100, color1: fg, color2: bg }, { mode: 2, speed: 100, color1: bg, color2: fg }]));
                         } else {
                           let arr: any[] = [];
                           if (pattern.id === 2) arr = [fg, bg, bg, bg, bg, bg, bg, bg];
                           if (pattern.id === 3) arr = [fg, {r: Math.floor(fg.r*0.5), g: Math.floor(fg.g*0.5), b: Math.floor(fg.b*0.5)}, {r: Math.floor(fg.r*0.2), g: Math.floor(fg.g*0.2), b: Math.floor(fg.b*0.2)}, bg, bg, bg];
                           if (pattern.id === 4) arr = [fg, fg, fg, fg, bg, bg, bg, bg];
                           if (pattern.id === 5) arr = [fg, fg, bg, bg];
+                          if (pattern.id === 9) arr = [bg, bg, fg, fg, bg, bg];
+                          if (pattern.id === 10) arr = [fg, bg, bg, bg, bg, fg];
                           writeToDevice(ZenggeProtocol.setMultiColor(arr, speed, 1));
                         }
                       }
                     }}
-                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}
                   >
-                    <Text style={{ marginRight: 12, fontSize: 18 }}>🎨</Text>
-                    <View style={{ flexDirection: 'row', flex: 1, gap: 4 }}>
+                    <Text style={{ marginRight: 10, fontSize: 16 }}>🎨</Text>
+                    <View style={{ flexDirection: 'row', flex: 1, gap: 3 }}>
                       {pattern.dots.map((c, i) => (
-                        <View key={i} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c }} />
+                        <View key={i} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c }} />
                       ))}
                     </View>
-                    <Text style={{ color: Colors.textMuted, fontSize: 18 }}>{fixedPatternId === pattern.id ? '✓' : '→'}</Text>
+                    <Text style={{ color: Colors.textMuted, fontSize: 16 }}>{fixedPatternId === pattern.id ? '✓' : '→'}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -328,27 +372,19 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           )}
 
           {activeMode === 'RBM' && (
-            <View style={styles.sceneContainer}>
-              <View style={styles.sceneHeader}>
-                <Text style={styles.sceneTitle}>100+ RBM Modes</Text>
-              </View>
-              
-              <View style={styles.rbmWheelSection}>
-                <ArcPatternWheel 
-                  value={selectedPatternId} 
-                  onValueChange={(pid) => {
-                    setSelectedPatternId(pid);
-                    if (writeToDevice) {
-                      writeToDevice(ZenggeProtocol.setRbmMode(pid, speed, brightness));
-                    }
-                  }} 
-                  min={1} 
-                  max={100} 
-                  itemLabel={(item: number) => getRbmPatternName(item)}
-                />
-              </View>
-
-
+            <View style={{ marginBottom: 16 }}>
+              <ArcPatternWheel 
+                value={selectedPatternId}
+                onValueChange={(pid) => {
+                  setSelectedPatternId(pid);
+                  if (writeToDevice) {
+                    writeToDevice(ZenggeProtocol.setRbmMode(pid, speed, brightness));
+                  }
+                }}
+                min={1}
+                max={100}
+                itemLabel={(val) => getRbmPatternName(val)}
+              />
             </View>
           )}
 
@@ -534,85 +570,89 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           {/* UNIVERSAL SLIDERS SECTION */}
           {activeMode !== 'CAMERA' && activeMode !== 'CUSTOM' && activeMode !== 'PRESETS' && (
             <View style={[styles.sceneSlidersContainer, { marginTop: 16 }]}>
-              {/* Color Grid */}
-              <View style={[styles.colorGrid, { marginBottom: 16 }]}>
-                {['#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#FFFFFF'].map(color => (
-                  <TouchableOpacity 
-                    key={color} 
-                    onPress={() => {
-                      const hueMap: {[key: string]: number} = {
-                        '#FF0000': 0, '#FFFF00': 60, '#00FF00': 120, 
-                        '#00FFFF': 180, '#0000FF': 240, '#FF00FF': 300, '#FFFFFF': 0
-                      };
-                      if (activeMode === 'FIXED') {
-                        if (fixedColorMode === 'FOREGROUND') setFixedFgColor(color);
-                        else setFixedBgColor(color);
-                        if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
-                      } else if (activeMode === 'MUSIC') {
-                        if (hueMap[color] !== undefined) setMusicHue(hueMap[color]);
-                      } else {
-                        setSelectedColor(color);
-                        if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
-                      }
-
-                      if (writeToDevice) {
-                        if (activeMode === 'MUSIC') {
-                          handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hueMap[color] || 0);
+              {/* Color Grid - Hidden in Programs Mode */}
+              {activeMode !== 'RBM' && (
+                <View style={[styles.colorGrid, { marginBottom: 16 }]}>
+                  {['#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#FFFFFF'].map(color => (
+                    <TouchableOpacity 
+                      key={color} 
+                      onPress={() => {
+                        const hueMap: {[key: string]: number} = {
+                          '#FF0000': 0, '#FFFF00': 60, '#00FF00': 120, 
+                          '#00FFFF': 180, '#0000FF': 240, '#FF00FF': 300, '#FFFFFF': 0
+                        };
+                        if (activeMode === 'FIXED') {
+                          if (fixedColorMode === 'FOREGROUND') setFixedFgColor(color);
+                          else setFixedBgColor(color);
+                          if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
+                        } else if (activeMode === 'MUSIC') {
+                          if (hueMap[color] !== undefined) setMusicHue(hueMap[color]);
                         } else {
-                          const r = parseInt(color.slice(1, 3), 16);
-                          const g = parseInt(color.slice(3, 5), 16);
-                          const b = parseInt(color.slice(5, 7), 16);
-                          writeToDevice(ZenggeProtocol.setColor(r, g, b));
+                          setSelectedColor(color);
+                          if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
                         }
+
+                        if (writeToDevice) {
+                          if (activeMode === 'MUSIC') {
+                            handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hueMap[color] || 0);
+                          } else {
+                            const r = parseInt(color.slice(1, 3), 16);
+                            const g = parseInt(color.slice(3, 5), 16);
+                            const b = parseInt(color.slice(5, 7), 16);
+                            writeToDevice(ZenggeProtocol.setColor(r, g, b));
+                          }
+                        }
+                      }}
+                      style={[
+                        styles.colorButton, 
+                        { backgroundColor: color, flex: 1, marginHorizontal: 2, height: 40, borderRadius: 4 },
+                        ((activeMode === 'FIXED' ? (fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor) : selectedColor) === color) && styles.selectedColorButton
+                      ]} 
+                    />
+                  ))}
+                </View>
+              )}
+
+              {/* Hue Slider - Hidden in Programs Mode */}
+              {activeMode !== 'RBM' && (
+                <View style={[styles.controlRow, { marginTop: 0, height: 40 }]}>
+                  <CustomSlider 
+                    gradientTrack={true}
+                    value={activeMode === 'FIXED' ? fixedHue : (activeMode === 'MUSIC' ? musicHue : selectedHue)}
+                    onValueChange={(hue) => {
+                      if (activeMode === 'FIXED') {
+                        setFixedHue(hue);
+                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+                        const hex = rgb2hex(f(5), f(3), f(1));
+                        if (fixedColorMode === 'FOREGROUND') setFixedFgColor(hex);
+                        else setFixedBgColor(hex);
+                      } else if (activeMode === 'MUSIC') {
+                        setMusicHue(hue);
+                      } else {
+                        setSelectedHue(hue);
+                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+                        setSelectedColor(rgb2hex(f(5), f(3), f(1)));
                       }
                     }}
-                    style={[
-                      styles.colorButton, 
-                      { backgroundColor: color, flex: 1, marginHorizontal: 2, height: 40, borderRadius: 4 },
-                      ((activeMode === 'FIXED' ? (fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor) : selectedColor) === color) && styles.selectedColorButton
-                    ]} 
+                    onSlidingComplete={(hue) => {
+                      if (activeMode === 'MUSIC') {
+                        handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hue);
+                      } else if (writeToDevice) {
+                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                        const r = Math.round(f(5) * 255);
+                        const g = Math.round(f(3) * 255);
+                        const b = Math.round(f(1) * 255);
+                        writeToDevice(ZenggeProtocol.setColor(r, g, b));
+                      }
+                    }}
+                    minimumValue={0}
+                    maximumValue={360}
+                    style={{ position: 'absolute', width: '100%', height: 40 }}
                   />
-                ))}
-              </View>
-
-              {/* Hue Slider */}
-              <View style={[styles.controlRow, { marginTop: 0, height: 40 }]}>
-                <CustomSlider 
-                  gradientTrack={true}
-                  value={activeMode === 'FIXED' ? fixedHue : (activeMode === 'MUSIC' ? musicHue : selectedHue)}
-                  onValueChange={(hue) => {
-                    if (activeMode === 'FIXED') {
-                      setFixedHue(hue);
-                      const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                      const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
-                      const hex = rgb2hex(f(5), f(3), f(1));
-                      if (fixedColorMode === 'FOREGROUND') setFixedFgColor(hex);
-                      else setFixedBgColor(hex);
-                    } else if (activeMode === 'MUSIC') {
-                      setMusicHue(hue);
-                    } else {
-                      setSelectedHue(hue);
-                      const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                      const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
-                      setSelectedColor(rgb2hex(f(5), f(3), f(1)));
-                    }
-                  }}
-                  onSlidingComplete={(hue) => {
-                    if (activeMode === 'MUSIC') {
-                      handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hue);
-                    } else if (writeToDevice) {
-                      const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                      const r = Math.round(f(5) * 255);
-                      const g = Math.round(f(3) * 255);
-                      const b = Math.round(f(1) * 255);
-                      writeToDevice(ZenggeProtocol.setColor(r, g, b));
-                    }
-                  }}
-                  minimumValue={0}
-                  maximumValue={360}
-                  style={{ position: 'absolute', width: '100%', height: 40 }}
-                />
-              </View>
+                </View>
+              )}
 
               {/* Brightness / Sensitivity Slider */}
               <View style={[styles.controlRow, { marginTop: 24 }]}>
@@ -622,14 +662,18 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   </Text>
                   
                   {activeMode === 'MUSIC' && (
-                    <View style={{ flexDirection: 'row', position: 'absolute', top: -25, left: 24 }}>
+                    <View style={{ flexDirection: 'row', position: 'absolute', top: -35, left: 24 }}>
                       <TouchableOpacity style={{ marginRight: 16 }} onPress={() => setMusicSetting('SENSITIVITY')}>
-                        <Text style={{ color: musicSetting === 'SENSITIVITY' ? Colors.primary : Colors.textMuted }}>Sensitivity</Text>
+                        <Text style={{ color: musicSetting === 'SENSITIVITY' ? Colors.primary : Colors.textMuted, fontSize: 12, fontWeight: 'bold' }}>SENSITIVITY</Text>
                       </TouchableOpacity>
                       <TouchableOpacity onPress={() => setMusicSetting('BRIGHTNESS')}>
-                        <Text style={{ color: musicSetting === 'BRIGHTNESS' ? Colors.primary : Colors.textMuted }}>Brightness</Text>
+                        <Text style={{ color: musicSetting === 'BRIGHTNESS' ? Colors.primary : Colors.textMuted, fontSize: 12, fontWeight: 'bold' }}>BRIGHTNESS</Text>
                       </TouchableOpacity>
                     </View>
+                  )}
+                  
+                  {activeMode !== 'MUSIC' && (
+                    <Text style={{ position: 'absolute', top: -20, left: 24, fontSize: 10, color: Colors.textMuted, fontWeight: 'bold', letterSpacing: 1 }}>BRIGHTNESS</Text>
                   )}
 
                   <CustomSlider 
@@ -648,10 +692,46 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                           } else {
                             handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicHue);
                           }
+                        } else {
+                          // Support brightness for Fixed, Presets, Multicolor via RGB scaling
+                          const factor = val / 100;
+                          const fgHex = activeMode === 'FIXED' ? fixedFgColor : (activeMode === 'MULTICOLOR' ? '#FFFFFF' : selectedColor);
+                          const bgHex = activeMode === 'FIXED' ? fixedBgColor : '#000000';
+                          
+                          const fg = { 
+                            r: Math.round(parseInt(fgHex.slice(1, 3), 16) * factor), 
+                            g: Math.round(parseInt(fgHex.slice(3, 5), 16) * factor), 
+                            b: Math.round(parseInt(fgHex.slice(5, 7), 16) * factor) 
+                          };
+                          const bg = { 
+                            r: Math.round(parseInt(bgHex.slice(1, 3), 16) * factor), 
+                            g: Math.round(parseInt(bgHex.slice(3, 5), 16) * factor), 
+                            b: Math.round(parseInt(bgHex.slice(5, 7), 16) * factor) 
+                          };
+
+                          if (activeMode === 'FIXED' && fixedPatternId !== 1) {
+                            if (fixedPatternId === 6) {
+                              writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 1, speed, color1: fg, color2: bg }, { mode: 1, speed, color1: bg, color2: fg }]));
+                            } else if (fixedPatternId === 7) {
+                              writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 2, speed, color1: fg, color2: bg }, { mode: 2, speed, color1: bg, color2: fg }]));
+                            } else {
+                              let arr: any[] = [];
+                              if (fixedPatternId === 2) arr = [fg, bg, bg, bg, bg, bg, bg, bg];
+                              if (fixedPatternId === 3) arr = [fg, {r: Math.floor(fg.r*0.5), g: Math.floor(fg.g*0.5), b: Math.floor(fg.b*0.5)}, {r: Math.floor(fg.r*0.2), g: Math.floor(fg.g*0.2), b: Math.floor(fg.b*0.2)}, bg, bg, bg];
+                              if (fixedPatternId === 4) arr = [fg, fg, fg, fg, bg, bg, bg, bg];
+                              if (fixedPatternId === 5) arr = [fg, fg, bg, bg];
+                              writeToDevice(ZenggeProtocol.setMultiColor(arr, speed, 1));
+                            }
+                          } else {
+                            writeToDevice(ZenggeProtocol.setColor(fg.r, fg.g, fg.b));
+                          }
                         }
                       }
                     }}
                   />
+                  <Text style={{ color: Colors.text, marginLeft: 10, width: 45, fontWeight: 'bold', fontSize: 13, textAlign: 'right' }}>
+                    {Math.round(activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? micSensitivity : brightness)}%
+                  </Text>
                   <Text style={{ color: Colors.textMuted, marginLeft: 8, fontSize: 16 }}>
                     {activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? '🎚️' : '☀️'}
                   </Text>
@@ -661,6 +741,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
               {/* Speed Slider */}
               {activeMode !== 'MUSIC' && (
                 <View style={[styles.controlRow, { marginTop: 12 }]}>
+                  <Text style={{ position: 'absolute', top: -14, left: 24, fontSize: 10, color: Colors.textMuted, fontWeight: 'bold', letterSpacing: 1 }}>SPEED</Text>
                   <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={{ color: Colors.textMuted, marginRight: 8, fontSize: 16 }}>🚀</Text>
                     <CustomSlider 
@@ -708,7 +789,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                       maximumValue={100}
                       style={{ flex: 1 }}
                     />
-                    <Text style={{ color: Colors.textMuted, marginLeft: 8, fontSize: 16 }}>🚀</Text>
+                    <Text style={{ color: Colors.text, marginLeft: 10, width: 45, fontWeight: 'bold', fontSize: 13, textAlign: 'right' }}>
+                      {Math.round(speed)}
+                    </Text>
                   </View>
                 </View>
               )}
@@ -729,10 +812,9 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   visualizerWrapper: {
-    transform: [{ scale: 1.0 }],
+    width: '100%',
+    alignItems: 'stretch',
     marginVertical: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   tabContainer: {
     flexDirection: 'row',
