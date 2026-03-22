@@ -527,7 +527,7 @@ export default function DashboardScreen() {
                 {!isActuallyConnected && (
                   <TouchableOpacity 
                     onPress={toggleTheme} 
-                    style={{ position: 'absolute', left: 0, top: 40, zIndex: 10, padding: 10 }}
+                    style={{ position: 'absolute', right: 0, top: 40, zIndex: 10, padding: 10 }}
                   >
                     <MaterialCommunityIcons 
                       name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} 
@@ -592,7 +592,7 @@ export default function DashboardScreen() {
                     </View>
                   )}
 
-                  <View style={{ flex: 1 }} />
+                  {isActuallyConnected && <View style={{ flex: 1 }} />}
 
                   {isActuallyConnected && (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
