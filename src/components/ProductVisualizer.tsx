@@ -203,9 +203,17 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
     <TouchableOpacity 
       activeOpacity={onLongPress ? 0.8 : 1}
       onLongPress={onLongPress ? () => onLongPress(device) : undefined}
-      style={{ alignItems: 'center', marginHorizontal: 2 }}
     >
-      <View style={[product === 'HALOZ' ? styles.haloBase : styles.soulBase, { transform: [{ scale: 0.55 }] }]}>
+      <View style={[
+        product === 'HALOZ' ? styles.haloBase : styles.soulBase, 
+        { 
+          transform: [{ scale: 0.55 }],
+          // Adjust layout to match visual size after scale
+          marginTop: product === 'HALOZ' ? -54 : -67.5,
+          marginBottom: product === 'HALOZ' ? -54 : -100, // Extra margin to account for text
+          alignSelf: 'center'
+        }
+      ]}>
          {leds.map(led => (
             <Animated.View key={led.key} style={[
                product === 'HALOZ' ? styles.ledDot : styles.ledDotSmall, 
@@ -218,7 +226,7 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
             ]} />
          ))}
       </View>
-      <View style={{ marginTop: -36, alignItems: 'center' }}>
+      <View style={{ marginTop: product === 'HALOZ' ? 10 : 0, alignItems: 'center', zIndex: 10 }}>
          <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 11, textAlign: 'center', opacity: 0.9 }}>{device.name || product}</Text>
       </View>
     </TouchableOpacity>
@@ -287,7 +295,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    minHeight: 120,
+    minHeight: 180,
     width: '100%',
   },
   haloBase: {

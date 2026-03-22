@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image } from 'react-native';
 import { Colors, Typography, Layout } from '../theme/theme';
-import Header from '../components/Header';
 import DeviceItem from '../components/DeviceItem';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import useBLE from '../hooks/useBLE';
@@ -476,57 +475,69 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Header />
       <View style={styles.container}>
 
         <FlatList
           style={{ flex: 1 }}
           ListHeaderComponent={
             <View style={{ paddingBottom: 16 }}>
-              <View style={{ paddingHorizontal: Layout.padding }}>
-              <View style={[styles.card, isActuallyConnected ? { paddingVertical: 12, paddingHorizontal: 16 } : { padding: 16 }]}>
-                {isActuallyConnected ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <View style={{ flex: 1 }}>
-                      {isGrouped ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: displayConnectedDevices.length >= 2 ? Colors.success : (displayConnectedDevices.length === 1 ? '#FFA500' : Colors.error), marginRight: 6 }} />
-                          <Text style={[Typography.caption, { color: displayConnectedDevices.length >= 2 ? Colors.success : (displayConnectedDevices.length === 1 ? '#FFA500' : Colors.error), fontWeight: 'bold' }]}>
-                            SYNCED ({displayConnectedDevices.length})
-                          </Text>
-                        </View>
-                      ) : (
-                        <Text style={Typography.body}>
-                          Connected: <Text style={{ color: Colors.primary, fontWeight: 'bold' }}>
-                            {displayConnectedDevices[0]?.name}
-                          </Text>
-                        </Text>
-                      )}
-                    </View>
+              {/* COMBINED HEADER & STATUS */}
+              <View style={{ paddingHorizontal: Layout.padding, paddingTop: 16, paddingBottom: 20 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Image 
+                    source={require('../../assets/logo.png')} 
+                    style={{ width: 100, height: 30 }} 
+                    resizeMode="contain"
+                    tintColor={Colors.text}
+                  />
+                  
+                  {isActuallyConnected && (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{ marginRight: 12, alignItems: 'flex-end' }}>
+                        {isGrouped ? (
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: displayConnectedDevices.length >= 2 ? Colors.success : (displayConnectedDevices.length === 1 ? '#FFA500' : Colors.error), marginRight: 6 }} />
+                            <Text style={[Typography.caption, { color: displayConnectedDevices.length >= 2 ? Colors.success : (displayConnectedDevices.length === 1 ? '#FFA500' : Colors.error), fontSize: 10, fontWeight: 'bold' }]}>
+                              SYNCED ({displayConnectedDevices.length})
+                            </Text>
+                          </View>
+                        ) : (
+                          <Text style={[Typography.caption, { fontSize: 10 }]}>Connected</Text>
+                        )}
+                      </View>
+
                       {(() => {
                         const allIds = displayConnectedDevices.map(d => d.id);
                         const isGlobalPoweredOn = allIds.every(id => powerStates[id] ?? true);
                         return (
                           <TouchableOpacity 
-                            style={{ marginRight: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: isGlobalPoweredOn ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isGlobalPoweredOn ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255,255,255,0.2)' }}
+                            style={{ marginRight: 8, width: 32, height: 32, borderRadius: 16, backgroundColor: isGlobalPoweredOn ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isGlobalPoweredOn ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255,255,255,0.2)' }}
                             onPress={() => handleGlobalPowerToggle(allIds)}
                             activeOpacity={0.6}
                           >
-                            <MaterialCommunityIcons name="power" size={20} color={isGlobalPoweredOn ? Colors.primary : Colors.textMuted} />
+                            <MaterialCommunityIcons name="power" size={18} color={isGlobalPoweredOn ? Colors.primary : Colors.textMuted} />
                           </TouchableOpacity>
                         );
                       })()}
+
                       <TouchableOpacity
-                        style={styles.disconnectButtonSmall}
+                        style={[styles.disconnectButtonSmall, { paddingVertical: 4, paddingHorizontal: 8 }]}
                         onPress={handleDisconnect}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.disconnectButtonTextSmall}>DISCONNECT</Text>
+                        <Text style={[styles.disconnectButtonTextSmall, { fontSize: 10 }]}>DISCONNECT</Text>
                       </TouchableOpacity>
                     </View>
-                  </View>
-                ) : (
+                  )}
+                </View>
+                {!isActuallyConnected && (
+                  <View style={{ height: 2, width: 30, backgroundColor: Colors.secondary, marginTop: 6, borderRadius: 1 }} />
+                )}
+              </View>
+
+              <View style={{ paddingHorizontal: Layout.padding }}>
+              {!isActuallyConnected ? (
+                <View style={[styles.card, { padding: 16 }]}>
                   <View>
                     <TouchableOpacity
                       style={[styles.scanButton, { marginTop: 0 }, isScanning && { opacity: 0.7 }]}
@@ -563,8 +574,8 @@ export default function DashboardScreen() {
                       </View>
                     </View>
                   </View>
-                )}
-              </View>
+                </View>
+              ) : null}
               </View>
 
               {MemoizedSk8lytzController}
