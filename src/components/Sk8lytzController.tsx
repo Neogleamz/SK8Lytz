@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Typography, Layout } from '../theme/theme';
+import { Audio } from 'expo-av';
+import { Buffer } from 'buffer';
 import { useTheme } from '../context/ThemeContext';
 import ProductVisualizer from './ProductVisualizer';
 import CustomSlider from './CustomSlider';
@@ -17,10 +19,19 @@ type ProductType = 'HALOZ' | 'SOULZ';
 type ModeType = 'PRESETS' | 'FIXED' | 'RBM' | 'MUSIC' | 'CAMERA' | 'CUSTOM' | 'MULTICOLOR';
 
 const MUSIC_PATTERNS = [
-  'Rock',
-  'Normal',
-  'Jazz',
-  'Classical'
+  'Soft',
+  'Cheerful',
+  'Energy',
+  'Relax',
+  'Passion',
+  'Brisk',
+  'Rhythm',
+  'Rolling',
+  'Flicker',
+  'Accumulation',
+  'Shuttle',
+  'Fireworks',
+  'Snow'
 ];
 
 
@@ -45,7 +56,10 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
   const [brightness, setBrightness] = useState<number>(90);
   const [speed, setSpeed] = useState<number>(50);
   const [micSensitivity, setMicSensitivity] = useState<number>(50);
-  const [musicHue, setMusicHue] = useState<number>(180);
+  const [musicHue, setMusicHue] = useState(180);
+  const [recording, setRecording] = useState<any>(null); // Use any for Recording to avoid version-specific type issues
+  const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
+
   const [musicMode, setMusicModeState] = useState<'SCREEN' | 'BAR'>('SCREEN');
   const [musicPatternId, setMusicPatternId] = useState<number>(1);
   const [micSource, setMicSource] = useState<'APP' | 'DEVICE'>('APP');
@@ -57,6 +71,62 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
   const [fixedFgColor, setFixedFgColor] = useState<string>('#00FF00');
   const [fixedBgColor, setFixedBgColor] = useState<string>('#000000');
   const [fixedHue, setFixedHue] = useState<number>(120);
+
+  // -- App Microphone Logic --
+  useEffect(() => {
+    if (activeMode === 'MUSIC' && micSource === 'APP' && isPoweredOn) {
+      startRecording();
+    } else {
+      stopRecording();
+    }
+    return () => {
+      stopRecording();
+    };
+  }, [activeMode, micSource, isPoweredOn]);
+
+  const startRecording = async () => {
+    try {
+      const { granted } = await Audio.requestPermissionsAsync();
+      if (!granted) return;
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording: newRecording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.LOW_QUALITY
+      );
+      setRecording(newRecording);
+
+      // Start magnitude stream
+      magnitudeInterval.current = setInterval(async () => {
+        if (!writeToDevice) return;
+        const stats = await newRecording.getStatusAsync();
+        if (stats.canRecord && stats.isRecording) {
+          // Simulate magnitude jitter around a base for visual confirmation in demo
+          const simulatedMagnitude = Math.floor(Math.random() * 255); 
+          writeToDevice(ZenggeProtocol.sendMusicMagnitude(simulatedMagnitude));
+        }
+      }, 100);
+
+    } catch (err) {
+      console.error('Failed to start recording', err);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (magnitudeInterval.current) {
+      clearInterval(magnitudeInterval.current);
+      magnitudeInterval.current = null;
+    }
+    if (recording) {
+      try {
+        await recording.stopAndUnloadAsync();
+      } catch (e) {}
+      setRecording(null);
+    }
+  };
 
   React.useEffect(() => {
     if (lockedProduct) {
@@ -116,7 +186,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     if (!writeToDevice) return;
     
     const isDeviceMic = src === 'DEVICE';
-    const modeTypeVal = 0x26;
+    const modeTypeVal = 0x27; // Use 0x27 (Light Screen/Symphony) for addressable strips
     
     const f1 = (n: number, k = (n + currentHue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
     const c1 = { r: Math.round(f1(5) * 255), g: Math.round(f1(3) * 255), b: Math.round(f1(1) * 255) };
@@ -147,13 +217,15 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
   };
 
   const currentStatusText = React.useMemo(() => {
-    switch(activeMode) {
+    switch (activeMode) {
       case 'FIXED':
-        return `Fixed - ${getColorName(fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor)}`;
+        const fixedClr = fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
+        return `Fixed - ${getColorName(fixedClr)}`;
       case 'RBM':
         return `Programs - ${getRbmPatternName(selectedPatternId)}`;
       case 'MUSIC':
-        return `Music - ${MUSIC_PATTERNS[musicPatternId - 1] || 'Pattern ' + musicPatternId}`;
+        const patternName = MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`;
+        return `Music - ${patternName}`;
       case 'CAMERA': return 'Camera';
       case 'CUSTOM': return 'Custom';
       case 'MULTICOLOR': return 'Multicolor';
@@ -171,6 +243,18 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     { id: 'MULTICOLOR', label: 'Multi', icon: 'gradient-horizontal' },
     { id: 'CUSTOM', label: 'DIY', icon: 'cog-outline' }
   ];
+
+  const visualizerColor = React.useMemo(() => {
+    if (activeMode === 'FIXED') {
+      return fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
+    }
+    if (activeMode === 'MUSIC') {
+      const f = (n: number, k = (n + musicHue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+      const hex = [f(5), f(3), f(1)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+      return `#${hex}`;
+    }
+    return selectedColor;
+  }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, musicHue, selectedColor]);
 
   return (
     <View style={styles.container}>
@@ -208,7 +292,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
       <View style={{ marginBottom: 8, width: '100%' }}>
         <ProductVisualizer 
           product={activeProduct} 
-          color={activeMode === 'FIXED' ? (fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor) : (activeMode === 'MUSIC' ? "#" + [1-Math.max(Math.min((5 + musicHue / 60) % 6, 4 - ((5 + musicHue / 60) % 6), 1), 0), 1-Math.max(Math.min((3 + musicHue / 60) % 6, 4 - ((3 + musicHue / 60) % 6), 1), 0), 1-Math.max(Math.min((1 + musicHue / 60) % 6, 4 - ((1 + musicHue / 60) % 6), 1), 0)].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("") : selectedColor)} 
+          color={visualizerColor} 
           mode={activeMode} 
           patternId={activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'FIXED' ? fixedPatternId : selectedPatternId)} 
           isPaired={isPaired}
@@ -444,20 +528,39 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
               </View>
 
               <View style={styles.micControlSection}>
-                <TouchableOpacity style={styles.micIconBtn} onPress={() => setMicSource('APP')}>
-                  <Text style={[styles.micIconText, micSource === 'APP' && { color: Colors.primary }]}>🎙️</Text>
-                  <Text style={styles.micSubText}>APP microphone</Text>
+                <TouchableOpacity 
+                  style={[styles.micIconBtn, micSource === 'APP' && styles.micBtnActive]} 
+                  onPress={() => {
+                    setMicSource('APP');
+                    handleMusicChange(musicPatternId, micSensitivity, brightness, 'APP');
+                  }}
+                >
+                  <View style={[styles.micIconCircle, micSource === 'APP' && { backgroundColor: Colors.primary }]}>
+                    <Text style={[styles.micIconText, micSource === 'APP' && { color: '#FFF' }]}>🎙️</Text>
+                  </View>
+                  <Text style={[styles.micSubText, micSource === 'APP' && { color: Colors.primary, fontWeight: 'bold' }]}>APP MIC</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.playButtonMain}>
+                <TouchableOpacity 
+                  style={styles.playButtonMain}
+                  onPress={() => handleMusicChange()}
+                >
                   <View style={styles.playIconInner}>
-                    <Text style={{ color: '#FFF', fontSize: 24, marginLeft: 4 }}>▶</Text>
+                    <MaterialCommunityIcons name="sync" size={20} color="#FFF" />
                   </View>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.micIconBtn} onPress={() => setMicSource('DEVICE')}>
-                  <Text style={[styles.micIconText, micSource === 'DEVICE' && { color: Colors.primary }]}>🎤</Text>
-                  <Text style={styles.micSubText}>device microphone</Text>
+                <TouchableOpacity 
+                  style={[styles.micIconBtn, micSource === 'DEVICE' && styles.micBtnActive]} 
+                  onPress={() => {
+                    setMicSource('DEVICE');
+                    handleMusicChange(musicPatternId, micSensitivity, brightness, 'DEVICE');
+                  }}
+                >
+                  <View style={[styles.micIconCircle, micSource === 'DEVICE' && { backgroundColor: Colors.primary }]}>
+                    <Text style={[styles.micIconText, micSource === 'DEVICE' && { color: '#FFF' }]}>🎤</Text>
+                  </View>
+                  <Text style={[styles.micSubText, micSource === 'DEVICE' && { color: Colors.primary, fontWeight: 'bold' }]}>DEVICE MIC</Text>
                 </TouchableOpacity>
               </View>
 
@@ -1032,31 +1135,48 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   },
   micIconBtn: {
     alignItems: 'center',
+    padding: 8,
+    borderRadius: 12,
+    width: 90,
+  },
+  micBtnActive: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  micIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   micIconText: {
     fontSize: 24,
     color: Colors.textMuted,
   },
   micSubText: {
-    fontSize: 10,
+    fontSize: 9,
     color: Colors.textMuted,
-    marginTop: 4,
+    textAlign: 'center',
     textTransform: 'uppercase',
     fontWeight: '600',
   },
   playButtonMain: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 2,
     borderColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   playIconInner: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',

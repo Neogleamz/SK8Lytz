@@ -19,7 +19,7 @@ interface BluetoothLowEnergyApi {
   connectToDevice: (device: Device) => Promise<void>;
   connectToDevices: (devices: Device[]) => Promise<void>;
   disconnectFromDevice: () => void;
-  writeToDevice: (payload: number[]) => Promise<void>;
+  writeToDevice: (payload: number[], targetDeviceId?: string) => Promise<void>;
   connectedDevices: Device[];
   allDevices: Device[];
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
@@ -173,9 +173,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
     }
   };
 
-  const writeToDevice = async (payload: number[]) => {
+  const writeToDevice = async (payload: number[], targetDeviceId?: string) => {
     // Hex trace for browser/debug purposes
-    console.log('[BLE WRITE]', payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' '));
+    console.log(`[BLE WRITE]${targetDeviceId ? ` [Target: ${targetDeviceId}]` : ''}`, payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' '));
     
     if (connectedDevices.length === 0 || Platform.OS === 'web') return;
     try {
@@ -183,7 +183,15 @@ export default function useBLE(): BluetoothLowEnergyApi {
       const buffer = require('buffer').Buffer;
       const base64Payload = buffer.from(payload).toString('base64');
       
-      await Promise.all(connectedDevices.map(device => 
+      const targets = targetDeviceId 
+        ? connectedDevices.filter(d => d.id === targetDeviceId) 
+        : connectedDevices;
+
+      if (targets.length === 0 && targetDeviceId) {
+        console.warn(`Target device ${targetDeviceId} not found in connected devices`);
+      }
+
+      await Promise.all(targets.map(device => 
         device.writeCharacteristicWithoutResponseForService(
           ZENGGE_SERVICE_UUID,
           ZENGGE_CHARACTERISTIC_UUID,

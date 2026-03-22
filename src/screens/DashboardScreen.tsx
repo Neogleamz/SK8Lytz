@@ -280,15 +280,17 @@ export default function DashboardScreen() {
     
     // Update local state optimistic
     const newStates = { ...powerStates };
-    deviceIds.forEach(id => { newStates[id] = targetState; });
+    deviceIds.forEach(id => { 
+        newStates[id] = targetState; 
+        
+        // Broadcast BLE command targetted to each device
+        if (targetState) {
+            writeToDevice(ZenggeProtocol.turnOn(), id);
+        } else {
+            writeToDevice(ZenggeProtocol.turnOff(), id);
+        }
+    });
     setPowerStates(newStates);
-
-    // Broadcast BLE command
-    if (targetState) {
-        writeToDevice(ZenggeProtocol.turnOn());
-    } else {
-        writeToDevice(ZenggeProtocol.turnOff());
-    }
   };
 
 
@@ -395,7 +397,7 @@ export default function DashboardScreen() {
              AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups)).catch(() => {});
           }
       } else if (!settings.grouped) {
-          const newGroups = customGroups.map(g => ({...g, deviceIds: g.deviceIds.filter(id => id !== selectedDeviceForSettings.id)}));
+          const newGroups = customGroups.map(g => ({...g, deviceIds: g.deviceIds.filter((id: string) => id !== selectedDeviceForSettings.id)}));
           setCustomGroups(newGroups);
           AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups)).catch(() => {});
       }
@@ -479,7 +481,7 @@ export default function DashboardScreen() {
         onPowerToggle={() => handleGlobalPowerToggle([item.id])}
       />
     </View>
-  ), [displayConnectedDevices, isSelectionMode, selectedIds]);
+  ), [displayConnectedDevices, isSelectionMode, selectedIds, powerStates]);
 
   const BluetoothWarningBanner = useMemo(() => {
     if (isBluetoothEnabled || Platform.OS === 'web') return null;
