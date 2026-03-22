@@ -15,9 +15,20 @@ interface CustomSliderProps {
 
 export default function CustomSlider({ value, onValueChange, onSlidingComplete, minimumValue = 0, maximumValue = 100, style, gradientTrack = false }: CustomSliderProps) {
   const [containerWidth, setContainerWidth] = useState(0);
+  const containerWidthRef = useRef(0);
+  
   const valueRef = useRef(value);
   valueRef.current = value;
   
+  const minMaxRef = useRef({ min: minimumValue, max: maximumValue });
+  minMaxRef.current = { min: minimumValue, max: maximumValue };
+
+  const onValueChangeRef = useRef(onValueChange);
+  onValueChangeRef.current = onValueChange;
+
+  const onSlidingCompleteRef = useRef(onSlidingComplete);
+  onSlidingCompleteRef.current = onSlidingComplete;
+
   const startValRef = useRef(value);
 
   const panResponder = useRef(
@@ -31,26 +42,28 @@ export default function CustomSlider({ value, onValueChange, onSlidingComplete, 
         // Record starting value
         startValRef.current = valueRef.current;
         // Optional: Jump to click location if it's a tap on track
-        if (containerWidth > 0 && evt.nativeEvent.locationX) {
-           const initialPercent = Math.max(0, Math.min(1, evt.nativeEvent.locationX / containerWidth));
-           const initialVal = minimumValue + (initialPercent * (maximumValue - minimumValue));
+        if (containerWidthRef.current > 0 && evt.nativeEvent.locationX) {
+           const initialPercent = Math.max(0, Math.min(1, evt.nativeEvent.locationX / containerWidthRef.current));
+           const { min, max } = minMaxRef.current;
+           const initialVal = min + (initialPercent * (max - min));
            startValRef.current = initialVal;
-           onValueChange(Math.round(initialVal));
+           onValueChangeRef.current(Math.round(initialVal));
         }
       },
       onPanResponderMove: (evt, gestureState) => {
-        if (containerWidth === 0) return;
-        const deltaPercent = gestureState.dx / containerWidth;
-        const deltaVal = deltaPercent * (maximumValue - minimumValue);
+        if (containerWidthRef.current === 0) return;
+        const { min, max } = minMaxRef.current;
+        const deltaPercent = gestureState.dx / containerWidthRef.current;
+        const deltaVal = deltaPercent * (max - min);
         let newVal = startValRef.current + deltaVal;
-        newVal = Math.max(minimumValue, Math.min(maximumValue, newVal));
-        onValueChange(Math.round(newVal));
+        newVal = Math.max(min, Math.min(max, newVal));
+        onValueChangeRef.current(Math.round(newVal));
       },
       onPanResponderRelease: () => {
-        if (onSlidingComplete) onSlidingComplete(valueRef.current);
+        if (onSlidingCompleteRef.current) onSlidingCompleteRef.current(valueRef.current);
       },
       onPanResponderTerminate: () => {
-        if (onSlidingComplete) onSlidingComplete(valueRef.current);
+        if (onSlidingCompleteRef.current) onSlidingCompleteRef.current(valueRef.current);
       },
     })
   ).current;
@@ -60,7 +73,10 @@ export default function CustomSlider({ value, onValueChange, onSlidingComplete, 
   return (
     <View 
       style={[styles.container, style, { touchAction: 'none', userSelect: 'none' } as any]} 
-      onLayout={(e: LayoutChangeEvent) => setContainerWidth(e.nativeEvent.layout.width)}
+      onLayout={(e: LayoutChangeEvent) => {
+        setContainerWidth(e.nativeEvent.layout.width);
+        containerWidthRef.current = e.nativeEvent.layout.width;
+      }}
       {...panResponder.panHandlers}
     >
       <View style={[styles.track, gradientTrack && { backgroundColor: 'transparent' }]} pointerEvents="none">
