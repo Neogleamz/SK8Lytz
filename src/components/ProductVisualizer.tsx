@@ -208,7 +208,7 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
     <TouchableOpacity 
       activeOpacity={onLongPress ? 0.8 : 1}
       onLongPress={onLongPress ? () => onLongPress(device) : undefined}
-      style={{ alignItems: 'center', marginHorizontal: 12, paddingVertical: 10 }}
+      style={{ alignItems: 'center', marginHorizontal: 12, paddingVertical: 4 }}
     >
       <View style={[
         product === 'HALOZ' ? styles.haloBase : styles.soulBase, 
@@ -229,7 +229,7 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
             ]} />
          ))}
       </View>
-      <View style={{ marginTop: 10, alignItems: 'center', zIndex: 10, width: 100 }}>
+      <View style={{ marginTop: 4, alignItems: 'center', zIndex: 10, width: 100 }}>
          <Text 
            style={{ color: 'white', fontWeight: 'bold', fontSize: 11, textAlign: 'center', opacity: isPoweredOn ? 1.0 : 0.4 }}
            numberOfLines={2}
@@ -275,7 +275,7 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
   return (
     <View style={styles.container}>
       {statusText && (
-        <View style={{ width: '100%', alignItems: 'center', marginBottom: 12 }}>
+        <View style={{ width: '100%', alignItems: 'center', marginBottom: 6 }}>
           <Text style={{ color: 'white', opacity: 0.8, fontSize: 10, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase' }}>
             {statusText}
           </Text>
@@ -306,7 +306,7 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
 
 const styles = StyleSheet.create({
   container: {
-    padding: 10,
+    padding: 6,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#000000', 
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
-    minHeight: 200,
+    minHeight: 120,
     width: '100%',
   },
   haloBase: {

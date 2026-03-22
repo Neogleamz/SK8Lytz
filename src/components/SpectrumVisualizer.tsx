@@ -32,7 +32,7 @@ export default function SpectrumVisualizer() {
         {animations.map((anim, i) => {
           const height = anim.interpolate({
             inputRange: [0, 1],
-            outputRange: [5, 60],
+            outputRange: [4, 40],
           });
           
           // Color based on index (rainbow)
@@ -57,7 +57,7 @@ export default function SpectrumVisualizer() {
                 style={[
                   styles.peak, 
                   { 
-                    transform: [{ translateY: anim.interpolate({ inputRange: [0,1], outputRange: [0, -30]}) }],
+                    transform: [{ translateY: anim.interpolate({ inputRange: [0,1], outputRange: [0, -20]}) }],
                     opacity: 0.8
                   }
                 ]} 
@@ -72,19 +72,19 @@ export default function SpectrumVisualizer() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    padding: 4,
     backgroundColor: 'rgba(255,110,0,0.05)',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 100,
+    minHeight: 50,
     borderWidth: 1,
     borderColor: 'rgba(255,110,0,0.1)',
   },
   visualizerArea: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    height: 80,
+    height: 40,
     width: '100%',
     justifyContent: 'space-between',
   },

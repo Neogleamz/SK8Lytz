@@ -205,7 +205,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
 
       {/* Visual Product Shape Selector/Indicator - ENLARGED FOCUS */}
       <View style={styles.visualizerWrapper}>
-      <View style={{ marginBottom: 16, width: '100%' }}>
+      <View style={{ marginBottom: 8, width: '100%' }}>
         <ProductVisualizer 
           product={activeProduct} 
           color={activeMode === 'FIXED' ? (fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor) : (activeMode === 'MUSIC' ? "#" + [1-Math.max(Math.min((5 + musicHue / 60) % 6, 4 - ((5 + musicHue / 60) % 6), 1), 0), 1-Math.max(Math.min((3 + musicHue / 60) % 6, 4 - ((3 + musicHue / 60) % 6), 1), 0), 1-Math.max(Math.min((1 + musicHue / 60) % 6, 4 - ((1 + musicHue / 60) % 6), 1), 0)].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("") : selectedColor)} 
@@ -226,7 +226,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
       </View>
 
       <View style={styles.controlsContainer}>
-        <View style={{ marginBottom: 24 }}>
+        <View style={{ marginBottom: 12 }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, gap: 12 }}>
             {modes.map((mode: any) => (
               <TouchableOpacity 
@@ -234,12 +234,12 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                 style={[
                   styles.modePill, 
                   { 
-                    width: 76, 
-                    height: 76, 
-                    paddingVertical: 12, 
-                    paddingHorizontal: 4, 
+                    width: 54, 
+                    height: 48, 
+                    paddingVertical: 4, 
+                    paddingHorizontal: 2, 
                     marginRight: 0, 
-                    borderRadius: 16,
+                    borderRadius: 8,
                     alignItems: 'center', 
                     justifyContent: 'center',
                     backgroundColor: activeMode === mode.id ? 'transparent' : Colors.background,
@@ -265,7 +265,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   style={[
                     styles.modePillText, 
                     activeMode === mode.id && styles.activeModePillText,
-                    { fontSize: 11, textAlign: 'center', zIndex: 2, fontWeight: activeMode === mode.id ? 'bold' : '600' }
+                    { fontSize: 10, textAlign: 'center', zIndex: 2, fontWeight: activeMode === mode.id ? 'bold' : '600' }
                   ]}
                 >
                   {mode.label}
@@ -277,7 +277,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
 
         <View style={styles.activeModeContainer}>
           {activeMode === 'PRESETS' && (
-            <View style={{ marginBottom: 16 }}>
+            <View style={{ marginBottom: 8 }}>
               <Text style={Typography.title}>Signature Lighting Presets</Text>
               <Text style={[Typography.caption, { marginTop: 8 }]}>One-tap replicas of our official product showcase effects.</Text>
               
@@ -297,9 +297,10 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           )}
 
           {activeMode === 'FIXED' && (
-            <View style={{ marginBottom: 16 }}>
+            <View style={{ marginBottom: 8 }}>
               
-              <View style={{ backgroundColor: Colors.surfaceHighlight, borderRadius: 8, padding: 8, marginBottom: 16 }}>
+              <View style={{ backgroundColor: Colors.surfaceHighlight, borderRadius: 8, padding: 8, marginBottom: 8, height: 120 }}>
+                <ScrollView nestedScrollEnabled={true}>
                 {[
                   { id: 1, label: 'Solid', dots: ['#00FF00','#00FF00','#00FF00','#00FF00','#00FF00','#00FF00','#00FF00','#00FF00'] },
                   { id: 2, label: 'Single Dot', dots: ['#00FFFF','transparent','transparent','transparent','transparent','transparent','transparent','transparent'] },
@@ -353,6 +354,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     <Text style={{ color: Colors.textMuted, fontSize: 16 }}>{fixedPatternId === pattern.id ? '✓' : '→'}</Text>
                   </TouchableOpacity>
                 ))}
+                </ScrollView>
               </View>
 
               <View style={{ flexDirection: 'row', marginBottom: 12 }}>
@@ -375,7 +377,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           )}
 
           {activeMode === 'RBM' && (
-            <View style={{ marginBottom: 16 }}>
+            <View style={{ marginBottom: 8 }}>
               <ArcPatternWheel 
                 value={selectedPatternId}
                 onValueChange={(pid) => {
@@ -392,7 +394,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           )}
 
           {activeMode === 'CAMERA' && (
-            <View style={[styles.sceneContainer, { padding: 16, backgroundColor: 'transparent', borderWidth: 0 }]}>
+            <View style={[styles.sceneContainer, { padding: 8, backgroundColor: 'transparent', borderWidth: 0 }]}>
               <CameraTracker 
                 isActive={activeMode === 'CAMERA'} 
                 onColorDetected={(hex) => {
@@ -417,21 +419,21 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                       const pid = musicPatternId > 1 ? musicPatternId - 1 : MUSIC_PATTERNS.length;
                       setMusicPatternId(pid);
                       handleMusicChange(pid);
-                    }} style={{ paddingHorizontal: 20 }}>
-                      <Text style={{ color: '#FFF', fontSize: 28, fontWeight: 'bold' }}>{'<'}</Text>
+                    }} style={{ paddingHorizontal: 10 }}>
+                      <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'<'}</Text>
                     </TouchableOpacity>
-                    <View style={[styles.musicModeCircle, { width: 80, height: 80, borderRadius: 40 }]}>
-                      <Text style={[styles.musicModeNumber, { fontSize: 24 }]}>{musicPatternId}</Text>
+                    <View style={[styles.musicModeCircle, { width: 32, height: 32, borderRadius: 16 }]}>
+                      <Text style={[styles.musicModeNumber, { fontSize: 14 }]}>{musicPatternId}</Text>
                     </View>
                     <TouchableOpacity onPress={() => {
                       const pid = musicPatternId < MUSIC_PATTERNS.length ? musicPatternId + 1 : 1;
                       setMusicPatternId(pid);
                       handleMusicChange(pid);
-                    }} style={{ paddingHorizontal: 20 }}>
-                      <Text style={{ color: '#FFF', fontSize: 28, fontWeight: 'bold' }}>{'>'}</Text>
+                    }} style={{ paddingHorizontal: 10 }}>
+                      <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'>'}</Text>
                     </TouchableOpacity>
                   </View>
-                  <Text style={[Typography.caption, { marginTop: 12, color: Colors.primary, fontWeight: 'bold', fontSize: 16 }]}>
+                  <Text style={[Typography.caption, { marginTop: 4, color: Colors.primary, fontWeight: 'bold', fontSize: 13 }]}>
                     {MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`}
                   </Text>
                 </View>
@@ -479,43 +481,23 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
             </View>
           )}
 
-          {activeMode === 'CAMERA' && (
-            <View style={{ marginBottom: 16 }}>
-              <Text style={Typography.title}>Camera Color Picker</Text>
-              <Text style={[Typography.caption, { marginTop: 8 }]}>Point your camera at any object to extract real-time ambient color.</Text>
-              <TouchableOpacity 
-                style={[styles.presetCard, { marginTop: 16, alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderLeftColor: Colors.primary }]} 
-                onPress={() => {
-                  // Simulate camera color update
-                  const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#00FFFF', '#FF00FF'];
-                  const randomColor = colors[Math.floor(Math.random() * colors.length)];
-                  const r = parseInt(randomColor.slice(1, 3), 16);
-                  const g = parseInt(randomColor.slice(3, 5), 16);
-                  const b = parseInt(randomColor.slice(5, 7), 16);
-                  if (writeToDevice) writeToDevice(ZenggeProtocol.setColor(r, g, b));
-                }}
-              >
-                <Text style={[Typography.body, { color: Colors.primary, fontWeight: 'bold' }]}>📸 Extract Ambient Color</Text>
-              </TouchableOpacity>
-            </View>
-          )}
 
           {activeMode === 'MULTICOLOR' && (
-            <View style={{ marginBottom: 16 }}>
+            <View style={{ marginBottom: 8 }}>
               <Text style={Typography.title}>Multi-color Segments</Text>
               <Text style={[Typography.caption, { marginTop: 8 }]}>Set unique colors for different parts of your boards.</Text>
               
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                 {[1, 2, 3, 4, 5, 6, 7].map((seg) => (
                   <TouchableOpacity 
                     key={seg} 
-                    style={[styles.colorButton, { backgroundColor: seg === 1 ? '#FF0000' : (seg === 2 ? '#00FF00' : '#0000FF'), width: 40, height: 40, borderRadius: 20 }]} 
+                    style={[styles.colorButton, { backgroundColor: seg === 1 ? '#FF0000' : (seg === 2 ? '#00FF00' : '#0000FF'), width: 32, height: 32, borderRadius: 16 }]} 
                   />
                 ))}
               </View>
 
               <TouchableOpacity 
-                style={[styles.presetCard, { marginTop: 20, borderLeftColor: Colors.secondary }]}
+                style={[styles.presetCard, { marginTop: 10, borderLeftColor: Colors.secondary }]}
                 onPress={() => {
                   if (writeToDevice) {
                     const segmentColors = [
@@ -536,7 +518,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           )}
 
           {activeMode === 'CUSTOM' && (
-            <View style={{ marginBottom: 16 }}>
+            <View style={{ marginBottom: 8 }}>
               <Text style={Typography.title}>DIY Pattern Builder</Text>
               <Text style={[Typography.caption, { marginTop: 8 }]}>Stack up to 32 animated steps for a custom light show.</Text>
               
@@ -572,10 +554,10 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           )}
           {/* UNIVERSAL SLIDERS SECTION */}
           {activeMode !== 'CAMERA' && activeMode !== 'CUSTOM' && activeMode !== 'PRESETS' && (
-            <View style={[styles.sceneSlidersContainer, { marginTop: 16 }]}>
+            <View style={[styles.sceneSlidersContainer, { marginTop: 8 }]}>
               {/* Color Grid - Hidden in Programs Mode */}
               {activeMode !== 'RBM' && (
-                <View style={[styles.colorGrid, { marginBottom: 16 }]}>
+                <View style={[styles.colorGrid, { marginBottom: 8 }]}>
                   {['#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#FFFFFF'].map(color => (
                     <TouchableOpacity 
                       key={color} 
@@ -618,7 +600,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
 
               {/* Hue Slider - Hidden in Programs Mode */}
               {activeMode !== 'RBM' && (
-                <View style={[styles.controlRow, { marginTop: 0, height: 40 }]}>
+                <View style={[styles.controlRow, { marginTop: 0, height: 32 }]}>
                   <CustomSlider 
                     gradientTrack={true}
                     value={activeMode === 'FIXED' ? fixedHue : (activeMode === 'MUSIC' ? musicHue : selectedHue)}
@@ -652,7 +634,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     }}
                     minimumValue={0}
                     maximumValue={360}
-                    style={{ position: 'absolute', width: '100%', height: 40 }}
+                    style={{ position: 'absolute', width: '100%', height: 32 }}
                   />
                 </View>
               )}
@@ -817,20 +799,20 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   visualizerWrapper: {
     width: '100%',
     alignItems: 'stretch',
-    marginVertical: 4,
+    marginVertical: 2,
   },
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: Colors.surfaceHighlight,
     borderRadius: Layout.borderRadius,
     padding: 6,
-    marginBottom: 16,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
   },
   tab: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 8,
     alignItems: 'center',
     borderRadius: Layout.borderRadius - 6,
     overflow: 'hidden',
@@ -850,7 +832,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     color: Colors.isDark ? '#FFF' : Colors.accent,
   },
   controlsContainer: {
-    padding: 16,
+    padding: 10,
     backgroundColor: Colors.isDark ? 'rgba(21, 25, 40, 0.7)' : Colors.surface,
     borderRadius: Layout.borderRadius + 4,
     borderWidth: 1,
@@ -858,7 +840,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   },
   modesScroll: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: 4,
   },
   modePill: {
     paddingHorizontal: 16,
@@ -887,7 +869,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     minHeight: 120,
   },
   controlRow: {
-    marginTop: 12,
+    marginTop: 6,
   },
   placeholderSlider: {
     height: 8,
@@ -1039,20 +1021,20 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   },
   musicVisualizerSection: {
     paddingHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   micControlSection: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 30,
-    marginBottom: 20,
+    paddingHorizontal: 15,
+    marginBottom: 4,
   },
   micIconBtn: {
     alignItems: 'center',
   },
   micIconText: {
-    fontSize: 32,
+    fontSize: 24,
     color: Colors.textMuted,
   },
   micSubText: {
@@ -1063,18 +1045,18 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     fontWeight: '600',
   },
   playButtonMain: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 2,
     borderColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   playIconInner: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1082,8 +1064,8 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   musicOptionsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: 10,
+    marginBottom: 4,
   },
   radioItem: {
     flexDirection: 'row',
@@ -1110,7 +1092,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   },
   radioLabel: {
     color: Colors.text,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
   },
   gradientSliderTrack: {
@@ -1123,6 +1105,6 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     flexDirection: 'row',
     justifyContent: 'flex-start',
     gap: 30,
-    marginBottom: 12,
+    marginBottom: 4,
   }
 });

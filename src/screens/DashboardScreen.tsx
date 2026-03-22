@@ -519,15 +519,15 @@ export default function DashboardScreen() {
               {/* COMBINED HEADER & STATUS */}
               <View style={{ 
                 paddingHorizontal: Layout.padding, 
-                paddingTop: isActuallyConnected ? 16 : 40, 
-                paddingBottom: isActuallyConnected ? 20 : 30,
+                paddingTop: isActuallyConnected ? 2 : 15, 
+                paddingBottom: isActuallyConnected ? 2 : 8,
                 position: 'relative',
               }}>
                 {/* Theme toggle: landing page only, absolutely pinned top-left */}
                 {!isActuallyConnected && (
                   <TouchableOpacity 
                     onPress={toggleTheme} 
-                    style={{ position: 'absolute', right: 0, top: 40, zIndex: 10, padding: 10 }}
+                    style={{ position: 'absolute', right: 0, top: 20, zIndex: 10, padding: 10 }}
                   >
                     <MaterialCommunityIcons 
                       name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} 
@@ -547,8 +547,8 @@ export default function DashboardScreen() {
                   <Image 
                     source={require('../../assets/logo.png')} 
                     style={{ 
-                      width: isActuallyConnected ? 100 : 180, 
-                      height: isActuallyConnected ? 30 : 54 
+                      width: isActuallyConnected ? 70 : 130, 
+                      height: isActuallyConnected ? 20 : 38 
                     }} 
                     resizeMode="contain"
                     tintColor={Colors.text}
@@ -621,7 +621,7 @@ export default function DashboardScreen() {
                   )}
                 </View>
                 {!isActuallyConnected && (
-                  <View style={{ height: 2, width: 30, backgroundColor: Colors.secondary, marginTop: 6, borderRadius: 1, alignSelf: 'center' }} />
+                  <View style={{ height: 2, width: 30, backgroundColor: Colors.secondary, marginTop: 4, borderRadius: 1, alignSelf: 'center' }} />
                 )}
               </View>
 
@@ -642,7 +642,7 @@ export default function DashboardScreen() {
                       )}
                     </TouchableOpacity>
                     
-                    <View style={{ flexDirection: 'column', alignItems: 'center', marginTop: 16, gap: 12 }}>
+                    <View style={{ flexDirection: 'column', alignItems: 'center', marginTop: 8, gap: 12 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
                         <Text style={{ color: Colors.text, marginRight: 12, fontWeight: 'bold' }}>Demo HALOZ</Text>
                         <Switch
@@ -713,7 +713,7 @@ export default function DashboardScreen() {
 
               {!isActuallyConnected && (
                 <>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12, paddingHorizontal: 4 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, marginBottom: 12, paddingHorizontal: 4 }}>
                     <Text style={[Typography.title, { color: Colors.primary }]}>Available Devices</Text>
                     {allDevices.length > 0 && (
                       <TouchableOpacity onPress={() => setIsDeviceListCollapsed(!isDeviceListCollapsed)}>
@@ -731,7 +731,7 @@ export default function DashboardScreen() {
           data={(!isActuallyConnected && !isDeviceListCollapsed) ? allDevices : []}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 40 }}
 
           ListEmptyComponent={
             (!isActuallyConnected && !isDeviceListCollapsed) ? (
@@ -787,7 +787,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Layout.borderRadius,
-    padding: 24,
+    padding: 16,
     borderWidth: 1,
     borderColor: Colors.surfaceHighlight,
     shadowColor: Colors.primary,

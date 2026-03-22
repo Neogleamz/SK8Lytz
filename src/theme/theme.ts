@@ -35,13 +35,13 @@ export const LightColors: ThemePalette = {
 export const Colors = DarkColors;
 
 export const Typography = {
-  header: { fontSize: 32, fontWeight: '900' as const, textTransform: 'uppercase' as const, letterSpacing: 2 },
-  title: { fontSize: 22, fontWeight: '800' as const, letterSpacing: 0.5 },
-  body: { fontSize: 16, fontWeight: '500' as const },
-  caption: { fontSize: 13, fontWeight: '600' as const },
+  header: { fontSize: 24, fontWeight: '900' as const, textTransform: 'uppercase' as const, letterSpacing: 2 },
+  title: { fontSize: 16, fontWeight: '800' as const, letterSpacing: 0.5 },
+  body: { fontSize: 14, fontWeight: '500' as const },
+  caption: { fontSize: 11, fontWeight: '600' as const },
 };
 
 export const Layout = {
-  padding: 20,
+  padding: 14,
   borderRadius: 24,
 };

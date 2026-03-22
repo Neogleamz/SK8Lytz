@@ -25,9 +25,11 @@ interface CameraTrackerProps {
 const extractBase64Data = (uri: string) => uri.replace(/^data:image\/\w+;base64,/, '');
 
 export default function CameraTracker({ onColorDetected, isActive }: CameraTrackerProps) {
-  const [permission, requestPermission] = useCameraPermissions(); // Keep original permission hook
-  const [detectedHex, setDetectedHex] = useState<string>('#000000'); // Keep original state
-  const cameraRef = useRef<CameraView>(null); // Keep original ref type
+  const [permission, requestPermission] = useCameraPermissions();
+  const [detectedHex, setDetectedHex] = useState<string>('#000000');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [layout, setLayout] = useState({ width: 0, height: 0 });
+  const cameraRef = useRef<CameraView>(null);
 
   if (Platform.OS === 'web') {
     return (
@@ -39,57 +41,61 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
     );
   }
 
-  useEffect(() => {
-    if (!isActive || !permission?.granted) return;
+  const handlePress = async (event: any) => {
+    if (!isActive || !permission?.granted || !cameraRef.current || isProcessing || !layout.width || !layout.height) return;
+
+    const { locationX, locationY } = event.nativeEvent;
     
-    const interval = setInterval(async () => {
-      if (cameraRef.current) {
-        try {
-          const photo = await cameraRef.current.takePictureAsync({ quality: 0.1, skipProcessing: true });
-          if (!photo) return;
-          
-          // Crop it straight exactly at the geometric center
-          // A tiny 10x10 slice gives us 100 pixels to aggressively average
-          const centerX = photo.width / 2;
-          const centerY = photo.height / 2;
-          
-          const result = await ImageManipulator.manipulateAsync(
-            photo.uri,
-            [{ crop: { originX: centerX - 5, originY: centerY - 5, width: 10, height: 10 } }],
-            { base64: true, format: ImageManipulator.SaveFormat.JPEG, compress: 1.0 }
-          );
-
-          if (result.base64) {
-            const rawData = extractBase64Data(result.base64);
-            const buffer = Buffer.from(rawData, 'base64');
-            const decoded = jpeg.decode(buffer, { useTArray: true });
-            
-            let r = 0, g = 0, b = 0;
-            const pixelCount = decoded.width * decoded.height;
-            
-            // Loop through the contiguous RGBA sequence
-            for (let i = 0; i < decoded.data.length; i += 4) {
-                r += decoded.data[i];
-                g += decoded.data[i + 1];
-                b += decoded.data[i + 2];
-            }
-            
-            const avgR = Math.round(r / pixelCount);
-            const avgG = Math.round(g / pixelCount);
-            const avgB = Math.round(b / pixelCount);
-            
-            const hex = '#' + [avgR, avgG, avgB].map(x => x.toString(16).padStart(2, '0')).join('');
-            setDetectedHex(hex);
-            onColorDetected(hex);
-          }
-        } catch (e) {
-          console.log('Camera capture dropped cycle', e);
-        }
+    setIsProcessing(true);
+    try {
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.2, skipProcessing: true });
+      if (!photo) {
+        setIsProcessing(false);
+        return;
       }
-    }, 1000); // 1000ms loop
+      
+      // Map screen touch to photo coordinates
+      const x_p = (locationX / layout.width) * photo.width;
+      const y_p = (locationY / layout.height) * photo.height;
+      
+      const cropSize = 20; // Slightly larger for better averaging
+      const originX = Math.max(0, Math.min(photo.width - cropSize, x_p - cropSize / 2));
+      const originY = Math.max(0, Math.min(photo.height - cropSize, y_p - cropSize / 2));
 
-    return () => clearInterval(interval);
-  }, [isActive, permission?.granted, onColorDetected]);
+      const result = await ImageManipulator.manipulateAsync(
+        photo.uri,
+        [{ crop: { originX, originY, width: cropSize, height: cropSize } }],
+        { base64: true, format: ImageManipulator.SaveFormat.JPEG, compress: 1.0 }
+      );
+
+      if (result.base64) {
+        const rawData = extractBase64Data(result.base64);
+        const buffer = Buffer.from(rawData, 'base64');
+        const decoded = jpeg.decode(buffer, { useTArray: true });
+        
+        let r = 0, g = 0, b = 0;
+        const pixelCount = decoded.width * decoded.height;
+        
+        for (let i = 0; i < decoded.data.length; i += 4) {
+            r += decoded.data[i];
+            g += decoded.data[i + 1];
+            b += decoded.data[i + 2];
+        }
+        
+        const avgR = Math.round(r / pixelCount);
+        const avgG = Math.round(g / pixelCount);
+        const avgB = Math.round(b / pixelCount);
+        
+        const hex = '#' + [avgR, avgG, avgB].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+        setDetectedHex(hex);
+        onColorDetected(hex);
+      }
+    } catch (e) {
+      console.log('Camera capture failed', e);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   if (!permission) {
     return <View />;
@@ -109,11 +115,29 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
   return (
     <View style={styles.container}>
       <View style={styles.cameraBox}>
-        <CameraView style={styles.camera} ref={cameraRef} facing="back">
-           <View style={styles.crosshair}>
-              <Text style={styles.crosshairText}>[ x ]</Text>
-           </View>
-        </CameraView>
+        <TouchableOpacity 
+          activeOpacity={1} 
+          onPress={handlePress}
+          style={{ flex: 1 }}
+        >
+          <CameraView 
+            style={styles.camera} 
+            ref={cameraRef} 
+            facing="back"
+            onLayout={(e) => {
+              setLayout({
+                width: e.nativeEvent.layout.width,
+                height: e.nativeEvent.layout.height
+              });
+            }}
+          >
+             <View style={styles.instructionOverlay}>
+                <Text style={styles.instructionText}>
+                  {isProcessing ? 'Analyzing...' : 'Touch screen to pick color'}
+                </Text>
+             </View>
+          </CameraView>
+        </TouchableOpacity>
       </View>
       <View style={styles.statusBox}>
          <View style={[styles.swatch, { backgroundColor: detectedHex }]} />
@@ -125,7 +149,7 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
 
 const styles = StyleSheet.create({
   container: {
-    height: 400,
+    height: 320,
     backgroundColor: '#050505',
     borderRadius: 24,
     marginTop: 8,
@@ -149,7 +173,7 @@ const styles = StyleSheet.create({
   },
   cameraBox: {
     width: '90%',
-    height: 280,
+    height: 220,
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#000',
@@ -161,21 +185,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  crosshair: {
+  instructionOverlay: {
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
-  crosshairText: {
-    color: 'rgba(255, 0, 0, 0.8)',
-    fontSize: 32,
-    fontWeight: '800',
+  instructionText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
   statusBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 8,
     paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingVertical: 8,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 100,
   },
