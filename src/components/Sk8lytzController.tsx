@@ -46,7 +46,7 @@ interface Sk8lytzControllerProps {
 }
 
 export default function Sk8lytzController({ lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice, isPoweredOn = true }: Sk8lytzControllerProps) {
-  const { Colors } = useTheme();
+  const { Colors, isDark } = useTheme();
   const styles = createStyles(Colors);
   const [activeProduct, setActiveProduct] = useState<ProductType>(lockedProduct || 'HALOZ');
   const [activeMode, setActiveMode] = useState<ModeType>('PRESETS');
@@ -241,7 +241,6 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     { id: 'MUSIC', label: 'Music', icon: 'music-note' },
     { id: 'CAMERA', label: 'Camera', icon: 'camera-outline' },
     { id: 'MULTICOLOR', label: 'Multi', icon: 'gradient-horizontal' },
-    { id: 'CUSTOM', label: 'DIY', icon: 'cog-outline' }
   ];
 
   const visualizerColor = React.useMemo(() => {
@@ -310,60 +309,57 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
       </View>
 
       <View style={styles.controlsContainer}>
-        <View style={{ marginBottom: 12 }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, gap: 12 }}>
-            {modes.map((mode: any) => (
-              <TouchableOpacity 
-                key={mode.id}
-                style={[
-                  styles.modePill, 
-                  { 
-                    width: 54, 
-                    height: 48, 
-                    paddingVertical: 4, 
-                    paddingHorizontal: 2, 
-                    marginRight: 0, 
-                    borderRadius: 8,
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    backgroundColor: activeMode === mode.id ? 'transparent' : Colors.background,
-                    borderWidth: activeMode === mode.id ? 0 : 1
-                  }
-                ]}
-                onPress={() => setActiveMode(mode.id)}
-              >
-                {activeMode === mode.id && (
-                  <LinearGradient 
-                    colors={[Colors.primary, Colors.accent]} 
-                    start={{x: 0, y: 0}} end={{x: 1, y: 1}} 
-                    style={StyleSheet.absoluteFill} 
-                  />
-                )}
-                <MaterialCommunityIcons 
-                  name={mode.icon} 
-                  size={20} 
-                  color={activeMode === mode.id ? '#FFFFFF' : Colors.textMuted} 
-                  style={{ marginBottom: 4, zIndex: 2 }} 
+        <View style={styles.modesContainer}>
+          {modes.map((mode: any) => (
+            <TouchableOpacity 
+              key={mode.id}
+              style={[
+                styles.modePill, 
+                { 
+                  width: 52, 
+                  height: 48, 
+                  paddingVertical: 4, 
+                  paddingHorizontal: 2, 
+                  marginRight: 0, 
+                  borderRadius: 8,
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  backgroundColor: activeMode === mode.id ? 'transparent' : Colors.background,
+                  borderWidth: activeMode === mode.id ? 0 : 1
+                }
+              ]}
+              onPress={() => setActiveMode(mode.id)}
+            >
+              {activeMode === mode.id && (
+                <LinearGradient 
+                  colors={[Colors.primary, Colors.accent]} 
+                  start={{x: 0, y: 0}} end={{x: 1, y: 1}} 
+                  style={StyleSheet.absoluteFill} 
                 />
-                <Text 
-                  style={[
-                    styles.modePillText, 
-                    activeMode === mode.id && styles.activeModePillText,
-                    { fontSize: 10, textAlign: 'center', zIndex: 2, fontWeight: activeMode === mode.id ? 'bold' : '600' }
-                  ]}
-                >
-                  {mode.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+              )}
+              <MaterialCommunityIcons 
+                name={mode.icon} 
+                size={20} 
+                color={activeMode === mode.id ? '#FFFFFF' : Colors.textMuted} 
+                style={{ marginBottom: 4, zIndex: 2 }} 
+              />
+              <Text 
+                style={[
+                  styles.modePillText, 
+                  activeMode === mode.id && styles.activeModePillText,
+                  { fontSize: 10, textAlign: 'center', zIndex: 2, fontWeight: activeMode === mode.id ? 'bold' : '600' }
+                ]}
+              >
+                {mode.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <View style={styles.activeModeContainer}>
           {activeMode === 'PRESETS' && (
             <View style={{ marginBottom: 8 }}>
-              <Text style={Typography.title}>Signature Lighting Presets</Text>
-              <Text style={[Typography.caption, { marginTop: 8 }]}>One-tap replicas of our official product showcase effects.</Text>
+              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>Signature Lighting Presets</Text>
               
               <View style={styles.presetContainer}>
                   <TouchableOpacity 
@@ -587,8 +583,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
 
           {activeMode === 'MULTICOLOR' && (
             <View style={{ marginBottom: 8 }}>
-              <Text style={Typography.title}>Multi-color Segments</Text>
-              <Text style={[Typography.caption, { marginTop: 8 }]}>Set unique colors for different parts of your boards.</Text>
+              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>Multi-color Segments</Text>
               
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                 {[1, 2, 3, 4, 5, 6, 7].map((seg) => (
@@ -622,8 +617,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
 
           {activeMode === 'CUSTOM' && (
             <View style={{ marginBottom: 8 }}>
-              <Text style={Typography.title}>DIY Pattern Builder</Text>
-              <Text style={[Typography.caption, { marginTop: 8 }]}>Stack up to 32 animated steps for a custom light show.</Text>
+              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>DIY Pattern Builder</Text>
               
               <View style={{ backgroundColor: Colors.surfaceHighlight, borderRadius: 8, padding: 12, marginTop: 16, marginBottom: 12 }}>
                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
@@ -941,9 +935,11 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     borderWidth: 1,
     borderColor: Colors.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0,0,0,0.08)',
   },
-  modesScroll: {
+  modesContainer: {
     flexDirection: 'row',
-    marginBottom: 4,
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 12,
   },
   modePill: {
     paddingHorizontal: 16,
