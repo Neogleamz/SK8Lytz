@@ -42,6 +42,7 @@ yarn-error.*
 
 # Zengge APK extraction artifacts (local only)
 ZENGGE*
+!src/protocols/ZenggeProtocol.ts
 app_strings.txt
 extract.js
 jadx_src*/
