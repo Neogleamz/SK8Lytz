@@ -14,12 +14,20 @@ set "PATH=%PATH%;%JAVA_HOME%\bin;%ANDROID_HOME%\platform-tools"
 echo JAVA_HOME is set to: %JAVA_HOME%
 echo ANDROID_HOME is set to: %ANDROID_HOME%
 echo.
-echo Starting Expo Local Build for Android (Profile: preview)
+echo Generating native Android code (if not already present)...
+call npx expo prebuild --platform android
+
+echo.
+echo Starting Gradle Local Build for Android (Release APK)
 echo You will see all logs and prompts live in this window!
 echo.
 
-call eas build --platform android --local --profile preview
+cd android
+call gradlew assembleRelease
 
 echo.
 echo Build process finished!
+echo Your APK should be located in:
+echo MobileApp\android\app\build\outputs\apk\release\app-release.apk
+echo.
 pause

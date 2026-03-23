@@ -36,7 +36,7 @@ function payloadSummary(entry: LogEntry): string {
   switch (e) {
     case 'DEVICE_DISCOVERED': 
       return `${d.name || 'Unknown'} (${d.type || '?'}) RSSI: ${d.rssi ?? '?'}${d.sorting ? ` [${d.sorting}/${d.stripType}]` : ''}${d.points ? ` ${d.points}L/${d.segments || 1}S` : ''}`;
-    case 'DEVICE_CONNECTED':  return `${d.name || d.id}`;
+    case 'DEVICE_CONNECTED':  return `${d.name || d.id}${d.firmware ? ` (FW: ${d.firmware})` : ''}`;
     case 'MODE_CHANGED':      return `→ ${d.mode}${d.device ? ` on ${d.device}` : ''}`;
     case 'PATTERN_CHANGED':   return `${d.pattern}${d.mode ? ` [${d.mode}]` : ''}`;
     case 'COLOR_CHANGED':     return `${d.hex}${d.device ? ` on ${d.device}` : ''}`;
@@ -125,19 +125,23 @@ export default function LogViewerModal({ visible, onClose }: LogViewerModalProps
     const earliest = new Map<string, number>();
     const latest = new Map<string, number>();
     const uniqueMeta = new Map<string, any>();
+    const firmwares = new Map<string, string>();
 
     // logs are sorted NEWEST first.
     logs.forEach(l => {
+      if (l.e === 'DEVICE_CONNECTED' && l.d.id && l.d.firmware) {
+         if (!firmwares.has(l.d.id)) firmwares.set(l.d.id, l.d.firmware);
+      }
       if (l.e === 'DEVICE_DISCOVERED' || l.e === 'DEVICE_CONNECTED') {
          const id = l.d.id;
          if (!id) return;
          if (!latest.has(id)) latest.set(id, l.t);    // first element encountered is latest
          earliest.set(id, l.t);                       // will continually overwrite until it points to the oldest one
-         if (!uniqueMeta.has(id)) uniqueMeta.set(id, l.d); // store newest payload meta
+         if (!uniqueMeta.has(id) && l.e === 'DEVICE_DISCOVERED') uniqueMeta.set(id, l.d); // store newest payload meta
       }
     });
 
-    const uniqueIds = Array.from(uniqueMeta.keys());
+    const uniqueIds = Array.from(latest.keys());
 
     return (
       <ScrollView style={styles.tabContent}>
@@ -145,7 +149,7 @@ export default function LogViewerModal({ visible, onClose }: LogViewerModalProps
           <Text style={[styles.emptyText, { color: textMuted }]}>No devices logged yet.</Text>
         )}
         {uniqueIds.map((id, i) => {
-          const meta = uniqueMeta.get(id);
+          const meta = uniqueMeta.get(id) || {};
           const config = deviceConfigs[id] || {};
           const sortingLabel = config.sorting === 'leftToRight' ? 'L→R' : config.sorting === 'rightToLeft' ? 'R→L' : config.sorting;
 
@@ -155,11 +159,12 @@ export default function LogViewerModal({ visible, onClose }: LogViewerModalProps
               <View style={{ marginLeft: 12, flex: 1 }}>
                 <Text style={[styles.deviceName, { color: textPrimary }]}>{config.name || meta.name || 'Unknown'}</Text>
                 <Text style={[styles.deviceDetail, { color: textMuted }]}>ID: {id}</Text>
+                {firmwares.has(id) && <Text style={[styles.deviceDetail, { color: textMuted }]}>Firmware: {firmwares.get(id)}</Text>}
                 
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                  <Text style={[styles.deviceDetail, { color: textMuted }]}>Type: {config.type || meta.type || '?'}</Text>
-                  {meta.rssi && <Text style={[styles.deviceDetail, { color: textMuted }]}>· RSSI: {meta.rssi}</Text>}
-                  {(config.points || meta.points) && (
+                  <Text style={[styles.deviceDetail, { color: textMuted }]}>Type: {config.type || meta?.type || '?'}</Text>
+                  {meta?.rssi && <Text style={[styles.deviceDetail, { color: textMuted }]}>· RSSI: {meta.rssi}</Text>}
+                  {(config.points || meta?.points) && (
                     <Text style={[styles.deviceDetail, { color: textMuted }]}>
                       · LEDs: {config.points || meta.points} ({config.segments || meta.segments || 1} seg)
                     </Text>

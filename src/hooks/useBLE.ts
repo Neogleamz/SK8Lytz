@@ -3,6 +3,7 @@ import { PermissionsAndroid, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import * as ExpoDevice from 'expo-device';
 import { ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID } from '../protocols/ZenggeProtocol';
+import { AppLogger } from '../services/AppLogger';
 
 let BleManager: any;
 let State: any;
@@ -192,6 +193,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     try {
       if (Platform.OS === 'web') {
         setConnectedDevices([device]);
+        AppLogger.log('DEVICE_CONNECTED', { id: device.id, name: device.name, firmware: 'v2.0.1.DEMO' });
         return;
       }
       const deviceConnection = await bleManager.connectToDevice(device.id);
@@ -205,6 +207,23 @@ export default function useBLE(): BluetoothLowEnergyApi {
         (error: any, characteristic: any) => handleNotification(error, characteristic, device.id)
       );
 
+      // Attempt to read firmware version from standard BLE Device Information Service (180A / 2A26)
+      let firmware = undefined;
+      try {
+        const fwChar = await deviceConnection.readCharacteristicForService(
+          '0000180a-0000-1000-8000-00805f9b34fb',
+          '00002a26-0000-1000-8000-00805f9b34fb'
+        );
+        if (fwChar && fwChar.value) {
+          const rawFw = require('buffer').Buffer.from(fwChar.value, 'base64').toString('ascii');
+          firmware = rawFw.replace(/[^\x20-\x7E]/g, ''); // Clean non-printable chars
+        }
+      } catch (e) {
+        console.log(`[BLE] No standard firmware characteristic for ${device.id}`);
+      }
+
+      AppLogger.log('DEVICE_CONNECTED', { id: device.id, name: device.name, firmware });
+
       bleManager.stopDeviceScan();
       setIsScanning(false);
     } catch (e) {
@@ -217,6 +236,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
     try {
       if (Platform.OS === 'web') {
         setConnectedDevices(devices);
+        devices.forEach(d => {
+          AppLogger.log('DEVICE_CONNECTED', { id: d.id, name: d.name, firmware: 'v2.0.1.DEMO' });
+        });
         return;
       }
       
@@ -225,14 +247,28 @@ export default function useBLE(): BluetoothLowEnergyApi {
       
       await Promise.all(connections.map(conn => conn.discoverAllServicesAndCharacteristics()));
 
-      // Monitor for each device
-      connections.forEach(conn => {
+      // Monitor & Firmware check for each device
+      await Promise.all(connections.map(async (conn) => {
         conn.monitorCharacteristicForService(
           ZENGGE_SERVICE_UUID,
           ZENGGE_CHARACTERISTIC_UUID,
           (error: any, characteristic: any) => handleNotification(error, characteristic, conn.id)
         );
-      });
+
+        let firmware = undefined;
+        try {
+          const fwChar = await conn.readCharacteristicForService(
+            '0000180a-0000-1000-8000-00805f9b34fb',
+            '00002a26-0000-1000-8000-00805f9b34fb'
+          );
+          if (fwChar && fwChar.value) {
+            const rawFw = require('buffer').Buffer.from(fwChar.value, 'base64').toString('ascii');
+            firmware = rawFw.replace(/[^\x20-\x7E]/g, '');
+          }
+        } catch (e) { }
+
+        AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name, firmware });
+      }));
 
       bleManager.stopDeviceScan();
       setIsScanning(false);
