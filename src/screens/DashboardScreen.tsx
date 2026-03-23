@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar } from 'react-native';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import DeviceItem from '../components/DeviceItem';
@@ -676,7 +676,7 @@ export default function DashboardScreen() {
               {/* COMBINED HEADER & STATUS */}
               <View style={{ 
                 paddingHorizontal: Layout.padding, 
-                paddingTop: isActuallyConnected ? 12 : 20, 
+                paddingTop: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + (isActuallyConnected ? 12 : 20), 
                 paddingBottom: isActuallyConnected ? 2 : 8,
                 position: 'relative',
               }}>
@@ -684,7 +684,7 @@ export default function DashboardScreen() {
                 {!isActuallyConnected && (
                   <TouchableOpacity 
                     onPress={toggleTheme} 
-                    style={{ position: 'absolute', right: 0, top: 20, zIndex: 10, padding: 10 }}
+                    style={{ position: 'absolute', right: 0, top: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + 20, zIndex: 10, padding: 10 }}
                   >
                     <MaterialCommunityIcons 
                       name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} 
