@@ -14,6 +14,7 @@ import { getRbmPatternName } from '../constants/RbmPatterns';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { AppLogger } from '../services/AppLogger';
 
 type ProductType = 'HALOZ' | 'SOULZ';
 type ModeType = 'PRESETS' | 'FIXED' | 'RBM' | 'MUSIC' | 'CAMERA' | 'CUSTOM' | 'MULTICOLOR';
@@ -84,6 +85,40 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
       stopRecording();
     };
   }, [activeMode, micSource, isPoweredOn]);
+
+  // -- Analytics Logging --
+  const logTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  // Mode change logger
+  useEffect(() => {
+    AppLogger.log('MODE_CHANGED', { mode: activeMode });
+  }, [activeMode]);
+
+  // Pattern change logger (PRESETS mode)
+  useEffect(() => {
+    AppLogger.log('PATTERN_CHANGED', { pattern: `ID:${selectedPatternId}`, mode: activeMode });
+  }, [selectedPatternId]);
+
+  // Color change logger
+  useEffect(() => {
+    AppLogger.log('COLOR_CHANGED', { hex: selectedColor });
+  }, [selectedColor]);
+
+  // Brightness change logger (debounced 600ms)
+  useEffect(() => {
+    clearTimeout(logTimers.current['brightness']);
+    logTimers.current['brightness'] = setTimeout(() => {
+      AppLogger.log('BRIGHTNESS_CHANGED', { value: brightness, mode: activeMode });
+    }, 600);
+  }, [brightness]);
+
+  // Speed change logger (debounced 600ms)
+  useEffect(() => {
+    clearTimeout(logTimers.current['speed']);
+    logTimers.current['speed'] = setTimeout(() => {
+      AppLogger.log('SPEED_CHANGED', { value: speed, mode: activeMode });
+    }, 600);
+  }, [speed]);
 
   const startRecording = async () => {
     try {

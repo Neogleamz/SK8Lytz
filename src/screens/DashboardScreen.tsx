@@ -12,6 +12,7 @@ import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScannerAnimation from '../components/ScannerAnimation';
+import { AppLogger } from '../services/AppLogger';
 
 interface DeviceSettings {
   name: string;
@@ -47,8 +48,8 @@ export default function DashboardScreen() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [powerStates, setPowerStates] = useState<Record<string, boolean>>({});
 
-  // TEMP MOCK for browser verification
-  const IS_BROWSER_DEMO = true;
+  // Browser demo mode - only active on web platform, never on real hardware
+  const IS_BROWSER_DEMO = Platform.OS === 'web';
   const [mockConnected, setMockConnected] = useState(false);
   const [mockConnectedDevice, setMockConnectedDevice] = useState<string | null>(null);
   const [mockConnectedGroup, setMockConnectedGroup] = useState<string | null>(null);
@@ -75,6 +76,7 @@ export default function DashboardScreen() {
     requestPermissions().then((granted) => {
       if (granted) {
         console.log('[SK8Lytz] Manual Scan Initiated');
+        AppLogger.log('SCAN_STARTED');
         const scanStartTime = Date.now();
         isProvisioningTriggered.current = true;
         AsyncStorage.removeItem('ng_processed_devices');
@@ -93,28 +95,32 @@ export default function DashboardScreen() {
             if (demoHaloQueued) {
               haloIds.forEach((id, idx) => {
                 if (!newDevices.some(d => d.id === id)) {
-                  newDevices.push({ 
+                  const device = { 
                     id, 
                     name: `HALOZ ${idx === 0 ? 'Left' : 'Right'} Skate`, 
                     points: 16, 
                     rssi: -45 - Math.floor(Math.random() * 20),
                     serviceUUIDs: [ZENGGE_SERVICE_UUID],
                     manufacturerData: 'AAAAAAAAAAAz'
-                  } as any);
+                  } as any;
+                  newDevices.push(device);
+                  AppLogger.log('DEVICE_DISCOVERED', { id, name: device.name, type: 'HALOZ', rssi: device.rssi });
                 }
               });
             }
             if (demoSoulQueued) {
               soulIds.forEach((id, idx) => {
                 if (!newDevices.some(d => d.id === id)) {
-                  newDevices.push({ 
+                  const device = { 
                     id, 
                     name: `SOULZ ${idx === 0 ? 'Left' : 'Right'} Skate`, 
                     points: 43, 
                     rssi: -42 - Math.floor(Math.random() * 20),
                     serviceUUIDs: [ZENGGE_SERVICE_UUID],
                     manufacturerData: 'AAAAAAAAAAAz'
-                  } as any);
+                  } as any;
+                  newDevices.push(device);
+                  AppLogger.log('DEVICE_DISCOVERED', { id, name: device.name, type: 'SOULZ', rssi: device.rssi });
                 }
               });
             }
