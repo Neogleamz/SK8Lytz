@@ -92,6 +92,7 @@ export default function DashboardScreen() {
   };
 
   const handlePressIn = () => {
+    if (isActuallyConnected) return;
     holdTimer.current = setTimeout(() => {
       let count = 5;
       setCountdown(count);
