@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView,
   Share, Alert, FlatList, Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger, LogEntry, EventType } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
@@ -53,12 +54,17 @@ export default function LogViewerModal({ visible, onClose }: LogViewerModalProps
   const [tab, setTab] = useState<Tab>('timeline');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stats, setStats] = useState<any>(null);
+  const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
 
   const load = useCallback(async () => {
     const l = await AppLogger.getLogs();
     setLogs(l);
     const s = await AppLogger.getStats();
     setStats(s);
+    try {
+      const storedConfigs = await AsyncStorage.getItem('ng_device_configs');
+      if (storedConfigs) setDeviceConfigs(JSON.parse(storedConfigs) || {});
+    } catch(e) {}
   }, []);
 
   useEffect(() => {
@@ -112,26 +118,56 @@ export default function LogViewerModal({ visible, onClose }: LogViewerModalProps
   };
 
   const renderDeviceTab = () => {
-    const deviceEvents = logs.filter(l => l.e === 'DEVICE_DISCOVERED');
-    const seen = new Map<string, LogEntry>();
-    deviceEvents.forEach(e => { if (!seen.has(e.d.id)) seen.set(e.d.id, e); });
-    const unique = [...seen.values()];
+    const earliest = new Map<string, number>();
+    const latest = new Map<string, number>();
+    const uniqueMeta = new Map<string, any>();
+
+    // logs are sorted NEWEST first.
+    logs.forEach(l => {
+      if (l.e === 'DEVICE_DISCOVERED' || l.e === 'DEVICE_CONNECTED') {
+         const id = l.d.id;
+         if (!id) return;
+         if (!latest.has(id)) latest.set(id, l.t);    // first element encountered is latest
+         earliest.set(id, l.t);                       // will continually overwrite until it points to the oldest one
+         if (!uniqueMeta.has(id)) uniqueMeta.set(id, l.d); // store newest payload meta
+      }
+    });
+
+    const uniqueIds = Array.from(uniqueMeta.keys());
+
     return (
       <ScrollView style={styles.tabContent}>
-        {unique.length === 0 && (
+        {uniqueIds.length === 0 && (
           <Text style={[styles.emptyText, { color: textMuted }]}>No devices logged yet.</Text>
         )}
-        {unique.map((entry, i) => (
-          <View key={i} style={[styles.deviceCard, { backgroundColor: cardBg, borderColor }]}>
-            <MaterialCommunityIcons name="bluetooth-connect" size={24} color="#9D4EFF" />
-            <View style={{ marginLeft: 12, flex: 1 }}>
-              <Text style={[styles.deviceName, { color: textPrimary }]}>{entry.d.name || 'Unknown'}</Text>
-              <Text style={[styles.deviceDetail, { color: textMuted }]}>ID: {entry.d.id}</Text>
-              <Text style={[styles.deviceDetail, { color: textMuted }]}>Type: {entry.d.type || '?'} · RSSI: {entry.d.rssi ?? '?'}</Text>
-              <Text style={[styles.deviceDetail, { color: textMuted }]}>First seen: {formatTime(entry.t)}</Text>
+        {uniqueIds.map((id, i) => {
+          const meta = uniqueMeta.get(id);
+          const config = deviceConfigs[id] || {};
+          const sortingLabel = config.sorting === 'leftToRight' ? 'L→R' : config.sorting === 'rightToLeft' ? 'R→L' : config.sorting;
+
+          return (
+            <View key={i} style={[styles.deviceCard, { backgroundColor: cardBg, borderColor }]}>
+              <MaterialCommunityIcons name="bluetooth-connect" size={24} color="#9D4EFF" />
+              <View style={{ marginLeft: 12, flex: 1 }}>
+                <Text style={[styles.deviceName, { color: textPrimary }]}>{config.name || meta.name || 'Unknown'}</Text>
+                <Text style={[styles.deviceDetail, { color: textMuted }]}>ID: {id}</Text>
+                
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                  <Text style={[styles.deviceDetail, { color: textMuted }]}>Type: {config.type || meta.type || '?'}</Text>
+                  {meta.rssi && <Text style={[styles.deviceDetail, { color: textMuted }]}>· RSSI: {meta.rssi}</Text>}
+                  {config.points && <Text style={[styles.deviceDetail, { color: textMuted }]}>· LEDs: {config.points}</Text>}
+                  {config.stripType && <Text style={[styles.deviceDetail, { color: textMuted }]}>· Format: {config.stripType}</Text>}
+                  {config.sorting && <Text style={[styles.deviceDetail, { color: textMuted }]}>· Sort: {sortingLabel}</Text>}
+                </View>
+
+                <View style={{ borderTopWidth: 1, borderTopColor: borderColor, marginTop: 6, paddingTop: 4 }}>
+                  <Text style={[styles.deviceDetail, { color: textMuted }]}>First seen: {formatTime(earliest.get(id)!)}</Text>
+                  <Text style={[styles.deviceDetail, { color: textMuted }]}>Last seen: {formatTime(latest.get(id)!)}</Text>
+                </View>
+              </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </ScrollView>
     );
   };
