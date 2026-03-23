@@ -5,6 +5,7 @@ import DashboardScreen from './src/screens/DashboardScreen';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { useFonts, Righteous_400Regular } from '@expo-google-fonts/righteous';
 import * as SplashScreen from 'expo-splash-screen';
+import { AppLogger } from './src/services/AppLogger';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -18,6 +19,8 @@ function AppContent() {
   );
 }
 
+const appStartTime = Date.now();
+
 export default function App() {
   const [fontsLoaded] = useFonts({
     'Righteous': Righteous_400Regular,
@@ -26,6 +29,7 @@ export default function App() {
   useEffect(() => {
     if (fontsLoaded) {
       SplashScreen.hideAsync().catch(() => {});
+      AppLogger.log('APP_OPENED', { loadTimeMs: Date.now() - appStartTime });
     }
   }, [fontsLoaded]);
 

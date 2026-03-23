@@ -4,6 +4,7 @@ import {
   Share, Alert, FlatList, Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Device from 'expo-device';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger, LogEntry, EventType } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
@@ -174,11 +175,26 @@ export default function LogViewerModal({ visible, onClose }: LogViewerModalProps
 
   const renderStatsTab = () => {
     if (!stats) return null;
+
+    const gbMem = Device.totalMemory ? (Device.totalMemory / 1024 ** 3).toFixed(1) + ' GB' : 'Unknown';
+    const osDisplay = `${Device.osName || Platform.OS} ${Device.osVersion || ''}`.trim();
+    const sessionMins = stats.lastAppOpenedTime ? Math.round((Date.now() - stats.lastAppOpenedTime) / 60000) : 0;
+
     return (
       <ScrollView style={styles.tabContent}>
-        <Text style={[styles.statSection, { color: textPrimary }]}>📊 Overview</Text>
+        <Text style={[styles.statSection, { color: textPrimary }]}>📱 Device & App Telemetry</Text>
         <View style={[styles.statCard, { backgroundColor: cardBg, borderColor }]}>
-          <StatRow label="Total Events" value={String(stats.totalEvents)} color={textPrimary} muted={textMuted} />
+          <StatRow label="Hardware" value={Device.modelName || 'Unknown Engine'} color={textPrimary} muted={textMuted} />
+          <StatRow label="Operating System" value={osDisplay} color={textPrimary} muted={textMuted} />
+          <StatRow label="Total RAM" value={gbMem} color={textPrimary} muted={textMuted} />
+          <StatRow label="Avg Boot Time" value={stats.averageLoadTimeMs ? `${stats.averageLoadTimeMs}ms` : 'N/A'} color={textPrimary} muted={textMuted} />
+          <StatRow label="Current Session" value={`${sessionMins} mins`} color={textPrimary} muted={textMuted} />
+          <StatRow label="Log Storage Used" value={`${(stats.storageBytesEstimate / 1024).toFixed(2)} KB`} color={textPrimary} muted={textMuted} />
+        </View>
+
+        <Text style={[styles.statSection, { color: textPrimary }]}>📊 Analytics Overview</Text>
+        <View style={[styles.statCard, { backgroundColor: cardBg, borderColor }]}>
+          <StatRow label="Total Events Logged" value={String(stats.totalEvents)} color={textPrimary} muted={textMuted} />
           <StatRow label="Devices Discovered" value={String(stats.devicesDiscovered)} color={textPrimary} muted={textMuted} />
         </View>
 

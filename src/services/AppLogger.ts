@@ -89,6 +89,9 @@ class AppLoggerService {
     colorUsage: Record<string, number>;
     devicesDiscovered: number;
     totalEvents: number;
+    storageBytesEstimate: number;
+    averageLoadTimeMs: number;
+    lastAppOpenedTime: number;
   }> {
     await this.ensureLoaded();
     const modeUsage: Record<string, number> = {};
@@ -110,7 +113,33 @@ class AppLoggerService {
         devicesDiscovered++;
       }
     }
-    return { modeUsage, patternUsage, colorUsage, devicesDiscovered, totalEvents: this.buffer.length };
+
+    let storageBytesEstimate = 0;
+    try {
+      const rawString = await AsyncStorage.getItem(STORAGE_KEY);
+      storageBytesEstimate = rawString ? rawString.length * 2 : 0;
+    } catch(e) {}
+
+    let totalLoadTime = 0;
+    let loadTimeCount = 0;
+    let lastAppOpenedTime = 0;
+
+    for (const entry of this.buffer) {
+      if (entry.e === 'APP_OPENED') {
+        if (entry.t > lastAppOpenedTime) lastAppOpenedTime = entry.t;
+        if (entry.d.loadTimeMs) {
+          totalLoadTime += entry.d.loadTimeMs;
+          loadTimeCount++;
+        }
+      }
+    }
+    const averageLoadTimeMs = loadTimeCount > 0 ? Math.round(totalLoadTime / loadTimeCount) : 0;
+
+    return { 
+      modeUsage, patternUsage, colorUsage, devicesDiscovered, 
+      totalEvents: this.buffer.length, storageBytesEstimate,
+      averageLoadTimeMs, lastAppOpenedTime
+    };
   }
 }
 
