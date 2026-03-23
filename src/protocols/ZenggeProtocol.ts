@@ -196,4 +196,30 @@ export class ZenggeProtocol {
     const checksum = this.calculateChecksum(cmd);
     return this.wrapCommand([...cmd, checksum]);
   }
+
+  /**
+   * Query Hardware Configuration (0x10)
+   */
+  static queryHardwareConfig(): number[] {
+    const payload = [0x10, 0x00, 0x00, 0x10]; // Common query for v2 symphony
+    return this.wrapCommand(payload);
+  }
+
+  /**
+   * Parse Hardware Configuration Response
+   */
+  static parseHardwareConfig(payload: number[]) {
+    if (payload[0] !== 0x10 || payload.length < 9) return null;
+    
+    const points = (payload[2] << 8) | payload[3];
+    const orderBytes = ['UNK', 'RGB', 'RBG', 'GRB', 'GBR', 'BRG', 'BGR'];
+    const colorOrder = orderBytes[payload[4]] || 'GRB';
+    
+    const icBytes: Record<number, string> = { 1: 'SM16703', 2: 'WS2811', 3: 'WS2812B', 4: 'SK6812' };
+    const stripType = icBytes[payload[5]] || 'WS2812B';
+    
+    const segments = (payload[6] << 8) | payload[7];
+
+    return { points, colorOrder, stripType, segments };
+  }
 }

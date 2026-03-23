@@ -24,7 +24,7 @@ export const LightColors: ThemePalette = {
   primary: '#FF5A00',
   secondary: '#FFB800',
   accent: '#1B4279',
-  text: '#1A2A42',
+  text: '#1B4279',
   textMuted: '#5A7A9F',
   success: '#00C476',
   error: '#E03260',

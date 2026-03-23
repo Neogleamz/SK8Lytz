@@ -55,15 +55,31 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
           {showGroupIcon && <Text style={{ fontSize: 18, marginRight: 8 }}>👥</Text>}
           <Text style={[Typography.title, { color: Colors.primary }]}>{device.name || `SK8 - ${(device.id || '').replace(/:/g, '').slice(-6).toUpperCase()}`}</Text>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-          {isSelectionMode && <View style={{ width: 34 }} />}
-          <Text style={[Typography.caption, { color: Colors.textMuted }]}>
-            {device.isGroup 
-              ? `${(device as any).deviceIds?.length || 0} Devices` 
-              : `MAC: ${device.id.toUpperCase()} ${device.rssi ? ` | RSSI: ${device.rssi} dBm` : ''}`
-            }
-          </Text>
-        </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+            {isSelectionMode && <View style={{ width: 34 }} />}
+            {device.isGroup ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ 
+                  width: 6, 
+                  height: 6, 
+                  borderRadius: 3, 
+                  backgroundColor: (device as any).connectedCount === 0 ? Colors.error : ((device as any).connectedCount < (device as any).deviceIds?.length ? '#FFA500' : Colors.success), 
+                  marginRight: 6 
+                }} />
+                <Text style={[Typography.caption, { 
+                  color: (device as any).connectedCount === 0 ? Colors.error : ((device as any).connectedCount < (device as any).deviceIds?.length ? '#FFA500' : Colors.success), 
+                  fontSize: 10, 
+                  fontWeight: 'bold' 
+                }]}>
+                  PAIRED ({(device as any).connectedCount || 0})
+                </Text>
+              </View>
+            ) : (
+              <Text style={[Typography.caption, { color: Colors.textMuted }]}>
+                MAC: {device.id.toUpperCase()} {device.rssi ? ` | RSSI: ${device.rssi} dBm` : ''}
+              </Text>
+            )}
+          </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', zIndex: 2 }}>
         {onPowerToggle && (

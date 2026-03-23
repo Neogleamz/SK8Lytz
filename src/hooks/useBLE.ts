@@ -26,6 +26,8 @@ interface BluetoothLowEnergyApi {
   isScanning: boolean;
   isBluetoothSupported: boolean;
   isBluetoothEnabled: boolean;
+  onDataReceived?: (deviceId: string, data: number[]) => void;
+  setOnDataReceived: (callback: (deviceId: string, data: number[]) => void) => void;
 }
 
 export default function useBLE(): BluetoothLowEnergyApi {
@@ -39,6 +41,29 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const [isScanning, setIsScanning] = useState(false);
   const [isBluetoothSupported, setIsBluetoothSupported] = useState(Platform.OS !== 'web');
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState(Platform.OS === 'web');
+  const [dataReceivedCallback, setDataReceivedCallback] = useState<((deviceId: string, data: number[]) => void) | undefined>();
+
+  const handleNotification = (error: any, characteristic: any, deviceId: string) => {
+    if (error) {
+      console.warn('Notification Error', error);
+      return;
+    }
+    if (characteristic?.value) {
+      try {
+        /* global Buffer */
+        const buffer = require('buffer').Buffer;
+        const data = Array.from(buffer.from(characteristic.value, 'base64')) as number[];
+        // Zengge v2 packets are wrapped: [Header, Seq, Frag, Frag, Len, Len, PayloadLen, cmdId, ...Payload]
+        // We strip the wrapper for the callback for easier parsing
+        if (data.length > 8) {
+          const payload = data.slice(8);
+          if (dataReceivedCallback) dataReceivedCallback(deviceId, payload);
+        }
+      } catch (e) {
+        console.error('Failed to parse notification', e);
+      }
+    }
+  };
 
   useEffect(() => {
     if (!bleManager || Platform.OS === 'web') return;
@@ -172,6 +197,14 @@ export default function useBLE(): BluetoothLowEnergyApi {
       const deviceConnection = await bleManager.connectToDevice(device.id);
       setConnectedDevices([deviceConnection]);
       await deviceConnection.discoverAllServicesAndCharacteristics();
+      
+      // Monitor for responses
+      deviceConnection.monitorCharacteristicForService(
+        ZENGGE_SERVICE_UUID,
+        ZENGGE_CHARACTERISTIC_UUID,
+        (error: any, characteristic: any) => handleNotification(error, characteristic, device.id)
+      );
+
       bleManager.stopDeviceScan();
       setIsScanning(false);
     } catch (e) {
@@ -191,6 +224,16 @@ export default function useBLE(): BluetoothLowEnergyApi {
       setConnectedDevices(connections);
       
       await Promise.all(connections.map(conn => conn.discoverAllServicesAndCharacteristics()));
+
+      // Monitor for each device
+      connections.forEach(conn => {
+        conn.monitorCharacteristicForService(
+          ZENGGE_SERVICE_UUID,
+          ZENGGE_CHARACTERISTIC_UUID,
+          (error: any, characteristic: any) => handleNotification(error, characteristic, conn.id)
+        );
+      });
+
       bleManager.stopDeviceScan();
       setIsScanning(false);
     } catch (e) {
@@ -237,7 +280,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     }
   };
 
-  return {
+  return useMemo(() => ({
     scanForPeripherals,
     requestPermissions,
     connectToDevice,
@@ -250,5 +293,15 @@ export default function useBLE(): BluetoothLowEnergyApi {
     isScanning,
     isBluetoothSupported,
     isBluetoothEnabled,
-  };
+    onDataReceived: dataReceivedCallback,
+    setOnDataReceived: (callback: (deviceId: string, data: number[]) => void) => setDataReceivedCallback(() => callback),
+  }), [
+    allDevices, 
+    connectedDevices, 
+    isScanning, 
+    isBluetoothSupported, 
+    isBluetoothEnabled, 
+    dataReceivedCallback,
+    setDataReceivedCallback
+  ]);
 }

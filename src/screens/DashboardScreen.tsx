@@ -11,6 +11,7 @@ import Sk8lytzController from '../components/Sk8lytzController';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import ScannerAnimation from '../components/ScannerAnimation';
 
 interface DeviceSettings {
   name: string;
@@ -69,9 +70,12 @@ export default function DashboardScreen() {
   const [demoSoulQueued, setDemoSoulQueued] = useState(false);
 
   const handleScan = () => {
+    if (isScanning || isActuallyConnected) return;
+    
     requestPermissions().then((granted) => {
       if (granted) {
         console.log('[SK8Lytz] Manual Scan Initiated');
+        const scanStartTime = Date.now();
         isProvisioningTriggered.current = true;
         AsyncStorage.removeItem('ng_processed_devices');
         lastProcessedRef.current = '';
@@ -79,6 +83,7 @@ export default function DashboardScreen() {
         
         scanForPeripherals();
         
+        // Manual/Simulator scan behavior
         setTimeout(() => {
           setAllDevices((prev: any[]) => {
             let newDevices = [...prev];
@@ -94,7 +99,7 @@ export default function DashboardScreen() {
                     points: 16, 
                     rssi: -45 - Math.floor(Math.random() * 20),
                     serviceUUIDs: [ZENGGE_SERVICE_UUID],
-                    manufacturerData: 'AAAAAAAAAAAz' // Byte 9 is 0x33 (Symphony)
+                    manufacturerData: 'AAAAAAAAAAAz'
                   } as any);
                 }
               });
@@ -108,7 +113,7 @@ export default function DashboardScreen() {
                     points: 43, 
                     rssi: -42 - Math.floor(Math.random() * 20),
                     serviceUUIDs: [ZENGGE_SERVICE_UUID],
-                    manufacturerData: 'AAAAAAAAAAAz' // Byte 9 is 0x33 (Symphony)
+                    manufacturerData: 'AAAAAAAAAAAz'
                   } as any);
                 }
               });
@@ -118,8 +123,10 @@ export default function DashboardScreen() {
           });
         }, 150);
 
-        const waitTime = Platform.OS === 'web' ? 1800 : 7000;
+        // Ensure we scan for at least 5 seconds for visual impact
+        const waitTime = Math.max(5000, Platform.OS === 'web' ? 5000 : 7000);
         setTimeout(() => {
+          setIsDeviceListCollapsed(false);
           runAutoProvisioning();
         }, waitTime);
       }
@@ -128,12 +135,17 @@ export default function DashboardScreen() {
 
 
   useEffect(() => {
+    customGroupsRef.current = customGroups;
+  }, [customGroups]);
+
+  useEffect(() => {
     AsyncStorage.getItem('ng_custom_groups')
       .then(res => {
         if (res) {
           try { 
-            setCustomGroups(JSON.parse(res)); 
-          } catch(e) { console.warn('JSON parse error custom groups', e); }
+            const parsed = JSON.parse(res);
+            setCustomGroups(parsed || []);
+          } catch(e) { console.warn('JSON parse error groups', e); }
         }
       })
       .catch(e => console.warn('AsyncStorage error custom groups', e));
@@ -143,6 +155,7 @@ export default function DashboardScreen() {
         if (res) {
           try {
             const configs = JSON.parse(res);
+            // We don't need to do much here, the configs are used on-demand
           } catch(e) { console.warn('JSON parse error configs', e); }
         }
       })
@@ -221,9 +234,15 @@ export default function DashboardScreen() {
     checkAndGroup(halozDevices, 'HALOZ Roller Skate Lights', 'HALOZ', 16);
 
     const storagePromises = [];
-    if (didUpdateProcessed) storagePromises.push(AsyncStorage.setItem('ng_processed_devices', JSON.stringify(processed)));
-    if (didUpdateGroups) storagePromises.push(AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups)));
-    if (didUpdateConfigs) storagePromises.push(AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs)));
+    if (didUpdateProcessed) {
+      storagePromises.push(AsyncStorage.setItem('ng_processed_devices', JSON.stringify(processed)));
+    }
+    if (didUpdateGroups) {
+      storagePromises.push(AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups)));
+    }
+    if (didUpdateConfigs) {
+      storagePromises.push(AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs)));
+    }
     if (storagePromises.length > 0) await Promise.all(storagePromises);
 
     if (didUpdateGroups) {
@@ -641,45 +660,13 @@ export default function DashboardScreen() {
                 )}
               </View>
 
-              <View style={{ paddingHorizontal: Layout.padding }}>
-              {!isActuallyConnected ? (
-                <View style={[styles.card, { padding: 16 }]}>
-                  <View>
-                    <TouchableOpacity
-                      style={[styles.scanButton, { marginTop: 0 }, isScanning && { opacity: 0.7 }]}
-                      onPress={handleScan}
-                      activeOpacity={0.8}
-                      disabled={isScanning}
-                    >
-                      {isScanning ? (
-                        <ActivityIndicator color={Colors.text} />
-                      ) : (
-                        <Text style={styles.scanButtonText}>SCAN FOR SK8LYTZ</Text>
-                      )}
-                    </TouchableOpacity>
-                    
-                    <View style={{ flexDirection: 'column', alignItems: 'center', marginTop: 8, gap: 12 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={{ color: Colors.text, marginRight: 12, fontWeight: 'bold' }}>Demo HALOZ</Text>
-                        <Switch
-                          value={demoHaloQueued}
-                          onValueChange={setDemoHaloQueued}
-                          trackColor={{ false: 'rgba(255,255,255,0.1)', true: Colors.primary }}
-                          thumbColor={demoHaloQueued ? (Colors.isDark ? '#444' : '#000') : '#888'}
-                        />
-                      </View>
-                      
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={{ color: Colors.text, marginRight: 12, fontWeight: 'bold' }}>Demo SOULZ</Text>
-                        <Switch
-                          value={demoSoulQueued}
-                          onValueChange={setDemoSoulQueued}
-                          trackColor={{ false: 'rgba(255,255,255,0.1)', true: Colors.secondary }}
-                          thumbColor={demoSoulQueued ? (Colors.isDark ? '#444' : '#000') : '#888'}
-                        />
-                      </View>
-                    </View>
-                  </View>
+              <View style={{ paddingHorizontal: Layout.padding }}>              {!isActuallyConnected ? (
+                <View style={{ height: 440, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 5, width: '100%' }}>
+                    <ScannerAnimation 
+                       deviceCount={allDevices.length} 
+                       isScanning={isScanning} 
+                       onPress={handleScan}
+                    />
                 </View>
               ) : null}
               </View>
@@ -692,10 +679,17 @@ export default function DashboardScreen() {
               {!isActuallyConnected && customGroups.length > 0 && (
                 <View style={{ marginTop: 20 }}>
                   <Text style={[Typography.title, { marginBottom: 12, paddingHorizontal: 4, color: Colors.primary }]}>Groups</Text>
-                  {customGroups.map((group) => (
-                    <DeviceItem
-                      key={group.id}
-                      device={group}
+                  {customGroups.map((group) => {
+                      const foundIds = allDevices.map(d => d.id);
+                      const matched = group.deviceIds.filter((id: string) => foundIds.includes(id));
+                      
+                      return (
+                        <DeviceItem
+                          key={group.id}
+                          device={{
+                            ...group,
+                            connectedCount: matched.length
+                          }}
                       isConnected={mockConnectedGroup === group.id}
                       isSelectionMode={false}
                       isSelected={false}
@@ -722,8 +716,9 @@ export default function DashboardScreen() {
                       showGroupIcon={true}
                       isPoweredOn={group.deviceIds.every((id: string) => powerStates[id] ?? true)}
                       onPowerToggle={() => handleGlobalPowerToggle(group.deviceIds)}
-                    />
-                  ))}
+                      />
+                    );
+                  })}
                 </View>
               )}
 
@@ -739,6 +734,29 @@ export default function DashboardScreen() {
                       </TouchableOpacity>
                     )}
                   </View>
+
+                  {!isActuallyConnected && !isDeviceListCollapsed && (
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16, padding: 8, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={{ color: Colors.text, marginRight: 8, fontSize: 12, fontWeight: '600' }}>Demo HALOZ</Text>
+                        <Switch
+                          value={demoHaloQueued}
+                          onValueChange={setDemoHaloQueued}
+                          style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+                          trackColor={{ false: 'rgba(255,255,255,0.1)', true: Colors.primary }}
+                        />
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={{ color: Colors.text, marginRight: 8, fontSize: 12, fontWeight: '600' }}>Demo SOULZ</Text>
+                        <Switch
+                          value={demoSoulQueued}
+                          onValueChange={setDemoSoulQueued}
+                          style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+                          trackColor={{ false: 'rgba(255,255,255,0.1)', true: Colors.secondary }}
+                        />
+                      </View>
+                    </View>
+                  )}
                 </>
               )}
               </View>
@@ -752,7 +770,7 @@ export default function DashboardScreen() {
           ListEmptyComponent={
             (!isActuallyConnected && !isDeviceListCollapsed) ? (
               <View style={styles.emptyStateContainer}>
-                <Text style={Typography.caption}>
+                <Text style={[Typography.caption, { color: Colors.text, opacity: 0.7 }]}>
                   {isScanning ? 'Scanning...' : 'No devices found.'}
                 </Text>
               </View>

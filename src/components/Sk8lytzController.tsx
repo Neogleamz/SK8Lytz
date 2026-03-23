@@ -58,6 +58,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
   const [micSensitivity, setMicSensitivity] = useState<number>(50);
   const [musicHue, setMusicHue] = useState(180);
   const [recording, setRecording] = useState<any>(null); // Use any for Recording to avoid version-specific type issues
+  const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
   const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
 
   const [musicMode, setMusicModeState] = useState<'SCREEN' | 'BAR'>('SCREEN');
@@ -95,8 +96,35 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
       });
 
       const { recording: newRecording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.LOW_QUALITY
+        {
+          ...Audio.RecordingOptionsPresets.LOW_QUALITY,
+          android: {
+            ...Audio.RecordingOptionsPresets.LOW_QUALITY.android,
+            extension: '.m4a',
+            outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+            audioEncoder: Audio.AndroidAudioEncoder.AAC,
+            sampleRate: 44100,
+            numberOfChannels: 1,
+            bitRate: 128000,
+          },
+          ios: {
+            ...Audio.RecordingOptionsPresets.LOW_QUALITY.ios,
+            extension: '.m4a',
+            outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+            audioQuality: Audio.IOSAudioQuality.MIN,
+            sampleRate: 44100,
+            numberOfChannels: 1,
+            bitRate: 128000,
+            linearPCMBitDepth: 16,
+            linearPCMIsBigEndian: false,
+            linearPCMIsFloat: false,
+          },
+        },
+        null, // initialStatus
+        50 // progressUpdateIntervalMillis
       );
+      
+      await newRecording.setProgressUpdateInterval(50);
       setRecording(newRecording);
 
       // Start magnitude stream
@@ -104,11 +132,19 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
         if (!writeToDevice) return;
         const stats = await newRecording.getStatusAsync();
         if (stats.canRecord && stats.isRecording) {
-          // Simulate magnitude jitter around a base for visual confirmation in demo
-          const simulatedMagnitude = Math.floor(Math.random() * 255); 
-          writeToDevice(ZenggeProtocol.sendMusicMagnitude(simulatedMagnitude));
+          // stats.metering ranges from -160 to 0. 
+          // Typical music peaks around -20 to 0.
+          const metering = stats.metering ?? -160;
+          // Map -60...0 to 0...1 for usable visualization
+          const normalized = Math.max(0, Math.min(1, (metering + 60) / 60));
+          
+          setAudioMagnitude(normalized);
+          
+          // Send to physical device (Symphony 0x74 command expects 0-255)
+          const deviceMag = Math.floor(normalized * 255);
+          writeToDevice(ZenggeProtocol.sendMusicMagnitude(deviceMag));
         }
-      }, 100);
+      }, 50);
 
     } catch (err) {
       console.error('Failed to start recording', err);
@@ -304,6 +340,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           fixedBgColor={fixedBgColor}
           isPoweredOn={isPoweredOn}
           statusText={currentStatusText}
+          audioMagnitude={audioMagnitude}
         />
       </View>
       </View>
@@ -316,11 +353,10 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
               style={[
                 styles.modePill, 
                 { 
-                  width: 52, 
+                  flex: 1,
                   height: 48, 
                   paddingVertical: 4, 
                   paddingHorizontal: 2, 
-                  marginRight: 0, 
                   borderRadius: 8,
                   alignItems: 'center', 
                   justifyContent: 'center',
@@ -379,7 +415,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           {activeMode === 'FIXED' && (
             <View style={{ marginBottom: 8 }}>
               
-              <View style={{ backgroundColor: Colors.surfaceHighlight, borderRadius: 8, padding: 8, marginBottom: 8, height: 120 }}>
+              <View style={{ backgroundColor: Colors.surfaceHighlight, borderRadius: 8, padding: 8, marginBottom: 8, height: 170 }}>
                 <ScrollView nestedScrollEnabled={true}>
                 {[
                   { id: 1, label: 'Solid', dots: ['#00FF00','#00FF00','#00FF00','#00FF00','#00FF00','#00FF00','#00FF00','#00FF00'] },
@@ -423,12 +459,11 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                         }
                       }
                     }}
-                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}
                   >
-                    <Text style={{ marginRight: 10, fontSize: 16 }}>🎨</Text>
-                    <View style={{ flexDirection: 'row', flex: 1, gap: 3 }}>
+                    <View style={{ flexDirection: 'row', flex: 1, gap: 4 }}>
                       {pattern.dots.map((c, i) => (
-                        <View key={i} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c }} />
+                        <View key={i} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c }} />
                       ))}
                     </View>
                     <Text style={{ color: Colors.textMuted, fontSize: 16 }}>{fixedPatternId === pattern.id ? '✓' : '→'}</Text>
@@ -463,7 +498,24 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                 onValueChange={(pid) => {
                   setSelectedPatternId(pid);
                   if (writeToDevice) {
-                    writeToDevice(ZenggeProtocol.setRbmMode(pid, speed, brightness));
+                    if (pid === 100) {
+                      // Custom Emergency Pattern
+                      const red = { r: 255, g: 0, b: 0 };
+                      const white = { r: 255, g: 255, b: 255 };
+                      const yellow = { r: 255, g: 255, b: 0 };
+                      const bg = { r: 0, g: 0, b: 0 };
+                      
+                      // Construct a 20-point buffer for the controller
+                      const arr = [
+                        red, red, red, red,      // Bottom
+                        yellow, bg, yellow, bg,  // Flowing mid
+                        white, white, white, white, // Top
+                        yellow, bg, yellow, bg   // Flowing mid
+                      ];
+                      writeToDevice(ZenggeProtocol.setMultiColor(arr, speed, 1));
+                    } else {
+                      writeToDevice(ZenggeProtocol.setRbmMode(pid, speed, brightness));
+                    }
                   }
                 }}
                 min={1}
@@ -649,239 +701,236 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
               </TouchableOpacity>
             </View>
           )}
-          {/* UNIVERSAL SLIDERS SECTION */}
-          {activeMode !== 'CAMERA' && activeMode !== 'CUSTOM' && activeMode !== 'PRESETS' && (
-            <View style={[styles.sceneSlidersContainer, { marginTop: 8 }]}>
-              {/* Color Grid - Hidden in Programs Mode */}
-              {activeMode !== 'RBM' && (
-                <View style={[styles.colorGrid, { marginBottom: 8 }]}>
-                  {['#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#FFFFFF'].map(color => (
-                    <TouchableOpacity 
-                      key={color} 
-                      onPress={() => {
-                        const hueMap: {[key: string]: number} = {
-                          '#FF0000': 0, '#FFFF00': 60, '#00FF00': 120, 
-                          '#00FFFF': 180, '#0000FF': 240, '#FF00FF': 300, '#FFFFFF': 0
-                        };
-                        if (activeMode === 'FIXED') {
-                          if (fixedColorMode === 'FOREGROUND') setFixedFgColor(color);
-                          else setFixedBgColor(color);
-                          if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
-                        } else if (activeMode === 'MUSIC') {
-                          if (hueMap[color] !== undefined) setMusicHue(hueMap[color]);
-                        } else {
-                          setSelectedColor(color);
-                          if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
-                        }
-
-                        if (writeToDevice) {
-                          if (activeMode === 'MUSIC') {
-                            handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hueMap[color] || 0);
-                          } else {
-                            const r = parseInt(color.slice(1, 3), 16);
-                            const g = parseInt(color.slice(3, 5), 16);
-                            const b = parseInt(color.slice(5, 7), 16);
-                            writeToDevice(ZenggeProtocol.setColor(r, g, b));
-                          }
-                        }
-                      }}
-                      style={[
-                        styles.colorButton, 
-                        { backgroundColor: color, flex: 1, marginHorizontal: 2, height: 40, borderRadius: 4 },
-                        ((activeMode === 'FIXED' ? (fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor) : selectedColor) === color) && styles.selectedColorButton
-                      ]} 
-                    />
-                  ))}
-                </View>
-              )}
-
-              {/* Hue Slider - Hidden in Programs Mode */}
-              {activeMode !== 'RBM' && (
-                <View style={[styles.controlRow, { marginTop: 0, height: 32 }]}>
-                  <CustomSlider 
-                    gradientTrack={true}
-                    value={activeMode === 'FIXED' ? fixedHue : (activeMode === 'MUSIC' ? musicHue : selectedHue)}
-                    onValueChange={(hue) => {
-                      if (activeMode === 'FIXED') {
-                        setFixedHue(hue);
-                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
-                        const hex = rgb2hex(f(5), f(3), f(1));
-                        if (fixedColorMode === 'FOREGROUND') setFixedFgColor(hex);
-                        else setFixedBgColor(hex);
-                      } else if (activeMode === 'MUSIC') {
-                        setMusicHue(hue);
-                      } else {
-                        setSelectedHue(hue);
-                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
-                        setSelectedColor(rgb2hex(f(5), f(3), f(1)));
-                      }
-                    }}
-                    onSlidingComplete={(hue) => {
-                      if (activeMode === 'MUSIC') {
-                        handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hue);
-                      } else if (writeToDevice) {
-                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                        const r = Math.round(f(5) * 255);
-                        const g = Math.round(f(3) * 255);
-                        const b = Math.round(f(1) * 255);
-                        writeToDevice(ZenggeProtocol.setColor(r, g, b));
-                      }
-                    }}
-                    minimumValue={0}
-                    maximumValue={360}
-                    style={{ position: 'absolute', width: '100%', height: 32 }}
-                  />
-                </View>
-              )}
-
-              {/* Brightness / Sensitivity Slider */}
-              <View style={[styles.controlRow, { marginTop: 24 }]}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ color: Colors.textMuted, marginRight: 8, fontSize: 16 }}>
-                    {activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? '🎚️' : '☀️'}
-                  </Text>
-                  
-                  {activeMode === 'MUSIC' && (
-                    <View style={{ flexDirection: 'row', position: 'absolute', top: -35, left: 24 }}>
-                      <TouchableOpacity style={{ marginRight: 16 }} onPress={() => setMusicSetting('SENSITIVITY')}>
-                        <Text style={{ color: musicSetting === 'SENSITIVITY' ? Colors.primary : Colors.textMuted, fontSize: 12, fontWeight: 'bold' }}>SENSITIVITY</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => setMusicSetting('BRIGHTNESS')}>
-                        <Text style={{ color: musicSetting === 'BRIGHTNESS' ? Colors.primary : Colors.textMuted, fontSize: 12, fontWeight: 'bold' }}>BRIGHTNESS</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                  
-                  {activeMode !== 'MUSIC' && (
-                    <Text style={{ position: 'absolute', top: -20, left: 24, fontSize: 10, color: Colors.textMuted, fontWeight: 'bold', letterSpacing: 1 }}>BRIGHTNESS</Text>
-                  )}
-
-                  <CustomSlider 
-                    value={activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? micSensitivity : brightness}
-                    onValueChange={activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? setMicSensitivity : setBrightness}
-                    minimumValue={0}
-                    maximumValue={100}
-                    style={{ flex: 1 }}
-                    onSlidingComplete={(val) => {
-                      if (writeToDevice) {
-                        if (activeMode === 'RBM') {
-                          writeToDevice(ZenggeProtocol.setRbmMode(selectedPatternId, speed, val));
-                        } else if (activeMode === 'MUSIC') {
-                          if (musicSetting === 'SENSITIVITY') {
-                            handleMusicChange(musicPatternId, val, brightness, micSource, musicHue);
-                          } else {
-                            handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicHue);
-                          }
-                        } else {
-                          // Support brightness for Fixed, Presets, Multicolor via RGB scaling
-                          const factor = val / 100;
-                          const fgHex = activeMode === 'FIXED' ? fixedFgColor : (activeMode === 'MULTICOLOR' ? '#FFFFFF' : selectedColor);
-                          const bgHex = activeMode === 'FIXED' ? fixedBgColor : '#000000';
-                          
-                          const fg = { 
-                            r: Math.round(parseInt(fgHex.slice(1, 3), 16) * factor), 
-                            g: Math.round(parseInt(fgHex.slice(3, 5), 16) * factor), 
-                            b: Math.round(parseInt(fgHex.slice(5, 7), 16) * factor) 
-                          };
-                          const bg = { 
-                            r: Math.round(parseInt(bgHex.slice(1, 3), 16) * factor), 
-                            g: Math.round(parseInt(bgHex.slice(3, 5), 16) * factor), 
-                            b: Math.round(parseInt(bgHex.slice(5, 7), 16) * factor) 
-                          };
-
-                          if (activeMode === 'FIXED' && fixedPatternId !== 1) {
-                            if (fixedPatternId === 6) {
-                              writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 1, speed, color1: fg, color2: bg }, { mode: 1, speed, color1: bg, color2: fg }]));
-                            } else if (fixedPatternId === 7) {
-                              writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 2, speed, color1: fg, color2: bg }, { mode: 2, speed, color1: bg, color2: fg }]));
-                            } else {
-                              let arr: any[] = [];
-                              if (fixedPatternId === 2) arr = [fg, bg, bg, bg, bg, bg, bg, bg];
-                              if (fixedPatternId === 3) arr = [fg, {r: Math.floor(fg.r*0.5), g: Math.floor(fg.g*0.5), b: Math.floor(fg.b*0.5)}, {r: Math.floor(fg.r*0.2), g: Math.floor(fg.g*0.2), b: Math.floor(fg.b*0.2)}, bg, bg, bg];
-                              if (fixedPatternId === 4) arr = [fg, fg, fg, fg, bg, bg, bg, bg];
-                              if (fixedPatternId === 5) arr = [fg, fg, bg, bg];
-                              writeToDevice(ZenggeProtocol.setMultiColor(arr, speed, 1));
-                            }
-                          } else {
-                            writeToDevice(ZenggeProtocol.setColor(fg.r, fg.g, fg.b));
-                          }
-                        }
-                      }
-                    }}
-                  />
-                  <Text style={{ color: Colors.text, marginLeft: 10, width: 45, fontWeight: 'bold', fontSize: 13, textAlign: 'right' }}>
-                    {Math.round(activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? micSensitivity : brightness)}%
-                  </Text>
-                  <Text style={{ color: Colors.textMuted, marginLeft: 8, fontSize: 16 }}>
-                    {activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? '🎚️' : '☀️'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Speed Slider */}
-              {activeMode !== 'MUSIC' && (
-                <View style={[styles.controlRow, { marginTop: 12 }]}>
-                  <Text style={{ position: 'absolute', top: -14, left: 24, fontSize: 10, color: Colors.textMuted, fontWeight: 'bold', letterSpacing: 1 }}>SPEED</Text>
-                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ color: Colors.textMuted, marginRight: 8, fontSize: 16 }}>🚀</Text>
-                    <CustomSlider 
-                      value={speed}
-                      onValueChange={setSpeed}
-                      onSlidingComplete={(val) => {
-                        if (writeToDevice) {
-                          if (activeMode === 'FIXED') {
-                            const fgHex = fixedColorMode === 'FOREGROUND' ? fixedFgColor : (fixedFgColor || '#00FF00');
-                            const bgHex = fixedColorMode === 'BACKGROUND' ? fixedBgColor : (fixedBgColor || '#000000');
-                            const fg = { r: parseInt(fgHex.slice(1, 3), 16), g: parseInt(fgHex.slice(3, 5), 16), b: parseInt(fgHex.slice(5, 7), 16) };
-                            const bg = { r: parseInt(bgHex.slice(1, 3), 16), g: parseInt(bgHex.slice(3, 5), 16), b: parseInt(bgHex.slice(5, 7), 16) };
-                            
-                            if (fixedPatternId === 1) {
-                              writeToDevice(ZenggeProtocol.setColor(fg.r, fg.g, fg.b));
-                            } else if (fixedPatternId === 6) { 
-                              const steps = [{ mode: 1, speed: val, color1: fg, color2: bg }, { mode: 1, speed: val, color1: bg, color2: fg }];
-                              writeToDevice(ZenggeProtocol.setCustomMode(steps));
-                            } else if (fixedPatternId === 7) { 
-                              const steps = [{ mode: 2, speed: val, color1: fg, color2: bg }, { mode: 2, speed: val, color1: bg, color2: fg }];
-                              writeToDevice(ZenggeProtocol.setCustomMode(steps));
-                            } else { 
-                              let arr: any[] = [];
-                              if (fixedPatternId === 2) arr = [fg, bg, bg, bg, bg, bg, bg, bg];
-                              if (fixedPatternId === 3) arr = [fg, {r: Math.floor(fg.r*0.5), g: Math.floor(fg.g*0.5), b: Math.floor(fg.b*0.5)}, {r: Math.floor(fg.r*0.2), g: Math.floor(fg.g*0.2), b: Math.floor(fg.b*0.2)}, bg, bg, bg];
-                              if (fixedPatternId === 4) arr = [fg, fg, fg, fg, bg, bg, bg, bg];
-                              if (fixedPatternId === 5) arr = [fg, fg, bg, bg];
-                              writeToDevice(ZenggeProtocol.setMultiColor(arr, val, 1));
-                            }
-                          } else if (activeMode === 'RBM') {
-                            writeToDevice(ZenggeProtocol.setRbmMode(selectedPatternId, val, brightness));
-                          } else if (activeMode === 'MULTICOLOR') {
-                            const segmentColors = [
-                              { r: 255, g: 0, b: 0 },
-                              { r: 0, g: 255, b: 0 },
-                              { r: 0, g: 0, b: 255 },
-                              { r: 255, g: 255, b: 0 },
-                              { r: 0, g: 255, b: 255 }
-                            ];
-                            writeToDevice(ZenggeProtocol.setMultiColor(segmentColors, val, 1));
-                          }
-                        }
-                      }}
-                      minimumValue={0}
-                      maximumValue={100}
-                      style={{ flex: 1 }}
-                    />
-                    <Text style={{ color: Colors.text, marginLeft: 10, width: 45, fontWeight: 'bold', fontSize: 13, textAlign: 'right' }}>
-                      {Math.round(speed)}
-                    </Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          )}
-
         </View>
 
+        {/* UNIVERSAL SLIDERS FOOTER - Always at the bottom */}
+        {activeMode !== 'CAMERA' && (
+          <View style={[styles.sceneSlidersContainer, { marginTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 8 }]}>
+            {/* Color Grid - Hidden in Programs Mode */}
+            {activeMode !== 'RBM' && activeMode !== 'PRESETS' && (
+              <View style={[styles.colorGrid, { marginBottom: 8 }]}>
+                {['#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#FFFFFF'].map(color => (
+                  <TouchableOpacity 
+                    key={color} 
+                    onPress={() => {
+                      const hueMap: {[key: string]: number} = {
+                        '#FF0000': 0, '#FFFF00': 60, '#00FF00': 120, 
+                        '#00FFFF': 180, '#0000FF': 240, '#FF00FF': 300, '#FFFFFF': 0
+                      };
+                      if (activeMode === 'FIXED') {
+                        if (fixedColorMode === 'FOREGROUND') setFixedFgColor(color);
+                        else setFixedBgColor(color);
+                        if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
+                      } else if (activeMode === 'MUSIC') {
+                        if (hueMap[color] !== undefined) setMusicHue(hueMap[color]);
+                      } else {
+                        setSelectedColor(color);
+                        if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
+                      }
+
+                      if (writeToDevice) {
+                        if (activeMode === 'MUSIC') {
+                          handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hueMap[color] || 0);
+                        } else {
+                          const r = parseInt(color.slice(1, 3), 16);
+                          const g = parseInt(color.slice(3, 5), 16);
+                          const b = parseInt(color.slice(5, 7), 16);
+                          writeToDevice(ZenggeProtocol.setColor(r, g, b));
+                        }
+                      }
+                    }}
+                    style={[
+                      styles.colorButton, 
+                      { backgroundColor: color, flex: 1, marginHorizontal: 2, height: 40, borderRadius: 4 },
+                      ((activeMode === 'FIXED' ? (fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor) : selectedColor) === color) && styles.selectedColorButton
+                    ]} 
+                  />
+                ))}
+              </View>
+            )}
+
+            {/* Hue Slider - Hidden in Programs Mode */}
+            {activeMode !== 'RBM' && activeMode !== 'PRESETS' && (
+              <View style={[styles.controlRow, { marginTop: 0, height: 32 }]}>
+                <CustomSlider 
+                  gradientTrack={true}
+                  value={activeMode === 'FIXED' ? fixedHue : (activeMode === 'MUSIC' ? musicHue : selectedHue)}
+                  onValueChange={(hue) => {
+                    if (activeMode === 'FIXED') {
+                      setFixedHue(hue);
+                      const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                      const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+                      const hex = rgb2hex(f(5), f(3), f(1));
+                      if (fixedColorMode === 'FOREGROUND') setFixedFgColor(hex);
+                      else setFixedBgColor(hex);
+                    } else if (activeMode === 'MUSIC') {
+                      setMusicHue(hue);
+                    } else {
+                      setSelectedHue(hue);
+                      const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                      const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+                      setSelectedColor(rgb2hex(f(5), f(3), f(1)));
+                    }
+                  }}
+                  onSlidingComplete={(hue) => {
+                    if (activeMode === 'MUSIC') {
+                      handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hue);
+                    } else if (writeToDevice) {
+                      const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                      const r = Math.round(f(5) * 255);
+                      const g = Math.round(f(3) * 255);
+                      const b = Math.round(f(1) * 255);
+                      writeToDevice(ZenggeProtocol.setColor(r, g, b));
+                    }
+                  }}
+                  minimumValue={0}
+                  maximumValue={360}
+                  style={{ position: 'absolute', width: '100%', height: 32 }}
+                />
+              </View>
+            )}
+
+            {/* Brightness / Sensitivity Slider */}
+            <View style={[styles.controlRow, { marginTop: 24 }]}>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ color: Colors.textMuted, marginRight: 8, fontSize: 16 }}>
+                  {activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? '🎚️' : '☀️'}
+                </Text>
+                
+                {activeMode === 'MUSIC' && (
+                  <View style={{ flexDirection: 'row', position: 'absolute', top: -35, left: 24 }}>
+                    <TouchableOpacity style={{ marginRight: 16 }} onPress={() => setMusicSetting('SENSITIVITY')}>
+                      <Text style={{ color: musicSetting === 'SENSITIVITY' ? Colors.primary : Colors.textMuted, fontSize: 12, fontWeight: 'bold' }}>SENSITIVITY</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setMusicSetting('BRIGHTNESS')}>
+                      <Text style={{ color: musicSetting === 'BRIGHTNESS' ? Colors.primary : Colors.textMuted, fontSize: 12, fontWeight: 'bold' }}>BRIGHTNESS</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                
+                {activeMode !== 'MUSIC' && (
+                  <Text style={{ position: 'absolute', top: -20, left: 24, fontSize: 10, color: Colors.textMuted, fontWeight: 'bold', letterSpacing: 1 }}>BRIGHTNESS</Text>
+                )}
+
+                <CustomSlider 
+                  value={activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? micSensitivity : brightness}
+                  onValueChange={activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? setMicSensitivity : setBrightness}
+                  minimumValue={0}
+                  maximumValue={100}
+                  style={{ flex: 1 }}
+                  onSlidingComplete={(val) => {
+                    if (writeToDevice) {
+                      if (activeMode === 'RBM') {
+                        writeToDevice(ZenggeProtocol.setRbmMode(selectedPatternId, speed, val));
+                      } else if (activeMode === 'MUSIC') {
+                        if (musicSetting === 'SENSITIVITY') {
+                          handleMusicChange(musicPatternId, val, brightness, micSource, musicHue);
+                        } else {
+                          handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicHue);
+                        }
+                      } else {
+                        // Support brightness for Fixed, Presets, Multicolor via RGB scaling
+                        const factor = val / 100;
+                        const fgHex = activeMode === 'FIXED' ? fixedFgColor : (activeMode === 'MULTICOLOR' ? '#FFFFFF' : selectedColor);
+                        const bgHex = activeMode === 'FIXED' ? fixedBgColor : '#000000';
+                        
+                        const fg = { 
+                          r: Math.round(parseInt(fgHex.slice(1, 3), 16) * factor), 
+                          g: Math.round(parseInt(fgHex.slice(3, 5), 16) * factor), 
+                          b: Math.round(parseInt(fgHex.slice(5, 7), 16) * factor) 
+                        };
+                        const bg = { 
+                          r: Math.round(parseInt(bgHex.slice(1, 3), 16) * factor), 
+                          g: Math.round(parseInt(bgHex.slice(3, 5), 16) * factor), 
+                          b: Math.round(parseInt(bgHex.slice(5, 7), 16) * factor) 
+                        };
+
+                        if (activeMode === 'FIXED' && fixedPatternId !== 1) {
+                          if (fixedPatternId === 6) {
+                            writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 1, speed, color1: fg, color2: bg }, { mode: 1, speed, color1: bg, color2: fg }]));
+                          } else if (fixedPatternId === 7) {
+                            writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 2, speed, color1: fg, color2: bg }, { mode: 2, speed, color1: bg, color2: fg }]));
+                          } else {
+                            let arr: any[] = [];
+                            if (fixedPatternId === 2) arr = [fg, bg, bg, bg, bg, bg, bg, bg];
+                            if (fixedPatternId === 3) arr = [fg, {r: Math.floor(fg.r*0.5), g: Math.floor(fg.g*0.5), b: Math.floor(fg.b*0.5)}, {r: Math.floor(fg.r*0.2), g: Math.floor(fg.g*0.2), b: Math.floor(fg.b*0.2)}, bg, bg, bg];
+                            if (fixedPatternId === 4) arr = [fg, fg, fg, fg, bg, bg, bg, bg];
+                            if (fixedPatternId === 5) arr = [fg, fg, bg, bg];
+                            writeToDevice(ZenggeProtocol.setMultiColor(arr, speed, 1));
+                          }
+                        } else {
+                          writeToDevice(ZenggeProtocol.setColor(fg.r, fg.g, fg.b));
+                        }
+                      }
+                    }
+                  }}
+                />
+                <Text style={{ color: Colors.text, marginLeft: 10, width: 45, fontWeight: 'bold', fontSize: 13, textAlign: 'right' }}>
+                  {Math.round(activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? micSensitivity : brightness)}%
+                </Text>
+                <Text style={{ color: Colors.textMuted, marginLeft: 8, fontSize: 16 }}>
+                  {activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? '🎚️' : '☀️'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Speed Slider */}
+            <View style={[styles.controlRow, { marginTop: 12 }]}>
+              <Text style={{ position: 'absolute', top: -14, left: 24, fontSize: 10, color: Colors.textMuted, fontWeight: 'bold', letterSpacing: 1 }}>SPEED</Text>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ color: Colors.textMuted, marginRight: 8, fontSize: 16 }}>🚀</Text>
+                <CustomSlider 
+                  value={speed}
+                  onValueChange={setSpeed}
+                  onSlidingComplete={(val) => {
+                    if (writeToDevice) {
+                      if (activeMode === 'FIXED') {
+                        const fgHex = fixedColorMode === 'FOREGROUND' ? fixedFgColor : (fixedFgColor || '#00FF00');
+                        const bgHex = fixedColorMode === 'BACKGROUND' ? fixedBgColor : (fixedBgColor || '#000000');
+                        const fg = { r: parseInt(fgHex.slice(1, 3), 16), g: parseInt(fgHex.slice(3, 5), 16), b: parseInt(fgHex.slice(5, 7), 16) };
+                        const bg = { r: parseInt(bgHex.slice(1, 3), 16), g: parseInt(bgHex.slice(3, 5), 16), b: parseInt(bgHex.slice(5, 7), 16) };
+                        
+                        if (fixedPatternId === 1) {
+                          writeToDevice(ZenggeProtocol.setColor(fg.r, fg.g, fg.b));
+                        } else if (fixedPatternId === 6) { 
+                          const steps = [{ mode: 1, speed: val, color1: fg, color2: bg }, { mode: 1, speed: val, color1: bg, color2: fg }];
+                          writeToDevice(ZenggeProtocol.setCustomMode(steps));
+                        } else if (fixedPatternId === 7) { 
+                          const steps = [{ mode: 2, speed: val, color1: fg, color2: bg }, { mode: 2, speed: val, color1: bg, color2: fg }];
+                          writeToDevice(ZenggeProtocol.setCustomMode(steps));
+                        } else { 
+                          let arr: any[] = [];
+                          if (fixedPatternId === 2) arr = [fg, bg, bg, bg, bg, bg, bg, bg];
+                          if (fixedPatternId === 3) arr = [fg, {r: Math.floor(fg.r*0.5), g: Math.floor(fg.g*0.5), b: Math.floor(fg.b*0.5)}, {r: Math.floor(fg.r*0.2), g: Math.floor(fg.g*0.2), b: Math.floor(fg.b*0.2)}, bg, bg, bg];
+                          if (fixedPatternId === 4) arr = [fg, fg, fg, fg, bg, bg, bg, bg];
+                          if (fixedPatternId === 5) arr = [fg, fg, bg, bg];
+                          writeToDevice(ZenggeProtocol.setMultiColor(arr, val, 1));
+                        }
+                      } else if (activeMode === 'RBM') {
+                        writeToDevice(ZenggeProtocol.setRbmMode(selectedPatternId, val, brightness));
+                      } else if (activeMode === 'MULTICOLOR') {
+                        const segmentColors = [
+                          { r: 255, g: 0, b: 0 },
+                          { r: 0, g: 255, b: 0 },
+                          { r: 0, g: 0, b: 255 },
+                          { r: 255, g: 255, b: 0 },
+                          { r: 0, g: 255, b: 255 }
+                        ];
+                        writeToDevice(ZenggeProtocol.setMultiColor(segmentColors, val, 1));
+                      }
+                    }
+                  }}
+                  minimumValue={0}
+                  maximumValue={100}
+                  style={{ flex: 1 }}
+                />
+                <Text style={{ color: Colors.text, marginLeft: 10, width: 45, fontWeight: 'bold', fontSize: 13, textAlign: 'right' }}>
+                  {Math.round(speed)}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -889,6 +938,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
 
 const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleSheet.create({
   container: {
+    flex: 1,
     paddingHorizontal: 0,
     paddingBottom: 20,
     paddingTop: 0,
@@ -929,6 +979,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     color: Colors.isDark ? '#FFF' : Colors.accent,
   },
   controlsContainer: {
+    flex: 1,
     padding: 10,
     backgroundColor: Colors.isDark ? 'rgba(21, 25, 40, 0.7)' : Colors.surface,
     borderRadius: Layout.borderRadius + 4,
@@ -965,7 +1016,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     fontWeight: 'bold',
   },
   activeModeContainer: {
-    minHeight: 120,
+    flex: 1,
   },
   controlRow: {
     marginTop: 6,

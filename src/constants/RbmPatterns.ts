@@ -96,7 +96,9 @@ export const RBM_PATTERNS = [
   "Neon City",
   "Forest Path",
   "Lava Lamp",
-  "Ocean Drift"
+  "Ocean Drift",
+  "Starry Night",
+  "Emergency"
 ];
 
 // Fallback generator for the rest of the 100
@@ -104,5 +106,5 @@ export const getRbmPatternName = (index: number): string => {
   if (index >= 1 && index <= RBM_PATTERNS.length) {
     return RBM_PATTERNS[index - 1];
   }
-  return `Pattern ${index}`;
+  return `MODE ${index}`;
 };
