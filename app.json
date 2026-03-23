@@ -28,6 +28,15 @@
     },
     "plugins": [
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "gradleVersion": "8.5",
+            "kotlinVersion": "1.9.24"
+          }
+        }
+      ],
+      [
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": true,
