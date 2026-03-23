@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import DeviceItem from '../components/DeviceItem';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import useBLE from '../hooks/useBLE';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { ZenggeProtocol, ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol';
 
 import Sk8lytzController from '../components/Sk8lytzController';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
@@ -88,14 +88,28 @@ export default function DashboardScreen() {
             if (demoHaloQueued) {
               haloIds.forEach((id, idx) => {
                 if (!newDevices.some(d => d.id === id)) {
-                  newDevices.push({ id, name: `HALOZ ${idx === 0 ? 'Left' : 'Right'} Skate`, points: 16, rssi: -45 - Math.floor(Math.random() * 20) } as any);
+                  newDevices.push({ 
+                    id, 
+                    name: `HALOZ ${idx === 0 ? 'Left' : 'Right'} Skate`, 
+                    points: 16, 
+                    rssi: -45 - Math.floor(Math.random() * 20),
+                    serviceUUIDs: [ZENGGE_SERVICE_UUID],
+                    manufacturerData: 'AAAAAAAAAAAz' // Byte 9 is 0x33 (Symphony)
+                  } as any);
                 }
               });
             }
             if (demoSoulQueued) {
               soulIds.forEach((id, idx) => {
                 if (!newDevices.some(d => d.id === id)) {
-                  newDevices.push({ id, name: `SOULZ ${idx === 0 ? 'Left' : 'Right'} Skate`, points: 43, rssi: -42 - Math.floor(Math.random() * 20) } as any);
+                  newDevices.push({ 
+                    id, 
+                    name: `SOULZ ${idx === 0 ? 'Left' : 'Right'} Skate`, 
+                    points: 43, 
+                    rssi: -42 - Math.floor(Math.random() * 20),
+                    serviceUUIDs: [ZENGGE_SERVICE_UUID],
+                    manufacturerData: 'AAAAAAAAAAAz' // Byte 9 is 0x33 (Symphony)
+                  } as any);
                 }
               });
             }

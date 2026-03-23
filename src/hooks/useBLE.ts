@@ -119,9 +119,34 @@ export default function useBLE(): BluetoothLowEnergyApi {
       if (device) {
         const nameLower = device.name?.toLowerCase() || '';
         const hasZenggeService = device.serviceUUIDs?.includes(ZENGGE_SERVICE_UUID);
-        const isZenggeName = nameLower.includes('led') || nameLower.includes('zengge') || nameLower.includes('magic') || nameLower.startsWith('sp') || nameLower.includes('sk8');
+        const manufacturerData = device.manufacturerData;
 
-        if (hasZenggeService || isZenggeName) {
+        let isSymphony = false;
+        if (manufacturerData) {
+          try {
+            /* global Buffer */
+            const buffer = require('buffer').Buffer.from(manufacturerData, 'base64');
+            // Index 9 is the device type code in many Zengge advertisement packets.
+            // 0x33 (51) is the standard for addressable / Symphony controllers.
+            // 0xBF is also seen in some Symphony variants.
+            if (buffer.length > 9 && (buffer[9] === 0x33 || buffer[9] === 0xBF)) {
+              isSymphony = true;
+            }
+          } catch (e) {
+            // Silently ignore decode errors
+          }
+        }
+
+        // Strict Filter Logic:
+        // We prioritizing devices that explicitly report as Symphony (SPI) 
+        // or have the signature SK8 or LEDnet prefix.
+        const isKnownPrefix = nameLower.startsWith('lednet') || 
+                            nameLower.startsWith('sk8') ||
+                            nameLower.startsWith('zg') ||
+                            nameLower.startsWith('halo') ||
+                            nameLower.startsWith('soul');
+
+        if (isSymphony || (isKnownPrefix && hasZenggeService)) {
           setAllDevices((prevState) => {
             if (!isDuplicateDevice(prevState, device)) {
               return [...prevState, device];
