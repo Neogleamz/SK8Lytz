@@ -19,7 +19,8 @@ export type EventType =
   | 'PATTERN_CHANGED'
   | 'COLOR_CHANGED'
   | 'BRIGHTNESS_CHANGED'
-  | 'SPEED_CHANGED';
+  | 'SPEED_CHANGED'
+  | 'HARDWARE_CONFIG_CHANGED';
 
 export interface LogEntry {
   t: number;        // timestamp ms
@@ -85,17 +86,18 @@ class AppLoggerService {
   /** Aggregate usage stats for the Stats tab */
   async getStats(): Promise<{
     modeUsage: Record<string, number>;
-    patternUsage: Record<string, number>;
+    patternUsage: Record<string, { count: number; colors: string[] }>;
     colorUsage: Record<string, number>;
     devicesDiscovered: number;
     totalEvents: number;
     storageBytesEstimate: number;
+    totalStorageEstimate: number;
     averageLoadTimeMs: number;
     lastAppOpenedTime: number;
   }> {
     await this.ensureLoaded();
     const modeUsage: Record<string, number> = {};
-    const patternUsage: Record<string, number> = {};
+    const patternUsage: Record<string, any> = {};
     const colorUsage: Record<string, number> = {};
     let devicesDiscovered = 0;
 
@@ -104,7 +106,12 @@ class AppLoggerService {
         modeUsage[entry.d.mode] = (modeUsage[entry.d.mode] || 0) + 1;
       }
       if (entry.e === 'PATTERN_CHANGED' && entry.d.pattern) {
-        patternUsage[entry.d.pattern] = (patternUsage[entry.d.pattern] || 0) + 1;
+        const key = entry.d.name || entry.d.pattern;
+        if (!patternUsage[key]) {
+          patternUsage[key] = { count: 0, colors: new Set<string>() };
+        }
+        (patternUsage[key] as any).count++;
+        if (entry.d.color) (patternUsage[key] as any).colors.add(entry.d.color);
       }
       if (entry.e === 'COLOR_CHANGED' && entry.d.hex) {
         colorUsage[entry.d.hex] = (colorUsage[entry.d.hex] || 0) + 1;
@@ -115,9 +122,15 @@ class AppLoggerService {
     }
 
     let storageBytesEstimate = 0;
+    let totalStorageEstimate = 0;
     try {
-      const rawString = await AsyncStorage.getItem(STORAGE_KEY);
-      storageBytesEstimate = rawString ? rawString.length * 2 : 0;
+      const keys = await AsyncStorage.getAllKeys();
+      const pairs = await AsyncStorage.multiGet(keys);
+      pairs.forEach(([key, val]) => {
+        const size = val ? val.length * 2 : 0;
+        totalStorageEstimate += size;
+        if (key === STORAGE_KEY) storageBytesEstimate = size;
+      });
     } catch(e) {}
 
     let totalLoadTime = 0;
@@ -135,9 +148,18 @@ class AppLoggerService {
     }
     const averageLoadTimeMs = loadTimeCount > 0 ? Math.round(totalLoadTime / loadTimeCount) : 0;
 
+    // Convert Sets to Arrays for JSON serialization
+    const finalPatternUsage: Record<string, { count: number; colors: string[] }> = {};
+    for (const [name, data] of Object.entries(patternUsage)) {
+      finalPatternUsage[name] = { 
+        count: (data as any).count, 
+        colors: Array.from((data as any).colors) 
+      };
+    }
+
     return { 
-      modeUsage, patternUsage, colorUsage, devicesDiscovered, 
-      totalEvents: this.buffer.length, storageBytesEstimate,
+      modeUsage, patternUsage: finalPatternUsage, colorUsage, devicesDiscovered, 
+      totalEvents: this.buffer.length, storageBytesEstimate, totalStorageEstimate,
       averageLoadTimeMs, lastAppOpenedTime
     };
   }

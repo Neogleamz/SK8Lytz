@@ -148,13 +148,26 @@ export default function DashboardScreen() {
                   const device = { 
                     id, 
                     name: `HALOZ ${idx === 0 ? 'Left' : 'Right'} Skate`, 
+                    type: 'HALOZ',
                     points: 16, 
+                    segments: 1,
+                    sorting: 'GRB',
+                    stripType: 'WS2812B',
                     rssi: -45 - Math.floor(Math.random() * 20),
                     serviceUUIDs: [ZENGGE_SERVICE_UUID],
                     manufacturerData: 'AAAAAAAAAAAz'
                   } as any;
                   newDevices.push(device);
-                  AppLogger.log('DEVICE_DISCOVERED', { id, name: device.name, type: 'HALOZ', rssi: device.rssi });
+                  AppLogger.log('DEVICE_DISCOVERED', { 
+                    id, 
+                    name: device.name, 
+                    type: device.type, 
+                    rssi: device.rssi,
+                    points: device.points,
+                    segments: device.segments,
+                    sorting: device.sorting,
+                    stripType: device.stripType
+                  });
                 }
               });
             }
@@ -164,13 +177,26 @@ export default function DashboardScreen() {
                   const device = { 
                     id, 
                     name: `SOULZ ${idx === 0 ? 'Left' : 'Right'} Skate`, 
+                    type: 'SOULZ',
                     points: 43, 
+                    segments: 1,
+                    sorting: 'GRB',
+                    stripType: 'WS2812B',
                     rssi: -42 - Math.floor(Math.random() * 20),
                     serviceUUIDs: [ZENGGE_SERVICE_UUID],
                     manufacturerData: 'AAAAAAAAAAAz'
                   } as any;
                   newDevices.push(device);
-                  AppLogger.log('DEVICE_DISCOVERED', { id, name: device.name, type: 'SOULZ', rssi: device.rssi });
+                  AppLogger.log('DEVICE_DISCOVERED', { 
+                    id, 
+                    name: device.name, 
+                    type: device.type, 
+                    rssi: device.rssi,
+                    points: device.points,
+                    segments: device.segments,
+                    sorting: device.sorting,
+                    stripType: device.stripType
+                  });
                 }
               });
             }
@@ -524,7 +550,7 @@ export default function DashboardScreen() {
       setAllDevices((prev: any[]) => {
         const next = prev.map(d => 
           d.id === selectedDeviceForSettings.id 
-            ? { ...d, name: settings.name, type: settings.type, points: settings.points, sorting: settings.sorting, stripType: settings.stripType, groupId: finalGroupId } 
+            ? { ...d, name: settings.name, type: settings.type, points: settings.points, segments: settings.segments, sorting: settings.sorting, stripType: settings.stripType, groupId: finalGroupId } 
             : d
         );
         allDevicesRef.current = next as any;
@@ -532,12 +558,22 @@ export default function DashboardScreen() {
       });
       
       setUpdateTrigger(prev => prev + 1);
-
-      try {
-        const stored = await AsyncStorage.getItem('ng_device_configs');
-        const configs = stored ? JSON.parse(stored) : {};
-        configs[selectedDeviceForSettings.id] = { ...settings, groupId: finalGroupId };
-        await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
+ 
+       try {
+         const stored = await AsyncStorage.getItem('ng_device_configs');
+         const configs = stored ? JSON.parse(stored) : {};
+         configs[selectedDeviceForSettings.id] = { ...settings, groupId: finalGroupId };
+         await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
+         
+         AppLogger.log('HARDWARE_CONFIG_CHANGED', {
+           id: selectedDeviceForSettings.id,
+           name: settings.name,
+           type: settings.type,
+           points: settings.points,
+           segments: settings.segments,
+           sorting: settings.sorting,
+           stripType: settings.stripType,
+         });
       } catch (e) { console.error('Failed to persist settings', e); }
     }
     setIsSettingsVisible(false);
@@ -983,6 +1019,26 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: 1,
+  },
+  countdownBadge: {
+    position: 'absolute',
+    right: -10,
+    top: -10,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#FF7000',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF7000',
+    shadowRadius: 8,
+    shadowOpacity: 1,
+    zIndex: 50,
+  },
+  countdownText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '900',
   },
   errorContainer: {
     marginTop: 16,

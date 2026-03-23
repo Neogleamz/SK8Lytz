@@ -96,7 +96,13 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
 
   // Pattern change logger (PRESETS mode)
   useEffect(() => {
-    AppLogger.log('PATTERN_CHANGED', { pattern: `ID:${selectedPatternId}`, mode: activeMode });
+    const name = getRbmPatternName(selectedPatternId);
+    AppLogger.log('PATTERN_CHANGED', { 
+      pattern: `ID:${selectedPatternId}`, 
+      name,
+      mode: activeMode,
+      color: selectedColor 
+    });
   }, [selectedPatternId]);
 
   // Color change logger

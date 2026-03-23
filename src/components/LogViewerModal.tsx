@@ -23,6 +23,7 @@ const EVENT_META: Record<EventType, { icon: string; color: string; label: string
   COLOR_CHANGED:      { icon: 'palette',         color: '#FF7000', label: 'Color Changed' },
   BRIGHTNESS_CHANGED: { icon: 'brightness-5',   color: '#AAFFAA', label: 'Brightness' },
   SPEED_CHANGED:      { icon: 'speedometer',     color: '#AADDFF', label: 'Speed' },
+  HARDWARE_CONFIG_CHANGED: { icon: 'memory',     color: '#00E676', label: 'Hardware Settings' },
 };
 
 function formatTime(ms: number): string {
@@ -33,13 +34,15 @@ function formatTime(ms: number): string {
 function payloadSummary(entry: LogEntry): string {
   const { d, e } = entry;
   switch (e) {
-    case 'DEVICE_DISCOVERED': return `${d.name || 'Unknown'} (${d.type || '?'}) RSSI: ${d.rssi ?? '?'}`;
+    case 'DEVICE_DISCOVERED': 
+      return `${d.name || 'Unknown'} (${d.type || '?'}) RSSI: ${d.rssi ?? '?'}${d.sorting ? ` [${d.sorting}/${d.stripType}]` : ''}${d.points ? ` ${d.points}L/${d.segments || 1}S` : ''}`;
     case 'DEVICE_CONNECTED':  return `${d.name || d.id}`;
     case 'MODE_CHANGED':      return `→ ${d.mode}${d.device ? ` on ${d.device}` : ''}`;
     case 'PATTERN_CHANGED':   return `${d.pattern}${d.mode ? ` [${d.mode}]` : ''}`;
     case 'COLOR_CHANGED':     return `${d.hex}${d.device ? ` on ${d.device}` : ''}`;
     case 'BRIGHTNESS_CHANGED':return `${d.value}%`;
     case 'SPEED_CHANGED':     return `${d.value}%`;
+    case 'HARDWARE_CONFIG_CHANGED': return `${d.name || d.id}: ${d.points} LEDs (${d.segments || 1} seg), ${d.stripType}, ${d.sorting}`;
     case 'SCAN_COMPLETED':    return `${d.devicesFound ?? 0} device(s) found`;
     default: return JSON.stringify(d).slice(0, 60);
   }
@@ -156,9 +159,23 @@ export default function LogViewerModal({ visible, onClose }: LogViewerModalProps
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
                   <Text style={[styles.deviceDetail, { color: textMuted }]}>Type: {config.type || meta.type || '?'}</Text>
                   {meta.rssi && <Text style={[styles.deviceDetail, { color: textMuted }]}>· RSSI: {meta.rssi}</Text>}
-                  {config.points && <Text style={[styles.deviceDetail, { color: textMuted }]}>· LEDs: {config.points}</Text>}
-                  {config.stripType && <Text style={[styles.deviceDetail, { color: textMuted }]}>· Format: {config.stripType}</Text>}
-                  {config.sorting && <Text style={[styles.deviceDetail, { color: textMuted }]}>· Sort: {sortingLabel}</Text>}
+                  {(config.points || meta.points) && (
+                    <Text style={[styles.deviceDetail, { color: textMuted }]}>
+                      · LEDs: {config.points || meta.points} ({config.segments || meta.segments || 1} seg)
+                    </Text>
+                  )}
+                  {(config.stripType || meta.stripType) && (
+                    <Text style={[styles.deviceDetail, { color: textMuted }]}>
+                      · Format: {config.stripType || meta.stripType}
+                    </Text>
+                  )}
+                  {(config.sorting || meta.sorting) && (
+                    <Text style={[styles.deviceDetail, { color: textMuted }]}>
+                      · Sort: {config.sorting === 'leftToRight' ? 'L→R' : 
+                               config.sorting === 'rightToLeft' ? 'R→L' : 
+                               (config.sorting || meta.sorting)}
+                    </Text>
+                  )}
                 </View>
 
                 <View style={{ borderTopWidth: 1, borderTopColor: borderColor, marginTop: 6, paddingTop: 4 }}>
@@ -184,12 +201,15 @@ export default function LogViewerModal({ visible, onClose }: LogViewerModalProps
       <ScrollView style={styles.tabContent}>
         <Text style={[styles.statSection, { color: textPrimary }]}>📱 Device & App Telemetry</Text>
         <View style={[styles.statCard, { backgroundColor: cardBg, borderColor }]}>
-          <StatRow label="Hardware" value={Device.modelName || 'Unknown Engine'} color={textPrimary} muted={textMuted} />
+          <StatRow label="Brand / Model" value={`${Device.brand || ''} ${Device.modelName || 'Unknown'}`.trim()} color={textPrimary} muted={textMuted} />
+          <StatRow label="Manufacturer" value={Device.manufacturer || 'Unknown'} color={textPrimary} muted={textMuted} />
           <StatRow label="Operating System" value={osDisplay} color={textPrimary} muted={textMuted} />
+          <StatRow label="Environment" value={Device.isDevice ? 'Physical Device' : 'Simulator'} color={textPrimary} muted={textMuted} />
           <StatRow label="Total RAM" value={gbMem} color={textPrimary} muted={textMuted} />
           <StatRow label="Avg Boot Time" value={stats.averageLoadTimeMs ? `${stats.averageLoadTimeMs}ms` : 'N/A'} color={textPrimary} muted={textMuted} />
           <StatRow label="Current Session" value={`${sessionMins} mins`} color={textPrimary} muted={textMuted} />
-          <StatRow label="Log Storage Used" value={`${(stats.storageBytesEstimate / 1024).toFixed(2)} KB`} color={textPrimary} muted={textMuted} />
+          <StatRow label="Log Storage" value={`${(stats.storageBytesEstimate / 1024).toFixed(2)} KB`} color={textPrimary} muted={textMuted} />
+          <StatRow label="App Storage" value={`${(stats.totalStorageEstimate / 1024).toFixed(2)} KB`} color={textPrimary} muted={textMuted} />
         </View>
 
         <Text style={[styles.statSection, { color: textPrimary }]}>📊 Analytics Overview</Text>
@@ -210,11 +230,29 @@ export default function LogViewerModal({ visible, onClose }: LogViewerModalProps
 
         <Text style={[styles.statSection, { color: textPrimary }]}>🎨 Pattern Usage</Text>
         <View style={[styles.statCard, { backgroundColor: cardBg, borderColor }]}>
-          {Object.entries(stats.patternUsage).sort((a, b) => (b[1] as number) - (a[1] as number)).slice(0, 10).map(([p, count]) => (
-            <StatRow key={p} label={p} value={`${count}×`} color={textPrimary} muted={textMuted} />
-          ))}
-          {Object.keys(stats.patternUsage).length === 0 && (
-            <Text style={[styles.emptyText, { color: textMuted }]}>No pattern changes yet.</Text>
+          {Object.entries(stats.patternUsage).length > 0 ? (
+            Object.entries(stats.patternUsage)
+              .sort((a, b) => (b[1] as any).count - (a[1] as any).count)
+              .slice(0, 10)
+              .map(([name, data]) => (
+                <View key={name} style={{ marginBottom: 8 }}>
+                  <StatRow 
+                    label={name} 
+                    value={`${(data as any).count}×`} 
+                    color={textPrimary} 
+                    muted={textMuted} 
+                  />
+                  {(data as any).colors.length > 0 && (
+                    <View style={{ flexDirection: 'row', gap: 4, marginTop: 2, marginLeft: 4 }}>
+                      {(data as any).colors.map((c: string) => (
+                        <View key={c} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c, borderWidth: 0.5, borderColor }} />
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))
+          ) : (
+            <Text style={[styles.emptyText, { color: textMuted }]}>No patterns used yet.</Text>
           )}
         </View>
 
