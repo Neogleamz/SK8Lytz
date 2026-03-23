@@ -61,3 +61,4 @@ temp_en/
 
 # Local builder tools
 .local-builder/
+eas-error.log
