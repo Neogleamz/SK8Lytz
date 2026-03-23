@@ -6,7 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = '@sk8lytz_logs';
-const MAX_ENTRIES = 500;
+const MAX_ENTRIES = 10000; // ~1MB of compact log data before rotation
 
 export type EventType =
   | 'APP_OPENED'

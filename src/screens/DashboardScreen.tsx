@@ -145,27 +145,57 @@ export default function DashboardScreen() {
   }, [customGroups]);
 
   useEffect(() => {
+    // 1. Load and clean custom groups
     AsyncStorage.getItem('ng_custom_groups')
       .then(res => {
         if (res) {
           try { 
-            const parsed = JSON.parse(res);
-            setCustomGroups(parsed || []);
+            const parsed = JSON.parse(res) || [];
+            // Remove any groups containing simulated devices
+            const cleanedGroups = parsed.filter((g: any) => !g.deviceIds.some((id: string) => id.startsWith('sim-')));
+            if (cleanedGroups.length !== parsed.length) {
+              AsyncStorage.setItem('ng_custom_groups', JSON.stringify(cleanedGroups)).catch(()=>{});
+            }
+            setCustomGroups(cleanedGroups);
           } catch(e) { console.warn('JSON parse error groups', e); }
         }
       })
       .catch(e => console.warn('AsyncStorage error custom groups', e));
 
+    // 2. Load and clean device configs
     AsyncStorage.getItem('ng_device_configs')
       .then(res => {
         if (res) {
           try {
-            const configs = JSON.parse(res);
-            // We don't need to do much here, the configs are used on-demand
+            const configs = JSON.parse(res) || {};
+            let changed = false;
+            for (const key in configs) {
+              if (key.startsWith('sim-')) {
+                delete configs[key];
+                changed = true;
+              }
+            }
+            if (changed) {
+              AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs)).catch(()=>{});
+            }
           } catch(e) { console.warn('JSON parse error configs', e); }
         }
       })
       .catch(e => console.warn('AsyncStorage error configs', e));
+
+    // 3. Load and clean processed devices log
+    AsyncStorage.getItem('ng_processed_devices')
+      .then(res => {
+        if (res) {
+          try {
+            const processed = JSON.parse(res) || [];
+            const cleaned = processed.filter((id: string) => !id.startsWith('sim-'));
+            if (cleaned.length !== processed.length) {
+              AsyncStorage.setItem('ng_processed_devices', JSON.stringify(cleaned)).catch(()=>{});
+            }
+          } catch(e) {}
+        }
+      });
   }, []);
 
   const runAutoProvisioning = useCallback(async () => {

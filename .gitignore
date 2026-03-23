@@ -58,3 +58,6 @@ jadx.zip
 C:/GradleBuild/
 temp_apk/
 temp_en/
+
+# Local builder tools
+.local-builder/

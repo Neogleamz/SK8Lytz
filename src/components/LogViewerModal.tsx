@@ -84,11 +84,11 @@ export default function LogViewerModal({ visible, onClose }: LogViewerModalProps
     ]);
   };
 
-  const bg = isDark ? '#0A0A12' : '#F0F0F8';
-  const cardBg = isDark ? '#13131F' : '#FFFFFF';
-  const textPrimary = isDark ? '#FFFFFF' : '#0A0A20';
-  const textMuted = isDark ? '#8888AA' : '#666688';
-  const borderColor = isDark ? '#222240' : '#E0E0EE';
+  const bg = '#FFFFFF';
+  const cardBg = '#F8F8F8';
+  const textPrimary = '#000000';
+  const textMuted = '#444444';
+  const borderColor = '#CCCCCC';
 
   const renderLogItem = ({ item }: { item: LogEntry }) => {
     const meta = EVENT_META[item.e] || { icon: 'information', color: '#888', label: item.e };
@@ -254,14 +254,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1,
   },
-  title: { fontSize: 20, fontWeight: '800', letterSpacing: 0.5 },
-  subtitle: { fontSize: 12, marginTop: 2 },
+  title: { fontSize: 20, fontWeight: '800', letterSpacing: 0.5, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  subtitle: { fontSize: 12, marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   headerActions: { flexDirection: 'row', gap: 4 },
   actionBtn: { padding: 8 },
   tabs: { flexDirection: 'row', borderBottomWidth: 1 },
   tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  tabBtnActive: { borderBottomWidth: 2, borderBottomColor: '#00f0ff' },
-  tabLabel: { fontSize: 13, fontWeight: '600' },
+  tabBtnActive: { borderBottomWidth: 2, borderBottomColor: '#000000' },
+  tabLabel: { fontSize: 13, fontWeight: '600', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   tabContent: { flex: 1, padding: 16 },
   logRow: {
     flexDirection: 'row', alignItems: 'flex-start',
@@ -270,23 +270,23 @@ const styles = StyleSheet.create({
   logIcon: { marginTop: 2, marginRight: 12, width: 20 },
   logBody: { flex: 1 },
   logHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  logType: { fontSize: 13, fontWeight: '700' },
-  logTime: { fontSize: 10 },
-  logPayload: { fontSize: 12, marginTop: 2 },
-  colorSwatch: { width: 16, height: 8, borderRadius: 3, marginTop: 4 },
-  emptyText: { textAlign: 'center', fontSize: 14, marginTop: 16 },
+  logType: { fontSize: 13, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  logTime: { fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  logPayload: { fontSize: 12, marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  colorSwatch: { width: 16, height: 8, borderRadius: 3, marginTop: 4, borderWidth: 1, borderColor: '#000' },
+  emptyText: { textAlign: 'center', fontSize: 14, marginTop: 16, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   deviceCard: {
-    flexDirection: 'row', alignItems: 'center', borderRadius: 12,
+    flexDirection: 'row', alignItems: 'center', borderRadius: 0,
     padding: 14, marginBottom: 10, borderWidth: 1,
   },
-  deviceName: { fontSize: 15, fontWeight: '700' },
-  deviceDetail: { fontSize: 12, marginTop: 2 },
-  statSection: { fontSize: 14, fontWeight: '700', marginTop: 16, marginBottom: 8 },
-  statCard: { borderRadius: 12, padding: 14, marginBottom: 4, borderWidth: 1 },
+  deviceName: { fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  deviceDetail: { fontSize: 12, marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  statSection: { fontSize: 14, fontWeight: '700', marginTop: 16, marginBottom: 8, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  statCard: { borderRadius: 0, padding: 14, marginBottom: 4, borderWidth: 1 },
   statRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
-  statLabel: { fontSize: 13 },
-  statValue: { fontSize: 13, fontWeight: '700' },
+  statLabel: { fontSize: 13, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  statValue: { fontSize: 13, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   colorRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5 },
-  colorDot: { width: 18, height: 18, borderRadius: 9, marginRight: 10 },
+  colorDot: { width: 18, height: 18, borderRadius: 0, marginRight: 10, borderWidth: 1, borderColor: '#000' },
   colorHex: { flex: 1, fontSize: 12, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
 });
