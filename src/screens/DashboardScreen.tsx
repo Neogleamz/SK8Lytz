@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated } from 'react-native';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import DeviceItem from '../components/DeviceItem';
@@ -13,6 +13,7 @@ import GroupSettingsModal from '../components/GroupSettingsModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
+import LogViewerModal from '../components/LogViewerModal';
 
 interface DeviceSettings {
   name: string;
@@ -65,10 +66,58 @@ export default function DashboardScreen() {
   const customGroupsRef = React.useRef(customGroups);
   const isProvisioningTriggered = React.useRef(false);
 
-  // Refs are now updated manually in setters to avoid reactive loops
-
+  // Refs are now updated manually  const [isProvisioning, setIsProvisioning] = useState(false);
   const [demoHaloQueued, setDemoHaloQueued] = useState(false);
   const [demoSoulQueued, setDemoSoulQueued] = useState(false);
+
+  // Analytics hidden trigger
+  const [logsVisible, setLogsVisible] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tickTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pulseAnimConfig = useRef(new Animated.Value(1)).current;
+
+  const startLogPulse = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnimConfig, { toValue: 1.15, duration: 400, useNativeDriver: true }),
+        Animated.timing(pulseAnimConfig, { toValue: 1, duration: 400, useNativeDriver: true }),
+      ])
+    ).start();
+  };
+
+  const stopLogPulse = () => {
+    pulseAnimConfig.stopAnimation();
+    pulseAnimConfig.setValue(1);
+  };
+
+  const handlePressIn = () => {
+    holdTimer.current = setTimeout(() => {
+      let count = 5;
+      setCountdown(count);
+      startLogPulse();
+      tickTimer.current = setInterval(() => {
+        count--;
+        if (count <= 0) {
+          if (tickTimer.current) clearInterval(tickTimer.current);
+          setCountdown(null);
+          stopLogPulse();
+          setLogsVisible(true);
+        } else {
+          setCountdown(count);
+        }
+      }, 1000);
+    }, 5000);
+  };
+
+  const handlePressOut = () => {
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+    if (tickTimer.current) clearInterval(tickTimer.current);
+    holdTimer.current = null;
+    tickTimer.current = null;
+    setCountdown(null);
+    stopLogPulse();
+  };
 
   const handleScan = () => {
     if (isScanning || isActuallyConnected) return;
@@ -615,15 +664,27 @@ export default function DashboardScreen() {
                   justifyContent: isActuallyConnected ? 'flex-start' : 'center',
                   width: '100%'
                 }}>
-                  <Image 
-                    source={require('../../assets/logo.png')} 
-                    style={{ 
-                      width: isActuallyConnected ? 70 : 130, 
-                      height: isActuallyConnected ? 20 : 38 
-                    }} 
-                    resizeMode="contain"
-                    tintColor={Colors.text}
-                  />
+                  <TouchableOpacity
+                    activeOpacity={1}
+                    onPressIn={handlePressIn}
+                    onPressOut={handlePressOut}
+                    style={{ position: 'relative' }}
+                  >
+                    <Image 
+                      source={require('../../assets/logo.png')} 
+                      style={{ 
+                        width: isActuallyConnected ? 70 : 130, 
+                        height: isActuallyConnected ? 20 : 38 
+                      }} 
+                      resizeMode="contain"
+                      tintColor={Colors.text}
+                    />
+                    {countdown !== null && (
+                      <Animated.View style={[styles.countdownBadge, { transform: [{ scale: pulseAnimConfig }] }]}>
+                        <Text style={styles.countdownText}>{countdown}</Text>
+                      </Animated.View>
+                    )}
+                  </TouchableOpacity>
 
                   {isActuallyConnected && (
                     <View style={{ marginLeft: 16 }}>
@@ -841,6 +902,8 @@ export default function DashboardScreen() {
           allDevices={allDevices}
         />
       </View>
+      
+      <LogViewerModal visible={logsVisible} onClose={() => setLogsVisible(false)} />
     </SafeAreaView>
   );
 }

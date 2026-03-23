@@ -1,9 +1,8 @@
-import React, { useEffect, useRef, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { Typography } from '../theme/theme';
-import LogViewerModal from './LogViewerModal';
 
 interface ScannerAnimationProps {
   deviceCount: number;
@@ -24,55 +23,6 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
   const shimmerAnim = useRef(new Animated.Value(0)).current;
   const detectionAnim = useRef(new Animated.Value(0)).current;
   const prevDeviceCount = useRef(deviceCount);
-
-  // Analytics hidden trigger
-  const [logsVisible, setLogsVisible] = useState(false);
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const holdTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const tickTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pulseAnimConfig = useRef(new Animated.Value(1)).current;
-
-  const startLogPulse = () => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnimConfig, { toValue: 1.15, duration: 400, useNativeDriver: true }),
-        Animated.timing(pulseAnimConfig, { toValue: 1, duration: 400, useNativeDriver: true }),
-      ])
-    ).start();
-  };
-
-  const stopLogPulse = () => {
-    pulseAnimConfig.stopAnimation();
-    pulseAnimConfig.setValue(1);
-  };
-
-  const handlePressIn = () => {
-    holdTimer.current = setTimeout(() => {
-      let count = 5;
-      setCountdown(count);
-      startLogPulse();
-      tickTimer.current = setInterval(() => {
-        count--;
-        if (count <= 0) {
-          clearInterval(tickTimer.current!);
-          setCountdown(null);
-          stopLogPulse();
-          setLogsVisible(true);
-        } else {
-          setCountdown(count);
-        }
-      }, 1000);
-    }, 5000);
-  };
-
-  const handlePressOut = () => {
-    if (holdTimer.current) clearTimeout(holdTimer.current);
-    if (tickTimer.current) clearInterval(tickTimer.current);
-    holdTimer.current = null;
-    tickTimer.current = null;
-    setCountdown(null);
-    stopLogPulse();
-  };
 
   useEffect(() => {
     if (deviceCount > prevDeviceCount.current) {
@@ -234,9 +184,8 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
         {/* Central Scan Button */}
         <TouchableOpacity 
           activeOpacity={0.7} 
-          onPress={() => { if (!isScanning && onPress) onPress(); }} 
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
+          onPress={onPress} 
+          disabled={isScanning}
           style={styles.centralButtonWrapper}
         >
           <Animated.View 
@@ -300,13 +249,6 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
                 />
               </View>
             )}
-
-            {/* Hidden Countdown Badge */}
-            {countdown !== null && (
-              <Animated.View style={[styles.countdownBadge, { transform: [{ scale: pulseAnimConfig }] }]}>
-                <Text style={styles.countdownText}>{countdown}</Text>
-              </Animated.View>
-            )}
           </Animated.View>
         </TouchableOpacity>
 
@@ -343,7 +285,6 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
           )}
         </View>
       </View>
-      <LogViewerModal visible={logsVisible} onClose={() => setLogsVisible(false)} />
     </View>
   );
 }
@@ -432,25 +373,5 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     zIndex: 20,
-  },
-  countdownBadge: {
-    position: 'absolute',
-    right: 5,
-    top: 5,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#FF7000',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#FF7000',
-    shadowRadius: 8,
-    shadowOpacity: 1,
-    zIndex: 50,
-  },
-  countdownText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '900',
   },
 });
