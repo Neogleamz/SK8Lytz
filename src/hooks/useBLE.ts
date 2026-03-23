@@ -172,13 +172,35 @@ export default function useBLE(): BluetoothLowEnergyApi {
                             nameLower.startsWith('halo') ||
                             nameLower.startsWith('soul');
 
-        if (isSymphony || (isKnownPrefix && hasZenggeService)) {
+        const isMatch = isSymphony || isKnownPrefix || hasZenggeService;
+        
+        const logData = {
+          id: device.id,
+          name: device.name || 'Unknown',
+          rssi: device.rssi,
+          isSymphony,
+          isKnownPrefix,
+          hasZenggeService,
+          serviceUUIDs: device.serviceUUIDs || [],
+          manufacturerData: manufacturerData ? 'presents' : 'none'
+        };
+
+        if (isMatch) {
+          AppLogger.log('SCAN_FILTER_MATCH', logData);
           setAllDevices((prevState) => {
             if (!isDuplicateDevice(prevState, device)) {
               return [...prevState, device];
             }
             return prevState;
           });
+        } else {
+          // Only log rejection if it's not a complete ghost (has at least a name or service)
+          if (device.name || (device.serviceUUIDs && device.serviceUUIDs.length > 0)) {
+            AppLogger.log('SCAN_FILTER_REJECT', {
+              ...logData,
+              reason: !isSymphony && !isKnownPrefix && !hasZenggeService ? 'No matching signature' : 'Unknown'
+            });
+          }
         }
       }
     });

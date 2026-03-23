@@ -15,6 +15,8 @@ const EVENT_META: Record<EventType, { icon: string; color: string; label: string
   APP_OPENED:         { icon: 'cellphone-check', color: '#00f0ff', label: 'App Opened' },
   SCAN_STARTED:       { icon: 'radar',           color: '#FF7000', label: 'Scan Started' },
   SCAN_COMPLETED:     { icon: 'check-circle',    color: '#00ff80', label: 'Scan Completed' },
+  SCAN_FILTER_MATCH:  { icon: 'filter-check',    color: '#00f0ff', label: 'Filter Match' },
+  SCAN_FILTER_REJECT: { icon: 'filter-remove',   color: '#ff4040', label: 'Filter Reject' },
   DEVICE_DISCOVERED:  { icon: 'bluetooth-connect', color: '#9D4EFF', label: 'Device Found' },
   DEVICE_CONNECTED:   { icon: 'link-variant',    color: '#00ff80', label: 'Connected' },
   DEVICE_DISCONNECTED:{ icon: 'link-variant-off',color: '#ff4040', label: 'Disconnected' },
@@ -43,6 +45,10 @@ function payloadSummary(entry: LogEntry): string {
     case 'BRIGHTNESS_CHANGED':return `${d.value}%`;
     case 'SPEED_CHANGED':     return `${d.value}%`;
     case 'HARDWARE_CONFIG_CHANGED': return `${d.name || d.id}: ${d.points} LEDs (${d.segments || 1} seg), ${d.stripType}, ${d.sorting}`;
+    case 'SCAN_FILTER_MATCH':
+      return `${d.name} (${d.id}) RSSI: ${d.rssi} [${d.isSymphony ? 'SPI' : ''}${d.isKnownPrefix ? ' PREFIX' : ''}${d.hasZenggeService ? ' UUID' : ''}]`;
+    case 'SCAN_FILTER_REJECT':
+      return `${d.name || '?'}: ${d.reason || 'Unknown'} (ID: ${d.id})`;
     case 'SCAN_COMPLETED':    return `${d.devicesFound ?? 0} device(s) found`;
     default: return JSON.stringify(d).slice(0, 60);
   }
