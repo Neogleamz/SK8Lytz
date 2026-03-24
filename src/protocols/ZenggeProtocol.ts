@@ -46,6 +46,16 @@ export class ZenggeProtocol {
   }
 
   /**
+   * Symphony Static Color (0x41)
+   * Specifically for addressable SPI controllers to set a solid color on all pixels.
+   */
+  static setSymphonyColor(r: number, g: number, b: number): number[] {
+    const cmd = [0x41, r, g, b, 0x01, 0x01, 0xf0];
+    const checksum = this.calculateChecksum(cmd);
+    return this.wrapCommand([...cmd, checksum]);
+  }
+
+  /**
    * RBM Mode (Advanced 100 modes on Firmware 0x56)
    * Pattern 1-100, Speed 0-100, Brightness 0-100
    */

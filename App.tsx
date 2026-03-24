@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, AppState } from 'react-native';
 import DashboardScreen from './src/screens/DashboardScreen';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { useFonts, Righteous_400Regular } from '@expo-google-fonts/righteous';
@@ -30,8 +30,23 @@ export default function App() {
     if (fontsLoaded) {
       SplashScreen.hideAsync().catch(() => {});
       AppLogger.log('APP_OPENED', { loadTimeMs: Date.now() - appStartTime });
+      // Upload logs when app is fully opened
+      AppLogger.uploadLogsToSupabase();
     }
   }, [fontsLoaded]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      // Trigger upload when app is minimized or backgrounded (effectively "closed" from the user's perspective)
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        AppLogger.uploadLogsToSupabase();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   if (!fontsLoaded) return null;
 

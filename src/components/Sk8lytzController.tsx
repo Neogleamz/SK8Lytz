@@ -62,6 +62,14 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
   const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
   const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
 
+  /** Unified color sender for both standard RGB and Symphony controllers */
+  const sendColor = async (r: number, g: number, b: number) => {
+    if (!writeToDevice) return;
+    // Send both commands to cover all controller versions
+    await writeToDevice(ZenggeProtocol.setColor(r, g, b));
+    await writeToDevice(ZenggeProtocol.setSymphonyColor(r, g, b));
+  };
+
   const [musicMode, setMusicModeState] = useState<'SCREEN' | 'BAR'>('SCREEN');
   const [musicPatternId, setMusicPatternId] = useState<number>(1);
   const [micSource, setMicSource] = useState<'APP' | 'DEVICE'>('APP');
@@ -443,7 +451,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     style={[styles.presetCard, { borderColor: Colors.primary }]}
                     onPress={() => {
                     setSelectedColor('#FF0000');
-                    if (writeToDevice) writeToDevice(ZenggeProtocol.setColor(255, 0, 0));
+                    sendColor(255, 0, 0);
                   }}
                   >
                     <Text style={styles.presetTitle}>{activeProduct} Rainbow Flow</Text>
@@ -481,7 +489,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                         const bg = { r: parseInt(bgHex.slice(1, 3), 16), g: parseInt(bgHex.slice(3, 5), 16), b: parseInt(bgHex.slice(5, 7), 16) };
                         
                         if (pattern.id === 1) {
-                          writeToDevice(ZenggeProtocol.setColor(fg.r, fg.g, fg.b));
+                          sendColor(fg.r, fg.g, fg.b);
                         } else if (pattern.id === 6) {
                           writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 1, speed, color1: fg, color2: bg }, { mode: 1, speed, color1: bg, color2: fg }]));
                         } else if (pattern.id === 7) {
@@ -576,7 +584,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     const r = parseInt(hex.substring(1, 3), 16);
                     const g = parseInt(hex.substring(3, 5), 16);
                     const b = parseInt(hex.substring(5, 7), 16);
-                    writeToDevice(ZenggeProtocol.setColor(r, g, b));
+                    sendColor(r, g, b);
                   }
                 }} 
               />
@@ -776,7 +784,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                           const r = parseInt(color.slice(1, 3), 16);
                           const g = parseInt(color.slice(3, 5), 16);
                           const b = parseInt(color.slice(5, 7), 16);
-                          writeToDevice(ZenggeProtocol.setColor(r, g, b));
+                          sendColor(r, g, b);
                         }
                       }
                     }}
@@ -821,7 +829,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                       const r = Math.round(f(5) * 255);
                       const g = Math.round(f(3) * 255);
                       const b = Math.round(f(1) * 255);
-                      writeToDevice(ZenggeProtocol.setColor(r, g, b));
+                      sendColor(r, g, b);
                     }
                   }}
                   minimumValue={0}
@@ -900,7 +908,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                             writeToDevice(ZenggeProtocol.setMultiColor(arr, speed, 1));
                           }
                         } else {
-                          writeToDevice(ZenggeProtocol.setColor(fg.r, fg.g, fg.b));
+                          sendColor(fg.r, fg.g, fg.b);
                         }
                       }
                     }
@@ -932,7 +940,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                         const bg = { r: parseInt(bgHex.slice(1, 3), 16), g: parseInt(bgHex.slice(3, 5), 16), b: parseInt(bgHex.slice(5, 7), 16) };
                         
                         if (fixedPatternId === 1) {
-                          writeToDevice(ZenggeProtocol.setColor(fg.r, fg.g, fg.b));
+                          sendColor(fg.r, fg.g, fg.b);
                         } else if (fixedPatternId === 6) { 
                           const steps = [{ mode: 1, speed: val, color1: fg, color2: bg }, { mode: 1, speed: val, color1: bg, color2: fg }];
                           writeToDevice(ZenggeProtocol.setCustomMode(steps));

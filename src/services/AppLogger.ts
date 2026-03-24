@@ -4,6 +4,8 @@
  * Export-ready for future webhook/database upload.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from './supabaseClient';
+import * as Device from 'expo-device';
 
 const STORAGE_KEY = '@sk8lytz_logs';
 const MAX_ENTRIES = 10000; // ~1MB of compact log data before rotation
@@ -83,6 +85,38 @@ class AppLoggerService {
       count: this.buffer.length,
       logs: this.buffer,
     }, null, 2);
+  }
+
+  async uploadLogsToSupabase() {
+    if (!supabase) {
+      console.log('[AppLogger] Supabase client not configured. Skipping log upload.');
+      return;
+    }
+    await this.ensureLoaded();
+    if (this.buffer.length === 0) return;
+
+    try {
+      const jsonStr = await this.exportJSON();
+      const deviceId = Device.osInternalBuildId || Device.modelId || 'unknown-device';
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `logs_${deviceId}_${timestamp}.json`;
+
+      // Uploading as a string/Blob to the 'sk8lytz-logs' bucket
+      const { data, error } = await supabase.storage
+        .from('sk8lytz-logs')
+        .upload(filename, jsonStr, {
+          contentType: 'application/json',
+          upsert: true,
+        });
+
+      if (error) {
+        console.error('[AppLogger] Failed to upload logs to Supabase:', error);
+      } else {
+        console.log(`[AppLogger] Successfully uploaded logs to Supabase: ${data.path}`);
+      }
+    } catch (err) {
+      console.error('[AppLogger] Upload exception:', err);
+    }
   }
 
   /** Aggregate usage stats for the Stats tab */
