@@ -288,6 +288,8 @@ To maintain consistent branding and clarity, the app uses specific emojis for de
 | **Device Name** | `SK8Lytz-****` | Fallback for factory names, using last 4 MAC digits. |
 | **RSSI Display** | `-XX dBm` | Displayed alongside MAC, "RSSI:" label removed. |
 | **Demo MACs** | `00:DE:M0:00:00:0X` | Realistic dummy format for IDs starting with `sim-`. |
+| **Pattern Wheel** | Circular | Looping logic (1 ↔ 100). |
+| **Pattern Hold** | 500ms Skip | Long-press auto-scroll triggers after 0.5s. |
 
 ---
 *End of Master Reference. KEEP UPDATING ON ALL NEW FEATURES.*

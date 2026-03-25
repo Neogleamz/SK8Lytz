@@ -94,7 +94,7 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
               </View>
             ) : (
               <Text style={[Typography.caption, { color: Colors.textMuted, flex: 1 }]} numberOfLines={0}>
-                MAC: {(() => {
+                {(() => {
                   const id = device.id.toUpperCase();
                   if (id.startsWith('SIM-')) {
                     const parts = id.split('-');

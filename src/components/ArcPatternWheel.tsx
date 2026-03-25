@@ -70,7 +70,11 @@ export default function ArcPatternWheel({
 
   const handleJump = (delta: number) => {
     let newVal = value + delta;
-    newVal = Math.max(min, Math.min(max, newVal));
+    
+    // Circular logic
+    if (newVal < min) newVal = max;
+    else if (newVal > max) newVal = min;
+
     if (newVal !== value) {
       onValueChange(newVal);
       scrollToValue(newVal, true);
@@ -81,9 +85,11 @@ export default function ArcPatternWheel({
     handleJump(delta);
     holdTimerRef.current = setTimeout(() => {
       skipIntervalRef.current = setInterval(() => {
+        // Fast skip by 1 or 5 depending on range? 
+        // For 1-100, 5 is good.
         handleJump(delta > 0 ? 5 : -5);
       }, 100); 
-    }, 3000);
+    }, 500); // reduced from 3000ms to 500ms
   };
 
   const stopHold = () => {
