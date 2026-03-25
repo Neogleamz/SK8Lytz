@@ -246,41 +246,47 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
                dotColor = fg;
                dotOpacity = 1.0;
              } else if (pid === 2) { // Single Dot
-               dotOpacity = animValue.interpolate({
+               dotColor = animValue.interpolate({
                   inputRange: [0, Math.max(0, mirroredFract - 0.05), mirroredFract, Math.min(1, mirroredFract + 0.05), 1],
-                  outputRange: [0.1, 0.1, 1, 0.1, 0.1]
+                  outputRange: [bg, bg, fg, bg, bg]
                });
-               dotColor = fg;
+               dotOpacity = 1.0;
              } else if (pid === 3) { // Comet
+               dotColor = animValue.interpolate({
+                  inputRange: [0, Math.max(0, mirroredFract - 0.3), mirroredFract, Math.min(1, mirroredFract + 0.05), 1],
+                  outputRange: [bg, bg, fg, bg, bg]
+               });
                dotOpacity = animValue.interpolate({
                   inputRange: [0, Math.max(0, mirroredFract - 0.3), mirroredFract, Math.min(1, mirroredFract + 0.05), 1],
-                  outputRange: [0.1, 0.1, 1, 0.1, 0.1]
+                  outputRange: [0.3, 0.3, 1, 0.3, 0.3]
                });
-               dotColor = fg;
              } else if (pid === 4) { // Dashed
                dotColor = (Math.floor(i / 4) % 2 === 0) ? fg : bg;
+               dotOpacity = 1.0;
              } else if (pid === 5) { // Alternating
                dotColor = (Math.floor(i / 2) % 2 === 0) ? fg : bg;
+               dotOpacity = 1.0;
              } else if (pid === 6) { // Breath
-               dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.1, 1, 0.1] });
-               dotColor = fg;
+               dotColor = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [bg, fg, bg] });
+               dotOpacity = 1.0;
              } else if (pid === 7) { // Flash
                dotColor = animValue.interpolate({ inputRange: [0, 0.49, 0.5, 0.99, 1], outputRange: [fg, fg, bg, bg, fg] });
+               dotOpacity = 1.0;
              } else if (pid === 8) { // Strobe
+               dotColor = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [fg, bg, fg] });
                dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0, 1] });
-               dotColor = fg;
              } else if (pid === 9) { // Wave
-               dotOpacity = animValue.interpolate({
+               dotColor = animValue.interpolate({
                   inputRange: [0, Math.max(0, mirroredFract - 0.2), mirroredFract, Math.min(1, mirroredFract + 0.2), 1],
-                  outputRange: [0.1, 0.1, 1, 0.1, 0.1]
+                  outputRange: [bg, bg, fg, bg, bg]
                });
-               dotColor = fg;
+               dotOpacity = 1.0;
              } else if (pid === 10) { // Pinch
-               dotOpacity = animValue.interpolate({
+               dotColor = animValue.interpolate({
                   inputRange: [0, Math.max(0, (1 - mirroredFract) - 0.2), (1 - mirroredFract), Math.min(1, (1-mirroredFract) + 0.2), 1],
-                  outputRange: [0.1, 0.1, 1, 0.1, 0.1]
+                  outputRange: [bg, bg, fg, bg, bg]
                });
-               dotColor = fg;
+               dotOpacity = 1.0;
              }
           }
         }
