@@ -70,6 +70,60 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     await writeToDevice(ZenggeProtocol.setSymphonyColor(r, g, b));
   };
 
+  /** Helper to apply current fixed pattern state to devices */
+  const applyFixedPattern = async (
+    patternId: number = fixedPatternId,
+    fg: string = fixedFgColor,
+    bg: string = fixedBgColor,
+    currentSpeed: number = speed,
+    currentBrightness: number = brightness
+  ) => {
+    if (!writeToDevice) return;
+
+    const factor = currentBrightness / 100;
+    const fgRgb = { 
+      r: Math.round(parseInt(fg.slice(1, 3), 16) * factor), 
+      g: Math.round(parseInt(fg.slice(3, 5), 16) * factor), 
+      b: Math.round(parseInt(fg.slice(5, 7), 16) * factor) 
+    };
+    const bgRgb = { 
+      r: Math.round(parseInt(bg.slice(1, 3), 16) * factor), 
+      g: Math.round(parseInt(bg.slice(3, 5), 16) * factor), 
+      b: Math.round(parseInt(bg.slice(5, 7), 16) * factor) 
+    };
+
+    if (patternId === 1) {
+      // Solid: Use 0x59 Multi-color on all Symphony devices for maximum stability, 
+      // or standard 0x31/0x41 if it's simpler. 0x59 repeating [fg] is robust.
+      // For now, use sendColor with scaled values for solid.
+      sendColor(fgRgb.r, fgRgb.g, fgRgb.b);
+    } else if (patternId === 6) {
+      writeToDevice(ZenggeProtocol.setCustomMode([
+        { mode: 1, speed: currentSpeed, color1: fgRgb, color2: bgRgb }, 
+        { mode: 1, speed: currentSpeed, color1: bgRgb, color2: fgRgb }
+      ]));
+    } else if (patternId === 7) {
+      writeToDevice(ZenggeProtocol.setCustomMode([
+        { mode: 2, speed: currentSpeed, color1: fgRgb, color2: bgRgb }, 
+        { mode: 2, speed: currentSpeed, color1: bgRgb, color2: fgRgb }
+      ]));
+    } else if (patternId === 8) {
+      writeToDevice(ZenggeProtocol.setCustomMode([
+        { mode: 2, speed: 100, color1: fgRgb, color2: bgRgb }, 
+        { mode: 2, speed: 100, color1: bgRgb, color2: fgRgb }
+      ]));
+    } else {
+      let arr: any[] = [];
+      if (patternId === 2) arr = [fgRgb, bgRgb, bgRgb, bgRgb, bgRgb, bgRgb, bgRgb, bgRgb];
+      if (patternId === 3) arr = [fgRgb, {r: Math.floor(fgRgb.r*0.5), g: Math.floor(fgRgb.g*0.5), b: Math.floor(fgRgb.b*0.5)}, {r: Math.floor(fgRgb.r*0.2), g: Math.floor(fgRgb.g*0.2), b: Math.floor(fgRgb.b*0.2)}, bgRgb, bgRgb, bgRgb];
+      if (patternId === 4) arr = [fgRgb, fgRgb, fgRgb, fgRgb, bgRgb, bgRgb, bgRgb, bgRgb];
+      if (patternId === 5) arr = [fgRgb, fgRgb, bgRgb, bgRgb];
+      if (patternId === 9) arr = [bgRgb, bgRgb, fgRgb, fgRgb, bgRgb, bgRgb];
+      if (patternId === 10) arr = [fgRgb, bgRgb, bgRgb, bgRgb, bgRgb, fgRgb];
+      writeToDevice(ZenggeProtocol.setMultiColor(arr, currentSpeed, 1));
+    }
+  };
+
   const [musicMode, setMusicModeState] = useState<'SCREEN' | 'BAR'>('SCREEN');
   const [musicPatternId, setMusicPatternId] = useState<number>(1);
   const [micSource, setMicSource] = useState<'APP' | 'DEVICE'>('APP');
@@ -482,31 +536,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     key={pattern.id}
                     onPress={() => {
                       setFixedPatternId(pattern.id);
-                      if (writeToDevice) {
-                        const fgHex = fixedColorMode === 'FOREGROUND' ? fixedFgColor : (fixedFgColor || '#00FF00');
-                        const bgHex = fixedColorMode === 'BACKGROUND' ? fixedBgColor : (fixedBgColor || '#000000');
-                        const fg = { r: parseInt(fgHex.slice(1, 3), 16), g: parseInt(fgHex.slice(3, 5), 16), b: parseInt(fgHex.slice(5, 7), 16) };
-                        const bg = { r: parseInt(bgHex.slice(1, 3), 16), g: parseInt(bgHex.slice(3, 5), 16), b: parseInt(bgHex.slice(5, 7), 16) };
-                        
-                        if (pattern.id === 1) {
-                          sendColor(fg.r, fg.g, fg.b);
-                        } else if (pattern.id === 6) {
-                          writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 1, speed, color1: fg, color2: bg }, { mode: 1, speed, color1: bg, color2: fg }]));
-                        } else if (pattern.id === 7) {
-                          writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 2, speed, color1: fg, color2: bg }, { mode: 2, speed, color1: bg, color2: fg }]));
-                        } else if (pattern.id === 8) {
-                          writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 2, speed: 100, color1: fg, color2: bg }, { mode: 2, speed: 100, color1: bg, color2: fg }]));
-                        } else {
-                          let arr: any[] = [];
-                          if (pattern.id === 2) arr = [fg, bg, bg, bg, bg, bg, bg, bg];
-                          if (pattern.id === 3) arr = [fg, {r: Math.floor(fg.r*0.5), g: Math.floor(fg.g*0.5), b: Math.floor(fg.b*0.5)}, {r: Math.floor(fg.r*0.2), g: Math.floor(fg.g*0.2), b: Math.floor(fg.b*0.2)}, bg, bg, bg];
-                          if (pattern.id === 4) arr = [fg, fg, fg, fg, bg, bg, bg, bg];
-                          if (pattern.id === 5) arr = [fg, fg, bg, bg];
-                          if (pattern.id === 9) arr = [bg, bg, fg, fg, bg, bg];
-                          if (pattern.id === 10) arr = [fg, bg, bg, bg, bg, fg];
-                          writeToDevice(ZenggeProtocol.setMultiColor(arr, speed, 1));
-                        }
-                      }
+                      applyFixedPattern(pattern.id);
                     }}
                     style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}
                   >
@@ -767,20 +797,24 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                         '#00FFFF': 180, '#0000FF': 240, '#FF00FF': 300, '#FFFFFF': 0
                       };
                       if (activeMode === 'FIXED') {
-                        if (fixedColorMode === 'FOREGROUND') setFixedFgColor(color);
-                        else setFixedBgColor(color);
+                        let newFg = fixedFgColor;
+                        let newBg = fixedBgColor;
+                        if (fixedColorMode === 'FOREGROUND') {
+                          newFg = color;
+                          setFixedFgColor(color);
+                        } else {
+                          newBg = color;
+                          setFixedBgColor(color);
+                        }
                         if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
+                        applyFixedPattern(fixedPatternId, newFg, newBg);
                       } else if (activeMode === 'MUSIC') {
                         if (hueMap[color] !== undefined) setMusicHue(hueMap[color]);
+                        handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hueMap[color] || 0);
                       } else {
                         setSelectedColor(color);
                         if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
-                      }
-
-                      if (writeToDevice) {
-                        if (activeMode === 'MUSIC') {
-                          handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hueMap[color] || 0);
-                        } else {
+                        if (writeToDevice) {
                           const r = parseInt(color.slice(1, 3), 16);
                           const g = parseInt(color.slice(3, 5), 16);
                           const b = parseInt(color.slice(5, 7), 16);
@@ -822,7 +856,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     }
                   }}
                   onSlidingComplete={(hue) => {
-                    if (activeMode === 'MUSIC') {
+                    if (activeMode === 'FIXED') {
+                      applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor);
+                    } else if (activeMode === 'MUSIC') {
                       handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hue);
                     } else if (writeToDevice) {
                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
@@ -878,37 +914,16 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                           handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicHue);
                         }
                       } else {
-                        // Support brightness for Fixed, Presets, Multicolor via RGB scaling
-                        const factor = val / 100;
-                        const fgHex = activeMode === 'FIXED' ? fixedFgColor : (activeMode === 'MULTICOLOR' ? '#FFFFFF' : selectedColor);
-                        const bgHex = activeMode === 'FIXED' ? fixedBgColor : '#000000';
-                        
-                        const fg = { 
-                          r: Math.round(parseInt(fgHex.slice(1, 3), 16) * factor), 
-                          g: Math.round(parseInt(fgHex.slice(3, 5), 16) * factor), 
-                          b: Math.round(parseInt(fgHex.slice(5, 7), 16) * factor) 
-                        };
-                        const bg = { 
-                          r: Math.round(parseInt(bgHex.slice(1, 3), 16) * factor), 
-                          g: Math.round(parseInt(bgHex.slice(3, 5), 16) * factor), 
-                          b: Math.round(parseInt(bgHex.slice(5, 7), 16) * factor) 
-                        };
-
-                        if (activeMode === 'FIXED' && fixedPatternId !== 1) {
-                          if (fixedPatternId === 6) {
-                            writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 1, speed, color1: fg, color2: bg }, { mode: 1, speed, color1: bg, color2: fg }]));
-                          } else if (fixedPatternId === 7) {
-                            writeToDevice(ZenggeProtocol.setCustomMode([{ mode: 2, speed, color1: fg, color2: bg }, { mode: 2, speed, color1: bg, color2: fg }]));
-                          } else {
-                            let arr: any[] = [];
-                            if (fixedPatternId === 2) arr = [fg, bg, bg, bg, bg, bg, bg, bg];
-                            if (fixedPatternId === 3) arr = [fg, {r: Math.floor(fg.r*0.5), g: Math.floor(fg.g*0.5), b: Math.floor(fg.b*0.5)}, {r: Math.floor(fg.r*0.2), g: Math.floor(fg.g*0.2), b: Math.floor(fg.b*0.2)}, bg, bg, bg];
-                            if (fixedPatternId === 4) arr = [fg, fg, fg, fg, bg, bg, bg, bg];
-                            if (fixedPatternId === 5) arr = [fg, fg, bg, bg];
-                            writeToDevice(ZenggeProtocol.setMultiColor(arr, speed, 1));
-                          }
+                        if (activeMode === 'FIXED') {
+                          applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
                         } else {
-                          sendColor(fg.r, fg.g, fg.b);
+                          // Standard scaled color for other modes
+                          const factor = val / 100;
+                          const hex = activeMode === 'MULTICOLOR' ? '#FFFFFF' : selectedColor;
+                          const r = Math.round(parseInt(hex.slice(1, 3), 16) * factor);
+                          const g = Math.round(parseInt(hex.slice(3, 5), 16) * factor);
+                          const b = Math.round(parseInt(hex.slice(5, 7), 16) * factor);
+                          sendColor(r, g, b);
                         }
                       }
                     }
@@ -934,27 +949,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   onSlidingComplete={(val) => {
                     if (writeToDevice) {
                       if (activeMode === 'FIXED') {
-                        const fgHex = fixedColorMode === 'FOREGROUND' ? fixedFgColor : (fixedFgColor || '#00FF00');
-                        const bgHex = fixedColorMode === 'BACKGROUND' ? fixedBgColor : (fixedBgColor || '#000000');
-                        const fg = { r: parseInt(fgHex.slice(1, 3), 16), g: parseInt(fgHex.slice(3, 5), 16), b: parseInt(fgHex.slice(5, 7), 16) };
-                        const bg = { r: parseInt(bgHex.slice(1, 3), 16), g: parseInt(bgHex.slice(3, 5), 16), b: parseInt(bgHex.slice(5, 7), 16) };
-                        
-                        if (fixedPatternId === 1) {
-                          sendColor(fg.r, fg.g, fg.b);
-                        } else if (fixedPatternId === 6) { 
-                          const steps = [{ mode: 1, speed: val, color1: fg, color2: bg }, { mode: 1, speed: val, color1: bg, color2: fg }];
-                          writeToDevice(ZenggeProtocol.setCustomMode(steps));
-                        } else if (fixedPatternId === 7) { 
-                          const steps = [{ mode: 2, speed: val, color1: fg, color2: bg }, { mode: 2, speed: val, color1: bg, color2: fg }];
-                          writeToDevice(ZenggeProtocol.setCustomMode(steps));
-                        } else { 
-                          let arr: any[] = [];
-                          if (fixedPatternId === 2) arr = [fg, bg, bg, bg, bg, bg, bg, bg];
-                          if (fixedPatternId === 3) arr = [fg, {r: Math.floor(fg.r*0.5), g: Math.floor(fg.g*0.5), b: Math.floor(fg.b*0.5)}, {r: Math.floor(fg.r*0.2), g: Math.floor(fg.g*0.2), b: Math.floor(fg.b*0.2)}, bg, bg, bg];
-                          if (fixedPatternId === 4) arr = [fg, fg, fg, fg, bg, bg, bg, bg];
-                          if (fixedPatternId === 5) arr = [fg, fg, bg, bg];
-                          writeToDevice(ZenggeProtocol.setMultiColor(arr, val, 1));
-                        }
+                        applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
                       } else if (activeMode === 'RBM') {
                         writeToDevice(ZenggeProtocol.setRbmMode(selectedPatternId, val, brightness));
                       } else if (activeMode === 'MULTICOLOR') {
