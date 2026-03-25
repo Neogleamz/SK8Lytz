@@ -82,9 +82,22 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
             b += decoded.data[i + 2];
         }
         
-        const avgR = Math.round(r / pixelCount);
-        const avgG = Math.round(g / pixelCount);
-        const avgB = Math.round(b / pixelCount);
+        let avgR = Math.round(r / pixelCount);
+        let avgG = Math.round(g / pixelCount);
+        let avgB = Math.round(b / pixelCount);
+
+        // VIVIDNESS NORMAILZATION ALGORITHM:
+        // Raw camera feeds are inherently washed out by white light (glare). 
+        // For physical LEDs, any white mixed into the RGB channel degrades the pure hue.
+        // We eliminate the lowest channel (white noise) by pushing it to 0, and pull the highest channel to 255.
+        const max = Math.max(avgR, avgG, avgB);
+        const min = Math.min(avgR, avgG, avgB);
+        
+        if (max > 0 && max !== min) {
+           avgR = Math.round(((avgR - min) / (max - min)) * 255);
+           avgG = Math.round(((avgG - min) / (max - min)) * 255);
+           avgB = Math.round(((avgB - min) / (max - min)) * 255);
+        }
         
         const hex = '#' + [avgR, avgG, avgB].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
         setDetectedHex(hex);

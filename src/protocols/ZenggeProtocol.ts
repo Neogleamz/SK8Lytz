@@ -37,9 +37,18 @@ export class ZenggeProtocol {
   }
 
   /**
-   * Generates command to set RGB Color (Classic and V2)
+   * Universal Rock-Solid Color State
+   * REPLACES the glitchy 0x31 Basic RGB endpoint.
+   * Testing confirmed generating a 10-length segmented array using Type 1 (Gradual) forces the hardware to natively lock a perfect solid light state.
    */
-  static setColor(r: number, g: number, b: number): number[] {
+  static setColor(r: number, g: number, b: number, speed: number = 100): number[] {
+    return this.setMultiColor(Array(10).fill({ r, g, b }), speed, 1, 1);
+  }
+
+  /**
+   * Basic RGB Solid Color (0x31) - Legacy Unstable Fallback
+   */
+  static setLegacyColor0x31(r: number, g: number, b: number): number[] {
     const cmd = [0x31, r, g, b, 0x00, 0x00, 0x0f];
     const checksum = this.calculateChecksum(cmd);
     return this.wrapCommand([...cmd, checksum]);

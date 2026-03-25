@@ -65,10 +65,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
   /** Unified color sender */
   const sendColor = async (r: number, g: number, b: number) => {
     if (!writeToDevice) return;
-    // Hardware ignores 0x59 if speed=0. 
-    // Using a 1-pixel array at speed=100 rapidly replicates the static color across all LEDs!
-    await writeToDevice(ZenggeProtocol.setColor(r, g, b));
-    await writeToDevice(ZenggeProtocol.setMultiColor([{r, g, b}], 100, 1));
+    // Solid fallback explicitly forced to length=10, transitionType=1 to stop physical node scrambling/jumping. 
+    const colors = Array(10).fill({ r, g, b });
+    await writeToDevice(ZenggeProtocol.setMultiColor(colors, 100, 1, 1));
   };
 
   /** Helper to apply current fixed pattern state to devices */
@@ -94,13 +93,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     };
 
     if (patternId === 1) {
-      // Solid: 0x51 crashes the visualizer/BLE MTU limit due to 291-byte payloads.
-      // 0x59 with an 8-LED segment creates remainder glitches on dynamic LED lengths.
-      // A perfect 1-LED payload is tiny (12 bytes) avoiding MTU traps,
-      // and perfectly divides into ANY hardware point setting (modulo 0) averting remainders.
-      // Non-zero speed forces hardware recognition bypassing 0-speed rejections.
-      let forcedSpeed = currentSpeed > 0 ? currentSpeed : 100;
-      writeToDevice(ZenggeProtocol.setMultiColor([{ r: fgRgb.r, g: fgRgb.g, b: fgRgb.b }], forcedSpeed, 1));
+      const forcedSpeed = currentSpeed > 0 ? currentSpeed : 100;
+      const solidColors = Array(10).fill({ r: fgRgb.r, g: fgRgb.g, b: fgRgb.b }); // Buffer stabilized length >= 10
+      writeToDevice(ZenggeProtocol.setMultiColor(solidColors, forcedSpeed, 1, 1));
     } else if (patternId === 6) {
       writeToDevice(ZenggeProtocol.setCustomMode([
         { mode: 1, speed: currentSpeed, color1: fgRgb, color2: bgRgb }, 
@@ -124,7 +119,15 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
       if (patternId === 5) arr = [fgRgb, fgRgb, bgRgb, bgRgb];
       if (patternId === 9) arr = [bgRgb, bgRgb, fgRgb, fgRgb, bgRgb, bgRgb];
       if (patternId === 10) arr = [fgRgb, bgRgb, bgRgb, bgRgb, bgRgb, fgRgb];
-      writeToDevice(ZenggeProtocol.setMultiColor(arr, currentSpeed, 1));
+      
+      // CRITICAL HARDWARE FIX: Arrays smaller than 10 trigger hardware glitches. 
+      // Safely multiply the base array chunk footprint until length hits native safe limit >= 10.
+      while (arr.length > 0 && arr.length < 10) {
+        arr = [...arr, ...arr];
+      }
+      
+      // Send with TransitionType 0x00 (Static Flow/Marquee) to actually animate across the matrix
+      writeToDevice(ZenggeProtocol.setMultiColor(arr, currentSpeed, 1, 0));
     }
   };
 
@@ -541,6 +544,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     onPress={() => {
                       setFixedPatternId(pattern.id);
                       applyFixedPattern(pattern.id);
+                      if (pattern.id === 1) {
+                         setFixedColorMode('FOREGROUND');
+                      }
                     }}
                     style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}
                   >
@@ -563,8 +569,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   <Text style={{ color: fixedColorMode === 'FOREGROUND' ? '#FFF' : Colors.textMuted, fontWeight: 'bold' }}>FOREGROUND</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
+                  disabled={fixedPatternId === 1}
                   onPress={() => setFixedColorMode('BACKGROUND')}
-                  style={{ flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: fixedColorMode === 'BACKGROUND' ? '#3B4A5A' : Colors.surfaceHighlight, borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
+                  style={{ flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: fixedColorMode === 'BACKGROUND' ? '#3B4A5A' : Colors.surfaceHighlight, borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius, opacity: fixedPatternId === 1 ? 0.3 : 1 }}
                 >
                   <Text style={{ color: fixedColorMode === 'BACKGROUND' ? '#FFF' : Colors.textMuted, fontWeight: 'bold' }}>BACKGROUND</Text>
                 </TouchableOpacity>

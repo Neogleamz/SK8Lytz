@@ -6,6 +6,7 @@ import CustomSlider from './CustomSlider';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ProductVisualizer from './ProductVisualizer';
+import CameraTracker from './CameraTracker';
 
 interface HardwareTestControllerProps {
   writeToDevice?: (payload: number[]) => Promise<void>;
@@ -70,7 +71,7 @@ export default function HardwareTestController({
   }, [device]);
   
   // Builder State
-  const [protocol, setProtocol] = useState<'0x59' | '0x51' | '0x42' | '0x31' | '0x25'>('0x59');
+  const [protocol, setProtocol] = useState<'0x59' | '0x51' | '0x42' | '0x31' | '0x25' | '0x73' | 'CAMERA'>('0x59');
   const [r, setR] = useState(255);
   const [g, setG] = useState(0);
   const [b, setB] = useState(0);
@@ -82,8 +83,18 @@ export default function HardwareTestController({
   const [rbmPattern, setRbmPattern] = useState<number>(1);
   const [legacyPattern, setLegacyPattern] = useState<number>(1);
   
+  // Music Mode Sync State (0x73)
+  const [isDeviceMic, setIsDeviceMic] = useState<number>(1);
+  const [musicModeType, setMusicModeType] = useState<number>(38); // 0x26
+  const [musicPatternId, setMusicPatternId] = useState<number>(1);
+  const [musicSensitivity, setMusicSensitivity] = useState<number>(50);
+  const [r2, setR2] = useState<number>(0);
+  const [g2, setG2] = useState<number>(0);
+  const [b2, setB2] = useState<number>(255);
+  
   // Raw Hex State
   const [rawHexString, setRawHexString] = useState('');
+  const [annotatedPayload, setAnnotatedPayload] = useState<{hex: string, label: string, color: string}[]>([]);
   const [isManualOverride, setIsManualOverride] = useState(false);
 
   // Generate payload
@@ -127,7 +138,12 @@ export default function HardwareTestController({
         { mode: transitionType === 0 ? 1 : transitionType, speed: speed, color1: bg, color2: color }
       ]);
     } else if (protocol === '0x31') {
+      payload = ZenggeProtocol.setLegacyColor0x31(color.r, color.g, color.b);
+    } else if (protocol === 'CAMERA') {
       payload = ZenggeProtocol.setColor(color.r, color.g, color.b);
+    } else if (protocol === '0x73') {
+      const c2 = { r: Math.round(r2 * factor), g: Math.round(g2 * factor), b: Math.round(b2 * factor) };
+      payload = ZenggeProtocol.setMusicConfig(isDeviceMic === 1, musicModeType, musicPatternId, color, c2, musicSensitivity, brightness);
     } else if (protocol === '0x42') {
       payload = ZenggeProtocol.setRbmMode(rbmPattern, speed, brightness);
     } else if (protocol === '0x25') {
@@ -137,7 +153,75 @@ export default function HardwareTestController({
     const hex = payload.map(byte => byte.toString(16).toUpperCase().padStart(2, '0')).join(' ');
     setRawHexString(hex);
 
-  }, [protocol, r, g, b, speed, length, transitionType, brightness, segmentDirection, rbmPattern, legacyPattern, isManualOverride]);
+    const annotations: {hex: string, label: string, color: string}[] = [];
+    const getHex = (v: number) => v.toString(16).toUpperCase().padStart(2, '0');
+    
+    payload.forEach((byte, i) => {
+        let label = 'Unk';
+        let color = '#888';
+        const h = getHex(byte);
+        
+        if (i === 0) { label = 'Pfx'; color = '#666'; }
+        else if (i === 1) { label = 'Seq'; color = '#888'; }
+        else if (i === 2 || i === 3) { label = 'Mgc'; color = '#666'; }
+        else if (i === 4 || i === 5) { label = 'Len'; color = '#4488FF'; }
+        else if (i === 6) { label = 'Fmly'; color = '#AA44FF'; }
+        else if (i === payload.length - 1) { label = 'Chk'; color = '#FF4444'; }
+        else {
+            const innerIdx = i - 7;
+            const op = payload[7];
+            
+            if (op === 0x59) {
+                if (innerIdx === 0) { label = 'OpC'; color = '#FFA500'; }
+                else if (innerIdx === 1 || innerIdx === 2) { label = 'SegL'; color = '#4488FF'; }
+                else {
+                    const rgbEnd = 2 + (length * 3);
+                    if (innerIdx > 2 && innerIdx <= rgbEnd) {
+                        const channel = (innerIdx - 3) % 3;
+                        label = channel === 0 ? 'R' : channel === 1 ? 'G' : 'B';
+                        color = channel === 0 ? '#FF4444' : channel === 1 ? '#44FF44' : '#4444FF';
+                    } else if (innerIdx === rgbEnd + 1 || innerIdx === rgbEnd + 2) {
+                        label = 'Pts'; color = '#4488FF';
+                    } else if (innerIdx === rgbEnd + 3) {
+                        label = 'Typ'; color = '#FFD700';
+                    } else if (innerIdx === rgbEnd + 4) {
+                        label = 'Spd'; color = '#00FFFF';
+                    } else if (innerIdx === rgbEnd + 5) {
+                        label = 'Dir'; color = '#FF00FF';
+                    } else if (innerIdx === rgbEnd + 6) {
+                        label = 'iChk'; color = '#FF4444';
+                    }
+                }
+            } else if (op === 0x42) {
+                if (innerIdx === 0) { label = 'OpC'; color = '#00FF44'; }
+                else if (innerIdx === 1) { label = 'Pat'; color = '#FFD700'; }
+                else if (innerIdx === 2) { label = 'Spd'; color = '#00FFFF'; }
+                else if (innerIdx === 3) { label = 'Bri'; color = '#FF8800'; }
+                else if (innerIdx === 4 || innerIdx === 5 || innerIdx === 6 || innerIdx === 7) { label = 'PAD'; color = '#666'; }
+                else if (innerIdx === 8) { label = 'iChk'; color = '#FF4444'; }
+            } else if (op === 0x31) {
+                if (innerIdx === 0) { label = 'OpC'; color = '#4488FF'; }
+                else if (innerIdx === 1) { label = 'R'; color = '#FF4444'; }
+                else if (innerIdx === 2) { label = 'G'; color = '#44FF44'; }
+                else if (innerIdx === 3) { label = 'B'; color = '#4444FF'; }
+                else if (innerIdx === 4 || innerIdx === 5) { label = 'W'; color = '#FFF'; }
+                else if (innerIdx === 6 || innerIdx === 7) { label = 'PAD'; color = '#666'; }
+                else if (innerIdx === 8) { label = 'iChk'; color = '#FF4444'; }
+            } else if (op === 0x25) {
+                if (innerIdx === 0) { label = 'OpC'; color = '#FF00FF'; }
+                else if (innerIdx === 1) { label = 'Pat'; color = '#FFD700'; }
+                else if (innerIdx === 2) { label = 'Spd'; color = '#00FFFF'; }
+                else if (innerIdx === 3) { label = 'iChk'; color = '#FF4444'; }
+            } else {
+                if (innerIdx === 0) { label = 'OpC'; color = '#FF00FF'; }
+                else { label = 'Dat'; color = '#888'; }
+            }
+        }
+        annotations.push({ hex: h, label, color });
+    });
+    setAnnotatedPayload(annotations);
+
+  }, [protocol, r, g, b, r2, g2, b2, speed, length, transitionType, brightness, segmentDirection, rbmPattern, legacyPattern, isDeviceMic, musicModeType, musicPatternId, musicSensitivity, isManualOverride]);
 
   const handleSend = () => {
     if (!writeToDevice) return;
@@ -168,6 +252,20 @@ export default function HardwareTestController({
   };
 
   const currentPreviewColor = `rgb(${r}, ${g}, ${b})`;
+
+  const handleCameraColor = (hex: string) => {
+    const rVal = parseInt(hex.slice(1, 3), 16);
+    const gVal = parseInt(hex.slice(3, 5), 16);
+    const bVal = parseInt(hex.slice(5, 7), 16);
+    setR(rVal);
+    setG(gVal);
+    setB(bVal);
+    if (writeToDevice) {
+        // Auto-transmit native payload instantly on capture
+        const payload = ZenggeProtocol.setColor(rVal, gVal, bVal);
+        writeToDevice(payload);
+    }
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -288,30 +386,41 @@ export default function HardwareTestController({
           )}
         </View>
         
-        <TextInput
-          style={{
-            color: '#FFFFFF',
-            fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-            fontSize: 14,
-            minHeight: 80,
-            textAlignVertical: 'top'
-          }}
-          multiline
-          value={rawHexString}
-          onChangeText={handleManualHexEdit}
-          placeholder="00 FF 1A..."
-          placeholderTextColor="#666"
-        />
+        {isManualOverride ? (
+          <TextInput
+            style={{
+              color: '#FFFFFF',
+              fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+              fontSize: 14,
+              minHeight: 80,
+              textAlignVertical: 'top'
+            }}
+            multiline
+            value={rawHexString}
+            onChangeText={handleManualHexEdit}
+            placeholder="00 FF 1A..."
+            placeholderTextColor="#666"
+          />
+        ) : (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+            {annotatedPayload.map((ann, i) => (
+              <View key={i} style={{ alignItems: 'center', width: 28, marginBottom: 8 }}>
+                <Text style={{ color: ann.color, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 13, fontWeight: 'bold' }}>{ann.hex}</Text>
+                <Text style={{ color: ann.color, fontSize: 8, marginTop: 2, opacity: 0.8, fontWeight: '600' }} numberOfLines={1} adjustsFontSizeToFit>{ann.label}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
       </View>
 
       <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 12 }]}>Protocol Selector</Text>
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
-        {['0x59', '0x51', '0x42', '0x25', '0x31'].map(p => (
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+        {['0x59', '0x51', '0x42', '0x25', '0x31', '0x73', 'CAMERA'].map(p => (
           <TouchableOpacity 
             key={p} 
             onPress={() => setProtocol(p as any)}
-            style={{ flex: 1, padding: 10, borderRadius: 8, alignItems: 'center', backgroundColor: protocol === p ? Colors.primary : Colors.surfaceHighlight }}
+            style={{ padding: 10, borderRadius: 8, alignItems: 'center', backgroundColor: protocol === p ? Colors.primary : Colors.surfaceHighlight, flexGrow: 1 }}
           >
             <Text style={{ color: protocol === p ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>{p}</Text>
           </TouchableOpacity>
@@ -380,6 +489,44 @@ export default function HardwareTestController({
           <SettingWithExplanation title={`Legacy Pattern ID (${legacyPattern})`} description="Older command protocol for fixed ROM patterns. Useful for older controller compatibility." Colors={Colors}>
              <CustomSlider value={legacyPattern} minimumValue={1} maximumValue={300} onValueChange={setLegacyPattern} />
           </SettingWithExplanation>
+        </View>
+      )}
+
+      {protocol === '0x73' && (
+        <View style={{ gap: 16, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
+          <Text style={[Typography.title, { color: '#FFD700', fontSize: 16 }]}>0x73 Music Symphony Parameters</Text>
+          <SettingWithExplanation title={`Mic Source (${isDeviceMic === 1 ? 'Native Hardware Controller Mic' : 'App Software Microphone'})`} description="0x01 forces the physical chip mic to activate. 0x00 silences hardware and relies entirely on BLE streamed magnitudes." Colors={Colors}>
+             <CustomSlider value={isDeviceMic} minimumValue={0} maximumValue={1} onValueChange={setIsDeviceMic} />
+          </SettingWithExplanation>
+          <SettingWithExplanation title={`Hardware Matrix Style (${musicModeType === 38 ? '0x26 Light Bar' : '0x27 Light Screen'})`} description="Internal mathematical configuration differentiating horizontal scaling vs panel clustering." Colors={Colors}>
+             <CustomSlider value={musicModeType} minimumValue={38} maximumValue={39} onValueChange={setMusicModeType} />
+          </SettingWithExplanation>
+          <SettingWithExplanation title={`Symphony Pattern Definition (${musicPatternId})`} description="Physical music patterns burnt into controller ROM." Colors={Colors}>
+             <CustomSlider value={musicPatternId} minimumValue={1} maximumValue={16} onValueChange={setMusicPatternId} />
+          </SettingWithExplanation>
+          <SettingWithExplanation title={`Mic Sensitivity Gain (${musicSensitivity}%)`} description="The floor amplification scaling factor utilized by the active microphone." Colors={Colors}>
+             <CustomSlider value={musicSensitivity} minimumValue={1} maximumValue={100} onValueChange={setMusicSensitivity} />
+          </SettingWithExplanation>
+          <View>
+             <Text style={{ color: '#FFF', fontWeight: 'bold', marginTop: 8, marginBottom: 8, alignSelf: 'center' }}>Secondary Reaction Color Variables</Text>
+             <View style={{ flexDirection: 'row', gap: 16 }}>
+               <View style={{ flex: 1 }}><Text style={{ color: '#FF4444', fontWeight: 'bold' }}>R2</Text><CustomSlider value={r2} minimumValue={0} maximumValue={255} onValueChange={setR2} /></View>
+               <View style={{ flex: 1 }}><Text style={{ color: '#44FF44', fontWeight: 'bold' }}>G2</Text><CustomSlider value={g2} minimumValue={0} maximumValue={255} onValueChange={setG2} /></View>
+               <View style={{ flex: 1 }}><Text style={{ color: '#4444FF', fontWeight: 'bold' }}>B2</Text><CustomSlider value={b2} minimumValue={0} maximumValue={255} onValueChange={setB2} /></View>
+             </View>
+          </View>
+        </View>
+      )}
+
+      {protocol === 'CAMERA' && (
+        <View style={{ gap: 16, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
+          <Text style={[Typography.title, { color: '#FFF', fontSize: 16 }]}>Optical Camera Telemetry</Text>
+          <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 8 }}>
+            Tap anywhere on the camera feed to extract the average hex color of that chunk. The payload will instantly auto-transmit to hardware over Bluetooth.
+          </Text>
+          <View style={{ height: 350, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: Colors.primary }}>
+            <CameraTracker isActive={true} onColorDetected={handleCameraColor} />
+          </View>
         </View>
       )}
 

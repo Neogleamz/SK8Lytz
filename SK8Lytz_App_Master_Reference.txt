@@ -772,6 +772,9 @@ These mappings closely relate to the `setHardwareConfig` (`0x81`) command values
 
 
 
-### CRITICAL HARDWARE FINDINGS (0x59)
-1. **Array Length Glitching**: Continuously transmitting a 0x59 payload with an array length of < 10 causes the first chunk of physical LEDs to glitch and flicker severely. The array length MUST be set to >= 10 to establish a perfectly solid, stable loop on the controller.
-2. **Type Byte Support**: The Symphony controller firmware physically ignores Type Byte values 0, 1, and 2 when processing 0x59 array flows. It strictly processes 0x59 as a running marquee buffer. Therefore, ONLY Type 3 (Jump/Flow) actually acts upon the hardware.
+### CRITICAL HARDWARE FINDINGS (0x59 & Ambient Optics)
+1. **Array Length Glitching**: Continuously transmitting a 0x59 payload with an array length of < 10 causes the first chunk of physical LEDs to glitch and flicker severely. The array length MUST be dynamically padded to fall >= 10 to establish a perfectly solid, stable loop on the controller.
+2. **Matrix Transition State Locks**: The Symphony controller firmware natively ties `0x59` movement rules to the Transition Byte.
+    - **Type `0x00` (Static Flow)**: Instructs the array to cascade and naturally loop across the skateboard (used for Marquee, Comet, and Alternating).
+    - **Type `0x01` (Gradual)**: Systematically locks the array in place, freezing all internal gradients into an unmoving stream. This is required to prevent flickering on `Solid` pattern outputs.
+3. **Camera Optic Saturation Scaling**: Raw environment telemetry gathered from device cameras contains heavily desaturated hex codes due to fluorescent glare. To map properly to addressable strips, the hex matrix must be mathematically normalized by completely subtracting the noise floor (minimum RGB channel) and instantly scaling the dominant channel to `255`, ensuring pure structural saturation reaches the BLE pipeline.
