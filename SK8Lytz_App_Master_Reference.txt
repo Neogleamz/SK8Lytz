@@ -277,7 +277,35 @@ All compatible controllers SHOULD advertise the primary Service UUID:
 
 ---
 
-## 13. App UI Iconography
+---
+
+## 13. Fixed Mode (Pattern 1-10) Implementation
+
+The "Fixed Mode" in the SK8Lytz app utilizes three distinct protocols to provide high-quality static and moving patterns on addressable hardware:
+
+### 1. Standard Solid (Pattern 1)
+- **Commands**: `0x31` (Classic) and `0x41` (Symphony).
+- **Behavior**: Sets all pixels to a single color.
+- **Reactivity**: Immediately updates on color picker or hue slider change.
+
+### 2. Symphony Multi-Color (Patterns 2-5, 9-10)
+- **Command**: `0x59`
+- **Logic**: Sends an array of colors that repeats or shifts based on the controller's internal logic.
+- **Pattern 2 (Single Dot)**: `[fg, bg, bg, bg, bg, bg, bg, bg]` (Repeating).
+- **Pattern 3 (Comet)**: `[fg, 50%fg, 20%fg, bg, bg, bg]` (Creates a fading tail effect).
+- **Pattern 4 (Dashed)**: `[fg, fg, fg, fg, bg, bg, bg, bg]` (4-pixel segments).
+- **Pattern 5 (Alternating)**: `[fg, fg, bg, bg]` (2-pixel segments).
+- **Pattern 9 (Wave)**: `[bg, bg, fg, fg, bg, bg]` (A moving 6-pixel wave).
+- **Pattern 10 (Pinch)**: `[fg, bg, bg, bg, bg, fg]` (Inward/Outward movement from edges).
+
+### 3. Custom Step Mode (Patterns 6-8)
+- **Command**: `0x51`
+- **Logic**: Defines a sequence of colors and a transition mode (Jump/Fade).
+- **Pattern 6 (Breath)**: Fade between `fg` and `bg`.
+- **Pattern 7 (Flash)**: Jump between `fg` and `bg`.
+- **Pattern 8 (Strobe)**: Fast jump between `fg` and `bg` with fixed speed.
+
+## 14. App UI Iconography
 
 To maintain consistent branding and clarity, the app uses specific emojis for device and group identification in the Dashboard list.
 
