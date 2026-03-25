@@ -131,6 +131,25 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     }
   };
 
+  const applyEmergencyPattern = (spd: number, bright: number) => {
+    if (!writeToDevice) return;
+    const factor = bright / 100;
+    const red = { r: Math.round(255 * factor), g: 0, b: 0 };
+    const white = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: Math.round(255 * factor) };
+    const yellow = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: 0 };
+    const bg = { r: 0, g: 0, b: 0 };
+    
+    // Construct a 16-point buffer for the controller (Length >= 10 Safe)
+    const arr = [
+      red, red, red, red,      // Bottom
+      yellow, bg, yellow, bg,  // Flowing mid
+      white, white, white, white, // Top
+      yellow, bg, yellow, bg   // Flowing mid
+    ];
+    // EXPLICIT Transition Type 0x00 for Native Marquee Flow across the Symphony Strip bounds
+    writeToDevice(ZenggeProtocol.setMultiColor(arr, spd, 1, 0));
+  };
+
   const [musicMode, setMusicModeState] = useState<'SCREEN' | 'BAR'>('SCREEN');
   const [musicPatternId, setMusicPatternId] = useState<number>(1);
   const [micSource, setMicSource] = useState<'APP' | 'DEVICE'>('APP');
@@ -589,20 +608,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   setSelectedPatternId(pid);
                   if (writeToDevice) {
                     if (pid === 100) {
-                      // Custom Emergency Pattern
-                      const red = { r: 255, g: 0, b: 0 };
-                      const white = { r: 255, g: 255, b: 255 };
-                      const yellow = { r: 255, g: 255, b: 0 };
-                      const bg = { r: 0, g: 0, b: 0 };
-                      
-                      // Construct a 20-point buffer for the controller
-                      const arr = [
-                        red, red, red, red,      // Bottom
-                        yellow, bg, yellow, bg,  // Flowing mid
-                        white, white, white, white, // Top
-                        yellow, bg, yellow, bg   // Flowing mid
-                      ];
-                      writeToDevice(ZenggeProtocol.setMultiColor(arr, speed, 1));
+                      applyEmergencyPattern(speed, brightness);
                     } else {
                       writeToDevice(ZenggeProtocol.setRbmMode(pid, speed, brightness));
                     }
@@ -918,7 +924,11 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   onSlidingComplete={(val) => {
                     if (writeToDevice) {
                       if (activeMode === 'RBM') {
-                        writeToDevice(ZenggeProtocol.setRbmMode(selectedPatternId, speed, val));
+                        if (selectedPatternId === 100) {
+                          applyEmergencyPattern(speed, val);
+                        } else {
+                          writeToDevice(ZenggeProtocol.setRbmMode(selectedPatternId, speed, val));
+                        }
                       } else if (activeMode === 'MUSIC') {
                         if (musicSetting === 'SENSITIVITY') {
                           handleMusicChange(musicPatternId, val, brightness, micSource, musicHue);
@@ -963,7 +973,11 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                       if (activeMode === 'FIXED') {
                         applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
                       } else if (activeMode === 'RBM') {
-                        writeToDevice(ZenggeProtocol.setRbmMode(selectedPatternId, val, brightness));
+                        if (selectedPatternId === 100) {
+                          applyEmergencyPattern(val, brightness);
+                        } else {
+                          writeToDevice(ZenggeProtocol.setRbmMode(selectedPatternId, val, brightness));
+                        }
                       } else if (activeMode === 'MULTICOLOR') {
                         const segmentColors = [
                           { r: 255, g: 0, b: 0 },
