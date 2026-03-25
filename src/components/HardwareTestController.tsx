@@ -1,0 +1,411 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
+import { Typography, Layout } from '../theme/theme';
+import CustomSlider from './CustomSlider';
+import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import ProductVisualizer from './ProductVisualizer';
+
+interface HardwareTestControllerProps {
+  writeToDevice?: (payload: number[]) => Promise<void>;
+  device?: any;
+  allDevices?: any[];
+  isScanning?: boolean;
+  handleScan?: () => void;
+  connectToDevice?: (item: any) => Promise<void>;
+  handleDisconnect?: () => void;
+  isActuallyConnected?: boolean;
+}
+
+const SettingWithExplanation = ({ title, description, children, Colors }: { title: string, description: string, children: React.ReactNode, Colors: any }) => {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <TouchableOpacity onPress={() => setExpanded(!expanded)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }} activeOpacity={0.7}>
+        <Text style={{ color: Colors.textMuted, flex: 1, fontWeight: 'bold' }}>{title}</Text>
+        <MaterialCommunityIcons name={expanded ? "chevron-up" : "information-outline"} size={16} color={Colors.primary} />
+      </TouchableOpacity>
+      {expanded && (
+        <Text style={{ color: '#888', fontSize: 11, marginBottom: 8, fontStyle: 'italic', backgroundColor: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 6 }}>
+          {description}
+        </Text>
+      )}
+      {children}
+    </View>
+  );
+};
+
+export default function HardwareTestController({ 
+  writeToDevice, 
+  device,
+  allDevices = [],
+  isScanning = false,
+  handleScan,
+  connectToDevice,
+  handleDisconnect,
+  isActuallyConnected = false
+}: HardwareTestControllerProps) {
+  const { Colors, isDark } = useTheme();
+
+  const points = device?.points || 43;
+  const product = device?.name || 'DEVICE';
+  
+  // Hardware Re-Config State
+  const [hwPoints, setHwPoints] = useState(device?.points || 43);
+  const [hwSegments, setHwSegments] = useState(device?.segments || 1);
+  const [hwColorOrder, setHwColorOrder] = useState(device?.sorting || 'GRB');
+  const [hwStripType, setHwStripType] = useState(device?.stripType || 'WS2812B');
+
+  const COLOR_ORDERS = ['RGB', 'RBG', 'GRB', 'GBR', 'BRG', 'BGR'];
+  const STRIP_TYPES = ['SM16703', 'WS2811', 'WS2812B', 'SK6812'];
+
+  useEffect(() => {
+    if (device) {
+      setHwPoints(device.points || 43);
+      setHwSegments(device.segments || 1);
+      setHwColorOrder(device.sorting || 'GRB');
+      setHwStripType(device.stripType || 'WS2812B');
+    }
+  }, [device]);
+  
+  // Builder State
+  const [protocol, setProtocol] = useState<'0x59' | '0x51' | '0x42' | '0x31' | '0x25'>('0x59');
+  const [r, setR] = useState(255);
+  const [g, setG] = useState(0);
+  const [b, setB] = useState(0);
+  const [speed, setSpeed] = useState(100);
+  const [length, setLength] = useState(10);
+  const [transitionType, setTransitionType] = useState<number>(3);
+  const [segmentDirection, setSegmentDirection] = useState<number>(1);
+  const [brightness, setBrightness] = useState(100);
+  const [rbmPattern, setRbmPattern] = useState<number>(1);
+  const [legacyPattern, setLegacyPattern] = useState<number>(1);
+  
+  // Raw Hex State
+  const [rawHexString, setRawHexString] = useState('');
+  const [isManualOverride, setIsManualOverride] = useState(false);
+
+  // Generate payload
+  useEffect(() => {
+    if (isManualOverride) return;
+
+    let payload: number[] = [];
+    const factor = brightness / 100;
+    const color = { 
+      r: Math.round(r * factor), 
+      g: Math.round(g * factor), 
+      b: Math.round(b * factor) 
+    };
+
+    if (protocol === '0x59') {
+      // Manual explicit length manipulation requested by user
+      const totalPoints = length;
+      const totalLen = (totalPoints * 3) + 9;
+      payload = new Array(totalLen);
+      payload[0] = 0x59;
+      payload[1] = (totalLen >> 8) & 0xFF;
+      payload[2] = totalLen & 0xFF;
+      let idx = 3;
+      for (let i = 0; i < totalPoints; i++) {
+        payload[idx++] = color.r;
+        payload[idx++] = color.g;
+        payload[idx++] = color.b;
+      }
+      payload[idx++] = (totalPoints >> 8) & 0xFF;
+      payload[idx++] = totalPoints & 0xFF;
+      payload[idx++] = transitionType;
+      payload[idx++] = speed;
+      payload[idx++] = segmentDirection;
+      payload[idx] = ZenggeProtocol.calculateChecksum(payload.slice(0, totalLen - 1));
+      payload = ZenggeProtocol.wrapCommand(payload);
+
+    } else if (protocol === '0x51') {
+      const bg = { r: 0, g: 0, b: 0 };
+      payload = ZenggeProtocol.setCustomMode([
+        { mode: transitionType === 0 ? 1 : transitionType, speed: speed, color1: color, color2: bg },
+        { mode: transitionType === 0 ? 1 : transitionType, speed: speed, color1: bg, color2: color }
+      ]);
+    } else if (protocol === '0x31') {
+      payload = ZenggeProtocol.setColor(color.r, color.g, color.b);
+    } else if (protocol === '0x42') {
+      payload = ZenggeProtocol.setRbmMode(rbmPattern, speed, brightness);
+    } else if (protocol === '0x25') {
+      payload = ZenggeProtocol.setLegacyPattern(legacyPattern, speed);
+    }
+    
+    const hex = payload.map(byte => byte.toString(16).toUpperCase().padStart(2, '0')).join(' ');
+    setRawHexString(hex);
+
+  }, [protocol, r, g, b, speed, length, transitionType, brightness, segmentDirection, rbmPattern, legacyPattern, isManualOverride]);
+
+  const handleSend = () => {
+    if (!writeToDevice) return;
+    try {
+      // Parse the hex string back to byte array
+      const text = rawHexString.replace(/[^0-9A-Fa-f]/g, '');
+      const bytes = [];
+      for (let i = 0; i < text.length; i += 2) {
+        bytes.push(parseInt(text.substring(i, i + 2), 16));
+      }
+      if (bytes.length > 0) {
+        writeToDevice(bytes);
+      }
+    } catch (e) {
+      alert("Invalid Hex Format");
+    }
+  };
+
+  const handleManualHexEdit = (text: string) => {
+    setIsManualOverride(true);
+    setRawHexString(text.toUpperCase());
+  };
+
+  const pushHardwareConfig = async () => {
+    if (!writeToDevice) return;
+    const payload = ZenggeProtocol.setHardwareConfig(hwPoints, hwColorOrder, hwStripType, hwSegments);
+    await writeToDevice(payload);
+  };
+
+  const currentPreviewColor = `rgb(${r}, ${g}, ${b})`;
+
+  return (
+    <View style={{ flex: 1 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: Layout.padding, paddingBottom: 100 }}>
+        
+        {/* Connection Manager */}
+      <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: 12, marginBottom: 20 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+           <Text style={[Typography.title, { color: Colors.primary, fontSize: 14 }]}>Connection Manager</Text>
+           <TouchableOpacity onPress={handleScan} style={{ backgroundColor: Colors.surfaceHighlight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}>
+             <Text style={{ color: Colors.text, fontSize: 12, fontWeight: 'bold' }}>{isScanning ? 'SCANNING...' : 'SCAN'}</Text>
+           </TouchableOpacity>
+        </View>
+
+        {isActuallyConnected ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#000', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#333' }}>
+            <View>
+              <Text style={{ color: Colors.success, fontWeight: 'bold', marginBottom: 4 }}>CONNECTED</Text>
+              <Text style={{ color: Colors.textMuted, fontSize: 12 }}>{device?.name || 'Unknown Device'} | {device?.id}</Text>
+            </View>
+            <TouchableOpacity onPress={handleDisconnect} style={{ backgroundColor: Colors.error, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+              <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 12 }}>DISCONNECT</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View>
+            {(!allDevices || allDevices.length === 0) ? (
+              <Text style={{ color: Colors.textMuted, fontSize: 12, fontStyle: 'italic', textAlign: 'center', padding: 12 }}>No devices found. Tap Scan to discover nearby Symphony Hardware.</Text>
+            ) : (
+              allDevices.map((d: any) => (
+                <TouchableOpacity 
+                   key={d.id} 
+                   onPress={() => connectToDevice && connectToDevice(d)}
+                   style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' }}
+                >
+                  <View>
+                    <Text style={{ color: Colors.text, fontWeight: 'bold', fontSize: 14 }}>{d.name || 'Unknown Symphony Device'}</Text>
+                    <Text style={{ color: Colors.textMuted, fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', marginTop: 4 }}>MAC: {d.id}</Text>
+                  </View>
+                  <MaterialCommunityIcons name="bluetooth-connect" size={24} color={Colors.primary} />
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        )}
+      </View>
+
+      <View style={{ marginBottom: 20, width: '100%', height: 200 }}>
+        <ProductVisualizer 
+          product={device?.type || (product.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ')} 
+          color={currentPreviewColor} 
+          mode="FIXED" 
+          patternId={1} 
+          isPaired={!!writeToDevice}
+          points={hwPoints}
+          brightness={brightness}
+          speed={speed}
+          isPoweredOn={true}
+          statusText={`TESTING: ${protocol}`}
+          audioMagnitude={0}
+        />
+      </View>
+
+      {/* Target Hardware Profile */}
+      <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: 12, marginBottom: 20 }}>
+        <Text style={[Typography.title, { color: Colors.primary, fontSize: 14, marginBottom: 8 }]}>Hardware Internal Specs</Text>
+        <Text style={{ color: Colors.textMuted, fontSize: 12 }}>Name: {device?.name || 'Unknown'} | MAC: {device?.id || 'Unknown'}</Text>
+        <Text style={{ color: Colors.textMuted, fontSize: 12 }}>Read Points: {device?.points || 'Default'} | Segments: {device?.segments || 'Default'}</Text>
+        <Text style={{ color: Colors.textMuted, fontSize: 12 }}>Sorting: {device?.sorting || 'Default'} | Strip IC: {device?.stripType || 'Default'}</Text>
+        
+        <View style={{ marginTop: 16, backgroundColor: '#000', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#333' }}>
+          <Text style={[Typography.title, { color: '#FFF', fontSize: 14, marginBottom: 12 }]}>Re-Configure Device Logic</Text>
+          
+          <SettingWithExplanation title={`Total LED Points (${hwPoints})`} description="The physical number of distinct LEDs on the strip. Determines the absolute end of the hardware transmission envelope. Sent via 0x81 payload." Colors={Colors}>
+             <CustomSlider value={hwPoints} minimumValue={1} maximumValue={600} onValueChange={setHwPoints} />
+          </SettingWithExplanation>
+
+          <SettingWithExplanation title={`Segments / Repeating Blocks (${hwSegments})`} description="Splits the LED points into duplicated virtual segments. E.g., 40 points with 2 segments = two identical 20-LED mirroring blocks. Sent via 0x81 payload." Colors={Colors}>
+            <CustomSlider value={hwSegments} minimumValue={1} maximumValue={100} onValueChange={setHwSegments} />
+          </SettingWithExplanation>
+          
+          <SettingWithExplanation title={`Color Ordering (${hwColorOrder})`} description="The explicit RGB mapping translation expected by the hardware. Mismatching this array causes Red to visually trigger as Green, etc. Sent via 0x81 payload." Colors={Colors}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 4 }}>
+              {COLOR_ORDERS.map((order) => (
+                <TouchableOpacity key={order} onPress={() => setHwColorOrder(order)} style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: hwColorOrder === order ? Colors.primary : '#333', borderRadius: 16, marginRight: 8 }}>
+                  <Text style={{ color: hwColorOrder === order ? '#000' : '#FFF', fontWeight: 'bold' }}>{order}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </SettingWithExplanation>
+
+          <SettingWithExplanation title={`Controller IC Protocol (${hwStripType})`} description="The standard physical communication chip protocol driving the internal LEDs. Handled by the Skate's motherboard. Mismatching this causes rapid flickering, data scrambling, or total failure. Sent via 0x81 payload." Colors={Colors}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 4 }}>
+              {STRIP_TYPES.map((ic) => (
+                <TouchableOpacity key={ic} onPress={() => setHwStripType(ic)} style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: hwStripType === ic ? Colors.primary : '#333', borderRadius: 16, marginRight: 8 }}>
+                  <Text style={{ color: hwStripType === ic ? '#000' : '#FFF', fontWeight: 'bold' }}>{ic}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </SettingWithExplanation>
+
+          <TouchableOpacity onPress={pushHardwareConfig} style={{ backgroundColor: Colors.error, padding: 12, borderRadius: 8, alignItems: 'center' }}>
+            <Text style={{ color: '#FFF', fontWeight: 'bold' }}>OVERWRITE HARDWARE CONFIG (0x81)</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Raw Payload Visualizer & Editor */}
+      <View style={{ backgroundColor: '#1E1E1E', borderRadius: 8, padding: 12, marginBottom: 20, borderWidth: 1, borderColor: isManualOverride ? Colors.error : Colors.primary }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <Text style={[Typography.title, { color: isManualOverride ? Colors.error : Colors.primary, fontSize: 14 }]}>
+            {isManualOverride ? 'MANUAL PAYLOAD OVERRIDE' : 'LIVE GENERATED PAYLOAD'}
+          </Text>
+          {isManualOverride && (
+            <TouchableOpacity onPress={() => setIsManualOverride(false)}>
+              <Text style={{ color: Colors.primary, fontSize: 12, fontWeight: 'bold' }}>RESET TO SLIDERS</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        <TextInput
+          style={{
+            color: '#FFFFFF',
+            fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+            fontSize: 14,
+            minHeight: 80,
+            textAlignVertical: 'top'
+          }}
+          multiline
+          value={rawHexString}
+          onChangeText={handleManualHexEdit}
+          placeholder="00 FF 1A..."
+          placeholderTextColor="#666"
+        />
+
+      </View>
+
+      <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 12 }]}>Protocol Selector</Text>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+        {['0x59', '0x51', '0x42', '0x25', '0x31'].map(p => (
+          <TouchableOpacity 
+            key={p} 
+            onPress={() => setProtocol(p as any)}
+            style={{ flex: 1, padding: 10, borderRadius: 8, alignItems: 'center', backgroundColor: protocol === p ? Colors.primary : Colors.surfaceHighlight }}
+          >
+            <Text style={{ color: protocol === p ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>{p}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: currentPreviewColor, borderWidth: 2, borderColor: '#FFF', marginRight: 16 }} />
+        <Text style={[Typography.title, { color: Colors.textMuted }]}>RGB: {r},{g},{b}</Text>
+      </View>
+
+      {/* R G B Settings */}
+      <View style={{ gap: 16, marginBottom: 20 }}>
+        <View>
+          <Text style={{ color: '#FF4444', fontWeight: 'bold', marginBottom: 4 }}>RED ({r})</Text>
+          <CustomSlider value={r} minimumValue={0} maximumValue={255} onValueChange={setR} />
+        </View>
+        <View>
+          <Text style={{ color: '#44FF44', fontWeight: 'bold', marginBottom: 4 }}>GREEN ({g})</Text>
+          <CustomSlider value={g} minimumValue={0} maximumValue={255} onValueChange={setG} />
+        </View>
+        <View>
+          <Text style={{ color: '#4444FF', fontWeight: 'bold', marginBottom: 4 }}>BLUE ({b})</Text>
+          <CustomSlider value={b} minimumValue={0} maximumValue={255} onValueChange={setB} />
+        </View>
+      </View>
+
+      {protocol === '0x59' && (
+        <View style={{ gap: 16, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
+          <Text style={[Typography.title, { color: '#FFA500', fontSize: 16 }]}>0x59 Segment Parameters</Text>
+          <SettingWithExplanation title={`Arr Length / Scale (${length})`} description={`The number of color data entries processed per animation frame. CRITICAL: Hardware testing confirms any length below 10 causes the first chunk of LEDs to glitch/flicker. Must be set >= 10 for absolute stability.`} Colors={Colors}>
+            <CustomSlider value={length} minimumValue={1} maximumValue={points * 2} onValueChange={setLength} />
+          </SettingWithExplanation>
+
+          <SettingWithExplanation title={`Type Byte (${transitionType === 0 ? 'Static' : transitionType === 1 ? 'Gradual' : transitionType === 2 ? 'Strobe' : 'Jump'})`} description="CRITICAL: Hardware confirms that 0x59 strictly operates as a running marquee buffer. Types 0, 1, 2 are completely ignored by the IC. Only 3 (Jump/Flow) actually works natively on the Symphony controller." Colors={Colors}>
+             <CustomSlider value={transitionType} minimumValue={0} maximumValue={3} onValueChange={setTransitionType} />
+          </SettingWithExplanation>
+          
+          <SettingWithExplanation title={`Flow Direction (${segmentDirection === 0 ? 'Reverse/Back' : 'Forward/Right'})`} description="Determines if the array sweeps forward from LED 0 or backwards from the end of the strip upon rendering." Colors={Colors}>
+             <CustomSlider value={segmentDirection} minimumValue={0} maximumValue={1} onValueChange={setSegmentDirection} />
+          </SettingWithExplanation>
+        </View>
+      )}
+
+      {protocol === '0x51' && (
+        <View style={{ gap: 16, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
+          <Text style={[Typography.title, { color: '#00F0FF', fontSize: 16 }]}>0x51 Custom Parameters</Text>
+          <SettingWithExplanation title={`Effect Type (${transitionType === 1 ? 'Gradual' : transitionType === 2 ? 'Jump' : 'Strobe'})`} description="0x51 supports explicitly injecting transition nodes into the skate's memory bank alongside up to 16 colors." Colors={Colors}>
+             <CustomSlider value={transitionType} minimumValue={1} maximumValue={3} onValueChange={setTransitionType} />
+          </SettingWithExplanation>
+        </View>
+      )}
+
+      {protocol === '0x42' && (
+        <View style={{ gap: 16, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
+          <Text style={[Typography.title, { color: '#00FF44', fontSize: 16 }]}>0x42 Fixed ROM Pattern</Text>
+          <SettingWithExplanation title={`RBM Pattern ID (${rbmPattern})`} description="Triggers a hardcoded light pattern baked directly into the Symphony controller's physical ROM footprint. These 210 patterns operate completely natively and bypass software arrays." Colors={Colors}>
+             <CustomSlider value={rbmPattern} minimumValue={1} maximumValue={210} onValueChange={setRbmPattern} />
+          </SettingWithExplanation>
+        </View>
+      )}
+
+      {protocol === '0x25' && (
+        <View style={{ gap: 16, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
+          <Text style={[Typography.title, { color: '#FF00FF', fontSize: 16 }]}>0x25 Legacy ROM Pattern</Text>
+          <SettingWithExplanation title={`Legacy Pattern ID (${legacyPattern})`} description="Older command protocol for fixed ROM patterns. Useful for older controller compatibility." Colors={Colors}>
+             <CustomSlider value={legacyPattern} minimumValue={1} maximumValue={300} onValueChange={setLegacyPattern} />
+          </SettingWithExplanation>
+        </View>
+      )}
+
+      {/* Global modifiers */}
+      <View style={{ gap: 8, marginBottom: 40 }}>
+        <SettingWithExplanation title={`Sync Speed / Interval (${speed})`} description="The native animation interval. The hardware actively ignores some protocol arrays if speed is strictly 0." Colors={Colors}>
+          <CustomSlider value={speed} minimumValue={0} maximumValue={100} onValueChange={setSpeed} />
+        </SettingWithExplanation>
+        
+        <SettingWithExplanation title={`Data Matrix Brightness Mod (${brightness}%)`} description="A software-level modifier that mathematically dims the RGB hex boundaries (lowering voltage amplitudes) BEFORE generating the payload array. Required to prevent absolute current clipping." Colors={Colors}>
+          <CustomSlider value={brightness} minimumValue={0} maximumValue={100} onValueChange={setBrightness} />
+        </SettingWithExplanation>
+      </View>
+
+      </ScrollView>
+
+      {/* Floating Transmit Button */}
+      <View style={{ position: 'absolute', bottom: 20, left: Layout.padding, right: Layout.padding }}>
+        <TouchableOpacity 
+          style={{ backgroundColor: Colors.primary, padding: 16, borderRadius: 12, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 8, elevation: 10 }}
+          onPress={handleSend}
+          activeOpacity={0.8}
+        >
+          <Text style={{ color: '#000', fontWeight: '900', fontSize: 16 }}>TRANSMIT PAYLOAD</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}

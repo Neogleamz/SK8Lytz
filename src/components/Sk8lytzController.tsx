@@ -62,12 +62,13 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
   const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
   const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
 
-  /** Unified color sender for both standard RGB and Symphony controllers */
+  /** Unified color sender */
   const sendColor = async (r: number, g: number, b: number) => {
     if (!writeToDevice) return;
-    // Send both commands to cover all controller versions
+    // Hardware ignores 0x59 if speed=0. 
+    // Using a 1-pixel array at speed=100 rapidly replicates the static color across all LEDs!
     await writeToDevice(ZenggeProtocol.setColor(r, g, b));
-    await writeToDevice(ZenggeProtocol.setSymphonyColor(r, g, b));
+    await writeToDevice(ZenggeProtocol.setMultiColor([{r, g, b}], 100, 1));
   };
 
   /** Helper to apply current fixed pattern state to devices */
@@ -93,10 +94,13 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     };
 
     if (patternId === 1) {
-      // Solid: Use 0x59 Multi-color on all Symphony devices for maximum stability, 
-      // or standard 0x31/0x41 if it's simpler. 0x59 repeating [fg] is robust.
-      // For now, use sendColor with scaled values for solid.
-      sendColor(fgRgb.r, fgRgb.g, fgRgb.b);
+      // Solid: 0x51 crashes the visualizer/BLE MTU limit due to 291-byte payloads.
+      // 0x59 with an 8-LED segment creates remainder glitches on dynamic LED lengths.
+      // A perfect 1-LED payload is tiny (12 bytes) avoiding MTU traps,
+      // and perfectly divides into ANY hardware point setting (modulo 0) averting remainders.
+      // Non-zero speed forces hardware recognition bypassing 0-speed rejections.
+      let forcedSpeed = currentSpeed > 0 ? currentSpeed : 100;
+      writeToDevice(ZenggeProtocol.setMultiColor([{ r: fgRgb.r, g: fgRgb.g, b: fgRgb.b }], forcedSpeed, 1));
     } else if (patternId === 6) {
       writeToDevice(ZenggeProtocol.setCustomMode([
         { mode: 1, speed: currentSpeed, color1: fgRgb, color2: bgRgb }, 
@@ -611,9 +615,10 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                 onColorDetected={(hex) => {
                   setSelectedColor(hex);
                   if (writeToDevice) {
-                    const r = parseInt(hex.substring(1, 3), 16);
-                    const g = parseInt(hex.substring(3, 5), 16);
-                    const b = parseInt(hex.substring(5, 7), 16);
+                    const factor = brightness / 100;
+                    const r = Math.round(parseInt(hex.substring(1, 3), 16) * factor);
+                    const g = Math.round(parseInt(hex.substring(3, 5), 16) * factor);
+                    const b = Math.round(parseInt(hex.substring(5, 7), 16) * factor);
                     sendColor(r, g, b);
                   }
                 }} 

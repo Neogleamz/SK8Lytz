@@ -14,11 +14,11 @@ export class ZenggeProtocol {
     return this.messageCounter;
   }
 
-  private static calculateChecksum(payload: number[]): number {
+  public static calculateChecksum(payload: number[]): number {
     return payload.reduce((acc, val) => acc + val, 0) & 0xFF;
   }
 
-  private static wrapCommand(rawPayload: number[], cmdFamily: number = 0x0b): number[] {
+  public static wrapCommand(rawPayload: number[], cmdFamily: number = 0x0b): number[] {
     const payloadLen = rawPayload.length;
     const seq = this.getSequenceCounter();
     
@@ -107,7 +107,7 @@ export class ZenggeProtocol {
   /**
    * Multi-color / Segmented Mode (0x59)
    */
-  static setMultiColor(colors: {r: number, g: number, b: number}[], speed: number, direction: number): number[] {
+  static setMultiColor(colors: {r: number, g: number, b: number}[], speed: number, direction: number, transitionType: number = 0x00): number[] {
     const numPoints = colors.length;
     const totalLen = (numPoints * 3) + 9;
     const payload = new Array(totalLen);
@@ -122,7 +122,7 @@ export class ZenggeProtocol {
     }
     payload[idx++] = (numPoints >> 8) & 0xFF;
     payload[idx++] = numPoints & 0xFF;
-    payload[idx++] = 0x00; // Type
+    payload[idx++] = transitionType; // Type
     payload[idx++] = speed;
     payload[idx++] = direction;
     payload[idx] = this.calculateChecksum(payload.slice(0, totalLen - 1));
@@ -187,9 +187,12 @@ export class ZenggeProtocol {
   /**
    * Set Hardware Strip Configuration (IC Type, Pixels, Color Order) 0x81 command
    */
-  static setHardwareConfig(points: number, colorOrder: string, stripType: string): number[] {
+  public static setHardwareConfig(points: number, colorOrder: string, stripType: string, segments: number = 1): number[] {
     const pointsHigh = (points >> 8) & 0xFF;
     const pointsLow = points & 0xFF;
+    
+    const segmentsHigh = (segments >> 8) & 0xFF;
+    const segmentsLow = segments & 0xFF;
 
     let orderByte = 3; // GRB default
     if (colorOrder.includes('RGB')) orderByte = 1;
@@ -200,9 +203,11 @@ export class ZenggeProtocol {
     else if (colorOrder.includes('BGR')) orderByte = 6;
 
     let icByte = 3; // WS2812B default
-    if (stripType.includes('WS2811')) icByte = 2;
+    if (stripType.includes('SM16703')) icByte = 1;
+    else if (stripType.includes('WS2811')) icByte = 2;
+    else if (stripType.includes('SK6812')) icByte = 4;
 
-    const cmd = [0x81, pointsHigh, pointsLow, orderByte, icByte, 0x00, 0x00];
+    const cmd = [0x81, pointsHigh, pointsLow, orderByte, icByte, segmentsHigh, segmentsLow];
     const checksum = this.calculateChecksum(cmd);
     return this.wrapCommand([...cmd, checksum]);
   }

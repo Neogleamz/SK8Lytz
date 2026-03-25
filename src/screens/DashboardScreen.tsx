@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar, Dimensions } from 'react-native';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import DeviceItem from '../components/DeviceItem';
@@ -8,6 +8,7 @@ import useBLE from '../hooks/useBLE';
 import { ZenggeProtocol, ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol';
 
 import Sk8lytzController from '../components/Sk8lytzController';
+import HardwareTestController from '../components/HardwareTestController';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -49,12 +50,12 @@ export default function DashboardScreen() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [powerStates, setPowerStates] = useState<Record<string, boolean>>({});
 
-  // Browser demo mode - only active on web platform, never on real hardware
   const IS_BROWSER_DEMO = Platform.OS === 'web';
   const [mockConnected, setMockConnected] = useState(false);
   const [mockConnectedDevice, setMockConnectedDevice] = useState<string | null>(null);
   const [mockConnectedGroup, setMockConnectedGroup] = useState<string | null>(null);
   const [updateTrigger, setUpdateTrigger] = useState(0);
+  const [isTestModeActive, setIsTestModeActive] = useState(false);
 
   const [customGroups, setCustomGroups] = useState<any[]>([]);
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
@@ -581,6 +582,11 @@ export default function DashboardScreen() {
 
   const MemoizedSk8lytzController = useMemo(() => {
     if (!isActuallyConnected) return null;
+
+    if (isTestModeActive) {
+      return null;
+    }
+
     return (
       <Sk8lytzController
         lockedProduct={
@@ -597,7 +603,7 @@ export default function DashboardScreen() {
         isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
       />
     );
-  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates]);
+  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive]);
 
   const renderItem = useCallback(({ item }: { item: any }) => (
     <View style={{ paddingHorizontal: Layout.padding }}>
@@ -763,8 +769,18 @@ export default function DashboardScreen() {
 
                   {isActuallyConnected && <View style={{ flex: 1 }} />}
 
-                  {isActuallyConnected && (
+                  {/* TESTER TOGGLE AT GLOBAL HEADER LAYER */}
+                  <TouchableOpacity
+                    style={{ position: 'absolute', left: 0, top: 0, backgroundColor: isTestModeActive ? Colors.error : 'rgba(255,255,255,0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: isTestModeActive ? Colors.error : 'rgba(255,255,255,0.2)', zIndex: 100 }}
+                    onPress={() => setIsTestModeActive(!isTestModeActive)}
+                  >
+                     <Text style={{ color: '#FFF', fontSize: 10, fontWeight: 'bold' }}>{isTestModeActive ? 'EXIT TESTER' : '🧪 TESTER'}</Text>
+                  </TouchableOpacity>
+
+                  {isActuallyConnected && !isTestModeActive && (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+
+
                       <TouchableOpacity
                         style={[styles.disconnectButtonSmall, { paddingVertical: 4, paddingHorizontal: 8, marginRight: 8 }]}
                         onPress={handleDisconnect}
@@ -794,7 +810,8 @@ export default function DashboardScreen() {
                 )}
               </View>
 
-              <View style={{ paddingHorizontal: Layout.padding }}>              {!isActuallyConnected ? (
+              <View style={{ paddingHorizontal: Layout.padding }}>
+                {!isActuallyConnected && !isTestModeActive ? (
                 <View style={{ height: 220, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 5, width: '100%' }}>
                     <ScannerAnimation 
                        deviceCount={allDevices.length} 
@@ -807,6 +824,28 @@ export default function DashboardScreen() {
 
               {MemoizedSk8lytzController}
 
+              {isTestModeActive && (
+                <View style={{ marginTop: 12, paddingHorizontal: 12, height: Dimensions.get('window').height - (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) - 120 }}>
+                  <HardwareTestController
+                    writeToDevice={writeToDevice}
+                    device={displayConnectedDevices[0]} 
+                    allDevices={allDevices}
+                    isScanning={isScanning}
+                    handleScan={handleScan}
+                    connectToDevice={async (item: any) => {
+                      await connectToDevice(item);
+                      if (IS_BROWSER_DEMO) {
+                        setMockConnected(true);
+                        setMockConnectedDevice(item.id);
+                      }
+                    }}
+                    handleDisconnect={handleDisconnect}
+                    isActuallyConnected={isActuallyConnected}
+                  />
+                </View>
+              )}
+
+              {!isTestModeActive && (
               <View style={{ paddingHorizontal: Layout.padding }}>
 
 
@@ -828,8 +867,10 @@ export default function DashboardScreen() {
                       isSelectionMode={false}
                       isSelected={false}
                       onPress={async () => {
-                        setMockConnected(true);
-                        setMockConnectedGroup(group.id);
+                        if (IS_BROWSER_DEMO) {
+                          setMockConnected(true);
+                          setMockConnectedGroup(group.id);
+                        }
                         
                         const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id));
                         if (devicesToConnect.length > 0) {
@@ -894,11 +935,13 @@ export default function DashboardScreen() {
                 </>
               )}
               </View>
+              )}
             </View>
           }
           data={(!isActuallyConnected && !isDeviceListCollapsed) ? allDevices : []}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
+          scrollEnabled={!isTestModeActive} // Added scrollEnabled prop
           contentContainerStyle={{ paddingBottom: 40 }}
 
           ListEmptyComponent={

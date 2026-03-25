@@ -86,7 +86,7 @@ Unlimited creativity with up to 32 steps.
 
 | ID | Name | Protocol | Logic / Hex Detail |
 |:---|:---|:---|:---|
-| 1 | **Solid** | `0x31` | Set all pixels to one RGB value. |
+| 1 | **Solid** | `0x59` | Single perfectly-mapped pixel array `NumPoints=1`, `Speed>0` (req). |
 | 2 | **Single Dot** | `0x61` | `[FG, BG, BG, BG, BG, BG, BG, BG]` |
 | 3 | **Comet** | `0x61` | `[FG, 50%FG, 20%FG, BG, BG, BG]` |
 | 4 | **Dashed** | `0x61` | `[FG, FG, FG, FG, BG, BG, BG, BG]` |
@@ -284,7 +284,7 @@ All compatible controllers SHOULD advertise the primary Service UUID:
 The "Fixed Mode" in the SK8Lytz app utilizes three distinct protocols to provide high-quality static and moving patterns on addressable hardware:
 
 ### 1. Standard Solid (Pattern 1)
-- **Commands**: `0x31` (Classic) and `0x41` (Symphony).
+- **Commands**: `0x59` (Segmented Multi-Color Repeating). Note: `0x51` produces 299-byte payloads crashing standard MTUs and freezing the app UI stack. To dynamically accommodate any LED point size without modulo remainders and avoid standard 0-speed hardware rejection, we force `NumPoints=1` mapped continuously with `Speed>0`.
 - **Behavior**: Sets all pixels to a single color.
 - **Reactivity**: Immediately updates on color picker or hue slider change.
 
@@ -320,4 +320,458 @@ To maintain consistent branding and clarity, the app uses specific emojis for de
 | **Pattern Hold** | 500ms Skip | Long-press auto-scroll triggers after 0.5s. |
 
 ---
+
+## 15. Zengge APK Reverse Engineering Findings (com.zengge.blev2)
+
+### A. App Architecture & Payload Construction
+1. **Hybrid Structure**: The Zengge app uses Flutter for all UI and business logic, while the native Android code acts as a BLE bridge.
+2. **Payload Origin**: The actual hex arrays mapping to commands like `0x42`, `0x51`, `0x59` are constructed inside the compiled AOT Dart code (`flutter_assets`), not native Java.
+3. **Native Bridge (`FlutterBleControl.java`)**: The Flutter layer passes complete byte payloads and configuration targets directly to native BLE write functions, meaning the native app simply transmits what Flutter computes.
+
+### B. Device State Mapping (`DeviceState2SymphonyLamp`)
+The native code tracks the state of connecting hardware using the following byte structure (tracked in a 14-byte `DeviceState` array):
+- **Red/Green/Blue**: Mapped to state positions `j`, `k`, `l`.
+- **HSV Settings (Symphony Lamps)**: 
+  - `Hue`: Stored natively as variable `t`.
+  - `Saturation`: Variable `w` (0-100).
+  - `Brightness/Value`: Variable `x` (0-100).
+- **Mode `0x97` (Static Color)**: Natively mapped from HSV settings to the RGB arrays during dynamic translations. When setting solid Symphony colors, the app defaults to mode `97` (decimal).
+
+### C. Device Controller Types (Native Offsets)
+- `Ctrl_Mini_RGB_Symphony_0xa1.java`: Handles 0xA1 control protocol types.
+- `Ctrl_RGBCW_Both_0x25.java`: RGBCW devices use the identifier `37` (0x25) and map brightness combinations between RGB diodes and White/Warm diodes to emulate exact CCT temperatures and luminosities natively.
+
+### D. Hardware IC Types & Discovery
+- Identified natively supported IC types inside the settings mappings (`SymphonyICTypeItem`):
+  1. `DIM` (1)
+  2. `CCT` (2)
+  3. `RGB` (3)
+  4. `RGB & W` (4)
+  5. `RGB & CCT` (5)
+  6. `RGB / W` (6)
+  7. `RGB / CCT` (7)
+These mappings closely relate to the `setHardwareConfig` (`0x81`) command values utilized in the `ZenggeProtocol.ts`.
+
+---
 *End of Master Reference. KEEP UPDATING ON ALL NEW FEATURES.*
+
+
+## 6. Exhaustive List of ZENGGE App Modes (Extracted from APK strings.xml)
+
+### Classic Java Modes (20+)
+- `java_Mode_01`: Seven color cross fade
+- `java_Mode_01_tsrarey_0x27`: 21 color gradient
+- `java_Mode_02`: Red gradual change
+- `java_Mode_03`: Green gradual change
+- `java_Mode_04`: Blue gradual change
+- `java_Mode_05`: Yellow gradual change
+- `java_Mode_06`: Cyan gradual change
+- `java_Mode_07`: Purple gradual change
+- `java_Mode_08`: White gradual change
+- `java_Mode_09`: Red/green cross fade
+- `java_Mode_10`: Red/blue cross fade
+- `java_Mode_11`: Green/blue cross fade
+- `java_Mode_12`: Seven color strobe flash
+- `java_Mode_13`: Red strobe flash
+- `java_Mode_14`: Green strobe flash
+- `java_Mode_15`: Blue strobe flash
+- `java_Mode_16`: Yellow strobe flash
+- `java_Mode_17`: Cyan strobe flash
+- `java_Mode_18`: Purple strobe flash
+- `java_Mode_19`: White strobe flash
+- `java_Mode_20`: Seven color jumping change
+
+### Symphony Build Modes (300)
+- `symphony_SymphonyBuild_1`: Circulate all modes
+- `symphony_SymphonyBuild_2`: 7 colors change gradually
+- `symphony_SymphonyBuild_3`: 7 colors run in olivary
+- `symphony_SymphonyBuild_4`: 7 colors change quickly
+- `symphony_SymphonyBuild_5`: 7 colors strobe-flash
+- `symphony_SymphonyBuild_6`: 7 colors running, 1 point from start to end and return back
+- `symphony_SymphonyBuild_7`: 7 colors running, multi points from start to end and return back
+- `symphony_SymphonyBuild_8`: 7 colors overlay, multi points from start to end and return back
+- `symphony_SymphonyBuild_9`: 7 colors overlay, multi points from the middle to the both ends and return back
+- `symphony_SymphonyBuild_10`: 7 colors flow gradually, from start to end and return back
+- `symphony_SymphonyBuild_11`: Fading out run, 7 colors from start to end and return back
+- `symphony_SymphonyBuild_12`: Runs in olivary, 7 colors from start to end and return back
+- `symphony_SymphonyBuild_13`: Fading out run, 7 colors start with white color from start to end and return back
+- `symphony_SymphonyBuild_14`: Run circularly, 7 colors with black background, 1point from start to end
+- `symphony_SymphonyBuild_15`: Run circularly, 7 colors with red background, 1point from start to end
+- `symphony_SymphonyBuild_16`: Run circularly, 7 colors with green background, 1point from start to end
+- `symphony_SymphonyBuild_17`: Run circularly, 7 colors with blue background, 1point from start to end
+- `symphony_SymphonyBuild_18`: Run circularly, 7 colors with yellow background, 1point from start to end
+- `symphony_SymphonyBuild_19`: Run circularly, 7 colors with purple background, 1point from start to end
+- `symphony_SymphonyBuild_20`: Run circularly, 7 colors with cyan background, 1point from start to end
+- `symphony_SymphonyBuild_21`: Run circularly, 7 colors with white background, 1point from start to end
+- `symphony_SymphonyBuild_22`: Run circularly, 7 colors with black background, 1point from end to start
+- `symphony_SymphonyBuild_23`: Run circularly, 7 colors with red background, 1point from end to start
+- `symphony_SymphonyBuild_24`: Run circularly, 7 colors with green background, 1point from end to start
+- `symphony_SymphonyBuild_25`: Run circularly, 7 colors with blue background, 1point from end to start
+- `symphony_SymphonyBuild_26`: Run circularly, 7 colors with yellow background, 1point from end to start
+- `symphony_SymphonyBuild_27`: Run circularly, 7 colors with purple background, 1point from end to start
+- `symphony_SymphonyBuild_28`: Run circularly, 7 colors with cyan background, 1point from end to start
+- `symphony_SymphonyBuild_29`: Run circularly, 7 colors with white background, 1point from end to start
+- `symphony_SymphonyBuild_30`: Run circularly, 7 colors with black background, 1point from start to end and return back
+- `symphony_SymphonyBuild_31`: Run circularly, 7 colors with red background, 1point from start to end and return back
+- `symphony_SymphonyBuild_32`: Run circularly, 7 colors with green background, 1point from start to end and return back
+- `symphony_SymphonyBuild_33`: Run circularly, 7 colors with blue background, 1point from start to end and return back
+- `symphony_SymphonyBuild_34`: Run circularly, 7 colors with yellow background, 1point from start to end and return back
+- `symphony_SymphonyBuild_35`: Run circularly, 7 colors with purple background, 1point from start to end and return back
+- `symphony_SymphonyBuild_36`: Run circularly, 7 colors with cyan background, 1point from start to end and return back
+- `symphony_SymphonyBuild_37`: Run circularly, 7 colors with white background, 1point from start to end and return back
+- `symphony_SymphonyBuild_38`: Run circularly, 7 colors with black background, 1point from middle to both ends
+- `symphony_SymphonyBuild_39`: Run circularly, 7 colors with red background, 1point from middle to both ends
+- `symphony_SymphonyBuild_40`: Run circularly, 7 colors with green background, 1point from middle to both ends
+- `symphony_SymphonyBuild_41`: Run circularly, 7 colors with blue background, 1point from middle to both ends
+- `symphony_SymphonyBuild_42`: Run circularly, 7 colors with yellow background, 1point from middle to both ends
+- `symphony_SymphonyBuild_43`: Run circularly, 7 colors with purple background, 1point from middle to both ends
+- `symphony_SymphonyBuild_44`: Run circularly, 7 colors with cyan background, 1point from middle to both ends
+- `symphony_SymphonyBuild_45`: Run circularly, 7 colors with white background, 1point from middle to both ends
+- `symphony_SymphonyBuild_46`: Run circularly, 7 colors with black background, 1point from both ends to middle
+- `symphony_SymphonyBuild_47`: Run circularly, 7 colors with red background, 1point from both ends to middle
+- `symphony_SymphonyBuild_48`: Run circularly, 7 colors with green background, 1point from both ends to middle
+- `symphony_SymphonyBuild_49`: Run circularly, 7 colors with blue background, 1point from both ends to middle
+- `symphony_SymphonyBuild_50`: Run circularly, 7 colors with yellow background, 1point from both ends to middle
+- `symphony_SymphonyBuild_51`: Run circularly, 7 colors with purple background, 1point from both ends to middle
+- `symphony_SymphonyBuild_52`: Run circularly, 7 colors with cyan background, 1point from both ends to middle
+- `symphony_SymphonyBuild_53`: Run circularly, 7 colors with white background, 1point from both ends to middle
+- `symphony_SymphonyBuild_54`: Run circularly, 7 colors with black background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_55`: Run circularly, 7 colors with red background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_56`: Run circularly, 7 colors with green background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_57`: Run circularly, 7 colors with blue background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_58`: Run circularly, 7 colors with yellow background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_59`: Run circularly, 7 colors with purple background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_60`: Run circularly, 7 colors with cyan background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_61`: Run circularly, 7 colors with white background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_62`: Overlay circularly, 7 colors with black background from start to end
+- `symphony_SymphonyBuild_63`: Overlay circularly, 7 colors with red background from start to end
+- `symphony_SymphonyBuild_64`: Overlay circularly, 7 colors with green background from start to end
+- `symphony_SymphonyBuild_65`: Overlay circularly, 7 colors with blue background from start to end
+- `symphony_SymphonyBuild_66`: Overlay circularly, 7 colors with yellow background from start to end
+- `symphony_SymphonyBuild_67`: Overlay circularly, 7 colors with purple background from start to end
+- `symphony_SymphonyBuild_68`: Overlay circularly, 7 colors with cyan background from start to end
+- `symphony_SymphonyBuild_69`: Overlay circularly, 7 colors with white background from start to end
+- `symphony_SymphonyBuild_70`: Overlay circularly, 7 colors with black background from end to start
+- `symphony_SymphonyBuild_71`: Overlay circularly, 7 colors with red background from end to start
+- `symphony_SymphonyBuild_72`: Overlay circularly, 7 colors with green background from end to start
+- `symphony_SymphonyBuild_73`: Overlay circularly, 7 colors with blue background from end to start
+- `symphony_SymphonyBuild_74`: Overlay circularly, 7 colors with yellow background from end to start
+- `symphony_SymphonyBuild_75`: Overlay circularly, 7 colors with purple background from end to start
+- `symphony_SymphonyBuild_76`: Overlay circularly, 7 colors with cyan background from end to start
+- `symphony_SymphonyBuild_77`: Overlay circularly, 7 colors with white background from end to start
+- `symphony_SymphonyBuild_78`: Overlay circularly, 7 colors with black background from start to end and return back
+- `symphony_SymphonyBuild_79`: Overlay circularly, 7 colors with red background from start to end and return back
+- `symphony_SymphonyBuild_80`: Overlay circularly, 7 colors with green background from start to end and return back
+- `symphony_SymphonyBuild_81`: Overlay circularly, 7 colors with blue background from start to end and return back
+- `symphony_SymphonyBuild_82`: Overlay circularly, 7 colors with yellow background from start to end and return back
+- `symphony_SymphonyBuild_83`: Overlay circularly, 7 colors with purple background from start to end and return back
+- `symphony_SymphonyBuild_84`: Overlay circularly, 7 colors with cyan background from start to end and return back
+- `symphony_SymphonyBuild_85`: Overlay circularly, 7 colors with white background from start to end and return back
+- `symphony_SymphonyBuild_86`: Overlay circularly, 7 colors with black background from middle to both ends
+- `symphony_SymphonyBuild_87`: Overlay circularly, 7 colors with red background from middle to both ends
+- `symphony_SymphonyBuild_88`: Overlay circularly, 7 colors with green background from middle to both ends
+- `symphony_SymphonyBuild_89`: Overlay circularly, 7 colors with blue background from middle to both ends
+- `symphony_SymphonyBuild_90`: Overlay circularly, 7 colors with yellow background from middle to both ends
+- `symphony_SymphonyBuild_91`: Overlay circularly, 7 colors with purple background from middle to both ends
+- `symphony_SymphonyBuild_92`: Overlay circularly, 7 colors with cyan background from middle to both ends
+- `symphony_SymphonyBuild_93`: Overlay circularly, 7 colors with white background from middle to both ends
+- `symphony_SymphonyBuild_94`: Overlay circularly, 7 colors with black background from both ends to middle
+- `symphony_SymphonyBuild_95`: Overlay circularly, 7 colors with red background from both ends to middle
+- `symphony_SymphonyBuild_96`: Overlay circularly, 7 colors with green background from both ends to middle
+- `symphony_SymphonyBuild_97`: Overlay circularly, 7 colors with blue background from both ends to middle
+- `symphony_SymphonyBuild_98`: Overlay circularly, 7 colors with yellow background from both ends to middle
+- `symphony_SymphonyBuild_99`: Overlay circularly, 7 colors with purple background from both ends to middle
+- `symphony_SymphonyBuild_100`: Overlay circularly, 7 colors with cyan background from both ends to middle
+- `symphony_SymphonyBuild_101`: Overlay circularly, 7 colors with white background from both ends to middle
+- `symphony_SymphonyBuild_102`: Overlay circularly, 7 colors with black background from middle to both sides and return back
+- `symphony_SymphonyBuild_103`: Overlay circularly, 7 colors with red background from middle to both sides and return back
+- `symphony_SymphonyBuild_104`: Overlay circularly, 7 colors with green background from middle to both sides and return back
+- `symphony_SymphonyBuild_105`: Overlay circularly, 7 colors with blue background from middle to both sides and return back
+- `symphony_SymphonyBuild_106`: Overlay circularly, 7 colors with yellow background from middle to both sides and return back
+- `symphony_SymphonyBuild_107`: Overlay circularly, 7 colors with purple background from middle to both sides and return back
+- `symphony_SymphonyBuild_108`: Overlay circularly, 7 colors with cyan background from middle to both sides and return back
+- `symphony_SymphonyBuild_109`: Overlay circularly, 7 colors with white background from middle to both sides and return back
+- `symphony_SymphonyBuild_110`: Fading out run circularly, 1point with black background from start to end
+- `symphony_SymphonyBuild_111`: Fading out run circularly, 1point with red background from start to end
+- `symphony_SymphonyBuild_112`: Fading out run circularly, 1point with green background from start to end
+- `symphony_SymphonyBuild_113`: Fading out run circularly, 1point with blue background from start to end
+- `symphony_SymphonyBuild_114`: Fading out run circularly, 1point with yellow background from start to end
+- `symphony_SymphonyBuild_115`: Fading out run circularly, 1point with purple background from start to end
+- `symphony_SymphonyBuild_116`: Fading out run circularly, 1point with cyan background from start to end
+- `symphony_SymphonyBuild_117`: Fading out run circularly, 1point with white background from start to end
+- `symphony_SymphonyBuild_118`: Fading out run circularly, 1point with black background from end to start
+- `symphony_SymphonyBuild_119`: Fading out run circularly, 1point with red background from end to start
+- `symphony_SymphonyBuild_120`: Fading out run circularly, 1point with green background from end to start
+- `symphony_SymphonyBuild_121`: Fading out run circularly, 1point with blue background from end to start
+- `symphony_SymphonyBuild_122`: Fading out run circularly, 1point with yellow background from end to start
+- `symphony_SymphonyBuild_123`: Fading out run circularly, 1point with purple background from end to start
+- `symphony_SymphonyBuild_124`: Fading out run circularly, 1point with cyan background from end to start
+- `symphony_SymphonyBuild_125`: Fading out run circularly, 1point with white background from end to start
+- `symphony_SymphonyBuild_126`: Fading out run circularly, 1point with black background from start to end and return back
+- `symphony_SymphonyBuild_127`: Fading out run circularly, 1point with red background from start to end and return back
+- `symphony_SymphonyBuild_128`: Fading out run circularly, 1point with green background from start to end and return back
+- `symphony_SymphonyBuild_129`: Fading out run circularly, 1point with blue background from start to end and return back
+- `symphony_SymphonyBuild_130`: Fading out run circularly, 1point with yellow background from start to end and return back
+- `symphony_SymphonyBuild_131`: Fading out run circularly, 1point with purple background from start to end and return back
+- `symphony_SymphonyBuild_132`: Fading out run circularly, 1point with cyan background from start to end and return back
+- `symphony_SymphonyBuild_133`: Fading out run circularly, 1point with white background from start to end and return back
+- `symphony_SymphonyBuild_134`: Flows in olivary circularly, 7 colors with black background from start to end
+- `symphony_SymphonyBuild_135`: Flows in olivary circularly, 7 colors with red background from start to end
+- `symphony_SymphonyBuild_136`: Flows in olivary circularly, 7 colors with green background from start to end
+- `symphony_SymphonyBuild_137`: Flows in olivary circularly, 7 colors with blue background from start to end
+- `symphony_SymphonyBuild_138`: Flows in olivary circularly, 7 colors with yellow background from start to end
+- `symphony_SymphonyBuild_139`: Flows in olivary circularly, 7 colors with purple background from start to end
+- `symphony_SymphonyBuild_140`: Flows in olivary circularly, 7 colors with cyan background from start to end
+- `symphony_SymphonyBuild_141`: Flows in olivary circularly, 7 colors with white background from start to end
+- `symphony_SymphonyBuild_142`: Flows in olivary circularly, 7 colors with black background from end to start
+- `symphony_SymphonyBuild_143`: Flows in olivary circularly, 7 colors with red background from end to start
+- `symphony_SymphonyBuild_144`: Flows in olivary circularly, 7 colors with green background from end to start
+- `symphony_SymphonyBuild_145`: Flows in olivary circularly, 7 colors with blue background from end to start
+- `symphony_SymphonyBuild_146`: Flows in olivary circularly, 7 colors with yellow background from end to start
+- `symphony_SymphonyBuild_147`: Flows in olivary circularly, 7 colors with purple background from end to start
+- `symphony_SymphonyBuild_148`: Flows in olivary circularly, 7 colors with cyan background from end to start
+- `symphony_SymphonyBuild_149`: Flows in olivary circularly, 7 colors with white background from end to start
+- `symphony_SymphonyBuild_150`: Flows in olivary circularly, 7 colors with black background from start to end and return back
+- `symphony_SymphonyBuild_151`: Flows in olivary circularly, 7 colors with red background from start to end and return back
+- `symphony_SymphonyBuild_152`: Flows in olivary circularly, 7 colors with green background from start to end and return back
+- `symphony_SymphonyBuild_153`: Flows in olivary circularly, 7 colors with blue background from start to end and return back
+- `symphony_SymphonyBuild_154`: Flows in olivary circularly, 7 colors with yellow background from start to end and return back
+- `symphony_SymphonyBuild_155`: Flows in olivary circularly, 7 colors with purple background from start to end and return back
+- `symphony_SymphonyBuild_156`: Flows in olivary circularly, 7 colors with cyan background from start to end and return back
+- `symphony_SymphonyBuild_157`: Flows in olivary circularly, 7 colors with white background from start to end and return back
+- `symphony_SymphonyBuild_158`: 7 colors run circularly, each color in every 1 point with black background from start to end
+- `symphony_SymphonyBuild_159`: 7 colors run circularly, each color in every 1 point with red background from start to end
+- `symphony_SymphonyBuild_160`: 7 colors run circularly, each color in every 1 point with green background from start to end
+- `symphony_SymphonyBuild_161`: 7 colors run circularly, each color in every 1 point with blue background from start to end
+- `symphony_SymphonyBuild_162`: 7 colors run circularly, each color in every 1 point with yellow background from start to end
+- `symphony_SymphonyBuild_163`: 7 colors run circularly, each color in every 1 point with purple background from start to end
+- `symphony_SymphonyBuild_164`: 7 colors run circularly, each color in every 1 point with cyan background from start to end
+- `symphony_SymphonyBuild_165`: 7 colors run circularly, each color in every 1 point with white background from start to end
+- `symphony_SymphonyBuild_166`: 7 colors run circularly, each color in every 1 point with black background from end to start
+- `symphony_SymphonyBuild_167`: 7 colors run circularly, each color in every 1 point with red background from end to start
+- `symphony_SymphonyBuild_168`: 7 colors run circularly, each color in every 1 point with green background from end to start
+- `symphony_SymphonyBuild_169`: 7 colors run circularly, each color in every 1 point with blue background from end to start
+- `symphony_SymphonyBuild_170`: 7 colors run circularly, each color in every 1 point with yellow background from end to start
+- `symphony_SymphonyBuild_171`: 7 colors run circularly, each color in every 1 point with purple background from end to start
+- `symphony_SymphonyBuild_172`: 7 colors run circularly, each color in every 1 point with cyan background from end to start
+- `symphony_SymphonyBuild_173`: 7 colors run circularly, each color in every 1 point with white background from end to start
+- `symphony_SymphonyBuild_174`: 7 colors run circularly, each color in every 1 point with black background from start to end and return back
+- `symphony_SymphonyBuild_175`: 7 colors run circularly, each color in every 1 point with red background from start to end and return back
+- `symphony_SymphonyBuild_176`: 7 colors run circularly, each color in every 1 point with green background from start to end and return back
+- `symphony_SymphonyBuild_177`: 7 colors run circularly, each color in every 1 point with blue background from start to end and return back
+- `symphony_SymphonyBuild_178`: 7 colors run circularly, each color in every 1 point with yellow background from start to end and return back
+- `symphony_SymphonyBuild_179`: 7 colors run circularly, each color in every 1 point with purple background from start to end and return back
+- `symphony_SymphonyBuild_180`: 7 colors run circularly, each color in every 1 point with cyan background from start to end and return back
+- `symphony_SymphonyBuild_181`: 7 colors run circularly, each color in every 1 point with white background from start to end and return back
+- `symphony_SymphonyBuild_182`: 7 colors run circularly, each color in multi points with red background from start to end
+- `symphony_SymphonyBuild_183`: 7 colors run circularly, each color in multi points with green background from start to end
+- `symphony_SymphonyBuild_184`: 7 colors run circularly, each color in multi points with blue background from start to end
+- `symphony_SymphonyBuild_185`: 7 colors run circularly, each color in multi points with yellow background from start to end
+- `symphony_SymphonyBuild_186`: 7 colors run circularly, each color in multi points with purple background from start to end
+- `symphony_SymphonyBuild_187`: 7 colors run circularly, each color in multi points with cyan background from start to end
+- `symphony_SymphonyBuild_188`: 7 colors run circularly, each color in multi points with white background from start to end
+- `symphony_SymphonyBuild_189`: 7 colors run circularly, each color in multi points with red background from end to start
+- `symphony_SymphonyBuild_190`: 7 colors run circularly, each color in multi points with green background from end to start
+- `symphony_SymphonyBuild_191`: 7 colors run circularly, each color in multi points with blue background from end to start
+- `symphony_SymphonyBuild_192`: 7 colors run circularly, each color in multi points with yellow background from end to start
+- `symphony_SymphonyBuild_193`: 7 colors run circularly, each color in multi points with purple background from end to start
+- `symphony_SymphonyBuild_194`: 7 colors run circularly, each color in multi points with cyan background from end to start
+- `symphony_SymphonyBuild_195`: 7 colors run circularly, each color in multi points with white background from end to start
+- `symphony_SymphonyBuild_196`: 7 colors run circularly, each color in multi points with red background from start to end and return back
+- `symphony_SymphonyBuild_197`: 7 colors run circularly, each color in multi points with green background from start to end and return back
+- `symphony_SymphonyBuild_198`: 7 colors run circularly, each color in multi points with blue background from start to end and return back
+- `symphony_SymphonyBuild_199`: 7 colors run circularly, each color in multi points with yellow background from start to end and return back
+- `symphony_SymphonyBuild_200`: 7 colors run circularly, each color in multi points with purple background from start to end and return back
+- `symphony_SymphonyBuild_201`: 7 colors run circularly, each color in multi points with cyan background from start to end and return back
+- `symphony_SymphonyBuild_202`: 7 colors run circularly, each color in multi points with white background from start to end and return back
+- `symphony_SymphonyBuild_203`: Fading out run circularly, 7 colors each in red fading from start to end
+- `symphony_SymphonyBuild_204`: Fading out run circularly, 7 colors each in green fading from start to end
+- `symphony_SymphonyBuild_205`: Fading out run circularly, 7 colors each in blue fading from start to end
+- `symphony_SymphonyBuild_206`: Fading out run circularly, 7 colors each in yellow fading from start to end
+- `symphony_SymphonyBuild_207`: Fading out run circularly, 7 colors each in purple fading from start to end
+- `symphony_SymphonyBuild_208`: Fading out run circularly, 7 colors each in cyan fading from start to end
+- `symphony_SymphonyBuild_209`: Fading out run circularly, 7 colors each in white fading from start to end
+- `symphony_SymphonyBuild_210`: Fading out run circularly, 7 colors each in red fading from end to start
+- `symphony_SymphonyBuild_211`: Fading out run circularly, 7 colors each in green fading from end to start
+- `symphony_SymphonyBuild_212`: Fading out run circularly, 7 colors each in blue fading from end to start
+- `symphony_SymphonyBuild_213`: Fading out run circularly, 7 colors each in yellow fading from end to start
+- `symphony_SymphonyBuild_214`: Fading out run circularly, 7 colors each in purple fading from end to start
+- `symphony_SymphonyBuild_215`: Fading out run circularly, 7 colors each in cyan fading from end to start
+- `symphony_SymphonyBuild_216`: Fading out run circularly, 7 colors each in white fading from end to start
+- `symphony_SymphonyBuild_217`: Fading out run circularly, 7 colors each in red fading from start to end and return back
+- `symphony_SymphonyBuild_218`: Fading out run circularly, 7 colors each in green fading from start to end and return back
+- `symphony_SymphonyBuild_219`: Fading out run circularly, 7 colors each in blue fading from start to end and return back
+- `symphony_SymphonyBuild_220`: Fading out run circularly, 7 colors each in yellow fading from start to end and return back
+- `symphony_SymphonyBuild_221`: Fading out run circularly, 7 colors each in purple fading from start to end and return back
+- `symphony_SymphonyBuild_222`: Fading out run circularly, 7 colors each in cyan fading from start to end and return back
+- `symphony_SymphonyBuild_223`: Fading out run circularly, 7 colors each in white fading from start to end and return back
+- `symphony_SymphonyBuild_224`: 7 colors each in red run circularly, multi points from start to end
+- `symphony_SymphonyBuild_225`: 7 colors each in green run circularly, multi points from start to end
+- `symphony_SymphonyBuild_226`: 7 colors each in blue run circularly, multi points from start to end
+- `symphony_SymphonyBuild_227`: 7 colors each in yellow run circularly, multi points from start to end
+- `symphony_SymphonyBuild_228`: 7 colors each in purple run circularly, multi points from start to end
+- `symphony_SymphonyBuild_229`: 7 colors each in cyan run circularly, multi points from start to end
+- `symphony_SymphonyBuild_230`: 7 colors each in white run circularly, multi points from start to end
+- `symphony_SymphonyBuild_231`: 7 colors each in red run circularly, multi points from end to start
+- `symphony_SymphonyBuild_232`: 7 colors each in green run circularly, multi points from end to start
+- `symphony_SymphonyBuild_233`: 7 colors each in blue run circularly, multi points from end to start
+- `symphony_SymphonyBuild_234`: 7 colors each in yellow run circularly, multi points from end to start
+- `symphony_SymphonyBuild_235`: 7 colors each in purple run circularly, multi points from end to start
+- `symphony_SymphonyBuild_236`: 7 colors each in cyan run circularly, multi points from end to start
+- `symphony_SymphonyBuild_237`: 7 colors each in white run circularly, multi points from end to start
+- `symphony_SymphonyBuild_238`: 7 colors each in red run circularly, multi points from start to end and return back
+- `symphony_SymphonyBuild_239`: 7 colors each in green run circularly, multi points from start to end and return back
+- `symphony_SymphonyBuild_240`: and return back7 colors each in blue run circularly, multi points from start to end
+- `symphony_SymphonyBuild_241`: 7 colors each in yellow run circularly, multi points from start to end and return back
+- `symphony_SymphonyBuild_242`: 7 colors each in purple run circularly, multi points from start to end and return back
+- `symphony_SymphonyBuild_243`: 7 colors each in cyan run circularly, multi points from start to end and return back
+- `symphony_SymphonyBuild_244`: 7 colors each in white run circularly, multi points from start to end and return back
+- `symphony_SymphonyBuild_245`: Flows gradually and circularly, 6 colors with red background from start to end
+- `symphony_SymphonyBuild_246`: Flows gradually and circularly, 6 colors with green background from start to end
+- `symphony_SymphonyBuild_247`: Flows gradually and circularly, 6 colors with blue background from start to end
+- `symphony_SymphonyBuild_248`: Flows gradually and circularly, 6 colors with yellow background from start to end
+- `symphony_SymphonyBuild_249`: Flows gradually and circularly, 6 colors with purple background from start to end
+- `symphony_SymphonyBuild_250`: Flows gradually and circularly, 6 colors with cyan background from start to end
+- `symphony_SymphonyBuild_251`: Flows gradually and circularly, 6 colors with white background from start to end
+- `symphony_SymphonyBuild_252`: Flows gradually and circularly, 6 colors with red background from end to start
+- `symphony_SymphonyBuild_253`: Flows gradually and circularly, 6 colors with green background from end to start
+- `symphony_SymphonyBuild_254`: Flows gradually and circularly, 6 colors with blue background from end to start
+- `symphony_SymphonyBuild_255`: Flows gradually and circularly, 6 colors with yellow background from end to start
+- `symphony_SymphonyBuild_256`: Flows gradually and circularly, 6 colors with purple background from end to start
+- `symphony_SymphonyBuild_257`: Flows gradually and circularly, 6 colors with cyan background from end to start
+- `symphony_SymphonyBuild_258`: Flows gradually and circularly, 6 colors with white background from end to start
+- `symphony_SymphonyBuild_259`: Flows gradually and circularly, 6 colors with red background from start to end and return back
+- `symphony_SymphonyBuild_260`: Flows gradually and circularly, 6 colors with green background from start to end and return back
+- `symphony_SymphonyBuild_261`: Flows gradually and circularly, 6 colors with blue background from start to end and return back
+- `symphony_SymphonyBuild_262`: Flows gradually and circularly, 6 colors with yellow background from start to end and return back
+- `symphony_SymphonyBuild_263`: Flows gradually and circularly, 6 colors with purple background from start to end and return back
+- `symphony_SymphonyBuild_264`: Flows gradually and circularly, 6 colors with cyan background from start to end and return back
+- `symphony_SymphonyBuild_265`: Flows gradually and circularly, 6 colors with white background from start to end and return back
+- `symphony_SymphonyBuild_266`: 7 colors run with black background from start to end
+- `symphony_SymphonyBuild_267`: 7 colors run with red background from start to end
+- `symphony_SymphonyBuild_268`: 7 colors run with green background from start to end
+- `symphony_SymphonyBuild_269`: 7 colors run with blue background from start to end
+- `symphony_SymphonyBuild_270`: 7 colors run with yellow background from start to end
+- `symphony_SymphonyBuild_271`: 7 colors run with purple background from start to end
+- `symphony_SymphonyBuild_272`: 7 colors run with cyan background from start to end
+- `symphony_SymphonyBuild_273`: 7 colors run with white background from start to end
+- `symphony_SymphonyBuild_274`: 7 colors run with black background from end to start
+- `symphony_SymphonyBuild_275`: 7 colors run with red background from end to start
+- `symphony_SymphonyBuild_276`: 7 colors run with green background from end to start
+- `symphony_SymphonyBuild_277`: 7 colors run with blue background from end to start
+- `symphony_SymphonyBuild_278`: 7 colors run with yellow background from end to start
+- `symphony_SymphonyBuild_279`: 7 colors run with purple background from end to start
+- `symphony_SymphonyBuild_280`: 7 colors run with cyan background from end to start
+- `symphony_SymphonyBuild_281`: 7 colors run with white background from end to start
+- `symphony_SymphonyBuild_282`: 7 colors run with black background from start to end and return back
+- `symphony_SymphonyBuild_283`: 7 colors run with red background from start to end and return back
+- `symphony_SymphonyBuild_284`: 7 colors run with green background from start to end and return back
+- `symphony_SymphonyBuild_285`: 7 colors run with blue background from start to end and return back
+- `symphony_SymphonyBuild_286`: 7 colors run with yellow background from start to end and return back
+- `symphony_SymphonyBuild_287`: 7 colors run with purple background from start to end and return back
+- `symphony_SymphonyBuild_288`: 7 colors run with cyan background from start to end and return back
+- `symphony_SymphonyBuild_289`: 7 colors run with white background from start to end and return back
+- `symphony_SymphonyBuild_290`: 7 colors run gradually + 7 colors run in olivary
+- `symphony_SymphonyBuild_291`: 7 colors run gradually + 7 colors change quickly
+- `symphony_SymphonyBuild_292`: 7 colors run gradually + 7 colors flash
+- `symphony_SymphonyBuild_293`: 7 colors run in olivary + 7 colors change quickly
+- `symphony_SymphonyBuild_294`: 7 colors run in olivary + 7 colors flash
+- `symphony_SymphonyBuild_295`: 7 colors change quickly + 7 colors flash
+- `symphony_SymphonyBuild_296`: 7 colors run gradually + 7 colors run in olivary + 7 colors change quickly
+- `symphony_SymphonyBuild_297`: 7 colors run gradually + 7 colors run in olivary + 7 colors flash
+- `symphony_SymphonyBuild_298`: 7 colors run gradually + 7 colors change quickly + 7 colors flash
+- `symphony_SymphonyBuild_299`: 7 colors run in olivary + 7 colors change quickly + 7 colors flash
+- `symphony_SymphonyBuild_300`: 7 colors run gradually + 7 colors run in olivary + 7 colors change quickly + 7 color flash
+
+### Symphony Effects (44)
+- `symphony_SymphonyEffect1`: Change gradually
+- `symphony_SymphonyEffect2`: Bright up and Fade gradually
+- `symphony_SymphonyEffect3`: Change quickly
+- `symphony_SymphonyEffect4`: Strobe-flash
+- `symphony_SymphonyEffect5`: Running, 1point from start to end
+- `symphony_SymphonyEffect6`: Running, 1point from end to start
+- `symphony_SymphonyEffect7`: Running, 1point from the middle to the both ends
+- `symphony_SymphonyEffect8`: Running, 1point from the both ends to the middle
+- `symphony_SymphonyEffect9`: Overlay, from start to end
+- `symphony_SymphonyEffect10`: Overlay, from end to start
+- `symphony_SymphonyEffect11`: Overlay, from the middle to the both ends
+- `symphony_SymphonyEffect12`: Overlay, from the both ends to the middle
+- `symphony_SymphonyEffect13`: Fading and running, 1point from start to end
+- `symphony_SymphonyEffect14`: Fading and running, 1point from end to start
+- `symphony_SymphonyEffect15`: Olivary Flowing, from start to end
+- `symphony_SymphonyEffect16`: Olivary Flowing, from end to start
+- `symphony_SymphonyEffect17`: Running, 1point w/background from start to end
+- `symphony_SymphonyEffect18`: Running, 1point w/background from end to start
+- `symphony_SymphonyEffect19`: 2 colors run, multi points w/black background from start to end
+- `symphony_SymphonyEffect20`: 2 colors run, multi points w/black background from end to start
+- `symphony_SymphonyEffect21`: 2 colors run alternately, fading from start to end
+- `symphony_SymphonyEffect22`: 2 colors run alternately, fading from end to start
+- `symphony_SymphonyEffect23`: 2 colors run alternately, multi points from start to end
+- `symphony_SymphonyEffect24`: 2 colors run alternately, multi points from end to start
+- `symphony_SymphonyEffect25`: Fading out Flows, from start to end
+- `symphony_SymphonyEffect26`: Fading out Flows, from end to start
+- `symphony_SymphonyEffect27`: 7 colors run alternately, 1 point with multi points background, from start to end
+- `symphony_SymphonyEffect28`: 7 colors run alternately, 1 point with multi points background, from end to start
+- `symphony_SymphonyEffect29`: 7 colors run alternately, 1 point from start to end
+- `symphony_SymphonyEffect30`: 7 colors run alternately, 1 point from end to start
+- `symphony_SymphonyEffect31`: 7 colors run alternately, multi points from start to end
+- `symphony_SymphonyEffect32`: 7 colors run alternately, multi points from end to start
+- `symphony_SymphonyEffect33`: 7 colors overlay, multi points from start to end
+- `symphony_SymphonyEffect34`: 7 colors overlay, multi points from end to start
+- `symphony_SymphonyEffect35`: 7 colors overlay, multi points from the middle to the both ends
+- `symphony_SymphonyEffect36`: 7 colors overlay, multi points from the both ends to the middle
+- `symphony_SymphonyEffect37`: 7 colors flow gradually, from start to end
+- `symphony_SymphonyEffect38`: 7 colors flow gradually, from end to start
+- `symphony_SymphonyEffect39`: Fading out run, 7 colors from start to end
+- `symphony_SymphonyEffect40`: Fading out run, 7 colors from end to start
+- `symphony_SymphonyEffect41`: Runs in olivary, 7 colors from start to end
+- `symphony_SymphonyEffect42`: Runs in olivary, 7 colors from end to start
+- `symphony_SymphonyEffect43`: Fading out run, 7 colors start with white color from start to end
+- `symphony_SymphonyEffect44`: Fading out run, 7 colors start with white color from end to start
+
+### Christmas Modes
+- `christmas_mode_name_breathing_sync`: Breathe Sync
+- `christmas_mode_name_fill`: Fill-in
+- `christmas_mode_name_flash`: Flash
+- `christmas_mode_name_flash_sync`: Flash Sync
+- `christmas_mode_name_full_back`: Fill-in and Return
+- `christmas_mode_name_jump`: Jump
+- `christmas_mode_name_jump_sync`: Jump Sync
+- `christmas_mode_name_overlap`: Overlap
+- `christmas_mode_name_random_gradual_ansy`: Random Color Gradient Async
+- `christmas_mode_name_random_jump_ansy`: Random Jump Async
+- `christmas_mode_name_stars_twinkle`: Twinkle
+- `christmas_mode_name_strobe`: Strobe
+- `christmas_mode_name_two_flash`: Alternating Flash
+- `christmas_mode_name_wave`: Wave
+
+### Music Modes
+- `music_channel_name`: Play Music in the background
+- `music_classical`: Classical
+- `music_jazz`: Jazz
+- `music_normal`: Normal
+- `music_rock`: Rock
+- `music_select`: Please select music
+- `music_select_All`: Select all
+- `music_select_Reverse`: Reverse selection
+- `music_select_music`: Select Music
+
+### Camera Modes
+- `camera_auto`: Auto
+- `camera_colorPix`: Capture color
+- `camera_manual`: Manual
+- `camera_not_Camera`: Cannot connect to camera.
+- `camera_tips`: Please point the mobile phone camera at the TV screen, refer to the red box, you can zoom in or out, the lamp will change color according to the TV screen
+
+### Microphone Modes
+- `mic_gainlable`: Microphone Sensitivity
+- `mic_note`: Note:You can minimize the app to play music from any source such as \"Pandora\" and \"Spotify\". Your LED device will automatically synchronize and change color to the music.
+- `mic_service_content`: Tab to the function interface
+- `mic_service_mode`: Microphone mode
+- `mic_service_name`: Microphone mode turned on
+
+
+
+### CRITICAL HARDWARE FINDINGS (0x59)
+1. **Array Length Glitching**: Continuously transmitting a 0x59 payload with an array length of < 10 causes the first chunk of physical LEDs to glitch and flicker severely. The array length MUST be set to >= 10 to establish a perfectly solid, stable loop on the controller.
+2. **Type Byte Support**: The Symphony controller firmware physically ignores Type Byte values 0, 1, and 2 when processing 0x59 array flows. It strictly processes 0x59 as a running marquee buffer. Therefore, ONLY Type 3 (Jump/Flow) actually acts upon the hardware.
