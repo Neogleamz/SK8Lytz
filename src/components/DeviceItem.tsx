@@ -52,7 +52,7 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
                {isSelected && <Text style={{color: 'white', fontSize: 12, fontWeight: 'bold', zIndex: 1}}>✓</Text>}
              </View>
           )}
-          {showGroupIcon && <Text style={{ fontSize: 18, marginRight: 8 }}>👥</Text>}
+          {showGroupIcon && <Text style={{ fontSize: 18, marginRight: 8 }}>🛼</Text>}
           <Text style={[Typography.title, { color: Colors.primary }]}>{device.name || `SK8 - ${(device.id || '').replace(/:/g, '').slice(-6).toUpperCase()}`}</Text>
         </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
