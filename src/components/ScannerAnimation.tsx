@@ -11,7 +11,7 @@ interface ScannerAnimationProps {
 }
 
 const PULSE_COUNT = 14;
-const MAX_RADIUS = 380;
+const MAX_RADIUS = 190;
 const DOTS_PER_RING = 48;
 
 export default function ScannerAnimation({ deviceCount, isScanning, onPress }: ScannerAnimationProps) {
@@ -114,7 +114,7 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
     // Outward moving radius: start at button edge (50), end at MAX_RADIUS
     const radius = pulseAnim.interpolate({
       inputRange: [0, 1],
-      outputRange: [50, MAX_RADIUS]
+      outputRange: [25, MAX_RADIUS]
     });
 
     // Fade out as it expands
@@ -210,7 +210,7 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
               <View style={{ alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
                 <Image 
                   source={require('../../assets/favicon.png')} 
-                  style={{ width: 75, height: 75, resizeMode: 'contain', opacity: 0.95 }}
+                  style={{ width: 38, height: 38, resizeMode: 'contain', opacity: 0.95 }}
                 />
                 {/* Micro LED Dots on Button - Randomized Shimmer */}
                 {[...Array(9)].map((_, i) => (
@@ -245,7 +245,7 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
               <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                 <Image 
                   source={require('../../assets/favicon.png')} 
-                  style={{ width: 85, height: 85, resizeMode: 'contain' }}
+                  style={{ width: 42, height: 42, resizeMode: 'contain' }}
                 />
               </View>
             )}
@@ -255,7 +255,7 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
         {/* Detected Controller "Blips" */}
         {isScanning && Array.from({ length: Math.min(deviceCount, 8) }).map((_, i) => {
            const angle = (i * 137.5) * Math.PI / 180; // Golden angle
-           const r = 40 + (i * 12);
+           const r = 20 + (i * 6);
            return (
              <View 
                key={`blip-${i}`} 
@@ -275,7 +275,7 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
         })}
         {/* Inline status text inside the rings */}
         <View style={styles.inlineStatus} pointerEvents="none">
-          <Text style={[Typography.title, { color: Colors.primary, textAlign: 'center', fontWeight: 'bold', fontSize: 18 }]}>
+          <Text style={[Typography.title, { color: Colors.primary, textAlign: 'center', fontWeight: 'bold', fontSize: 12 }]}>
             {isScanning ? (deviceCount > 0 ? `PAIRED (${deviceCount})` : 'SEARCHING...') : 'TAP TO DISCOVER'}
           </Text>
           {isScanning && (
@@ -296,8 +296,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   radarContainer: {
-    width: 360,
-    height: 360,
+    width: 180,
+    height: 180,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -311,9 +311,9 @@ const styles = StyleSheet.create({
   },
   ledDot: {
     position: 'absolute',
-    width: 4.5,
-    height: 4.5,
-    borderRadius: 2.25,
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 10,
@@ -321,18 +321,18 @@ const styles = StyleSheet.create({
   },
   sweep: {
     position: 'absolute',
-    width: 400,
-    height: 400,
-    borderRadius: 200,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     overflow: 'hidden',
   },
   sweepGlow: {
     position: 'absolute',
-    top: 200,
-    left: 200,
-    width: 200,
-    height: 200,
-    borderTopRightRadius: 200,
+    top: 100,
+    left: 100,
+    width: 100,
+    height: 100,
+    borderTopRightRadius: 100,
     backgroundColor: 'rgba(0, 240, 255, 0.12)',
     borderRightWidth: 4,
     borderTopWidth: 4,
@@ -349,9 +349,9 @@ const styles = StyleSheet.create({
     zIndex: 30,
   },
   center: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 8,
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   },
   inlineStatus: {
     position: 'absolute',
-    top: 248,
+    top: 125,
     left: 0,
     right: 0,
     alignItems: 'center',

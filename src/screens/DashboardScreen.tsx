@@ -795,7 +795,7 @@ export default function DashboardScreen() {
               </View>
 
               <View style={{ paddingHorizontal: Layout.padding }}>              {!isActuallyConnected ? (
-                <View style={{ height: 440, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 5, width: '100%' }}>
+                <View style={{ height: 220, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 5, width: '100%' }}>
                     <ScannerAnimation 
                        deviceCount={allDevices.length} 
                        isScanning={isScanning} 
