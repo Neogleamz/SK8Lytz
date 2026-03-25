@@ -20,7 +20,11 @@ interface DeviceItemProps {
 export default function DeviceItem({ device, onPress, onLongPress, isConnected, showGroupIcon, isSelectionMode, isSelected, onPowerToggle, isPoweredOn = true }: DeviceItemProps) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
-  const isZengge = device.name?.toLowerCase().includes('led') || device.name?.toLowerCase().includes('zengge') || device.name?.toLowerCase().includes('magic');
+  const isZengge = (device.name?.toLowerCase().includes('led') || device.name?.toLowerCase().includes('zengge') || device.name?.toLowerCase().includes('magic')) && !device.name?.includes('HALOZ') && !device.name?.includes('SOULZ');
+  
+  const displayName = (!device.name || isZengge) 
+    ? `SK8Lytz-${(device.id || '').replace(/:/g, '').slice(-4).toUpperCase()}` 
+    : device.name;
 
   return (
     <TouchableOpacity 
@@ -52,8 +56,22 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
                {isSelected && <Text style={{color: 'white', fontSize: 12, fontWeight: 'bold', zIndex: 1}}>✓</Text>}
              </View>
           )}
-          {showGroupIcon && <Text style={{ fontSize: 18, marginRight: 8 }}>🛼</Text>}
-          <Text style={[Typography.title, { color: Colors.primary }]}>{device.name || `SK8 - ${(device.id || '').replace(/:/g, '').slice(-6).toUpperCase()}`}</Text>
+          <View style={{ flexDirection: 'row', marginRight: 8, alignItems: 'center' }}>
+            <MaterialCommunityIcons 
+              name="roller-skate" 
+              size={22} 
+              color={Colors.primary} 
+            />
+            {showGroupIcon && (
+              <MaterialCommunityIcons 
+                name="roller-skate" 
+                size={22} 
+                color={Colors.primary} 
+                style={{ marginLeft: -10, opacity: 0.8 }} 
+              />
+            )}
+          </View>
+          <Text style={[Typography.title, { color: Colors.primary, flex: 1 }]} numberOfLines={0}>{displayName}</Text>
         </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
             {isSelectionMode && <View style={{ width: 34 }} />}
@@ -75,8 +93,16 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
                 </Text>
               </View>
             ) : (
-              <Text style={[Typography.caption, { color: Colors.textMuted }]}>
-                MAC: {device.id.toUpperCase()} {device.rssi ? ` | RSSI: ${device.rssi} dBm` : ''}
+              <Text style={[Typography.caption, { color: Colors.textMuted, flex: 1 }]} numberOfLines={0}>
+                MAC: {(() => {
+                  const id = device.id.toUpperCase();
+                  if (id.startsWith('SIM-')) {
+                    const parts = id.split('-');
+                    const num = parts[parts.length - 1];
+                    return `00:DE:M0:00:00:0${num}`;
+                  }
+                  return id;
+                })()} {device.rssi ? ` | ${device.rssi} dBm` : ''}
               </Text>
             )}
           </View>

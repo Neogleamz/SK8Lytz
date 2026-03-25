@@ -179,7 +179,21 @@ Unlimited creativity with up to 32 steps.
 ---
 ---
 
-## 9. Symphony Music Modes (Addressable)
+## 9. UI Components & Iconography
+
+### Icons (MaterialCommunityIcons)
+- **Primary Branding**: `roller-skate`
+- **Main Interaction**: `power`
+- **Settings**: `tune` or `cog`
+
+### Group Visualization
+- **Single Device**: Single `roller-skate` icon (Size 22, `Colors.primary`).
+- **Grouped Devices**: Double `roller-skate` icons. The second icon is offset (`marginLeft: -10`) with reduced opacity (`0.8`) to create a stacked "pair" effect.
+
+---
+---
+
+## 10. Symphony Music Modes (Addressable)
 
 These modes are specific to Symphony controllers (HALOZ/SOULZ) using `ModeType 0x27`.
 
@@ -260,6 +274,20 @@ If manufacturer data is unavailable or the device is during first-time pairing, 
 ### C. Service UUID Validation
 All compatible controllers SHOULD advertise the primary Service UUID:
 - `0000ffff-0000-1000-8000-00805f9b34fb`.
+
+---
+
+## 13. App UI Iconography
+
+To maintain consistent branding and clarity, the app uses specific emojis for device and group identification in the Dashboard list.
+
+| Element | Icon | Logic |
+|:---|:---|:---|
+| **Individual Device** | `roller-skate` | `MaterialCommunityIcons`, 1 icon |
+| **Device Group** | `roller-skate` x2 | `MaterialCommunityIcons`, 2 icons (overlapping) |
+| **Device Name** | `SK8Lytz-****` | Fallback for factory names, using last 4 MAC digits. |
+| **RSSI Display** | `-XX dBm` | Displayed alongside MAC, "RSSI:" label removed. |
+| **Demo MACs** | `00:DE:M0:00:00:0X` | Realistic dummy format for IDs starting with `sim-`. |
 
 ---
 *End of Master Reference. KEEP UPDATING ON ALL NEW FEATURES.*
