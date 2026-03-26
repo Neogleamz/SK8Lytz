@@ -25,19 +25,19 @@ export default function Sk8LytzProgrammerModal({ visible, onClose, allDevices, w
   const textMuted = isDark ? '#9ca3af' : '#6b7280';
   const borderColor = isDark ? '#2d3348' : '#e5e7eb';
 
-  const [halozConfig, setHalozConfig] = useState({ points: 16, colorOrder: 'GRB', stripType: 'WS2812B' });
-  const [soulzConfig, setSoulzConfig] = useState({ points: 43, colorOrder: 'GRB', stripType: 'WS2812B' });
+  const [halozConfig, setHalozConfig] = useState({ points: 16, segments: 2, colorOrder: 'GRB', stripType: 'WS2812B' });
+  const [soulzConfig, setSoulzConfig] = useState({ points: 43, segments: 2, colorOrder: 'GRB', stripType: 'WS2812B' });
 
   const [isEditingConfig, setIsEditingConfig] = useState<'HALOZ' | 'SOULZ' | null>(null);
-  const [tempConfig, setTempConfig] = useState({ points: 16, colorOrder: 'GRB', stripType: 'WS2812B' });
+  const [tempConfig, setTempConfig] = useState({ points: 16, segments: 2, colorOrder: 'GRB', stripType: 'WS2812B' });
 
   useEffect(() => {
     const loadPresets = async () => {
       try {
         const h = await AsyncStorage.getItem('@sk8_program_haloz');
         const s = await AsyncStorage.getItem('@sk8_program_soulz');
-        if (h) setHalozConfig(JSON.parse(h));
-        if (s) setSoulzConfig(JSON.parse(s));
+        if (h) setHalozConfig({ segments: 2, ...JSON.parse(h) });
+        if (s) setSoulzConfig({ segments: 2, ...JSON.parse(s) });
       } catch (e) {
         // fail silently
       }
@@ -76,14 +76,14 @@ export default function Sk8LytzProgrammerModal({ visible, onClose, allDevices, w
 
   const flashHaloz = async () => {
     for (const id of selectedIds) {
-      await writeToDevice(ZenggeProtocol.setHardwareConfig(halozConfig.points, halozConfig.colorOrder, halozConfig.stripType), id);
+      await writeToDevice(ZenggeProtocol.setHardwareConfig(halozConfig.points, halozConfig.colorOrder, halozConfig.stripType, halozConfig.segments || 2), id);
     }
     alert(`Successfully flashed HALOZ config to ${selectedIds.length} devices.`);
   };
 
   const flashSoulz = async () => {
     for (const id of selectedIds) {
-      await writeToDevice(ZenggeProtocol.setHardwareConfig(soulzConfig.points, soulzConfig.colorOrder, soulzConfig.stripType), id);
+      await writeToDevice(ZenggeProtocol.setHardwareConfig(soulzConfig.points, soulzConfig.colorOrder, soulzConfig.stripType, soulzConfig.segments || 2), id);
     }
     alert(`Successfully flashed SOULZ config to ${selectedIds.length} devices.`);
   };
@@ -121,9 +121,9 @@ export default function Sk8LytzProgrammerModal({ visible, onClose, allDevices, w
                 <Text style={[styles.flashBtnText, { color: '#00f0ff', opacity: selectedIds.length === 0 ? 0.4 : 1 }]}>
                   FLASH HALOZ ({halozConfig.points} Pts)
                 </Text>
-+               <Text style={{ color: '#00f0ff', fontSize: 9, opacity: selectedIds.length === 0 ? 0.3 : 0.6, marginTop: 4 }}>
-+                 {halozConfig.colorOrder} • {halozConfig.stripType}
-+               </Text>
+                <Text style={{ color: '#00f0ff', fontSize: 9, opacity: selectedIds.length === 0 ? 0.3 : 0.6, marginTop: 4 }}>
+                  {halozConfig.segments} Seg • {halozConfig.colorOrder} • {halozConfig.stripType}
+                </Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -138,9 +138,9 @@ export default function Sk8LytzProgrammerModal({ visible, onClose, allDevices, w
                 <Text style={[styles.flashBtnText, { color: Colors.secondary, opacity: selectedIds.length === 0 ? 0.4 : 1 }]}>
                   FLASH SOULZ ({soulzConfig.points} Pts)
                 </Text>
-+               <Text style={{ color: Colors.secondary, fontSize: 9, opacity: selectedIds.length === 0 ? 0.3 : 0.6, marginTop: 4 }}>
-+                 {soulzConfig.colorOrder} • {soulzConfig.stripType}
-+               </Text>
+                <Text style={{ color: Colors.secondary, fontSize: 9, opacity: selectedIds.length === 0 ? 0.3 : 0.6, marginTop: 4 }}>
+                  {soulzConfig.segments} Seg • {soulzConfig.colorOrder} • {soulzConfig.stripType}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -200,10 +200,19 @@ export default function Sk8LytzProgrammerModal({ visible, onClose, allDevices, w
               <Text style={{ color: textMuted, fontSize: 13, marginBottom: 8, fontWeight: 'bold' }}>PIXEL COUNT</Text>
               <TextInput
                 style={{ backgroundColor: bg, borderColor, borderWidth: 1, borderRadius: 8, padding: 12, color: textPrimary, fontSize: 16, marginBottom: 16, textAlign: 'center' }}
-                value={String(tempConfig.points)}
+                value={String(tempConfig.points || 0)}
                 onChangeText={(t) => setTempConfig({ ...tempConfig, points: parseInt(t.replace(/[^0-9]/g, '')) || 0 })}
                 keyboardType="number-pad"
                 maxLength={4}
+              />
+
+              <Text style={{ color: textMuted, fontSize: 13, marginBottom: 8, fontWeight: 'bold' }}>SEGMENT COUNT</Text>
+              <TextInput
+                style={{ backgroundColor: bg, borderColor, borderWidth: 1, borderRadius: 8, padding: 12, color: textPrimary, fontSize: 16, marginBottom: 16, textAlign: 'center' }}
+                value={String(tempConfig.segments || 1)}
+                onChangeText={(t) => setTempConfig({ ...tempConfig, segments: parseInt(t.replace(/[^0-9]/g, '')) || 1 })}
+                keyboardType="number-pad"
+                maxLength={2}
               />
 
               <Text style={{ color: textMuted, fontSize: 13, marginBottom: 8, fontWeight: 'bold' }}>COLOR ORDER</Text>

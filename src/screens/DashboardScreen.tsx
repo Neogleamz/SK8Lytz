@@ -903,6 +903,15 @@ export default function DashboardScreen() {
 
               {isTestModeActive && (
                 <View style={{ marginTop: 12, paddingHorizontal: 12, height: Dimensions.get('window').height - (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) - 120 }}>
+                  <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 4}}>
+                     <Text style={[Typography.title, { color: Colors.primary }]}>Hardware Test Matrix</Text>
+                     <TouchableOpacity 
+                         style={{backgroundColor: 'rgba(255, 60, 60, 0.15)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255, 60, 60, 0.4)'}} 
+                         onPress={() => setIsTestModeActive(false)}
+                     >
+                         <Text style={{color: '#FF8888', fontSize: 10, fontWeight: 'bold', letterSpacing: 1}}>EXIT TESTER</Text>
+                     </TouchableOpacity>
+                  </View>
                   <HardwareTestController
                     writeToDevice={writeToDevice}
                     device={displayConnectedDevices[0]} 
