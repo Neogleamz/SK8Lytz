@@ -949,7 +949,10 @@ export default function DashboardScreen() {
                      <Text style={[Typography.title, { color: Colors.primary }]}>Hardware Test Matrix</Text>
                      <TouchableOpacity 
                          style={{backgroundColor: 'rgba(255, 60, 60, 0.15)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255, 60, 60, 0.4)'}} 
-                         onPress={() => setIsTestModeActive(false)}
+                         onPress={() => {
+                           setIsTestModeActive(false);
+                           setLogsVisible(true);
+                         }}
                      >
                          <Text style={{color: '#FF8888', fontSize: 10, fontWeight: 'bold', letterSpacing: 1}}>EXIT TESTER</Text>
                      </TouchableOpacity>
