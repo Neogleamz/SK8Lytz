@@ -1252,6 +1252,8 @@ export default function DashboardScreen() {
             setLogsVisible(false);
             setIsProgrammerVisible(true);
         }}
+        writeToDevice={writeToDevice}
+        liveRxPayload={lastRawNotification}
       />
       <Sk8LytzProgrammerModal 
         visible={isProgrammerVisible} 

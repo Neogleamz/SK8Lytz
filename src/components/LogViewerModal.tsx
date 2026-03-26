@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView,
-  Share, Alert, FlatList, Platform, SafeAreaView
+  Share, Alert, FlatList, Platform, SafeAreaView, TextInput
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
@@ -9,7 +9,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger, LogEntry, EventType } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
 
-type Tab = 'timeline' | 'devices' | 'stats' | 'admin';
+type Tab = 'timeline' | 'devices' | 'stats' | 'admin' | 'sniffer';
 
 const EVENT_META: Record<EventType, { icon: string; color: string; label: string }> = {
   APP_OPENED:         { icon: 'cellphone-check', color: '#00f0ff', label: 'App Opened' },
@@ -65,14 +65,42 @@ interface LogViewerModalProps {
   onClose: () => void;
   onOpenTester?: () => void;
   onOpenProgrammer?: () => void;
+  writeToDevice?: (data: number[]) => Promise<void>;
+  liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
 }
 
-export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenProgrammer }: LogViewerModalProps) {
+export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenProgrammer, writeToDevice, liveRxPayload }: LogViewerModalProps) {
   const { Colors, isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
+  
+  // Realtime Sniffer States
+  const [snifferLogs, setSnifferLogs] = useState<{dir: 'TX' | 'RX', hex: string, t: number}[]>([]);
+  const [snifferInput, setSnifferInput] = useState('');
+
+  useEffect(() => {
+    if (visible && liveRxPayload && liveRxPayload.payloadHex) {
+      setSnifferLogs(prev => {
+        // Prevent duplicate spam if reference doesn't change
+        if (prev.length > 0 && prev[0].hex === liveRxPayload.payloadHex && (Date.now() - prev[0].t < 50)) return prev;
+        return [{ dir: 'RX', hex: liveRxPayload.payloadHex, t: liveRxPayload.timestamp || Date.now() }, ...prev];
+      });
+    }
+  }, [liveRxPayload, visible]);
+
+  const handleSendSniffer = async (hexStr: string) => {
+    if (!writeToDevice) return;
+    try {
+      const bytes = hexStr.replace(/[^0-9A-Fa-f]/g, '').match(/.{1,2}/g)?.map(b => parseInt(b, 16)) || [];
+      if (bytes.length === 0) return;
+      await writeToDevice(bytes);
+      setSnifferLogs(prev => [{ dir: 'TX', hex: bytes.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '), t: Date.now() }, ...prev]);
+    } catch (e) {
+      console.warn("Sniffer TX Error", e);
+    }
+  };
 
   const load = useCallback(async () => {
     const l = await AppLogger.getLogs();
@@ -327,6 +355,67 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
     </ScrollView>
   );
 
+  const renderSnifferTab = () => (
+    <View style={{ flex: 1, padding: 16 }}>
+      <Text style={{ color: textPrimary, fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>💉 Protocol Sniffer</Text>
+      <Text style={{ color: textMuted, fontSize: 12, marginBottom: 16 }}>Manually inject bleeding-edge hexadecimal arrays bridging directly against standard BLE GATT pipes verifying absolute hardware responses locally.</Text>
+      
+      {/* Probe Dictionary */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 16, flexGrow: 0 }}>
+        {[
+          { label: '0x81 Sync', hex: '81 8A 8B 96' },
+          { label: '0x10 Ping', hex: '10 00 00 10' },
+          { label: '0x2B RConfig', hex: '2B 2C 2D 00' },
+          { label: '0x32 Boot', hex: '32 3A 3B 0F' },
+          { label: '0x63 IC Probe', hex: '63 14 00 00' }
+        ].map((probe) => (
+          <TouchableOpacity 
+            key={probe.label} 
+            onPress={() => handleSendSniffer(probe.hex)}
+            style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: '#00f0ff', borderWidth: 1, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginRight: 8, height: 36 }}
+          >
+            <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 13 }}>{probe.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* Custom Command Input */}
+      <View style={{ flexDirection: 'row', marginBottom: 16 }}>
+        <TextInput
+           style={{ flex: 1, backgroundColor: cardBg, color: textPrimary, borderColor, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, height: 44, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}
+           placeholder="ex: 81 8A 8B 96"
+           placeholderTextColor={textMuted}
+           value={snifferInput}
+           onChangeText={setSnifferInput}
+           autoCapitalize="none"
+        />
+        <TouchableOpacity 
+           style={{ backgroundColor: '#00AEEF', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16, borderRadius: 8, marginLeft: 8 }}
+           onPress={() => handleSendSniffer(snifferInput)}
+        >
+           <Text style={{ color: '#000', fontWeight: 'bold' }}>TX</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Terminal View */}
+      <View style={{ flex: 1, backgroundColor: '#000', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#333' }}>
+         <FlatList 
+            data={snifferLogs}
+            inverted
+            keyExtractor={(_, i) => String(i)}
+            ListEmptyComponent={<Text style={{ color: '#555', fontFamily: 'monospace', fontSize: 12 }}>Waiting for BLE traffic...</Text>}
+            renderItem={({ item }) => (
+              <View style={{ flexDirection: 'row', marginBottom: 6, opacity: Date.now() - item.t > 15000 ? 0.6 : 1 }}>
+                <Text style={{ color: item.dir === 'TX' ? '#FFD700' : '#00ff80', width: 28, fontWeight: 'bold', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 12 }}>{item.dir}</Text>
+                <Text style={{ color: '#9ca3af', width: 70, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11, marginTop: 1 }}>{formatTime(item.t).split(' ')[2]}</Text>
+                <Text style={{ color: '#FFF', flex: 1, flexWrap: 'wrap', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 12 }}>{item.hex}</Text>
+              </View>
+            )}
+         />
+      </View>
+    </View>
+  );
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
@@ -351,7 +440,7 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
 
         {/* Tabs */}
         <View style={[styles.tabs, { borderBottomColor: borderColor }]}>
-          {(['timeline', 'devices', 'stats', 'admin'] as Tab[]).map(t => (
+          {(['timeline', 'devices', 'stats', 'admin', 'sniffer'] as Tab[]).map(t => (
             <TouchableOpacity
               key={t}
               onPress={() => setTab(t)}
@@ -378,6 +467,7 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
         {tab === 'devices' && renderDeviceTab()}
         {tab === 'stats' && renderStatsTab()}
         {tab === 'admin' && renderAdminTab()}
+        {tab === 'sniffer' && renderSnifferTab()}
       </SafeAreaView>
     </Modal>
   );
