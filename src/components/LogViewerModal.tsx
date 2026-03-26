@@ -26,6 +26,9 @@ const EVENT_META: Record<EventType, { icon: string; color: string; label: string
   BRIGHTNESS_CHANGED: { icon: 'brightness-5',   color: '#AAFFAA', label: 'Brightness' },
   SPEED_CHANGED:      { icon: 'speedometer',     color: '#AADDFF', label: 'Speed' },
   HARDWARE_CONFIG_CHANGED: { icon: 'memory',     color: '#00E676', label: 'Hardware Settings' },
+  PROTOCOL_ERROR:          { icon: 'alert-circle', color: '#ff4040', label: 'Protocol Fault' },
+  BLE_WRITE_ERROR:         { icon: 'bluetooth-audio', color: '#ff4040', label: 'TX Error' },
+  BLE_CONNECTION_ERROR:    { icon: 'bluetooth-off', color: '#ff4040', label: 'Connection Fault' },
 };
 
 function formatTime(ms: number): string {
@@ -45,6 +48,9 @@ function payloadSummary(entry: LogEntry): string {
     case 'BRIGHTNESS_CHANGED':return `${d.value}%`;
     case 'SPEED_CHANGED':     return `${d.value}%`;
     case 'HARDWARE_CONFIG_CHANGED': return `${d.name || d.id}: ${d.points} LEDs (${d.segments || 1} seg), ${d.stripType}, ${d.sorting}`;
+    case 'PROTOCOL_ERROR':    return `[${d.context}] ${d.error}${d.deviceId ? ` on ${d.deviceId}` : ''}`;
+    case 'BLE_WRITE_ERROR':   return `TX Failed: ${d.error}${d.target ? ` on ${d.target}` : ''}`;
+    case 'BLE_CONNECTION_ERROR': return `${d.error}${d.deviceId ? ` (ID: ${d.deviceId})` : ''}`;
     case 'SCAN_FILTER_MATCH':
       return `${d.name} (${d.id}) RSSI: ${d.rssi} [${d.isSymphony ? 'SPI' : ''}${d.isKnownPrefix ? ' PREFIX' : ''}${d.hasZenggeService ? ' UUID' : ''}]`;
     case 'SCAN_FILTER_REJECT':

@@ -47,6 +47,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const handleNotification = (error: any, characteristic: any, deviceId: string) => {
     if (error) {
       console.warn('Notification Error', error);
+      AppLogger.log('PROTOCOL_ERROR', { error: error?.message || String(error), deviceId, context: 'notification' });
       return;
     }
     if (characteristic?.value) {
@@ -60,8 +61,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
           const payload = data.slice(8);
           if (dataReceivedCallback) dataReceivedCallback(deviceId, payload);
         }
-      } catch (e) {
+      } catch (e: any) {
         console.error('Failed to parse notification', e);
+        AppLogger.log('PROTOCOL_ERROR', { error: e?.message || String(e), deviceId, context: 'parse' });
       }
     }
   };
@@ -250,8 +252,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
       setIsScanning(false);
       
       return firmware;
-    } catch (e) {
+    } catch (e: any) {
       console.error('FAILED TO CONNECT', e);
+      AppLogger.log('BLE_CONNECTION_ERROR', { error: e?.message || String(e), deviceId: device.id });
     }
   };
 
@@ -296,8 +299,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
       bleManager.stopDeviceScan();
       setIsScanning(false);
-    } catch (e) {
+    } catch (e: any) {
       console.error('FAILED TO CONNECT TO GROUP', e);
+      AppLogger.log('BLE_CONNECTION_ERROR', { error: e?.message || String(e), context: 'group' });
     }
   };
 
@@ -326,8 +330,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
           base64Payload
         )
       ));
-    } catch (e) {
+    } catch (e: any) {
       console.warn('Write failed', e);
+      AppLogger.log('BLE_WRITE_ERROR', { error: e?.message || String(e), target: targetDeviceId, payloadHex: payload.map(x => x.toString(16).padStart(2, '0')).join(' ') });
     }
   };
 

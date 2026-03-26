@@ -243,7 +243,8 @@ export class ZenggeProtocol {
    * Parse Hardware Configuration Response
    */
   static parseHardwareConfig(payload: number[]) {
-    if (payload[0] !== 0x10 || payload.length < 9) return null;
+    // Legacy responses may be shorter than standard 10-byte bounds
+    if (payload[0] !== 0x10 || payload.length < 7) return null;
     
     const points = (payload[2] << 8) | payload[3];
     const orderBytes = ['UNK', 'RGB', 'RBG', 'GRB', 'GBR', 'BRG', 'BGR'];
@@ -252,7 +253,10 @@ export class ZenggeProtocol {
     const icBytes: Record<number, string> = { 1: 'SM16703', 2: 'WS2811', 3: 'WS2812B', 4: 'SK6812' };
     const stripType = icBytes[payload[5]] || 'WS2812B';
     
-    const segments = (payload[6] << 8) | payload[7];
+    let segments = 1;
+    if (payload.length > 8) {
+      segments = (payload[6] << 8) | payload[7];
+    }
 
     return { points, sorting, stripType, segments };
   }

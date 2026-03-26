@@ -24,7 +24,10 @@ export type EventType =
   | 'COLOR_CHANGED'
   | 'BRIGHTNESS_CHANGED'
   | 'SPEED_CHANGED'
-  | 'HARDWARE_CONFIG_CHANGED';
+  | 'HARDWARE_CONFIG_CHANGED'
+  | 'PROTOCOL_ERROR'
+  | 'BLE_WRITE_ERROR'
+  | 'BLE_CONNECTION_ERROR';
 
 export interface LogEntry {
   t: number;        // timestamp ms

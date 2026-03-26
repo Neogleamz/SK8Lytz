@@ -44,7 +44,8 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
       const payload = ZenggeProtocol.setHardwareConfig(
         settings.points,
         settings.sorting,
-        settings.stripType
+        settings.stripType,
+        settings.segments
       );
       writeToDevice(payload);
     }
