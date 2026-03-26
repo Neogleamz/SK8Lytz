@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar, Dimensions, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar, Dimensions, Modal, TextInput, BackHandler } from 'react-native';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import DeviceItem from '../components/DeviceItem';
@@ -59,6 +59,7 @@ export default function DashboardScreen() {
   const [mockConnectedGroup, setMockConnectedGroup] = useState<string | null>(null);
   const [updateTrigger, setUpdateTrigger] = useState(0);
   const [isTestModeActive, setIsTestModeActive] = useState(false);
+  const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
 
   const [customGroups, setCustomGroups] = useState<any[]>([]);
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
@@ -76,6 +77,30 @@ export default function DashboardScreen() {
   // Refs are now updated manually  const [isProvisioning, setIsProvisioning] = useState(false);
   const [demoHaloQueued, setDemoHaloQueued] = useState(false);
   const [demoSoulQueued, setDemoSoulQueued] = useState(false);
+
+  // Bind BLE Notification Hardware Sync Hook
+  useEffect(() => {
+    setOnDataReceived((deviceId: string, payload: number[]) => {
+      setLastRawNotification({ deviceId, payloadHex: payload.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ') });
+      const config = ZenggeProtocol.parseHardwareConfig(payload);
+      if (config) {
+        console.log('[Dashboard] Intercepted Hardware Sync:', config);
+        setAllDevices(prev => prev.map(d => {
+          if (d.id === deviceId) {
+            const newD = { ...d, points: config.points, sorting: config.sorting, stripType: config.stripType, segments: config.segments } as any as typeof d;
+            // Mirror securely directly to persistent memory
+            AsyncStorage.getItem('ng_device_configs').then(str => {
+               const p = JSON.parse(str || '{}');
+               p[deviceId] = { ...p[deviceId], ...newD };
+               AsyncStorage.setItem('ng_device_configs', JSON.stringify(p));
+            }).catch(()=>{});
+            return newD;
+          }
+          return d;
+        }));
+      }
+    });
+  }, [setOnDataReceived, setAllDevices]);
 
   // Analytics hidden trigger
   const [logsVisible, setLogsVisible] = useState(false);
@@ -422,14 +447,31 @@ export default function DashboardScreen() {
   const isActuallyConnected = displayConnectedDevices.length > 0;
   const isGrouped = displayConnectedDevices.length > 1 && displayConnectedDevices.every(d => (d as any).grouped);
 
-  const handleDisconnect = () => {
+  const handleDisconnect = useCallback(() => {
     if (IS_BROWSER_DEMO) {
       setMockConnected(false);
       setMockConnectedDevice(null);
       setMockConnectedGroup(null);
     }
     disconnectFromDevice();
-  };
+  }, [IS_BROWSER_DEMO, disconnectFromDevice]);
+
+  useEffect(() => {
+    const handleBackPress = () => {
+      if (isTestModeActive) {
+        setIsTestModeActive(false);
+        return true; // intercept
+      }
+      if (isActuallyConnected) {
+        handleDisconnect();
+        return true; // intercept and exit to scanner
+      }
+      return false; // allow native exit
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+    return () => backHandler.remove();
+  }, [isTestModeActive, isActuallyConnected, handleDisconnect]);
 
   const handleGlobalPowerToggle = (deviceIds: string[], forceState?: boolean) => {
     // If forceState is provided, use it, else default to toggling based on first device's state
@@ -927,6 +969,7 @@ export default function DashboardScreen() {
                     }}
                     handleDisconnect={handleDisconnect}
                     isActuallyConnected={isActuallyConnected}
+                    lastRawNotification={lastRawNotification}
                   />
                 </View>
               )}

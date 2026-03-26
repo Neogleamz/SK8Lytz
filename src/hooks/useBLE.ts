@@ -337,11 +337,17 @@ export default function useBLE(): BluetoothLowEnergyApi {
   };
 
   const disconnectFromDevice = () => {
-    if (connectedDevices.length > 0) {
-      if (Platform.OS !== 'web') {
-        connectedDevices.forEach(device => bleManager.cancelDeviceConnection(device.id));
-      }
-      setConnectedDevices([]);
+    const staleDevices = [...connectedDevices];
+    setConnectedDevices([]);
+
+    if (staleDevices.length > 0 && Platform.OS !== 'web') {
+      staleDevices.forEach(device => {
+        try {
+          bleManager.cancelDeviceConnection(device.id).catch((e: any) => console.warn('Disconnect soft fail', e));
+        } catch (e: any) {
+          console.error('Fatal disconnect fault', e);
+        }
+      });
     }
   };
 

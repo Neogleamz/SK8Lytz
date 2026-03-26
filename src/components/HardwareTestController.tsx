@@ -17,6 +17,7 @@ interface HardwareTestControllerProps {
   connectToDevice?: (item: any) => Promise<void>;
   handleDisconnect?: () => void;
   isActuallyConnected?: boolean;
+  lastRawNotification?: {deviceId: string, payloadHex: string} | null;
 }
 
 const SettingWithExplanation = ({ title, description, children, Colors }: { title: string, description: string, children: React.ReactNode, Colors: any }) => {
@@ -45,7 +46,8 @@ export default function HardwareTestController({
   handleScan,
   connectToDevice,
   handleDisconnect,
-  isActuallyConnected = false
+  isActuallyConnected = false,
+  lastRawNotification
 }: HardwareTestControllerProps) {
   const { Colors, isDark } = useTheme();
 
@@ -397,6 +399,13 @@ export default function HardwareTestController({
           >
             <Text style={{ color: '#FFF', fontWeight: 'bold' }}>QUERY PHYSICAL HARDWARE SETTINGS (0x10)</Text>
           </TouchableOpacity>
+
+          {lastRawNotification && lastRawNotification.deviceId === (device?.id) && (
+             <View style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', padding: 8, borderRadius: 6, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.3)' }}>
+               <Text style={{ color: '#00f0ff', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>LATEST HARDWARE RESPONSE:</Text>
+               <Text style={{ color: '#FFF', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 13 }}>{lastRawNotification.payloadHex}</Text>
+             </View>
+          )}
 
           <TouchableOpacity onPress={pushHardwareConfig} style={{ backgroundColor: Colors.error, padding: 12, borderRadius: 8, alignItems: 'center' }}>
             <Text style={{ color: '#FFF', fontWeight: 'bold' }}>OVERWRITE HARDWARE CONFIG (0x81)</Text>
