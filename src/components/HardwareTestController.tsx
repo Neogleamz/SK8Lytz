@@ -372,6 +372,17 @@ export default function HardwareTestController({
             </ScrollView>
           </SettingWithExplanation>
 
+          <TouchableOpacity 
+            onPress={() => {
+              if (writeToDevice) {
+                writeToDevice(ZenggeProtocol.queryHardwareConfig());
+              }
+            }} 
+            style={{ backgroundColor: '#00AEEF', padding: 12, borderRadius: 8, alignItems: 'center', marginBottom: 8 }}
+          >
+            <Text style={{ color: '#FFF', fontWeight: 'bold' }}>QUERY PHYSICAL HARDWARE SETTINGS (0x10)</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity onPress={pushHardwareConfig} style={{ backgroundColor: Colors.error, padding: 12, borderRadius: 8, alignItems: 'center' }}>
             <Text style={{ color: '#FFF', fontWeight: 'bold' }}>OVERWRITE HARDWARE CONFIG (0x81)</Text>
           </TouchableOpacity>
