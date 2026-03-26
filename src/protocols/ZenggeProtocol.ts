@@ -46,15 +46,6 @@ export class ZenggeProtocol {
   }
 
   /**
-   * Basic RGB Solid Color (0x31) - Legacy Unstable Fallback
-   */
-  static setLegacyColor0x31(r: number, g: number, b: number): number[] {
-    const cmd = [0x31, r, g, b, 0x00, 0x00, 0x0f];
-    const checksum = this.calculateChecksum(cmd);
-    return this.wrapCommand([...cmd, checksum]);
-  }
-
-  /**
    * Symphony Static Color (0x41)
    * Specifically for addressable SPI controllers to set a solid color on all pixels.
    */
@@ -168,15 +159,6 @@ export class ZenggeProtocol {
     payload[290] = this.calculateChecksum(payload.slice(0, 290));
 
     return this.wrapCommand(payload);
-  }
-
-  /**
-   * Legacy Pattern Command (0x25)
-   */
-  static setLegacyPattern(mode: number, speed: number): number[] {
-    const cmd = [0x25, mode, speed];
-    const checksum = this.calculateChecksum(cmd);
-    return this.wrapCommand([...cmd, checksum]);
   }
 
   /**

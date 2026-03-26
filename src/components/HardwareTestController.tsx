@@ -71,7 +71,7 @@ export default function HardwareTestController({
   }, [device]);
   
   // Builder State
-  const [protocol, setProtocol] = useState<'0x59' | '0x51' | '0x42' | '0x31' | '0x25' | '0x73' | '0x71' | '0x2A' | 'CAMERA'>('0x59');
+  const [protocol, setProtocol] = useState<'0x59' | '0x51' | '0x42' | '0x73' | '0x71' | '0x2A' | 'CAMERA'>('0x59');
   const [r, setR] = useState(255);
   const [g, setG] = useState(0);
   const [b, setB] = useState(0);
@@ -81,7 +81,6 @@ export default function HardwareTestController({
   const [segmentDirection, setSegmentDirection] = useState<number>(1);
   const [brightness, setBrightness] = useState(100);
   const [rbmPattern, setRbmPattern] = useState<number>(1);
-  const [legacyPattern, setLegacyPattern] = useState<number>(1);
   
   // Music Mode Sync State (0x73)
   const [isDeviceMic, setIsDeviceMic] = useState<number>(1);
@@ -143,8 +142,6 @@ export default function HardwareTestController({
         { mode: transitionType === 0 ? 1 : transitionType, speed: speed, color1: color, color2: bg },
         { mode: transitionType === 0 ? 1 : transitionType, speed: speed, color1: bg, color2: color }
       ]);
-    } else if (protocol === '0x31') {
-      payload = ZenggeProtocol.setLegacyColor0x31(color.r, color.g, color.b);
     } else if (protocol === 'CAMERA') {
       payload = ZenggeProtocol.setColor(color.r, color.g, color.b);
     } else if (protocol === '0x73') {
@@ -152,8 +149,6 @@ export default function HardwareTestController({
       payload = ZenggeProtocol.setMusicConfig(isDeviceMic === 1, musicModeType, musicPatternId, color, c2, musicSensitivity, brightness);
     } else if (protocol === '0x42') {
       payload = ZenggeProtocol.setRbmMode(rbmPattern, speed, brightness);
-    } else if (protocol === '0x25') {
-      payload = ZenggeProtocol.setLegacyPattern(legacyPattern, speed);
     } else if (protocol === '0x2A') {
       payload = ZenggeProtocol.setRfRemoteState(rfAuthMode);
     } else if (protocol === '0x71') {
@@ -231,7 +226,7 @@ export default function HardwareTestController({
     });
     setAnnotatedPayload(annotations);
 
-  }, [protocol, r, g, b, r2, g2, b2, speed, length, transitionType, brightness, segmentDirection, rbmPattern, legacyPattern, isDeviceMic, musicModeType, musicPatternId, musicSensitivity, isManualOverride]);
+  }, [protocol, r, g, b, r2, g2, b2, speed, length, transitionType, brightness, segmentDirection, rbmPattern, isDeviceMic, musicModeType, musicPatternId, musicSensitivity, isManualOverride]);
 
   const handleSend = () => {
     if (!writeToDevice) return;
@@ -426,7 +421,7 @@ export default function HardwareTestController({
 
       <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 12 }]}>Protocol Selector</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-        {['0x59', '0x51', '0x42', '0x25', '0x31', '0x73', '0x71', '0x2A', 'CAMERA'].map(p => (
+        {['0x59', '0x51', '0x42', '0x73', '0x71', '0x2A', 'CAMERA'].map(p => (
           <TouchableOpacity 
             key={p} 
             onPress={() => setProtocol(p as any)}
@@ -488,17 +483,8 @@ export default function HardwareTestController({
       {protocol === '0x42' && (
         <View style={{ gap: 16, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
           <Text style={[Typography.title, { color: '#00FF44', fontSize: 16 }]}>0x42 Fixed ROM Pattern</Text>
-          <SettingWithExplanation title={`RBM Pattern ID (${rbmPattern})`} description="Triggers a hardcoded light pattern baked directly into the Symphony controller's physical ROM footprint. These 210 patterns operate completely natively and bypass software arrays." Colors={Colors}>
-             <CustomSlider value={rbmPattern} minimumValue={1} maximumValue={210} onValueChange={setRbmPattern} />
-          </SettingWithExplanation>
-        </View>
-      )}
-
-      {protocol === '0x25' && (
-        <View style={{ gap: 16, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
-          <Text style={[Typography.title, { color: '#FF00FF', fontSize: 16 }]}>0x25 Legacy ROM Pattern</Text>
-          <SettingWithExplanation title={`Legacy Pattern ID (${legacyPattern})`} description="Older command protocol for fixed ROM patterns. Useful for older controller compatibility." Colors={Colors}>
-             <CustomSlider value={legacyPattern} minimumValue={1} maximumValue={300} onValueChange={setLegacyPattern} />
+          <SettingWithExplanation title={`RBM Pattern ID (${rbmPattern})`} description="Triggers a hardcoded light pattern baked directly into the Symphony controller's physical ROM footprint. Due to hardware constraints, native RBM patterns above 102 are entirely non-functional." Colors={Colors}>
+             <CustomSlider value={rbmPattern} minimumValue={1} maximumValue={102} onValueChange={setRbmPattern} />
           </SettingWithExplanation>
         </View>
       )}
