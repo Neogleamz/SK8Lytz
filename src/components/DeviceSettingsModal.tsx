@@ -13,6 +13,7 @@ interface DeviceSettings {
   grouped: boolean;
   groupId?: string;
   groupName?: string;
+  firmware?: string;
 }
 
 interface DeviceSettingsModalProps {
@@ -190,7 +191,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
                     placeholderTextColor={Colors.textMuted}
                   />
                   {settings.groupId && (
-                    <TouchableOpacity onPress={() => setSettings({...settings, groupId: undefined, groupName: 'My Roller Skates'})} style={{ marginTop: 8 }}>
+                    <TouchableOpacity onPress={() => setSettings({...settings, groupId: undefined, groupName: 'My SK8Lytz'})} style={{ marginTop: 8 }}>
                        <Text style={{ color: Colors.primary, fontSize: 12 }}>+ Deselect/Create New</Text>
                     </TouchableOpacity>
                   )}
@@ -262,6 +263,15 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
                   </TouchableOpacity>
                 ))}
               </View>
+            </View>
+
+            <View style={[styles.inputGroup, { marginTop: 16 }]}>
+              <Text style={styles.label}>Firmware Version</Text>
+              <TextInput 
+                style={[styles.input, { color: Colors.textMuted, backgroundColor: 'rgba(255,255,255,0.02)' }]}
+                value={settings.firmware || 'Unknown'}
+                editable={false}
+              />
             </View>
           </ScrollView>
 

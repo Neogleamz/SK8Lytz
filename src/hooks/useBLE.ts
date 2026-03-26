@@ -17,7 +17,7 @@ if (Platform.OS !== 'web') {
 interface BluetoothLowEnergyApi {
   requestPermissions(): Promise<boolean>;
   scanForPeripherals(): void;
-  connectToDevice: (device: Device) => Promise<void>;
+  connectToDevice: (device: Device) => Promise<string | undefined>;
   connectToDevices: (devices: Device[]) => Promise<void>;
   disconnectFromDevice: () => void;
   writeToDevice: (payload: number[], targetDeviceId?: string) => Promise<void>;
@@ -211,12 +211,12 @@ export default function useBLE(): BluetoothLowEnergyApi {
     }, 5000);
   };
 
-  const connectToDevice = async (device: Device) => {
+  const connectToDevice = async (device: Device): Promise<string | undefined> => {
     try {
       if (Platform.OS === 'web') {
         setConnectedDevices([device]);
         AppLogger.log('DEVICE_CONNECTED', { id: device.id, name: device.name, firmware: 'v2.0.1.DEMO' });
-        return;
+        return 'v2.0.1.DEMO';
       }
       const deviceConnection = await bleManager.connectToDevice(device.id);
       setConnectedDevices([deviceConnection]);
@@ -248,6 +248,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
       bleManager.stopDeviceScan();
       setIsScanning(false);
+      
+      return firmware;
     } catch (e) {
       console.error('FAILED TO CONNECT', e);
     }

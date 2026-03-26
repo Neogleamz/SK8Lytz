@@ -57,7 +57,9 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
 
   // HALOZ actual hardware is composed of two segments making a ring of 16 LEDs.
   // SOULZ visualizer uses the pointsPerSide * 2 logic to visually double the strip.
-  const numLeds = isHaloz ? (device.points || fallbackPoints || 16) : ((device.points || fallbackPoints || 43) * 2);
+  const devicePoints = device?.points || fallbackPoints || (isHaloz ? 16 : 43);
+  const deviceSegments = device?.segments || 1;
+  const numLeds = isHaloz ? Math.floor(devicePoints / deviceSegments) : Math.floor(devicePoints / deviceSegments) * 2;
 
   const leds = useMemo(() => {
     const list = [];
@@ -439,6 +441,20 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
   let simAudioMag = audioMagnitude;
   let simMultiColors: string[] = [];
 
+  const activeDevice = devices && devices.length > 0 ? devices[0] : null; 
+  const hwSorting = (activeDevice as any)?.sorting || 'GRB';
+
+  const applySorting = (rBytes: number, gBytes: number, bBytes: number) => {
+      const order = hwSorting.toUpperCase();
+      let shiftR = rBytes, shiftG = gBytes, shiftB = bBytes;
+      if (order === 'GRB') { shiftR = gBytes; shiftG = rBytes; shiftB = bBytes; }
+      else if (order === 'GBR') { shiftR = bBytes; shiftG = rBytes; shiftB = gBytes; }
+      else if (order === 'BRG') { shiftR = gBytes; shiftG = bBytes; shiftB = rBytes; }
+      else if (order === 'BGR') { shiftR = bBytes; shiftG = gBytes; shiftB = rBytes; }
+      else if (order === 'RBG') { shiftR = rBytes; shiftG = bBytes; shiftB = gBytes; }
+      return { r: shiftR, g: shiftG, b: shiftB };
+  };
+
   if (rawHexPayload && rawHexPayload.length > 5 && isPoweredOn) {
       let payloadOffset = 0;
       let op = rawHexPayload[0];
@@ -453,15 +469,16 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
           simMode = 'FIXED';
           simPatternId = 1;
           const colors = [];
-          for (let i = 5 + payloadOffset; i < rawHexPayload.length - 2; i += 3) {
-             const r = rawHexPayload[i] || 0;
-             const g = rawHexPayload[i+1] || 0;
-             const b = rawHexPayload[i+2] || 0;
+          for (let i = 3 + payloadOffset; i < rawHexPayload.length - 6; i += 3) {
+             const rRaw = rawHexPayload[i] || 0;
+             const gRaw = rawHexPayload[i+1] || 0;
+             const bRaw = rawHexPayload[i+2] || 0;
+             const { r, g, b } = applySorting(rRaw, gRaw, bRaw);
              colors.push(`#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`);
           }
           simMultiColors = colors;
           simColor = colors[0] || color;
-          simSpeed = rawHexPayload[3 + payloadOffset] || speed;
+          simSpeed = rawHexPayload[rawHexPayload.length - 3] || speed;
       } else if (op === 0x42) {
           simMode = 'RBM';
           simPatternId = rawHexPayload[1 + payloadOffset] || patternId;
@@ -473,13 +490,15 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
           simAudioMag = audioMagnitude; 
           simSpeed = rawHexPayload[11 + payloadOffset] || speed;
           simBrightness = rawHexPayload[12 + payloadOffset] || brightness;
-          const r1 = rawHexPayload[4 + payloadOffset]||0, g1 = rawHexPayload[5 + payloadOffset]||0, b1 = rawHexPayload[6 + payloadOffset]||0;
-          simColor = `#${r1.toString(16).padStart(2,'0')}${g1.toString(16).padStart(2,'0')}${b1.toString(16).padStart(2,'0')}`;
+          const rRaw = rawHexPayload[4 + payloadOffset]||0, gRaw = rawHexPayload[5 + payloadOffset]||0, bRaw = rawHexPayload[6 + payloadOffset]||0;
+          const { r, g, b } = applySorting(rRaw, gRaw, bRaw);
+          simColor = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
       } else if (op === 0x39 && rawHexPayload[1 + payloadOffset] === 0xD1) {
           simMode = 'CANDLE';
           simPatternId = 1;
-          const r1 = rawHexPayload[2 + payloadOffset]||0, g1 = rawHexPayload[3 + payloadOffset]||0, b1 = rawHexPayload[4 + payloadOffset]||0;
-          simColor = `#${r1.toString(16).padStart(2,'0')}${g1.toString(16).padStart(2,'0')}${b1.toString(16).padStart(2,'0')}`;
+          const rRaw = rawHexPayload[2 + payloadOffset]||0, gRaw = rawHexPayload[3 + payloadOffset]||0, bRaw = rawHexPayload[4 + payloadOffset]||0;
+          const { r, g, b } = applySorting(rRaw, gRaw, bRaw);
+          simColor = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
           simSpeed = 101 - (rawHexPayload[5 + payloadOffset] || 50); // Protocol inverts speed automatically
           simBrightness = rawHexPayload[6 + payloadOffset] || 100;
           // Candle Amplitude stored at index 7, but random flicker determines UI intensity

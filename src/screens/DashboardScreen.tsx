@@ -50,6 +50,7 @@ export default function DashboardScreen() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [powerStates, setPowerStates] = useState<Record<string, boolean>>({});
+  const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
 
   const IS_BROWSER_DEMO = Platform.OS === 'web';
   const [mockConnected, setMockConnected] = useState(false);
@@ -184,7 +185,7 @@ export default function DashboardScreen() {
                     segments: 1,
                     sorting: 'GRB',
                     stripType: 'WS2812B',
-                    rssi: -42 - Math.floor(Math.random() * 20),
+                    rssi: idx === 1 ? -85 : -42 - Math.floor(Math.random() * 20),
                     serviceUUIDs: [ZENGGE_SERVICE_UUID],
                     manufacturerData: 'AAAAAAAAAAAz'
                   } as any;
@@ -256,6 +257,7 @@ export default function DashboardScreen() {
             if (changed) {
               AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs)).catch(()=>{});
             }
+            setDeviceConfigs(configs);
           } catch(e) { console.warn('JSON parse error configs', e); }
         }
       })
@@ -344,8 +346,8 @@ export default function DashboardScreen() {
       }
     };
 
-    checkAndGroup(soulzDevices, 'SOULZ Roller Skate Lights', 'SOULZ', 43);
-    checkAndGroup(halozDevices, 'HALOZ Roller Skate Lights', 'HALOZ', 16);
+    checkAndGroup(soulzDevices, 'SOULZ SK8Lytz', 'SOULZ', 43);
+    checkAndGroup(halozDevices, 'HALOZ SK8Lytz', 'HALOZ', 16);
 
     const storagePromises = [];
     if (didUpdateProcessed) {
@@ -652,10 +654,14 @@ export default function DashboardScreen() {
     );
   }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive]);
 
-  const renderItem = useCallback(({ item }: { item: any }) => (
+  const renderItem = useCallback(({ item }: { item: any }) => {
+    const cachedConfig = deviceConfigs?.[item.id] || {};
+    const mergedItem = { ...item, ...cachedConfig };
+
+    return (
     <View style={{ paddingHorizontal: Layout.padding }}>
       <DeviceItem
-        device={item}
+        device={mergedItem}
         isConnected={displayConnectedDevices.some(d => d.id === item.id)}
         isSelectionMode={isSelectionMode}
         isSelected={selectedIds.includes(item.id)}
@@ -667,14 +673,28 @@ export default function DashboardScreen() {
           if (item.id.startsWith('sim-')) {
             setMockConnected(true);
             setMockConnectedDevice(item.id);
+            setDeviceConfigs(prev => {
+                const fw = 'v2.0.1.DEMO';
+                const next = { ...prev, [item.id]: { ...(prev?.[item.id] || {}), firmware: fw } };
+                AsyncStorage.setItem('ng_device_configs', JSON.stringify(next)).catch(() => {});
+                return next;
+            });
             return;
           }
-          await connectToDevice(item);
+          const fw = await connectToDevice(item);
+          if (fw) {
+            setDeviceConfigs(prev => {
+                const next = { ...prev, [item.id]: { ...(prev?.[item.id] || {}), firmware: fw } };
+                AsyncStorage.setItem('ng_device_configs', JSON.stringify(next)).catch(() => {});
+                return next;
+            });
+          }
           
-          const configPoints = (item as any).points || (item.name?.toLowerCase().includes('soul') ? 43 : 16);
-          const configSorting = (item as any).sorting || 'GRB';
-          const configStripType = (item as any).stripType || 'WS2812B';
-          writeToDevice(ZenggeProtocol.setHardwareConfig(configPoints, configSorting, configStripType));
+          const configPoints = (mergedItem as any).points || (mergedItem.name?.toLowerCase().includes('soul') ? 43 : 8);
+          const configSorting = (mergedItem as any).sorting || 'GRB';
+          const configStripType = (mergedItem as any).stripType || 'WS2812B';
+          const configSegments = (mergedItem as any).segments || (mergedItem.name?.toLowerCase().includes('soul') ? 1 : 2);
+          writeToDevice(ZenggeProtocol.setHardwareConfig(configPoints, configSorting, configStripType, configSegments));
 
           if (IS_BROWSER_DEMO) {
             setMockConnected(true);
@@ -682,14 +702,15 @@ export default function DashboardScreen() {
           }
         }}
         onLongPress={() => {
-          openSettings(item);
+          openSettings(mergedItem);
         }}
         showGroupIcon={false}
         isPoweredOn={powerStates[item.id] ?? true}
         onPowerToggle={() => handleGlobalPowerToggle([item.id])}
       />
     </View>
-  ), [displayConnectedDevices, isSelectionMode, selectedIds, powerStates]);
+    ); // close return
+  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs]);
 
   const BluetoothWarningBanner = useMemo(() => {
     if (isBluetoothEnabled || Platform.OS === 'web') return null;
@@ -806,7 +827,7 @@ export default function DashboardScreen() {
                               fontSize: 10, 
                               fontWeight: 'bold' 
                             }]}>
-                              PAIRED ({connectedCount})
+                              DISCOVERED ({connectedCount})
                             </Text>
                           </View>
                         );
@@ -900,15 +921,19 @@ export default function DashboardScreen() {
                 <View style={{ marginTop: 20 }}>
                   <Text style={[Typography.title, { marginBottom: 12, paddingHorizontal: 4, color: Colors.primary }]}>Groups</Text>
                   {customGroups.map((group) => {
-                      const foundIds = allDevices.map(d => d.id);
-                      const matched = group.deviceIds.filter((id: string) => foundIds.includes(id));
+                      const matchedDevices = allDevices.filter(d => group.deviceIds.includes(d.id));
+                      const groupRssis = group.deviceIds.map((id: string) => {
+                        const found = allDevices.find(d => d.id === id);
+                        return found ? (found.rssi ?? null) : null;
+                      });
                       
                       return (
                         <DeviceItem
                           key={group.id}
                           device={{
                             ...group,
-                            connectedCount: matched.length
+                            connectedCount: matchedDevices.length,
+                            rssiList: groupRssis
                           }}
                       isConnected={mockConnectedGroup === group.id}
                       isSelectionMode={false}
@@ -1009,13 +1034,14 @@ export default function DashboardScreen() {
           initialSettings={{
             name: selectedDeviceForSettings?.name || 'SOULZ',
             type: (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'),
-            points: (selectedDeviceForSettings as any)?.points || (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 43 : 24),
-            segments: (selectedDeviceForSettings as any)?.segments || 1,
+            points: (selectedDeviceForSettings as any)?.points || (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 43 : 8),
+            segments: (selectedDeviceForSettings as any)?.segments || (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 1 : 2),
             stripType: (selectedDeviceForSettings as any)?.stripType || 'WS2812B',
             sorting: (selectedDeviceForSettings as any)?.sorting || 'GRB',
             grouped: (selectedDeviceForSettings as any)?.grouped || false,
             groupId: (selectedDeviceForSettings as any)?.groupId,
-            groupName: customGroups.find(g => g.id === (selectedDeviceForSettings as any)?.groupId)?.name || 'My Roller Skates'
+            groupName: customGroups.find(g => g.id === (selectedDeviceForSettings as any)?.groupId)?.name || 'My SK8Lytz',
+            firmware: (selectedDeviceForSettings as any)?.firmware || ((selectedDeviceForSettings as any)?.id?.startsWith('sim-') ? 'v2.0.1.DEMO' : 'Unknown')
           }}
           groups={customGroups}
         />
@@ -1024,7 +1050,7 @@ export default function DashboardScreen() {
           onClose={() => setIsGroupModalVisible(false)}
           onSave={saveGroup}
           onDelete={groupModalMode === 'rename' && editingGroupId ? () => deleteGroup(editingGroupId) : undefined}
-          initialName={groupModalMode === 'rename' ? customGroups.find(g => g.id === editingGroupId)?.name : 'My Roller Skates'}
+          initialName={groupModalMode === 'rename' ? customGroups.find(g => g.id === editingGroupId)?.name : 'My SK8Lytz'}
           initialDeviceIds={groupModalMode === 'rename' ? customGroups.find(g => g.id === editingGroupId)?.deviceIds : selectedIds}
           allDevices={allDevices}
         />

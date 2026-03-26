@@ -71,7 +71,7 @@ export default function HardwareTestController({
   }, [device]);
   
   // Builder State
-  const [protocol, setProtocol] = useState<'0x59' | '0x51' | '0x42' | '0x73' | '0x71' | '0x2A' | 'CANDLE' | 'CAMERA'>('0x59');
+  const [protocol, setProtocol] = useState<'0x59' | '0x51' | '0x42' | '0x73' | '0x71' | '0x2A' | 'CANDLE' | 'CAMERA' | 'MULTI'>('0x59');
   const [r, setR] = useState(255);
   const [g, setG] = useState(0);
   const [b, setB] = useState(0);
@@ -96,6 +96,10 @@ export default function HardwareTestController({
 
   // Candle Mode State (0x39)
   const [candleAmplitude, setCandleAmplitude] = useState<number>(2);
+
+  // MULTI DIY Mode State (Zengge 0x59 Overlay)
+  const [multiColors, setMultiColors] = useState<string[]>(['#FF0000', '#00FF00', '#0000FF']);
+  const [multiTransition, setMultiTransition] = useState<number>(3); // 3=Running Water default
 
   // Power State (0x71)
   const [powerTesterState, setPowerTesterState] = useState<boolean>(true);
@@ -159,6 +163,9 @@ export default function HardwareTestController({
       payload = ZenggeProtocol.setRfRemoteState(rfAuthMode);
     } else if (protocol === '0x71') {
       payload = powerTesterState ? ZenggeProtocol.turnOn() : ZenggeProtocol.turnOff();
+    } else if (protocol === 'MULTI') {
+        const rgbColors = multiColors.map(hex => ({ r: parseInt(hex.slice(1,3), 16) || 0, g: parseInt(hex.slice(3,5), 16) || 0, b: parseInt(hex.slice(5,7), 16) || 0 }));
+        payload = ZenggeProtocol.setMultiColor(rgbColors, speed, 1, multiTransition);
     }
     
     const hex = payload.map(byte => byte.toString(16).toUpperCase().padStart(2, '0')).join(' ');
@@ -233,7 +240,7 @@ export default function HardwareTestController({
     });
     setAnnotatedPayload(annotations);
 
-  }, [protocol, r, g, b, r2, g2, b2, speed, length, transitionType, brightness, segmentDirection, rbmPattern, isDeviceMic, musicModeType, musicPatternId, musicSensitivity, candleAmplitude, isManualOverride, powerTesterState]);
+  }, [protocol, r, g, b, r2, g2, b2, speed, length, transitionType, brightness, segmentDirection, rbmPattern, isDeviceMic, musicModeType, musicPatternId, musicSensitivity, candleAmplitude, multiColors, multiTransition, isManualOverride, powerTesterState]);
 
   const handleSend = () => {
     if (!writeToDevice) return;
@@ -511,8 +518,49 @@ export default function HardwareTestController({
       {protocol === 'CANDLE' && (
         <View style={{ gap: 16, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
           <Text style={[Typography.title, { color: '#FFA500', fontSize: 16 }]}>Candle Flicker Simulation</Text>
-          <SettingWithExplanation title={`Volumetric Amplitude (${candleAmplitude})`} description="Forces a random flickering array physically inside the hardware using an undocumented algorithm to simulate deep candles." Colors={Colors}>
+          <SettingWithExplanation title={`Flicker Effect (${candleAmplitude})`} description="Forces a random flickering array physically inside the hardware using an undocumented algorithm to simulate deep candles." Colors={Colors}>
              <CustomSlider value={candleAmplitude} minimumValue={1} maximumValue={3} onValueChange={setCandleAmplitude} />
+          </SettingWithExplanation>
+        </View>
+      )}
+
+      {protocol === 'MULTI' && (
+        <View style={{ gap: 16, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
+          <Text style={[Typography.title, { color: '#FF00FF', fontSize: 16 }]}>Multi-Color DIY Engine (0x59)</Text>
+          <SettingWithExplanation title={`List of Colors (${multiColors.length})`} description="The discrete colored array sequence mapped structurally to the Segment configuration. Tap blocks to overwrite." Colors={Colors}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 8 }}>
+              {multiColors.map((hex, index) => (
+                <TouchableOpacity key={index} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: hex, borderWidth: 2, borderColor: '#FFF', shadowColor: hex, shadowOpacity: 0.8, shadowRadius: 4 }} onPress={() => {
+                  const newArr = [...multiColors];
+                  newArr[index] = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`.toUpperCase();
+                  setMultiColors(newArr);
+                }} />
+              ))}
+              {multiColors.length < 16 && (
+                <TouchableOpacity style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: '#FFF', justifyContent: 'center', alignItems: 'center' }} onPress={() => {
+                   setMultiColors([...multiColors, `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`.toUpperCase()]);
+                }}>
+                  <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold' }}>+</Text>
+                </TouchableOpacity>
+              )}
+              {multiColors.length > 1 && (
+                <TouchableOpacity style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,0,0,0.5)', borderWidth: 1, borderColor: '#FFF', justifyContent: 'center', alignItems: 'center' }} onPress={() => {
+                   const newArr = [...multiColors];
+                   newArr.pop();
+                   setMultiColors(newArr);
+                }}>
+                  <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold', lineHeight: 26 }}>-</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </SettingWithExplanation>
+          
+          <SettingWithExplanation title={`Segment Size (${length})`} description={`The computational size scaling the recurring colored pattern globally. Minimum 10 pixels required.`} Colors={Colors}>
+            <CustomSlider value={length} minimumValue={10} maximumValue={points * 2} onValueChange={setLength} />
+          </SettingWithExplanation>
+
+          <SettingWithExplanation title={`Zengge Transition (${multiTransition === 0 ? 'Static' : multiTransition === 1 ? 'Gradual' : multiTransition === 2 ? 'Strobe' : 'Running Water'})`} description="Strict translation of the 4 native Zengge animation engines bounded seamlessly inside the 0x59 byte wrapper." Colors={Colors}>
+             <CustomSlider value={multiTransition} minimumValue={0} maximumValue={3} onValueChange={setMultiTransition} />
           </SettingWithExplanation>
         </View>
       )}

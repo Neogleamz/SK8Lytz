@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface DeviceItemProps {
-  device: { name: string | null; id: string; rssi?: number | null; isGroup?: boolean };
+  device: { name: string | null; id: string; rssi?: number | null; rssiList?: number[]; isGroup?: boolean };
   onPress: () => void;
   onLongPress?: () => void;
   isConnected: boolean;
@@ -71,41 +71,54 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
               />
             )}
           </View>
-          <Text style={[Typography.title, { color: Colors.primary, flex: 1 }]} numberOfLines={0}>{displayName}</Text>
-        </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-            {isSelectionMode && <View style={{ width: 34 }} />}
-            {device.isGroup ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ 
-                  width: 6, 
-                  height: 6, 
-                  borderRadius: 3, 
-                  backgroundColor: (device as any).connectedCount === 0 ? Colors.error : ((device as any).connectedCount < (device as any).deviceIds?.length ? '#FFA500' : Colors.success), 
-                  marginRight: 6 
-                }} />
-                <Text style={[Typography.caption, { 
-                  color: (device as any).connectedCount === 0 ? Colors.error : ((device as any).connectedCount < (device as any).deviceIds?.length ? '#FFA500' : Colors.success), 
-                  fontSize: 10, 
-                  fontWeight: 'bold' 
-                }]}>
-                  PAIRED ({(device as any).connectedCount || 0})
-                </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, flexWrap: 'wrap' }}>
+            <Text style={[Typography.title, { color: Colors.primary, marginRight: 8 }]} numberOfLines={0}>{displayName}</Text>
+            
+            {(device.rssiList && device.rssiList.length > 0) ? (
+              <View style={{ flexDirection: 'row' }}>
+                {device.rssiList.map((r, i) => (
+                  <MaterialCommunityIcons 
+                    key={i}
+                    name={r === null ? 'wifi-off' : r > -60 ? 'wifi-strength-4' : r > -80 ? 'wifi-strength-2' : 'wifi-strength-1'} 
+                    size={16} 
+                    color={r === null ? Colors.error : r > -60 ? Colors.success : r > -80 ? '#FFA500' : Colors.error}
+                    style={{ marginLeft: i > 0 ? 4 : 0, opacity: 0.8 }}
+                  />
+                ))}
               </View>
             ) : (
-              <Text style={[Typography.caption, { color: Colors.textMuted, flex: 1 }]} numberOfLines={0}>
-                {(() => {
-                  const id = device.id.toUpperCase();
-                  if (id.startsWith('SIM-')) {
-                    const parts = id.split('-');
-                    const num = parts[parts.length - 1];
-                    return `00:DE:M0:00:00:0${num}`;
-                  }
-                  return id;
-                })()} {device.rssi ? ` | ${device.rssi} dBm` : ''}
-              </Text>
+              <MaterialCommunityIcons 
+                name={!device.rssi ? 'wifi-off' : device.rssi > -60 ? 'wifi-strength-4' : device.rssi > -80 ? 'wifi-strength-2' : 'wifi-strength-1'} 
+                size={16} 
+                color={!device.rssi ? Colors.error : device.rssi > -60 ? Colors.success : device.rssi > -80 ? '#FFA500' : Colors.error}
+                style={{ opacity: 0.8 }}
+              />
             )}
           </View>
+        </View>
+        
+        {!device.isGroup && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+            {isSelectionMode && <View style={{ width: 34 }} />}
+            <Text style={[Typography.caption, { color: Colors.textMuted, flex: 1 }]} numberOfLines={0}>
+                {(() => {
+                  const devAny = device as any;
+                  // If unqueried during scan, use safe defaults
+                  const pts = devAny.points ?? (devAny.name?.toLowerCase().includes('soul') ? '43' : '8');
+                  const segs = devAny.segments ?? (devAny.name?.toLowerCase().includes('soul') ? '1' : '2');
+                  const strip = devAny.stripType ?? 'WS2812B';
+                  const sort = devAny.sorting ?? 'GRB';
+                  
+                  const id = device.id.toUpperCase();
+                  const mac4 = id.startsWith('SIM-') 
+                    ? `000${id.split('-').pop()}`.slice(-4)
+                    : id.replace(/:/g, '').slice(-4);
+
+                  return `${pts}-${segs}-${strip}-${sort}-${mac4}`;
+                })()}
+              </Text>
+          </View>
+        )}
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', zIndex: 2 }}>
         {onPowerToggle && (

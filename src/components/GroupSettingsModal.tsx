@@ -41,7 +41,7 @@ export default function GroupSettingsModal({ isVisible, onClose, onSave, onDelet
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="e.g. My Skates left/right"
+            placeholder="e.g. My SK8Lytz"
             placeholderTextColor={Colors.textMuted}
             autoFocus
           />

@@ -816,3 +816,58 @@ These mappings closely relate to the `setHardwareConfig` (`0x81`) command values
 ### Smear Payload Protocol (Raw Streaming Vectors)
 - The raw pixel-by-pixel color buffer stream utilized by certain V5 apps is classified as a "Smear Packet".
 - **Structure**: These are functionally massive variants of the `0x59` matrix mapped into 144-byte streams (48 pixels * 3 channels), containing dedicated bit flags for directional stream math (`1`=static, `2`=stream, `3`=strobe, `4`=jump).
+
+========================================================================
+             SECTION: HARDWARE STRIP IC & COLOR SEQUENCING
+                        (WS2812B / SM16703 PARITY)
+========================================================================
+
+## THE  x81 HARDWARE BOUNDARY PACKET
+Zengge BLE controllers do *not* require the controlling smartphone application to manually scramble RGB sequence bytes to match the target LEDs (e.g., swapping bytes to GRB natively in JS before Bluetooth transmission).
+
+Instead, the ecosystem relies on the **0x81 Configuration Command**. This command acts as a physical 'gateway setting' written directly into the controller's memory.
+
+**0x81 Format**:
+[0x81, PointsHigh, PointsLow, OrderByte, ICByte, SegmentsHigh, SegmentsLow, Checksum]
+
+- **ICByte**: Maps explicitly to the silicon driver type.
+  - SM16703:  x01
+  - WS2811:  x02
+  - WS2812B:  x03
+  - SK6812:  x04
+- **OrderByte**: Maps to the physical copper wiring layout of the LED diodes.
+  - RGB:  x01
+  - RBG:  x02
+  - GRB:  x03 (Standard WS2812B)
+  - GBR:  x04
+  - BRG:  x05
+  - BGR:  x06
+
+## 0x59 PAYLOAD DESERIALIZATION CAVEATS
+Because the hardware controller automatically unscrambles standard RGB packets based on the aforementioned  x81 config, all mobile app arrays (like  x59 running marquee multi-colors) MUST ALWAYS BE BROADCAST IN PURE R, G, B FORMAT. 
+
+If the React Native visualizer renders 'green' when 'red' is selected, this is strictly a mathematical index parsing error inside the UI code, *not* a requirement to artificially scramble the Bluetooth transmission payload.
+
+- **0x59 Structure Constraint**: The payload dynamic color string ALWAYS begins explicitly at **Index 3**.
+  - [0x59, LengthHigh, LengthLow, R1, G1, B1, R2, G2, B2...]
+- Reading visualizer chunks manually offset to Index 5 strictly induces a complete color channel phase shift (Reading B1 as R2, R2 as G2, etc). Always interpret colors starting directly after the LengthLow byte.
+
+========================================================================
+             SECTION: BLUETOOTH RSSI (SIGNAL STRENGTH) TOLERANCES
+========================================================================
+
+## BLUETOOTH LOW ENERGY (BLE) ATTENUATION SCALING
+The Sk8Lytz Dashboard actively measures physical Bluetooth Signal Attenuation (RSSI) expressed in negative decibel-milliwatts (dBm) natively translating to Wifi-style visual meters (`wifi-strength-X`).
+
+- **Excellent Quality (> -60 dBm)**: Direct Line-of-Sight, Minimal Interference. Packet streaming (0x59 Arrays / 0x31 Solid Matrix) will be completely structurally intact without frame shedding.
+  - UI Visualization: `Green` | `wifi-strength-4`
+
+- **Fair Quality (-61 dBm to -80 dBm)**: Distanced Connection / Minor Physical Occlusion (i.e. Body Blocking). Array streaming will occasionally delay response by 50ms-150ms.
+  - UI Visualization: `Orange` | `wifi-strength-2`
+
+- **Poor Quality (< -80 dBm)**: Extreme Attenuation / High Interference. Native physical controller packet drops will occur gracefully causing intermittent visually skipping frames or missing firmware overrides.
+  - UI Visualization: `Red` | `wifi-strength-1`
+
+- **Unknown / Booting (0 or Null)**: Connecting phase resolving physical connection states.
+  - UI Visualization: `Grey` | `wifi-strength-outline`
+

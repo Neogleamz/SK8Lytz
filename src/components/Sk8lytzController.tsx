@@ -17,7 +17,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger } from '../services/AppLogger';
 
 type ProductType = 'HALOZ' | 'SOULZ';
-type ModeType = 'PRESETS' | 'FIXED' | 'RBM' | 'MUSIC' | 'CAMERA' | 'CUSTOM' | 'MULTICOLOR';
+type ModeType = 'PRESETS' | 'FIXED' | 'RBM' | 'MUSIC' | 'CAMERA' | 'CUSTOM' | 'MULTICOLOR' | 'CANDLE';
 
 const MUSIC_PATTERNS = [
   'Soft',
@@ -71,12 +71,28 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
   const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
   const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
 
+  // Multi-Color DIY State
+  const [multiColors, setMultiColors] = useState<string[]>(['#FF0000', '#00FF00', '#0000FF']);
+  const [multiTransition, setMultiTransition] = useState<number>(3); // 3=Running Water default
+  const [multiLength, setMultiLength] = useState<number>(16);
+  const [candleAmplitude, setCandleAmplitude] = useState<number>(2);
+
   /** Unified color sender */
   const sendColor = async (r: number, g: number, b: number) => {
     if (!writeToDevice) return;
-    // Solid fallback explicitly forced to length=10, transitionType=1 to stop physical node scrambling/jumping. 
-    const colors = Array(10).fill({ r, g, b });
-    await writeToDevice(ZenggeProtocol.setMultiColor(colors, 100, 1, 1));
+    if (activeMode === 'CANDLE') {
+        const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
+        const rawR = parseInt(selectedColor.slice(1, 3), 16) || 255;
+        const rawG = parseInt(selectedColor.slice(3, 5), 16) || 255;
+        const rawB = parseInt(selectedColor.slice(5, 7), 16) || 255;
+        let finalR = rawR; let finalG = rawG; let finalB = rawB;
+        if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
+        await writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, candleAmplitude));
+    } else {
+        // Solid fallback explicitly forced to length=10, transitionType=1 to stop physical node scrambling/jumping. 
+        const colors = Array(10).fill({ r, g, b });
+        await writeToDevice(ZenggeProtocol.setMultiColor(colors, 100, 1, 1));
+    }
   };
 
   /** Helper to apply current fixed pattern state to devices */
@@ -333,6 +349,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           if (parsed.fixedFgColor) setFixedFgColor(parsed.fixedFgColor);
           if (parsed.fixedBgColor) setFixedBgColor(parsed.fixedBgColor);
           if (parsed.fixedHue !== undefined) setFixedHue(parsed.fixedHue);
+          if (parsed.candleAmplitude !== undefined) setCandleAmplitude(parsed.candleAmplitude);
         } catch(e) {}
       }
     });
@@ -342,13 +359,13 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     const stateBlob = {
       activeMode, selectedColor, selectedPatternId, brightness, speed,
       micSensitivity, musicHue, musicSecondaryHue, musicMatrixStyle, musicPatternId, micSource, musicSetting,
-      fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
+      fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue, candleAmplitude
     };
     AsyncStorage.setItem('@Sk8lytz_ControllerState', JSON.stringify(stateBlob)).catch(() => {});
   }, [
     activeMode, selectedColor, selectedPatternId, brightness, speed, 
     micSensitivity, musicHue, musicSecondaryHue, musicMatrixStyle, musicPatternId, micSource, musicSetting,
-    fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
+    fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue, candleAmplitude
   ]);
 
   const handleMusicChange = (
@@ -404,11 +421,11 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
       case 'CAMERA': return 'Camera';
       case 'CUSTOM': return 'Custom';
       case 'MULTICOLOR': return 'Multicolor';
+      case 'CANDLE': return 'Candle Mode';
       case 'PRESETS': return 'Presets';
       default: return activeMode;
     }
   }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, selectedPatternId, musicPatternId, selectedColor]);
-
   const modes: { id: ModeType; label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
     { id: 'PRESETS', label: 'Favorites', icon: 'star-outline' },
     { id: 'FIXED', label: 'Fixed', icon: 'palette-outline' },
@@ -416,6 +433,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     { id: 'MUSIC', label: 'Music', icon: 'music-note' },
     { id: 'CAMERA', label: 'Camera', icon: 'camera-outline' },
     { id: 'MULTICOLOR', label: 'Multi', icon: 'gradient-horizontal' },
+    { id: 'CANDLE', label: 'Candle', icon: 'fire' },
   ];
 
   const visualizerColor = React.useMemo(() => {
@@ -552,6 +570,101 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
             </View>
           )}
 
+          {activeMode === 'CANDLE' && (
+            <View style={{ marginBottom: 8 }}>
+              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>Hardware Emulated Fire</Text>
+              <Text style={{ color: Colors.textMuted, fontSize: 13, marginBottom: 12 }}>
+                Simulates dynamic volumetric tracking mathematically in hardware using raw LED flickering logic.
+              </Text>
+              <Text style={{ fontSize: 14, color: Colors.text, marginTop: 12, marginBottom: 4 }}>Flicker Effect ({candleAmplitude})</Text>
+              <CustomSlider 
+                value={candleAmplitude} 
+                minimumValue={1} 
+                maximumValue={3} 
+                onValueChange={setCandleAmplitude} 
+                onSlidingComplete={(val) => {
+                  const rawR = parseInt(selectedColor.substring(1, 3), 16) || 255;
+                  const rawG = parseInt(selectedColor.substring(3, 5), 16) || 255;
+                  const rawB = parseInt(selectedColor.substring(5, 7), 16) || 255;
+                  let finalR = rawR; let finalG = rawG; let finalB = rawB;
+                  const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
+                  if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
+                  if (writeToDevice) writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, val));
+                }} 
+              />
+            </View>
+          )}
+
+          {activeMode === 'MULTICOLOR' && (
+            <View style={{ marginBottom: 16 }}>
+              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>DIY Array Animations</Text>
+              <Text style={{ color: Colors.textMuted, fontSize: 13, marginBottom: 16 }}>
+                Compose seamless pixel arrays generating hardware-level Multi-Color strings natively spanning across skates.
+              </Text>
+              
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: 16 }}>
+                {multiColors.map((hex, index) => (
+                  <TouchableOpacity key={index} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: hex, borderWidth: 2, borderColor: '#FFF', shadowColor: hex, shadowOpacity: 0.8, shadowRadius: 4 }} onPress={() => {
+                    // Update the active color block index implicitly
+                    const newArr = [...multiColors];
+                    newArr[index] = selectedColor;
+                    setMultiColors(newArr);
+                    // Push live payload
+                    const rgbColors = newArr.map(h => ({r: parseInt(h.slice(1,3),16)||0, g: parseInt(h.slice(3,5),16)||0, b: parseInt(h.slice(5,7),16)||0}));
+                    if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
+                  }} />
+                ))}
+                {multiColors.length < 16 && (
+                  <TouchableOpacity style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: '#FFF', justifyContent: 'center', alignItems: 'center' }} onPress={() => {
+                     const newArr = [...multiColors, selectedColor];
+                     setMultiColors(newArr);
+                     const rgbColors = newArr.map(h => ({r: parseInt(h.slice(1,3),16)||0, g: parseInt(h.slice(3,5),16)||0, b: parseInt(h.slice(5,7),16)||0}));
+                     if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
+                  }}>
+                    <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold' }}>+</Text>
+                  </TouchableOpacity>
+                )}
+                {multiColors.length > 1 && (
+                  <TouchableOpacity style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,0,0,0.3)', borderWidth: 1, borderColor: '#FFF', justifyContent: 'center', alignItems: 'center' }} onPress={() => {
+                     const newArr = [...multiColors];
+                     newArr.pop();
+                     setMultiColors(newArr);
+                     const rgbColors = newArr.map(h => ({r: parseInt(h.slice(1,3),16)||0, g: parseInt(h.slice(3,5),16)||0, b: parseInt(h.slice(5,7),16)||0}));
+                     if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
+                  }}>
+                    <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold', lineHeight: 26 }}>-</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 8, fontWeight: 'bold' }}>ZENGGE TRANSITION TYPE</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 20 }}>
+                {[
+                  { label: 'Static', val: 0 },
+                  { label: 'Gradual', val: 1 },
+                  { label: 'Strobe', val: 2 },
+                  { label: 'Running Water', val: 3 }
+                ].map((mode) => (
+                  <TouchableOpacity 
+                    key={mode.val} 
+                    onPress={() => {
+                       setMultiTransition(mode.val);
+                       const rgbColors = multiColors.map(h => ({r: parseInt(h.slice(1,3),16)||0, g: parseInt(h.slice(3,5),16)||0, b: parseInt(h.slice(5,7),16)||0}));
+                       if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, mode.val, speed));
+                    }} 
+                    style={{ 
+                      paddingHorizontal: 16, paddingVertical: 10, 
+                      backgroundColor: multiTransition === mode.val ? Colors.primary : 'rgba(255,255,255,0.05)', 
+                      borderRadius: 8, marginRight: 8 
+                    }}
+                  >
+                    <Text style={{ color: multiTransition === mode.val ? '#000' : '#FFF', fontWeight: 'bold', fontSize: 12 }}>{mode.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           {activeMode === 'FIXED' && (
             <View style={{ marginBottom: 8 }}>
               
@@ -621,7 +734,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     if (pid === 100) {
                       applyEmergencyPattern(speed, brightness);
                     } else {
-                      writeToDevice(ZenggeProtocol.setRbmMode(pid, speed, brightness));
+                      writeToDevice(ZenggeProtocol.setCustomRbm(pid, speed, brightness));
                     }
                   }
                 }}
@@ -966,7 +1079,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                         if (selectedPatternId === 100) {
                           applyEmergencyPattern(speed, val);
                         } else {
-                          writeToDevice(ZenggeProtocol.setRbmMode(selectedPatternId, speed, val));
+                          writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, speed, val));
                         }
                       } else if (activeMode === 'MUSIC') {
                         if (musicSetting === 'SENSITIVITY') {
@@ -1015,7 +1128,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                         if (selectedPatternId === 100) {
                           applyEmergencyPattern(val, brightness);
                         } else {
-                          writeToDevice(ZenggeProtocol.setRbmMode(selectedPatternId, val, brightness));
+                          writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
                         }
                       } else if (activeMode === 'MULTICOLOR') {
                         const segmentColors = [
