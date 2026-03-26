@@ -100,11 +100,8 @@ export default function Sk8LytzProgrammerModal({ visible, onClose, onExitToLogs,
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
-        <View style={[styles.header, { borderBottomColor: borderColor, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 }]}>
-          <View>
-            <Text style={[styles.title, { color: textPrimary }]}>⚡ SK8Lytz Programmer</Text>
-            <Text style={[styles.subtitle, { color: textMuted }]}>Batch Flash Hardware Configs</Text>
-          </View>
+        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 16, paddingTop: 16}}>
+          <Text style={[Typography.title, { color: Colors.primary }]}>SK8Lytz Programmer</Text>
           <TouchableOpacity 
               style={{backgroundColor: 'rgba(255, 60, 60, 0.15)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255, 60, 60, 0.4)'}} 
               onPress={() => {
