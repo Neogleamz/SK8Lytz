@@ -9,7 +9,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger, LogEntry, EventType } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
 
-type Tab = 'timeline' | 'devices' | 'stats' | 'admin' | 'sniffer';
+type Tab = 'timeline' | 'devices' | 'stats' | 'admin';
 
 const EVENT_META: Record<EventType, { icon: string; color: string; label: string }> = {
   APP_OPENED:         { icon: 'cellphone-check', color: '#00f0ff', label: 'App Opened' },
@@ -66,128 +66,19 @@ interface LogViewerModalProps {
   onClose: () => void;
   onOpenTester?: () => void;
   onOpenProgrammer?: () => void;
+  onOpenSniffer?: () => void;
   writeToDevice?: (data: number[], deviceId?: string) => Promise<void>;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
   connectedDevices?: { id: string, name: string | null }[];
 }
 
-export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenProgrammer, writeToDevice, liveRxPayload, connectedDevices }: LogViewerModalProps) {
+export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenProgrammer, onOpenSniffer, writeToDevice, liveRxPayload, connectedDevices }: LogViewerModalProps) {
   const { Colors, isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
   
-  // Realtime & Historic Sniffer States
-  const [snifferLogs, setSnifferLogs] = useState<{dir: 'TX' | 'RX', hex: string, t: number, dev?: string}[]>([]);
-  const [snifferInput, setSnifferInput] = useState('');
-  const [isSnifferPaused, setIsSnifferPaused] = useState(false);
-  const [snifferTarget, setSnifferTarget] = useState<string>('ALL');
-
-  // Hydrate from global database explicitly (so boot captures display) and sync live hook organically
-  useEffect(() => {
-    if (!visible) return;
-    
-    // 1. Parse historical buffers stored organically before the overlay was even opened.
-    const loadedHistory = logs.filter(l => l.e === 'RAW_PAYLOAD').map(l => ({
-       dir: l.d.dir as 'RX' | 'TX',
-       hex: l.d.hex,
-       t: l.t,
-       dev: l.d.deviceId
-    }));
-    
-    setSnifferLogs(prev => {
-       const merged = [...prev];
-       
-       // Append global logs seamlessly filtering duplicates chronologically
-       loadedHistory.forEach(h => {
-         if (!merged.find(m => m.t === h.t && m.hex === h.hex)) {
-           merged.push(h);
-         }
-       });
-
-       // 2. React to explicitly inbound Live Payload organically natively
-       if (liveRxPayload && liveRxPayload.payloadHex && !isSnifferPaused) {
-         if (snifferTarget === 'ALL' || liveRxPayload.deviceId === snifferTarget) {
-            const rxHash = { dir: 'RX' as const, hex: liveRxPayload.payloadHex, t: liveRxPayload.timestamp || Date.now(), dev: liveRxPayload.deviceId };
-            if (!merged.find(m => m.hex === rxHash.hex && (Date.now() - m.t < 50))) {
-               merged.unshift(rxHash);
-            }
-         }
-       }
-       
-       // Filter rendered buffer natively to targeted mapping securely
-       const sorted = merged.sort((a,b) => b.t - a.t);
-       if (snifferTarget === 'ALL') return sorted;
-       return sorted.filter(m => m.dev === snifferTarget || !m.dev);
-    });
-  }, [liveRxPayload, visible, logs, snifferTarget, isSnifferPaused]);
-
-  const handleSendSniffer = async (hexStr: string) => {
-    if (!writeToDevice) return;
-    try {
-      const bytes = hexStr.replace(/[^0-9A-Fa-f]/g, '').match(/.{1,2}/g)?.map(b => parseInt(b, 16)) || [];
-      if (bytes.length === 0) return;
-      await writeToDevice(bytes, snifferTarget === 'ALL' ? undefined : snifferTarget);
-      
-      // TX is automatically logged to global AppLogger 'RAW_PAYLOAD' locally by useBLE.ts, 
-      // but to ensure instant terminal response we force inject here natively too.
-      if (!isSnifferPaused) {
-        setSnifferLogs(prev => [{ dir: 'TX', hex: bytes.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '), t: Date.now(), dev: snifferTarget }, ...prev]);
-      }
-    } catch (e) {
-      console.warn("Sniffer TX Error", e);
-    }
-  };
-
-  const renderAnalyzedPayload = (hex: string) => {
-    const bytes = hex.split(' ');
-    if (bytes.length === 0) return <Text style={{ color: '#FFF' }}>{hex}</Text>;
-    
-    // Status Payload (Wait, bytes[0] could be 81 and length could be 14)
-    if (bytes[0] === '81' && bytes.length >= 14) {
-      const power = bytes[1] === '01' ? 'ON' : 'OFF';
-      const powerColor = bytes[1] === '01' ? '#00ff80' : '#ff4040';
-      const pattern = parseInt(bytes[2], 16);
-      const speed = parseInt(bytes[4], 16);
-      const colorHex = `#${bytes[6] || '00'}${bytes[7] || '00'}${bytes[8] || '00'}`;
-      return (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
-          <Text style={{ color: '#FFD700', fontSize: 11, fontWeight: 'bold' }}>[STATUS]</Text>
-          <Text style={{ color: powerColor, fontSize: 11 }}>PWR:{power}</Text>
-          <Text style={{ color: '#c084fc', fontSize: 11 }}>PAT:{pattern}</Text>
-          <Text style={{ color: '#AADDFF', fontSize: 11 }}>SPD:{speed}</Text>
-          <View style={{ width: 12, height: 12, backgroundColor: colorHex, borderRadius: 2, borderWidth: 1, borderColor: '#fff' }} />
-          <Text style={{ color: '#888', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{hex}</Text>
-        </View>
-      );
-    }
-    
-    // Hardware Config Payload Native Translation
-    if ((bytes[0] === '00' && bytes[1] === '63') || bytes[0] === '63') {
-       const offset = bytes[0] === '00' ? 1 : 0;
-       if (bytes.length > offset + 5) {
-         const b2 = parseInt(bytes[offset + 1], 16);
-         const b3 = parseInt(bytes[offset + 2], 16);
-         const points = (b2 << 8) | b3;
-         const segments = parseInt(bytes[offset + 4], 16);
-         return (
-           <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
-             <Text style={{ color: '#00f0ff', fontSize: 11, fontWeight: 'bold' }}>[HARDWARE]</Text>
-             <Text style={{ color: '#00ff80', fontSize: 11 }}>LEDS:{points}</Text>
-             <Text style={{ color: '#ff70ff', fontSize: 11 }}>SEGS:{segments}</Text>
-             <Text style={{ color: '#888', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{hex}</Text>
-           </View>
-         );
-       }
-    }
-
-    if (bytes[0] === '81' && bytes.length < 10) return <Text style={{ color: '#00ccff', fontSize: 11 }}>[PING] {hex}</Text>;
-    if (bytes[0] === '2B') return <Text style={{ color: '#ff7000', fontSize: 11 }}>[R-CONFIG] {hex}</Text>;
-
-    return <Text style={{ color: '#FFF', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11 }}>{hex}</Text>;
-  };
-
   const load = useCallback(async () => {
     const l = await AppLogger.getLogs();
     setLogs(l);
@@ -427,7 +318,7 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={{ backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: '#ff4040', borderWidth: 1, paddingVertical: 14, borderRadius: 8 }}
+          style={{ backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: '#ff4040', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
           onPress={() => {
             if (onOpenProgrammer) onOpenProgrammer();
           }}
@@ -437,92 +328,20 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
             <Text style={{ color: '#ff4040', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch SK8Lytz Programmer</Text>
           </View>
         </TouchableOpacity>
-      </View>
-    </ScrollView>
-  );
 
-  const renderSnifferTab = () => (
-    <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ color: textPrimary, fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>💉 Protocol Sniffer</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-         <Text style={{ color: textMuted, fontSize: 12 }}>Target Device:</Text>
-         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginLeft: 8 }}>
-            <TouchableOpacity onPress={() => setSnifferTarget('ALL')} style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, backgroundColor: snifferTarget === 'ALL' ? '#00f0ff' : cardBg, marginRight: 8, borderWidth: 1, borderColor: snifferTarget === 'ALL' ? '#00f0ff' : borderColor }}>
-               <Text style={{ color: snifferTarget === 'ALL' ? '#000' : textPrimary, fontSize: 11, fontWeight: 'bold' }}>ALL</Text>
-            </TouchableOpacity>
-            {connectedDevices?.map(d => (
-               <TouchableOpacity key={d.id} onPress={() => setSnifferTarget(d.id)} style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, backgroundColor: snifferTarget === d.id ? '#00f0ff' : cardBg, marginRight: 8, borderWidth: 1, borderColor: snifferTarget === d.id ? '#00f0ff' : borderColor }}>
-                 <Text style={{ color: snifferTarget === d.id ? '#000' : textPrimary, fontSize: 11, fontWeight: 'bold' }}>{d.name || d.id.slice(-5)}</Text>
-               </TouchableOpacity>
-            ))}
-         </ScrollView>
-      </View>
-      
-      {/* Probe Dictionary */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 16, flexGrow: 0 }}>
-        {[
-          { label: '0x81 Sync', hex: '81 8A 8B 96' },
-          { label: '0x10 Ping', hex: '10 00 00 10' },
-          { label: '0x2B RConfig', hex: '2B 2C 2D 00' },
-          { label: '0x32 Boot', hex: '32 3A 3B 0F' },
-          { label: '0x63 IC Probe', hex: '63 14 00 00' }
-        ].map((probe) => (
-          <TouchableOpacity 
-            key={probe.label} 
-            onPress={() => handleSendSniffer(probe.hex)}
-            style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: '#00f0ff', borderWidth: 1, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginRight: 8, height: 36 }}
-          >
-            <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 13 }}>{probe.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Custom Command Input */}
-      <View style={{ flexDirection: 'row', marginBottom: 16 }}>
-        <TextInput
-           style={{ flex: 1, backgroundColor: cardBg, color: textPrimary, borderColor, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, height: 44, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}
-           placeholder="ex: 81 8A 8B 96"
-           placeholderTextColor={textMuted}
-           value={snifferInput}
-           onChangeText={setSnifferInput}
-           autoCapitalize="none"
-        />
         <TouchableOpacity 
-           style={{ backgroundColor: '#00AEEF', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16, borderRadius: 8, marginLeft: 8 }}
-           onPress={() => handleSendSniffer(snifferInput)}
+          style={{ backgroundColor: 'rgba(152, 251, 152, 0.1)', borderColor: '#98FB98', borderWidth: 1, paddingVertical: 14, borderRadius: 8 }}
+          onPress={() => {
+            if (onOpenSniffer) onOpenSniffer();
+          }}
         >
-           <Text style={{ color: '#000', fontWeight: 'bold' }}>TX</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 16, marginRight: 8 }}>💉</Text>
+            <Text style={{ color: '#98FB98', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch Protocol Sniffer</Text>
+          </View>
         </TouchableOpacity>
       </View>
-
-      {/* Terminal View */}
-      <View style={{ flex: 1, backgroundColor: '#000', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#333' }}>
-         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
-           <Text style={{ color: '#bbb', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontWeight: 'bold' }}>CHRONOLOGICAL TIMELINE STREAM</Text>
-           <TouchableOpacity onPress={() => setIsSnifferPaused(!isSnifferPaused)}>
-             <Text style={{ color: isSnifferPaused ? '#ff4040' : '#00ff80', fontSize: 10, fontWeight: 'bold' }}>{isSnifferPaused ? '▶ RESUME' : '⏸ PAUSE'}</Text>
-           </TouchableOpacity>
-         </View>
-         <FlatList 
-            data={snifferLogs}
-            inverted
-            keyExtractor={(_, i) => String(i)}
-            ListEmptyComponent={<Text style={{ color: '#555', fontFamily: 'monospace', fontSize: 12 }}>Waiting for BLE traffic...</Text>}
-            renderItem={({ item }) => (
-              <View style={{ flexDirection: 'row', marginBottom: 8, opacity: Date.now() - item.t > 15000 ? 0.7 : 1, alignItems: 'flex-start' }}>
-                <Text style={{ color: item.dir === 'TX' ? '#FFD700' : '#00ff80', width: 26, fontWeight: 'bold', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11 }}>{item.dir}</Text>
-                <Text style={{ color: '#777', width: 66, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 10, marginTop: 1 }}>{formatTime(item.t).split(' ')[2]}</Text>
-                <View style={{ flex: 1 }}>
-                  {renderAnalyzedPayload(item.hex)}
-                  {(item.dev && item.dev !== 'ALL') && (
-                    <Text style={{ color: '#555', fontSize: 9 }}>DEV: {item.dev.slice(-5)}</Text>
-                  )}
-                </View>
-              </View>
-            )}
-         />
-      </View>
-    </View>
+    </ScrollView>
   );
 
   const timelineLogs = logs.filter(l => l.e !== 'RAW_PAYLOAD');
@@ -551,7 +370,7 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
 
         {/* Tabs */}
         <View style={[styles.tabs, { borderBottomColor: borderColor }]}>
-          {(['timeline', 'devices', 'stats', 'admin', 'sniffer'] as Tab[]).map(t => (
+          {(['timeline', 'devices', 'stats', 'admin'] as Tab[]).map(t => (
             <TouchableOpacity
               key={t}
               onPress={() => setTab(t)}
@@ -578,7 +397,6 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
         {tab === 'devices' && renderDeviceTab()}
         {tab === 'stats' && renderStatsTab()}
         {tab === 'admin' && renderAdminTab()}
-        {tab === 'sniffer' && renderSnifferTab()}
       </SafeAreaView>
     </Modal>
   );

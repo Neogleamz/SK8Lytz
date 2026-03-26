@@ -66,9 +66,9 @@ export default function DashboardScreen() {
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(false);
-  const [showHintText, setShowHintText] = useState(true);
   const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
+  const [isSnifferVisible, setIsSnifferVisible] = useState(false);
   const lastProcessedRef = React.useRef<string>('');
   const allDevicesRef = React.useRef(allDevices);
   const customGroupsRef = React.useRef(customGroups);
@@ -1252,6 +1252,10 @@ export default function DashboardScreen() {
             setLogsVisible(false);
             setIsProgrammerVisible(true);
         }}
+        onOpenSniffer={() => {
+            setLogsVisible(false);
+            setIsSnifferVisible(true);
+        }}
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
         connectedDevices={connectedDevices as any[]}
@@ -1266,7 +1270,22 @@ export default function DashboardScreen() {
         allDevices={allDevices}
         writeToDevice={writeToDevice}
         isScanning={isScanning}
-        handleScan={handleScan}
+        handleScan={scanForPeripherals}
+      />
+      <ProtocolSnifferModal 
+        visible={isSnifferVisible}
+        onClose={() => {
+            setIsSnifferVisible(false);
+            setLogsVisible(true);
+        }}
+        allDevices={allDevices}
+        connectedDevices={connectedDevices as any[]}
+        isScanning={isScanning}
+        handleScan={scanForPeripherals}
+        connectToDevice={connectToDevice}
+        handleDisconnect={disconnectFromDevice}
+        writeToDevice={writeToDevice}
+        liveRxPayload={lastRawNotification}
       />
     </SafeAreaView>
   );
