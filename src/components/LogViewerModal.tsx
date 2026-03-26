@@ -78,22 +78,50 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
   const [stats, setStats] = useState<any>(null);
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
   
-  // Realtime Sniffer States
+  // Realtime & Historic Sniffer States
   const [snifferLogs, setSnifferLogs] = useState<{dir: 'TX' | 'RX', hex: string, t: number, dev?: string}[]>([]);
   const [snifferInput, setSnifferInput] = useState('');
   const [isSnifferPaused, setIsSnifferPaused] = useState(false);
   const [snifferTarget, setSnifferTarget] = useState<string>('ALL');
 
+  // Hydrate from global database explicitly (so boot captures display) and sync live hook organically
   useEffect(() => {
-    if (visible && liveRxPayload && liveRxPayload.payloadHex && !isSnifferPaused) {
-      if (snifferTarget !== 'ALL' && liveRxPayload.deviceId !== snifferTarget) return;
-      setSnifferLogs(prev => {
-        // Prevent duplicate spam if reference doesn't change
-        if (prev.length > 0 && prev[0].hex === liveRxPayload.payloadHex && (Date.now() - prev[0].t < 50)) return prev;
-        return [{ dir: 'RX', hex: liveRxPayload.payloadHex, t: liveRxPayload.timestamp || Date.now(), dev: liveRxPayload.deviceId }, ...prev];
-      });
-    }
-  }, [liveRxPayload, visible, isSnifferPaused, snifferTarget]);
+    if (!visible) return;
+    
+    // 1. Parse historical buffers stored organically before the overlay was even opened.
+    const loadedHistory = logs.filter(l => l.e === 'RAW_PAYLOAD').map(l => ({
+       dir: l.d.dir as 'RX' | 'TX',
+       hex: l.d.hex,
+       t: l.t,
+       dev: l.d.deviceId
+    }));
+    
+    setSnifferLogs(prev => {
+       const merged = [...prev];
+       
+       // Append global logs seamlessly filtering duplicates chronologically
+       loadedHistory.forEach(h => {
+         if (!merged.find(m => m.t === h.t && m.hex === h.hex)) {
+           merged.push(h);
+         }
+       });
+
+       // 2. React to explicitly inbound Live Payload organically natively
+       if (liveRxPayload && liveRxPayload.payloadHex && !isSnifferPaused) {
+         if (snifferTarget === 'ALL' || liveRxPayload.deviceId === snifferTarget) {
+            const rxHash = { dir: 'RX' as const, hex: liveRxPayload.payloadHex, t: liveRxPayload.timestamp || Date.now(), dev: liveRxPayload.deviceId };
+            if (!merged.find(m => m.hex === rxHash.hex && (Date.now() - m.t < 50))) {
+               merged.unshift(rxHash);
+            }
+         }
+       }
+       
+       // Filter rendered buffer natively to targeted mapping securely
+       const sorted = merged.sort((a,b) => b.t - a.t);
+       if (snifferTarget === 'ALL') return sorted;
+       return sorted.filter(m => m.dev === snifferTarget || !m.dev);
+    });
+  }, [liveRxPayload, visible, logs, snifferTarget, isSnifferPaused]);
 
   const handleSendSniffer = async (hexStr: string) => {
     if (!writeToDevice) return;
@@ -101,6 +129,9 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
       const bytes = hexStr.replace(/[^0-9A-Fa-f]/g, '').match(/.{1,2}/g)?.map(b => parseInt(b, 16)) || [];
       if (bytes.length === 0) return;
       await writeToDevice(bytes, snifferTarget === 'ALL' ? undefined : snifferTarget);
+      
+      // TX is automatically logged to global AppLogger 'RAW_PAYLOAD' locally by useBLE.ts, 
+      // but to ensure instant terminal response we force inject here natively too.
       if (!isSnifferPaused) {
         setSnifferLogs(prev => [{ dir: 'TX', hex: bytes.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '), t: Date.now(), dev: snifferTarget }, ...prev]);
       }
@@ -494,6 +525,8 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
     </View>
   );
 
+  const timelineLogs = logs.filter(l => l.e !== 'RAW_PAYLOAD');
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
@@ -501,7 +534,7 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
         <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
           <View>
             <Text style={[styles.title, { color: textPrimary }]}>SK8Lytz Analytics</Text>
-            <Text style={[styles.subtitle, { color: textMuted }]}>{logs.length} events stored</Text>
+            <Text style={[styles.subtitle, { color: textMuted }]}>{timelineLogs.length} events stored</Text>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity onPress={handleExport} style={styles.actionBtn}>
@@ -534,7 +567,7 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
         {/* Content */}
         {tab === 'timeline' && (
           <FlatList
-            data={logs}
+            data={timelineLogs}
             keyExtractor={(_, i) => String(i)}
             renderItem={renderLogItem}
             ListEmptyComponent={
