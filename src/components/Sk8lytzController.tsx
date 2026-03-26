@@ -46,9 +46,18 @@ interface Sk8lytzControllerProps {
   isPoweredOn?: boolean;
 }
 
-export default function Sk8lytzController({ lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice, isPoweredOn = true }: Sk8lytzControllerProps) {
+export default function Sk8lytzController({ lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true }: Sk8lytzControllerProps) {
   const { Colors, isDark } = useTheme();
   const styles = createStyles(Colors);
+  const [lastSentPayload, setLastSentPayload] = useState<number[]>([]);
+  
+  const writeToDevice = async (payload: number[]) => {
+    setLastSentPayload([...payload]);
+    if (parentWriteToDevice) {
+      await parentWriteToDevice(payload);
+    }
+  };
+  
   const [activeProduct, setActiveProduct] = useState<ProductType>(lockedProduct || 'HALOZ');
   const [activeMode, setActiveMode] = useState<ModeType>('PRESETS');
   const [selectedColor, setSelectedColor] = useState<string>('#00F0FF');
@@ -471,6 +480,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           isPoweredOn={isPoweredOn}
           statusText={currentStatusText}
           audioMagnitude={audioMagnitude}
+          rawHexPayload={lastSentPayload}
         />
       </View>
       </View>

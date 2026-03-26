@@ -58,6 +58,19 @@ Applies to almost all raw payloads.
 - **Power ON**: `[0x71, 0x23, 0x0F, 0xA3]`
 - **Power OFF**: `[0x71, 0x24, 0x0F, 0xA4]`
 - **Discovery**: Zengge devices typically broadcast as `LEDnetXXXXXX`.
+-   Direction Boolean: Byte [138] // (0x01 Forward, 0x00 Reverse)
+   Terminator: 0x0F
+   Checksum: sum(payload) & 0xFF
+
+=== ALTERNATIVE NON-ADDRESSABLE RGB PATTERNS (Node.js RAW DISCOVERIES) ===
+When pushing 0x42 packets, certain devices running generic non-IC LED firmware exhibit alternative mappings. Documenting these overrides here per user request for future legacy controller compatibility layers:
+- ID 56: Seven-Color Cross-Fade (Conflicts with our Symphony "Red Marquee")
+- ID 63: White Gradual Change
+- ID 64: Red/Green Cross-Fade
+- ID 67: Seven-Color Strobe Flash
+- ID 69: Green Strobe Flash
+- ID 76: Seven-Color Jumping Change
+* NOTE: The SK8Lytz system primarily targets Haloz / Soulz operating on WS2812B/SM16703 IC arrays, hence why these standard base-emitter mappings do not align mechanically with our SPI hardware.
 
 ### Color & Brightness (`0x31`)
 - **Format**: `[0x31, R, G, B, 0x00, 0x00, 0x0F, Checksum]`
@@ -69,10 +82,17 @@ Modern high-performance pattern selection.
 - **Pattern IDs**: 1 - 100+ (See Master Pattern List).
 - **Default SK8Lytz Values**: Brightness 90% (`0x5A`), Speed 50% (`0x32`).
 
-### Multi-Color Segmented (`0x59`)
-Individual LED control.
-- **Format**: `[0x59, TotalLen(2), Colors(3N), NumPoints(2), Type, Speed, Direction, Checksum]`
-- **Application**: 10 Fixed Modes (Comet, Dashed, etc.).
+### Addressable Mode (`0x59`) - Multi-Color Array / DIY Multi-Color
+- **Format**: `[0x59, SegmentLength, TransitionType, Speed, 0x01, R1,G1,B1, R2,G2,B2...]`
+- *Note on DIY Multi-Color Parity*: The Zengge APK's advanced "Multi-Color" tab natively utilizes this exact `0x59` chunked buffer to build DIY animations. The UI labels map strictly to these `TransitionType` bytes:
+  - `0x00`: **Static** (Color blocks sit still)
+  - `0x01`: **Gradual** (Flowing/Breathing transition)
+  - `0x02`: **Strobe** (Flashing segments)
+  - `0x03`: **Running Water** (Hard jumping Marquee)
+- **SegmentLength (Byte 1)** defines the size of the looping chunk. (Must be >=10 points to avoid hardware glitching).
+- **Speed (Byte 3)**: `0x01` (Slowest) to `0x64` (Fastest, usually bounded `0x20`+).
+- **Direction Boolean (Byte 138 - if length padded)**: `0x01` Forward flow, `0x00` Reverse flow.
+- A single 1-pixel padded string to `0x59` `Type 1` safely replicates Solid Mode without `0x31` flickering glitches.
 
 ### Custom DIY Patterns (`0x51`)
 Unlimited creativity with up to 32 steps.
@@ -778,3 +798,21 @@ These mappings closely relate to the `setHardwareConfig` (`0x81`) command values
     - **Type `0x00` (Static Flow)**: Instructs the array to cascade and naturally loop across the skateboard (used for Marquee, Comet, and Alternating).
     - **Type `0x01` (Gradual)**: Systematically locks the array in place, freezing all internal gradients into an unmoving stream. This is required to prevent flickering on `Solid` pattern outputs.
 3. **Camera Optic Saturation Scaling**: Raw environment telemetry gathered from device cameras contains heavily desaturated hex codes due to fluorescent glare. To map properly to addressable strips, the hex matrix must be mathematically normalized by completely subtracting the noise floor (minimum RGB channel) and instantly scaling the dominant channel to `255`, ensuring pure structural saturation reaches the BLE pipeline.
+
+---
+
+## 6. Advanced V5 Firmware Discoveries (LedNetWF)
+*Discovered via HomeAssistant / LEDNetWF repository analysis against V5 microcontrollers.*
+
+### Candle Mode (Flicker Simulation)
+- The V5 firmware supports a native "Candle" effect that uses internal algorithms to realistically simulate a flickering flame.
+- **Parameters**: It allows specific adjustments for baseline brightness, flicker speed, and base RGB lighting color to establish warm ambient atmospheres completely independently of the static `0x42` pattern bounds.
+
+### Hardware Alarms & Timers
+- **Offline Schedules**: V5 controllers possess dedicated memory banks to store daily and weekly schedule masks (alarms) independently of the mobile app.
+- **Power & Action Triggers**: Hex arguments natively support `alarm-on` (Boot device), `alarm-off` (Kill power), `alarm-rgb` (Boot on specific Static Hex array), and `alarm-effect` (Boot into a specific Pattern ID).
+- **Known Firmware Glitch**: While writing alarms to device memory typically succeeds and populates correctly inside the official Zengge visual interfaces, the execution of "Repeat Day Masks" contains firmware-level race conditions that occasionally prevent the alarms from physically firing at the target time. OFF schedules possess definitively higher reliability than ON/Effect schedules.
+
+### Smear Payload Protocol (Raw Streaming Vectors)
+- The raw pixel-by-pixel color buffer stream utilized by certain V5 apps is classified as a "Smear Packet".
+- **Structure**: These are functionally massive variants of the `0x59` matrix mapped into 144-byte streams (48 pixels * 3 channels), containing dedicated bit flags for directional stream math (`1`=static, `2`=stream, `3`=strobe, `4`=jump).

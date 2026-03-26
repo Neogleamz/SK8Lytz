@@ -71,7 +71,7 @@ export default function HardwareTestController({
   }, [device]);
   
   // Builder State
-  const [protocol, setProtocol] = useState<'0x59' | '0x51' | '0x42' | '0x73' | '0x71' | '0x2A' | 'CAMERA'>('0x59');
+  const [protocol, setProtocol] = useState<'0x59' | '0x51' | '0x42' | '0x73' | '0x71' | '0x2A' | 'CANDLE' | 'CAMERA'>('0x59');
   const [r, setR] = useState(255);
   const [g, setG] = useState(0);
   const [b, setB] = useState(0);
@@ -94,10 +94,14 @@ export default function HardwareTestController({
   // 2.4G RF Remote State (0x2A)
   const [rfAuthMode, setRfAuthMode] = useState<'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED'>('ALLOW_ALL');
 
+  // Candle Mode State (0x39)
+  const [candleAmplitude, setCandleAmplitude] = useState<number>(2);
+
   // Power State (0x71)
   const [powerTesterState, setPowerTesterState] = useState<boolean>(true);
 
   // Raw Hex State
+  const [currentPayload, setCurrentPayload] = useState<number[]>([]);
   const [rawHexString, setRawHexString] = useState('');
   const [annotatedPayload, setAnnotatedPayload] = useState<{hex: string, label: string, color: string}[]>([]);
   const [isManualOverride, setIsManualOverride] = useState(false);
@@ -148,7 +152,9 @@ export default function HardwareTestController({
       const c2 = { r: Math.round(r2 * factor), g: Math.round(g2 * factor), b: Math.round(b2 * factor) };
       payload = ZenggeProtocol.setMusicConfig(isDeviceMic === 1, musicModeType, musicPatternId, color, c2, musicSensitivity, brightness);
     } else if (protocol === '0x42') {
-      payload = ZenggeProtocol.setRbmMode(rbmPattern, speed, brightness);
+      payload = ZenggeProtocol.setCustomRbm(rbmPattern, speed, brightness);
+    } else if (protocol === 'CANDLE') {
+      payload = ZenggeProtocol.setCandleMode(r, g, b, speed, brightness, candleAmplitude);
     } else if (protocol === '0x2A') {
       payload = ZenggeProtocol.setRfRemoteState(rfAuthMode);
     } else if (protocol === '0x71') {
@@ -157,6 +163,7 @@ export default function HardwareTestController({
     
     const hex = payload.map(byte => byte.toString(16).toUpperCase().padStart(2, '0')).join(' ');
     setRawHexString(hex);
+    setCurrentPayload([...payload]);
 
     const annotations: {hex: string, label: string, color: string}[] = [];
     const getHex = (v: number) => v.toString(16).toUpperCase().padStart(2, '0');
@@ -226,7 +233,7 @@ export default function HardwareTestController({
     });
     setAnnotatedPayload(annotations);
 
-  }, [protocol, r, g, b, r2, g2, b2, speed, length, transitionType, brightness, segmentDirection, rbmPattern, isDeviceMic, musicModeType, musicPatternId, musicSensitivity, isManualOverride]);
+  }, [protocol, r, g, b, r2, g2, b2, speed, length, transitionType, brightness, segmentDirection, rbmPattern, isDeviceMic, musicModeType, musicPatternId, musicSensitivity, candleAmplitude, isManualOverride, powerTesterState]);
 
   const handleSend = () => {
     if (!writeToDevice) return;
@@ -328,8 +335,9 @@ export default function HardwareTestController({
           points={hwPoints}
           brightness={brightness}
           speed={speed}
-          isPoweredOn={true}
-          statusText={`TESTING: ${protocol}`}
+          isPoweredOn={powerTesterState}
+          statusText={`TEST 0X${currentPayload[0]?.toString(16).toUpperCase() || '00'} | SPEED: ${speed}`}
+          rawHexPayload={currentPayload}
           audioMagnitude={0}
         />
       </View>
@@ -432,7 +440,7 @@ export default function HardwareTestController({
 
       <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 12 }]}>Protocol Selector</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-        {['0x59', '0x51', '0x42', '0x73', '0x71', '0x2A', 'CAMERA'].map(p => (
+        {['0x59', '0x51', '0x42', '0x73', '0x71', '0x2A', 'CANDLE', 'CAMERA'].map(p => (
           <TouchableOpacity 
             key={p} 
             onPress={() => setProtocol(p as any)}
@@ -494,8 +502,17 @@ export default function HardwareTestController({
       {protocol === '0x42' && (
         <View style={{ gap: 16, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
           <Text style={[Typography.title, { color: '#00FF44', fontSize: 16 }]}>0x42 Fixed ROM Pattern</Text>
-          <SettingWithExplanation title={`RBM Pattern ID (${rbmPattern})`} description="Triggers a hardcoded light pattern baked directly into the Symphony controller's physical ROM footprint. Due to hardware constraints, native RBM patterns above 102 are entirely non-functional." Colors={Colors}>
-             <CustomSlider value={rbmPattern} minimumValue={1} maximumValue={102} onValueChange={setRbmPattern} />
+          <SettingWithExplanation title={`RBM Pattern ID (${rbmPattern})`} description="Triggers a hardcoded light pattern baked directly into the Symphony controller's physical ROM footprint. Note: Addressing patterns 101-210 accesses extended Halloween/Christmas looping effects undocumented in standard guides." Colors={Colors}>
+             <CustomSlider value={rbmPattern} minimumValue={1} maximumValue={210} onValueChange={setRbmPattern} />
+          </SettingWithExplanation>
+        </View>
+      )}
+
+      {protocol === 'CANDLE' && (
+        <View style={{ gap: 16, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
+          <Text style={[Typography.title, { color: '#FFA500', fontSize: 16 }]}>Candle Flicker Simulation</Text>
+          <SettingWithExplanation title={`Volumetric Amplitude (${candleAmplitude})`} description="Forces a random flickering array physically inside the hardware using an undocumented algorithm to simulate deep candles." Colors={Colors}>
+             <CustomSlider value={candleAmplitude} minimumValue={1} maximumValue={3} onValueChange={setCandleAmplitude} />
           </SettingWithExplanation>
         </View>
       )}

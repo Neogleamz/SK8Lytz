@@ -24,6 +24,7 @@ interface ProductVisualizerProps {
   isPoweredOn?: boolean;
   statusText?: string;
   audioMagnitude?: number;
+  rawHexPayload?: number[];
 }
 
 // Convert HSL to Hex manually as React Native Interpolate handles strict string maps better
@@ -50,7 +51,7 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, isPoweredOn = true, audioMagnitude = 0 }: any) => {
+const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, isPoweredOn = true, audioMagnitude = 0, multiColors = [], rawHexPayload, simMode }: any) => {
   const product = String(device.type || fallbackProduct);
   const isHaloz = !product.toLowerCase().includes('soul');
 
@@ -117,7 +118,7 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
     for (let i = 0; i < renderLeds; i++) {
         let left = 0;
         let top = 0;
-        const outerDiam = isHaloz ? 36 : 18; // Dense radius expanding overlap aggressively
+        const outerDiam = isHaloz ? 16 : 12; // Shrunk massively to simulate a thin 6mm channel
         const offset = outerDiam / 2;
 
         const targetLength = (i / renderLeds) * totalLength;
@@ -147,7 +148,25 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
         let dotOpacity: any = isPoweredOn ? 1 : 0.2;
 
         if (isPoweredOn) {
-          if (mode === 'PRESETS') {
+          if (mode === 'CANDLE') {
+             dotColor = color;
+             const offset = (i * 0.15) % 1;
+             dotOpacity = animValue.interpolate({
+                 inputRange: [0, 0.25, 0.5, 0.75, 1],
+                 outputRange: [
+                     (brightness/100) * (0.6 + (Math.sin(offset * Math.PI) * 0.1)), 
+                     (brightness/100) * (0.8 + (Math.cos(offset * Math.PI) * 0.2)), 
+                     (brightness/100) * 0.4, 
+                     (brightness/100) * 0.9, 
+                     (brightness/100) * 0.6
+                 ],
+             });
+          } else if (mode === 'FIXED' && multiColors && multiColors.length > 0) {
+             const segmentIdx = Math.floor(fract * multiColors.length);
+             const safeIdx = Math.min(Math.max(0, segmentIdx), multiColors.length - 1);
+             dotColor = multiColors[safeIdx];
+             dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.8, 1]}); // Slight breathing to prove it's tracking
+          } else if (mode === 'PRESETS') {
              const rainbowColors = [0, 1/6, 2/6, 3/6, 4/6, 5/6, 1].map(v => HSLToHex((v - mirroredFract + 1) % 1 * 360, 100, 50));
              dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
           } else if (mode === 'RBM') {
@@ -348,22 +367,22 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
          {isHaloz && (
             <View style={{
                position: 'absolute',
-               width: 77 + 32, // Based on calculated superellipse bounds (140 * 0.55 = 77) + dot offset
-               height: 121 + 32, // (220 * 0.55 = 121) + dot offset
-               borderWidth: 26, // Creates the hollow track
+               width: 77 + 16, 
+               height: 121 + 16, 
+               borderWidth: 10, // Creates a very thin hollow 6mm track
                borderColor: 'rgba(255,255,255,0.06)',
-               borderRadius: 24, // Matches the n=4 superellipse curvature precisely
+               borderRadius: 24, 
                alignSelf: 'center',
                top: '50%',
-               marginTop: -(121 + 32) / 2,
+               marginTop: -(121 + 16) / 2,
                left: '50%',
-               marginLeft: -(77 + 32) / 2
+               marginLeft: -(77 + 16) / 2
             }}/>
          )}
 
          {leds.map(led => {
-            const diam = isHaloz ? 36 : 18;
-            const core = isHaloz ? 3 : 4; // Substantially shrunk core to look like a microscopic chip
+            const diam = isHaloz ? 16 : 12; // Ultra-thin 6mm footprint
+            const core = isHaloz ? 2 : 2; // Microscopic core
             return (
                <Animated.View key={led.key} style={[
                   led.position, 
@@ -375,8 +394,8 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
                     backgroundColor: led.activeColor as any, 
                     opacity: led.activeOpacity,
                     shadowColor: isPoweredOn ? led.activeColor as any : 'transparent',
-                    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1.0, shadowRadius: isHaloz ? 30 : 16,
-                    elevation: 12,
+                    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1.0, shadowRadius: isHaloz ? 12 : 8,
+                    elevation: 6,
                   }} />
                   {/* Tight Inner LED Core */}
                   {led.isHotspot && (
@@ -407,18 +426,74 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
     </TouchableOpacity>
   );
 };
-
-export default function ProductVisualizer({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText, audioMagnitude = 0 }: ProductVisualizerProps) {
+export default function ProductVisualizer({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText, audioMagnitude = 0, rawHexPayload }: ProductVisualizerProps) {
   const animValue = useRef(new Animated.Value(0)).current;
+
+  // VISUALIZER PROTOCOL SYNCHRONIZATION ENGINE
+  // Derive 1:1 hardware simulation states natively out of raw Bluetooth Payload Hex
+  let simMode = mode;
+  let simPatternId = patternId;
+  let simSpeed = speed;
+  let simBrightness = brightness;
+  let simColor = color;
+  let simAudioMag = audioMagnitude;
+  let simMultiColors: string[] = [];
+
+  if (rawHexPayload && rawHexPayload.length > 5 && isPoweredOn) {
+      let payloadOffset = 0;
+      let op = rawHexPayload[0];
+      
+      // Auto-strip Symphony V2 Protocol Wrapping (00 XX 80 00 ...)
+      if (rawHexPayload[0] === 0x00 && rawHexPayload[2] === 0x80 && rawHexPayload.length > 8) {
+          op = rawHexPayload[8];
+          payloadOffset = 8;
+      }
+
+      if (op === 0x59) {
+          simMode = 'FIXED';
+          simPatternId = 1;
+          const colors = [];
+          for (let i = 5 + payloadOffset; i < rawHexPayload.length - 2; i += 3) {
+             const r = rawHexPayload[i] || 0;
+             const g = rawHexPayload[i+1] || 0;
+             const b = rawHexPayload[i+2] || 0;
+             colors.push(`#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`);
+          }
+          simMultiColors = colors;
+          simColor = colors[0] || color;
+          simSpeed = rawHexPayload[3 + payloadOffset] || speed;
+      } else if (op === 0x42) {
+          simMode = 'RBM';
+          simPatternId = rawHexPayload[1 + payloadOffset] || patternId;
+          simSpeed = rawHexPayload[2 + payloadOffset] || speed;
+          simBrightness = rawHexPayload[3 + payloadOffset] || brightness;
+      } else if (op === 0x73) {
+          simMode = 'MUSIC';
+          simPatternId = rawHexPayload[3 + payloadOffset] || patternId;
+          simAudioMag = audioMagnitude; 
+          simSpeed = rawHexPayload[11 + payloadOffset] || speed;
+          simBrightness = rawHexPayload[12 + payloadOffset] || brightness;
+          const r1 = rawHexPayload[4 + payloadOffset]||0, g1 = rawHexPayload[5 + payloadOffset]||0, b1 = rawHexPayload[6 + payloadOffset]||0;
+          simColor = `#${r1.toString(16).padStart(2,'0')}${g1.toString(16).padStart(2,'0')}${b1.toString(16).padStart(2,'0')}`;
+      } else if (op === 0x39 && rawHexPayload[1 + payloadOffset] === 0xD1) {
+          simMode = 'CANDLE';
+          simPatternId = 1;
+          const r1 = rawHexPayload[2 + payloadOffset]||0, g1 = rawHexPayload[3 + payloadOffset]||0, b1 = rawHexPayload[4 + payloadOffset]||0;
+          simColor = `#${r1.toString(16).padStart(2,'0')}${g1.toString(16).padStart(2,'0')}${b1.toString(16).padStart(2,'0')}`;
+          simSpeed = 101 - (rawHexPayload[5 + payloadOffset] || 50); // Protocol inverts speed automatically
+          simBrightness = rawHexPayload[6 + payloadOffset] || 100;
+          // Candle Amplitude stored at index 7, but random flicker determines UI intensity
+      }
+  }
 
   useEffect(() => {
     animValue.stopAnimation();
     
-    if (isPoweredOn && (mode === 'PRESETS' || mode === 'RBM' || mode === 'MUSIC' || mode === 'FIXED')) {
+    if (isPoweredOn && (simMode === 'PRESETS' || simMode === 'RBM' || simMode === 'MUSIC' || simMode === 'FIXED' || simMode === 'CANDLE')) {
       animValue.setValue(0);
-      const baseDuration = (mode === 'MUSIC') ? 800 : (mode === 'RBM' ? 2000 : (mode === 'FIXED' ? 1500 : 3000));
+      const baseDuration = (simMode === 'MUSIC') ? 800 : (simMode === 'RBM' ? 2000 : (simMode === 'FIXED' ? 1500 : (simMode === 'CANDLE' ? 400 : 3000)));
       // Speed 0 = 5x slower, Speed 100 = 0.4x faster
-      const duration = baseDuration / (0.4 + (speed / 100) * 2.1); 
+      const duration = baseDuration / (0.4 + (simSpeed / 100) * 2.1); 
       
       Animated.loop(
         Animated.timing(animValue, {
@@ -430,7 +505,7 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
     } else {
       animValue.setValue(1);
     }
-  }, [product, mode, color, patternId, speed, isPoweredOn]);
+  }, [product, simMode, simColor, simPatternId, simSpeed, isPoweredOn, rawHexPayload]);
 
   // Fallback if no specific devices array is provided: construct one or two devices based on isPaired flag
   const renderDevices = (devices && devices.length > 0) ? devices : (
@@ -453,18 +528,19 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
            <VisualizerUnit 
              key={dev.id || index.toString()} 
              device={dev}
-             color={color}
-             mode={mode}
-             patternId={patternId}
+             color={simColor}
+             mode={simMode}
+             patternId={simPatternId}
              animValue={animValue}
              fallbackProduct={product}
              fallbackPoints={points}
              fixedFgColor={fixedFgColor}
              fixedBgColor={fixedBgColor}
              onLongPress={onLongPressDevice}
-             brightness={brightness}
+             brightness={simBrightness}
              isPoweredOn={isPoweredOn}
-             audioMagnitude={audioMagnitude}
+             audioMagnitude={simAudioMag}
+             multiColors={simMultiColors}
            />
          ))}
       </View>

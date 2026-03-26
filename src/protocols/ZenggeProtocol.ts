@@ -59,10 +59,35 @@ export class ZenggeProtocol {
    * RBM Mode (Advanced 100 modes on Firmware 0x56)
    * Pattern 1-100, Speed 0-100, Brightness 0-100
    */
-  static setRbmMode(pattern: number, speed: number, brightness: number = 100): number[] {
-    const payload = [0x42, pattern, speed, brightness];
-    const checksum = this.calculateChecksum(payload);
-    return this.wrapCommand([...payload, checksum]);
+  static setCustomRbm(patternId: number, speed: number, brightness: number): number[] {
+    const speedHex = Math.max(1, Math.min(100, speed));
+    const brightnessHex = Math.max(1, Math.min(100, brightness));
+    const cmd = [0x42, patternId, speedHex, brightnessHex];
+    const checksum = this.calculateChecksum(cmd);
+    return this.wrapCommand([...cmd, checksum]);
+  }
+
+  /**
+   * Hardware Native Candle Mode (0x39 / 0xD1)
+   * Mimics physical flickering independently from the App's CPU.
+   * @param r Red Channel (0-255)
+   * @param g Green Channel (0-255)
+   * @param b Blue Channel (0-255)
+   * @param speed Flicker Speed (1-100)
+   * @param brightness Baseline Brightness (1-100)
+   * @param amplitude Intensity of flicker (1-3)
+   */
+  public static setCandleMode(r: number, g: number, b: number, speed: number, brightness: number, amplitude: number): number[] {
+    const cleanR = Math.max(0, Math.min(255, Math.round(r)));
+    const cleanG = Math.max(0, Math.min(255, Math.round(g)));
+    const cleanB = Math.max(0, Math.min(255, Math.round(b)));
+    const invertedSpeed = 101 - Math.max(1, Math.min(100, Math.round(speed)));
+    const cleanBright = Math.max(1, Math.min(100, Math.round(brightness)));
+    const cleanAmp = Math.max(1, Math.min(3, Math.round(amplitude)));
+
+    const cmd = [0x39, 0xD1, cleanR, cleanG, cleanB, invertedSpeed, cleanBright, cleanAmp];
+    const checksum = this.calculateChecksum(cmd);
+    return this.wrapCommand([...cmd, checksum]);
   }
 
   /**
