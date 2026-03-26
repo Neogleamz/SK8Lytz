@@ -237,13 +237,34 @@ export class ZenggeProtocol {
     
     const points = (payload[2] << 8) | payload[3];
     const orderBytes = ['UNK', 'RGB', 'RBG', 'GRB', 'GBR', 'BRG', 'BGR'];
-    const colorOrder = orderBytes[payload[4]] || 'GRB';
+    const sorting = orderBytes[payload[4]] || 'GRB';
     
     const icBytes: Record<number, string> = { 1: 'SM16703', 2: 'WS2811', 3: 'WS2812B', 4: 'SK6812' };
     const stripType = icBytes[payload[5]] || 'WS2812B';
     
     const segments = (payload[6] << 8) | payload[7];
 
-    return { points, colorOrder, stripType, segments };
+    return { points, sorting, stripType, segments };
+  }
+
+  /**
+   * Set 2.4G Physical RF Remote Authorization State & Pairing Memory
+   * Mode: 0x01 (Allow None), 0x02 (Allow Paired Only), 0x03 (Allow All)
+   */
+  public static setRfRemoteState(authMode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED', clearRemotes: boolean = false): number[] {
+    let modeByte = 0x03; // Allow All
+    if (authMode === 'ALLOW_NONE') modeByte = 0x01;
+    else if (authMode === 'ALLOW_PAIRED') modeByte = 0x02;
+    
+    // Command 0x2A is the 2.4G configuration.
+    // The 5 bytes of 0xFF effectively clear the paired 40-bit Remote ID when synchronized.
+    const cmd = [
+      0x2A, modeByte, 
+      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+      0x0F
+    ];
+    const checksum = this.calculateChecksum(cmd);
+    return this.wrapCommand([...cmd, checksum]);
   }
 }

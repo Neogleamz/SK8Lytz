@@ -225,7 +225,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
             <View style={styles.inputGroup}>
               <Text style={styles.label}>LED Strip Type</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-                {['RGB (WS2811)', 'RGBW', 'GRB (WS2812B)', 'BRG'].map((st) => (
+                {['SM16703', 'WS2811', 'WS2812B', 'SK6812'].map((st) => (
                   <TouchableOpacity 
                     key={st}
                     style={[

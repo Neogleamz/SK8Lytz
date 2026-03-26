@@ -150,10 +150,11 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     writeToDevice(ZenggeProtocol.setMultiColor(arr, spd, 1, 0));
   };
 
-  const [musicMode, setMusicModeState] = useState<'SCREEN' | 'BAR'>('SCREEN');
   const [musicPatternId, setMusicPatternId] = useState<number>(1);
   const [micSource, setMicSource] = useState<'APP' | 'DEVICE'>('APP');
-  const [musicOption, setMusicOption] = useState<'DROP' | 'COLUMN' | 'COLOR'>('COLUMN');
+  const [musicMatrixStyle, setMusicMatrixStyle] = useState<number>(39); // 0x27 (39) Light Screen, 0x26 (38) Light Bar
+  const [musicSecondaryHue, setMusicSecondaryHue] = useState<number>(300);
+  const [musicColorFocus, setMusicColorFocus] = useState<'PRIMARY' | 'SECONDARY'>('PRIMARY');
   const [musicSetting, setMusicSetting] = useState<'SENSITIVITY' | 'BRIGHTNESS'>('SENSITIVITY');
 
   const [fixedPatternId, setFixedPatternId] = useState<number>(1);
@@ -313,10 +314,10 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           else setSpeed(50);
           if (parsed.micSensitivity !== undefined) setMicSensitivity(parsed.micSensitivity);
           if (parsed.musicHue !== undefined) setMusicHue(parsed.musicHue);
-          if (parsed.musicMode) setMusicModeState(parsed.musicMode);
+          if (parsed.musicSecondaryHue !== undefined) setMusicSecondaryHue(parsed.musicSecondaryHue);
+          if (parsed.musicMatrixStyle) setMusicMatrixStyle(parsed.musicMatrixStyle);
           if (parsed.musicPatternId) setMusicPatternId(parsed.musicPatternId);
           if (parsed.micSource) setMicSource(parsed.micSource);
-          if (parsed.musicOption) setMusicOption(parsed.musicOption);
           if (parsed.musicSetting) setMusicSetting(parsed.musicSetting);
           if (parsed.fixedPatternId) setFixedPatternId(parsed.fixedPatternId);
           if (parsed.fixedColorMode) setFixedColorMode(parsed.fixedColorMode);
@@ -331,13 +332,13 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
   React.useEffect(() => {
     const stateBlob = {
       activeMode, selectedColor, selectedPatternId, brightness, speed,
-      micSensitivity, musicHue, musicMode, musicPatternId, micSource, musicOption, musicSetting,
+      micSensitivity, musicHue, musicSecondaryHue, musicMatrixStyle, musicPatternId, micSource, musicSetting,
       fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
     };
     AsyncStorage.setItem('@Sk8lytz_ControllerState', JSON.stringify(stateBlob)).catch(() => {});
   }, [
     activeMode, selectedColor, selectedPatternId, brightness, speed, 
-    micSensitivity, musicHue, musicMode, musicPatternId, micSource, musicOption, musicSetting,
+    micSensitivity, musicHue, musicSecondaryHue, musicMatrixStyle, musicPatternId, micSource, musicSetting,
     fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
   ]);
 
@@ -346,23 +347,23 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
     sens: number = micSensitivity,
     bright: number = brightness,
     src: 'APP' | 'DEVICE' = micSource,
-    currentHue: number = musicHue
+    currentHue: number = musicHue,
+    secondHue: number = musicSecondaryHue,
+    matrix: number = musicMatrixStyle
   ) => {
     if (!writeToDevice) return;
     
     const isDeviceMic = src === 'DEVICE';
-    const modeTypeVal = 0x27; // Use 0x27 (Light Screen/Symphony) for addressable strips
     
     const f1 = (n: number, k = (n + currentHue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
     const c1 = { r: Math.round(f1(5) * 255), g: Math.round(f1(3) * 255), b: Math.round(f1(1) * 255) };
     
-    const compHue = (currentHue + 180) % 360;
-    const f2 = (n: number, k = (n + compHue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+    const f2 = (n: number, k = (n + secondHue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
     const c2 = { r: Math.round(f2(5) * 255), g: Math.round(f2(3) * 255), b: Math.round(f2(1) * 255) };
     
     writeToDevice(ZenggeProtocol.setMusicConfig(
       isDeviceMic,
-      modeTypeVal,
+      matrix,
       patternId,
       c1,
       c2,
@@ -709,19 +710,24 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.musicOptionsGrid}>
-                <TouchableOpacity style={styles.radioItem} onPress={() => setMusicOption('DROP')}>
-                  <View style={[styles.radioOuter, musicOption === 'DROP' && styles.radioActive]}>
-                    <View style={musicOption === 'DROP' && styles.radioInner} />
-                  </View>
-                  <Text style={styles.radioLabel}>drop color</Text>
+              <View style={{ flexDirection: 'row', marginBottom: 12, marginTop: 12 }}>
+                <TouchableOpacity 
+                  onPress={() => {
+                     setMusicMatrixStyle(39);
+                     handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicHue, musicSecondaryHue, 39);
+                  }}
+                  style={{ flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: musicMatrixStyle === 39 ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
+                >
+                  <Text style={{ color: musicMatrixStyle === 39 ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Light Screen</Text>
                 </TouchableOpacity>
-
-                <TouchableOpacity style={styles.radioItem} onPress={() => setMusicOption('COLUMN')}>
-                  <View style={[styles.radioOuter, musicOption === 'COLUMN' && styles.radioActive]}>
-                    <View style={musicOption === 'COLUMN' && styles.radioInner} />
-                  </View>
-                  <Text style={styles.radioLabel}>sound column</Text>
+                <TouchableOpacity 
+                  onPress={() => {
+                     setMusicMatrixStyle(38);
+                     handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicHue, musicSecondaryHue, 38);
+                  }}
+                  style={{ flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: musicMatrixStyle === 38 ? Colors.secondary : Colors.surfaceHighlight, borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
+                >
+                  <Text style={{ color: musicMatrixStyle === 38 ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Light Bar</Text>
                 </TouchableOpacity>
               </View>
 
@@ -850,12 +856,30 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
               </View>
             )}
 
+            {/* Color Focus Toggle for Music Mode */}
+            {activeMode === 'MUSIC' && (
+              <View style={{ flexDirection: 'row', marginBottom: 16 }}>
+                <TouchableOpacity 
+                  onPress={() => setMusicColorFocus('PRIMARY')}
+                  style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: musicColorFocus === 'PRIMARY' ? '#FF4444' : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
+                >
+                  <Text style={{ color: musicColorFocus === 'PRIMARY' ? '#FFF' : Colors.textMuted, fontWeight: 'bold', fontSize: 12 }}>PRIMARY COLOR</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => setMusicColorFocus('SECONDARY')}
+                  style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: musicColorFocus === 'SECONDARY' ? '#44FF44' : Colors.surfaceHighlight, borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
+                >
+                  <Text style={{ color: musicColorFocus === 'SECONDARY' ? '#000' : Colors.textMuted, fontWeight: 'bold', fontSize: 12 }}>SECONDARY COLOR</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Hue Slider - Hidden in Programs Mode */}
             {activeMode !== 'RBM' && activeMode !== 'PRESETS' && (
               <View style={[styles.controlRow, { marginTop: 0, height: 32 }]}>
                 <CustomSlider 
                   gradientTrack={true}
-                  value={activeMode === 'FIXED' ? fixedHue : (activeMode === 'MUSIC' ? musicHue : selectedHue)}
+                  value={activeMode === 'FIXED' ? fixedHue : (activeMode === 'MUSIC' ? (musicColorFocus === 'PRIMARY' ? musicHue : musicSecondaryHue) : selectedHue)}
                   onValueChange={(hue) => {
                     if (activeMode === 'FIXED') {
                       setFixedHue(hue);
@@ -865,7 +889,8 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                       if (fixedColorMode === 'FOREGROUND') setFixedFgColor(hex);
                       else setFixedBgColor(hex);
                     } else if (activeMode === 'MUSIC') {
-                      setMusicHue(hue);
+                      if (musicColorFocus === 'PRIMARY') setMusicHue(hue);
+                      else setMusicSecondaryHue(hue);
                     } else {
                       setSelectedHue(hue);
                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
@@ -877,7 +902,11 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     if (activeMode === 'FIXED') {
                       applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor);
                     } else if (activeMode === 'MUSIC') {
-                      handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hue);
+                      if (musicColorFocus === 'PRIMARY') {
+                         handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hue, musicSecondaryHue, musicMatrixStyle);
+                      } else {
+                         handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicHue, hue, musicMatrixStyle);
+                      }
                     } else if (writeToDevice) {
                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
                       const r = Math.round(f(5) * 255);
@@ -931,9 +960,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                         }
                       } else if (activeMode === 'MUSIC') {
                         if (musicSetting === 'SENSITIVITY') {
-                          handleMusicChange(musicPatternId, val, brightness, micSource, musicHue);
+                          handleMusicChange(musicPatternId, val, brightness, micSource, musicHue, musicSecondaryHue, musicMatrixStyle);
                         } else {
-                          handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicHue);
+                          handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicHue, musicSecondaryHue, musicMatrixStyle);
                         }
                       } else {
                         if (activeMode === 'FIXED') {

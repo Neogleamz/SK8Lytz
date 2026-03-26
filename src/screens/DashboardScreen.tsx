@@ -43,7 +43,8 @@ export default function DashboardScreen() {
     isScanning,
     isBluetoothSupported,
     isBluetoothEnabled,
-    requestPermissions
+    requestPermissions,
+    setOnDataReceived
   } = useBLE();
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -504,12 +505,58 @@ export default function DashboardScreen() {
     requestPermissions();
   }, []);
 
-  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
-  const [selectedDeviceForSettings, setSelectedDeviceForSettings] = useState<any>(null);
+  useEffect(() => {
+    if (setOnDataReceived) {
+      setOnDataReceived((deviceId, data) => {
+        const parsed = ZenggeProtocol.parseHardwareConfig(data);
+        if (parsed) {
+          console.log(`[HW Sync] Decoded live configuration from ${deviceId}:`, parsed);
+          setAllDevices((prev: any[]) => {
+            let morphed = false;
+            const next = prev.map(d => {
+              if (d.id === deviceId) {
+                const anyD = d as any;
+                if (anyD.points !== parsed.points || anyD.segments !== parsed.segments || anyD.stripType !== parsed.stripType || anyD.sorting !== parsed.sorting) {
+                  morphed = true;
+                  return { ...d, points: parsed.points, segments: parsed.segments, stripType: parsed.stripType, sorting: parsed.sorting };
+                }
+              }
+              return d;
+            });
+            if (morphed) allDevicesRef.current = next as any;
+            return morphed ? next : prev;
+          });
+          
+          AsyncStorage.getItem('ng_device_configs').then(stored => {
+             const configs = stored ? JSON.parse(stored) : {};
+             if (!configs[deviceId]) configs[deviceId] = {};
+             configs[deviceId].points = parsed.points;
+             configs[deviceId].segments = parsed.segments;
+             configs[deviceId].stripType = parsed.stripType;
+             configs[deviceId].sorting = parsed.sorting;
+             AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs)).catch(()=>{});
+          });
+        }
+      });
+    }
+  }, [setOnDataReceived, setAllDevices]);
 
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
+  const [selectedDeviceForSettingsId, setSelectedDeviceForSettingsId] = useState<string | null>(null);
+
+  const selectedDeviceForSettings = useMemo(() => {
+    if (!selectedDeviceForSettingsId) return null;
+    return allDevices.find(d => d.id === selectedDeviceForSettingsId) || null;
+  }, [selectedDeviceForSettingsId, allDevices]);
 
   const openSettings = (device: any) => {
-    setSelectedDeviceForSettings(device);
+    setSelectedDeviceForSettingsId(device.id);
+    
+    // Explicitly query the hardware config upon modal invoke if connected
+    if (connectedDevices.some(d => d.id === device.id)) {
+       writeToDevice(ZenggeProtocol.queryHardwareConfig(), device.id);
+    }
+    
     setIsSettingsVisible(true);
   };
 
@@ -962,13 +1009,13 @@ export default function DashboardScreen() {
           initialSettings={{
             name: selectedDeviceForSettings?.name || 'SOULZ',
             type: (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'),
-            points: selectedDeviceForSettings?.points || (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 43 : 24),
-            segments: 1,
-            stripType: selectedDeviceForSettings?.stripType || 'GRB (WS2812B)',
-            sorting: selectedDeviceForSettings?.sorting || 'GRB',
-            grouped: selectedDeviceForSettings?.grouped || false,
-            groupId: selectedDeviceForSettings?.groupId,
-            groupName: customGroups.find(g => g.id === selectedDeviceForSettings?.groupId)?.name || 'My Roller Skates'
+            points: (selectedDeviceForSettings as any)?.points || (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 43 : 24),
+            segments: (selectedDeviceForSettings as any)?.segments || 1,
+            stripType: (selectedDeviceForSettings as any)?.stripType || 'WS2812B',
+            sorting: (selectedDeviceForSettings as any)?.sorting || 'GRB',
+            grouped: (selectedDeviceForSettings as any)?.grouped || false,
+            groupId: (selectedDeviceForSettings as any)?.groupId,
+            groupName: customGroups.find(g => g.id === (selectedDeviceForSettings as any)?.groupId)?.name || 'My Roller Skates'
           }}
           groups={customGroups}
         />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Platform, Switch } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Typography, Layout } from '../theme/theme';
 import CustomSlider from './CustomSlider';
@@ -71,7 +71,7 @@ export default function HardwareTestController({
   }, [device]);
   
   // Builder State
-  const [protocol, setProtocol] = useState<'0x59' | '0x51' | '0x42' | '0x31' | '0x25' | '0x73' | 'CAMERA'>('0x59');
+  const [protocol, setProtocol] = useState<'0x59' | '0x51' | '0x42' | '0x31' | '0x25' | '0x73' | '0x71' | '0x2A' | 'CAMERA'>('0x59');
   const [r, setR] = useState(255);
   const [g, setG] = useState(0);
   const [b, setB] = useState(0);
@@ -92,6 +92,12 @@ export default function HardwareTestController({
   const [g2, setG2] = useState<number>(0);
   const [b2, setB2] = useState<number>(255);
   
+  // 2.4G RF Remote State (0x2A)
+  const [rfAuthMode, setRfAuthMode] = useState<'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED'>('ALLOW_ALL');
+
+  // Power State (0x71)
+  const [powerTesterState, setPowerTesterState] = useState<boolean>(true);
+
   // Raw Hex State
   const [rawHexString, setRawHexString] = useState('');
   const [annotatedPayload, setAnnotatedPayload] = useState<{hex: string, label: string, color: string}[]>([]);
@@ -148,6 +154,10 @@ export default function HardwareTestController({
       payload = ZenggeProtocol.setRbmMode(rbmPattern, speed, brightness);
     } else if (protocol === '0x25') {
       payload = ZenggeProtocol.setLegacyPattern(legacyPattern, speed);
+    } else if (protocol === '0x2A') {
+      payload = ZenggeProtocol.setRfRemoteState(rfAuthMode);
+    } else if (protocol === '0x71') {
+      payload = powerTesterState ? ZenggeProtocol.turnOn() : ZenggeProtocol.turnOff();
     }
     
     const hex = payload.map(byte => byte.toString(16).toUpperCase().padStart(2, '0')).join(' ');
@@ -416,7 +426,7 @@ export default function HardwareTestController({
 
       <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 12 }]}>Protocol Selector</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-        {['0x59', '0x51', '0x42', '0x25', '0x31', '0x73', 'CAMERA'].map(p => (
+        {['0x59', '0x51', '0x42', '0x25', '0x31', '0x73', '0x71', '0x2A', 'CAMERA'].map(p => (
           <TouchableOpacity 
             key={p} 
             onPress={() => setProtocol(p as any)}
@@ -434,6 +444,7 @@ export default function HardwareTestController({
 
       {/* R G B Settings */}
       <View style={{ gap: 16, marginBottom: 20 }}>
+        <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: -8 }}>Color 1 (Primary / Sound Column Color)</Text>
         <View>
           <Text style={{ color: '#FF4444', fontWeight: 'bold', marginBottom: 4 }}>RED ({r})</Text>
           <CustomSlider value={r} minimumValue={0} maximumValue={255} onValueChange={setR} />
@@ -492,6 +503,50 @@ export default function HardwareTestController({
         </View>
       )}
 
+      {protocol === '0x2A' && (
+        <View style={{ gap: 16, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
+          <Text style={[Typography.title, { color: '#00FF44', fontSize: 16 }]}>0x2A Physical RF Remote Boundaries</Text>
+          <SettingWithExplanation title="RF Authorization Gateway" description="Sets the native bounding box for physical 2.4G remotes linking to this unit. Modifying this explicitly locks out or grants access to external handheld controllers natively." Colors={Colors}>
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 4 }}>
+               {[
+                 { label: 'Allow All', val: 'ALLOW_ALL' },
+                 { label: 'Allow Only Paired', val: 'ALLOW_PAIRED' },
+                 { label: 'Allow None', val: 'ALLOW_NONE' }
+               ].map((mode) => (
+                 <TouchableOpacity 
+                   key={mode.val} 
+                   onPress={() => setRfAuthMode(mode.val as any)} 
+                   style={{ 
+                     paddingHorizontal: 12, paddingVertical: 8, 
+                     backgroundColor: rfAuthMode === mode.val ? Colors.primary : 'rgba(255,255,255,0.1)', 
+                     borderRadius: 8, marginRight: 8 
+                   }}
+                 >
+                   <Text style={{ color: rfAuthMode === mode.val ? '#000' : '#FFF', fontWeight: 'bold' }}>{mode.label}</Text>
+                 </TouchableOpacity>
+               ))}
+             </ScrollView>
+          </SettingWithExplanation>
+        </View>
+      )}
+
+      {protocol === '0x71' && (
+        <View style={{ gap: 16, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
+          <Text style={[Typography.title, { color: Colors.primary, fontSize: 16 }]}>0x71 Power Override</Text>
+          <SettingWithExplanation title="Power ON / OFF" description="Directly transmits brute force system Power ON / OFF vectors to the native motherboard receiver." Colors={Colors}>
+             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={{ color: Colors.textMuted }}>Command Power State</Text>
+                <Switch 
+                  value={powerTesterState}
+                  onValueChange={setPowerTesterState}
+                  trackColor={{ false: '#3B4A5A', true: Colors.primary }}
+                  thumbColor="#FFF"
+                />
+             </View>
+          </SettingWithExplanation>
+        </View>
+      )}
+
       {protocol === '0x73' && (
         <View style={{ gap: 16, marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8 }}>
           <Text style={[Typography.title, { color: '#FFD700', fontSize: 16 }]}>0x73 Music Symphony Parameters</Text>
@@ -508,7 +563,7 @@ export default function HardwareTestController({
              <CustomSlider value={musicSensitivity} minimumValue={1} maximumValue={100} onValueChange={setMusicSensitivity} />
           </SettingWithExplanation>
           <View>
-             <Text style={{ color: '#FFF', fontWeight: 'bold', marginTop: 8, marginBottom: 8, alignSelf: 'center' }}>Secondary Reaction Color Variables</Text>
+             <Text style={{ color: '#FFF', fontWeight: 'bold', marginTop: 8, marginBottom: 8, alignSelf: 'center' }}>Drop Color (Secondary Variables)</Text>
              <View style={{ flexDirection: 'row', gap: 16 }}>
                <View style={{ flex: 1 }}><Text style={{ color: '#FF4444', fontWeight: 'bold' }}>R2</Text><CustomSlider value={r2} minimumValue={0} maximumValue={255} onValueChange={setR2} /></View>
                <View style={{ flex: 1 }}><Text style={{ color: '#44FF44', fontWeight: 'bold' }}>G2</Text><CustomSlider value={g2} minimumValue={0} maximumValue={255} onValueChange={setG2} /></View>

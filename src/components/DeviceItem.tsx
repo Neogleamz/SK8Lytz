@@ -111,7 +111,7 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
         {onPowerToggle && (
           <TouchableOpacity 
             style={{ marginRight: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isPoweredOn ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255,255,255,0.2)' }}
-            onPress={onPowerToggle}
+            onPress={(e) => { e.stopPropagation(); onPowerToggle(); }}
             activeOpacity={0.6}
           >
             <MaterialCommunityIcons name="power" size={20} color={isPoweredOn ? Colors.primary : Colors.textMuted} />

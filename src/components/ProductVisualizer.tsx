@@ -52,63 +52,81 @@ function HSLToHex(h: number, s: number, l: number) {
 
 const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, isPoweredOn = true, audioMagnitude = 0 }: any) => {
   const product = device.type || fallbackProduct;
-  const pointsPerSide = device.points || fallbackPoints || (product === 'HALOZ' ? 24 : 43);
-  const numLeds = pointsPerSide * 2;
+  // HALOZ actual hardware is composed of two segments making a ring of 16 LEDs.
+  // SOULZ visualizer uses the pointsPerSide * 2 logic to visually double the strip.
+  const numLeds = product === 'HALOZ' ? (device.points || fallbackPoints || 16) : ((device.points || fallbackPoints || 43) * 2);
 
   const leds = useMemo(() => {
     const list = [];
-    const numSamples = 5000;
-    const pathSamples = [];
+    const numSamples = product === 'SOULZ' ? 5000 : 0;
+    const pathSamples: any[] = [];
     let totalLength = 0;
     
     // SCALE FACTOR
     const S = 0.55;
 
-    for (let i = 0; i <= numSamples; i++) {
-        const fract = i / numSamples;
-        const angle = (fract * 2 * Math.PI) + (Math.PI / 2);
-        let top = 0; let left = 0;
-        
-        if (product === 'HALOZ') {
-          const p = 0.6;
-          const sgnCos = Math.sign(Math.cos(angle)) || 1;
-          const sgnSin = Math.sign(Math.sin(angle)) || 1;
-          left = (80 + sgnCos * Math.pow(Math.abs(Math.cos(angle)), p) * 70) * S;
-          top = (120 + sgnSin * Math.pow(Math.abs(Math.sin(angle)), p) * 110) * S;
-        } else {
-          top = (150 + Math.sin(angle) * 150) * S;
+    if (product === 'SOULZ') {
+      for (let i = 0; i <= numSamples; i++) {
+          const fract = i / numSamples;
+          const angle = (fract * 2 * Math.PI) + (Math.PI / 2);
+          const top = (150 + Math.sin(angle) * 150) * S;
           const verticalPos = Math.sin(angle);
           const pinch = 1 - 0.3 * Math.exp(-Math.pow(verticalPos - 0.1, 2) * 5); 
-          left = (70 + (Math.cos(angle) * 70 * pinch)) * S;
-        }
+          const left = (70 + (Math.cos(angle) * 70 * pinch)) * S;
 
-        if (i > 0) {
-            const prev = pathSamples[i - 1];
-            const dx = left - prev.left;
-            const dy = top - prev.top;
-            totalLength += Math.sqrt(dx*dx + dy*dy);
-        }
-        pathSamples.push({ top, left, length: totalLength });
+          if (i > 0) {
+              const prev = pathSamples[i - 1];
+              const dx = left - prev.left;
+              const dy = top - prev.top;
+              totalLength += Math.sqrt(dx*dx + dy*dy);
+          }
+          pathSamples.push({ top, left, length: totalLength });
+      }
     }
 
     let lastSampleIdx = 0;
     for (let i = 0; i < numLeds; i++) {
-        const targetLength = (i / numLeds) * totalLength;
-        let p1 = pathSamples[lastSampleIdx];
-        let p2 = pathSamples[lastSampleIdx + 1];
-        
-        for (let j = lastSampleIdx; j < numSamples; j++) {
-            if (pathSamples[j+1].length >= targetLength) {
-                p1 = pathSamples[j];
-                p2 = pathSamples[j+1];
-                lastSampleIdx = j;
-                break;
+        let left = 0;
+        let top = 0;
+        const dotSize = product === 'HALOZ' ? 12 : 10;
+        const offset = dotSize / 2;
+
+        if (product === 'HALOZ') {
+            let angle = 0;
+            const half = Math.floor(numLeds / 2);
+            if (i < half) {
+               // Segment 1: Bottom Middle (π/2) ascending Right side to Top Middle (-π/2)
+               const fraction = i / Math.max(1, half - 1); 
+               angle = (Math.PI / 2) - fraction * Math.PI; 
+            } else {
+               // Segment 2: Top Middle (-π/2) descending Left side to Bottom Middle (-3π/2)
+               const fraction = (i - half) / Math.max(1, (numLeds - half) - 1); 
+               angle = - (Math.PI / 2) - fraction * Math.PI; 
             }
+
+            // Evenly spaced standard elliptical distribution to prevent corner bunching
+            left = (80 + Math.cos(angle) * 70) * S - offset;
+            top = (120 + Math.sin(angle) * 110) * S - offset;
+        } else {
+            const targetLength = (i / numLeds) * totalLength;
+            let p1 = pathSamples[lastSampleIdx];
+            let p2 = pathSamples[lastSampleIdx + 1];
+            
+            for (let j = lastSampleIdx; j < pathSamples.length - 1; j++) {
+                if (pathSamples[j+1].length >= targetLength) {
+                    p1 = pathSamples[j];
+                    p2 = pathSamples[j+1];
+                    lastSampleIdx = j;
+                    break;
+                }
+            }
+            
+            const segmentLength = p2.length - p1.length;
+            const t = segmentLength <= 0.0001 ? 0 : (targetLength - p1.length) / segmentLength;
+            left = p1.left + (p2.left - p1.left) * t - offset;
+            top = p1.top + (p2.top - p1.top) * t - offset;
         }
-        
-        const segmentLength = p2.length - p1.length;
-        const t = segmentLength <= 0.0001 ? 0 : (targetLength - p1.length) / segmentLength;
-        
+
         const fract = (i / numLeds);
         const mirroredFract = fract <= 0.5 ? fract * 2 : (1 - fract) * 2;
         let dotColor: any = isPoweredOn ? color : '#333333';
@@ -291,11 +309,6 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
           }
         }
 
-        const dotSize = product === 'HALOZ' ? 12 : 10;
-        const offset = dotSize / 2;
-        const left = p1.left + (p2.left - p1.left) * t - offset;
-        const top = p1.top + (p2.top - p1.top) * t - offset;
-
         list.push({
           key: `led_${i}`,
           position: { top, left, position: 'absolute' as const },
@@ -324,9 +337,13 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
                  backgroundColor: led.activeColor as any, 
                  opacity: led.activeOpacity,
                  shadowColor: isPoweredOn ? led.activeColor as any : 'transparent',
-                 width: product === 'HALOZ' ? 12 : 10,
-                 height: product === 'HALOZ' ? 12 : 10,
-                 borderRadius: product === 'HALOZ' ? 6 : 5,
+                 shadowOffset: { width: 0, height: 0 },
+                 shadowOpacity: 1.0,
+                 shadowRadius: product === 'HALOZ' ? 24 : 18,
+                 elevation: 12,
+                 width: product === 'HALOZ' ? 16 : 12,
+                 height: product === 'HALOZ' ? 16 : 12,
+                 borderRadius: product === 'HALOZ' ? 8 : 6,
                }
             ]} />
          ))}
@@ -427,21 +444,21 @@ const styles = StyleSheet.create({
     width: 77, height: 165,
   },
   ledDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  ledDotSmall: {
     width: 12,
     height: 12,
     borderRadius: 6,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  ledDotSmall: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowRadius: 18,
+    elevation: 10,
   }
 });
