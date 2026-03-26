@@ -51,83 +51,97 @@ function HSLToHex(h: number, s: number, l: number) {
 }
 
 const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, isPoweredOn = true, audioMagnitude = 0 }: any) => {
-  const product = device.type || fallbackProduct;
+  const product = String(device.type || fallbackProduct);
+  const isHaloz = !product.toLowerCase().includes('soul');
+
   // HALOZ actual hardware is composed of two segments making a ring of 16 LEDs.
   // SOULZ visualizer uses the pointsPerSide * 2 logic to visually double the strip.
-  const numLeds = product === 'HALOZ' ? (device.points || fallbackPoints || 16) : ((device.points || fallbackPoints || 43) * 2);
+  const numLeds = isHaloz ? (device.points || fallbackPoints || 16) : ((device.points || fallbackPoints || 43) * 2);
 
   const leds = useMemo(() => {
     const list = [];
-    const numSamples = product === 'SOULZ' ? 5000 : 0;
+    const numSamples = 5000;
     const pathSamples: any[] = [];
     let totalLength = 0;
     
     // SCALE FACTOR
     const S = 0.55;
 
-    if (product === 'SOULZ') {
-      for (let i = 0; i <= numSamples; i++) {
-          const fract = i / numSamples;
-          const angle = (fract * 2 * Math.PI) + (Math.PI / 2);
-          const top = (150 + Math.sin(angle) * 150) * S;
-          const verticalPos = Math.sin(angle);
-          const pinch = 1 - 0.3 * Math.exp(-Math.pow(verticalPos - 0.1, 2) * 5); 
-          const left = (70 + (Math.cos(angle) * 70 * pinch)) * S;
-
-          if (i > 0) {
-              const prev = pathSamples[i - 1];
-              const dx = left - prev.left;
-              const dy = top - prev.top;
-              totalLength += Math.sqrt(dx*dx + dy*dy);
-          }
-          pathSamples.push({ top, left, length: totalLength });
-      }
-    }
-
-    let lastSampleIdx = 0;
-    for (let i = 0; i < numLeds; i++) {
+    for (let i = 0; i <= numSamples; i++) {
         let left = 0;
         let top = 0;
-        const dotSize = product === 'HALOZ' ? 12 : 10;
-        const offset = dotSize / 2;
 
-        if (product === 'HALOZ') {
+        if (isHaloz) {
             let angle = 0;
-            const half = Math.floor(numLeds / 2);
+            const half = Math.floor(numSamples / 2);
             if (i < half) {
                // Segment 1: Bottom Middle (π/2) ascending Right side to Top Middle (-π/2)
                const fraction = i / Math.max(1, half - 1); 
                angle = (Math.PI / 2) - fraction * Math.PI; 
             } else {
                // Segment 2: Top Middle (-π/2) descending Left side to Bottom Middle (-3π/2)
-               const fraction = (i - half) / Math.max(1, (numLeds - half) - 1); 
+               const fraction = (i - half) / Math.max(1, (numSamples - half) - 1); 
                angle = - (Math.PI / 2) - fraction * Math.PI; 
             }
 
-            // Evenly spaced standard elliptical distribution to prevent corner bunching
-            left = (80 + Math.cos(angle) * 70) * S - offset;
-            top = (120 + Math.sin(angle) * 110) * S - offset;
+            // Superellipse implementation for a rounded rectangle frame.
+            const n = 4; // Flatness / Boxiness factor
+            const power = 2 / n;
+            const cosT = Math.cos(angle);
+            const sinT = Math.sin(angle);
+            const x = 70 * Math.sign(cosT) * Math.pow(Math.abs(cosT), power);
+            const y = 110 * Math.sign(sinT) * Math.pow(Math.abs(sinT), power);
+
+            left = (80 + x) * S;
+            top = (120 + y) * S;
         } else {
-            const targetLength = (i / numLeds) * totalLength;
-            let p1 = pathSamples[lastSampleIdx];
-            let p2 = pathSamples[lastSampleIdx + 1];
-            
-            for (let j = lastSampleIdx; j < pathSamples.length - 1; j++) {
-                if (pathSamples[j+1].length >= targetLength) {
-                    p1 = pathSamples[j];
-                    p2 = pathSamples[j+1];
-                    lastSampleIdx = j;
-                    break;
-                }
-            }
-            
-            const segmentLength = p2.length - p1.length;
-            const t = segmentLength <= 0.0001 ? 0 : (targetLength - p1.length) / segmentLength;
-            left = p1.left + (p2.left - p1.left) * t - offset;
-            top = p1.top + (p2.top - p1.top) * t - offset;
+            const fract = i / numSamples;
+            const angle = (fract * 2 * Math.PI) + (Math.PI / 2);
+            top = (150 + Math.sin(angle) * 150) * S;
+            const verticalPos = Math.sin(angle);
+            const pinch = 1 - 0.3 * Math.exp(-Math.pow(verticalPos - 0.1, 2) * 5); 
+            left = (70 + (Math.cos(angle) * 70 * pinch)) * S;
         }
 
-        const fract = (i / numLeds);
+        if (i > 0) {
+            const prev = pathSamples[i - 1];
+            const dx = left - prev.left;
+            const dy = top - prev.top;
+            totalLength += Math.sqrt(dx*dx + dy*dy);
+        }
+        pathSamples.push({ top, left, length: totalLength });
+    }
+
+    let lastSampleIdx = 0;
+    const renderLeds = isHaloz ? Math.max(numLeds * 4, 64) : numLeds;
+    for (let i = 0; i < renderLeds; i++) {
+        let left = 0;
+        let top = 0;
+        const outerDiam = isHaloz ? 36 : 18; // Dense radius expanding overlap aggressively
+        const offset = outerDiam / 2;
+
+        const targetLength = (i / renderLeds) * totalLength;
+        let p1 = pathSamples[lastSampleIdx];
+        let p2 = pathSamples[lastSampleIdx + 1] || p1;
+        
+        for (let j = lastSampleIdx; j < pathSamples.length - 1; j++) {
+            if (pathSamples[j+1].length >= targetLength) {
+                p1 = pathSamples[j];
+                p2 = pathSamples[j+1];
+                lastSampleIdx = j;
+                break;
+            }
+        }
+        
+        const segmentLength = p2.length - p1.length;
+        const t = segmentLength <= 0.0001 ? 0 : (targetLength - p1.length) / segmentLength;
+        left = p1.left + (p2.left - p1.left) * t - offset;
+        top = p1.top + (p2.top - p1.top) * t - offset;
+
+        const segmentI = isHaloz ? (i % (renderLeds / 2)) : i;
+        const activeSegmentLeds = isHaloz ? (renderLeds / 2) : renderLeds;
+        
+        const fract = (segmentI / activeSegmentLeds);
         const mirroredFract = fract <= 0.5 ? fract * 2 : (1 - fract) * 2;
         let dotColor: any = isPoweredOn ? color : '#333333';
         let dotOpacity: any = isPoweredOn ? 1 : 0.2;
@@ -310,10 +324,11 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
         }
 
         list.push({
-          key: `led_${i}`,
-          position: { top, left, position: 'absolute' as const },
-          activeColor: dotColor,
-          activeOpacity: dotOpacity,
+           key: `led_${i}`,
+           position: { top, left, position: 'absolute' as const },
+           activeColor: dotColor,
+           activeOpacity: dotOpacity,
+           isHotspot: isHaloz ? (i % (renderLeds / numLeds) === 0) : true,
         });
     }
     return list;
@@ -326,27 +341,60 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
       style={{ alignItems: 'center', marginHorizontal: 12, paddingVertical: 4 }}
     >
       <View style={[
-        product === 'HALOZ' ? styles.haloBase : styles.soulBase, 
+        isHaloz ? styles.haloBase : styles.soulBase, 
         { alignSelf: 'center', opacity: isPoweredOn ? (brightness === 0 ? 0 : 0.08 + Math.pow(brightness / 100, 0.6) * 0.92) : 0.2 }
       ]}>
-         {leds.map(led => (
-            <Animated.View key={led.key} style={[
-               product === 'HALOZ' ? styles.ledDot : styles.ledDotSmall, 
-               led.position, 
-               { 
-                 backgroundColor: led.activeColor as any, 
-                 opacity: led.activeOpacity,
-                 shadowColor: isPoweredOn ? led.activeColor as any : 'transparent',
-                 shadowOffset: { width: 0, height: 0 },
-                 shadowOpacity: 1.0,
-                 shadowRadius: product === 'HALOZ' ? 24 : 18,
-                 elevation: 12,
-                 width: product === 'HALOZ' ? 16 : 12,
-                 height: product === 'HALOZ' ? 16 : 12,
-                 borderRadius: product === 'HALOZ' ? 8 : 6,
-               }
-            ]} />
-         ))}
+         {/* Physical unlit silicone background track simulation */}
+         {isHaloz && (
+            <View style={{
+               position: 'absolute',
+               width: 77 + 32, // Based on calculated superellipse bounds (140 * 0.55 = 77) + dot offset
+               height: 121 + 32, // (220 * 0.55 = 121) + dot offset
+               borderWidth: 26, // Creates the hollow track
+               borderColor: 'rgba(255,255,255,0.06)',
+               borderRadius: 24, // Matches the n=4 superellipse curvature precisely
+               alignSelf: 'center',
+               top: '50%',
+               marginTop: -(121 + 32) / 2,
+               left: '50%',
+               marginLeft: -(77 + 32) / 2
+            }}/>
+         )}
+
+         {leds.map(led => {
+            const diam = isHaloz ? 36 : 18;
+            const core = isHaloz ? 3 : 4; // Substantially shrunk core to look like a microscopic chip
+            return (
+               <Animated.View key={led.key} style={[
+                  led.position, 
+                  { width: diam, height: diam, alignItems: 'center', justifyContent: 'center' }
+               ]}>
+                  {/* Diffused Outer Aura */}
+                  <Animated.View style={{
+                    position: 'absolute', width: '100%', height: '100%', borderRadius: diam/2,
+                    backgroundColor: led.activeColor as any, 
+                    opacity: led.activeOpacity,
+                    shadowColor: isPoweredOn ? led.activeColor as any : 'transparent',
+                    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1.0, shadowRadius: isHaloz ? 30 : 16,
+                    elevation: 12,
+                  }} />
+                  {/* Tight Inner LED Core */}
+                  {led.isHotspot && (
+                    <Animated.View style={{
+                      width: core, height: core, borderRadius: core/2,
+                      backgroundColor: '#FFFFFF',
+                      shadowColor: '#FFFFFF', shadowOpacity: 1.0, shadowRadius: 3, elevation: 4,
+                      opacity: Animated.multiply(led.activeOpacity, 0.9) as any, // Boosted opacity to slice through the heavy diffusion
+                    }} />
+                  )}
+                  {/* 3D Silicone Frost Overlay */}
+                  <View style={{
+                    position: 'absolute', width: '100%', height: '100%', borderRadius: diam/2,
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  }} />
+               </Animated.View>
+            );
+         })}
       </View>
       <View style={{ marginTop: 4, alignItems: 'center', zIndex: 10, width: 100 }}>
          <Text 
