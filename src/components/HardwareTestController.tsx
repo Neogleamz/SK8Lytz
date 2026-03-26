@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Platform, Switch } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Platform, Switch, Alert } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Typography, Layout } from '../theme/theme';
 import CustomSlider from './CustomSlider';
@@ -55,22 +55,36 @@ export default function HardwareTestController({
   const product = device?.name || 'DEVICE';
   
   // Hardware Re-Config State
-  const [hwPoints, setHwPoints] = useState(device?.points || 43);
-  const [hwSegments, setHwSegments] = useState(device?.segments || 1);
-  const [hwColorOrder, setHwColorOrder] = useState(device?.sorting || 'GRB');
-  const [hwStripType, setHwStripType] = useState(device?.stripType || 'WS2812B');
+  const [hwPoints, setHwPoints] = useState<number | null>(null);
+  const [hwSegments, setHwSegments] = useState<number | null>(null);
+  const [hwColorOrder, setHwColorOrder] = useState<string | null>(null);
+  const [hwStripType, setHwStripType] = useState<string | null>(null);
+
+  const [isQueryingHardware, setIsQueryingHardware] = useState(false);
 
   const COLOR_ORDERS = ['RGB', 'RBG', 'GRB', 'GBR', 'BRG', 'BGR'];
   const STRIP_TYPES = ['SM16703', 'WS2811', 'WS2812B', 'SK6812'];
 
   useEffect(() => {
-    if (device) {
-      setHwPoints(device.points || 43);
-      setHwSegments(device.segments || 1);
-      setHwColorOrder(device.sorting || 'GRB');
-      setHwStripType(device.stripType || 'WS2812B');
+    if (isQueryingHardware && lastRawNotification && lastRawNotification.deviceId === (device?.id)) {
+       const payloadStr = lastRawNotification.payloadHex.split(' ');
+       const payloadBytes = payloadStr.map(s => parseInt(s, 16));
+       if (payloadBytes[0] === 0x10) {
+           const parsed = ZenggeProtocol.parseHardwareConfig(payloadBytes);
+           if (parsed) {
+              setHwPoints(parsed.points);
+              setHwSegments(parsed.segments);
+              setHwColorOrder(parsed.sorting);
+              setHwStripType(parsed.stripType);
+              setIsQueryingHardware(false);
+              Alert.alert(
+                "Hardware Query Successful",
+                `Points: ${parsed.points}\nSegments: ${parsed.segments}\nColor Order: ${parsed.sorting}\nPlatform IC: ${parsed.stripType}`
+              );
+           }
+       }
     }
-  }, [device]);
+  }, [lastRawNotification]);
   
   // Builder State
   const [protocol, setProtocol] = useState<'0x59' | '0x51' | '0x42' | '0x73' | '0x71' | '0x2A' | 'CANDLE' | 'CAMERA' | 'MULTI'>('0x59');
@@ -268,6 +282,10 @@ export default function HardwareTestController({
 
   const pushHardwareConfig = async () => {
     if (!writeToDevice) return;
+    if (hwPoints === null || hwColorOrder === null || hwStripType === null || hwSegments === null) {
+      Alert.alert("Missing Parameters", "Please query the physical hardware settings first, or manually parameterize all values before rewriting the core matrix.");
+      return;
+    }
     const payload = ZenggeProtocol.setHardwareConfig(hwPoints, hwColorOrder, hwStripType, hwSegments);
     await writeToDevice(payload);
   };
@@ -341,7 +359,7 @@ export default function HardwareTestController({
           mode="FIXED" 
           patternId={1} 
           isPaired={!!writeToDevice}
-          points={hwPoints}
+          points={hwPoints === null ? 43 : hwPoints}
           brightness={brightness}
           speed={speed}
           isPoweredOn={powerTesterState}
@@ -361,15 +379,15 @@ export default function HardwareTestController({
         <View style={{ marginTop: 16, backgroundColor: '#000', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#333' }}>
           <Text style={[Typography.title, { color: '#FFF', fontSize: 14, marginBottom: 12 }]}>Re-Configure Device Logic</Text>
           
-          <SettingWithExplanation title={`Total LED Points (${hwPoints})`} description="The physical number of distinct LEDs on the strip. Determines the absolute end of the hardware transmission envelope. Sent via 0x81 payload." Colors={Colors}>
-             <CustomSlider value={hwPoints} minimumValue={1} maximumValue={600} onValueChange={setHwPoints} />
+          <SettingWithExplanation title={`Total LED Points (${hwPoints === null ? '????' : hwPoints})`} description="The physical number of distinct LEDs on the strip. Determines the absolute end of the hardware transmission envelope. Sent via 0x81 payload." Colors={Colors}>
+             <CustomSlider value={hwPoints === null ? 43 : hwPoints} minimumValue={1} maximumValue={600} onValueChange={setHwPoints} />
           </SettingWithExplanation>
 
-          <SettingWithExplanation title={`Segments / Repeating Blocks (${hwSegments})`} description="Splits the LED points into duplicated virtual segments. E.g., 40 points with 2 segments = two identical 20-LED mirroring blocks. Sent via 0x81 payload." Colors={Colors}>
-            <CustomSlider value={hwSegments} minimumValue={1} maximumValue={100} onValueChange={setHwSegments} />
+          <SettingWithExplanation title={`Segments / Repeating Blocks (${hwSegments === null ? '????' : hwSegments})`} description="Splits the LED points into duplicated virtual segments. E.g., 40 points with 2 segments = two identical 20-LED mirroring blocks. Sent via 0x81 payload." Colors={Colors}>
+            <CustomSlider value={hwSegments === null ? 1 : hwSegments} minimumValue={1} maximumValue={100} onValueChange={setHwSegments} />
           </SettingWithExplanation>
           
-          <SettingWithExplanation title={`Color Ordering (${hwColorOrder})`} description="The explicit RGB mapping translation expected by the hardware. Mismatching this array causes Red to visually trigger as Green, etc. Sent via 0x81 payload." Colors={Colors}>
+          <SettingWithExplanation title={`Color Ordering (${hwColorOrder === null ? '????' : hwColorOrder})`} description="The explicit RGB mapping translation expected by the hardware. Mismatching this array causes Red to visually trigger as Green, etc. Sent via 0x81 payload." Colors={Colors}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 4 }}>
               {COLOR_ORDERS.map((order) => (
                 <TouchableOpacity key={order} onPress={() => setHwColorOrder(order)} style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: hwColorOrder === order ? Colors.primary : '#333', borderRadius: 16, marginRight: 8 }}>
@@ -379,7 +397,7 @@ export default function HardwareTestController({
             </ScrollView>
           </SettingWithExplanation>
 
-          <SettingWithExplanation title={`Controller IC Protocol (${hwStripType})`} description="The standard physical communication chip protocol driving the internal LEDs. Handled by the Skate's motherboard. Mismatching this causes rapid flickering, data scrambling, or total failure. Sent via 0x81 payload." Colors={Colors}>
+          <SettingWithExplanation title={`Controller IC Protocol (${hwStripType === null ? '????' : hwStripType})`} description="The standard physical communication chip protocol driving the internal LEDs. Handled by the Skate's motherboard. Mismatching this causes rapid flickering, data scrambling, or total failure. Sent via 0x81 payload." Colors={Colors}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 4 }}>
               {STRIP_TYPES.map((ic) => (
                 <TouchableOpacity key={ic} onPress={() => setHwStripType(ic)} style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: hwStripType === ic ? Colors.primary : '#333', borderRadius: 16, marginRight: 8 }}>
@@ -392,6 +410,7 @@ export default function HardwareTestController({
           <TouchableOpacity 
             onPress={() => {
               if (writeToDevice) {
+                setIsQueryingHardware(true);
                 writeToDevice(ZenggeProtocol.queryHardwareConfig());
               }
             }} 
