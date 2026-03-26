@@ -10,13 +10,14 @@ import DeviceItem from './DeviceItem';
 interface Sk8LytzProgrammerModalProps {
   visible: boolean;
   onClose: () => void;
+  onExitToLogs?: () => void;
   allDevices: any[];
   writeToDevice: (data: number[], deviceId?: string) => Promise<void>;
   isScanning: boolean;
   handleScan: () => void;
 }
 
-export default function Sk8LytzProgrammerModal({ visible, onClose, allDevices, writeToDevice, isScanning, handleScan }: Sk8LytzProgrammerModalProps) {
+export default function Sk8LytzProgrammerModal({ visible, onClose, onExitToLogs, allDevices, writeToDevice, isScanning, handleScan }: Sk8LytzProgrammerModalProps) {
   const { Colors, isDark } = useTheme();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const bg = isDark ? '#0f111a' : '#f0f2f5';
@@ -75,6 +76,10 @@ export default function Sk8LytzProgrammerModal({ visible, onClose, allDevices, w
   };
 
   const flashHaloz = async () => {
+    if (selectedIds.length === 0) {
+      alert("No devices selected to flash!");
+      return;
+    }
     for (const id of selectedIds) {
       await writeToDevice(ZenggeProtocol.setHardwareConfig(halozConfig.points, halozConfig.colorOrder, halozConfig.stripType, halozConfig.segments || 2), id);
     }
@@ -82,6 +87,10 @@ export default function Sk8LytzProgrammerModal({ visible, onClose, allDevices, w
   };
 
   const flashSoulz = async () => {
+    if (selectedIds.length === 0) {
+      alert("No devices selected to flash!");
+      return;
+    }
     for (const id of selectedIds) {
       await writeToDevice(ZenggeProtocol.setHardwareConfig(soulzConfig.points, soulzConfig.colorOrder, soulzConfig.stripType, soulzConfig.segments || 2), id);
     }
@@ -91,13 +100,19 @@ export default function Sk8LytzProgrammerModal({ visible, onClose, allDevices, w
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
-        <View style={[styles.header, { borderBottomColor: borderColor }]}>
+        <View style={[styles.header, { borderBottomColor: borderColor, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 }]}>
           <View>
             <Text style={[styles.title, { color: textPrimary }]}>⚡ SK8Lytz Programmer</Text>
             <Text style={[styles.subtitle, { color: textMuted }]}>Batch Flash Hardware Configs</Text>
           </View>
-          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-            <MaterialCommunityIcons name="close" size={24} color={textPrimary} />
+          <TouchableOpacity 
+              style={{backgroundColor: 'rgba(255, 60, 60, 0.15)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255, 60, 60, 0.4)'}} 
+              onPress={() => {
+                if (onExitToLogs) onExitToLogs();
+                else onClose();
+              }}
+          >
+              <Text style={{color: '#FF8888', fontSize: 10, fontWeight: 'bold', letterSpacing: 1}}>EXIT PROGRAMMER</Text>
           </TouchableOpacity>
         </View>
 
@@ -116,9 +131,8 @@ export default function Sk8LytzProgrammerModal({ visible, onClose, allDevices, w
                   setTempConfig(halozConfig);
                   setIsEditingConfig('HALOZ');
                 }}
-                disabled={selectedIds.length === 0}
               >
-                <Text style={[styles.flashBtnText, { color: '#00f0ff', opacity: selectedIds.length === 0 ? 0.4 : 1 }]}>
+                <Text style={[styles.flashBtnText, { color: '#00f0ff' }]}>
                   FLASH HALOZ ({halozConfig.points} Pts)
                 </Text>
                 <Text style={{ color: '#00f0ff', fontSize: 9, opacity: selectedIds.length === 0 ? 0.3 : 0.6, marginTop: 4 }}>
@@ -133,9 +147,8 @@ export default function Sk8LytzProgrammerModal({ visible, onClose, allDevices, w
                   setTempConfig(soulzConfig);
                   setIsEditingConfig('SOULZ');
                 }}
-                disabled={selectedIds.length === 0}
               >
-                <Text style={[styles.flashBtnText, { color: Colors.secondary, opacity: selectedIds.length === 0 ? 0.4 : 1 }]}>
+                <Text style={[styles.flashBtnText, { color: Colors.secondary }]}>
                   FLASH SOULZ ({soulzConfig.points} Pts)
                 </Text>
                 <Text style={{ color: Colors.secondary, fontSize: 9, opacity: selectedIds.length === 0 ? 0.3 : 0.6, marginTop: 4 }}>

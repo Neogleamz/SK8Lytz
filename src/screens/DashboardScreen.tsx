@@ -1250,10 +1250,13 @@ export default function DashboardScreen() {
             setIsProgrammerVisible(true);
         }}
       />
-      
       <Sk8LytzProgrammerModal 
         visible={isProgrammerVisible} 
         onClose={() => setIsProgrammerVisible(false)} 
+        onExitToLogs={() => {
+            setIsProgrammerVisible(false);
+            setLogsVisible(true);
+        }}
         allDevices={allDevices}
         writeToDevice={writeToDevice}
         isScanning={isScanning}
