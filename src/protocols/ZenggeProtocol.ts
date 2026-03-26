@@ -229,6 +229,20 @@ export class ZenggeProtocol {
   }
 
   /**
+   * Universal Addressable LED Configuration Query Pings (Shotgun Dict)
+   */
+  static queryHardwareConfigDictionary(): number[][] {
+    return [
+      this.wrapCommand([0x81, 0x8A, 0x8B, 0x96]), // 1: Standard LedNet Status
+      this.wrapCommand([0x10, 0x00, 0x00, 0x10]), // 2: Legacy MagicHome Ping
+      this.wrapCommand([0x2B, 0x2C, 0x2D, 0x00]), // 3: RF Remote Config Ping
+      this.wrapCommand([0x32, 0x3A, 0x3B, 0x0F]), // 4: Power State Boot Ping
+      this.wrapCommand([0x63, 0x14, 0x00, 0x00]), // 5: Direct Addressable Config Probe
+      this.wrapCommand([0x62, 0x00, 0x00, 0x00])  // 6: Direct Addressable Length Probe
+    ];
+  }
+
+  /**
    * Query Hardware Configuration (0x10)
    */
   static queryHardwareConfig(): number[] {

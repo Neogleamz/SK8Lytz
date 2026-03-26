@@ -411,12 +411,24 @@ export default function HardwareTestController({
             onPress={() => {
               if (writeToDevice) {
                 setIsQueryingHardware(true);
-                writeToDevice(ZenggeProtocol.queryHardwareConfig());
+                const queries = ZenggeProtocol.queryHardwareConfigDictionary();
+                queries.reduce((promise, query) => {
+                  return promise.then(() => new Promise((resolve) => {
+                    writeToDevice(query).then(() => {
+                      setTimeout(resolve, 300); // 300ms staggered sequential pings
+                    }).catch(() => {
+                      setTimeout(resolve, 300);
+                    });
+                  }));
+                }, Promise.resolve()).then(() => {
+                  setIsQueryingHardware(false);
+                  alert("Shotgun Protocol Fired! Please check the Telemetry Log Viewer to intercept the target Addressable payload response!");
+                });
               }
             }} 
             style={{ backgroundColor: '#00AEEF', padding: 12, borderRadius: 8, alignItems: 'center', marginBottom: 8 }}
           >
-            <Text style={{ color: '#FFF', fontWeight: 'bold' }}>QUERY PHYSICAL HARDWARE SETTINGS (0x10)</Text>
+            <Text style={{ color: '#FFF', fontWeight: 'bold', textAlign: 'center' }}>FIRE HARDWARE SHOTGUN PROBES</Text>
           </TouchableOpacity>
 
           {lastRawNotification && lastRawNotification.deviceId === (device?.id) && (
