@@ -1254,6 +1254,7 @@ export default function DashboardScreen() {
         }}
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
+        connectedDevices={connectedDevices as any[]}
       />
       <Sk8LytzProgrammerModal 
         visible={isProgrammerVisible} 

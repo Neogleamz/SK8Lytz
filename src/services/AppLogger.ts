@@ -27,7 +27,8 @@ export type EventType =
   | 'HARDWARE_CONFIG_CHANGED'
   | 'PROTOCOL_ERROR'
   | 'BLE_WRITE_ERROR'
-  | 'BLE_CONNECTION_ERROR';
+  | 'BLE_CONNECTION_ERROR'
+  | 'RAW_PAYLOAD';
 
 export interface LogEntry {
   t: number;        // timestamp ms

@@ -29,6 +29,7 @@ const EVENT_META: Record<EventType, { icon: string; color: string; label: string
   PROTOCOL_ERROR:          { icon: 'alert-circle', color: '#ff4040', label: 'Protocol Fault' },
   BLE_WRITE_ERROR:         { icon: 'bluetooth-audio', color: '#ff4040', label: 'TX Error' },
   BLE_CONNECTION_ERROR:    { icon: 'bluetooth-off', color: '#ff4040', label: 'Connection Fault' },
+  RAW_PAYLOAD:             { icon: 'matrix',       color: '#00f0ff', label: 'Data Trace' },
 };
 
 function formatTime(ms: number): string {
@@ -65,11 +66,12 @@ interface LogViewerModalProps {
   onClose: () => void;
   onOpenTester?: () => void;
   onOpenProgrammer?: () => void;
-  writeToDevice?: (data: number[]) => Promise<void>;
+  writeToDevice?: (data: number[], deviceId?: string) => Promise<void>;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
+  connectedDevices?: { id: string, name: string | null }[];
 }
 
-export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenProgrammer, writeToDevice, liveRxPayload }: LogViewerModalProps) {
+export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenProgrammer, writeToDevice, liveRxPayload, connectedDevices }: LogViewerModalProps) {
   const { Colors, isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -77,29 +79,82 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
   
   // Realtime Sniffer States
-  const [snifferLogs, setSnifferLogs] = useState<{dir: 'TX' | 'RX', hex: string, t: number}[]>([]);
+  const [snifferLogs, setSnifferLogs] = useState<{dir: 'TX' | 'RX', hex: string, t: number, dev?: string}[]>([]);
   const [snifferInput, setSnifferInput] = useState('');
+  const [isSnifferPaused, setIsSnifferPaused] = useState(false);
+  const [snifferTarget, setSnifferTarget] = useState<string>('ALL');
 
   useEffect(() => {
-    if (visible && liveRxPayload && liveRxPayload.payloadHex) {
+    if (visible && liveRxPayload && liveRxPayload.payloadHex && !isSnifferPaused) {
+      if (snifferTarget !== 'ALL' && liveRxPayload.deviceId !== snifferTarget) return;
       setSnifferLogs(prev => {
         // Prevent duplicate spam if reference doesn't change
         if (prev.length > 0 && prev[0].hex === liveRxPayload.payloadHex && (Date.now() - prev[0].t < 50)) return prev;
-        return [{ dir: 'RX', hex: liveRxPayload.payloadHex, t: liveRxPayload.timestamp || Date.now() }, ...prev];
+        return [{ dir: 'RX', hex: liveRxPayload.payloadHex, t: liveRxPayload.timestamp || Date.now(), dev: liveRxPayload.deviceId }, ...prev];
       });
     }
-  }, [liveRxPayload, visible]);
+  }, [liveRxPayload, visible, isSnifferPaused, snifferTarget]);
 
   const handleSendSniffer = async (hexStr: string) => {
     if (!writeToDevice) return;
     try {
       const bytes = hexStr.replace(/[^0-9A-Fa-f]/g, '').match(/.{1,2}/g)?.map(b => parseInt(b, 16)) || [];
       if (bytes.length === 0) return;
-      await writeToDevice(bytes);
-      setSnifferLogs(prev => [{ dir: 'TX', hex: bytes.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '), t: Date.now() }, ...prev]);
+      await writeToDevice(bytes, snifferTarget === 'ALL' ? undefined : snifferTarget);
+      if (!isSnifferPaused) {
+        setSnifferLogs(prev => [{ dir: 'TX', hex: bytes.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '), t: Date.now(), dev: snifferTarget }, ...prev]);
+      }
     } catch (e) {
       console.warn("Sniffer TX Error", e);
     }
+  };
+
+  const renderAnalyzedPayload = (hex: string) => {
+    const bytes = hex.split(' ');
+    if (bytes.length === 0) return <Text style={{ color: '#FFF' }}>{hex}</Text>;
+    
+    // Status Payload (Wait, bytes[0] could be 81 and length could be 14)
+    if (bytes[0] === '81' && bytes.length >= 14) {
+      const power = bytes[1] === '01' ? 'ON' : 'OFF';
+      const powerColor = bytes[1] === '01' ? '#00ff80' : '#ff4040';
+      const pattern = parseInt(bytes[2], 16);
+      const speed = parseInt(bytes[4], 16);
+      const colorHex = `#${bytes[6] || '00'}${bytes[7] || '00'}${bytes[8] || '00'}`;
+      return (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+          <Text style={{ color: '#FFD700', fontSize: 11, fontWeight: 'bold' }}>[STATUS]</Text>
+          <Text style={{ color: powerColor, fontSize: 11 }}>PWR:{power}</Text>
+          <Text style={{ color: '#c084fc', fontSize: 11 }}>PAT:{pattern}</Text>
+          <Text style={{ color: '#AADDFF', fontSize: 11 }}>SPD:{speed}</Text>
+          <View style={{ width: 12, height: 12, backgroundColor: colorHex, borderRadius: 2, borderWidth: 1, borderColor: '#fff' }} />
+          <Text style={{ color: '#888', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{hex}</Text>
+        </View>
+      );
+    }
+    
+    // Hardware Config Payload Native Translation
+    if ((bytes[0] === '00' && bytes[1] === '63') || bytes[0] === '63') {
+       const offset = bytes[0] === '00' ? 1 : 0;
+       if (bytes.length > offset + 5) {
+         const b2 = parseInt(bytes[offset + 1], 16);
+         const b3 = parseInt(bytes[offset + 2], 16);
+         const points = (b2 << 8) | b3;
+         const segments = parseInt(bytes[offset + 4], 16);
+         return (
+           <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+             <Text style={{ color: '#00f0ff', fontSize: 11, fontWeight: 'bold' }}>[HARDWARE]</Text>
+             <Text style={{ color: '#00ff80', fontSize: 11 }}>LEDS:{points}</Text>
+             <Text style={{ color: '#ff70ff', fontSize: 11 }}>SEGS:{segments}</Text>
+             <Text style={{ color: '#888', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{hex}</Text>
+           </View>
+         );
+       }
+    }
+
+    if (bytes[0] === '81' && bytes.length < 10) return <Text style={{ color: '#00ccff', fontSize: 11 }}>[PING] {hex}</Text>;
+    if (bytes[0] === '2B') return <Text style={{ color: '#ff7000', fontSize: 11 }}>[R-CONFIG] {hex}</Text>;
+
+    return <Text style={{ color: '#FFF', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11 }}>{hex}</Text>;
   };
 
   const load = useCallback(async () => {
@@ -358,7 +413,19 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
   const renderSnifferTab = () => (
     <View style={{ flex: 1, padding: 16 }}>
       <Text style={{ color: textPrimary, fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>💉 Protocol Sniffer</Text>
-      <Text style={{ color: textMuted, fontSize: 12, marginBottom: 16 }}>Manually inject bleeding-edge hexadecimal arrays bridging directly against standard BLE GATT pipes verifying absolute hardware responses locally.</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+         <Text style={{ color: textMuted, fontSize: 12 }}>Target Device:</Text>
+         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginLeft: 8 }}>
+            <TouchableOpacity onPress={() => setSnifferTarget('ALL')} style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, backgroundColor: snifferTarget === 'ALL' ? '#00f0ff' : cardBg, marginRight: 8, borderWidth: 1, borderColor: snifferTarget === 'ALL' ? '#00f0ff' : borderColor }}>
+               <Text style={{ color: snifferTarget === 'ALL' ? '#000' : textPrimary, fontSize: 11, fontWeight: 'bold' }}>ALL</Text>
+            </TouchableOpacity>
+            {connectedDevices?.map(d => (
+               <TouchableOpacity key={d.id} onPress={() => setSnifferTarget(d.id)} style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, backgroundColor: snifferTarget === d.id ? '#00f0ff' : cardBg, marginRight: 8, borderWidth: 1, borderColor: snifferTarget === d.id ? '#00f0ff' : borderColor }}>
+                 <Text style={{ color: snifferTarget === d.id ? '#000' : textPrimary, fontSize: 11, fontWeight: 'bold' }}>{d.name || d.id.slice(-5)}</Text>
+               </TouchableOpacity>
+            ))}
+         </ScrollView>
+      </View>
       
       {/* Probe Dictionary */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 16, flexGrow: 0 }}>
@@ -399,16 +466,27 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
 
       {/* Terminal View */}
       <View style={{ flex: 1, backgroundColor: '#000', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#333' }}>
+         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+           <Text style={{ color: '#bbb', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontWeight: 'bold' }}>CHRONOLOGICAL TIMELINE STREAM</Text>
+           <TouchableOpacity onPress={() => setIsSnifferPaused(!isSnifferPaused)}>
+             <Text style={{ color: isSnifferPaused ? '#ff4040' : '#00ff80', fontSize: 10, fontWeight: 'bold' }}>{isSnifferPaused ? '▶ RESUME' : '⏸ PAUSE'}</Text>
+           </TouchableOpacity>
+         </View>
          <FlatList 
             data={snifferLogs}
             inverted
             keyExtractor={(_, i) => String(i)}
             ListEmptyComponent={<Text style={{ color: '#555', fontFamily: 'monospace', fontSize: 12 }}>Waiting for BLE traffic...</Text>}
             renderItem={({ item }) => (
-              <View style={{ flexDirection: 'row', marginBottom: 6, opacity: Date.now() - item.t > 15000 ? 0.6 : 1 }}>
-                <Text style={{ color: item.dir === 'TX' ? '#FFD700' : '#00ff80', width: 28, fontWeight: 'bold', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 12 }}>{item.dir}</Text>
-                <Text style={{ color: '#9ca3af', width: 70, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11, marginTop: 1 }}>{formatTime(item.t).split(' ')[2]}</Text>
-                <Text style={{ color: '#FFF', flex: 1, flexWrap: 'wrap', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 12 }}>{item.hex}</Text>
+              <View style={{ flexDirection: 'row', marginBottom: 8, opacity: Date.now() - item.t > 15000 ? 0.7 : 1, alignItems: 'flex-start' }}>
+                <Text style={{ color: item.dir === 'TX' ? '#FFD700' : '#00ff80', width: 26, fontWeight: 'bold', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11 }}>{item.dir}</Text>
+                <Text style={{ color: '#777', width: 66, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 10, marginTop: 1 }}>{formatTime(item.t).split(' ')[2]}</Text>
+                <View style={{ flex: 1 }}>
+                  {renderAnalyzedPayload(item.hex)}
+                  {(item.dev && item.dev !== 'ALL') && (
+                    <Text style={{ color: '#555', fontSize: 9 }}>DEV: {item.dev.slice(-5)}</Text>
+                  )}
+                </View>
               </View>
             )}
          />
