@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView,
-  Share, Alert, FlatList, Platform,
+  Share, Alert, FlatList, Platform, SafeAreaView
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
@@ -9,7 +9,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger, LogEntry, EventType } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
 
-type Tab = 'timeline' | 'devices' | 'stats';
+type Tab = 'timeline' | 'devices' | 'stats' | 'admin';
 
 const EVENT_META: Record<EventType, { icon: string; color: string; label: string }> = {
   APP_OPENED:         { icon: 'cellphone-check', color: '#00f0ff', label: 'App Opened' },
@@ -57,9 +57,11 @@ function payloadSummary(entry: LogEntry): string {
 interface LogViewerModalProps {
   visible: boolean;
   onClose: () => void;
+  onOpenTester?: () => void;
+  onOpenProgrammer?: () => void;
 }
 
-export default function LogViewerModal({ visible, onClose }: LogViewerModalProps) {
+export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenProgrammer }: LogViewerModalProps) {
   const { Colors, isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -285,9 +287,43 @@ export default function LogViewerModal({ visible, onClose }: LogViewerModalProps
     );
   };
 
+  const renderAdminTab = () => (
+    <ScrollView style={styles.tabContent}>
+      <Text style={[styles.statSection, { color: textPrimary }]}>🛠️ Admin Tools</Text>
+      <View style={[styles.statCard, { backgroundColor: cardBg, borderColor, padding: 20 }]}>
+        <Text style={{ color: textMuted, fontSize: 13, marginBottom: 16, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+          Restricted diagnostics payload for low-level protocol debugging.
+        </Text>
+        <TouchableOpacity 
+          style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: '#00f0ff', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
+          onPress={() => {
+            if (onOpenTester) onOpenTester();
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 16, marginRight: 8 }}>🧪</Text>
+            <Text style={{ color: '#00f0ff', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch Hardware Tester</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={{ backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: '#ff4040', borderWidth: 1, paddingVertical: 14, borderRadius: 8 }}
+          onPress={() => {
+            if (onOpenProgrammer) onOpenProgrammer();
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 16, marginRight: 8 }}>⚡</Text>
+            <Text style={{ color: '#ff4040', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch SK8Lytz Programmer</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
-      <View style={[styles.root, { backgroundColor: bg }]}>
+      <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
         {/* Header */}
         <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
           <View>
@@ -309,7 +345,7 @@ export default function LogViewerModal({ visible, onClose }: LogViewerModalProps
 
         {/* Tabs */}
         <View style={[styles.tabs, { borderBottomColor: borderColor }]}>
-          {(['timeline', 'devices', 'stats'] as Tab[]).map(t => (
+          {(['timeline', 'devices', 'stats', 'admin'] as Tab[]).map(t => (
             <TouchableOpacity
               key={t}
               onPress={() => setTab(t)}
@@ -335,7 +371,8 @@ export default function LogViewerModal({ visible, onClose }: LogViewerModalProps
         )}
         {tab === 'devices' && renderDeviceTab()}
         {tab === 'stats' && renderStatsTab()}
-      </View>
+        {tab === 'admin' && renderAdminTab()}
+      </SafeAreaView>
     </Modal>
   );
 }

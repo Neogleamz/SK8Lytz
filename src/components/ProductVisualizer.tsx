@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { View, StyleSheet, Animated, Text, TouchableOpacity } from 'react-native';
+import { getArchetypeFromId } from '../utils/RbmDictionary';
+import { MusicDictionary } from '../utils/MusicDictionary';
 
 interface DeviceConfig {
   id?: string;
@@ -25,6 +27,8 @@ interface ProductVisualizerProps {
   statusText?: string;
   audioMagnitude?: number;
   rawHexPayload?: number[];
+  multiColors?: string[];
+  multiTransition?: number;
 }
 
 // Convert HSL to Hex manually as React Native Interpolate handles strict string maps better
@@ -51,7 +55,7 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, isPoweredOn = true, audioMagnitude = 0, multiColors = [], rawHexPayload, simMode }: any) => {
+const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload, simMode }: any) => {
   const product = String(device.type || fallbackProduct);
   const isHaloz = !product.toLowerCase().includes('soul');
 
@@ -163,19 +167,61 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
                      (brightness/100) * 0.6
                  ],
              });
-          } else if (mode === 'FIXED' && multiColors && multiColors.length > 0) {
-             const segmentIdx = Math.floor(fract * multiColors.length);
-             const safeIdx = Math.min(Math.max(0, segmentIdx), multiColors.length - 1);
-             dotColor = multiColors[safeIdx];
-             dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.8, 1]}); // Slight breathing to prove it's tracking
+          } else if (mode === 'MULTICOLOR' || (mode === 'FIXED' && multiColors && multiColors.length > 0)) {
+             
+             if (multiTransition === 0) { // Static
+                const segmentIdx = Math.floor(fract * multiColors.length);
+                const safeIdx = Math.min(Math.max(0, segmentIdx), multiColors.length - 1);
+                dotColor = multiColors[safeIdx];
+                dotOpacity = 1.0;
+             } else if (multiTransition === 1) { // Gradual crossfade
+                const inputR = multiColors.map((_: any, i: number) => i / Math.max(1, multiColors.length - 1));
+                if (multiColors.length === 1) {
+                   dotColor = multiColors[0];
+                } else {
+                   dotColor = animValue.interpolate({ inputRange: inputR, outputRange: multiColors });
+                }
+                dotOpacity = 1.0;
+             } else if (multiTransition === 2) { // Strobe
+                const segmentIdx = Math.floor(fract * multiColors.length);
+                const safeIdx = Math.min(Math.max(0, segmentIdx), multiColors.length - 1);
+                dotColor = multiColors[safeIdx];
+                dotOpacity = animValue.interpolate({ inputRange: [0, 0.49, 0.5, 0.99, 1], outputRange: [1, 1, 0.1, 0.1, 1] });
+             } else if (multiTransition === 3 || multiTransition === undefined) { // Running Water
+                // We create a shifting offset using animValue mapped from 0 to 1
+                // We calculate a virtual position for each LED based on fract and animValue offset
+                if (multiColors.length === 1) {
+                   dotColor = multiColors[0];
+                } else {
+                   // Create an infinite loop array wrapping
+                   const doubleColors = [...multiColors, ...multiColors, ...multiColors];
+                   const maxLenStr = doubleColors.length - 1;
+                   const pointsArr = Array.from({length: maxLenStr + 1}, (_, idx) => idx / maxLenStr);
+                   
+                   // Fract controls spatial shift, animValue controls temporal shift
+                   // We want spatial gradients that physically slide over time
+                   // Since React Native Animated doesn't allow `+` easily within interpolate without creating new Animated.add nodes globally,
+                   // we can simulate running water using an explicit mathematical gradient fallback
+                   dotColor = animValue.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [
+                         multiColors[Math.min(multiColors.length - 1, Math.floor(((fract + 0) % 1) * multiColors.length))], 
+                         multiColors[Math.min(multiColors.length - 1, Math.floor(((fract + 0.99) % 1) * multiColors.length))]
+                      ]
+                   });
+                }
+                // To simulate running water properly, we use native opacity fading mimicking waves
+                dotOpacity = animValue.interpolate({
+                   inputRange: [0, Math.max(0, fract - 0.2), fract, Math.min(1, fract + 0.2), 1],
+                   outputRange: [0.2, 0.2, 1, 0.2, 0.2]
+                });
+             }
           } else if (mode === 'PRESETS') {
              const rainbowColors = [0, 1/6, 2/6, 3/6, 4/6, 5/6, 1].map(v => HSLToHex((v - mirroredFract + 1) % 1 * 360, 100, 50));
              dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
           } else if (mode === 'RBM') {
              const pid = patternId || 1;
-             if (pid === 1) {
-               dotColor = color;
-             } else if (pid === 100) { // Emergency (Bouncing logic)
+             if (pid === 100) { // Emergency (Bouncing logic)
                const isTop = mirroredFract > 0.8;
                const isBottom = mirroredFract < 0.2;
                if (isTop) {
@@ -206,18 +252,35 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
                    )
                  });
                }
-             } else if (pid >= 2 && pid <= 11) { // Jump/Gradual
-               const rainbowColors = [0, 0.2, 0.4, 0.6, 0.8, 1].map(v => HSLToHex(v * 360, 100, 50));
-               dotColor = animValue.interpolate({ inputRange: [0, 0.2, 0.4, 0.6, 0.8, 1], outputRange: rainbowColors });
-             } else if (pid >= 12 && pid <= 19) { // Strobe
-               dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.1, 1] });
-               dotColor = color;
-             } else { // Flow/Chase
-               dotOpacity = animValue.interpolate({
-                 inputRange: [0, Math.max(0, mirroredFract - 0.2), mirroredFract, Math.min(1, mirroredFract + 0.2), 1],
-                 outputRange: [0.3, 0.3, 1, 0.3, 0.3]
-               });
-               dotColor = color;
+             } else {
+                 const archetype = getArchetypeFromId(pid);
+                 const rainbowColors = [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1].map(v => HSLToHex(v * 360, 100, 50));
+                 
+                 if (archetype === 'MARQUEE') {
+                     dotOpacity = animValue.interpolate({
+                         inputRange: [0, Math.max(0, mirroredFract - 0.2), mirroredFract, Math.min(1, mirroredFract + 0.2), 1],
+                         outputRange: [0.3, 0.3, 1, 0.3, 0.3]
+                     });
+                     dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
+                 } else if (archetype === 'BREATHING') {
+                     dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.2, 1, 0.2] });
+                     dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
+                 } else if (archetype === 'STROBE') {
+                     dotOpacity = animValue.interpolate({ inputRange: [0, 0.49, 0.5, 0.99, 1], outputRange: [1, 1, 0.1, 0.1, 1] });
+                     dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
+                 } else if (archetype === 'METEOR') { // Trail mapping
+                     dotOpacity = animValue.interpolate({
+                         inputRange: [0, Math.max(0, fract - 0.3), fract, Math.min(1, fract + 0.05), 1],
+                         outputRange: [0.1, 0.1, 1, 0.1, 0.1]
+                     });
+                     dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
+                 } else { // OUTLIERS fallback
+                     dotOpacity = animValue.interpolate({
+                         inputRange: [0, Math.max(0, mirroredFract - 0.2), mirroredFract, Math.min(1, mirroredFract + 0.2), 1],
+                         outputRange: [0.3, 0.3, 1, 0.3, 0.3]
+                     });
+                     dotColor = color; // Fallback to base UI explicitly
+                 }
              }
           } else if (mode === 'MUSIC') {
              const h = 1 - mirroredFract;
@@ -228,67 +291,32 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
              const compHex = '#' + ((255-r)<<16 | (255-g)<<8 | (255-b)).toString(16).padStart(6, '0');
              const mag = 0.1 + (audioMagnitude * 0.9);
 
-             if (patternId === 1) { // Soft
-               dotOpacity = mag * (0.3 + 0.7 * h);
-               dotColor = color;
-             } else if (patternId === 2) { // Cheerful
-               dotOpacity = (audioMagnitude > 0.6) ? 1.0 : (0.2 + 0.3 * mag);
-               dotColor = (audioMagnitude > 0.7 && i % 4 === 0) ? '#FFFFFF' : color;
-             } else if (patternId === 3) { // Energy
-               dotOpacity = (audioMagnitude > 0.5) ? 1.0 : 0.1;
-               dotColor = (audioMagnitude > 0.8) ? '#FFFFFF' : (i % 2 === 0 ? color : compHex);
-             } else if (patternId === 4) { // Relax
-               dotOpacity = 0.4 + 0.6 * mag;
-               dotColor = animValue.interpolate({ inputRange: [0, 1], outputRange: [color, compHex] });
-             } else if (patternId === 5) { // Passion
-               const threshold = audioMagnitude;
-               dotOpacity = (mirroredFract < threshold) ? 1.0 : 0.15;
-               dotColor = color;
-             } else if (patternId === 6) { // Brisk
-               const jump = Math.floor(audioMagnitude * 10) % 2;
-               dotOpacity = (i % 2 === jump) ? 1.0 : 0.2;
-               dotColor = color;
-             } else if (patternId === 7) { // Rhythm
-               const vuLevel = audioMagnitude;
-               dotOpacity = (fract < vuLevel) ? 1.0 : 0.1;
-               dotColor = (fract > 0.8) ? '#FF0000' : (fract > 0.6 ? '#FFFF00' : color);
-             } else if (patternId === 8) { // Rolling
-                dotOpacity = animValue.interpolate({
-                  inputRange: [0, Math.max(0, mirroredFract - 0.2), mirroredFract, Math.min(1, mirroredFract + 0.2), 1],
-                  outputRange: [0.2, 0.2, mag, 0.2, 0.2]
-                });
-                dotColor = color;
-             } else if (patternId === 9) { // Flicker
-                const randomTwinkle = (Math.sin(i * 1.5 + Date.now() / 100) + 1) / 2;
-                dotOpacity = (randomTwinkle < audioMagnitude) ? 1.0 : 0.1;
-                dotColor = color;
-             } else if (patternId === 10) { // Accumulation
-                const fill = audioMagnitude;
-                dotOpacity = (mirroredFract > (1 - fill)) ? 1.0 : 0.15;
-                dotColor = color;
-             } else if (patternId === 11) { // Shuttle
-                dotOpacity = animValue.interpolate({
-                  inputRange: [0, Math.max(0, fract - 0.1), fract, Math.min(1, fract + 0.1), 1],
-                  outputRange: [0.1, 0.1, mag, 0.1, 0.1]
-                });
-                dotColor = color;
-             } else if (patternId === 12) { // Fireworks
-                const burst = audioMagnitude > 0.7;
-                dotOpacity = burst ? (Math.random() > 0.5 ? 1.0 : 0.2) : 0.1;
-                dotColor = burst ? (Math.random() > 0.5 ? '#FFFFFF' : color) : color;
-             } else if (patternId === 13) { // Snow
-                const inputs = [0, 0.45, 0.5, 0.55, 0.95, 1];
-                dotOpacity = animValue.interpolate({
-                   inputRange: inputs,
-                   outputRange: [0.1, 0.1, 0.1, 0.1, 1, 1]
-                });
-                dotColor = animValue.interpolate({
-                   inputRange: inputs,
-                   outputRange: ['#0000FF', '#0000FF', '#0000FF', '#0000FF', '#FFFFFF', '#FFFFFF']
-                });
+             const profile = MusicDictionary[patternId] || MusicDictionary[2];
+             const arch = profile.archetype;
+             
+             if (arch === 'VU_METER') {
+                 // Classic volume bar
+                 dotOpacity = (fract < audioMagnitude) ? 1.0 : 0.1;
+                 dotColor = (fract > 0.8) ? '#FF0000' : (fract > 0.6 ? '#FFFF00' : color);
+             } else if (arch === 'PULSE') {
+                 // Soft breathing matched to audio amplitudes
+                 dotOpacity = (audioMagnitude > 0.5) ? 1.0 : (0.2 + 0.3 * mag);
+                 dotColor = color;
+             } else if (arch === 'STROBE') {
+                 // Hard flashing threshold clipping
+                 dotOpacity = (audioMagnitude > 0.7) ? 1.0 : 0.1;
+                 dotColor = (audioMagnitude > 0.8 && i % 3 === 0) ? '#FFFFFF' : color;
+             } else if (arch === 'WAVE') {
+                 // Rainbow colors shifting over the animation loop explicitly bridging audio magnitude
+                 const rainbow = [0, 1/6, 2/6, 3/6, 4/6, 5/6, 1].map(v => HSLToHex((v) % 1 * 360, 100, 50));
+                 dotOpacity = animValue.interpolate({
+                     inputRange: [0, Math.max(0, mirroredFract - 0.2), mirroredFract, Math.min(1, mirroredFract + 0.2), 1],
+                     outputRange: [0.1, 0.1, mag, 0.1, 0.1]
+                 });
+                 dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbow });
              } else {
-               dotOpacity = mag;
-               dotColor = color;
+                 dotOpacity = mag;
+                 dotColor = color;
              }
           } else if (mode === 'FIXED') {
              const fg = fixedFgColor || color;
@@ -428,7 +456,7 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
     </TouchableOpacity>
   );
 };
-export default function ProductVisualizer({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText, audioMagnitude = 0, rawHexPayload }: ProductVisualizerProps) {
+export default function ProductVisualizer({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText, audioMagnitude = 0, rawHexPayload, multiColors, multiTransition }: ProductVisualizerProps) {
   const animValue = useRef(new Animated.Value(0)).current;
 
   // VISUALIZER PROTOCOL SYNCHRONIZATION ENGINE
@@ -439,7 +467,8 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
   let simBrightness = brightness;
   let simColor = color;
   let simAudioMag = audioMagnitude;
-  let simMultiColors: string[] = [];
+  let simMultiColors: string[] = multiColors || [];
+  let simMultiTransition = multiTransition || 0;
 
   const activeDevice = devices && devices.length > 0 ? devices[0] : null; 
   const hwSorting = (activeDevice as any)?.sorting || 'GRB';
@@ -467,17 +496,24 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
 
       if (op === 0x59) {
           simMode = 'FIXED';
-          simPatternId = 1;
-          const colors = [];
-          for (let i = 3 + payloadOffset; i < rawHexPayload.length - 6; i += 3) {
-             const rRaw = rawHexPayload[i] || 0;
-             const gRaw = rawHexPayload[i+1] || 0;
-             const bRaw = rawHexPayload[i+2] || 0;
-             const { r, g, b } = applySorting(rRaw, gRaw, bRaw);
-             colors.push(`#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`);
+          if (mode === 'MULTICOLOR') {
+             simPatternId = 1;
+             
+             // BLE MTU drops payloads > 20 bytes into chunks, so rawHexPayload may literally only be the first 20 bytes.
+             // If we already have the complete array from our props Native React State, DO NOT overwrite it with a truncated hex parse!
+             if (!multiColors || multiColors.length === 0) {
+                 const colors = [];
+                 for (let i = 3 + payloadOffset; i < rawHexPayload.length - 6; i += 3) {
+                    const rRaw = rawHexPayload[i] || 0;
+                    const gRaw = rawHexPayload[i+1] || 0;
+                    const bRaw = rawHexPayload[i+2] || 0;
+                    const { r, g, b } = applySorting(rRaw, gRaw, bRaw);
+                    colors.push(`#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`);
+                 }
+                 simMultiColors = colors;
+                 simColor = colors[0] || color;
+             }
           }
-          simMultiColors = colors;
-          simColor = colors[0] || color;
           simSpeed = rawHexPayload[rawHexPayload.length - 3] || speed;
       } else if (op === 0x42) {
           simMode = 'RBM';
@@ -499,18 +535,19 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
           const rRaw = rawHexPayload[2 + payloadOffset]||0, gRaw = rawHexPayload[3 + payloadOffset]||0, bRaw = rawHexPayload[4 + payloadOffset]||0;
           const { r, g, b } = applySorting(rRaw, gRaw, bRaw);
           simColor = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
-          simSpeed = 101 - (rawHexPayload[5 + payloadOffset] || 50); // Protocol inverts speed automatically
           simBrightness = rawHexPayload[6 + payloadOffset] || 100;
-          // Candle Amplitude stored at index 7, but random flicker determines UI intensity
+          // Candle Amplitude stored at index 7 controls visualizer flicker speed natively
+          const candleAmp = rawHexPayload[7 + payloadOffset] || 2;
+          simSpeed = candleAmp === 1 ? 20 : (candleAmp === 2 ? 60 : 100); 
       }
   }
 
   useEffect(() => {
     animValue.stopAnimation();
     
-    if (isPoweredOn && (simMode === 'PRESETS' || simMode === 'RBM' || simMode === 'MUSIC' || simMode === 'FIXED' || simMode === 'CANDLE')) {
+    if (isPoweredOn && (simMode === 'MULTICOLOR' || simMode === 'PRESETS' || simMode === 'RBM' || simMode === 'MUSIC' || simMode === 'FIXED' || simMode === 'CANDLE')) {
       animValue.setValue(0);
-      const baseDuration = (simMode === 'MUSIC') ? 800 : (simMode === 'RBM' ? 2000 : (simMode === 'FIXED' ? 1500 : (simMode === 'CANDLE' ? 400 : 3000)));
+      const baseDuration = (simMode === 'MUSIC') ? 800 : (simMode === 'RBM' ? 2000 : (simMode === 'FIXED' || simMode === 'MULTICOLOR' ? 1500 : (simMode === 'CANDLE' ? 400 : 3000)));
       // Speed 0 = 5x slower, Speed 100 = 0.4x faster
       const duration = baseDuration / (0.4 + (simSpeed / 100) * 2.1); 
       
@@ -560,6 +597,7 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
              isPoweredOn={isPoweredOn}
              audioMagnitude={simAudioMag}
              multiColors={simMultiColors}
+             multiTransition={simMultiTransition}
            />
          ))}
       </View>

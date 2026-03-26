@@ -10,9 +10,10 @@ interface ScannerAnimationProps {
   onPress?: () => void;
 }
 
-const PULSE_COUNT = 14;
-const MAX_RADIUS = 190;
-const DOTS_PER_RING = 48;
+const PULSE_COUNT = 8;
+const MAX_RADIUS = 280; // Extended boundary past standard screen widths
+const BASE_RADIUS = 25;
+const DOTS_PER_RING = 32;
 
 export default function ScannerAnimation({ deviceCount, isScanning, onPress }: ScannerAnimationProps) {
   const { Colors } = useTheme();
@@ -23,6 +24,55 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
   const shimmerAnim = useRef(new Animated.Value(0)).current;
   const detectionAnim = useRef(new Animated.Value(0)).current;
   const prevDeviceCount = useRef(deviceCount);
+
+  // Two sets of pre-calculated arrays to prevent bridge-blocking calculations during active scanning.
+  const staticIdleRings = useMemo(() => {
+    const rings = [];
+    const colorSpectrum = [
+      '#FF0000', '#FF7F00', '#FFFF00', '#00FF00', 
+      '#0000FF', '#4B0082', '#9400D3', '#FF00FF'
+    ];
+    for (let r = 0; r < PULSE_COUNT; r++) {
+      const dots = [];
+      for (let i = 0; i < DOTS_PER_RING; i++) {
+          if (Math.random() < 0.65) continue;
+          const angle = (i / DOTS_PER_RING) * 2 * Math.PI;
+          const color = colorSpectrum[i % colorSpectrum.length];
+          dots.push({
+              x: BASE_RADIUS * Math.cos(angle) - 1.5,
+              y: BASE_RADIUS * Math.sin(angle) - 1.5,
+              color
+          });
+      }
+      rings.push(dots);
+    }
+    return rings;
+  }, []);
+
+  const staticActiveRings = useMemo(() => {
+    const rings = [];
+    const colorSpectrum = [
+      '#FF0000', '#FF7F00', '#FFFF00', '#00FF00', 
+      '#0000FF', '#4B0082', '#9400D3', '#FF00FF'
+    ];
+    // Double density when scanning linearly
+    const ACTIVE_DOTS = DOTS_PER_RING * 2;
+    for (let r = 0; r < PULSE_COUNT; r++) {
+      const dots = [];
+      for (let i = 0; i < ACTIVE_DOTS; i++) {
+          // 0% skip rate, full pure dense signal pattern
+          const angle = (i / ACTIVE_DOTS) * 2 * Math.PI;
+          const color = colorSpectrum[i % colorSpectrum.length];
+          dots.push({
+              x: BASE_RADIUS * Math.cos(angle) - 1.5,
+              y: BASE_RADIUS * Math.sin(angle) - 1.5,
+              color
+          });
+      }
+      rings.push(dots);
+    }
+    return rings;
+  }, []);
 
   useEffect(() => {
     if (deviceCount > prevDeviceCount.current) {
@@ -43,7 +93,7 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
     shimmerAnim.stopAnimation();
     shimmerAnim.setValue(0);
 
-    const pulseDuration = isScanning ? 3500 : 8000;
+    const pulseDuration = isScanning ? 1200 : 8000;
     const staggerDelay = pulseDuration / PULSE_COUNT;
 
     const animations = pulseAnims.map((anim, i) => {
@@ -53,7 +103,7 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
           Animated.timing(anim, {
             toValue: 1,
             duration: pulseDuration,
-            easing: Easing.linear,
+            easing: Easing.out(Easing.quad), // smoother expansion curve
             useNativeDriver: true,
           }),
           Animated.timing(anim, { toValue: 0, duration: 0, useNativeDriver: true })
@@ -74,13 +124,13 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
       Animated.sequence([
         Animated.timing(shimmerAnim, { 
           toValue: 1, 
-          duration: isScanning ? 300 : 800, 
+          duration: isScanning ? 150 : 800, 
           easing: Easing.inOut(Easing.quad), 
           useNativeDriver: true 
         }),
         Animated.timing(shimmerAnim, { 
           toValue: 0, 
-          duration: isScanning ? 300 : 800, 
+          duration: isScanning ? 150 : 800, 
           easing: Easing.inOut(Easing.quad), 
           useNativeDriver: true 
         }),
@@ -89,7 +139,6 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
 
     // Start pulses and shimmer in parallel
     Animated.parallel([...animations, shimmerLoop]).start();
-    // Start rotation separately to ensure it doesn't get blocked
     rotateAnimLoop.start();
 
     return () => {
@@ -104,70 +153,69 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
     outputRange: ['0deg', '360deg'],
   });
 
-  const renderRainbowRing = (pulseAnim: Animated.Value, index: number) => {
-    const dots = [];
-    const colorSpectrum = [
-      '#FF0000', '#FF7F00', '#FFFF00', '#00FF00', 
-      '#0000FF', '#4B0082', '#9400D3', '#FF00FF'
-    ];
-
-    // Outward moving radius: start at button edge (50), end at MAX_RADIUS
-    const radius = pulseAnim.interpolate({
+  const renderRainbowRingContainer = (pulseAnim: Animated.Value, index: number) => {
+    // Massive DOM/Math optimization: Instead of evaluating geometry via Native UI thread
+    // over 672 individual objects concurrently, we evaluate 8 scale boundaries globally.
+    // The dots are hard-stamped inside this boundary container natively!
+    const scale = pulseAnim.interpolate({
       inputRange: [0, 1],
-      outputRange: [25, MAX_RADIUS]
+      outputRange: [1, MAX_RADIUS / BASE_RADIUS]
     });
 
-    // Fade out as it expands
     const opacity = pulseAnim.interpolate({
-      inputRange: [0, 0.1, 0.8, 1],
-      outputRange: [0, 0.6, 0.4, 0]
+      inputRange: [0, 0.1, 0.85, 1],
+      outputRange: [0, 0.8, 0.5, 0]
     });
 
-    for (let i = 0; i < DOTS_PER_RING; i++) {
-        const angle = (i / DOTS_PER_RING) * 2 * Math.PI;
-        // Each dot gets a color from the rainbow
-        const color = colorSpectrum[i % colorSpectrum.length];
-        
-        // Slight shimmer highlight
-        const isPick = (i + index * 5) % 3 === 0;
-        const shimmerAdd = isPick ? shimmerAnim.interpolate({ 
-            inputRange: [0, 1], 
-            outputRange: [0, 0.5] 
-        }) : 0;
+    const ringsArray = isScanning ? staticActiveRings : staticIdleRings;
 
-        dots.push(
-          <Animated.View
-            key={`pulse-${index}-dot-${i}`}
-            style={[
-              styles.ledDot,
-              {
-                backgroundColor: color,
-                shadowColor: color,
-                opacity: isScanning ? Animated.add(opacity, shimmerAdd) : opacity,
-                transform: [
-                  { 
-                    translateX: Animated.multiply(radius, Math.cos(angle)) 
-                  },
-                  { 
-                    translateY: Animated.multiply(radius, Math.sin(angle)) 
-                  },
-                  { 
-                    scale: 0.7 
-                  }
-                ],
-              },
-            ]}
+    return (
+      <Animated.View
+        key={`pulse-ring-${index}`}
+        style={{
+          position: 'absolute',
+          width: BASE_RADIUS * 2,
+          height: BASE_RADIUS * 2,
+          opacity: opacity,
+          transform: [{ scale }],
+        }}
+        pointerEvents="none"
+      >
+        {ringsArray[index].map((dot: any, i: number) => (
+          <View
+            key={`dot-${i}`}
+            style={{
+              position: 'absolute',
+              left: BASE_RADIUS + dot.x,
+              top: BASE_RADIUS + dot.y,
+              width: 3,
+              height: 3,
+              borderRadius: 1.5,
+              backgroundColor: dot.color,
+              shadowColor: dot.color,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 1,
+              shadowRadius: 4,
+              elevation: 4,
+            }}
           />
-        );
-    }
-    return dots;
+        ))}
+      </Animated.View>
+    );
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.radarContainer}>
+        {/* Static Sonar Grid Overlay */}
+        <View style={styles.sonarGridRing1} pointerEvents="none" />
+        <View style={styles.sonarGridRing2} pointerEvents="none" />
+        <View style={styles.sonarGridRing3} pointerEvents="none" />
+        <View style={styles.sonarGridCrosshairX} pointerEvents="none" />
+        <View style={styles.sonarGridCrosshairY} pointerEvents="none" />
+
         {/* Sonar Rainbow Pulses */}
-        {pulseAnims.map((anim, i) => renderRainbowRing(anim, i))}
+        {pulseAnims.map((anim, i) => renderRainbowRingContainer(anim, i))}
 
         {/* Sonar Sweep Arm */}
         {isScanning && (
@@ -308,6 +356,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
+  },
+  sonarGridRing1: {
+    position: 'absolute', width: 220, height: 220, borderRadius: 110, 
+    borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.1)',
+  },
+  sonarGridRing2: {
+    position: 'absolute', width: 140, height: 140, borderRadius: 70, 
+    borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.08)', borderStyle: 'dashed'
+  },
+  sonarGridRing3: {
+    position: 'absolute', width: 80, height: 80, borderRadius: 40, 
+    borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.15)', borderStyle: 'dashed'
+  },
+  sonarGridCrosshairX: {
+    position: 'absolute', width: 230, height: 1, backgroundColor: 'rgba(0, 240, 255, 0.15)'
+  },
+  sonarGridCrosshairY: {
+    position: 'absolute', height: 230, width: 1, backgroundColor: 'rgba(0, 240, 255, 0.15)'
   },
   ledDot: {
     position: 'absolute',

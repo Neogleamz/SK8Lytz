@@ -141,8 +141,10 @@ export class ZenggeProtocol {
     payload[2] = totalLen & 0xFF;
     let idx = 3;
     for (const c of colors) {
-      payload[idx++] = c.r;
+      // EXPLICIT HARDWARE FIX: Symphony V5 arrays physically bypass the 0x81 hardware map.
+      // We must explicitly swap R and G bytes natively in the multi-color payload loop!
       payload[idx++] = c.g;
+      payload[idx++] = c.r;
       payload[idx++] = c.b;
     }
     payload[idx++] = (numPoints >> 8) & 0xFF;
@@ -169,11 +171,12 @@ export class ZenggeProtocol {
             payload[idx++] = 0xf0; // Active
             payload[idx++] = step.mode;
             payload[idx++] = step.speed;
-            payload[idx++] = step.color1.r;
+            // EXPLICIT HARDWARE FIX: Scramble GRB native payloads inside Custom DIY loops
             payload[idx++] = step.color1.g;
+            payload[idx++] = step.color1.r;
             payload[idx++] = step.color1.b;
-            payload[idx++] = step.color2.r;
             payload[idx++] = step.color2.g;
+            payload[idx++] = step.color2.r;
             payload[idx++] = step.color2.b;
         } else {
             payload[idx++] = 0x0f; // Inactive

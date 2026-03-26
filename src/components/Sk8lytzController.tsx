@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Platform, Modal, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Typography, Layout } from '../theme/theme';
 import { Audio } from 'expo-av';
@@ -34,6 +34,60 @@ const MUSIC_PATTERNS = [
   'Fireworks',
   'Snow'
 ];
+
+const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segments = 1 }: { baseDots: string[], patternId: number, speed: number, points?: number, segments?: number }) => {
+  const [offset, setOffset] = React.useState(0);
+
+  // Extend the 8-element static base array explicitly to match physical point counts natively
+  const fullArray = React.useMemo(() => {
+     const arr: string[] = [];
+     
+     // Hardware repeats the geometric bounds across the segment boundary safely
+     const dotsPerSegment = Math.max(1, Math.floor(points / Math.max(1, segments)));
+     
+     for (let i = 0; i < points; i++) {
+        // Map native segment repetitions safely simulating string data
+        const segmentLocalIndex = i % dotsPerSegment;
+        arr.push(baseDots[segmentLocalIndex % baseDots.length]);
+     }
+     return arr;
+  }, [baseDots, points, segments]);
+
+  React.useEffect(() => {
+    if (patternId === 1) return; 
+    const intervalTime = Math.max(30, 200 - (speed * 1.7)); 
+    const int = setInterval(() => {
+      setOffset(o => (o + 1) % fullArray.length);
+    }, intervalTime);
+    return () => clearInterval(int);
+  }, [fullArray.length, patternId, speed]);
+
+  const displayedDots = React.useMemo(() => {
+    if (patternId === 1) return fullArray;
+    return [...fullArray.slice(fullArray.length - offset), ...fullArray.slice(0, fullArray.length - offset)];
+  }, [fullArray, offset, patternId]);
+  
+  const dotsPerSegment = Math.max(1, Math.floor(points / Math.max(1, segments)));
+
+  return (
+    <View style={{ flex: 1, marginRight: 8, overflow: 'hidden' }}>
+      <View style={{ flexDirection: 'row', gap: 4 }}>
+        {displayedDots.map((c, i) => (
+          <View 
+             key={i} 
+             style={{ 
+               width: 8, 
+               height: 8, 
+               borderRadius: 4, 
+               backgroundColor: c,
+               marginLeft: i > 0 && i % dotsPerSegment === 0 ? 12 : 0 
+             }} 
+          />
+        ))}
+      </View>
+    </View>
+  );
+};
 
 
 interface Sk8lytzControllerProps {
@@ -76,6 +130,86 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
   const [multiTransition, setMultiTransition] = useState<number>(3); // 3=Running Water default
   const [multiLength, setMultiLength] = useState<number>(16);
   const [candleAmplitude, setCandleAmplitude] = useState<number>(2);
+
+  // Favorites Array
+  const [favorites, setFavorites] = useState<any[]>([]);
+
+  const [isFavPromptVisible, setIsFavPromptVisible] = useState(false);
+  const [favPromptName, setFavPromptName] = useState('');
+
+  const handleSaveFavoriteClick = () => {
+     let defaultName = '';
+     try { defaultName = currentStatusText || `${activeMode} Preset`; } catch(e) { defaultName = `${activeMode} Preset`; }
+     setFavPromptName(defaultName);
+     setIsFavPromptVisible(true);
+  };
+
+  const handleConfirmSaveFavorite = () => {
+     let defaultName = '';
+     try { defaultName = currentStatusText || `${activeMode} Preset`; } catch(e) { defaultName = `${activeMode} Preset`; }
+     const name = favPromptName.trim() || defaultName;
+     const newFav = {
+        id: Date.now().toString(),
+        name,
+        mode: activeMode,
+        color: selectedColor,
+        patternId: activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'FIXED' ? fixedPatternId : selectedPatternId),
+        speed,
+        brightness,
+        fixedColorMode, fixedFgColor, fixedBgColor, fixedHue,
+        multiColors, multiTransition, multiLength,
+        candleAmplitude
+     };
+     const newFavorites = [...favorites, newFav];
+     setFavorites(newFavorites);
+     AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
+     setIsFavPromptVisible(false);
+  };
+
+  const deleteFavorite = (id: string) => {
+     const newFavorites = favorites.filter(f => f.id !== id);
+     setFavorites(newFavorites);
+     AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
+  };
+
+  const loadFavorite = (fav: any) => {
+     setActiveMode(fav.mode);
+     setSpeed(fav.speed);
+     setBrightness(fav.brightness);
+     if (fav.color) setSelectedColor(fav.color);
+     
+     if (fav.mode === 'FIXED') {
+        setFixedPatternId(fav.patternId);
+        setFixedColorMode(fav.fixedColorMode);
+        setFixedFgColor(fav.fixedFgColor);
+        setFixedBgColor(fav.fixedBgColor);
+        applyFixedPattern(fav.patternId, fav.fixedFgColor, fav.fixedBgColor, fav.speed, fav.brightness);
+     } else if (fav.mode === 'RBM') {
+        setSelectedPatternId(fav.patternId);
+        if (writeToDevice) writeToDevice(ZenggeProtocol.setCustomRbm(fav.patternId, fav.speed, fav.brightness));
+     } else if (fav.mode === 'MUSIC') {
+        setMusicPatternId(fav.patternId);
+        handleMusicChange(fav.patternId, micSensitivity, fav.brightness, micSource);
+     } else if (fav.mode === 'MULTICOLOR') {
+        setMultiColors(fav.multiColors);
+        setMultiTransition(fav.multiTransition);
+        setMultiLength(fav.multiLength);
+        if (writeToDevice) {
+           const rgbColors = fav.multiColors.map((h: string) => ({r: parseInt(h.slice(1,3),16)||0, g: parseInt(h.slice(3,5),16)||0, b: parseInt(h.slice(5,7),16)||0}));
+           writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, fav.multiLength, fav.multiTransition, fav.speed));
+        }
+     } else if (fav.mode === 'CANDLE') {
+        setCandleAmplitude(fav.candleAmplitude);
+        // Defer native command dispatch for candle
+        setTimeout(() => {
+           sendColor(parseInt(fav.color.slice(1,3),16)||0, parseInt(fav.color.slice(3,5),16)||0, parseInt(fav.color.slice(5,7),16)||0);
+        }, 100);
+     } else {
+        setTimeout(() => {
+           sendColor(parseInt(fav.color.slice(1,3),16)||0, parseInt(fav.color.slice(3,5),16)||0, parseInt(fav.color.slice(5,7),16)||0);
+        }, 100);
+     }
+  };
 
   /** Unified color sender */
   const sendColor = async (r: number, g: number, b: number) => {
@@ -353,6 +487,41 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
         } catch(e) {}
       }
     });
+
+    AsyncStorage.getItem('@Sk8lytz_Favorites').then((saved) => {
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (parsed && parsed.length > 0) {
+                   setFavorites(parsed);
+                } else {
+                   // Fallback to default if somehow parsed as empty
+                   const defaultFavorites = [{
+                       id: 'default-1',
+                       name: 'Programs - ' + getRbmPatternName(3),
+                       mode: 'RBM',
+                       patternId: 3,
+                       speed: 50,
+                       brightness: 90
+                   }];
+                   setFavorites(defaultFavorites);
+                   AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(defaultFavorites));
+                }
+            } catch(e) {}
+        } else {
+            // First time load, inject default Program mode pattern 3
+            const defaultFavorites = [{
+                id: 'default-1',
+                name: 'Programs - ' + getRbmPatternName(3),
+                mode: 'RBM',
+                patternId: 3,
+                speed: 50,
+                brightness: 90
+            }];
+            setFavorites(defaultFavorites);
+            AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(defaultFavorites));
+        }
+    });
   }, []);
 
   React.useEffect(() => {
@@ -420,9 +589,9 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
         return `Music - ${patternName}`;
       case 'CAMERA': return 'Camera';
       case 'CUSTOM': return 'Custom';
-      case 'MULTICOLOR': return 'Multicolor';
+      case 'MULTICOLOR': return 'Multicolor Array';
       case 'CANDLE': return 'Candle Mode';
-      case 'PRESETS': return 'Presets';
+      case 'PRESETS': return 'Favorites';
       default: return activeMode;
     }
   }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, selectedPatternId, musicPatternId, selectedColor]);
@@ -482,6 +651,12 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
       {/* Visual Product Shape Selector/Indicator - ENLARGED FOCUS */}
       <View style={styles.visualizerWrapper}>
       <View style={{ marginBottom: 8, width: '100%' }}>
+        <TouchableOpacity 
+           style={{ position: 'absolute', top: 12, right: 16, zIndex: 100, backgroundColor: 'rgba(255,255,255,0.1)', padding: 6, borderRadius: 20 }}
+           onPress={handleSaveFavoriteClick}
+        >
+           <MaterialCommunityIcons name="heart-plus-outline" size={22} color={Colors.primary} />
+        </TouchableOpacity>
         <ProductVisualizer 
           product={activeProduct} 
           color={visualizerColor} 
@@ -553,19 +728,31 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
         <View style={styles.activeModeContainer}>
           {activeMode === 'PRESETS' && (
             <View style={{ marginBottom: 8 }}>
-              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>Signature Lighting Presets</Text>
+              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>Your Saved Favorites</Text>
+              
+              {favorites.length === 0 && (
+                 <Text style={{ color: Colors.textMuted, fontSize: 13, marginBottom: 12 }}>
+                    You have no saved favorites. Click the heart icon on any pattern in the Visualizer to save it here!
+                 </Text>
+              )}
               
               <View style={styles.presetContainer}>
+                 {favorites.map((fav, idx) => (
                   <TouchableOpacity 
+                    key={fav.id}
                     style={[styles.presetCard, { borderColor: Colors.primary }]}
-                    onPress={() => {
-                    setSelectedColor('#FF0000');
-                    sendColor(255, 0, 0);
-                  }}
+                    onPress={() => loadFavorite(fav)}
                   >
-                    <Text style={styles.presetTitle}>{activeProduct} Rainbow Flow</Text>
-                    <Text style={styles.presetDesc}>Continuous full-spectrum color chase simulating individual addressable LEDs moving at moderate speed.</Text>
+                    <TouchableOpacity 
+                       style={{ position: 'absolute', right: 12, top: 12, zIndex: 10 }} 
+                       onPress={() => deleteFavorite(fav.id)}
+                    >
+                       <MaterialCommunityIcons name="trash-can-outline" size={20} color={Colors.textMuted} />
+                    </TouchableOpacity>
+                    <Text style={styles.presetTitle}>{fav.name}</Text>
+                    <Text style={styles.presetDesc}>Mode: {fav.mode} | Speed: {fav.speed}%</Text>
                   </TouchableOpacity>
+                 ))}
               </View>
             </View>
           )}
@@ -576,30 +763,54 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
               <Text style={{ color: Colors.textMuted, fontSize: 13, marginBottom: 12 }}>
                 Simulates dynamic volumetric tracking mathematically in hardware using raw LED flickering logic.
               </Text>
-              <Text style={{ fontSize: 14, color: Colors.text, marginTop: 12, marginBottom: 4 }}>Flicker Effect ({candleAmplitude})</Text>
-              <CustomSlider 
-                value={candleAmplitude} 
-                minimumValue={1} 
-                maximumValue={3} 
-                onValueChange={setCandleAmplitude} 
-                onSlidingComplete={(val) => {
-                  const rawR = parseInt(selectedColor.substring(1, 3), 16) || 255;
-                  const rawG = parseInt(selectedColor.substring(3, 5), 16) || 255;
-                  const rawB = parseInt(selectedColor.substring(5, 7), 16) || 255;
-                  let finalR = rawR; let finalG = rawG; let finalB = rawB;
-                  const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
-                  if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
-                  if (writeToDevice) writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, val));
-                }} 
-              />
             </View>
           )}
 
           {activeMode === 'MULTICOLOR' && (
             <View style={{ marginBottom: 16 }}>
-              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>DIY Array Animations</Text>
+              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>Multi-Color Quick Presets</Text>
+              <Text style={{ color: Colors.textMuted, fontSize: 13, marginBottom: 12 }}>
+                Instantly load predefined color arrays formatted natively against hardware transition bounds.
+              </Text>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 16 }} style={{ marginBottom: 20 }}>
+                {[
+                  { name: 'Rainbow', colors: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'], type: 3 },
+                  { name: 'America', colors: ['#FF0000', '#FFFFFF', '#0000FF'], type: 3 },
+                  { name: 'Cyberpunk', colors: ['#00FFFF', '#FF00FF', '#FFFF00'], type: 3 },
+                  { name: 'Forest', colors: ['#00FF00', '#008000', '#228B22', '#32CD32'], type: 1 },
+                  { name: 'Sunset', colors: ['#FF0000', '#FF4500', '#FF8C00', '#FFA500'], type: 1 },
+                  { name: 'Ice', colors: ['#FFFFFF', '#E0FFFF', '#00FFFF', '#0000FF'], type: 1 }
+                ].map((preset, idx) => (
+                  <TouchableOpacity 
+                    key={idx}
+                    onPress={() => {
+                        setMultiColors(preset.colors);
+                        setMultiTransition(preset.type);
+                        if (writeToDevice) {
+                            const rgbColors = preset.colors.map(h => ({r: parseInt(h.slice(1,3),16)||0, g: parseInt(h.slice(3,5),16)||0, b: parseInt(h.slice(5,7),16)||0}));
+                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, preset.type, speed));
+                        }
+                    }}
+                    style={{
+                        paddingVertical: 10, paddingHorizontal: 16, 
+                        backgroundColor: 'rgba(255,255,255,0.05)', 
+                        borderRadius: 8, marginRight: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
+                    }}
+                  >
+                    <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13, marginBottom: 6 }}>{preset.name}</Text>
+                    <View style={{ flexDirection: 'row', gap: 4 }}>
+                       {preset.colors.map((c, i) => (
+                          <View key={i} style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: c }} />
+                       ))}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>DIY Array Builder</Text>
               <Text style={{ color: Colors.textMuted, fontSize: 13, marginBottom: 16 }}>
-                Compose seamless pixel arrays generating hardware-level Multi-Color strings natively spanning across skates.
+                Compose seamless pixel arrays generating custom hardware-level strings natively.
               </Text>
               
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: 16 }}>
@@ -668,20 +879,31 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           {activeMode === 'FIXED' && (
             <View style={{ marginBottom: 8 }}>
               
-              <View style={{ backgroundColor: Colors.surfaceHighlight, borderRadius: 8, padding: 8, marginBottom: 8, height: 170 }}>
+              <View style={{ backgroundColor: '#000000', borderRadius: 8, padding: 8, marginBottom: 8, height: 170 }}>
                 <ScrollView nestedScrollEnabled={true}>
-                {[
-                  { id: 1, label: 'Solid', dots: ['#00FF00','#00FF00','#00FF00','#00FF00','#00FF00','#00FF00','#00FF00','#00FF00'] },
-                  { id: 2, label: 'Single Dot', dots: ['#00FFFF','transparent','transparent','transparent','transparent','transparent','transparent','transparent'] },
-                  { id: 3, label: 'Comet', dots: ['#FF0000','rgba(255,0,0,0.6)','rgba(255,0,0,0.3)','rgba(255,0,0,0.1)','transparent','transparent','transparent','transparent'] },
-                  { id: 4, label: 'Dashed', dots: ['#FFFF00','#FFFF00','transparent','transparent','#FFFF00','#FFFF00','transparent','transparent'] },
-                  { id: 5, label: 'Alternating', dots: ['#FF00FF','transparent','#FF00FF','transparent','#FFFFFF','transparent','#FFFFFF','transparent'] },
-                  { id: 6, label: 'Breath', dots: ['#00FF00', 'rgba(0,255,0,0.5)', 'transparent', 'rgba(0,255,0,0.5)', '#00FF00', 'rgba(0,255,0,0.5)', 'transparent', 'rgba(0,255,0,0.5)'] },
-                  { id: 7, label: 'Flash', dots: ['#00FFFF', 'transparent', '#00FFFF', 'transparent', '#00FFFF', 'transparent', '#00FFFF', 'transparent'] },
-                  { id: 8, label: 'Strobe', dots: ['#FFFFFF', 'transparent', '#FFFFFF', 'transparent', '#FFFFFF', 'transparent', '#FFFFFF', 'transparent'] },
-                  { id: 9, label: 'Wave', dots: ['transparent', 'rgba(0,255,255,0.5)', '#00FFFF', '#00FFFF', 'rgba(0,255,255,0.5)', 'transparent', 'transparent', 'transparent'] },
-                  { id: 10, label: 'Pinch', dots: ['#FF00FF', 'rgba(255,0,255,0.5)', 'transparent', 'transparent', 'transparent', 'rgba(255,0,255,0.5)', '#FF00FF', 'transparent'] }
-                ].map(pattern => (
+                {(() => {
+                  const fgRgb = (hex: string, alpha: number) => {
+                     const h = hex || '#FFFFFF';
+                     const r = parseInt(h.substring(1, 3), 16) || 0;
+                     const g = parseInt(h.substring(3, 5), 16) || 0;
+                     const b = parseInt(h.substring(5, 7), 16) || 0;
+                     return `rgba(${r},${g},${b},${alpha})`;
+                  };
+                  const f = fixedFgColor || '#FFFFFF';
+                  const b = fixedBgColor || 'transparent';
+                  return [
+                    { id: 1, label: 'Solid', dots: [f, f, f, f, f, f, f, f] },
+                    { id: 2, label: 'Single Dot', dots: [f, b, b, b, b, b, b, b] },
+                    { id: 3, label: 'Comet', dots: [f, fgRgb(f, 0.6), fgRgb(f, 0.3), fgRgb(f, 0.1), b, b, b, b] },
+                    { id: 4, label: 'Dashed', dots: [f, f, b, b, f, f, b, b] },
+                    { id: 5, label: 'Alternating', dots: [f, b, f, b, '#FFFFFF', b, '#FFFFFF', b] },
+                    { id: 6, label: 'Breath', dots: [f, fgRgb(f, 0.5), b, fgRgb(f, 0.5), f, fgRgb(f, 0.5), b, fgRgb(f, 0.5)] },
+                    { id: 7, label: 'Flash', dots: [f, b, f, b, f, b, f, b] },
+                    { id: 8, label: 'Strobe', dots: ['#FFFFFF', b, '#FFFFFF', b, '#FFFFFF', b, '#FFFFFF', b] },
+                    { id: 9, label: 'Wave', dots: [b, fgRgb(f, 0.5), f, f, fgRgb(f, 0.5), b, b, b] },
+                    { id: 10, label: 'Pinch', dots: [f, fgRgb(f, 0.5), b, b, b, fgRgb(f, 0.5), f, b] }
+                  ];
+                })().map(pattern => (
                   <TouchableOpacity 
                     key={pattern.id}
                     onPress={() => {
@@ -693,11 +915,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     }}
                     style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}
                   >
-                    <View style={{ flexDirection: 'row', flex: 1, gap: 4 }}>
-                      {pattern.dots.map((c, i) => (
-                        <View key={i} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c }} />
-                      ))}
-                    </View>
+                    <FixedPatternPreviewRow baseDots={pattern.dots} patternId={pattern.id} speed={speed} points={devices?.[0]?.points || points || 16} segments={devices?.[0]?.segments || 1} />
                     <Text style={{ color: Colors.textMuted, fontSize: 16 }}>{fixedPatternId === pattern.id ? '✓' : '→'}</Text>
                   </TouchableOpacity>
                 ))}
@@ -1045,31 +1263,15 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
               </View>
             )}
 
-            {/* Brightness / Sensitivity Slider */}
+            {/* Brightness Slider - Always Visible */}
             <View style={[styles.controlRow, { marginTop: 24 }]}>
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ color: Colors.textMuted, marginRight: 8, fontSize: 16 }}>
-                  {activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? '🎚️' : '☀️'}
-                </Text>
-                
-                {activeMode === 'MUSIC' && (
-                  <View style={{ flexDirection: 'row', position: 'absolute', top: -35, left: 24 }}>
-                    <TouchableOpacity style={{ marginRight: 16 }} onPress={() => setMusicSetting('SENSITIVITY')}>
-                      <Text style={{ color: musicSetting === 'SENSITIVITY' ? Colors.primary : Colors.textMuted, fontSize: 12, fontWeight: 'bold' }}>SENSITIVITY</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setMusicSetting('BRIGHTNESS')}>
-                      <Text style={{ color: musicSetting === 'BRIGHTNESS' ? Colors.primary : Colors.textMuted, fontSize: 12, fontWeight: 'bold' }}>BRIGHTNESS</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-                
-                {activeMode !== 'MUSIC' && (
-                  <Text style={{ position: 'absolute', top: -20, left: 24, fontSize: 10, color: Colors.textMuted, fontWeight: 'bold', letterSpacing: 1 }}>BRIGHTNESS</Text>
-                )}
+                <Text style={{ position: 'absolute', top: -20, left: 24, fontSize: 10, color: Colors.textMuted, fontWeight: 'bold', letterSpacing: 1 }}>BRIGHTNESS</Text>
+                <Text style={{ color: Colors.textMuted, marginRight: 8, fontSize: 16 }}>☀️</Text>
 
                 <CustomSlider 
-                  value={activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? micSensitivity : brightness}
-                  onValueChange={activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? setMicSensitivity : setBrightness}
+                  value={brightness}
+                  onValueChange={setBrightness}
                   minimumValue={0}
                   maximumValue={100}
                   style={{ flex: 1 }}
@@ -1082,11 +1284,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                           writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, speed, val));
                         }
                       } else if (activeMode === 'MUSIC') {
-                        if (musicSetting === 'SENSITIVITY') {
-                          handleMusicChange(musicPatternId, val, brightness, micSource, musicHue, musicSecondaryHue, musicMatrixStyle);
-                        } else {
-                          handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicHue, musicSecondaryHue, musicMatrixStyle);
-                        }
+                        handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicHue, musicSecondaryHue, musicMatrixStyle);
                       } else {
                         if (activeMode === 'FIXED') {
                           applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
@@ -1104,55 +1302,134 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   }}
                 />
                 <Text style={{ color: Colors.text, marginLeft: 10, width: 45, fontWeight: 'bold', fontSize: 13, textAlign: 'right' }}>
-                  {Math.round(activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? micSensitivity : brightness)}%
-                </Text>
-                <Text style={{ color: Colors.textMuted, marginLeft: 8, fontSize: 16 }}>
-                  {activeMode === 'MUSIC' && musicSetting === 'SENSITIVITY' ? '🎚️' : '☀️'}
+                  {Math.round(brightness)}%
                 </Text>
               </View>
             </View>
 
-            {/* Speed Slider */}
-            <View style={[styles.controlRow, { marginTop: 12 }]}>
-              <Text style={{ position: 'absolute', top: -14, left: 24, fontSize: 10, color: Colors.textMuted, fontWeight: 'bold', letterSpacing: 1 }}>SPEED</Text>
-              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ color: Colors.textMuted, marginRight: 8, fontSize: 16 }}>🚀</Text>
-                <CustomSlider 
-                  value={speed}
-                  onValueChange={setSpeed}
-                  onSlidingComplete={(val) => {
-                    if (writeToDevice) {
-                      if (activeMode === 'FIXED') {
-                        applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
-                      } else if (activeMode === 'RBM') {
-                        if (selectedPatternId === 100) {
-                          applyEmergencyPattern(val, brightness);
-                        } else {
-                          writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
+            {/* Speed Slider - Hidden in MUSIC and CANDLE */}
+            {activeMode !== 'MUSIC' && activeMode !== 'CANDLE' && (
+              <View style={[styles.controlRow, { marginTop: 12 }]}>
+                <Text style={{ position: 'absolute', top: -14, left: 24, fontSize: 10, color: Colors.textMuted, fontWeight: 'bold', letterSpacing: 1 }}>SPEED</Text>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ color: Colors.textMuted, marginRight: 8, fontSize: 16 }}>🚀</Text>
+                  <CustomSlider 
+                    value={speed}
+                    onValueChange={setSpeed}
+                    onSlidingComplete={(val) => {
+                      if (writeToDevice) {
+                        if (activeMode === 'FIXED') {
+                          applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
+                        } else if (activeMode === 'RBM') {
+                          if (selectedPatternId === 100) {
+                            applyEmergencyPattern(val, brightness);
+                          } else {
+                            writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
+                          }
+                        } else if (activeMode === 'MULTICOLOR') {
+                          const segmentColors = [
+                            { r: 255, g: 0, b: 0 },
+                            { r: 0, g: 255, b: 0 },
+                            { r: 0, g: 0, b: 255 },
+                            { r: 255, g: 255, b: 0 },
+                            { r: 0, g: 255, b: 255 }
+                          ];
+                          writeToDevice(ZenggeProtocol.setMultiColor(segmentColors, val, 1));
                         }
-                      } else if (activeMode === 'MULTICOLOR') {
-                        const segmentColors = [
-                          { r: 255, g: 0, b: 0 },
-                          { r: 0, g: 255, b: 0 },
-                          { r: 0, g: 0, b: 255 },
-                          { r: 255, g: 255, b: 0 },
-                          { r: 0, g: 255, b: 255 }
-                        ];
-                        writeToDevice(ZenggeProtocol.setMultiColor(segmentColors, val, 1));
                       }
-                    }
-                  }}
-                  minimumValue={0}
-                  maximumValue={100}
-                  style={{ flex: 1 }}
-                />
-                <Text style={{ color: Colors.text, marginLeft: 10, width: 45, fontWeight: 'bold', fontSize: 13, textAlign: 'right' }}>
-                  {Math.round(speed)}
-                </Text>
+                    }}
+                    minimumValue={0}
+                    maximumValue={100}
+                    style={{ flex: 1 }}
+                  />
+                  <Text style={{ color: Colors.text, marginLeft: 10, width: 45, fontWeight: 'bold', fontSize: 13, textAlign: 'right' }}>
+                    {Math.round(speed)}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* Sensitivity Slider - Visible ONLY in MUSIC */}
+            {activeMode === 'MUSIC' && (
+              <View style={[styles.controlRow, { marginTop: 12 }]}>
+                <Text style={{ position: 'absolute', top: -14, left: 24, fontSize: 10, color: Colors.textMuted, fontWeight: 'bold', letterSpacing: 1 }}>SENSITIVITY</Text>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ color: Colors.textMuted, marginRight: 8, fontSize: 16 }}>🎚️</Text>
+                  <CustomSlider 
+                    value={micSensitivity}
+                    onValueChange={setMicSensitivity}
+                    onSlidingComplete={(val) => {
+                      if (writeToDevice) {
+                        handleMusicChange(musicPatternId, val, brightness, micSource, musicHue, musicSecondaryHue, musicMatrixStyle);
+                      }
+                    }}
+                    minimumValue={0}
+                    maximumValue={100}
+                    style={{ flex: 1 }}
+                  />
+                  <Text style={{ color: Colors.text, marginLeft: 10, width: 45, fontWeight: 'bold', fontSize: 13, textAlign: 'right' }}>
+                    {Math.round(micSensitivity)}%
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* Flicker Effect Slider - Visible ONLY in CANDLE */}
+            {activeMode === 'CANDLE' && (
+              <View style={[styles.controlRow, { marginTop: 12 }]}>
+                <Text style={{ position: 'absolute', top: -14, left: 24, fontSize: 10, color: Colors.textMuted, fontWeight: 'bold', letterSpacing: 1 }}>FLICKER EFFECT</Text>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ color: Colors.textMuted, marginRight: 8, fontSize: 16 }}>🔥</Text>
+                  <CustomSlider 
+                    value={candleAmplitude}
+                    onValueChange={setCandleAmplitude}
+                    onSlidingComplete={(val) => {
+                      const rawR = parseInt(selectedColor.substring(1, 3), 16) || 255;
+                      const rawG = parseInt(selectedColor.substring(3, 5), 16) || 255;
+                      const rawB = parseInt(selectedColor.substring(5, 7), 16) || 255;
+                      let finalR = rawR; let finalG = rawG; let finalB = rawB;
+                      const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
+                      if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
+                      if (writeToDevice) writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, val));
+                    }}
+                    minimumValue={1}
+                    maximumValue={3}
+                    style={{ flex: 1 }}
+                  />
+                  <Text style={{ color: Colors.text, marginLeft: 10, width: 45, fontWeight: 'bold', fontSize: 13, textAlign: 'right' }}>
+                    {Math.round(candleAmplitude)}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+        {/* Favorite Prompt Modal */}
+        <Modal visible={isFavPromptVisible} transparent animationType="fade">
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <View style={{ backgroundColor: Colors.surface, padding: 24, borderRadius: 20, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>Save Favorite</Text>
+              <Text style={{ color: Colors.textMuted, fontSize: 14, marginBottom: 20, textAlign: 'center' }}>Name your preset. Leave blank to use the default name.</Text>
+              <TextInput
+                style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: 12, borderRadius: 8, fontSize: 16, marginBottom: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
+                placeholder="Custom Preset Name..."
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                value={favPromptName}
+                onChangeText={setFavPromptName}
+                autoFocus
+              />
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => setIsFavPromptVisible(false)}>
+                  <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary }} onPress={handleConfirmSaveFavorite}>
+                  <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>Save</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
-        )}
+        </Modal>
+
       </View>
     </View>
   );

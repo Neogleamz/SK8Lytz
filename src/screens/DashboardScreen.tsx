@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar, Dimensions, Modal, TextInput } from 'react-native';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import DeviceItem from '../components/DeviceItem';
@@ -11,6 +11,7 @@ import Sk8lytzController from '../components/Sk8lytzController';
 import HardwareTestController from '../components/HardwareTestController';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
+import Sk8LytzProgrammerModal from '../components/Sk8LytzProgrammerModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
@@ -64,6 +65,9 @@ export default function DashboardScreen() {
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(false);
+  const [showHintText, setShowHintText] = useState(true);
+  const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
+  const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
   const lastProcessedRef = React.useRef<string>('');
   const allDevicesRef = React.useRef(allDevices);
   const customGroupsRef = React.useRef(customGroups);
@@ -79,6 +83,10 @@ export default function DashboardScreen() {
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tickTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const pulseAnimConfig = useRef(new Animated.Value(1)).current;
+  const tapCountRef = useRef(0);
+  const tapTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isPinPromptVisible, setIsPinPromptVisible] = useState(false);
+  const [pinInput, setPinInput] = useState('');
 
   const startLogPulse = () => {
     Animated.loop(
@@ -93,34 +101,34 @@ export default function DashboardScreen() {
     pulseAnimConfig.stopAnimation();
     pulseAnimConfig.setValue(1);
   };
-
-  const handlePressIn = () => {
+  const handleLogoPress = () => {
     if (isActuallyConnected) return;
-    holdTimer.current = setTimeout(() => {
-      let count = 5;
-      setCountdown(count);
-      startLogPulse();
-      tickTimer.current = setInterval(() => {
-        count--;
-        if (count <= 0) {
-          if (tickTimer.current) clearInterval(tickTimer.current);
-          setCountdown(null);
-          stopLogPulse();
-          setLogsVisible(true);
-        } else {
-          setCountdown(count);
-        }
-      }, 1000);
-    }, 5000);
-  };
+    
+    tapCountRef.current += 1;
+    
+    // Reset the count if they stop tapping for 1500ms
+    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    tapTimerRef.current = setTimeout(() => {
+      tapCountRef.current = 0;
+      setCountdown(null);
+      stopLogPulse();
+    }, 1500);
 
-  const handlePressOut = () => {
-    if (holdTimer.current) clearTimeout(holdTimer.current);
-    if (tickTimer.current) clearInterval(tickTimer.current);
-    holdTimer.current = null;
-    tickTimer.current = null;
-    setCountdown(null);
-    stopLogPulse();
+    const taps = tapCountRef.current;
+    if (taps === 1) {
+        startLogPulse();
+    }
+    
+    if (taps >= 5 && taps < 10) {
+      setCountdown(10 - taps);
+    } else if (taps >= 10) {
+      if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+      setCountdown(null);
+      stopLogPulse();
+      setPinInput('');
+      setIsPinPromptVisible(true);
+      tapCountRef.current = 0;
+    }
   };
 
   const handleScan = () => {
@@ -777,8 +785,7 @@ export default function DashboardScreen() {
                 }}>
                   <TouchableOpacity
                     activeOpacity={1}
-                    onPressIn={handlePressIn}
-                    onPressOut={handlePressOut}
+                    onPress={handleLogoPress}
                     style={{ position: 'relative' }}
                   >
                     <Image 
@@ -837,13 +844,15 @@ export default function DashboardScreen() {
 
                   {isActuallyConnected && <View style={{ flex: 1 }} />}
 
-                  {/* TESTER TOGGLE AT GLOBAL HEADER LAYER */}
-                  <TouchableOpacity
-                    style={{ position: 'absolute', left: 0, top: 0, backgroundColor: isTestModeActive ? Colors.error : 'rgba(255,255,255,0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: isTestModeActive ? Colors.error : 'rgba(255,255,255,0.2)', zIndex: 100 }}
-                    onPress={() => setIsTestModeActive(!isTestModeActive)}
-                  >
-                     <Text style={{ color: '#FFF', fontSize: 10, fontWeight: 'bold' }}>{isTestModeActive ? 'EXIT TESTER' : '🧪 TESTER'}</Text>
-                  </TouchableOpacity>
+                  {/* APP MENU CONTROLS */}
+                  {!isActuallyConnected && (
+                    <TouchableOpacity
+                      style={{ position: 'absolute', left: 0, top: 0, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', zIndex: 100 }}
+                      onPress={() => setIsSupportModalVisible(true)}
+                    >
+                       <MaterialCommunityIcons name="help-circle-outline" size={20} color={Colors.text} />
+                    </TouchableOpacity>
+                  )}
 
                   {isActuallyConnected && !isTestModeActive && (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1056,7 +1065,148 @@ export default function DashboardScreen() {
         />
       </View>
       
-      <LogViewerModal visible={logsVisible} onClose={() => setLogsVisible(false)} />
+      {(!isActuallyConnected && (allDevices.length > 0 || customGroups.length > 0)) && (
+          <TouchableOpacity
+            onPress={() => setShowHintText(!showHintText)}
+            style={{
+              position: 'absolute',
+              bottom: 24,
+              right: 16,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: 0.9,
+              paddingVertical: 10,
+              paddingHorizontal: showHintText ? 14 : 12,
+              borderRadius: 30,
+              backgroundColor: 'rgba(21, 25, 40, 0.85)',
+              borderWidth: 1,
+              borderColor: 'rgba(0, 240, 255, 0.2)',
+              elevation: 4,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              zIndex: 100
+            }}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="gesture-tap-hold" size={20} color={Colors.primary} style={{ marginRight: showHintText ? 8 : 0 }} />
+            {showHintText && (
+              <>
+                <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: 'bold', marginRight: 6 }}>
+                  Long-press to auto-configure
+                </Text>
+                <MaterialCommunityIcons name="chevron-right" size={16} color={Colors.primary} style={{ opacity: 0.7 }} />
+              </>
+            )}
+            {!showHintText && (
+              <MaterialCommunityIcons name="chevron-left" size={16} color={Colors.primary} style={{ opacity: 0.7, marginLeft: 2 }} />
+            )}
+          </TouchableOpacity>
+        )}
+
+        <Modal
+          visible={isSupportModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setIsSupportModalVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ backgroundColor: Colors.surface, padding: 24, borderRadius: 16, width: '85%', borderWidth: 1, borderColor: Colors.surfaceHighlight }}>
+              <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                <MaterialCommunityIcons name="lifebuoy" size={48} color={Colors.primary} />
+                <Text style={{ ...Typography.title, color: Colors.primary, marginTop: 12 }}>Support Portal</Text>
+                <Text style={{ color: Colors.textMuted, fontSize: 13, textAlign: 'center', marginTop: 8 }}>Need help configuring your hardware? Browse our official guides below.</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.groupButton, { backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: Colors.primary, borderWidth: 1, marginBottom: 16, paddingVertical: 12 }]}
+                onPress={() => Linking.openURL('https://neogleamz.com/pages/getting-started')}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <MaterialCommunityIcons name="book-open-page-variant" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
+                  <Text style={[styles.groupButtonText, { color: Colors.primary, fontSize: 14 }]}>Installation Guides</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.groupButton, { backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: Colors.secondary, borderWidth: 1, marginBottom: 24, paddingVertical: 12 }]}
+                onPress={() => Linking.openURL('https://neogleamz.com/pages/contact')}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <MaterialCommunityIcons name="email-fast" size={20} color={Colors.secondary} style={{ marginRight: 8 }} />
+                  <Text style={[styles.groupButtonText, { color: Colors.secondary, fontSize: 14 }]}>Support Form</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{ paddingVertical: 12, alignItems: 'center' }}
+                onPress={() => setIsSupportModalVisible(false)}
+              >
+                <Text style={{ color: Colors.textMuted, fontWeight: 'bold' }}>CLOSE</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+      {/* Developer PIN Verification Modal */}
+      <Modal visible={isPinPromptVisible} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: Colors.surface, padding: 24, borderRadius: 20, width: '100%', maxWidth: 320, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+            <Text style={{ color: Colors.error, fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>Developer Tools</Text>
+            <Text style={{ color: Colors.textMuted, fontSize: 13, marginBottom: 20, textAlign: 'center' }}>Enter PIN verification to access underlying hardware logging subsystems.</Text>
+            <TextInput
+              style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: '#FFF', padding: 12, borderRadius: 8, fontSize: 24, marginBottom: 24, borderWidth: 1, borderColor: 'rgba(255,100,100,0.3)', textAlign: 'center', letterSpacing: 8 }}
+              placeholder="----"
+              placeholderTextColor="rgba(255,255,255,0.1)"
+              secureTextEntry
+              keyboardType="number-pad"
+              maxLength={4}
+              value={pinInput}
+              onChangeText={setPinInput}
+              autoFocus
+            />
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => setIsPinPromptVisible(false)}>
+                <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: pinInput.length === 4 ? Colors.error : 'rgba(255,61,0,0.2)' }} disabled={pinInput.length !== 4} onPress={() => {
+                 if (pinInput === '0000') {
+                    setIsPinPromptVisible(false);
+                    setLogsVisible(true);
+                 } else {
+                    alert("Invalid PIN. Access denied.");
+                    setPinInput('');
+                 }
+              }}>
+                <Text style={{ color: pinInput.length === 4 ? '#000' : 'rgba(255,255,255,0.3)', textAlign: 'center', fontWeight: 'bold' }}>Unlock</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <LogViewerModal 
+        visible={logsVisible} 
+        onClose={() => setLogsVisible(false)} 
+        onOpenTester={() => {
+            setLogsVisible(false);
+            setIsTestModeActive(true);
+        }}
+        onOpenProgrammer={() => {
+            setLogsVisible(false);
+            setIsProgrammerVisible(true);
+        }}
+      />
+      
+      <Sk8LytzProgrammerModal 
+        visible={isProgrammerVisible} 
+        onClose={() => setIsProgrammerVisible(false)} 
+        allDevices={allDevices}
+        writeToDevice={writeToDevice}
+        isScanning={isScanning}
+        handleScan={handleScan}
+      />
     </SafeAreaView>
   );
 }
