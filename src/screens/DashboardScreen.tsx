@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
 import LogViewerModal from '../components/LogViewerModal';
+import ProtocolSnifferModal from '../components/ProtocolSnifferModal';
 
 interface DeviceSettings {
   name: string;
@@ -66,6 +67,7 @@ export default function DashboardScreen() {
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(false);
+  const [showHintText, setShowHintText] = useState(true);
   const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
   const [isSnifferVisible, setIsSnifferVisible] = useState(false);

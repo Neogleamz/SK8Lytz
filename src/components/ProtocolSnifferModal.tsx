@@ -6,6 +6,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { AppLogger } from '../services/AppLogger';
+import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 
 interface ProtocolSnifferModalProps {
   visible: boolean;
@@ -34,6 +35,19 @@ export default function ProtocolSnifferModal({
 
   // Device Selection Matrix
   const [isScanningExpanded, setIsScanningExpanded] = useState(false);
+
+  // Hardware Re-Config Injector
+  const [hwPoints, setHwPoints] = useState('43');
+  const [hwSegments, setHwSegments] = useState('1');
+  const [hwColorOrder, setHwColorOrder] = useState('GRB');
+  const [hwStripType, setHwStripType] = useState('WS2812B');
+
+  // Extracted Controller Specs Tracker
+  const [detectedPoints, setDetectedPoints] = useState<number | null>(null);
+  const [detectedSegments, setDetectedSegments] = useState<number | null>(null);
+  const [detectedColorOrder, setDetectedColorOrder] = useState<string | null>(null);
+  const [detectedStripType, setDetectedStripType] = useState<string | null>(null);
+  const [detectedFirmware, setDetectedFirmware] = useState<string | null>(null);
   
   const load = useCallback(async () => {
     const logs = await AppLogger.getLogs();
@@ -61,10 +75,12 @@ export default function ProtocolSnifferModal({
     if (visible) load();
   }, [visible, load]);
 
-  // React to Live Payloads
+  // React to Live Payloads & Extract Intercepted States
   useEffect(() => {
     if (visible && liveRxPayload && liveRxPayload.payloadHex && !isSnifferPaused) {
       if (snifferTarget !== 'ALL' && liveRxPayload.deviceId !== snifferTarget) return;
+
+      // 1. Process Timeline Sink
       setSnifferLogs(prev => {
         const merged = [...prev];
         const rxHash = { dir: 'RX' as const, hex: liveRxPayload.payloadHex, t: liveRxPayload.timestamp || Date.now(), dev: liveRxPayload.deviceId };
@@ -73,6 +89,33 @@ export default function ProtocolSnifferModal({
         }
         return merged;
       });
+
+      // 2. Parse Intercepted Payload to Extract Hardware Specs organically
+      const bytes = liveRxPayload.payloadHex.split(' ').map(h => parseInt(h, 16));
+      
+      if ((bytes[0] === 0x00 && bytes[1] === 0x63) || bytes[0] === 0x63) {
+         const offset = bytes[0] === 0x00 ? 1 : 0;
+         if (bytes.length > offset + 5) {
+           const pts = (bytes[offset+1] << 8) | bytes[offset+2];
+           const segs = bytes[offset+4];
+           setDetectedPoints(pts);
+           setDetectedSegments(segs);
+         }
+      }
+
+      const parsedHardware = ZenggeProtocol.parseHardwareConfig(bytes);
+      if (parsedHardware) {
+         setDetectedPoints(parsedHardware.points);
+         setDetectedSegments(parsedHardware.segments);
+         setDetectedColorOrder(parsedHardware.sorting);
+         setDetectedStripType(parsedHardware.stripType);
+      }
+
+      // 0x32 ping reveals Firmware on some controllers. Simple hook wrapper.
+      if (bytes[0] === 0x32 && bytes.length > 5) {
+         setDetectedFirmware(`${bytes[2]}.${bytes[3]}.${bytes[4]}`);
+      }
+
     }
   }, [liveRxPayload, visible, isSnifferPaused, snifferTarget]);
 
@@ -243,6 +286,74 @@ export default function ProtocolSnifferModal({
               </TouchableOpacity>
             ))}
           </ScrollView>
+
+          {/* Hardware Configuration Injector */}
+          <View style={{ marginBottom: 16, backgroundColor: '#222', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#444' }}>
+             <Text style={{ color: '#00f0ff', fontSize: 12, fontWeight: 'bold', marginBottom: 12 }}>HARDWARE CONFIG INJECTOR (0x81)</Text>
+             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#bbb', fontSize: 10, marginBottom: 4 }}>POINTS</Text>
+                  <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 8, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwPoints} onChangeText={setHwPoints} keyboardType="numeric" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#bbb', fontSize: 10, marginBottom: 4 }}>SEGMENTS</Text>
+                  <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 8, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwSegments} onChangeText={setHwSegments} keyboardType="numeric" />
+                </View>
+                <View style={{ flex: 1.2 }}>
+                  <Text style={{ color: '#bbb', fontSize: 10, marginBottom: 4 }}>COLOR</Text>
+                  <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 8, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwColorOrder} onChangeText={setHwColorOrder} autoCapitalize="characters" />
+                </View>
+                <View style={{ flex: 1.5 }}>
+                  <Text style={{ color: '#bbb', fontSize: 10, marginBottom: 4 }}>TYPE</Text>
+                  <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 8, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwStripType} onChangeText={setHwStripType} autoCapitalize="characters" />
+                </View>
+             </View>
+             <TouchableOpacity style={{ backgroundColor: '#ff4040', padding: 12, borderRadius: 6, alignItems: 'center' }} onPress={() => {
+                const pBytes = ZenggeProtocol.setHardwareConfig(parseInt(hwPoints)||43, hwColorOrder, hwStripType, parseInt(hwSegments)||1);
+                handleSendSniffer(pBytes.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' '));
+             }}>
+                <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 12 }}>TX SET HARDWARE MATRIX</Text>
+             </TouchableOpacity>
+          </View>
+
+          {/* Extracted Hardware Specifications */}
+          <View style={{ marginBottom: 16, backgroundColor: '#1E1E1E', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#00ff8050' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ color: '#00ff80', fontSize: 13, fontWeight: 'bold' }}>DETECTED HARDWARE STATE</Text>
+              <TouchableOpacity onPress={() => {
+                  const payload10 = ZenggeProtocol.queryHardwareConfig();
+                  const payload63 = ZenggeProtocol.wrapCommand([0x63, 0x14, 0x00, 0x00]);
+                  const payload32 = ZenggeProtocol.wrapCommand([0x32, 0x3A, 0x3B, 0x0F]); // Query Firmware Boot Details
+                  handleSendSniffer(payload10.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' '));
+                  setTimeout(() => handleSendSniffer(payload63.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ')), 100);
+                  setTimeout(() => handleSendSniffer(payload32.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ')), 200);
+              }} style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: '#00f0ff', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6 }}>
+                <Text style={{ color: '#00f0ff', fontSize: 10, fontWeight: 'bold' }}>PROBE SETTINGS (0x10 / 0x63)</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
+                 <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>LED POINTS</Text>
+                 <Text style={{ color: detectedPoints ? '#FFF' : '#444', fontSize: 14, fontWeight: 'bold' }}>{detectedPoints || '?'}</Text>
+              </View>
+              <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
+                 <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SEGMENTS</Text>
+                 <Text style={{ color: detectedSegments ? '#FFF' : '#444', fontSize: 14, fontWeight: 'bold' }}>{detectedSegments || '?'}</Text>
+              </View>
+              <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
+                 <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>COLOR ORDER</Text>
+                 <Text style={{ color: detectedColorOrder ? '#FFF' : '#444', fontSize: 14, fontWeight: 'bold' }}>{detectedColorOrder || '?'}</Text>
+              </View>
+              <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
+                 <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>STRIP IC TYPE</Text>
+                 <Text style={{ color: detectedStripType ? '#FFF' : '#444', fontSize: 14, fontWeight: 'bold' }}>{detectedStripType || '?'}</Text>
+              </View>
+              <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
+                 <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>FIRMWARE INFO</Text>
+                 <Text style={{ color: detectedFirmware ? '#FFF' : '#444', fontSize: 14, fontWeight: 'bold' }}>{detectedFirmware || '?'}</Text>
+              </View>
+            </View>
+          </View>
 
           {/* TX Manual Injection */}
           <View style={{ flexDirection: 'row', marginBottom: 16 }}>
