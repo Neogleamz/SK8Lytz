@@ -93,16 +93,6 @@ export default function ProtocolSnifferModal({
       // 2. Parse Intercepted Payload to Extract Hardware Specs organically
       const bytes = liveRxPayload.payloadHex.split(' ').map(h => parseInt(h, 16));
       
-      if ((bytes[0] === 0x00 && bytes[1] === 0x63) || bytes[0] === 0x63) {
-         const offset = bytes[0] === 0x00 ? 1 : 0;
-         if (bytes.length > offset + 5) {
-           const pts = (bytes[offset+1] << 8) | bytes[offset+2];
-           const segs = bytes[offset+4];
-           setDetectedPoints(pts);
-           setDetectedSegments(segs);
-         }
-      }
-
       const parsedHardware = ZenggeProtocol.parseHardwareConfig(bytes);
       if (parsedHardware) {
          setDetectedPoints(parsedHardware.points);
@@ -189,217 +179,221 @@ export default function ProtocolSnifferModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
-      <SafeAreaView style={[styles.root, { backgroundColor: '#111' }]}>
+      <SafeAreaView style={[styles.root, { backgroundColor: '#111', paddingTop: Platform.OS === 'android' ? 32 : 0 }]}>
         
         {/* Header matching Tester & Programmer */}
         <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={onClose} style={{ padding: 8 }}>
-            <MaterialCommunityIcons name="close" size={24} color="#FFF" />
+          <TouchableOpacity onPress={onClose} style={{ padding: 12, backgroundColor: '#333', borderRadius: 20 }}>
+            <MaterialCommunityIcons name="close" size={22} color="#FFF" />
           </TouchableOpacity>
           <View style={{ flex: 1, alignItems: 'center' }}>
             <Text style={styles.title}>PROTOCOL SNIFFER</Text>
           </View>
-          <TouchableOpacity style={{ padding: 8, opacity: 0 }}>
-             <MaterialCommunityIcons name="close" size={24} color="#FFF" />
+          <TouchableOpacity style={{ padding: 12, opacity: 0 }}>
+             <MaterialCommunityIcons name="close" size={22} color="#FFF" />
           </TouchableOpacity>
         </View>
 
         <View style={{ flex: 1, paddingHorizontal: 16 }}>
-          {/* Target Device UI Matrix with Scan built in */}
-          <View style={{ marginBottom: 16 }}>
-             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <Text style={{ color: '#bbb', fontSize: 12, fontWeight: 'bold' }}>TARGET DEVICE NODE</Text>
-                <TouchableOpacity onPress={() => setIsScanningExpanded(!isScanningExpanded)} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                   <Text style={{ color: '#00f0ff', fontSize: 12, fontWeight: 'bold', marginRight: 4 }}>
-                     {isScanningExpanded ? 'HIDE SCANNER' : 'SCAN DEVICES'}
-                   </Text>
-                   <MaterialCommunityIcons name={isScanningExpanded ? "chevron-up" : "radar"} size={16} color="#00f0ff" />
-                </TouchableOpacity>
-             </View>
-             
-             {isScanningExpanded && (
-                <View style={{ backgroundColor: '#222', borderRadius: 8, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#333' }}>
-                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                     <Text style={{ color: '#FFF', fontSize: 12 }}>Discoverable BLE Nodes</Text>
-                     <TouchableOpacity 
-                       onPress={handleScan}
-                       style={{ backgroundColor: '#00AEEF', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16, flexDirection: 'row', alignItems: 'center' }}
-                     >
-                       {isScanning && <ActivityIndicator size="small" color="#FFF" style={{ marginRight: 6 }} />}
-                       <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 11 }}>{isScanning ? "SCANNING..." : "SCAN"}</Text>
-                     </TouchableOpacity>
-                   </View>
-                   <ScrollView style={{ maxHeight: 150 }}>
-                     {allDevices.length === 0 && <Text style={{ color: '#666', fontSize: 11 }}>No un-connected devices found.</Text>}
-                     {allDevices.map((d, i) => {
-                       const isConn = connectedDevices.find(c => c.id === d.id);
-                       return (
-                         <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#333' }}>
-                           <View>
-                             <Text style={{ color: '#FFF', fontSize: 13, fontWeight: 'bold' }}>{d.name || 'Unknown Device'}</Text>
-                             <Text style={{ color: '#888', fontSize: 10 }}>{d.id}</Text>
-                           </View>
-                           {isConn ? (
-                             <TouchableOpacity onPress={handleDisconnect} style={{ backgroundColor: '#ff4040', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}>
-                               <Text style={{ color: '#FFF', fontSize: 10, fontWeight: 'bold' }}>DISCONNECT</Text>
+          {/* Chronological Native Display as a unified scroll canvas */}
+          <View style={{ flex: 1, backgroundColor: '#000', borderRadius: 8, borderWidth: 1, borderColor: '#333', padding: 8 }}>
+            <FlatList 
+               data={filteredLogs}
+               keyExtractor={(_, i) => String(i)}
+               ListHeaderComponent={() => (
+                 <View style={{ paddingBottom: 16 }}>
+                    {/* Target Device UI Matrix with Scan built in */}
+                    <View style={{ marginBottom: 16 }}>
+                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <Text style={{ color: '#bbb', fontSize: 12, fontWeight: 'bold' }}>TARGET DEVICE NODE</Text>
+                          <TouchableOpacity onPress={() => setIsScanningExpanded(!isScanningExpanded)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#333', paddingLeft: 8, paddingRight: 4, paddingVertical: 4, borderRadius: 12 }}>
+                             <Text style={{ color: '#00f0ff', fontSize: 10, fontWeight: 'bold', marginRight: 4 }}>
+                               {isScanningExpanded ? 'HIDE SCANNER' : 'SCAN DEVICES'}
+                             </Text>
+                             <MaterialCommunityIcons name={isScanningExpanded ? "chevron-up" : "radar"} size={14} color="#00f0ff" />
+                          </TouchableOpacity>
+                       </View>
+                       
+                       {isScanningExpanded && (
+                          <View style={{ backgroundColor: '#222', borderRadius: 8, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#333' }}>
+                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                               <Text style={{ color: '#FFF', fontSize: 12 }}>Discoverable BLE Nodes</Text>
+                               <TouchableOpacity 
+                                 onPress={handleScan}
+                                 style={{ backgroundColor: '#00AEEF', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16, flexDirection: 'row', alignItems: 'center' }}
+                               >
+                                 {isScanning && <ActivityIndicator size="small" color="#FFF" style={{ marginRight: 6 }} />}
+                                 <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 11 }}>{isScanning ? "SCANNING..." : "SCAN"}</Text>
+                               </TouchableOpacity>
+                             </View>
+                             <View style={{ maxHeight: 150 }}>
+                               <ScrollView nestedScrollEnabled>
+                                 {allDevices.length === 0 && <Text style={{ color: '#666', fontSize: 11 }}>No un-connected devices found.</Text>}
+                                 {allDevices.map((d, i) => {
+                                   const isConn = connectedDevices.find(c => c.id === d.id);
+                                   return (
+                                     <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#333' }}>
+                                       <View>
+                                         <Text style={{ color: '#FFF', fontSize: 13, fontWeight: 'bold' }}>{d.name || 'Unknown Device'}</Text>
+                                         <Text style={{ color: '#888', fontSize: 10 }}>{d.id}</Text>
+                                       </View>
+                                       {isConn ? (
+                                         <TouchableOpacity onPress={handleDisconnect} style={{ backgroundColor: '#ff4040', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}>
+                                           <Text style={{ color: '#FFF', fontSize: 10, fontWeight: 'bold' }}>DISCONNECT</Text>
+                                         </TouchableOpacity>
+                                       ) : (
+                                         <TouchableOpacity onPress={() => connectToDevice && connectToDevice(d)} style={{ backgroundColor: '#00ff80', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}>
+                                           <Text style={{ color: '#000', fontSize: 10, fontWeight: 'bold' }}>CONNECT</Text>
+                                         </TouchableOpacity>
+                                       )}
+                                     </View>
+                                   );
+                                 })}
+                               </ScrollView>
+                             </View>
+                          </View>
+                       )}
+
+                       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                          <TouchableOpacity onPress={() => setSnifferTarget('ALL')} style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: snifferTarget === 'ALL' ? '#00f0ff' : '#222', marginRight: 8, borderWidth: 1, borderColor: snifferTarget === 'ALL' ? '#00f0ff' : '#444' }}>
+                             <Text style={{ color: snifferTarget === 'ALL' ? '#000' : '#FFF', fontSize: 11, fontWeight: 'bold' }}>ALL</Text>
+                          </TouchableOpacity>
+                          {connectedDevices.map(d => (
+                             <TouchableOpacity key={d.id} onPress={() => setSnifferTarget(d.id)} style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: snifferTarget === d.id ? '#00f0ff' : '#222', marginRight: 8, borderWidth: 1, borderColor: snifferTarget === d.id ? '#00f0ff' : '#444' }}>
+                               <Text style={{ color: snifferTarget === d.id ? '#000' : '#FFF', fontSize: 11, fontWeight: 'bold' }}>{d.name || d.id.slice(-5)}</Text>
                              </TouchableOpacity>
-                           ) : (
-                             <TouchableOpacity onPress={() => connectToDevice && connectToDevice(d)} style={{ backgroundColor: '#00ff80', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}>
-                               <Text style={{ color: '#000', fontSize: 10, fontWeight: 'bold' }}>CONNECT</Text>
-                             </TouchableOpacity>
-                           )}
-                         </View>
-                       );
-                     })}
-                   </ScrollView>
-                </View>
-             )}
-
-             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <TouchableOpacity onPress={() => setSnifferTarget('ALL')} style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16, backgroundColor: snifferTarget === 'ALL' ? '#00f0ff' : '#222', marginRight: 8, borderWidth: 1, borderColor: snifferTarget === 'ALL' ? '#00f0ff' : '#444' }}>
-                   <Text style={{ color: snifferTarget === 'ALL' ? '#000' : '#FFF', fontSize: 12, fontWeight: 'bold' }}>ALL</Text>
-                </TouchableOpacity>
-                {connectedDevices.map(d => (
-                   <TouchableOpacity key={d.id} onPress={() => setSnifferTarget(d.id)} style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16, backgroundColor: snifferTarget === d.id ? '#00f0ff' : '#222', marginRight: 8, borderWidth: 1, borderColor: snifferTarget === d.id ? '#00f0ff' : '#444' }}>
-                     <Text style={{ color: snifferTarget === d.id ? '#000' : '#FFF', fontSize: 12, fontWeight: 'bold' }}>{d.name || d.id.slice(-5)}</Text>
-                   </TouchableOpacity>
-                ))}
-             </ScrollView>
-          </View>
-
-          {/* Dictionary */}
-          <Text style={{ color: '#bbb', fontSize: 12, fontWeight: 'bold', marginBottom: 8 }}>DIAGNOSTIC DICTIONARY</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 16, flexGrow: 0 }}>
-            {[
-              { label: '0x81 Sync', hex: '81 8A 8B 96' },
-              { label: '0x10 Ping', hex: '10 00 00 10' },
-              { label: '0x2B RConfig', hex: '2B 2C 2D 00' },
-              { label: '0x32 Boot', hex: '32 3A 3B 0F' },
-              { label: '0x63 IC Probe', hex: '63 14 00 00' }
-            ].map((probe) => (
-              <TouchableOpacity 
-                key={probe.label} 
-                onPress={() => handleSendSniffer(probe.hex)}
-                style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: '#00f0ff', borderWidth: 1, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginRight: 8, height: 36 }}
-              >
-                <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 13 }}>{probe.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Hardware Configuration Injector */}
-          <View style={{ marginBottom: 16, backgroundColor: '#222', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#444' }}>
-             <Text style={{ color: '#00f0ff', fontSize: 12, fontWeight: 'bold', marginBottom: 12 }}>HARDWARE CONFIG INJECTOR (0x81)</Text>
-             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#bbb', fontSize: 10, marginBottom: 4 }}>POINTS</Text>
-                  <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 8, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwPoints} onChangeText={setHwPoints} keyboardType="numeric" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#bbb', fontSize: 10, marginBottom: 4 }}>SEGMENTS</Text>
-                  <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 8, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwSegments} onChangeText={setHwSegments} keyboardType="numeric" />
-                </View>
-                <View style={{ flex: 1.2 }}>
-                  <Text style={{ color: '#bbb', fontSize: 10, marginBottom: 4 }}>COLOR</Text>
-                  <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 8, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwColorOrder} onChangeText={setHwColorOrder} autoCapitalize="characters" />
-                </View>
-                <View style={{ flex: 1.5 }}>
-                  <Text style={{ color: '#bbb', fontSize: 10, marginBottom: 4 }}>TYPE</Text>
-                  <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 8, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwStripType} onChangeText={setHwStripType} autoCapitalize="characters" />
-                </View>
-             </View>
-             <TouchableOpacity style={{ backgroundColor: '#ff4040', padding: 12, borderRadius: 6, alignItems: 'center' }} onPress={() => {
-                const pBytes = ZenggeProtocol.setHardwareConfig(parseInt(hwPoints)||43, hwColorOrder, hwStripType, parseInt(hwSegments)||1);
-                handleSendSniffer(pBytes.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' '));
-             }}>
-                <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 12 }}>TX SET HARDWARE MATRIX</Text>
-             </TouchableOpacity>
-          </View>
-
-          {/* Extracted Hardware Specifications */}
-          <View style={{ marginBottom: 16, backgroundColor: '#1E1E1E', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#00ff8050' }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ color: '#00ff80', fontSize: 13, fontWeight: 'bold' }}>DETECTED HARDWARE STATE</Text>
-              <TouchableOpacity onPress={() => {
-                  const payload10 = ZenggeProtocol.queryHardwareConfig();
-                  const payload63 = ZenggeProtocol.wrapCommand([0x63, 0x14, 0x00, 0x00]);
-                  const payload32 = ZenggeProtocol.wrapCommand([0x32, 0x3A, 0x3B, 0x0F]); // Query Firmware Boot Details
-                  handleSendSniffer(payload10.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' '));
-                  setTimeout(() => handleSendSniffer(payload63.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ')), 100);
-                  setTimeout(() => handleSendSniffer(payload32.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ')), 200);
-              }} style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: '#00f0ff', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6 }}>
-                <Text style={{ color: '#00f0ff', fontSize: 10, fontWeight: 'bold' }}>PROBE SETTINGS (0x10 / 0x63)</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
-                 <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>LED POINTS</Text>
-                 <Text style={{ color: detectedPoints ? '#FFF' : '#444', fontSize: 14, fontWeight: 'bold' }}>{detectedPoints || '?'}</Text>
-              </View>
-              <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
-                 <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SEGMENTS</Text>
-                 <Text style={{ color: detectedSegments ? '#FFF' : '#444', fontSize: 14, fontWeight: 'bold' }}>{detectedSegments || '?'}</Text>
-              </View>
-              <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
-                 <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>COLOR ORDER</Text>
-                 <Text style={{ color: detectedColorOrder ? '#FFF' : '#444', fontSize: 14, fontWeight: 'bold' }}>{detectedColorOrder || '?'}</Text>
-              </View>
-              <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
-                 <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>STRIP IC TYPE</Text>
-                 <Text style={{ color: detectedStripType ? '#FFF' : '#444', fontSize: 14, fontWeight: 'bold' }}>{detectedStripType || '?'}</Text>
-              </View>
-              <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
-                 <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>FIRMWARE INFO</Text>
-                 <Text style={{ color: detectedFirmware ? '#FFF' : '#444', fontSize: 14, fontWeight: 'bold' }}>{detectedFirmware || '?'}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* TX Manual Injection */}
-          <View style={{ flexDirection: 'row', marginBottom: 16 }}>
-            <TextInput
-               style={{ flex: 1, backgroundColor: '#222', color: '#FFF', borderColor: '#444', borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, height: 44, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}
-               placeholder="ex: 81 8A 8B 96"
-               placeholderTextColor="#666"
-               value={snifferInput}
-               onChangeText={setSnifferInput}
-               autoCapitalize="none"
-            />
-            <TouchableOpacity 
-               style={{ backgroundColor: '#00AEEF', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16, borderRadius: 8, marginLeft: 8 }}
-               onPress={() => handleSendSniffer(snifferInput)}
-            >
-               <Text style={{ color: '#000', fontWeight: 'bold' }}>TX</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Chronological Native Display */}
-          <View style={{ flex: 1, backgroundColor: '#000', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#333' }}>
-             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
-               <Text style={{ color: '#bbb', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontWeight: 'bold' }}>CHRONOLOGICAL TIMELINE STREAM</Text>
-               <TouchableOpacity onPress={() => setIsSnifferPaused(!isSnifferPaused)} style={{ backgroundColor: isSnifferPaused ? '#ff404020' : '#00ff8020', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
-                 <Text style={{ color: isSnifferPaused ? '#ff4040' : '#00ff80', fontSize: 10, fontWeight: 'bold' }}>{isSnifferPaused ? '▶ RESUME' : '⏸ PAUSE'}</Text>
-               </TouchableOpacity>
-             </View>
-             
-             <FlatList 
-                data={filteredLogs}
-                inverted
-                keyExtractor={(_, i) => String(i)}
-                ListEmptyComponent={<Text style={{ color: '#555', fontFamily: 'monospace', fontSize: 12, marginTop: 20, textAlign: 'center' }}>Waiting for BLE traffic...</Text>}
-                renderItem={({ item }) => (
-                  <View style={{ flexDirection: 'row', marginBottom: 8, opacity: Date.now() - item.t > 15000 ? 0.7 : 1, alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#222', paddingBottom: 6 }}>
-                    <Text style={{ color: item.dir === 'TX' ? '#FFD700' : '#00ff80', width: 26, fontWeight: 'bold', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11 }}>{item.dir}</Text>
-                    <Text style={{ color: '#777', width: 66, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 10, marginTop: 1 }}>{formatTime(item.t)}</Text>
-                    <View style={{ flex: 1 }}>
-                      {renderAnalyzedPayload(item.hex)}
-                      {(item.dev && item.dev !== 'ALL') && (
-                        <Text style={{ color: '#555', fontSize: 9 }}>DEV: {item.dev.slice(-5)}</Text>
-                      )}
+                          ))}
+                       </ScrollView>
                     </View>
-                  </View>
-                )}
-             />
+
+                    {/* Dictionary */}
+                    <Text style={{ color: '#bbb', fontSize: 12, fontWeight: 'bold', marginBottom: 8 }}>DIAGNOSTIC DICTIONARY</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 16, flexGrow: 0 }}>
+                      {[
+                        { label: '0x81 Sync', hex: '81 8A 8B 96' },
+                        { label: '0x10 Ping', hex: '10 00 00 10' },
+                        { label: '0x2B RConfig', hex: '2B 2C 2D 00' },
+                        { label: '0x32 Boot', hex: '32 3A 3B 0F' },
+                        { label: '0x63 IC Probe', hex: '63 14 00 00' }
+                      ].map((probe) => (
+                        <TouchableOpacity 
+                          key={probe.label} 
+                          onPress={() => handleSendSniffer(probe.hex)}
+                          style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: '#00f0ff', borderWidth: 1, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, marginRight: 8 }}
+                        >
+                          <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 11 }}>{probe.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+
+                    {/* Hardware Configuration Injector */}
+                    <View style={{ marginBottom: 16, backgroundColor: '#222', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#444' }}>
+                       <Text style={{ color: '#00f0ff', fontSize: 11, fontWeight: 'bold', marginBottom: 12 }}>HARDWARE CONFIG INJECTOR (0x81)</Text>
+                       <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+                          <View style={{ flex: 1, minWidth: '22%' }}>
+                            <Text style={{ color: '#bbb', fontSize: 9, marginBottom: 4 }}>POINTS</Text>
+                            <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 6, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwPoints} onChangeText={setHwPoints} keyboardType="numeric" />
+                          </View>
+                          <View style={{ flex: 1, minWidth: '22%' }}>
+                            <Text style={{ color: '#bbb', fontSize: 9, marginBottom: 4 }}>SEGMENTS</Text>
+                            <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 6, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwSegments} onChangeText={setHwSegments} keyboardType="numeric" />
+                          </View>
+                          <View style={{ flex: 1, minWidth: '22%' }}>
+                            <Text style={{ color: '#bbb', fontSize: 9, marginBottom: 4 }}>COLOR</Text>
+                            <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 6, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwColorOrder} onChangeText={setHwColorOrder} autoCapitalize="characters" />
+                          </View>
+                          <View style={{ flex: 1, minWidth: '22%' }}>
+                            <Text style={{ color: '#bbb', fontSize: 9, marginBottom: 4 }}>TYPE</Text>
+                            <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 6, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwStripType} onChangeText={setHwStripType} autoCapitalize="characters" />
+                          </View>
+                       </View>
+                       <TouchableOpacity style={{ backgroundColor: '#ff4040', padding: 10, borderRadius: 6, alignItems: 'center' }} onPress={() => {
+                          const pBytes = ZenggeProtocol.setHardwareConfig(parseInt(hwPoints)||43, hwColorOrder, hwStripType, parseInt(hwSegments)||1);
+                          handleSendSniffer(pBytes.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' '));
+                       }}>
+                          <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 11 }}>TX SET HARDWARE MATRIX</Text>
+                       </TouchableOpacity>
+                    </View>
+
+                    {/* Extracted Hardware Specifications */}
+                    <View style={{ marginBottom: 16, backgroundColor: '#192518', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#00ff8050' }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                        <Text style={{ color: '#00ff80', fontSize: 11, fontWeight: 'bold' }}>DETECTED STATE</Text>
+                        <TouchableOpacity onPress={() => {
+                            const payload10 = ZenggeProtocol.queryHardwareConfig();
+                            const payload63 = ZenggeProtocol.wrapCommand([0x63, 0x14, 0x00, 0x00]);
+                            const payload32 = ZenggeProtocol.wrapCommand([0x32, 0x3A, 0x3B, 0x0F]); // Query Firmware Boot Details
+                            handleSendSniffer(payload10.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' '));
+                            setTimeout(() => handleSendSniffer(payload63.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ')), 100);
+                            setTimeout(() => handleSendSniffer(payload32.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ')), 200);
+                        }} style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: '#00f0ff', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6 }}>
+                          <Text style={{ color: '#00f0ff', fontSize: 9, fontWeight: 'bold' }}>AUTO PROBE (0x10 / 0x63)</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
+                           <Text style={{ color: '#888', fontSize: 9, marginBottom: 2 }}>POINTS</Text>
+                           <Text style={{ color: detectedPoints ? '#FFF' : '#444', fontSize: 13, fontWeight: 'bold' }}>{detectedPoints || '?'}</Text>
+                        </View>
+                        <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
+                           <Text style={{ color: '#888', fontSize: 9, marginBottom: 2 }}>SEGMENTS</Text>
+                           <Text style={{ color: detectedSegments ? '#FFF' : '#444', fontSize: 13, fontWeight: 'bold' }}>{detectedSegments || '?'}</Text>
+                        </View>
+                        <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
+                           <Text style={{ color: '#888', fontSize: 9, marginBottom: 2 }}>COLOR ORDER</Text>
+                           <Text style={{ color: detectedColorOrder ? '#FFF' : '#444', fontSize: 13, fontWeight: 'bold' }}>{detectedColorOrder || '?'}</Text>
+                        </View>
+                        <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
+                           <Text style={{ color: '#888', fontSize: 9, marginBottom: 2 }}>STRIP IC</Text>
+                           <Text style={{ color: detectedStripType ? '#FFF' : '#444', fontSize: 13, fontWeight: 'bold' }}>{detectedStripType || '?'}</Text>
+                        </View>
+                        <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
+                           <Text style={{ color: '#888', fontSize: 9, marginBottom: 2 }}>FIRMWARE</Text>
+                           <Text style={{ color: detectedFirmware ? '#FFF' : '#444', fontSize: 13, fontWeight: 'bold' }}>{detectedFirmware || '?'}</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* TX Manual Injection */}
+                    <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+                      <TextInput
+                         style={{ flex: 1, backgroundColor: '#222', color: '#FFF', borderColor: '#444', borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, height: 40, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 12 }}
+                         placeholder="ex: 81 8A 8B 96"
+                         placeholderTextColor="#666"
+                         value={snifferInput}
+                         onChangeText={setSnifferInput}
+                         autoCapitalize="none"
+                      />
+                      <TouchableOpacity 
+                         style={{ backgroundColor: '#00AEEF', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16, borderRadius: 8, marginLeft: 8 }}
+                         onPress={() => handleSendSniffer(snifferInput)}
+                      >
+                         <Text style={{ color: '#000', fontWeight: 'bold', fontSize: 12 }}>TX</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, marginBottom: 4, alignItems: 'center' }}>
+                      <Text style={{ color: '#bbb', fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontWeight: 'bold' }}>CHRONOLOGICAL TIMELINE STREAM</Text>
+                      <TouchableOpacity onPress={() => setIsSnifferPaused(!isSnifferPaused)} style={{ backgroundColor: isSnifferPaused ? '#ff404020' : '#00ff8020', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
+                        <Text style={{ color: isSnifferPaused ? '#ff4040' : '#00ff80', fontSize: 9, fontWeight: 'bold' }}>{isSnifferPaused ? '▶ RESUME' : '⏸ PAUSE'}</Text>
+                      </TouchableOpacity>
+                    </View>
+                 </View>
+               )}
+               ListEmptyComponent={<Text style={{ color: '#555', fontFamily: 'monospace', fontSize: 12, marginTop: 20, textAlign: 'center' }}>Waiting for BLE traffic...</Text>}
+               renderItem={({ item }) => (
+                 <View style={{ flexDirection: 'row', marginBottom: 8, opacity: Date.now() - item.t > 15000 ? 0.7 : 1, alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#222', paddingBottom: 6 }}>
+                   <Text style={{ color: item.dir === 'TX' ? '#FFD700' : '#00ff80', width: 26, fontWeight: 'bold', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11 }}>{item.dir}</Text>
+                   <Text style={{ color: '#777', width: 66, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 10, marginTop: 1 }}>{formatTime(item.t)}</Text>
+                   <View style={{ flex: 1 }}>
+                     {renderAnalyzedPayload(item.hex)}
+                     {(item.dev && item.dev !== 'ALL') && (
+                       <Text style={{ color: '#555', fontSize: 9 }}>DEV: {item.dev.slice(-5)}</Text>
+                     )}
+                   </View>
+                 </View>
+               )}
+            />
           </View>
         </View>
       </SafeAreaView>

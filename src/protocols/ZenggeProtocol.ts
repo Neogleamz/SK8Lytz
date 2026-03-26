@@ -207,25 +207,29 @@ export class ZenggeProtocol {
     const pointsHigh = (points >> 8) & 0xFF;
     const pointsLow = points & 0xFF;
     
-    const segmentsHigh = (segments >> 8) & 0xFF;
-    const segmentsLow = segments & 0xFF;
+    // Per geminianswer.txt, Segments is a single integer byte in the config payload.
+    const segmentsByte = segments & 0xFF;
 
-    let orderByte = 3; // GRB default
-    if (colorOrder.includes('RGB')) orderByte = 1;
-    else if (colorOrder.includes('RBG')) orderByte = 2;
-    else if (colorOrder.includes('GRB')) orderByte = 3;
-    else if (colorOrder.includes('GBR')) orderByte = 4;
-    else if (colorOrder.includes('BRG')) orderByte = 5;
-    else if (colorOrder.includes('BGR')) orderByte = 6;
+    let orderByte = 1; // GRB default in the index logic
+    if (colorOrder === 'RGB') orderByte = 0;
+    else if (colorOrder === 'GRB') orderByte = 1;
+    else if (colorOrder === 'BRG') orderByte = 2;
+    // Map any outliers safely
+    else if (colorOrder.includes('RGB')) orderByte = 0;
+    else if (colorOrder.includes('GRB')) orderByte = 1;
 
-    let icByte = 3; // WS2812B default
-    if (stripType.includes('SM16703')) icByte = 1;
-    else if (stripType.includes('WS2811')) icByte = 2;
-    else if (stripType.includes('SK6812')) icByte = 4;
+    let icByte = 1; // WS2812B default
+    if (stripType.includes('WS2812B')) icByte = 1;
+    else if (stripType.includes('SM16703')) icByte = 2;
+    else if (stripType.includes('SM16704')) icByte = 3;
+    else if (stripType.includes('WS2811')) icByte = 4;
+    else if (stripType.includes('SK6812')) icByte = 5;
 
-    const cmd = [0x81, pointsHigh, pointsLow, orderByte, icByte, segmentsHigh, segmentsLow];
+    // Per geminianswer.txt: Pack them into the data section: [IC Type, Sorting, Points High, Points Low, Segments].
+    // We prefix with 0x81 as the SET config specific data header.
+    const cmd = [0x81, icByte, orderByte, pointsHigh, pointsLow, segmentsByte];
     const checksum = this.calculateChecksum(cmd);
-    return this.wrapCommand([...cmd, checksum]);
+    return this.wrapCommand([...cmd, checksum], 0x0A); // System settings often use cmdFamily 0x0A
   }
 
   /**
@@ -254,20 +258,35 @@ export class ZenggeProtocol {
    * Parse Hardware Configuration Response
    */
   static parseHardwareConfig(payload: number[]) {
-    // Legacy responses may be shorter than standard 10-byte bounds
-    if (payload[0] !== 0x10 || payload.length < 7) return null;
+    // Expected wrapped notification starting with 0x00, seq, 0x80, 0x00 ...
+    // Minimum length for a 13-byte hardware response as defined in geminianswer.txt
+    if (!payload || payload.length < 13) return null;
     
-    const points = (payload[2] << 8) | payload[3];
-    const orderBytes = ['UNK', 'RGB', 'RBG', 'GRB', 'GBR', 'BRG', 'BGR'];
-    const sorting = orderBytes[payload[4]] || 'GRB';
+    // We check if it's a hardware response. The header starts usually with 0x80 at index 2.
+    if (payload[2] !== 0x80) return null;
     
-    const icBytes: Record<number, string> = { 1: 'SM16703', 2: 'WS2811', 3: 'WS2812B', 4: 'SK6812' };
-    const stripType = icBytes[payload[5]] || 'WS2812B';
+    // Index 7 is the Response Command Header (e.g., 0x0A or 0x63 or 0x81)
+    const cmdHeader = payload[7];
+    if (cmdHeader !== 0x0A && cmdHeader !== 0x63 && cmdHeader !== 0x81) return null;
     
-    let segments = 1;
-    if (payload.length > 8) {
-      segments = (payload[6] << 8) | payload[7];
-    }
+    // Parsing logic exclusively mapping hardware characteristics based on offsets:
+    const icType = payload[8];
+    const sortingType = payload[9];
+    const pointsHigh = payload[10];
+    const pointsLow = payload[11];
+    const segments = payload[12];
+    
+    // Mapping constants safely interpreting the extracted bytes
+    const icBytes: Record<number, string> = { 1: 'WS2812B', 2: 'SM16703', 3: 'SM16704', 4: 'WS2811', 5: 'SK6812' };
+    const orderBytes = ['RGB', 'GRB', 'BRG'];
+    
+    // Calculate total LED points via bitwise shift
+    const points = (pointsHigh << 8) | pointsLow;
+    const sorting = orderBytes[sortingType] || 'UNK';
+    const stripType = icBytes[icType] || 'UNK';
+
+    // Discard false positives where 0x81 ping isn't the config array (if bytes are radically out of expected ranges)
+    if (sorting === 'UNK' && stripType === 'UNK') return null;
 
     return { points, sorting, stripType, segments };
   }

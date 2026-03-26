@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar, Dimensions, Modal, TextInput, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar, Dimensions, Modal, TextInput, BackHandler, PanResponder } from 'react-native';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import DeviceItem from '../components/DeviceItem';
@@ -475,6 +475,32 @@ export default function DashboardScreen() {
     return () => backHandler.remove();
   }, [isTestModeActive, isActuallyConnected, handleDisconnect]);
 
+  // Handle Swipe-to-Back natively for Visualizer screens (IOS & Android edge swipe)
+  const edgePanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        const startX = evt.nativeEvent.pageX - gestureState.dx;
+        // Only trigger if starting from the far left edge (< 40px) moving rightwards (simulating back swipe)
+        if (startX < 50 && gestureState.dx > 15 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy)) {
+          return true;
+        }
+        return false;
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx > 60) {
+          if (isTestModeActive) setIsTestModeActive(false);
+          else if (isActuallyConnected) handleDisconnect();
+        }
+      },
+      onPanResponderTerminate: (evt, gestureState) => {
+        if (gestureState.dx > 60) {
+          if (isTestModeActive) setIsTestModeActive(false);
+          else if (isActuallyConnected) handleDisconnect();
+        }
+      }
+    })
+  ).current;
+
   const handleGlobalPowerToggle = (deviceIds: string[], forceState?: boolean) => {
     // If forceState is provided, use it, else default to toggling based on first device's state
     const targetState = forceState !== undefined ? forceState : !(powerStates[deviceIds[0]] ?? true);
@@ -689,20 +715,22 @@ export default function DashboardScreen() {
     }
 
     return (
-      <Sk8lytzController
-        lockedProduct={
-          (displayConnectedDevices[0] as any)?.type || 
-          ((displayConnectedDevices[0] as any)?.points 
-            ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
-            : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
-        }
-        isPaired={isGrouped}
-        points={(displayConnectedDevices[0] as any).points}
-        devices={displayConnectedDevices}
-        onLongPressDevice={openSettings}
-        writeToDevice={writeToDevice}
-        isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
-      />
+      <Animated.View {...edgePanResponder.panHandlers} style={{ flex: 1, backgroundColor: 'transparent' }}>
+        <Sk8lytzController
+          lockedProduct={
+            (displayConnectedDevices[0] as any)?.type || 
+            ((displayConnectedDevices[0] as any)?.points 
+              ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
+              : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
+          }
+          isPaired={isGrouped}
+          points={(displayConnectedDevices[0] as any).points}
+          devices={displayConnectedDevices}
+          onLongPressDevice={openSettings}
+          writeToDevice={writeToDevice}
+          isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
+        />
+      </Animated.View>
     );
   }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive]);
 
@@ -946,7 +974,7 @@ export default function DashboardScreen() {
               {MemoizedSk8lytzController}
 
               {isTestModeActive && (
-                <View style={{ marginTop: 12, paddingHorizontal: 12, height: Dimensions.get('window').height - (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) - 120 }}>
+                <View {...edgePanResponder.panHandlers} style={{ marginTop: 12, paddingHorizontal: 12, height: Dimensions.get('window').height - (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) - 120 }}>
                   <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 4}}>
                      <Text style={[Typography.title, { color: Colors.primary }]}>Hardware Test Matrix</Text>
                      <TouchableOpacity 
@@ -1284,7 +1312,7 @@ export default function DashboardScreen() {
         connectedDevices={connectedDevices as any[]}
         isScanning={isScanning}
         handleScan={scanForPeripherals}
-        connectToDevice={connectToDevice}
+        connectToDevice={async (d) => { await connectToDevice(d); }}
         handleDisconnect={disconnectFromDevice}
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
