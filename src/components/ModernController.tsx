@@ -355,13 +355,13 @@ export default function ModernController({
                   value={activePattern}
                   onValueChange={(pid) => {
                     setActivePattern(pid);
-                    const payload = pid === 100 
+                    const payload = pid === 400 
                         ? ZenggeProtocol.setMultiColor(Array(10).fill({ r: 255, g: 0, b: 0 }), speed, 1, 0)
                         : ZenggeProtocol.setCustomRbm(pid, speed, brightness);
                     devices.forEach(d => writeToDevice(payload));
                   }}
                   min={1}
-                  max={100}
+                  max={302}
                   itemLabel={(val) => getRbmPatternName(val)}
                 />
              </View>

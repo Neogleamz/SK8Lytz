@@ -24,25 +24,60 @@ export default function ArcPatternWheel({
   
   const [containerWidth, setContainerWidth] = useState(0);
   const itemWidth = containerWidth > 0 ? (containerWidth / 5.0) : 70;
+  const curIndexRef = useRef<number>(-1);
+  const [localVal, setLocalVal] = useState(value);
 
-  // Generate data with padding for 5-visible-item wheel effect
-  const data = [
-    { type: 'pad', id: 'pad-1' },
-    { type: 'pad', id: 'pad-2' },
-    ...Array.from({ length: max - min + 1 }, (_, i) => ({ type: 'item', id: String(min + i), val: min + i })),
-    { type: 'pad', id: 'pad-3' },
-    { type: 'pad', id: 'pad-4' },
-  ];
+  useEffect(() => {
+    setLocalVal(value);
+  }, [value]);
+
+  const commitTimeoutRef = useRef<any>(null);
+
+  const commitValue = (val: number) => {
+    setLocalVal(val);
+    if (val !== value) {
+       if (commitTimeoutRef.current) clearTimeout(commitTimeoutRef.current);
+       commitTimeoutRef.current = setTimeout(() => {
+          onValueChange(val);
+       }, 150);
+    }
+  };
+
+  // FAUX INFINITE LOOP: Repeat the sequence 20 times (e.g. 6,000 items)
+  // React Native's virtualizer only renders ~10 items at a time, so this costs zero performance natively.
+  const data = React.useMemo(() => {
+    const patternCount = max - min + 1;
+    const items = [];
+    for (let r = 0; r < 20; r++) {
+      for (let v = min; v <= max; v++) {
+        items.push({ type: 'item', id: `${r}-${v}`, val: v, rep: r });
+      }
+    }
+    return [
+      { type: 'pad', id: 'pad-start-1' },
+      { type: 'pad', id: 'pad-start-2' },
+      ...items,
+      { type: 'pad', id: 'pad-end-1' },
+      { type: 'pad', id: 'pad-end-2' },
+    ];
+  }, [min, max]);
 
   const scrollToValue = (val: number, animated = true) => {
     if (containerWidth === 0) return;
-    const idx = val - min;
-    // index + 2 because of the two pads at the start
-    // We want the item at idx+2 to be centered. 
-    // In a 5-item visible row, index i is centered if its start is at (i-2) * itemWidth
-    // So for val=min (idx=0), we want index 2 to be centered, which means offset 0.
+    const patternCount = max - min + 1;
+    
+    // Jump straight to the absolute middle block (Block 10 of 20) on initial load to give thousands of items buffer on both sides.
+    let targetRep = 10; 
+    
+    if (curIndexRef.current >= 0) {
+        // If we are actively scrolling, we target the exact block repetition the user is currently looking at!
+        targetRep = Math.floor(curIndexRef.current / patternCount);
+    }
+    
+    const targetIdx = (targetRep * patternCount) + (val - min);
+    
     flatListRef.current?.scrollToOffset({ 
-      offset: idx * itemWidth, 
+      offset: targetIdx * itemWidth, 
       animated 
     });
   };
@@ -60,23 +95,27 @@ export default function ArcPatternWheel({
     if (containerWidth === 0) return;
     const offsetX = e.nativeEvent.contentOffset.x;
     const index = Math.round(offsetX / itemWidth);
-    const item = data[index + 2] as any; // The item that should be in center
+    
+    // Save physical list location so arrow buttons / skips snap to the nearest neighbor natively
+    curIndexRef.current = index;
+
+    const item = data[index + 2] as any; // The item perfectly centered
     if (item && item.type === 'item') {
-      if (item.val !== value) {
-        onValueChange(item.val);
+      if (item.val !== localVal) {
+        commitValue(item.val);
       }
     }
   };
 
   const handleJump = (delta: number) => {
-    let newVal = value + delta;
+    let newVal = localVal + delta;
     
     // Circular logic
     if (newVal < min) newVal = max;
     else if (newVal > max) newVal = min;
 
-    if (newVal !== value) {
-      onValueChange(newVal);
+    if (newVal !== localVal) {
+      commitValue(newVal);
       scrollToValue(newVal, true);
     }
   };
@@ -116,18 +155,21 @@ export default function ArcPatternWheel({
           scrollEventThrottle={16}
           onScroll={onScroll}
           onMomentumScrollEnd={onScroll}
+          initialNumToRender={15}
+          maxToRenderPerBatch={20}
+          windowSize={5}
           getItemLayout={(_, index) => ({ length: itemWidth, offset: itemWidth * index, index })}
           renderItem={({ item }) => {
             if (item.type === 'pad') {
               return <View style={{ width: itemWidth, height: 80 }} />;
             }
             const itemVal = (item as any).val;
-            const isSelected = itemVal === value;
+            const isSelected = itemVal === localVal;
             return (
               <TouchableOpacity 
                 activeOpacity={0.9} 
                 onPress={() => {
-                  onValueChange(itemVal);
+                  commitValue(itemVal);
                   scrollToValue(itemVal, true);
                 }}
                 style={[styles.itemContainer, { width: itemWidth }]}

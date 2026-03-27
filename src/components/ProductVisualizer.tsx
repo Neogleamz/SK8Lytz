@@ -55,7 +55,7 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload, simMode }: any) => {
+const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload, simMode }: any) => {
   const product = String(device.type || fallbackProduct);
   const isHaloz = !product.toLowerCase().includes('soul');
 
@@ -175,10 +175,10 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
                      (brightness/100) * 0.6
                  ],
              });
-          } else if (mode === 'MULTICOLOR' || (mode === 'FIXED' && multiColors && multiColors.length > 0)) {
+          } else if (mode === 'MULTICOLOR') {
              
              if (multiTransition === 0) { // Static
-                const segmentIdx = Math.floor(fract * multiColors.length);
+                const segmentIdx = Math.floor(mirroredFract * multiColors.length);
                 const safeIdx = Math.min(Math.max(0, segmentIdx), multiColors.length - 1);
                 dotColor = multiColors[safeIdx];
                 dotOpacity = 1.0;
@@ -191,7 +191,7 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
                 }
                 dotOpacity = 1.0;
              } else if (multiTransition === 2) { // Strobe
-                const segmentIdx = Math.floor(fract * multiColors.length);
+                const segmentIdx = Math.floor(mirroredFract * multiColors.length);
                 const safeIdx = Math.min(Math.max(0, segmentIdx), multiColors.length - 1);
                 dotColor = multiColors[safeIdx];
                 dotOpacity = animValue.interpolate({ inputRange: [0, 0.49, 0.5, 0.99, 1], outputRange: [1, 1, 0.1, 0.1, 1] });
@@ -213,14 +213,14 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
                    dotColor = animValue.interpolate({
                       inputRange: [0, 1],
                       outputRange: [
-                         multiColors[Math.min(multiColors.length - 1, Math.floor(((fract + 0) % 1) * multiColors.length))], 
-                         multiColors[Math.min(multiColors.length - 1, Math.floor(((fract + 0.99) % 1) * multiColors.length))]
+                         multiColors[Math.min(multiColors.length - 1, Math.floor(((mirroredFract + 0) % 1) * multiColors.length))], 
+                         multiColors[Math.min(multiColors.length - 1, Math.floor(((mirroredFract + 0.99) % 1) * multiColors.length))]
                       ]
                    });
                 }
                 // To simulate running water properly, we use native opacity fading mimicking waves
                 dotOpacity = animValue.interpolate({
-                   inputRange: [0, Math.max(0, fract - 0.2), fract, Math.min(1, fract + 0.2), 1],
+                   inputRange: [0, Math.max(0, mirroredFract - 0.2), mirroredFract, Math.min(1, mirroredFract + 0.2), 1],
                    outputRange: [0.2, 0.2, 1, 0.2, 0.2]
                 });
              }
@@ -388,7 +388,7 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
         });
     }
     return list;
-  }, [product, mode, color, numLeds, patternId, isPoweredOn, audioMagnitude, fixedFgColor, fixedBgColor]);
+  }, [product, mode, color, numLeds, patternId, isPoweredOn, audioMagnitude, fixedFgColor, fixedBgColor, multiColors, multiTransition, brightness, speed]);
 
   return (
     <TouchableOpacity 
@@ -425,8 +425,7 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
                   led.position, 
                   { width: diam, height: diam, alignItems: 'center', justifyContent: 'center', overflow: 'visible', zIndex: 10, opacity: led.activeOpacity }
                ]}>
-                  {/* CHROMATIC BLOOM TRACK (Fixes RN shadowColor limitation) */}
-                  {/* Rather than using CSS shadowColor (which natively drops Animated.Values), we emit a thicker, translucent layer natively under the main tubing. Since the dots overlap flawlessly, this creates a perfectly smooth continuous colored glowing aura! */}
+                  {/* CHROMATIC BLOOM TRACK (Retains sharp silicone shape while glowing dynamically) */}
                   <Animated.View style={{
                     position: 'absolute', width: diam * 2.4, height: diam * 2.4, borderRadius: (diam * 2.4)/2,
                     backgroundColor: led.activeColor as any, 
@@ -498,7 +497,7 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
       }
 
       if (op === 0x59) {
-          simMode = 'FIXED';
+          simMode = mode === 'MULTICOLOR' ? 'MULTICOLOR' : 'FIXED';
           if (mode === 'MULTICOLOR') {
              simPatternId = 1;
              
@@ -541,7 +540,7 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
           simBrightness = rawHexPayload[6 + payloadOffset] || 100;
           // Candle Amplitude stored at index 7 controls visualizer flicker speed natively
           const candleAmp = rawHexPayload[7 + payloadOffset] || 2;
-          simSpeed = candleAmp === 1 ? 20 : (candleAmp === 2 ? 60 : 100); 
+          simSpeed = candleAmp === 1 ? -9 : (candleAmp === 2 ? 40 : 100); 
       }
   }
 
@@ -564,7 +563,7 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
     } else {
       animValue.setValue(1);
     }
-  }, [product, simMode, simColor, simPatternId, simSpeed, isPoweredOn, rawHexPayload]);
+  }, [product, simMode, simColor, simPatternId, simSpeed, isPoweredOn, rawHexPayload, JSON.stringify(simMultiColors), simMultiTransition]);
 
   // Fallback if no specific devices array is provided: construct one or two devices based on isPaired flag
   const renderDevices = (devices && devices.length > 0) ? devices : (

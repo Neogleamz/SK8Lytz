@@ -8,7 +8,6 @@ import useBLE from '../hooks/useBLE';
 import { ZenggeProtocol, ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol';
 
 import Sk8lytzController from '../components/Sk8lytzController';
-import ModernController from '../components/ModernController';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import Sk8LytzProgrammerModal from '../components/Sk8LytzProgrammerModal';
@@ -720,22 +719,6 @@ export default function DashboardScreen() {
 
     return (
       <Animated.View {...edgePanResponder.panHandlers} style={{ flex: 1, backgroundColor: 'transparent' }}>
-        {controlUITheme === 'MODERN' ? (
-          <ModernController
-            lockedProduct={
-              (displayConnectedDevices[0] as any)?.type || 
-              ((displayConnectedDevices[0] as any)?.points 
-                ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
-                : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
-            }
-            isPaired={isGrouped}
-            points={(displayConnectedDevices[0] as any).points}
-            devices={displayConnectedDevices}
-            onLongPressDevice={openSettings}
-            writeToDevice={writeToDevice}
-            isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
-          />
-        ) : (
           <Sk8lytzController
             lockedProduct={
               (displayConnectedDevices[0] as any)?.type || 
@@ -750,7 +733,6 @@ export default function DashboardScreen() {
             writeToDevice={writeToDevice}
             isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
           />
-        )}
       </Animated.View>
     );
   }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, controlUITheme]);
@@ -839,229 +821,182 @@ export default function DashboardScreen() {
     );
   }, [isBluetoothEnabled]);
 
+  const renderDashboardHeader = () => (
+      <View style={{ 
+        paddingHorizontal: Layout.padding, 
+        paddingTop: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + (isActuallyConnected ? 12 : 20), 
+        paddingBottom: isActuallyConnected ? 2 : 8,
+        position: 'relative',
+      }}>
+        {!isActuallyConnected && (
+          <View style={{ position: 'absolute', right: 0, top: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + 20, zIndex: 10, flexDirection: 'row' }}>
+            <TouchableOpacity onPress={toggleControlUITheme} style={{ padding: 10 }}>
+              <MaterialCommunityIcons name={controlUITheme === 'MODERN' ? 'view-dashboard-variant-outline' : 'view-list-outline'} size={22} color={Colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={toggleTheme} style={{ padding: 10 }}>
+              <MaterialCommunityIcons name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} size={22} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: isActuallyConnected ? 'flex-start' : 'center', width: '100%' }}>
+          <TouchableOpacity activeOpacity={1} onPress={handleLogoPress} style={{ position: 'relative' }}>
+            <Image source={require('../../assets/logo.png')} style={{ width: isActuallyConnected ? 70 : 130, height: isActuallyConnected ? 20 : 38 }} resizeMode="contain" tintColor={Colors.text} />
+            {countdown !== null && (
+              <Animated.View style={[styles.countdownBadge, { transform: [{ scale: pulseAnimConfig }] }]}>
+                <Text style={styles.countdownText}>{countdown}</Text>
+              </Animated.View>
+            )}
+          </TouchableOpacity>
+
+          {isActuallyConnected && (
+            <View style={{ marginLeft: 16 }}>
+              {(() => {
+                const connectedCount = displayConnectedDevices.length;
+                let expectedCount = 1;
+                const firstDevice = displayConnectedDevices[0] as any;
+                if (firstDevice?.grouped && firstDevice?.groupId) {
+                  const group = customGroups.find(g => g.id === firstDevice.groupId);
+                  if (group) expectedCount = group.deviceIds.length;
+                }
+                
+                let statusColor = Colors.success;
+                if (connectedCount === 0) statusColor = Colors.error;
+                else if (connectedCount < expectedCount) statusColor = '#FFA500';
+                else statusColor = Colors.success;
+
+                return (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusColor, marginRight: 6 }} />
+                    <Text style={[Typography.caption, { color: statusColor, fontSize: 10, fontWeight: 'bold' }]}>DISCOVERED ({connectedCount})</Text>
+                  </View>
+                );
+              })()}
+            </View>
+          )}
+
+          {isActuallyConnected && <View style={{ flex: 1 }} />}
+
+          {!isActuallyConnected && (
+            <TouchableOpacity style={{ position: 'absolute', left: 0, top: 0, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', zIndex: 100 }} onPress={() => setIsSupportModalVisible(true)}>
+               <MaterialCommunityIcons name="help-circle-outline" size={20} color={Colors.text} />
+            </TouchableOpacity>
+          )}
+
+          {isActuallyConnected && !isTestModeActive && (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity style={[styles.disconnectButtonSmall, { paddingVertical: 4, paddingHorizontal: 8, marginRight: 8 }]} onPress={handleDisconnect} activeOpacity={0.8}>
+                <Text style={[styles.disconnectButtonTextSmall, { fontSize: 10 }]}>DISCONNECT</Text>
+              </TouchableOpacity>
+
+              {(() => {
+                const allIds = displayConnectedDevices.map(d => d.id);
+                const isGlobalPoweredOn = allIds.every(id => powerStates[id] ?? true);
+                return (
+                  <TouchableOpacity 
+                    style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: isGlobalPoweredOn ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isGlobalPoweredOn ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255,255,255,0.2)' }}
+                    onPress={() => handleGlobalPowerToggle(allIds)}
+                    activeOpacity={0.6}
+                  >
+                    <MaterialCommunityIcons name="power" size={18} color={isGlobalPoweredOn ? Colors.primary : Colors.textMuted} />
+                  </TouchableOpacity>
+                );
+              })()}
+            </View>
+          )}
+        </View>
+        {!isActuallyConnected && (
+          <View style={{ height: 2, width: 30, backgroundColor: Colors.secondary, marginTop: 4, borderRadius: 1, alignSelf: 'center' }} />
+        )}
+      </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {BluetoothWarningBanner}
       <View style={styles.container}>
 
-        <FlatList
-          style={{ flex: 1 }}
-          ListHeaderComponent={
+        {isActuallyConnected ? (
+          <View style={{ flex: 1 }}>
             <View style={{ paddingBottom: 16 }}>
-              {/* COMBINED HEADER & STATUS */}
-              <View style={{ 
-                paddingHorizontal: Layout.padding, 
-                paddingTop: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + (isActuallyConnected ? 12 : 20), 
-                paddingBottom: isActuallyConnected ? 2 : 8,
-                position: 'relative',
-              }}>
-                {/* Theme toggle: landing page only, absolutely pinned top-left */}
-                {!isActuallyConnected && (
-                  <View style={{ position: 'absolute', right: 0, top: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + 20, zIndex: 10, flexDirection: 'row' }}>
-                    <TouchableOpacity 
-                      onPress={toggleControlUITheme} 
-                      style={{ padding: 10 }}
-                    >
-                      <MaterialCommunityIcons 
-                        name={controlUITheme === 'MODERN' ? 'view-dashboard-variant-outline' : 'view-list-outline'} 
-                        size={22} 
-                        color={Colors.primary} 
+              {renderDashboardHeader()}
+            </View>
+            <View style={{ flex: 1 }}>
+              {MemoizedSk8lytzController}
+            </View>
+          </View>
+        ) : (
+          <FlatList
+            style={{ flex: 1 }}
+            ListHeaderComponent={
+              <View style={{ paddingBottom: 16 }}>
+                {renderDashboardHeader()}
+
+                <View style={{ paddingHorizontal: Layout.padding }}>
+                  {!isTestModeActive ? (
+                  <View style={{ height: 220, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 5, width: '100%' }}>
+                      <ScannerAnimation 
+                         deviceCount={allDevices.length} 
+                         isScanning={isScanning} 
+                         onPress={handleScan}
                       />
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      onPress={toggleTheme} 
-                      style={{ padding: 10 }}
-                    >
-                      <MaterialCommunityIcons 
-                        name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} 
-                        size={22} 
-                        color={Colors.primary} 
-                      />
-                    </TouchableOpacity>
+                  </View>
+                ) : null}
+                </View>
+
+                <View style={{ paddingHorizontal: Layout.padding }}>
+                {customGroups.length > 0 && (
+                  <View style={{ marginTop: 20 }}>
+                    <Text style={[Typography.title, { marginBottom: 12, paddingHorizontal: 4, color: Colors.primary }]}>Groups</Text>
+                    {customGroups.map((group) => {
+                        const matchedDevices = allDevices.filter(d => group.deviceIds.includes(d.id));
+                        const groupRssis = group.deviceIds.map((id: string) => {
+                          const found = allDevices.find(d => d.id === id);
+                          return found ? (found.rssi ?? null) : null;
+                        });
+                        
+                        return (
+                          <DeviceItem
+                            key={group.id}
+                            device={{
+                              ...group,
+                              connectedCount: matchedDevices.length,
+                              rssiList: groupRssis
+                            }}
+                        isConnected={mockConnectedGroup === group.id}
+                        isSelectionMode={false}
+                        isSelected={false}
+                        onPress={async () => {
+                          if (IS_BROWSER_DEMO) {
+                            setMockConnected(true);
+                            setMockConnectedGroup(group.id);
+                          }
+                          
+                          const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id));
+                          if (devicesToConnect.length > 0) {
+                            await connectToDevices(devicesToConnect);
+                            
+                            const firstDev = devicesToConnect[0];
+                            const configPoints = (firstDev as any).points || (firstDev.name?.toLowerCase().includes('soul') ? 43 : 16);
+                            const configSorting = (firstDev as any).sorting || 'GRB';
+                            const configStripType = (firstDev as any).stripType || 'WS2812B';
+                            writeToDevice(ZenggeProtocol.setHardwareConfig(configPoints, configSorting, configStripType));
+                          }
+                        }}
+                        onLongPress={() => {
+                          setEditingGroupId(group.id);
+                          setGroupModalMode('rename');
+                          setIsGroupModalVisible(true);
+                        }}
+                        showGroupIcon={true}
+                        isPoweredOn={group.deviceIds.every((id: string) => powerStates[id] ?? true)}
+                        onPowerToggle={() => handleGlobalPowerToggle(group.deviceIds)}
+                        />
+                      );
+                    })}
                   </View>
                 )}
 
-                {/* Logo row — logo always centered, plus connected-state chips on right */}
-                <View style={{ 
-                  flexDirection: 'row', 
-                  alignItems: 'center', 
-                  justifyContent: isActuallyConnected ? 'flex-start' : 'center',
-                  width: '100%'
-                }}>
-                  <TouchableOpacity
-                    activeOpacity={1}
-                    onPress={handleLogoPress}
-                    style={{ position: 'relative' }}
-                  >
-                    <Image 
-                      source={require('../../assets/logo.png')} 
-                      style={{ 
-                        width: isActuallyConnected ? 70 : 130, 
-                        height: isActuallyConnected ? 20 : 38 
-                      }} 
-                      resizeMode="contain"
-                      tintColor={Colors.text}
-                    />
-                    {countdown !== null && (
-                      <Animated.View style={[styles.countdownBadge, { transform: [{ scale: pulseAnimConfig }] }]}>
-                        <Text style={styles.countdownText}>{countdown}</Text>
-                      </Animated.View>
-                    )}
-                  </TouchableOpacity>
-
-                  {isActuallyConnected && (
-                    <View style={{ marginLeft: 16 }}>
-                      {(() => {
-                        const connectedCount = displayConnectedDevices.length;
-                        let expectedCount = 1;
-                        const firstDevice = displayConnectedDevices[0] as any;
-                        if (firstDevice?.grouped && firstDevice?.groupId) {
-                          const group = customGroups.find(g => g.id === firstDevice.groupId);
-                          if (group) expectedCount = group.deviceIds.length;
-                        }
-                        
-                        let statusColor = Colors.success;
-                        if (connectedCount === 0) statusColor = Colors.error;
-                        else if (connectedCount < expectedCount) statusColor = '#FFA500';
-                        else statusColor = Colors.success;
-
-                        return (
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <View style={{ 
-                              width: 6, 
-                              height: 6, 
-                              borderRadius: 3, 
-                              backgroundColor: statusColor, 
-                              marginRight: 6 
-                            }} />
-                            <Text style={[Typography.caption, { 
-                              color: statusColor, 
-                              fontSize: 10, 
-                              fontWeight: 'bold' 
-                            }]}>
-                              DISCOVERED ({connectedCount})
-                            </Text>
-                          </View>
-                        );
-                      })()}
-                    </View>
-                  )}
-
-                  {isActuallyConnected && <View style={{ flex: 1 }} />}
-
-                  {/* APP MENU CONTROLS */}
-                  {!isActuallyConnected && (
-                    <TouchableOpacity
-                      style={{ position: 'absolute', left: 0, top: 0, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', zIndex: 100 }}
-                      onPress={() => setIsSupportModalVisible(true)}
-                    >
-                       <MaterialCommunityIcons name="help-circle-outline" size={20} color={Colors.text} />
-                    </TouchableOpacity>
-                  )}
-
-                  {isActuallyConnected && !isTestModeActive && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-
-
-                      <TouchableOpacity
-                        style={[styles.disconnectButtonSmall, { paddingVertical: 4, paddingHorizontal: 8, marginRight: 8 }]}
-                        onPress={handleDisconnect}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={[styles.disconnectButtonTextSmall, { fontSize: 10 }]}>DISCONNECT</Text>
-                      </TouchableOpacity>
-
-                      {(() => {
-                        const allIds = displayConnectedDevices.map(d => d.id);
-                        const isGlobalPoweredOn = allIds.every(id => powerStates[id] ?? true);
-                        return (
-                          <TouchableOpacity 
-                            style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: isGlobalPoweredOn ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isGlobalPoweredOn ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255,255,255,0.2)' }}
-                            onPress={() => handleGlobalPowerToggle(allIds)}
-                            activeOpacity={0.6}
-                          >
-                            <MaterialCommunityIcons name="power" size={18} color={isGlobalPoweredOn ? Colors.primary : Colors.textMuted} />
-                          </TouchableOpacity>
-                        );
-                      })()}
-                    </View>
-                  )}
-                </View>
-                {!isActuallyConnected && (
-                  <View style={{ height: 2, width: 30, backgroundColor: Colors.secondary, marginTop: 4, borderRadius: 1, alignSelf: 'center' }} />
-                )}
-              </View>
-
-              <View style={{ paddingHorizontal: Layout.padding }}>
-                {!isActuallyConnected && !isTestModeActive ? (
-                <View style={{ height: 220, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 5, width: '100%' }}>
-                    <ScannerAnimation 
-                       deviceCount={allDevices.length} 
-                       isScanning={isScanning} 
-                       onPress={handleScan}
-                    />
-                </View>
-              ) : null}
-              </View>
-
-              {MemoizedSk8lytzController}
-
-              <View style={{ paddingHorizontal: Layout.padding }}>
-
-
-              {!isActuallyConnected && customGroups.length > 0 && (
-                <View style={{ marginTop: 20 }}>
-                  <Text style={[Typography.title, { marginBottom: 12, paddingHorizontal: 4, color: Colors.primary }]}>Groups</Text>
-                  {customGroups.map((group) => {
-                      const matchedDevices = allDevices.filter(d => group.deviceIds.includes(d.id));
-                      const groupRssis = group.deviceIds.map((id: string) => {
-                        const found = allDevices.find(d => d.id === id);
-                        return found ? (found.rssi ?? null) : null;
-                      });
-                      
-                      return (
-                        <DeviceItem
-                          key={group.id}
-                          device={{
-                            ...group,
-                            connectedCount: matchedDevices.length,
-                            rssiList: groupRssis
-                          }}
-                      isConnected={mockConnectedGroup === group.id}
-                      isSelectionMode={false}
-                      isSelected={false}
-                      onPress={async () => {
-                        if (IS_BROWSER_DEMO) {
-                          setMockConnected(true);
-                          setMockConnectedGroup(group.id);
-                        }
-                        
-                        const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id));
-                        if (devicesToConnect.length > 0) {
-                          await connectToDevices(devicesToConnect);
-                          
-                          const firstDev = devicesToConnect[0];
-                          const configPoints = (firstDev as any).points || (firstDev.name?.toLowerCase().includes('soul') ? 43 : 16);
-                          const configSorting = (firstDev as any).sorting || 'GRB';
-                          const configStripType = (firstDev as any).stripType || 'WS2812B';
-                          writeToDevice(ZenggeProtocol.setHardwareConfig(configPoints, configSorting, configStripType));
-                        }
-                      }}
-                      onLongPress={() => {
-                        setEditingGroupId(group.id);
-                        setGroupModalMode('rename');
-                        setIsGroupModalVisible(true);
-                      }}
-                      showGroupIcon={true}
-                      isPoweredOn={group.deviceIds.every((id: string) => powerStates[id] ?? true)}
-                      onPowerToggle={() => handleGlobalPowerToggle(group.deviceIds)}
-                      />
-                    );
-                  })}
-                </View>
-              )}
-
-              {!isActuallyConnected && (
                 <>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, marginBottom: 12, paddingHorizontal: 4 }}>
                     <Text style={[Typography.title, { color: Colors.primary }]}>Available Devices</Text>
@@ -1074,7 +1009,7 @@ export default function DashboardScreen() {
                     )}
                   </View>
 
-                  {!isActuallyConnected && !isDeviceListCollapsed && (
+                  {!isDeviceListCollapsed && (
                     <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16, padding: 8, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Text style={{ color: Colors.text, marginRight: 8, fontSize: 12, fontWeight: '600' }}>Demo HALOZ</Text>
@@ -1097,26 +1032,26 @@ export default function DashboardScreen() {
                     </View>
                   )}
                 </>
-              )}
+                </View>
               </View>
-            </View>
-          }
-          data={(!isActuallyConnected && !isDeviceListCollapsed) ? allDevices : []}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          scrollEnabled={true}
-          contentContainerStyle={{ paddingBottom: 40 }}
+            }
+            data={!isDeviceListCollapsed ? allDevices : []}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            scrollEnabled={true}
+            contentContainerStyle={{ paddingBottom: 40 }}
 
-          ListEmptyComponent={
-            (!isActuallyConnected && !isDeviceListCollapsed) ? (
-              <View style={styles.emptyStateContainer}>
-                <Text style={[Typography.caption, { color: Colors.text, opacity: 0.7 }]}>
-                  {isScanning ? 'Scanning...' : 'No devices found.'}
-                </Text>
-              </View>
-            ) : null
-          }
+            ListEmptyComponent={
+              !isDeviceListCollapsed ? (
+                <View style={styles.emptyStateContainer}>
+                  <Text style={[Typography.caption, { color: Colors.text, opacity: 0.7 }]}>
+                    {isScanning ? 'Scanning...' : 'No devices found.'}
+                  </Text>
+                </View>
+              ) : null
+            }
         />
+        )}
         <DeviceSettingsModal
           isVisible={isSettingsVisible}
           onClose={() => setIsSettingsVisible(false)}

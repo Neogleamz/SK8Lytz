@@ -132,6 +132,15 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
   const [multiLength, setMultiLength] = useState<number>(16);
   const [candleAmplitude, setCandleAmplitude] = useState<number>(2);
 
+  // Collapsible Layout States
+  const [isFixedExpanded, setIsFixedExpanded] = useState<boolean>(true);
+  const [isPresetsExpanded, setIsPresetsExpanded] = useState<boolean>(false);
+  const [isCandleExpanded, setIsCandleExpanded] = useState<boolean>(false);
+  const [isProgramsExpanded, setIsProgramsExpanded] = useState<boolean>(false);
+
+  // Active Sub-Mode for the Consolidated Fixed Tab
+  const [fixedSubMode, setFixedSubMode] = useState<'PATTERN' | 'MULTI' | 'CANDLE' | 'RBM'>('PATTERN');
+
   // Favorites Array
   const [favorites, setFavorites] = useState<any[]>([]);
 
@@ -228,6 +237,17 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
         const colors = Array(10).fill({ r, g, b });
         await writeToDevice(ZenggeProtocol.setMultiColor(colors, 100, 1, 1));
     }
+  };
+
+  /** Helper to parse a hex string array into GRB-sorted valid hardware RGB array */
+  const generateSortedColors = (hexArray: string[]) => {
+      const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
+      return hexArray.map(h => {
+          const r = parseInt(h.slice(1,3), 16) || 0;
+          const g = parseInt(h.slice(3,5), 16) || 0;
+          const b = parseInt(h.slice(5,7), 16) || 0;
+          return sorting === 'GRB' ? { r: g, g: r, b } : { r, g, b };
+      });
   };
 
   /** Helper to apply current fixed pattern state to devices */
@@ -596,18 +616,16 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
       default: return activeMode;
     }
   }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, selectedPatternId, musicPatternId, selectedColor]);
-  const modes: { id: ModeType; label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
+  const modes = [
     { id: 'PRESETS', label: 'Styles', icon: 'star-outline' },
     { id: 'FIXED', label: 'Fixed', icon: 'palette-outline' },
-    { id: 'RBM', label: 'Programs', icon: 'auto-fix' },
     { id: 'MUSIC', label: 'Music', icon: 'music-note' },
-    { id: 'CAMERA', label: 'Camera', icon: 'camera-outline' },
-    { id: 'MULTICOLOR', label: 'Multi', icon: 'gradient-horizontal' },
-    { id: 'CANDLE', label: 'Candle', icon: 'fire' },
+    { id: 'CAMERA', label: 'Camera', icon: 'camera-outline' }
   ];
 
   const visualizerColor = React.useMemo(() => {
     if (activeMode === 'FIXED') {
+      if (fixedSubMode === 'CANDLE' || fixedSubMode === 'MULTI' || fixedSubMode === 'RBM') return selectedColor;
       return fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
     }
     if (activeMode === 'MUSIC') {
@@ -661,8 +679,8 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
         <ProductVisualizer 
           product={activeProduct} 
           color={visualizerColor} 
-          mode={activeMode} 
-          patternId={activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'FIXED' ? fixedPatternId : selectedPatternId)} 
+          mode={activeMode === 'FIXED' ? (fixedSubMode === 'MULTI' ? 'MULTICOLOR' : (fixedSubMode === 'CANDLE' ? 'CANDLE' : (fixedSubMode === 'RBM' ? 'RBM' : 'FIXED'))) : activeMode} 
+          patternId={activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'FIXED' && fixedSubMode === 'PATTERN' ? fixedPatternId : selectedPatternId)} 
           isPaired={isPaired}
           points={points}
           devices={devices}
@@ -675,6 +693,8 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           statusText={currentStatusText}
           audioMagnitude={audioMagnitude}
           rawHexPayload={lastSentPayload}
+          multiColors={multiColors}
+          multiTransition={multiTransition}
         />
       </View>
       </View>
@@ -726,7 +746,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
           ))}
         </View>
 
-        <View style={styles.activeModeContainer}>
+        <ScrollView style={styles.activeModeContainer} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
           {activeMode === 'PRESETS' && (
             <View style={{ marginBottom: 8 }}>
               <Text style={[Typography.title, isDark && { color: '#FFF' }]}>Your Saved Favorites</Text>
@@ -758,227 +778,274 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
             </View>
           )}
 
-          {activeMode === 'CANDLE' && (
-            <View style={{ marginBottom: 8 }}>
-              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>Hardware Emulated Fire</Text>
-              <Text style={{ color: Colors.textMuted, fontSize: 13, marginBottom: 12 }}>
-                Simulates dynamic volumetric tracking mathematically in hardware using raw LED flickering logic.
-              </Text>
-            </View>
-          )}
-
-          {activeMode === 'MULTICOLOR' && (
-            <View style={{ marginBottom: 16 }}>
-              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>Multi-Color Quick Presets</Text>
-              <Text style={{ color: Colors.textMuted, fontSize: 13, marginBottom: 12 }}>
-                Instantly load predefined color arrays formatted natively against hardware transition bounds.
-              </Text>
-
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 16 }} style={{ marginBottom: 20 }}>
-                {[
-                  { name: 'Rainbow', colors: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'], type: 3 },
-                  { name: 'America', colors: ['#FF0000', '#FFFFFF', '#0000FF'], type: 3 },
-                  { name: 'Cyberpunk', colors: ['#00FFFF', '#FF00FF', '#FFFF00'], type: 3 },
-                  { name: 'Forest', colors: ['#00FF00', '#008000', '#228B22', '#32CD32'], type: 1 },
-                  { name: 'Sunset', colors: ['#FF0000', '#FF4500', '#FF8C00', '#FFA500'], type: 1 },
-                  { name: 'Ice', colors: ['#FFFFFF', '#E0FFFF', '#00FFFF', '#0000FF'], type: 1 }
-                ].map((preset, idx) => (
-                  <TouchableOpacity 
-                    key={idx}
-                    onPress={() => {
-                        setMultiColors(preset.colors);
-                        setMultiTransition(preset.type);
-                        if (writeToDevice) {
-                            const rgbColors = preset.colors.map(h => ({r: parseInt(h.slice(1,3),16)||0, g: parseInt(h.slice(3,5),16)||0, b: parseInt(h.slice(5,7),16)||0}));
-                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, preset.type, speed));
-                        }
-                    }}
-                    style={{
-                        paddingVertical: 10, paddingHorizontal: 16, 
-                        backgroundColor: 'rgba(255,255,255,0.05)', 
-                        borderRadius: 8, marginRight: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
-                    }}
-                  >
-                    <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13, marginBottom: 6 }}>{preset.name}</Text>
-                    <View style={{ flexDirection: 'row', gap: 4 }}>
-                       {preset.colors.map((c, i) => (
-                          <View key={i} style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: c }} />
-                       ))}
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>DIY Array Builder</Text>
-              <Text style={{ color: Colors.textMuted, fontSize: 13, marginBottom: 16 }}>
-                Compose seamless pixel arrays generating custom hardware-level strings natively.
-              </Text>
-              
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: 16 }}>
-                {multiColors.map((hex, index) => (
-                  <TouchableOpacity key={index} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: hex, borderWidth: 2, borderColor: '#FFF', shadowColor: hex, shadowOpacity: 0.8, shadowRadius: 4 }} onPress={() => {
-                    // Update the active color block index implicitly
-                    const newArr = [...multiColors];
-                    newArr[index] = selectedColor;
-                    setMultiColors(newArr);
-                    // Push live payload
-                    const rgbColors = newArr.map(h => ({r: parseInt(h.slice(1,3),16)||0, g: parseInt(h.slice(3,5),16)||0, b: parseInt(h.slice(5,7),16)||0}));
-                    if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
-                  }} />
-                ))}
-                {multiColors.length < 16 && (
-                  <TouchableOpacity style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: '#FFF', justifyContent: 'center', alignItems: 'center' }} onPress={() => {
-                     const newArr = [...multiColors, selectedColor];
-                     setMultiColors(newArr);
-                     const rgbColors = newArr.map(h => ({r: parseInt(h.slice(1,3),16)||0, g: parseInt(h.slice(3,5),16)||0, b: parseInt(h.slice(5,7),16)||0}));
-                     if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
-                  }}>
-                    <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold' }}>+</Text>
-                  </TouchableOpacity>
-                )}
-                {multiColors.length > 1 && (
-                  <TouchableOpacity style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,0,0,0.3)', borderWidth: 1, borderColor: '#FFF', justifyContent: 'center', alignItems: 'center' }} onPress={() => {
-                     const newArr = [...multiColors];
-                     newArr.pop();
-                     setMultiColors(newArr);
-                     const rgbColors = newArr.map(h => ({r: parseInt(h.slice(1,3),16)||0, g: parseInt(h.slice(3,5),16)||0, b: parseInt(h.slice(5,7),16)||0}));
-                     if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
-                  }}>
-                    <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold', lineHeight: 26 }}>-</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 8, fontWeight: 'bold' }}>ZENGGE TRANSITION TYPE</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 20 }}>
-                {[
-                  { label: 'Static', val: 0 },
-                  { label: 'Gradual', val: 1 },
-                  { label: 'Strobe', val: 2 },
-                  { label: 'Running Water', val: 3 }
-                ].map((mode) => (
-                  <TouchableOpacity 
-                    key={mode.val} 
-                    onPress={() => {
-                       setMultiTransition(mode.val);
-                       const rgbColors = multiColors.map(h => ({r: parseInt(h.slice(1,3),16)||0, g: parseInt(h.slice(3,5),16)||0, b: parseInt(h.slice(5,7),16)||0}));
-                       if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, mode.val, speed));
-                    }} 
-                    style={{ 
-                      paddingHorizontal: 16, paddingVertical: 10, 
-                      backgroundColor: multiTransition === mode.val ? Colors.primary : 'rgba(255,255,255,0.05)', 
-                      borderRadius: 8, marginRight: 8 
-                    }}
-                  >
-                    <Text style={{ color: multiTransition === mode.val ? '#000' : '#FFF', fontWeight: 'bold', fontSize: 12 }}>{mode.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
           {activeMode === 'FIXED' && (
             <View style={{ marginBottom: 8 }}>
               
-              <View style={{ backgroundColor: '#000000', borderRadius: 8, padding: 8, marginBottom: 8, height: 170 }}>
-                <ScrollView nestedScrollEnabled={true}>
-                {(() => {
-                  const fgRgb = (hex: string, alpha: number) => {
-                     const h = hex || '#FFFFFF';
-                     const r = parseInt(h.substring(1, 3), 16) || 0;
-                     const g = parseInt(h.substring(3, 5), 16) || 0;
-                     const b = parseInt(h.substring(5, 7), 16) || 0;
-                     return `rgba(${r},${g},${b},${alpha})`;
-                  };
-                  const f = fixedFgColor || '#FFFFFF';
-                  const b = fixedBgColor || 'transparent';
-                  return [
-                    { id: 1, label: 'Solid', dots: [f, f, f, f, f, f, f, f] },
-                    { id: 2, label: 'Single Dot', dots: [f, b, b, b, b, b, b, b] },
-                    { id: 3, label: 'Comet', dots: [f, fgRgb(f, 0.6), fgRgb(f, 0.3), fgRgb(f, 0.1), b, b, b, b] },
-                    { id: 4, label: 'Dashed', dots: [f, f, b, b, f, f, b, b] },
-                    { id: 5, label: 'Alternating', dots: [f, b, f, b, '#FFFFFF', b, '#FFFFFF', b] },
-                    { id: 6, label: 'Breath', dots: [f, fgRgb(f, 0.5), b, fgRgb(f, 0.5), f, fgRgb(f, 0.5), b, fgRgb(f, 0.5)] },
-                    { id: 7, label: 'Flash', dots: [f, b, f, b, f, b, f, b] },
-                    { id: 8, label: 'Strobe', dots: ['#FFFFFF', b, '#FFFFFF', b, '#FFFFFF', b, '#FFFFFF', b] },
-                    { id: 9, label: 'Wave', dots: [b, fgRgb(f, 0.5), f, f, fgRgb(f, 0.5), b, b, b] },
-                    { id: 10, label: 'Pinch', dots: [f, fgRgb(f, 0.5), b, b, b, fgRgb(f, 0.5), f, b] }
-                  ];
-                })().map(pattern => (
-                  <TouchableOpacity 
-                    key={pattern.id}
-                    onPress={() => {
-                      setFixedPatternId(pattern.id);
-                      applyFixedPattern(pattern.id);
-                      if (pattern.id === 1) {
-                         setFixedColorMode('FOREGROUND');
+              {/* FIXED PATTERNS COLLAPSIBLE */}
+              <TouchableOpacity onPress={() => setIsFixedExpanded(!isFixedExpanded)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: isFixedExpanded ? 8 : 16 }}>
+                 <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 0 }]}>Fixed Patterns</Text>
+                 <MaterialCommunityIcons name={isFixedExpanded ? "chevron-up" : "chevron-down"} size={24} color={Colors.textMuted} />
+              </TouchableOpacity>
+              
+              {isFixedExpanded && (
+                <View>
+                  <View style={{ backgroundColor: '#000000', borderRadius: 8, padding: 8, marginBottom: 8, height: 170 }}>
+                    <ScrollView nestedScrollEnabled={true}>
+                    {(() => {
+                      const fgRgb = (hex: string, alpha: number) => {
+                         const h = hex || '#FFFFFF';
+                         const r = parseInt(h.substring(1, 3), 16) || 0;
+                         const g = parseInt(h.substring(3, 5), 16) || 0;
+                         const b = parseInt(h.substring(5, 7), 16) || 0;
+                         return `rgba(${r},${g},${b},${alpha})`;
+                      };
+                      const f = fixedFgColor || '#FFFFFF';
+                      const b = fixedBgColor || 'transparent';
+                      return [
+                        { id: 1, label: 'Solid', dots: [f, f, f, f, f, f, f, f] },
+                        { id: 2, label: 'Single Dot', dots: [f, b, b, b, b, b, b, b] },
+                        { id: 3, label: 'Comet', dots: [f, fgRgb(f, 0.6), fgRgb(f, 0.3), fgRgb(f, 0.1), b, b, b, b] },
+                        { id: 4, label: 'Dashed', dots: [f, f, b, b, f, f, b, b] },
+                        { id: 5, label: 'Alternating', dots: [f, b, f, b, '#FFFFFF', b, '#FFFFFF', b] },
+                        { id: 6, label: 'Breath', dots: [f, fgRgb(f, 0.5), b, fgRgb(f, 0.5), f, fgRgb(f, 0.5), b, fgRgb(f, 0.5)] },
+                        { id: 7, label: 'Flash', dots: [f, b, f, b, f, b, f, b] },
+                        { id: 8, label: 'Strobe', dots: ['#FFFFFF', b, '#FFFFFF', b, '#FFFFFF', b, '#FFFFFF', b] },
+                        { id: 9, label: 'Wave', dots: [b, fgRgb(f, 0.5), f, f, fgRgb(f, 0.5), b, b, b] },
+                        { id: 10, label: 'Pinch', dots: [f, fgRgb(f, 0.5), b, b, b, fgRgb(f, 0.5), f, b] }
+                      ];
+                    })().map(pattern => (
+                      <TouchableOpacity 
+                        key={pattern.id}
+                        onPress={() => {
+                          setFixedSubMode('PATTERN');
+                          setFixedPatternId(pattern.id);
+                          applyFixedPattern(pattern.id);
+                          if (pattern.id === 1) {
+                             setFixedColorMode('FOREGROUND');
+                          }
+                        }}
+                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}
+                      >
+                        <FixedPatternPreviewRow baseDots={pattern.dots} patternId={pattern.id} speed={speed} points={devices?.[0]?.points || points || 16} segments={devices?.[0]?.segments || 1} />
+                        <Text style={{ color: Colors.textMuted, fontSize: 16 }}>{fixedPatternId === pattern.id ? '✓' : '→'}</Text>
+                      </TouchableOpacity>
+                    ))}
+                    </ScrollView>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', marginBottom: 24 }}>
+                    <TouchableOpacity 
+                      onPress={() => setFixedColorMode('FOREGROUND')}
+                      style={{ flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: fixedColorMode === 'FOREGROUND' ? '#00AEEF' : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
+                    >
+                      <Text style={{ color: fixedColorMode === 'FOREGROUND' ? '#FFF' : Colors.textMuted, fontWeight: 'bold' }}>FOREGROUND</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      disabled={fixedPatternId === 1}
+                      onPress={() => setFixedColorMode('BACKGROUND')}
+                      style={{ flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: fixedColorMode === 'BACKGROUND' ? '#3B4A5A' : Colors.surfaceHighlight, borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius, opacity: fixedPatternId === 1 ? 0.3 : 1 }}
+                    >
+                      <Text style={{ color: fixedColorMode === 'BACKGROUND' ? '#FFF' : Colors.textMuted, fontWeight: 'bold' }}>BACKGROUND</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {/* MULTI-COLOR PRESETS & DIY BUILDER COLLAPSIBLE */}
+              <TouchableOpacity onPress={() => setIsPresetsExpanded(!isPresetsExpanded)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: isPresetsExpanded ? 8 : 16 }}>
+                 <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 0 }]}>Multi-Color Arrays</Text>
+                 <MaterialCommunityIcons name={isPresetsExpanded ? "chevron-up" : "chevron-down"} size={24} color={Colors.textMuted} />
+              </TouchableOpacity>
+              
+              {isPresetsExpanded && (
+                <View>
+                  <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 8, fontWeight: 'bold', marginTop: 8 }}>QUICK PRESETS</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                    {[
+                      { name: 'Rainbow', colors: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'], type: 3 },
+                      { name: 'America', colors: ['#FF0000', '#FFFFFF', '#0000FF'], type: 3 },
+                      { name: 'Cyberpunk', colors: ['#00FFFF', '#FF00FF', '#FFFF00'], type: 3 },
+                      { name: 'Forest', colors: ['#00FF00', '#008000', '#228B22', '#32CD32'], type: 1 },
+                      { name: 'Sunset', colors: ['#FF0000', '#FF4500', '#FF8C00', '#FFA500'], type: 1 },
+                      { name: 'Ice', colors: ['#FFFFFF', '#E0FFFF', '#00FFFF', '#0000FF'], type: 1 }
+                    ].map((preset, idx) => (
+                      <TouchableOpacity 
+                        key={idx}
+                        onPress={() => {
+                            setFixedSubMode('MULTI');
+                            setMultiColors(preset.colors);
+                            setMultiTransition(preset.type);
+                            if (writeToDevice) {
+                                const rgbColors = generateSortedColors(preset.colors);
+                                writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, preset.type, speed));
+                            }
+                        }}
+                        style={{
+                            paddingVertical: 10, paddingHorizontal: 16, 
+                            backgroundColor: 'rgba(255,255,255,0.05)', 
+                            borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
+                        }}
+                      >
+                        <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13, marginBottom: 6 }}>{preset.name}</Text>
+                        <View style={{ flexDirection: 'row', gap: 4 }}>
+                           {preset.colors.map((c, i) => (
+                              <View key={i} style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: c }} />
+                           ))}
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 8, fontWeight: 'bold' }}>DIY ARRAY BUILDER</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: 16 }}>
+                    {multiColors.map((hex, index) => (
+                      <TouchableOpacity key={index} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: hex, borderWidth: 2, borderColor: '#FFF', shadowColor: hex, shadowOpacity: 0.8, shadowRadius: 4 }} onPress={() => {
+                        setFixedSubMode('MULTI');
+                        const newArr = [...multiColors];
+                        newArr[index] = selectedColor;
+                        setMultiColors(newArr);
+                        const rgbColors = generateSortedColors(newArr);
+                        if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
+                      }} />
+                    ))}
+                    {multiColors.length < 16 && (
+                      <TouchableOpacity style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: '#FFF', justifyContent: 'center', alignItems: 'center' }} onPress={() => {
+                         setFixedSubMode('MULTI');
+                         const newArr = [...multiColors, selectedColor];
+                         setMultiColors(newArr);
+                         const rgbColors = generateSortedColors(newArr);
+                         if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
+                      }}>
+                        <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold' }}>+</Text>
+                      </TouchableOpacity>
+                    )}
+                    {multiColors.length > 1 && (
+                      <TouchableOpacity style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,0,0,0.3)', borderWidth: 1, borderColor: '#FFF', justifyContent: 'center', alignItems: 'center' }} onPress={() => {
+                         setFixedSubMode('MULTI');
+                         const newArr = [...multiColors];
+                         newArr.pop();
+                         setMultiColors(newArr);
+                         const rgbColors = generateSortedColors(newArr);
+                         if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
+                      }}>
+                        <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold', lineHeight: 26 }}>-</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 8, fontWeight: 'bold' }}>TRANSITION TYPE</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 20 }}>
+                    {[
+                      { label: 'Static', val: 0 },
+                      { label: 'Gradual', val: 1 },
+                      { label: 'Strobe', val: 2 },
+                      { label: 'Running Water', val: 3 }
+                    ].map((mode) => (
+                      <TouchableOpacity 
+                        key={mode.val} 
+                        onPress={() => {
+                           setFixedSubMode('MULTI');
+                           setMultiTransition(mode.val);
+                           const rgbColors = generateSortedColors(multiColors);
+                           if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, mode.val, speed));
+                        }} 
+                        style={{ 
+                          paddingHorizontal: 16, paddingVertical: 10, 
+                          backgroundColor: multiTransition === mode.val ? Colors.primary : 'rgba(255,255,255,0.05)', 
+                          borderRadius: 8, marginRight: 8 
+                        }}
+                      >
+                        <Text style={{ color: multiTransition === mode.val ? '#000' : '#FFF', fontWeight: 'bold', fontSize: 12 }}>{mode.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* CANDLE EMULATOR COLLAPSIBLE */}
+              <TouchableOpacity onPress={() => setIsCandleExpanded(!isCandleExpanded)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: isCandleExpanded ? 8 : 16 }}>
+                 <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 0 }]}>Candle</Text>
+                 <MaterialCommunityIcons name={isCandleExpanded ? "chevron-up" : "chevron-down"} size={24} color={Colors.textMuted} />
+              </TouchableOpacity>
+              
+              {isCandleExpanded && (
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={{ color: Colors.textMuted, fontSize: 13, marginBottom: 12 }}>
+                    Simulates dynamic volumetric tracking mathematically in hardware using raw LED flickering logic.
+                  </Text>
+                  
+                  <View style={{ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 4, marginTop: 4, marginBottom: 16 }}>
+                    {[
+                      { label: 'SLOW', value: 1 },
+                      { label: 'MEDIUM', value: 2 },
+                      { label: 'FAST', value: 3 }
+                    ].map(speedObj => {
+                      const isActive = Math.round(candleAmplitude) === speedObj.value;
+                      return (
+                        <TouchableOpacity 
+                          key={speedObj.value}
+                          onPress={() => {
+                             setCandleAmplitude(speedObj.value);
+                             setFixedSubMode('CANDLE');
+                             if (writeToDevice) {
+                                const rawR = parseInt(selectedColor.substring(1, 3), 16) || 255;
+                                const rawG = parseInt(selectedColor.substring(3, 5), 16) || 255;
+                                const rawB = parseInt(selectedColor.substring(5, 7), 16) || 255;
+                                let finalR = rawR; let finalG = rawG; let finalB = rawB;
+                                const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
+                                if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
+                                writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, speedObj.value));
+                             }
+                          }}
+                          style={{
+                            flex: 1,
+                            paddingVertical: 12,
+                            borderRadius: 8,
+                            backgroundColor: isActive ? Colors.primary : 'transparent',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Text style={{ 
+                            fontSize: 12, 
+                            fontWeight: 'bold', 
+                            color: isActive ? '#000000' : Colors.textMuted 
+                          }}>
+                            {speedObj.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+              {/* PROGRAMS COLLAPSIBLE */}
+              <TouchableOpacity onPress={() => setIsProgramsExpanded(!isProgramsExpanded)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: isProgramsExpanded ? 8 : 16 }}>
+                 <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 0 }]}>Programs</Text>
+                 <MaterialCommunityIcons name={isProgramsExpanded ? "chevron-up" : "chevron-down"} size={24} color={Colors.textMuted} />
+              </TouchableOpacity>
+              
+              {isProgramsExpanded && (
+                <View style={{ marginBottom: 16, marginTop: 12 }}>
+                  <ArcPatternWheel 
+                    value={selectedPatternId}
+                    onValueChange={(pid) => {
+                      setFixedSubMode('RBM');
+                      setSelectedPatternId(pid);
+                      if (writeToDevice) {
+                        if (pid === 400) {
+                          applyEmergencyPattern(speed, brightness);
+                        } else {
+                          writeToDevice(ZenggeProtocol.setCustomRbm(pid, speed, brightness));
+                        }
                       }
                     }}
-                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}
-                  >
-                    <FixedPatternPreviewRow baseDots={pattern.dots} patternId={pattern.id} speed={speed} points={devices?.[0]?.points || points || 16} segments={devices?.[0]?.segments || 1} />
-                    <Text style={{ color: Colors.textMuted, fontSize: 16 }}>{fixedPatternId === pattern.id ? '✓' : '→'}</Text>
-                  </TouchableOpacity>
-                ))}
-                </ScrollView>
-              </View>
-
-              <View style={{ flexDirection: 'row', marginBottom: 12 }}>
-                <TouchableOpacity 
-                  onPress={() => setFixedColorMode('FOREGROUND')}
-                  style={{ flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: fixedColorMode === 'FOREGROUND' ? '#00AEEF' : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
-                >
-                  <Text style={{ color: fixedColorMode === 'FOREGROUND' ? '#FFF' : Colors.textMuted, fontWeight: 'bold' }}>FOREGROUND</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  disabled={fixedPatternId === 1}
-                  onPress={() => setFixedColorMode('BACKGROUND')}
-                  style={{ flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: fixedColorMode === 'BACKGROUND' ? '#3B4A5A' : Colors.surfaceHighlight, borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius, opacity: fixedPatternId === 1 ? 0.3 : 1 }}
-                >
-                  <Text style={{ color: fixedColorMode === 'BACKGROUND' ? '#FFF' : Colors.textMuted, fontWeight: 'bold' }}>BACKGROUND</Text>
-                </TouchableOpacity>
-              </View>
-
-
-            </View>
-          )}
-
-          {activeMode === 'RBM' && (
-            <View style={{ marginBottom: 8 }}>
-              <ArcPatternWheel 
-                value={selectedPatternId}
-                onValueChange={(pid) => {
-                  setSelectedPatternId(pid);
-                  if (writeToDevice) {
-                    if (pid === 100) {
-                      applyEmergencyPattern(speed, brightness);
-                    } else {
-                      writeToDevice(ZenggeProtocol.setCustomRbm(pid, speed, brightness));
-                    }
-                  }
-                }}
-                min={1}
-                max={100}
-                itemLabel={(val) => getRbmPatternName(val)}
-              />
-            </View>
-          )}
-
-          {activeMode === 'CAMERA' && (
-            <View style={[styles.sceneContainer, { padding: 8, backgroundColor: 'transparent', borderWidth: 0 }]}>
-              <CameraTracker 
-                isActive={activeMode === 'CAMERA'} 
-                onColorDetected={(hex) => {
-                  setSelectedColor(hex);
-                  if (writeToDevice) {
-                    const factor = brightness / 100;
-                    const r = Math.round(parseInt(hex.substring(1, 3), 16) * factor);
-                    const g = Math.round(parseInt(hex.substring(3, 5), 16) * factor);
-                    const b = Math.round(parseInt(hex.substring(5, 7), 16) * factor);
-                    sendColor(r, g, b);
-                  }
-                }} 
-              />
+                    min={1}
+                    max={302}
+                    itemLabel={(val) => getRbmPatternName(val)}
+                  />
+                </View>
+              )}
             </View>
           )}
 
@@ -1079,8 +1146,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
 
           {activeMode === 'CAMERA' && (
             <View style={{ marginBottom: 8 }}>
-              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>Real-time Telemetry</Text>
-              <Text style={[styles.presetDesc, { marginBottom: 12 }]}>Points the camera at any surface to instantly sync your lights to the physical world.</Text>
+              <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 12 }]}>Real-time Telemetry</Text>
               
               <CameraTracker 
                  isActive={activeMode === 'CAMERA'} 
@@ -1096,40 +1162,6 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
             </View>
           )}
 
-
-          {activeMode === 'MULTICOLOR' && (
-            <View style={{ marginBottom: 8 }}>
-              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>Multi-color Segments</Text>
-              
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                {[1, 2, 3, 4, 5, 6, 7].map((seg) => (
-                  <TouchableOpacity 
-                    key={seg} 
-                    style={[styles.colorButton, { backgroundColor: seg === 1 ? '#FF0000' : (seg === 2 ? '#00FF00' : '#0000FF'), width: 32, height: 32, borderRadius: 16 }]} 
-                  />
-                ))}
-              </View>
-
-              <TouchableOpacity 
-                style={[styles.presetCard, { marginTop: 10, borderLeftColor: Colors.secondary }]}
-                onPress={() => {
-                  if (writeToDevice) {
-                    const segmentColors = [
-                      { r: 255, g: 0, b: 0 },
-                      { r: 0, g: 255, b: 0 },
-                      { r: 0, g: 0, b: 255 },
-                      { r: 255, g: 255, b: 0 },
-                      { r: 0, g: 255, b: 255 }
-                    ];
-                    writeToDevice(ZenggeProtocol.setMultiColor(segmentColors, speed, 1));
-                  }
-                }}
-              >
-                <Text style={styles.presetTitle}>Apply Segmented Scene</Text>
-                <Text style={styles.presetDesc}>Push these colors to your controllers synchronously.</Text>
-              </TouchableOpacity>
-            </View>
-          )}
 
           {activeMode === 'CUSTOM' && (
             <View style={{ marginBottom: 8 }}>
@@ -1160,57 +1192,75 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   }
                 }}
               >
-                <Text style={styles.presetTitle}>Save & Sync DIY</Text>
-                <Text style={styles.presetDesc}>Flash this sequence to the controller's permanent memory.</Text>
               </TouchableOpacity>
             </View>
           )}
-        </View>
+        </ScrollView>
 
         {/* UNIVERSAL SLIDERS FOOTER - Always at the bottom */}
         {activeMode !== 'CAMERA' && (
           <View style={[styles.sceneSlidersContainer, { marginTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 8 }]}>
-            {/* Color Grid - Hidden in Programs Mode */}
-            {activeMode !== 'RBM' && activeMode !== 'PRESETS' && (
+            {/* Color Grid */}
+            {activeMode !== 'PRESETS' && (
               <View style={[styles.colorGrid, { marginBottom: 8 }]}>
-                {['#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#FFFFFF'].map(color => (
+                {[
+                  (activeMode === 'FIXED' && fixedSubMode === 'PATTERN') ? (fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor) : selectedColor,
+                  '#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#FFFFFF'
+                ].map((color, index) => (
                   <TouchableOpacity 
-                    key={color} 
+                    key={index} 
                     onPress={() => {
                       const hueMap: {[key: string]: number} = {
                         '#FF0000': 0, '#FFFF00': 60, '#00FF00': 120, 
                         '#00FFFF': 180, '#0000FF': 240, '#FF00FF': 300, '#FFFFFF': 0
                       };
                       if (activeMode === 'FIXED') {
-                        let newFg = fixedFgColor;
-                        let newBg = fixedBgColor;
-                        if (fixedColorMode === 'FOREGROUND') {
-                          newFg = color;
-                          setFixedFgColor(color);
+                        if (fixedSubMode === 'CANDLE') {
+                           setSelectedColor(color);
+                           if (writeToDevice) {
+                               const rawR = parseInt(color.substring(1, 3), 16) || 255;
+                               const rawG = parseInt(color.substring(3, 5), 16) || 255;
+                               const rawB = parseInt(color.substring(5, 7), 16) || 255;
+                               let finalR = rawR; let finalG = rawG; let finalB = rawB;
+                               const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
+                               if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
+                               writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, candleAmplitude));
+                           }
+                        } else if (fixedSubMode === 'PATTERN') {
+                           let newFg = fixedFgColor;
+                           let newBg = fixedBgColor;
+                           if (fixedColorMode === 'FOREGROUND') {
+                             newFg = color;
+                             setFixedFgColor(color);
+                             setSelectedColor(color);
+                           } else {
+                             newBg = color;
+                             setFixedBgColor(color);
+                             setSelectedColor(color);
+                           }
+                           if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
+                           applyFixedPattern(fixedPatternId, newFg, newBg);
                         } else {
-                          newBg = color;
-                          setFixedBgColor(color);
+                           setSelectedColor(color);
+                           if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
                         }
-                        if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
-                        applyFixedPattern(fixedPatternId, newFg, newBg);
                       } else if (activeMode === 'MUSIC') {
                         if (hueMap[color] !== undefined) setMusicHue(hueMap[color]);
                         handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hueMap[color] || 0);
                       } else {
                         setSelectedColor(color);
                         if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
-                        if (writeToDevice) {
-                          const r = parseInt(color.slice(1, 3), 16);
-                          const g = parseInt(color.slice(3, 5), 16);
-                          const b = parseInt(color.slice(5, 7), 16);
-                          sendColor(r, g, b);
-                        }
+                        const r = parseInt(color.slice(1, 3), 16);
+                        const g = parseInt(color.slice(3, 5), 16);
+                        const b = parseInt(color.slice(5, 7), 16);
+                        sendColor(r, g, b);
                       }
                     }}
                     style={[
                       styles.colorButton, 
-                      { backgroundColor: color, flex: 1, marginHorizontal: 2, height: 40, borderRadius: 4 },
-                      ((activeMode === 'FIXED' ? (fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor) : selectedColor) === color) && styles.selectedColorButton
+                      { backgroundColor: color, flex: 1, marginHorizontal: 2, height: 40, borderRadius: index === 0 ? 8 : 4 },
+                      index === 0 && { borderWidth: 2, borderColor: '#FFF' },
+                      ((activeMode === 'FIXED' ? (fixedSubMode === 'PATTERN' ? (fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor) : selectedColor) : selectedColor) === color) && index !== 0 && styles.selectedColorButton
                     ]} 
                   />
                 ))}
@@ -1235,20 +1285,39 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
               </View>
             )}
 
-            {/* Hue Slider - Hidden in Programs Mode */}
-            {activeMode !== 'RBM' && activeMode !== 'PRESETS' && (
+            {/* Hue Slider */}
+            {activeMode !== 'PRESETS' && (
               <View style={[styles.controlRow, { marginTop: 0, height: 32 }]}>
                 <CustomSlider 
                   gradientTrack={true}
                   value={activeMode === 'FIXED' ? fixedHue : (activeMode === 'MUSIC' ? (musicColorFocus === 'PRIMARY' ? musicHue : musicSecondaryHue) : selectedHue)}
                   onValueChange={(hue) => {
                     if (activeMode === 'FIXED') {
-                      setFixedHue(hue);
-                      const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                      const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
-                      const hex = rgb2hex(f(5), f(3), f(1));
-                      if (fixedColorMode === 'FOREGROUND') setFixedFgColor(hex);
-                      else setFixedBgColor(hex);
+                      if (fixedSubMode === 'CANDLE') {
+                        setFixedHue(hue);
+                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+                        const hex = rgb2hex(f(5), f(3), f(1));
+                        setSelectedColor(hex);
+                      } else if (fixedSubMode === 'PATTERN') {
+                        setFixedHue(hue);
+                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+                        const hex = rgb2hex(f(5), f(3), f(1));
+                        if (fixedColorMode === 'FOREGROUND') {
+                            setFixedFgColor(hex);
+                            setSelectedColor(hex);
+                        } else {
+                            setFixedBgColor(hex);
+                            setSelectedColor(hex);
+                        }
+                      } else {
+                        setFixedHue(hue);
+                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+                        const hex = rgb2hex(f(5), f(3), f(1));
+                        setSelectedColor(hex);
+                      }
                     } else if (activeMode === 'MUSIC') {
                       if (musicColorFocus === 'PRIMARY') setMusicHue(hue);
                       else setMusicSecondaryHue(hue);
@@ -1261,14 +1330,26 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   }}
                   onSlidingComplete={(hue) => {
                     if (activeMode === 'FIXED') {
-                      applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor);
+                      if (fixedSubMode === 'CANDLE') {
+                         if (writeToDevice) {
+                             const rawR = parseInt(selectedColor.substring(1, 3), 16) || 255;
+                             const rawG = parseInt(selectedColor.substring(3, 5), 16) || 255;
+                             const rawB = parseInt(selectedColor.substring(5, 7), 16) || 255;
+                             let finalR = rawR; let finalG = rawG; let finalB = rawB;
+                             const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
+                             if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
+                             writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, candleAmplitude));
+                         }
+                      } else if (fixedSubMode === 'PATTERN') {
+                         applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor);
+                      }
                     } else if (activeMode === 'MUSIC') {
                       if (musicColorFocus === 'PRIMARY') {
                          handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hue, musicSecondaryHue, musicMatrixStyle);
                       } else {
                          handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicHue, hue, musicMatrixStyle);
                       }
-                    } else if (writeToDevice) {
+                    } else {
                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
                       const r = Math.round(f(5) * 255);
                       const g = Math.round(f(3) * 255);
@@ -1297,17 +1378,35 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                   style={{ flex: 1 }}
                   onSlidingComplete={(val) => {
                     if (writeToDevice) {
-                      if (activeMode === 'RBM') {
-                        if (selectedPatternId === 100) {
-                          applyEmergencyPattern(speed, val);
-                        } else {
-                          writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, speed, val));
-                        }
-                      } else if (activeMode === 'MUSIC') {
+                      if (activeMode === 'MUSIC') {
                         handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicHue, musicSecondaryHue, musicMatrixStyle);
                       } else {
                         if (activeMode === 'FIXED') {
-                          applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
+                          if (fixedSubMode === 'PATTERN') {
+                            applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
+                          } else if (fixedSubMode === 'MULTI') {
+                            const factor = val / 100;
+                            const rgbColors = multiColors.map(h => ({
+                                r: Math.round((parseInt(h.slice(1,3), 16) || 0) * factor),
+                                g: Math.round((parseInt(h.slice(3,5), 16) || 0) * factor),
+                                b: Math.round((parseInt(h.slice(5,7), 16) || 0) * factor)
+                            }));
+                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
+                          } else if (fixedSubMode === 'CANDLE') {
+                            const rawR = parseInt(selectedColor.substring(1, 3), 16) || 255;
+                            const rawG = parseInt(selectedColor.substring(3, 5), 16) || 255;
+                            const rawB = parseInt(selectedColor.substring(5, 7), 16) || 255;
+                            let finalR = rawR; let finalG = rawG; let finalB = rawB;
+                            const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
+                            if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
+                            writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, val, candleAmplitude));
+                          } else if (fixedSubMode === 'RBM') {
+                            if (selectedPatternId === 100) {
+                              applyEmergencyPattern(speed, val);
+                            } else {
+                              writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, speed, val));
+                            }
+                          }
                         } else {
                           // Standard scaled color for other modes
                           const factor = val / 100;
@@ -1339,22 +1438,31 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     onSlidingComplete={(val) => {
                       if (writeToDevice) {
                         if (activeMode === 'FIXED') {
-                          applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
-                        } else if (activeMode === 'RBM') {
-                          if (selectedPatternId === 100) {
-                            applyEmergencyPattern(val, brightness);
-                          } else {
-                            writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
+                          if (fixedSubMode === 'PATTERN') {
+                            applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
+                          } else if (fixedSubMode === 'MULTI') {
+                            const factor = brightness / 100;
+                            const rgbColors = multiColors.map(h => ({
+                                r: Math.round((parseInt(h.slice(1,3), 16) || 0) * factor),
+                                g: Math.round((parseInt(h.slice(3,5), 16) || 0) * factor),
+                                b: Math.round((parseInt(h.slice(5,7), 16) || 0) * factor)
+                            }));
+                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, val));
+                          } else if (fixedSubMode === 'CANDLE') {
+                            const rawR = parseInt(selectedColor.substring(1, 3), 16) || 255;
+                            const rawG = parseInt(selectedColor.substring(3, 5), 16) || 255;
+                            const rawB = parseInt(selectedColor.substring(5, 7), 16) || 255;
+                            let finalR = rawR; let finalG = rawG; let finalB = rawB;
+                            const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
+                            if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
+                            writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, val, brightness, candleAmplitude));
+                          } else if (fixedSubMode === 'RBM') {
+                            if (selectedPatternId === 100) {
+                              applyEmergencyPattern(val, brightness);
+                            } else {
+                              writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
+                            }
                           }
-                        } else if (activeMode === 'MULTICOLOR') {
-                          const segmentColors = [
-                            { r: 255, g: 0, b: 0 },
-                            { r: 0, g: 255, b: 0 },
-                            { r: 0, g: 0, b: 255 },
-                            { r: 255, g: 255, b: 0 },
-                            { r: 0, g: 255, b: 255 }
-                          ];
-                          writeToDevice(ZenggeProtocol.setMultiColor(segmentColors, val, 1));
                         }
                       }
                     }}
@@ -1379,9 +1487,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
                     value={micSensitivity}
                     onValueChange={setMicSensitivity}
                     onSlidingComplete={(val) => {
-                      if (writeToDevice) {
-                        handleMusicChange(musicPatternId, val, brightness, micSource, musicHue, musicSecondaryHue, musicMatrixStyle);
-                      }
+                      handleMusicChange(musicPatternId, val, brightness, micSource, musicHue, musicSecondaryHue, musicMatrixStyle);
                     }}
                     minimumValue={0}
                     maximumValue={100}
@@ -1394,34 +1500,7 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
               </View>
             )}
 
-            {/* Flicker Effect Slider - Visible ONLY in CANDLE */}
-            {activeMode === 'CANDLE' && (
-              <View style={[styles.controlRow, { marginTop: 12 }]}>
-                <Text style={{ position: 'absolute', top: -14, left: 24, fontSize: 10, color: Colors.textMuted, fontWeight: 'bold', letterSpacing: 1 }}>FLICKER EFFECT</Text>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ color: Colors.textMuted, marginRight: 8, fontSize: 16 }}>🔥</Text>
-                  <CustomSlider 
-                    value={candleAmplitude}
-                    onValueChange={setCandleAmplitude}
-                    onSlidingComplete={(val) => {
-                      const rawR = parseInt(selectedColor.substring(1, 3), 16) || 255;
-                      const rawG = parseInt(selectedColor.substring(3, 5), 16) || 255;
-                      const rawB = parseInt(selectedColor.substring(5, 7), 16) || 255;
-                      let finalR = rawR; let finalG = rawG; let finalB = rawB;
-                      const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
-                      if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
-                      if (writeToDevice) writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, val));
-                    }}
-                    minimumValue={1}
-                    maximumValue={3}
-                    style={{ flex: 1 }}
-                  />
-                  <Text style={{ color: Colors.text, marginLeft: 10, width: 45, fontWeight: 'bold', fontSize: 13, textAlign: 'right' }}>
-                    {Math.round(candleAmplitude)}
-                  </Text>
-                </View>
-              </View>
-            )}
+
           </View>
         )}
         {/* Favorite Prompt Modal */}
@@ -1455,11 +1534,12 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
   );
 }
 
+
 const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 0,
-    paddingBottom: 20,
+    paddingBottom: 0,
     paddingTop: 0,
   },
   visualizerWrapper: {
