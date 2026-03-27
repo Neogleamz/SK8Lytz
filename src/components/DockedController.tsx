@@ -73,17 +73,15 @@ const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segme
   const dotsPerSegment = Math.max(1, Math.floor(points / Math.max(1, segments)));
 
   return (
-    <View style={{ flex: 1, marginRight: 8, overflow: 'hidden' }}>
-      <View style={{ flexDirection: 'row', gap: 4 }}>
-        {displayedDots.map((c, i) => (
+    <View style={{ flex: 1, marginRight: 8, height: 8, overflow: 'hidden' }}>
+      <View style={{ flex: 1, flexDirection: 'row', gap: 2 }}>
+        {displayedDots.slice(0, 10).map((c, i) => (
           <View 
              key={i} 
              style={{ 
-               width: 8, 
-               height: 8, 
+               flex: 1,
                borderRadius: 4, 
-               backgroundColor: c,
-               marginLeft: i > 0 && i % dotsPerSegment === 0 ? 12 : 0 
+               backgroundColor: c
              }} 
           />
         ))}
@@ -931,7 +929,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                               <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
                            </View>
                         </View>
-                        <View style={{ width: '100%', height: 20, justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ width: '100%', minHeight: 20, justifyContent: 'center', alignItems: 'center' }}>
                            <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.name}</MarqueeText>
                         </View>
                         {(() => {
@@ -980,7 +978,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                         style={[styles.presetCard, { borderColor: Colors.secondary }]}
                         onPress={() => loadFavorite(fav)}
                       >
-                        <View style={{ width: '100%', height: 20, justifyContent: 'center', alignItems: 'center', marginTop: 2 }}>
+                        <View style={{ width: '100%', minHeight: 20, justifyContent: 'center', alignItems: 'center', marginTop: 2 }}>
                            <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.name}</MarqueeText>
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 2, marginBottom: 4, gap: 4, opacity: 0.8 }}>
@@ -1336,7 +1334,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
               </View>
 
               <View style={[styles.musicVisualizerSection, { flex: 1, justifyContent: 'center' }]}>
-                <SpectrumVisualizer />
+                <SpectrumVisualizer magnitude={audioMagnitude} />
               </View>
 
               <View style={styles.micControlSection}>
@@ -2207,7 +2205,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     fontWeight: '700',
   },
   musicModeIndicator: {
-    width: 60,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
