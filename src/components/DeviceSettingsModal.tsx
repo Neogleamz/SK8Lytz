@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView, Platform, Alert } from 'react-native';
 import { Colors, Typography, Layout } from '../theme/theme';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 
@@ -27,25 +27,47 @@ interface DeviceSettingsModalProps {
 
 export default function DeviceSettingsModal({ isVisible, onClose, onSave, initialSettings, groups, writeToDevice }: DeviceSettingsModalProps) {
   const [settings, setSettings] = useState<DeviceSettings>(initialSettings);
+  const [pointsText, setPointsText] = useState<string>(initialSettings.points.toString());
+  const [segmentsText, setSegmentsText] = useState<string>(initialSettings.segments.toString());
   const [namePreset, setNamePreset] = useState<string>(
     initialSettings.name.includes('Left') ? 'Left Skate' : (initialSettings.name.includes('Right') ? 'Right Skate' : 'Manual')
   );
 
+  // Sync when the modal is first opened or when LIVE hardware values change organically in the background
   useEffect(() => {
-    setSettings(initialSettings);
-    setNamePreset(initialSettings.name.includes('Left') ? 'Left Skate' : (initialSettings.name.includes('Right') ? 'Right Skate' : 'Manual'));
-  }, [initialSettings]);
+    if (initialSettings.points !== settings.points || initialSettings.segments !== settings.segments || initialSettings.sorting !== settings.sorting || initialSettings.stripType !== settings.stripType || initialSettings.firmware !== settings.firmware) {
+      setSettings(prev => ({...prev, points: initialSettings.points, segments: initialSettings.segments, sorting: initialSettings.sorting, stripType: initialSettings.stripType, firmware: initialSettings.firmware}));
+      setPointsText(initialSettings.points.toString());
+      setSegmentsText(initialSettings.segments.toString());
+    }
+  }, [initialSettings.points, initialSettings.segments, initialSettings.sorting, initialSettings.stripType, initialSettings.firmware]);
+
+  // Sync initial full state on visible toggle
+  useEffect(() => {
+    if (isVisible) {
+      setSettings(initialSettings);
+      setPointsText(initialSettings.points.toString());
+      setSegmentsText(initialSettings.segments.toString());
+      setNamePreset(initialSettings.name.includes('Left') ? 'Left Skate' : (initialSettings.name.includes('Right') ? 'Right Skate' : 'Manual'));
+    }
+  }, [isVisible]);
 
   const handleSave = () => {
-    onSave(settings);
+    const finalPoints = parseInt(pointsText) || initialSettings.points || 43;
+    const finalSegments = parseInt(segmentsText) || initialSettings.segments || 1;
     
-    // Sync to hardware
+    // Explicit group flag check
+    const isGrouped = !!settings.groupId;
+    
+    const finalSettings = { ...settings, points: finalPoints, segments: finalSegments, grouped: isGrouped };
+    onSave(finalSettings);
+    
     if (writeToDevice) {
       const payload = ZenggeProtocol.setHardwareConfig(
-        settings.points,
+        finalPoints,
         settings.sorting,
         settings.stripType,
-        settings.segments
+        finalSegments
       );
       writeToDevice(payload);
     }
@@ -53,22 +75,23 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
     onClose();
   };
 
-  const handlePresetChange = (preset: string) => {
-    setNamePreset(preset);
-    if (preset === 'Manual') {
-      // Keep existing name or clear if it was a preset
-      if (settings.name.includes('Left') || settings.name.includes('Right')) {
-        setSettings({ ...settings, name: '' });
-      }
-    } else {
-      // Convert "Left Skate" preset to just "Left" for the actual device name 
-      const cleanSuffix = preset.replace(' Skate', '');
-      setSettings({ ...settings, name: `${settings.type} ${cleanSuffix}` });
+  const handleQuery = async () => {
+    if (writeToDevice) {
+      // Blast both ping protocols immediately to brute force the hardware specs
+      writeToDevice(ZenggeProtocol.queryHardwareConfig());
+      setTimeout(() => { writeToDevice(ZenggeProtocol.wrapCommand([0x63, 0x14, 0x00, 0x00])); }, 250);
+      Alert.alert("Interrogating Hardware", "Extracting physical state... Please wait a few seconds. Fields will dynamically auto-fill if the controller responds.");
     }
   };
 
+  const handlePresetChange = (preset: string) => {
+    setNamePreset(preset);
+    if (preset === 'Manual') return;
+    const cleanSuffix = preset.replace(' Skate', '');
+    setSettings({ ...settings, name: `${settings.type} ${cleanSuffix}` });
+  };
+
   const setType = (type: 'HALOZ' | 'SOULZ') => {
-    // If not manual, preserve the directional suffix
     const cleanSuffix = namePreset !== 'Manual' ? namePreset.replace(' Skate', '') : '';
     const newName = namePreset !== 'Manual' ? `${type} ${cleanSuffix}` : settings.name;
     setSettings({ ...settings, type, name: newName });
@@ -111,18 +134,19 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
               </View>
             </View>
 
-            {namePreset === 'Manual' && (
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Custom Device Name</Text>
-                <TextInput 
-                  style={styles.input}
-                  value={settings.name}
-                  onChangeText={(text) => setSettings({ ...settings, name: text })}
-                  placeholder="e.g. My Custom HALO"
-                  placeholderTextColor={Colors.textMuted}
-                />
-              </View>
-            )}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Custom Device Name</Text>
+              <TextInput 
+                style={styles.input}
+                value={settings.name}
+                onChangeText={(text) => {
+                   setSettings({ ...settings, name: text });
+                   setNamePreset('Manual');
+                }}
+                placeholder="e.g. My Custom Skate"
+                placeholderTextColor={Colors.textMuted}
+              />
+            </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Product Type</Text>
@@ -146,80 +170,68 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Group / Pair Mode</Text>
-              <View style={styles.buttonGroup}>
-                <TouchableOpacity 
-                  style={[styles.groupButton, !settings.grouped && styles.groupButtonActive]}
-                  onPress={() => setSettings({ ...settings, grouped: false })}
-                >
-                  <Text style={[styles.groupButtonText, !settings.grouped && styles.groupButtonTextActive]}>Single</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.groupButton, settings.grouped && styles.groupButtonActive]}
-                  onPress={() => setSettings({ ...settings, grouped: true })}
-                >
-                  <Text style={[styles.groupButtonText, settings.grouped && styles.groupButtonTextActive]}>Paired / Grouped</Text>
-                </TouchableOpacity>
-              </View>
-              {settings.grouped && (
-                <View style={{ marginTop: 12 }}>
-                  <Text style={styles.label}>Assign to Group</Text>
-                  
-                  {groups && groups.filter(g => g.isGroup).length > 0 && (
-                    <ScrollView style={{ maxHeight: 120, marginBottom: 12 }} nestedScrollEnabled>
-                      {groups.filter(g => g.isGroup).map(g => (
-                        <TouchableOpacity 
-                          key={g.id}
-                          style={[styles.input, { paddingVertical: 12, marginBottom: 4 }, settings.groupId === g.id && { borderColor: Colors.primary }]}
-                          onPress={() => setSettings({ ...settings, groupId: g.id, groupName: g.name })}
-                        >
-                          <Text style={{ color: settings.groupId === g.id ? Colors.primary : Colors.text }}>{g.name}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  )}
-
-                  <Text style={styles.label}>{settings.groupId ? 'Rename Selected Group' : 'Or Create New Group...'}</Text>
-                  <TextInput 
-                    style={styles.input}
-                    value={settings.groupName}
-                    onChangeText={(text) => {
-                       // If they start typing and had a group selected but change the text, it will rename the selected group.
-                       // If they clear the groupId, it makes a new one. But let's just let it rename.
-                       setSettings({ ...settings, groupName: text });
-                    }}
-                    placeholder="Enter Group Name"
-                    placeholderTextColor={Colors.textMuted}
-                  />
-                  {settings.groupId && (
-                    <TouchableOpacity onPress={() => setSettings({...settings, groupId: undefined, groupName: 'My SK8Lytz'})} style={{ marginTop: 8 }}>
-                       <Text style={{ color: Colors.primary, fontSize: 12 }}>+ Deselect/Create New</Text>
+              <Text style={styles.label}>Assign to Group (Optional)</Text>
+              
+              {groups && groups.filter(g => g.isGroup).length > 0 && (
+                <ScrollView style={{ maxHeight: 120, marginBottom: 12 }} nestedScrollEnabled>
+                  {groups.filter(g => g.isGroup).map(g => (
+                    <TouchableOpacity 
+                      key={g.id}
+                      style={[styles.input, { paddingVertical: 12, marginBottom: 4 }, settings.groupId === g.id && { borderColor: Colors.primary }]}
+                      onPress={() => setSettings({ ...settings, groupId: g.id, groupName: g.name, grouped: true })}
+                    >
+                      <Text style={{ color: settings.groupId === g.id ? Colors.primary : Colors.text }}>{g.name}</Text>
                     </TouchableOpacity>
-                  )}
-                </View>
+                  ))}
+                </ScrollView>
               )}
-              <Text style={[Typography.caption, { marginTop: 6, color: Colors.textMuted }]}>
-                Enabling Paired mode allows you to control both Left and Right skates simultaneously.
+
+              <Text style={styles.label}>{settings.groupId ? 'Rename Selected Group' : 'Or Create New Group...'}</Text>
+              <TextInput 
+                style={styles.input}
+                value={settings.groupName}
+                onChangeText={(text) => setSettings({ ...settings, groupName: text, grouped: true })}
+                placeholder="Enter Group Name"
+                placeholderTextColor={Colors.textMuted}
+              />
+              {settings.groupId && (
+                <TouchableOpacity onPress={() => setSettings({...settings, groupId: undefined, groupName: 'My SK8Lytz', grouped: false})} style={{ marginTop: 8 }}>
+                   <Text style={{ color: Colors.primary, fontSize: 12 }}>+ Deselect/Ungroup Device</Text>
+                </TouchableOpacity>
+              )}
+              <Text style={[Typography.caption, { marginTop: 8, color: Colors.textMuted }]}>
+                Assigning a group implicitly puts the device into "Paired Mode", combining control arrays onto one Dashboard card automatically.
               </Text>
             </View>
+
+            <TouchableOpacity 
+              style={{ backgroundColor: '#111', borderWidth: 1, borderColor: '#00f0ff50', borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginBottom: 16 }}
+              onPress={handleQuery}
+            >
+               <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 12, letterSpacing: 1 }}>↓ LIVE HARDWARE PING (0x10)</Text>
+            </TouchableOpacity>
 
             <View style={styles.row}>
               <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
                 <Text style={styles.label}>LED Points</Text>
                 <TextInput 
                   style={styles.input}
-                  value={settings.points.toString()}
-                  onChangeText={(text) => setSettings({ ...settings, points: parseInt(text) || 0 })}
+                  value={pointsText}
+                  onChangeText={setPointsText}
                   keyboardType="numeric"
+                  placeholder="e.g. 43"
+                  placeholderTextColor="#444"
                 />
               </View>
               <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
                 <Text style={styles.label}>Segments</Text>
                 <TextInput 
                   style={styles.input}
-                  value={settings.segments.toString()}
-                  onChangeText={(text) => setSettings({ ...settings, segments: parseInt(text) || 0 })}
+                  value={segmentsText}
+                  onChangeText={setSegmentsText}
                   keyboardType="numeric"
+                  placeholder="e.g. 1"
+                  placeholderTextColor="#444"
                 />
               </View>
             </View>

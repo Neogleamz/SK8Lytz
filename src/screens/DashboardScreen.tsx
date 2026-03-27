@@ -96,6 +96,10 @@ export default function DashboardScreen() {
                p[deviceId] = { ...p[deviceId], ...newD };
                AsyncStorage.setItem('ng_device_configs', JSON.stringify(p));
             }).catch(()=>{});
+            setDeviceConfigs((prevConfigs: any) => ({
+              ...prevConfigs,
+              [deviceId]: { ...(prevConfigs[deviceId] || {}), ...newD }
+            }));
             return newD;
           }
           return d;
@@ -1128,14 +1132,14 @@ export default function DashboardScreen() {
           initialSettings={{
             name: selectedDeviceForSettings?.name || 'SOULZ',
             type: (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'),
-            points: (selectedDeviceForSettings as any)?.points || (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 43 : 8),
-            segments: (selectedDeviceForSettings as any)?.segments || (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 1 : 2),
-            stripType: (selectedDeviceForSettings as any)?.stripType || 'WS2812B',
-            sorting: (selectedDeviceForSettings as any)?.sorting || 'GRB',
-            grouped: (selectedDeviceForSettings as any)?.grouped || false,
-            groupId: (selectedDeviceForSettings as any)?.groupId,
-            groupName: customGroups.find(g => g.id === (selectedDeviceForSettings as any)?.groupId)?.name || 'My SK8Lytz',
-            firmware: (selectedDeviceForSettings as any)?.firmware || ((selectedDeviceForSettings as any)?.id?.startsWith('sim-') ? 'v2.0.1.DEMO' : 'Unknown')
+            points: deviceConfigs[selectedDeviceForSettings?.id || '']?.points || (selectedDeviceForSettings as any)?.points || (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 43 : 8),
+            segments: deviceConfigs[selectedDeviceForSettings?.id || '']?.segments || (selectedDeviceForSettings as any)?.segments || (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 1 : 2),
+            stripType: deviceConfigs[selectedDeviceForSettings?.id || '']?.stripType || (selectedDeviceForSettings as any)?.stripType || 'WS2812B',
+            sorting: deviceConfigs[selectedDeviceForSettings?.id || '']?.sorting || (selectedDeviceForSettings as any)?.sorting || 'GRB',
+            grouped: !!deviceConfigs[selectedDeviceForSettings?.id || '']?.groupId || (selectedDeviceForSettings as any)?.grouped || false,
+            groupId: deviceConfigs[selectedDeviceForSettings?.id || '']?.groupId || (selectedDeviceForSettings as any)?.groupId,
+            groupName: customGroups.find(g => g.id === (deviceConfigs[selectedDeviceForSettings?.id || '']?.groupId || (selectedDeviceForSettings as any)?.groupId))?.name || 'My SK8Lytz',
+            firmware: deviceConfigs[selectedDeviceForSettings?.id || '']?.firmware || (selectedDeviceForSettings as any)?.firmware || ((selectedDeviceForSettings as any)?.id?.startsWith('sim-') ? 'v2.0.1.DEMO' : 'Unknown')
           }}
           groups={customGroups}
         />
