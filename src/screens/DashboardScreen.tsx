@@ -8,6 +8,7 @@ import useBLE from '../hooks/useBLE';
 import { ZenggeProtocol, ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol';
 
 import Sk8lytzController from '../components/Sk8lytzController';
+import DockedController from '../components/DockedController';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import Sk8LytzProgrammerModal from '../components/Sk8LytzProgrammerModal';
@@ -719,20 +720,39 @@ export default function DashboardScreen() {
 
     return (
       <Animated.View {...edgePanResponder.panHandlers} style={{ flex: 1, backgroundColor: 'transparent' }}>
-          <Sk8lytzController
-            lockedProduct={
-              (displayConnectedDevices[0] as any)?.type || 
-              ((displayConnectedDevices[0] as any)?.points 
-                ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
-                : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
-            }
-            isPaired={isGrouped}
-            points={(displayConnectedDevices[0] as any).points}
-            devices={displayConnectedDevices}
-            onLongPressDevice={openSettings}
-            writeToDevice={writeToDevice}
-            isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
-          />
+          {controlUITheme === 'DOCKED' ? (
+              <DockedController
+                lockedProduct={
+                  (displayConnectedDevices[0] as any)?.type || 
+                  ((displayConnectedDevices[0] as any)?.points 
+                    ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
+                    : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
+                }
+                isPaired={isGrouped}
+                points={(displayConnectedDevices[0] as any).points}
+                devices={displayConnectedDevices}
+                onLongPressDevice={openSettings}
+                writeToDevice={writeToDevice}
+                isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
+                onDisconnect={handleDisconnect}
+              />
+          ) : (
+              <Sk8lytzController
+                lockedProduct={
+                  (displayConnectedDevices[0] as any)?.type || 
+                  ((displayConnectedDevices[0] as any)?.points 
+                    ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
+                    : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
+                }
+                isPaired={isGrouped}
+                points={(displayConnectedDevices[0] as any).points}
+                devices={displayConnectedDevices}
+                onLongPressDevice={openSettings}
+                writeToDevice={writeToDevice}
+                isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
+                onDisconnect={handleDisconnect}
+              />
+          )}
       </Animated.View>
     );
   }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, controlUITheme]);
@@ -830,8 +850,9 @@ export default function DashboardScreen() {
       }}>
         {!isActuallyConnected && (
           <View style={{ position: 'absolute', right: 0, top: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + 20, zIndex: 10, flexDirection: 'row' }}>
-            <TouchableOpacity onPress={toggleControlUITheme} style={{ padding: 10 }}>
-              <MaterialCommunityIcons name={controlUITheme === 'MODERN' ? 'view-dashboard-variant-outline' : 'view-list-outline'} size={22} color={Colors.primary} />
+            <TouchableOpacity onPress={toggleControlUITheme} style={{ padding: 10, flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ color: Colors.primary, marginRight: 6, fontSize: 10, fontWeight: 'bold' }}>{controlUITheme}</Text>
+              <MaterialCommunityIcons name={controlUITheme === 'DOCKED' ? 'dock-bottom' : (controlUITheme === 'MODERN' ? 'view-dashboard-variant-outline' : 'view-list-outline')} size={22} color={Colors.primary} />
             </TouchableOpacity>
             <TouchableOpacity onPress={toggleTheme} style={{ padding: 10 }}>
               <MaterialCommunityIcons name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} size={22} color={Colors.primary} />

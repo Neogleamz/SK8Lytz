@@ -48,7 +48,7 @@ export default function ArcPatternWheel({
   const data = React.useMemo(() => {
     const patternCount = max - min + 1;
     const items = [];
-    for (let r = 0; r < 20; r++) {
+    for (let r = 0; r < 5; r++) {
       for (let v = min; v <= max; v++) {
         items.push({ type: 'item', id: `${r}-${v}`, val: v, rep: r });
       }
@@ -62,12 +62,15 @@ export default function ArcPatternWheel({
     ];
   }, [min, max]);
 
+  const patternCount = max - min + 1;
+  const [initialTargetIdx] = useState((2 * patternCount) + (value - min) + 2);
+
   const scrollToValue = (val: number, animated = true) => {
     if (containerWidth === 0) return;
     const patternCount = max - min + 1;
     
-    // Jump straight to the absolute middle block (Block 10 of 20) on initial load to give thousands of items buffer on both sides.
-    let targetRep = 10; 
+    // Jump straight to the absolute middle block (Block 2 of 5) on initial load to give items buffer on both sides.
+    let targetRep = 2; 
     
     if (curIndexRef.current >= 0) {
         // If we are actively scrolling, we target the exact block repetition the user is currently looking at!
@@ -83,13 +86,11 @@ export default function ArcPatternWheel({
   };
 
   useEffect(() => {
-    if (containerWidth > 0) {
-      const timer = setTimeout(() => {
-        scrollToValue(value, false);
-      }, 100);
-      return () => clearTimeout(timer);
+    if (value !== localVal) {
+      setLocalVal(value);
+      setTimeout(() => scrollToValue(value, true), 50);
     }
-  }, [containerWidth]);
+  }, [value]);
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (containerWidth === 0) return;
@@ -155,8 +156,9 @@ export default function ArcPatternWheel({
           scrollEventThrottle={16}
           onScroll={onScroll}
           onMomentumScrollEnd={onScroll}
-          initialNumToRender={15}
-          maxToRenderPerBatch={20}
+          initialScrollIndex={initialTargetIdx}
+          initialNumToRender={10}
+          maxToRenderPerBatch={15}
           windowSize={5}
           getItemLayout={(_, index) => ({ length: itemWidth, offset: itemWidth * index, index })}
           renderItem={({ item }) => {

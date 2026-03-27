@@ -9,7 +9,7 @@ interface ThemeContextType {
   Colors: ThemePalette;
   isDark: boolean;
   toggleTheme: () => void;
-  controlUITheme: 'CLASSIC' | 'MODERN';
+  controlUITheme: 'CLASSIC' | 'MODERN' | 'DOCKED';
   toggleControlUITheme: () => void;
 }
 
@@ -17,20 +17,20 @@ const ThemeContext = createContext<ThemeContextType>({
   Colors: DarkColors,
   isDark: true,
   toggleTheme: () => {},
-  controlUITheme: 'CLASSIC',
+  controlUITheme: 'DOCKED',
   toggleControlUITheme: () => {},
 });
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isDark, setIsDark] = useState(true);
-  const [controlUITheme, setControlUITheme] = useState<'CLASSIC' | 'MODERN'>('CLASSIC');
+  const [controlUITheme, setControlUITheme] = useState<'CLASSIC' | 'MODERN' | 'DOCKED'>('DOCKED');
 
   useEffect(() => {
     AsyncStorage.getItem(THEME_KEY).then((val) => {
       if (val !== null) setIsDark(val === 'dark');
     });
     AsyncStorage.getItem(CONTROL_THEME_KEY).then((val) => {
-      if (val === 'CLASSIC' || val === 'MODERN') setControlUITheme(val);
+      if (val === 'CLASSIC' || val === 'MODERN' || val === 'DOCKED') setControlUITheme(val);
     });
   }, []);
 
@@ -44,7 +44,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const toggleControlUITheme = useCallback(() => {
     setControlUITheme((prev) => {
-      const next = prev === 'CLASSIC' ? 'MODERN' : 'CLASSIC';
+      const next = prev === 'CLASSIC' ? 'MODERN' : (prev === 'MODERN' ? 'DOCKED' : 'CLASSIC');
       AsyncStorage.setItem(CONTROL_THEME_KEY, next);
       return next;
     });

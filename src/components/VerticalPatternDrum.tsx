@@ -24,6 +24,7 @@ export default function VerticalPatternDrum({
   const flatListRef = useRef<FlatList>(null);
   
   const [localVal, setLocalVal] = useState(value);
+  const [layoutHeight, setLayoutHeight] = useState(200);
   const commitTimeoutRef = useRef<any>(null);
 
   useEffect(() => {
@@ -40,25 +41,25 @@ export default function VerticalPatternDrum({
     }
   };
 
-  const data = React.useMemo(() => {
-    const items = [];
-    for (let r = 0; r < 20; r++) {
+  const padCount = Math.max(1, Math.floor((layoutHeight / ITEM_HEIGHT) / 2));
+
+  // Pure pattern data array. No layout dependencies ensure stable reference hooks.
+  const items = React.useMemo(() => {
+    const arr = [];
+    for (let r = 0; r < 5; r++) {
       for (let v = min; v <= max; v++) {
-        items.push({ type: 'item', id: `${r}-${v}`, val: v, rep: r });
+        arr.push({ type: 'item', id: `${r}-${v}`, val: v, rep: r });
       }
     }
-    return [
-      { type: 'pad', id: 'pad-start-1' },
-      { type: 'pad', id: 'pad-start-2' },
-      ...items,
-      { type: 'pad', id: 'pad-end-1' },
-      { type: 'pad', id: 'pad-end-2' },
-    ];
+    return arr;
   }, [min, max]);
 
+  const patternCount = max - min + 1;
+  // Frame 1 absolute jump vector ensuring Zero layout calculations
+  const [initialTargetIdx] = useState((2 * patternCount) + (value - min));
+
   const scrollToValue = (val: number, animated = true) => {
-    const patternCount = max - min + 1;
-    let targetRep = 10; // Middle rep
+    let targetRep = 2; // Middle of 5 reps
     const targetIdx = (targetRep * patternCount) + (val - min);
     
     flatListRef.current?.scrollToOffset({ 
@@ -68,16 +69,16 @@ export default function VerticalPatternDrum({
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      scrollToValue(value, false);
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []);
+    if (value !== localVal) {
+      setLocalVal(value);
+      setTimeout(() => scrollToValue(value, true), 50);
+    }
+  }, [value]);
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetY = e.nativeEvent.contentOffset.y;
-    const index = Math.round(offsetY / ITEM_HEIGHT);
-    const item = data[index + 2] as any; 
+    const index = Math.max(0, Math.round(offsetY / ITEM_HEIGHT));
+    const item = items[index] as any; 
     
     if (item && item.type === 'item') {
       if (item.val !== localVal) {
@@ -87,30 +88,33 @@ export default function VerticalPatternDrum({
   };
 
   return (
-    <View style={styles.containerWrap}>
-      <View style={styles.container}>
+    <View style={[styles.containerWrap, { flex: 1 }]}>
+      <View style={styles.container} onLayout={(e) => setLayoutHeight(e.nativeEvent.layout.height)}>
         <View style={styles.drumMask}>
              {/* Reticle / Center indicator */}
-             <View style={styles.reticleOverlay} pointerEvents="none">
+             <View style={[styles.reticleOverlay, { top: padCount * ITEM_HEIGHT, marginTop: 0 }]} pointerEvents="none">
                <View style={styles.reticleGlassBox} />
              </View>
    
              <FlatList
                ref={flatListRef}
-               data={data}
+               data={items}
                keyExtractor={(item) => item.id}
                showsVerticalScrollIndicator={false}
                snapToInterval={ITEM_HEIGHT}
                snapToAlignment="start"
                decelerationRate="fast"
-               onScroll={onScroll}
                scrollEventThrottle={16}
-               getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
-               initialNumToRender={15}
-               maxToRenderPerBatch={20}
+               onScroll={onScroll}
+               onMomentumScrollEnd={onScroll}
+               initialScrollIndex={initialTargetIdx}
+               initialNumToRender={10}
+               maxToRenderPerBatch={15}
                windowSize={5}
+               ListHeaderComponent={<View style={{ height: padCount * ITEM_HEIGHT }} />}
+               ListFooterComponent={<View style={{ height: padCount * ITEM_HEIGHT }} />}
+               getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
                renderItem={({ item }) => {
-                 if (item.type === 'pad') return <View style={{ height: ITEM_HEIGHT, width: '100%' }} />;
                  const itemVal = (item as any).val;
                  const isSelected = itemVal === localVal;
                  
@@ -151,17 +155,17 @@ export default function VerticalPatternDrum({
        elevation: 12,
      },
      container: {
-       height: ITEM_HEIGHT * VISIBLE_ITEMS,
-       width: '80%',   // Narrower profile matching the mock-up 7-slot drum
-       alignItems: 'center',
-       justifyContent: 'center',
-       backgroundColor: Colors.isDark ? '#08080C' : Colors.surfaceHighlight,
-       borderRadius: 24,
-       overflow: 'hidden',
-       borderWidth: 1.5,
-       borderColor: 'rgba(0, 212, 255, 0.35)',
-       alignSelf: 'center',
-     },
+      flex: 1,
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: Colors.isDark ? '#08080C' : Colors.surfaceHighlight,
+      borderRadius: 24,
+      overflow: 'hidden',
+      borderWidth: 1.5,
+      borderColor: 'rgba(0, 212, 255, 0.35)',
+      alignSelf: 'center',
+    },
      drumMask: {
        width: '100%',
        height: '100%',
@@ -207,15 +211,16 @@ export default function VerticalPatternDrum({
        textShadowOffset: { width: 0, height: 0 },
      },
      reticleOverlay: {
-       position: 'absolute',
-       top: ITEM_HEIGHT * 3,
-       height: ITEM_HEIGHT,
-       width: '100%',
-       zIndex: 0,
-       justifyContent: 'center',
-       alignItems: 'center',
-       paddingHorizontal: 12,
-     },
+      position: 'absolute',
+      top: '50%',
+      marginTop: -(ITEM_HEIGHT / 2),
+      height: ITEM_HEIGHT,
+      width: '100%',
+      zIndex: 0,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+    },
      reticleGlassBox: {
        width: '100%',
        height: '90%',

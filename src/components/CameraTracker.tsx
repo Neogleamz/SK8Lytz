@@ -162,7 +162,8 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
 
 const styles = StyleSheet.create({
   container: {
-    height: 320,
+    flex: 1,
+    minHeight: 280,
     backgroundColor: '#050505',
     borderRadius: 24,
     marginTop: 8,
@@ -170,7 +171,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.05)',
     overflow: 'hidden',
     alignItems: 'center',
-    paddingTop: 16
+    paddingTop: 16,
+    paddingBottom: 16
   },
   message: {
     color: '#FFF',
@@ -186,7 +188,8 @@ const styles = StyleSheet.create({
   },
   cameraBox: {
     width: '90%',
-    height: 220,
+    flex: 1,
+    marginBottom: 8,
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#000',
