@@ -858,7 +858,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
           </Text>
       </View>
 
-      <View style={styles.controlsContainer}>
+      <ScrollView style={styles.controlsContainer} contentContainerStyle={{ flexGrow: 1, paddingBottom: 150 }} showsVerticalScrollIndicator={false}>
         <View style={[styles.activeModeContainer, { paddingBottom: activeMode === 'PRESETS' ? 0 : 40, flexGrow: 1 }]}>
           {activeMode === 'PRESETS' && (
             <View style={{ flex: 1, paddingHorizontal: Layout.padding, paddingBottom: 8 }}>
@@ -1982,7 +1982,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
           </View>
         </Modal>
 
-      </View>
+      </ScrollView>
     </View>
   );
 }
