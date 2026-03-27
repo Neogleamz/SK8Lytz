@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Platform, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Platform, Modal, TextInput, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Typography, Layout } from '../theme/theme';
 import { Audio } from 'expo-av';
@@ -102,7 +102,10 @@ interface Sk8lytzControllerProps {
   onDisconnect?: () => void;
 }
 
-const CURATED_PRESETS: any[] = [];
+const CURATED_PRESETS: any[] = [
+  { id: 'ours-1', name: 'custom 1', mode: 'MULTI', multiColors: ['#00FFFF', '#FF00FF', '#FFFF00'], multiTransition: 3, multiLength: 16, speed: 85, brightness: 100 },
+  { id: 'ours-2', name: 'custom 2', mode: 'MULTI', multiColors: ['#00FFFF', '#FF00FF', '#FFFF00'], multiTransition: 3, multiLength: 16, speed: 85, brightness: 100 }
+];
 
 export default function DockedController({ lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect }: Sk8lytzControllerProps) {
   const { Colors, isDark } = useTheme();
@@ -145,6 +148,27 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
 
   // Active Sub-Mode for the Consolidated Fixed Tab
   const [fixedSubMode, setFixedSubMode] = useState<'PATTERN' | 'MULTI' | 'CANDLE' | 'RBM' | 'MUSIC' | 'CAMERA'>('PATTERN');
+
+  const candleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (fixedSubMode === 'CANDLE') {
+       let speedVal = 1000;
+       if (candleAmplitude === 1) speedVal = 1200;
+       if (candleAmplitude === 2) speedVal = 400;
+       if (candleAmplitude === 3) speedVal = 100;
+
+       Animated.loop(
+         Animated.sequence([
+           Animated.timing(candleAnim, { toValue: 0.5, duration: speedVal, useNativeDriver: true }),
+           Animated.timing(candleAnim, { toValue: 1, duration: speedVal, useNativeDriver: true })
+         ])
+       ).start();
+    } else {
+       candleAnim.stopAnimation();
+       candleAnim.setValue(1);
+    }
+  }, [fixedSubMode, candleAmplitude]);
 
   // Favorites Array
   const [favorites, setFavorites] = useState<any[]>([]);
@@ -984,50 +1008,43 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                   )}
                   {/* CANDLE EMULATOR TIER */}
                   {fixedSubMode === 'CANDLE' && (
-                  <View style={{ flex: 1, justifyContent: 'center' }}>
-                    
-                    <View style={{ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 4, marginTop: 4, marginBottom: 16 }}>
-                      {[
-                        { label: 'CALM', value: 1 },
-                        { label: 'FLICKERING', value: 2 },
-                        { label: 'TURBULENT', value: 3 }
-                      ].map(speedObj => {
-                        const isActive = Math.round(candleAmplitude) === speedObj.value;
-                        return (
-                          <TouchableOpacity 
-                            key={speedObj.value}
-                            onPress={() => {
-                               setCandleAmplitude(speedObj.value);
-                               setFixedSubMode('CANDLE');
-                               if (writeToDevice) {
-                                  let finalR = parseInt(selectedColor.substring(1, 3), 16) || 255;
-                                  let finalG = parseInt(selectedColor.substring(3, 5), 16) || 255;
-                                  let finalB = parseInt(selectedColor.substring(5, 7), 16) || 255;
-                                  const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
-                                  if (sorting === 'GRB') { const tempR = finalR; finalR = finalG; finalG = tempR; }
-                                  writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, speedObj.value));
-                               }
-                            }}
-                            style={{
-                              flex: 1,
-                              paddingVertical: 12,
-                              borderRadius: 8,
-                              backgroundColor: isActive ? Colors.primary : 'transparent',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            <Text style={{ 
-                              fontSize: 12, 
-                              fontWeight: 'bold', 
-                              color: isActive ? '#000000' : Colors.textMuted 
-                            }}>
-                              {speedObj.label}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
+                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 }}>
+                     <TouchableOpacity 
+                        activeOpacity={1}
+                        onPress={() => {
+                           let nextAmp = candleAmplitude + 1;
+                           if (nextAmp > 3) nextAmp = 1;
+                           setCandleAmplitude(nextAmp);
+                           
+                           if (writeToDevice) {
+                              let finalR = parseInt(selectedColor.substring(1, 3), 16) || 255;
+                              let finalG = parseInt(selectedColor.substring(3, 5), 16) || 255;
+                              let finalB = parseInt(selectedColor.substring(5, 7), 16) || 255;
+                              const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
+                              if (sorting === 'GRB') { const tempR = finalR; finalR = finalG; finalG = tempR; }
+                              writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, nextAmp));
+                           }
+                        }}
+                     >
+                        <Animated.View style={{ 
+                            opacity: candleAnim, 
+                            transform: [{ scale: candleAnim.interpolate({ inputRange: [0.5, 1], outputRange: [0.95, 1.05] }) }],
+                            shadowColor: selectedColor,
+                            shadowOffset: { width: 0, height: 0 },
+                            shadowOpacity: 1,
+                            shadowRadius: candleAmplitude === 3 ? 40 : candleAmplitude === 2 ? 25 : 15,
+                            elevation: 20
+                        }}>
+                           <MaterialCommunityIcons name="candle" size={140} color={selectedColor === '#000000' || selectedColor === '#000' ? '#FFA500' : selectedColor} />
+                        </Animated.View>
+                     </TouchableOpacity>
+                     
+                     <Text style={{ ...Typography.title, color: Colors.primary, marginTop: 40, fontSize: 24, letterSpacing: 4 }}>
+                        {candleAmplitude === 1 ? 'CALM' : candleAmplitude === 2 ? 'FLICKERING' : 'TURBULENT'}
+                     </Text>
+                     <Text style={{ ...Typography.caption, color: Colors.textMuted, marginTop: 12, fontSize: 13 }}>
+                        Tap the candle to change flicker intensity
+                     </Text>
                   </View>
                   )}
 
