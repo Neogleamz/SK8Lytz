@@ -848,14 +848,14 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
       </View>
       
       {/* Current Active Mode Header (Floating beneath Visualizer) */}
-      <View style={{ marginBottom: 0, marginTop: 8 }}>
-        <Text style={[styles.dockActiveText, { marginTop: 0, marginBottom: 0 }]}>
-             {activeMode === 'PRESETS' ? 'Favorites' :
-              (fixedSubMode === 'PATTERN' || fixedSubMode === 'MULTI' || fixedSubMode === 'CANDLE') ? 'Multi-Mode' :
-              fixedSubMode === 'RBM' ? 'Programs' :
-              fixedSubMode === 'MUSIC' ? 'Music Sync' :
-              'Camera'}
-        </Text>
+      <View style={{ marginBottom: 4, marginTop: 4, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={[styles.dockActiveText, { fontSize: 24, marginTop: 0, marginBottom: 0, letterSpacing: 8, textAlign: 'center' }]}>
+               {activeMode === 'PRESETS' ? 'Favorites' :
+                (fixedSubMode === 'PATTERN' || fixedSubMode === 'MULTI' || fixedSubMode === 'CANDLE') ? 'Multi-Mode' :
+                fixedSubMode === 'RBM' ? 'Programs' :
+                fixedSubMode === 'MUSIC' ? 'Music Sync' :
+                'Camera'}
+          </Text>
       </View>
 
       <View style={styles.controlsContainer}>
@@ -1015,7 +1015,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                       onPress={() => setFixedSubMode('MULTI')}
                       style={{ flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: fixedSubMode === 'MULTI' ? Colors.primary : Colors.surfaceHighlight, borderRightWidth: 1, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}
                     >
-                      <Text style={{ color: fixedSubMode === 'MULTI' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Quick Presets</Text>
+                      <Text style={{ color: fixedSubMode === 'MULTI' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Presets & DIY</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                       onPress={() => setFixedSubMode('CANDLE')}
@@ -1074,8 +1074,8 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
 
                   {/* QUICK PRESETS TIER */}
                   {fixedSubMode === 'MULTI' && (
-                  <View style={{ flex: 1, justifyContent: 'space-between', paddingVertical: 4 }}>
-                    <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 'bold' }}>QUICK PRESETS</Text>
+                  <View style={{ paddingVertical: 4 }}>
+                    <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 'bold' }}>PRESETS & DIY</Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                       {quickPresets.map((preset, idx) => (
                         <TouchableOpacity 

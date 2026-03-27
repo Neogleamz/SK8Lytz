@@ -880,3 +880,15 @@ The Sk8Lytz Dashboard actively measures physical Bluetooth Signal Attenuation (R
 - **Unknown / Booting (0 or Null)**: Connecting phase resolving physical connection states.
   - UI Visualization: `Grey` | `wifi-strength-outline`
 
+========================================================================
+             SECTION: NATIVE UI ARCHITECTURE
+========================================================================
+
+## ACTIVE CONTROLLER COMPONENTS
+The application now exclusively relies on `DockedController.tsx` for all unified controller UI overlays, deprecating and permanently removing `ModernController.tsx` to maintain feature parity without conflicting state trees.
+
+## SCANNER MODULE DIMENSIONS
+The `ScannerAnimation.tsx` projection wrapper inside the DOM natively sits at `380px` height constraints, preventing the sweeping MAX_RADIUS = 280 (560px diameter) sonar rings from vertically clipping, significantly enhancing the visual impact of the BLE pairing screen natively.
+
+## FIXED PATTERN TIER LIST
+The physical array list for "Solid Patterns" is locked at 10 native fixed iterations mapping directly to internal protocol handlers. (1: Solid, 2: Single Dot ... 10: Pinch).

@@ -955,7 +955,7 @@ export default function DashboardScreen() {
 
                 <View style={{ paddingHorizontal: Layout.padding }}>
                   {!isTestModeActive ? (
-                  <View style={{ height: 220, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 5, width: '100%' }}>
+                  <View style={{ height: 380, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 5, width: '100%' }}>
                       <ScannerAnimation 
                          deviceCount={allDevices.length} 
                          isScanning={isScanning} 

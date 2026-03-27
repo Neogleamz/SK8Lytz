@@ -455,7 +455,7 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
             );
          })}
       </View>
-      <View style={{ marginTop: 4, alignItems: 'center', zIndex: 10, width: 100 }}>
+      <View style={{ marginTop: 16, alignItems: 'center', zIndex: 10, width: 100 }}>
          <Text 
            style={{ color: isPoweredOn ? (isDark ? 'white' : 'black') : (isDark ? '#888' : '#666'), fontWeight: 'bold', fontSize: 11, textAlign: 'center', opacity: isPoweredOn ? 1.0 : 0.4 }}
            numberOfLines={2}
@@ -583,14 +583,7 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
 
   return (
     <View style={[styles.container, { backgroundColor: isDark ? '#000000' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)' }]}>
-      {statusText && (
-        <View style={{ width: '100%', alignItems: 'center', marginBottom: 6 }}>
-          <Text style={{ color: isDark ? 'white' : 'black', opacity: 0.8, fontSize: 10, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-            {statusText}
-          </Text>
-        </View>
-      )}
-      <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', paddingTop: 24 }}>
          {renderDevices.map((dev, index) => (
            <VisualizerUnit 
              key={dev.id || index.toString()} 
