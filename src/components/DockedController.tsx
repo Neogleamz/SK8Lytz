@@ -847,26 +847,17 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
       </View>
       </View>
       
-      {/* Current Active Mode Header (Floating beneath Visualizer) */}
-      <View style={{ marginBottom: 4, marginTop: 4, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={[styles.dockActiveText, { fontSize: 24, marginTop: 0, marginBottom: 0, letterSpacing: 8, textAlign: 'center' }]}>
-               {activeMode === 'PRESETS' ? 'Favorites' :
-                (fixedSubMode === 'PATTERN' || fixedSubMode === 'MULTI' || fixedSubMode === 'CANDLE') ? 'Multi-Mode' :
-                fixedSubMode === 'RBM' ? 'Programs' :
-                fixedSubMode === 'MUSIC' ? 'Music Sync' :
-                'Camera'}
-          </Text>
-      </View>
+      {/* Removed Active Mode Header to save vertical space */}
 
-      <ScrollView style={styles.controlsContainer} contentContainerStyle={{ flexGrow: 1, paddingBottom: 150 }} showsVerticalScrollIndicator={false}>
-        <View style={[styles.activeModeContainer, { paddingBottom: activeMode === 'PRESETS' ? 0 : 40, flexGrow: 1 }]}>
+      <View style={[styles.controlsContainer, { padding: 4, overflow: 'hidden' }]}>
+        <View style={[styles.activeModeContainer, { flex: 1, justifyContent: 'space-evenly' }]}>
           {activeMode === 'PRESETS' && (
-            <View style={{ flex: 1, paddingHorizontal: Layout.padding, paddingBottom: 8 }}>
+            <View style={{ flex: 1, paddingHorizontal: Layout.padding, justifyContent: 'space-evenly' }}>
               
-              <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 6, fontSize: 16 }]}>YOURS</Text>
+              <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13 }]}>YOURS</Text>
               
-              <View style={[styles.presetContainer, { flex: 1, marginBottom: 12 }]}>
-                 {Array.from({ length: 9 }).map((_, idx) => {
+              <View style={[styles.presetContainer, { flex: 1 }]}>
+                 {Array.from({ length: 4 }).map((_, idx) => {
                     const fav = favorites[idx];
                     if (!fav) return <View key={`empty-yours-${idx}`} style={[styles.presetCard, { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
                     return (
@@ -899,7 +890,9 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                               <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
                            </View>
                         </View>
-                        <MarqueeText style={[styles.presetTitle, { fontSize: 13, flex: 1, textAlignVertical: 'center', textAlign: 'center' }]}>{fav.name}</MarqueeText>
+                        <View style={{ width: '100%', height: 20, justifyContent: 'center', alignItems: 'center' }}>
+                           <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.name}</MarqueeText>
+                        </View>
                         {(() => {
                            if (fav.mode === 'CANDLE' || (fav.mode === 'PATTERN' && fav.patternId === 1) || (fav.mode === 'FIXED' && fav.patternId === 1)) {
                               const c = fav.mode === 'CANDLE' ? fav.color : (fav.fixedFgColor || Colors.primary);
@@ -934,10 +927,10 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                  })}
               </View>
 
-              <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 6, fontSize: 16 }]}>OURS</Text>
+              <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, marginTop: 4 }]}>OURS</Text>
               
               <View style={[styles.presetContainer, { flex: 1 }]}>
-                 {Array.from({ length: 9 }).map((_, idx) => {
+                 {Array.from({ length: 4 }).map((_, idx) => {
                     const fav = CURATED_PRESETS[idx];
                     if (!fav) return <View key={`empty-ours-${idx}`} style={[styles.presetCard, { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
                     return (
@@ -946,7 +939,9 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                         style={[styles.presetCard, { borderColor: Colors.secondary }]}
                         onPress={() => loadFavorite(fav)}
                       >
-                        <MarqueeText style={[styles.presetTitle, { fontSize: 13, marginTop: 2, textAlign: 'center' }]}>{fav.name}</MarqueeText>
+                        <View style={{ width: '100%', height: 20, justifyContent: 'center', alignItems: 'center', marginTop: 2 }}>
+                           <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.name}</MarqueeText>
+                        </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 2, marginBottom: 4, gap: 4, opacity: 0.8 }}>
                            {fav.mode === 'MUSIC' ? (
                               <><MaterialCommunityIcons name="microphone-outline" size={10} color={Colors.secondary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.micSensitivity || fav.speed || 50)}%</Text></>
@@ -994,41 +989,35 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
           )}
 
           {activeMode === 'FIXED' && (
-            <View style={{ marginBottom: 8 }}>
+            <View style={{ flex: 1, marginBottom: 8, justifyContent: 'flex-start' }}>
               
               {/* UNIFIED SOLID & MULTI-COLOR PRESETS & CANDLE & DIY BUILDER */}
-              {(fixedSubMode === 'MULTI' || fixedSubMode === 'PATTERN' || fixedSubMode === 'CANDLE') && (
-                <View style={{ flex: 1, width: '100%', marginBottom: 16 }}>
+              {(fixedSubMode === 'MULTI' || fixedSubMode === 'PATTERN') && (
+                <View style={{ flex: 1, width: '100%', marginBottom: 4 }}>
                   
                   {/* UNIFIED TOGGLE */}
-                  <View style={{ flexDirection: 'row', marginBottom: 16, marginTop: 4 }}>
+                  <View style={{ flexDirection: 'row', marginBottom: 6, marginTop: 2, flexShrink: 0, minHeight: 36 }}>
                     <TouchableOpacity 
                       onPress={() => {
                         setFixedSubMode('PATTERN');
                         if (fixedPatternId === 1) setFixedPatternId(2);
                       }}
-                      style={{ flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: fixedSubMode === 'PATTERN' ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
+                      style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'PATTERN' ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
                     >
                       <Text style={{ color: fixedSubMode === 'PATTERN' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Solid Patterns</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                       onPress={() => setFixedSubMode('MULTI')}
-                      style={{ flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: fixedSubMode === 'MULTI' ? Colors.primary : Colors.surfaceHighlight, borderRightWidth: 1, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}
+                      style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'MULTI' ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
                     >
                       <Text style={{ color: fixedSubMode === 'MULTI' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Presets & DIY</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      onPress={() => setFixedSubMode('CANDLE')}
-                      style={{ flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: fixedSubMode === 'CANDLE' ? Colors.primary : Colors.surfaceHighlight, borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
-                    >
-                      <Text style={{ color: fixedSubMode === 'CANDLE' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Candle</Text>
                     </TouchableOpacity>
                   </View>
 
                   {/* SOLID PATTERNS TIER */}
                   {fixedSubMode === 'PATTERN' && (
-                  <View style={{ flex: 1 }}>
-                    <View style={{ backgroundColor: Colors.isDark ? '#000000' : 'rgba(0,0,0,0.04)', borderRadius: 8, padding: 8, marginBottom: 8, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1, paddingBottom: 6 }}>
+                    <View style={{ flex: 1, backgroundColor: Colors.isDark ? '#000000' : 'rgba(0,0,0,0.04)', borderRadius: 8, padding: 4, flexDirection: 'column', flexWrap: 'wrap', alignContent: 'stretch' }}>
                       {(() => {
                         const fgRgb = (hex: string, alpha: number) => {
                            const h = hex || '#FFFFFF';
@@ -1062,7 +1051,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                                setFixedColorMode('FOREGROUND');
                             }
                           }}
-                          style={{ width: '48%', flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
+                          style={{ flex: 1, minHeight: 35, marginHorizontal: 6, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
                         >
                           <Text style={{ color: Colors.text, flex: 1, fontWeight: 'bold', fontSize: 13 }}>{pattern.label}</Text>
                           <FixedPatternPreviewRow baseDots={pattern.dots} patternId={pattern.id} speed={speed} points={devices?.[0]?.points || points || 16} segments={devices?.[0]?.segments || 1} />
@@ -1074,9 +1063,9 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
 
                   {/* QUICK PRESETS TIER */}
                   {fixedSubMode === 'MULTI' && (
-                  <View style={{ paddingVertical: 4 }}>
-                    <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 'bold' }}>PRESETS & DIY</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  <View style={{ flex: 1, paddingBottom: 6 }}>
+                    <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: 'bold', marginBottom: 4 }}>PRESETS & DIY</Text>
+                    <View style={{ flex: 1, flexDirection: 'column', flexWrap: 'wrap', alignContent: 'stretch', gap: 4 }}>
                       {quickPresets.map((preset, idx) => (
                         <TouchableOpacity 
                           key={idx}
@@ -1096,12 +1085,14 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                              setIsQuickPromptVisible(true);
                           }}
                           style={{
-                              paddingVertical: 6, paddingHorizontal: 10, 
+                              flex: 1, minHeight: 45, justifyContent: 'center', paddingHorizontal: 10,
                               backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', 
                               borderRadius: 8, borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
                           }}
                         >
-                          <MarqueeText style={{ color: Colors.text, fontWeight: 'bold', fontSize: 11, marginBottom: 4, width: 50, textAlign: 'center' }}>{preset.name}</MarqueeText>
+                          <View style={{ width: '100%', height: 20, justifyContent: 'center', alignItems: 'center' }}>
+                            <MarqueeText style={{ color: Colors.text, fontWeight: 'bold', fontSize: 11 }}>{preset.name}</MarqueeText>
+                          </View>
                           <View style={{ flexDirection: 'row', gap: 2, justifyContent: 'center' }}>
                              {preset.colors.slice(0,6).map((c: string, i: number) => (
                                 <View key={i} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c }} />
@@ -1112,8 +1103,8 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                       ))}
                     </View>
 
-                    <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 'bold' }}>DIY ARRAY BUILDER</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+                    <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: 'bold', marginTop: 4 }}>DIY ARRAY BUILDER</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                       {multiColors.map((hex, index) => (
                         <TouchableOpacity key={index} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: hex, borderWidth: 2, borderColor: '#FFF', shadowColor: hex, shadowOpacity: 0.8, shadowRadius: 4 }} onPress={() => {
                           setFixedSubMode('MULTI');
@@ -1189,54 +1180,6 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                     </View>
                   </View>
                   )}
-                  {/* CANDLE EMULATOR TIER */}
-                  {fixedSubMode === 'CANDLE' && (
-                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                     <TouchableOpacity 
-                        activeOpacity={1}
-                        onPress={() => {
-                           let nextAmp = candleAmplitude + 1;
-                           if (nextAmp > 3) nextAmp = 1;
-                           setCandleAmplitude(nextAmp);
-                           
-                           if (writeToDevice) {
-                              let finalR = parseInt(selectedColor.substring(1, 3), 16) || 255;
-                              let finalG = parseInt(selectedColor.substring(3, 5), 16) || 255;
-                              let finalB = parseInt(selectedColor.substring(5, 7), 16) || 255;
-                              const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
-                              if (sorting === 'GRB') { const tempR = finalR; finalR = finalG; finalG = tempR; }
-                              writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, nextAmp));
-                           }
-                        }}
-                     >
-                        <Animated.View style={{ 
-                            opacity: candleAnim.interpolate({ inputRange: [0.2, 1], outputRange: [0.7, 1] }), 
-                            transform: [{ scale: candleAnim.interpolate({ inputRange: [0.2, 1], outputRange: [0.97, 1.03] }) }]
-                        }}>
-                           <AnimatedIcon 
-                              name="candle" 
-                              size={140} 
-                              color={selectedColor === '#000000' || selectedColor === '#000' ? '#FFA500' : selectedColor}
-                              style={{
-                                 textShadowColor: selectedColor === '#000000' || selectedColor === '#000' ? '#FFA500' : selectedColor,
-                                 textShadowOffset: { width: 0, height: 0 },
-                                 textShadowRadius: candleAnim.interpolate({ 
-                                     inputRange: [0.2, 1], 
-                                     outputRange: [
-                                        candleAmplitude === 3 ? 15 : candleAmplitude === 2 ? 8 : 4, 
-                                        candleAmplitude === 3 ? 70 : candleAmplitude === 2 ? 40 : 20
-                                     ] 
-                                 })
-                              }}
-                           />
-                        </Animated.View>
-                     </TouchableOpacity>
-                     
-                     <Text style={{ ...Typography.title, color: Colors.primary, marginTop: 12, fontSize: 24, letterSpacing: 4 }}>
-                        {candleAmplitude === 1 ? 'CALM' : candleAmplitude === 2 ? 'FLICKERING' : 'TURBULENT'}
-                     </Text>
-                  </View>
-                  )}
 
                 </View>
               )}
@@ -1268,7 +1211,30 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
 
               {/* MUSIC SYNC */}
               {fixedSubMode === 'MUSIC' && (
-                <View style={{ flex: 1, width: '100%', paddingVertical: 8 }}>
+                <View style={{ flex: 1, width: '100%', marginBottom: 4 }}>
+                  <View style={{ flexDirection: 'row', marginBottom: 6, marginTop: 2, flexShrink: 0, minHeight: 36 }}>
+                    <TouchableOpacity 
+                      onPress={() => {
+                         setFixedSubMode('MUSIC');
+                         setMusicMatrixStyle(39);
+                         handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 39);
+                      }}
+                      style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: musicMatrixStyle === 39 ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
+                    >
+                      <Text style={{ color: musicMatrixStyle === 39 ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Light Screen</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      onPress={() => {
+                         setFixedSubMode('MUSIC');
+                         setMusicMatrixStyle(38);
+                         handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 38);
+                      }}
+                      style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: musicMatrixStyle === 38 ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
+                    >
+                      <Text style={{ color: musicMatrixStyle === 38 ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Light Bar</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={{ flex: 1, width: '100%', justifyContent: 'space-evenly' }}>
                   <View style={[styles.musicToggleHeader, { justifyContent: 'center' }]}>
                 <View style={[styles.musicModeIndicator, { alignItems: 'center' }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1298,7 +1264,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                 </View>
               </View>
 
-              <View style={styles.musicVisualizerSection}>
+              <View style={[styles.musicVisualizerSection, { flex: 1, justifyContent: 'center' }]}>
                 <SpectrumVisualizer />
               </View>
 
@@ -1322,7 +1288,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                   onPress={() => handleMusicChange()}
                 >
                   <View style={styles.playIconInner}>
-                    <MaterialCommunityIcons name="sync" size={20} color="#FFF" />
+                    <MaterialCommunityIcons name="play" size={24} color="#FFF" />
                   </View>
                 </TouchableOpacity>
 
@@ -1341,30 +1307,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                 </TouchableOpacity>
               </View>
 
-              <View style={{ flexDirection: 'row', marginBottom: 12, marginTop: 12 }}>
-                <TouchableOpacity 
-                  onPress={() => {
-                     setFixedSubMode('MUSIC');
-                     setMusicMatrixStyle(39);
-                     handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 39);
-                  }}
-                  style={{ flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: musicMatrixStyle === 39 ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
-                >
-                  <Text style={{ color: musicMatrixStyle === 39 ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Light Screen</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={() => {
-                     setFixedSubMode('MUSIC');
-                     setMusicMatrixStyle(38);
-                     handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 38);
-                  }}
-                  style={{ flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: musicMatrixStyle === 38 ? Colors.secondary : Colors.surfaceHighlight, borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
-                >
-                  <Text style={{ color: musicMatrixStyle === 38 ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Light Bar</Text>
-                </TouchableOpacity>
-              </View>
-
-
+                </View>
                 </View>
               )}
 
@@ -1597,14 +1540,15 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                         style={[
                           { 
                             backgroundColor: color, 
-                            width: 26, 
-                            height: 26, 
-                            borderRadius: 13,
+                            width: 20, 
+                            height: 20, 
+                            borderRadius: 10,
                             shadowColor: color,
                             shadowOpacity: 1,
-                            shadowRadius: 16,
+                            shadowRadius: 10,
                             shadowOffset: { width: 0, height: 0 },
-                            elevation: 12
+                            elevation: 8,
+                            margin: 2
                           },
                           isActive && { borderWidth: 2, borderColor: '#FFF' }
                         ]} 
@@ -1620,7 +1564,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
 
             {/* Hue Slider */}
             {!(activeMode === 'FIXED' && (fixedSubMode === 'RBM' || fixedSubMode === 'CAMERA')) && (
-              <View style={[styles.controlRow, { marginTop: 0, height: 32 }]}>
+              <View style={[styles.controlRow, { marginTop: 0, height: 32, flexShrink: 0 }]}>
                 <CustomSlider 
                   gradientTrack={true}
                   value={activeMode === 'FIXED' ? (fixedSubMode === 'MUSIC' ? (musicColorFocus === 'PRIMARY' ? musicHue : musicSecondaryHue) : fixedHue) : selectedHue}
@@ -1715,9 +1659,9 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
 
             {/* Brightness Slider - Hidden in PRESETS and CAMERA (Presets have their own Brightness logic mapped inside the component block, while Camera explicitly forces raw camera detection bounds) */}
             {!(activeMode === 'FIXED' && fixedSubMode === 'CAMERA') && (
-            <View style={[styles.controlRow, { marginTop: 8, marginBottom: 4 }]}>
+            <View style={[styles.controlRow, { marginTop: 8, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialCommunityIcons name="white-balance-sunny" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center' }} />
+                <MaterialCommunityIcons name="white-balance-sunny" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
 
                 <CustomSlider 
                   value={brightness}
@@ -1769,18 +1713,15 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                     }
                   }}
                 />
-                <Text style={{ color: Colors.text, marginLeft: 10, width: 45, fontFamily: 'Righteous', fontSize: 15, textAlign: 'right' }}>
-                  {Math.round(brightness)}%
-                </Text>
               </View>
             </View>
             )}
 
             {/* Speed Slider - Hidden in MUSIC, and CAMERA */}
             {!(activeMode === 'FIXED' && (fixedSubMode === 'MUSIC' || fixedSubMode === 'CAMERA')) && (
-              <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4 }]}>
+              <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialCommunityIcons name="engine-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center' }} />
+                  <MaterialCommunityIcons name="engine-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
                   <CustomSlider 
                     value={speed}
                     onValueChange={setSpeed}
@@ -1819,18 +1760,15 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                     maximumValue={100}
                     style={{ flex: 1 }}
                   />
-                  <Text style={{ color: Colors.text, marginLeft: 10, width: 45, fontFamily: 'Righteous', fontSize: 14, textAlign: 'right' }}>
-                    {Math.round(speed)}
-                  </Text>
                 </View>
               </View>
             )}
 
             {/* Sensitivity Slider - Visible ONLY in MUSIC */}
             {(activeMode === 'FIXED' && fixedSubMode === 'MUSIC') && (
-              <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4 }]}>
+              <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialCommunityIcons name="microphone-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center' }} />
+                  <MaterialCommunityIcons name="microphone-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
                   <CustomSlider 
                     value={micSensitivity}
                     onValueChange={setMicSensitivity}
@@ -1841,14 +1779,12 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                     maximumValue={100}
                     style={{ flex: 1 }}
                   />
-                  <Text style={{ color: Colors.text, marginLeft: 10, width: 45, fontFamily: 'Righteous', fontSize: 15, textAlign: 'right' }}>
-                    {Math.round(micSensitivity)}%
-                  </Text>
                 </View>
               </View>
             )}
           </View>
         )}
+      </View>
 
         {/* THE FLOATING DOCK */}
         <View style={{ marginBottom: 4 }}>
@@ -1982,8 +1918,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
           </View>
         </Modal>
 
-      </ScrollView>
-    </View>
+      </View>
   );
 }
 
@@ -2111,8 +2046,8 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     gap: 6
   },
   presetCard: {
-    width: '31%',
-    height: '31%',
+    width: '48%',
+    height: '48%',
     padding: 4,
     backgroundColor: Colors.isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.04)',
     borderRadius: 16,

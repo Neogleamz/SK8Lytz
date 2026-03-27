@@ -73,8 +73,8 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
     const pathSamples: any[] = [];
     let totalLength = 0;
     
-    // SCALE FACTOR
-    const S = 0.55;
+    // SCALE FACTOR (SHRUNK)
+    const S = 0.38;
 
     for (let i = 0; i <= numSamples; i++) {
         let left = 0;
@@ -412,21 +412,21 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
          {isHaloz && (
             <View style={{
                position: 'absolute',
-               width: 77 + 16, 
-               height: 121 + 16, 
-               borderWidth: 10, // Creates a very thin hollow 6mm track
+               width: 50 + 12, 
+               height: 75 + 12, 
+               borderWidth: 8, // Creates a very thin hollow track
                borderColor: 'rgba(255,255,255,0.06)',
-               borderRadius: 24, 
+               borderRadius: 20, 
                alignSelf: 'center',
                top: '50%',
-               marginTop: -(121 + 16) / 2,
+               marginTop: -(75 + 12) / 2,
                left: '50%',
-               marginLeft: -(77 + 16) / 2
+               marginLeft: -(50 + 12) / 2
             }}/>
          )}
 
          {leds.map(led => {
-            const diam = isHaloz ? 16 : 12; // Perfectly smooth continuous tube geometry
+            const diam = isHaloz ? 10 : 8; // Perfectly smooth continuous tube geometry
 
             return (
                <Animated.View key={led.key} style={[
@@ -623,10 +623,10 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   haloBase: {
-    width: 88, height: 132,
+    width: 60, height: 90,
   },
   soulBase: {
-    width: 77, height: 165,
+    width: 55, height: 115,
   },
   ledDot: {
     width: 16,

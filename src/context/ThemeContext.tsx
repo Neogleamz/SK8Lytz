@@ -44,7 +44,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const toggleControlUITheme = useCallback(() => {
     setControlUITheme((prev) => {
-      const next = prev === 'CLASSIC' ? 'MODERN' : (prev === 'MODERN' ? 'DOCKED' : 'CLASSIC');
+      const next = prev === 'CLASSIC' ? 'DOCKED' : 'CLASSIC';
       AsyncStorage.setItem(CONTROL_THEME_KEY, next);
       return next;
     });

@@ -163,7 +163,7 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    minHeight: 280,
+    minHeight: 180,
     backgroundColor: '#050505',
     borderRadius: 24,
     marginTop: 8,
