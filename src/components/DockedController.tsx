@@ -104,10 +104,49 @@ interface Sk8lytzControllerProps {
   onDisconnect?: () => void;
 }
 
-const CURATED_PRESETS: any[] = [
-  { id: 'ours-1', name: 'custom 1', mode: 'MULTI', multiColors: ['#00FFFF', '#FF00FF', '#FFFF00'], multiTransition: 3, multiLength: 16, speed: 85, brightness: 100 },
-  { id: 'ours-2', name: 'custom 2', mode: 'MULTI', multiColors: ['#00FFFF', '#FF00FF', '#FFFF00'], multiTransition: 3, multiLength: 16, speed: 85, brightness: 100 }
-];
+const CURATED_PRESETS: any[] = [];
+
+const MarqueeText = ({ children, style }: any) => {
+  const [textWidth, setTextWidth] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (textWidth > containerWidth && containerWidth > 0) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(1500),
+          Animated.timing(anim, {
+            toValue: -(textWidth - containerWidth + 8),
+            duration: 18 * (textWidth - containerWidth),
+            useNativeDriver: true,
+          }),
+          Animated.delay(1000),
+          Animated.timing(anim, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          })
+        ])
+      ).start();
+    } else {
+      anim.setValue(0);
+      anim.stopAnimation();
+    }
+  }, [textWidth, containerWidth]);
+
+  return (
+    <View style={{ overflow: 'hidden', width: '100%', alignItems: 'center', marginVertical: 2 }} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
+      <Animated.Text
+        numberOfLines={1}
+        onLayout={(e) => setTextWidth(e.nativeEvent.layout.width)}
+        style={[style, { transform: [{ translateX: anim }] }]}
+      >
+        {children}
+      </Animated.Text>
+    </View>
+  );
+};
 
 export default function DockedController({ lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect }: Sk8lytzControllerProps) {
   const { Colors, isDark } = useTheme();
@@ -128,11 +167,26 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
   const [selectedPatternId, setSelectedPatternId] = useState<number>(1);
   const [brightness, setBrightness] = useState<number>(90);
   const [speed, setSpeed] = useState<number>(50);
-  const [micSensitivity, setMicSensitivity] = useState<number>(50);
+  const [micSensitivity, setMicSensitivity] = useState<number>(80);
   const [musicHue, setMusicHue] = useState(180);
   const [recording, setRecording] = useState<any>(null); // Use any for Recording to avoid version-specific type issues
   const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
   const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
+
+  const [quickPresets, setQuickPresets] = useState<any[]>([
+    { name: 'Rainbow', colors: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'], type: 3 },
+    { name: 'America', colors: ['#FF0000', '#FFFFFF', '#0000FF'], type: 3 },
+    { name: 'Cyberpunk', colors: ['#00FFFF', '#FF00FF', '#FFFF00'], type: 3 },
+    { name: 'Forest', colors: ['#00FF00', '#008000', '#228B22', '#32CD32'], type: 1 },
+    { name: 'Sunset', colors: ['#FF0000', '#FF4500', '#FF8C00', '#FFA500'], type: 1 },
+    { name: 'Ice', colors: ['#FFFFFF', '#E0FFFF', '#00FFFF', '#0000FF'], type: 1 },
+    { name: 'Custom 1', colors: ['#000000', '#FFFFFF', '#000000'], type: 3 },
+    { name: 'Custom 2', colors: ['#000000', '#FFFFFF', '#000000'], type: 3 }
+  ]);
+  const [isQuickPromptVisible, setIsQuickPromptVisible] = useState(false);
+  const [quickPromptName, setQuickPromptName] = useState('');
+  const [quickPromptTargetIndex, setQuickPromptTargetIndex] = useState(-1);
+  const [activeQuickPresetIndex, setActiveQuickPresetIndex] = useState<number | null>(null);
 
   // Multi-Color DIY State
   const [multiColors, setMultiColors] = useState<string[]>(['#FF0000', '#00FF00', '#0000FF']);
@@ -193,10 +247,22 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
 
   const [isFavPromptVisible, setIsFavPromptVisible] = useState(false);
   const [favPromptName, setFavPromptName] = useState('');
+  const [favPromptTargetId, setFavPromptTargetId] = useState<string | null>(null);
+  const [activeFavoriteId, setActiveFavoriteId] = useState<string | null>(null);
 
   const handleSaveFavoriteClick = () => {
+     if (activeFavoriteId) {
+        const activeFav = favorites.find(f => f.id === activeFavoriteId);
+        if (activeFav) {
+           setFavPromptTargetId(activeFav.id);
+           setFavPromptName(activeFav.name);
+           setIsFavPromptVisible(true);
+           return;
+        }
+     }
      let defaultName = '';
      try { defaultName = currentStatusText || `${activeMode} Preset`; } catch(e) { defaultName = `${activeMode} Preset`; }
+     setFavPromptTargetId(null);
      setFavPromptName(defaultName);
      setIsFavPromptVisible(true);
   };
@@ -205,8 +271,9 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
      let defaultName = '';
      try { defaultName = currentStatusText || `${activeMode} Preset`; } catch(e) { defaultName = `${activeMode} Preset`; }
      const name = favPromptName.trim() || defaultName;
+
      const newFav = {
-        id: Date.now().toString(),
+        id: favPromptTargetId || Date.now().toString(),
         name,
         mode: activeMode === 'FIXED' ? fixedSubMode : activeMode,
         color: selectedColor,
@@ -215,8 +282,19 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
         brightness,
         fixedColorMode, fixedFgColor, fixedBgColor, fixedHue,
         multiColors, multiTransition, multiLength,
-        candleAmplitude
+        candleAmplitude,
+        musicPrimaryColor, musicSecondaryColor, micSensitivity, micSource, musicMatrixStyle
      };
+
+     if (favPromptTargetId) {
+        const newFavorites = favorites.map(f => f.id === favPromptTargetId ? newFav : f);
+        setFavorites(newFavorites);
+        AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
+        setIsFavPromptVisible(false);
+        setFavPromptTargetId(null);
+        return;
+     }
+
      const newFavorites = [...favorites, newFav];
      setFavorites(newFavorites);
      AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
@@ -230,6 +308,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
   };
 
   const loadFavorite = (fav: any) => {
+     setActiveFavoriteId(fav.id);
      setActiveMode('FIXED');
        
      // Handle Legacy vs New Mode Signatures
@@ -599,6 +678,15 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
             AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(defaultFavorites));
         }
     });
+
+    AsyncStorage.getItem('@Sk8lytz_QuickPresets').then((saved) => {
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (parsed && parsed.length > 0) setQuickPresets(parsed);
+            } catch(e) {}
+        }
+    });
   }, []);
 
   React.useEffect(() => {
@@ -739,7 +827,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
         <ProductVisualizer 
           product={activeProduct} 
           color={visualizerColor} 
-          mode={activeMode === 'FIXED' ? (fixedSubMode === 'MULTI' ? 'MULTICOLOR' : (fixedSubMode === 'CANDLE' ? 'CANDLE' : (fixedSubMode === 'PATTERN' ? 'RBM' : (fixedSubMode === 'MUSIC' ? 'MUSIC' : (fixedSubMode === 'CAMERA' ? 'CAMERA' : 'FIXED'))))) : activeMode} 
+          mode={activeMode === 'PRESETS' ? 'MULTICOLOR' : activeMode === 'FIXED' ? (fixedSubMode === 'MULTI' ? 'MULTICOLOR' : (fixedSubMode === 'CANDLE' ? 'CANDLE' : (fixedSubMode === 'PATTERN' ? 'RBM' : (fixedSubMode === 'MUSIC' ? 'MUSIC' : (fixedSubMode === 'CAMERA' ? 'CAMERA' : 'FIXED'))))) : activeMode} 
           patternId={activeMode === 'FIXED' && fixedSubMode === 'MUSIC' ? musicPatternId : (activeMode === 'FIXED' && fixedSubMode === 'PATTERN' ? fixedPatternId : selectedPatternId)} 
           isPaired={isPaired}
           points={points}
@@ -753,8 +841,8 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
           statusText={currentStatusText}
           audioMagnitude={audioMagnitude}
           rawHexPayload={lastSentPayload}
-          multiColors={multiColors}
-          multiTransition={multiTransition}
+          multiColors={activeMode === 'PRESETS' ? ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'] : multiColors}
+          multiTransition={activeMode === 'PRESETS' ? 3 : multiTransition}
         />
       </View>
       </View>
@@ -763,22 +851,15 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
       <View style={{ marginBottom: 0, marginTop: 8 }}>
         <Text style={[styles.dockActiveText, { marginTop: 0, marginBottom: 0 }]}>
              {activeMode === 'PRESETS' ? 'Favorites' :
-              fixedSubMode === 'PATTERN' ? 'Solid' :
-              fixedSubMode === 'MULTI' ? 'Multi-Color' :
+              (fixedSubMode === 'PATTERN' || fixedSubMode === 'MULTI' || fixedSubMode === 'CANDLE') ? 'Multi-Mode' :
               fixedSubMode === 'RBM' ? 'Programs' :
               fixedSubMode === 'MUSIC' ? 'Music Sync' :
-              fixedSubMode === 'CANDLE' ? 'Candle' :
               'Camera'}
         </Text>
       </View>
 
       <View style={styles.controlsContainer}>
-        <ScrollView 
-          style={styles.activeModeContainer} 
-          scrollEnabled={!(activeMode === 'PRESETS' || (activeMode === 'FIXED' && (fixedSubMode === 'RBM' || fixedSubMode === 'MUSIC' || fixedSubMode === 'PATTERN' || fixedSubMode === 'CAMERA' || fixedSubMode === 'CANDLE')))}
-          contentContainerStyle={{ paddingBottom: (activeMode === 'PRESETS' || (activeMode === 'FIXED' && (fixedSubMode === 'RBM' || fixedSubMode === 'MUSIC' || fixedSubMode === 'PATTERN' || fixedSubMode === 'CAMERA' || fixedSubMode === 'CANDLE'))) ? 0 : 40, flexGrow: 1 }} 
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={[styles.activeModeContainer, { paddingBottom: activeMode === 'PRESETS' ? 0 : 40, flexGrow: 1 }]}>
           {activeMode === 'PRESETS' && (
             <View style={{ flex: 1, paddingHorizontal: Layout.padding, paddingBottom: 8 }}>
               
@@ -795,19 +876,59 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                         onPress={() => loadFavorite(fav)}
                       >
                         <TouchableOpacity 
-                           style={{ position: 'absolute', right: 8, top: 8, zIndex: 10 }} 
-                           onPress={() => deleteFavorite(fav.id)}
+                           style={{ position: 'absolute', right: 4, top: 4, zIndex: 10, padding: 4 }} 
+                           onPress={() => {
+                              setFavPromptTargetId(fav.id);
+                              setFavPromptName(fav.name);
+                              setIsFavPromptVisible(true);
+                           }}
                         >
-                           <MaterialCommunityIcons name="trash-can-outline" size={16} color={Colors.textMuted} />
+                           <MaterialCommunityIcons name="pencil-outline" size={12} color={Colors.textMuted} />
                         </TouchableOpacity>
-                        <MaterialCommunityIcons 
-                           name={fav.mode === 'MULTI' ? 'palette' : fav.mode === 'RBM' ? 'animation-play' : fav.mode === 'MUSIC' ? 'music' : fav.mode === 'CANDLE' ? 'candle' : 'shape-square-plus'} 
-                           size={26} 
-                           color={Colors.primary} 
-                           style={{ marginBottom: 4 }} 
-                        />
-                        <Text style={styles.presetTitle} numberOfLines={1}>{fav.name}</Text>
-                        <Text style={styles.presetDesc}>{fav.speed}%</Text>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%', marginTop: 2, marginBottom: 2, gap: 10, opacity: 0.8, paddingHorizontal: 16 }}>
+                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                              {fav.mode === 'MUSIC' ? (
+                                 <><MaterialCommunityIcons name="microphone-outline" size={9} color={Colors.primary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.micSensitivity || fav.speed || 50)}%</Text></>
+                              ) : (
+                                 <><MaterialCommunityIcons name="speedometer" size={9} color={Colors.primary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.speed || 50)}%</Text></>
+                              )}
+                           </View>
+                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                              <MaterialCommunityIcons name="brightness-6" size={9} color={Colors.primary} />
+                              <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
+                           </View>
+                        </View>
+                        <MarqueeText style={[styles.presetTitle, { fontSize: 13, flex: 1, textAlignVertical: 'center', textAlign: 'center' }]}>{fav.name}</MarqueeText>
+                        {(() => {
+                           if (fav.mode === 'CANDLE' || (fav.mode === 'PATTERN' && fav.patternId === 1) || (fav.mode === 'FIXED' && fav.patternId === 1)) {
+                              const c = fav.mode === 'CANDLE' ? fav.color : (fav.fixedFgColor || Colors.primary);
+                              return <View style={{ width: '60%', height: 6, borderRadius: 3, backgroundColor: c, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }} />;
+                           } else if (fav.mode === 'MUSIC') {
+                              return (
+                                 <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
+                                    <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
+                                    <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
+                                 </View>
+                              );
+                           } else if (fav.mode === 'PATTERN' || fav.mode === 'FIXED') {
+                              return (
+                                 <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
+                                    <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
+                                    <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
+                                 </View>
+                              );
+                           } else if (fav.mode === 'MULTI') {
+                              const colors = fav.multiColors || ['#FFFFFF'];
+                              return (
+                                 <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
+                                    {colors.map((c: string, i: number) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}
+                                 </View>
+                              );
+                           } else {
+                              return <MaterialCommunityIcons name={fav.mode === 'RBM' ? 'animation-play' : 'shape-square-plus'} size={14} color={Colors.primary} style={{ marginTop: 4, marginBottom: 2 }} />;
+                           }
+                        })()}
                       </TouchableOpacity>
                     );
                  })}
@@ -825,14 +946,46 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                         style={[styles.presetCard, { borderColor: Colors.secondary }]}
                         onPress={() => loadFavorite(fav)}
                       >
-                        <MaterialCommunityIcons 
-                           name={fav.mode === 'MULTI' ? 'palette' : fav.mode === 'RBM' ? 'animation-play' : fav.mode === 'MUSIC' ? 'music' : fav.mode === 'CANDLE' ? 'candle' : 'shape-square-plus'} 
-                           size={26} 
-                           color={Colors.secondary} 
-                           style={{ marginBottom: 4 }} 
-                        />
-                        <Text style={styles.presetTitle} numberOfLines={1}>{fav.name}</Text>
-                        <Text style={styles.presetDesc}>Curated</Text>
+                        <MarqueeText style={[styles.presetTitle, { fontSize: 13, marginTop: 2, textAlign: 'center' }]}>{fav.name}</MarqueeText>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 2, marginBottom: 4, gap: 4, opacity: 0.8 }}>
+                           {fav.mode === 'MUSIC' ? (
+                              <><MaterialCommunityIcons name="microphone-outline" size={10} color={Colors.secondary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.micSensitivity || fav.speed || 50)}%</Text></>
+                           ) : (
+                              <><MaterialCommunityIcons name="speedometer" size={10} color={Colors.secondary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.speed || 50)}%</Text></>
+                           )}
+                           <Text style={{ fontSize: 9, color: Colors.textMuted }}> | </Text>
+                           <MaterialCommunityIcons name="brightness-6" size={10} color={Colors.secondary} />
+                           <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
+                        </View>
+                        {(() => {
+                           if (fav.mode === 'CANDLE' || (fav.mode === 'PATTERN' && fav.patternId === 1) || (fav.mode === 'FIXED' && fav.patternId === 1)) {
+                              const c = fav.mode === 'CANDLE' ? fav.color : (fav.fixedFgColor || Colors.primary);
+                              return <View style={{ width: '60%', height: 6, borderRadius: 3, backgroundColor: c, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }} />;
+                           } else if (fav.mode === 'MUSIC') {
+                              return (
+                                 <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
+                                    <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
+                                    <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
+                                 </View>
+                              );
+                           } else if (fav.mode === 'PATTERN' || fav.mode === 'FIXED') {
+                              return (
+                                 <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
+                                    <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
+                                    <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
+                                 </View>
+                              );
+                           } else if (fav.mode === 'MULTI') {
+                              const colors = fav.multiColors || ['#FFFFFF'];
+                              return (
+                                 <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
+                                    {colors.map((c: string, i: number) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}
+                                 </View>
+                              );
+                           } else {
+                              return <MaterialCommunityIcons name={fav.mode === 'RBM' ? 'animation-play' : 'shape-square-plus'} size={14} color={Colors.secondary} style={{ marginTop: 4, marginBottom: 2 }} />;
+                           }
+                        })()}
                       </TouchableOpacity>
                     );
                  })}
@@ -875,7 +1028,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                   {/* SOLID PATTERNS TIER */}
                   {fixedSubMode === 'PATTERN' && (
                   <View style={{ flex: 1 }}>
-                    <View style={{ backgroundColor: '#000000', borderRadius: 8, padding: 8, marginBottom: 8, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                    <View style={{ backgroundColor: Colors.isDark ? '#000000' : 'rgba(0,0,0,0.04)', borderRadius: 8, padding: 8, marginBottom: 8, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
                       {(() => {
                         const fgRgb = (hex: string, alpha: number) => {
                            const h = hex || '#FFFFFF';
@@ -909,9 +1062,9 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                                setFixedColorMode('FOREGROUND');
                             }
                           }}
-                          style={{ width: '48%', flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}
+                          style={{ width: '48%', flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
                         >
-                          <Text style={{ color: '#FFF', flex: 1, fontWeight: 'bold', fontSize: 13 }}>{pattern.label}</Text>
+                          <Text style={{ color: Colors.text, flex: 1, fontWeight: 'bold', fontSize: 13 }}>{pattern.label}</Text>
                           <FixedPatternPreviewRow baseDots={pattern.dots} patternId={pattern.id} speed={speed} points={devices?.[0]?.points || points || 16} segments={devices?.[0]?.segments || 1} />
                         </TouchableOpacity>
                       ))}
@@ -921,20 +1074,14 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
 
                   {/* QUICK PRESETS TIER */}
                   {fixedSubMode === 'MULTI' && (
-                  <View>
-                    <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 8, fontWeight: 'bold' }}>QUICK PRESETS</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-                      {[
-                        { name: 'Rainbow', colors: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'], type: 3 },
-                        { name: 'America', colors: ['#FF0000', '#FFFFFF', '#0000FF'], type: 3 },
-                        { name: 'Cyberpunk', colors: ['#00FFFF', '#FF00FF', '#FFFF00'], type: 3 },
-                        { name: 'Forest', colors: ['#00FF00', '#008000', '#228B22', '#32CD32'], type: 1 },
-                        { name: 'Sunset', colors: ['#FF0000', '#FF4500', '#FF8C00', '#FFA500'], type: 1 },
-                        { name: 'Ice', colors: ['#FFFFFF', '#E0FFFF', '#00FFFF', '#0000FF'], type: 1 }
-                      ].map((preset, idx) => (
+                  <View style={{ flex: 1, justifyContent: 'space-between', paddingVertical: 4 }}>
+                    <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 'bold' }}>QUICK PRESETS</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                      {quickPresets.map((preset, idx) => (
                         <TouchableOpacity 
                           key={idx}
                           onPress={() => {
+                              setActiveQuickPresetIndex(idx);
                               setFixedSubMode('MULTI');
                               setMultiColors(preset.colors);
                               setMultiTransition(preset.type);
@@ -943,26 +1090,32 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                                   writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, preset.type, speed));
                               }
                           }}
+                          onLongPress={() => {
+                             setQuickPromptTargetIndex(idx);
+                             setQuickPromptName(preset.name);
+                             setIsQuickPromptVisible(true);
+                          }}
                           style={{
-                              paddingVertical: 10, paddingHorizontal: 16, 
-                              backgroundColor: 'rgba(255,255,255,0.05)', 
-                              borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
+                              paddingVertical: 6, paddingHorizontal: 10, 
+                              backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', 
+                              borderRadius: 8, borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
                           }}
                         >
-                          <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13, marginBottom: 6 }}>{preset.name}</Text>
-                          <View style={{ flexDirection: 'row', gap: 4 }}>
-                             {preset.colors.map((c, i) => (
-                                <View key={i} style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: c }} />
+                          <MarqueeText style={{ color: Colors.text, fontWeight: 'bold', fontSize: 11, marginBottom: 4, width: 50, textAlign: 'center' }}>{preset.name}</MarqueeText>
+                          <View style={{ flexDirection: 'row', gap: 2, justifyContent: 'center' }}>
+                             {preset.colors.slice(0,6).map((c: string, i: number) => (
+                                <View key={i} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c }} />
                              ))}
+                             {preset.colors.length > 6 && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#888' }} />}
                           </View>
                         </TouchableOpacity>
                       ))}
                     </View>
 
-                    <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 8, fontWeight: 'bold' }}>DIY ARRAY BUILDER</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: 16 }}>
+                    <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 'bold' }}>DIY ARRAY BUILDER</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
                       {multiColors.map((hex, index) => (
-                        <TouchableOpacity key={index} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: hex, borderWidth: 2, borderColor: '#FFF', shadowColor: hex, shadowOpacity: 0.8, shadowRadius: 4 }} onPress={() => {
+                        <TouchableOpacity key={index} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: hex, borderWidth: 2, borderColor: '#FFF', shadowColor: hex, shadowOpacity: 0.8, shadowRadius: 4 }} onPress={() => {
                           setFixedSubMode('MULTI');
                           const newArr = [...multiColors];
                           newArr[index] = selectedColor;
@@ -972,18 +1125,18 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                         }} />
                       ))}
                       {multiColors.length < 16 && (
-                        <TouchableOpacity style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: '#FFF', justifyContent: 'center', alignItems: 'center' }} onPress={() => {
+                        <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderWidth: 1, borderColor: Colors.isDark ? '#FFF' : Colors.text, justifyContent: 'center', alignItems: 'center' }} onPress={() => {
                            setFixedSubMode('MULTI');
                            const newArr = [...multiColors, selectedColor];
                            setMultiColors(newArr);
                            const rgbColors = generateSortedColors(newArr);
                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
                         }}>
-                          <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold' }}>+</Text>
+                          <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold' }}>+</Text>
                         </TouchableOpacity>
                       )}
                       {multiColors.length > 1 && (
-                        <TouchableOpacity style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,0,0,0.3)', borderWidth: 1, borderColor: '#FFF', justifyContent: 'center', alignItems: 'center' }} onPress={() => {
+                        <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,0,0,0.3)', borderWidth: 1, borderColor: Colors.isDark ? '#FFF' : Colors.text, justifyContent: 'center', alignItems: 'center' }} onPress={() => {
                            setFixedSubMode('MULTI');
                            const newArr = [...multiColors];
                            newArr.pop();
@@ -991,13 +1144,25 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                            const rgbColors = generateSortedColors(newArr);
                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
                         }}>
-                          <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold', lineHeight: 26 }}>-</Text>
+                          <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold', lineHeight: 22 }}>-</Text>
                         </TouchableOpacity>
                       )}
+                      <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.primary, borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)', justifyContent: 'center', alignItems: 'center', marginLeft: 'auto' }} onPress={() => {
+                          if (activeQuickPresetIndex !== null && quickPresets[activeQuickPresetIndex]) {
+                              setQuickPromptTargetIndex(activeQuickPresetIndex);
+                              setQuickPromptName(quickPresets[activeQuickPresetIndex].name);
+                          } else {
+                              setQuickPromptTargetIndex(-1);
+                              setQuickPromptName('Custom Preset');
+                          }
+                          setIsQuickPromptVisible(true);
+                      }}>
+                        <MaterialCommunityIcons name="content-save" size={16} color="#000" />
+                      </TouchableOpacity>
                     </View>
 
-                    <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 8, fontWeight: 'bold' }}>TRANSITION TYPE</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 20 }}>
+                    <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 'bold' }}>TRANSITION TYPE</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 }}>
                       {[
                         { label: 'Static', val: 0 },
                         { label: 'Gradual', val: 1 },
@@ -1013,12 +1178,12 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                              if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, mode.val, speed));
                           }} 
                           style={{ 
-                            paddingHorizontal: 16, paddingVertical: 10, 
-                            backgroundColor: multiTransition === mode.val ? Colors.primary : 'rgba(255,255,255,0.05)', 
-                            borderRadius: 8, marginRight: 8, marginBottom: 8 
+                            paddingHorizontal: 12, paddingVertical: 6, 
+                            backgroundColor: multiTransition === mode.val ? Colors.primary : (Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'), 
+                            borderRadius: 8, marginRight: 6, marginBottom: 6 
                           }}
                         >
-                          <Text style={{ color: multiTransition === mode.val ? '#000' : '#FFF', fontWeight: 'bold', fontSize: 12 }}>{mode.label}</Text>
+                          <Text style={{ color: multiTransition === mode.val ? '#000' : Colors.text, fontWeight: 'bold', fontSize: 11 }}>{mode.label}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -1067,11 +1232,8 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                         </Animated.View>
                      </TouchableOpacity>
                      
-                     <Text style={{ ...Typography.title, color: Colors.primary, marginTop: 40, fontSize: 24, letterSpacing: 4 }}>
+                     <Text style={{ ...Typography.title, color: Colors.primary, marginTop: 12, fontSize: 24, letterSpacing: 4 }}>
                         {candleAmplitude === 1 ? 'CALM' : candleAmplitude === 2 ? 'FLICKERING' : 'TURBULENT'}
-                     </Text>
-                     <Text style={{ ...Typography.caption, color: Colors.textMuted, marginTop: 12, fontSize: 13 }}>
-                        Tap the candle to change flicker intensity
                      </Text>
                   </View>
                   )}
@@ -1080,7 +1242,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
               )}
               {/* PROGRAMS */}
               {fixedSubMode === 'RBM' && (
-                <View style={{ flex: 1, width: '100%', paddingVertical: 8, minHeight: 350 }}>
+                <View style={{ width: '100%', paddingVertical: 8, height: 350 }}>
                   <VerticalPatternDrum 
                     value={selectedPatternId}
                     onValueChange={(pid) => {
@@ -1261,7 +1423,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
               </TouchableOpacity>
             </View>
           )}
-        </ScrollView>
+        </View>
 
 
 
@@ -1386,7 +1548,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                             if (fixedSubMode === 'CANDLE') {
                                setSelectedColor(color);
                                if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
-                               if (parentWriteToDevice) {
+                               if (writeToDevice) {
                                    const rawR = parseInt(color.substring(1, 3), 16) || 255;
                                    const rawG = parseInt(color.substring(3, 5), 16) || 255;
                                    const rawB = parseInt(color.substring(5, 7), 16) || 255;
@@ -1685,8 +1847,6 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                 </View>
               </View>
             )}
-
-
           </View>
         )}
 
@@ -1712,7 +1872,11 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                          setActiveMode('PRESETS'); 
                      } else {
                         setActiveMode('FIXED');
-                        setFixedSubMode(dockItem.id as any);
+                        if (dockItem.id === 'MULTI') {
+                           setFixedSubMode('PATTERN');
+                        } else {
+                           setFixedSubMode(dockItem.id as any);
+                        }
                      }
                   }}
                   style={[styles.dockIconCont, isActive && styles.dockIconActive]}
@@ -1727,12 +1891,70 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
             })}
           </View>
         </View>
+        {/* Quick Preset Prompt Modal */}
+        <Modal visible={isQuickPromptVisible} transparent animationType="fade">
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <View style={{ backgroundColor: Colors.surface, padding: 24, borderRadius: 20, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>
+                 {quickPromptTargetIndex === -1 ? 'Save Quick Preset' : 'Edit Quick Preset'}
+              </Text>
+              <Text style={{ color: Colors.textMuted, fontSize: 14, marginBottom: 20, textAlign: 'center' }}>
+                 {quickPromptTargetIndex === -1 ? 'Name your new preset to store it in the Quick bar.' : 'Rename your preset or delete it from the bar.'}
+              </Text>
+              <TextInput
+                style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: 12, borderRadius: 8, fontSize: 16, marginBottom: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
+                placeholder="Preset Name..."
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                value={quickPromptName}
+                onChangeText={setQuickPromptName}
+                autoFocus
+              />
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                {quickPromptTargetIndex !== -1 && (
+                   <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={() => {
+                       const newArr = [...quickPresets];
+                       newArr.splice(quickPromptTargetIndex, 1);
+                       setQuickPresets(newArr);
+                       AsyncStorage.setItem('@Sk8lytz_QuickPresets', JSON.stringify(newArr));
+                       setIsQuickPromptVisible(false);
+                   }}>
+                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Delete</Text>
+                   </TouchableOpacity>
+                )}
+                {quickPromptTargetIndex === -1 && (
+                   <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => setIsQuickPromptVisible(false)}>
+                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
+                   </TouchableOpacity>
+                )}
+                <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary }} onPress={() => {
+                    const newArr = [...quickPresets];
+                    const safeName = quickPromptName.trim() || 'Preset';
+                    if (quickPromptTargetIndex === -1) {
+                        newArr.push({ name: safeName, colors: multiColors, type: multiTransition });
+                    } else {
+                        newArr[quickPromptTargetIndex].name = safeName;
+                    }
+                    setQuickPresets(newArr);
+                    AsyncStorage.setItem('@Sk8lytz_QuickPresets', JSON.stringify(newArr));
+                    setIsQuickPromptVisible(false);
+                }}>
+                  <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
         {/* Favorite Prompt Modal */}
         <Modal visible={isFavPromptVisible} transparent animationType="fade">
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
             <View style={{ backgroundColor: Colors.surface, padding: 24, borderRadius: 20, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>Save Favorite</Text>
-              <Text style={{ color: Colors.textMuted, fontSize: 14, marginBottom: 20, textAlign: 'center' }}>Name your preset. Leave blank to use the default name.</Text>
+              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>
+                 {favPromptTargetId ? 'Edit Favorite' : 'Save Favorite'}
+              </Text>
+              <Text style={{ color: Colors.textMuted, fontSize: 14, marginBottom: 20, textAlign: 'center' }}>
+                 {favPromptTargetId ? 'Rename your preset or delete it.' : 'Name your preset. Leave blank to use the default name.'}
+              </Text>
               <TextInput
                 style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: 12, borderRadius: 8, fontSize: 16, marginBottom: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
                 placeholder="Custom Preset Name..."
@@ -1742,9 +1964,16 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                 autoFocus
               />
               <View style={{ flexDirection: 'row', gap: 12 }}>
-                <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => setIsFavPromptVisible(false)}>
-                  <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
-                </TouchableOpacity>
+                {favPromptTargetId && (
+                   <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={() => { deleteFavorite(favPromptTargetId); setIsFavPromptVisible(false); setFavPromptTargetId(null); }}>
+                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Delete</Text>
+                   </TouchableOpacity>
+                )}
+                {(!favPromptTargetId) && (
+                   <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => setIsFavPromptVisible(false)}>
+                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
+                   </TouchableOpacity>
+                )}
                 <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary }} onPress={handleConfirmSaveFavorite}>
                   <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>Save</Text>
                 </TouchableOpacity>
@@ -1875,15 +2104,25 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     transform: [{ scale: 1.1 }]
   },
   presetContainer: {
-    marginTop: 16,
-    gap: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignContent: 'flex-start',
+    gap: 6
   },
   presetCard: {
-    padding: 16,
-    backgroundColor: Colors.surfaceHighlight,
-    borderRadius: Layout.borderRadius,
-    borderWidth: 1,
-    borderLeftWidth: 6,
+    width: '31%',
+    height: '31%',
+    padding: 4,
+    backgroundColor: Colors.isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.04)',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
   },
   presetTitle: {
     ...Typography.body,
@@ -2010,18 +2249,18 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     width: 90,
   },
   micBtnActive: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
   },
   micIconCircle: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
   },
   micIconText: {
     fontSize: 24,
@@ -2101,9 +2340,9 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(8, 10, 16, 0.98)',
+    backgroundColor: Colors.isDark ? 'rgba(8, 10, 16, 0.98)' : 'rgba(255, 255, 255, 0.98)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 255, 0.35)',
+    borderColor: Colors.isDark ? 'rgba(0, 240, 255, 0.35)' : 'rgba(0, 200, 255, 0.4)',
     borderRadius: 30,
     paddingVertical: 10,
     paddingHorizontal: 20,
@@ -2120,11 +2359,11 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.05)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
   },
   dockIconActive: {
     backgroundColor: Colors.primary,

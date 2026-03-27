@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import { View, StyleSheet, Animated, Text, TouchableOpacity } from 'react-native';
 import { getArchetypeFromId } from '../utils/RbmDictionary';
 import { MusicDictionary } from '../utils/MusicDictionary';
+import { useTheme } from '../context/ThemeContext';
 
 interface DeviceConfig {
   id?: string;
@@ -56,6 +57,7 @@ function HSLToHex(h: number, s: number, l: number) {
 }
 
 const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload, simMode }: any) => {
+  const { isDark } = useTheme();
   const product = String(device.type || fallbackProduct);
   const isHaloz = !product.toLowerCase().includes('soul');
 
@@ -243,20 +245,26 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
                  const target = (mirroredFract - 0.2) / 0.6;
                  const t1 = (1 + target) / 2;
                  const t2 = (1 - target) / 2;
-                 const inputs = [0, Math.max(0, t2-0.08), t2, Math.min(1, t2+0.08), Math.max(0, t1-0.08), t1, Math.min(1, t1+0.08), 1].sort((a,b) => a-b);
-                 // Deduplicate sorted inputs for interpolation
-                 const uniqueInputs = Array.from(new Set(inputs));
+                 const rawInputs = [0, Math.max(0, t2-0.08), t2, Math.min(1, t2+0.08), Math.max(0, t1-0.08), t1, Math.min(1, t1+0.08), 1].sort((a,b) => a-b);
+                 
+                 // React Native strictly enforces perfectly monotonically increasing bounds
+                 const safeInputs = [rawInputs[0]];
+                 for (let k = 1; k < rawInputs.length; k++) {
+                     if (rawInputs[k] > safeInputs[safeInputs.length - 1] + 0.001) {
+                         safeInputs.push(rawInputs[k]);
+                     }
+                 }
                  
                  dotOpacity = animValue.interpolate({
-                   inputRange: uniqueInputs,
-                   outputRange: uniqueInputs.map(v => 
-                      (Math.abs(v-t2) < 0.001 || Math.abs(v-t1) < 0.001) ? 1.0 : 0.1
+                   inputRange: safeInputs,
+                   outputRange: safeInputs.map(v => 
+                      (Math.abs(v-t2) < 0.005 || Math.abs(v-t1) < 0.005) ? 1.0 : 0.1
                    )
                  });
                  dotColor = animValue.interpolate({
-                   inputRange: uniqueInputs,
-                   outputRange: uniqueInputs.map(v => 
-                      (Math.abs(v-t2) < 0.001 || Math.abs(v-t1) < 0.001) ? '#FFFF00' : '#111111'
+                   inputRange: safeInputs,
+                   outputRange: safeInputs.map(v => 
+                      (Math.abs(v-t2) < 0.005 || Math.abs(v-t1) < 0.005) ? '#FFFF00' : '#111111'
                    )
                  });
                }
@@ -449,7 +457,7 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
       </View>
       <View style={{ marginTop: 4, alignItems: 'center', zIndex: 10, width: 100 }}>
          <Text 
-           style={{ color: 'white', fontWeight: 'bold', fontSize: 11, textAlign: 'center', opacity: isPoweredOn ? 1.0 : 0.4 }}
+           style={{ color: isPoweredOn ? (isDark ? 'white' : 'black') : (isDark ? '#888' : '#666'), fontWeight: 'bold', fontSize: 11, textAlign: 'center', opacity: isPoweredOn ? 1.0 : 0.4 }}
            numberOfLines={2}
          >
            {device.name || product}
@@ -459,6 +467,7 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
   );
 };
 export default function ProductVisualizer({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText, audioMagnitude = 0, rawHexPayload, multiColors, multiTransition }: ProductVisualizerProps) {
+  const { isDark } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
 
   // VISUALIZER PROTOCOL SYNCHRONIZATION ENGINE
@@ -549,7 +558,7 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
     
     if (isPoweredOn && (simMode === 'MULTICOLOR' || simMode === 'PRESETS' || simMode === 'RBM' || simMode === 'MUSIC' || simMode === 'FIXED' || simMode === 'CANDLE')) {
       animValue.setValue(0);
-      const baseDuration = (simMode === 'MUSIC') ? 800 : (simMode === 'RBM' ? 2000 : (simMode === 'FIXED' || simMode === 'MULTICOLOR' ? 1500 : (simMode === 'CANDLE' ? 400 : 3000)));
+      const baseDuration = (simMode === 'MUSIC') ? 800 : (simMode === 'RBM' ? 2000 : (simMode === 'MULTICOLOR' ? (simMultiTransition === 2 ? 350 : 1500) : (simMode === 'FIXED' ? 1500 : (simMode === 'CANDLE' ? 400 : 3000))));
       // Speed 0 = 5x slower, Speed 100 = 0.4x faster
       const duration = baseDuration / (0.4 + (simSpeed / 100) * 2.1); 
       
@@ -573,10 +582,10 @@ export default function ProductVisualizer({ product, color, mode, patternId, isP
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: isDark ? '#000000' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)' }]}>
       {statusText && (
         <View style={{ width: '100%', alignItems: 'center', marginBottom: 6 }}>
-          <Text style={{ color: 'white', opacity: 0.8, fontSize: 10, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+          <Text style={{ color: isDark ? 'white' : 'black', opacity: 0.8, fontSize: 10, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase' }}>
             {statusText}
           </Text>
         </View>
