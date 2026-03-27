@@ -977,41 +977,6 @@ export default function DashboardScreen() {
 
               {MemoizedSk8lytzController}
 
-              {isTestModeActive && (
-                <View {...edgePanResponder.panHandlers} style={{ marginTop: 12, paddingHorizontal: 12, height: Dimensions.get('window').height - (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) - 120 }}>
-                  <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 4}}>
-                     <Text style={[Typography.title, { color: Colors.primary }]}>Hardware Test Matrix</Text>
-                     <TouchableOpacity 
-                         style={{backgroundColor: 'rgba(255, 60, 60, 0.15)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255, 60, 60, 0.4)'}} 
-                         onPress={() => {
-                           setIsTestModeActive(false);
-                           setLogsVisible(true);
-                         }}
-                     >
-                         <Text style={{color: '#FF8888', fontSize: 10, fontWeight: 'bold', letterSpacing: 1}}>EXIT TESTER</Text>
-                     </TouchableOpacity>
-                  </View>
-                  <HardwareTestController
-                    writeToDevice={writeToDevice}
-                    device={displayConnectedDevices[0]} 
-                    allDevices={allDevices}
-                    isScanning={isScanning}
-                    handleScan={handleScan}
-                    connectToDevice={async (item: any) => {
-                      await connectToDevice(item);
-                      if (IS_BROWSER_DEMO) {
-                        setMockConnected(true);
-                        setMockConnectedDevice(item.id);
-                      }
-                    }}
-                    handleDisconnect={handleDisconnect}
-                    isActuallyConnected={isActuallyConnected}
-                    lastRawNotification={lastRawNotification}
-                  />
-                </View>
-              )}
-
-              {!isTestModeActive && (
               <View style={{ paddingHorizontal: Layout.padding }}>
 
 
@@ -1105,13 +1070,12 @@ export default function DashboardScreen() {
                 </>
               )}
               </View>
-              )}
             </View>
           }
           data={(!isActuallyConnected && !isDeviceListCollapsed) ? allDevices : []}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          scrollEnabled={!isTestModeActive} // Added scrollEnabled prop
+          scrollEnabled={true}
           contentContainerStyle={{ paddingBottom: 40 }}
 
           ListEmptyComponent={
@@ -1278,10 +1242,6 @@ export default function DashboardScreen() {
       <LogViewerModal 
         visible={logsVisible} 
         onClose={() => setLogsVisible(false)} 
-        onOpenTester={() => {
-            setLogsVisible(false);
-            setIsTestModeActive(true);
-        }}
         onOpenProgrammer={() => {
             setLogsVisible(false);
             setIsProgrammerVisible(true);

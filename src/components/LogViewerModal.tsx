@@ -64,7 +64,6 @@ function payloadSummary(entry: LogEntry): string {
 interface LogViewerModalProps {
   visible: boolean;
   onClose: () => void;
-  onOpenTester?: () => void;
   onOpenProgrammer?: () => void;
   onOpenSniffer?: () => void;
   writeToDevice?: (data: number[], deviceId?: string) => Promise<void>;
@@ -72,7 +71,7 @@ interface LogViewerModalProps {
   connectedDevices?: { id: string, name: string | null }[];
 }
 
-export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenProgrammer, onOpenSniffer, writeToDevice, liveRxPayload, connectedDevices }: LogViewerModalProps) {
+export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, writeToDevice, liveRxPayload, connectedDevices }: LogViewerModalProps) {
   const { Colors, isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -305,18 +304,6 @@ export default function LogViewerModal({ visible, onClose, onOpenTester, onOpenP
         <Text style={{ color: textMuted, fontSize: 13, marginBottom: 16, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
           Restricted diagnostics payload for low-level protocol debugging.
         </Text>
-        <TouchableOpacity 
-          style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: '#00f0ff', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
-          onPress={() => {
-            if (onOpenTester) onOpenTester();
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 16, marginRight: 8 }}>🧪</Text>
-            <Text style={{ color: '#00f0ff', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch Hardware Tester</Text>
-          </View>
-        </TouchableOpacity>
-
         <TouchableOpacity 
           style={{ backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: '#ff4040', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
           onPress={() => {

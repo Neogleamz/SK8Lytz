@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView,
-  FlatList, Platform, SafeAreaView, TextInput, ActivityIndicator
+  FlatList, Platform, SafeAreaView, TextInput, ActivityIndicator, Switch
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { AppLogger } from '../services/AppLogger';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import CustomSlider from './CustomSlider';
+import ProductVisualizer from './ProductVisualizer';
+import CameraTracker from './CameraTracker';
 
 interface ProtocolSnifferModalProps {
   visible: boolean;
@@ -48,6 +51,51 @@ export default function ProtocolSnifferModal({
   const [detectedColorOrder, setDetectedColorOrder] = useState<string | null>(null);
   const [detectedStripType, setDetectedStripType] = useState<string | null>(null);
   const [detectedFirmware, setDetectedFirmware] = useState<string | null>(null);
+  
+  // Builder State
+  const [protocol, setProtocol] = useState<'0x59' | '0x51' | '0x42' | '0x73' | '0x71' | '0x2A' | 'CANDLE' | 'CAMERA' | 'MULTI'>('0x59');
+  const [r, setR] = useState(255);
+  const [g, setG] = useState(0);
+  const [b, setB] = useState(0);
+  const [speed, setSpeed] = useState(100);
+  const [length, setLength] = useState(10);
+  const [transitionType, setTransitionType] = useState<number>(3);
+  const [segmentDirection, setSegmentDirection] = useState<number>(1);
+  const [brightness, setBrightness] = useState(100);
+  const [rbmPattern, setRbmPattern] = useState<number>(1);
+  const [multiColors, setMultiColors] = useState<string[]>(['#FF0000', '#00FF00', '#0000FF']);
+  const [multiTransition, setMultiTransition] = useState<number>(3);
+  const [isDeviceMic, setIsDeviceMic] = useState<number>(1);
+  const [musicModeType, setMusicModeType] = useState<number>(38);
+  const [musicPatternId, setMusicPatternId] = useState<number>(1);
+  const [musicSensitivity, setMusicSensitivity] = useState<number>(50);
+  const [r2, setR2] = useState<number>(0);
+  const [g2, setG2] = useState<number>(0);
+  const [b2, setB2] = useState<number>(255);
+  const [rfAuthMode, setRfAuthMode] = useState<'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED'>('ALLOW_ALL');
+  const [candleAmplitude, setCandleAmplitude] = useState<number>(2);
+  const [powerTesterState, setPowerTesterState] = useState<boolean>(true);
+  
+  const [currentGeneratedPayload, setCurrentGeneratedPayload] = useState<number[]>([]);
+  const currentPreviewColor = `rgb(${r}, ${g}, ${b})`;
+
+  const SettingWithExplanation = ({ title, description, children, ColorsKey }: { title: string, description: string, children: React.ReactNode, ColorsKey: any }) => {
+    const [expanded, setExpanded] = useState(false);
+    return (
+      <View style={{ marginBottom: 12 }}>
+        <TouchableOpacity onPress={() => setExpanded(!expanded)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }} activeOpacity={0.7}>
+          <Text style={{ color: ColorsKey.textMuted || '#aaa', flex: 1, fontWeight: 'bold' }}>{title}</Text>
+          <MaterialCommunityIcons name={expanded ? "chevron-up" : "information-outline"} size={16} color={ColorsKey.primary || '#00f0ff'} />
+        </TouchableOpacity>
+        {expanded && (
+          <Text style={{ color: '#888', fontSize: 11, marginBottom: 8, fontStyle: 'italic', backgroundColor: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 6 }}>
+            {description}
+          </Text>
+        )}
+        {children}
+      </View>
+    );
+  };
   
   const load = useCallback(async () => {
     const logs = await AppLogger.getLogs();
@@ -108,6 +156,55 @@ export default function ProtocolSnifferModal({
 
     }
   }, [liveRxPayload, visible, isSnifferPaused, snifferTarget]);
+
+  // Generate Internal Payload state bound to Sliders
+  useEffect(() => {
+    let payload: number[] = [];
+    const factor = brightness / 100;
+    const color = { r: Math.round(r * factor), g: Math.round(g * factor), b: Math.round(b * factor) };
+
+    if (protocol === '0x59') {
+      const totalPoints = length;
+      const totalLen = (totalPoints * 3) + 9;
+      payload = new Array(totalLen);
+      payload[0] = 0x59;
+      payload[1] = (totalLen >> 8) & 0xFF;
+      payload[2] = totalLen & 0xFF;
+      let idx = 3;
+      for (let i = 0; i < totalPoints; i++) {
+        payload[idx++] = color.r; payload[idx++] = color.g; payload[idx++] = color.b;
+      }
+      payload[idx++] = (totalPoints >> 8) & 0xFF; payload[idx++] = totalPoints & 0xFF;
+      payload[idx++] = transitionType; payload[idx++] = speed; payload[idx++] = segmentDirection;
+      payload[idx] = ZenggeProtocol.calculateChecksum(payload.slice(0, totalLen - 1));
+      payload = ZenggeProtocol.wrapCommand(payload);
+    } else if (protocol === '0x51') {
+      const bg = { r: 0, g: 0, b: 0 };
+      payload = ZenggeProtocol.setCustomMode([
+        { mode: transitionType === 0 ? 1 : transitionType, speed: speed, color1: color, color2: bg },
+        { mode: transitionType === 0 ? 1 : transitionType, speed: speed, color1: bg, color2: color }
+      ]);
+    } else if (protocol === 'CAMERA') {
+      payload = ZenggeProtocol.setColor(color.r, color.g, color.b);
+    } else if (protocol === '0x73') {
+      const c2 = { r: Math.round(r2 * factor), g: Math.round(g2 * factor), b: Math.round(b2 * factor) };
+      payload = ZenggeProtocol.setMusicConfig(isDeviceMic === 1, musicModeType, musicPatternId, color, c2, musicSensitivity, brightness);
+    } else if (protocol === '0x42') {
+      payload = ZenggeProtocol.setCustomRbm(rbmPattern, speed, brightness);
+    } else if (protocol === 'CANDLE') {
+      payload = ZenggeProtocol.setCandleMode(r, g, b, speed, brightness, candleAmplitude);
+    } else if (protocol === '0x2A') {
+      payload = ZenggeProtocol.setRfRemoteState(rfAuthMode);
+    } else if (protocol === '0x71') {
+      payload = powerTesterState ? ZenggeProtocol.turnOn() : ZenggeProtocol.turnOff();
+    } else if (protocol === 'MULTI') {
+      const rgbColors = multiColors.map(hex => ({ r: parseInt(hex.slice(1,3), 16) || 0, g: parseInt(hex.slice(3,5), 16) || 0, b: parseInt(hex.slice(5,7), 16) || 0 }));
+      payload = ZenggeProtocol.setMultiColor(rgbColors, speed, 1, multiTransition);
+    }
+    
+    setCurrentGeneratedPayload(payload);
+    setSnifferInput(payload.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' '));
+  }, [protocol, r, g, b, r2, g2, b2, speed, length, transitionType, brightness, segmentDirection, rbmPattern, isDeviceMic, musicModeType, musicPatternId, musicSensitivity, candleAmplitude, multiColors, multiTransition, powerTesterState]);
 
   const handleSendSniffer = async (hexStr: string) => {
     if (!writeToDevice) return;
@@ -197,11 +294,8 @@ export default function ProtocolSnifferModal({
         <View style={{ flex: 1, paddingHorizontal: 16 }}>
           {/* Chronological Native Display as a unified scroll canvas */}
           <View style={{ flex: 1, backgroundColor: '#000', borderRadius: 8, borderWidth: 1, borderColor: '#333', padding: 8 }}>
-            <FlatList 
-               data={filteredLogs}
-               keyExtractor={(_, i) => String(i)}
-               ListHeaderComponent={() => (
-                 <View style={{ paddingBottom: 16 }}>
+            <ScrollView style={{ flex: 1 }} nestedScrollEnabled>
+               <View style={{ paddingBottom: 16 }}>
                     {/* Target Device UI Matrix with Scan built in */}
                     <View style={{ marginBottom: 16 }}>
                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -354,6 +448,96 @@ export default function ProtocolSnifferModal({
                       </View>
                     </View>
 
+                    {/* Integrated Hardware Tester: Payload Generator */}
+                    <View style={{ marginBottom: 16, backgroundColor: '#111', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#00f0ff50' }}>
+                      <Text style={{ color: '#00f0ff', fontSize: 13, fontWeight: 'bold', marginBottom: 12 }}>PAYLOAD BUILDER</Text>
+                      
+                      <View style={{ marginBottom: 12, width: '100%', height: 180 }}>
+                        <ProductVisualizer 
+                          product={snifferTarget.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'} 
+                          color={currentPreviewColor} 
+                          mode="FIXED" 
+                          patternId={1} 
+                          isPaired={!!writeToDevice}
+                          points={parseInt(String(detectedPoints || hwPoints || 43), 10)}
+                          brightness={brightness}
+                          speed={speed}
+                          isPoweredOn={powerTesterState}
+                          statusText={`LIVE PREVIEW\nEXPECTED TX BYTES: ${currentGeneratedPayload.length}`}
+                          rawHexPayload={currentGeneratedPayload}
+                          audioMagnitude={0}
+                        />
+                      </View>
+
+                      <Text style={{ color: '#bbb', fontSize: 11, fontWeight: 'bold', marginBottom: 8 }}>PROTOCOL TARGET LAYER</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+                        {['0x59', '0x51', '0x42', '0x73', '0x71', '0x2A', 'CANDLE', 'CAMERA', 'MULTI'].map(p => (
+                          <TouchableOpacity 
+                            key={p} 
+                            onPress={() => setProtocol(p as any)}
+                            style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, backgroundColor: protocol === p ? '#00f0ff' : '#222', flexGrow: 1, alignItems: 'center' }}
+                          >
+                            <Text style={{ color: protocol === p ? '#000' : '#888', fontWeight: 'bold', fontSize: 10 }}>{p}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: currentPreviewColor, borderWidth: 2, borderColor: '#FFF', marginRight: 12 }} />
+                        <Text style={{ color: '#aaa', fontSize: 11, fontWeight: 'bold' }}>RGB COLOR BUFFER: {r},{g},{b}</Text>
+                      </View>
+
+                      <View style={{ gap: 8, marginBottom: 16 }}>
+                        <View><Text style={{ color: '#FF4444', fontSize: 9, fontWeight: 'bold' }}>R ({r})</Text><CustomSlider value={r} minimumValue={0} maximumValue={255} onValueChange={setR} /></View>
+                        <View><Text style={{ color: '#44FF44', fontSize: 9, fontWeight: 'bold' }}>G ({g})</Text><CustomSlider value={g} minimumValue={0} maximumValue={255} onValueChange={setG} /></View>
+                        <View><Text style={{ color: '#4444FF', fontSize: 9, fontWeight: 'bold' }}>B ({b})</Text><CustomSlider value={b} minimumValue={0} maximumValue={255} onValueChange={setB} /></View>
+                      </View>
+
+                      {protocol === '0x59' && (
+                        <View style={{ gap: 8, marginBottom: 16, backgroundColor: 'rgba(255,165,0,0.1)', padding: 10, borderRadius: 6 }}>
+                          <Text style={{ color: '#FFA500', fontSize: 11, fontWeight: 'bold', marginBottom: 4 }}>0x59 SEGMENT PARAMETERS</Text>
+                          <SettingWithExplanation title={`Segment Array Scale (${length})`} description="Calculated node length sent to IC buffers." ColorsKey={{textMuted: '#aaa', primary: '#FFA500'}}>
+                            <CustomSlider value={length} minimumValue={1} maximumValue={600} onValueChange={setLength} />
+                          </SettingWithExplanation>
+                          <SettingWithExplanation title={`Animation Transition (${transitionType})`} description="3 = Wave Pattern natively on most chips." ColorsKey={{textMuted: '#aaa', primary: '#FFA500'}}>
+                             <CustomSlider value={transitionType} minimumValue={0} maximumValue={3} onValueChange={setTransitionType} />
+                          </SettingWithExplanation>
+                          <SettingWithExplanation title={`Matrix Flow Extent (${segmentDirection})`} description="Direction polarity 1 vs 0." ColorsKey={{textMuted: '#aaa', primary: '#FFA500'}}>
+                             <CustomSlider value={segmentDirection} minimumValue={0} maximumValue={1} onValueChange={setSegmentDirection} />
+                          </SettingWithExplanation>
+                        </View>
+                      )}
+
+                      {protocol === '0x42' && (
+                        <View style={{ gap: 8, marginBottom: 16, backgroundColor: 'rgba(0,255,68,0.1)', padding: 10, borderRadius: 6 }}>
+                          <SettingWithExplanation title={`ROM Memory RBM Block (${rbmPattern})`} description="Internal loop index reference logic 1-210" ColorsKey={{textMuted: '#aaa', primary: '#00FF44'}}>
+                             <CustomSlider value={rbmPattern} minimumValue={1} maximumValue={210} onValueChange={setRbmPattern} />
+                          </SettingWithExplanation>
+                        </View>
+                      )}
+
+                      {protocol === 'CAMERA' && (
+                        <View style={{ height: 280, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#00f0ff', marginBottom: 16 }}>
+                          <CameraTracker isActive={true} onColorDetected={(h) => {
+                             setR(parseInt(h.slice(1, 3), 16)); setG(parseInt(h.slice(3, 5), 16)); setB(parseInt(h.slice(5, 7), 16));
+                             if (writeToDevice) {
+                               const bBytes = ZenggeProtocol.setColor(r, g, b);
+                               handleSendSniffer(bBytes.map(bb => bb.toString(16).padStart(2,'0').toUpperCase()).join(' '));
+                             }
+                          }} />
+                        </View>
+                      )}
+
+                      <View style={{ gap: 8, marginTop: 8 }}>
+                        <SettingWithExplanation title={`Transmission Throttle / Speed (${speed})`} description="Interval byte mapped across 0-100 scales." ColorsKey={{textMuted: '#aaa', primary: '#00f0ff'}}>
+                          <CustomSlider value={speed} minimumValue={0} maximumValue={100} onValueChange={setSpeed} />
+                        </SettingWithExplanation>
+                        <SettingWithExplanation title={`Software Bit-Biting Dimmer (${brightness}%)`} description="Software scaled byte modifier to cap amplitude draws natively before dispatching frame payloads." ColorsKey={{textMuted: '#aaa', primary: '#00f0ff'}}>
+                          <CustomSlider value={brightness} minimumValue={0} maximumValue={100} onValueChange={setBrightness} />
+                        </SettingWithExplanation>
+                      </View>
+                    </View>
+
                     {/* TX Manual Injection */}
                     <View style={{ flexDirection: 'row', marginBottom: 8 }}>
                       <TextInput
@@ -379,12 +563,15 @@ export default function ProtocolSnifferModal({
                       </TouchableOpacity>
                     </View>
                  </View>
-               )}
-               ListEmptyComponent={<Text style={{ color: '#555', fontFamily: 'monospace', fontSize: 12, marginTop: 20, textAlign: 'center' }}>Waiting for BLE traffic...</Text>}
-               renderItem={({ item }) => (
-                 <View style={{ flexDirection: 'row', marginBottom: 8, opacity: Date.now() - item.t > 15000 ? 0.7 : 1, alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#222', paddingBottom: 6 }}>
-                   <Text style={{ color: item.dir === 'TX' ? '#FFD700' : '#00ff80', width: 26, fontWeight: 'bold', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11 }}>{item.dir}</Text>
-                   <Text style={{ color: '#777', width: 66, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 10, marginTop: 1 }}>{formatTime(item.t)}</Text>
+               <FlatList 
+                  data={filteredLogs}
+                  scrollEnabled={false}
+                  keyExtractor={(item, i) => `${item.t}-${i}`}
+                  ListEmptyComponent={<Text style={{ color: '#555', fontFamily: 'monospace', fontSize: 12, marginTop: 20, textAlign: 'center' }}>Waiting for BLE traffic...</Text>}
+                  renderItem={({ item }) => (
+                    <View style={{ flexDirection: 'row', marginBottom: 8, opacity: Date.now() - item.t > 15000 ? 0.7 : 1, alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#222', paddingBottom: 6 }}>
+                      <Text style={{ color: item.dir === 'TX' ? '#FFD700' : '#00ff80', width: 26, fontWeight: 'bold', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11 }}>{item.dir}</Text>
+                      <Text style={{ color: '#777', width: 66, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 10, marginTop: 1 }}>{formatTime(item.t)}</Text>
                    <View style={{ flex: 1 }}>
                      {renderAnalyzedPayload(item.hex)}
                      {(item.dev && item.dev !== 'ALL') && (
@@ -394,6 +581,7 @@ export default function ProtocolSnifferModal({
                  </View>
                )}
             />
+          </ScrollView>
           </View>
         </View>
       </SafeAreaView>

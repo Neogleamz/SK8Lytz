@@ -59,11 +59,10 @@ export default function useBLE(): BluetoothLowEnergyApi {
         // Capture lowest-level inbound payload trace before ANY application decoding organically
         AppLogger.log('RAW_PAYLOAD', { dir: 'RX', hex: data.map(x => x.toString(16).padStart(2, '0').toUpperCase()).join(' '), deviceId });
 
-        // Zengge v2 packets are wrapped: [Header, Seq, Frag, Frag, Len, Len, PayloadLen, cmdId, ...Payload]
-        // We strip the wrapper for the callback for easier parsing
-        if (data.length > 8) {
-          const payload = data.slice(8);
-          if (dataReceivedCallback) dataReceivedCallback(deviceId, payload);
+        // We send the absolute raw binary frame to the data callbacks.
+        // It is strictly the responsibility of parser endpoints (ZenggeProtocol) to dissect Headers vs Bodies.
+        if (dataReceivedCallback) {
+            dataReceivedCallback(deviceId, data);
         }
       } catch (e: any) {
         console.error('Failed to parse notification', e);
