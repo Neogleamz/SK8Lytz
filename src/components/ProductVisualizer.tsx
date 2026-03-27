@@ -229,7 +229,7 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
              dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
           } else if (mode === 'RBM') {
              const pid = patternId || 1;
-             if (pid === 100) { // Emergency (Bouncing logic)
+             if (pid === 103) { // Emergency (Bouncing logic)
                const isTop = mirroredFract > 0.8;
                const isBottom = mirroredFract < 0.2;
                if (isTop) {

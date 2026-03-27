@@ -1,0 +1,63 @@
+# SK8Lytz App: Zengge Image Asset Cross-Reference
+
+This document outlines how the static image assets extracted from the Zengge APK map to specific Hardware Protocol Patterns, Modes, and interface themes within the SK8Lytz ecosystem.
+
+---
+
+## 1. Music Symphony Light Bar Modes (0x73 Protocol)
+These images natively map 1:1 to the 13 defined Symphony Music patterns. They represent the graphical buttons pressed by the user to trigger audio-reactive hardware subroutines.
+
+**Project Path:** `src/assets/images/zengge_patterns/music_scene/`
+
+| Hardware ID | Music Pattern Name | Extracted Image Asset          | Notes |
+|:------------|:-------------------|:-------------------------------|:------|
+| 1           | Soft               | `music_scene_1.png`            | Smooth pulse visualization |
+| 2           | Cheerful           | `music_scene_2.png`            | Dot peaks visualization |
+| 3           | Energy             | `music_scene_3.png`            | Strobe/Rapid visualization |
+| 4           | Relax              | `music_scene_4.png`            | Slow gradient visualization |
+| 5           | Passion            | `music_scene_5.png`            | Expansion visualization |
+| 6           | Brisk              | `music_scene_6.png`            | Jumping visualizer icon |
+| 7           | Rhythm             | `music_scene_7.png`            | Classic VU Meter icon |
+| 8           | Rolling            | `music_scene_8.png`            | Flow visualizer icon |
+| 9           | Flicker            | `music_scene_9.png`            | Twinkle visualizer icon |
+| 10          | Accumulation       | `music_scene_10.png`           | Edge-to-center fill icon |
+| 11          | Shuttle            | `music_scene_11.png`           | Bouncing visualizer icon |
+| 12          | Fireworks          | `music_scene_12.png`           | Center burst visualizer |
+| 13          | Snow               | `music_scene_12.png` (Repeats)| Fallback / Missing exact 13th icon in split APK |
+
+---
+
+## 2. Symphony Pixel Screen Modes
+These sequences map to the "Symphony Screen" UI, which allows controllers with 2D LED matrix topologies to select intricate pixel art patterns.
+
+**Project Path:** `src/assets/images/zengge_patterns/screen/`
+
+| Sequence Range                | Hardware Behavior                             |
+|:------------------------------|:----------------------------------------------|
+| `screen0.png` - `screen23.png`| Sequentially maps to Matrix pattern IDs 0-23. Used as graphical shortcuts for pixel-art effects (e.g. scrolling banners, tetris-like overlays). |
+| `screenNew16.png`, `17.png`   | Extended / App-updated versions of patterns 16 & 17. |
+
+---
+
+## 3. Thematic Scenes & Environmental Presets
+Zengge utilizes high-resolution `.jpg` photography as thumbnails for their global environmental scene buttons. Selecting these thumbnails sends custom RGB profiles overriding the current state.
+
+**Project Path:** `src/assets/images/zengge_patterns/presets/`
+
+| Base Image Asset | Internal Scene Theme | Protocol Shift |
+|:-----------------|:---------------------|:---------------|
+| `focus.jpg`      | "Focus"              | Static White / High CCT (`0x31`) |
+| `night.jpg`      | "Night"              | Dimmed / Warm Glow (`0x31`) |
+| `listen.jpg`     | "Audio Reactive"     | Jump to Music Mode (`0x73`) |
+| `meditation.jpg` | "Meditate"           | Slow breath / gradient (`0x51` or `0x42` Zen Mode) |
+| `preset_1.jpg` -> `preset_44.jpg` | Generic User Presets | Custom RGB/RBM configurations saved by users. |
+
+---
+
+## 4. Programmatic/Code-Based Modes (NO IMAGES)
+It is important to understand that the majority of patterns do **not** have a static image file associated with them in the APK.
+
+- **The 210 RBM Array (0x42)**: Patterns such as "7 Color Jump", "Red Flow", or "White Marquee" do not have dedicated `.png` files. The Zengge UI utilizes standard Dart Canvas commands to dynamically draw miniature colorful visualizers (gradients and solid color boxes) representing these sequences.
+- **Fixed & DIY Modes (0x59, 0x51)**: Custom colors, comet, pinch, or solid arrays are configured completely through the color wheel interface.
+
+---

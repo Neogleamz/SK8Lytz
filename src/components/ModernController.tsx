@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Typography, Layout } from '../theme/theme';
 import CustomSlider from './CustomSlider';
 import ProductVisualizer from './ProductVisualizer';
-import ArcPatternWheel from './ArcPatternWheel';
+import VerticalPatternDrum from './VerticalPatternDrum';
 import CameraTracker from './CameraTracker';
 import { getRbmPatternName } from '../constants/RbmPatterns';
 import { MusicDictionary } from '../utils/MusicDictionary';
@@ -85,6 +85,23 @@ export default function ModernController({
     devices.forEach(d => writeToDevice(payload));
   };
 
+  const applyEmergencyPattern = (spd: number, bright: number) => {
+    const factor = bright / 100;
+    const red = { r: Math.round(255 * factor), g: 0, b: 0 };
+    const white = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: Math.round(255 * factor) };
+    const yellow = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: 0 };
+    const bg = { r: 0, g: 0, b: 0 };
+    
+    // Construct a 16-point buffer for the controller (Length >= 10 Safe)
+    const arr = [
+      red, red, red, red,      // Bottom
+      yellow, bg, yellow, bg,  // Flowing mid
+      white, white, white, white, // Top
+      yellow, bg, yellow, bg   // Flowing mid
+    ];
+    devices.forEach(d => writeToDevice(ZenggeProtocol.setMultiColor(arr, spd, 1, 0)));
+  };
+
   const sendCandleMode = (hex: string = selectedColor, currentBright: number = brightness, amp: number = candleAmplitude) => {
     setIsCandleMode(true);
     const factor = currentBright / 100;
@@ -149,7 +166,7 @@ export default function ModernController({
         <ProductVisualizer 
           product={(lockedProduct as 'HALOZ' | 'SOULZ') || 'HALOZ'} 
           color={activeTab === 'COLORS' ? selectedColor : NeoColors.accentBlue}
-          mode={activeTab === 'COLORS' ? (isCandleMode ? 'CANDLE' : 'FIXED') : 'FIXED'}
+          mode={activeTab === 'COLORS' ? (isCandleMode ? 'CANDLE' : 'FIXED') : (activeTab === 'SCENES' ? 'RBM' : (activeTab === 'MUSIC' ? 'MUSIC' : 'FIXED'))}
           patternId={activePattern}
           isPaired={isPaired} 
           points={points || 16} 
@@ -351,18 +368,23 @@ export default function ModernController({
              </Text>
              
              <View style={{ marginBottom: 24, paddingVertical: 10, backgroundColor: NeoColors.cardLight, borderRadius: 24, borderWidth: 1, borderColor: NeoColors.cardBorder }}>
-                <ArcPatternWheel 
+                <VerticalPatternDrum 
                   value={activePattern}
                   onValueChange={(pid) => {
                     setActivePattern(pid);
-                    const payload = pid === 400 
-                        ? ZenggeProtocol.setMultiColor(Array(10).fill({ r: 255, g: 0, b: 0 }), speed, 1, 0)
-                        : ZenggeProtocol.setCustomRbm(pid, speed, brightness);
-                    devices.forEach(d => writeToDevice(payload));
+                    if (pid === 103) {
+                        applyEmergencyPattern(speed, brightness);
+                    } else {
+                        const payload = ZenggeProtocol.setCustomRbm(pid, speed, brightness);
+                        devices.forEach(d => writeToDevice(payload));
+                    }
                   }}
                   min={1}
-                  max={302}
-                  itemLabel={(val) => getRbmPatternName(val)}
+                  max={103}
+                  itemLabel={(val) => {
+                     const name = getRbmPatternName(val);
+                     return name.split(': ')[1] || name;
+                  }}
                 />
              </View>
 
@@ -398,7 +420,18 @@ export default function ModernController({
 
         {/* CAMERA TAB */}
         {activeTab === 'CAMERA' && (
-          <View style={{ padding: 8, backgroundColor: 'transparent', borderRadius: 24, overflow: 'hidden' }}>
+          <View style={{ padding: 8, backgroundColor: 'transparent', borderRadius: 24 }}>
+             
+             {/* Dynamic Selected Color Bar (Mirrored from Color Grid) */}
+             <View style={{ width: '100%', marginBottom: 20 }}>
+               <View style={[
+                  { height: 24, width: '100%', borderRadius: 12, backgroundColor: selectedColor, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' },
+                  { shadowColor: selectedColor, shadowOpacity: 1, shadowRadius: 24, shadowOffset: { width: 0, height: 0 }, elevation: 16 }
+               ]}>
+                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900', letterSpacing: 2, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>SELECTED COLOR</Text>
+               </View>
+             </View>
+
              <CameraTracker 
                 isActive={activeTab === 'CAMERA'} 
                 onColorDetected={(hex) => {
