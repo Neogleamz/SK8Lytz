@@ -120,11 +120,13 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
     }
 
     let lastSampleIdx = 0;
-    const renderLeds = isHaloz ? Math.max(numLeds * 4, 64) : numLeds;
+    // We strictly use dense rendering (64 points) to draw the perfectly smooth physical silicone casing, 
+    // but the `isHotspot` flag ensures ONLY the true 16 LEDs actually fire inside it!
+    const renderLeds = isHaloz ? Math.max(numLeds * 4, 64) : Math.max(numLeds * 2, 86);
     for (let i = 0; i < renderLeds; i++) {
         let left = 0;
         let top = 0;
-        const outerDiam = isHaloz ? 16 : 12; // Shrunk massively to simulate a thin 6mm channel
+        const outerDiam = isHaloz ? 16 : 12; // Reverted to physical 6mm strip dimensions
         const offset = outerDiam / 2;
 
         const targetLength = (i / renderLeds) * totalLength;
@@ -148,8 +150,14 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
         const segmentI = isHaloz ? (i % (renderLeds / 2)) : i;
         const activeSegmentLeds = isHaloz ? (renderLeds / 2) : renderLeds;
         
-        const fract = (segmentI / activeSegmentLeds);
+        // Raw smooth path interval
+        const rawFract = (segmentI / activeSegmentLeds);
+        
+        // QUANTIZATION: Forces the perfectly smooth line to illuminate in exactly 16 discrete hardware blocks!
+        // Instead of lighting sliding across the shape fluidly, it snaps instantly inside the boundaries of the physical LED chip.
+        const fract = Math.floor(rawFract * numLeds) / numLeds;
         const mirroredFract = fract <= 0.5 ? fract * 2 : (1 - fract) * 2;
+        
         let dotColor: any = isPoweredOn ? color : '#333333';
         let dotOpacity: any = isPoweredOn ? 1 : 0.2;
 
@@ -377,7 +385,6 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
            position: { top, left, position: 'absolute' as const },
            activeColor: dotColor,
            activeOpacity: dotOpacity,
-           isHotspot: isHaloz ? (i % (renderLeds / numLeds) === 0) : true,
         });
     }
     return list;
@@ -411,35 +418,31 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
          )}
 
          {leds.map(led => {
-            const diam = isHaloz ? 16 : 12; // Ultra-thin 6mm footprint
-            const core = isHaloz ? 2 : 2; // Microscopic core
+            const diam = isHaloz ? 16 : 12; // Perfectly smooth continuous tube geometry
+
             return (
                <Animated.View key={led.key} style={[
                   led.position, 
-                  { width: diam, height: diam, alignItems: 'center', justifyContent: 'center' }
+                  { width: diam, height: diam, alignItems: 'center', justifyContent: 'center', overflow: 'visible', zIndex: 10, opacity: led.activeOpacity }
                ]}>
-                  {/* Diffused Outer Aura */}
+                  {/* CHROMATIC BLOOM TRACK (Fixes RN shadowColor limitation) */}
+                  {/* Rather than using CSS shadowColor (which natively drops Animated.Values), we emit a thicker, translucent layer natively under the main tubing. Since the dots overlap flawlessly, this creates a perfectly smooth continuous colored glowing aura! */}
+                  <Animated.View style={{
+                    position: 'absolute', width: diam * 2.4, height: diam * 2.4, borderRadius: (diam * 2.4)/2,
+                    backgroundColor: led.activeColor as any, 
+                    opacity: 0.12, 
+                  }} />
+
+                  {/* Perfectly Smooth Continuous Silicone Tube */}
                   <Animated.View style={{
                     position: 'absolute', width: '100%', height: '100%', borderRadius: diam/2,
                     backgroundColor: led.activeColor as any, 
-                    opacity: led.activeOpacity,
-                    shadowColor: isPoweredOn ? led.activeColor as any : 'transparent',
-                    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1.0, shadowRadius: isHaloz ? 12 : 8,
-                    elevation: 6,
                   }} />
-                  {/* Tight Inner LED Core */}
-                  {led.isHotspot && (
-                    <Animated.View style={{
-                      width: core, height: core, borderRadius: core/2,
-                      backgroundColor: '#FFFFFF',
-                      shadowColor: '#FFFFFF', shadowOpacity: 1.0, shadowRadius: 3, elevation: 4,
-                      opacity: Animated.multiply(led.activeOpacity, 0.9) as any, // Boosted opacity to slice through the heavy diffusion
-                    }} />
-                  )}
-                  {/* 3D Silicone Frost Overlay */}
+                  {/* Frosty Silicone Exterior Glaze */}
                   <View style={{
                     position: 'absolute', width: '100%', height: '100%', borderRadius: diam/2,
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.12)', // Milky texture
+                    borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.05)'
                   }} />
                </Animated.View>
             );

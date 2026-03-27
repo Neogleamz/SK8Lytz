@@ -228,7 +228,7 @@ export default function ProtocolSnifferModal({
 
   const renderAnalyzedPayload = (hex: string) => {
     const bytes = hex.split(' ');
-    if (bytes.length === 0) return <Text style={{ color: '#FFF' }}>{hex}</Text>;
+    if (bytes.length === 0) return <Text style={{ color: '#000' }}>{hex}</Text>;
     
     if (bytes[0] === '81' && bytes.length >= 14) {
       const power = bytes[1] === '01' ? 'ON' : 'OFF';
@@ -243,7 +243,7 @@ export default function ProtocolSnifferModal({
           <Text style={{ color: '#c084fc', fontSize: 11 }}>PAT:{pattern}</Text>
           <Text style={{ color: '#AADDFF', fontSize: 11 }}>SPD:{speed}</Text>
           <View style={{ width: 12, height: 12, backgroundColor: colorHex, borderRadius: 2, borderWidth: 1, borderColor: '#fff' }} />
-          <Text style={{ color: '#888', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{hex}</Text>
+          <Text style={{ color: '#666', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{hex}</Text>
         </View>
       );
     }
@@ -257,10 +257,10 @@ export default function ProtocolSnifferModal({
          const segments = parseInt(bytes[offset + 4], 16);
          return (
            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
-             <Text style={{ color: '#00f0ff', fontSize: 11, fontWeight: 'bold' }}>[HARDWARE]</Text>
-             <Text style={{ color: '#00ff80', fontSize: 11 }}>LEDS:{points}</Text>
+             <Text style={{ color: '#007AFF', fontSize: 11, fontWeight: 'bold' }}>[HARDWARE]</Text>
+             <Text style={{ color: '#16A34A', fontSize: 11 }}>LEDS:{points}</Text>
              <Text style={{ color: '#ff70ff', fontSize: 11 }}>SEGS:{segments}</Text>
-             <Text style={{ color: '#888', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{hex}</Text>
+             <Text style={{ color: '#666', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{hex}</Text>
            </View>
          );
        }
@@ -276,15 +276,15 @@ export default function ProtocolSnifferModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
-      <SafeAreaView style={[styles.root, { backgroundColor: '#111', paddingTop: Platform.OS === 'android' ? 32 : 0 }]}>
+      <SafeAreaView style={[styles.root, { backgroundColor: '#F5F5F7', paddingTop: Platform.OS === 'android' ? 32 : 0 }]}>
         
         {/* Header matching Tester & Programmer */}
         <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={onClose} style={{ padding: 12, backgroundColor: '#333', borderRadius: 20 }}>
+          <TouchableOpacity onPress={onClose} style={{ padding: 12, backgroundColor: '#E5E5EA', borderRadius: 20 }}>
             <MaterialCommunityIcons name="close" size={22} color="#FFF" />
           </TouchableOpacity>
           <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={styles.title}>PROTOCOL SNIFFER</Text>
+            <Text style={styles.title}>HARDWARE TESTER</Text>
           </View>
           <TouchableOpacity style={{ padding: 12, opacity: 0 }}>
              <MaterialCommunityIcons name="close" size={22} color="#FFF" />
@@ -293,28 +293,28 @@ export default function ProtocolSnifferModal({
 
         <View style={{ flex: 1, paddingHorizontal: 16 }}>
           {/* Chronological Native Display as a unified scroll canvas */}
-          <View style={{ flex: 1, backgroundColor: '#000', borderRadius: 8, borderWidth: 1, borderColor: '#333', padding: 8 }}>
+          <View style={{ flex: 1, backgroundColor: '#FFF', borderRadius: 8, borderWidth: 1, borderColor: '#E5E5EA', padding: 8 }}>
             <ScrollView style={{ flex: 1 }} nestedScrollEnabled>
                <View style={{ paddingBottom: 16 }}>
                     {/* Target Device UI Matrix with Scan built in */}
                     <View style={{ marginBottom: 16 }}>
                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                          <Text style={{ color: '#bbb', fontSize: 12, fontWeight: 'bold' }}>TARGET DEVICE NODE</Text>
-                          <TouchableOpacity onPress={() => setIsScanningExpanded(!isScanningExpanded)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#333', paddingLeft: 8, paddingRight: 4, paddingVertical: 4, borderRadius: 12 }}>
-                             <Text style={{ color: '#00f0ff', fontSize: 10, fontWeight: 'bold', marginRight: 4 }}>
+                          <Text style={{ color: '#666', fontSize: 12, fontWeight: 'bold' }}>TARGET DEVICE NODE</Text>
+                          <TouchableOpacity onPress={() => setIsScanningExpanded(!isScanningExpanded)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E5E5EA', paddingLeft: 8, paddingRight: 4, paddingVertical: 4, borderRadius: 12 }}>
+                             <Text style={{ color: '#007AFF', fontSize: 10, fontWeight: 'bold', marginRight: 4 }}>
                                {isScanningExpanded ? 'HIDE SCANNER' : 'SCAN DEVICES'}
                              </Text>
-                             <MaterialCommunityIcons name={isScanningExpanded ? "chevron-up" : "radar"} size={14} color="#00f0ff" />
+                             <MaterialCommunityIcons name={isScanningExpanded ? "chevron-up" : "radar"} size={14} color="#007AFF" />
                           </TouchableOpacity>
                        </View>
                        
                        {isScanningExpanded && (
-                          <View style={{ backgroundColor: '#222', borderRadius: 8, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#333' }}>
+                          <View style={{ backgroundColor: '#F9F9F9', borderRadius: 8, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#E5E5EA' }}>
                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                               <Text style={{ color: '#FFF', fontSize: 12 }}>Discoverable BLE Nodes</Text>
+                               <Text style={{ color: '#000', fontSize: 12 }}>Discoverable BLE Nodes</Text>
                                <TouchableOpacity 
                                  onPress={handleScan}
-                                 style={{ backgroundColor: '#00AEEF', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16, flexDirection: 'row', alignItems: 'center' }}
+                                 style={{ backgroundColor: '#007AFF', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16, flexDirection: 'row', alignItems: 'center' }}
                                >
                                  {isScanning && <ActivityIndicator size="small" color="#FFF" style={{ marginRight: 6 }} />}
                                  <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 11 }}>{isScanning ? "SCANNING..." : "SCAN"}</Text>
@@ -326,10 +326,10 @@ export default function ProtocolSnifferModal({
                                  {allDevices.map((d, i) => {
                                    const isConn = connectedDevices.find(c => c.id === d.id);
                                    return (
-                                     <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#333' }}>
+                                     <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#E5E5EA' }}>
                                        <View>
-                                         <Text style={{ color: '#FFF', fontSize: 13, fontWeight: 'bold' }}>{d.name || 'Unknown Device'}</Text>
-                                         <Text style={{ color: '#888', fontSize: 10 }}>{d.id}</Text>
+                                         <Text style={{ color: '#000', fontSize: 13, fontWeight: 'bold' }}>{d.name || 'Unknown Device'}</Text>
+                                         <Text style={{ color: '#666', fontSize: 10 }}>{d.id}</Text>
                                        </View>
                                        {isConn ? (
                                          <TouchableOpacity onPress={handleDisconnect} style={{ backgroundColor: '#ff4040', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}>
@@ -349,70 +349,21 @@ export default function ProtocolSnifferModal({
                        )}
 
                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                          <TouchableOpacity onPress={() => setSnifferTarget('ALL')} style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: snifferTarget === 'ALL' ? '#00f0ff' : '#222', marginRight: 8, borderWidth: 1, borderColor: snifferTarget === 'ALL' ? '#00f0ff' : '#444' }}>
-                             <Text style={{ color: snifferTarget === 'ALL' ? '#000' : '#FFF', fontSize: 11, fontWeight: 'bold' }}>ALL</Text>
+                          <TouchableOpacity onPress={() => setSnifferTarget('ALL')} style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: snifferTarget === 'ALL' ? '#007AFF' : '#F0F0F0', marginRight: 8, borderWidth: 1, borderColor: snifferTarget === 'ALL' ? '#007AFF' : '#CCC' }}>
+                             <Text style={{ color: snifferTarget === 'ALL' ? '#FFF' : '#000', fontSize: 11, fontWeight: 'bold' }}>ALL</Text>
                           </TouchableOpacity>
                           {connectedDevices.map(d => (
-                             <TouchableOpacity key={d.id} onPress={() => setSnifferTarget(d.id)} style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: snifferTarget === d.id ? '#00f0ff' : '#222', marginRight: 8, borderWidth: 1, borderColor: snifferTarget === d.id ? '#00f0ff' : '#444' }}>
-                               <Text style={{ color: snifferTarget === d.id ? '#000' : '#FFF', fontSize: 11, fontWeight: 'bold' }}>{d.name || d.id.slice(-5)}</Text>
+                             <TouchableOpacity key={d.id} onPress={() => setSnifferTarget(d.id)} style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: snifferTarget === d.id ? '#007AFF' : '#F0F0F0', marginRight: 8, borderWidth: 1, borderColor: snifferTarget === d.id ? '#007AFF' : '#CCC' }}>
+                               <Text style={{ color: snifferTarget === d.id ? '#FFF' : '#000', fontSize: 11, fontWeight: 'bold' }}>{d.name || d.id.slice(-5)}</Text>
                              </TouchableOpacity>
                           ))}
                        </ScrollView>
                     </View>
 
-                    {/* Dictionary */}
-                    <Text style={{ color: '#bbb', fontSize: 12, fontWeight: 'bold', marginBottom: 8 }}>DIAGNOSTIC DICTIONARY</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 16, flexGrow: 0 }}>
-                      {[
-                        { label: '0x81 Sync', hex: '81 8A 8B 96' },
-                        { label: '0x10 Ping', hex: '10 00 00 10' },
-                        { label: '0x2B RConfig', hex: '2B 2C 2D 00' },
-                        { label: '0x32 Boot', hex: '32 3A 3B 0F' },
-                        { label: '0x63 IC Probe', hex: '63 14 00 00' }
-                      ].map((probe) => (
-                        <TouchableOpacity 
-                          key={probe.label} 
-                          onPress={() => handleSendSniffer(probe.hex)}
-                          style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: '#00f0ff', borderWidth: 1, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, marginRight: 8 }}
-                        >
-                          <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 11 }}>{probe.label}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-
-                    {/* Hardware Configuration Injector */}
-                    <View style={{ marginBottom: 16, backgroundColor: '#222', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#444' }}>
-                       <Text style={{ color: '#00f0ff', fontSize: 11, fontWeight: 'bold', marginBottom: 12 }}>HARDWARE CONFIG INJECTOR (0x81)</Text>
-                       <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-                          <View style={{ flex: 1, minWidth: '22%' }}>
-                            <Text style={{ color: '#bbb', fontSize: 9, marginBottom: 4 }}>POINTS</Text>
-                            <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 6, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwPoints} onChangeText={setHwPoints} keyboardType="numeric" />
-                          </View>
-                          <View style={{ flex: 1, minWidth: '22%' }}>
-                            <Text style={{ color: '#bbb', fontSize: 9, marginBottom: 4 }}>SEGMENTS</Text>
-                            <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 6, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwSegments} onChangeText={setHwSegments} keyboardType="numeric" />
-                          </View>
-                          <View style={{ flex: 1, minWidth: '22%' }}>
-                            <Text style={{ color: '#bbb', fontSize: 9, marginBottom: 4 }}>COLOR</Text>
-                            <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 6, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwColorOrder} onChangeText={setHwColorOrder} autoCapitalize="characters" />
-                          </View>
-                          <View style={{ flex: 1, minWidth: '22%' }}>
-                            <Text style={{ color: '#bbb', fontSize: 9, marginBottom: 4 }}>TYPE</Text>
-                            <TextInput style={{ backgroundColor: '#111', color: '#FFF', padding: 6, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwStripType} onChangeText={setHwStripType} autoCapitalize="characters" />
-                          </View>
-                       </View>
-                       <TouchableOpacity style={{ backgroundColor: '#ff4040', padding: 10, borderRadius: 6, alignItems: 'center' }} onPress={() => {
-                          const pBytes = ZenggeProtocol.setHardwareConfig(parseInt(hwPoints)||43, hwColorOrder, hwStripType, parseInt(hwSegments)||1);
-                          handleSendSniffer(pBytes.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' '));
-                       }}>
-                          <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 11 }}>TX SET HARDWARE MATRIX</Text>
-                       </TouchableOpacity>
-                    </View>
-
-                    {/* Extracted Hardware Specifications */}
-                    <View style={{ marginBottom: 16, backgroundColor: '#192518', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#00ff8050' }}>
+                    {/* Extracted Hardware Specifications (Moved up) */}
+                    <View style={{ marginBottom: 16, backgroundColor: '#F0FDF4', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#A7F3D0' }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-                        <Text style={{ color: '#00ff80', fontSize: 11, fontWeight: 'bold' }}>DETECTED STATE</Text>
+                        <Text style={{ color: '#16A34A', fontSize: 11, fontWeight: 'bold' }}>DETECTED STATE</Text>
                         <TouchableOpacity onPress={() => {
                             const payload10 = ZenggeProtocol.queryHardwareConfig();
                             const payload63 = ZenggeProtocol.wrapCommand([0x63, 0x14, 0x00, 0x00]);
@@ -420,39 +371,39 @@ export default function ProtocolSnifferModal({
                             handleSendSniffer(payload10.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' '));
                             setTimeout(() => handleSendSniffer(payload63.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ')), 100);
                             setTimeout(() => handleSendSniffer(payload32.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ')), 200);
-                        }} style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: '#00f0ff', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6 }}>
-                          <Text style={{ color: '#00f0ff', fontSize: 9, fontWeight: 'bold' }}>AUTO PROBE (0x10 / 0x63)</Text>
+                        }} style={{ backgroundColor: '#E0F2FE', borderColor: '#00f0ff', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6 }}>
+                          <Text style={{ color: '#007AFF', fontSize: 9, fontWeight: 'bold' }}>AUTO PROBE (0x10 / 0x63)</Text>
                         </TouchableOpacity>
                       </View>
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                        <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
-                           <Text style={{ color: '#888', fontSize: 9, marginBottom: 2 }}>POINTS</Text>
-                           <Text style={{ color: detectedPoints ? '#FFF' : '#444', fontSize: 13, fontWeight: 'bold' }}>{detectedPoints || '?'}</Text>
+                        <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#FFF', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#E5E5EA' }}>
+                           <Text style={{ color: '#666', fontSize: 9, marginBottom: 2 }}>POINTS</Text>
+                           <Text style={{ color: detectedPoints ? '#000' : '#888', fontSize: 13, fontWeight: 'bold' }}>{detectedPoints || '?'}</Text>
                         </View>
-                        <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
-                           <Text style={{ color: '#888', fontSize: 9, marginBottom: 2 }}>SEGMENTS</Text>
-                           <Text style={{ color: detectedSegments ? '#FFF' : '#444', fontSize: 13, fontWeight: 'bold' }}>{detectedSegments || '?'}</Text>
+                        <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#FFF', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#E5E5EA' }}>
+                           <Text style={{ color: '#666', fontSize: 9, marginBottom: 2 }}>SEGMENTS</Text>
+                           <Text style={{ color: detectedSegments ? '#000' : '#888', fontSize: 13, fontWeight: 'bold' }}>{detectedSegments || '?'}</Text>
                         </View>
-                        <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
-                           <Text style={{ color: '#888', fontSize: 9, marginBottom: 2 }}>COLOR ORDER</Text>
-                           <Text style={{ color: detectedColorOrder ? '#FFF' : '#444', fontSize: 13, fontWeight: 'bold' }}>{detectedColorOrder || '?'}</Text>
+                        <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#FFF', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#E5E5EA' }}>
+                           <Text style={{ color: '#666', fontSize: 9, marginBottom: 2 }}>COLOR ORDER</Text>
+                           <Text style={{ color: detectedColorOrder ? '#000' : '#888', fontSize: 13, fontWeight: 'bold' }}>{detectedColorOrder || '?'}</Text>
                         </View>
-                        <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
-                           <Text style={{ color: '#888', fontSize: 9, marginBottom: 2 }}>STRIP IC</Text>
-                           <Text style={{ color: detectedStripType ? '#FFF' : '#444', fontSize: 13, fontWeight: 'bold' }}>{detectedStripType || '?'}</Text>
+                        <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#FFF', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#E5E5EA' }}>
+                           <Text style={{ color: '#666', fontSize: 9, marginBottom: 2 }}>STRIP IC</Text>
+                           <Text style={{ color: detectedStripType ? '#000' : '#888', fontSize: 13, fontWeight: 'bold' }}>{detectedStripType || '?'}</Text>
                         </View>
-                        <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#000', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#333' }}>
-                           <Text style={{ color: '#888', fontSize: 9, marginBottom: 2 }}>FIRMWARE</Text>
-                           <Text style={{ color: detectedFirmware ? '#FFF' : '#444', fontSize: 13, fontWeight: 'bold' }}>{detectedFirmware || '?'}</Text>
+                        <View style={{ flex: 1, minWidth: '30%', backgroundColor: '#FFF', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#E5E5EA' }}>
+                           <Text style={{ color: '#666', fontSize: 9, marginBottom: 2 }}>FIRMWARE</Text>
+                           <Text style={{ color: detectedFirmware ? '#000' : '#888', fontSize: 13, fontWeight: 'bold' }}>{detectedFirmware || '?'}</Text>
                         </View>
                       </View>
                     </View>
 
                     {/* Integrated Hardware Tester: Payload Generator */}
-                    <View style={{ marginBottom: 16, backgroundColor: '#111', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#00f0ff50' }}>
-                      <Text style={{ color: '#00f0ff', fontSize: 13, fontWeight: 'bold', marginBottom: 12 }}>PAYLOAD BUILDER</Text>
+                    <View style={{ marginBottom: 16, backgroundColor: '#F5F5F7', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#BAE6FD' }}>
+                      <Text style={{ color: '#007AFF', fontSize: 13, fontWeight: 'bold', marginBottom: 12 }}>PAYLOAD BUILDER & INJECTOR</Text>
                       
-                      <View style={{ marginBottom: 12, width: '100%', height: 180 }}>
+                      <View style={{ marginBottom: -30, marginTop: -30, width: '100%', height: 180, transform: [{ scale: 0.4 }] }}>
                         <ProductVisualizer 
                           product={snifferTarget.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'} 
                           color={currentPreviewColor} 
@@ -469,22 +420,22 @@ export default function ProtocolSnifferModal({
                         />
                       </View>
 
-                      <Text style={{ color: '#bbb', fontSize: 11, fontWeight: 'bold', marginBottom: 8 }}>PROTOCOL TARGET LAYER</Text>
+                      <Text style={{ color: '#666', fontSize: 11, fontWeight: 'bold', marginBottom: 8 }}>PROTOCOL TARGET LAYER</Text>
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
                         {['0x59', '0x51', '0x42', '0x73', '0x71', '0x2A', 'CANDLE', 'CAMERA', 'MULTI'].map(p => (
                           <TouchableOpacity 
                             key={p} 
                             onPress={() => setProtocol(p as any)}
-                            style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, backgroundColor: protocol === p ? '#00f0ff' : '#222', flexGrow: 1, alignItems: 'center' }}
+                            style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, backgroundColor: protocol === p ? '#007AFF' : '#F0F0F0', flexGrow: 1, alignItems: 'center' }}
                           >
-                            <Text style={{ color: protocol === p ? '#000' : '#888', fontWeight: 'bold', fontSize: 10 }}>{p}</Text>
+                            <Text style={{ color: protocol === p ? '#FFF' : '#333', fontWeight: 'bold', fontSize: 10 }}>{p}</Text>
                           </TouchableOpacity>
                         ))}
                       </View>
 
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: currentPreviewColor, borderWidth: 2, borderColor: '#FFF', marginRight: 12 }} />
-                        <Text style={{ color: '#aaa', fontSize: 11, fontWeight: 'bold' }}>RGB COLOR BUFFER: {r},{g},{b}</Text>
+                        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: currentPreviewColor, borderWidth: 2, borderColor: '#CCC', marginRight: 12 }} />
+                        <Text style={{ color: '#666', fontSize: 11, fontWeight: 'bold' }}>RGB COLOR BUFFER: {r},{g},{b}</Text>
                       </View>
 
                       <View style={{ gap: 8, marginBottom: 16 }}>
@@ -494,23 +445,23 @@ export default function ProtocolSnifferModal({
                       </View>
 
                       {protocol === '0x59' && (
-                        <View style={{ gap: 8, marginBottom: 16, backgroundColor: 'rgba(255,165,0,0.1)', padding: 10, borderRadius: 6 }}>
-                          <Text style={{ color: '#FFA500', fontSize: 11, fontWeight: 'bold', marginBottom: 4 }}>0x59 SEGMENT PARAMETERS</Text>
-                          <SettingWithExplanation title={`Segment Array Scale (${length})`} description="Calculated node length sent to IC buffers." ColorsKey={{textMuted: '#aaa', primary: '#FFA500'}}>
+                        <View style={{ gap: 8, marginBottom: 16, backgroundColor: '#FFF7ED', padding: 10, borderRadius: 6 }}>
+                          <Text style={{ color: '#EA580C', fontSize: 11, fontWeight: 'bold', marginBottom: 4 }}>0x59 SEGMENT PARAMETERS</Text>
+                          <SettingWithExplanation title={`Segment Array Scale (${length})`} description="Calculated node length sent to IC buffers." ColorsKey={{textMuted: '#aaa', primary: '#EA580C'}}>
                             <CustomSlider value={length} minimumValue={1} maximumValue={600} onValueChange={setLength} />
                           </SettingWithExplanation>
-                          <SettingWithExplanation title={`Animation Transition (${transitionType})`} description="3 = Wave Pattern natively on most chips." ColorsKey={{textMuted: '#aaa', primary: '#FFA500'}}>
+                          <SettingWithExplanation title={`Animation Transition (${transitionType})`} description="3 = Wave Pattern natively on most chips." ColorsKey={{textMuted: '#aaa', primary: '#EA580C'}}>
                              <CustomSlider value={transitionType} minimumValue={0} maximumValue={3} onValueChange={setTransitionType} />
                           </SettingWithExplanation>
-                          <SettingWithExplanation title={`Matrix Flow Extent (${segmentDirection})`} description="Direction polarity 1 vs 0." ColorsKey={{textMuted: '#aaa', primary: '#FFA500'}}>
+                          <SettingWithExplanation title={`Matrix Flow Extent (${segmentDirection})`} description="Direction polarity 1 vs 0." ColorsKey={{textMuted: '#aaa', primary: '#EA580C'}}>
                              <CustomSlider value={segmentDirection} minimumValue={0} maximumValue={1} onValueChange={setSegmentDirection} />
                           </SettingWithExplanation>
                         </View>
                       )}
 
                       {protocol === '0x42' && (
-                        <View style={{ gap: 8, marginBottom: 16, backgroundColor: 'rgba(0,255,68,0.1)', padding: 10, borderRadius: 6 }}>
-                          <SettingWithExplanation title={`ROM Memory RBM Block (${rbmPattern})`} description="Internal loop index reference logic 1-210" ColorsKey={{textMuted: '#aaa', primary: '#00FF44'}}>
+                        <View style={{ gap: 8, marginBottom: 16, backgroundColor: '#F0FDF4', padding: 10, borderRadius: 6 }}>
+                          <SettingWithExplanation title={`ROM Memory RBM Block (${rbmPattern})`} description="Internal loop index reference logic 1-210" ColorsKey={{textMuted: '#aaa', primary: '#16A34A'}}>
                              <CustomSlider value={rbmPattern} minimumValue={1} maximumValue={210} onValueChange={setRbmPattern} />
                           </SettingWithExplanation>
                         </View>
@@ -528,7 +479,7 @@ export default function ProtocolSnifferModal({
                         </View>
                       )}
 
-                      <View style={{ gap: 8, marginTop: 8 }}>
+                      <View style={{ gap: 8, marginTop: 8, marginBottom: 24 }}>
                         <SettingWithExplanation title={`Transmission Throttle / Speed (${speed})`} description="Interval byte mapped across 0-100 scales." ColorsKey={{textMuted: '#aaa', primary: '#00f0ff'}}>
                           <CustomSlider value={speed} minimumValue={0} maximumValue={100} onValueChange={setSpeed} />
                         </SettingWithExplanation>
@@ -536,30 +487,62 @@ export default function ProtocolSnifferModal({
                           <CustomSlider value={brightness} minimumValue={0} maximumValue={100} onValueChange={setBrightness} />
                         </SettingWithExplanation>
                       </View>
-                    </View>
 
-                    {/* TX Manual Injection */}
-                    <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-                      <TextInput
-                         style={{ flex: 1, backgroundColor: '#222', color: '#FFF', borderColor: '#444', borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, height: 40, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 12 }}
-                         placeholder="ex: 81 8A 8B 96"
-                         placeholderTextColor="#666"
-                         value={snifferInput}
-                         onChangeText={setSnifferInput}
-                         autoCapitalize="none"
-                      />
-                      <TouchableOpacity 
-                         style={{ backgroundColor: '#00AEEF', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16, borderRadius: 8, marginLeft: 8 }}
-                         onPress={() => handleSendSniffer(snifferInput)}
-                      >
-                         <Text style={{ color: '#000', fontWeight: 'bold', fontSize: 12 }}>TX</Text>
-                      </TouchableOpacity>
+                      {/* Integrated Dictionary */}
+                      <Text style={{ color: '#666', fontSize: 12, fontWeight: 'bold', marginBottom: 8, marginTop: 8 }}>DIAGNOSTIC DICTIONARY & QUICK PROBES</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 16, flexGrow: 0 }}>
+                        {[
+                          { label: '0x81 Sync', hex: '81 8A 8B 96' },
+                          { label: '0x10 Ping', hex: '10 00 00 10' },
+                          { label: '0x2B RConfig', hex: '2B 2C 2D 00' },
+                          { label: '0x32 Boot', hex: '32 3A 3B 0F' },
+                          { label: '0x63 IC Probe', hex: '63 14 00 00' },
+                        ].map((probe) => (
+                          <TouchableOpacity 
+                            key={probe.label} 
+                            onPress={() => setSnifferInput(probe.hex)}
+                            style={{ backgroundColor: '#E0F2FE', borderColor: '#00f0ff', borderWidth: 1, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, marginRight: 8 }}
+                          >
+                            <Text style={{ color: '#007AFF', fontWeight: 'bold', fontSize: 11 }}>{probe.label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+
+                      {/* Hardware Configuration Injector */}
+                      <View style={{ marginBottom: 16, backgroundColor: '#F9F9F9', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#E5E5EA' }}>
+                         <Text style={{ color: '#007AFF', fontSize: 11, fontWeight: 'bold', marginBottom: 12 }}>HARDWARE CONFIG INJECTOR (0x81)</Text>
+                         <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+                            <View style={{ flex: 1, minWidth: '22%' }}>
+                              <Text style={{ color: '#bbb', fontSize: 9, marginBottom: 4 }}>POINTS</Text>
+                              <TextInput style={{ backgroundColor: '#F5F5F7', color: '#FFF', padding: 6, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwPoints} onChangeText={setHwPoints} keyboardType="numeric" />
+                            </View>
+                            <View style={{ flex: 1, minWidth: '22%' }}>
+                              <Text style={{ color: '#bbb', fontSize: 9, marginBottom: 4 }}>SEGMENTS</Text>
+                              <TextInput style={{ backgroundColor: '#F5F5F7', color: '#FFF', padding: 6, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwSegments} onChangeText={setHwSegments} keyboardType="numeric" />
+                            </View>
+                            <View style={{ flex: 1, minWidth: '22%' }}>
+                              <Text style={{ color: '#bbb', fontSize: 9, marginBottom: 4 }}>COLOR</Text>
+                              <TextInput style={{ backgroundColor: '#F5F5F7', color: '#FFF', padding: 6, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwColorOrder} onChangeText={setHwColorOrder} autoCapitalize="characters" />
+                            </View>
+                            <View style={{ flex: 1, minWidth: '22%' }}>
+                              <Text style={{ color: '#bbb', fontSize: 9, marginBottom: 4 }}>TYPE</Text>
+                              <TextInput style={{ backgroundColor: '#F5F5F7', color: '#FFF', padding: 6, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwStripType} onChangeText={setHwStripType} autoCapitalize="characters" />
+                            </View>
+                         </View>
+                         <TouchableOpacity style={{ backgroundColor: 'rgba(0, 174, 239, 0.2)', borderColor: '#007AFF', borderWidth: 1, padding: 10, borderRadius: 6, alignItems: 'center' }} onPress={() => {
+                            const pBytes = ZenggeProtocol.setHardwareConfig(parseInt(hwPoints)||43, hwColorOrder, hwStripType, parseInt(hwSegments)||1);
+                            setSnifferInput(pBytes.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' '));
+                         }}>
+                            <Text style={{ color: '#007AFF', fontWeight: 'bold', fontSize: 11 }}>PREPARE 0x81 PAYLOAD</Text>
+                         </TouchableOpacity>
+                      </View>
+
                     </View>
 
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, marginBottom: 4, alignItems: 'center' }}>
-                      <Text style={{ color: '#bbb', fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontWeight: 'bold' }}>CHRONOLOGICAL TIMELINE STREAM</Text>
-                      <TouchableOpacity onPress={() => setIsSnifferPaused(!isSnifferPaused)} style={{ backgroundColor: isSnifferPaused ? '#ff404020' : '#00ff8020', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
-                        <Text style={{ color: isSnifferPaused ? '#ff4040' : '#00ff80', fontSize: 9, fontWeight: 'bold' }}>{isSnifferPaused ? '▶ RESUME' : '⏸ PAUSE'}</Text>
+                      <Text style={{ color: '#666', fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontWeight: 'bold' }}>CHRONOLOGICAL TIMELINE STREAM</Text>
+                      <TouchableOpacity onPress={() => setIsSnifferPaused(!isSnifferPaused)} style={{ backgroundColor: isSnifferPaused ? '#FEE2E2' : '#DCFCE7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }}>
+                        <Text style={{ color: isSnifferPaused ? '#DC2626' : '#16A34A', fontSize: 9, fontWeight: 'bold' }}>{isSnifferPaused ? '▶ RESUME' : '⏸ PAUSE'}</Text>
                       </TouchableOpacity>
                     </View>
                  </View>
@@ -567,10 +550,10 @@ export default function ProtocolSnifferModal({
                   data={filteredLogs}
                   scrollEnabled={false}
                   keyExtractor={(item, i) => `${item.t}-${i}`}
-                  ListEmptyComponent={<Text style={{ color: '#555', fontFamily: 'monospace', fontSize: 12, marginTop: 20, textAlign: 'center' }}>Waiting for BLE traffic...</Text>}
+                  ListEmptyComponent={<Text style={{ color: '#888', fontFamily: 'monospace', fontSize: 12, marginTop: 20, textAlign: 'center' }}>Waiting for BLE traffic...</Text>}
                   renderItem={({ item }) => (
-                    <View style={{ flexDirection: 'row', marginBottom: 8, opacity: Date.now() - item.t > 15000 ? 0.7 : 1, alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#222', paddingBottom: 6 }}>
-                      <Text style={{ color: item.dir === 'TX' ? '#FFD700' : '#00ff80', width: 26, fontWeight: 'bold', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11 }}>{item.dir}</Text>
+                    <View style={{ flexDirection: 'row', marginBottom: 8, opacity: Date.now() - item.t > 15000 ? 0.7 : 1, alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#E5E5EA', paddingBottom: 6 }}>
+                      <Text style={{ color: item.dir === 'TX' ? '#D97706' : '#16A34A', width: 26, fontWeight: 'bold', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11 }}>{item.dir}</Text>
                       <Text style={{ color: '#777', width: 66, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 10, marginTop: 1 }}>{formatTime(item.t)}</Text>
                    <View style={{ flex: 1 }}>
                      {renderAnalyzedPayload(item.hex)}
@@ -582,6 +565,24 @@ export default function ProtocolSnifferModal({
                )}
             />
           </ScrollView>
+
+          {/* Floating TX Injection Bar Statically Docked */}
+          <View style={{ flexDirection: 'row', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#333' }}>
+            <TextInput
+               style={{ flex: 1, backgroundColor: '#222', color: '#FFF', borderColor: '#E5E5EA', borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, height: 44, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 14 }}
+               placeholder="ex: 81 8A 8B 96"
+               placeholderTextColor="#666"
+               value={snifferInput}
+               onChangeText={setSnifferInput}
+               autoCapitalize="none"
+            />
+            <TouchableOpacity 
+               style={{ backgroundColor: '#007AFF', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, borderRadius: 8, marginLeft: 8 }}
+               onPress={() => handleSendSniffer(snifferInput)}
+            >
+               <Text style={{ color: '#000', fontWeight: 'bold', fontSize: 12 }}>TX: FIRE PAYLOAD</Text>
+            </TouchableOpacity>
+          </View>
           </View>
         </View>
       </SafeAreaView>
@@ -594,7 +595,7 @@ const styles = StyleSheet.create({
   modalHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 8, paddingBottom: 16, paddingTop: Platform.OS === 'ios' ? 0 : 16,
-    borderBottomWidth: 1, borderBottomColor: '#333', marginBottom: 16
+    borderBottomWidth: 1, borderBottomColor: '#E5E5EA', marginBottom: 16
   },
-  title: { fontSize: 16, fontWeight: '800', letterSpacing: 1, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: '#FFF' },
+  title: { fontSize: 16, fontWeight: '800', letterSpacing: 1, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: '#000' },
 });

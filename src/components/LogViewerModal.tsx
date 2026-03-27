@@ -324,7 +324,7 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 16, marginRight: 8 }}>💉</Text>
-            <Text style={{ color: '#98FB98', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch Protocol Sniffer</Text>
+            <Text style={{ color: '#98FB98', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch Hardware Tester</Text>
           </View>
         </TouchableOpacity>
       </View>

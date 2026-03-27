@@ -37,7 +37,7 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
       for (let i = 0; i < DOTS_PER_RING; i++) {
           if (Math.random() < 0.65) continue;
           const angle = (i / DOTS_PER_RING) * 2 * Math.PI;
-          const color = colorSpectrum[i % colorSpectrum.length];
+          const color = colorSpectrum[Math.floor(Math.random() * colorSpectrum.length)];
           dots.push({
               x: BASE_RADIUS * Math.cos(angle) - 1.5,
               y: BASE_RADIUS * Math.sin(angle) - 1.5,
@@ -62,7 +62,7 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
       for (let i = 0; i < ACTIVE_DOTS; i++) {
           // 0% skip rate, full pure dense signal pattern
           const angle = (i / ACTIVE_DOTS) * 2 * Math.PI;
-          const color = colorSpectrum[i % colorSpectrum.length];
+          const color = colorSpectrum[Math.floor(Math.random() * colorSpectrum.length)];
           dots.push({
               x: BASE_RADIUS * Math.cos(angle) - 1.5,
               y: BASE_RADIUS * Math.sin(angle) - 1.5,

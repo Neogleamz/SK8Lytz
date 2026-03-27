@@ -8,7 +8,7 @@ import useBLE from '../hooks/useBLE';
 import { ZenggeProtocol, ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol';
 
 import Sk8lytzController from '../components/Sk8lytzController';
-import HardwareTestController from '../components/HardwareTestController';
+import ModernController from '../components/ModernController';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import Sk8LytzProgrammerModal from '../components/Sk8LytzProgrammerModal';
@@ -31,7 +31,7 @@ interface DeviceSettings {
 }
 
 export default function DashboardScreen() {
-  const { Colors, isDark, toggleTheme } = useTheme();
+  const { Colors, isDark, toggleTheme, controlUITheme, toggleControlUITheme } = useTheme();
   const styles = createStyles(Colors);
   const {
     scanForPeripherals,
@@ -720,23 +720,40 @@ export default function DashboardScreen() {
 
     return (
       <Animated.View {...edgePanResponder.panHandlers} style={{ flex: 1, backgroundColor: 'transparent' }}>
-        <Sk8lytzController
-          lockedProduct={
-            (displayConnectedDevices[0] as any)?.type || 
-            ((displayConnectedDevices[0] as any)?.points 
-              ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
-              : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
-          }
-          isPaired={isGrouped}
-          points={(displayConnectedDevices[0] as any).points}
-          devices={displayConnectedDevices}
-          onLongPressDevice={openSettings}
-          writeToDevice={writeToDevice}
-          isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
-        />
+        {controlUITheme === 'MODERN' ? (
+          <ModernController
+            lockedProduct={
+              (displayConnectedDevices[0] as any)?.type || 
+              ((displayConnectedDevices[0] as any)?.points 
+                ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
+                : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
+            }
+            isPaired={isGrouped}
+            points={(displayConnectedDevices[0] as any).points}
+            devices={displayConnectedDevices}
+            onLongPressDevice={openSettings}
+            writeToDevice={writeToDevice}
+            isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
+          />
+        ) : (
+          <Sk8lytzController
+            lockedProduct={
+              (displayConnectedDevices[0] as any)?.type || 
+              ((displayConnectedDevices[0] as any)?.points 
+                ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
+                : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
+            }
+            isPaired={isGrouped}
+            points={(displayConnectedDevices[0] as any).points}
+            devices={displayConnectedDevices}
+            onLongPressDevice={openSettings}
+            writeToDevice={writeToDevice}
+            isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
+          />
+        )}
       </Animated.View>
     );
-  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive]);
+  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, controlUITheme]);
 
   const renderItem = useCallback(({ item }: { item: any }) => {
     const cachedConfig = deviceConfigs?.[item.id] || {};
@@ -840,16 +857,28 @@ export default function DashboardScreen() {
               }}>
                 {/* Theme toggle: landing page only, absolutely pinned top-left */}
                 {!isActuallyConnected && (
-                  <TouchableOpacity 
-                    onPress={toggleTheme} 
-                    style={{ position: 'absolute', right: 0, top: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + 20, zIndex: 10, padding: 10 }}
-                  >
-                    <MaterialCommunityIcons 
-                      name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} 
-                      size={22} 
-                      color={Colors.primary} 
-                    />
-                  </TouchableOpacity>
+                  <View style={{ position: 'absolute', right: 0, top: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + 20, zIndex: 10, flexDirection: 'row' }}>
+                    <TouchableOpacity 
+                      onPress={toggleControlUITheme} 
+                      style={{ padding: 10 }}
+                    >
+                      <MaterialCommunityIcons 
+                        name={controlUITheme === 'MODERN' ? 'view-dashboard-variant-outline' : 'view-list-outline'} 
+                        size={22} 
+                        color={Colors.primary} 
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      onPress={toggleTheme} 
+                      style={{ padding: 10 }}
+                    >
+                      <MaterialCommunityIcons 
+                        name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} 
+                        size={22} 
+                        color={Colors.primary} 
+                      />
+                    </TouchableOpacity>
+                  </View>
                 )}
 
                 {/* Logo row — logo always centered, plus connected-state chips on right */}

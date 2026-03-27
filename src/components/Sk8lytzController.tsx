@@ -9,6 +9,7 @@ import ProductVisualizer from './ProductVisualizer';
 import CustomSlider from './CustomSlider';
 import ArcPatternWheel from './ArcPatternWheel';
 import SpectrumVisualizer from './SpectrumVisualizer';
+import CircularKnob from './CircularKnob';
 import CameraTracker from './CameraTracker';
 import { getRbmPatternName } from '../constants/RbmPatterns';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
@@ -591,12 +592,12 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
       case 'CUSTOM': return 'Custom';
       case 'MULTICOLOR': return 'Multicolor Array';
       case 'CANDLE': return 'Candle Mode';
-      case 'PRESETS': return 'Favorites';
+      case 'PRESETS': return 'Styles';
       default: return activeMode;
     }
   }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, selectedPatternId, musicPatternId, selectedColor]);
   const modes: { id: ModeType; label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
-    { id: 'PRESETS', label: 'Favorites', icon: 'star-outline' },
+    { id: 'PRESETS', label: 'Styles', icon: 'star-outline' },
     { id: 'FIXED', label: 'Fixed', icon: 'palette-outline' },
     { id: 'RBM', label: 'Programs', icon: 'auto-fix' },
     { id: 'MUSIC', label: 'Music', icon: 'music-note' },
@@ -1073,6 +1074,25 @@ export default function Sk8lytzController({ lockedProduct, isPaired, points, dev
               </View>
 
 
+            </View>
+          )}
+
+          {activeMode === 'CAMERA' && (
+            <View style={{ marginBottom: 8 }}>
+              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>Real-time Telemetry</Text>
+              <Text style={[styles.presetDesc, { marginBottom: 12 }]}>Points the camera at any surface to instantly sync your lights to the physical world.</Text>
+              
+              <CameraTracker 
+                 isActive={activeMode === 'CAMERA'} 
+                 onColorDetected={(hex) => {
+                    setSelectedColor(hex);
+                    // Vividness Normalization is run natively inside CameraTracker before it reaches this callback!
+                    const r = parseInt(hex.slice(1, 3), 16);
+                    const g = parseInt(hex.slice(3, 5), 16);
+                    const b = parseInt(hex.slice(5, 7), 16);
+                    sendColor(r, g, b);
+                 }} 
+              />
             </View>
           )}
 
