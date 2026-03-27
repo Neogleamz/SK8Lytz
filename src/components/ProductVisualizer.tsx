@@ -56,7 +56,7 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload, simMode }: any) => {
+const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload, simMode }: any) => {
   const { isDark } = useTheme();
   const product = String(device.type || fallbackProduct);
   const isHaloz = !product.toLowerCase().includes('soul');
@@ -465,8 +465,8 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
       </View>
     </TouchableOpacity>
   );
-};
-export default function ProductVisualizer({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText, audioMagnitude = 0, rawHexPayload, multiColors, multiTransition }: ProductVisualizerProps) {
+});
+const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText, audioMagnitude = 0, rawHexPayload, multiColors, multiTransition }: ProductVisualizerProps) => {
   const { isDark } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
 
@@ -647,3 +647,5 @@ const styles = StyleSheet.create({
     elevation: 10,
   }
 });
+
+export default React.memo(ProductVisualizer);

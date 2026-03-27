@@ -6,7 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 const ITEM_HEIGHT = 44;
 const VISIBLE_ITEMS = 5;
 
-export default function VerticalPatternDrum({
+const VerticalPatternDrum = ({
   value,
   onValueChange,
   min = 1,
@@ -18,7 +18,7 @@ export default function VerticalPatternDrum({
   min?: number;
   max?: number;
   itemLabel?: (item: number) => string;
-}) {
+}) => {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
   const flatListRef = useRef<FlatList>(null);
@@ -249,3 +249,5 @@ export default function VerticalPatternDrum({
        bottom: 0,
      }
    });
+
+export default React.memo(VerticalPatternDrum);

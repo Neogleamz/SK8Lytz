@@ -13,14 +13,22 @@ interface CustomSliderProps {
   gradientTrack?: boolean;
 }
 
-export default function CustomSlider({ value, onValueChange, onSlidingComplete, minimumValue = 0, maximumValue = 100, style, gradientTrack = false }: CustomSliderProps) {
+const CustomSlider = ({ value, onValueChange, onSlidingComplete, minimumValue = 0, maximumValue = 100, style, gradientTrack = false }: CustomSliderProps) => {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
   const [containerWidth, setContainerWidth] = useState(0);
   const containerWidthRef = useRef(0);
   
-  const valueRef = useRef(value);
-  valueRef.current = value;
+  const [localValue, setLocalValue] = useState(value);
+  const isDraggingRef = useRef(false);
+
+  // Sync with parent props only when NOT actively grabbed by user
+  React.useEffect(() => {
+     if (!isDraggingRef.current) setLocalValue(value);
+  }, [value]);
+
+  const valueRef = useRef(localValue);
+  valueRef.current = localValue;
   
   const minMaxRef = useRef({ min: minimumValue, max: maximumValue });
   minMaxRef.current = { min: minimumValue, max: maximumValue };
@@ -41,15 +49,17 @@ export default function CustomSlider({ value, onValueChange, onSlidingComplete, 
       onMoveShouldSetPanResponderCapture: () => true,
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (evt, gestureState) => {
+        isDraggingRef.current = true;
         // Record starting value
         startValRef.current = valueRef.current;
-        // Optional: Jump to click location if it's a tap on track
         if (containerWidthRef.current > 0 && evt.nativeEvent.locationX) {
            const initialPercent = Math.max(0, Math.min(1, evt.nativeEvent.locationX / containerWidthRef.current));
            const { min, max } = minMaxRef.current;
            const initialVal = min + (initialPercent * (max - min));
            startValRef.current = initialVal;
-           onValueChangeRef.current(Math.round(initialVal));
+           const cl = Math.round(initialVal);
+           setLocalValue(cl);
+           onValueChangeRef.current(cl);
         }
       },
       onPanResponderMove: (evt, gestureState) => {
@@ -59,18 +69,26 @@ export default function CustomSlider({ value, onValueChange, onSlidingComplete, 
         const deltaVal = deltaPercent * (max - min);
         let newVal = startValRef.current + deltaVal;
         newVal = Math.max(min, Math.min(max, newVal));
-        onValueChangeRef.current(Math.round(newVal));
+        const cl = Math.round(newVal);
+        // Instant visual local update without waiting for parent
+        if (cl !== valueRef.current) {
+            setLocalValue(cl);
+            // Optional: debounce or throttle this callback if needed, but since it's an event prop, DockedController can decide.
+            onValueChangeRef.current(cl);
+        }
       },
       onPanResponderRelease: () => {
+        isDraggingRef.current = false;
         if (onSlidingCompleteRef.current) onSlidingCompleteRef.current(valueRef.current);
       },
       onPanResponderTerminate: () => {
+        isDraggingRef.current = false;
         if (onSlidingCompleteRef.current) onSlidingCompleteRef.current(valueRef.current);
       },
     })
   ).current;
 
-  const percentage = (value - minimumValue) / (maximumValue - minimumValue);
+  const percentage = (localValue - minimumValue) / (maximumValue - minimumValue);
 
   return (
     <View 
@@ -127,3 +145,5 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     elevation: 5,
   }
 });
+
+export default React.memo(CustomSlider);

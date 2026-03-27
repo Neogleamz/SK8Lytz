@@ -93,18 +93,56 @@ const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segme
 };
 
 
+export interface IDeviceState {
+  id: string;
+  name: string;
+  points?: number;
+  segments?: number;
+  sorting?: 'RGB' | 'GRB' | 'BRG' | 'RBG' | 'BGR' | 'GBR';
+  [key: string]: any; // safe loose fallback for undocumented BLE peripheral keys
+}
+
+export interface IFavoriteState {
+  id: string;
+  name: string;
+  mode: string;
+  color?: string;
+  patternId?: number;
+  speed: number;
+  brightness: number;
+  fixedColorMode?: 'FOREGROUND' | 'BACKGROUND';
+  fixedFgColor?: string;
+  fixedBgColor?: string;
+  fixedHue?: number;
+  multiColors?: string[];
+  multiTransition?: number;
+  multiLength?: number;
+  candleAmplitude?: number;
+  musicPrimaryColor?: string;
+  musicSecondaryColor?: string;
+  micSensitivity?: number;
+  micSource?: 'APP' | 'DEVICE';
+  musicMatrixStyle?: number;
+}
+
+export interface IQuickPreset {
+  name: string;
+  colors: string[];
+  type: number;
+}
+
 interface Sk8lytzControllerProps {
   lockedProduct?: ProductType;
   isPaired?: boolean;
   points?: number;
-  devices?: any[];
-  onLongPressDevice?: (device: any) => void;
+  devices?: IDeviceState[];
+  onLongPressDevice?: (device: IDeviceState) => void;
   writeToDevice?: (payload: number[]) => Promise<void>;
   isPoweredOn?: boolean;
   onDisconnect?: () => void;
 }
 
-const CURATED_PRESETS: any[] = [];
+const CURATED_PRESETS: IFavoriteState[] = [];
 
 const MarqueeText = ({ children, style }: any) => {
   const [textWidth, setTextWidth] = useState(0);
@@ -169,11 +207,11 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
   const [speed, setSpeed] = useState<number>(50);
   const [micSensitivity, setMicSensitivity] = useState<number>(80);
   const [musicHue, setMusicHue] = useState(180);
-  const [recording, setRecording] = useState<any>(null); // Use any for Recording to avoid version-specific type issues
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
   const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
 
-  const [quickPresets, setQuickPresets] = useState<any[]>([
+  const [quickPresets, setQuickPresets] = useState<IQuickPreset[]>([
     { name: 'Rainbow', colors: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'], type: 3 },
     { name: 'America', colors: ['#FF0000', '#FFFFFF', '#0000FF'], type: 3 },
     { name: 'Cyberpunk', colors: ['#00FFFF', '#FF00FF', '#FFFF00'], type: 3 },
@@ -243,7 +281,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
   }, [fixedSubMode, candleAmplitude]);
 
   // Favorites Array
-  const [favorites, setFavorites] = useState<any[]>([]);
+  const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
 
   const [isFavPromptVisible, setIsFavPromptVisible] = useState(false);
   const [favPromptName, setFavPromptName] = useState('');
@@ -307,13 +345,14 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
      AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
   };
 
-  const loadFavorite = (fav: any) => {
+  const loadFavorite = (favRaw: IFavoriteState) => {
+     const fav: any = favRaw;
      setActiveFavoriteId(fav.id);
      setActiveMode('FIXED');
        
      // Handle Legacy vs New Mode Signatures
      const targetSubMode = fav.mode === 'FIXED' ? 'PATTERN' : (fav.mode === 'MULTICOLOR' ? 'MULTI' : fav.mode);
-     setFixedSubMode(targetSubMode);
+     setFixedSubMode(targetSubMode as any);
        
      setSpeed(fav.speed);
      setBrightness(fav.brightness);
@@ -423,7 +462,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
         { mode: 2, speed: 100, color1: bgRgb, color2: fgRgb }
       ]));
     } else {
-      let arr: any[] = [];
+      let arr: {r: number, g: number, b: number}[] = [];
       if (patternId === 2) arr = [fgRgb, bgRgb, bgRgb, bgRgb, bgRgb, bgRgb, bgRgb, bgRgb];
       if (patternId === 3) arr = [fgRgb, {r: Math.floor(fgRgb.r*0.5), g: Math.floor(fgRgb.g*0.5), b: Math.floor(fgRgb.b*0.5)}, {r: Math.floor(fgRgb.r*0.2), g: Math.floor(fgRgb.g*0.2), b: Math.floor(fgRgb.b*0.2)}, bgRgb, bgRgb, bgRgb];
       if (patternId === 4) arr = [fgRgb, fgRgb, fgRgb, fgRgb, bgRgb, bgRgb, bgRgb, bgRgb];

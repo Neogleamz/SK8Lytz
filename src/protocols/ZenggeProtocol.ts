@@ -133,14 +133,16 @@ export class ZenggeProtocol {
    * Multi-color / Segmented Mode (0x59)
    */
   static setMultiColor(colors: {r: number, g: number, b: number}[], speed: number, direction: number, transitionType: number = 0x00): number[] {
-    const numPoints = colors.length;
+    // SECURITY: Clamp the payload to absolute maximum of 32 color vectors to completely eliminate MTU fragmentation BLE packet crashing
+    const safeColors = colors.slice(0, 32);
+    const numPoints = safeColors.length;
     const totalLen = (numPoints * 3) + 9;
     const payload = new Array(totalLen);
     payload[0] = 0x59;
     payload[1] = (totalLen >> 8) & 0xFF;
     payload[2] = totalLen & 0xFF;
     let idx = 3;
-    for (const c of colors) {
+    for (const c of safeColors) {
       payload[idx++] = c.r;
       payload[idx++] = c.g;
       payload[idx++] = c.b;
@@ -160,12 +162,14 @@ export class ZenggeProtocol {
    * Up to 32 steps. Each step: [active, mode, speed, r1, g1, b1, r2, g2, b2]
    */
   static setCustomMode(steps: {mode: number, speed: number, color1: {r: number, g: number, b: number}, color2: {r: number, g: number, b: number}}[]): number[] {
+    // SECURITY: Hard limit the 291 byte buffer exactly to the 32 Step MCU spec.
+    const safeSteps = steps.slice(0, 32);
     const payload = new Array(291).fill(0);
     payload[0] = 0x51;
     let idx = 1;
     for (let i = 0; i < 32; i++) {
-        if (i < steps.length) {
-            const step = steps[i];
+        if (i < safeSteps.length) {
+            const step = safeSteps[i];
             payload[idx++] = 0xf0; // Active
             payload[idx++] = step.mode;
             payload[idx++] = step.speed;

@@ -730,7 +730,7 @@ export default function DashboardScreen() {
                 }
                 isPaired={isGrouped}
                 points={(displayConnectedDevices[0] as any).points}
-                devices={displayConnectedDevices}
+                devices={displayConnectedDevices as any}
                 onLongPressDevice={openSettings}
                 writeToDevice={writeToDevice}
                 isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
@@ -746,7 +746,7 @@ export default function DashboardScreen() {
                 }
                 isPaired={isGrouped}
                 points={(displayConnectedDevices[0] as any).points}
-                devices={displayConnectedDevices}
+                devices={displayConnectedDevices as any}
                 onLongPressDevice={openSettings}
                 writeToDevice={writeToDevice}
                 isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
