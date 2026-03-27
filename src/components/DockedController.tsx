@@ -17,6 +17,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger } from '../services/AppLogger';
 
+const AnimatedIcon = Animated.createAnimatedComponent(MaterialCommunityIcons);
+
 type ProductType = 'HALOZ' | 'SOULZ';
 type ModeType = 'PRESETS' | 'FIXED' | 'RBM' | 'MUSIC' | 'CAMERA' | 'CUSTOM' | 'MULTICOLOR' | 'CANDLE';
 
@@ -152,22 +154,38 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
   const candleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    let isActive = true;
     if (fixedSubMode === 'CANDLE') {
-       let speedVal = 1000;
-       if (candleAmplitude === 1) speedVal = 1200;
-       if (candleAmplitude === 2) speedVal = 400;
-       if (candleAmplitude === 3) speedVal = 100;
+       const flicker = () => {
+          if (!isActive) return;
+          let minOp = 0.8; let maxOp = 1.0;
+          let minDur = 100; let maxDur = 300;
 
-       Animated.loop(
-         Animated.sequence([
-           Animated.timing(candleAnim, { toValue: 0.5, duration: speedVal, useNativeDriver: true }),
-           Animated.timing(candleAnim, { toValue: 1, duration: speedVal, useNativeDriver: true })
-         ])
-       ).start();
+          if (candleAmplitude === 1) { // CALM
+             minOp = 0.85; maxOp = 1.0; minDur = 300; maxDur = 600;
+          } else if (candleAmplitude === 2) { // FLICKERING
+             minOp = 0.5; maxOp = 1.0; minDur = 80; maxDur = 250;
+          } else { // TURBULENT
+             minOp = 0.2; maxOp = 1.0; minDur = 30; maxDur = 120;
+          }
+
+          const nextOp = Math.random() * (maxOp - minOp) + minOp;
+          const nextDur = Math.random() * (maxDur - minDur) + minDur;
+
+          Animated.timing(candleAnim, {
+             toValue: nextOp,
+             duration: nextDur,
+             useNativeDriver: true
+          }).start(({ finished }) => {
+             if (finished) flicker();
+          });
+       };
+       flicker();
     } else {
        candleAnim.stopAnimation();
        candleAnim.setValue(1);
     }
+    return () => { isActive = false; };
   }, [fixedSubMode, candleAmplitude]);
 
   // Favorites Array
@@ -757,50 +775,51 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
       <View style={styles.controlsContainer}>
         <ScrollView 
           style={styles.activeModeContainer} 
-          scrollEnabled={!(activeMode === 'FIXED' && (fixedSubMode === 'RBM' || fixedSubMode === 'MUSIC' || fixedSubMode === 'PATTERN' || fixedSubMode === 'CAMERA'))}
-          contentContainerStyle={{ paddingBottom: (activeMode === 'FIXED' && (fixedSubMode === 'RBM' || fixedSubMode === 'MUSIC' || fixedSubMode === 'PATTERN' || fixedSubMode === 'CAMERA')) ? 0 : 40, flexGrow: 1 }} 
+          scrollEnabled={!(activeMode === 'PRESETS' || (activeMode === 'FIXED' && (fixedSubMode === 'RBM' || fixedSubMode === 'MUSIC' || fixedSubMode === 'PATTERN' || fixedSubMode === 'CAMERA' || fixedSubMode === 'CANDLE')))}
+          contentContainerStyle={{ paddingBottom: (activeMode === 'PRESETS' || (activeMode === 'FIXED' && (fixedSubMode === 'RBM' || fixedSubMode === 'MUSIC' || fixedSubMode === 'PATTERN' || fixedSubMode === 'CAMERA' || fixedSubMode === 'CANDLE'))) ? 0 : 40, flexGrow: 1 }} 
           showsVerticalScrollIndicator={false}
         >
           {activeMode === 'PRESETS' && (
-            <View style={{ marginBottom: 8, paddingHorizontal: Layout.padding }}>
+            <View style={{ flex: 1, paddingHorizontal: Layout.padding, paddingBottom: 8 }}>
               
-              <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 12 }]}>YOURS</Text>
-              {favorites.length === 0 && (
-                 <Text style={{ color: Colors.textMuted, fontSize: 13, marginBottom: 12 }}>
-                    You have no saved favorites. Click the heart icon on any pattern in the Visualizer to save it!
-                 </Text>
-              )}
+              <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 6, fontSize: 16 }]}>YOURS</Text>
               
-              <View style={[styles.presetContainer, { marginBottom: 24 }]}>
-                 {favorites.map((fav, idx) => (
-                  <TouchableOpacity 
-                    key={fav.id}
-                    style={[styles.presetCard, { borderColor: Colors.primary }]}
-                    onPress={() => loadFavorite(fav)}
-                  >
-                    <TouchableOpacity 
-                       style={{ position: 'absolute', right: 12, top: 12, zIndex: 10 }} 
-                       onPress={() => deleteFavorite(fav.id)}
-                    >
-                       <MaterialCommunityIcons name="trash-can-outline" size={20} color={Colors.textMuted} />
-                    </TouchableOpacity>
-                    <MaterialCommunityIcons 
-                       name={fav.mode === 'MULTI' ? 'palette' : fav.mode === 'RBM' ? 'animation-play' : fav.mode === 'MUSIC' ? 'music' : fav.mode === 'CANDLE' ? 'candle' : 'shape-square-plus'} 
-                       size={36} 
-                       color={Colors.primary} 
-                       style={{ marginBottom: 12 }} 
-                    />
-                    <Text style={styles.presetTitle} numberOfLines={1}>{fav.name}</Text>
-                    <Text style={styles.presetDesc}>Speed: {fav.speed}%</Text>
-                  </TouchableOpacity>
-                 ))}
+              <View style={[styles.presetContainer, { flex: 1, marginBottom: 12 }]}>
+                 {Array.from({ length: 9 }).map((_, idx) => {
+                    const fav = favorites[idx];
+                    if (!fav) return <View key={`empty-yours-${idx}`} style={[styles.presetCard, { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
+                    return (
+                      <TouchableOpacity 
+                        key={fav.id}
+                        style={[styles.presetCard, { borderColor: Colors.primary }]}
+                        onPress={() => loadFavorite(fav)}
+                      >
+                        <TouchableOpacity 
+                           style={{ position: 'absolute', right: 8, top: 8, zIndex: 10 }} 
+                           onPress={() => deleteFavorite(fav.id)}
+                        >
+                           <MaterialCommunityIcons name="trash-can-outline" size={16} color={Colors.textMuted} />
+                        </TouchableOpacity>
+                        <MaterialCommunityIcons 
+                           name={fav.mode === 'MULTI' ? 'palette' : fav.mode === 'RBM' ? 'animation-play' : fav.mode === 'MUSIC' ? 'music' : fav.mode === 'CANDLE' ? 'candle' : 'shape-square-plus'} 
+                           size={26} 
+                           color={Colors.primary} 
+                           style={{ marginBottom: 4 }} 
+                        />
+                        <Text style={styles.presetTitle} numberOfLines={1}>{fav.name}</Text>
+                        <Text style={styles.presetDesc}>{fav.speed}%</Text>
+                      </TouchableOpacity>
+                    );
+                 })}
               </View>
 
-              {CURATED_PRESETS.length > 0 && (
-                <>
-                  <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 12 }]}>OURS</Text>
-                  <View style={[styles.presetContainer, { marginBottom: 24 }]}>
-                     {CURATED_PRESETS.map((fav, idx) => (
+              <Text style={[Typography.title, isDark && { color: '#FFF' }, { marginBottom: 6, fontSize: 16 }]}>OURS</Text>
+              
+              <View style={[styles.presetContainer, { flex: 1 }]}>
+                 {Array.from({ length: 9 }).map((_, idx) => {
+                    const fav = CURATED_PRESETS[idx];
+                    if (!fav) return <View key={`empty-ours-${idx}`} style={[styles.presetCard, { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
+                    return (
                       <TouchableOpacity 
                         key={fav.id}
                         style={[styles.presetCard, { borderColor: Colors.secondary }]}
@@ -808,17 +827,16 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                       >
                         <MaterialCommunityIcons 
                            name={fav.mode === 'MULTI' ? 'palette' : fav.mode === 'RBM' ? 'animation-play' : fav.mode === 'MUSIC' ? 'music' : fav.mode === 'CANDLE' ? 'candle' : 'shape-square-plus'} 
-                           size={36} 
+                           size={26} 
                            color={Colors.secondary} 
-                           style={{ marginBottom: 12 }} 
+                           style={{ marginBottom: 4 }} 
                         />
                         <Text style={styles.presetTitle} numberOfLines={1}>{fav.name}</Text>
-                        <Text style={styles.presetDesc}>Curated {fav.mode}</Text>
+                        <Text style={styles.presetDesc}>Curated</Text>
                       </TouchableOpacity>
-                     ))}
-                  </View>
-                </>
-              )}
+                    );
+                 })}
+              </View>
             </View>
           )}
 
@@ -1008,7 +1026,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                   )}
                   {/* CANDLE EMULATOR TIER */}
                   {fixedSubMode === 'CANDLE' && (
-                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 }}>
+                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                      <TouchableOpacity 
                         activeOpacity={1}
                         onPress={() => {
@@ -1027,15 +1045,25 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                         }}
                      >
                         <Animated.View style={{ 
-                            opacity: candleAnim, 
-                            transform: [{ scale: candleAnim.interpolate({ inputRange: [0.5, 1], outputRange: [0.95, 1.05] }) }],
-                            shadowColor: selectedColor,
-                            shadowOffset: { width: 0, height: 0 },
-                            shadowOpacity: 1,
-                            shadowRadius: candleAmplitude === 3 ? 40 : candleAmplitude === 2 ? 25 : 15,
-                            elevation: 20
+                            opacity: candleAnim.interpolate({ inputRange: [0.2, 1], outputRange: [0.7, 1] }), 
+                            transform: [{ scale: candleAnim.interpolate({ inputRange: [0.2, 1], outputRange: [0.97, 1.03] }) }]
                         }}>
-                           <MaterialCommunityIcons name="candle" size={140} color={selectedColor === '#000000' || selectedColor === '#000' ? '#FFA500' : selectedColor} />
+                           <AnimatedIcon 
+                              name="candle" 
+                              size={140} 
+                              color={selectedColor === '#000000' || selectedColor === '#000' ? '#FFA500' : selectedColor}
+                              style={{
+                                 textShadowColor: selectedColor === '#000000' || selectedColor === '#000' ? '#FFA500' : selectedColor,
+                                 textShadowOffset: { width: 0, height: 0 },
+                                 textShadowRadius: candleAnim.interpolate({ 
+                                     inputRange: [0.2, 1], 
+                                     outputRange: [
+                                        candleAmplitude === 3 ? 15 : candleAmplitude === 2 ? 8 : 4, 
+                                        candleAmplitude === 3 ? 70 : candleAmplitude === 2 ? 40 : 20
+                                     ] 
+                                 })
+                              }}
+                           />
                         </Animated.View>
                      </TouchableOpacity>
                      
