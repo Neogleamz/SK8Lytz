@@ -477,8 +477,8 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
         arr = [...arr, ...arr];
       }
       
-      // Send with TransitionType 0x00 (Static Flow/Marquee) to actually animate across the matrix
-      writeToDevice(ZenggeProtocol.setMultiColor(arr, currentSpeed, 1, 0));
+      // Send with TransitionType 0x03 (Running Water/Marquee) to actually animate across the matrix
+      writeToDevice(ZenggeProtocol.setMultiColor(arr, currentSpeed, 1, 3));
     }
   };
 
@@ -518,7 +518,8 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
 
   // -- App Microphone Logic --
   useEffect(() => {
-    if (activeMode === 'MUSIC' && micSource === 'APP' && isPoweredOn) {
+    const isMusicActive = activeMode === 'MUSIC' || (activeMode === 'FIXED' && fixedSubMode === 'MUSIC');
+    if (isMusicActive && micSource === 'APP' && isPoweredOn) {
       startRecording();
     } else {
       stopRecording();
@@ -526,7 +527,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
     return () => {
       stopRecording();
     };
-  }, [activeMode, micSource, isPoweredOn]);
+  }, [activeMode, fixedSubMode, micSource, isPoweredOn]);
 
   // -- Analytics Logging --
   const logTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});

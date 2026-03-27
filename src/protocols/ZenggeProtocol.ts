@@ -133,8 +133,18 @@ export class ZenggeProtocol {
    * Multi-color / Segmented Mode (0x59)
    */
   static setMultiColor(colors: {r: number, g: number, b: number}[], speed: number, direction: number, transitionType: number = 0x00): number[] {
+    // SECURITY: Dynamic Padding - The hardware native 0x59 parser WILL GLITCH if array length < 10.
+    // We seamlessly loop the user's pattern over itself until it breaches the threshold.
+    let expandedColors = [...colors];
+    if (expandedColors.length > 0 && expandedColors.length < 10) {
+       const basePattern = [...expandedColors];
+       while (expandedColors.length < 10) {
+          expandedColors.push(...basePattern);
+       }
+    }
+
     // SECURITY: Clamp the payload to absolute maximum of 32 color vectors to completely eliminate MTU fragmentation BLE packet crashing
-    const safeColors = colors.slice(0, 32);
+    const safeColors = expandedColors.slice(0, 32);
     const numPoints = safeColors.length;
     const totalLen = (numPoints * 3) + 9;
     const payload = new Array(totalLen);
