@@ -287,6 +287,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
   const [favPromptName, setFavPromptName] = useState('');
   const [favPromptTargetId, setFavPromptTargetId] = useState<string | null>(null);
   const [activeFavoriteId, setActiveFavoriteId] = useState<string | null>(null);
+  const [isDiyBuilderExpanded, setIsDiyBuilderExpanded] = useState(false);
 
   const handleSaveFavoriteClick = () => {
      if (activeFavoriteId) {
@@ -1056,7 +1057,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                   {/* SOLID PATTERNS TIER */}
                   {fixedSubMode === 'PATTERN' && (
                   <View style={{ flex: 1, paddingBottom: 6 }}>
-                    <View style={{ flex: 1, backgroundColor: Colors.isDark ? '#000000' : 'rgba(0,0,0,0.04)', borderRadius: 8, padding: 4, flexDirection: 'column', flexWrap: 'wrap', alignContent: 'stretch' }}>
+                    <View style={{ flex: 1, backgroundColor: Colors.isDark ? '#000000' : 'rgba(0,0,0,0.04)', borderRadius: 8, padding: 8, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
                       {(() => {
                         const fgRgb = (hex: string, alpha: number) => {
                            const h = hex || '#FFFFFF';
@@ -1090,9 +1091,9 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                                setFixedColorMode('FOREGROUND');
                             }
                           }}
-                          style={{ flex: 1, minHeight: 35, marginHorizontal: 6, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
+                          style={{ width: '48%', minHeight: 40, marginBottom: 8, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
                         >
-                          <Text style={{ color: Colors.text, flex: 1, fontWeight: 'bold', fontSize: 13 }}>{pattern.label}</Text>
+                          <Text style={{ color: Colors.text, flex: 1, fontWeight: 'bold', fontSize: 13 }} numberOfLines={1}>{pattern.label}</Text>
                           <FixedPatternPreviewRow baseDots={pattern.dots} patternId={pattern.id} speed={speed} points={devices?.[0]?.points || points || 16} segments={devices?.[0]?.segments || 1} />
                         </TouchableOpacity>
                       ))}
@@ -1118,21 +1119,29 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                                   writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, preset.type, speed));
                               }
                           }}
-                          onLongPress={() => {
-                             setQuickPromptTargetIndex(idx);
-                             setQuickPromptName(preset.name);
-                             setIsQuickPromptVisible(true);
-                          }}
                           style={{
                               flex: 1, minHeight: 45, justifyContent: 'center', paddingHorizontal: 10,
                               backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', 
-                              borderRadius: 8, borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+                              borderRadius: 8, borderWidth: 1, borderColor: activeQuickPresetIndex === idx ? Colors.primary : (Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')
                           }}
                         >
-                          <View style={{ width: '100%', height: 20, justifyContent: 'center', alignItems: 'center' }}>
+                          <TouchableOpacity 
+                            style={{ position: 'absolute', right: 10, top: '50%', marginTop: -14, padding: 6, zIndex: 10 }}
+                            onPress={() => {
+                               setActiveQuickPresetIndex(idx);
+                               setFixedSubMode('MULTI');
+                               setMultiColors(preset.colors);
+                               setMultiTransition(preset.type);
+                               setIsDiyBuilderExpanded(true);
+                            }}
+                          >
+                             <MaterialCommunityIcons name="pencil-outline" size={16} color={Colors.textMuted} />
+                          </TouchableOpacity>
+
+                          <View style={{ width: '80%', height: 20, justifyContent: 'center', alignItems: 'center' }}>
                             <MarqueeText style={{ color: Colors.text, fontWeight: 'bold', fontSize: 11 }}>{preset.name}</MarqueeText>
                           </View>
-                          <View style={{ flexDirection: 'row', gap: 2, justifyContent: 'center' }}>
+                          <View style={{ flexDirection: 'row', gap: 2, justifyContent: 'center', marginRight: '15%' }}>
                              {preset.colors.slice(0,6).map((c: string, i: number) => (
                                 <View key={i} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c }} />
                              ))}
@@ -1142,81 +1151,103 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                       ))}
                     </View>
 
-                    <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: 'bold', marginTop: 4 }}>DIY ARRAY BUILDER</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                      {multiColors.map((hex, index) => (
-                        <TouchableOpacity key={index} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: hex, borderWidth: 2, borderColor: '#FFF', shadowColor: hex, shadowOpacity: 0.8, shadowRadius: 4 }} onPress={() => {
-                          setFixedSubMode('MULTI');
-                          const newArr = [...multiColors];
-                          newArr[index] = selectedColor;
-                          setMultiColors(newArr);
-                          const rgbColors = generateSortedColors(newArr);
-                          if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
-                        }} />
-                      ))}
-                      {multiColors.length < 16 && (
-                        <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderWidth: 1, borderColor: Colors.isDark ? '#FFF' : Colors.text, justifyContent: 'center', alignItems: 'center' }} onPress={() => {
-                           setFixedSubMode('MULTI');
-                           const newArr = [...multiColors, selectedColor];
-                           setMultiColors(newArr);
-                           const rgbColors = generateSortedColors(newArr);
-                           if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
-                        }}>
-                          <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold' }}>+</Text>
-                        </TouchableOpacity>
-                      )}
-                      {multiColors.length > 1 && (
-                        <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,0,0,0.3)', borderWidth: 1, borderColor: Colors.isDark ? '#FFF' : Colors.text, justifyContent: 'center', alignItems: 'center' }} onPress={() => {
-                           setFixedSubMode('MULTI');
-                           const newArr = [...multiColors];
-                           newArr.pop();
-                           setMultiColors(newArr);
-                           const rgbColors = generateSortedColors(newArr);
-                           if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
-                        }}>
-                          <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold', lineHeight: 22 }}>-</Text>
-                        </TouchableOpacity>
-                      )}
-                      <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.primary, borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)', justifyContent: 'center', alignItems: 'center', marginLeft: 'auto' }} onPress={() => {
-                          if (activeQuickPresetIndex !== null && quickPresets[activeQuickPresetIndex]) {
-                              setQuickPromptTargetIndex(activeQuickPresetIndex);
-                              setQuickPromptName(quickPresets[activeQuickPresetIndex].name);
-                          } else {
-                              setQuickPromptTargetIndex(-1);
-                              setQuickPromptName('Custom Preset');
-                          }
-                          setIsQuickPromptVisible(true);
-                      }}>
-                        <MaterialCommunityIcons name="content-save" size={16} color="#000" />
+                    {!isDiyBuilderExpanded && (
+                      <TouchableOpacity 
+                        style={{ marginTop: 8, padding: 12, backgroundColor: Colors.surfaceHighlight, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
+                        onPress={() => {
+                           setActiveQuickPresetIndex(null);
+                           setIsDiyBuilderExpanded(true);
+                        }}
+                      >
+                        <Text style={{ color: Colors.text, fontWeight: 'bold', fontSize: 12 }}>+ Create New DIY Array</Text>
                       </TouchableOpacity>
-                    </View>
+                    )}
 
-                    <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 'bold' }}>TRANSITION TYPE</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 }}>
-                      {[
-                        { label: 'Static', val: 0 },
-                        { label: 'Gradual', val: 1 },
-                        { label: 'Strobe', val: 2 },
-                        { label: 'Running Water', val: 3 }
-                      ].map((mode) => (
-                        <TouchableOpacity 
-                          key={mode.val} 
-                          onPress={() => {
+                    {isDiyBuilderExpanded && (
+                    <View style={{ marginTop: 12, padding: 10, backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderRadius: 12, borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                         <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: 'bold' }}>DIY ARRAY BUILDER</Text>
+                         <TouchableOpacity onPress={() => setIsDiyBuilderExpanded(false)} style={{ padding: 4 }}>
+                            <MaterialCommunityIcons name="chevron-up" size={24} color={Colors.textMuted} />
+                         </TouchableOpacity>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        {multiColors.map((hex, index) => (
+                          <TouchableOpacity key={index} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: hex, borderWidth: 2, borderColor: '#FFF', shadowColor: hex, shadowOpacity: 0.8, shadowRadius: 4 }} onPress={() => {
+                            setFixedSubMode('MULTI');
+                            const newArr = [...multiColors];
+                            newArr[index] = selectedColor;
+                            setMultiColors(newArr);
+                            const rgbColors = generateSortedColors(newArr);
+                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
+                          }} />
+                        ))}
+                        {multiColors.length < 16 && (
+                          <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderWidth: 1, borderColor: Colors.isDark ? '#FFF' : Colors.text, justifyContent: 'center', alignItems: 'center' }} onPress={() => {
                              setFixedSubMode('MULTI');
-                             setMultiTransition(mode.val);
-                             const rgbColors = generateSortedColors(multiColors);
-                             if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, mode.val, speed));
-                          }} 
-                          style={{ 
-                            paddingHorizontal: 12, paddingVertical: 6, 
-                            backgroundColor: multiTransition === mode.val ? Colors.primary : (Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'), 
-                            borderRadius: 8, marginRight: 6, marginBottom: 6 
-                          }}
-                        >
-                          <Text style={{ color: multiTransition === mode.val ? '#000' : Colors.text, fontWeight: 'bold', fontSize: 11 }}>{mode.label}</Text>
+                             const newArr = [...multiColors, selectedColor];
+                             setMultiColors(newArr);
+                             const rgbColors = generateSortedColors(newArr);
+                             if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
+                          }}>
+                            <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold' }}>+</Text>
+                          </TouchableOpacity>
+                        )}
+                        {multiColors.length > 1 && (
+                          <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,0,0,0.3)', borderWidth: 1, borderColor: Colors.isDark ? '#FFF' : Colors.text, justifyContent: 'center', alignItems: 'center' }} onPress={() => {
+                             setFixedSubMode('MULTI');
+                             const newArr = [...multiColors];
+                             newArr.pop();
+                             setMultiColors(newArr);
+                             const rgbColors = generateSortedColors(newArr);
+                             if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
+                          }}>
+                            <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold', lineHeight: 22 }}>-</Text>
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.primary, borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)', justifyContent: 'center', alignItems: 'center', marginLeft: 'auto' }} onPress={() => {
+                            if (activeQuickPresetIndex !== null && quickPresets[activeQuickPresetIndex]) {
+                                setQuickPromptTargetIndex(activeQuickPresetIndex);
+                                setQuickPromptName(quickPresets[activeQuickPresetIndex].name);
+                            } else {
+                                setQuickPromptTargetIndex(-1);
+                                setQuickPromptName('Custom Preset');
+                            }
+                            setIsQuickPromptVisible(true);
+                        }}>
+                          <MaterialCommunityIcons name="content-save" size={16} color="#000" />
                         </TouchableOpacity>
-                      ))}
+                      </View>
+
+                      <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 4, marginTop: 12, fontWeight: 'bold' }}>TRANSITION TYPE</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 }}>
+                        {[
+                          { label: 'Static', val: 0 },
+                          { label: 'Gradual', val: 1 },
+                          { label: 'Strobe', val: 2 },
+                          { label: 'Running Water', val: 3 }
+                        ].map((mode) => (
+                          <TouchableOpacity 
+                            key={mode.val} 
+                            onPress={() => {
+                               setFixedSubMode('MULTI');
+                               setMultiTransition(mode.val);
+                               const rgbColors = generateSortedColors(multiColors);
+                               if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, mode.val, speed));
+                            }} 
+                            style={{ 
+                              paddingHorizontal: 12, paddingVertical: 6, 
+                              backgroundColor: multiTransition === mode.val ? Colors.primary : (Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'), 
+                              borderRadius: 8, marginRight: 6, marginBottom: 6 
+                            }}
+                          >
+                            <Text style={{ color: multiTransition === mode.val ? '#000' : Colors.text, fontWeight: 'bold', fontSize: 11 }}>{mode.label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
                     </View>
+                    )}
                   </View>
                   )}
 
@@ -2086,8 +2117,8 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   },
   presetCard: {
     width: '48%',
-    height: '48%',
-    padding: 4,
+    minHeight: 80,
+    padding: 6,
     backgroundColor: Colors.isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.04)',
     borderRadius: 16,
     borderWidth: 1.5,

@@ -272,33 +272,43 @@ export default function useBLE(): BluetoothLowEnergyApi {
         return;
       }
       
-      const connections = await Promise.all(devices.map(device => bleManager.connectToDevice(device.id)));
-      setConnectedDevices(connections);
-      
-      await Promise.all(connections.map(conn => conn.discoverAllServicesAndCharacteristics()));
-
-      // Monitor & Firmware check for each device
-      await Promise.all(connections.map(async (conn) => {
-        conn.monitorCharacteristicForService(
-          ZENGGE_SERVICE_UUID,
-          ZENGGE_CHARACTERISTIC_UUID,
-          (error: any, characteristic: any) => handleNotification(error, characteristic, conn.id)
-        );
-
-        let firmware = undefined;
+      const connections = [];
+      // STRICT SEQUENTIAL CONNECTION LOOP
+      // WARNING: Android's native Bluetooth GATT adapter heavily penalizes concurrent `Promise.all` calls 
+      // with immediate GATT 133 Exception drops. We MUST connect and discover systematically one-by-one.
+      for (const device of devices) {
         try {
-          const fwChar = await conn.readCharacteristicForService(
-            '0000180a-0000-1000-8000-00805f9b34fb',
-            '00002a26-0000-1000-8000-00805f9b34fb'
+          const conn = await bleManager.connectToDevice(device.id);
+          connections.push(conn);
+          await conn.discoverAllServicesAndCharacteristics();
+          
+          // Monitor
+          conn.monitorCharacteristicForService(
+            ZENGGE_SERVICE_UUID,
+            ZENGGE_CHARACTERISTIC_UUID,
+            (error: any, characteristic: any) => handleNotification(error, characteristic, conn.id)
           );
-          if (fwChar && fwChar.value) {
-            const rawFw = require('buffer').Buffer.from(fwChar.value, 'base64').toString('ascii');
-            firmware = rawFw.replace(/[^\x20-\x7E]/g, '');
-          }
-        } catch (e) { }
 
-        AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name, firmware });
-      }));
+          let firmware = undefined;
+          try {
+            const fwChar = await conn.readCharacteristicForService(
+              '0000180a-0000-1000-8000-00805f9b34fb',
+              '00002a26-0000-1000-8000-00805f9b34fb'
+            );
+            if (fwChar && fwChar.value) {
+              const rawFw = require('buffer').Buffer.from(fwChar.value, 'base64').toString('ascii');
+              firmware = rawFw.replace(/[^\x20-\x7E]/g, '');
+            }
+          } catch (e) { }
+
+          AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name, firmware });
+        } catch (deviceError: any) {
+          console.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${device.id}`, deviceError);
+          AppLogger.log('BLE_CONNECTION_ERROR', { error: deviceError?.message || String(deviceError), deviceId: device.id, context: 'group_sync_fail' });
+        }
+      }
+
+      setConnectedDevices(connections);
 
       bleManager.stopDeviceScan();
       setIsScanning(false);
