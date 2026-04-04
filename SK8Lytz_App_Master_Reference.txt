@@ -716,7 +716,7 @@ These mappings closely relate to the `setHardwareConfig` (`0x81`) command values
 - `symphony_SymphonyEffect10`: Overlay, from end to start
 - `symphony_SymphonyEffect11`: Overlay, from the middle to the both ends
 - `symphony_SymphonyEffect12`: Overlay, from the both ends to the middle
-- `symphony_SymphonyEffect13`: Fading and running, 1point from start to end
+- `symphony_SymphonyEffect13`: -Fading and running, 1point from start to end
 - `symphony_SymphonyEffect14`: Fading and running, 1point from end to start
 - `symphony_SymphonyEffect15`: Olivary Flowing, from start to end
 - `symphony_SymphonyEffect16`: Olivary Flowing, from end to start
@@ -892,3 +892,410 @@ The `ScannerAnimation.tsx` projection wrapper inside the DOM natively sits at `3
 
 ## FIXED PATTERN TIER LIST
 The physical array list for "Solid Patterns" is locked at 10 native fixed iterations mapping directly to internal protocol handlers. (1: Solid, 2: Single Dot ... 10: Pinch).
+
+========================================================================
+         SECTION: HARDWARE SETTINGS DEEP REVERSE ENGINEERING
+             (From APK Decompile - April 2026 Audit)
+         Source Files: SymphonySettingForA3.java, tc/b.java, dd/i.java
+========================================================================
+
+## 16. Hardware Settings Protocol (Complete Specification)
+
+This section documents the COMPLETE BLE protocol for reading and writing
+all hardware settings for Zengge Symphony addressable LED controllers
+(HALOZ / SOULZ), as extracted from decompiled `com.zengge.blev2` APK v1.5.0.
+
+---
+
+### A. QUERY COMMAND: Read Current Hardware Settings (0x63 / command byte 99)
+
+The Zengge app sends a 5-byte query packet to request the current hardware
+configuration from the device. This is sent once immediately on connection.
+
+**Source**: `tc/b.java → public static byte[] f0(boolean z10)`
+
+```
+QUERY PACKET FORMAT (5 bytes raw, before V2 wrapper):
+  bArr[0] = 0x63  (99)   // Opcode: "get hardware config"
+  bArr[1] = 0x12  (18)   // Sub-command identifier
+  bArr[2] = 0x21  (33)   // Sub-command parameter (0x21 = query mode)
+  bArr[3] = 0xF0  (240)  // 0xF0 if device has mic, 0x0F if not
+  bArr[4] = checksum(bArr, 4)
+```
+
+**When to send**: Immediately after BLE connection established, before sending
+any pattern or config commands.
+
+---
+
+### B. RESPONSE PACKET: Hardware Settings Reply (opcode 0x63 / 99 in position [0])
+
+**Source**: `tc/b.java → static class a → public static SymphonyICTypeItem g(byte[] bArr)`
+
+The device responds with a 12-byte packet. Validation: `bArr[0] == 99` AND
+`bArr[11] == checksum(bArr, 11)`.
+
+```
+RESPONSE PACKET FORMAT (12 bytes):
+  bArr[0]  = 0x63  (99)   // Response opcode (matches query opcode)
+  bArr[1]  = ??           // Sub-type byte (ignored in parsing)
+  bArr[2]  = ??           // Ignored
+  bArr[3]  = ICType       // Strip Type / IC Wiring Type (0-based index)
+  bArr[4]  = ICParam_c    // IC timing param c (T0H in ns)
+  bArr[5]  = ICParam_d    // IC timing param d (T0L in ns)
+  bArr[6]  = ICParam_e    // IC timing param e (T1H in ns)
+  bArr[7]  = ICParam_f    // IC timing param f (T1L in ns)
+  bArr[8]  = Points_High  // LED Points High Byte (big-endian with [9])
+  bArr[9]  = Points_Low   // LED Points Low Byte
+  bArr[10] = ColorSorting // Color order index (see Sorting Table below)
+  bArr[11] = Checksum     // sum(bArr[0..10]) & 0xFF
+```
+
+**Parsing LED Points (total count)**:
+```javascript
+ledPoints = ((bArr[9] & 0xFF) << 8) | (bArr[8] & 0xFF)
+// NOTE: bytes are SWAPPED - g2.c.a(new byte[]{bArr[9], bArr[8]})
+// meaning bArr[8]=Low, bArr[9]=High (little-endian pair in that field)
+```
+
+**Parsing IC Type**: `bArr[3] & 0xFF` → lookup in IC Type Table
+**Parsing Color Sorting**: `bArr[10] & 0xFF` → lookup in Sorting Table
+
+---
+
+### C. WRITE COMMAND: Set Hardware Settings (opcode 0x62 / 98)
+
+**Source**: `tc/b.java → public static byte[] C(int i10, int i11, int i12, int i13, int i14, int i15)`
+
+The full 11-byte set-hardware-config command (before V2 wrapper):
+
+```
+WRITE PACKET FORMAT (11 bytes):
+  bArr[0]  = 0x62  (98)   // Opcode: "set hardware config"
+  bArr[1]  = Points_High  // LED Points High byte (g2.c.c(points)[1])
+  bArr[2]  = Points_Low   // LED Points Low byte  (g2.c.c(points)[0])
+  bArr[3]  = Seg_High     // LED Segments High byte (g2.c.c(segments)[1])
+  bArr[4]  = Seg_Low      // LED Segments Low byte  (g2.c.c(segments)[0])
+  bArr[5]  = ICType       // Strip Type index (see IC Type Table)
+  bArr[6]  = ColorSorting // Color order index (see Sorting Table)
+  bArr[7]  = MicPoints    // Points for music mode  (for Symphony mic)
+  bArr[8]  = MicSegments  // Segments for music mode
+  bArr[9]  = 0xF0  (-16)  // Fixed terminator byte
+  bArr[10] = checksum(bArr, 10)
+```
+
+**Parameter constraints (from SymphonySettingForA3.java)**:
+- `ledPoints` (f24921l): 1 to 300 max. Constraint: points * segments <= 2048.
+- `ledSegments` (f24922m): 1 to (2048 / ledPoints) max.
+- `micPoints` (f24923n): 1 to 150 max. Constraint: micPoints * micSegments <= 960.
+- `micSegments` (f24924p): 1 to (960 / micPoints) max.
+- Default fallback if zeros detected: points=30, segments=10.
+
+---
+
+### D. IC TYPE TABLE (Strip Type / "Wiring Type")
+
+**Source**: `dd/i.java → public static ArrayList<SymphonyICTypeItem> m(boolean z10, int i10)`
+
+This is the complete list for the A3/A2 controller (our HALOZ/SOULZ hardware).
+The `ICType` byte in the packet corresponds to the index value (field `f23990a`).
+
+For non-mic mode (z10=false, which is our use case):
+
+| Index | Name        | T0H | T0L | T1H | T1L | MaxHz |
+|-------|-------------|-----|-----|-----|-----|-------|
+|   1   | WS2812B     |  14 |  12 |   6 |  18 | 1000  |
+|   2   | SM16703     |  18 |   6 |   0 |  18 | 1600  |
+|   3   | SM16704     |  18 |   6 |   0 |  18 | 1600  |
+|   4   | WS2811      |  40 |  10 |  10 |  40 | 1000  |
+|   5   | UCS1903     |  40 |  10 |  10 |  40 |  480  |
+|   6   | SK6812      |  12 |  12 |   6 | 900 | 1600  |
+|   7   | SK6812RGBW  |  12 |  12 |   6 | 900 | 1600  |
+|   8   | INK1003     |  12 |  12 |   6 | 900 | 1600  |
+|   9   | UCS2904B    |  12 |  12 |   6 | 900 | 1600  |
+|  10   | JY1903      |  12 |  12 |   6 | 900 | 1600  | (firmware >= 2)
+|  11   | WS2812E     |  12 |  12 |   6 | 900 | 1600  | (firmware >= 3)
+
+**SK8Lytz Default**: Index 1 = WS2812B (HALOZ) or Index 2 = SM16703 (SOULZ)
+
+---
+
+### E. COLOR SORTING TABLE (Strip Type Ordering)
+
+**Source**: `SymphonySettingForA3.java → b1() method`
+
+Color sorting index values used in both query response byte[10] and write
+command byte[6]:
+
+For standard RGB strips (non-RGBW):
+| Index | Name |
+|-------|------|
+|   0   | RGB  |
+|   1   | RBG  |
+|   2   | GRB  |
+|   3   | GBR  |
+|   4   | BRG  |
+|   5   | BGR  |
+
+For RGBW strips (ICType 7 = SK6812RGBW):
+| Index | Name |
+|-------|------|
+|   0   | RGBW |
+|   1   | RBGW |
+|   2   | GRBW |
+|   3   | GBRW |
+|   4   | BRGW |
+|   5   | BGRW |
+|   6   | WRGB |
+|   7   | WRBG |
+|   8   | WGRB |
+|   9   | WGBR |
+|  10   | WBRG |
+|  11   | WBGR |
+
+**SK8Lytz Default**: Index 2 = GRB (standard WS2812B wiring)
+
+NOTE: The original 0x81 command used a 1-based color order (RGB=1, GRB=3).
+The new 0x63/0x62 protocol uses 0-based indexing (RGB=0, GRB=2). These
+are equivalent but the offset differs. Always use 0-based for new protocol.
+
+---
+
+### F. FIRMWARE VERSION DETECTION
+
+**Source**: `ZGHBDevice.java` (advertisement packet parsing)
+
+Firmware version is embedded in the BLE manufacturer advertisement data,
+NOT via a BLE command. It is read during scan/discovery:
+
+```
+Manufacturer data byte layout (29-byte payload at AD type 0xFF):
+  bArr[0]  = State byte (STA)
+  bArr[1..2] = Manufacturer ID (big-endian)
+  bArr[3]  = BLE Protocol Version (bleVersion)
+  bArr[4..9] = MAC address (6 bytes)
+  bArr[10..11] = Product ID (big-endian uint16)
+  bArr[12] = Firmware Version (low byte = firmwareVer & 0xFF)
+  bArr[13] = LED Version (ledVersion & 0xFF)
+  bArr[14] = Additional flags (checkKeyFlag & 0x03, ext firmwareVer bits)
+  bArr[15] = firmwareFlag (& 0x1F)
+  bArr[16..26] = State array (11 bytes for bleVersion < 7)
+```
+
+**firmwareVer full value formula** (for bleVersion >= 6):
+```javascript
+firmwareVer = (bArr[12] & 0xFF) | (((bArr[14] & 0xFFFF) >> 2) << 8)
+```
+
+For bleVersion < 6:
+```javascript
+firmwareVer = bArr[12] & 0xFF
+```
+
+**ledVersion**: `bArr[13] & 0xFF` (separate from firmwareVer)
+
+**Manufacturer IDs (valid ranges)**:
+- 23123-23133 (exact)
+- 23072-23087 (range)
+- 23136-23151 (range)
+- 23152-23167 (range)
+- 23168-23183 (range)
+
+---
+
+### G. LED SEGMENTS EXPLAINED
+
+The `ledSegments` field (f24922m in APK) represents the number of LED
+"segment groups" the controller treats as a logical unit. This is distinct
+from `ledPoints`:
+
+- **ledPoints**: Individual LED pixel count per segment.
+- **ledSegments**: How many of those segments are chained.
+- **Total LEDs**: `ledPoints × ledSegments` (max 2048).
+
+For SK8Lytz HALOZ (16 LEDs): points=16, segments=1 → total=16
+For SK8Lytz SOULZ (43 LEDs): points=43, segments=1 → total=43
+
+The Zengge settings UI displays: "Points", "Segments", and "Sum" (= P × S).
+
+---
+
+### H. FULL ROUND-TRIP WORKFLOW (On Connection)
+
+1. **BLE connection established** to device.
+2. **Send query**: `f0(hasMic)` → `[0x63, 0x12, 0x21, 0xF0|0x0F, checksum]`
+   - Wrap in V2 packet wrapper before sending.
+3. **Await 12-byte response** starting with `bArr[0] == 0x63`.
+4. **Parse response**:
+   - `icType = bArr[3] & 0xFF`
+   - `icParamC = bArr[4] & 0xFF` (T0H)
+   - `icParamD = bArr[5] & 0xFF` (T0L)
+   - `icParamE = bArr[6] & 0xFF` (T1H)
+   - `icParamF = bArr[7] & 0xFF` (T1L)
+   - `ledPoints = g2.c.a([bArr[9], bArr[8]])` ← low/high SWAPPED
+   - `colorSorting = bArr[10] & 0xFF`
+5. **Look up IC name** from IC Type Table using `icType` index.
+6. **Look up color order name** from Sorting Table using `colorSorting`.
+7. **Update UI** with detected values.
+8. **Store in `ng_device_configs`** AsyncStorage per device MAC.
+9. **Optionally re-send** `0x81` hardware config to confirm alignment.
+
+---
+
+### I. WRITE HARDWARE SETTINGS WORKFLOW
+
+When user changes settings in Hardware Settings UI and confirms:
+
+1. Build write packet via C(points, segments, icType, sorting, micPts, micSegs).
+2. Send 11-byte packet (V2 wrapped) to device.
+3. Device applies and persists the configuration.
+4. Optionally re-query (step 2 above) to confirm round-trip.
+5. Update `ng_device_configs` cache.
+
+---
+
+### J. EXISTING 0x81 COMMAND RELATIONSHIP
+
+The existing `0x81` command in our codebase is a LEGACY format that is
+functionally replaced by the `0x62`/`0x63` pair:
+
+| Feature | 0x81 (legacy) | 0x62/0x63 (new) |
+|---------|---------------|-----------------|
+| Query   | No            | Yes (0x63)      |
+| Write   | Yes           | Yes (0x62)      |
+| Points  | Yes           | Yes             |
+| Segments| No            | Yes             |
+| IC Type | Partial       | Full IC table   |
+| Mic settings | No     | Yes             |
+
+The 0x81 command continues to work for basic configuration but the 0x62/0x63
+protocol should be used for the full hardware settings dialog.
+
+---
+
+*End of Hardware Settings Deep Reverse Engineering Section — April 2026*
+
+
+================================================================================
+SECTION 17: HARDWARE SETTINGS INTEGRATION — IMPLEMENTATION STATUS (April 2026)
+================================================================================
+
+This section documents the completed implementation of the Zengge 0x62/0x63
+hardware settings protocol into the SK8Lytz application codebase.
+
+--------------------------------------------------------------------------------
+A. FILES MODIFIED
+--------------------------------------------------------------------------------
+
+1. src/protocols/ZenggeProtocol.ts  (COMPLETE REWRITE)
+   - queryHardwareSettings(hasMic)
+       Builds correct 5-byte query: [0x63, 0x12, 0x21, 0x0F, checksum]
+       Source: tc/b.java → f0(boolean)
+
+   - parseHardwareSettingsResponse(raw)
+       Parses 12-byte response from device.
+       CRITICAL BYTE SWAP: ledPoints = (bytes[9] << 8) | bytes[8]
+         (little-endian pair, NOT big-endian as one might assume)
+       Validates checksum: sum(bytes[0..10]) & 0xFF == bytes[11]
+       Handles both raw (starts 0x63) and V2-wrapped (8-byte header) responses.
+
+   - writeHardwareSettings(points, segments, icType, sorting, micPts?, micSegs?)
+       Builds correct 11-byte write: [0x62, ptsHi, ptsLo, segHi, segLo,
+         icType, sorting, micPts, micSegs, 0xF0, checksum]
+       Source: tc/b.java → C(int, int, int, int, int, int)
+
+   - parseFirmwareFromAdvertisement(base64)
+       Extracts firmware version from BLE scan advertisement manufacturer data.
+       Source: ZGHBDevice.java → setDeviceInfo(byte[])
+       Bytes: [12] = fw low, [14] >> 2 = fw high (when bleVersion >= 6)
+
+   - HardwareSettings interface: ledPoints, segments, icType, icName,
+       colorSorting, colorSortingName, firmwareVer, detected
+
+   - SK8_DEFAULTS constants:
+       HALOZ: { points: 16, segments: 1, icType: 1 (WS2812B), sorting: 2 (GRB) }
+       SOULZ: { points: 43, segments: 1, icType: 2 (SM16703), sorting: 2 (GRB) }
+
+   - HW_CONSTRAINTS: maxPoints=300, maxPxS=2048, maxMicPoints=150, maxMicPxS=960
+
+
+2. src/components/Sk8LytzProgrammerModal.tsx  (COMPLETE REBUILD)
+   Full scan → query → settings → write flow:
+   - SCAN DEVICES button → triggers BLE scan via handleScan prop
+   - Firmware parsed from advertisement data as devices are discovered
+   - RSSI signal strength bars (4-level: green/amber/orange/red)
+   - QUERY button per device → sends 0x63, waits up to 5s for response
+   - QUERY ALL button → sequential query of all visible devices
+   - Device tap → opens full-screen settings panel showing:
+       • Device MAC, firmware version, BLE version (read-only)
+       • ✓ LIVE badge when data came from physical 0x63 response
+       • LED POINTS + SEGMENTS inputs with constraint validation
+       • Total LED count display (red if exceeds 2048 max)
+       • IC STRIP TYPE horizontal chip picker (all 11 IC types)
+       • COLOR SORTING chip grid (RGB/RBG/GRB/GBR/BRG/BGR)
+       • HALOZ / SOULZ quick preset buttons
+       • WRITE TO HARDWARE (0x62) save footer button
+   - AsyncStorage caching: settings cached per device MAC address
+     Cache key: @sk8_hw_<deviceId>
+   - setOnDataReceived prop: listener for incoming BLE data to capture 0x63 responses
+
+
+3. src/components/ProtocolSnifferModal.tsx  (TARGETED FIXES)
+   - AUTO PROBE button: now sends correct queryHardwareSettings(false) command
+     (was incorrectly sending [0x63, 0x14, 0x00, 0x00] — wrong bytes)
+   - RX parsing: parseHardwareSettingsResponse() is now PRIMARY parser
+     Falls back to legacy parseHardwareConfig() for old 0x81/0x10 responses
+   - renderAnalyzedPayload() labels:
+       [0x63 HW RESP] — decoded: LEDS, IC type name, sorting name
+       [0x62 HW WRITE] — decoded: LEDS, SEGS, IC type name, sorting name
+       [0x63 WRAPPED] — V2-wrapped 0x63 responses
+   - Probe dictionary: "0x63 HW QUERY ✓" highlighted in green with correct bytes
+   - Config Injector: PREPARE 0x62 ✓ button (new) + 0x81 (legacy) side-by-side
+   - Fixed TextInput white-on-white display bug (was color:#FFF on bg:#F5F5F7)
+   - detectedLive state flag: shows "✓ LIVE — from 0x63 hardware response" banner
+
+--------------------------------------------------------------------------------
+B. IC TYPE TABLE (complete — all 11 types, source: dd/i.java)
+--------------------------------------------------------------------------------
+
+  Index | Name        | SK8Lytz Use
+  ------|-------------|------------------
+  1     | WS2812B     | HALOZ default
+  2     | SM16703     | SOULZ default
+  3     | SM16704     | —
+  4     | WS2811      | —
+  5     | UCS1903     | —
+  6     | SK6812      | —
+  7     | SK6812RGBW  | —
+  8     | INK1003     | —
+  9     | UCS2904B    | —
+  10    | JY1903      | —
+  11    | WS2812E     | —
+
+--------------------------------------------------------------------------------
+C. COLOR SORTING TABLE (RGB mode, 0-indexed, source: SymphonySettingForA3.java)
+--------------------------------------------------------------------------------
+
+  Index | Name | Notes
+  ------|------|---------------------------
+  0     | RGB  | —
+  1     | RBG  | —
+  2     | GRB  | Default for WS2812B/SM16703
+  3     | GBR  | —
+  4     | BRG  | —
+  5     | BGR  | —
+
+--------------------------------------------------------------------------------
+D. KNOWN CONSTRAINTS & DESIGN DECISIONS
+--------------------------------------------------------------------------------
+
+  - Segments NOT returned in 0x63 response — managed as local state, defaults to 1
+  - All LED point parsing uses little-endian byte swap: (bytes[9]<<8)|bytes[8]
+  - 0x62/0x63 pair deprecates 0x81 for hardware settings (0x81 kept for compat)
+  - Firmware version extracted from BLE advertisement, NOT via command
+  - maxPoints x maxSegments must not exceed 2048 (enforced in writeHardwareSettings)
+  - setOnDataReceived prop required in Sk8LytzProgrammerModal to capture 0x63 responses
+
+--------------------------------------------------------------------------------
+
+*Last Updated: April 2026*

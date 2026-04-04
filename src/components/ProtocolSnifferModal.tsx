@@ -6,7 +6,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { AppLogger } from '../services/AppLogger';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { ZenggeProtocol, IC_TYPES, COLOR_SORTING_RGB } from '../protocols/ZenggeProtocol';
 import CustomSlider from './CustomSlider';
 import ProductVisualizer from './ProductVisualizer';
 import CameraTracker from './CameraTracker';
@@ -51,6 +51,7 @@ export default function ProtocolSnifferModal({
   const [detectedColorOrder, setDetectedColorOrder] = useState<string | null>(null);
   const [detectedStripType, setDetectedStripType] = useState<string | null>(null);
   const [detectedFirmware, setDetectedFirmware] = useState<string | null>(null);
+  const [detectedLive, setDetectedLive] = useState<boolean>(false);
   
   // Builder State
   const [protocol, setProtocol] = useState<'0x59' | '0x51' | '0x42' | '0x73' | '0x71' | '0x2A' | 'CANDLE' | 'CAMERA' | 'MULTI'>('0x59');
@@ -138,18 +139,30 @@ export default function ProtocolSnifferModal({
         return merged;
       });
 
-      // 2. Parse Intercepted Payload to Extract Hardware Specs organically
+      // 2. Parse Intercepted Payload to Extract Hardware Specs
       const bytes = liveRxPayload.payloadHex.split(' ').map(h => parseInt(h, 16));
       
-      const parsedHardware = ZenggeProtocol.parseHardwareConfig(bytes);
-      if (parsedHardware) {
-         setDetectedPoints(parsedHardware.points);
-         setDetectedSegments(parsedHardware.segments);
-         setDetectedColorOrder(parsedHardware.sorting);
-         setDetectedStripType(parsedHardware.stripType);
+      // PRIMARY: Parse 0x63 hardware settings response (correct full parser)
+      // Works whether raw (starts 0x63) or V2-wrapped (offset 8 bytes in)
+      const hw63 = ZenggeProtocol.parseHardwareSettingsResponse(bytes);
+      if (hw63) {
+        setDetectedPoints(hw63.ledPoints);
+        setDetectedColorOrder(hw63.colorSortingName);
+        setDetectedStripType(hw63.icName);
+        setDetectedLive(true);
+      } else {
+        // FALLBACK: legacy 0x81/0x10 response parser
+        const parsedHardware = ZenggeProtocol.parseHardwareConfig(bytes);
+        if (parsedHardware) {
+          setDetectedPoints(parsedHardware.points);
+          setDetectedSegments(parsedHardware.segments);
+          setDetectedColorOrder(parsedHardware.sorting);
+          setDetectedStripType(parsedHardware.stripType);
+          setDetectedLive(false);
+        }
       }
 
-      // 0x32 ping reveals Firmware on some controllers. Simple hook wrapper.
+      // 0x32 ping reveals Firmware on some controllers
       if (bytes[0] === 0x32 && bytes.length > 5) {
          setDetectedFirmware(`${bytes[2]}.${bytes[3]}.${bytes[4]}`);
       }
@@ -248,22 +261,70 @@ export default function ProtocolSnifferModal({
       );
     }
     
-    if ((bytes[0] === '00' && bytes[1] === '63') || bytes[0] === '63') {
-       const offset = bytes[0] === '00' ? 1 : 0;
-       if (bytes.length > offset + 5) {
-         const b2 = parseInt(bytes[offset + 1], 16);
-         const b3 = parseInt(bytes[offset + 2], 16);
-         const points = (b2 << 8) | b3;
-         const segments = parseInt(bytes[offset + 4], 16);
-         return (
-           <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
-             <Text style={{ color: '#007AFF', fontSize: 11, fontWeight: 'bold' }}>[HARDWARE]</Text>
-             <Text style={{ color: '#16A34A', fontSize: 11 }}>LEDS:{points}</Text>
-             <Text style={{ color: '#ff70ff', fontSize: 11 }}>SEGS:{segments}</Text>
-             <Text style={{ color: '#666', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{hex}</Text>
-           </View>
-         );
-       }
+    // 0x63 hardware settings RESPONSE (12-byte reply from device)
+    // Points are little-endian swapped: bytes[8]=Low, bytes[9]=High
+    if (bytes[0] === '63' && bytes.length >= 12) {
+       const icType = parseInt(bytes[3], 16);
+       // SWAP: index 8=Low, index 9=High
+       const ptsLow  = parseInt(bytes[8], 16);
+       const ptsHigh = parseInt(bytes[9], 16);
+       const points = (ptsHigh << 8) | ptsLow;
+       const sorting = parseInt(bytes[10], 16);
+       const icName = IC_TYPES[icType] || `IC#${icType}`;
+       const sortName = COLOR_SORTING_RGB[sorting] || `SORT#${sorting}`;
+       return (
+         <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+           <Text style={{ color: '#00cc88', fontSize: 11, fontWeight: 'bold' }}>[0x63 HW RESP]</Text>
+           <Text style={{ color: '#16A34A', fontSize: 11 }}>LEDS:{points}</Text>
+           <Text style={{ color: '#007AFF', fontSize: 11 }}>{icName}</Text>
+           <Text style={{ color: '#ff70ff', fontSize: 11 }}>{sortName}</Text>
+           <Text style={{ color: '#666', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{hex}</Text>
+         </View>
+       );
+    }
+    // 0x62 hardware settings WRITE (sent to device)
+    if (bytes[0] === '62' && bytes.length >= 11) {
+       const ptsHigh = parseInt(bytes[1], 16);
+       const ptsLow  = parseInt(bytes[2], 16);
+       const points  = (ptsHigh << 8) | ptsLow;
+       const segHigh = parseInt(bytes[3], 16);
+       const segLow  = parseInt(bytes[4], 16);
+       const segs    = (segHigh << 8) | segLow;
+       const icType  = parseInt(bytes[5], 16);
+       const sorting = parseInt(bytes[6], 16);
+       const icName  = IC_TYPES[icType] || `IC#${icType}`;
+       const sortName = COLOR_SORTING_RGB[sorting] || `SORT#${sorting}`;
+       return (
+         <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+           <Text style={{ color: '#ff9500', fontSize: 11, fontWeight: 'bold' }}>[0x62 HW WRITE]</Text>
+           <Text style={{ color: '#16A34A', fontSize: 11 }}>LEDS:{points}</Text>
+           <Text style={{ color: '#ff70ff', fontSize: 11 }}>SEGS:{segs}</Text>
+           <Text style={{ color: '#007AFF', fontSize: 11 }}>{icName}</Text>
+           <Text style={{ color: '#c084fc', fontSize: 11 }}>{sortName}</Text>
+           <Text style={{ color: '#666', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{hex}</Text>
+         </View>
+       );
+    }
+    // V2-wrapped 0x63 response (starts with 00 xx 80 00 ...)
+    if (bytes[0] === '00' && bytes.length > 12 && bytes[2] === '80') {
+      const inner = bytes.slice(8);
+      if (inner[0] === '63' && inner.length >= 12) {
+        const ptsLow  = parseInt(inner[8], 16);
+        const ptsHigh = parseInt(inner[9], 16);
+        const points = (ptsHigh << 8) | ptsLow;
+        const icType = parseInt(inner[3], 16);
+        const icName = IC_TYPES[icType] || `IC#${icType}`;
+        const sortName = COLOR_SORTING_RGB[parseInt(inner[10], 16)] || '?';
+        return (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+            <Text style={{ color: '#00cc88', fontSize: 11, fontWeight: 'bold' }}>[0x63 WRAPPED]</Text>
+            <Text style={{ color: '#16A34A', fontSize: 11 }}>LEDS:{points}</Text>
+            <Text style={{ color: '#007AFF', fontSize: 11 }}>{icName}</Text>
+            <Text style={{ color: '#ff70ff', fontSize: 11 }}>{sortName}</Text>
+            <Text style={{ color: '#666', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{hex}</Text>
+          </View>
+        );
+      }
     }
 
     if (bytes[0] === '81' && bytes.length < 10) return <Text style={{ color: '#00ccff', fontSize: 11 }}>[PING] {hex}</Text>;
@@ -372,7 +433,7 @@ export default function ProtocolSnifferModal({
                             setTimeout(() => handleSendSniffer(payload63.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ')), 100);
                             setTimeout(() => handleSendSniffer(payload32.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ')), 200);
                         }} style={{ backgroundColor: '#E0F2FE', borderColor: '#00f0ff', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6 }}>
-                          <Text style={{ color: '#007AFF', fontSize: 9, fontWeight: 'bold' }}>AUTO PROBE (0x10 / 0x63)</Text>
+                          <Text style={{ color: '#007AFF', fontSize: 9, fontWeight: 'bold' }}>AUTO PROBE (0x63 HW QUERY)</Text>
                         </TouchableOpacity>
                       </View>
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
@@ -496,11 +557,11 @@ export default function ProtocolSnifferModal({
                           { label: '0x10 Ping', hex: '10 00 00 10' },
                           { label: '0x2B RConfig', hex: '2B 2C 2D 00' },
                           { label: '0x32 Boot', hex: '32 3A 3B 0F' },
-                          { label: '0x63 IC Probe', hex: '63 14 00 00' },
+                          { label: '0x63 HW QUERY ✓', hex: null, highlight: true },
                         ].map((probe) => (
                           <TouchableOpacity 
                             key={probe.label} 
-                            onPress={() => setSnifferInput(probe.hex)}
+                            onPress={() => { const h = probe.hex ?? ZenggeProtocol.queryHardwareSettings(false).map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' '); setSnifferInput(h); }}
                             style={{ backgroundColor: '#E0F2FE', borderColor: '#00f0ff', borderWidth: 1, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, marginRight: 8 }}
                           >
                             <Text style={{ color: '#007AFF', fontWeight: 'bold', fontSize: 11 }}>{probe.label}</Text>
@@ -510,7 +571,8 @@ export default function ProtocolSnifferModal({
 
                       {/* Hardware Configuration Injector */}
                       <View style={{ marginBottom: 16, backgroundColor: '#F9F9F9', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#E5E5EA' }}>
-                         <Text style={{ color: '#007AFF', fontSize: 11, fontWeight: 'bold', marginBottom: 12 }}>HARDWARE CONFIG INJECTOR (0x81)</Text>
+                         <Text style={{ color: '#007AFF', fontSize: 11, fontWeight: 'bold', marginBottom: 4 }}>HARDWARE CONFIG INJECTOR</Text>
+                          <Text style={{ color: '#888', fontSize: 10, marginBottom: 12 }}>0x62 = correct new protocol · 0x81 = legacy</Text>
                          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
                             <View style={{ flex: 1, minWidth: '22%' }}>
                               <Text style={{ color: '#bbb', fontSize: 9, marginBottom: 4 }}>POINTS</Text>
@@ -529,12 +591,22 @@ export default function ProtocolSnifferModal({
                               <TextInput style={{ backgroundColor: '#F5F5F7', color: '#FFF', padding: 6, borderRadius: 4, fontFamily: 'monospace', fontSize: 12 }} value={hwStripType} onChangeText={setHwStripType} autoCapitalize="characters" />
                             </View>
                          </View>
-                         <TouchableOpacity style={{ backgroundColor: 'rgba(0, 174, 239, 0.2)', borderColor: '#007AFF', borderWidth: 1, padding: 10, borderRadius: 6, alignItems: 'center' }} onPress={() => {
-                            const pBytes = ZenggeProtocol.setHardwareConfig(parseInt(hwPoints)||43, hwColorOrder, hwStripType, parseInt(hwSegments)||1);
-                            setSnifferInput(pBytes.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' '));
-                         }}>
-                            <Text style={{ color: '#007AFF', fontWeight: 'bold', fontSize: 11 }}>PREPARE 0x81 PAYLOAD</Text>
-                         </TouchableOpacity>
+                         <View style={{ flexDirection: 'row', gap: 8 }}>
+                            <TouchableOpacity style={{ flex: 2, backgroundColor: 'rgba(0,204,136,0.15)', borderColor: '#00cc88', borderWidth: 1, padding: 10, borderRadius: 6, alignItems: 'center' }} onPress={() => {
+                               const icIndex = parseInt(Object.keys(IC_TYPES).find(k => IC_TYPES[parseInt(k)] === hwStripType) || '1');
+                               const sortIndex = parseInt(Object.keys(COLOR_SORTING_RGB).find(k => COLOR_SORTING_RGB[parseInt(k)] === hwColorOrder) || '2');
+                               const pBytes = ZenggeProtocol.writeHardwareSettings(parseInt(hwPoints)||43, parseInt(hwSegments)||1, icIndex, sortIndex);
+                               setSnifferInput(pBytes.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' '));
+                            }}>
+                               <Text style={{ color: '#00cc88', fontWeight: 'bold', fontSize: 11 }}>PREPARE 0x62 ✓</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,122,255,0.1)', borderColor: '#007AFF', borderWidth: 1, padding: 10, borderRadius: 6, alignItems: 'center' }} onPress={() => {
+                               const pBytes = ZenggeProtocol.setHardwareConfig(parseInt(hwPoints)||43, hwColorOrder, hwStripType, parseInt(hwSegments)||1);
+                               setSnifferInput(pBytes.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' '));
+                            }}>
+                               <Text style={{ color: '#007AFF', fontWeight: 'bold', fontSize: 11 }}>0x81 (legacy)</Text>
+                            </TouchableOpacity>
+                          </View>
                       </View>
 
                     </View>
