@@ -76,3 +76,6 @@ eas-error.log
 # Scratch / one-off dev files
 test-supabase.js
 theme.js
+
+# Editor settings (local only)
+.vscode/
