@@ -1118,23 +1118,16 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, [isBluetoothEnabled]);
 
   const renderDashboardHeader = () => (
-      <View style={{ 
-        paddingHorizontal: Layout.padding, 
-        paddingTop: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + (isActuallyConnected ? 12 : 20), 
-        paddingBottom: isActuallyConnected ? 2 : 8,
-        position: 'relative',
-      }}>
-        {!isActuallyConnected && (
-          <View style={{ position: 'absolute', right: 0, top: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + 20, zIndex: 10, flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity onPress={toggleTheme} style={{ padding: 10 }}>
-              <MaterialCommunityIcons name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} size={22} color={Colors.primary} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: isActuallyConnected ? 'flex-start' : 'center', width: '100%' }}>
+    <View style={{
+      paddingHorizontal: Layout.padding,
+      paddingTop: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + (isActuallyConnected ? 12 : 16),
+      paddingBottom: isActuallyConnected ? 2 : 8,
+    }}>
+      {isActuallyConnected ? (
+        /* ── Connected: compact left-aligned row ── */
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity activeOpacity={1} onPress={handleLogoPress} style={{ position: 'relative' }}>
-            <Image source={require('../../assets/logo.png')} style={{ width: isActuallyConnected ? 70 : 130, height: isActuallyConnected ? 20 : 38 }} resizeMode="contain" tintColor={Colors.text} />
+            <Image source={require('../../assets/logo.png')} style={{ width: 70, height: 20 }} resizeMode="contain" tintColor={Colors.text} />
             {countdown !== null && (
               <Animated.View style={[styles.countdownBadge, { transform: [{ scale: pulseAnimConfig }] }]}>
                 <Text style={styles.countdownText}>{countdown}</Text>
@@ -1142,97 +1135,40 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             )}
           </TouchableOpacity>
 
-          {isActuallyConnected && (
-            <View style={{ marginLeft: 16 }}>
-              {(() => {
-                const connectedCount = displayConnectedDevices.length;
-                let expectedCount = 1;
-                const firstDevice = displayConnectedDevices[0] as any;
-                if (firstDevice?.grouped && firstDevice?.groupId) {
-                  const group = customGroups.find(g => g.id === firstDevice.groupId);
-                  if (group) expectedCount = group.deviceIds.length;
-                }
-                
-                let statusColor = Colors.success;
-                if (connectedCount === 0) statusColor = Colors.error;
-                else if (connectedCount < expectedCount) statusColor = '#FFA500';
-                else statusColor = Colors.success;
-
-                return (
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusColor, marginRight: 6 }} />
-                    <Text style={[Typography.caption, { color: statusColor, fontSize: 10, fontWeight: 'bold' }]}>DISCOVERED ({connectedCount})</Text>
-                  </View>
-                );
-              })()}
-            </View>
-          )}
-
-          {isActuallyConnected && <View style={{ flex: 1 }} />}
-
-          {!isActuallyConnected && (
-            <View style={{ position: 'absolute', left: 0, top: 0, flexDirection: 'row', alignItems: 'center', gap: 8, zIndex: 100 }}>
-              {/* Help button */}
-              <TouchableOpacity
-                style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}
-                onPress={() => setIsSupportModalVisible(true)}
-              >
-                <MaterialCommunityIcons name="help-circle-outline" size={20} color={Colors.textMuted} />
-              </TouchableOpacity>
-
-              {/* Username + Online/Offline status pill */}
-              <TouchableOpacity
-                onPress={handleLogout}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingHorizontal: 10,
-                  paddingVertical: 5,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: isOfflineMode ? 'rgba(255,170,0,0.35)' : 'rgba(0,240,255,0.25)',
-                  backgroundColor: isOfflineMode ? 'rgba(255,170,0,0.08)' : 'rgba(0,240,255,0.06)',
-                  gap: 6,
-                }}
-              >
-                {/* Status dot */}
-                <View style={{
-                  width: 7, height: 7, borderRadius: 4,
-                  backgroundColor: isOfflineMode ? '#FFA500' : Colors.success,
-                  shadowColor: isOfflineMode ? '#FFA500' : Colors.success,
-                  shadowOpacity: 0.8, shadowRadius: 4, elevation: 2,
-                }} />
-                {/* Username */}
-                <Text style={{ color: Colors.text, fontSize: 12, fontWeight: '700', maxWidth: 90 }} numberOfLines={1}>
-                  {authUsername || 'Skater'}
-                </Text>
-                {/* Mode badge */}
-                <View style={{
-                  paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6,
-                  backgroundColor: isOfflineMode ? 'rgba(255,170,0,0.2)' : 'rgba(0,200,100,0.2)',
-                }}>
-                  <Text style={{ fontSize: 9, fontWeight: '900', letterSpacing: 0.5, color: isOfflineMode ? '#FFA500' : Colors.success }}>
-                    {isOfflineMode ? 'OFFLINE' : 'ONLINE'}
-                  </Text>
+          {/* Connected device status */}
+          <View style={{ marginLeft: 12 }}>
+            {(() => {
+              const connectedCount = displayConnectedDevices.length;
+              let expectedCount = 1;
+              const firstDevice = displayConnectedDevices[0] as any;
+              if (firstDevice?.grouped && firstDevice?.groupId) {
+                const group = customGroups.find(g => g.id === firstDevice.groupId);
+                if (group) expectedCount = group.deviceIds.length;
+              }
+              let statusColor = connectedCount === 0 ? Colors.error : connectedCount < expectedCount ? '#FFA500' : Colors.success;
+              return (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusColor, marginRight: 6 }} />
+                  <Text style={[Typography.caption, { color: statusColor, fontSize: 10, fontWeight: 'bold' }]}>DISCOVERED ({connectedCount})</Text>
                 </View>
-                {/* Logout icon */}
-                <MaterialCommunityIcons name="logout" size={13} color={Colors.error} style={{ opacity: 0.8 }} />
-              </TouchableOpacity>
-            </View>
-          )}
+              );
+            })()}
+          </View>
 
-          {isActuallyConnected && !isTestModeActive && (
+          <View style={{ flex: 1 }} />
+
+          {/* Disconnect + power controls */}
+          {!isTestModeActive && (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TouchableOpacity style={[styles.disconnectButtonSmall, { paddingVertical: 4, paddingHorizontal: 8, marginRight: 8 }]} onPress={handleDisconnect} activeOpacity={0.8}>
                 <Text style={[styles.disconnectButtonTextSmall, { fontSize: 10 }]}>DISCONNECT</Text>
               </TouchableOpacity>
-
               {(() => {
                 const allIds = displayConnectedDevices.map(d => d.id);
                 const isGlobalPoweredOn = allIds.every(id => powerStates[id] ?? true);
                 return (
-                  <TouchableOpacity 
-                    style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: isGlobalPoweredOn ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isGlobalPoweredOn ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255,255,255,0.2)' }}
+                  <TouchableOpacity
+                    style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: isGlobalPoweredOn ? 'rgba(0,240,255,0.15)' : 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isGlobalPoweredOn ? 'rgba(0,240,255,0.3)' : 'rgba(255,255,255,0.2)' }}
                     onPress={() => handleGlobalPowerToggle(allIds)}
                     activeOpacity={0.6}
                   >
@@ -1243,10 +1179,74 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             </View>
           )}
         </View>
-        {!isActuallyConnected && (
-          <View style={{ height: 2, width: 30, backgroundColor: Colors.secondary, marginTop: 4, borderRadius: 1, alignSelf: 'center' }} />
-        )}
-      </View>
+      ) : (
+        /* ── Not connected: 3-column layout — no overlapping ── */
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+
+          {/* LEFT: help + user pill */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+            <TouchableOpacity
+              style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}
+              onPress={() => setIsSupportModalVisible(true)}
+            >
+              <MaterialCommunityIcons name="help-circle-outline" size={18} color={Colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={{
+                flexDirection: 'row', alignItems: 'center',
+                paddingHorizontal: 8, paddingVertical: 5,
+                borderRadius: 20, borderWidth: 1, gap: 5,
+                borderColor: isOfflineMode ? 'rgba(255,170,0,0.35)' : 'rgba(0,240,255,0.25)',
+                backgroundColor: isOfflineMode ? 'rgba(255,170,0,0.08)' : 'rgba(0,240,255,0.06)',
+              }}
+            >
+              <View style={{
+                width: 7, height: 7, borderRadius: 4,
+                backgroundColor: isOfflineMode ? '#FFA500' : Colors.success,
+                shadowColor: isOfflineMode ? '#FFA500' : Colors.success,
+                shadowOpacity: 0.8, shadowRadius: 4, elevation: 2,
+              }} />
+              <Text style={{ color: Colors.text, fontSize: 11, fontWeight: '700', maxWidth: 80 }} numberOfLines={1}>
+                {authUsername || 'Skater'}
+              </Text>
+              <View style={{
+                paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5,
+                backgroundColor: isOfflineMode ? 'rgba(255,170,0,0.2)' : 'rgba(0,200,100,0.2)',
+              }}>
+                <Text style={{ fontSize: 8, fontWeight: '900', letterSpacing: 0.5, color: isOfflineMode ? '#FFA500' : Colors.success }}>
+                  {isOfflineMode ? 'OFFLINE' : 'ONLINE'}
+                </Text>
+              </View>
+              <MaterialCommunityIcons name="logout" size={12} color={Colors.error} style={{ opacity: 0.8 }} />
+            </TouchableOpacity>
+          </View>
+
+          {/* CENTER: logo */}
+          <TouchableOpacity activeOpacity={1} onPress={handleLogoPress} style={{ position: 'relative', alignItems: 'center' }}>
+            <Image source={require('../../assets/logo.png')} style={{ width: 110, height: 32 }} resizeMode="contain" tintColor={Colors.text} />
+            {countdown !== null && (
+              <Animated.View style={[styles.countdownBadge, { transform: [{ scale: pulseAnimConfig }] }]}>
+                <Text style={styles.countdownText}>{countdown}</Text>
+              </Animated.View>
+            )}
+          </TouchableOpacity>
+
+          {/* RIGHT: theme toggle */}
+          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+            <TouchableOpacity onPress={toggleTheme} style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} size={18} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Accent line under logo when not connected */}
+      {!isActuallyConnected && (
+        <View style={{ height: 2, width: 30, backgroundColor: Colors.secondary, marginTop: 6, borderRadius: 1, alignSelf: 'center' }} />
+      )}
+    </View>
   );
 
   return (
