@@ -383,26 +383,34 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
 
           {allDevices?.map((d: any, idx) => {
              // Merge persisted 0x63 EEPROM results from ng_device_configs
-             // These are written by DashboardScreen after hardware ping queries
              const cfg = deviceConfigs[d.id] || {};
              const points   = cfg.points    || d.points    || null;
              const segments = cfg.segments  || d.segments  || 1;
              const sorting  = cfg.sorting   || d.sorting   || d.colorSortingName || null;
              const stripType= cfg.stripType || d.stripType || d.icName           || null;
+             const isConn   = connectedDevices?.some(c => c.id === d.id);
              return (
              <View key={d.id || idx} style={[styles.statCard, { backgroundColor: cardBg, borderColor }]}>
-                <Text style={{ color: textPrimary, fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>{cfg.name || d.name || 'Unknown Device'}</Text>
-                <Text style={{ color: textMuted, fontSize: 13, marginBottom: 8, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>MAC: {d.id}</Text>
-                <StatRow label="Hardware ID" value={d.type || 'Zengge/Triones'} color="#9D4EFF" muted={textMuted} />
-                <StatRow label="Firmware" value={d.firmware || cfg.firmware || 'Unknown'} color="#00E676" muted={textMuted} />
-                <StatRow label="RSSI (Signal)" value={d.rssi ? `${d.rssi} dBm` : '?'} color="#FF7000" muted={textMuted} />
-                <StatRow label="Points (LEDs)" value={points ? String(points) : 'Unknown — connect to read'} color="#00f0ff" muted={textMuted} />
-                <StatRow label="Segments" value={String(segments)} color="#00f0ff" muted={textMuted} />
-                <StatRow label="IC / Strip Type" value={stripType || 'Unknown — connect to read'} color="#FFD700" muted={textMuted} />
-                <StatRow label="Color Order" value={sorting || 'Unknown — connect to read'} color="#FF69B4" muted={textMuted} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <Text style={{ color: textPrimary, fontWeight: 'bold', fontSize: 15, flex: 1 }} numberOfLines={1}>{cfg.name || d.name || 'Unknown Device'}</Text>
+                  {isConn
+                    ? <Text style={{ color: '#00E676', fontSize: 11, fontWeight: '700', marginLeft: 8 }}>● CONNECTED</Text>
+                    : <TouchableOpacity onPress={onClose} style={{ backgroundColor: '#9D4EFF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 4, marginLeft: 8 }}>
+                        <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '700' }}>CONNECT</Text>
+                      </TouchableOpacity>
+                  }
+                </View>
+                <Text style={{ color: textMuted, fontSize: 11, marginBottom: 6, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{d.id}</Text>
+                <StatRow label="Firmware"     value={d.firmware || cfg.firmware || '—'}       color="#00E676" muted={textMuted} />
+                <StatRow label="RSSI"         value={d.rssi ? `${d.rssi} dBm` : '—'}         color="#FF7000" muted={textMuted} />
+                <StatRow label="Points (LEDs)"value={points ? String(points) : '— connect'}   color="#00f0ff" muted={textMuted} />
+                <StatRow label="Segments"     value={String(segments)}                         color="#00f0ff" muted={textMuted} />
+                <StatRow label="IC / Strip"   value={stripType || '— connect'}                color="#FFD700" muted={textMuted} />
+                <StatRow label="Color Order"  value={sorting   || '— connect'}                color="#FF69B4" muted={textMuted} />
              </View>
              );
           })}
+
 
           <View style={{ height: 40 }} />
         </ScrollView>
