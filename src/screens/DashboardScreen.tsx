@@ -1576,6 +1576,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             setLogsVisible(true);
         }}
         allDevices={allDevices}
+        deviceConfigs={deviceConfigs}
+        connectToDevice={connectToDevice}
+        disconnectFromDevice={disconnectFromDevice}
         writeToDevice={writeToDevice}
         isScanning={isScanning}
         handleScan={scanForPeripherals}

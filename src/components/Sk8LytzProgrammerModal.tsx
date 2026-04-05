@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Modal, SafeAreaView, TouchableOpacity,
-  ScrollView, ActivityIndicator, Alert, Platform, Switch
+  ScrollView, ActivityIndicator, Alert, Platform, Switch, TextInput
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from '../services/AppLogger';
@@ -31,6 +31,9 @@ interface Sk8LytzProgrammerModalProps {
   onClose: () => void;
   onExitToLogs?: () => void;
   allDevices: any[];
+  deviceConfigs?: Record<string, any>;       // pre-populated from scan probe
+  connectToDevice?: (d: any) => Promise<void>;
+  disconnectFromDevice?: (id: string) => Promise<void>;
   writeToDevice: (data: number[], deviceId?: string) => Promise<void>;
   isScanning: boolean;
   handleScan: () => void;
@@ -47,6 +50,8 @@ type ActiveProfileType = 'HALOZ' | 'SOULZ';
 
 export default function Sk8LytzProgrammerModal({
   visible, onClose, onExitToLogs, allDevices,
+  deviceConfigs = {},
+  connectToDevice, disconnectFromDevice,
   writeToDevice, isScanning, handleScan
 }: Sk8LytzProgrammerModalProps) {
   const { Colors, isDark } = useTheme();
@@ -94,7 +99,11 @@ export default function Sk8LytzProgrammerModal({
   const [flashStatus, setFlashStatus] = useState<Record<string, 'idle' | 'pending' | 'success' | 'failed'>>({});
   const [isFlashing, setIsFlashing] = useState(false);
 
-  // ─── Sync allDevices → scannedDevices ───────────────────────────────────────
+  // Local editable text for points/segments (avoids tap-cycling)
+  const [pointsText, setPointsText] = useState(String(profiles[activeProfile].ledPoints));
+  const [segmentsText, setSegmentsText] = useState(String(profiles[activeProfile].segments));
+
+  // Sync allDevices → scannedDevices, pre-populate detected hw from scan probe
   useEffect(() => {
     if (!visible) return;
     const updated: ScannedDevice[] = allDevices.map(d => ({
@@ -103,16 +112,30 @@ export default function Sk8LytzProgrammerModal({
       rssi: d.rssi || -99,
     }));
     setScannedDevices(updated);
-    
-    // Ensure new devices have an idle status
     setFlashStatus(prev => {
-        const next = { ...prev };
-        updated.forEach(d => {
-            if (!next[d.id]) next[d.id] = 'idle';
-        });
-        return next;
+      const next = { ...prev };
+      updated.forEach(d => { if (!next[d.id]) next[d.id] = 'idle'; });
+      return next;
     });
   }, [allDevices, visible]);
+
+  // Sync text inputs when profile changes
+  useEffect(() => {
+    setPointsText(String(profiles[activeProfile].ledPoints));
+    setSegmentsText(String(profiles[activeProfile].segments));
+  }, [activeProfile]);
+
+  // Commit typed points/segments to profile state on blur
+  const commitPoints = () => {
+    const v = Math.max(1, Math.min(300, parseInt(pointsText) || currentProfile.ledPoints));
+    setPointsText(String(v));
+    updateActiveProfile({ ledPoints: v });
+  };
+  const commitSegments = () => {
+    const v = Math.max(1, Math.min(2048, parseInt(segmentsText) || currentProfile.segments));
+    setSegmentsText(String(v));
+    updateActiveProfile({ segments: v });
+  };
 
   // ─── Load Profiles ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -141,11 +164,11 @@ export default function Sk8LytzProgrammerModal({
       saveProfileChange({ ...profiles, [activeProfile]: newSettings });
   };
 
-  // ─── Batch Flashing ─────────────────────────────────────────────────────────
+  // ─── Batch Flashing — connect → write 0x62 → disconnect ────────────────────
   const handleFlash = async () => {
       if (selectedIds.length === 0) return;
       setIsFlashing(true);
-      
+
       const config = profiles[activeProfile];
       const cmd = ZenggeProtocol.writeHardwareSettings(
           config.ledPoints,
@@ -157,10 +180,20 @@ export default function Sk8LytzProgrammerModal({
       for (const id of selectedIds) {
           setFlashStatus(prev => ({ ...prev, [id]: 'pending' }));
           try {
+              // If device needs connection first, connect then write then disconnect
+              const device = allDevices.find(d => d.id === id);
+              if (connectToDevice && device) {
+                  await connectToDevice(device);
+                  await new Promise(res => setTimeout(res, 600)); // let GATT settle
+              }
               await writeToDevice(cmd, id);
-              // Slight delay to allow packet processing natively
-              await new Promise(res => setTimeout(res, 300));
+              await new Promise(res => setTimeout(res, 400)); // let write land
+              if (disconnectFromDevice) {
+                  await disconnectFromDevice(id);
+                  await new Promise(res => setTimeout(res, 400)); // gap between ops
+              }
               setFlashStatus(prev => ({ ...prev, [id]: 'success' }));
+              AppLogger.log('PERFORMANCE_METRIC', { metricName: 'HW_CONFIG_FLASHED', value: 1, unit: id, deviceId: id });
           } catch (e) {
               setFlashStatus(prev => ({ ...prev, [id]: 'failed' }));
           }
@@ -188,17 +221,15 @@ export default function Sk8LytzProgrammerModal({
   const currentProfile = profiles[activeProfile];
 
   const cycleProperty = (field: 'points' | 'segments') => {
-      const maxPts = 100;
-      const maxSeg = 8;
-      
       if (field === 'points') {
-          let n = currentProfile.ledPoints + 1;
-          if (n > maxPts) n = 1;
-          updateActiveProfile({ ledPoints: n });
+          const v = Math.min(300, currentProfile.ledPoints + 1);
+          updateActiveProfile({ ledPoints: v === 1 ? 300 : v });
+          setPointsText(String(v === 1 ? 300 : v));
       } else {
-          let n = currentProfile.segments + 1;
-          if (n > maxSeg) n = 1;
-          updateActiveProfile({ segments: n });
+          const v = currentProfile.segments + 1;
+          const clamped = v > Math.floor(2048 / currentProfile.ledPoints) ? 1 : v;
+          updateActiveProfile({ segments: clamped });
+          setSegmentsText(String(clamped));
       }
   };
 
@@ -256,15 +287,46 @@ export default function Sk8LytzProgrammerModal({
 
              <Text style={{ color: txtPri, fontWeight: 'bold', marginBottom: 12 }}>Profile Defaults (Tap to cycle payload values)</Text>
              
+             {/* Points + Segments: tap to cycle OR type directly */}
              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
-                <TouchableOpacity style={[s.configBtn, { flex: 1, borderColor: border }]} onPress={() => cycleProperty('points')}>
-                    <Text style={{ color: txtMuted, fontSize: 11 }}>POINTS (LEDs)</Text>
-                    <Text style={{ color: activeProfile === 'HALOZ'? cyan : amber, fontWeight: 'bold', fontSize: 16 }}>{currentProfile.ledPoints}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[s.configBtn, { flex: 1, borderColor: border }]} onPress={() => cycleProperty('segments')}>
-                    <Text style={{ color: txtMuted, fontSize: 11 }}>SEGMENTS</Text>
-                    <Text style={{ color: activeProfile === 'HALOZ'? cyan : amber, fontWeight: 'bold', fontSize: 16 }}>{currentProfile.segments}</Text>
-                </TouchableOpacity>
+                <View style={[s.configBtn, { flex: 1, borderColor: border }]}>
+                    <Text style={{ color: txtMuted, fontSize: 11, marginBottom: 4 }}>POINTS (LEDs)</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <TouchableOpacity onPress={() => cycleProperty('points')}>
+                        <Text style={{ color: activeProfile==='HALOZ'? cyan : amber, fontSize: 20 }}>‹</Text>
+                      </TouchableOpacity>
+                      <TextInput
+                        style={{ color: activeProfile==='HALOZ'? cyan : amber, fontWeight: 'bold', fontSize: 20, minWidth: 48, textAlign: 'center' }}
+                        value={pointsText}
+                        onChangeText={setPointsText}
+                        onBlur={commitPoints}
+                        keyboardType="numeric"
+                        selectTextOnFocus
+                      />
+                      <TouchableOpacity onPress={() => { const v = Math.min(300, currentProfile.ledPoints + 1); updateActiveProfile({ ledPoints: v }); setPointsText(String(v)); }}>
+                        <Text style={{ color: activeProfile==='HALOZ'? cyan : amber, fontSize: 20 }}>›</Text>
+                      </TouchableOpacity>
+                    </View>
+                </View>
+                <View style={[s.configBtn, { flex: 1, borderColor: border }]}>
+                    <Text style={{ color: txtMuted, fontSize: 11, marginBottom: 4 }}>SEGMENTS</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <TouchableOpacity onPress={() => cycleProperty('segments')}>
+                        <Text style={{ color: activeProfile==='HALOZ'? cyan : amber, fontSize: 20 }}>‹</Text>
+                      </TouchableOpacity>
+                      <TextInput
+                        style={{ color: activeProfile==='HALOZ'? cyan : amber, fontWeight: 'bold', fontSize: 20, minWidth: 32, textAlign: 'center' }}
+                        value={segmentsText}
+                        onChangeText={setSegmentsText}
+                        onBlur={commitSegments}
+                        keyboardType="numeric"
+                        selectTextOnFocus
+                      />
+                      <TouchableOpacity onPress={() => { const maxS = Math.floor(2048/currentProfile.ledPoints); const v = Math.min(maxS, currentProfile.segments + 1); updateActiveProfile({ segments: v }); setSegmentsText(String(v)); }}>
+                        <Text style={{ color: activeProfile==='HALOZ'? cyan : amber, fontSize: 20 }}>›</Text>
+                      </TouchableOpacity>
+                    </View>
+                </View>
              </View>
 
              <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -311,6 +373,7 @@ export default function Sk8LytzProgrammerModal({
             scannedDevices.map(device => {
               const isSelected = selectedIds.includes(device.id);
               const status = flashStatus[device.id] || 'idle';
+              const detected = deviceConfigs[device.id];
               
               return (
                 <TouchableOpacity
@@ -333,6 +396,12 @@ export default function Sk8LytzProgrammerModal({
                         <Text style={{ color: txtMuted, fontSize: 11, marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
                           {device.id} ({device.rssi} dBm)
                         </Text>
+                        {/* Show detected hw from scan probe */}
+                        {detected && (
+                          <Text style={{ color: '#00cc88', fontSize: 10, marginTop: 2 }}>
+                            ✓ {detected.ledPoints ?? detected.points ?? '?'}pts · {detected.segments ?? '?'}seg · {detected.icName ?? detected.stripType ?? '?'} · {detected.colorSortingName ?? detected.sorting ?? '?'}
+                          </Text>
+                        )}
                      </View>
                      <View style={{ alignItems: 'flex-end' }}>
                          {status === 'pending' && <ActivityIndicator size="small" color={cyan} />}
