@@ -26,7 +26,7 @@ if ($devices) {
     & $AdbPath install -r $ApkPath
     if ($LASTEXITCODE -eq 0) {
         Write-Host "### Install successful — launching SK8Lytz... ###"
-        & $AdbPath shell monkey -p com.anonymous.MobileApp -c android.intent.category.LAUNCHER 1
+        & $AdbPath shell monkey -p com.neogleamz.sk8lytz -c android.intent.category.LAUNCHER 1
         Write-Host "### App launched on device! ###"
     } else {
         Write-Host "### Install failed. Check device connection. ###"
