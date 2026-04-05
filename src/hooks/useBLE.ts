@@ -1,3 +1,21 @@
+/**
+ * useBLE.ts — SK8Lytz Bluetooth Low Energy Engine
+ *
+ * Custom React hook that wraps react-native-ble-plx to provide all
+ * BLE hardware interactions for the SK8Lytz LED controller ecosystem.
+ *
+ * Key behaviors:
+ *  - Strict device filtering: Symphony (0x33/0xBF manufacturer byte),
+ *    known prefixes (lednet/sk8/zg/halo/soul), or Zengge service UUID
+ *  - Sequential group connection loop (for...of) — NEVER use Promise.all,
+ *    Android GATT throws error 133 on concurrent pairing attempts
+ *  - Firmware parsed from BLE advertisement data on discovery
+ *  - Characteristic notifications start immediately on connection for RX data
+ *  - write() broadcasts to all connected unless targetDeviceId is specified
+ *
+ * Logs: DEVICE_DISCOVERED, DEVICE_CONNECTED, BLE_CONNECTION_ERROR, BLE_WRITE_ERROR, PERFORMANCE_METRIC
+ * Platform: React Native Android / Web (web returns no-op stubs)
+ */
 import { useState, useMemo, useEffect } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';

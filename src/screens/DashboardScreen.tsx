@@ -1,3 +1,25 @@
+/**
+ * DashboardScreen.tsx — SK8Lytz Root Application Screen
+ *
+ * The single top-level screen for the entire SK8Lytz application.
+ * This is intentionally monolithic — all BLE state must be co-located
+ * to prevent race conditions between hardware events and UI re-renders.
+ *
+ * Owns:
+ *  - BLE lifecycle (scan, connect, disconnect, group sync)
+ *  - Device roster (allDevices, connectedDevices)
+ *  - Custom groups (name, deviceIds, persistence)
+ *  - Per-device configs (name, LED type, points, segments, sorting)
+ *  - Power state map, modal visibility flags
+ *  - BLE write dispatch (writeToDevice → useBLE → GATT)
+ *
+ * AsyncStorage keys:
+ *  - ng_device_configs    → per-device settings dict (keyed by MAC)
+ *  - ng_custom_groups     → user-defined multi-device groups
+ *  - ng_processed_devices → cached discovered device list
+ *
+ * Platform: React Native (Android + Web)
+ */
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar, Dimensions, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus } from 'react-native';
 import { Typography, Layout } from '../theme/theme';

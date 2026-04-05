@@ -1,3 +1,25 @@
+/**
+ * LogViewerModal.tsx — SK8Lytz In-App Analytics Dashboard
+ *
+ * Full-screen modal that renders the current session's telemetry data
+ * sourced from the AppLogger local buffer.
+ *
+ * Four-tab layout:
+ *  LOGS     — Virtualized event timeline (newest first), color-coded by event type
+ *             Each event type maps to an icon, color, and human-readable summary
+ *  STATS    — Aggregated usage: top modes, top patterns, most-used colors
+ *  DEVICES  — All BLE devices seen this session with hardware config details
+ *  EXPORT   — JSON dump of the full local log buffer (shareable via OS sheet)
+ *
+ * Event type registry: EVENT_META maps every EventType to { icon, color, label }
+ * Custom rendering: payloadSummary() formats each event's data field for display
+ *
+ * Note: Reads LOCAL AppLogger buffer only. Historical Supabase data requires
+ * a separate authenticated query endpoint (not yet implemented).
+ *
+ * Depends on: AppLogger (singleton), MaterialCommunityIcons
+ * Platform: React Native (Android + Web)
+ */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView,

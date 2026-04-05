@@ -1,3 +1,20 @@
+/**
+ * DockedController.tsx — SK8Lytz Primary LED Control Interface
+ *
+ * The main user-facing control panel for LED mode management.
+ * Renders as a bottom sheet overlay on DashboardScreen.
+ *
+ * Responsibilities:
+ *  - Mode switching: Fixed, Music, Camera, Pattern (RBM), Candle, DIY Array
+ *  - Color picker, RGB sliders, brightness & speed knobs
+ *  - Pattern wheel (ArcPatternWheel / VerticalPatternDrum)
+ *  - Music EQ visualizer (SpectrumVisualizer)
+ *  - Favorites system and Quick Presets
+ *  - Per-device and group analytics telemetry (MODE_CHANGED, PATTERN_CHANGED, COLOR_CHANGED)
+ *
+ * Depends on: ZenggeProtocol, AppLogger, useBLE (via prop injection), ThemeContext
+ * Platform: React Native (Android + Web)
+ */
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Platform, Modal, TextInput, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';

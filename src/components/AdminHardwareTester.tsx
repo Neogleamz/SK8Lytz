@@ -1,3 +1,23 @@
+/**
+ * AdminHardwareTester.tsx — SK8Lytz Admin BLE Diagnostic Terminal
+ *
+ * Hidden admin panel for Zengge BLE protocol inspection and hardware configuration.
+ * Accessible via secret gesture in DashboardScreen. NOT visible to end users.
+ *
+ * Three-tab architecture:
+ *  SNIFFER  — Live RX/TX BLE packet timeline with protocol parsing
+ *             Parses 0x63 (HW Settings Response), 0x81 (Status), 0x62 (HW Write)
+ *             Logs RAW_PAYLOAD events (the ONLY source of this event type)
+ *  FACTORY  — Payload generator for all Zengge command types
+ *             (0x59 Solid Array, 0x51 Custom, 0x42 RBM, 0x73 Music, CANDLE, MULTI)
+ *             Editable hex field with direct TX to connected hardware
+ *  CONFIG   — EEPROM register configurator
+ *             Polls hardware via 0x63 (current gen) or 0x81 (legacy)
+ *             Burns new settings via 0x62 write command
+ *
+ * Depends on: ZenggeProtocol (all command generation), AppLogger (RAW_PAYLOAD)
+ * Platform: React Native (Android + Web)
+ */
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView,

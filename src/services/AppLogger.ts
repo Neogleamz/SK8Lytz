@@ -1,7 +1,30 @@
 /**
- * AppLogger - SK8Lytz Analytics & Event Logger
- * Stores compact structured logs locally with rotation.
- * Export-ready for future webhook/database upload.
+ * AppLogger.ts — SK8Lytz Telemetry & Analytics Engine
+ *
+ * Singleton service that captures all significant app events and uploads
+ * them to Supabase for remote diagnostics and usage analytics.
+ *
+ * Architecture:
+ *  - Local buffer: compact LogEntry[] ({ t, e, d }) stored in AsyncStorage
+ *    under '@sk8lytz_logs'. Rotates at MAX_ENTRIES (10,000) to cap storage.
+ *  - Session ID: generated once at instantiation (telemetry_TIMESTAMP),
+ *    stable for the entire app lifetime to prevent duplicate Supabase rows.
+ *  - uploadLogsToSupabase(): merges with cloud Storage JSON, deduplicates,
+ *    pushes current delta to 6 normalized Postgres tables, then CLEARS the
+ *    local buffer (rotation) on confirmed success.
+ *  - Group event unrolling: group-targeted events (deviceIds[]) are flatMapped
+ *    into individual per-device rows in Supabase, enabling per-device diagnostics.
+ *  - Custom device names: resolved from 'ng_device_configs' AsyncStorage key
+ *    (same key DashboardScreen writes) and injected into all DB payloads.
+ *  - RAW_PAYLOAD events are intentionally EXCLUDED from Supabase DB writes
+ *    (hardware tester sniffer data only — kept in Storage/local only).
+ *
+ * Supabase tables written:
+ *  parsed_session_stats, parsed_session_devices, parsed_logs,
+ *  parsed_mode_usage, parsed_pattern_usage, parsed_color_usage
+ *
+ * Event types: see EventType union below
+ * Platform: React Native (Android + Web)
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabaseClient';
