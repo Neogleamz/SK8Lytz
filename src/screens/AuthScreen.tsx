@@ -6,8 +6,6 @@ import {
 import { supabase } from '../services/supabaseClient';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
-import * as WebBrowser from 'expo-web-browser';
-import { makeRedirectUri } from 'expo-auth-session';
 import {
   checkPasswordComplexity,
   isCommonPassword,
@@ -15,8 +13,6 @@ import {
   containsProfanity,
   PasswordStrength
 } from '../services/AuthUtils';
-
-WebBrowser.maybeCompleteAuthSession();
 
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
 
@@ -35,9 +31,8 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
   const [passwordStrength, setPasswordStrength] = useState<PasswordStrength | null>(null);
   const strengthAnim = useRef(new Animated.Value(0)).current;
 
-  const redirectTo = makeRedirectUri({});
 
-  // Live password strength while typing
+  // ─── MAGIC LINK ─────────────────────────────────────────────────────────
   useEffect(() => {
     if ((mode === 'SIGNUP') && password.length > 0) {
       const s = checkPasswordComplexity(password);
@@ -52,28 +47,6 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
     }
   }, [password, mode]);
 
-  // ─── OAUTH ──────────────────────────────────────────────────────────────────
-  const handleOAuth = async (provider: 'google' | 'apple' | 'facebook') => {
-    try {
-      setLoading(true);
-      const isNative = Platform.OS !== 'web';
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo, skipBrowserRedirect: isNative },
-      });
-      if (error) throw error;
-      if (isNative && data?.url) {
-        const res = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-        if (res.type === 'success' && res.url) {
-          await supabase.auth.getSessionFromUrl(res.url);
-        }
-      }
-    } catch (error: any) {
-      Alert.alert('OAuth Error', error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // ─── MAGIC LINK ─────────────────────────────────────────────────────────────
   const handleMagicLink = async () => {
@@ -84,7 +57,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
     setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: redirectTo },
+      options: { emailRedirectTo: 'sk8lytz://auth' },
     });
     setLoading(false);
     if (error) {
@@ -163,7 +136,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: 'sk8lytz://auth' });
     setLoading(false);
     if (error) Alert.alert('Error', error.message);
     else {
@@ -329,29 +302,6 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           </View>
         </View>
 
-        {/* OAuth row */}
-        {(mode === 'LOGIN' || mode === 'SIGNUP') && (
-          <View style={styles.oauthContainer}>
-            <View style={styles.dividerContainer}>
-              <View style={styles.divider} />
-              <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
-              <View style={styles.divider} />
-            </View>
-            <View style={styles.oauthButtonGroup}>
-              <TouchableOpacity style={styles.oauthButton} onPress={() => handleOAuth('google')}>
-                <Text style={styles.oauthButtonText}>Google</Text>
-              </TouchableOpacity>
-              {Platform.OS === 'ios' && (
-                <TouchableOpacity style={styles.oauthButton} onPress={() => handleOAuth('apple')}>
-                  <Text style={styles.oauthButtonText}>Apple</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity style={styles.oauthButton} onPress={() => handleOAuth('facebook')}>
-                <Text style={styles.oauthButtonText}>Facebook</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
 
         {/* Offline mode option */}
         {(mode === 'LOGIN' || mode === 'MAGIC_LINK') && onOfflineMode && (
