@@ -1299,3 +1299,7 @@ D. KNOWN CONSTRAINTS & DESIGN DECISIONS
 --------------------------------------------------------------------------------
 
 *Last Updated: April 2026*
+  
+## 20. Hardware Synchronization & Points/Segments  
+- Physical Segments: Act as multipliers for standard paths. Applications must bounds clamp raw array payloads matching exactly Math.floor(pts / segments) to prevent overflow tearing across repeating bounds on V2 Symphony hardware.  
+- Color Sorting Constraints: Array generation, music UI mode secondary/primary mapping, and fixed arrays rely natively on ZenggeProtocol.applyColorSorting to enforce user configuration explicitly at payload creation. 

@@ -130,6 +130,7 @@ export interface IQuickPreset {
 }
 
 interface Sk8lytzControllerProps {
+  hwSettings?: any;
   lockedProduct?: ProductType;
   isPaired?: boolean;
   points?: number;
@@ -184,7 +185,7 @@ const MarqueeText = ({ children, style }: any) => {
   );
 };
 
-export default function DockedController({ lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect }: Sk8lytzControllerProps) {
+export default function DockedController({ hwSettings, lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect }: Sk8lytzControllerProps) {
   const { Colors, isDark } = useTheme();
   const styles = createStyles(Colors);
   const [lastSentPayload, setLastSentPayload] = useState<number[]>([]);
@@ -374,8 +375,20 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
         setMultiTransition(fav.multiTransition);
         setMultiLength(fav.multiLength || 16);
         if (writeToDevice) {
-           const rgbColors = fav.multiColors.map((h: string) => ({r: parseInt(h.slice(1,3),16)||0, g: parseInt(h.slice(3,5),16)||0, b: parseInt(h.slice(5,7),16)||0}));
-           writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, fav.multiLength || 16, fav.multiTransition, fav.speed));
+           const sortIdx = hwSettings?.colorSorting ?? 2;
+           const rgbColors = fav.multiColors.map((h: string) => {
+              const r = parseInt(h.slice(1,3), 16) || 0;
+              const g = parseInt(h.slice(3,5), 16) || 0;
+              const b = parseInt(h.slice(5,7), 16) || 0;
+              return ZenggeProtocol.applyColorSorting(r, g, b, sortIdx);
+           });
+           
+           const pts = hwSettings?.ledPoints || points || 16;
+           const segs = hwSettings?.segments || 1;
+           const maxLen = Math.max(1, Math.floor(pts / segs));
+           const appliedLength = (fav.multiLength || 16) > maxLen ? maxLen : (fav.multiLength || 16);
+           
+           writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, fav.multiTransition, fav.speed));
         }
      } else if (fav.mode === 'CANDLE') {
         setCandleAmplitude(fav.candleAmplitude);
@@ -394,12 +407,11 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
   const sendColor = async (r: number, g: number, b: number) => {
     if (!writeToDevice) return;
     if (activeMode === 'CANDLE') {
-        const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
+        const sortIdx = hwSettings?.colorSorting ?? 2;
         const rawR = parseInt(selectedColor.slice(1, 3), 16) || 255;
         const rawG = parseInt(selectedColor.slice(3, 5), 16) || 255;
         const rawB = parseInt(selectedColor.slice(5, 7), 16) || 255;
-        let finalR = rawR; let finalG = rawG; let finalB = rawB;
-        if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
+        const { r: finalR, g: finalG, b: finalB } = ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
         await writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, candleAmplitude));
     } else {
         // Solid fallback explicitly forced to length=10, transitionType=1 to stop physical node scrambling/jumping. 
@@ -410,12 +422,12 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
 
   /** Helper to parse a hex string array into GRB-sorted valid hardware RGB array */
   const generateSortedColors = (hexArray: string[]) => {
-      const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
+      const sortIdx = hwSettings?.colorSorting ?? 2;
       return hexArray.map(h => {
           const r = parseInt(h.slice(1,3), 16) || 0;
           const g = parseInt(h.slice(3,5), 16) || 0;
           const b = parseInt(h.slice(5,7), 16) || 0;
-          return sorting === 'GRB' ? { r: g, g: r, b } : { r, g, b };
+          return ZenggeProtocol.applyColorSorting(r, g, b, sortIdx);
       });
   };
 
@@ -430,20 +442,28 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
     if (!writeToDevice) return;
 
     const factor = currentBrightness / 100;
-    const fgRgb = { 
+    const fgRgbRaw = { 
       r: Math.round(parseInt(fg.slice(1, 3), 16) * factor), 
       g: Math.round(parseInt(fg.slice(3, 5), 16) * factor), 
       b: Math.round(parseInt(fg.slice(5, 7), 16) * factor) 
     };
-    const bgRgb = { 
+    const bgRgbRaw = { 
       r: Math.round(parseInt(bg.slice(1, 3), 16) * factor), 
       g: Math.round(parseInt(bg.slice(3, 5), 16) * factor), 
       b: Math.round(parseInt(bg.slice(5, 7), 16) * factor) 
     };
+    
+    const sortIdx = hwSettings?.colorSorting ?? 2;
+    const fgRgb = ZenggeProtocol.applyColorSorting(fgRgbRaw.r, fgRgbRaw.g, fgRgbRaw.b, sortIdx);
+    const bgRgb = ZenggeProtocol.applyColorSorting(bgRgbRaw.r, bgRgbRaw.g, bgRgbRaw.b, sortIdx);
+
+    const pts = hwSettings?.ledPoints || points || 16;
+    const segs = hwSettings?.segments || 1;
+    const effectivePoints = Math.max(1, Math.floor(pts / segs));
 
     if (patternId === 1) {
       const forcedSpeed = currentSpeed > 0 ? currentSpeed : 100;
-      const solidColors = Array(10).fill({ r: fgRgb.r, g: fgRgb.g, b: fgRgb.b }); // Buffer stabilized length >= 10
+      const solidColors = Array(effectivePoints).fill({ r: fgRgb.r, g: fgRgb.g, b: fgRgb.b }); // Buffer natively bounded
       writeToDevice(ZenggeProtocol.setMultiColor(solidColors, forcedSpeed, 1, 1));
     } else if (patternId === 6) {
       writeToDevice(ZenggeProtocol.setCustomMode([
@@ -469,11 +489,11 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
       if (patternId === 9) arr = [bgRgb, bgRgb, fgRgb, fgRgb, bgRgb, bgRgb];
       if (patternId === 10) arr = [fgRgb, bgRgb, bgRgb, bgRgb, bgRgb, fgRgb];
       
-      // CRITICAL HARDWARE FIX: Arrays smaller than 10 trigger hardware glitches. 
-      // Safely multiply the base array chunk footprint until length hits native safe limit >= 10.
-      while (arr.length > 0 && arr.length < 10) {
-        arr = [...arr, ...arr];
+      const chunk = [...arr];
+      while (arr.length > 0 && arr.length < effectivePoints) {
+        arr = [...arr, ...chunk];
       }
+      arr = arr.slice(0, effectivePoints);
       
       // Send with TransitionType 0x03 (Running Water/Marquee) to actually animate across the matrix
       writeToDevice(ZenggeProtocol.setMultiColor(arr, currentSpeed, 1, 3));
@@ -754,17 +774,21 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
     
     const isDeviceMic = src === 'DEVICE';
     
-    const c1 = { 
+    const c1Raw = { 
        r: parseInt(color1Hex.slice(1,3), 16) || 0, 
        g: parseInt(color1Hex.slice(3,5), 16) || 0, 
        b: parseInt(color1Hex.slice(5,7), 16) || 0 
     };
     
-    const c2 = { 
+    const c2Raw = { 
        r: parseInt(color2Hex.slice(1,3), 16) || 0, 
        g: parseInt(color2Hex.slice(3,5), 16) || 0, 
        b: parseInt(color2Hex.slice(5,7), 16) || 0 
     };
+    
+    const sortIdx = hwSettings?.colorSorting ?? 2;
+    const c1 = ZenggeProtocol.applyColorSorting(c1Raw.r, c1Raw.g, c1Raw.b, sortIdx);
+    const c2 = ZenggeProtocol.applyColorSorting(c2Raw.r, c2Raw.g, c2Raw.b, sortIdx);
     
     writeToDevice(ZenggeProtocol.setMusicConfig(
       isDeviceMic,
@@ -1115,7 +1139,8 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                               setMultiTransition(preset.type);
                               if (writeToDevice) {
                                   const rgbColors = generateSortedColors(preset.colors);
-                                  writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, preset.type, speed));
+                                  const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                                  writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, preset.type, speed));
                               }
                           }}
                           style={{
@@ -1179,7 +1204,8 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                             newArr[index] = selectedColor;
                             setMultiColors(newArr);
                             const rgbColors = generateSortedColors(newArr);
-                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
+                            const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, speed));
                           }} />
                         ))}
                         {multiColors.length < 16 && (
@@ -1188,7 +1214,8 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                              const newArr = [...multiColors, selectedColor];
                              setMultiColors(newArr);
                              const rgbColors = generateSortedColors(newArr);
-                             if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
+                             const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, speed));
                           }}>
                             <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold' }}>+</Text>
                           </TouchableOpacity>
@@ -1200,7 +1227,8 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                              newArr.pop();
                              setMultiColors(newArr);
                              const rgbColors = generateSortedColors(newArr);
-                             if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
+                             const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, speed));
                           }}>
                             <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold', lineHeight: 22 }}>-</Text>
                           </TouchableOpacity>
@@ -1233,7 +1261,8 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                                setFixedSubMode('MULTI');
                                setMultiTransition(mode.val);
                                const rgbColors = generateSortedColors(multiColors);
-                               if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, mode.val, speed));
+                               const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                               if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, mode.val, speed));
                             }} 
                             style={{ 
                               paddingHorizontal: 12, paddingVertical: 6, 
@@ -1748,19 +1777,22 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                             applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
                           } else if (fixedSubMode === 'MULTI') {
                             const factor = val / 100;
-                            const rgbColors = multiColors.map(h => ({
-                                r: Math.round((parseInt(h.slice(1,3), 16) || 0) * factor),
-                                g: Math.round((parseInt(h.slice(3,5), 16) || 0) * factor),
-                                b: Math.round((parseInt(h.slice(5,7), 16) || 0) * factor)
-                            }));
-                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
+                            const sortIdx = hwSettings?.colorSorting ?? 2;
+                            const rgbColors = multiColors.map(h => {
+                                const rawR = Math.round((parseInt(h.slice(1,3), 16) || 0) * factor);
+                                const rawG = Math.round((parseInt(h.slice(3,5), 16) || 0) * factor);
+                                const rawB = Math.round((parseInt(h.slice(5,7), 16) || 0) * factor);
+                                return ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
+                            });
+                            const pts = hwSettings?.ledPoints || points || 16;
+                            const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, speed));
                           } else if (fixedSubMode === 'CANDLE') {
                             const rawR = parseInt(selectedColor.substring(1, 3), 16) || 255;
                             const rawG = parseInt(selectedColor.substring(3, 5), 16) || 255;
                             const rawB = parseInt(selectedColor.substring(5, 7), 16) || 255;
-                            let finalR = rawR; let finalG = rawG; let finalB = rawB;
-                            const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
-                            if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
+                            const sortIdx = hwSettings?.colorSorting ?? 2;
+                            const { r: finalR, g: finalG, b: finalB } = ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
                             writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, val, candleAmplitude));
                           } else if (fixedSubMode === 'RBM') {
                             if (selectedPatternId === 100) {
@@ -1801,19 +1833,22 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                             applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
                           } else if (fixedSubMode === 'MULTI') {
                             const factor = brightness / 100;
-                            const rgbColors = multiColors.map(h => ({
-                                r: Math.round((parseInt(h.slice(1,3), 16) || 0) * factor),
-                                g: Math.round((parseInt(h.slice(3,5), 16) || 0) * factor),
-                                b: Math.round((parseInt(h.slice(5,7), 16) || 0) * factor)
-                            }));
-                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, val));
+                            const sortIdx = hwSettings?.colorSorting ?? 2;
+                            const rgbColors = multiColors.map(h => {
+                                const rawR = Math.round((parseInt(h.slice(1,3), 16) || 0) * factor);
+                                const rawG = Math.round((parseInt(h.slice(3,5), 16) || 0) * factor);
+                                const rawB = Math.round((parseInt(h.slice(5,7), 16) || 0) * factor);
+                                return ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
+                            });
+                            const pts = hwSettings?.ledPoints || points || 16;
+                            const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, val));
                           } else if (fixedSubMode === 'CANDLE') {
                             const rawR = parseInt(selectedColor.substring(1, 3), 16) || 255;
                             const rawG = parseInt(selectedColor.substring(3, 5), 16) || 255;
                             const rawB = parseInt(selectedColor.substring(5, 7), 16) || 255;
-                            let finalR = rawR; let finalG = rawG; let finalB = rawB;
-                            const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
-                            if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
+                            const sortIdx = hwSettings?.colorSorting ?? 2;
+                            const { r: finalR, g: finalG, b: finalB } = ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
                             writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, val, brightness, candleAmplitude));
                           } else if (fixedSubMode === 'RBM') {
                             if (selectedPatternId === 100) {

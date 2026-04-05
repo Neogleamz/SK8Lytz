@@ -84,12 +84,32 @@ export default function DashboardScreen() {
   useEffect(() => {
     setOnDataReceived((deviceId: string, payload: number[]) => {
       setLastRawNotification({ deviceId, payloadHex: payload.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ') });
-      const config = ZenggeProtocol.parseHardwareConfig(payload);
-      if (config) {
-        console.log('[Dashboard] Intercepted Hardware Sync:', config);
+      
+      const v2Config = ZenggeProtocol.parseHardwareSettingsResponse(payload);
+      const v1Config = ZenggeProtocol.parseHardwareConfig(payload);
+      
+      let configPoints: number | undefined;
+      let configSegments: number | undefined;
+      let configStripType: string | undefined;
+      let configSorting: string | undefined;
+
+      if (v2Config) {
+        configPoints = v2Config.ledPoints;
+        configSegments = v2Config.segments;
+        configStripType = v2Config.icName;
+        configSorting = v2Config.colorSortingName;
+      } else if (v1Config) {
+        configPoints = v1Config.points;
+        configSegments = v1Config.segments;
+        configStripType = v1Config.stripType;
+        configSorting = v1Config.sorting;
+      }
+
+      if (configPoints !== undefined && configSorting !== undefined) {
+        console.log('[Dashboard] Intercepted Hardware Sync from', deviceId);
         setAllDevices(prev => prev.map(d => {
           if (d.id === deviceId) {
-            const newD = { ...d, points: config.points, sorting: config.sorting, stripType: config.stripType, segments: config.segments } as any as typeof d;
+            const newD = { ...d, points: configPoints, sorting: configSorting, stripType: configStripType, segments: configSegments } as any as typeof d;
             // Mirror securely directly to persistent memory
             AsyncStorage.getItem('ng_device_configs').then(str => {
                const p = JSON.parse(str || '{}');
@@ -589,41 +609,7 @@ export default function DashboardScreen() {
     requestPermissions();
   }, []);
 
-  useEffect(() => {
-    if (setOnDataReceived) {
-      setOnDataReceived((deviceId, data) => {
-        const parsed = ZenggeProtocol.parseHardwareConfig(data);
-        if (parsed) {
-          console.log(`[HW Sync] Decoded live configuration from ${deviceId}:`, parsed);
-          setAllDevices((prev: any[]) => {
-            let morphed = false;
-            const next = prev.map(d => {
-              if (d.id === deviceId) {
-                const anyD = d as any;
-                if (anyD.points !== parsed.points || anyD.segments !== parsed.segments || anyD.stripType !== parsed.stripType || anyD.sorting !== parsed.sorting) {
-                  morphed = true;
-                  return { ...d, points: parsed.points, segments: parsed.segments, stripType: parsed.stripType, sorting: parsed.sorting };
-                }
-              }
-              return d;
-            });
-            if (morphed) allDevicesRef.current = next as any;
-            return morphed ? next : prev;
-          });
-          
-          AsyncStorage.getItem('ng_device_configs').then(stored => {
-             const configs = stored ? JSON.parse(stored) : {};
-             if (!configs[deviceId]) configs[deviceId] = {};
-             configs[deviceId].points = parsed.points;
-             configs[deviceId].segments = parsed.segments;
-             configs[deviceId].stripType = parsed.stripType;
-             configs[deviceId].sorting = parsed.sorting;
-             AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs)).catch(()=>{});
-          });
-        }
-      });
-    }
-  }, [setOnDataReceived, setAllDevices]);
+  // (Removed redundant second setOnDataReceived binding)
 
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [selectedDeviceForSettingsId, setSelectedDeviceForSettingsId] = useState<string | null>(null);
@@ -711,6 +697,21 @@ export default function DashboardScreen() {
     setIsSettingsVisible(false);
   };
 
+  const activeHwSettings = useMemo(() => {
+    const d = displayConnectedDevices[0] as any;
+    const s = d?.sorting || d?.colorSortingName || 'GRB';
+    const sortingIdx = s === 'RGB' ? 0 : s === 'RBG' ? 1 : s === 'GRB' ? 2 : s === 'GBR' ? 3 : s === 'BRG' ? 4 : s === 'BGR' ? 5 : 2;
+    return {
+      ledPoints: d?.points || d?.ledPoints || (d?.name?.toLowerCase().includes('soul') ? 43 : 16),
+      segments:  d?.segments || 1,
+      icType:    d?.icType || 1,
+      icName:    d?.icName || d?.stripType || 'WS2812B',
+      colorSorting: d?.colorSorting ?? sortingIdx,
+      colorSortingName: s,
+      detected:  d?.detected || false,
+    };
+  }, [displayConnectedDevices]);
+
   const MemoizedSk8lytzController = useMemo(() => {
     if (!isActuallyConnected) return null;
 
@@ -722,6 +723,7 @@ export default function DashboardScreen() {
       <Animated.View {...edgePanResponder.panHandlers} style={{ flex: 1, backgroundColor: 'transparent' }}>
           {controlUITheme === 'DOCKED' ? (
               <DockedController
+                hwSettings={activeHwSettings}
                 lockedProduct={
                   (displayConnectedDevices[0] as any)?.type || 
                   ((displayConnectedDevices[0] as any)?.points 
@@ -738,6 +740,7 @@ export default function DashboardScreen() {
               />
           ) : (
               <Sk8lytzController
+                hwSettings={activeHwSettings}
                 lockedProduct={
                   (displayConnectedDevices[0] as any)?.type || 
                   ((displayConnectedDevices[0] as any)?.points 
@@ -755,7 +758,7 @@ export default function DashboardScreen() {
           )}
       </Animated.View>
     );
-  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, controlUITheme]);
+  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, controlUITheme, activeHwSettings]);
 
   const renderItem = useCallback(({ item }: { item: any }) => {
     const cachedConfig = deviceConfigs?.[item.id] || {};
@@ -793,11 +796,7 @@ export default function DashboardScreen() {
             });
           }
           
-          const configPoints = (mergedItem as any).points || (mergedItem.name?.toLowerCase().includes('soul') ? 43 : 8);
-          const configSorting = (mergedItem as any).sorting || 'GRB';
-          const configStripType = (mergedItem as any).stripType || 'WS2812B';
-          const configSegments = (mergedItem as any).segments || (mergedItem.name?.toLowerCase().includes('soul') ? 1 : 2);
-          writeToDevice(ZenggeProtocol.setHardwareConfig(configPoints, configSorting, configStripType, configSegments));
+          writeToDevice(ZenggeProtocol.queryHardwareSettings(false), item.id);
 
           if (IS_BROWSER_DEMO) {
             setMockConnected(true);
