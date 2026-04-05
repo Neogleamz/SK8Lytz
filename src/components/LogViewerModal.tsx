@@ -407,13 +407,13 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
       <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
         {/* Header */}
         <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
-          <View>
-            <Text style={[styles.title, { color: textPrimary }]}>SK8Lytz Analytics</Text>
-            <Text style={[styles.subtitle, { color: textMuted }]}>{timelineLogs.length} events stored</Text>
+          <View style={{ flexShrink: 1, paddingRight: 8 }}>
+            <Text style={[styles.title, { color: textPrimary }]} numberOfLines={1}>SK8Lytz Analytics</Text>
+            <Text style={[styles.subtitle, { color: textMuted }]} numberOfLines={1}>{timelineLogs.length} events stored</Text>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity onPress={handleExport} style={styles.actionBtn}>
-              <MaterialCommunityIcons name="export-variant" size={22} color="#00f0ff" />
+              <MaterialCommunityIcons name="download" size={22} color="#00f0ff" />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleUpload}
@@ -486,8 +486,8 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 20, fontWeight: '800', letterSpacing: 0.5, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   subtitle: { fontSize: 12, marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  headerActions: { flexDirection: 'row', gap: 4 },
-  actionBtn: { padding: 8 },
+  headerActions: { flexDirection: 'row', alignItems: 'center' },
+  actionBtn: { padding: 8, marginLeft: 2 },
   tabs: { flexDirection: 'row', borderBottomWidth: 1 },
   tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center' },
   tabBtnActive: { borderBottomWidth: 2, borderBottomColor: '#000000' },
