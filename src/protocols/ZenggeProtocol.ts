@@ -202,17 +202,28 @@ export class ZenggeProtocol {
     let icType: number, ledPoints: number, colorSorting: number;
 
     if (is63AtIndex1 && isJsonFormat) {
-      // JSON-inner format
-      icType       = payload[3] & 0xFF;
-      const ptsHi  = payload[5] & 0xFF;
-      const ptsLo  = payload[6] & 0xFF;
-      ledPoints    = (ptsHi << 8) | ptsLo;
+      // JSON-inner format — verified against Zengge app ground truth:
+      // [0]=0x00  [1]=0x63  [2]=0x00
+      // [3]=points (single byte, e.g. 0x0B=11)
+      // [4]=0x00  (reserved)
+      // [5]=segments (e.g. 0x02=2)
+      // [6]=icType (e.g. 0x01=WS2812B)
+      // [7]=colorSorting (e.g. 0x02=GRB)
+      // [8]=micPoints  [9]=micSegments  [10]=flags
+      icType       = payload[6] & 0xFF;
+      ledPoints    = payload[3] & 0xFF;
       colorSorting = payload[7] & 0xFF;
-      // Fallback if points look wrong (0 or >2048)
-      if (ledPoints === 0 || ledPoints > 2048) {
-        // Try alternative positions
-        ledPoints = ((payload[6] & 0xFF) << 8) | (payload[7] & 0xFF);
-      }
+      const parsedSegments = payload[5] & 0xFF;
+
+      return {
+        ledPoints: (ledPoints > 0 && ledPoints <= 2048) ? ledPoints : HW_CONSTRAINTS.defaultPoints,
+        segments:  (parsedSegments > 0) ? parsedSegments : 1,
+        icType,
+        icName: IC_TYPES[icType] || 'WS2812B',
+        colorSorting,
+        colorSortingName: COLOR_SORTING_RGB[colorSorting] || 'GRB',
+        detected: true,
+      };
     } else {
       // Classic 12-byte format
       icType       = payload[3] & 0xFF;
