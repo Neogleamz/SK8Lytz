@@ -1,3 +1,20 @@
+/**
+ * DockedController.tsx — SK8Lytz Primary LED Control Interface
+ *
+ * The main user-facing control panel for LED mode management.
+ * Renders as a bottom sheet overlay on DashboardScreen.
+ *
+ * Responsibilities:
+ *  - Mode switching: Fixed, Music, Camera, Pattern (RBM), Candle, DIY Array
+ *  - Color picker, RGB sliders, brightness & speed knobs
+ *  - Pattern wheel (ArcPatternWheel / VerticalPatternDrum)
+ *  - Music EQ visualizer (SpectrumVisualizer)
+ *  - Favorites system and Quick Presets
+ *  - Per-device and group analytics telemetry (MODE_CHANGED, PATTERN_CHANGED, COLOR_CHANGED)
+ *
+ * Depends on: ZenggeProtocol, AppLogger, useBLE (via prop injection), ThemeContext
+ * Platform: React Native (Android + Web)
+ */
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Platform, Modal, TextInput, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +33,7 @@ import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger } from '../services/AppLogger';
+import { supabase } from '../services/supabaseClient';
 
 const AnimatedIcon = Animated.createAnimatedComponent(MaterialCommunityIcons);
 
@@ -73,17 +91,15 @@ const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segme
   const dotsPerSegment = Math.max(1, Math.floor(points / Math.max(1, segments)));
 
   return (
-    <View style={{ flex: 1, marginRight: 8, overflow: 'hidden' }}>
-      <View style={{ flexDirection: 'row', gap: 4 }}>
-        {displayedDots.map((c, i) => (
+    <View style={{ flex: 1, marginRight: 8, height: 8, overflow: 'hidden' }}>
+      <View style={{ flex: 1, flexDirection: 'row', gap: 2 }}>
+        {displayedDots.slice(0, 10).map((c, i) => (
           <View 
              key={i} 
              style={{ 
-               width: 8, 
-               height: 8, 
+               flex: 1,
                borderRadius: 4, 
-               backgroundColor: c,
-               marginLeft: i > 0 && i % dotsPerSegment === 0 ? 12 : 0 
+               backgroundColor: c
              }} 
           />
         ))}
@@ -93,18 +109,58 @@ const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segme
 };
 
 
+export interface IDeviceState {
+  id: string;
+  name: string;
+  points?: number;
+  segments?: number;
+  sorting?: 'RGB' | 'GRB' | 'BRG' | 'RBG' | 'BGR' | 'GBR';
+  [key: string]: any; // safe loose fallback for undocumented BLE peripheral keys
+}
+
+export interface IFavoriteState {
+  id: string;
+  name: string;
+  customName?: string;
+  mode: string;
+  color?: string;
+  patternId?: number;
+  speed: number;
+  brightness: number;
+  fixedColorMode?: 'FOREGROUND' | 'BACKGROUND';
+  fixedFgColor?: string;
+  fixedBgColor?: string;
+  fixedHue?: number;
+  multiColors?: string[];
+  multiTransition?: number;
+  multiLength?: number;
+  candleAmplitude?: number;
+  musicPrimaryColor?: string;
+  musicSecondaryColor?: string;
+  micSensitivity?: number;
+  micSource?: 'APP' | 'DEVICE';
+  musicMatrixStyle?: number;
+}
+
+export interface IQuickPreset {
+  name: string;
+  colors: string[];
+  type: number;
+}
+
 interface Sk8lytzControllerProps {
+  hwSettings?: any;
   lockedProduct?: ProductType;
   isPaired?: boolean;
   points?: number;
-  devices?: any[];
-  onLongPressDevice?: (device: any) => void;
+  devices?: IDeviceState[];
+  onLongPressDevice?: (device: IDeviceState) => void;
   writeToDevice?: (payload: number[]) => Promise<void>;
   isPoweredOn?: boolean;
   onDisconnect?: () => void;
 }
 
-const CURATED_PRESETS: any[] = [];
+// CURATED_PRESETS logic moved to internal component state for Supabase updating
 
 const MarqueeText = ({ children, style }: any) => {
   const [textWidth, setTextWidth] = useState(0);
@@ -148,7 +204,7 @@ const MarqueeText = ({ children, style }: any) => {
   );
 };
 
-export default function DockedController({ lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect }: Sk8lytzControllerProps) {
+export default function DockedController({ hwSettings, lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect }: Sk8lytzControllerProps) {
   const { Colors, isDark } = useTheme();
   const styles = createStyles(Colors);
   const [lastSentPayload, setLastSentPayload] = useState<number[]>([]);
@@ -169,11 +225,11 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
   const [speed, setSpeed] = useState<number>(50);
   const [micSensitivity, setMicSensitivity] = useState<number>(80);
   const [musicHue, setMusicHue] = useState(180);
-  const [recording, setRecording] = useState<any>(null); // Use any for Recording to avoid version-specific type issues
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
   const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
 
-  const [quickPresets, setQuickPresets] = useState<any[]>([
+  const [quickPresets, setQuickPresets] = useState<IQuickPreset[]>([
     { name: 'Rainbow', colors: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'], type: 3 },
     { name: 'America', colors: ['#FF0000', '#FFFFFF', '#0000FF'], type: 3 },
     { name: 'Cyberpunk', colors: ['#00FFFF', '#FF00FF', '#FFFF00'], type: 3 },
@@ -243,12 +299,13 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
   }, [fixedSubMode, candleAmplitude]);
 
   // Favorites Array
-  const [favorites, setFavorites] = useState<any[]>([]);
+  const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
 
   const [isFavPromptVisible, setIsFavPromptVisible] = useState(false);
   const [favPromptName, setFavPromptName] = useState('');
   const [favPromptTargetId, setFavPromptTargetId] = useState<string | null>(null);
   const [activeFavoriteId, setActiveFavoriteId] = useState<string | null>(null);
+  const [isDiyBuilderExpanded, setIsDiyBuilderExpanded] = useState(false);
 
   const handleSaveFavoriteClick = () => {
      if (activeFavoriteId) {
@@ -307,13 +364,14 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
      AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
   };
 
-  const loadFavorite = (fav: any) => {
+  const loadFavorite = (favRaw: IFavoriteState) => {
+     const fav: any = favRaw;
      setActiveFavoriteId(fav.id);
      setActiveMode('FIXED');
        
      // Handle Legacy vs New Mode Signatures
      const targetSubMode = fav.mode === 'FIXED' ? 'PATTERN' : (fav.mode === 'MULTICOLOR' ? 'MULTI' : fav.mode);
-     setFixedSubMode(targetSubMode);
+     setFixedSubMode(targetSubMode as any);
        
      setSpeed(fav.speed);
      setBrightness(fav.brightness);
@@ -336,8 +394,20 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
         setMultiTransition(fav.multiTransition);
         setMultiLength(fav.multiLength || 16);
         if (writeToDevice) {
-           const rgbColors = fav.multiColors.map((h: string) => ({r: parseInt(h.slice(1,3),16)||0, g: parseInt(h.slice(3,5),16)||0, b: parseInt(h.slice(5,7),16)||0}));
-           writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, fav.multiLength || 16, fav.multiTransition, fav.speed));
+           const sortIdx = hwSettings?.colorSorting ?? 2;
+           const rgbColors = fav.multiColors.map((h: string) => {
+              const r = parseInt(h.slice(1,3), 16) || 0;
+              const g = parseInt(h.slice(3,5), 16) || 0;
+              const b = parseInt(h.slice(5,7), 16) || 0;
+              return ZenggeProtocol.applyColorSorting(r, g, b, sortIdx);
+           });
+           
+           const pts = hwSettings?.ledPoints || points || 16;
+           const segs = hwSettings?.segments || 1;
+           const maxLen = Math.max(1, Math.floor(pts / segs));
+           const appliedLength = (fav.multiLength || 16) > maxLen ? maxLen : (fav.multiLength || 16);
+           
+           writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, fav.multiTransition, fav.speed));
         }
      } else if (fav.mode === 'CANDLE') {
         setCandleAmplitude(fav.candleAmplitude);
@@ -356,12 +426,11 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
   const sendColor = async (r: number, g: number, b: number) => {
     if (!writeToDevice) return;
     if (activeMode === 'CANDLE') {
-        const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
+        const sortIdx = hwSettings?.colorSorting ?? 2;
         const rawR = parseInt(selectedColor.slice(1, 3), 16) || 255;
         const rawG = parseInt(selectedColor.slice(3, 5), 16) || 255;
         const rawB = parseInt(selectedColor.slice(5, 7), 16) || 255;
-        let finalR = rawR; let finalG = rawG; let finalB = rawB;
-        if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
+        const { r: finalR, g: finalG, b: finalB } = ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
         await writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, candleAmplitude));
     } else {
         // Solid fallback explicitly forced to length=10, transitionType=1 to stop physical node scrambling/jumping. 
@@ -372,12 +441,12 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
 
   /** Helper to parse a hex string array into GRB-sorted valid hardware RGB array */
   const generateSortedColors = (hexArray: string[]) => {
-      const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
+      const sortIdx = hwSettings?.colorSorting ?? 2;
       return hexArray.map(h => {
           const r = parseInt(h.slice(1,3), 16) || 0;
           const g = parseInt(h.slice(3,5), 16) || 0;
           const b = parseInt(h.slice(5,7), 16) || 0;
-          return sorting === 'GRB' ? { r: g, g: r, b } : { r, g, b };
+          return ZenggeProtocol.applyColorSorting(r, g, b, sortIdx);
       });
   };
 
@@ -392,20 +461,28 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
     if (!writeToDevice) return;
 
     const factor = currentBrightness / 100;
-    const fgRgb = { 
+    const fgRgbRaw = { 
       r: Math.round(parseInt(fg.slice(1, 3), 16) * factor), 
       g: Math.round(parseInt(fg.slice(3, 5), 16) * factor), 
       b: Math.round(parseInt(fg.slice(5, 7), 16) * factor) 
     };
-    const bgRgb = { 
+    const bgRgbRaw = { 
       r: Math.round(parseInt(bg.slice(1, 3), 16) * factor), 
       g: Math.round(parseInt(bg.slice(3, 5), 16) * factor), 
       b: Math.round(parseInt(bg.slice(5, 7), 16) * factor) 
     };
+    
+    const sortIdx = hwSettings?.colorSorting ?? 2;
+    const fgRgb = ZenggeProtocol.applyColorSorting(fgRgbRaw.r, fgRgbRaw.g, fgRgbRaw.b, sortIdx);
+    const bgRgb = ZenggeProtocol.applyColorSorting(bgRgbRaw.r, bgRgbRaw.g, bgRgbRaw.b, sortIdx);
+
+    const pts = hwSettings?.ledPoints || points || 16;
+    const segs = hwSettings?.segments || 1;
+    const effectivePoints = Math.max(1, Math.floor(pts / segs));
 
     if (patternId === 1) {
       const forcedSpeed = currentSpeed > 0 ? currentSpeed : 100;
-      const solidColors = Array(10).fill({ r: fgRgb.r, g: fgRgb.g, b: fgRgb.b }); // Buffer stabilized length >= 10
+      const solidColors = Array(effectivePoints).fill({ r: fgRgb.r, g: fgRgb.g, b: fgRgb.b }); // Buffer natively bounded
       writeToDevice(ZenggeProtocol.setMultiColor(solidColors, forcedSpeed, 1, 1));
     } else if (patternId === 6) {
       writeToDevice(ZenggeProtocol.setCustomMode([
@@ -423,7 +500,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
         { mode: 2, speed: 100, color1: bgRgb, color2: fgRgb }
       ]));
     } else {
-      let arr: any[] = [];
+      let arr: {r: number, g: number, b: number}[] = [];
       if (patternId === 2) arr = [fgRgb, bgRgb, bgRgb, bgRgb, bgRgb, bgRgb, bgRgb, bgRgb];
       if (patternId === 3) arr = [fgRgb, {r: Math.floor(fgRgb.r*0.5), g: Math.floor(fgRgb.g*0.5), b: Math.floor(fgRgb.b*0.5)}, {r: Math.floor(fgRgb.r*0.2), g: Math.floor(fgRgb.g*0.2), b: Math.floor(fgRgb.b*0.2)}, bgRgb, bgRgb, bgRgb];
       if (patternId === 4) arr = [fgRgb, fgRgb, fgRgb, fgRgb, bgRgb, bgRgb, bgRgb, bgRgb];
@@ -431,14 +508,14 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
       if (patternId === 9) arr = [bgRgb, bgRgb, fgRgb, fgRgb, bgRgb, bgRgb];
       if (patternId === 10) arr = [fgRgb, bgRgb, bgRgb, bgRgb, bgRgb, fgRgb];
       
-      // CRITICAL HARDWARE FIX: Arrays smaller than 10 trigger hardware glitches. 
-      // Safely multiply the base array chunk footprint until length hits native safe limit >= 10.
-      while (arr.length > 0 && arr.length < 10) {
-        arr = [...arr, ...arr];
+      const chunk = [...arr];
+      while (arr.length > 0 && arr.length < effectivePoints) {
+        arr = [...arr, ...chunk];
       }
+      arr = arr.slice(0, effectivePoints);
       
-      // Send with TransitionType 0x00 (Static Flow/Marquee) to actually animate across the matrix
-      writeToDevice(ZenggeProtocol.setMultiColor(arr, currentSpeed, 1, 0));
+      // Send with TransitionType 0x03 (Running Water/Marquee) to actually animate across the matrix
+      writeToDevice(ZenggeProtocol.setMultiColor(arr, currentSpeed, 1, 3));
     }
   };
 
@@ -476,9 +553,41 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
   const [fixedBgColor, setFixedBgColor] = useState<string>('#000000');
   const [fixedHue, setFixedHue] = useState<number>(120);
 
+  // -- Curated Presets (SK8Lytz Picks) --
+  const [curatedPresets, setCuratedPresets] = useState<IFavoriteState[]>([]);
+
+  useEffect(() => {
+    const fetchPicks = async () => {
+      try {
+        if (!supabase) return;
+        const { data, error } = await supabase.storage.from('sk8lytz-settings').download('sk8lytz-picks.json');
+        if (error) {
+          console.warn('[SK8Lytz Picks] No custom picks config found or accessible:', error.message);
+        } else if (data) {
+          const text = await new Promise<string>((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onload = () => resolve(fr.result as string);
+            fr.onerror = reject;
+            fr.readAsText(data);
+          });
+          const json = JSON.parse(text);
+          if (Array.isArray(json)) {
+            setCuratedPresets(json);
+          } else {
+            console.warn('[SK8Lytz Picks] Fetched config is not an array.');
+          }
+        }
+      } catch (e) {
+        console.warn('[SK8Lytz Picks] Exception fetching', e);
+      }
+    };
+    fetchPicks();
+  }, []);
+
   // -- App Microphone Logic --
   useEffect(() => {
-    if (activeMode === 'MUSIC' && micSource === 'APP' && isPoweredOn) {
+    const isMusicActive = activeMode === 'MUSIC' || (activeMode === 'FIXED' && fixedSubMode === 'MUSIC');
+    if (isMusicActive && micSource === 'APP' && isPoweredOn) {
       startRecording();
     } else {
       stopRecording();
@@ -486,47 +595,53 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
     return () => {
       stopRecording();
     };
-  }, [activeMode, micSource, isPoweredOn]);
+  }, [activeMode, fixedSubMode, micSource, isPoweredOn]);
 
   // -- Analytics Logging --
   const logTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
+  const deviceContext = React.useMemo(() => {
+    if (!devices || devices.length === 0) return { target: 'none' };
+    if (devices.length === 1) return { target: 'device', deviceId: devices[0].id };
+    return { target: 'group', deviceIds: devices.map(d => d.id), groupSize: devices.length };
+  }, [devices]);
+
   // Mode change logger
   useEffect(() => {
-    AppLogger.log('MODE_CHANGED', { mode: activeMode });
-  }, [activeMode]);
+    AppLogger.log('MODE_CHANGED', { mode: activeMode, ...deviceContext });
+  }, [activeMode, deviceContext]);
 
-  // Pattern change logger (PRESETS mode)
   useEffect(() => {
     const name = getRbmPatternName(selectedPatternId);
     AppLogger.log('PATTERN_CHANGED', { 
       pattern: `ID:${selectedPatternId}`, 
       name,
       mode: activeMode,
-      color: selectedColor 
+      color: selectedColor,
+      ...deviceContext
     });
-  }, [selectedPatternId]);
+  }, [selectedPatternId, deviceContext]);
 
   // Color change logger
   useEffect(() => {
-    AppLogger.log('COLOR_CHANGED', { hex: selectedColor });
-  }, [selectedColor]);
+    AppLogger.log('COLOR_CHANGED', { hex: selectedColor, ...deviceContext });
+  }, [selectedColor, deviceContext]);
 
   // Brightness change logger (debounced 600ms)
   useEffect(() => {
     clearTimeout(logTimers.current['brightness']);
     logTimers.current['brightness'] = setTimeout(() => {
-      AppLogger.log('BRIGHTNESS_CHANGED', { value: brightness, mode: activeMode });
+      AppLogger.log('BRIGHTNESS_CHANGED', { value: brightness, mode: activeMode, ...deviceContext });
     }, 600);
-  }, [brightness]);
+  }, [brightness, activeMode, deviceContext]);
 
   // Speed change logger (debounced 600ms)
   useEffect(() => {
     clearTimeout(logTimers.current['speed']);
     logTimers.current['speed'] = setTimeout(() => {
-      AppLogger.log('SPEED_CHANGED', { value: speed, mode: activeMode });
+      AppLogger.log('SPEED_CHANGED', { value: speed, mode: activeMode, ...deviceContext });
     }, 600);
-  }, [speed]);
+  }, [speed, activeMode, deviceContext]);
 
   const startRecording = async () => {
     try {
@@ -715,17 +830,21 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
     
     const isDeviceMic = src === 'DEVICE';
     
-    const c1 = { 
+    const c1Raw = { 
        r: parseInt(color1Hex.slice(1,3), 16) || 0, 
        g: parseInt(color1Hex.slice(3,5), 16) || 0, 
        b: parseInt(color1Hex.slice(5,7), 16) || 0 
     };
     
-    const c2 = { 
+    const c2Raw = { 
        r: parseInt(color2Hex.slice(1,3), 16) || 0, 
        g: parseInt(color2Hex.slice(3,5), 16) || 0, 
        b: parseInt(color2Hex.slice(5,7), 16) || 0 
     };
+    
+    const sortIdx = hwSettings?.colorSorting ?? 2;
+    const c1 = ZenggeProtocol.applyColorSorting(c1Raw.r, c1Raw.g, c1Raw.b, sortIdx);
+    const c2 = ZenggeProtocol.applyColorSorting(c2Raw.r, c2Raw.g, c2Raw.b, sortIdx);
     
     writeToDevice(ZenggeProtocol.setMusicConfig(
       isDeviceMic,
@@ -890,7 +1009,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                               <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
                            </View>
                         </View>
-                        <View style={{ width: '100%', height: 20, justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ width: '100%', minHeight: 20, justifyContent: 'center', alignItems: 'center' }}>
                            <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.name}</MarqueeText>
                         </View>
                         {(() => {
@@ -927,11 +1046,11 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                  })}
               </View>
 
-              <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, marginTop: 4 }]}>OURS</Text>
+              <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, marginTop: 4 }]}>SK8Lytz Picks</Text>
               
               <View style={[styles.presetContainer, { flex: 1 }]}>
-                 {Array.from({ length: 4 }).map((_, idx) => {
-                    const fav = CURATED_PRESETS[idx];
+                 {Array.from({ length: Math.max(4, curatedPresets.length) }).map((_, idx) => {
+                    const fav = curatedPresets[idx];
                     if (!fav) return <View key={`empty-ours-${idx}`} style={[styles.presetCard, { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
                     return (
                       <TouchableOpacity 
@@ -939,8 +1058,8 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                         style={[styles.presetCard, { borderColor: Colors.secondary }]}
                         onPress={() => loadFavorite(fav)}
                       >
-                        <View style={{ width: '100%', height: 20, justifyContent: 'center', alignItems: 'center', marginTop: 2 }}>
-                           <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.name}</MarqueeText>
+                        <View style={{ width: '100%', minHeight: 20, justifyContent: 'center', alignItems: 'center', marginTop: 2 }}>
+                           <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.customName || fav.name}</MarqueeText>
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 2, marginBottom: 4, gap: 4, opacity: 0.8 }}>
                            {fav.mode === 'MUSIC' ? (
@@ -1017,7 +1136,11 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                   {/* SOLID PATTERNS TIER */}
                   {fixedSubMode === 'PATTERN' && (
                   <View style={{ flex: 1, paddingBottom: 6 }}>
-                    <View style={{ flex: 1, backgroundColor: Colors.isDark ? '#000000' : 'rgba(0,0,0,0.04)', borderRadius: 8, padding: 4, flexDirection: 'column', flexWrap: 'wrap', alignContent: 'stretch' }}>
+                    <ScrollView 
+                       style={{ flex: 1, backgroundColor: Colors.isDark ? '#000000' : 'rgba(0,0,0,0.04)', borderRadius: 8 }} 
+                       contentContainerStyle={{ padding: 8, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}
+                       showsVerticalScrollIndicator={false}
+                    >
                       {(() => {
                         const fgRgb = (hex: string, alpha: number) => {
                            const h = hex || '#FFFFFF';
@@ -1051,13 +1174,13 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                                setFixedColorMode('FOREGROUND');
                             }
                           }}
-                          style={{ flex: 1, minHeight: 35, marginHorizontal: 6, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
+                          style={{ width: '48%', minHeight: 40, marginBottom: 8, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
                         >
-                          <Text style={{ color: Colors.text, flex: 1, fontWeight: 'bold', fontSize: 13 }}>{pattern.label}</Text>
+                          <Text style={{ color: Colors.text, flex: 1, fontWeight: 'bold', fontSize: 13 }} numberOfLines={1}>{pattern.label}</Text>
                           <FixedPatternPreviewRow baseDots={pattern.dots} patternId={pattern.id} speed={speed} points={devices?.[0]?.points || points || 16} segments={devices?.[0]?.segments || 1} />
                         </TouchableOpacity>
                       ))}
-                    </View>
+                    </ScrollView>
                   </View>
                   )}
 
@@ -1076,24 +1199,33 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                               setMultiTransition(preset.type);
                               if (writeToDevice) {
                                   const rgbColors = generateSortedColors(preset.colors);
-                                  writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, preset.type, speed));
+                                  const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                                  writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, preset.type, speed));
                               }
-                          }}
-                          onLongPress={() => {
-                             setQuickPromptTargetIndex(idx);
-                             setQuickPromptName(preset.name);
-                             setIsQuickPromptVisible(true);
                           }}
                           style={{
                               flex: 1, minHeight: 45, justifyContent: 'center', paddingHorizontal: 10,
                               backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', 
-                              borderRadius: 8, borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+                              borderRadius: 8, borderWidth: 1, borderColor: activeQuickPresetIndex === idx ? Colors.primary : (Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')
                           }}
                         >
-                          <View style={{ width: '100%', height: 20, justifyContent: 'center', alignItems: 'center' }}>
+                          <TouchableOpacity 
+                            style={{ position: 'absolute', right: 10, top: '50%', marginTop: -14, padding: 6, zIndex: 10 }}
+                            onPress={() => {
+                               setActiveQuickPresetIndex(idx);
+                               setFixedSubMode('MULTI');
+                               setMultiColors(preset.colors);
+                               setMultiTransition(preset.type);
+                               setIsDiyBuilderExpanded(true);
+                            }}
+                          >
+                             <MaterialCommunityIcons name="pencil-outline" size={16} color={Colors.textMuted} />
+                          </TouchableOpacity>
+
+                          <View style={{ width: '80%', height: 20, justifyContent: 'center', alignItems: 'center' }}>
                             <MarqueeText style={{ color: Colors.text, fontWeight: 'bold', fontSize: 11 }}>{preset.name}</MarqueeText>
                           </View>
-                          <View style={{ flexDirection: 'row', gap: 2, justifyContent: 'center' }}>
+                          <View style={{ flexDirection: 'row', gap: 2, justifyContent: 'center', marginRight: '15%' }}>
                              {preset.colors.slice(0,6).map((c: string, i: number) => (
                                 <View key={i} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c }} />
                              ))}
@@ -1103,81 +1235,107 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                       ))}
                     </View>
 
-                    <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: 'bold', marginTop: 4 }}>DIY ARRAY BUILDER</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                      {multiColors.map((hex, index) => (
-                        <TouchableOpacity key={index} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: hex, borderWidth: 2, borderColor: '#FFF', shadowColor: hex, shadowOpacity: 0.8, shadowRadius: 4 }} onPress={() => {
-                          setFixedSubMode('MULTI');
-                          const newArr = [...multiColors];
-                          newArr[index] = selectedColor;
-                          setMultiColors(newArr);
-                          const rgbColors = generateSortedColors(newArr);
-                          if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
-                        }} />
-                      ))}
-                      {multiColors.length < 16 && (
-                        <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderWidth: 1, borderColor: Colors.isDark ? '#FFF' : Colors.text, justifyContent: 'center', alignItems: 'center' }} onPress={() => {
-                           setFixedSubMode('MULTI');
-                           const newArr = [...multiColors, selectedColor];
-                           setMultiColors(newArr);
-                           const rgbColors = generateSortedColors(newArr);
-                           if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
-                        }}>
-                          <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold' }}>+</Text>
-                        </TouchableOpacity>
-                      )}
-                      {multiColors.length > 1 && (
-                        <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,0,0,0.3)', borderWidth: 1, borderColor: Colors.isDark ? '#FFF' : Colors.text, justifyContent: 'center', alignItems: 'center' }} onPress={() => {
-                           setFixedSubMode('MULTI');
-                           const newArr = [...multiColors];
-                           newArr.pop();
-                           setMultiColors(newArr);
-                           const rgbColors = generateSortedColors(newArr);
-                           if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
-                        }}>
-                          <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold', lineHeight: 22 }}>-</Text>
-                        </TouchableOpacity>
-                      )}
-                      <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.primary, borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)', justifyContent: 'center', alignItems: 'center', marginLeft: 'auto' }} onPress={() => {
-                          if (activeQuickPresetIndex !== null && quickPresets[activeQuickPresetIndex]) {
-                              setQuickPromptTargetIndex(activeQuickPresetIndex);
-                              setQuickPromptName(quickPresets[activeQuickPresetIndex].name);
-                          } else {
-                              setQuickPromptTargetIndex(-1);
-                              setQuickPromptName('Custom Preset');
-                          }
-                          setIsQuickPromptVisible(true);
-                      }}>
-                        <MaterialCommunityIcons name="content-save" size={16} color="#000" />
+                    {!isDiyBuilderExpanded && (
+                      <TouchableOpacity 
+                        style={{ marginTop: 8, padding: 12, backgroundColor: Colors.surfaceHighlight, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
+                        onPress={() => {
+                           setActiveQuickPresetIndex(null);
+                           setIsDiyBuilderExpanded(true);
+                        }}
+                      >
+                        <Text style={{ color: Colors.text, fontWeight: 'bold', fontSize: 12 }}>+ Create New DIY Array</Text>
                       </TouchableOpacity>
-                    </View>
+                    )}
 
-                    <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 'bold' }}>TRANSITION TYPE</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 }}>
-                      {[
-                        { label: 'Static', val: 0 },
-                        { label: 'Gradual', val: 1 },
-                        { label: 'Strobe', val: 2 },
-                        { label: 'Running Water', val: 3 }
-                      ].map((mode) => (
-                        <TouchableOpacity 
-                          key={mode.val} 
-                          onPress={() => {
+                    {isDiyBuilderExpanded && (
+                    <View style={{ marginTop: 12, padding: 10, backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderRadius: 12, borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                         <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: 'bold' }}>DIY ARRAY BUILDER</Text>
+                         <TouchableOpacity onPress={() => setIsDiyBuilderExpanded(false)} style={{ padding: 4 }}>
+                            <MaterialCommunityIcons name="chevron-up" size={24} color={Colors.textMuted} />
+                         </TouchableOpacity>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        {multiColors.map((hex, index) => (
+                          <TouchableOpacity key={index} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: hex, borderWidth: 2, borderColor: '#FFF', shadowColor: hex, shadowOpacity: 0.8, shadowRadius: 4 }} onPress={() => {
+                            setFixedSubMode('MULTI');
+                            const newArr = [...multiColors];
+                            newArr[index] = selectedColor;
+                            setMultiColors(newArr);
+                            const rgbColors = generateSortedColors(newArr);
+                            const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, speed));
+                          }} />
+                        ))}
+                        {multiColors.length < 16 && (
+                          <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderWidth: 1, borderColor: Colors.isDark ? '#FFF' : Colors.text, justifyContent: 'center', alignItems: 'center' }} onPress={() => {
                              setFixedSubMode('MULTI');
-                             setMultiTransition(mode.val);
-                             const rgbColors = generateSortedColors(multiColors);
-                             if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, mode.val, speed));
-                          }} 
-                          style={{ 
-                            paddingHorizontal: 12, paddingVertical: 6, 
-                            backgroundColor: multiTransition === mode.val ? Colors.primary : (Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'), 
-                            borderRadius: 8, marginRight: 6, marginBottom: 6 
-                          }}
-                        >
-                          <Text style={{ color: multiTransition === mode.val ? '#000' : Colors.text, fontWeight: 'bold', fontSize: 11 }}>{mode.label}</Text>
+                             const newArr = [...multiColors, selectedColor];
+                             setMultiColors(newArr);
+                             const rgbColors = generateSortedColors(newArr);
+                             const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, speed));
+                          }}>
+                            <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold' }}>+</Text>
+                          </TouchableOpacity>
+                        )}
+                        {multiColors.length > 1 && (
+                          <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,0,0,0.3)', borderWidth: 1, borderColor: Colors.isDark ? '#FFF' : Colors.text, justifyContent: 'center', alignItems: 'center' }} onPress={() => {
+                             setFixedSubMode('MULTI');
+                             const newArr = [...multiColors];
+                             newArr.pop();
+                             setMultiColors(newArr);
+                             const rgbColors = generateSortedColors(newArr);
+                             const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, speed));
+                          }}>
+                            <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold', lineHeight: 22 }}>-</Text>
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.primary, borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)', justifyContent: 'center', alignItems: 'center', marginLeft: 'auto' }} onPress={() => {
+                            if (activeQuickPresetIndex !== null && quickPresets[activeQuickPresetIndex]) {
+                                setQuickPromptTargetIndex(activeQuickPresetIndex);
+                                setQuickPromptName(quickPresets[activeQuickPresetIndex].name);
+                            } else {
+                                setQuickPromptTargetIndex(-1);
+                                setQuickPromptName('Custom Preset');
+                            }
+                            setIsQuickPromptVisible(true);
+                        }}>
+                          <MaterialCommunityIcons name="content-save" size={16} color="#000" />
                         </TouchableOpacity>
-                      ))}
+                      </View>
+
+                      <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 4, marginTop: 12, fontWeight: 'bold' }}>TRANSITION TYPE</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 }}>
+                        {[
+                          { label: 'Static', val: 0 },
+                          { label: 'Gradual', val: 1 },
+                          { label: 'Strobe', val: 2 },
+                          { label: 'Running Water', val: 3 }
+                        ].map((mode) => (
+                          <TouchableOpacity 
+                            key={mode.val} 
+                            onPress={() => {
+                               setFixedSubMode('MULTI');
+                               setMultiTransition(mode.val);
+                               const rgbColors = generateSortedColors(multiColors);
+                               const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                               if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, mode.val, speed));
+                            }} 
+                            style={{ 
+                              paddingHorizontal: 12, paddingVertical: 6, 
+                              backgroundColor: multiTransition === mode.val ? Colors.primary : (Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'), 
+                              borderRadius: 8, marginRight: 6, marginBottom: 6 
+                            }}
+                          >
+                            <Text style={{ color: multiTransition === mode.val ? '#000' : Colors.text, fontWeight: 'bold', fontSize: 11 }}>{mode.label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
                     </View>
+                    )}
                   </View>
                   )}
 
@@ -1265,7 +1423,7 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
               </View>
 
               <View style={[styles.musicVisualizerSection, { flex: 1, justifyContent: 'center' }]}>
-                <SpectrumVisualizer />
+                <SpectrumVisualizer magnitude={audioMagnitude} />
               </View>
 
               <View style={styles.micControlSection}>
@@ -1679,19 +1837,22 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                             applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
                           } else if (fixedSubMode === 'MULTI') {
                             const factor = val / 100;
-                            const rgbColors = multiColors.map(h => ({
-                                r: Math.round((parseInt(h.slice(1,3), 16) || 0) * factor),
-                                g: Math.round((parseInt(h.slice(3,5), 16) || 0) * factor),
-                                b: Math.round((parseInt(h.slice(5,7), 16) || 0) * factor)
-                            }));
-                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, speed));
+                            const sortIdx = hwSettings?.colorSorting ?? 2;
+                            const rgbColors = multiColors.map(h => {
+                                const rawR = Math.round((parseInt(h.slice(1,3), 16) || 0) * factor);
+                                const rawG = Math.round((parseInt(h.slice(3,5), 16) || 0) * factor);
+                                const rawB = Math.round((parseInt(h.slice(5,7), 16) || 0) * factor);
+                                return ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
+                            });
+                            const pts = hwSettings?.ledPoints || points || 16;
+                            const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, speed));
                           } else if (fixedSubMode === 'CANDLE') {
                             const rawR = parseInt(selectedColor.substring(1, 3), 16) || 255;
                             const rawG = parseInt(selectedColor.substring(3, 5), 16) || 255;
                             const rawB = parseInt(selectedColor.substring(5, 7), 16) || 255;
-                            let finalR = rawR; let finalG = rawG; let finalB = rawB;
-                            const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
-                            if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
+                            const sortIdx = hwSettings?.colorSorting ?? 2;
+                            const { r: finalR, g: finalG, b: finalB } = ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
                             writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, val, candleAmplitude));
                           } else if (fixedSubMode === 'RBM') {
                             if (selectedPatternId === 100) {
@@ -1732,19 +1893,22 @@ export default function DockedController({ lockedProduct, isPaired, points, devi
                             applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
                           } else if (fixedSubMode === 'MULTI') {
                             const factor = brightness / 100;
-                            const rgbColors = multiColors.map(h => ({
-                                r: Math.round((parseInt(h.slice(1,3), 16) || 0) * factor),
-                                g: Math.round((parseInt(h.slice(3,5), 16) || 0) * factor),
-                                b: Math.round((parseInt(h.slice(5,7), 16) || 0) * factor)
-                            }));
-                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, multiLength, multiTransition, val));
+                            const sortIdx = hwSettings?.colorSorting ?? 2;
+                            const rgbColors = multiColors.map(h => {
+                                const rawR = Math.round((parseInt(h.slice(1,3), 16) || 0) * factor);
+                                const rawG = Math.round((parseInt(h.slice(3,5), 16) || 0) * factor);
+                                const rawB = Math.round((parseInt(h.slice(5,7), 16) || 0) * factor);
+                                return ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
+                            });
+                            const pts = hwSettings?.ledPoints || points || 16;
+                            const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, val));
                           } else if (fixedSubMode === 'CANDLE') {
                             const rawR = parseInt(selectedColor.substring(1, 3), 16) || 255;
                             const rawG = parseInt(selectedColor.substring(3, 5), 16) || 255;
                             const rawB = parseInt(selectedColor.substring(5, 7), 16) || 255;
-                            let finalR = rawR; let finalG = rawG; let finalB = rawB;
-                            const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
-                            if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
+                            const sortIdx = hwSettings?.colorSorting ?? 2;
+                            const { r: finalR, g: finalG, b: finalB } = ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
                             writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, val, brightness, candleAmplitude));
                           } else if (fixedSubMode === 'RBM') {
                             if (selectedPatternId === 100) {
@@ -2047,8 +2211,8 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   },
   presetCard: {
     width: '48%',
-    height: '48%',
-    padding: 4,
+    minHeight: 80,
+    padding: 6,
     backgroundColor: Colors.isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.04)',
     borderRadius: 16,
     borderWidth: 1.5,
@@ -2136,7 +2300,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     fontWeight: '700',
   },
   musicModeIndicator: {
-    width: 60,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },

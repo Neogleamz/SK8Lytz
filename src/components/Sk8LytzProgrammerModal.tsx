@@ -1,11 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, SafeAreaView, TouchableOpacity, ScrollView, Platform, TextInput } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View, Text, StyleSheet, Modal, SafeAreaView, TouchableOpacity,
+  ScrollView, ActivityIndicator, Alert, Platform, Switch
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppLogger } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Typography, Layout } from '../theme/theme';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
-import DeviceItem from './DeviceItem';
+import { Typography } from '../theme/theme';
+import {
+  ZenggeProtocol,
+  HardwareSettings,
+  SK8_DEFAULTS,
+  IC_TYPES,
+  COLOR_SORTING_RGB,
+  icTypeIndex,
+  colorSortingIndex
+} from '../protocols/ZenggeProtocol';
+
+// ─── Types ─────────────────────────────────────────────────────────────────────
+
+interface ScannedDevice {
+  id: string;
+  name: string;
+  rssi: number;
+}
 
 interface Sk8LytzProgrammerModalProps {
   visible: boolean;
@@ -17,294 +36,396 @@ interface Sk8LytzProgrammerModalProps {
   handleScan: () => void;
 }
 
-export default function Sk8LytzProgrammerModal({ visible, onClose, onExitToLogs, allDevices, writeToDevice, isScanning, handleScan }: Sk8LytzProgrammerModalProps) {
+const PROFILES_STORAGE_KEY = 'ng_programmer_profiles';
+
+const IC_LIST = Object.entries(IC_TYPES).map(([k, v]) => ({ index: Number(k), name: v }));
+const SORTING_LIST = Object.entries(COLOR_SORTING_RGB).map(([k, v]) => ({ index: Number(k), name: v }));
+
+type ActiveProfileType = 'HALOZ' | 'SOULZ';
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function Sk8LytzProgrammerModal({
+  visible, onClose, onExitToLogs, allDevices,
+  writeToDevice, isScanning, handleScan
+}: Sk8LytzProgrammerModalProps) {
   const { Colors, isDark } = useTheme();
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const bg = isDark ? '#0f111a' : '#f0f2f5';
-  const cardBg = isDark ? '#1a1d2d' : '#ffffff';
-  const textPrimary = isDark ? '#ffffff' : '#111827';
-  const textMuted = isDark ? '#9ca3af' : '#6b7280';
-  const borderColor = isDark ? '#2d3348' : '#e5e7eb';
 
-  const [halozConfig, setHalozConfig] = useState({ points: 16, segments: 2, colorOrder: 'GRB', stripType: 'WS2812B' });
-  const [soulzConfig, setSoulzConfig] = useState({ points: 43, segments: 2, colorOrder: 'GRB', stripType: 'WS2812B' });
-
-  const [isEditingConfig, setIsEditingConfig] = useState<'HALOZ' | 'SOULZ' | null>(null);
-  const [tempConfig, setTempConfig] = useState({ points: 16, segments: 2, colorOrder: 'GRB', stripType: 'WS2812B' });
+  const bg       = isDark ? '#0a0d18' : '#f0f2f5';
+  const cardBg   = isDark ? '#141829' : '#ffffff';
+  const txtPri   = isDark ? '#ffffff' : '#111827';
+  const txtMuted = isDark ? '#8a96b3' : '#6b7280';
+  const border   = isDark ? '#252c47' : '#e5e7eb';
+  const cyan     = '#00f0ff';
+  const orange   = Colors.primary;
+  const amber    = Colors.secondary;
 
   useEffect(() => {
-    const loadPresets = async () => {
-      try {
-        const h = await AsyncStorage.getItem('@sk8_program_haloz');
-        const s = await AsyncStorage.getItem('@sk8_program_soulz');
-        if (h) setHalozConfig({ segments: 2, ...JSON.parse(h) });
-        if (s) setSoulzConfig({ segments: 2, ...JSON.parse(s) });
-      } catch (e) {
-        // fail silently
-      }
-    };
-    loadPresets();
+    if (visible) AppLogger.log('SCREEN_OPENED', { screenName: 'Device Auto-Programmer' });
+  }, [visible]);
+  const green    = '#00e887';
+
+  // ─── State ──────────────────────────────────────────────────────────────────
+  const [scannedDevices, setScannedDevices] = useState<ScannedDevice[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [activeProfile, setActiveProfile] = useState<ActiveProfileType>('HALOZ');
+  
+  const [profiles, setProfiles] = useState<Record<ActiveProfileType, HardwareSettings>>({
+    HALOZ: {
+      ledPoints: SK8_DEFAULTS.HALOZ.points,
+      segments: SK8_DEFAULTS.HALOZ.segments,
+      icType: SK8_DEFAULTS.HALOZ.icType,
+      icName: SK8_DEFAULTS.HALOZ.icName,
+      colorSorting: SK8_DEFAULTS.HALOZ.sorting,
+      colorSortingName: SK8_DEFAULTS.HALOZ.sortingName,
+      detected: false
+    },
+    SOULZ: {
+      ledPoints: SK8_DEFAULTS.SOULZ.points,
+      segments: SK8_DEFAULTS.SOULZ.segments,
+      icType: SK8_DEFAULTS.SOULZ.icType,
+      icName: SK8_DEFAULTS.SOULZ.icName,
+      colorSorting: SK8_DEFAULTS.SOULZ.sorting,
+      colorSortingName: SK8_DEFAULTS.SOULZ.sortingName,
+      detected: false
+    }
+  });
+
+  const [flashStatus, setFlashStatus] = useState<Record<string, 'idle' | 'pending' | 'success' | 'failed'>>({});
+  const [isFlashing, setIsFlashing] = useState(false);
+
+  // ─── Sync allDevices → scannedDevices ───────────────────────────────────────
+  useEffect(() => {
+    if (!visible) return;
+    const updated: ScannedDevice[] = allDevices.map(d => ({
+      id: d.id,
+      name: d.name || d.id.slice(-8),
+      rssi: d.rssi || -99,
+    }));
+    setScannedDevices(updated);
+    
+    // Ensure new devices have an idle status
+    setFlashStatus(prev => {
+        const next = { ...prev };
+        updated.forEach(d => {
+            if (!next[d.id]) next[d.id] = 'idle';
+        });
+        return next;
+    });
+  }, [allDevices, visible]);
+
+  // ─── Load Profiles ──────────────────────────────────────────────────────────
+  useEffect(() => {
+      const load = async () => {
+          try {
+              const saved = await AsyncStorage.getItem(PROFILES_STORAGE_KEY);
+              if (saved) setProfiles(JSON.parse(saved));
+          } catch(e) {}
+      };
+      if (visible) load();
   }, [visible]);
 
-  const saveConfig = async () => {
-    try {
-      if (isEditingConfig === 'HALOZ') {
-        setHalozConfig(tempConfig);
-        await AsyncStorage.setItem('@sk8_program_haloz', JSON.stringify(tempConfig));
-      } else if (isEditingConfig === 'SOULZ') {
-        setSoulzConfig(tempConfig);
-        await AsyncStorage.setItem('@sk8_program_soulz', JSON.stringify(tempConfig));
+  // ─── Save Profiles ──────────────────────────────────────────────────────────
+  const saveProfileChange = async (newProfiles: Record<ActiveProfileType, HardwareSettings>) => {
+      setProfiles(newProfiles);
+      try {
+          await AsyncStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(newProfiles));
+      } catch (e) {
+          console.error('[Programmer] Failed to persist profile');
       }
-    } catch (e) {}
-    setIsEditingConfig(null);
   };
 
-  const toggleSelect = (id: string) => {
-    if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter(i => i !== id));
-    } else {
-      setSelectedIds([...selectedIds, id]);
-    }
+  const updateActiveProfile = (update: Partial<HardwareSettings>) => {
+      const p = profiles[activeProfile];
+      const newSettings = { ...p, ...update };
+      saveProfileChange({ ...profiles, [activeProfile]: newSettings });
   };
 
-  const selectAll = () => {
-    setSelectedIds(allDevices.map(d => d.id));
+  // ─── Batch Flashing ─────────────────────────────────────────────────────────
+  const handleFlash = async () => {
+      if (selectedIds.length === 0) return;
+      setIsFlashing(true);
+      
+      const config = profiles[activeProfile];
+      const cmd = ZenggeProtocol.writeHardwareSettings(
+          config.ledPoints,
+          config.segments,
+          config.icType,
+          config.colorSorting
+      );
+
+      for (const id of selectedIds) {
+          setFlashStatus(prev => ({ ...prev, [id]: 'pending' }));
+          try {
+              await writeToDevice(cmd, id);
+              // Slight delay to allow packet processing natively
+              await new Promise(res => setTimeout(res, 300));
+              setFlashStatus(prev => ({ ...prev, [id]: 'success' }));
+          } catch (e) {
+              setFlashStatus(prev => ({ ...prev, [id]: 'failed' }));
+          }
+      }
+      setIsFlashing(false);
   };
 
-  const clearSelection = () => {
-    setSelectedIds([]);
+  const toggleSelectAll = () => {
+      if (selectedIds.length === scannedDevices.length) {
+          setSelectedIds([]);
+      } else {
+          setSelectedIds(scannedDevices.map(d => d.id));
+      }
   };
 
-  const flashHaloz = async () => {
-    if (selectedIds.length === 0) {
-      alert("No devices selected to flash!");
-      return;
-    }
-    for (const id of selectedIds) {
-      await writeToDevice(ZenggeProtocol.setHardwareConfig(halozConfig.points, halozConfig.colorOrder, halozConfig.stripType, halozConfig.segments || 2), id);
-    }
-    alert(`Successfully flashed HALOZ config to ${selectedIds.length} devices.`);
+  const toggleDevice = (id: string) => {
+      if (selectedIds.includes(id)) {
+          setSelectedIds(selectedIds.filter(i => i !== id));
+      } else {
+          setSelectedIds([...selectedIds, id]);
+      }
   };
 
-  const flashSoulz = async () => {
-    if (selectedIds.length === 0) {
-      alert("No devices selected to flash!");
-      return;
-    }
-    for (const id of selectedIds) {
-      await writeToDevice(ZenggeProtocol.setHardwareConfig(soulzConfig.points, soulzConfig.colorOrder, soulzConfig.stripType, soulzConfig.segments || 2), id);
-    }
-    alert(`Successfully flashed SOULZ config to ${selectedIds.length} devices.`);
+  // ─── UI Helpers ─────────────────────────────────────────────────────────────
+  const currentProfile = profiles[activeProfile];
+
+  const cycleProperty = (field: 'points' | 'segments') => {
+      const maxPts = 100;
+      const maxSeg = 8;
+      
+      if (field === 'points') {
+          let n = currentProfile.ledPoints + 1;
+          if (n > maxPts) n = 1;
+          updateActiveProfile({ ledPoints: n });
+      } else {
+          let n = currentProfile.segments + 1;
+          if (n > maxSeg) n = 1;
+          updateActiveProfile({ segments: n });
+      }
   };
 
+  const cycleIC = () => {
+      const idx = IC_LIST.findIndex(i => i.index === currentProfile.icType);
+      const next = IC_LIST[(idx + 1) % IC_LIST.length];
+      updateActiveProfile({ icType: next.index, icName: next.name });
+  };
+
+  const cycleSorting = () => {
+      const idx = SORTING_LIST.findIndex(i => i.index === currentProfile.colorSorting);
+      const next = SORTING_LIST[(idx + 1) % SORTING_LIST.length];
+      updateActiveProfile({ colorSorting: next.index, colorSortingName: next.name });
+  };
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
-      <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
-        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 16, paddingTop: 16}}>
-          <Text style={[Typography.title, { color: Colors.primary }]}>SK8Lytz Programmer</Text>
-          <TouchableOpacity 
-              style={{backgroundColor: 'rgba(255, 60, 60, 0.15)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255, 60, 60, 0.4)'}} 
-              onPress={() => {
-                if (onExitToLogs) onExitToLogs();
-                else onClose();
-              }}
+      <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
+
+        {/* ── Header ── */}
+        <View style={[s.topBar, { borderBottomColor: border }]}>
+          <View>
+            <Text style={[Typography.title, { color: orange, fontSize: 18 }]}>⚡ BATCH PROGRAMMER</Text>
+            <Text style={{ color: txtMuted, fontSize: 11, marginTop: 2 }}>
+              Configure multiple controllers instantly
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[s.exitBtn, { borderColor: 'rgba(255,60,60,0.4)', backgroundColor: 'rgba(255,60,60,0.1)' }]}
+            onPress={() => { if (onExitToLogs) onExitToLogs(); else onClose(); }}
           >
-              <Text style={{color: '#FF8888', fontSize: 10, fontWeight: 'bold', letterSpacing: 1}}>EXIT PROGRAMMER</Text>
+            <Text style={{ color: '#FF8888', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>EXIT</Text>
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.content}>
-          <View style={[styles.actionCard, { backgroundColor: cardBg, borderColor }]}>
-            <Text style={[styles.sectionTitle, { color: textPrimary }]}>Target Configuration</Text>
-            <Text style={{ color: textMuted, fontSize: 13, marginBottom: 16 }}>
-              Select target payload. This overwrites {selectedIds.length} connected devices instantly.
-            </Text>
-            
-            <View style={styles.buttonRow}>
-              <TouchableOpacity 
-                style={[styles.flashBtn, { backgroundColor: 'rgba(0, 240, 255, 0.15)', borderColor: '#00f0ff' }]}
-                onPress={flashHaloz}
-                onLongPress={() => {
-                  setTempConfig(halozConfig);
-                  setIsEditingConfig('HALOZ');
-                }}
-              >
-                <Text style={[styles.flashBtnText, { color: '#00f0ff' }]}>
-                  FLASH HALOZ ({halozConfig.points} Pts)
-                </Text>
-                <Text style={{ color: '#00f0ff', fontSize: 9, opacity: selectedIds.length === 0 ? 0.3 : 0.6, marginTop: 4 }}>
-                  {halozConfig.segments} Seg • {halozConfig.colorOrder} • {halozConfig.stripType}
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.flashBtn, { backgroundColor: 'rgba(255, 61, 0, 0.15)', borderColor: Colors.secondary }]}
-                onPress={flashSoulz}
-                onLongPress={() => {
-                  setTempConfig(soulzConfig);
-                  setIsEditingConfig('SOULZ');
-                }}
-              >
-                <Text style={[styles.flashBtnText, { color: Colors.secondary }]}>
-                  FLASH SOULZ ({soulzConfig.points} Pts)
-                </Text>
-                <Text style={{ color: Colors.secondary, fontSize: 9, opacity: selectedIds.length === 0 ? 0.3 : 0.6, marginTop: 4 }}>
-                  {soulzConfig.segments} Seg • {soulzConfig.colorOrder} • {soulzConfig.stripType}
-                </Text>
-              </TouchableOpacity>
-            </View>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+
+          {/* ── Profile Selector & Config ── */}
+          <View style={[s.card, { backgroundColor: cardBg, borderColor: border, marginBottom: 16 }]}>
+             <View style={{ flexDirection: 'row', marginBottom: 16, borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: border }}>
+                 <TouchableOpacity 
+                    style={{ flex: 1, paddingVertical: 12, alignItems: 'center', backgroundColor: activeProfile === 'HALOZ' ? cyan : 'transparent' }}
+                    onPress={() => setActiveProfile('HALOZ')}
+                 >
+                     <Text style={{ fontWeight: 'bold', color: activeProfile === 'HALOZ' ? '#000' : txtMuted }}>HALOZ PROFILE</Text>
+                 </TouchableOpacity>
+                 <TouchableOpacity 
+                    style={{ flex: 1, paddingVertical: 12, alignItems: 'center', backgroundColor: activeProfile === 'SOULZ' ? amber : 'transparent' }}
+                    onPress={() => setActiveProfile('SOULZ')}
+                 >
+                     <Text style={{ fontWeight: 'bold', color: activeProfile === 'SOULZ' ? '#000' : txtMuted }}>SOULZ PROFILE</Text>
+                 </TouchableOpacity>
+             </View>
+
+             <Text style={{ color: txtPri, fontWeight: 'bold', marginBottom: 12 }}>Profile Defaults (Tap to cycle payload values)</Text>
+             
+             <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+                <TouchableOpacity style={[s.configBtn, { flex: 1, borderColor: border }]} onPress={() => cycleProperty('points')}>
+                    <Text style={{ color: txtMuted, fontSize: 11 }}>POINTS (LEDs)</Text>
+                    <Text style={{ color: activeProfile === 'HALOZ'? cyan : amber, fontWeight: 'bold', fontSize: 16 }}>{currentProfile.ledPoints}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.configBtn, { flex: 1, borderColor: border }]} onPress={() => cycleProperty('segments')}>
+                    <Text style={{ color: txtMuted, fontSize: 11 }}>SEGMENTS</Text>
+                    <Text style={{ color: activeProfile === 'HALOZ'? cyan : amber, fontWeight: 'bold', fontSize: 16 }}>{currentProfile.segments}</Text>
+                </TouchableOpacity>
+             </View>
+
+             <View style={{ flexDirection: 'row', gap: 12 }}>
+                <TouchableOpacity style={[s.configBtn, { flex: 1, borderColor: border }]} onPress={cycleIC}>
+                    <Text style={{ color: txtMuted, fontSize: 11 }}>STRIP TYPE (IC)</Text>
+                    <Text style={{ color: activeProfile === 'HALOZ'? cyan : amber, fontWeight: 'bold', fontSize: 16 }}>{currentProfile.icName}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.configBtn, { flex: 1, borderColor: border }]} onPress={cycleSorting}>
+                    <Text style={{ color: txtMuted, fontSize: 11 }}>COLOR SORTING</Text>
+                    <Text style={{ color: activeProfile === 'HALOZ'? cyan : amber, fontWeight: 'bold', fontSize: 16 }}>{currentProfile.colorSortingName}</Text>
+                </TouchableOpacity>
+             </View>
           </View>
 
-          <View style={styles.selectionHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={[styles.sectionTitle, { color: textPrimary, marginBottom: 0 }]}>
-                Discovered Hardware ({allDevices.length})
+          {/* ── Device List Header ── */}
+          <View style={[s.row, { marginBottom: 12, paddingHorizontal: 4 }]}>
+             <Text style={{ color: txtPri, fontWeight: 'bold', fontSize: 16 }}>Broadcast Targets</Text>
+             <View style={s.row}>
+                <TouchableOpacity onPress={handleScan} style={{ marginRight: 16 }}>
+                    <Text style={{ color: cyan, fontSize: 12, fontWeight: 'bold' }}>{isScanning ? 'SCANNING...' : 'SCAN'}</Text>
+                </TouchableOpacity>
+                {scannedDevices.length > 0 && (
+                  <TouchableOpacity onPress={toggleSelectAll}>
+                      <Text style={{ color: amber, fontSize: 12, fontWeight: 'bold' }}>
+                          {selectedIds.length === scannedDevices.length ? 'DESELECT ALL' : 'SELECT ALL'}
+                      </Text>
+                  </TouchableOpacity>
+                )}
+             </View>
+          </View>
+
+          {/* ── Device List ── */}
+          {scannedDevices.length === 0 ? (
+            <View style={{ alignItems: 'center', paddingVertical: 48 }}>
+              <MaterialCommunityIcons name="bluetooth-off" size={48} color={border} />
+              <Text style={{ color: txtMuted, marginTop: 12, fontSize: 14 }}>
+                No SK8Lytz hardware detected.
               </Text>
-              <TouchableOpacity onPress={handleScan} style={{ marginLeft: 12, paddingHorizontal: 12, paddingVertical: 4, backgroundColor: isScanning ? 'transparent' : 'rgba(0, 240, 255, 0.1)', borderRadius: 12, borderWidth: 1, borderColor: isScanning ? 'transparent' : '#00f0ff' }}>
-                 <Text style={{ color: isScanning ? textMuted : '#00f0ff', fontSize: 10, fontWeight: '900' }}>{isScanning ? 'SCANNING...' : 'RESCAN'}</Text>
-              </TouchableOpacity>
+              <Text style={{ color: txtMuted, fontSize: 12, marginTop: 4 }}>
+                Ensure units are powered on and tap SCAN.
+              </Text>
             </View>
-            <View style={{ flexDirection: 'row' }}>
-              <TouchableOpacity onPress={selectAll} style={styles.textBtn}>
-                <Text style={{ color: Colors.primary, fontWeight: 'bold', fontSize: 12 }}>ALL</Text>
-              </TouchableOpacity>
-              <View style={{ width: 12 }} />
-              <TouchableOpacity onPress={clearSelection} style={styles.textBtn}>
-                <Text style={{ color: Colors.error, fontWeight: 'bold', fontSize: 12 }}>NONE</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.listContainer}>
-            {allDevices.length === 0 ? (
-              <Text style={{ color: textMuted, textAlign: 'center', marginVertical: 32 }}>No devices discovered.</Text>
-            ) : (
-              allDevices.map((d) => (
-                <DeviceItem
-                  key={d.id}
-                  device={d}
-                  isConnected={true}
-                  isSelectionMode={true}
-                  isSelected={selectedIds.includes(d.id)}
-                  onPress={() => toggleSelect(d.id)}
-                  onLongPress={() => toggleSelect(d.id)}
-                />
-              ))
-            )}
-          </View>
-          <View style={{ height: 40 }} />
+          ) : (
+            scannedDevices.map(device => {
+              const isSelected = selectedIds.includes(device.id);
+              const status = flashStatus[device.id] || 'idle';
+              
+              return (
+                <TouchableOpacity
+                  key={device.id}
+                  style={[s.deviceCard, { backgroundColor: cardBg, borderColor: isSelected ? (activeProfile==='HALOZ'?cyan:amber) : border, opacity: status === 'pending' ? 0.7 : 1 }]}
+                  onPress={() => toggleDevice(device.id)}
+                  activeOpacity={0.75}
+                  disabled={isFlashing}
+                >
+                  <View style={s.row}>
+                     <View style={{ width: 24, alignItems: 'center' }}>
+                         {isSelected ? (
+                             <MaterialCommunityIcons name="checkbox-marked" size={22} color={activeProfile==='HALOZ'?cyan:amber} />
+                         ) : (
+                             <MaterialCommunityIcons name="checkbox-blank-outline" size={22} color={border} />
+                         )}
+                     </View>
+                     <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text style={{ color: txtPri, fontWeight: '800', fontSize: 14 }}>{device.name}</Text>
+                        <Text style={{ color: txtMuted, fontSize: 11, marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+                          {device.id} ({device.rssi} dBm)
+                        </Text>
+                     </View>
+                     <View style={{ alignItems: 'flex-end' }}>
+                         {status === 'pending' && <ActivityIndicator size="small" color={cyan} />}
+                         {status === 'success' && <Text style={{ color: green, fontWeight: 'bold', fontSize: 12 }}>SUCCESS</Text>}
+                         {status === 'failed' && <Text style={{ color: '#FF3D71', fontWeight: 'bold', fontSize: 12 }}>FAILED</Text>}
+                     </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
+          
+          <View style={{ height: 100 }} />
         </ScrollView>
 
-        <Modal
-          visible={isEditingConfig !== null}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setIsEditingConfig(null)}
-        >
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' }}>
-            <View style={{ backgroundColor: cardBg, padding: 24, borderRadius: 16, width: '90%', borderWidth: 1, borderColor: isEditingConfig === 'HALOZ' ? '#00f0ff' : Colors.secondary }}>
-              <Text style={{ ...Typography.title, color: isEditingConfig === 'HALOZ' ? '#00f0ff' : Colors.secondary, marginBottom: 16 }}>
-                Edit {isEditingConfig} Payload
-              </Text>
-              
-              <Text style={{ color: textMuted, fontSize: 13, marginBottom: 8, fontWeight: 'bold' }}>PIXEL COUNT</Text>
-              <TextInput
-                style={{ backgroundColor: bg, borderColor, borderWidth: 1, borderRadius: 8, padding: 12, color: textPrimary, fontSize: 16, marginBottom: 16, textAlign: 'center' }}
-                value={String(tempConfig.points || 0)}
-                onChangeText={(t) => setTempConfig({ ...tempConfig, points: parseInt(t.replace(/[^0-9]/g, '')) || 0 })}
-                keyboardType="number-pad"
-                maxLength={4}
-              />
-
-              <Text style={{ color: textMuted, fontSize: 13, marginBottom: 8, fontWeight: 'bold' }}>SEGMENT COUNT</Text>
-              <TextInput
-                style={{ backgroundColor: bg, borderColor, borderWidth: 1, borderRadius: 8, padding: 12, color: textPrimary, fontSize: 16, marginBottom: 16, textAlign: 'center' }}
-                value={String(tempConfig.segments || 1)}
-                onChangeText={(t) => setTempConfig({ ...tempConfig, segments: parseInt(t.replace(/[^0-9]/g, '')) || 1 })}
-                keyboardType="number-pad"
-                maxLength={2}
-              />
-
-              <Text style={{ color: textMuted, fontSize: 13, marginBottom: 8, fontWeight: 'bold' }}>COLOR ORDER</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 }}>
-                {['RGB', 'RBG', 'GRB', 'GBR', 'BRG', 'BGR'].map(co => (
-                  <TouchableOpacity
-                    key={co}
-                    onPress={() => setTempConfig({ ...tempConfig, colorOrder: co })}
-                    style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, borderColor: tempConfig.colorOrder === co ? Colors.primary : borderColor, backgroundColor: tempConfig.colorOrder === co ? 'rgba(0, 240, 255, 0.1)' : 'transparent', marginRight: 8, marginBottom: 8 }}
-                  >
-                     <Text style={{ color: tempConfig.colorOrder === co ? Colors.primary : textMuted, fontSize: 12, fontWeight: 'bold' }}>{co}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={{ color: textMuted, fontSize: 13, marginBottom: 8, fontWeight: 'bold' }}>IC STRIP TYPE</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 24 }}>
-                {['WS2812B', 'SM16703', 'WS2811', 'SK6812'].map(ic => (
-                  <TouchableOpacity
-                    key={ic}
-                    onPress={() => setTempConfig({ ...tempConfig, stripType: ic })}
-                    style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, borderColor: tempConfig.stripType === ic ? Colors.secondary : borderColor, backgroundColor: tempConfig.stripType === ic ? 'rgba(255, 61, 0, 0.1)' : 'transparent', marginRight: 8, marginBottom: 8 }}
-                  >
-                     <Text style={{ color: tempConfig.stripType === ic ? Colors.secondary : textMuted, fontSize: 12, fontWeight: 'bold' }}>{ic}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-                <TouchableOpacity onPress={() => setIsEditingConfig(null)} style={{ padding: 16 }}>
-                  <Text style={{ color: textMuted, fontWeight: 'bold' }}>CANCEL</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={saveConfig} style={{ padding: 16 }}>
-                  <Text style={{ color: Colors.primary, fontWeight: 'bold' }}>SAVE OVERRIDE</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+        {/* ── Action Footer ── */}
+        <View style={[s.footer, { backgroundColor: cardBg, borderColor: border }]}>
+            <TouchableOpacity 
+                style={[s.flashBtn, { opacity: (selectedIds.length === 0 || isFlashing) ? 0.5 : 1, backgroundColor: activeProfile === 'HALOZ' ? cyan : amber }]}
+                disabled={selectedIds.length === 0 || isFlashing}
+                onPress={handleFlash}
+            >
+                {isFlashing ? (
+                    <ActivityIndicator color="#000" />
+                ) : (
+                    <Text style={{ color: '#000', fontWeight: '900', fontSize: 16 }}>
+                        FLASH {selectedIds.length} DEVICE{selectedIds.length !== 1 ? 'S' : ''}
+                    </Text>
+                )}
+            </TouchableOpacity>
+        </View>
       </SafeAreaView>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   root: { flex: 1 },
-  header: {
+  topBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    alignItems: 'center',
     borderBottomWidth: 1,
   },
-  title: { fontSize: 20, fontWeight: '900', letterSpacing: 0.5 },
-  subtitle: { fontSize: 13, marginTop: 4, fontWeight: '600' },
-  closeBtn: { padding: 4 },
-  content: { flex: 1, padding: 16 },
-  actionCard: {
+  exitBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
     borderWidth: 1,
+  },
+  card: {
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-  },
-  sectionTitle: { fontSize: 16, fontWeight: '800', marginBottom: 8, letterSpacing: 0.5 },
-  buttonRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  flashBtn: {
-    flex: 1,
     borderWidth: 1,
-    borderRadius: 8,
-    paddingVertical: 14,
-    marginHorizontal: 4,
-    alignItems: 'center',
+    padding: 16,
   },
-  flashBtnText: { fontWeight: '800', fontSize: 13, letterSpacing: 0.5 },
-  selectionHeader: {
+  row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 4,
+    justifyContent: 'space-between',
   },
-  textBtn: { padding: 4 },
-  listContainer: { paddingBottom: 20 },
+  configBtn: {
+      borderWidth: 1,
+      borderRadius: 8,
+      padding: 12,
+      alignItems: 'center',
+      backgroundColor: 'rgba(255,255,255,0.03)'
+  },
+  deviceCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 8,
+  },
+  footer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      padding: 16,
+      paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+      borderTopWidth: 1,
+  },
+  flashBtn: {
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 6
+  }
 });

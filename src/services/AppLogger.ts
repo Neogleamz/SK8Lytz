@@ -1,11 +1,35 @@
 /**
- * AppLogger - SK8Lytz Analytics & Event Logger
- * Stores compact structured logs locally with rotation.
- * Export-ready for future webhook/database upload.
+ * AppLogger.ts — SK8Lytz Telemetry & Analytics Engine
+ *
+ * Singleton service that captures all significant app events and uploads
+ * them to Supabase for remote diagnostics and usage analytics.
+ *
+ * Architecture:
+ *  - Local buffer: compact LogEntry[] ({ t, e, d }) stored in AsyncStorage
+ *    under '@sk8lytz_logs'. Rotates at MAX_ENTRIES (10,000) to cap storage.
+ *  - Session ID: generated once at instantiation (telemetry_TIMESTAMP),
+ *    stable for the entire app lifetime to prevent duplicate Supabase rows.
+ *  - uploadLogsToSupabase(): merges with cloud Storage JSON, deduplicates,
+ *    pushes current delta to 6 normalized Postgres tables, then CLEARS the
+ *    local buffer (rotation) on confirmed success.
+ *  - Group event unrolling: group-targeted events (deviceIds[]) are flatMapped
+ *    into individual per-device rows in Supabase, enabling per-device diagnostics.
+ *  - Custom device names: resolved from 'ng_device_configs' AsyncStorage key
+ *    (same key DashboardScreen writes) and injected into all DB payloads.
+ *  - RAW_PAYLOAD events are intentionally EXCLUDED from Supabase DB writes
+ *    (hardware tester sniffer data only — kept in Storage/local only).
+ *
+ * Supabase tables written:
+ *  parsed_session_stats, parsed_session_devices, parsed_logs,
+ *  parsed_mode_usage, parsed_pattern_usage, parsed_color_usage
+ *
+ * Event types: see EventType union below
+ * Platform: React Native (Android + Web)
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabaseClient';
 import * as Device from 'expo-device';
+import * as Battery from 'expo-battery';
 
 const STORAGE_KEY = '@sk8lytz_logs';
 const MAX_ENTRIES = 10000; // ~1MB of compact log data before rotation
@@ -19,6 +43,7 @@ export type EventType =
   | 'DEVICE_DISCOVERED'
   | 'DEVICE_CONNECTED'
   | 'DEVICE_DISCONNECTED'
+  | 'DEVICE_RENAMED'
   | 'MODE_CHANGED'
   | 'PATTERN_CHANGED'
   | 'COLOR_CHANGED'
@@ -28,7 +53,12 @@ export type EventType =
   | 'PROTOCOL_ERROR'
   | 'BLE_WRITE_ERROR'
   | 'BLE_CONNECTION_ERROR'
-  | 'RAW_PAYLOAD';
+  | 'RAW_PAYLOAD'
+  | 'SCREEN_OPENED'
+  | 'APP_BACKGROUNDED'
+  | 'APP_FOREGROUNDED'
+  | 'ERROR_CAUGHT'
+  | 'PERFORMANCE_METRIC';
 
 export interface LogEntry {
   t: number;        // timestamp ms
@@ -38,7 +68,9 @@ export interface LogEntry {
 
 class AppLoggerService {
   private buffer: LogEntry[] = [];
+  private activeDevices: any[] = [];
   private loaded = false;
+  private sessionId = `telemetry_${Date.now()}`;
 
   private async ensureLoaded() {
     if (this.loaded) return;
@@ -63,12 +95,62 @@ class AppLoggerService {
     }
   }
 
+  private txPayloadQueue: { hex: string, timestamp: number } | null = null;
+  private pendingLogQueue: { event: EventType, payload: Record<string, any>, resolve: () => void } | null = null;
+
+  updateKnownDevices(devices: any[]) {
+    this.activeDevices = devices;
+  }
+
+  setLastTxPayload(hex: string) {
+    this.txPayloadQueue = { hex, timestamp: Date.now() };
+    this.flushQueues();
+  }
+
+  private flushQueues() {
+    if (this.pendingLogQueue) {
+      const now = Date.now();
+      const tx = this.txPayloadQueue;
+      // If a payload happens within 250ms of the UI event, correlate them
+      const correlatedHex = (tx && Math.abs(now - tx.timestamp) < 250) ? tx.hex : undefined;
+      
+      const payloadMeta = correlatedHex 
+        ? { ...this.pendingLogQueue.payload, txPayload: correlatedHex, txState: 'SUCCESS' } 
+        : this.pendingLogQueue.payload;
+
+      const entry: LogEntry = { t: now, e: this.pendingLogQueue.event, d: payloadMeta };
+      this.buffer.push(entry);
+      this.persist();
+      if (__DEV__) console.log(`[AppLogger] ${this.pendingLogQueue.event}`, payloadMeta);
+      
+      this.pendingLogQueue.resolve();
+      this.pendingLogQueue = null;
+    }
+  }
+
   async log(event: EventType, payload: Record<string, any> = {}) {
     await this.ensureLoaded();
-    const entry: LogEntry = { t: Date.now(), e: event, d: payload };
-    this.buffer.push(entry);
-    this.persist(); // fire-and-forget
-    if (__DEV__) console.log(`[AppLogger] ${event}`, payload);
+    
+    // Non-hardware events bypass correlation
+    if (['APP_OPENED', 'SCAN_STARTED', 'SCAN_COMPLETED', 'DEVICE_DISCOVERED', 'DEVICE_CONNECTED', 'DEVICE_DISCONNECTED', 'PROTOCOL_ERROR'].includes(event)) {
+      const entry: LogEntry = { t: Date.now(), e: event, d: payload };
+      this.buffer.push(entry);
+      this.persist();
+      if (__DEV__) console.log(`[AppLogger] ${event}`, payload);
+      return;
+    }
+
+    // Queue functional hardware commands for up to 100ms to see if a TX payload fires alongside it
+    return new Promise<void>((resolve) => {
+      this.pendingLogQueue = { event, payload, resolve };
+      
+      // If the UI state updated but no Bluetooth write occurs within 100ms, log it solo
+      setTimeout(() => {
+        if (this.pendingLogQueue && this.pendingLogQueue.event === event) {
+          this.flushQueues();
+        }
+      }, 100);
+    });
   }
 
   async getLogs(): Promise<LogEntry[]> {
@@ -78,15 +160,36 @@ class AppLoggerService {
 
   async clearLogs() {
     this.buffer = [];
+    this.activeDevices = [];
+    this.pendingLogQueue = null;
     await AsyncStorage.removeItem(STORAGE_KEY);
+    
+    if (supabase) {
+      // Must compute both potential filenames since state could be paired or unpaired
+      const pMac = this.activeDevices.length > 0 ? this.activeDevices[0].id : 'unpaired-host';
+      const bleMac = pMac.replace(/[^a-zA-Z0-9_-]/g, '');
+      
+      const rawId = Device.osInternalBuildId || Device.modelId || 'unknown-device';
+      const deviceId = rawId.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+      try {
+        await supabase.storage.from('sk8lytz-logs').remove([`logs_${bleMac}.json`, `logs_${deviceId}.json`]);
+      } catch(e) {
+        console.warn('Failed cloud wipe', e);
+      }
+    }
   }
 
   async exportJSON(): Promise<string> {
     await this.ensureLoaded();
+    const stats = await this.getStats();
     return JSON.stringify({
       app: 'SK8Lytz',
+      hostDeviceId: Device.osInternalBuildId || Device.modelId || 'unknown-device',
       exported: new Date().toISOString(),
       count: this.buffer.length,
+      stats: stats,
+      devices: this.activeDevices,
       logs: this.buffer,
     }, null, 2);
   }
@@ -100,12 +203,76 @@ class AppLoggerService {
     if (this.buffer.length === 0) return;
 
     try {
-      const jsonStr = await this.exportJSON();
       const deviceId = Device.osInternalBuildId || Device.modelId || 'unknown-device';
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `logs_${deviceId}_${timestamp}.json`;
+      const primaryMacRaw = this.activeDevices.length > 0 ? this.activeDevices[0].id : 'unpaired-host';
+      const bleMac = primaryMacRaw.replace(/[^a-zA-Z0-9_-]/g, '');
+      const filename = `logs_${bleMac}.json`;
 
-      // Uploading as a string/Blob to the 'sk8lytz-logs' bucket
+      let mergedLogs = [...this.buffer];
+      let existingStats = null;
+      let existingDevices = [];
+
+      // Attempt to fetch existing cloud file for appending
+      const { data: fileData, error: dlError } = await supabase.storage.from('sk8lytz-logs').download(filename);
+      
+      if (!dlError && fileData) {
+        try {
+          // Native RN safe text extraction
+          const text = await new Promise<string>((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onload = () => resolve(fr.result as string);
+            fr.onerror = reject;
+            fr.readAsText(fileData);
+          });
+          
+          const parsed = JSON.parse(text);
+          if (parsed) {
+            existingStats = parsed.stats || null;
+            existingDevices = parsed.devices || [];
+
+            if (Array.isArray(parsed.logs)) {
+              // Deduplicate logs using timestamp + event fingerprint
+              const logMap = new Map();
+              parsed.logs.forEach((l: any) => {
+                  if (l.e !== 'RAW_PAYLOAD') logMap.set(l.t + '_' + l.e, l);
+              });
+              this.buffer.forEach((l: any) => {
+                  if (l.e !== 'RAW_PAYLOAD') logMap.set(l.t + '_' + l.e, l);
+              });
+              
+              mergedLogs = Array.from(logMap.values()).sort((a: any, b: any) => a.t - b.t);
+              
+              // Prevent critical memory faults on mobile by capping massive files
+              if (mergedLogs.length > 50000) mergedLogs = mergedLogs.slice(-50000);
+            }
+          }
+        } catch (e) {
+           console.warn('[AppLogger] Existing log parser failed, overwriting safely.');
+        }
+      }
+
+      // Re-compile stats for exact current bounds
+      const currentStats = await this.getStats();
+
+      // Deduplicate devices
+      const deviceMap = new Map();
+      existingDevices.forEach((d: any) => deviceMap.set(d.id, d));
+      this.activeDevices.forEach((d: any) => deviceMap.set(d.id, d));
+
+      const mergedPayload = {
+        app: 'SK8Lytz',
+        hostDeviceId: deviceId,
+        bleMac: primaryMacRaw,
+        exported: new Date().toISOString(),
+        count: mergedLogs.length,
+        stats: { ...existingStats, ...currentStats, totalEvents: mergedLogs.length },
+        devices: Array.from(deviceMap.values()),
+        logs: mergedLogs,
+      };
+
+      const jsonStr = JSON.stringify(mergedPayload, null, 2);
+
+      // Uploading as a string/Blob to the 'sk8lytz-logs' bucket, force upsert
       const { data, error } = await supabase.storage
         .from('sk8lytz-logs')
         .upload(filename, jsonStr, {
@@ -115,11 +282,141 @@ class AppLoggerService {
 
       if (error) {
         console.error('[AppLogger] Failed to upload logs to Supabase:', error);
+        throw new Error(error.message);
       } else {
-        console.log(`[AppLogger] Successfully uploaded logs to Supabase: ${data.path}`);
+        console.log(`[AppLogger] Successfully appended and uploaded logs: ${data.path}`);
+        
+        // ENTERPRISE DB INJECTION STREAM
+        // Directly maps telemetry to normalized raw relational Postgres tables
+        // INSERTS ONLY THE CURRENT DELTA BUFFER - Prevents doubling up historical merged logs
+        try {
+          console.log('[AppLogger] Pushing native telemetry structures to Postgres Timeseries...');
+          const sessionId = this.sessionId;
+          const currentRunLogs = [...this.buffer].filter(l => l.e !== 'RAW_PAYLOAD');
+          
+          // 1. Session Stats
+          await supabase.from('parsed_session_stats').upsert([{
+            session_id: sessionId,
+            device_id: primaryMacRaw,
+            host_device_id: deviceId,
+            timestamp_ms: currentRunLogs.length > 0 ? currentRunLogs[currentRunLogs.length - 1].t : Date.now(),
+            devices_discovered: currentStats.devicesDiscovered || 0,
+            total_events: currentRunLogs.length || 0,
+            storage_bytes_estimate: currentStats.storageBytesEstimate || 0,
+            average_load_time_ms: currentStats.averageLoadTimeMs || 0,
+            battery_level: currentStats.batteryLevel || -1,
+            is_low_power_mode: currentStats.isLowPowerMode || false
+          }], { onConflict: 'session_id' });
+
+          // Extract Custom Hardware Names from ng_device_configs (keyed by device MAC)
+          const customNameMap = new Map<string, string>();
+          try {
+            const stored = await AsyncStorage.getItem('ng_device_configs');
+            if (stored) {
+              const configs = JSON.parse(stored);
+              for (const d of this.activeDevices) {
+                const cfg = configs[d.id];
+                if (cfg?.name) customNameMap.set(d.id, cfg.name);
+              }
+            }
+          } catch(e) {
+            console.warn('[AppLogger] Failed to read device configs for name resolution', e);
+          }
+
+          // 2. Devices
+          if (this.activeDevices.length > 0) {
+            const devPayload = this.activeDevices.map((d: any) => ({
+                session_id: sessionId,
+                device_id: d.id,
+                timestamp_ms: Date.now(),
+                host_device_id: deviceId,
+                name: customNameMap.get(d.id) || d.name,
+                rssi: d.rssi,
+                firmware_ver: d.firmwareVer ? { fw: d.firmwareVer, led: d.ledVersion, ble: d.bleVersion } : (d.manufacturerData || {}),
+                ic_type: d.hardwareSettings?.icType,
+                led_points: d.hardwareSettings?.ledPoints,
+                segments: d.hardwareSettings?.segments,
+                color_sorting: d.hardwareSettings?.colorSorting
+            }));
+            await supabase.from('parsed_session_devices').upsert(devPayload, { onConflict: 'session_id, device_id' });
+          }
+
+          // 3. New Usage Tracking Matrix directly from current logs
+          const modeMap = new Map();
+          const patternMap = new Map();
+          const colorMap = new Map();
+          
+          currentRunLogs.forEach((item: any) => {
+              const isGroup = item.d?.target === 'group' || (item.d?.deviceIds && item.d.deviceIds.length > 1);
+              const groupId = isGroup ? item.d?.deviceIds?.join('_') : null;
+              const groupName = isGroup ? `Group (${item.d?.groupSize || item.d?.deviceIds?.length} Devices)` : null;
+              const targets = isGroup && Array.isArray(item.d?.deviceIds) ? item.d.deviceIds : [item.d?.deviceId || primaryMacRaw];
+              
+              targets.forEach((tgtDev: string) => {
+                  if (item.e === 'MODE_CHANGED' && item.d?.mode) {
+                      const hash = `${groupId || tgtDev}|${item.d.mode}`;
+                      modeMap.set(hash, { mName: item.d.mode, count: (modeMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev });
+                  }
+                  if (item.e === 'PATTERN_CHANGED' && item.d?.pattern) {
+                      const pName = item.d.name || item.d.pattern;
+                      const hash = `${groupId || tgtDev}|${pName}`;
+                      patternMap.set(hash, { pName, count: (patternMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev });
+                  }
+                  if (item.e === 'COLOR_CHANGED' && item.d?.hex) {
+                      const hash = `${groupId || tgtDev}|${item.d.hex}`;
+                      colorMap.set(hash, { hex: item.d.hex, count: (colorMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev });
+                  }
+              });
+          });
+
+          const modePayload = Array.from(modeMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, device_name: customNameMap.get(v.tgtDev), mode_name: v.mName, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
+          if (modePayload.length > 0) await supabase.from('parsed_mode_usage').insert(modePayload);
+
+          const patternPayload = Array.from(patternMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, device_name: customNameMap.get(v.tgtDev), pattern_idx: v.pName, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
+          if (patternPayload.length > 0) await supabase.from('parsed_pattern_usage').insert(patternPayload);
+
+          const colorPayload = Array.from(colorMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, device_name: customNameMap.get(v.tgtDev), hex_color: v.hex, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
+          if (colorPayload.length > 0) await supabase.from('parsed_color_usage').insert(colorPayload);
+
+          // 4. Trace Log Push (Batched)
+          const CHUNK = 1000;
+          for (let i = 0; i < currentRunLogs.length; i += CHUNK) {
+             const chunk = currentRunLogs.slice(i, i + CHUNK);
+             const dbLogPayload = chunk.flatMap((item: any) => {
+                const isGroup = item.d?.target === 'group' || (item.d?.deviceIds && item.d.deviceIds.length > 1);
+                const targets = isGroup && Array.isArray(item.d?.deviceIds) ? item.d.deviceIds : [item.d?.deviceId || primaryMacRaw];
+                
+                return targets.map((explicitDeviceId: string) => ({
+                  session_id: sessionId,
+                  host_device_id: deviceId,
+                  timestamp_ms: item.t,
+                  event_type: item.e,
+                  direction: item.d?.dir || null,
+                  hex_payload: item.d?.hex || null,
+                  device_id: explicitDeviceId,
+                  device_name: customNameMap.get(explicitDeviceId) || null,
+                  group_id: isGroup ? item.d?.deviceIds?.join('_') : null,
+                  group_name: isGroup ? `Group (${item.d?.groupSize || item.d?.deviceIds?.length} Devices)` : null,
+                  raw_data: item.d || {} 
+                }));
+             });
+             await supabase.from('parsed_logs').insert(dbLogPayload);
+          }
+          
+          console.log('[AppLogger] Postgres Native Insertion Complete!');
+
+          // Buffer rotation: clear local log buffer after a confirmed clean push
+          // This prevents old events from re-uploading on subsequent calls
+          this.buffer = [];
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+          console.log('[AppLogger] Local buffer cleared after successful push.');
+        } catch (dbErr) {
+          console.error('[AppLogger] Non-fatal Supabase DB ingestion failure:', dbErr);
+        }
       }
     } catch (err) {
       console.error('[AppLogger] Upload exception:', err);
+      throw err;
     }
   }
 
@@ -134,6 +431,9 @@ class AppLoggerService {
     totalStorageEstimate: number;
     averageLoadTimeMs: number;
     lastAppOpenedTime: number;
+    primaryBleMac: string;
+    batteryLevel: number;
+    isLowPowerMode: boolean;
   }> {
     await this.ensureLoaded();
     const modeUsage: Record<string, number> = {};
@@ -197,10 +497,23 @@ class AppLoggerService {
       };
     }
 
+    const pMac = this.activeDevices.length > 0 ? this.activeDevices[0].id : 'unpaired-host';
+    const bleMac = pMac.replace(/[^a-zA-Z0-9_-]/g, '');
+
+    let batteryLevel = -1;
+    let isLowPowerMode = false;
+    try {
+      if (await Battery.isAvailableAsync()) {
+        batteryLevel = await Battery.getBatteryLevelAsync();
+        isLowPowerMode = await Battery.isLowPowerModeEnabledAsync();
+      }
+    } catch(e) {}
+
     return { 
       modeUsage, patternUsage: finalPatternUsage, colorUsage, devicesDiscovered, 
       totalEvents: this.buffer.length, storageBytesEstimate, totalStorageEstimate,
-      averageLoadTimeMs, lastAppOpenedTime
+      averageLoadTimeMs, lastAppOpenedTime, primaryBleMac: bleMac,
+      batteryLevel, isLowPowerMode
     };
   }
 }

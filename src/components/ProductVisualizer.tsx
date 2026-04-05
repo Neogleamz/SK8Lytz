@@ -56,7 +56,7 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload, simMode }: any) => {
+const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload, simMode }: any) => {
   const { isDark } = useTheme();
   const product = String(device.type || fallbackProduct);
   const isHaloz = !product.toLowerCase().includes('soul');
@@ -163,7 +163,13 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
         let dotColor: any = isPoweredOn ? color : '#333333';
         let dotOpacity: any = isPoweredOn ? 1 : 0.2;
 
-        if (isPoweredOn) {
+        const segmentBoundary = (rawFract * deviceSegments) % 1;
+        const isGap = deviceSegments > 1 && (segmentBoundary < 0.015 || segmentBoundary > 0.985);
+
+        if (isPoweredOn && isGap) {
+          dotColor = '#111111';
+          dotOpacity = Math.max(0.1, (brightness/100) * 0.3);
+        } else if (isPoweredOn) {
           if (mode === 'CANDLE') {
              dotColor = color;
              const offset = (i * 0.15) % 1;
@@ -465,8 +471,8 @@ const VisualizerUnit = ({ device, color, mode, patternId, animValue, fallbackPro
       </View>
     </TouchableOpacity>
   );
-};
-export default function ProductVisualizer({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText, audioMagnitude = 0, rawHexPayload, multiColors, multiTransition }: ProductVisualizerProps) {
+});
+const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText, audioMagnitude = 0, rawHexPayload, multiColors, multiTransition }: ProductVisualizerProps) => {
   const { isDark } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
 
@@ -647,3 +653,5 @@ const styles = StyleSheet.create({
     elevation: 10,
   }
 });
+
+export default React.memo(ProductVisualizer);

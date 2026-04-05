@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { Colors, Typography, Layout } from '../theme/theme';
+import { AppLogger } from '../services/AppLogger';
 
 interface GroupSettingsModalProps {
   isVisible: boolean;
@@ -17,6 +18,7 @@ export default function GroupSettingsModal({ isVisible, onClose, onSave, onDelet
   const [selectedIds, setSelectedIds] = useState<string[]>(initialDeviceIds);
 
   useEffect(() => {
+    if (isVisible) AppLogger.log('SCREEN_OPENED', { screenName: 'Group Settings' });
     setName(initialName);
     setSelectedIds(initialDeviceIds);
   }, [initialName, initialDeviceIds, isVisible]);

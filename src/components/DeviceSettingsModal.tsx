@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView, Platform, Alert } from 'react-native';
 import { Colors, Typography, Layout } from '../theme/theme';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { AppLogger } from '../services/AppLogger';
 
 interface DeviceSettings {
   name: string;
@@ -45,6 +46,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
   // Sync initial full state on visible toggle
   useEffect(() => {
     if (isVisible) {
+      AppLogger.log('SCREEN_OPENED', { screenName: 'Device Settings' });
       setSettings(initialSettings);
       setPointsText(initialSettings.points.toString());
       setSegmentsText(initialSettings.segments.toString());

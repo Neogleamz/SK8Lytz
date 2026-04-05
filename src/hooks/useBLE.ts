@@ -1,3 +1,21 @@
+/**
+ * useBLE.ts — SK8Lytz Bluetooth Low Energy Engine
+ *
+ * Custom React hook that wraps react-native-ble-plx to provide all
+ * BLE hardware interactions for the SK8Lytz LED controller ecosystem.
+ *
+ * Key behaviors:
+ *  - Strict device filtering: Symphony (0x33/0xBF manufacturer byte),
+ *    known prefixes (lednet/sk8/zg/halo/soul), or Zengge service UUID
+ *  - Sequential group connection loop (for...of) — NEVER use Promise.all,
+ *    Android GATT throws error 133 on concurrent pairing attempts
+ *  - Firmware parsed from BLE advertisement data on discovery
+ *  - Characteristic notifications start immediately on connection for RX data
+ *  - write() broadcasts to all connected unless targetDeviceId is specified
+ *
+ * Logs: DEVICE_DISCOVERED, DEVICE_CONNECTED, BLE_CONNECTION_ERROR, BLE_WRITE_ERROR, PERFORMANCE_METRIC
+ * Platform: React Native Android / Web (web returns no-op stubs)
+ */
 import { useState, useMemo, useEffect } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
@@ -44,6 +62,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState(Platform.OS === 'web');
   const [dataReceivedCallback, setDataReceivedCallback] = useState<((deviceId: string, data: number[]) => void) | undefined>();
 
+  useEffect(() => {
+    AppLogger.updateKnownDevices(allDevices);
+  }, [allDevices]);
   const handleNotification = (error: any, characteristic: any, deviceId: string) => {
     if (error) {
       console.warn('Notification Error', error);
@@ -56,9 +77,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
         const buffer = require('buffer').Buffer;
         const data = Array.from(buffer.from(characteristic.value, 'base64')) as number[];
         
-        // Capture lowest-level inbound payload trace before ANY application decoding organically
-        AppLogger.log('RAW_PAYLOAD', { dir: 'RX', hex: data.map(x => x.toString(16).padStart(2, '0').toUpperCase()).join(' '), deviceId });
-
         // We send the absolute raw binary frame to the data callbacks.
         // It is strictly the responsibility of parser endpoints (ZenggeProtocol) to dissect Headers vs Bodies.
         if (dataReceivedCallback) {
@@ -191,9 +209,47 @@ export default function useBLE(): BluetoothLowEnergyApi {
         };
 
         if (isMatch) {
-          AppLogger.log('SCAN_FILTER_MATCH', logData);
           setAllDevices((prevState) => {
             if (!isDuplicateDevice(prevState, device)) {
+              // Parse firmware from advertisement data during scan — primary source for Zengge
+              let advFirmware: string | undefined;
+              let firmwareVer: number | undefined;
+              let ledVersion: number | undefined;
+              let bleVersion: number | undefined;
+              let productId: number | undefined;
+              if (manufacturerData) {
+                try {
+                  const { ZenggeProtocol } = require('../protocols/ZenggeProtocol');
+                  const fwInfo = ZenggeProtocol.parseFirmwareFromAdvertisement(manufacturerData);
+                  if (fwInfo) {
+                    advFirmware = `v${fwInfo.firmwareVer}.${fwInfo.ledVersion} (BLE ${fwInfo.bleVersion})`;
+                    firmwareVer = fwInfo.firmwareVer;
+                    ledVersion  = fwInfo.ledVersion;
+                    bleVersion  = fwInfo.bleVersion;
+                    productId   = fwInfo.productId;
+                    (device as any).firmware   = advFirmware;
+                    (device as any).firmwareVer = firmwareVer;
+                    (device as any).ledVersion  = ledVersion;
+                    (device as any).bleVersion  = bleVersion;
+                    (device as any).productId   = productId;
+                  }
+                } catch (e) { /* silently skip */ }
+              }
+              // Log the full discovery event with all available hardware info
+              AppLogger.log('DEVICE_DISCOVERED', {
+                id: device.id,
+                name: device.name || 'Unknown',
+                rssi: device.rssi,
+                isSymphony,
+                isKnownPrefix,
+                hasZenggeService,
+                firmware: advFirmware,
+                firmwareVer,
+                ledVersion,
+                bleVersion,
+                productId,
+                serviceUUIDs: device.serviceUUIDs || [],
+              });
               return [...prevState, device];
             }
             return prevState;
@@ -218,14 +274,20 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
   const connectToDevice = async (device: Device): Promise<string | undefined> => {
     try {
+      const connectStartTime = Date.now();
+      
       if (Platform.OS === 'web') {
         setConnectedDevices([device]);
         AppLogger.log('DEVICE_CONNECTED', { id: device.id, name: device.name, firmware: 'v2.0.1.DEMO' });
         return 'v2.0.1.DEMO';
       }
+      
       const deviceConnection = await bleManager.connectToDevice(device.id);
       setConnectedDevices([deviceConnection]);
       await deviceConnection.discoverAllServicesAndCharacteristics();
+      
+      const latencyMs = Date.now() - connectStartTime;
+      AppLogger.log('PERFORMANCE_METRIC', { metricName: 'BLE_Auth_Latency', value: latencyMs, unit: 'ms', deviceId: device.id });
       
       // Monitor for responses
       deviceConnection.monitorCharacteristicForService(
@@ -235,18 +297,29 @@ export default function useBLE(): BluetoothLowEnergyApi {
       );
 
       // Attempt to read firmware version from standard BLE Device Information Service (180A / 2A26)
-      let firmware = undefined;
-      try {
-        const fwChar = await deviceConnection.readCharacteristicForService(
-          '0000180a-0000-1000-8000-00805f9b34fb',
-          '00002a26-0000-1000-8000-00805f9b34fb'
-        );
-        if (fwChar && fwChar.value) {
-          const rawFw = require('buffer').Buffer.from(fwChar.value, 'base64').toString('ascii');
-          firmware = rawFw.replace(/[^\x20-\x7E]/g, ''); // Clean non-printable chars
+      let firmware: string | undefined;
+
+      // First try: advertisement data already parsed during scan
+      const advFw = (device as any).firmware;
+      if (advFw && typeof advFw === 'string' && advFw.length > 0) {
+        firmware = advFw;
+      }
+
+      // Second try: GATT Device Information Service characteristic
+      if (!firmware) {
+        try {
+          const fwChar = await deviceConnection.readCharacteristicForService(
+            '0000180a-0000-1000-8000-00805f9b34fb',
+            '00002a26-0000-1000-8000-00805f9b34fb'
+          );
+          if (fwChar && fwChar.value) {
+            const rawFw = require('buffer').Buffer.from(fwChar.value, 'base64').toString('ascii');
+            const clean = rawFw.replace(/[^\x20-\x7E]/g, '');
+            if (clean.length > 0) firmware = clean;
+          }
+        } catch (e) {
+          console.log(`[BLE] No standard firmware characteristic for ${device.id}`);
         }
-      } catch (e) {
-        console.log(`[BLE] No standard firmware characteristic for ${device.id}`);
       }
 
       AppLogger.log('DEVICE_CONNECTED', { id: device.id, name: device.name, firmware });
@@ -272,33 +345,43 @@ export default function useBLE(): BluetoothLowEnergyApi {
         return;
       }
       
-      const connections = await Promise.all(devices.map(device => bleManager.connectToDevice(device.id)));
-      setConnectedDevices(connections);
-      
-      await Promise.all(connections.map(conn => conn.discoverAllServicesAndCharacteristics()));
-
-      // Monitor & Firmware check for each device
-      await Promise.all(connections.map(async (conn) => {
-        conn.monitorCharacteristicForService(
-          ZENGGE_SERVICE_UUID,
-          ZENGGE_CHARACTERISTIC_UUID,
-          (error: any, characteristic: any) => handleNotification(error, characteristic, conn.id)
-        );
-
-        let firmware = undefined;
+      const connections = [];
+      // STRICT SEQUENTIAL CONNECTION LOOP
+      // WARNING: Android's native Bluetooth GATT adapter heavily penalizes concurrent `Promise.all` calls 
+      // with immediate GATT 133 Exception drops. We MUST connect and discover systematically one-by-one.
+      for (const device of devices) {
         try {
-          const fwChar = await conn.readCharacteristicForService(
-            '0000180a-0000-1000-8000-00805f9b34fb',
-            '00002a26-0000-1000-8000-00805f9b34fb'
+          const conn = await bleManager.connectToDevice(device.id);
+          connections.push(conn);
+          await conn.discoverAllServicesAndCharacteristics();
+          
+          // Monitor
+          conn.monitorCharacteristicForService(
+            ZENGGE_SERVICE_UUID,
+            ZENGGE_CHARACTERISTIC_UUID,
+            (error: any, characteristic: any) => handleNotification(error, characteristic, conn.id)
           );
-          if (fwChar && fwChar.value) {
-            const rawFw = require('buffer').Buffer.from(fwChar.value, 'base64').toString('ascii');
-            firmware = rawFw.replace(/[^\x20-\x7E]/g, '');
-          }
-        } catch (e) { }
 
-        AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name, firmware });
-      }));
+          let firmware = undefined;
+          try {
+            const fwChar = await conn.readCharacteristicForService(
+              '0000180a-0000-1000-8000-00805f9b34fb',
+              '00002a26-0000-1000-8000-00805f9b34fb'
+            );
+            if (fwChar && fwChar.value) {
+              const rawFw = require('buffer').Buffer.from(fwChar.value, 'base64').toString('ascii');
+              firmware = rawFw.replace(/[^\x20-\x7E]/g, '');
+            }
+          } catch (e) { }
+
+          AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name, firmware });
+        } catch (deviceError: any) {
+          console.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${device.id}`, deviceError);
+          AppLogger.log('BLE_CONNECTION_ERROR', { error: deviceError?.message || String(deviceError), deviceId: device.id, context: 'group_sync_fail' });
+        }
+      }
+
+      setConnectedDevices(connections);
 
       bleManager.stopDeviceScan();
       setIsScanning(false);
@@ -312,8 +395,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
     // Hex trace for browser/debug purposes
     console.log(`[BLE WRITE]${targetDeviceId ? ` [Target: ${targetDeviceId}]` : ''}`, hexString);
-    // Persist absolute outbound payload trace synchronously to Database Log organically
-    AppLogger.log('RAW_PAYLOAD', { dir: 'TX', hex: hexString, deviceId: targetDeviceId || 'ALL' });
+    AppLogger.setLastTxPayload(hexString);
     
     if (connectedDevices.length === 0 || Platform.OS === 'web') return;
     try {

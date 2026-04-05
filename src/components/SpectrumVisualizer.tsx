@@ -4,27 +4,43 @@ import { Colors } from '../theme/theme';
 
 const BARS_COUNT = 30;
 
-export default function SpectrumVisualizer() {
+export default function SpectrumVisualizer({ magnitude }: { magnitude?: number }) {
   const animations = useRef(Array(BARS_COUNT).fill(0).map(() => new Animated.Value(0))).current;
+  const loopActive = useRef(true);
 
   useEffect(() => {
-    const runAnimation = (anim: Animated.Value) => {
-      Animated.sequence([
-        Animated.timing(anim, {
-          toValue: Math.random(),
-          duration: 300 + Math.random() * 500,
+    if (magnitude !== undefined) {
+      loopActive.current = false;
+      animations.forEach((anim, i) => {
+        // Add pseudo-frequency randomness but anchor to magnitude to make it dance realistically to the DB peaks
+        const randomness = Math.random() * 0.5 + 0.5;
+        Animated.spring(anim, {
+          toValue: magnitude * randomness,
           useNativeDriver: false,
-        }),
-        Animated.timing(anim, {
-          toValue: 0.2 + Math.random() * 0.3,
-          duration: 300 + Math.random() * 500,
-          useNativeDriver: false,
-        })
-      ]).start(() => runAnimation(anim));
-    };
-
-    animations.forEach(runAnimation);
-  }, []);
+          speed: 24,
+          bounciness: 8
+        }).start();
+      });
+    } else {
+      loopActive.current = true;
+      const runAnimation = (anim: Animated.Value) => {
+        if (!loopActive.current) return;
+        Animated.sequence([
+          Animated.timing(anim, {
+            toValue: Math.random(),
+            duration: 300 + Math.random() * 500,
+            useNativeDriver: false,
+          }),
+          Animated.timing(anim, {
+            toValue: 0.2 + Math.random() * 0.3,
+            duration: 300 + Math.random() * 500,
+            useNativeDriver: false,
+          })
+        ]).start(() => runAnimation(anim));
+      };
+      animations.forEach(runAnimation);
+    }
+  }, [magnitude]);
 
   return (
     <View style={styles.container}>

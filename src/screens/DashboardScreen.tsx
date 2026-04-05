@@ -1,5 +1,27 @@
+/**
+ * DashboardScreen.tsx — SK8Lytz Root Application Screen
+ *
+ * The single top-level screen for the entire SK8Lytz application.
+ * This is intentionally monolithic — all BLE state must be co-located
+ * to prevent race conditions between hardware events and UI re-renders.
+ *
+ * Owns:
+ *  - BLE lifecycle (scan, connect, disconnect, group sync)
+ *  - Device roster (allDevices, connectedDevices)
+ *  - Custom groups (name, deviceIds, persistence)
+ *  - Per-device configs (name, LED type, points, segments, sorting)
+ *  - Power state map, modal visibility flags
+ *  - BLE write dispatch (writeToDevice → useBLE → GATT)
+ *
+ * AsyncStorage keys:
+ *  - ng_device_configs    → per-device settings dict (keyed by MAC)
+ *  - ng_custom_groups     → user-defined multi-device groups
+ *  - ng_processed_devices → cached discovered device list
+ *
+ * Platform: React Native (Android + Web)
+ */
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar, Dimensions, Modal, TextInput, BackHandler, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar, Dimensions, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus } from 'react-native';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import DeviceItem from '../components/DeviceItem';
@@ -7,7 +29,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import useBLE from '../hooks/useBLE';
 import { ZenggeProtocol, ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol';
 
-import Sk8lytzController from '../components/Sk8lytzController';
 import DockedController from '../components/DockedController';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
@@ -16,7 +37,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
 import LogViewerModal from '../components/LogViewerModal';
-import ProtocolSnifferModal from '../components/ProtocolSnifferModal';
+import AdminHardwareTester from '../components/AdminHardwareTester';
 
 interface DeviceSettings {
   name: string;
@@ -31,7 +52,7 @@ interface DeviceSettings {
 }
 
 export default function DashboardScreen() {
-  const { Colors, isDark, toggleTheme, controlUITheme, toggleControlUITheme } = useTheme();
+  const { Colors, isDark, toggleTheme } = useTheme();
   const styles = createStyles(Colors);
   const {
     scanForPeripherals,
@@ -80,16 +101,67 @@ export default function DashboardScreen() {
   const [demoHaloQueued, setDemoHaloQueued] = useState(false);
   const [demoSoulQueued, setDemoSoulQueued] = useState(false);
 
+  // AppState Telemetry
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
+        AppLogger.log('APP_FOREGROUNDED');
+      } else if (nextAppState === 'background') {
+        AppLogger.log('APP_BACKGROUNDED');
+      }
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   // Bind BLE Notification Hardware Sync Hook
   useEffect(() => {
     setOnDataReceived((deviceId: string, payload: number[]) => {
       setLastRawNotification({ deviceId, payloadHex: payload.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ') });
-      const config = ZenggeProtocol.parseHardwareConfig(payload);
-      if (config) {
-        console.log('[Dashboard] Intercepted Hardware Sync:', config);
+      
+      const v2Config = ZenggeProtocol.parseHardwareSettingsResponse(payload);
+      const v1Config = ZenggeProtocol.parseHardwareConfig(payload);
+      
+      let configPoints: number | undefined;
+      let configSegments: number | undefined;
+      let configStripType: string | undefined;
+      let configSorting: string | undefined;
+      let configSortingIdx: number | undefined;
+      let configIcType: number | undefined;
+
+      if (v2Config) {
+        configPoints = v2Config.ledPoints;
+        configSegments = v2Config.segments;
+        configStripType = v2Config.icName;
+        configSorting = v2Config.colorSortingName;
+        configSortingIdx = v2Config.colorSorting;   // numeric index — critical for hwSettings
+        configIcType = v2Config.icType;
+      } else if (v1Config) {
+        configPoints = v1Config.points;
+        configSegments = v1Config.segments;
+        configStripType = v1Config.stripType;
+        configSorting = v1Config.sorting;
+        // Derive idx from string for v1
+        configSortingIdx = ['RGB','RBG','GRB','GBR','BRG','BGR'].indexOf(configSorting ?? 'GRB');
+        if (configSortingIdx < 0) configSortingIdx = 2; // default GRB
+      }
+
+      if (configPoints !== undefined && configSorting !== undefined) {
+        // Prevent telemetry flooding by NOT emitting an event for passive continuous Sync packets
         setAllDevices(prev => prev.map(d => {
           if (d.id === deviceId) {
-            const newD = { ...d, points: config.points, sorting: config.sorting, stripType: config.stripType, segments: config.segments } as any as typeof d;
+            const newD = { 
+              ...d, 
+              points: configPoints, 
+              sorting: configSorting,
+              colorSorting: configSortingIdx,   // numeric index propagated
+              colorSortingName: configSorting,
+              stripType: configStripType, 
+              icType: configIcType,
+              segments: configSegments,
+              detected: true,                    // flag that this came from real hardware
+            } as any as typeof d;
             // Mirror securely directly to persistent memory
             AsyncStorage.getItem('ng_device_configs').then(str => {
                const p = JSON.parse(str || '{}');
@@ -181,8 +253,8 @@ export default function DashboardScreen() {
         setTimeout(() => {
           setAllDevices((prev: any[]) => {
             let newDevices = [...prev];
-            const haloIds = ['sim-halo-1', 'sim-halo-2'];
-            const soulIds = ['sim-soul-1', 'sim-soul-2'];
+            const haloIds = ['sim-DE:M0:HA:L0:00:01', 'sim-DE:M0:HA:L0:00:02'];
+            const soulIds = ['sim-DE:M0:S0:UL:00:01', 'sim-DE:M0:S0:UL:00:02'];
             
             if (demoHaloQueued) {
               haloIds.forEach((id, idx) => {
@@ -191,8 +263,8 @@ export default function DashboardScreen() {
                     id, 
                     name: `HALOZ ${idx === 0 ? 'Left' : 'Right'} Skate`, 
                     type: 'HALOZ',
-                    points: 16, 
-                    segments: 1,
+                    points: 11, 
+                    segments: 2,
                     sorting: 'GRB',
                     stripType: 'WS2812B',
                     rssi: -45 - Math.floor(Math.random() * 20),
@@ -589,41 +661,7 @@ export default function DashboardScreen() {
     requestPermissions();
   }, []);
 
-  useEffect(() => {
-    if (setOnDataReceived) {
-      setOnDataReceived((deviceId, data) => {
-        const parsed = ZenggeProtocol.parseHardwareConfig(data);
-        if (parsed) {
-          console.log(`[HW Sync] Decoded live configuration from ${deviceId}:`, parsed);
-          setAllDevices((prev: any[]) => {
-            let morphed = false;
-            const next = prev.map(d => {
-              if (d.id === deviceId) {
-                const anyD = d as any;
-                if (anyD.points !== parsed.points || anyD.segments !== parsed.segments || anyD.stripType !== parsed.stripType || anyD.sorting !== parsed.sorting) {
-                  morphed = true;
-                  return { ...d, points: parsed.points, segments: parsed.segments, stripType: parsed.stripType, sorting: parsed.sorting };
-                }
-              }
-              return d;
-            });
-            if (morphed) allDevicesRef.current = next as any;
-            return morphed ? next : prev;
-          });
-          
-          AsyncStorage.getItem('ng_device_configs').then(stored => {
-             const configs = stored ? JSON.parse(stored) : {};
-             if (!configs[deviceId]) configs[deviceId] = {};
-             configs[deviceId].points = parsed.points;
-             configs[deviceId].segments = parsed.segments;
-             configs[deviceId].stripType = parsed.stripType;
-             configs[deviceId].sorting = parsed.sorting;
-             AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs)).catch(()=>{});
-          });
-        }
-      });
-    }
-  }, [setOnDataReceived, setAllDevices]);
+  // (Removed redundant second setOnDataReceived binding)
 
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [selectedDeviceForSettingsId, setSelectedDeviceForSettingsId] = useState<string | null>(null);
@@ -698,7 +736,7 @@ export default function DashboardScreen() {
          await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
          
          AppLogger.log('HARDWARE_CONFIG_CHANGED', {
-           id: selectedDeviceForSettings.id,
+           deviceId: selectedDeviceForSettings.id,
            name: settings.name,
            type: settings.type,
            points: settings.points,
@@ -706,10 +744,39 @@ export default function DashboardScreen() {
            sorting: settings.sorting,
            stripType: settings.stripType,
          });
+
+         // Log rename separately for device audit trail
+         const previousName = selectedDeviceForSettings.name;
+         if (settings.name && settings.name !== previousName) {
+           AppLogger.log('DEVICE_RENAMED', {
+             deviceId: selectedDeviceForSettings.id,
+             oldName: previousName || 'Unknown',
+             newName: settings.name,
+           });
+         }
       } catch (e) { console.error('Failed to persist settings', e); }
     }
     setIsSettingsVisible(false);
   };
+
+  const activeHwSettings = useMemo(() => {
+    const raw = displayConnectedDevices[0] as any;
+    // Merge persisted deviceConfigs on top — ensures 0x63 ping results always surface
+    // even when displayConnectedDevices comes from useBLE.connectedDevices (real hardware path)
+    const cached = raw?.id ? (deviceConfigs[raw.id] || {}) : {};
+    const d = { ...raw, ...cached };
+    const s = d?.sorting || d?.colorSortingName || 'GRB';
+    const sortingIdx = s === 'RGB' ? 0 : s === 'RBG' ? 1 : s === 'GRB' ? 2 : s === 'GBR' ? 3 : s === 'BRG' ? 4 : s === 'BGR' ? 5 : 2;
+    return {
+      ledPoints: d?.points || d?.ledPoints || (d?.name?.toLowerCase().includes('soul') ? 43 : 16),
+      segments:  d?.segments || 1,
+      icType:    d?.icType || 1,
+      icName:    d?.icName || d?.stripType || 'WS2812B',
+      colorSorting: d?.colorSorting ?? sortingIdx,
+      colorSortingName: s,
+      detected:  d?.detected || false,
+    };
+  }, [displayConnectedDevices, deviceConfigs]);
 
   const MemoizedSk8lytzController = useMemo(() => {
     if (!isActuallyConnected) return null;
@@ -720,42 +787,25 @@ export default function DashboardScreen() {
 
     return (
       <Animated.View {...edgePanResponder.panHandlers} style={{ flex: 1, backgroundColor: 'transparent' }}>
-          {controlUITheme === 'DOCKED' ? (
-              <DockedController
-                lockedProduct={
-                  (displayConnectedDevices[0] as any)?.type || 
-                  ((displayConnectedDevices[0] as any)?.points 
-                    ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
-                    : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
-                }
-                isPaired={isGrouped}
-                points={(displayConnectedDevices[0] as any).points}
-                devices={displayConnectedDevices}
-                onLongPressDevice={openSettings}
-                writeToDevice={writeToDevice}
-                isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
-                onDisconnect={handleDisconnect}
-              />
-          ) : (
-              <Sk8lytzController
-                lockedProduct={
-                  (displayConnectedDevices[0] as any)?.type || 
-                  ((displayConnectedDevices[0] as any)?.points 
-                    ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
-                    : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
-                }
-                isPaired={isGrouped}
-                points={(displayConnectedDevices[0] as any).points}
-                devices={displayConnectedDevices}
-                onLongPressDevice={openSettings}
-                writeToDevice={writeToDevice}
-                isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
-                onDisconnect={handleDisconnect}
-              />
-          )}
+          <DockedController
+            hwSettings={activeHwSettings}
+            lockedProduct={
+              (displayConnectedDevices[0] as any)?.type || 
+              ((displayConnectedDevices[0] as any)?.points 
+                ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
+                : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
+            }
+            isPaired={isGrouped}
+            points={(displayConnectedDevices[0] as any).points}
+            devices={displayConnectedDevices as any}
+            onLongPressDevice={openSettings}
+            writeToDevice={writeToDevice}
+            isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
+            onDisconnect={handleDisconnect}
+          />
       </Animated.View>
     );
-  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, controlUITheme]);
+  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, activeHwSettings]);
 
   const renderItem = useCallback(({ item }: { item: any }) => {
     const cachedConfig = deviceConfigs?.[item.id] || {};
@@ -793,11 +843,7 @@ export default function DashboardScreen() {
             });
           }
           
-          const configPoints = (mergedItem as any).points || (mergedItem.name?.toLowerCase().includes('soul') ? 43 : 8);
-          const configSorting = (mergedItem as any).sorting || 'GRB';
-          const configStripType = (mergedItem as any).stripType || 'WS2812B';
-          const configSegments = (mergedItem as any).segments || (mergedItem.name?.toLowerCase().includes('soul') ? 1 : 2);
-          writeToDevice(ZenggeProtocol.setHardwareConfig(configPoints, configSorting, configStripType, configSegments));
+          writeToDevice(ZenggeProtocol.queryHardwareSettings(false), item.id);
 
           if (IS_BROWSER_DEMO) {
             setMockConnected(true);
@@ -850,10 +896,6 @@ export default function DashboardScreen() {
       }}>
         {!isActuallyConnected && (
           <View style={{ position: 'absolute', right: 0, top: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + 20, zIndex: 10, flexDirection: 'row' }}>
-            <TouchableOpacity onPress={toggleControlUITheme} style={{ padding: 10, flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ color: Colors.primary, marginRight: 6, fontSize: 10, fontWeight: 'bold' }}>{controlUITheme}</Text>
-              <MaterialCommunityIcons name={controlUITheme === 'DOCKED' ? 'dock-bottom' : (controlUITheme === 'MODERN' ? 'view-dashboard-variant-outline' : 'view-list-outline')} size={22} color={Colors.primary} />
-            </TouchableOpacity>
             <TouchableOpacity onPress={toggleTheme} style={{ padding: 10 }}>
               <MaterialCommunityIcons name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} size={22} color={Colors.primary} />
             </TouchableOpacity>
@@ -1056,7 +1098,7 @@ export default function DashboardScreen() {
                 </View>
               </View>
             }
-            data={!isDeviceListCollapsed ? allDevices : []}
+            data={!isDeviceListCollapsed ? [...allDevices].sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999)) : []}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             scrollEnabled={true}
@@ -1238,6 +1280,16 @@ export default function DashboardScreen() {
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
         connectedDevices={connectedDevices as any[]}
+        allDevices={allDevices}
+        isScanning={isScanning}
+        handleScan={handleScan}
+        onClearAll={() => {
+          setAllDevices([]);
+          if (Platform.OS === 'web') {
+            setMockConnected(false);
+            setMockConnectedDevice(null);
+          }
+        }}
       />
       <Sk8LytzProgrammerModal 
         visible={isProgrammerVisible} 
@@ -1251,7 +1303,7 @@ export default function DashboardScreen() {
         isScanning={isScanning}
         handleScan={scanForPeripherals}
       />
-      <ProtocolSnifferModal 
+      <AdminHardwareTester 
         visible={isSnifferVisible}
         onClose={() => {
             setIsSnifferVisible(false);
@@ -1261,7 +1313,7 @@ export default function DashboardScreen() {
         connectedDevices={connectedDevices as any[]}
         isScanning={isScanning}
         handleScan={scanForPeripherals}
-        connectToDevice={async (d) => { await connectToDevice(d); }}
+        connectToDevice={async (d: any) => { await connectToDevice(d); }}
         handleDisconnect={disconnectFromDevice}
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}

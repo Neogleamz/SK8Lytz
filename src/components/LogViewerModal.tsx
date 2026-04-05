@@ -1,3 +1,25 @@
+/**
+ * LogViewerModal.tsx — SK8Lytz In-App Analytics Dashboard
+ *
+ * Full-screen modal that renders the current session's telemetry data
+ * sourced from the AppLogger local buffer.
+ *
+ * Four-tab layout:
+ *  LOGS     — Virtualized event timeline (newest first), color-coded by event type
+ *             Each event type maps to an icon, color, and human-readable summary
+ *  STATS    — Aggregated usage: top modes, top patterns, most-used colors
+ *  DEVICES  — All BLE devices seen this session with hardware config details
+ *  EXPORT   — JSON dump of the full local log buffer (shareable via OS sheet)
+ *
+ * Event type registry: EVENT_META maps every EventType to { icon, color, label }
+ * Custom rendering: payloadSummary() formats each event's data field for display
+ *
+ * Note: Reads LOCAL AppLogger buffer only. Historical Supabase data requires
+ * a separate authenticated query endpoint (not yet implemented).
+ *
+ * Depends on: AppLogger (singleton), MaterialCommunityIcons
+ * Platform: React Native (Android + Web)
+ */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView,
@@ -20,6 +42,7 @@ const EVENT_META: Record<EventType, { icon: string; color: string; label: string
   DEVICE_DISCOVERED:  { icon: 'bluetooth-connect', color: '#9D4EFF', label: 'Device Found' },
   DEVICE_CONNECTED:   { icon: 'link-variant',    color: '#00ff80', label: 'Connected' },
   DEVICE_DISCONNECTED:{ icon: 'link-variant-off',color: '#ff4040', label: 'Disconnected' },
+  DEVICE_RENAMED:     { icon: 'pencil-circle',   color: '#FFA500', label: 'Device Renamed' },
   MODE_CHANGED:       { icon: 'tune',            color: '#FFD700', label: 'Mode Changed' },
   PATTERN_CHANGED:    { icon: 'shape',           color: '#FF69B4', label: 'Pattern Changed' },
   COLOR_CHANGED:      { icon: 'palette',         color: '#FF7000', label: 'Color Changed' },
@@ -30,6 +53,11 @@ const EVENT_META: Record<EventType, { icon: string; color: string; label: string
   BLE_WRITE_ERROR:         { icon: 'bluetooth-audio', color: '#ff4040', label: 'TX Error' },
   BLE_CONNECTION_ERROR:    { icon: 'bluetooth-off', color: '#ff4040', label: 'Connection Fault' },
   RAW_PAYLOAD:             { icon: 'matrix',       color: '#00f0ff', label: 'Data Trace' },
+  SCREEN_OPENED:           { icon: 'dock-window',  color: '#c255ff', label: 'Screen View' },
+  APP_BACKGROUNDED:        { icon: 'flip-to-back', color: '#888888', label: 'App Suspended' },
+  APP_FOREGROUNDED:        { icon: 'flip-to-front',color: '#00E676', label: 'App Resumed' },
+  ERROR_CAUGHT:            { icon: 'bug',          color: '#ff2020', label: 'Exception Trapped' },
+  PERFORMANCE_METRIC:      { icon: 'chart-line',   color: '#FFD700', label: 'Metric' },
 };
 
 function formatTime(ms: number): string {
@@ -48,7 +76,8 @@ function payloadSummary(entry: LogEntry): string {
     case 'COLOR_CHANGED':     return `${d.hex}${d.device ? ` on ${d.device}` : ''}`;
     case 'BRIGHTNESS_CHANGED':return `${d.value}%`;
     case 'SPEED_CHANGED':     return `${d.value}%`;
-    case 'HARDWARE_CONFIG_CHANGED': return `${d.name || d.id}: ${d.points} LEDs (${d.segments || 1} seg), ${d.stripType}, ${d.sorting}`;
+    case 'HARDWARE_CONFIG_CHANGED': return `${d.name || d.deviceId}: ${d.points} LEDs (${d.segments || 1} seg), ${d.stripType}, ${d.sorting}`;
+    case 'DEVICE_RENAMED':    return `"${d.oldName}" → "${d.newName}"`;
     case 'PROTOCOL_ERROR':    return `[${d.context}] ${d.error}${d.deviceId ? ` on ${d.deviceId}` : ''}`;
     case 'BLE_WRITE_ERROR':   return `TX Failed: ${d.error}${d.target ? ` on ${d.target}` : ''}`;
     case 'BLE_CONNECTION_ERROR': return `${d.error}${d.deviceId ? ` (ID: ${d.deviceId})` : ''}`;
@@ -57,6 +86,11 @@ function payloadSummary(entry: LogEntry): string {
     case 'SCAN_FILTER_REJECT':
       return `${d.name || '?'}: ${d.reason || 'Unknown'} (ID: ${d.id})`;
     case 'SCAN_COMPLETED':    return `${d.devicesFound ?? 0} device(s) found`;
+    case 'SCREEN_OPENED':     return `${d.screenName || 'Unknown Screen'} Opened`;
+    case 'APP_BACKGROUNDED':  return `App paused/backgrounded`;
+    case 'APP_FOREGROUNDED':  return `App resumed/foregrounded`;
+    case 'ERROR_CAUGHT':      return `${d.message || String(d.error || 'Unknown Exception')}`;
+    case 'PERFORMANCE_METRIC':return `${d.metricName}: ${d.value}${d.unit ? ` ${d.unit}` : ''}`;
     default: return JSON.stringify(d).slice(0, 60);
   }
 }
@@ -69,14 +103,25 @@ interface LogViewerModalProps {
   writeToDevice?: (data: number[], deviceId?: string) => Promise<void>;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
   connectedDevices?: { id: string, name: string | null }[];
+  allDevices?: any[];
+  isScanning?: boolean;
+  handleScan?: () => void;
+  onClearAll?: () => void;
 }
 
-export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, writeToDevice, liveRxPayload, connectedDevices }: LogViewerModalProps) {
+export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, writeToDevice, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll }: LogViewerModalProps) {
   const { Colors, isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
+  const [isUploading, setIsUploading] = useState(false);
+  const [simpleScannerMode, setSimpleScannerMode] = useState(false);
+  const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
+
+  useEffect(() => {
+    if (visible) AppLogger.log('SCREEN_OPENED', { screenName: 'Analytics' });
+  }, [visible]);
   
   const load = useCallback(async () => {
     const l = await AppLogger.getLogs();
@@ -103,13 +148,27 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
   };
 
   const handleClear = () => {
-    Alert.alert('Clear Logs', 'Delete all stored analytics logs?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => { await AppLogger.clearLogs(); load(); }
-      },
-    ]);
+    setConfirmDeleteVisible(true);
+  };
+
+  const executeClear = async () => {
+    await AppLogger.clearLogs();
+    load();
+    if (onClearAll) onClearAll();
+    setConfirmDeleteVisible(false);
+  };
+
+  const handleUpload = async () => {
+    if (isUploading) return;
+    setIsUploading(true);
+    try {
+      await AppLogger.uploadLogsToSupabase();
+      Alert.alert('Upload Complete', 'Logs successfully uploaded to sk8lytz-logs bucket on Supabase.');
+    } catch (err: any) {
+      Alert.alert('Upload Failed', err?.message || String(err));
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const bg = '#FFFFFF';
@@ -176,7 +235,7 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
               <MaterialCommunityIcons name="bluetooth-connect" size={24} color="#9D4EFF" />
               <View style={{ marginLeft: 12, flex: 1 }}>
                 <Text style={[styles.deviceName, { color: textPrimary }]}>{config.name || meta.name || 'Unknown'}</Text>
-                <Text style={[styles.deviceDetail, { color: textMuted }]}>ID: {id}</Text>
+                <Text style={[styles.deviceDetail, { color: textMuted }]}>MAC Address: {id}</Text>
                 {firmwares.has(id) && <Text style={[styles.deviceDetail, { color: textMuted }]}>Firmware: {firmwares.get(id)}</Text>}
                 
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
@@ -228,6 +287,9 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
           <StatRow label="Manufacturer" value={Device.manufacturer || 'Unknown'} color={textPrimary} muted={textMuted} />
           <StatRow label="Operating System" value={osDisplay} color={textPrimary} muted={textMuted} />
           <StatRow label="Environment" value={Device.isDevice ? 'Physical Device' : 'Simulator'} color={textPrimary} muted={textMuted} />
+          <StatRow label="Battery Level" value={stats.batteryLevel !== -1 ? `${Math.round(stats.batteryLevel * 100)}%` : 'Unknown'} color={textPrimary} muted={textMuted} />
+          <StatRow label="Power State" value={stats.isLowPowerMode ? 'Low Power Mode' : 'Normal'} color={stats.isLowPowerMode ? '#FFB84D' : textPrimary} muted={textMuted} />
+          <StatRow label="BLE Target MAC" value={stats.primaryBleMac || 'N/A'} color="#00f0ff" muted={textMuted} />
           <StatRow label="Total RAM" value={gbMem} color={textPrimary} muted={textMuted} />
           <StatRow label="Avg Boot Time" value={stats.averageLoadTimeMs ? `${stats.averageLoadTimeMs}ms` : 'N/A'} color={textPrimary} muted={textMuted} />
           <StatRow label="Current Session" value={`${sessionMins} mins`} color={textPrimary} muted={textMuted} />
@@ -297,39 +359,90 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
     );
   };
 
-  const renderAdminTab = () => (
-    <ScrollView style={styles.tabContent}>
-      <Text style={[styles.statSection, { color: textPrimary }]}>🛠️ Admin Tools</Text>
-      <View style={[styles.statCard, { backgroundColor: cardBg, borderColor, padding: 20 }]}>
-        <Text style={{ color: textMuted, fontSize: 13, marginBottom: 16, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
-          Restricted diagnostics payload for low-level protocol debugging.
-        </Text>
-        <TouchableOpacity 
-          style={{ backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: '#ff4040', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
-          onPress={() => {
-            if (onOpenProgrammer) onOpenProgrammer();
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 16, marginRight: 8 }}>⚡</Text>
-            <Text style={{ color: '#ff4040', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch SK8Lytz Programmer</Text>
+  const renderAdminTab = () => {
+    if (simpleScannerMode) {
+      return (
+        <ScrollView style={styles.tabContent}>
+          <TouchableOpacity style={{ marginBottom: 16 }} onPress={() => setSimpleScannerMode(false)}>
+            <Text style={{ color: '#00f0ff', fontSize: 16, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>← Back to Admin Tools</Text>
+          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+             <Text style={[styles.statSection, { color: textPrimary, marginTop: 0, marginBottom: 0 }]}>📡 Simple Scanner</Text>
+             <TouchableOpacity 
+               style={{ backgroundColor: isScanning ? '#555' : '#00E676', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }} 
+               onPress={() => { if (handleScan) handleScan(); }}
+               disabled={isScanning}
+             >
+               <Text style={{ color: '#000', fontWeight: 'bold' }}>{isScanning ? 'SCANNING...' : 'START SCAN'}</Text>
+             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+          
+          {(!allDevices || allDevices.length === 0) && (
+            <Text style={[styles.emptyText, { color: textMuted }]}>No devices found. Tap START SCAN to begin.</Text>
+          )}
 
-        <TouchableOpacity 
-          style={{ backgroundColor: 'rgba(152, 251, 152, 0.1)', borderColor: '#98FB98', borderWidth: 1, paddingVertical: 14, borderRadius: 8 }}
-          onPress={() => {
-            if (onOpenSniffer) onOpenSniffer();
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 16, marginRight: 8 }}>💉</Text>
-            <Text style={{ color: '#98FB98', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch Hardware Tester</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
-  );
+          {allDevices?.map((d: any, idx) => (
+             <View key={d.id || idx} style={[styles.statCard, { backgroundColor: cardBg, borderColor }]}>
+                <Text style={{ color: textPrimary, fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>{d.name || 'Unknown Device'}</Text>
+                <Text style={{ color: textMuted, fontSize: 13, marginBottom: 8, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>MAC: {d.id}</Text>
+                <StatRow label="Hardware ID" value={d.type || 'Zengge/Triones'} color="#9D4EFF" muted={textMuted} />
+                <StatRow label="Firmware" value={d.firmware || 'Unknown'} color="#00E676" muted={textMuted} />
+                <StatRow label="RSSI (Signal)" value={d.rssi ? `${d.rssi} dBm` : '?'} color="#FF7000" muted={textMuted} />
+                <StatRow label="Points (LEDs)" value={d.points ? String(d.points) : 'Unknown'} color="#00f0ff" muted={textMuted} />
+                <StatRow label="Segments" value={d.segments ? String(d.segments) : '1'} color="#00f0ff" muted={textMuted} />
+                <StatRow label="Color Order" value={d.sorting || 'Unknown'} color="#FF69B4" muted={textMuted} />
+             </View>
+          ))}
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      );
+    }
+
+    return (
+      <ScrollView style={styles.tabContent}>
+        <Text style={[styles.statSection, { color: textPrimary }]}>🛠️ Admin Tools</Text>
+        <View style={[styles.statCard, { backgroundColor: cardBg, borderColor, padding: 20 }]}>
+          <Text style={{ color: textMuted, fontSize: 13, marginBottom: 16, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+            Restricted diagnostics payload for low-level protocol debugging.
+          </Text>
+
+          <TouchableOpacity 
+            style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: '#00f0ff', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
+            onPress={() => setSimpleScannerMode(true)}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>📡</Text>
+              <Text style={{ color: '#00f0ff', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch Simple Scanner</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={{ backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: '#ff4040', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
+            onPress={() => {
+              if (onOpenProgrammer) onOpenProgrammer();
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>⚡</Text>
+              <Text style={{ color: '#ff4040', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch SK8Lytz Programmer</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={{ backgroundColor: 'rgba(152, 251, 152, 0.1)', borderColor: '#98FB98', borderWidth: 1, paddingVertical: 14, borderRadius: 8 }}
+            onPress={() => {
+              if (onOpenSniffer) onOpenSniffer();
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>💉</Text>
+              <Text style={{ color: '#98FB98', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch Hardware Tester</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
+  };
 
   const timelineLogs = logs.filter(l => l.e !== 'RAW_PAYLOAD');
 
@@ -338,13 +451,24 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
       <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
         {/* Header */}
         <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
-          <View>
-            <Text style={[styles.title, { color: textPrimary }]}>SK8Lytz Analytics</Text>
-            <Text style={[styles.subtitle, { color: textMuted }]}>{timelineLogs.length} events stored</Text>
+          <View style={{ flexShrink: 1, paddingRight: 8 }}>
+            <Text style={[styles.title, { color: textPrimary }]} numberOfLines={1}>SK8Lytz Analytics</Text>
+            <Text style={[styles.subtitle, { color: textMuted }]} numberOfLines={1}>{timelineLogs.length} events stored</Text>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity onPress={handleExport} style={styles.actionBtn}>
-              <MaterialCommunityIcons name="export-variant" size={22} color="#00f0ff" />
+              <MaterialCommunityIcons name="download" size={22} color="#00f0ff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleUpload}
+              style={[styles.actionBtn, isUploading && { opacity: 0.5 }]}
+              disabled={isUploading}
+            >
+              <MaterialCommunityIcons
+                name={isUploading ? 'cloud-sync' : 'cloud-upload'}
+                size={22}
+                color="#00E676"
+              />
             </TouchableOpacity>
             <TouchableOpacity onPress={handleClear} style={styles.actionBtn}>
               <MaterialCommunityIcons name="delete-sweep" size={22} color="#ff4040" />
@@ -385,6 +509,28 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
         {tab === 'stats' && renderStatsTab()}
         {tab === 'admin' && renderAdminTab()}
       </SafeAreaView>
+
+      <Modal visible={confirmDeleteVisible} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: isDark ? '#1A1A1A' : '#FFF', padding: 24, borderRadius: 12, width: '100%', maxWidth: 400, borderColor: '#ff4040', borderWidth: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <MaterialCommunityIcons name="alert" size={24} color="#ff4040" />
+              <Text style={{ fontSize: 18, fontWeight: '800', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: isDark ? '#FFF' : '#000', marginLeft: 8 }}>Purge Telemetry Logs</Text>
+            </View>
+            <Text style={{ fontSize: 14, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: isDark ? '#CCC' : '#444', marginBottom: 24, lineHeight: 20 }}>
+              Are you sure you want to completely erase all timeline, device, and analytics stats from local memory? This action cannot be reversed.
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
+              <TouchableOpacity onPress={() => setConfirmDeleteVisible(false)} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 6, backgroundColor: isDark ? '#333' : '#EEE' }}>
+                <Text style={{ fontWeight: '700', color: isDark ? '#FFF' : '#000', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={executeClear} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 6, backgroundColor: '#ff4040' }}>
+                <Text style={{ fontWeight: '700', color: '#FFF', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Erase Everything</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 }
@@ -406,8 +552,8 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 20, fontWeight: '800', letterSpacing: 0.5, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   subtitle: { fontSize: 12, marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  headerActions: { flexDirection: 'row', gap: 4 },
-  actionBtn: { padding: 8 },
+  headerActions: { flexDirection: 'row', alignItems: 'center' },
+  actionBtn: { padding: 8, marginLeft: 2 },
   tabs: { flexDirection: 'row', borderBottomWidth: 1 },
   tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center' },
   tabBtnActive: { borderBottomWidth: 2, borderBottomColor: '#000000' },

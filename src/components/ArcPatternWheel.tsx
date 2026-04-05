@@ -1,14 +1,17 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, NativeSyntheticEvent, NativeScrollEvent, TouchableOpacity, LayoutChangeEvent, Platform } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function ArcPatternWheel({ 
-  value, 
-  onValueChange, 
-  min = 1, 
+const REPEATS = 5;      // How many full cycles to pre-build (virtual infinite)
+const VISIBLE_ITEMS = 5; // Items visible at once on wheel
+
+export default function ArcPatternWheel({
+  value,
+  onValueChange,
+  min = 1,
   max = 100,
-  itemLabel 
+  itemLabel,
 }: {
   value: number;
   onValueChange: (val: number) => void;
@@ -21,125 +24,137 @@ export default function ArcPatternWheel({
   const flatListRef = useRef<FlatList>(null);
   const holdTimerRef = useRef<any>(null);
   const skipIntervalRef = useRef<any>(null);
-  
-  const [containerWidth, setContainerWidth] = useState(0);
-  const itemWidth = containerWidth > 0 ? (containerWidth / 5.0) : 70;
-  const curIndexRef = useRef<number>(-1);
-  const [localVal, setLocalVal] = useState(value);
-
-  useEffect(() => {
-    setLocalVal(value);
-  }, [value]);
-
   const commitTimeoutRef = useRef<any>(null);
+  const isScrollingRef = useRef(false);
+  const lastScrolledValueRef = useRef(value);
 
-  const commitValue = (val: number) => {
-    setLocalVal(val);
-    if (val !== value) {
-       if (commitTimeoutRef.current) clearTimeout(commitTimeoutRef.current);
-       commitTimeoutRef.current = setTimeout(() => {
-          onValueChange(val);
-       }, 150);
-    }
-  };
+  const [containerWidth, setContainerWidth] = useState(0);
+  const itemWidth = containerWidth > 0 ? containerWidth / VISIBLE_ITEMS : 70;
 
-  // FAUX INFINITE LOOP: Repeat the sequence 20 times (e.g. 6,000 items)
-  // React Native's virtualizer only renders ~10 items at a time, so this costs zero performance natively.
+  const [localVal, setLocalVal] = useState(value);
+  const localValRef = useRef(value);
+
+  const patternCount = max - min + 1;
+
+  // Build data once per [min, max]. Each item has a globally-unique key.
   const data = React.useMemo(() => {
-    const patternCount = max - min + 1;
-    const items = [];
-    for (let r = 0; r < 5; r++) {
+    const items: { type: string; id: string; val: number; rep: number }[] = [];
+    for (let r = 0; r < REPEATS; r++) {
       for (let v = min; v <= max; v++) {
         items.push({ type: 'item', id: `${r}-${v}`, val: v, rep: r });
       }
     }
-    return [
-      { type: 'pad', id: 'pad-start-1' },
-      { type: 'pad', id: 'pad-start-2' },
-      ...items,
-      { type: 'pad', id: 'pad-end-1' },
-      { type: 'pad', id: 'pad-end-2' },
-    ];
+    return items;
   }, [min, max]);
 
-  const patternCount = max - min + 1;
-  const [initialTargetIdx] = useState((2 * patternCount) + (value - min) + 2);
+  // The middle repetition (rep=2) is where we start — equal buffer on both sides.
+  const middleRep = Math.floor(REPEATS / 2);
 
-  const scrollToValue = (val: number, animated = true) => {
-    if (containerWidth === 0) return;
-    const patternCount = max - min + 1;
-    
-    // Jump straight to the absolute middle block (Block 2 of 5) on initial load to give items buffer on both sides.
-    let targetRep = 2; 
-    
-    if (curIndexRef.current >= 0) {
-        // If we are actively scrolling, we target the exact block repetition the user is currently looking at!
-        targetRep = Math.floor(curIndexRef.current / patternCount);
-    }
-    
-    const targetIdx = (targetRep * patternCount) + (val - min);
-    
-    flatListRef.current?.scrollToOffset({ 
-      offset: targetIdx * itemWidth, 
-      animated 
-    });
-  };
+  const getScrollOffset = useCallback(
+    (val: number, rep: number) => ((rep * patternCount) + (val - min)) * itemWidth,
+    [patternCount, min, itemWidth]
+  );
 
+  // Scroll to a value, staying in the same rep-block the user is currently in.
+  const scrollToValue = useCallback(
+    (val: number, animated = true) => {
+      if (!flatListRef.current || containerWidth === 0) return;
+      const offset = flatListRef.current as any;
+      // Read current scroll position quietly from the FlatList's internal state
+      const currentOffset = (flatListRef.current as any)._listRef?._scrollMetrics?.offset ?? 0;
+      const currentRep = Math.floor(currentOffset / (patternCount * itemWidth));
+      const clampedRep = Math.max(0, Math.min(currentRep, REPEATS - 1));
+      flatListRef.current.scrollToOffset({
+        offset: getScrollOffset(val, clampedRep),
+        animated,
+      });
+    },
+    [containerWidth, patternCount, itemWidth, getScrollOffset]
+  );
+
+  // Scroll to initial position after layout is ready — only once.
+  const hasInitialScrolled = useRef(false);
   useEffect(() => {
-    if (value !== localVal) {
-      setLocalVal(value);
-      setTimeout(() => scrollToValue(value, true), 50);
+    if (containerWidth > 0 && !hasInitialScrolled.current) {
+      hasInitialScrolled.current = true;
+      // Use a short delay to ensure the FlatList is fully mounted
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({
+          offset: getScrollOffset(value, middleRep),
+          animated: false,
+        });
+      }, 50);
     }
-  }, [value]);
+  }, [containerWidth]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (containerWidth === 0) return;
-    const offsetX = e.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / itemWidth);
-    
-    // Save physical list location so arrow buttons / skips snap to the nearest neighbor natively
-    curIndexRef.current = index;
-
-    const item = data[index + 2] as any; // The item perfectly centered
-    if (item && item.type === 'item') {
-      if (item.val !== localVal) {
-        commitValue(item.val);
+  // Sync when external value changes (e.g. pattern selected elsewhere)
+  useEffect(() => {
+    if (value !== localValRef.current) {
+      localValRef.current = value;
+      setLocalVal(value);
+      if (containerWidth > 0) {
+        // Small delay so we don't fight an in-progress scroll
+        setTimeout(() => scrollToValue(value, true), 80);
       }
     }
-  };
+  }, [value, containerWidth, scrollToValue]);
 
-  const handleJump = (delta: number) => {
-    let newVal = localVal + delta;
-    
-    // Circular logic
-    if (newVal < min) newVal = max;
-    else if (newVal > max) newVal = min;
+  const commitValue = useCallback(
+    (val: number) => {
+      if (val === localValRef.current) return;
+      localValRef.current = val;
+      setLocalVal(val);
+      if (commitTimeoutRef.current) clearTimeout(commitTimeoutRef.current);
+      commitTimeoutRef.current = setTimeout(() => onValueChange(val), 120);
+    },
+    [onValueChange]
+  );
 
-    if (newVal !== localVal) {
+  const onScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (containerWidth === 0) return;
+      const offsetX = e.nativeEvent.contentOffset.x;
+      // Which item index is in the center slot (slot 2 of 5)?
+      const centerIndex = Math.round(offsetX / itemWidth) + Math.floor(VISIBLE_ITEMS / 2);
+      const item = data[centerIndex] as any;
+      if (item && item.type === 'item') {
+        commitValue(item.val);
+      }
+    },
+    [containerWidth, itemWidth, data, commitValue]
+  );
+
+  const handleJump = useCallback(
+    (delta: number) => {
+      let newVal = localValRef.current + delta;
+      if (newVal < min) newVal = max;
+      else if (newVal > max) newVal = min;
       commitValue(newVal);
       scrollToValue(newVal, true);
-    }
-  };
+    },
+    [min, max, commitValue, scrollToValue]
+  );
 
-  const startHold = (delta: number) => {
-    handleJump(delta);
-    holdTimerRef.current = setTimeout(() => {
-      skipIntervalRef.current = setInterval(() => {
-        // Fast skip by 1 or 5 depending on range? 
-        // For 1-100, 5 is good.
-        handleJump(delta > 0 ? 5 : -5);
-      }, 100); 
-    }, 500); // reduced from 3000ms to 500ms
-  };
+  const startHold = useCallback(
+    (delta: number) => {
+      handleJump(delta);
+      holdTimerRef.current = setTimeout(() => {
+        skipIntervalRef.current = setInterval(() => {
+          handleJump(delta > 0 ? 5 : -5);
+        }, 100);
+      }, 500);
+    },
+    [handleJump]
+  );
 
-  const stopHold = () => {
+  const stopHold = useCallback(() => {
     if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
     if (skipIntervalRef.current) clearInterval(skipIntervalRef.current);
-  };
+  }, []);
 
-  const onLayout = (event: LayoutChangeEvent) => {
+  const onLayout = useCallback((event: LayoutChangeEvent) => {
     setContainerWidth(event.nativeEvent.layout.width);
-  };
+  }, []);
 
   return (
     <View style={styles.container} onLayout={onLayout}>
@@ -156,10 +171,9 @@ export default function ArcPatternWheel({
           scrollEventThrottle={16}
           onScroll={onScroll}
           onMomentumScrollEnd={onScroll}
-          initialScrollIndex={initialTargetIdx}
-          initialNumToRender={10}
-          maxToRenderPerBatch={15}
-          windowSize={5}
+          initialNumToRender={VISIBLE_ITEMS + 2}
+          maxToRenderPerBatch={10}
+          windowSize={3}
           getItemLayout={(_, index) => ({ length: itemWidth, offset: itemWidth * index, index })}
           renderItem={({ item }) => {
             if (item.type === 'pad') {
@@ -168,8 +182,8 @@ export default function ArcPatternWheel({
             const itemVal = (item as any).val;
             const isSelected = itemVal === localVal;
             return (
-              <TouchableOpacity 
-                activeOpacity={0.9} 
+              <TouchableOpacity
+                activeOpacity={0.9}
                 onPress={() => {
                   commitValue(itemVal);
                   scrollToValue(itemVal, true);
@@ -185,12 +199,15 @@ export default function ArcPatternWheel({
         />
 
         {/* Center Indicator Box */}
-        <View style={[styles.centerIndicator, { width: itemWidth, left: itemWidth * 2 }]} pointerEvents="none" />
+        <View
+          style={[styles.centerIndicator, { width: itemWidth, left: itemWidth * Math.floor(VISIBLE_ITEMS / 2) }]}
+          pointerEvents="none"
+        />
       </View>
-      
+
       {/* Name and Navigation Controls */}
       <View style={styles.controlsRow}>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => handleJump(-1)}
           onPressIn={() => startHold(-1)}
           onPressOut={stopHold}
@@ -202,11 +219,11 @@ export default function ArcPatternWheel({
 
         {itemLabel && (
           <View style={styles.labelWrapper}>
-            <Text style={styles.labelText} numberOfLines={1}>{itemLabel(value)}</Text>
+            <Text style={styles.labelText} numberOfLines={1}>{itemLabel(localVal)}</Text>
           </View>
         )}
 
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => handleJump(1)}
           onPressIn={() => startHold(1)}
           onPressOut={stopHold}
@@ -237,7 +254,6 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   },
   centerIndicator: {
     position: 'absolute',
-    width: 60,
     height: 50,
     borderWidth: 1,
     borderColor: 'rgba(255, 110, 0, 0.4)',
@@ -293,5 +309,5 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     textAlign: 'center',
-  }
+  },
 });
