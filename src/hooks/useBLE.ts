@@ -59,9 +59,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
         const buffer = require('buffer').Buffer;
         const data = Array.from(buffer.from(characteristic.value, 'base64')) as number[];
         
-        // Capture lowest-level inbound payload trace before ANY application decoding organically
-        AppLogger.log('RAW_PAYLOAD', { dir: 'RX', hex: data.map(x => x.toString(16).padStart(2, '0').toUpperCase()).join(' '), deviceId });
-
         // We send the absolute raw binary frame to the data callbacks.
         // It is strictly the responsibility of parser endpoints (ZenggeProtocol) to dissect Headers vs Bodies.
         if (dataReceivedCallback) {
@@ -374,8 +371,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
     const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
     // Hex trace for browser/debug purposes
     console.log(`[BLE WRITE]${targetDeviceId ? ` [Target: ${targetDeviceId}]` : ''}`, hexString);
-    // Persist absolute outbound payload trace synchronously to Database Log organically
-    AppLogger.log('RAW_PAYLOAD', { dir: 'TX', hex: hexString, deviceId: targetDeviceId || 'ALL' });
     
     if (connectedDevices.length === 0 || Platform.OS === 'web') return;
     try {

@@ -98,31 +98,7 @@ export default function ProtocolSnifferModal({
     );
   };
   
-  const load = useCallback(async () => {
-    const logs = await AppLogger.getLogs();
-    
-    const loadedHistory = logs.filter(l => l.e === 'RAW_PAYLOAD').map(l => ({
-       dir: l.d.dir as 'RX' | 'TX',
-       hex: l.d.hex,
-       t: l.t,
-       dev: l.d.deviceId
-    }));
-    
-    setSnifferLogs(prev => {
-       const merged = [...prev];
-       loadedHistory.forEach(h => {
-         if (!merged.find(m => m.t === h.t && m.hex === h.hex)) {
-           merged.push(h);
-         }
-       });
-       return merged.sort((a,b) => b.t - a.t);
-    });
-  }, []);
-
-  // Hydrate from global database explicitly
-  useEffect(() => {
-    if (visible) load();
-  }, [visible, load]);
+  // Hydrate from global database explicitly (Disabled - Hardware Tester now maintains localized timeline only)
 
   // React to Live Payloads & Extract Intercepted States
   useEffect(() => {
