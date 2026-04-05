@@ -130,6 +130,21 @@ class AppLoggerService {
   async clearLogs() {
     this.buffer = [];
     await AsyncStorage.removeItem(STORAGE_KEY);
+    
+    if (supabase) {
+      // Must compute both potential filenames since state could be paired or unpaired
+      const pMac = this.activeDevices.length > 0 ? this.activeDevices[0].id : 'unpaired-host';
+      const bleMac = pMac.replace(/[^a-zA-Z0-9_-]/g, '');
+      
+      const rawId = Device.osInternalBuildId || Device.modelId || 'unknown-device';
+      const deviceId = rawId.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+      try {
+        await supabase.storage.from('sk8lytz-logs').remove([`logs_${bleMac}.json`, `logs_${deviceId}.json`]);
+      } catch(e) {
+        console.warn('Failed cloud wipe', e);
+      }
+    }
   }
 
   async exportJSON(): Promise<string> {
