@@ -1,6 +1,8 @@
 {
+  // Inherits Expo's base TypeScript config (JSX transform, module resolution, etc.)
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    // Strict mode: catches null/undefined errors, implicit any, and unsafe operations
     "strict": true
   }
 }
