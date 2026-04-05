@@ -301,23 +301,39 @@ class AppLoggerService {
             await supabase.from('parsed_session_devices').insert(devPayload);
           }
 
-          // 3. New Usage Tracking Matrix
-          const modePayload = [];
-          for (const [mName, mCount] of Object.entries(currentStats.modeUsage || {})) {
-            modePayload.push({ session_id: sessionId, device_id: primaryMacRaw, mode_name: mName, usage_count: mCount, timestamp_ms: Date.now() });
-          }
+          // 3. New Usage Tracking Matrix directly from current logs
+          const modeMap = new Map();
+          const patternMap = new Map();
+          const colorMap = new Map();
+          
+          currentRunLogs.forEach((item: any) => {
+              const isGroup = item.d?.target === 'group' || (item.d?.deviceIds && item.d.deviceIds.length > 1);
+              const groupId = isGroup ? item.d?.deviceIds?.join('_') : null;
+              const groupName = isGroup ? `Group (${item.d?.groupSize || item.d?.deviceIds?.length} Devices)` : null;
+              const targetDeviceId = item.d?.deviceId || primaryMacRaw;
+              
+              if (item.e === 'MODE_CHANGED' && item.d?.mode) {
+                  const hash = `${groupId || targetDeviceId}|${item.d.mode}`;
+                  modeMap.set(hash, { mName: item.d.mode, count: (modeMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev: targetDeviceId });
+              }
+              if (item.e === 'PATTERN_CHANGED' && item.d?.pattern) {
+                  const pName = item.d.name || item.d.pattern;
+                  const hash = `${groupId || targetDeviceId}|${pName}`;
+                  patternMap.set(hash, { pName, count: (patternMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev: targetDeviceId });
+              }
+              if (item.e === 'COLOR_CHANGED' && item.d?.hex) {
+                  const hash = `${groupId || targetDeviceId}|${item.d.hex}`;
+                  colorMap.set(hash, { hex: item.d.hex, count: (colorMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev: targetDeviceId });
+              }
+          });
+
+          const modePayload = Array.from(modeMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, mode_name: v.mName, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
           if (modePayload.length > 0) await supabase.from('parsed_mode_usage').insert(modePayload);
 
-          const patternPayload = [];
-          for (const [pName, pData] of Object.entries((currentStats.patternUsage as any) || {})) {
-            patternPayload.push({ session_id: sessionId, device_id: primaryMacRaw, pattern_idx: pName, usage_count: (pData as any).count, timestamp_ms: Date.now() });
-          }
+          const patternPayload = Array.from(patternMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, pattern_idx: v.pName, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
           if (patternPayload.length > 0) await supabase.from('parsed_pattern_usage').insert(patternPayload);
 
-          const colorPayload = [];
-          for (const [cHex, cCount] of Object.entries(currentStats.colorUsage || {})) {
-            colorPayload.push({ session_id: sessionId, device_id: primaryMacRaw, hex_color: cHex, usage_count: cCount, timestamp_ms: Date.now() });
-          }
+          const colorPayload = Array.from(colorMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, hex_color: v.hex, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
           if (colorPayload.length > 0) await supabase.from('parsed_color_usage').insert(colorPayload);
 
           // 4. Trace Log Push (Batched)
