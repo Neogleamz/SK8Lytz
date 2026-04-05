@@ -240,7 +240,38 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // Bind BLE Notification Hardware Sync Hook
   useEffect(() => {
     setOnDataReceived((deviceId: string, payload: number[]) => {
-      setLastRawNotification({ deviceId, payloadHex: payload.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ') });
+      const payloadHex = payload.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
+      setLastRawNotification({ deviceId, payloadHex });
+
+      // ── Diagnostics: upload every raw notification to Supabase ──────────────
+      // Fire-and-forget: never blocks the UI or BLE pipeline
+      const v2ConfigForUpload = ZenggeProtocol.parseHardwareSettingsResponse(payload);
+      const v1ConfigForUpload = ZenggeProtocol.parseHardwareConfig(payload);
+      const parsedOk = !!(v2ConfigForUpload || v1ConfigForUpload);
+      const pts = v2ConfigForUpload?.ledPoints ?? v1ConfigForUpload?.points;
+      const ict = v2ConfigForUpload?.icType;
+      const icn = v2ConfigForUpload?.icName ?? v1ConfigForUpload?.stripType;
+      const cs  = v2ConfigForUpload?.colorSorting ?? undefined;
+      const co  = v2ConfigForUpload?.colorSortingName ?? v1ConfigForUpload?.sorting;
+      const deviceName = allDevices.find((d: any) => d.id === deviceId)?.name ?? null;
+      supabase.from('device_diagnostics').insert({
+        device_id:     deviceId,
+        device_name:   deviceName,
+        payload_hex:   payloadHex,
+        payload_bytes: payload.length,
+        byte_0:        payload[0] ?? null,
+        byte_2:        payload[2] ?? null,
+        parsed_ok:     parsedOk,
+        points:        pts ?? null,
+        ic_type:       ict ?? null,
+        ic_name:       icn ?? null,
+        color_sorting: cs ?? null,
+        color_order:   co ?? null,
+      }).then(({ error }: any) => {
+        if (error) console.warn('[Diagnostics] upload failed:', error.message);
+        else console.log('[Diagnostics] uploaded', payload.length, 'bytes for', deviceId);
+      });
+      // ────────────────────────────────────────────────────────────────────────
       
       const v2Config = ZenggeProtocol.parseHardwareSettingsResponse(payload);
       const v1Config = ZenggeProtocol.parseHardwareConfig(payload);
