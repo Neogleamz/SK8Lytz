@@ -20,6 +20,7 @@ const EVENT_META: Record<EventType, { icon: string; color: string; label: string
   DEVICE_DISCOVERED:  { icon: 'bluetooth-connect', color: '#9D4EFF', label: 'Device Found' },
   DEVICE_CONNECTED:   { icon: 'link-variant',    color: '#00ff80', label: 'Connected' },
   DEVICE_DISCONNECTED:{ icon: 'link-variant-off',color: '#ff4040', label: 'Disconnected' },
+  DEVICE_RENAMED:     { icon: 'pencil-circle',   color: '#FFA500', label: 'Device Renamed' },
   MODE_CHANGED:       { icon: 'tune',            color: '#FFD700', label: 'Mode Changed' },
   PATTERN_CHANGED:    { icon: 'shape',           color: '#FF69B4', label: 'Pattern Changed' },
   COLOR_CHANGED:      { icon: 'palette',         color: '#FF7000', label: 'Color Changed' },
@@ -53,7 +54,8 @@ function payloadSummary(entry: LogEntry): string {
     case 'COLOR_CHANGED':     return `${d.hex}${d.device ? ` on ${d.device}` : ''}`;
     case 'BRIGHTNESS_CHANGED':return `${d.value}%`;
     case 'SPEED_CHANGED':     return `${d.value}%`;
-    case 'HARDWARE_CONFIG_CHANGED': return `${d.name || d.id}: ${d.points} LEDs (${d.segments || 1} seg), ${d.stripType}, ${d.sorting}`;
+    case 'HARDWARE_CONFIG_CHANGED': return `${d.name || d.deviceId}: ${d.points} LEDs (${d.segments || 1} seg), ${d.stripType}, ${d.sorting}`;
+    case 'DEVICE_RENAMED':    return `"${d.oldName}" → "${d.newName}"`;
     case 'PROTOCOL_ERROR':    return `[${d.context}] ${d.error}${d.deviceId ? ` on ${d.deviceId}` : ''}`;
     case 'BLE_WRITE_ERROR':   return `TX Failed: ${d.error}${d.target ? ` on ${d.target}` : ''}`;
     case 'BLE_CONNECTION_ERROR': return `${d.error}${d.deviceId ? ` (ID: ${d.deviceId})` : ''}`;

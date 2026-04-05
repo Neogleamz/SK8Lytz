@@ -20,6 +20,7 @@ export type EventType =
   | 'DEVICE_DISCOVERED'
   | 'DEVICE_CONNECTED'
   | 'DEVICE_DISCONNECTED'
+  | 'DEVICE_RENAMED'
   | 'MODE_CHANGED'
   | 'PATTERN_CHANGED'
   | 'COLOR_CHANGED'
@@ -46,6 +47,7 @@ class AppLoggerService {
   private buffer: LogEntry[] = [];
   private activeDevices: any[] = [];
   private loaded = false;
+  private sessionId = `telemetry_${Date.now()}`;
 
   private async ensureLoaded() {
     if (this.loaded) return;
@@ -266,11 +268,11 @@ class AppLoggerService {
         // INSERTS ONLY THE CURRENT DELTA BUFFER - Prevents doubling up historical merged logs
         try {
           console.log('[AppLogger] Pushing native telemetry structures to Postgres Timeseries...');
-          const sessionId = `telemetry_${Date.now()}`;
+          const sessionId = this.sessionId;
           const currentRunLogs = [...this.buffer].filter(l => l.e !== 'RAW_PAYLOAD');
           
           // 1. Session Stats
-          await supabase.from('parsed_session_stats').insert([{
+          await supabase.from('parsed_session_stats').upsert([{
             session_id: sessionId,
             device_id: primaryMacRaw,
             host_device_id: deviceId,
@@ -281,7 +283,22 @@ class AppLoggerService {
             average_load_time_ms: currentStats.averageLoadTimeMs || 0,
             battery_level: currentStats.batteryLevel || -1,
             is_low_power_mode: currentStats.isLowPowerMode || false
-          }]);
+          }], { onConflict: 'session_id' });
+
+          // Extract Custom Hardware Names from ng_device_configs (keyed by device MAC)
+          const customNameMap = new Map<string, string>();
+          try {
+            const stored = await AsyncStorage.getItem('ng_device_configs');
+            if (stored) {
+              const configs = JSON.parse(stored);
+              for (const d of this.activeDevices) {
+                const cfg = configs[d.id];
+                if (cfg?.name) customNameMap.set(d.id, cfg.name);
+              }
+            }
+          } catch(e) {
+            console.warn('[AppLogger] Failed to read device configs for name resolution', e);
+          }
 
           // 2. Devices
           if (this.activeDevices.length > 0) {
@@ -290,7 +307,7 @@ class AppLoggerService {
                 device_id: d.id,
                 timestamp_ms: Date.now(),
                 host_device_id: deviceId,
-                name: d.name,
+                name: customNameMap.get(d.id) || d.name,
                 rssi: d.rssi,
                 firmware_ver: d.firmwareVer ? { fw: d.firmwareVer, led: d.ledVersion, ble: d.bleVersion } : (d.manufacturerData || {}),
                 ic_type: d.hardwareSettings?.icType,
@@ -298,7 +315,7 @@ class AppLoggerService {
                 segments: d.hardwareSettings?.segments,
                 color_sorting: d.hardwareSettings?.colorSorting
             }));
-            await supabase.from('parsed_session_devices').insert(devPayload);
+            await supabase.from('parsed_session_devices').upsert(devPayload, { onConflict: 'session_id, device_id' });
           }
 
           // 3. New Usage Tracking Matrix directly from current logs
@@ -310,55 +327,66 @@ class AppLoggerService {
               const isGroup = item.d?.target === 'group' || (item.d?.deviceIds && item.d.deviceIds.length > 1);
               const groupId = isGroup ? item.d?.deviceIds?.join('_') : null;
               const groupName = isGroup ? `Group (${item.d?.groupSize || item.d?.deviceIds?.length} Devices)` : null;
-              const targetDeviceId = item.d?.deviceId || primaryMacRaw;
+              const targets = isGroup && Array.isArray(item.d?.deviceIds) ? item.d.deviceIds : [item.d?.deviceId || primaryMacRaw];
               
-              if (item.e === 'MODE_CHANGED' && item.d?.mode) {
-                  const hash = `${groupId || targetDeviceId}|${item.d.mode}`;
-                  modeMap.set(hash, { mName: item.d.mode, count: (modeMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev: targetDeviceId });
-              }
-              if (item.e === 'PATTERN_CHANGED' && item.d?.pattern) {
-                  const pName = item.d.name || item.d.pattern;
-                  const hash = `${groupId || targetDeviceId}|${pName}`;
-                  patternMap.set(hash, { pName, count: (patternMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev: targetDeviceId });
-              }
-              if (item.e === 'COLOR_CHANGED' && item.d?.hex) {
-                  const hash = `${groupId || targetDeviceId}|${item.d.hex}`;
-                  colorMap.set(hash, { hex: item.d.hex, count: (colorMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev: targetDeviceId });
-              }
+              targets.forEach((tgtDev: string) => {
+                  if (item.e === 'MODE_CHANGED' && item.d?.mode) {
+                      const hash = `${groupId || tgtDev}|${item.d.mode}`;
+                      modeMap.set(hash, { mName: item.d.mode, count: (modeMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev });
+                  }
+                  if (item.e === 'PATTERN_CHANGED' && item.d?.pattern) {
+                      const pName = item.d.name || item.d.pattern;
+                      const hash = `${groupId || tgtDev}|${pName}`;
+                      patternMap.set(hash, { pName, count: (patternMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev });
+                  }
+                  if (item.e === 'COLOR_CHANGED' && item.d?.hex) {
+                      const hash = `${groupId || tgtDev}|${item.d.hex}`;
+                      colorMap.set(hash, { hex: item.d.hex, count: (colorMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev });
+                  }
+              });
           });
 
-          const modePayload = Array.from(modeMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, mode_name: v.mName, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
+          const modePayload = Array.from(modeMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, device_name: customNameMap.get(v.tgtDev), mode_name: v.mName, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
           if (modePayload.length > 0) await supabase.from('parsed_mode_usage').insert(modePayload);
 
-          const patternPayload = Array.from(patternMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, pattern_idx: v.pName, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
+          const patternPayload = Array.from(patternMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, device_name: customNameMap.get(v.tgtDev), pattern_idx: v.pName, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
           if (patternPayload.length > 0) await supabase.from('parsed_pattern_usage').insert(patternPayload);
 
-          const colorPayload = Array.from(colorMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, hex_color: v.hex, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
+          const colorPayload = Array.from(colorMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, device_name: customNameMap.get(v.tgtDev), hex_color: v.hex, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
           if (colorPayload.length > 0) await supabase.from('parsed_color_usage').insert(colorPayload);
 
           // 4. Trace Log Push (Batched)
           const CHUNK = 1000;
           for (let i = 0; i < currentRunLogs.length; i += CHUNK) {
              const chunk = currentRunLogs.slice(i, i + CHUNK);
-             const dbLogPayload = chunk.map((item: any) => {
+             const dbLogPayload = chunk.flatMap((item: any) => {
                 const isGroup = item.d?.target === 'group' || (item.d?.deviceIds && item.d.deviceIds.length > 1);
-                return {
+                const targets = isGroup && Array.isArray(item.d?.deviceIds) ? item.d.deviceIds : [item.d?.deviceId || primaryMacRaw];
+                
+                return targets.map((explicitDeviceId: string) => ({
                   session_id: sessionId,
                   host_device_id: deviceId,
                   timestamp_ms: item.t,
                   event_type: item.e,
                   direction: item.d?.dir || null,
                   hex_payload: item.d?.hex || null,
-                  device_id: item.d?.deviceId || null,
+                  device_id: explicitDeviceId,
+                  device_name: customNameMap.get(explicitDeviceId) || null,
                   group_id: isGroup ? item.d?.deviceIds?.join('_') : null,
                   group_name: isGroup ? `Group (${item.d?.groupSize || item.d?.deviceIds?.length} Devices)` : null,
                   raw_data: item.d || {} 
-                };
+                }));
              });
              await supabase.from('parsed_logs').insert(dbLogPayload);
           }
           
           console.log('[AppLogger] Postgres Native Insertion Complete!');
+
+          // Buffer rotation: clear local log buffer after a confirmed clean push
+          // This prevents old events from re-uploading on subsequent calls
+          this.buffer = [];
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+          console.log('[AppLogger] Local buffer cleared after successful push.');
         } catch (dbErr) {
           console.error('[AppLogger] Non-fatal Supabase DB ingestion failure:', dbErr);
         }

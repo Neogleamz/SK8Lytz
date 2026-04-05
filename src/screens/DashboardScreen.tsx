@@ -15,7 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
 import LogViewerModal from '../components/LogViewerModal';
-import ProtocolSnifferModal from '../components/ProtocolSnifferModal';
+import AdminHardwareTester from '../components/AdminHardwareTester';
 
 interface DeviceSettings {
   name: string;
@@ -714,7 +714,7 @@ export default function DashboardScreen() {
          await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
          
          AppLogger.log('HARDWARE_CONFIG_CHANGED', {
-           id: selectedDeviceForSettings.id,
+           deviceId: selectedDeviceForSettings.id,
            name: settings.name,
            type: settings.type,
            points: settings.points,
@@ -722,6 +722,16 @@ export default function DashboardScreen() {
            sorting: settings.sorting,
            stripType: settings.stripType,
          });
+
+         // Log rename separately for device audit trail
+         const previousName = selectedDeviceForSettings.name;
+         if (settings.name && settings.name !== previousName) {
+           AppLogger.log('DEVICE_RENAMED', {
+             deviceId: selectedDeviceForSettings.id,
+             oldName: previousName || 'Unknown',
+             newName: settings.name,
+           });
+         }
       } catch (e) { console.error('Failed to persist settings', e); }
     }
     setIsSettingsVisible(false);
@@ -1271,7 +1281,7 @@ export default function DashboardScreen() {
         isScanning={isScanning}
         handleScan={scanForPeripherals}
       />
-      <ProtocolSnifferModal 
+      <AdminHardwareTester 
         visible={isSnifferVisible}
         onClose={() => {
             setIsSnifferVisible(false);
@@ -1281,7 +1291,7 @@ export default function DashboardScreen() {
         connectedDevices={connectedDevices as any[]}
         isScanning={isScanning}
         handleScan={scanForPeripherals}
-        connectToDevice={async (d) => { await connectToDevice(d); }}
+        connectToDevice={async (d: any) => { await connectToDevice(d); }}
         handleDisconnect={disconnectFromDevice}
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
