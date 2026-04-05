@@ -20,7 +20,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import * as ExpoDevice from 'expo-device';
-import { ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID } from '../protocols/ZenggeProtocol';
+import { ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 
 let BleManager: any;
@@ -340,6 +340,21 @@ export default function useBLE(): BluetoothLowEnergyApi {
         }
       }
 
+      // Send 0x63 hardware settings query directly via deviceConnection
+      // Using deviceConnection directly — avoids ALL stale closure issues with writeToDevice/connectedDevices state
+      setTimeout(async () => {
+        try {
+          const queryPayload = ZenggeProtocol.queryHardwareSettings(false);
+          const b64 = require('buffer').Buffer.from(queryPayload).toString('base64');
+          await deviceConnection.writeCharacteristicWithoutResponseForService(
+            ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
+          );
+          console.log(`[BLE] 0x63 hw query sent to ${device.id}`);
+        } catch (e) {
+          console.warn('[BLE] hw query write failed', e);
+        }
+      }, 600);
+
       AppLogger.log('DEVICE_CONNECTED', { id: device.id, name: device.name, firmware });
 
       bleManager.stopDeviceScan();
@@ -406,6 +421,19 @@ export default function useBLE(): BluetoothLowEnergyApi {
           } catch (e) { }
 
           AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name, firmware });
+
+          // Send 0x63 hw query directly via conn — no stale closure
+          const connCapture = conn;
+          setTimeout(async () => {
+            try {
+              const qp = ZenggeProtocol.queryHardwareSettings(false);
+              const b64 = require('buffer').Buffer.from(qp).toString('base64');
+              await connCapture.writeCharacteristicWithoutResponseForService(
+                ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
+              );
+              console.log(`[BLE] 0x63 hw query sent to ${connCapture.id} (group)`);
+            } catch (e) { console.warn('[BLE] group hw query write failed', e); }
+          }, 600);
         } catch (deviceError: any) {
           console.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${device.id}`, deviceError);
           AppLogger.log('BLE_CONNECTION_ERROR', { error: deviceError?.message || String(deviceError), deviceId: device.id, context: 'group_sync_fail' });

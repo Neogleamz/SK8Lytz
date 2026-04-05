@@ -1489,11 +1489,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             setMockConnectedDevice(null);
           }
         }}
-        onConnectToDevice={async (d: any) => {
-          await connectToDevice(d);
-          // Send 0x63 hardware query after connect — response populates deviceConfigs via notification callback
-          setTimeout(() => writeToDevice(ZenggeProtocol.queryHardwareSettings(false), d.id), 600);
-        }}
+        onConnectToDevice={async (d: any) => { await connectToDevice(d); }}
         liveDeviceConfigs={deviceConfigs}
       />
       <Sk8LytzProgrammerModal 
