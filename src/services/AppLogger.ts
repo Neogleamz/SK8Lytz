@@ -155,9 +155,10 @@ class AppLoggerService {
     if (this.buffer.length === 0) return;
 
     try {
-      const rawId = Device.osInternalBuildId || Device.modelId || 'unknown-device';
-      const deviceId = rawId.replace(/[^a-zA-Z0-9_-]/g, '_');
-      const filename = `logs_${deviceId}.json`;
+      const deviceId = Device.osInternalBuildId || Device.modelId || 'unknown-device';
+      const primaryMacRaw = this.activeDevices.length > 0 ? this.activeDevices[0].id : 'unpaired-host';
+      const bleMac = primaryMacRaw.replace(/[^a-zA-Z0-9_-]/g, '');
+      const filename = `logs_${bleMac}.json`;
 
       let mergedLogs = [...this.buffer];
       let existingStats = null;
