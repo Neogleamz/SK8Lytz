@@ -210,6 +210,7 @@ class AppLoggerService {
       const mergedPayload = {
         app: 'SK8Lytz',
         hostDeviceId: deviceId,
+        bleMac: primaryMacRaw,
         exported: new Date().toISOString(),
         count: mergedLogs.length,
         stats: { ...existingStats, ...currentStats, totalEvents: mergedLogs.length },

@@ -15,8 +15,9 @@ async function ingestLogFile(filePath) {
 
     // Create a unique session ID for this bulk upload
     const sessionId = `import_${Date.now()}`;
-    // Extract universal tracking key
+    // Extract universal tracking keys
     const hostDeviceId = parsed.hostDeviceId || 'unknown-host';
+    const bleMac = parsed.bleMac || 'unpaired-host';
 
     const logs = parsed.logs;
     const devices = parsed.devices || [];
@@ -33,6 +34,7 @@ async function ingestLogFile(filePath) {
         const statsPayload = [{
             session_id: sessionId,
             host_device_id: hostDeviceId,
+            ble_mac: bleMac,
             devices_discovered: stats.devicesDiscovered || 0,
             total_events: stats.totalEvents || 0,
             storage_bytes_estimate: stats.storageBytesEstimate || 0,
@@ -153,5 +155,5 @@ async function ingestLogFile(filePath) {
     console.log('🎉 Full JSON ingestion complete!');
 }
 
-const targetFile = process.argv[2] || 'c:\\Users\\Magma\\Downloads\\logs_unknown-device_2026-04-05T01-49-38-813Z.json';
+const targetFile = process.argv[2] || 'c:\\Users\\Magma\\Downloads\\logs_unknown-device.json';
 ingestLogFile(targetFile);
