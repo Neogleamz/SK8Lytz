@@ -64,16 +64,62 @@ class AppLoggerService {
     }
   }
 
+  private txPayloadQueue: { hex: string, timestamp: number } | null = null;
+  private pendingLogQueue: { event: EventType, payload: Record<string, any>, resolve: () => void } | null = null;
+
   updateKnownDevices(devices: any[]) {
     this.activeDevices = devices;
   }
 
+  setLastTxPayload(hex: string) {
+    this.txPayloadQueue = { hex, timestamp: Date.now() };
+    this.flushQueues();
+  }
+
+  private flushQueues() {
+    if (this.pendingLogQueue) {
+      const now = Date.now();
+      const tx = this.txPayloadQueue;
+      // If a payload happens within 250ms of the UI event, correlate them
+      const correlatedHex = (tx && Math.abs(now - tx.timestamp) < 250) ? tx.hex : undefined;
+      
+      const payloadMeta = correlatedHex 
+        ? { ...this.pendingLogQueue.payload, txPayload: correlatedHex, txState: 'SUCCESS' } 
+        : this.pendingLogQueue.payload;
+
+      const entry: LogEntry = { t: now, e: this.pendingLogQueue.event, d: payloadMeta };
+      this.buffer.push(entry);
+      this.persist();
+      if (__DEV__) console.log(`[AppLogger] ${this.pendingLogQueue.event}`, payloadMeta);
+      
+      this.pendingLogQueue.resolve();
+      this.pendingLogQueue = null;
+    }
+  }
+
   async log(event: EventType, payload: Record<string, any> = {}) {
     await this.ensureLoaded();
-    const entry: LogEntry = { t: Date.now(), e: event, d: payload };
-    this.buffer.push(entry);
-    this.persist(); // fire-and-forget
-    if (__DEV__) console.log(`[AppLogger] ${event}`, payload);
+    
+    // Non-hardware events bypass correlation
+    if (['APP_OPENED', 'SCAN_STARTED', 'SCAN_COMPLETED', 'DEVICE_DISCOVERED', 'DEVICE_CONNECTED', 'DEVICE_DISCONNECTED', 'PROTOCOL_ERROR'].includes(event)) {
+      const entry: LogEntry = { t: Date.now(), e: event, d: payload };
+      this.buffer.push(entry);
+      this.persist();
+      if (__DEV__) console.log(`[AppLogger] ${event}`, payload);
+      return;
+    }
+
+    // Queue functional hardware commands for up to 100ms to see if a TX payload fires alongside it
+    return new Promise<void>((resolve) => {
+      this.pendingLogQueue = { event, payload, resolve };
+      
+      // If the UI state updated but no Bluetooth write occurs within 100ms, log it solo
+      setTimeout(() => {
+        if (this.pendingLogQueue && this.pendingLogQueue.event === event) {
+          this.flushQueues();
+        }
+      }, 100);
+    });
   }
 
   async getLogs(): Promise<LogEntry[]> {

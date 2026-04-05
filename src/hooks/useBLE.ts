@@ -371,6 +371,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
     // Hex trace for browser/debug purposes
     console.log(`[BLE WRITE]${targetDeviceId ? ` [Target: ${targetDeviceId}]` : ''}`, hexString);
+    AppLogger.setLastTxPayload(hexString);
     
     if (connectedDevices.length === 0 || Platform.OS === 'web') return;
     try {
