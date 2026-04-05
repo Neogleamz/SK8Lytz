@@ -8,8 +8,9 @@
  *   WRITE:  0x62 [ptsHigh] [ptsLow] [segHigh] [segLow] [icType] [sorting] [micPts] [micSegs] 0xF0 [cs]
  */
 
-export const ZENGGE_SERVICE_UUID = '0000ffff-0000-1000-8000-00805f9b34fb';
-export const ZENGGE_CHARACTERISTIC_UUID = '0000ff01-0000-1000-8000-00805f9b34fb';
+export const ZENGGE_SERVICE_UUID        = '0000ffff-0000-1000-8000-00805f9b34fb';
+export const ZENGGE_CHARACTERISTIC_UUID = '0000ff01-0000-1000-8000-00805f9b34fb'; // WRITE
+export const ZENGGE_NOTIFY_UUID         = '0000ff02-0000-1000-8000-00805f9b34fb'; // NOTIFY (responses)
 
 // ─── IC TYPE TABLE (0-indexed values sent in protocol) ───────────────────────
 // Source: dd/i.java → m(boolean, int) — non-mic mode list (HALOZ/SOULZ hardware)

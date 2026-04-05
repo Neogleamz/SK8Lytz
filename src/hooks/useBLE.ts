@@ -20,7 +20,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import * as ExpoDevice from 'expo-device';
-import { ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, ZENGGE_NOTIFY_UUID, ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 
 let BleManager: any;
@@ -307,10 +307,10 @@ export default function useBLE(): BluetoothLowEnergyApi {
       const latencyMs = Date.now() - connectStartTime;
       AppLogger.log('PERFORMANCE_METRIC', { metricName: 'BLE_Auth_Latency', value: latencyMs, unit: 'ms', deviceId: device.id });
       
-      // Monitor for responses
+      // Monitor FF02 for responses — FF01 is write-only, FF02 is the notify characteristic
       deviceConnection.monitorCharacteristicForService(
         ZENGGE_SERVICE_UUID,
-        ZENGGE_CHARACTERISTIC_UUID,
+        ZENGGE_NOTIFY_UUID,
         (error: any, characteristic: any) => handleNotification(error, characteristic, device.id)
       );
 
@@ -401,10 +401,10 @@ export default function useBLE(): BluetoothLowEnergyApi {
             }
           });
 
-          // Monitor
+          // Monitor FF02 for responses — FF01 is write-only, FF02 is the notify characteristic
           conn.monitorCharacteristicForService(
             ZENGGE_SERVICE_UUID,
-            ZENGGE_CHARACTERISTIC_UUID,
+            ZENGGE_NOTIFY_UUID,
             (error: any, characteristic: any) => handleNotification(error, characteristic, conn.id)
           );
 
