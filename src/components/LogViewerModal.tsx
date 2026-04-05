@@ -121,7 +121,15 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
     }
   };
 
-  const handleClear = () => {
+  const handleClear = async () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Delete all stored analytics logs?')) {
+        await AppLogger.clearLogs();
+        load();
+      }
+      return;
+    }
+
     Alert.alert('Clear Logs', 'Delete all stored analytics logs?', [
       { text: 'Cancel', style: 'cancel' },
       {
