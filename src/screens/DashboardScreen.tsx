@@ -227,8 +227,8 @@ export default function DashboardScreen() {
         setTimeout(() => {
           setAllDevices((prev: any[]) => {
             let newDevices = [...prev];
-            const haloIds = ['sim-halo-1', 'sim-halo-2'];
-            const soulIds = ['sim-soul-1', 'sim-soul-2'];
+            const haloIds = ['sim-DE:M0:HA:L0:00:01', 'sim-DE:M0:HA:L0:00:02'];
+            const soulIds = ['sim-DE:M0:S0:UL:00:01', 'sim-DE:M0:S0:UL:00:02'];
             
             if (demoHaloQueued) {
               haloIds.forEach((id, idx) => {
@@ -237,8 +237,8 @@ export default function DashboardScreen() {
                     id, 
                     name: `HALOZ ${idx === 0 ? 'Left' : 'Right'} Skate`, 
                     type: 'HALOZ',
-                    points: 16, 
-                    segments: 1,
+                    points: 11, 
+                    segments: 2,
                     sorting: 'GRB',
                     stripType: 'WS2812B',
                     rssi: -45 - Math.floor(Math.random() * 20),
