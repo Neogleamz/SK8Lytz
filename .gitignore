@@ -1,6 +1,6 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
-# dependencies
+# Dependencies
 node_modules/
 
 # Expo
@@ -21,7 +21,7 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
-# debug
+# Debug
 npm-debug.*
 yarn-debug.*
 yarn-error.*
@@ -30,20 +30,29 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# Environment files — NEVER commit secrets
+.env
+.env.*
 .env*.local
+*.local
 
-# typescript
+# TypeScript
 *.tsbuildinfo
 
-# generated native folders
+# Generated native folders
 /ios
 /android
 
-# Zengge APK extraction artifacts (local only)
+# Log files
+*.log
+*.log.*
+
+# Zengge APK extraction artifacts (local analysis only)
 ZENGGE*
 !src/protocols/ZenggeProtocol.ts
 app_strings.txt
+en_strings.txt
+libapp_strings.txt
 extract.js
 jadx_src*/
 jadx/
@@ -54,7 +63,7 @@ jadx.zip
 # Large media (keep GIFs, exclude raw video)
 *.mp4
 
-# Gradle build output (outside project)
+# Gradle build output
 /build
 C:/GradleBuild/
 temp_apk/
@@ -63,3 +72,7 @@ temp_en/
 # Local builder tools
 .local-builder/
 eas-error.log
+
+# Scratch / one-off dev files
+test-supabase.js
+theme.js
