@@ -1086,7 +1086,7 @@ export default function DashboardScreen() {
                 </View>
               </View>
             }
-            data={!isDeviceListCollapsed ? allDevices : []}
+            data={!isDeviceListCollapsed ? [...allDevices].sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999)) : []}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             scrollEnabled={true}

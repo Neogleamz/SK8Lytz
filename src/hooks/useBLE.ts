@@ -194,6 +194,21 @@ export default function useBLE(): BluetoothLowEnergyApi {
           AppLogger.log('SCAN_FILTER_MATCH', logData);
           setAllDevices((prevState) => {
             if (!isDuplicateDevice(prevState, device)) {
+              // Parse firmware from advertisement data during scan — primary source for Zengge
+              let advFirmware: string | undefined;
+              if (manufacturerData) {
+                try {
+                  const { ZenggeProtocol } = require('../protocols/ZenggeProtocol');
+                  const fwInfo = ZenggeProtocol.parseFirmwareFromAdvertisement(manufacturerData);
+                  if (fwInfo) {
+                    advFirmware = `v${fwInfo.firmwareVer}.${fwInfo.ledVersion} (BLE ${fwInfo.bleVersion})`;
+                    (device as any).firmware = advFirmware;
+                    (device as any).firmwareVer = fwInfo.firmwareVer;
+                    (device as any).ledVersion = fwInfo.ledVersion;
+                    (device as any).bleVersion = fwInfo.bleVersion;
+                  }
+                } catch (e) { /* silently skip */ }
+              }
               return [...prevState, device];
             }
             return prevState;
@@ -235,18 +250,29 @@ export default function useBLE(): BluetoothLowEnergyApi {
       );
 
       // Attempt to read firmware version from standard BLE Device Information Service (180A / 2A26)
-      let firmware = undefined;
-      try {
-        const fwChar = await deviceConnection.readCharacteristicForService(
-          '0000180a-0000-1000-8000-00805f9b34fb',
-          '00002a26-0000-1000-8000-00805f9b34fb'
-        );
-        if (fwChar && fwChar.value) {
-          const rawFw = require('buffer').Buffer.from(fwChar.value, 'base64').toString('ascii');
-          firmware = rawFw.replace(/[^\x20-\x7E]/g, ''); // Clean non-printable chars
+      let firmware: string | undefined;
+
+      // First try: advertisement data already parsed during scan
+      const advFw = (device as any).firmware;
+      if (advFw && typeof advFw === 'string' && advFw.length > 0) {
+        firmware = advFw;
+      }
+
+      // Second try: GATT Device Information Service characteristic
+      if (!firmware) {
+        try {
+          const fwChar = await deviceConnection.readCharacteristicForService(
+            '0000180a-0000-1000-8000-00805f9b34fb',
+            '00002a26-0000-1000-8000-00805f9b34fb'
+          );
+          if (fwChar && fwChar.value) {
+            const rawFw = require('buffer').Buffer.from(fwChar.value, 'base64').toString('ascii');
+            const clean = rawFw.replace(/[^\x20-\x7E]/g, '');
+            if (clean.length > 0) firmware = clean;
+          }
+        } catch (e) {
+          console.log(`[BLE] No standard firmware characteristic for ${device.id}`);
         }
-      } catch (e) {
-        console.log(`[BLE] No standard firmware characteristic for ${device.id}`);
       }
 
       AppLogger.log('DEVICE_CONNECTED', { id: device.id, name: device.name, firmware });
