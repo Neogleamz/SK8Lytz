@@ -155,24 +155,81 @@ class AppLoggerService {
     if (this.buffer.length === 0) return;
 
     try {
-      const jsonStr = await this.exportJSON();
       const deviceId = Device.osInternalBuildId || Device.modelId || 'unknown-device';
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `logs_${deviceId}_${timestamp}.json`;
+      const filename = `logs_${deviceId}.json`;
 
-      // Uploading as a string/Blob to the 'sk8lytz-logs' bucket
+      let mergedLogs = [...this.buffer];
+      let existingStats = null;
+      let existingDevices = [];
+
+      // Attempt to fetch existing cloud file for appending
+      const { data: fileData, error: dlError } = await supabase.storage.from('sk8lytz-logs').download(filename);
+      
+      if (!dlError && fileData) {
+        try {
+          // Native RN safe text extraction
+          const text = await new Promise<string>((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onload = () => resolve(fr.result as string);
+            fr.onerror = reject;
+            fr.readAsText(fileData);
+          });
+          
+          const parsed = JSON.parse(text);
+          if (parsed) {
+            existingStats = parsed.stats || null;
+            existingDevices = parsed.devices || [];
+
+            if (Array.isArray(parsed.logs)) {
+              // Deduplicate logs using timestamp + event fingerprint
+              const logMap = new Map();
+              parsed.logs.forEach((l: any) => logMap.set(l.t + '_' + l.e, l));
+              this.buffer.forEach((l: any) => logMap.set(l.t + '_' + l.e, l));
+              
+              mergedLogs = Array.from(logMap.values()).sort((a: any, b: any) => a.t - b.t);
+              
+              // Prevent critical memory faults on mobile by capping massive files
+              if (mergedLogs.length > 50000) mergedLogs = mergedLogs.slice(-50000);
+            }
+          }
+        } catch (e) {
+           console.warn('[AppLogger] Existing log parser failed, overwriting safely.');
+        }
+      }
+
+      // Re-compile stats for exact current bounds
+      const currentStats = await this.getStats();
+
+      // Deduplicate devices
+      const deviceMap = new Map();
+      existingDevices.forEach((d: any) => deviceMap.set(d.id, d));
+      this.activeDevices.forEach((d: any) => deviceMap.set(d.id, d));
+
+      const mergedPayload = {
+        app: 'SK8Lytz',
+        hostDeviceId: deviceId,
+        exported: new Date().toISOString(),
+        count: mergedLogs.length,
+        stats: { ...existingStats, ...currentStats, totalEvents: mergedLogs.length },
+        devices: Array.from(deviceMap.values()),
+        logs: mergedLogs,
+      };
+
+      const jsonStr = JSON.stringify(mergedPayload, null, 2);
+
+      // Uploading as a string/Blob to the 'sk8lytz-logs' bucket, force upsert
       const { data, error } = await supabase.storage
         .from('sk8lytz-logs')
         .upload(filename, jsonStr, {
           contentType: 'application/json',
-          upsert: false,
+          upsert: true,
         });
 
       if (error) {
         console.error('[AppLogger] Failed to upload logs to Supabase:', error);
         throw new Error(error.message);
       } else {
-        console.log(`[AppLogger] Successfully uploaded logs to Supabase: ${data.path}`);
+        console.log(`[AppLogger] Successfully appended and uploaded logs: ${data.path}`);
       }
     } catch (err) {
       console.error('[AppLogger] Upload exception:', err);
