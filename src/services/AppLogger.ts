@@ -88,10 +88,12 @@ class AppLoggerService {
 
   async exportJSON(): Promise<string> {
     await this.ensureLoaded();
+    const stats = await this.getStats();
     return JSON.stringify({
       app: 'SK8Lytz',
       exported: new Date().toISOString(),
       count: this.buffer.length,
+      stats: stats,
       devices: this.activeDevices,
       logs: this.buffer,
     }, null, 2);

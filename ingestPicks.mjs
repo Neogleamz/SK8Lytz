@@ -17,19 +17,55 @@ async function ingestLogFile(filePath) {
     const sessionId = `import_${Date.now()}`;
     const logs = parsed.logs;
     const devices = parsed.devices || [];
+    const stats = parsed.stats;
     
     if (!logs || !Array.isArray(logs)) {
         console.error('Invalid log format. Expected a "logs" array.');
         return;
     }
 
-    // 1. Process and Upload Devices
+    // 1. Process and Upload Session Stats
+    if (stats) {
+        console.log(`Mapping session statistics for database insertion (Session: ${sessionId})...`);
+        const statsPayload = [{
+            session_id: sessionId,
+            devices_discovered: stats.devicesDiscovered || 0,
+            total_events: stats.totalEvents || 0,
+            storage_bytes_estimate: stats.storageBytesEstimate || 0,
+            average_load_time_ms: stats.averageLoadTimeMs || 0,
+            mode_usage: stats.modeUsage || {},
+            pattern_usage: stats.finalPatternUsage || stats.patternUsage || {},
+            color_usage: stats.colorUsage || {}
+        }];
+
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/parsed_session_stats`, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify(statsPayload)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Stats Supabase Error ${response.status}: ${errorText}`);
+            }
+            console.log(`  ✓ Inserted global session stats.`);
+        } catch (err) {
+            console.error(`❌ Failed inserting session stats:`, err.message);
+        }
+    }
+
+    // 2. Process and Upload Devices
     if (devices.length > 0) {
-        console.log(`Mapping ${devices.length} devices for database insertion (Session: ${sessionId})...`);
+        console.log(`Mapping ${devices.length} devices for database insertion...`);
         const devicePayload = devices.map(d => {
             const hw = d.hardwareSettings || {};
-            // Parse firmware string if we stored it as string, else keep as json
-            const fw = d.manufacturerData || {}; // Fallback mapping depending on how BLE library yields it
+            const fw = d.manufacturerData || {}; 
             return {
                 session_id: sessionId,
                 device_id: d.id,
@@ -63,11 +99,9 @@ async function ingestLogFile(filePath) {
         } catch (err) {
             console.error(`❌ Failed inserting devices:`, err.message);
         }
-    } else {
-        console.log("No devices found in this log export to insert.");
     }
 
-    // 2. Process and Upload Logs
+    // 3. Process and Upload Logs
     console.log(`Mapping ${logs.length} logs for database insertion...`);
 
     const dbPayload = logs.map(item => ({
