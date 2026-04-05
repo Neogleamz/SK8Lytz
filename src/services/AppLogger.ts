@@ -208,8 +208,12 @@ class AppLoggerService {
             if (Array.isArray(parsed.logs)) {
               // Deduplicate logs using timestamp + event fingerprint
               const logMap = new Map();
-              parsed.logs.forEach((l: any) => logMap.set(l.t + '_' + l.e, l));
-              this.buffer.forEach((l: any) => logMap.set(l.t + '_' + l.e, l));
+              parsed.logs.forEach((l: any) => {
+                  if (l.e !== 'RAW_PAYLOAD') logMap.set(l.t + '_' + l.e, l);
+              });
+              this.buffer.forEach((l: any) => {
+                  if (l.e !== 'RAW_PAYLOAD') logMap.set(l.t + '_' + l.e, l);
+              });
               
               mergedLogs = Array.from(logMap.values()).sort((a: any, b: any) => a.t - b.t);
               
