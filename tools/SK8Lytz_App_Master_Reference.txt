@@ -1603,3 +1603,61 @@ This section documents every source file in the SK8Lytz application: what it is,
 
 *Section 21 last updated: April 5, 2026 — Covers all files as of the Enterprise Telemetry Hardening session.*
 
+---
+
+### M. FEATURES ADDED — April 5 2026 Cloud-Sync & Security Session
+
+#### M1. Authentication System Overhaul (src/screens/AuthScreen.tsx)
+- Password complexity: min 8 chars, uppercase, number, special char. Live animated strength bar.
+- HaveIBeenPwned: SHA1 via expo-crypto, k-anonymity API — only first 5 chars sent. Blocks breached passwords.
+- Top-100 bad password blocklist (embedded Set), checked before HIBP call.
+- Magic Link: signInWithOtp() — passwordless email link with confirmation screen.
+- Offline mode button: "Continue Offline" bypasses auth, all BLE works, cloud sync disabled.
+- OAuth: Google / Facebook / Apple via expo-auth-session + signInWithOAuth().
+- Show/Hide password toggle, Forgot password flow, HIBP attribution footer.
+- Username profanity guard via containsProfanity() before signup.
+
+#### M2. Auth Routing (App.tsx)
+- offlineMode state separate from Supabase session; resets on logout.
+- Logout fires supabase.auth.signOut() -> onAuthStateChange -> auto-route to AuthScreen.
+- Props: isOfflineMode + onLogout to DashboardScreen; onOfflineMode to AuthScreen.
+
+#### M3. Scanner/Dashboard UX
+- Username + logout chip moved to top-LEFT, next to ? support icon.
+- Shows: avatar icon + username text + logout icon. Tap = signOut().
+- Offline badge: DashboardScreen accepts isOfflineMode prop, cloud buttons gracefully disabled.
+
+#### M4. Cloud Scenes & CommunityModal (src/components/CommunityModal.tsx, src/services/ScenesService.ts)
+- ScenesService: publishScene, getPublicScenes, getMyScenes, upvoteScene (RPC), downloadScene (RPC), deleteScene.
+- CommunityModal full rewrite: animated LED strip preview (Animated.loop), Community/My Saves tabs, private/public badge, upvote+download stats, Apply + Delete buttons.
+- Public/Private toggle in DockedController cloud save prompt.
+- captureEntireState() serializes full controller state as JSONB.
+
+#### M5. Content Moderation (src/services/AuthUtils.ts)
+- containsProfanity(text): applied to usernames (signup) and scene names (before publish).
+- checkPasswordComplexity(pw): live strength bar + blocking submit.
+- isCommonPassword(pw): top-100 blocklist.
+- checkHIBP(pw): async SHA1 + k-anonymity HIBP API call.
+
+#### M6. Telemetry Fixes (src/services/AppLogger.ts)
+- getHostDeviceInfo(): captures brand, manufacturer, modelName, modelId, deviceType, deviceYearClass, totalMemory, isDevice, osName, osVersion, osBuildId, osInternalBuildId, osBuildFingerprint, platformApiLevel, battery level/state/lowPower.
+- parsed_session_devices fix: DashboardScreen syncs merged connectedDevices+allDevices into AppLogger on every change.
+- parsed_session_stats: upsert now sends all 23+ fields including full host device profile + host_device_info JSONB blob.
+
+#### M7. DB Migrations Applied
+- tools/AddMissingTelemetryColumns.sql: parsed_session_stats (+5), parsed_session_devices (+5)
+- tools/AddHostDeviceTelemetryColumns.sql: parsed_session_stats (+15 device telemetry cols)
+- tools/CloudScenesTable.sql: shared_scenes table + RLS + RPC functions
+
+#### M8. New Files
+- src/services/AuthUtils.ts — password validation, HIBP, top-100, profanity filter
+- src/services/ScenesService.ts — cloud scenes CRUD
+- src/components/CommunityModal.tsx — community browse/apply UI
+- tools/AddMissingTelemetryColumns.sql
+- tools/AddHostDeviceTelemetryColumns.sql
+- tools/CloudScenesTable.sql
+
+*Section M last updated: April 5, 2026*
+
+ — Covers all files as of the Enterprise Telemetry Hardening session.*
+

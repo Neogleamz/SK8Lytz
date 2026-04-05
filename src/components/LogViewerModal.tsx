@@ -381,18 +381,29 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
             <Text style={[styles.emptyText, { color: textMuted }]}>No devices found. Tap START SCAN to begin.</Text>
           )}
 
-          {allDevices?.map((d: any, idx) => (
+          {allDevices?.map((d: any, idx) => {
+             // Merge persisted 0x63 EEPROM results from ng_device_configs
+             // These are written by DashboardScreen after hardware ping queries
+             const cfg = deviceConfigs[d.id] || {};
+             const points   = cfg.points    || d.points    || null;
+             const segments = cfg.segments  || d.segments  || 1;
+             const sorting  = cfg.sorting   || d.sorting   || d.colorSortingName || null;
+             const stripType= cfg.stripType || d.stripType || d.icName           || null;
+             return (
              <View key={d.id || idx} style={[styles.statCard, { backgroundColor: cardBg, borderColor }]}>
-                <Text style={{ color: textPrimary, fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>{d.name || 'Unknown Device'}</Text>
+                <Text style={{ color: textPrimary, fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>{cfg.name || d.name || 'Unknown Device'}</Text>
                 <Text style={{ color: textMuted, fontSize: 13, marginBottom: 8, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>MAC: {d.id}</Text>
                 <StatRow label="Hardware ID" value={d.type || 'Zengge/Triones'} color="#9D4EFF" muted={textMuted} />
-                <StatRow label="Firmware" value={d.firmware || 'Unknown'} color="#00E676" muted={textMuted} />
+                <StatRow label="Firmware" value={d.firmware || cfg.firmware || 'Unknown'} color="#00E676" muted={textMuted} />
                 <StatRow label="RSSI (Signal)" value={d.rssi ? `${d.rssi} dBm` : '?'} color="#FF7000" muted={textMuted} />
-                <StatRow label="Points (LEDs)" value={d.points ? String(d.points) : 'Unknown'} color="#00f0ff" muted={textMuted} />
-                <StatRow label="Segments" value={d.segments ? String(d.segments) : '1'} color="#00f0ff" muted={textMuted} />
-                <StatRow label="Color Order" value={d.sorting || 'Unknown'} color="#FF69B4" muted={textMuted} />
+                <StatRow label="Points (LEDs)" value={points ? String(points) : 'Unknown — connect to read'} color="#00f0ff" muted={textMuted} />
+                <StatRow label="Segments" value={String(segments)} color="#00f0ff" muted={textMuted} />
+                <StatRow label="IC / Strip Type" value={stripType || 'Unknown — connect to read'} color="#FFD700" muted={textMuted} />
+                <StatRow label="Color Order" value={sorting || 'Unknown — connect to read'} color="#FF69B4" muted={textMuted} />
              </View>
-          ))}
+             );
+          })}
+
           <View style={{ height: 40 }} />
         </ScrollView>
       );
