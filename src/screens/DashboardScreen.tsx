@@ -134,8 +134,7 @@ export default function DashboardScreen() {
   const handleLogout = async () => {
      try {
        await supabase.auth.signOut();
-       setAuthUsername(null);
-       Alert.alert('Signed Out', 'You have been safely logged out.');
+       // App.tsx onAuthStateChange will detect session=null and redirect to AuthScreen automatically
      } catch (e) {
        console.error('Logout error:', e);
      }
@@ -1051,15 +1050,6 @@ export default function DashboardScreen() {
       }}>
         {!isActuallyConnected && (
           <View style={{ position: 'absolute', right: 0, top: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + 20, zIndex: 10, flexDirection: 'row', alignItems: 'center' }}>
-            {authUsername && (
-               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginRight: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-                  <MaterialCommunityIcons name="account-circle" size={16} color={Colors.textMuted} style={{ marginRight: 6 }} />
-                  <Text style={{ color: Colors.text, fontSize: 12, fontWeight: 'bold', marginRight: 8 }}>{authUsername}</Text>
-                  <TouchableOpacity onPress={handleLogout}>
-                     <Text style={{ color: Colors.error, fontSize: 10, fontWeight: 'bold' }}>LOGOUT</Text>
-                  </TouchableOpacity>
-               </View>
-            )}
             <TouchableOpacity onPress={toggleTheme} style={{ padding: 10 }}>
               <MaterialCommunityIcons name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} size={22} color={Colors.primary} />
             </TouchableOpacity>
@@ -1105,9 +1095,21 @@ export default function DashboardScreen() {
           {isActuallyConnected && <View style={{ flex: 1 }} />}
 
           {!isActuallyConnected && (
-            <TouchableOpacity style={{ position: 'absolute', left: 0, top: 0, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', zIndex: 100 }} onPress={() => setIsSupportModalVisible(true)}>
-               <MaterialCommunityIcons name="help-circle-outline" size={20} color={Colors.text} />
-            </TouchableOpacity>
+            <View style={{ position: 'absolute', left: 0, top: 0, flexDirection: 'row', alignItems: 'center', gap: 6, zIndex: 100 }}>
+              <TouchableOpacity style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }} onPress={() => setIsSupportModalVisible(true)}>
+                 <MaterialCommunityIcons name="help-circle-outline" size={20} color={Colors.text} />
+              </TouchableOpacity>
+              {authUsername && (
+                <TouchableOpacity
+                  onPress={handleLogout}
+                  style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', gap: 5 }}
+                >
+                  <MaterialCommunityIcons name="account-circle" size={16} color={Colors.textMuted} />
+                  <Text style={{ color: Colors.text, fontSize: 11, fontWeight: 'bold', maxWidth: 80 }} numberOfLines={1}>{authUsername}</Text>
+                  <MaterialCommunityIcons name="logout" size={14} color={Colors.error} />
+                </TouchableOpacity>
+              )}
+            </View>
           )}
 
           {isActuallyConnected && !isTestModeActive && (
