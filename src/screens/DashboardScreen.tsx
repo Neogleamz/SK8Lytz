@@ -1282,10 +1282,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                             await connectToDevices(devicesToConnect);
                             
                             const firstDev = devicesToConnect[0];
-                            const configPoints = (firstDev as any).points || (firstDev.name?.toLowerCase().includes('soul') ? 43 : 16);
-                            const configSorting = (firstDev as any).sorting || 'GRB';
-                            const configStripType = (firstDev as any).stripType || 'WS2812B';
-                            writeToDevice(ZenggeProtocol.setHardwareConfig(configPoints, configSorting, configStripType));
+                            const cfg = deviceConfigs[(firstDev as any).id] || {};
+                            const configPoints   = cfg.points    || (firstDev as any).points    || (firstDev.name?.toLowerCase().includes('soul') ? 43 : 16);
+                            const configSegments = cfg.segments  || (firstDev as any).segments  || 1;
+                            const configSorting  = cfg.sorting   || (firstDev as any).sorting   || 'GRB';
+                            const configStrip    = cfg.stripType || (firstDev as any).stripType || 'WS2812B';
+                            writeToDevice(ZenggeProtocol.writeHardwareSettingsByName(configPoints, configSegments, configStrip, configSorting));
                           }
                         }}
                         onLongPress={() => {

@@ -112,7 +112,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
     onSave(finalSettings);
 
     if (writeToDevice) {
-      writeToDevice(ZenggeProtocol.setHardwareConfig(finalPoints, sorting, stripType, finalSegments));
+      writeToDevice(ZenggeProtocol.writeHardwareSettingsByName(finalPoints, finalSegments, stripType, sorting));
     }
 
     onClose();

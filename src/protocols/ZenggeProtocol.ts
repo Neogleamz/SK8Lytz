@@ -275,15 +275,43 @@ export class ZenggeProtocol {
     const maxMicSeg = Math.floor(HW_CONSTRAINTS.maxMicPxS / safeMicPts);
     const safeMicSegs = Math.max(1, Math.min(maxMicSeg, ms));
 
-    // Big-endian pairs for points and segments
+    // 0x62 write format — mirrors 0x63 response field order (verified vs. APK):
+    //   [0x62][ptsHigh][ptsLow][segHigh][segLow][icType][sorting][micPts][micSegs][0xF0][checksum]
+    //
+    // Points/Segments are big-endian 16-bit pairs.
+    // icType: index from IC_TYPES (1=WS2812B, 2=SM16703, 6=SK6812, etc.)
+    // sorting: index from COLOR_SORTING_RGB (0=RGB, 2=GRB, etc.)
+    //
+    // Compare with 0x63 response inner payload (JSON format):
+    //   [3]=points  [5]=segments  [6]=icType  [7]=sorting
     const pHigh = (safePoints >> 8) & 0xFF;
     const pLow  = safePoints & 0xFF;
     const sHigh = (safeSegments >> 8) & 0xFF;
     const sLow  = safeSegments & 0xFF;
 
-    const raw = [0x62, pHigh, pLow, sHigh, sLow, icType, sorting, safeMicPts, safeMicSegs, 0xF0];
+    const raw = [0x62, pHigh, pLow, sHigh, sLow, icType & 0xFF, sorting & 0xFF, safeMicPts, safeMicSegs, 0xF0];
     raw.push(this.calculateChecksum(raw));
     return this.wrapCommand(raw);
+  }
+
+  /**
+   * Convenience wrapper around writeHardwareSettings that accepts string names.
+   * Resolves IC type and color sorting strings to their protocol indexes.
+   *
+   * @param points    LED point count (1-300)
+   * @param segments  Segment count (clamped automatically)
+   * @param icName    IC type string e.g. 'WS2812B', 'SM16703', 'SK6812'
+   * @param sortingName Color order string e.g. 'GRB', 'RGB', 'BGR'
+   */
+  public static writeHardwareSettingsByName(
+    points: number,
+    segments: number,
+    icName: string,
+    sortingName: string
+  ): number[] {
+    const icTypeIdx = icTypeIndex(icName);
+    const sortingIdx = colorSortingIndex(sortingName);
+    return this.writeHardwareSettings(points, segments, icTypeIdx, sortingIdx);
   }
 
   // ─── FIRMWARE VERSION FROM ADVERTISEMENT DATA ───────────────────────────────
@@ -432,30 +460,13 @@ export class ZenggeProtocol {
   }
 
   /**
-   * @deprecated Use writeHardwareSettings() instead.
-   * Legacy 0x81 command kept for backward compatibility.
+   * @deprecated Use writeHardwareSettingsByName() instead — this uses the OLD 0x81 command
+   * which is NOT recognized by newer firmware (LEDnetWF0200 series).
+   * The correct write command is 0x62 via writeHardwareSettings() / writeHardwareSettingsByName().
    */
   public static setHardwareConfig(points: number, colorOrder: string, stripType: string, segments: number = 1): number[] {
-    const pointsHigh = (points >> 8) & 0xFF;
-    const pointsLow = points & 0xFF;
-    const segmentsByte = segments & 0xFF;
-    let orderByte = 2; // GRB default (0-based index)
-    if (colorOrder === 'RGB') orderByte = 0;
-    else if (colorOrder === 'RBG') orderByte = 1;
-    else if (colorOrder === 'GRB') orderByte = 2;
-    else if (colorOrder === 'GBR') orderByte = 3;
-    else if (colorOrder === 'BRG') orderByte = 4;
-    else if (colorOrder === 'BGR') orderByte = 5;
-    let icByte = 1;
-    if (stripType.includes('WS2812B')) icByte = 1;
-    else if (stripType.includes('SM16703')) icByte = 2;
-    else if (stripType.includes('SM16704')) icByte = 3;
-    else if (stripType.includes('WS2811'))  icByte = 4;
-    else if (stripType.includes('UCS1903')) icByte = 5;
-    else if (stripType.includes('SK6812'))  icByte = 6;
-    const cmd = [0x81, icByte, orderByte, pointsHigh, pointsLow, segmentsByte];
-    const checksum = this.calculateChecksum(cmd);
-    return this.wrapCommand([...cmd, checksum], 0x0A);
+    console.warn('[ZenggeProtocol] setHardwareConfig() is deprecated — use writeHardwareSettingsByName()');
+    return this.writeHardwareSettingsByName(points, segments, stripType, colorOrder);
   }
 
   static queryHardwareConfig(): number[] {
