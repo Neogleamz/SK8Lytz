@@ -126,17 +126,7 @@ export default function DashboardScreen() {
       }
 
       if (configPoints !== undefined && configSorting !== undefined) {
-        console.log('[Dashboard] Intercepted Hardware Sync from', deviceId, '→', configPoints, 'pts,', configSegments, 'seg,', configSorting, `(idx=${configSortingIdx})`);
-        AppLogger.log('HARDWARE_CONFIG_CHANGED', {
-          deviceId,
-          source: '0x63_RESPONSE',
-          points: configPoints,
-          segments: configSegments,
-          sorting: configSorting,
-          sortingIdx: configSortingIdx,
-          stripType: configStripType,
-          icType: configIcType,
-        });
+        // Prevent telemetry flooding by NOT emitting an event for passive continuous Sync packets
         setAllDevices(prev => prev.map(d => {
           if (d.id === deviceId) {
             const newD = { 

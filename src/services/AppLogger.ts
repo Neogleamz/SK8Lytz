@@ -135,6 +135,8 @@ class AppLoggerService {
 
   async clearLogs() {
     this.buffer = [];
+    this.activeDevices = [];
+    this.pendingLogQueue = null;
     await AsyncStorage.removeItem(STORAGE_KEY);
     
     if (supabase) {
