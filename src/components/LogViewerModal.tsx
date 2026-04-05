@@ -82,9 +82,10 @@ interface LogViewerModalProps {
   allDevices?: any[];
   isScanning?: boolean;
   handleScan?: () => void;
+  onClearAll?: () => void;
 }
 
-export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, writeToDevice, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan }: LogViewerModalProps) {
+export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, writeToDevice, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll }: LogViewerModalProps) {
   const { Colors, isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -126,6 +127,7 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
       if (window.confirm('Delete all stored analytics logs?')) {
         await AppLogger.clearLogs();
         load();
+        if (onClearAll) onClearAll();
       }
       return;
     }
@@ -134,7 +136,7 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive',
-        onPress: async () => { await AppLogger.clearLogs(); load(); }
+        onPress: async () => { await AppLogger.clearLogs(); load(); if (onClearAll) onClearAll(); }
       },
     ]);
   };

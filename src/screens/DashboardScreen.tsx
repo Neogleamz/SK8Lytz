@@ -1251,6 +1251,13 @@ export default function DashboardScreen() {
         allDevices={allDevices}
         isScanning={isScanning}
         handleScan={handleScan}
+        onClearAll={() => {
+          setAllDevices([]);
+          if (Platform.OS === 'web') {
+            setMockConnected(false);
+            setMockConnectedDevice(null);
+          }
+        }}
       />
       <Sk8LytzProgrammerModal 
         visible={isProgrammerVisible} 
