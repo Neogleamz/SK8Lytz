@@ -26,8 +26,9 @@ async function ingestParsedLog(parsed, fileName) {
         console.log(`Mapping session statistics for database insertion (Session: ${sessionId})...`);
         const statsPayload = [{
             session_id: sessionId,
+            device_id: bleMac,
             host_device_id: hostDeviceId,
-            ble_mac: bleMac,
+            timestamp_ms: logs.length > 0 ? logs[logs.length - 1].t : Date.now(),
             devices_discovered: stats.devicesDiscovered || 0,
             total_events: stats.totalEvents || 0,
             storage_bytes_estimate: stats.storageBytesEstimate || 0,
@@ -69,8 +70,9 @@ async function ingestParsedLog(parsed, fileName) {
             const fw = d.manufacturerData || {}; 
             return {
                 session_id: sessionId,
-                host_device_id: hostDeviceId,
                 device_id: d.id,
+                timestamp_ms: Date.now(),
+                host_device_id: hostDeviceId,
                 name: d.name,
                 rssi: d.rssi,
                 firmware_ver: d.firmwareVer ? { fw: d.firmwareVer, led: d.ledVersion, ble: d.bleVersion } : fw,
