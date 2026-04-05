@@ -493,12 +493,74 @@ export class ZenggeProtocol {
     return { points, sorting, stripType, segments };
   }
 
-  public static setRfRemoteState(authMode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED', clearRemotes: boolean = false): number[] {
-    let modeByte = 0x03;
-    if (authMode === 'ALLOW_NONE') modeByte = 0x01;
+  // ─── RF REMOTE CONTROL (0x2A) ─────────────────────────────────────────────────
+  // Source: APK reverse engineering — RemoteSettingActivity.java
+  //
+  // Packet structure (inner payload, 15 bytes + checksum):
+  //   [0x2A][modeByte][0xFF][0xFF][0xFF][0xFF][0xFF][clearByte][0x00...][0x0F]
+  //
+  // modeByte:  0x01 = ALLOW_NONE (block all remotes)
+  //            0x02 = ALLOW_PAIRED (only exclusively paired remote)
+  //            0x03 = ALLOW_ALL (any RF remote can control device)
+  //
+  // clearByte: 0x00 = keep existing paired remotes
+  //            0x01 = clear/unpair all paired remotes
+  //
+  // NOTE: Physical pairing requires power-cycle + hold remote button during first
+  // 5 seconds of boot — cannot be triggered over BLE. Only mode changes and
+  // clearing are possible via BLE.
+  //
+  public static setRfRemoteState(
+    authMode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED',
+    clearRemotes: boolean = false
+  ): number[] {
+    let modeByte = 0x03; // ALLOW_ALL default
+    if (authMode === 'ALLOW_NONE')   modeByte = 0x01;
     else if (authMode === 'ALLOW_PAIRED') modeByte = 0x02;
-    const cmd = [0x2A, modeByte, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F];
+
+    const clearByte = clearRemotes ? 0x01 : 0x00;
+    const cmd = [0x2A, modeByte, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, clearByte, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F];
     const checksum = this.calculateChecksum(cmd);
     return this.wrapCommand([...cmd, checksum]);
+  }
+
+  /** Convenience: clear all paired remotes while keeping same auth mode */
+  public static clearRfRemotes(currentMode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED' = 'ALLOW_PAIRED'): number[] {
+    return this.setRfRemoteState(currentMode, true);
+  }
+
+  /** Query current RF remote auth mode — device responds with 0x2B packet */
+  public static queryRfRemoteState(): number[] {
+    const cmd = [0x2B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+    const checksum = this.calculateChecksum(cmd);
+    return this.wrapCommand([...cmd, checksum]);
+  }
+
+  /**
+   * Parses a 0x2B response packet to determine the current RF auth mode.
+   * Inner payload byte[0] = 0x2B, byte[1] = modeByte
+   */
+  public static parseRfRemoteState(payload: number[]): {
+    mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED';
+    modeName: string;
+    pairedCount: number;
+  } | null {
+    // Response is wrapped — locate the 0x2B marker in the inner payload
+    const innerStart = payload.findIndex(b => b === 0x2B);
+    if (innerStart < 0 || innerStart + 1 >= payload.length) return null;
+    const modeByte = payload[innerStart + 1];
+    const pairedCount = payload[innerStart + 2] ?? 0;
+    const modeMap: Record<number, 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED'> = {
+      0x01: 'ALLOW_NONE',
+      0x02: 'ALLOW_PAIRED',
+      0x03: 'ALLOW_ALL',
+    };
+    const mode = modeMap[modeByte] ?? 'ALLOW_ALL';
+    const modeNames: Record<string, string> = {
+      ALLOW_ALL: 'Allow All Remotes',
+      ALLOW_NONE: 'Block All Remotes',
+      ALLOW_PAIRED: 'Paired Remote Only',
+    };
+    return { mode, modeName: modeNames[mode], pairedCount };
   }
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView, Platform, Alert } from 'react-native';
 import { Colors, Typography, Layout } from '../theme/theme';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
@@ -43,6 +43,9 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
   const [segmentsText, setSegmentsText] = useState(initialSettings.segments?.toString() || '1');
   const [stripType, setStripType] = useState(initialSettings.stripType || 'WS2812B');
   const [sorting, setSorting] = useState(initialSettings.sorting || 'GRB');
+  const [rfMode, setRfMode] = useState<'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED'>(
+    (initialSettings as any).rfMode || 'ALLOW_PAIRED'
+  );
 
   // Derived values
   const { deviceName: autoName, groupName: autoGroupName } = deriveNames(type, position);
@@ -76,6 +79,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
       setSegmentsText(initialSettings.segments?.toString() || '1');
       setStripType(initialSettings.stripType || 'WS2812B');
       setSorting(initialSettings.sorting || 'GRB');
+      setRfMode((initialSettings as any).rfMode || 'ALLOW_PAIRED');
     }
   }, [isVisible]);
 
@@ -118,7 +122,36 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
     onClose();
   };
 
+  const handleSetRfMode = (mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED') => {
+    setRfMode(mode);
+    if (writeToDevice) {
+      writeToDevice(ZenggeProtocol.setRfRemoteState(mode, false));
+    }
+  };
 
+  const handleClearRfRemotes = () => {
+    Alert.alert(
+      'Clear Paired Remotes',
+      'This will unpair ALL RF remotes from this device. The remote must be physically re-paired after this. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear Remotes', style: 'destructive',
+          onPress: () => {
+            if (writeToDevice) {
+              writeToDevice(ZenggeProtocol.clearRfRemotes(rfMode));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleQueryRfState = () => {
+    if (writeToDevice) {
+      writeToDevice(ZenggeProtocol.queryRfRemoteState());
+    }
+  };
 
   return (
     <Modal visible={isVisible} animationType="slide" transparent onRequestClose={onClose}>
@@ -233,6 +266,60 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
               </View>
             </View>
 
+            {/* RF REMOTE CONTROL */}
+            <View style={[styles.inputGroup, { marginTop: 8 }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={styles.label}>RF Remote Control</Text>
+                <TouchableOpacity
+                  onPress={handleQueryRfState}
+                  style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(0,240,255,0.3)', backgroundColor: 'rgba(0,240,255,0.06)' }}
+                >
+                  <Text style={{ color: '#00f0ff', fontSize: 10, fontWeight: 'bold' }}>QUERY STATE</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Auth mode selector */}
+              <View style={{ gap: 8, marginBottom: 12 }}>
+                {([
+                  { key: 'ALLOW_PAIRED', label: '🔒 Paired Remote Only', desc: 'Only the exclusively paired remote works', color: '#00e887' },
+                  { key: 'ALLOW_ALL',    label: '🌐 Allow All Remotes',   desc: 'Any RF remote in range can control device', color: '#FFA500' },
+                  { key: 'ALLOW_NONE',   label: '🚫 Block All Remotes',   desc: 'RF remote input fully disabled', color: '#FF3D71' },
+                ] as const).map(({ key, label, desc, color }) => (
+                  <TouchableOpacity
+                    key={key}
+                    onPress={() => handleSetRfMode(key)}
+                    style={[
+                      styles.rfModeBtn,
+                      rfMode === key && { borderColor: color, backgroundColor: `${color}14` },
+                    ]}
+                    activeOpacity={0.75}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      {rfMode === key && (
+                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color,
+                          shadowColor: color, shadowOpacity: 1, shadowRadius: 6, elevation: 4 }} />
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: rfMode === key ? color : Colors.textMuted, fontWeight: '800', fontSize: 13 }}>{label}</Text>
+                        <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>{desc}</Text>
+                      </View>
+                      {rfMode === key && <Text style={{ color: color, fontSize: 11, fontWeight: 'bold' }}>ACTIVE ✓</Text>}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Clear paired remotes — destructive action */}
+              <TouchableOpacity
+                onPress={handleClearRfRemotes}
+                style={styles.clearRemotesBtn}
+                activeOpacity={0.75}
+              >
+                <Text style={{ color: '#FF3D71', fontWeight: '800', fontSize: 13 }}>⚡ Clear Paired Remotes</Text>
+                <Text style={{ color: Colors.textMuted, fontSize: 10, marginTop: 2 }}>Unlinks all paired RF remotes. Re-pair via power-cycle.</Text>
+              </TouchableOpacity>
+            </View>
+
             {/* FIRMWARE (read-only) */}
             <View style={[styles.inputGroup, { marginTop: 4 }]}>
               <Text style={styles.label}>Firmware Version</Text>
@@ -286,4 +373,14 @@ const styles = StyleSheet.create({
   cancelButtonText: { color: Colors.textMuted, fontWeight: 'bold' },
   saveButton: { flex: 2, paddingVertical: 14, alignItems: 'center', borderRadius: 12, backgroundColor: Colors.primary },
   saveButtonText: { color: '#000', fontWeight: 'bold' },
+  rfModeBtn: {
+    padding: 12, borderRadius: 10, borderWidth: 1,
+    borderColor: Colors.surfaceHighlight,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  clearRemotesBtn: {
+    padding: 12, borderRadius: 10, borderWidth: 1,
+    borderColor: 'rgba(255,61,113,0.35)',
+    backgroundColor: 'rgba(255,61,113,0.06)',
+  },
 });
