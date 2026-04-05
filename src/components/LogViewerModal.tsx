@@ -108,9 +108,10 @@ interface LogViewerModalProps {
   handleScan?: () => void;
   onClearAll?: () => void;
   onConnectToDevice?: (device: any) => Promise<any>;
+  liveDeviceConfigs?: Record<string, any>;
 }
 
-export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, writeToDevice, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll, onConnectToDevice }: LogViewerModalProps) {
+export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, writeToDevice, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll, onConnectToDevice, liveDeviceConfigs }: LogViewerModalProps) {
   const { Colors, isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -384,8 +385,8 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
           )}
 
           {allDevices?.map((d: any, idx) => {
-             // Merge persisted 0x63 EEPROM results from ng_device_configs
-             const cfg = deviceConfigs[d.id] || {};
+             // Merge: live prop (reactive, from DashboardScreen state) > local AsyncStorage cache
+             const cfg = { ...(deviceConfigs[d.id] || {}), ...(liveDeviceConfigs?.[d.id] || {}) };
              const points   = cfg.points    || d.points    || null;
              const segments = cfg.segments  || d.segments  || 1;
              const sorting  = cfg.sorting   || d.sorting   || d.colorSortingName || null;
@@ -398,9 +399,8 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
                setConnectingId(d.id);
                try {
                  await onConnectToDevice(d);
-                 // Refresh device configs after connect so hw fields populate
-                 const storedConfigs = await AsyncStorage.getItem('ng_device_configs');
-                 if (storedConfigs) setDeviceConfigs(JSON.parse(storedConfigs) || {});
+                 // liveDeviceConfigs prop will auto-update via DashboardScreen state —
+                 // no need to re-read AsyncStorage here
                } catch (e) { console.warn('Connect failed', e); }
                finally { setConnectingId(null); }
              };

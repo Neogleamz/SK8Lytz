@@ -1490,6 +1490,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           }
         }}
         onConnectToDevice={async (d: any) => { await connectToDevice(d); }}
+        liveDeviceConfigs={deviceConfigs}
       />
       <Sk8LytzProgrammerModal 
         visible={isProgrammerVisible} 
