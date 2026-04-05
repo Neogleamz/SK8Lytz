@@ -16,6 +16,7 @@ import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger } from '../services/AppLogger';
+import { supabase } from '../services/supabaseClient';
 
 const AnimatedIcon = Animated.createAnimatedComponent(MaterialCommunityIcons);
 
@@ -103,6 +104,7 @@ export interface IDeviceState {
 export interface IFavoriteState {
   id: string;
   name: string;
+  customName?: string;
   mode: string;
   color?: string;
   patternId?: number;
@@ -141,7 +143,7 @@ interface Sk8lytzControllerProps {
   onDisconnect?: () => void;
 }
 
-const CURATED_PRESETS: IFavoriteState[] = [];
+// CURATED_PRESETS logic moved to internal component state for Supabase updating
 
 const MarqueeText = ({ children, style }: any) => {
   const [textWidth, setTextWidth] = useState(0);
@@ -533,6 +535,30 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
   const [fixedFgColor, setFixedFgColor] = useState<string>('#00FF00');
   const [fixedBgColor, setFixedBgColor] = useState<string>('#000000');
   const [fixedHue, setFixedHue] = useState<number>(120);
+
+  // -- Curated Presets (SK8Lytz Picks) --
+  const [curatedPresets, setCuratedPresets] = useState<IFavoriteState[]>([]);
+
+  useEffect(() => {
+    const fetchPicks = async () => {
+      try {
+        if (!supabase) return;
+        const { data, error } = await supabase.storage.from('sk8lytz-settings').download('sk8lytz-picks.json');
+        if (error) {
+          console.log('[SK8Lytz Picks] No custom picks config found or accessible:', error.message);
+        } else if (data) {
+          const text = await data.text();
+          const json = JSON.parse(text);
+          if (Array.isArray(json)) {
+            setCuratedPresets(json);
+          }
+        }
+      } catch (e) {
+        console.warn('Exception fetching SK8Lytz Picks', e);
+      }
+    };
+    fetchPicks();
+  }, []);
 
   // -- App Microphone Logic --
   useEffect(() => {
@@ -990,11 +1016,11 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                  })}
               </View>
 
-              <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, marginTop: 4 }]}>OURS</Text>
+              <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, marginTop: 4 }]}>SK8Lytz Picks</Text>
               
               <View style={[styles.presetContainer, { flex: 1 }]}>
-                 {Array.from({ length: 4 }).map((_, idx) => {
-                    const fav = CURATED_PRESETS[idx];
+                 {Array.from({ length: Math.max(4, curatedPresets.length) }).map((_, idx) => {
+                    const fav = curatedPresets[idx];
                     if (!fav) return <View key={`empty-ours-${idx}`} style={[styles.presetCard, { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
                     return (
                       <TouchableOpacity 
@@ -1003,7 +1029,7 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                         onPress={() => loadFavorite(fav)}
                       >
                         <View style={{ width: '100%', minHeight: 20, justifyContent: 'center', alignItems: 'center', marginTop: 2 }}>
-                           <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.name}</MarqueeText>
+                           <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.customName || fav.name}</MarqueeText>
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 2, marginBottom: 4, gap: 4, opacity: 0.8 }}>
                            {fav.mode === 'MUSIC' ? (
@@ -1080,7 +1106,11 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                   {/* SOLID PATTERNS TIER */}
                   {fixedSubMode === 'PATTERN' && (
                   <View style={{ flex: 1, paddingBottom: 6 }}>
-                    <View style={{ flex: 1, backgroundColor: Colors.isDark ? '#000000' : 'rgba(0,0,0,0.04)', borderRadius: 8, padding: 8, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                    <ScrollView 
+                       style={{ flex: 1, backgroundColor: Colors.isDark ? '#000000' : 'rgba(0,0,0,0.04)', borderRadius: 8 }} 
+                       contentContainerStyle={{ padding: 8, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}
+                       showsVerticalScrollIndicator={false}
+                    >
                       {(() => {
                         const fgRgb = (hex: string, alpha: number) => {
                            const h = hex || '#FFFFFF';
@@ -1120,7 +1150,7 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                           <FixedPatternPreviewRow baseDots={pattern.dots} patternId={pattern.id} speed={speed} points={devices?.[0]?.points || points || 16} segments={devices?.[0]?.segments || 1} />
                         </TouchableOpacity>
                       ))}
-                    </View>
+                    </ScrollView>
                   </View>
                   )}
 

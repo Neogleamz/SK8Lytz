@@ -110,16 +110,18 @@ class AppLoggerService {
         .from('sk8lytz-logs')
         .upload(filename, jsonStr, {
           contentType: 'application/json',
-          upsert: true,
+          upsert: false,
         });
 
       if (error) {
         console.error('[AppLogger] Failed to upload logs to Supabase:', error);
+        throw new Error(error.message);
       } else {
         console.log(`[AppLogger] Successfully uploaded logs to Supabase: ${data.path}`);
       }
     } catch (err) {
       console.error('[AppLogger] Upload exception:', err);
+      throw err;
     }
   }
 

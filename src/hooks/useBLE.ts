@@ -191,24 +191,47 @@ export default function useBLE(): BluetoothLowEnergyApi {
         };
 
         if (isMatch) {
-          AppLogger.log('SCAN_FILTER_MATCH', logData);
           setAllDevices((prevState) => {
             if (!isDuplicateDevice(prevState, device)) {
               // Parse firmware from advertisement data during scan — primary source for Zengge
               let advFirmware: string | undefined;
+              let firmwareVer: number | undefined;
+              let ledVersion: number | undefined;
+              let bleVersion: number | undefined;
+              let productId: number | undefined;
               if (manufacturerData) {
                 try {
                   const { ZenggeProtocol } = require('../protocols/ZenggeProtocol');
                   const fwInfo = ZenggeProtocol.parseFirmwareFromAdvertisement(manufacturerData);
                   if (fwInfo) {
                     advFirmware = `v${fwInfo.firmwareVer}.${fwInfo.ledVersion} (BLE ${fwInfo.bleVersion})`;
-                    (device as any).firmware = advFirmware;
-                    (device as any).firmwareVer = fwInfo.firmwareVer;
-                    (device as any).ledVersion = fwInfo.ledVersion;
-                    (device as any).bleVersion = fwInfo.bleVersion;
+                    firmwareVer = fwInfo.firmwareVer;
+                    ledVersion  = fwInfo.ledVersion;
+                    bleVersion  = fwInfo.bleVersion;
+                    productId   = fwInfo.productId;
+                    (device as any).firmware   = advFirmware;
+                    (device as any).firmwareVer = firmwareVer;
+                    (device as any).ledVersion  = ledVersion;
+                    (device as any).bleVersion  = bleVersion;
+                    (device as any).productId   = productId;
                   }
                 } catch (e) { /* silently skip */ }
               }
+              // Log the full discovery event with all available hardware info
+              AppLogger.log('DEVICE_DISCOVERED', {
+                id: device.id,
+                name: device.name || 'Unknown',
+                rssi: device.rssi,
+                isSymphony,
+                isKnownPrefix,
+                hasZenggeService,
+                firmware: advFirmware,
+                firmwareVer,
+                ledVersion,
+                bleVersion,
+                productId,
+                serviceUUIDs: device.serviceUUIDs || [],
+              });
               return [...prevState, device];
             }
             return prevState;

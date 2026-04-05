@@ -1303,3 +1303,8 @@ D. KNOWN CONSTRAINTS & DESIGN DECISIONS
 ## 20. Hardware Synchronization & Points/Segments  
 - Physical Segments: Act as multipliers for standard paths. Applications must bounds clamp raw array payloads matching exactly Math.floor(pts / segments) to prevent overflow tearing across repeating bounds on V2 Symphony hardware.  
 - Color Sorting Constraints: Array generation, music UI mode secondary/primary mapping, and fixed arrays rely natively on ZenggeProtocol.applyColorSorting to enforce user configuration explicitly at payload creation. 
+
+[Dynamic Curated Presets]
+- "SK8Lytz Picks" (formerly "OURS") are dynamically fetched from the Supabase bucket "sk8lytz-logs" on app launch.
+- Filename: sk8lytz-picks.json.
+- Contains an array of IFavoriteState objects for default inclusion in the curated presets list.

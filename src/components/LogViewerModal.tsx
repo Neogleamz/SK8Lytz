@@ -69,15 +69,19 @@ interface LogViewerModalProps {
   writeToDevice?: (data: number[], deviceId?: string) => Promise<void>;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
   connectedDevices?: { id: string, name: string | null }[];
+  allDevices?: any[];
+  isScanning?: boolean;
+  handleScan?: () => void;
 }
 
-export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, writeToDevice, liveRxPayload, connectedDevices }: LogViewerModalProps) {
+export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, writeToDevice, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan }: LogViewerModalProps) {
   const { Colors, isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
   const [isUploading, setIsUploading] = useState(false);
+  const [simpleScannerMode, setSimpleScannerMode] = useState(false);
   
   const load = useCallback(async () => {
     const l = await AppLogger.getLogs();
@@ -311,39 +315,90 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
     );
   };
 
-  const renderAdminTab = () => (
-    <ScrollView style={styles.tabContent}>
-      <Text style={[styles.statSection, { color: textPrimary }]}>🛠️ Admin Tools</Text>
-      <View style={[styles.statCard, { backgroundColor: cardBg, borderColor, padding: 20 }]}>
-        <Text style={{ color: textMuted, fontSize: 13, marginBottom: 16, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
-          Restricted diagnostics payload for low-level protocol debugging.
-        </Text>
-        <TouchableOpacity 
-          style={{ backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: '#ff4040', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
-          onPress={() => {
-            if (onOpenProgrammer) onOpenProgrammer();
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 16, marginRight: 8 }}>⚡</Text>
-            <Text style={{ color: '#ff4040', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch SK8Lytz Programmer</Text>
+  const renderAdminTab = () => {
+    if (simpleScannerMode) {
+      return (
+        <ScrollView style={styles.tabContent}>
+          <TouchableOpacity style={{ marginBottom: 16 }} onPress={() => setSimpleScannerMode(false)}>
+            <Text style={{ color: '#00f0ff', fontSize: 16, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>← Back to Admin Tools</Text>
+          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+             <Text style={[styles.statSection, { color: textPrimary, marginTop: 0, marginBottom: 0 }]}>📡 Simple Scanner</Text>
+             <TouchableOpacity 
+               style={{ backgroundColor: isScanning ? '#555' : '#00E676', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }} 
+               onPress={() => { if (handleScan) handleScan(); }}
+               disabled={isScanning}
+             >
+               <Text style={{ color: '#000', fontWeight: 'bold' }}>{isScanning ? 'SCANNING...' : 'START SCAN'}</Text>
+             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+          
+          {(!allDevices || allDevices.length === 0) && (
+            <Text style={[styles.emptyText, { color: textMuted }]}>No devices found. Tap START SCAN to begin.</Text>
+          )}
 
-        <TouchableOpacity 
-          style={{ backgroundColor: 'rgba(152, 251, 152, 0.1)', borderColor: '#98FB98', borderWidth: 1, paddingVertical: 14, borderRadius: 8 }}
-          onPress={() => {
-            if (onOpenSniffer) onOpenSniffer();
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 16, marginRight: 8 }}>💉</Text>
-            <Text style={{ color: '#98FB98', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch Hardware Tester</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
-  );
+          {allDevices?.map((d: any, idx) => (
+             <View key={d.id || idx} style={[styles.statCard, { backgroundColor: cardBg, borderColor }]}>
+                <Text style={{ color: textPrimary, fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>{d.name || 'Unknown Device'}</Text>
+                <Text style={{ color: textMuted, fontSize: 13, marginBottom: 8, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>MAC: {d.id}</Text>
+                <StatRow label="Hardware ID" value={d.type || 'Zengge/Triones'} color="#9D4EFF" muted={textMuted} />
+                <StatRow label="Firmware" value={d.firmware || 'Unknown'} color="#00E676" muted={textMuted} />
+                <StatRow label="RSSI (Signal)" value={d.rssi ? `${d.rssi} dBm` : '?'} color="#FF7000" muted={textMuted} />
+                <StatRow label="Points (LEDs)" value={d.points ? String(d.points) : 'Unknown'} color="#00f0ff" muted={textMuted} />
+                <StatRow label="Segments" value={d.segments ? String(d.segments) : '1'} color="#00f0ff" muted={textMuted} />
+                <StatRow label="Color Order" value={d.sorting || 'Unknown'} color="#FF69B4" muted={textMuted} />
+             </View>
+          ))}
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      );
+    }
+
+    return (
+      <ScrollView style={styles.tabContent}>
+        <Text style={[styles.statSection, { color: textPrimary }]}>🛠️ Admin Tools</Text>
+        <View style={[styles.statCard, { backgroundColor: cardBg, borderColor, padding: 20 }]}>
+          <Text style={{ color: textMuted, fontSize: 13, marginBottom: 16, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+            Restricted diagnostics payload for low-level protocol debugging.
+          </Text>
+
+          <TouchableOpacity 
+            style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: '#00f0ff', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
+            onPress={() => setSimpleScannerMode(true)}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>📡</Text>
+              <Text style={{ color: '#00f0ff', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch Simple Scanner</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={{ backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: '#ff4040', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
+            onPress={() => {
+              if (onOpenProgrammer) onOpenProgrammer();
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>⚡</Text>
+              <Text style={{ color: '#ff4040', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch SK8Lytz Programmer</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={{ backgroundColor: 'rgba(152, 251, 152, 0.1)', borderColor: '#98FB98', borderWidth: 1, paddingVertical: 14, borderRadius: 8 }}
+            onPress={() => {
+              if (onOpenSniffer) onOpenSniffer();
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>💉</Text>
+              <Text style={{ color: '#98FB98', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch Hardware Tester</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
+  };
 
   const timelineLogs = logs.filter(l => l.e !== 'RAW_PAYLOAD');
 
