@@ -545,16 +545,23 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
         if (!supabase) return;
         const { data, error } = await supabase.storage.from('sk8lytz-settings').download('sk8lytz-picks.json');
         if (error) {
-          console.log('[SK8Lytz Picks] No custom picks config found or accessible:', error.message);
+          console.warn('[SK8Lytz Picks] No custom picks config found or accessible:', error.message);
         } else if (data) {
-          const text = await data.text();
+          const text = await new Promise<string>((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onload = () => resolve(fr.result as string);
+            fr.onerror = reject;
+            fr.readAsText(data);
+          });
           const json = JSON.parse(text);
           if (Array.isArray(json)) {
             setCuratedPresets(json);
+          } else {
+            console.warn('[SK8Lytz Picks] Fetched config is not an array.');
           }
         }
       } catch (e) {
-        console.warn('Exception fetching SK8Lytz Picks', e);
+        console.warn('[SK8Lytz Picks] Exception fetching', e);
       }
     };
     fetchPicks();
