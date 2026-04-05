@@ -1697,3 +1697,77 @@ Simple Scanner reads `allDevices` = raw BLE scan results. Hardware fields only a
 `CONNECT tap` → `connectToDevice(device)` (useBLE) → BLE GATT connect → char subscribe → 0x63 ping write → 0x63 notification parsed → DashboardScreen writes to `ng_device_configs` → LogViewerModal re-reads `ng_device_configs` → card updates with real values
 
 *Section N last updated: April 5, 2026*
+
+================================================================================
+*** CRITICAL BLE FINDINGS � VERIFIED 2026-04-05 ***
+================================================================================
+
+## BLE CHARACTERISTIC SPLIT (FF01 WRITE / FF02 NOTIFY)
+
+The Zengge GATT service (0000ffff-0000-1000-8000-00805f9b34fb) has TWO characteristics:
+
+  FF01 = 0000ff01-...  WRITE ONLY  � App sends commands to device
+  FF02 = 0000ff02-...  NOTIFY ONLY � Device sends ALL responses back to app
+
+ROOT BUG (FIXED 2026-04-05): useBLE.ts was monitoring FF01 for notifications.
+No notifications were ever triggered. Fixed: now monitors FF02 in connectToDevice
+and connectToDevices.
+
+Code: src/protocols/ZenggeProtocol.ts exports ZENGGE_CHARACTERISTIC_UUID (FF01)
+      and ZENGGE_NOTIFY_UUID (FF02).
+      src/hooks/useBLE.ts monitorCharacteristicForService uses ZENGGE_NOTIFY_UUID.
+
+================================================================================
+
+## JSON-OVER-BLE RESPONSE FORMAT (LEDnetWF0200-series Firmware)
+
+Device notifications on FF02 are NOT raw binary. They use a JSON wrapper:
+
+  [8-byte outer BLE frame][ASCII JSON: {"code":0,"payload":"<hex string>"}]
+
+  Outer frame example: 04 XX 80 00 00 2D 2E 0A
+  JSON example: {"code":0,"payload":"0063000B000201020B0280"}
+  code=0 means success. payload is hex-encoded inner binary response.
+
+Parser: ZenggeProtocol.parseHardwareSettingsResponse() detects JSON via 0x7B 0x22
+        prefix, decodes inner hex string to bytes, then maps fields.
+
+================================================================================
+
+## 0x63 HARDWARE SETTINGS RESPONSE � VERIFIED FIELD MAP
+
+Inner payload bytes (verified against Zengge app ground truth, device 808F):
+  Hex:  00  63  00  0B  00  02  01  02  0B  02  80
+  Idx: [0] [1] [2] [3] [4] [5] [6] [7] [8] [9] [10]
+
+  [3] = 0x0B = 11 ? POINTS (LED count)          ? (verified: 11 points)
+  [5] = 0x02 = 2  ? SEGMENTS                    ? (verified: 2 segments)
+  [6] = 0x01 = 1  ? IC TYPE (1=WS2812B)         ? (verified: WS2812B)
+  [7] = 0x02 = 2  ? COLOR SORTING (2=GRB)       ? (verified: GRB)
+  [8] = micPoints (mirrors points)
+  [9] = micSegments (mirrors segments)
+  [10] = 0x80 = additional flags (not yet decoded)
+
+IC_TYPES: 0=WS2811, 1=WS2812B, 2=SM16703, 3=SM16704, 4=WS2811,
+          5=UCS1903, 6=SK6812, 11=WS2812E
+COLOR_SORTING: 0=RGB, 1=RBG, 2=GRB, 3=GBR, 4=BRG, 5=BGR
+
+================================================================================
+
+## HARDWARE SETTINGS DATA FLOW (post-fix)
+
+BLE FF02 notification
+  ? useBLE.ts handleNotification (base64 decode ? byte array)
+  ? DashboardScreen.onDataReceived
+  ? ZenggeProtocol.parseHardwareSettingsResponse (JSON unwrap + field map)
+  ? setAllDevices (updates points/segments/sorting/icType on device object)
+  ? setDeviceConfigs (persists to AsyncStorage keyed by device ID)
+  ? displayConnectedDevices memo (merges deviceConfigs into connected devices)
+  ? DockedController hwSettings prop (activeHwSettings memo)
+  ? ProductVisualizer devices prop (points/segments/sorting used for LED sim)
+  ? DeviceSettingsModal initialSettings (reads from deviceConfigs first)
+
+KEY FIX: displayConnectedDevices now merges deviceConfigs so ProductVisualizer
+receives sorting/points/segments on real hardware path (previously missed).
+
+================================================================================

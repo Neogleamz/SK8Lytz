@@ -697,7 +697,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
 
   const displayConnectedDevices = useMemo(() => {
-    if (!mockConnected) return connectedDevices;
+    if (!mockConnected) {
+      // Real hardware path — enrich each connected BLE device with its parsed hardware config
+      // (points, segments, sorting, icType, etc.) from deviceConfigs populated by 0x63 BLE response
+      return connectedDevices.map(d => {
+        const cfg = deviceConfigs[(d as any).id] || {};
+        return { ...d, ...cfg };
+      });
+    }
 
     // In Browser Demo / Mock mode, we pull the actual device objects from allDevices 
     // to ensure settings like 'points' are reflected after being edited.
@@ -713,7 +720,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     const singleId = mockConnectedDevice || 'sim-soul-1';
     const single = allDevices.find(d => d.id === singleId);
     return single ? [{ ...single, grouped: false, points: (single as any).points || (single.name?.toLowerCase().includes('soul') ? 43 : 16) }] : [];
-  }, [mockConnected, mockConnectedDevice, mockConnectedGroup, allDevices, connectedDevices, updateTrigger, customGroups]);
+  }, [mockConnected, mockConnectedDevice, mockConnectedGroup, allDevices, connectedDevices, updateTrigger, customGroups, deviceConfigs]);
 
   const isActuallyConnected = displayConnectedDevices.length > 0;
   const isGrouped = displayConnectedDevices.length > 1 && displayConnectedDevices.every(d => (d as any).grouped);
