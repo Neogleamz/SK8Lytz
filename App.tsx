@@ -17,10 +17,11 @@ function AppContent() {
   const { Colors, isDark } = useTheme();
   const [session, setSession] = useState<Session | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
+  const [offlineMode, setOfflineMode] = useState(false);
 
   useEffect(() => {
     if (!supabase) {
-      console.warn('[SK8Lytz] Supabase is not configured. Falling back to offline-only mode.');
+      console.warn('[SK8Lytz] Supabase not configured — offline-only mode.');
       setSessionLoaded(true);
       return;
     }
@@ -32,6 +33,8 @@ function AppContent() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setSession(session);
+      // If session is cleared (logout), also exit offline mode
+      if (!session) setOfflineMode(false);
     });
 
     return () => subscription.unsubscribe();
@@ -39,13 +42,18 @@ function AppContent() {
 
   if (!sessionLoaded) return null;
 
+  const isAuthenticated = (session && session.user) || !supabase || offlineMode;
+
   return (
     <View style={[styles.container, { backgroundColor: Colors.background }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      {(session && session.user) || !supabase ? (
-        <DashboardScreen />
+      {isAuthenticated ? (
+        <DashboardScreen isOfflineMode={offlineMode} onLogout={() => setOfflineMode(false)} />
       ) : (
-        <AuthScreen onAuthSuccess={() => {}} />
+        <AuthScreen
+          onAuthSuccess={() => {/* session change auto-handles via onAuthStateChange */}}
+          onOfflineMode={() => setOfflineMode(true)}
+        />
       )}
     </View>
   );
@@ -62,22 +70,17 @@ export default function App() {
     if (fontsLoaded) {
       SplashScreen.hideAsync().catch(() => {});
       AppLogger.log('APP_OPENED', { loadTimeMs: Date.now() - appStartTime });
-      // Upload logs when app is fully opened
       AppLogger.uploadLogsToSupabase();
     }
   }, [fontsLoaded]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
-      // Trigger upload when app is minimized or backgrounded (effectively "closed" from the user's perspective)
       if (nextAppState === 'background' || nextAppState === 'inactive') {
         AppLogger.uploadLogsToSupabase();
       }
     });
-
-    return () => {
-      subscription.remove();
-    };
+    return () => subscription.remove();
   }, []);
 
   if (!fontsLoaded) return null;
@@ -90,7 +93,5 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
 });

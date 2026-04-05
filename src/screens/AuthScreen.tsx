@@ -20,7 +20,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
 
-export default function AuthScreen({ onAuthSuccess }: { onAuthSuccess: () => void }) {
+export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuccess: () => void; onOfflineMode?: () => void }) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
 
@@ -353,6 +353,17 @@ export default function AuthScreen({ onAuthSuccess }: { onAuthSuccess: () => voi
           </View>
         )}
 
+        {/* Offline mode option */}
+        {(mode === 'LOGIN' || mode === 'MAGIC_LINK') && onOfflineMode && (
+          <TouchableOpacity
+            onPress={onOfflineMode}
+            style={styles.offlineButton}
+          >
+            <Text style={styles.offlineButtonText}>📵 Continue Offline</Text>
+            <Text style={styles.offlineButtonSub}>No account needed · Cloud sync disabled</Text>
+          </TouchableOpacity>
+        )}
+
         {/* HIBP attribution */}
         {mode === 'SIGNUP' && (
           <Text style={{ color: Colors.textMuted, fontSize: 10, textAlign: 'center', marginTop: 8, paddingHorizontal: 24 }}>
@@ -424,4 +435,15 @@ const createStyles = (Colors: any) => StyleSheet.create({
     borderColor: Colors.surfaceHighlight,
   },
   oauthButtonText: { color: Colors.text, fontWeight: 'bold', fontSize: 13 },
+  offlineButton: {
+    alignItems: 'center',
+    marginTop: 20,
+    paddingVertical: 14,
+    borderRadius: Layout.borderRadius,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  offlineButtonText: { color: Colors.textMuted, fontSize: 14, fontWeight: '600', marginBottom: 3 },
+  offlineButtonSub: { color: Colors.textMuted, fontSize: 11, opacity: 0.7 },
 });

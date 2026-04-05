@@ -52,7 +52,7 @@ interface DeviceSettings {
   groupName?: string;
 }
 
-export default function DashboardScreen() {
+export default function DashboardScreen({ isOfflineMode = false, onLogout }: { isOfflineMode?: boolean; onLogout?: () => void } = {}) {
   const { Colors, isDark, toggleTheme } = useTheme();
   const styles = createStyles(Colors);
   const {
@@ -71,6 +71,14 @@ export default function DashboardScreen() {
     setOnDataReceived,
     droppedOutDeviceIds
   } = useBLE();
+
+  // Sync connected+discovered devices into AppLogger whenever they change
+  // so that parsed_session_devices has fresh data at upload time
+  useEffect(() => {
+    const merged = [...connectedDevices];
+    allDevices.forEach(d => { if (!merged.find(c => c.id === d.id)) merged.push(d); });
+    AppLogger.updateKnownDevices(merged);
+  }, [connectedDevices, allDevices]);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);

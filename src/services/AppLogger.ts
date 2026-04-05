@@ -294,7 +294,7 @@ class AppLoggerService {
           const sessionId = this.sessionId;
           const currentRunLogs = [...this.buffer].filter(l => l.e !== 'RAW_PAYLOAD');
           
-          // 1. Session Stats
+          // 1. Session Stats — full field set
           await supabase.from('parsed_session_stats').upsert([{
             session_id: sessionId,
             device_id: primaryMacRaw,
@@ -303,9 +303,14 @@ class AppLoggerService {
             devices_discovered: currentStats.devicesDiscovered || 0,
             total_events: currentRunLogs.length || 0,
             storage_bytes_estimate: currentStats.storageBytesEstimate || 0,
+            total_storage_estimate: currentStats.totalStorageEstimate || 0,
             average_load_time_ms: currentStats.averageLoadTimeMs || 0,
+            last_app_opened_time: currentStats.lastAppOpenedTime || 0,
+            primary_ble_mac: currentStats.primaryBleMac || primaryMacRaw,
             battery_level: currentStats.batteryLevel || -1,
-            is_low_power_mode: currentStats.isLowPowerMode || false
+            is_low_power_mode: currentStats.isLowPowerMode || false,
+            mode_usage: currentStats.modeUsage || {},
+            color_usage: currentStats.colorUsage || {},
           }], { onConflict: 'session_id' });
 
           // Extract Custom Hardware Names from ng_device_configs (keyed by device MAC)
