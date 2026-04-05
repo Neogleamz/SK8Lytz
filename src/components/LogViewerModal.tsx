@@ -107,9 +107,10 @@ interface LogViewerModalProps {
   isScanning?: boolean;
   handleScan?: () => void;
   onClearAll?: () => void;
+  onConnectToDevice?: (device: any) => Promise<any>;
 }
 
-export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, writeToDevice, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll }: LogViewerModalProps) {
+export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, writeToDevice, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll, onConnectToDevice }: LogViewerModalProps) {
   const { Colors, isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -118,6 +119,7 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
   const [isUploading, setIsUploading] = useState(false);
   const [simpleScannerMode, setSimpleScannerMode] = useState(false);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
+  const [connectingId, setConnectingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (visible) AppLogger.log('SCREEN_OPENED', { screenName: 'Analytics' });
@@ -389,14 +391,27 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
              const sorting  = cfg.sorting   || d.sorting   || d.colorSortingName || null;
              const stripType= cfg.stripType || d.stripType || d.icName           || null;
              const isConn   = connectedDevices?.some(c => c.id === d.id);
+             const isConnecting = connectingId === d.id;
+
+             const handleConnect = async () => {
+               if (!onConnectToDevice || isConnecting || isConn) return;
+               setConnectingId(d.id);
+               try {
+                 await onConnectToDevice(d);
+                 // Refresh device configs after connect so hw fields populate
+                 const storedConfigs = await AsyncStorage.getItem('ng_device_configs');
+                 if (storedConfigs) setDeviceConfigs(JSON.parse(storedConfigs) || {});
+               } catch (e) { console.warn('Connect failed', e); }
+               finally { setConnectingId(null); }
+             };
              return (
              <View key={d.id || idx} style={[styles.statCard, { backgroundColor: cardBg, borderColor }]}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                   <Text style={{ color: textPrimary, fontWeight: 'bold', fontSize: 15, flex: 1 }} numberOfLines={1}>{cfg.name || d.name || 'Unknown Device'}</Text>
                   {isConn
                     ? <Text style={{ color: '#00E676', fontSize: 11, fontWeight: '700', marginLeft: 8 }}>● CONNECTED</Text>
-                    : <TouchableOpacity onPress={onClose} style={{ backgroundColor: '#9D4EFF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 4, marginLeft: 8 }}>
-                        <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '700' }}>CONNECT</Text>
+                    : <TouchableOpacity onPress={handleConnect} disabled={isConnecting} style={{ backgroundColor: isConnecting ? '#555' : '#9D4EFF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 4, marginLeft: 8 }}>
+                        <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '700' }}>{isConnecting ? 'CONNECTING...' : 'CONNECT'}</Text>
                       </TouchableOpacity>
                   }
                 </View>

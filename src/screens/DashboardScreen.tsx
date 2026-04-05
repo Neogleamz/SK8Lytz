@@ -1489,6 +1489,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             setMockConnectedDevice(null);
           }
         }}
+        onConnectToDevice={async (d: any) => { await connectToDevice(d); }}
       />
       <Sk8LytzProgrammerModal 
         visible={isProgrammerVisible} 
