@@ -155,7 +155,8 @@ class AppLoggerService {
     if (this.buffer.length === 0) return;
 
     try {
-      const deviceId = Device.osInternalBuildId || Device.modelId || 'unknown-device';
+      const rawId = Device.osInternalBuildId || Device.modelId || 'unknown-device';
+      const deviceId = rawId.replace(/[^a-zA-Z0-9_-]/g, '_');
       const filename = `logs_${deviceId}.json`;
 
       let mergedLogs = [...this.buffer];
