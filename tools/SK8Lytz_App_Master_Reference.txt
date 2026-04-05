@@ -1661,3 +1661,39 @@ This section documents every source file in the SK8Lytz application: what it is,
 
  — Covers all files as of the Enterprise Telemetry Hardening session.*
 
+
+---
+
+### N. HARDWARE SETTINGS RETRIEVAL FLOW (0x63 EEPROM Protocol)
+
+#### How All Hardware Settings Are Retrieved At Once
+
+The Zengge/Triones controller exposes all hardware configuration (LED points, segments, IC type, color order, etc.) via a single **0x63 EEPROM query** — a BLE write that triggers a notification response packed with all hardware values.
+
+**Trigger Command (sent by app after BLE connect):**
+Written to the WRITE characteristic during DashboardScreen connection.
+
+**Parsed Response Fields (via ZenggeProtocol.parseHardwareSettings):**
+- `ledPoints` — Total LED count (bytes 8-9, 16-bit LE)
+- `segments` — Number of independent segments
+- `icType` — Internal IC code (e.g. 1 = WS2812B, 2 = SK6812, 3 = APA102)
+- `icName` — Human-readable strip type string
+- `colorSorting` — Color order index (0=RGB, 1=RBG, 2=GRB, 3=GBR, 4=BRG, 5=BGR)
+- `colorSortingName` — Human-readable color order string (e.g. "GRB")
+- `firmware` — Firmware version parsed from advertisement on discovery
+
+**Storage After Ping:**
+Results are merged into `ng_device_configs` in AsyncStorage, keyed by device MAC:
+`{ points, segments, icType, icName, sorting, stripType, colorSortingName, firmware }`
+
+**Why Simple Scanner Shows Dashes Before Connect:**
+Simple Scanner reads `allDevices` = raw BLE scan results. Hardware fields only arrive after connecting and receiving the 0x63 notification. The scanner now:
+1. Checks `ng_device_configs[device.id]` for cached values from previous sessions
+2. If cached: shows real values immediately
+3. If no cache: shows "— connect" and provides a CONNECT button
+4. After CONNECT: calls `connectToDevice(d)` inline, then re-reads `ng_device_configs` to refresh the card live
+
+**Simple Scanner CONNECT Flow:**
+`CONNECT tap` → `connectToDevice(device)` (useBLE) → BLE GATT connect → char subscribe → 0x63 ping write → 0x63 notification parsed → DashboardScreen writes to `ng_device_configs` → LogViewerModal re-reads `ng_device_configs` → card updates with real values
+
+*Section N last updated: April 5, 2026*
