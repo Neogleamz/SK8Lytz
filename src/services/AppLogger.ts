@@ -319,16 +319,21 @@ class AppLoggerService {
           const CHUNK = 1000;
           for (let i = 0; i < mergedLogs.length; i += CHUNK) {
              const chunk = mergedLogs.slice(i, i + CHUNK);
-             const dbLogPayload = chunk.map((item: any) => ({
-                session_id: sessionId,
-                host_device_id: deviceId,
-                timestamp_ms: item.t,
-                event_type: item.e,
-                direction: item.d?.dir || null,
-                hex_payload: item.d?.hex || null,
-                device_id: item.d?.deviceId || null,
-                raw_data: item.d || {} 
-             }));
+             const dbLogPayload = chunk.map((item: any) => {
+                const isGroup = item.d?.target === 'group' || (item.d?.deviceIds && item.d.deviceIds.length > 1);
+                return {
+                  session_id: sessionId,
+                  host_device_id: deviceId,
+                  timestamp_ms: item.t,
+                  event_type: item.e,
+                  direction: item.d?.dir || null,
+                  hex_payload: item.d?.hex || null,
+                  device_id: item.d?.deviceId || null,
+                  group_id: isGroup ? item.d?.deviceIds?.join('_') : null,
+                  group_name: isGroup ? `Group (${item.d?.groupSize || item.d?.deviceIds?.length} Devices)` : null,
+                  raw_data: item.d || {} 
+                };
+             });
              await supabase.from('parsed_logs').insert(dbLogPayload);
           }
           

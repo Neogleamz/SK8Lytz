@@ -583,42 +583,48 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
   // -- Analytics Logging --
   const logTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
+  const deviceContext = React.useMemo(() => {
+    if (!devices || devices.length === 0) return { target: 'none' };
+    if (devices.length === 1) return { target: 'device', deviceId: devices[0].id };
+    return { target: 'group', deviceIds: devices.map(d => d.id), groupSize: devices.length };
+  }, [devices]);
+
   // Mode change logger
   useEffect(() => {
-    AppLogger.log('MODE_CHANGED', { mode: activeMode });
-  }, [activeMode]);
+    AppLogger.log('MODE_CHANGED', { mode: activeMode, ...deviceContext });
+  }, [activeMode, deviceContext]);
 
-  // Pattern change logger (PRESETS mode)
   useEffect(() => {
     const name = getRbmPatternName(selectedPatternId);
     AppLogger.log('PATTERN_CHANGED', { 
       pattern: `ID:${selectedPatternId}`, 
       name,
       mode: activeMode,
-      color: selectedColor 
+      color: selectedColor,
+      ...deviceContext
     });
-  }, [selectedPatternId]);
+  }, [selectedPatternId, deviceContext]);
 
   // Color change logger
   useEffect(() => {
-    AppLogger.log('COLOR_CHANGED', { hex: selectedColor });
-  }, [selectedColor]);
+    AppLogger.log('COLOR_CHANGED', { hex: selectedColor, ...deviceContext });
+  }, [selectedColor, deviceContext]);
 
   // Brightness change logger (debounced 600ms)
   useEffect(() => {
     clearTimeout(logTimers.current['brightness']);
     logTimers.current['brightness'] = setTimeout(() => {
-      AppLogger.log('BRIGHTNESS_CHANGED', { value: brightness, mode: activeMode });
+      AppLogger.log('BRIGHTNESS_CHANGED', { value: brightness, mode: activeMode, ...deviceContext });
     }, 600);
-  }, [brightness]);
+  }, [brightness, activeMode, deviceContext]);
 
   // Speed change logger (debounced 600ms)
   useEffect(() => {
     clearTimeout(logTimers.current['speed']);
     logTimers.current['speed'] = setTimeout(() => {
-      AppLogger.log('SPEED_CHANGED', { value: speed, mode: activeMode });
+      AppLogger.log('SPEED_CHANGED', { value: speed, mode: activeMode, ...deviceContext });
     }, 600);
-  }, [speed]);
+  }, [speed, activeMode, deviceContext]);
 
   const startRecording = async () => {
     try {
