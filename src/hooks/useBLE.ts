@@ -16,7 +16,7 @@
  * Logs: DEVICE_DISCOVERED, DEVICE_CONNECTED, BLE_CONNECTION_ERROR, BLE_WRITE_ERROR, PERFORMANCE_METRIC
  * Platform: React Native Android / Web (web returns no-op stubs)
  */
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import * as ExpoDevice from 'expo-device';
@@ -47,6 +47,8 @@ interface BluetoothLowEnergyApi {
   isBluetoothEnabled: boolean;
   onDataReceived?: (deviceId: string, data: number[]) => void;
   setOnDataReceived: (callback: (deviceId: string, data: number[]) => void) => void;
+  droppedOutDeviceIds: string[];
+  setDroppedOutDeviceIds: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 export default function useBLE(): BluetoothLowEnergyApi {
@@ -61,6 +63,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const [isBluetoothSupported, setIsBluetoothSupported] = useState(Platform.OS !== 'web');
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState(Platform.OS === 'web');
   const [dataReceivedCallback, setDataReceivedCallback] = useState<((deviceId: string, data: number[]) => void) | undefined>();
+  const [droppedOutDeviceIds, setDroppedOutDeviceIds] = useState<string[]>([]);
+  const disconnectListeners = useRef<Record<string, import('react-native-ble-plx').Subscription>>({});
 
   useEffect(() => {
     AppLogger.updateKnownDevices(allDevices);
@@ -286,6 +290,19 @@ export default function useBLE(): BluetoothLowEnergyApi {
       setConnectedDevices([deviceConnection]);
       await deviceConnection.discoverAllServicesAndCharacteristics();
       
+      // Register dropout listener
+      if (disconnectListeners.current[device.id]) disconnectListeners.current[device.id].remove();
+      disconnectListeners.current[device.id] = bleManager.onDeviceDisconnected(device.id, (error: any, d: any) => {
+        console.warn(`[BLE] Device dropout detected for ${device.id}`);
+        AppLogger.log('DEVICE_DISCONNECTED', { id: device.id, reason: 'dropout', error: error?.message });
+        setDroppedOutDeviceIds(prev => [...prev, device.id]);
+        setConnectedDevices(prev => prev.filter(c => c.id !== device.id));
+        if (disconnectListeners.current[device.id]) {
+          disconnectListeners.current[device.id].remove();
+          delete disconnectListeners.current[device.id];
+        }
+      });
+      
       const latencyMs = Date.now() - connectStartTime;
       AppLogger.log('PERFORMANCE_METRIC', { metricName: 'BLE_Auth_Latency', value: latencyMs, unit: 'ms', deviceId: device.id });
       
@@ -355,6 +372,19 @@ export default function useBLE(): BluetoothLowEnergyApi {
           connections.push(conn);
           await conn.discoverAllServicesAndCharacteristics();
           
+          // Register dropout listener
+          if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
+          disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any, d: any) => {
+            console.warn(`[BLE] Device dropout detected for ${conn.id} in group`);
+            AppLogger.log('DEVICE_DISCONNECTED', { id: conn.id, reason: 'dropout', context: 'group', error: error?.message });
+            setDroppedOutDeviceIds(prev => [...prev, conn.id]);
+            setConnectedDevices(prev => prev.filter(c => c.id !== conn.id));
+            if (disconnectListeners.current[conn.id]) {
+              disconnectListeners.current[conn.id].remove();
+              delete disconnectListeners.current[conn.id];
+            }
+          });
+
           // Monitor
           conn.monitorCharacteristicForService(
             ZENGGE_SERVICE_UUID,
@@ -411,20 +441,40 @@ export default function useBLE(): BluetoothLowEnergyApi {
         console.warn(`Target device ${targetDeviceId} not found in connected devices`);
       }
 
-      await Promise.all(targets.map(device => 
+      const writePromises = targets.map(device => 
         device.writeCharacteristicWithoutResponseForService(
           ZENGGE_SERVICE_UUID,
           ZENGGE_CHARACTERISTIC_UUID,
           base64Payload
-        )
-      ));
+        ).catch((writeError: any) => {
+          console.warn(`Write failed specifically for ${device.id}`, writeError);
+          AppLogger.log('BLE_WRITE_ERROR', { error: writeError?.message || String(writeError), target: device.id, payloadHex: hexString });
+          return { error: writeError, failedId: device.id };
+        })
+      );
+
+      const results = await Promise.all(writePromises);
+      
+      // If any writes failed while the device is theoretically connected, we log it.
+      // E.g., device moved far away or just lost connection suddenly.
+      const failures = results.filter(r => r && (r as any).error);
+      if (failures.length > 0) {
+        console.warn(`[BLE] Silent write failures on: ${failures.map(f => (f as any).failedId).join(', ')}`);
+        // We could also proactively trigger a disconnect/dropout here if we wanted.
+      }
     } catch (e: any) {
-      console.warn('Write failed', e);
-      AppLogger.log('BLE_WRITE_ERROR', { error: e?.message || String(e), target: targetDeviceId, payloadHex: payload.map(x => x.toString(16).padStart(2, '0')).join(' ') });
+      console.warn('Fatal Write catch', e);
+      AppLogger.log('BLE_WRITE_ERROR', { error: e?.message || String(e), target: targetDeviceId, payloadHex: hexString });
     }
   };
 
   const disconnectFromDevice = () => {
+    // Clean up all physical listeners
+    Object.values(disconnectListeners.current).forEach(sub => {
+      try { sub.remove(); } catch (e) {}
+    });
+    disconnectListeners.current = {};
+
     const staleDevices = [...connectedDevices];
     setConnectedDevices([]);
 
@@ -454,6 +504,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
     isBluetoothEnabled,
     onDataReceived: dataReceivedCallback,
     setOnDataReceived: (callback: (deviceId: string, data: number[]) => void) => setDataReceivedCallback(() => callback),
+    droppedOutDeviceIds,
+    setDroppedOutDeviceIds,
   }), [
     allDevices, 
     connectedDevices, 
@@ -461,6 +513,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
     isBluetoothSupported, 
     isBluetoothEnabled, 
     dataReceivedCallback,
-    setDataReceivedCallback
+    setDataReceivedCallback,
+    droppedOutDeviceIds,
+    setDroppedOutDeviceIds
   ]);
 }

@@ -21,7 +21,7 @@
  * Platform: React Native (Android + Web)
  */
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar, Dimensions, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar, Dimensions, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus, Alert } from 'react-native';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import DeviceItem from '../components/DeviceItem';
@@ -38,6 +38,7 @@ import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
 import LogViewerModal from '../components/LogViewerModal';
 import AdminHardwareTester from '../components/AdminHardwareTester';
+import { supabase } from '../services/supabaseClient';
 
 interface DeviceSettings {
   name: string;
@@ -67,7 +68,8 @@ export default function DashboardScreen() {
     isBluetoothSupported,
     isBluetoothEnabled,
     requestPermissions,
-    setOnDataReceived
+    setOnDataReceived,
+    droppedOutDeviceIds
   } = useBLE();
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -114,6 +116,105 @@ export default function DashboardScreen() {
       subscription.remove();
     };
   }, []);
+
+  // Drop-out UI Alert
+  useEffect(() => {
+    if (droppedOutDeviceIds.length > 0) {
+      Alert.alert(
+        'Device Disconnected', 
+        `Hardware dropout detected. Connection has been lost to a skate.`,
+        [{ text: 'OK' }]
+      );
+    }
+  }, [droppedOutDeviceIds]);
+
+  // Cloud Sync & Auto Connect on Launch
+  const hasAutoConnectedRef = useRef(false);
+  useEffect(() => {
+    async function syncCloudAndAutoConnect() {
+      if (hasAutoConnectedRef.current || !isBluetoothSupported || !isBluetoothEnabled) return;
+      hasAutoConnectedRef.current = true; // Prevent looping
+
+      let groupsToProcess: any[] = [];
+      let isOffline = true;
+      let CloudUserId: string | null = null;
+
+      if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          CloudUserId = session.user.id;
+          const { data: groups, error } = await supabase.from('registered_groups').select('*').eq('user_id', CloudUserId).catch(() => ({ data: null, error: true }));
+          isOffline = !!error;
+          if (!error && groups && groups.length > 0) {
+            groupsToProcess = groups;
+          }
+        }
+      }
+
+      if (isOffline || groupsToProcess.length === 0) {
+        // Fallback to local storage
+        console.log('[SK8Lytz] Cloud unreachable. Using local AsyncStorage for Auto-Connect...');
+        const localGroupsStr = await AsyncStorage.getItem('ng_custom_groups');
+        if (localGroupsStr) {
+          try {
+            const parsed = JSON.parse(localGroupsStr);
+            groupsToProcess = parsed.map((g: any) => ({
+              id: g.id,
+              group_name: g.name,
+              created_at: new Date().toISOString(),
+              deviceIds: g.deviceIds
+            }));
+          } catch (e) {}
+        }
+      }
+
+      if (groupsToProcess.length > 0) {
+        console.log('[SK8Lytz] Found fleets. Initiating Auto-Connect Sequence...');
+        requestPermissions().then((granted) => {
+          if (granted && !isActuallyConnected) {
+            scanForPeripherals();
+            const waitTime = Math.max(5000, Platform.OS === 'web' ? 5000 : 7000);
+            setTimeout(async () => {
+              const currentScannedIds = allDevicesRef.current.map(d => d.id);
+              let presentGroups: any[] = [];
+              let idsToConnect: string[] = [];
+
+              if (!isOffline && supabase && CloudUserId) {
+                 const { data: devices } = await supabase.from('registered_devices').select('*').eq('user_id', CloudUserId);
+                 if (devices) {
+                    presentGroups = groupsToProcess.filter((g: any) => {
+                       const groupDevices = devices.filter((d: any) => d.group_id === g.id);
+                       return groupDevices.length > 0 && groupDevices.every((d: any) => currentScannedIds.includes(d.id));
+                    }).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                    
+                    if (presentGroups.length > 0) {
+                      idsToConnect = devices.filter((d: any) => d.group_id === presentGroups[0].id).map((d: any) => d.id);
+                    }
+                 }
+              } else {
+                 presentGroups = groupsToProcess.filter((g: any) => {
+                    return g.deviceIds && g.deviceIds.length > 0 && g.deviceIds.every((id: string) => currentScannedIds.includes(id));
+                 });
+                 if (presentGroups.length > 0) {
+                    idsToConnect = presentGroups[0].deviceIds;
+                 }
+              }
+
+              if (idsToConnect.length > 0) {
+                console.log('[SK8Lytz] Auto-connecting to fleet:', presentGroups[0].group_name);
+                const devicesToConnect = allDevicesRef.current.filter(d => idsToConnect.includes(d.id));
+                connectToDevices(devicesToConnect);
+              }
+            }, waitTime);
+          }
+        });
+      }
+    }
+    
+    // Slight delay to allow Bluetooth stack to fully initialize (1.5s)
+    const timerId = setTimeout(syncCloudAndAutoConnect, 1500);
+    return () => clearTimeout(timerId);
+  }, [isBluetoothSupported, isBluetoothEnabled]);
 
   // Bind BLE Notification Hardware Sync Hook
   useEffect(() => {
@@ -475,6 +576,46 @@ export default function DashboardScreen() {
     if (didUpdateGroups) {
       customGroupsRef.current = updatedGroups;
       setCustomGroups(updatedGroups);
+    }
+    
+    // Sync to Supabase if authenticated
+    if ((didUpdateGroups || didUpdateConfigs) && supabase) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && session.user) {
+          const userId = session.user.id;
+          
+          for (const group of updatedGroups) {
+            // Upsert Group
+            await supabase.from('registered_groups').upsert({
+              id: group.id,
+              user_id: userId,
+              group_name: group.name,
+              type: group.type,
+              created_at: new Date().toISOString()
+            }, { onConflict: 'id' }).catch(() => {});
+            
+            // Upsert Devices in Group
+            for (const deviceId of group.deviceIds) {
+              const c = configs[deviceId];
+              if (c) {
+                await supabase.from('registered_devices').upsert({
+                  id: deviceId,
+                  user_id: userId,
+                  group_id: group.id,
+                  custom_name: c.name || 'Unknown',
+                  points: c.points || 0,
+                  segments: c.segments || 0,
+                  sorting: c.sorting || 'GRB',
+                  strip_type: c.stripType || 'UNKNOWN'
+                }, { onConflict: 'id' }).catch(() => {});
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Supabase sync error during provisioning:', e);
+      }
     }
     
     if (didUpdateConfigs) {
@@ -1210,12 +1351,37 @@ export default function DashboardScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.groupButton, { backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: Colors.secondary, borderWidth: 1, marginBottom: 24, paddingVertical: 12 }]}
+                style={[styles.groupButton, { backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: Colors.secondary, borderWidth: 1, marginBottom: 16, paddingVertical: 12 }]}
                 onPress={() => Linking.openURL('https://neogleamz.com/pages/contact')}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <MaterialCommunityIcons name="email-fast" size={20} color={Colors.secondary} style={{ marginRight: 8 }} />
                   <Text style={[styles.groupButtonText, { color: Colors.secondary, fontSize: 14 }]}>Support Form</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.groupButton, { backgroundColor: 'rgba(255, 0, 0, 0.1)', borderColor: Colors.error, borderWidth: 1, marginBottom: 24, paddingVertical: 12 }]}
+                onPress={async () => {
+                  if (Platform.OS === 'web') {
+                      if (window.confirm("Are you sure you want to log out of your SK8Lytz account?")) {
+                          await supabase.auth.signOut();
+                          setIsSupportModalVisible(false);
+                      }
+                  } else {
+                      Alert.alert("Log Out", "Are you sure you want to log out of your SK8Lytz account?", [
+                        { text: "Cancel", style: "cancel" },
+                        { text: "Log Out", style: "destructive", onPress: async () => {
+                            await supabase.auth.signOut();
+                            setIsSupportModalVisible(false);
+                        }}
+                      ]);
+                  }
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <MaterialCommunityIcons name="logout" size={20} color={Colors.error} style={{ marginRight: 8 }} />
+                  <Text style={[styles.groupButtonText, { color: Colors.error, fontSize: 14 }]}>Log Out</Text>
                 </View>
               </TouchableOpacity>
 

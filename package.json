@@ -16,10 +16,12 @@
     "@supabase/supabase-js": "^2.100.0",
     "buffer": "^6.0.3",
     "expo": "~55.0.8",
+    "expo-auth-session": "~55.0.12",
     "expo-av": "^16.0.8",
     "expo-battery": "^55.0.11",
     "expo-build-properties": "^55.0.10",
     "expo-camera": "~55.0.10",
+    "expo-crypto": "~55.0.12",
     "expo-dev-client": "~55.0.18",
     "expo-device": "~55.0.10",
     "expo-font": "^55.0.4",
@@ -33,6 +35,7 @@
     "react-native": "0.83.2",
     "react-native-ble-plx": "^3.5.1",
     "react-native-svg": "15.15.3",
+    "react-native-url-polyfill": "^3.0.0",
     "react-native-web": "^0.21.2"
   },
   "devDependencies": {

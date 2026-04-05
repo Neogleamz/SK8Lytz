@@ -60,8 +60,9 @@ SK8Lytz implements the **Zengge V2 BLE Protocol** (Magic Home / LEDnetWF / Symph
 Supported IC types: WS2812B, SM16703, SM16704, WS2811, UCS1903, SK6812, and more.
 
 **Default hardware profiles:**
+
 - **HALOZ** — 16 LEDs, WS2812B, GRB color order (wheel/frame ring)
-- **SOULZ** — 43 LEDs, SM16703, GRB color order (boot/sole strip)
+- **SOULZ** — 43 LEDs, WS2812B order (boot/sole strip)
 
 ---
 
@@ -107,6 +108,7 @@ SK8Lytz/
 ```
 
 ### Requirements
+
 - Node.js 18+
 - Android SDK (API 31+)
 - ADB connected device with USB debugging enabled
