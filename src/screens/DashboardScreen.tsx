@@ -1171,20 +1171,53 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           {isActuallyConnected && <View style={{ flex: 1 }} />}
 
           {!isActuallyConnected && (
-            <View style={{ position: 'absolute', left: 0, top: 0, flexDirection: 'row', alignItems: 'center', gap: 6, zIndex: 100 }}>
-              <TouchableOpacity style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }} onPress={() => setIsSupportModalVisible(true)}>
-                 <MaterialCommunityIcons name="help-circle-outline" size={20} color={Colors.text} />
+            <View style={{ position: 'absolute', left: 0, top: 0, flexDirection: 'row', alignItems: 'center', gap: 8, zIndex: 100 }}>
+              {/* Help button */}
+              <TouchableOpacity
+                style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}
+                onPress={() => setIsSupportModalVisible(true)}
+              >
+                <MaterialCommunityIcons name="help-circle-outline" size={20} color={Colors.textMuted} />
               </TouchableOpacity>
-              {authUsername && (
-                <TouchableOpacity
-                  onPress={handleLogout}
-                  style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', gap: 5 }}
-                >
-                  <MaterialCommunityIcons name="account-circle" size={16} color={Colors.textMuted} />
-                  <Text style={{ color: Colors.text, fontSize: 11, fontWeight: 'bold', maxWidth: 80 }} numberOfLines={1}>{authUsername}</Text>
-                  <MaterialCommunityIcons name="logout" size={14} color={Colors.error} />
-                </TouchableOpacity>
-              )}
+
+              {/* Username + Online/Offline status pill */}
+              <TouchableOpacity
+                onPress={handleLogout}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: isOfflineMode ? 'rgba(255,170,0,0.35)' : 'rgba(0,240,255,0.25)',
+                  backgroundColor: isOfflineMode ? 'rgba(255,170,0,0.08)' : 'rgba(0,240,255,0.06)',
+                  gap: 6,
+                }}
+              >
+                {/* Status dot */}
+                <View style={{
+                  width: 7, height: 7, borderRadius: 4,
+                  backgroundColor: isOfflineMode ? '#FFA500' : Colors.success,
+                  shadowColor: isOfflineMode ? '#FFA500' : Colors.success,
+                  shadowOpacity: 0.8, shadowRadius: 4, elevation: 2,
+                }} />
+                {/* Username */}
+                <Text style={{ color: Colors.text, fontSize: 12, fontWeight: '700', maxWidth: 90 }} numberOfLines={1}>
+                  {authUsername || 'Skater'}
+                </Text>
+                {/* Mode badge */}
+                <View style={{
+                  paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6,
+                  backgroundColor: isOfflineMode ? 'rgba(255,170,0,0.2)' : 'rgba(0,200,100,0.2)',
+                }}>
+                  <Text style={{ fontSize: 9, fontWeight: '900', letterSpacing: 0.5, color: isOfflineMode ? '#FFA500' : Colors.success }}>
+                    {isOfflineMode ? 'OFFLINE' : 'ONLINE'}
+                  </Text>
+                </View>
+                {/* Logout icon */}
+                <MaterialCommunityIcons name="logout" size={13} color={Colors.error} style={{ opacity: 0.8 }} />
+              </TouchableOpacity>
             </View>
           )}
 
@@ -1245,6 +1278,25 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                          isScanning={isScanning} 
                          onPress={handleScan}
                       />
+                      {/* Probing indicator — shows after scan while BLE probe runs */}
+                      {isScanProbing && !isScanning && (
+                        <View style={{
+                          position: 'absolute', bottom: 12,
+                          flexDirection: 'row', alignItems: 'center', gap: 8,
+                          backgroundColor: 'rgba(0,240,255,0.08)',
+                          paddingHorizontal: 16, paddingVertical: 8,
+                          borderRadius: 20, borderWidth: 1,
+                          borderColor: 'rgba(0,240,255,0.3)',
+                        }}>
+                          <ActivityIndicator size="small" color={Colors.primary} />
+                          <Text style={{ color: Colors.primary, fontSize: 12, fontWeight: '700', letterSpacing: 0.5 }}>
+                            Probing hardware...
+                          </Text>
+                          <Text style={{ color: Colors.textMuted, fontSize: 10 }}>
+                            {allDevices.length} device{allDevices.length !== 1 ? 's' : ''}
+                          </Text>
+                        </View>
+                      )}
                   </View>
                 ) : null}
                 </View>
@@ -1577,8 +1629,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         }}
         allDevices={allDevices}
         deviceConfigs={deviceConfigs}
-        connectToDevice={connectToDevice}
-        disconnectFromDevice={disconnectFromDevice}
+        connectToDevice={async (d: any) => { await connectToDevice(d); }}
+        disconnectFromDevice={async (_id: string) => { disconnectFromDevice(); }}
         writeToDevice={writeToDevice}
         isScanning={isScanning}
         handleScan={scanForPeripherals}
