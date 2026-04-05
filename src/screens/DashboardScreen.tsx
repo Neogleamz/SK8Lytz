@@ -1275,28 +1275,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   <View style={{ height: 380, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 5, width: '100%' }}>
                       <ScannerAnimation 
                          deviceCount={allDevices.length} 
-                         isScanning={isScanning} 
+                         isScanning={isScanning}
+                         isScanProbing={isScanProbing}
                          onPress={handleScan}
                       />
-                      {/* Probing indicator — shows after scan while BLE probe runs */}
-                      {isScanProbing && !isScanning && (
-                        <View style={{
-                          position: 'absolute', bottom: 12,
-                          flexDirection: 'row', alignItems: 'center', gap: 8,
-                          backgroundColor: 'rgba(0,240,255,0.08)',
-                          paddingHorizontal: 16, paddingVertical: 8,
-                          borderRadius: 20, borderWidth: 1,
-                          borderColor: 'rgba(0,240,255,0.3)',
-                        }}>
-                          <ActivityIndicator size="small" color={Colors.primary} />
-                          <Text style={{ color: Colors.primary, fontSize: 12, fontWeight: '700', letterSpacing: 0.5 }}>
-                            Probing hardware...
-                          </Text>
-                          <Text style={{ color: Colors.textMuted, fontSize: 10 }}>
-                            {allDevices.length} device{allDevices.length !== 1 ? 's' : ''}
-                          </Text>
-                        </View>
-                      )}
                   </View>
                 ) : null}
                 </View>
@@ -1521,30 +1503,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.groupButton, { backgroundColor: 'rgba(255, 0, 0, 0.1)', borderColor: Colors.error, borderWidth: 1, marginBottom: 24, paddingVertical: 12 }]}
-                onPress={async () => {
-                  if (Platform.OS === 'web') {
-                      if (window.confirm("Are you sure you want to log out of your SK8Lytz account?")) {
-                          await supabase.auth.signOut();
-                          setIsSupportModalVisible(false);
-                      }
-                  } else {
-                      Alert.alert("Log Out", "Are you sure you want to log out of your SK8Lytz account?", [
-                        { text: "Cancel", style: "cancel" },
-                        { text: "Log Out", style: "destructive", onPress: async () => {
-                            await supabase.auth.signOut();
-                            setIsSupportModalVisible(false);
-                        }}
-                      ]);
-                  }
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialCommunityIcons name="logout" size={20} color={Colors.error} style={{ marginRight: 8 }} />
-                  <Text style={[styles.groupButtonText, { color: Colors.error, fontSize: 14 }]}>Log Out</Text>
-                </View>
-              </TouchableOpacity>
+
 
               <TouchableOpacity
                 style={{ paddingVertical: 12, alignItems: 'center' }}
@@ -1633,6 +1592,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         disconnectFromDevice={async (_id: string) => { disconnectFromDevice(); }}
         writeToDevice={writeToDevice}
         isScanning={isScanning}
+        isScanProbing={isScanProbing}
         handleScan={scanForPeripherals}
       />
       <AdminHardwareTester 
@@ -1644,6 +1604,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         allDevices={allDevices}
         connectedDevices={connectedDevices as any[]}
         isScanning={isScanning}
+        isScanProbing={isScanProbing}
         handleScan={scanForPeripherals}
         connectToDevice={async (d: any) => { await connectToDevice(d); }}
         handleDisconnect={disconnectFromDevice}

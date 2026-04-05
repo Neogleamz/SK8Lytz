@@ -36,6 +36,7 @@ interface Sk8LytzProgrammerModalProps {
   disconnectFromDevice?: (id: string) => Promise<void>;
   writeToDevice: (data: number[], deviceId?: string) => Promise<void>;
   isScanning: boolean;
+  isScanProbing?: boolean;
   handleScan: () => void;
 }
 
@@ -52,7 +53,7 @@ export default function Sk8LytzProgrammerModal({
   visible, onClose, onExitToLogs, allDevices,
   deviceConfigs = {},
   connectToDevice, disconnectFromDevice,
-  writeToDevice, isScanning, handleScan
+  writeToDevice, isScanning, isScanProbing = false, handleScan
 }: Sk8LytzProgrammerModalProps) {
   const { Colors, isDark } = useTheme();
 
@@ -345,8 +346,10 @@ export default function Sk8LytzProgrammerModal({
           <View style={[s.row, { marginBottom: 12, paddingHorizontal: 4 }]}>
              <Text style={{ color: txtPri, fontWeight: 'bold', fontSize: 16 }}>Broadcast Targets</Text>
              <View style={s.row}>
-                <TouchableOpacity onPress={handleScan} style={{ marginRight: 16 }}>
-                    <Text style={{ color: cyan, fontSize: 12, fontWeight: 'bold' }}>{isScanning ? 'SCANNING...' : 'SCAN'}</Text>
+                <TouchableOpacity onPress={handleScan} disabled={isScanning || isScanProbing} style={{ marginRight: 16 }}>
+                    <Text style={{ color: isScanning ? cyan : isScanProbing ? '#a855f7' : cyan, fontSize: 12, fontWeight: 'bold' }}>
+                      {isScanning ? 'SCANNING...' : isScanProbing ? 'PROBING...' : 'SCAN'}
+                    </Text>
                 </TouchableOpacity>
                 {scannedDevices.length > 0 && (
                   <TouchableOpacity onPress={toggleSelectAll}>

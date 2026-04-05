@@ -7,6 +7,7 @@ import { Typography } from '../theme/theme';
 interface ScannerAnimationProps {
   deviceCount: number;
   isScanning: boolean;
+  isScanProbing?: boolean;
   onPress?: () => void;
 }
 
@@ -15,8 +16,9 @@ const MAX_RADIUS = 280; // Extended boundary past standard screen widths
 const BASE_RADIUS = 25;
 const DOTS_PER_RING = 32;
 
-export default function ScannerAnimation({ deviceCount, isScanning, onPress }: ScannerAnimationProps) {
+export default function ScannerAnimation({ deviceCount, isScanning, isScanProbing = false, onPress }: ScannerAnimationProps) {
   const { Colors } = useTheme();
+  const isActive = isScanning || isScanProbing; // unified active state
   
   // Pulse animations: Each value goes from 0 to 1 (center to edge)
   const pulseAnims = useRef(Array.from({ length: PULSE_COUNT }).map(() => new Animated.Value(0))).current;
@@ -93,7 +95,7 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
     shimmerAnim.stopAnimation();
     shimmerAnim.setValue(0);
 
-    const pulseDuration = isScanning ? 1200 : 8000;
+    const pulseDuration = isActive ? 1200 : 8000;
     const staggerDelay = pulseDuration / PULSE_COUNT;
 
     const animations = pulseAnims.map((anim, i) => {
@@ -114,7 +116,7 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
     const rotateAnimLoop = Animated.loop(
       Animated.timing(rotateAnim, {
         toValue: 1,
-        duration: isScanning ? 3500 : 8000,
+        duration: isActive ? 3500 : 8000,
         easing: Easing.linear,
         useNativeDriver: true,
       })
@@ -124,13 +126,13 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
       Animated.sequence([
         Animated.timing(shimmerAnim, { 
           toValue: 1, 
-          duration: isScanning ? 150 : 800, 
+          duration: isActive ? 150 : 800, 
           easing: Easing.inOut(Easing.quad), 
           useNativeDriver: true 
         }),
         Animated.timing(shimmerAnim, { 
           toValue: 0, 
-          duration: isScanning ? 150 : 800, 
+          duration: isActive ? 150 : 800, 
           easing: Easing.inOut(Easing.quad), 
           useNativeDriver: true 
         }),
@@ -146,7 +148,7 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
       shimmerAnim.stopAnimation();
       rotateAnim.stopAnimation();
     };
-  }, [isScanning]);
+  }, [isActive]);
 
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],
@@ -167,7 +169,7 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
       outputRange: [0, 0.8, 0.5, 0]
     });
 
-    const ringsArray = isScanning ? staticActiveRings : staticIdleRings;
+    const ringsArray = isActive ? staticActiveRings : staticIdleRings;
 
     return (
       <Animated.View
@@ -217,8 +219,8 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
         {/* Sonar Rainbow Pulses */}
         {pulseAnims.map((anim, i) => renderRainbowRingContainer(anim, i))}
 
-        {/* Sonar Sweep Arm */}
-        {isScanning && (
+        {/* Sonar Sweep Arm — active during scan AND probe */}
+        {isActive && (
           <Animated.View 
             style={[
               styles.sweep, 
@@ -233,7 +235,7 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
         <TouchableOpacity 
           activeOpacity={0.7} 
           onPress={onPress} 
-          disabled={isScanning}
+          disabled={isActive}
           style={styles.centralButtonWrapper}
         >
           <Animated.View 
@@ -242,19 +244,19 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
               { 
                 backgroundColor: '#FFFFFF',
                 transform: [{ scale: detectionAnim.interpolate({ inputRange:[0,1], outputRange:[1, 1.4] }) }],
-                borderColor: isScanning 
+                borderColor: isActive 
                   ? shimmerAnim.interpolate({ inputRange:[0,1], outputRange:['#00f0ff', '#80faff'] }) 
                   : 'rgba(0,0,0,0.05)',
-                borderWidth: isScanning ? 4 : 1,
-                shadowColor: isScanning ? '#00f0ff' : '#000000',
-                shadowRadius: isScanning 
+                borderWidth: isActive ? 4 : 1,
+                shadowColor: isActive ? (isScanProbing ? '#a855f7' : '#00f0ff') : '#000000',
+                shadowRadius: isActive 
                   ? shimmerAnim.interpolate({ inputRange:[0,1], outputRange:[25, 45] }) 
                   : 12,
-                shadowOpacity: isScanning ? 0.9 : 0.2,
+                shadowOpacity: isActive ? 0.9 : 0.2,
               }
             ]}
           >
-            {isScanning ? (
+            {isActive ? (
               <View style={{ alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
                 <Image 
                   source={require('../../assets/favicon.png')} 
@@ -300,8 +302,8 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
           </Animated.View>
         </TouchableOpacity>
 
-        {/* Detected Controller "Blips" */}
-        {isScanning && Array.from({ length: Math.min(deviceCount, 8) }).map((_, i) => {
+        {/* Detected Controller "Blips" — show during scan and probe */}
+        {isActive && Array.from({ length: Math.min(deviceCount, 8) }).map((_, i) => {
            const angle = (i * 137.5) * Math.PI / 180; // Golden angle
            const r = 20 + (i * 6);
            return (
@@ -321,14 +323,23 @@ export default function ScannerAnimation({ deviceCount, isScanning, onPress }: S
              />
            );
         })}
-        {/* Inline status text inside the rings */}
+        {/* Inline status text — unified scan + probe phases */}
         <View style={styles.inlineStatus} pointerEvents="none">
-          <Text style={[Typography.title, { color: Colors.primary, textAlign: 'center', fontWeight: 'bold', fontSize: 12 }]}>
-            {isScanning ? (deviceCount > 0 ? `PAIRED (${deviceCount})` : 'SEARCHING...') : 'TAP TO DISCOVER'}
+          <Text style={[Typography.title, { color: isScanProbing ? '#a855f7' : Colors.primary, textAlign: 'center', fontWeight: 'bold', fontSize: 12 }]}>
+            {isScanning
+              ? (deviceCount > 0 ? `FOUND (${deviceCount})` : 'SEARCHING...')
+              : isScanProbing
+                ? (deviceCount > 0 ? `FOUND (${deviceCount})` : 'PROBING...')
+                : 'TAP TO DISCOVER'}
           </Text>
           {isScanning && (
             <Text style={[Typography.caption, { color: Colors.textMuted, marginTop: 2, letterSpacing: 1.5, fontSize: 10 }]}>
               DETECTING SK8LYTZ STRIPS
+            </Text>
+          )}
+          {isScanProbing && !isScanning && (
+            <Text style={[Typography.caption, { color: '#a855f7', marginTop: 2, letterSpacing: 1.5, fontSize: 10 }]}>
+              PROBING HARDWARE...
             </Text>
           )}
         </View>

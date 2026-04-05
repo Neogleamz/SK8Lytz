@@ -26,6 +26,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ZenggeProtocol, IC_TYPES, COLOR_SORTING_RGB } from '../protocols/ZenggeProtocol';
 import CustomSlider from './CustomSlider';
+import ScannerAnimation from './ScannerAnimation';
 
 interface AdminHardwareTesterProps {
   visible: boolean;
@@ -35,6 +36,7 @@ interface AdminHardwareTesterProps {
   connectedDevices?: { id: string, name: string | null }[];
   allDevices?: any[];
   isScanning?: boolean;
+  isScanProbing?: boolean;
   handleScan?: () => void;
   connectToDevice?: (item: any) => Promise<void>;
   handleDisconnect?: () => void;
@@ -44,7 +46,7 @@ type TabType = 'SNIFFER' | 'FACTORY' | 'CONFIG';
 
 export default function AdminHardwareTester({ 
   visible, onClose, writeToDevice, liveRxPayload, connectedDevices = [],
-  allDevices = [], isScanning = false, handleScan, connectToDevice, handleDisconnect 
+  allDevices = [], isScanning = false, isScanProbing = false, handleScan, connectToDevice, handleDisconnect 
 }: AdminHardwareTesterProps) {
   
   const [activeTab, setActiveTab] = useState<TabType>('SNIFFER');
@@ -246,40 +248,43 @@ export default function AdminHardwareTester({
              <MaterialCommunityIcons name={isDeviceMenuExpanded ? "chevron-up" : "radar"} size={14} color="#00ccff" />
           </TouchableOpacity>
        </View>
-       {isDeviceMenuExpanded && (
-          <View style={{ backgroundColor: '#1A1A1A', borderRadius: 8, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#333' }}>
-             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-               <Text style={{ color: '#aaa', fontSize: 12 }}>Discoverable BLE Nodes</Text>
-               <TouchableOpacity onPress={handleScan} style={{ backgroundColor: '#007AFF', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16, flexDirection: 'row', alignItems: 'center' }}>
-                 {isScanning && <ActivityIndicator size="small" color="#FFF" style={{ marginRight: 6 }} />}
-                 <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 11 }}>{isScanning ? "SCANNING..." : "SCAN"}</Text>
-               </TouchableOpacity>
-             </View>
-             <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled>
-               {allDevices.length === 0 && <Text style={{ color: '#666', fontSize: 11 }}>No un-connected devices found.</Text>}
-               {allDevices.map((d, i) => {
-                 const isConn = connectedDevices.find(c => c.id === d.id);
-                 return (
-                   <View key={i} style={styles.deviceScanRow}>
-                     <View>
-                       <Text style={{ color: '#FFF', fontSize: 13, fontWeight: 'bold' }}>{d.name || 'Unknown Device'}</Text>
-                       <Text style={{ color: '#888', fontSize: 10 }}>{d.id}</Text>
-                     </View>
-                     {isConn ? (
-                       <TouchableOpacity onPress={handleDisconnect} style={{ backgroundColor: '#ff4040', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}>
-                         <Text style={{ color: '#FFF', fontSize: 10, fontWeight: 'bold' }}>DISCONNECT</Text>
-                       </TouchableOpacity>
-                     ) : (
-                       <TouchableOpacity onPress={() => connectToDevice && connectToDevice(d)} style={{ backgroundColor: '#00ff80', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}>
-                         <Text style={{ color: '#000', fontSize: 10, fontWeight: 'bold' }}>CONNECT</Text>
-                       </TouchableOpacity>
-                     )}
+     {isDeviceMenuExpanded && (
+        <View style={{ backgroundColor: '#0A0A0A', borderRadius: 12, padding: 0, marginBottom: 12, borderWidth: 1, borderColor: '#222', overflow: 'hidden' }}>
+           {/* Scanner Animation — same as main dashboard */}
+           <View style={{ alignItems: 'center', paddingVertical: 8, backgroundColor: '#0D0D0D', borderBottomWidth: 1, borderBottomColor: '#1a1a1a' }}>
+             <ScannerAnimation
+               deviceCount={allDevices.length}
+               isScanning={isScanning}
+               isScanProbing={isScanProbing}
+               onPress={handleScan}
+             />
+           </View>
+           {/* Device list */}
+           <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled>
+             {allDevices.length === 0 && <Text style={{ color: '#666', fontSize: 11, padding: 12 }}>No devices found. Tap the scanner above.</Text>}
+             {allDevices.map((d, i) => {
+               const isConn = connectedDevices.find(c => c.id === d.id);
+               return (
+                 <View key={i} style={styles.deviceScanRow}>
+                   <View>
+                     <Text style={{ color: '#FFF', fontSize: 13, fontWeight: 'bold' }}>{d.name || 'Unknown Device'}</Text>
+                     <Text style={{ color: '#888', fontSize: 10 }}>{d.id}</Text>
                    </View>
-                 );
-               })}
-             </ScrollView>
-          </View>
-       )}
+                   {isConn ? (
+                     <TouchableOpacity onPress={handleDisconnect} style={{ backgroundColor: '#ff4040', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}>
+                       <Text style={{ color: '#FFF', fontSize: 10, fontWeight: 'bold' }}>DISCONNECT</Text>
+                     </TouchableOpacity>
+                   ) : (
+                     <TouchableOpacity onPress={() => connectToDevice && connectToDevice(d)} style={{ backgroundColor: '#00ff80', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}>
+                       <Text style={{ color: '#000', fontSize: 10, fontWeight: 'bold' }}>CONNECT</Text>
+                     </TouchableOpacity>
+                   )}
+                 </View>
+               );
+             })}
+           </ScrollView>
+        </View>
+     )}
        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <TouchableOpacity onPress={() => setSnifferTarget('ALL')} style={[styles.targetNodeBtn, snifferTarget === 'ALL' && styles.targetNodeBtnActive]}>
              <Text style={{ color: snifferTarget === 'ALL' ? '#FFF' : '#888', fontSize: 11, fontWeight: 'bold' }}>ALL</Text>
