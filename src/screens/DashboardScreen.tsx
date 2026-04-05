@@ -92,24 +92,51 @@ export default function DashboardScreen() {
       let configSegments: number | undefined;
       let configStripType: string | undefined;
       let configSorting: string | undefined;
+      let configSortingIdx: number | undefined;
+      let configIcType: number | undefined;
 
       if (v2Config) {
         configPoints = v2Config.ledPoints;
         configSegments = v2Config.segments;
         configStripType = v2Config.icName;
         configSorting = v2Config.colorSortingName;
+        configSortingIdx = v2Config.colorSorting;   // numeric index — critical for hwSettings
+        configIcType = v2Config.icType;
       } else if (v1Config) {
         configPoints = v1Config.points;
         configSegments = v1Config.segments;
         configStripType = v1Config.stripType;
         configSorting = v1Config.sorting;
+        // Derive idx from string for v1
+        configSortingIdx = ['RGB','RBG','GRB','GBR','BRG','BGR'].indexOf(configSorting ?? 'GRB');
+        if (configSortingIdx < 0) configSortingIdx = 2; // default GRB
       }
 
       if (configPoints !== undefined && configSorting !== undefined) {
-        console.log('[Dashboard] Intercepted Hardware Sync from', deviceId);
+        console.log('[Dashboard] Intercepted Hardware Sync from', deviceId, '→', configPoints, 'pts,', configSegments, 'seg,', configSorting, `(idx=${configSortingIdx})`);
+        AppLogger.log('HARDWARE_CONFIG_CHANGED', {
+          deviceId,
+          source: '0x63_RESPONSE',
+          points: configPoints,
+          segments: configSegments,
+          sorting: configSorting,
+          sortingIdx: configSortingIdx,
+          stripType: configStripType,
+          icType: configIcType,
+        });
         setAllDevices(prev => prev.map(d => {
           if (d.id === deviceId) {
-            const newD = { ...d, points: configPoints, sorting: configSorting, stripType: configStripType, segments: configSegments } as any as typeof d;
+            const newD = { 
+              ...d, 
+              points: configPoints, 
+              sorting: configSorting,
+              colorSorting: configSortingIdx,   // numeric index propagated
+              colorSortingName: configSorting,
+              stripType: configStripType, 
+              icType: configIcType,
+              segments: configSegments,
+              detected: true,                    // flag that this came from real hardware
+            } as any as typeof d;
             // Mirror securely directly to persistent memory
             AsyncStorage.getItem('ng_device_configs').then(str => {
                const p = JSON.parse(str || '{}');
@@ -698,7 +725,11 @@ export default function DashboardScreen() {
   };
 
   const activeHwSettings = useMemo(() => {
-    const d = displayConnectedDevices[0] as any;
+    const raw = displayConnectedDevices[0] as any;
+    // Merge persisted deviceConfigs on top — ensures 0x63 ping results always surface
+    // even when displayConnectedDevices comes from useBLE.connectedDevices (real hardware path)
+    const cached = raw?.id ? (deviceConfigs[raw.id] || {}) : {};
+    const d = { ...raw, ...cached };
     const s = d?.sorting || d?.colorSortingName || 'GRB';
     const sortingIdx = s === 'RGB' ? 0 : s === 'RBG' ? 1 : s === 'GRB' ? 2 : s === 'GBR' ? 3 : s === 'BRG' ? 4 : s === 'BGR' ? 5 : 2;
     return {
@@ -710,7 +741,7 @@ export default function DashboardScreen() {
       colorSortingName: s,
       detected:  d?.detected || false,
     };
-  }, [displayConnectedDevices]);
+  }, [displayConnectedDevices, deviceConfigs]);
 
   const MemoizedSk8lytzController = useMemo(() => {
     if (!isActuallyConnected) return null;
