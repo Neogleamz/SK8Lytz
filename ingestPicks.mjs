@@ -3,15 +3,8 @@ import fs from 'fs';
 const SUPABASE_URL = 'https://qefmeivpjyaukbwadgaz.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZm1laXZwanlhdWtid2FkZ2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MzUyMjAsImV4cCI6MjA4OTAxMTIyMH0.TtBAAL7RPk-w8Q_IGbhPouBjcdjyCRXKy_D5YS4FQss';
 
-async function ingestLogFile(filePath) {
-    if (!fs.existsSync(filePath)) {
-        console.error(`File not found: ${filePath}`);
-        return;
-    }
-
-    console.log(`Reading JSON from ${filePath}...`);
-    const fileContent = fs.readFileSync(filePath, 'utf-8');
-    const parsed = JSON.parse(fileContent);
+async function ingestParsedLog(parsed, fileName) {
+    console.log(`Processing payload from bucket file: ${fileName}...`);
 
     // Create a unique session ID for this bulk upload
     const sessionId = `import_${Date.now()}`;
@@ -154,8 +147,47 @@ async function ingestLogFile(filePath) {
         }
     }
 
-    console.log('🎉 Full JSON ingestion complete!');
+    console.log(`🎉 Ingestion complete for ${fileName}!`);
 }
 
-const targetFile = process.argv[2] || 'c:\\Users\\Magma\\Downloads\\logs_unknown-device.json';
-ingestLogFile(targetFile);
+async function runBucketSync() {
+    console.log('Fetching file list from sk8lytz-logs bucket...');
+    try {
+        const listRes = await fetch(`${SUPABASE_URL}/storage/v1/object/list/sk8lytz-logs`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ prefix: '', limit: 100, offset: 0, sortBy: { column: 'name', order: 'asc' } })
+        });
+        
+        if (!listRes.ok) throw new Error(`Bucket List Error: ${await listRes.text()}`);
+        
+        const files = await listRes.json();
+        const jsonFiles = files.filter(f => f.name.endsWith('.json'));
+        
+        console.log(`Found ${jsonFiles.length} JSON telemetry file(s) in sk8lytz-logs.`);
+        
+        for (const file of jsonFiles) {
+            console.log(`\n================================`);
+            console.log(`Downloading ${file.name}...`);
+            const dlRes = await fetch(`${SUPABASE_URL}/storage/v1/object/authenticated/sk8lytz-logs/${file.name}`, {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+            });
+            if (!dlRes.ok) {
+                console.error(`Failed to download ${file.name}: ${dlRes.status}`);
+                continue;
+            }
+            const data = await dlRes.json();
+            await ingestParsedLog(data, file.name);
+        }
+        
+        console.log(`\n✅ Bucket Sync Finished successfully.`);
+    } catch(err) {
+        console.error('Bucket Sync Failed:', err);
+    }
+}
+
+runBucketSync();
