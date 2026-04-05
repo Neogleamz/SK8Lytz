@@ -194,7 +194,7 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
               <MaterialCommunityIcons name="bluetooth-connect" size={24} color="#9D4EFF" />
               <View style={{ marginLeft: 12, flex: 1 }}>
                 <Text style={[styles.deviceName, { color: textPrimary }]}>{config.name || meta.name || 'Unknown'}</Text>
-                <Text style={[styles.deviceDetail, { color: textMuted }]}>ID: {id}</Text>
+                <Text style={[styles.deviceDetail, { color: textMuted }]}>MAC Address: {id}</Text>
                 {firmwares.has(id) && <Text style={[styles.deviceDetail, { color: textMuted }]}>Firmware: {firmwares.get(id)}</Text>}
                 
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
@@ -246,6 +246,7 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
           <StatRow label="Manufacturer" value={Device.manufacturer || 'Unknown'} color={textPrimary} muted={textMuted} />
           <StatRow label="Operating System" value={osDisplay} color={textPrimary} muted={textMuted} />
           <StatRow label="Environment" value={Device.isDevice ? 'Physical Device' : 'Simulator'} color={textPrimary} muted={textMuted} />
+          <StatRow label="BLE Target MAC" value={stats.primaryBleMac || 'N/A'} color="#00f0ff" muted={textMuted} />
           <StatRow label="Total RAM" value={gbMem} color={textPrimary} muted={textMuted} />
           <StatRow label="Avg Boot Time" value={stats.averageLoadTimeMs ? `${stats.averageLoadTimeMs}ms` : 'N/A'} color={textPrimary} muted={textMuted} />
           <StatRow label="Current Session" value={`${sessionMins} mins`} color={textPrimary} muted={textMuted} />

@@ -251,6 +251,7 @@ class AppLoggerService {
     totalStorageEstimate: number;
     averageLoadTimeMs: number;
     lastAppOpenedTime: number;
+    primaryBleMac: string;
   }> {
     await this.ensureLoaded();
     const modeUsage: Record<string, number> = {};
@@ -314,10 +315,13 @@ class AppLoggerService {
       };
     }
 
+    const pMac = this.activeDevices.length > 0 ? this.activeDevices[0].id : 'unpaired-host';
+    const bleMac = pMac.replace(/[^a-zA-Z0-9_-]/g, '');
+
     return { 
       modeUsage, patternUsage: finalPatternUsage, colorUsage, devicesDiscovered, 
       totalEvents: this.buffer.length, storageBytesEstimate, totalStorageEstimate,
-      averageLoadTimeMs, lastAppOpenedTime
+      averageLoadTimeMs, lastAppOpenedTime, primaryBleMac: bleMac
     };
   }
 }
