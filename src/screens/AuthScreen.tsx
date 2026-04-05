@@ -280,12 +280,12 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             )}
           </TouchableOpacity>
 
-          {/* Magic link option */}
-          {mode === 'LOGIN' && (
+          {/* Magic link option — disabled */}
+          {/* {mode === 'LOGIN' && (
             <TouchableOpacity onPress={() => resetState('MAGIC_LINK')} style={styles.magicLinkButton}>
               <Text style={styles.magicLinkText}>✨ Sign in with Magic Link instead</Text>
             </TouchableOpacity>
-          )}
+          )} */}
 
           {/* Toggle login / signup */}
           <View style={styles.toggleContainer}>

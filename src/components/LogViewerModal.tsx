@@ -419,10 +419,19 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
                 <StatRow label="Firmware"     value={d.firmware || cfg.firmware || '—'}       color="#00E676" muted={textMuted} />
                 <StatRow label="RSSI"         value={d.rssi ? `${d.rssi} dBm` : '—'}         color="#FF7000" muted={textMuted} />
                 <StatRow label="Points (LEDs)"value={points ? String(points) : '— connect'}   color="#00f0ff" muted={textMuted} />
-                <StatRow label="Segments"     value={String(segments)}                         color="#00f0ff" muted={textMuted} />
+                <StatRow label="Segments"     value={segments != null ? String(segments) : '�'}                         color="#00f0ff" muted={textMuted} />
                 <StatRow label="IC / Strip"   value={stripType || '— connect'}                color="#FFD700" muted={textMuted} />
                 <StatRow label="Color Order"  value={sorting   || '— connect'}                color="#FF69B4" muted={textMuted} />
-             </View>
+                 {/* RAW RX debug row — shows last notification bytes from this device */}
+                 {liveRxPayload?.deviceId === d.id && (
+                   <View style={{ marginTop: 6, padding: 6, backgroundColor: '#0a0a0a', borderRadius: 4 }}>
+                     <Text style={{ color: '#555', fontSize: 9, marginBottom: 2 }}>LAST RX BYTES</Text>
+                     <Text selectable style={{ color: '#00f0ff', fontSize: 9, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }} numberOfLines={3}>
+                       {liveRxPayload?.payloadHex}
+                     </Text>
+                   </View>
+                 )}
+              </View>
              );
           })}
 
@@ -620,3 +629,4 @@ const styles = StyleSheet.create({
   colorDot: { width: 18, height: 18, borderRadius: 0, marginRight: 10, borderWidth: 1, borderColor: '#000' },
   colorHex: { flex: 1, fontSize: 12, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
 });
+
