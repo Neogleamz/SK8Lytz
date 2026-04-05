@@ -263,28 +263,29 @@ class AppLoggerService {
         
         // ENTERPRISE DB INJECTION STREAM
         // Directly maps telemetry to normalized raw relational Postgres tables
+        // INSERTS ONLY THE CURRENT DELTA BUFFER - Prevents doubling up historical merged logs
         try {
           console.log('[AppLogger] Pushing native telemetry structures to Postgres Timeseries...');
           const sessionId = `telemetry_${Date.now()}`;
-          const finalStats = mergedPayload.stats;
+          const currentRunLogs = [...this.buffer].filter(l => l.e !== 'RAW_PAYLOAD');
           
           // 1. Session Stats
           await supabase.from('parsed_session_stats').insert([{
             session_id: sessionId,
             device_id: primaryMacRaw,
             host_device_id: deviceId,
-            timestamp_ms: mergedLogs.length > 0 ? mergedLogs[mergedLogs.length - 1].t : Date.now(),
-            devices_discovered: finalStats.devicesDiscovered || 0,
-            total_events: finalStats.totalEvents || 0,
-            storage_bytes_estimate: finalStats.storageBytesEstimate || 0,
-            average_load_time_ms: finalStats.averageLoadTimeMs || 0,
-            battery_level: finalStats.batteryLevel || -1,
-            is_low_power_mode: finalStats.isLowPowerMode || false
+            timestamp_ms: currentRunLogs.length > 0 ? currentRunLogs[currentRunLogs.length - 1].t : Date.now(),
+            devices_discovered: currentStats.devicesDiscovered || 0,
+            total_events: currentRunLogs.length || 0,
+            storage_bytes_estimate: currentStats.storageBytesEstimate || 0,
+            average_load_time_ms: currentStats.averageLoadTimeMs || 0,
+            battery_level: currentStats.batteryLevel || -1,
+            is_low_power_mode: currentStats.isLowPowerMode || false
           }]);
 
           // 2. Devices
-          if (mergedPayload.devices.length > 0) {
-            const devPayload = mergedPayload.devices.map((d: any) => ({
+          if (this.activeDevices.length > 0) {
+            const devPayload = this.activeDevices.map((d: any) => ({
                 session_id: sessionId,
                 device_id: d.id,
                 timestamp_ms: Date.now(),
@@ -302,27 +303,27 @@ class AppLoggerService {
 
           // 3. New Usage Tracking Matrix
           const modePayload = [];
-          for (const [mName, mCount] of Object.entries(finalStats.modeUsage || {})) {
+          for (const [mName, mCount] of Object.entries(currentStats.modeUsage || {})) {
             modePayload.push({ session_id: sessionId, device_id: primaryMacRaw, mode_name: mName, usage_count: mCount, timestamp_ms: Date.now() });
           }
           if (modePayload.length > 0) await supabase.from('parsed_mode_usage').insert(modePayload);
 
           const patternPayload = [];
-          for (const [pName, pData] of Object.entries((finalStats.patternUsage as any) || {})) {
+          for (const [pName, pData] of Object.entries((currentStats.patternUsage as any) || {})) {
             patternPayload.push({ session_id: sessionId, device_id: primaryMacRaw, pattern_idx: pName, usage_count: (pData as any).count, timestamp_ms: Date.now() });
           }
           if (patternPayload.length > 0) await supabase.from('parsed_pattern_usage').insert(patternPayload);
 
           const colorPayload = [];
-          for (const [cHex, cCount] of Object.entries(finalStats.colorUsage || {})) {
+          for (const [cHex, cCount] of Object.entries(currentStats.colorUsage || {})) {
             colorPayload.push({ session_id: sessionId, device_id: primaryMacRaw, hex_color: cHex, usage_count: cCount, timestamp_ms: Date.now() });
           }
           if (colorPayload.length > 0) await supabase.from('parsed_color_usage').insert(colorPayload);
 
           // 4. Trace Log Push (Batched)
           const CHUNK = 1000;
-          for (let i = 0; i < mergedLogs.length; i += CHUNK) {
-             const chunk = mergedLogs.slice(i, i + CHUNK);
+          for (let i = 0; i < currentRunLogs.length; i += CHUNK) {
+             const chunk = currentRunLogs.slice(i, i + CHUNK);
              const dbLogPayload = chunk.map((item: any) => {
                 const isGroup = item.d?.target === 'group' || (item.d?.deviceIds && item.d.deviceIds.length > 1);
                 return {
