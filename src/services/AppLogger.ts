@@ -91,6 +91,7 @@ class AppLoggerService {
     const stats = await this.getStats();
     return JSON.stringify({
       app: 'SK8Lytz',
+      hostDeviceId: Device.osInternalBuildId || Device.modelId || 'unknown-device',
       exported: new Date().toISOString(),
       count: this.buffer.length,
       stats: stats,

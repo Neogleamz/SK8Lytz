@@ -15,6 +15,9 @@ async function ingestLogFile(filePath) {
 
     // Create a unique session ID for this bulk upload
     const sessionId = `import_${Date.now()}`;
+    // Extract universal tracking key
+    const hostDeviceId = parsed.hostDeviceId || 'unknown-host';
+
     const logs = parsed.logs;
     const devices = parsed.devices || [];
     const stats = parsed.stats;
@@ -29,6 +32,7 @@ async function ingestLogFile(filePath) {
         console.log(`Mapping session statistics for database insertion (Session: ${sessionId})...`);
         const statsPayload = [{
             session_id: sessionId,
+            host_device_id: hostDeviceId,
             devices_discovered: stats.devicesDiscovered || 0,
             total_events: stats.totalEvents || 0,
             storage_bytes_estimate: stats.storageBytesEstimate || 0,
@@ -68,6 +72,7 @@ async function ingestLogFile(filePath) {
             const fw = d.manufacturerData || {}; 
             return {
                 session_id: sessionId,
+                host_device_id: hostDeviceId,
                 device_id: d.id,
                 name: d.name,
                 rssi: d.rssi,
@@ -106,6 +111,7 @@ async function ingestLogFile(filePath) {
 
     const dbPayload = logs.map(item => ({
         session_id: sessionId,
+        host_device_id: hostDeviceId,
         timestamp_ms: item.t,
         event_type: item.e,
         direction: item.d?.dir || null,
