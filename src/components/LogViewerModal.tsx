@@ -77,6 +77,7 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
+  const [isUploading, setIsUploading] = useState(false);
   
   const load = useCallback(async () => {
     const l = await AppLogger.getLogs();
@@ -110,6 +111,19 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
         onPress: async () => { await AppLogger.clearLogs(); load(); }
       },
     ]);
+  };
+
+  const handleUpload = async () => {
+    if (isUploading) return;
+    setIsUploading(true);
+    try {
+      await AppLogger.uploadLogsToSupabase();
+      Alert.alert('Upload Complete', 'Logs successfully uploaded to sk8lytz-logs bucket on Supabase.');
+    } catch (err: any) {
+      Alert.alert('Upload Failed', err?.message || String(err));
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const bg = '#FFFFFF';
@@ -345,6 +359,17 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
           <View style={styles.headerActions}>
             <TouchableOpacity onPress={handleExport} style={styles.actionBtn}>
               <MaterialCommunityIcons name="export-variant" size={22} color="#00f0ff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleUpload}
+              style={[styles.actionBtn, isUploading && { opacity: 0.5 }]}
+              disabled={isUploading}
+            >
+              <MaterialCommunityIcons
+                name={isUploading ? 'cloud-sync' : 'cloud-upload'}
+                size={22}
+                color="#00E676"
+              />
             </TouchableOpacity>
             <TouchableOpacity onPress={handleClear} style={styles.actionBtn}>
               <MaterialCommunityIcons name="delete-sweep" size={22} color="#ff4040" />
