@@ -256,6 +256,86 @@ class AppLoggerService {
         throw new Error(error.message);
       } else {
         console.log(`[AppLogger] Successfully appended and uploaded logs: ${data.path}`);
+        
+        // ENTERPRISE DB INJECTION STREAM
+        // Directly maps telemetry to normalized raw relational Postgres tables
+        try {
+          console.log('[AppLogger] Pushing native telemetry structures to Postgres Timeseries...');
+          const sessionId = `telemetry_${Date.now()}`;
+          const finalStats = mergedPayload.stats;
+          
+          // 1. Session Stats
+          await supabase.from('parsed_session_stats').insert([{
+            session_id: sessionId,
+            device_id: primaryMacRaw,
+            host_device_id: deviceId,
+            timestamp_ms: mergedLogs.length > 0 ? mergedLogs[mergedLogs.length - 1].t : Date.now(),
+            devices_discovered: finalStats.devicesDiscovered || 0,
+            total_events: finalStats.totalEvents || 0,
+            storage_bytes_estimate: finalStats.storageBytesEstimate || 0,
+            average_load_time_ms: finalStats.averageLoadTimeMs || 0,
+            battery_level: finalStats.batteryLevel || -1,
+            is_low_power_mode: finalStats.isLowPowerMode || false
+          }]);
+
+          // 2. Devices
+          if (mergedPayload.devices.length > 0) {
+            const devPayload = mergedPayload.devices.map((d: any) => ({
+                session_id: sessionId,
+                device_id: d.id,
+                timestamp_ms: Date.now(),
+                host_device_id: deviceId,
+                name: d.name,
+                rssi: d.rssi,
+                firmware_ver: d.firmwareVer ? { fw: d.firmwareVer, led: d.ledVersion, ble: d.bleVersion } : (d.manufacturerData || {}),
+                ic_type: d.hardwareSettings?.icType,
+                led_points: d.hardwareSettings?.ledPoints,
+                segments: d.hardwareSettings?.segments,
+                color_sorting: d.hardwareSettings?.colorSorting
+            }));
+            await supabase.from('parsed_session_devices').insert(devPayload);
+          }
+
+          // 3. New Usage Tracking Matrix
+          const modePayload = [];
+          for (const [mName, mCount] of Object.entries(finalStats.modeUsage || {})) {
+            modePayload.push({ session_id: sessionId, device_id: primaryMacRaw, mode_name: mName, usage_count: mCount, timestamp_ms: Date.now() });
+          }
+          if (modePayload.length > 0) await supabase.from('parsed_mode_usage').insert(modePayload);
+
+          const patternPayload = [];
+          for (const [pName, pData] of Object.entries((finalStats.patternUsage as any) || {})) {
+            patternPayload.push({ session_id: sessionId, device_id: primaryMacRaw, pattern_idx: pName, usage_count: (pData as any).count, timestamp_ms: Date.now() });
+          }
+          if (patternPayload.length > 0) await supabase.from('parsed_pattern_usage').insert(patternPayload);
+
+          const colorPayload = [];
+          for (const [cHex, cCount] of Object.entries(finalStats.colorUsage || {})) {
+            colorPayload.push({ session_id: sessionId, device_id: primaryMacRaw, hex_color: cHex, usage_count: cCount, timestamp_ms: Date.now() });
+          }
+          if (colorPayload.length > 0) await supabase.from('parsed_color_usage').insert(colorPayload);
+
+          // 4. Trace Log Push (Batched)
+          const CHUNK = 1000;
+          for (let i = 0; i < mergedLogs.length; i += CHUNK) {
+             const chunk = mergedLogs.slice(i, i + CHUNK);
+             const dbLogPayload = chunk.map((item: any) => ({
+                session_id: sessionId,
+                host_device_id: deviceId,
+                timestamp_ms: item.t,
+                event_type: item.e,
+                direction: item.d?.dir || null,
+                hex_payload: item.d?.hex || null,
+                device_id: item.d?.deviceId || null,
+                raw_data: item.d || {} 
+             }));
+             await supabase.from('parsed_logs').insert(dbLogPayload);
+          }
+          
+          console.log('[AppLogger] Postgres Native Insertion Complete!');
+        } catch (dbErr) {
+          console.error('[AppLogger] Non-fatal Supabase DB ingestion failure:', dbErr);
+        }
       }
     } catch (err) {
       console.error('[AppLogger] Upload exception:', err);
