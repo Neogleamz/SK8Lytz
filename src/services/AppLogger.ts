@@ -102,6 +102,56 @@ class AppLoggerService {
     this.activeDevices = devices;
   }
 
+  /** Collect ALL available host device + power data from expo-device and expo-battery */
+  private async getHostDeviceInfo(): Promise<Record<string, any>> {
+    let batteryLevel = -1;
+    let batteryState = 'UNKNOWN';
+    let isLowPowerMode = false;
+
+    try {
+      if (await Battery.isAvailableAsync()) {
+        batteryLevel = await Battery.getBatteryLevelAsync();
+        isLowPowerMode = await Battery.isLowPowerModeEnabledAsync();
+        const stateEnum = await Battery.getBatteryStateAsync();
+        const stateMap: Record<number, string> = {
+          0: 'UNKNOWN', 1: 'UNPLUGGED', 2: 'CHARGING', 3: 'FULL'
+        };
+        batteryState = stateMap[stateEnum] ?? 'UNKNOWN';
+      }
+    } catch(_e) {}
+
+    const deviceTypeMap: Record<number, string> = {
+      0: 'UNKNOWN', 1: 'PHONE', 2: 'TABLET', 3: 'DESKTOP', 4: 'TV'
+    };
+
+    return {
+      // Identity
+      brand:                Device.brand,
+      manufacturer:         Device.manufacturer,
+      model_name:           Device.modelName,
+      model_id:             Device.modelId,
+      design_name:          Device.designName,
+      product_name:         Device.productName,
+      device_name:          Device.deviceName,
+      // Hardware profile
+      device_type:          deviceTypeMap[Device.deviceType ?? 0] ?? 'UNKNOWN',
+      device_year_class:    Device.deviceYearClass,
+      total_memory_mb:      Device.totalMemory ? Math.round(Device.totalMemory / 1024 / 1024) : null,
+      is_physical_device:   Device.isDevice,
+      // OS
+      os_name:              Device.osName,
+      os_version:           Device.osVersion,
+      os_build_id:          Device.osBuildId,
+      os_internal_build_id: Device.osInternalBuildId,
+      os_build_fingerprint: Device.osBuildFingerprint,
+      platform_api_level:   Device.platformApiLevel,
+      // Power
+      battery_level:        batteryLevel,
+      battery_state:        batteryState,
+      is_low_power_mode:    isLowPowerMode,
+    };
+  }
+
   setLastTxPayload(hex: string) {
     this.txPayloadQueue = { hex, timestamp: Date.now() };
     this.flushQueues();
@@ -294,7 +344,8 @@ class AppLoggerService {
           const sessionId = this.sessionId;
           const currentRunLogs = [...this.buffer].filter(l => l.e !== 'RAW_PAYLOAD');
           
-          // 1. Session Stats — full field set
+          // 1. Session Stats — full host device profile + session metrics
+          const hostInfo = await this.getHostDeviceInfo();
           await supabase.from('parsed_session_stats').upsert([{
             session_id: sessionId,
             device_id: primaryMacRaw,
@@ -307,10 +358,30 @@ class AppLoggerService {
             average_load_time_ms: currentStats.averageLoadTimeMs || 0,
             last_app_opened_time: currentStats.lastAppOpenedTime || 0,
             primary_ble_mac: currentStats.primaryBleMac || primaryMacRaw,
-            battery_level: currentStats.batteryLevel || -1,
-            is_low_power_mode: currentStats.isLowPowerMode || false,
             mode_usage: currentStats.modeUsage || {},
             color_usage: currentStats.colorUsage || {},
+            // ── Host Device Identity ──────────────────────────────────────
+            device_brand:         hostInfo.brand,
+            device_model:         hostInfo.model_name,
+            device_manufacturer:  hostInfo.manufacturer,
+            device_model_id:      hostInfo.model_id,
+            device_name:          hostInfo.device_name,
+            device_type:          hostInfo.device_type,
+            device_year_class:    hostInfo.device_year_class,
+            is_physical_device:   hostInfo.is_physical_device,
+            // ── OS ───────────────────────────────────────────────────────
+            os_name:              hostInfo.os_name,
+            os_version:           hostInfo.os_version,
+            os_build_id:          hostInfo.os_build_id,
+            platform_api_level:   hostInfo.platform_api_level,
+            // ── Hardware ─────────────────────────────────────────────────
+            total_memory_mb:      hostInfo.total_memory_mb,
+            // ── Power ────────────────────────────────────────────────────
+            battery_level:        hostInfo.battery_level,
+            battery_state:        hostInfo.battery_state,
+            is_low_power_mode:    hostInfo.is_low_power_mode,
+            // ── Full blob (all fields including rare/platform-specific) ──
+            host_device_info:     hostInfo,
           }], { onConflict: 'session_id' });
 
           // Extract Custom Hardware Names from ng_device_configs (keyed by device MAC)
