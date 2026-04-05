@@ -6,6 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabaseClient';
 import * as Device from 'expo-device';
+import * as Battery from 'expo-battery';
 
 const STORAGE_KEY = '@sk8lytz_logs';
 const MAX_ENTRIES = 10000; // ~1MB of compact log data before rotation
@@ -28,7 +29,12 @@ export type EventType =
   | 'PROTOCOL_ERROR'
   | 'BLE_WRITE_ERROR'
   | 'BLE_CONNECTION_ERROR'
-  | 'RAW_PAYLOAD';
+  | 'RAW_PAYLOAD'
+  | 'SCREEN_OPENED'
+  | 'APP_BACKGROUNDED'
+  | 'APP_FOREGROUNDED'
+  | 'ERROR_CAUGHT'
+  | 'PERFORMANCE_METRIC';
 
 export interface LogEntry {
   t: number;        // timestamp ms
@@ -267,6 +273,8 @@ class AppLoggerService {
     averageLoadTimeMs: number;
     lastAppOpenedTime: number;
     primaryBleMac: string;
+    batteryLevel: number;
+    isLowPowerMode: boolean;
   }> {
     await this.ensureLoaded();
     const modeUsage: Record<string, number> = {};
@@ -333,10 +341,20 @@ class AppLoggerService {
     const pMac = this.activeDevices.length > 0 ? this.activeDevices[0].id : 'unpaired-host';
     const bleMac = pMac.replace(/[^a-zA-Z0-9_-]/g, '');
 
+    let batteryLevel = -1;
+    let isLowPowerMode = false;
+    try {
+      if (await Battery.isAvailableAsync()) {
+        batteryLevel = await Battery.getBatteryLevelAsync();
+        isLowPowerMode = await Battery.isLowPowerModeEnabledAsync();
+      }
+    } catch(e) {}
+
     return { 
       modeUsage, patternUsage: finalPatternUsage, colorUsage, devicesDiscovered, 
       totalEvents: this.buffer.length, storageBytesEstimate, totalStorageEstimate,
-      averageLoadTimeMs, lastAppOpenedTime, primaryBleMac: bleMac
+      averageLoadTimeMs, lastAppOpenedTime, primaryBleMac: bleMac,
+      batteryLevel, isLowPowerMode
     };
   }
 }

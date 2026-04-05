@@ -30,6 +30,11 @@ const EVENT_META: Record<EventType, { icon: string; color: string; label: string
   BLE_WRITE_ERROR:         { icon: 'bluetooth-audio', color: '#ff4040', label: 'TX Error' },
   BLE_CONNECTION_ERROR:    { icon: 'bluetooth-off', color: '#ff4040', label: 'Connection Fault' },
   RAW_PAYLOAD:             { icon: 'matrix',       color: '#00f0ff', label: 'Data Trace' },
+  SCREEN_OPENED:           { icon: 'dock-window',  color: '#c255ff', label: 'Screen View' },
+  APP_BACKGROUNDED:        { icon: 'flip-to-back', color: '#888888', label: 'App Suspended' },
+  APP_FOREGROUNDED:        { icon: 'flip-to-front',color: '#00E676', label: 'App Resumed' },
+  ERROR_CAUGHT:            { icon: 'bug',          color: '#ff2020', label: 'Exception Trapped' },
+  PERFORMANCE_METRIC:      { icon: 'chart-line',   color: '#FFD700', label: 'Metric' },
 };
 
 function formatTime(ms: number): string {
@@ -57,6 +62,11 @@ function payloadSummary(entry: LogEntry): string {
     case 'SCAN_FILTER_REJECT':
       return `${d.name || '?'}: ${d.reason || 'Unknown'} (ID: ${d.id})`;
     case 'SCAN_COMPLETED':    return `${d.devicesFound ?? 0} device(s) found`;
+    case 'SCREEN_OPENED':     return `${d.screenName || 'Unknown Screen'} Opened`;
+    case 'APP_BACKGROUNDED':  return `App paused/backgrounded`;
+    case 'APP_FOREGROUNDED':  return `App resumed/foregrounded`;
+    case 'ERROR_CAUGHT':      return `${d.message || String(d.error || 'Unknown Exception')}`;
+    case 'PERFORMANCE_METRIC':return `${d.metricName}: ${d.value}${d.unit ? ` ${d.unit}` : ''}`;
     default: return JSON.stringify(d).slice(0, 60);
   }
 }
@@ -82,6 +92,10 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [simpleScannerMode, setSimpleScannerMode] = useState(false);
+
+  useEffect(() => {
+    if (visible) AppLogger.log('SCREEN_OPENED', { screenName: 'Analytics' });
+  }, [visible]);
   
   const load = useCallback(async () => {
     const l = await AppLogger.getLogs();
@@ -246,6 +260,8 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
           <StatRow label="Manufacturer" value={Device.manufacturer || 'Unknown'} color={textPrimary} muted={textMuted} />
           <StatRow label="Operating System" value={osDisplay} color={textPrimary} muted={textMuted} />
           <StatRow label="Environment" value={Device.isDevice ? 'Physical Device' : 'Simulator'} color={textPrimary} muted={textMuted} />
+          <StatRow label="Battery Level" value={stats.batteryLevel !== -1 ? `${Math.round(stats.batteryLevel * 100)}%` : 'Unknown'} color={textPrimary} muted={textMuted} />
+          <StatRow label="Power State" value={stats.isLowPowerMode ? 'Low Power Mode' : 'Normal'} color={stats.isLowPowerMode ? '#FFB84D' : textPrimary} muted={textMuted} />
           <StatRow label="BLE Target MAC" value={stats.primaryBleMac || 'N/A'} color="#00f0ff" muted={textMuted} />
           <StatRow label="Total RAM" value={gbMem} color={textPrimary} muted={textMuted} />
           <StatRow label="Avg Boot Time" value={stats.averageLoadTimeMs ? `${stats.averageLoadTimeMs}ms` : 'N/A'} color={textPrimary} muted={textMuted} />

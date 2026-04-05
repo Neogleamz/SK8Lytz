@@ -256,14 +256,20 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
   const connectToDevice = async (device: Device): Promise<string | undefined> => {
     try {
+      const connectStartTime = Date.now();
+      
       if (Platform.OS === 'web') {
         setConnectedDevices([device]);
         AppLogger.log('DEVICE_CONNECTED', { id: device.id, name: device.name, firmware: 'v2.0.1.DEMO' });
         return 'v2.0.1.DEMO';
       }
+      
       const deviceConnection = await bleManager.connectToDevice(device.id);
       setConnectedDevices([deviceConnection]);
       await deviceConnection.discoverAllServicesAndCharacteristics();
+      
+      const latencyMs = Date.now() - connectStartTime;
+      AppLogger.log('PERFORMANCE_METRIC', { metricName: 'BLE_Auth_Latency', value: latencyMs, unit: 'ms', deviceId: device.id });
       
       // Monitor for responses
       deviceConnection.monitorCharacteristicForService(

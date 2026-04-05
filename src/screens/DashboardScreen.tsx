@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar, Dimensions, Modal, TextInput, BackHandler, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar, Dimensions, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus } from 'react-native';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import DeviceItem from '../components/DeviceItem';
@@ -78,6 +78,20 @@ export default function DashboardScreen() {
   // Refs are now updated manually  const [isProvisioning, setIsProvisioning] = useState(false);
   const [demoHaloQueued, setDemoHaloQueued] = useState(false);
   const [demoSoulQueued, setDemoSoulQueued] = useState(false);
+
+  // AppState Telemetry
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
+        AppLogger.log('APP_FOREGROUNDED');
+      } else if (nextAppState === 'background') {
+        AppLogger.log('APP_BACKGROUNDED');
+      }
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   // Bind BLE Notification Hardware Sync Hook
   useEffect(() => {

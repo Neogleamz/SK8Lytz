@@ -17,6 +17,7 @@
     "buffer": "^6.0.3",
     "expo": "~55.0.8",
     "expo-av": "^16.0.8",
+    "expo-battery": "^55.0.11",
     "expo-build-properties": "^55.0.10",
     "expo-camera": "~55.0.10",
     "expo-dev-client": "~55.0.18",

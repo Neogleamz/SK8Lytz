@@ -4,6 +4,7 @@ import {
   ScrollView, ActivityIndicator, Alert, Platform, Switch
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppLogger } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Typography } from '../theme/theme';
@@ -58,6 +59,10 @@ export default function Sk8LytzProgrammerModal({
   const cyan     = '#00f0ff';
   const orange   = Colors.primary;
   const amber    = Colors.secondary;
+
+  useEffect(() => {
+    if (visible) AppLogger.log('SCREEN_OPENED', { screenName: 'Device Auto-Programmer' });
+  }, [visible]);
   const green    = '#00e887';
 
   // ─── State ──────────────────────────────────────────────────────────────────

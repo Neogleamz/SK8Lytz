@@ -39,6 +39,8 @@ async function ingestLogFile(filePath) {
             total_events: stats.totalEvents || 0,
             storage_bytes_estimate: stats.storageBytesEstimate || 0,
             average_load_time_ms: stats.averageLoadTimeMs || 0,
+            battery_level: stats.batteryLevel || -1,
+            is_low_power_mode: stats.isLowPowerMode || false,
             mode_usage: stats.modeUsage || {},
             pattern_usage: stats.finalPatternUsage || stats.patternUsage || {},
             color_usage: stats.colorUsage || {}
