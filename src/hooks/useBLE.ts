@@ -65,6 +65,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const [dataReceivedCallback, setDataReceivedCallback] = useState<((deviceId: string, data: number[]) => void) | undefined>();
   const [droppedOutDeviceIds, setDroppedOutDeviceIds] = useState<string[]>([]);
   const disconnectListeners = useRef<Record<string, import('react-native-ble-plx').Subscription>>({});
+  // Use ref (not state) so handleNotification always reads the CURRENT callback
+  // without the stale closure problem — useState captures the value at subscription time
+  const dataReceivedCallbackRef = useRef<((deviceId: string, data: number[]) => void) | undefined>(undefined);
 
   useEffect(() => {
     AppLogger.updateKnownDevices(allDevices);
@@ -80,11 +83,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
         /* global Buffer */
         const buffer = require('buffer').Buffer;
         const data = Array.from(buffer.from(characteristic.value, 'base64')) as number[];
-        
-        // We send the absolute raw binary frame to the data callbacks.
-        // It is strictly the responsibility of parser endpoints (ZenggeProtocol) to dissect Headers vs Bodies.
-        if (dataReceivedCallback) {
-            dataReceivedCallback(deviceId, data);
+        // Read from ref — always has the latest callback, no stale closure
+        if (dataReceivedCallbackRef.current) {
+            dataReceivedCallbackRef.current(deviceId, data);
         }
       } catch (e: any) {
         console.error('Failed to parse notification', e);
@@ -503,7 +504,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     isBluetoothSupported,
     isBluetoothEnabled,
     onDataReceived: dataReceivedCallback,
-    setOnDataReceived: (callback: (deviceId: string, data: number[]) => void) => setDataReceivedCallback(() => callback),
+    setOnDataReceived: (callback: (deviceId: string, data: number[]) => void) => { dataReceivedCallbackRef.current = callback; },
     droppedOutDeviceIds,
     setDroppedOutDeviceIds,
   }), [

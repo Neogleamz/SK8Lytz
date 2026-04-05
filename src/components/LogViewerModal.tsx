@@ -387,10 +387,10 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
           {allDevices?.map((d: any, idx) => {
              // Merge: live prop (reactive, from DashboardScreen state) > local AsyncStorage cache
              const cfg = { ...(deviceConfigs[d.id] || {}), ...(liveDeviceConfigs?.[d.id] || {}) };
-             const points   = cfg.points    || d.points    || null;
-             const segments = cfg.segments  || d.segments  || 1;
-             const sorting  = cfg.sorting   || d.sorting   || d.colorSortingName || null;
-             const stripType= cfg.stripType || d.stripType || d.icName           || null;
+             const points   = cfg.points    ?? d.points    ?? null;
+             const segments = cfg.segments  ?? d.segments  ?? null;
+             const sorting  = cfg.sorting   ?? d.sorting   ?? cfg.colorSortingName ?? null;
+             const stripType= cfg.stripType ?? d.stripType ?? cfg.icName           ?? null;
              const isConn   = connectedDevices?.some(c => c.id === d.id);
              const isConnecting = connectingId === d.id;
 
