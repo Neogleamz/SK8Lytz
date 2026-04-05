@@ -1,7 +1,6 @@
 import fs from 'fs';
 
 const SUPABASE_URL = 'https://qefmeivpjyaukbwadgaz.supabase.co';
-// Using the anon key found in your .env
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZm1laXZwanlhdWtid2FkZ2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MzUyMjAsImV4cCI6MjA4OTAxMTIyMH0.TtBAAL7RPk-w8Q_IGbhPouBjcdjyCRXKy_D5YS4FQss';
 
 async function ingestLogFile(filePath) {
@@ -17,30 +16,72 @@ async function ingestLogFile(filePath) {
     // Create a unique session ID for this bulk upload
     const sessionId = `import_${Date.now()}`;
     const logs = parsed.logs;
+    const devices = parsed.devices || [];
     
     if (!logs || !Array.isArray(logs)) {
         console.error('Invalid log format. Expected a "logs" array.');
         return;
     }
 
-    console.log(`Mapping ${logs.length} logs for database insertion (Session: ${sessionId})...`);
+    // 1. Process and Upload Devices
+    if (devices.length > 0) {
+        console.log(`Mapping ${devices.length} devices for database insertion (Session: ${sessionId})...`);
+        const devicePayload = devices.map(d => {
+            const hw = d.hardwareSettings || {};
+            // Parse firmware string if we stored it as string, else keep as json
+            const fw = d.manufacturerData || {}; // Fallback mapping depending on how BLE library yields it
+            return {
+                session_id: sessionId,
+                device_id: d.id,
+                name: d.name,
+                rssi: d.rssi,
+                firmware_ver: d.firmwareVer ? { fw: d.firmwareVer, led: d.ledVersion, ble: d.bleVersion } : fw,
+                ic_type: hw.icName || null,
+                led_points: hw.ledPoints || null,
+                segments: hw.segments || null,
+                color_sorting: hw.colorSortingName || null
+            };
+        });
 
-    // Flatten and map the JSON structure to match our Postgres table columns
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/parsed_session_devices`, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify(devicePayload)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Device Supabase Error ${response.status}: ${errorText}`);
+            }
+            console.log(`  ✓ Inserted ${devicePayload.length} session devices.`);
+        } catch (err) {
+            console.error(`❌ Failed inserting devices:`, err.message);
+        }
+    } else {
+        console.log("No devices found in this log export to insert.");
+    }
+
+    // 2. Process and Upload Logs
+    console.log(`Mapping ${logs.length} logs for database insertion...`);
+
     const dbPayload = logs.map(item => ({
         session_id: sessionId,
         timestamp_ms: item.t,
         event_type: item.e,
-        // Optional chaining in case 'd' doesn't exist for some events
         direction: item.d?.dir || null,
         hex_payload: item.d?.hex || null,
         device_id: item.d?.deviceId || null,
-        // Store the entire 'd' object in the JSONB raw_data column for flexible queries
         raw_data: item.d || {} 
     }));
 
-    // Ingest into Supabase in chunks to avoid HTTP 413 Payload Too Large errors
     const CHUNK_SIZE = 1000;
-    console.log(`Starting ingest in chunks of ${CHUNK_SIZE}...`);
+    console.log(`Starting log ingest in chunks of ${CHUNK_SIZE}...`);
 
     for (let i = 0; i < dbPayload.length; i += CHUNK_SIZE) {
         const chunk = dbPayload.slice(i, i + CHUNK_SIZE);
@@ -52,7 +93,7 @@ async function ingestLogFile(filePath) {
                     'apikey': SUPABASE_KEY,
                     'Authorization': `Bearer ${SUPABASE_KEY}`,
                     'Content-Type': 'application/json',
-                    'Prefer': 'return=minimal' // minimal response to save bandwidth
+                    'Prefer': 'return=minimal'
                 },
                 body: JSON.stringify(chunk)
             });
@@ -65,7 +106,6 @@ async function ingestLogFile(filePath) {
             console.log(`  ✓ Inserted ${i + chunk.length} / ${dbPayload.length}`);
         } catch (err) {
             console.error(`❌ Failed inserting chunk starting at index ${i}:`, err.message);
-            // Optional: you can choose to halt or continue on chunk failure
             return;
         }
     }
@@ -73,6 +113,5 @@ async function ingestLogFile(filePath) {
     console.log('🎉 Full JSON ingestion complete!');
 }
 
-// Read filename from command arguments, or use the one you have open
 const targetFile = process.argv[2] || 'c:\\Users\\Magma\\Downloads\\logs_unknown-device_2026-04-05T01-49-38-813Z.json';
 ingestLogFile(targetFile);

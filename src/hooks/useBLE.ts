@@ -44,6 +44,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState(Platform.OS === 'web');
   const [dataReceivedCallback, setDataReceivedCallback] = useState<((deviceId: string, data: number[]) => void) | undefined>();
 
+  useEffect(() => {
+    AppLogger.updateKnownDevices(allDevices);
+  }, [allDevices]);
   const handleNotification = (error: any, characteristic: any, deviceId: string) => {
     if (error) {
       console.warn('Notification Error', error);

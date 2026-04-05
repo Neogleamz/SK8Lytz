@@ -38,6 +38,7 @@ export interface LogEntry {
 
 class AppLoggerService {
   private buffer: LogEntry[] = [];
+  private activeDevices: any[] = [];
   private loaded = false;
 
   private async ensureLoaded() {
@@ -61,6 +62,10 @@ class AppLoggerService {
     } catch (e) {
       console.warn('[AppLogger] persist failed', e);
     }
+  }
+
+  updateKnownDevices(devices: any[]) {
+    this.activeDevices = devices;
   }
 
   async log(event: EventType, payload: Record<string, any> = {}) {
@@ -87,6 +92,7 @@ class AppLoggerService {
       app: 'SK8Lytz',
       exported: new Date().toISOString(),
       count: this.buffer.length,
+      devices: this.activeDevices,
       logs: this.buffer,
     }, null, 2);
   }
