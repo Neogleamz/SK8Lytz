@@ -128,6 +128,19 @@ export default function DashboardScreen() {
     }
   }, [droppedOutDeviceIds]);
 
+  // User Profile
+  const [authUsername, setAuthUsername] = useState<string | null>(null);
+
+  const handleLogout = async () => {
+     try {
+       await supabase.auth.signOut();
+       setAuthUsername(null);
+       Alert.alert('Signed Out', 'You have been safely logged out.');
+     } catch (e) {
+       console.error('Logout error:', e);
+     }
+  };
+
   // Cloud Sync & Auto Connect on Launch
   const hasAutoConnectedRef = useRef(false);
   useEffect(() => {
@@ -143,6 +156,7 @@ export default function DashboardScreen() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           CloudUserId = session.user.id;
+          setAuthUsername(session.user.user_metadata?.username || session.user.email || 'Skater');
           const { data: groups, error } = await supabase.from('registered_groups').select('*').eq('user_id', CloudUserId).catch(() => ({ data: null, error: true }));
           isOffline = !!error;
           if (!error && groups && groups.length > 0) {
@@ -1036,7 +1050,16 @@ export default function DashboardScreen() {
         position: 'relative',
       }}>
         {!isActuallyConnected && (
-          <View style={{ position: 'absolute', right: 0, top: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + 20, zIndex: 10, flexDirection: 'row' }}>
+          <View style={{ position: 'absolute', right: 0, top: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + 20, zIndex: 10, flexDirection: 'row', alignItems: 'center' }}>
+            {authUsername && (
+               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginRight: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                  <MaterialCommunityIcons name="account-circle" size={16} color={Colors.textMuted} style={{ marginRight: 6 }} />
+                  <Text style={{ color: Colors.text, fontSize: 12, fontWeight: 'bold', marginRight: 8 }}>{authUsername}</Text>
+                  <TouchableOpacity onPress={handleLogout}>
+                     <Text style={{ color: Colors.error, fontSize: 10, fontWeight: 'bold' }}>LOGOUT</Text>
+                  </TouchableOpacity>
+               </View>
+            )}
             <TouchableOpacity onPress={toggleTheme} style={{ padding: 10 }}>
               <MaterialCommunityIcons name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} size={22} color={Colors.primary} />
             </TouchableOpacity>

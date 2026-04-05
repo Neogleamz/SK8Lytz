@@ -16,7 +16,7 @@
  * Platform: React Native (Android + Web)
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Platform, Modal, TextInput, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Platform, Modal, TextInput, Animated, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Typography, Layout } from '../theme/theme';
 import { Audio } from 'expo-av';
@@ -34,6 +34,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
+import { ScenesService } from '../services/ScenesService';
+import CommunityModal from './CommunityModal';
 
 const AnimatedIcon = Animated.createAnimatedComponent(MaterialCommunityIcons);
 
@@ -243,6 +245,43 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
   const [quickPromptName, setQuickPromptName] = useState('');
   const [quickPromptTargetIndex, setQuickPromptTargetIndex] = useState(-1);
   const [activeQuickPresetIndex, setActiveQuickPresetIndex] = useState<number | null>(null);
+
+  // Street Mode Physics
+  const [streetSensitivity, setStreetSensitivity] = useState<number>(30);
+
+  // Cloud Scene State
+  const [isCommunityModalVisible, setIsCommunityModalVisible] = useState<boolean>(false);
+  const [isPublishingCloud, setIsPublishingCloud] = useState<boolean>(false);
+
+  const captureEntireState = () => {
+    return {
+       activeMode, fixedSubMode, 
+       selectedColor, selectedPatternId, brightness, speed, 
+       multiColors, multiLength, multiTransition, candleAmplitude,
+       musicPatternId, musicPrimaryColor, musicSecondaryColor, micSensitivity, micSource, musicMatrixStyle,
+       streetSensitivity
+    };
+  };
+
+  const applyCloudScene = (scene: any) => {
+    if (scene.activeMode) setActiveMode(scene.activeMode);
+    if (scene.fixedSubMode) setFixedSubMode(scene.fixedSubMode);
+    if (scene.selectedColor) setSelectedColor(scene.selectedColor);
+    if (scene.selectedPatternId) setSelectedPatternId(scene.selectedPatternId);
+    if (scene.brightness !== undefined) setBrightness(scene.brightness);
+    if (scene.speed !== undefined) setSpeed(scene.speed);
+    if (scene.multiColors) setMultiColors(scene.multiColors);
+    if (scene.multiLength !== undefined) setMultiLength(scene.multiLength);
+    if (scene.multiTransition !== undefined) setMultiTransition(scene.multiTransition);
+    if (scene.candleAmplitude !== undefined) setCandleAmplitude(scene.candleAmplitude);
+    if (scene.musicPatternId !== undefined) setMusicPatternId(scene.musicPatternId);
+    if (scene.musicPrimaryColor) setMusicPrimaryColor(scene.musicPrimaryColor);
+    if (scene.musicSecondaryColor) setMusicSecondaryColor(scene.musicSecondaryColor);
+    if (scene.micSensitivity !== undefined) setMicSensitivity(scene.micSensitivity);
+    if (scene.micSource !== undefined) setMicSource(scene.micSource);
+    if (scene.musicMatrixStyle !== undefined) setMusicMatrixStyle(scene.musicMatrixStyle);
+    if (scene.streetSensitivity !== undefined) setStreetSensitivity(scene.streetSensitivity);
+  };
 
   // Multi-Color DIY State
   const [multiColors, setMultiColors] = useState<string[]>(['#FF0000', '#00FF00', '#0000FF']);
@@ -1187,7 +1226,13 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                   {/* QUICK PRESETS TIER */}
                   {fixedSubMode === 'MULTI' && (
                   <View style={{ flex: 1, paddingBottom: 6 }}>
-                    <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: 'bold', marginBottom: 4 }}>PRESETS & DIY</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                       <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: 'bold' }}>PRESETS & DIY</Text>
+                       <TouchableOpacity onPress={() => setIsCommunityModalVisible(true)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,255,0,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
+                          <MaterialCommunityIcons name="cloud-search" size={14} color="#00C853" style={{ marginRight: 4 }} />
+                          <Text style={{ color: '#00C853', fontSize: 10, fontWeight: 'bold' }}>COMMUNITY</Text>
+                       </TouchableOpacity>
+                    </View>
                     <View style={{ flex: 1, flexDirection: 'column', flexWrap: 'wrap', alignContent: 'stretch', gap: 4 }}>
                       {quickPresets.map((preset, idx) => (
                         <TouchableOpacity 
@@ -2026,6 +2071,20 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                      <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
                    </TouchableOpacity>
                 )}
+                <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#00C853' }} disabled={isPublishingCloud} onPress={async () => {
+                   setIsPublishingCloud(true);
+                   const safeName = quickPromptName.trim() || 'Cloud Scene';
+                   const success = await ScenesService.publishScene(safeName, captureEntireState(), true);
+                   if (success) {
+                       Alert.alert('Published!', 'Your scene is now available to the community.');
+                       setIsQuickPromptVisible(false);
+                   } else {
+                       Alert.alert('Error', 'Could not publish scene. Are you logged in?');
+                   }
+                   setIsPublishingCloud(false);
+                }}>
+                  <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>{isPublishingCloud ? 'Saving...' : 'To Cloud'}</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary }} onPress={() => {
                     const newArr = [...quickPresets];
                     const safeName = quickPromptName.trim() || 'Preset';
@@ -2044,6 +2103,13 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
             </View>
           </View>
         </Modal>
+
+        {/* Community Modal */}
+        <CommunityModal 
+           isVisible={isCommunityModalVisible} 
+           onClose={() => setIsCommunityModalVisible(false)} 
+           onApplyScene={applyCloudScene} 
+        />
 
         {/* Favorite Prompt Modal */}
         <Modal visible={isFavPromptVisible} transparent animationType="fade">
