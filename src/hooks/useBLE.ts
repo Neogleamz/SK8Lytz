@@ -43,10 +43,12 @@ interface BluetoothLowEnergyApi {
   allDevices: Device[];
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   isScanning: boolean;
+  isScanProbing: boolean;
   isBluetoothSupported: boolean;
   isBluetoothEnabled: boolean;
   onDataReceived?: (deviceId: string, data: number[]) => void;
   setOnDataReceived: (callback: (deviceId: string, data: number[]) => void) => void;
+  setOnHardwareProbed: (callback: (deviceId: string, config: any) => void) => void;
   droppedOutDeviceIds: string[];
   setDroppedOutDeviceIds: React.Dispatch<React.SetStateAction<string[]>>;
 }
@@ -64,10 +66,12 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState(Platform.OS === 'web');
   const [dataReceivedCallback, setDataReceivedCallback] = useState<((deviceId: string, data: number[]) => void) | undefined>();
   const [droppedOutDeviceIds, setDroppedOutDeviceIds] = useState<string[]>([]);
+  const [isScanProbing, setIsScanProbing] = useState(false);
   const disconnectListeners = useRef<Record<string, import('react-native-ble-plx').Subscription>>({});
   // Use ref (not state) so handleNotification always reads the CURRENT callback
   // without the stale closure problem — useState captures the value at subscription time
   const dataReceivedCallbackRef = useRef<((deviceId: string, data: number[]) => void) | undefined>(undefined);
+  const hardwareProbedCallbackRef = useRef<((deviceId: string, config: any) => void) | undefined>(undefined);
 
   useEffect(() => {
     AppLogger.updateKnownDevices(allDevices);
@@ -274,7 +278,98 @@ export default function useBLE(): BluetoothLowEnergyApi {
     setTimeout(() => {
       bleManager.stopDeviceScan();
       setIsScanning(false);
+      // After scan ends, background-probe each discovered device for hardware settings
+      probeAllDiscoveredDevices();
     }, 5000);
+  };
+
+  // Capture discovered devices at probe time via ref so the closure is fresh
+  const allDevicesRef2 = useRef<Device[]>([]);
+  useEffect(() => { allDevicesRef2.current = allDevices; }, [allDevices]);
+
+  /**
+   * probeAllDiscoveredDevices — runs after scan completes.
+   * Sequentially connects to each device, sends 0x63 query, waits for FF02
+   * notification, parses result, fires onHardwareProbed callback, disconnects.
+   * Skips devices that are already connected (user is actively using them).
+   */
+  const probeAllDiscoveredDevices = async () => {
+    if (Platform.OS === 'web' || !bleManager) return;
+    const devices = allDevicesRef2.current;
+    if (devices.length === 0) return;
+
+    setIsScanProbing(true);
+    console.log(`[BLE Probe] Starting background hardware probe of ${devices.length} device(s)`);
+
+    for (const device of devices) {
+      try {
+        // Skip if already connected (don't disturb active session)
+        const alreadyConn = await bleManager.isDeviceConnected(device.id).catch(() => false);
+        if (alreadyConn) {
+          console.log(`[BLE Probe] Skipping ${device.id} — already connected`);
+          continue;
+        }
+
+        console.log(`[BLE Probe] Probing ${device.name || device.id}...`);
+        const conn = await bleManager.connectToDevice(device.id, { timeout: 5000 });
+        await conn.discoverAllServicesAndCharacteristics();
+
+        // Collect the first 0x63 response via a one-shot promise
+        const hwConfig = await new Promise<any>((resolve) => {
+          const timer = setTimeout(() => {
+            sub.remove();
+            resolve(null); // timed out — no response
+          }, 2500);
+
+          const sub = conn.monitorCharacteristicForService(
+            ZENGGE_SERVICE_UUID,
+            ZENGGE_NOTIFY_UUID,
+            (err: any, char: any) => {
+              if (err || !char?.value) return;
+              try {
+                const buffer = require('buffer').Buffer;
+                const raw = Array.from(buffer.from(char.value, 'base64')) as number[];
+                const parsed = ZenggeProtocol.parseHardwareSettingsResponse(raw);
+                if (parsed) {
+                  clearTimeout(timer);
+                  sub.remove();
+                  resolve(parsed);
+                }
+              } catch (e) { /* ignore parse errors */ }
+            }
+          );
+
+          // Send the 0x63 query
+          const qp = ZenggeProtocol.queryHardwareSettings(false);
+          const b64 = require('buffer').Buffer.from(qp).toString('base64');
+          conn.writeCharacteristicWithoutResponseForService(
+            ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
+          ).catch((e: any) => console.warn('[BLE Probe] query write failed', e));
+        });
+
+        // Disconnect probe connection cleanly
+        try {
+          await bleManager.cancelDeviceConnection(device.id);
+        } catch (e) { /* ignore disconnect errors */ }
+
+        if (hwConfig && hardwareProbedCallbackRef.current) {
+          console.log(`[BLE Probe] Got config for ${device.id}:`, hwConfig);
+          hardwareProbedCallbackRef.current(device.id, hwConfig);
+        }
+
+        // Brief pause between probes to let GATT stack recover
+        await new Promise(r => setTimeout(r, 800));
+
+      } catch (probeErr: any) {
+        console.warn(`[BLE Probe] Failed to probe ${device.id}:`, probeErr?.message);
+        // Attempt cleanup even on error
+        try { await bleManager.cancelDeviceConnection(device.id); } catch (e) { }
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
+
+    setIsScanProbing(false);
+    console.log('[BLE Probe] Background probe complete.');
   };
 
   const connectToDevice = async (device: Device): Promise<string | undefined> => {
@@ -529,16 +624,19 @@ export default function useBLE(): BluetoothLowEnergyApi {
     connectedDevices,
     disconnectFromDevice,
     isScanning,
+    isScanProbing,
     isBluetoothSupported,
     isBluetoothEnabled,
     onDataReceived: dataReceivedCallback,
     setOnDataReceived: (callback: (deviceId: string, data: number[]) => void) => { dataReceivedCallbackRef.current = callback; },
+    setOnHardwareProbed: (callback: (deviceId: string, config: any) => void) => { hardwareProbedCallbackRef.current = callback; },
     droppedOutDeviceIds,
     setDroppedOutDeviceIds,
   }), [
     allDevices, 
     connectedDevices, 
-    isScanning, 
+    isScanning,
+    isScanProbing,
     isBluetoothSupported, 
     isBluetoothEnabled, 
     dataReceivedCallback,

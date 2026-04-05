@@ -65,10 +65,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     disconnectFromDevice,
     writeToDevice,
     isScanning,
+    isScanProbing,
     isBluetoothSupported,
     isBluetoothEnabled,
     requestPermissions,
     setOnDataReceived,
+    setOnHardwareProbed,
     droppedOutDeviceIds
   } = useBLE();
 
@@ -79,6 +81,34 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     allDevices.forEach(d => { if (!merged.find(c => c.id === d.id)) merged.push(d); });
     AppLogger.updateKnownDevices(merged);
   }, [connectedDevices, allDevices]);
+
+  // Register background probe callback — fires for each device after scan probe
+  useEffect(() => {
+    setOnHardwareProbed((deviceId: string, cfg: any) => {
+      // Merge parsed hardware config into deviceConfigs (persisted store)
+      setDeviceConfigs(prev => {
+        const merged = { ...(prev[deviceId] || {}), ...cfg };
+        const next = { ...prev, [deviceId]: merged };
+        // Persist immediately
+        AsyncStorage.setItem('ng_device_configs', JSON.stringify(next)).catch(() => {});
+        return next;
+      });
+      // Also update allDevices so the list shows config before user connects
+      setAllDevices(prev => prev.map(d =>
+        (d as any).id === deviceId
+          ? { ...d,
+              points: cfg.ledPoints,
+              segments: cfg.segments,
+              stripType: cfg.icName,
+              sorting: cfg.colorSortingName,
+              colorSorting: cfg.colorSorting,
+              icType: cfg.icType,
+              detected: true
+            } as any
+          : d
+      ));
+    });
+  }, [setOnHardwareProbed]);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -1310,7 +1340,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 </View>
               </View>
             }
-            data={!isDeviceListCollapsed ? [...allDevices].sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999)) : []}
+            data={!isDeviceListCollapsed ? [...allDevices]
+              .sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999))
+              .map(d => {
+                const cfg = deviceConfigs[(d as any).id] || {};
+                // Prefer user-configured name over raw BLE advertisement name
+                return { ...d, ...cfg };
+              }) : []}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             scrollEnabled={true}
