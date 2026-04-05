@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, FlatList, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
-import { Colors, Typography, Layout } from '../theme/theme';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  View, Text, StyleSheet, Modal, TouchableOpacity, FlatList,
+  ActivityIndicator, Alert, SafeAreaView, Animated, Easing
+} from 'react-native';
+import { useTheme } from '../context/ThemeContext';
+import { Typography, Layout } from '../theme/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ScenesService, ICloudScene } from '../services/ScenesService';
-import { LinearGradient } from 'expo-linear-gradient';
 
 interface Props {
   isVisible: boolean;
@@ -11,249 +14,291 @@ interface Props {
   onApplyScene: (payload: any) => void;
 }
 
+// --- Animated LED Strip Preview ---
+function LedStripPreview({ colors, mode }: { colors: string[], mode: string }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  const isAnimated = ['MULTI', 'RBM', 'MUSIC', 'FIXED'].includes(mode);
+
+  useEffect(() => {
+    if (!isAnimated || colors.length === 0) return;
+    Animated.loop(
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 2000,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      })
+    ).start();
+    return () => anim.stopAnimation();
+  }, [colors, isAnimated]);
+
+  const displayColors = colors.length > 0 ? colors : ['#1a1a1a', '#2a2a2a', '#1a1a1a'];
+  const segments = Math.max(displayColors.length, 8);
+  const repeated: string[] = [];
+  while (repeated.length < segments * 2) {
+    repeated.push(...displayColors);
+  }
+
+  const translateX = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -(100 / segments) * displayColors.length],
+  });
+
+  return (
+    <View style={{ height: 18, borderRadius: 9, overflow: 'hidden', flexDirection: 'row' }}>
+      <Animated.View
+        style={{
+          flexDirection: 'row',
+          width: '200%',
+          height: '100%',
+          transform: isAnimated ? [{ translateX: translateX as any }] : [],
+        }}
+      >
+        {repeated.map((color, idx) => (
+          <View key={idx} style={{ flex: 1, backgroundColor: color, height: '100%' }} />
+        ))}
+      </Animated.View>
+    </View>
+  );
+}
+
+// --- Main Component ---
 export default function CommunityModal({ isVisible, onClose, onApplyScene }: Props) {
+  const { Colors } = useTheme();
+  const styles = createStyles(Colors);
+
   const [activeTab, setActiveTab] = useState<'COMMUNITY' | 'PERSONAL'>('COMMUNITY');
   const [scenes, setScenes] = useState<ICloudScene[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isVisible) {
-      fetchScenes();
-    }
+    if (isVisible) fetchScenes();
   }, [isVisible, activeTab]);
 
   const fetchScenes = async () => {
     setLoading(true);
-    let data: ICloudScene[] = [];
-    if (activeTab === 'COMMUNITY') {
-       data = await ScenesService.getPublicScenes();
-    } else {
-       data = await ScenesService.getMyScenes();
-    }
+    const data = activeTab === 'COMMUNITY'
+      ? await ScenesService.getPublicScenes()
+      : await ScenesService.getMyScenes();
     setScenes(data);
     setLoading(false);
   };
 
   const handleApply = async (scene: ICloudScene) => {
     onApplyScene(scene.scene_payload);
-    Alert.alert('Applied!', `${scene.name} has been applied to your hardware.`);
-    if (activeTab === 'COMMUNITY') {
-        ScenesService.downloadScene(scene.id);
-    }
+    Alert.alert('✅ Applied!', `"${scene.name}" has been loaded onto your hardware.`);
+    if (activeTab === 'COMMUNITY') ScenesService.downloadScene(scene.id);
     onClose();
   };
 
   const handleUpvote = async (sceneId: string) => {
     setProcessingId(sceneId);
     const success = await ScenesService.upvoteScene(sceneId);
-    if (success) {
-       setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, upvotes: s.upvotes + 1 } : s));
-    }
+    if (success) setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, upvotes: s.upvotes + 1 } : s));
     setProcessingId(null);
   };
 
   const handleDelete = (sceneId: string) => {
-     Alert.alert('Delete Scene', 'Are you sure you want to delete this cloud scene?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: async () => {
-           setProcessingId(sceneId);
-           const success = await ScenesService.deleteScene(sceneId);
-           if (success) {
-              setScenes(prev => prev.filter(s => s.id !== sceneId));
-           } else {
-              Alert.alert('Error', 'Failed to delete scene.');
-           }
-           setProcessingId(null);
-        }}
-     ]);
+    Alert.alert('Delete Scene', 'This will permanently remove this scene from your cloud saves.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        setProcessingId(sceneId);
+        const success = await ScenesService.deleteScene(sceneId);
+        if (success) {
+          setScenes(prev => prev.filter(s => s.id !== sceneId));
+        } else {
+          Alert.alert('Error', 'Failed to delete scene.');
+        }
+        setProcessingId(null);
+      }}
+    ]);
   };
 
-  const renderItem = ({ item }: { item: ICloudScene }) => {
+  const renderItem = useCallback(({ item }: { item: ICloudScene }) => {
+    const p = item.scene_payload || {};
+    const mode: string = p.activeMode || p.fixedSubMode || 'UNKNOWN';
     const isOwner = activeTab === 'PERSONAL';
-    const payloadKeys = Object.keys(item.scene_payload || {}).length;
-    
-    // Attempt to parse out basic colors to show a preview if it's a DIY array
+
+    // Build color array for preview
     let previewColors: string[] = [];
-    if (item.scene_payload?.selectedColor) previewColors.push(item.scene_payload.selectedColor);
-    if (item.scene_payload?.multiColors && Array.isArray(item.scene_payload.multiColors) && item.scene_payload.multiColors.length > 0) {
-        previewColors = item.scene_payload.multiColors.slice(0, 5); // take max 5
-    }
-    
-    // Provide a fallback UI if no colors exist
-    if (previewColors.length === 0) previewColors = ['#333', '#444'];
+    if (p.multiColors?.length > 0) previewColors = p.multiColors;
+    else if (p.selectedColor) previewColors = [p.selectedColor, p.selectedColor];
+    else if (p.musicPrimaryColor) previewColors = [p.musicPrimaryColor, p.musicSecondaryColor || '#000'];
+
+    const modeLabel = mode.toUpperCase();
+    const paramCount = Object.keys(p).length;
 
     return (
       <View style={styles.card}>
+        {/* Header row */}
         <View style={styles.cardHeader}>
-           <Text style={styles.sceneName}>{item.name}</Text>
-           <View style={styles.badge}>
-              <Text style={styles.badgeText}>{item.scene_payload?.activeMode || 'UNKNOWN'} MODE</Text>
-           </View>
+          <Text style={styles.sceneName} numberOfLines={1}>{item.name}</Text>
+          <View style={[styles.badge, { backgroundColor: item.is_public ? 'rgba(0,200,80,0.15)' : 'rgba(255,255,255,0.08)' }]}>
+            <MaterialCommunityIcons
+              name={item.is_public ? 'earth' : 'lock-outline'}
+              size={10}
+              color={item.is_public ? '#00C853' : '#888'}
+              style={{ marginRight: 4 }}
+            />
+            <Text style={[styles.badgeText, { color: item.is_public ? '#00C853' : '#888' }]}>{modeLabel}</Text>
+          </View>
         </View>
 
-        <Text style={styles.authorText}>By {item.author_username}</Text>
+        <Text style={styles.authorText}>By {item.author_username}  ·  {paramCount} params</Text>
 
-        <View style={styles.previewContainer}>
-           <Text style={styles.statusText}>Payload Complexity: {payloadKeys} Parameters</Text>
-           <View style={styles.colorStrip}>
-              {previewColors.map((color, idx) => (
-                  <View key={idx} style={[styles.colorBlock, { backgroundColor: color }]} />
-              ))}
-              {item.scene_payload?.multiColors?.length > 5 && (
-                  <Text style={{color: '#888', marginLeft: 8}}>+{(item.scene_payload.multiColors.length - 5)} more</Text>
-              )}
-           </View>
+        {/* LED Strip Preview */}
+        <View style={styles.stripContainer}>
+          <LedStripPreview colors={previewColors} mode={mode} />
         </View>
 
+        {/* Actions */}
         <View style={styles.cardActions}>
-            <View style={styles.statsRow}>
-               <View style={styles.statItem}>
-                 <MaterialCommunityIcons name="heart" size={16} color={Colors.primary} />
-                 <Text style={styles.statText}>{item.upvotes}</Text>
-               </View>
-               <View style={styles.statItem}>
-                 <MaterialCommunityIcons name="download" size={16} color="#888" />
-                 <Text style={styles.statText}>{item.downloads}</Text>
-               </View>
+          <View style={styles.statsRow}>
+            <TouchableOpacity
+              style={styles.statItem}
+              onPress={() => handleUpvote(item.id)}
+              disabled={processingId === item.id || activeTab === 'PERSONAL'}
+            >
+              <MaterialCommunityIcons name="heart" size={15} color={activeTab === 'COMMUNITY' ? Colors.primary : '#555'} />
+              <Text style={styles.statText}>{item.upvotes}</Text>
+            </TouchableOpacity>
+            <View style={styles.statItem}>
+              <MaterialCommunityIcons name="download-outline" size={15} color="#555" />
+              <Text style={styles.statText}>{item.downloads}</Text>
             </View>
-            
-            <View style={styles.actionButtons}>
-               {activeTab === 'COMMUNITY' && (
-                 <TouchableOpacity 
-                    style={styles.iconButton} 
-                    onPress={() => handleUpvote(item.id)}
-                    disabled={processingId === item.id}
-                 >
-                    <MaterialCommunityIcons name="thumb-up-outline" size={20} color="#FFF" />
-                 </TouchableOpacity>
-               )}
-               {isOwner && (
-                 <TouchableOpacity 
-                    style={[styles.iconButton, { backgroundColor: 'rgba(255,0,0,0.2)' }]} 
-                    onPress={() => handleDelete(item.id)}
-                    disabled={processingId === item.id}
-                 >
-                    <MaterialCommunityIcons name="delete" size={20} color="#FF4444" />
-                 </TouchableOpacity>
-               )}
-               <TouchableOpacity 
-                  style={styles.applyButton} 
-                  onPress={() => handleApply(item)}
-               >
-                  <Text style={styles.applyButtonText}>Apply Scene</Text>
-                  <MaterialCommunityIcons name="chevron-right" size={20} color="#000" />
-               </TouchableOpacity>
-            </View>
+          </View>
+
+          <View style={styles.actionButtons}>
+            {isOwner && (
+              <TouchableOpacity
+                style={[styles.iconButton, { borderColor: 'rgba(255,60,60,0.4)' }]}
+                onPress={() => handleDelete(item.id)}
+                disabled={processingId === item.id}
+              >
+                <MaterialCommunityIcons name="trash-can-outline" size={17} color="#FF4444" />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.applyButton} onPress={() => handleApply(item)}>
+              <Text style={styles.applyButtonText}>Apply</Text>
+              <MaterialCommunityIcons name="lightning-bolt" size={16} color="#000" />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
-  };
+  }, [activeTab, processingId]);
 
   return (
     <Modal visible={isVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <SafeAreaView style={styles.container}>
-         <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-               <MaterialCommunityIcons name="close" size={28} color={Colors.text} />
-            </TouchableOpacity>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <MaterialCommunityIcons name="close" size={26} color={Colors.text} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle}>Cloud Scenes</Text>
-         </View>
+            <Text style={styles.headerSub}>Browse and share LED lighting setups</Text>
+          </View>
+          <TouchableOpacity onPress={fetchScenes} style={styles.refreshBtn}>
+            <MaterialCommunityIcons name="refresh" size={22} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
 
-         <View style={styles.tabsContainer}>
-            <TouchableOpacity 
-               style={[styles.tab, activeTab === 'COMMUNITY' && styles.activeTab]}
-               onPress={() => setActiveTab('COMMUNITY')}
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          {(['COMMUNITY', 'PERSONAL'] as const).map(tab => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tab, activeTab === tab && styles.activeTab]}
+              onPress={() => setActiveTab(tab)}
             >
-               <Text style={[styles.tabText, activeTab === 'COMMUNITY' && styles.activeTabText]}>Global Community</Text>
+              <MaterialCommunityIcons
+                name={tab === 'COMMUNITY' ? 'earth' : 'account-circle'}
+                size={16}
+                color={activeTab === tab ? Colors.primary : '#666'}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+                {tab === 'COMMUNITY' ? 'Community' : 'My Saves'}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-               style={[styles.tab, activeTab === 'PERSONAL' && styles.activeTab]}
-               onPress={() => setActiveTab('PERSONAL')}
-            >
-               <Text style={[styles.tabText, activeTab === 'PERSONAL' && styles.activeTabText]}>My Saves</Text>
-            </TouchableOpacity>
-         </View>
+          ))}
+        </View>
 
-         {loading ? (
-             <View style={styles.centerLoading}>
-                 <ActivityIndicator size="large" color={Colors.primary} />
-                 <Text style={{color: Colors.textMuted, marginTop: 12}}>Fetching Scenes...</Text>
-             </View>
-         ) : (
-             <FlatList 
-                 data={scenes}
-                 keyExtractor={(item) => item.id}
-                 renderItem={renderItem}
-                 contentContainerStyle={styles.listContainer}
-                 ListEmptyComponent={() => (
-                    <View style={styles.emptyContainer}>
-                       <MaterialCommunityIcons name="cloud-off-outline" size={64} color={Colors.surfaceHighlight} />
-                       <Text style={styles.emptyText}>No scenes found.</Text>
-                    </View>
-                 )}
-             />
-         )}
+        {loading ? (
+          <View style={styles.centerLoading}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+            <Text style={{ color: Colors.textMuted, marginTop: 12, fontSize: 13 }}>Loading scenes...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={scenes}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyContainer}>
+                <MaterialCommunityIcons name="cloud-off-outline" size={60} color="#333" />
+                <Text style={styles.emptyTitle}>No Scenes Yet</Text>
+                <Text style={styles.emptyText}>
+                  {activeTab === 'COMMUNITY'
+                    ? 'Be the first to publish a scene to the community!'
+                    : 'Save a preset to the cloud from the controller.'}
+                </Text>
+              </View>
+            )}
+          />
+        )}
       </SafeAreaView>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+const createStyles = (Colors: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: Colors.surfaceHighlight,
   },
-  closeBtn: {
-    marginRight: 16,
-  },
-  headerTitle: {
-    ...Typography.header,
-    fontSize: 24,
-    color: Colors.text,
-  },
+  closeBtn: { marginRight: 14 },
+  refreshBtn: { padding: 4 },
+  headerTitle: { ...Typography.header, fontSize: 22, color: Colors.text },
+  headerSub: { fontSize: 11, color: Colors.textMuted, marginTop: 1 },
   tabsContainer: {
     flexDirection: 'row',
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    flexDirection: 'row',
+    paddingVertical: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: Layout.borderRadius,
     backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   activeTab: {
-    backgroundColor: Colors.surfaceHighlight,
-    borderWidth: 1,
     borderColor: Colors.primary,
+    backgroundColor: Colors.surfaceHighlight,
   },
-  tabText: {
-    ...Typography.body,
-    fontWeight: 'bold',
-    color: '#888',
-  },
-  activeTabText: {
-    color: Colors.primary,
-  },
-  listContainer: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 16,
-  },
+  tabText: { fontWeight: 'bold', color: '#666', fontSize: 13 },
+  activeTabText: { color: Colors.primary },
+  listContainer: { padding: 14, paddingBottom: 50, gap: 14 },
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Layout.borderRadius,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: Colors.surfaceHighlight,
   },
@@ -261,81 +306,48 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   sceneName: {
     ...Typography.title,
     color: Colors.text,
-    fontSize: 18,
+    fontSize: 16,
     flex: 1,
+    marginRight: 8,
   },
   badge: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: Colors.textMuted,
-  },
-  authorText: {
-    ...Typography.caption,
-    color: Colors.textMuted,
-    marginBottom: 16,
-  },
-  previewContainer: {
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    padding: 12,
-    borderRadius: Layout.borderRadius,
-    marginBottom: 16,
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#888',
-    marginBottom: 8,
-  },
-  colorStrip: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
-  colorBlock: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    marginRight: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+  badgeText: { fontSize: 10, fontWeight: 'bold' },
+  authorText: { fontSize: 11, color: Colors.textMuted, marginBottom: 12 },
+  stripContainer: {
+    marginBottom: 12,
+    borderRadius: 9,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   cardActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statText: {
-    color: '#888',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
+  statsRow: { flexDirection: 'row', gap: 14 },
+  statItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  statText: { color: '#666', fontSize: 13, fontWeight: 'bold' },
+  actionButtons: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -345,26 +357,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
-    gap: 4,
+    borderRadius: 18,
+    gap: 5,
   },
-  applyButtonText: {
-    color: '#000',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  centerLoading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyContainer: {
-    marginTop: 60,
-    alignItems: 'center',
-  },
-  emptyText: {
-    ...Typography.title,
-    color: Colors.textMuted,
-    marginTop: 16,
-  }
+  applyButtonText: { color: '#000', fontWeight: 'bold', fontSize: 13 },
+  centerLoading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyContainer: { marginTop: 70, alignItems: 'center', paddingHorizontal: 30 },
+  emptyTitle: { ...Typography.title, color: Colors.text, marginTop: 16, fontSize: 18 },
+  emptyText: { color: Colors.textMuted, textAlign: 'center', marginTop: 8, fontSize: 13, lineHeight: 20 },
 });

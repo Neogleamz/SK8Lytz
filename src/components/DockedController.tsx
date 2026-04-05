@@ -35,6 +35,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
 import { ScenesService } from '../services/ScenesService';
+import { containsProfanity } from '../services/AuthUtils';
 import CommunityModal from './CommunityModal';
 
 const AnimatedIcon = Animated.createAnimatedComponent(MaterialCommunityIcons);
@@ -252,6 +253,7 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
   // Cloud Scene State
   const [isCommunityModalVisible, setIsCommunityModalVisible] = useState<boolean>(false);
   const [isPublishingCloud, setIsPublishingCloud] = useState<boolean>(false);
+  const [cloudPublicToggle, setCloudPublicToggle] = useState<boolean>(true);
 
   const captureEntireState = () => {
     return {
@@ -2047,13 +2049,31 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                  {quickPromptTargetIndex === -1 ? 'Name your new preset to store it in the Quick bar.' : 'Rename your preset or delete it from the bar.'}
               </Text>
               <TextInput
-                style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: 12, borderRadius: 8, fontSize: 16, marginBottom: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
+                style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: 12, borderRadius: 8, fontSize: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
                 placeholder="Preset Name..."
                 placeholderTextColor="rgba(255,255,255,0.3)"
                 value={quickPromptName}
                 onChangeText={setQuickPromptName}
                 autoFocus
               />
+              {/* Cloud visibility toggle */}
+              {quickPromptTargetIndex === -1 && (
+                <TouchableOpacity
+                  onPress={() => setCloudPublicToggle(p => !p)}
+                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 10, marginBottom: 20, borderWidth: 1, borderColor: cloudPublicToggle ? '#00C853' : 'rgba(255,255,255,0.1)' }}
+                >
+                  <MaterialCommunityIcons
+                    name={cloudPublicToggle ? 'earth' : 'lock-outline'}
+                    size={18}
+                    color={cloudPublicToggle ? '#00C853' : Colors.textMuted}
+                    style={{ marginRight: 10 }}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>{cloudPublicToggle ? 'Public — visible to community' : 'Private — only you can see it'}</Text>
+                    <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>Tap to toggle visibility</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 {quickPromptTargetIndex !== -1 && (
                    <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={() => {
@@ -2074,16 +2094,21 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                 <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#00C853' }} disabled={isPublishingCloud} onPress={async () => {
                    setIsPublishingCloud(true);
                    const safeName = quickPromptName.trim() || 'Cloud Scene';
-                   const success = await ScenesService.publishScene(safeName, captureEntireState(), true);
+                   if (containsProfanity(safeName)) {
+                     Alert.alert('Invalid Name', 'Scene names cannot contain inappropriate language. Please choose a different name.');
+                     setIsPublishingCloud(false);
+                     return;
+                   }
+                   const success = await ScenesService.publishScene(safeName, captureEntireState(), cloudPublicToggle);
                    if (success) {
-                       Alert.alert('Published!', 'Your scene is now available to the community.');
+                       Alert.alert(cloudPublicToggle ? 'Published!' : 'Saved!', cloudPublicToggle ? 'Your scene is now available to the community.' : 'Scene saved privately to your cloud.');
                        setIsQuickPromptVisible(false);
                    } else {
-                       Alert.alert('Error', 'Could not publish scene. Are you logged in?');
+                       Alert.alert('Error', 'Could not save scene. Are you logged in?');
                    }
                    setIsPublishingCloud(false);
                 }}>
-                  <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>{isPublishingCloud ? 'Saving...' : 'To Cloud'}</Text>
+                  <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>{isPublishingCloud ? 'Saving...' : (cloudPublicToggle ? '🌍 Publish' : '🔒 Save Private')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary }} onPress={() => {
                     const newArr = [...quickPresets];
