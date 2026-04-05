@@ -79,10 +79,11 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
 
   const handleQuery = async () => {
     if (writeToDevice) {
-      // Blast both ping protocols immediately to brute force the hardware specs
-      writeToDevice(ZenggeProtocol.queryHardwareConfig());
-      setTimeout(() => { writeToDevice(ZenggeProtocol.wrapCommand([0x63, 0x14, 0x00, 0x00])); }, 250);
-      Alert.alert("Interrogating Hardware", "Extracting physical state... Please wait a few seconds. Fields will dynamically auto-fill if the controller responds.");
+      // Send the correct 0x63 hardware settings query — matches what APK sends
+      writeToDevice(ZenggeProtocol.queryHardwareSettings(false));
+      // Send a retry 400ms later to catch devices that need a moment to respond
+      setTimeout(() => writeToDevice(ZenggeProtocol.queryHardwareSettings(false)), 400);
+      Alert.alert("Hardware Query Sent", "Sent 0x63 query to device. Fields will autofill within 1-2 seconds if the device responds.");
     }
   };
 
@@ -210,7 +211,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
               style={{ backgroundColor: '#111', borderWidth: 1, borderColor: '#00f0ff50', borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginBottom: 16 }}
               onPress={handleQuery}
             >
-               <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 12, letterSpacing: 1 }}>↓ LIVE HARDWARE PING (0x10)</Text>
+               <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 12, letterSpacing: 1 }}>↓ LIVE HARDWARE PING (0x63)</Text>
             </TouchableOpacity>
 
             <View style={styles.row}>

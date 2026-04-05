@@ -836,9 +836,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const openSettings = (device: any) => {
     setSelectedDeviceForSettingsId(device.id);
     
-    // Explicitly query the hardware config upon modal invoke if connected
+    // Query hardware settings with correct 0x63 command (not legacy 0x10)
     if (connectedDevices.some(d => d.id === device.id)) {
-       writeToDevice(ZenggeProtocol.queryHardwareConfig(), device.id);
+       setTimeout(() => writeToDevice(ZenggeProtocol.queryHardwareSettings(false), device.id), 300);
     }
     
     setIsSettingsVisible(true);
@@ -1489,7 +1489,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             setMockConnectedDevice(null);
           }
         }}
-        onConnectToDevice={async (d: any) => { await connectToDevice(d); }}
+        onConnectToDevice={async (d: any) => {
+          await connectToDevice(d);
+          // Send 0x63 hardware query after connect — response populates deviceConfigs via notification callback
+          setTimeout(() => writeToDevice(ZenggeProtocol.queryHardwareSettings(false), d.id), 600);
+        }}
         liveDeviceConfigs={deviceConfigs}
       />
       <Sk8LytzProgrammerModal 
