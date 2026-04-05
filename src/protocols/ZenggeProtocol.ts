@@ -155,27 +155,78 @@ export class ZenggeProtocol {
    * Validation: bytes[0]==0x63 AND bytes[11]==checksum(bytes[0..10])
    */
   public static parseHardwareSettingsResponse(raw: number[]): HardwareSettings | null {
-    // Strip V2 wrapper if present (8-byte header starting with 0x00, 0x__, 0x80, 0x00)
+    // ── Step 1: Detect and unwrap JSON envelope ──────────────────────────────
+    // Newer firmware sends: [8-byte BLE header][JSON: {"code":0,"payload":"<hex>"}]
+    // where <hex> is the actual binary response encoded as a hex string.
     let payload = raw;
-    if (raw.length > 12 && raw[2] === 0x80) {
-      payload = raw.slice(8);
+    let isJsonFormat = false;
+    try {
+      const jsonStart = raw.findIndex((b, i) => b === 0x7B && raw[i+1] === 0x22); // 0x7B = '{'
+      if (jsonStart !== -1) {
+        const jsonStr = String.fromCharCode(...raw.slice(jsonStart));
+        const parsed = JSON.parse(jsonStr);
+        if (parsed?.payload && typeof parsed.payload === 'string') {
+          const hexStr: string = parsed.payload;
+          const innerBytes: number[] = [];
+          for (let i = 0; i < hexStr.length - 1; i += 2) {
+            innerBytes.push(parseInt(hexStr.slice(i, i + 2), 16));
+          }
+          payload = innerBytes;
+          isJsonFormat = true;
+        }
+      }
+    } catch (e) {
+      // Not JSON format — fall through to binary parse
     }
 
-    if (payload.length < 12) return null;
-    if (payload[0] !== 0x63) return null;
+    // ── Step 2: Strip V2 binary wrapper if present ──────────────────────────
+    if (!isJsonFormat && payload.length > 12 && payload[2] === 0x80) {
+      payload = payload.slice(8);
+    }
 
-    // Validate checksum: sum(payload[0..10]) & 0xFF == payload[11]
-    const expectedCs = payload.slice(0, 11).reduce((a, b) => (a + b) & 0xFF, 0);
-    if (payload[11] !== expectedCs) return null;
+    // ── Step 3: Verify this is a 0x63 response packet ────────────────────────
+    // JSON format: [0x00, 0x63, ...] — 0x63 at index 1
+    // Classic format: [0x63, ...] — 0x63 at index 0
+    const is63AtIndex0 = payload[0] === 0x63;
+    const is63AtIndex1 = payload[1] === 0x63;
+    if (!is63AtIndex0 && !is63AtIndex1) return null;
+    if (payload.length < 10) return null;
 
-    const icType = payload[3] & 0xFF;
-    // BYTE SWAP: payload[8]=Low, payload[9]=High (little-endian pair)
-    const ledPoints = ((payload[9] & 0xFF) << 8) | (payload[8] & 0xFF);
-    const colorSorting = payload[10] & 0xFF;
+    // ── Step 4: Extract fields from correct offsets ───────────────────────────
+    // JSON-inner format (0x63 at index 1):
+    //   [0]=0x00  [1]=0x63  [2]=0x00  [3]=icType  [4]=0x00
+    //   [5]=segments  [6]=pts_hi  [7]=pts_lo  [8]=X  [9]=colorSorting
+    // Classic format (0x63 at index 0):
+    //   [0]=0x63  [1]=?  [2]=?  [3]=icType  [4]=?  [5]=?  [6]=?  [7]=?
+    //   [8]=pts_lo  [9]=pts_hi  [10]=colorSorting  [11]=checksum
+    let icType: number, ledPoints: number, colorSorting: number;
+
+    if (is63AtIndex1 && isJsonFormat) {
+      // JSON-inner format
+      icType       = payload[3] & 0xFF;
+      const ptsHi  = payload[5] & 0xFF;
+      const ptsLo  = payload[6] & 0xFF;
+      ledPoints    = (ptsHi << 8) | ptsLo;
+      colorSorting = payload[7] & 0xFF;
+      // Fallback if points look wrong (0 or >2048)
+      if (ledPoints === 0 || ledPoints > 2048) {
+        // Try alternative positions
+        ledPoints = ((payload[6] & 0xFF) << 8) | (payload[7] & 0xFF);
+      }
+    } else {
+      // Classic 12-byte format
+      icType       = payload[3] & 0xFF;
+      ledPoints    = ((payload[9] & 0xFF) << 8) | (payload[8] & 0xFF);
+      colorSorting = payload[10] & 0xFF;
+    }
+
+    // Clamp sorting to defined range
+    if (colorSorting > 5) colorSorting = colorSorting & 0x07;
+    if (colorSorting > 5) colorSorting = 2; // default GRB
 
     return {
-      ledPoints: ledPoints || HW_CONSTRAINTS.defaultPoints,
-      segments: 1,    // segments not returned in 0x63 response, default 1
+      ledPoints: (ledPoints > 0 && ledPoints <= 2048) ? ledPoints : HW_CONSTRAINTS.defaultPoints,
+      segments: 1,
       icType,
       icName: IC_TYPES[icType] || 'WS2812B',
       colorSorting,
