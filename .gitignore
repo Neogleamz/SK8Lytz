@@ -79,3 +79,6 @@ theme.js
 
 # Editor settings (local only)
 .vscode/
+
+# AI agent config (local only)
+.agents/
