@@ -93,6 +93,7 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [simpleScannerMode, setSimpleScannerMode] = useState(false);
+  const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
 
   useEffect(() => {
     if (visible) AppLogger.log('SCREEN_OPENED', { screenName: 'Analytics' });
@@ -122,23 +123,15 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
     }
   };
 
-  const handleClear = async () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Delete all stored analytics logs?')) {
-        await AppLogger.clearLogs();
-        load();
-        if (onClearAll) onClearAll();
-      }
-      return;
-    }
+  const handleClear = () => {
+    setConfirmDeleteVisible(true);
+  };
 
-    Alert.alert('Clear Logs', 'Delete all stored analytics logs?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => { await AppLogger.clearLogs(); load(); if (onClearAll) onClearAll(); }
-      },
-    ]);
+  const executeClear = async () => {
+    await AppLogger.clearLogs();
+    load();
+    if (onClearAll) onClearAll();
+    setConfirmDeleteVisible(false);
   };
 
   const handleUpload = async () => {
@@ -492,6 +485,28 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
         {tab === 'stats' && renderStatsTab()}
         {tab === 'admin' && renderAdminTab()}
       </SafeAreaView>
+
+      <Modal visible={confirmDeleteVisible} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: isDark ? '#1A1A1A' : '#FFF', padding: 24, borderRadius: 12, width: '100%', maxWidth: 400, borderColor: '#ff4040', borderWidth: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <MaterialCommunityIcons name="alert" size={24} color="#ff4040" />
+              <Text style={{ fontSize: 18, fontWeight: '800', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: isDark ? '#FFF' : '#000', marginLeft: 8 }}>Purge Telemetry Logs</Text>
+            </View>
+            <Text style={{ fontSize: 14, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: isDark ? '#CCC' : '#444', marginBottom: 24, lineHeight: 20 }}>
+              Are you sure you want to completely erase all timeline, device, and analytics stats from local memory? This action cannot be reversed.
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
+              <TouchableOpacity onPress={() => setConfirmDeleteVisible(false)} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 6, backgroundColor: isDark ? '#333' : '#EEE' }}>
+                <Text style={{ fontWeight: '700', color: isDark ? '#FFF' : '#000', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={executeClear} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 6, backgroundColor: '#ff4040' }}>
+                <Text style={{ fontWeight: '700', color: '#FFF', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Erase Everything</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 }
