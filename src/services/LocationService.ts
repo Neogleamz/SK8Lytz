@@ -72,15 +72,15 @@ class LocationService {
    * Fetch active public sessions sorted by distance from current position.
    * Falls back to creation-date order if location permission denied.
    */
-  async getNearbyPublicSessions(): Promise<NearbySession[]> {
+  async getNearbyPublicSessions(radiusMi?: number | null): Promise<NearbySession[]> {
     const { supabase } = await import('./supabaseClient');
 
     // Pull all active public sessions (via the security-invoker view)
     const { data, error } = await supabase
       .from('public_sessions')
-      .select('id, name, invite_code, location_label, location_coords, scheduled_at, created_at, leader_name, leader_username, member_count')
+      .select('id, name, invite_code, location_label, location_coords, scheduled_at, created_at, leader_name, leader_username, crew_name, member_count')
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(100);
 
     if (error || !data) return [];
 
@@ -116,6 +116,7 @@ class LocationService {
         inviteCode:    s.invite_code,
         locationLabel: s.location_label ?? 'Unknown Location',
         leaderName:    s.leader_name ?? 'Unknown',
+        crewName:      s.crew_name ?? null,
         memberCount:   s.member_count ?? 0,
         scheduledAt:   s.scheduled_at,
         distanceMi,
@@ -123,13 +124,19 @@ class LocationService {
       };
     });
 
-    // Sort: sessions with known distance first (nearest), then by date
-    return sessions.sort((a, b) => {
+    // Sort: nearest first, then by date
+    const sorted = sessions.sort((a, b) => {
       if (a.distanceMi !== null && b.distanceMi !== null) return a.distanceMi - b.distanceMi;
       if (a.distanceMi !== null) return -1;
       if (b.distanceMi !== null) return 1;
       return 0;
     });
+
+    // Apply radius filter if provided
+    if (radiusMi != null) {
+      return sorted.filter(s => s.distanceMi === null || s.distanceMi <= radiusMi);
+    }
+    return sorted;
   }
 
   /** Haversine distance in miles between two lat/lng points */
@@ -176,6 +183,7 @@ export interface NearbySession {
   inviteCode:    string;
   locationLabel: string;
   leaderName:    string;
+  crewName:      string | null;
   memberCount:   number;
   scheduledAt:   string | null;
   distanceMi:    number | null;

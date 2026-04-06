@@ -1,14 +1,15 @@
 /**
- * CrewModal.tsx — SK8Lytz Crew Sync 2.0
+ * CrewModal.tsx — SK8Lytz Crew Hub
  *
- * Full crew lifecycle modal with:
- *   Landing    → Create / Schedule / Join / Saved Crews
+ * Unified single-page crew experience:
+ *   Hub        → My Crews (inline live session + one-tap join), Live Near You (public sessions), Schedule
  *   Create     → Crew picker (existing crews) or new name, public/private, location
  *   Schedule   → Crew picker, DateTimePicker calendar, public/private, location
- *   Join       → Browse live sessions + code entry
  *   Controller → Leader OR Member session card (what/where/when/who)
  *                Leader: End Session, Hand Off, invite code copy
  *                Member: live mode/color sync status, Leave
+ *   Manage     → Create/edit/delete permanent crews (accessible from Hub)
+ *   Crew Detail → Members, invite code, stats
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -69,6 +70,11 @@ export default function CrewModal({
 
   type ModalStep = 'landing' | 'create' | 'schedule' | 'join' | 'controller' | 'manage' | 'crew-detail';
   const [step, setStep] = useState<ModalStep>(activeSession ? 'controller' : 'landing');
+  const [showCodeEntry, setShowCodeEntry] = useState(false);
+  // null = show all; number = filter to within that many miles
+  const [discoverRadiusMi, setDiscoverRadiusMi] = useState<number | null>(50);
+  // Maps crewId → its currently live session (populated when hub loads)
+  const [crewActiveSessions, setCrewActiveSessions] = useState<Record<string, ReturnType<typeof activeSessions[0] | any>>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -181,35 +187,51 @@ export default function CrewModal({
     loadUser();
   }, [visible]);
 
-  // Load permanent crews when the create/schedule or manage step opens
+  // Load permanent crews when hub, create, schedule, or manage opens
   useEffect(() => {
-    if (!visible || (step !== 'create' && step !== 'schedule' && step !== 'manage')) return;
+    if (!visible) return;
+    if (step !== 'landing' && step !== 'create' && step !== 'schedule' && step !== 'manage') return;
     profileService.getMyCrew().then((crews: PermanentCrew[]) => {
       setMyCrews(crews);
       setPermanentCrews(crews.map(c => ({ id: c.id, name: c.name })));
     }).catch(() => {});
   }, [visible, step]);
 
-  // Load public crews when discover sub-tab is active
+  // Load public crews for discover (manage tab) OR hub's Live Near You section
   useEffect(() => {
-    if (!visible || step !== 'manage' || manageTab !== 'discover') return;
+    if (!visible) return;
+    const shouldLoad = step === 'landing' || (step === 'manage' && manageTab === 'discover');
+    if (!shouldLoad) return;
     setIsLoadingCrews(true);
     profileService.getPublicCrews().then(crews => {
       setPublicCrews(crews);
     }).catch(() => {}).finally(() => setIsLoadingCrews(false));
   }, [visible, step, manageTab]);
 
-  // Load nearby live sessions when discover tab opens
+  // Load nearby live sessions when hub or discover opens
   useEffect(() => {
-    if (!visible || step !== 'manage' || manageTab !== 'discover') return;
+    if (!visible) return;
+    const shouldLoad = step === 'landing' || (step === 'manage' && manageTab === 'discover');
+    if (!shouldLoad) return;
     setIsLoadingNearby(true);
-    locationService.getNearbyPublicSessions()
+    locationService.getNearbyPublicSessions(discoverRadiusMi)
       .then(sessions => setNearbySessions(sessions))
       .catch(() => {})
       .finally(() => setIsLoadingNearby(false));
-  }, [visible, step, manageTab]);
+  }, [visible, step, manageTab, discoverRadiusMi]);
 
-  // Fetch member counts when viewing My Crews list
+  // Load active sessions for hub → map them to their crew
+  useEffect(() => {
+    if (!visible || step !== 'landing') return;
+    crewService.fetchActiveSessions().then(sessions => {
+      // Build a map from session name → session so crew cards can show inline status
+      const map: Record<string, CrewSession> = {};
+      sessions.forEach(s => { map[s.id] = s; });
+      setActiveSessions(sessions);
+    }).catch(() => {});
+  }, [visible, step]);
+
+  // Fetch member counts when viewing My Crews list (manage tab)
   useEffect(() => {
     if (!visible || step !== 'manage' || manageTab !== 'mycrews' || myCrews.length === 0) return;
     myCrews.forEach(crew => {
@@ -418,38 +440,272 @@ export default function CrewModal({
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // RENDER — Landing
+  // RENDER — Crew Hub (unified single-page home)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const renderLanding = () => (
-    <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-      <MaterialCommunityIcons name="account-group" size={48} color={Colors.primary} style={{ marginBottom: 10 }} />
-      <Text style={styles.titleLarge}>Crew Sync</Text>
-      <Text style={styles.subtitle}>
-        Skate together. One leader controls the light show — every crew member's skates sync instantly.
-      </Text>
+  const renderLanding = () => {
+    // Find the live session that matches a given crew (by name match or crew membership)
+    const getLiveSessionForCrew = (crew: PermanentCrew): CrewSession | null => {
+      return activeSessions.find(s =>
+        s.name === crew.name ||
+        s.name.startsWith(crew.name + ' ')
+      ) ?? null;
+    };
 
-      <TouchableOpacity style={styles.primaryBtn} onPress={() => { setStep('create'); setErrorMsg(''); }}>
-        <MaterialCommunityIcons name="lightning-bolt" size={18} color="#000" />
-        <Text style={styles.primaryBtnText}>Start a Session Now</Text>
-      </TouchableOpacity>
+    return (
+      <ScrollView contentContainerStyle={[styles.body, { paddingTop: 4 }]} showsVerticalScrollIndicator={false}>
+        {/* ── Header ── */}
+        <View style={styles.hubHeader}>
+          <View>
+            <Text style={styles.hubTitle}>Crew Hub</Text>
+            <Text style={styles.hubSub}>Skate together · sync your light show</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.hubStartBtn}
+            onPress={() => { setStep('create'); setErrorMsg(''); }}
+          >
+            <MaterialCommunityIcons name="lightning-bolt" size={16} color="#000" />
+            <Text style={styles.hubStartBtnText}>Start Now</Text>
+          </TouchableOpacity>
+        </View>
 
-      <TouchableOpacity style={styles.secondaryBtn} onPress={() => { setStep('schedule'); setErrorMsg(''); }}>
-        <MaterialCommunityIcons name="calendar-clock" size={18} color={Colors.primary} />
-        <Text style={styles.secondaryBtnText}>Schedule a Session</Text>
-      </TouchableOpacity>
+        {/* ── MY CREWS ── */}
+        <Text style={styles.hubSectionLabel}>MY CREWS</Text>
 
-      <TouchableOpacity style={styles.secondaryBtn} onPress={() => { setStep('join'); setErrorMsg(''); }}>
-        <MaterialCommunityIcons name="pound" size={18} color={Colors.primary} />
-        <Text style={styles.secondaryBtnText}>Join a Session by Code</Text>
-      </TouchableOpacity>
+        {myCrews.length === 0 ? (
+          <View style={styles.hubEmptyCard}>
+            <MaterialCommunityIcons name="account-group-outline" size={32} color={Colors.textMuted} />
+            <Text style={styles.hubEmptyText}>You haven't joined any crews yet</Text>
+            <TouchableOpacity
+              style={[styles.hubActionChip, { marginTop: 10 }]}
+              onPress={() => { setStep('manage'); setManageTab('create'); }}
+            >
+              <MaterialCommunityIcons name="plus" size={14} color={Colors.primary} />
+              <Text style={styles.hubActionChipText}>Create a Crew</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          myCrews.map(crew => {
+            const liveSession = getLiveSessionForCrew(crew);
+            const memberInfo = crewMemberCounts[crew.id];
+            const isOwner = crew.is_owner;
+            return (
+              <View key={crew.id} style={styles.hubCrewCard}>
+                {/* Crew avatar + name */}
+                <View style={styles.hubCrewCardTop}>
+                  <View style={[styles.hubCrewAvatar, { backgroundColor: crew.avatar_color || '#FFAA00' }]}>
+                    <MaterialCommunityIcons
+                      name={(crew.avatar_icon as any) || 'account-group'}
+                      size={20}
+                      color="#000"
+                    />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={styles.hubCrewName} numberOfLines={1}>{crew.name}</Text>
+                      {isOwner && (
+                        <View style={styles.hubOwnerBadge}>
+                          <Text style={styles.hubOwnerBadgeText}>👑 OWNER</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.hubCrewMeta}>
+                      {memberInfo ? `${memberInfo.count} member${memberInfo.count !== 1 ? 's' : ''}` : 'Loading...'}
+                      {crew.city ? ` · ${crew.city}` : ''}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.hubCrewManageBtn}
+                    onPress={() => { setSelectedCrewDetail(crew); setStep('manage'); }}
+                  >
+                    <MaterialCommunityIcons name="dots-horizontal" size={18} color={Colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
 
-      <TouchableOpacity style={styles.secondaryBtn} onPress={() => { setStep('manage'); setManageTab('mycrews'); setErrorMsg(''); }}>
-        <MaterialCommunityIcons name="account-group-outline" size={18} color={Colors.primary} />
-        <Text style={styles.secondaryBtnText}>Manage Crews</Text>
-      </TouchableOpacity>
-    </ScrollView>
-  );
+                {/* Live session status */}
+                {liveSession ? (
+                  <TouchableOpacity
+                    style={styles.hubLiveSessionRow}
+                    onPress={() => handleJoinById(liveSession.id)}
+                    disabled={isLoading}
+                    activeOpacity={0.75}
+                  >
+                    <Animated.View style={[styles.hubLiveDot, { opacity: pulseAnim }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.hubLiveSessionName}>{liveSession.name}</Text>
+                      <Text style={styles.hubLiveSessionMeta}>
+                        {liveSession.member_count ?? 0} skater{(liveSession.member_count ?? 0) !== 1 ? 's' : ''}
+                        {' · '}{liveSession.is_public ? '🌍 Public' : '🔒 Private'}
+                        {' · '}{timeAgo(liveSession.created_at)}
+                      </Text>
+                    </View>
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color="#000" />
+                    ) : (
+                      <View style={styles.hubJoinPill}>
+                        <MaterialCommunityIcons name="lightning-bolt" size={13} color="#000" />
+                        <Text style={styles.hubJoinPillText}>JOIN</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.hubNoSessionRow}>
+                    <Text style={styles.hubNoSessionText}>No active session</Text>
+                    <TouchableOpacity
+                      style={styles.hubActionChip}
+                      onPress={() => {
+                        setSelectedCrewId(crew.id);
+                        setStep('schedule');
+                        setErrorMsg('');
+                      }}
+                    >
+                      <MaterialCommunityIcons name="calendar-plus" size={12} color={Colors.primary} />
+                      <Text style={styles.hubActionChipText}>Schedule</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            );
+          })
+        )}
+
+        {/* Crew actions row */}
+        <View style={styles.hubCrewActions}>
+          <TouchableOpacity
+            style={styles.hubCrewActionBtn}
+            onPress={() => { setStep('manage'); setManageTab('create'); }}
+          >
+            <MaterialCommunityIcons name="plus-circle-outline" size={15} color={Colors.primary} />
+            <Text style={styles.hubCrewActionBtnText}>Create Crew</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.hubCrewActionBtn}
+            onPress={() => setShowCodeEntry(v => !v)}
+          >
+            <MaterialCommunityIcons name="pound" size={15} color={Colors.primary} />
+            <Text style={styles.hubCrewActionBtnText}>Join by Code</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.hubCrewActionBtn}
+            onPress={() => { setStep('manage'); setManageTab('mycrews'); }}
+          >
+            <MaterialCommunityIcons name="cog-outline" size={15} color={Colors.textMuted} />
+            <Text style={[styles.hubCrewActionBtnText, { color: Colors.textMuted }]}>Manage</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Inline code entry (toggle) */}
+        {showCodeEntry && (
+          <View style={styles.hubCodeEntry}>
+            <TextInput
+              style={[styles.input, styles.codeInput, { marginBottom: 8 }]}
+              value={inviteCode}
+              onChangeText={t => setInviteCode(t.toUpperCase())}
+              placeholder="ABC123"
+              placeholderTextColor={Colors.textMuted}
+              maxLength={6}
+              autoCapitalize="characters"
+              autoFocus
+            />
+            {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
+            <TouchableOpacity
+              style={[styles.primaryBtn, isLoading && { opacity: 0.5 }, { marginTop: 4 }]}
+              onPress={handleJoinByCode}
+              disabled={isLoading}
+            >
+              {isLoading
+                ? <ActivityIndicator color="#000" />
+                : <Text style={styles.primaryBtnText}>Join with Code</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ── LIVE NEAR YOU ── */}
+        <View style={styles.hubSectionRow}>
+          <Text style={styles.hubSectionLabel}>🔴 LIVE NEAR YOU</Text>
+          <TouchableOpacity onPress={() => {
+            setIsLoadingNearby(true);
+            locationService.getNearbyPublicSessions(discoverRadiusMi)
+              .then(s => setNearbySessions(s))
+              .catch(() => {})
+              .finally(() => setIsLoadingNearby(false));
+          }}>
+            <MaterialCommunityIcons name="refresh" size={15} color={Colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Radius pills */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+          style={{ width: '100%', marginBottom: 10 }}
+          contentContainerStyle={styles.radiusPillRow}>
+          {([20, 50, 100, 250, null] as (number | null)[]).map(r => {
+            const label = r === null ? 'Show All' : `${r} mi`;
+            const active = discoverRadiusMi === r;
+            return (
+              <TouchableOpacity
+                key={String(r)}
+                style={[styles.radiusPill, active && styles.radiusPillActive]}
+                onPress={() => setDiscoverRadiusMi(r)}
+              >
+                <Text style={[styles.radiusPillText, active && styles.radiusPillTextActive]}>{label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {isLoadingNearby ? (
+          <ActivityIndicator color={Colors.primary} style={{ marginVertical: 16 }} />
+        ) : nearbySessions.length === 0 ? (
+          <View style={styles.hubEmptyCard}>
+            <Text style={styles.hubEmptyText}>
+              {discoverRadiusMi != null
+                ? `No public sessions within ${discoverRadiusMi} mi`
+                : 'No public sessions near you right now'}
+            </Text>
+            <Text style={[styles.hubEmptyText, { fontSize: 11, marginTop: 4 }]}>Start one and skaters nearby will see it!</Text>
+          </View>
+        ) : (
+          nearbySessions.map(s => (
+            <TouchableOpacity
+              key={s.id}
+              style={styles.nearbySessionCard}
+              onPress={() => handleJoinById(s.id)}
+              disabled={!!joiningSessionId}
+              activeOpacity={0.75}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.nearbySessionName}>{s.crewName || s.name}</Text>
+                <Text style={styles.nearbySessionSub}>
+                  {s.crewName && s.crewName !== s.name ? `${s.name} · ` : ''}
+                  {s.memberCount} skater{s.memberCount !== 1 ? 's' : ''}
+                  {s.distanceLabel ? ` · ${s.distanceLabel}` : ''}
+                </Text>
+              </View>
+              {joiningSessionId === s.id ? (
+                <ActivityIndicator size="small" color="#000" />
+              ) : (
+                <View style={styles.nearbyJoinBtn}>
+                  <Text style={styles.nearbyJoinText}>JOIN ▶</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          ))
+        )}
+
+        {/* ── Schedule ── */}
+        <TouchableOpacity
+          style={[styles.secondaryBtn, { marginTop: 20 }]}
+          onPress={() => { setStep('schedule'); setErrorMsg(''); }}
+        >
+          <MaterialCommunityIcons name="calendar-clock" size={18} color={Colors.primary} />
+          <Text style={styles.secondaryBtnText}>📅 Schedule a Session</Text>
+        </TouchableOpacity>
+
+        <View style={{ height: 32 }} />
+      </ScrollView>
+    );
+  };
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER — Create (Start Now)
@@ -1495,6 +1751,99 @@ const createStyles = (Colors: any) => StyleSheet.create({
   // Typography
   titleLarge: { color: Colors.text || '#FFF', fontSize: 24, fontWeight: '800', marginBottom: 8, textAlign: 'center' },
   subtitle:   { color: Colors.textMuted || '#888', fontSize: 13, textAlign: 'center', lineHeight: 19, marginBottom: 20 },
+
+  // ── Crew Hub styles ──────────────────────────────────────────────────────
+  hubHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    width: '100%', marginBottom: 18, paddingTop: 4,
+  },
+  hubTitle:       { color: Colors.text || '#FFF', fontSize: 22, fontWeight: '900' },
+  hubSub:         { color: Colors.textMuted || '#888', fontSize: 11, marginTop: 2 },
+  hubStartBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: Colors.primary || '#FFAA00',
+    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 9,
+  },
+  hubStartBtnText: { color: '#000', fontSize: 13, fontWeight: '800' },
+
+  hubSectionLabel: {
+    color: Colors.textMuted || '#888', fontSize: 10, fontWeight: '700',
+    letterSpacing: 1.2, alignSelf: 'flex-start', marginBottom: 8, marginTop: 4,
+  },
+  hubSectionRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    width: '100%', marginTop: 20, marginBottom: 8,
+  },
+
+  hubEmptyCard: {
+    width: '100%', alignItems: 'center', padding: 20,
+    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 16,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 8,
+  },
+  hubEmptyText: { color: Colors.textMuted || '#888', fontSize: 13, textAlign: 'center' },
+
+  hubCrewCard: {
+    width: '100%', backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 16, padding: 14, marginBottom: 10,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.09)',
+  },
+  hubCrewCardTop:   { flexDirection: 'row', alignItems: 'center' },
+  hubCrewAvatar: {
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  hubCrewName:    { color: Colors.text || '#FFF', fontSize: 15, fontWeight: '700' },
+  hubCrewMeta:    { color: Colors.textMuted || '#888', fontSize: 11, marginTop: 2 },
+  hubOwnerBadge:  { backgroundColor: 'rgba(255,170,0,0.15)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  hubOwnerBadgeText: { color: Colors.primary || '#FFAA00', fontSize: 9, fontWeight: '800' },
+  hubCrewManageBtn: { padding: 6 },
+
+  hubLiveSessionRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginTop: 10, padding: 10,
+    backgroundColor: 'rgba(0,230,118,0.08)',
+    borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,230,118,0.2)',
+  },
+  hubLiveDot:         { width: 8, height: 8, borderRadius: 4, backgroundColor: '#00E676' },
+  hubLiveSessionName: { color: Colors.text || '#FFF', fontSize: 13, fontWeight: '700' },
+  hubLiveSessionMeta: { color: Colors.textMuted || '#888', fontSize: 10, marginTop: 1 },
+  hubJoinPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: Colors.primary || '#FFAA00',
+    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6,
+  },
+  hubJoinPillText: { color: '#000', fontSize: 11, fontWeight: '900' },
+
+  hubNoSessionRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: 8, paddingTop: 8,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+  hubNoSessionText: { color: Colors.textMuted || '#888', fontSize: 12 },
+
+  hubCrewActions: {
+    flexDirection: 'row', gap: 8, width: '100%', marginTop: 4, marginBottom: 4,
+  },
+  hubCrewActionBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 12, paddingVertical: 10,
+  },
+  hubCrewActionBtnText: { color: Colors.primary || '#FFAA00', fontSize: 11, fontWeight: '700' },
+
+  hubActionChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: 1.5, borderColor: 'rgba(255,170,0,0.35)',
+    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
+  },
+  hubActionChipText: { color: Colors.primary || '#FFAA00', fontSize: 11, fontWeight: '700' },
+
+  hubCodeEntry: {
+    width: '100%', marginTop: 8, marginBottom: 4,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 14, padding: 14,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+  },
   label:      { color: Colors.textMuted || '#888', fontSize: 10, fontWeight: '700', letterSpacing: 1.2, alignSelf: 'flex-start', marginBottom: 5, marginTop: 12 },
 
   // Buttons
@@ -1712,4 +2061,11 @@ const createStyles = (Colors: any) => StyleSheet.create({
   nearbySessionSub:  { color: Colors.textMuted || '#888', fontSize: 11, marginTop: 2 },
   nearbyJoinBtn:     { backgroundColor: Colors.primary || '#FFAA00', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, minWidth: 56, alignItems: 'center' },
   nearbyJoinText:    { color: '#000', fontSize: 13, fontWeight: '900' },
+
+  // Radius pill selector
+  radiusPillRow:       { flexDirection: 'row', gap: 6, paddingHorizontal: 2, paddingBottom: 2 },
+  radiusPill:          { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  radiusPillActive:    { backgroundColor: Colors.primary || '#FFAA00', borderColor: Colors.primary || '#FFAA00' },
+  radiusPillText:      { color: Colors.textMuted || '#888', fontSize: 12, fontWeight: '700' },
+  radiusPillTextActive:{ color: '#000', fontSize: 12, fontWeight: '700' },
 });

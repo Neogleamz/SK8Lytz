@@ -22,6 +22,7 @@
  */
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, ActivityIndicator, Switch, Platform, Image, Linking, Animated, StatusBar, Dimensions, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import DeviceItem from '../components/DeviceItem';
@@ -63,6 +64,7 @@ interface DeviceSettings {
 
 export default function DashboardScreen({ isOfflineMode = false, onLogout }: { isOfflineMode?: boolean; onLogout?: () => void } = {}) {
   const { Colors, isDark, toggleTheme } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = createStyles(Colors);
   const {
     scanForPeripherals,
@@ -152,7 +154,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(false);
 
-  // ── Crew Sync state ─────────────────────────────────────────────────────
+  // ── Crew Hub state ─────────────────────────────────────────────────────
   const [crewSession, setCrewSession] = useState<CrewSession | null>(null);
   const [crewRole, setCrewRole] = useState<CrewRole>(null);
   const [isCrewModalVisible, setIsCrewModalVisible] = useState(false);
@@ -1266,7 +1268,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const renderDashboardHeader = () => (
     <View style={{
       paddingHorizontal: Layout.padding,
-      paddingTop: (Platform.OS === 'android' ? (StatusBar.currentHeight || 20) : 0) + (isActuallyConnected ? 12 : 16),
+      paddingTop: insets.top + 12,
       paddingBottom: isActuallyConnected ? 2 : 8,
     }}>
       {isActuallyConnected ? (
@@ -1445,13 +1447,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     <Text style={{ color: crewRole === 'leader' ? '#FFAA00' : '#00AAFF', fontSize: 13, fontWeight: '700', flex: 1 }}>
                       {crewRole === 'leader'
                         ? `CREW LIVE · ${crewSession.name}`
-                        : `CREW SYNC · ${crewSession.name}`}
+                        : `Crew Hub · ${crewSession.name}`}
                     </Text>
                     <MaterialCommunityIcons name="chevron-right" size={16} color={crewRole === 'leader' ? '#FFAA00' : '#00AAFF'} />
                   </TouchableOpacity>
                 )}
 
-                {/* ── Crew Sync button (only when not in an active session — session banner handles it otherwise) ── */}
+                {/* ── Crew Hub button (only when not in an active session — session banner handles it otherwise) ── */}
                 {!crewSession && (
                   <TouchableOpacity
                     style={{
@@ -1464,7 +1466,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     onPress={() => setIsCrewModalVisible(true)}
                   >
                     <MaterialCommunityIcons name="account-group" size={16} color="#FFAA00" />
-                    <Text style={{ color: '#FFAA00', fontWeight: '700', fontSize: 13 }}>Crew Sync</Text>
+                    <Text style={{ color: '#FFAA00', fontWeight: '700', fontSize: 13 }}>Crew Hub</Text>
                     <Text style={{ color: Colors.textMuted, fontSize: 11, flex: 1, textAlign: 'right' }}>Start or join a session →</Text>
                   </TouchableOpacity>
                 )}
@@ -1821,7 +1823,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         }}
       />
 
-      {/* Crew Sync Modal */}
+      {/* Crew Hub Modal */}
       <CrewModal
         visible={isCrewModalVisible}
         onClose={() => setIsCrewModalVisible(false)}
@@ -1899,7 +1901,6 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   },
   container: {
     flex: 1,
-    paddingTop: 8,
   },
   card: {
     backgroundColor: Colors.surface,

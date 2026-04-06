@@ -383,14 +383,20 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
 
 const createStyles = (Colors: any, insets: { top: number; bottom: number; left: number; right: number }) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  scrollContent: {
+    flexGrow: 1, justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingTop: Math.max(insets.top + 60, 80), // clear the absolute topButtons row
+    paddingBottom: 24,
+  },
   topButtons: {
     position: 'absolute', top: Math.max(insets.top + 10, 20), right: 16,
     flexDirection: 'row', gap: 8, zIndex: 10,
   },
   topBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 34, height: 34, borderRadius: 17,
     backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
   headerContainer: { alignItems: 'center', marginBottom: 40 },
