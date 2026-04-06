@@ -344,10 +344,25 @@ export class ZenggeProtocol {
     }
   }
 
+  // ─── PROTOCOL CONSTANTS (APK proven 2026-04-06) ─────────────────────────────
+  // 0x51 DIY step transition modes — must use these exact values
+  static readonly STEP_JUMP    = 0x3A; // Hard cut between colors
+  static readonly STEP_GRADUAL = 0x3B; // Smooth cross-fade between colors
+  static readonly STEP_STROBE  = 0x3C; // Rapid flash between colors
+
+  // 0x59 animated pattern speed range (proven from Protocol/n.java: ad.e.a(f, 1, 31))
+  static readonly ANIM_SPEED_MIN = 1;
+  static readonly ANIM_SPEED_MAX = 31; // Values >31 may behave erratically on hardware
+
   // ─── EXISTING COMMANDS ─────────────────────────────────────────────────────
 
-  static setColor(r: number, g: number, b: number, speed: number = 100): number[] {
-    return this.setMultiColor(Array(10).fill({ r, g, b }), speed, 1, 1);
+  /**
+   * Set all LEDs to a solid color instantly (Static transition, no fade).
+   * Uses 0x59 with transitionType=0 (Static) for immediate hardware snap.
+   * NOTE: numPoints should match actual device LED count via hwSettings.ledPoints.
+   */
+  static setColor(r: number, g: number, b: number, numPoints: number = 10): number[] {
+    return this.setMultiColor(Array(numPoints).fill({ r, g, b }), 1, 1, 0x00);
   }
 
   static setSymphonyColor(r: number, g: number, b: number): number[] {
@@ -394,37 +409,79 @@ export class ZenggeProtocol {
     return this.wrapCommand([...payload, checksum]);
   }
 
-  static setMultiColor(colors: {r: number, g: number, b: number}[], speed: number, direction: number, transitionType: number = 0x00): number[] {
-    let expandedColors = [...colors];
-    if (expandedColors.length > 0 && expandedColors.length < 10) {
-      const basePattern = [...expandedColors];
-      while (expandedColors.length < 10) {
-        expandedColors.push(...basePattern);
-      }
-    }
-    const safeColors = expandedColors.slice(0, 32);
-    const numPoints = safeColors.length;
+  /**
+   * Build a 0x59 MultiColor packet (the primary command for all IC-strip patterns).
+   *
+   * APK-proven format (Protocol/a.java):
+   *   [0x59, totalLen_hi, totalLen_lo, R,G,B per pixel...,
+   *    numPoints_hi, numPoints_lo, transitionType, speed, direction, checksum]
+   *
+   * @param colors       Full per-pixel array. Length = actual device LED count.
+   *                     NO 32-pixel cap — hardware supports up to 300 LEDs.
+   * @param speed        For animated types (transitionType > 0): clamp to 1–31.
+   *                     For Static (0x00): speed is unused, send 1.
+   * @param direction    1 = forward, 0 = reverse
+   * @param transitionType  0x00=Static, 0x01=Gradual, 0x02=Strobe, 0x03=RunningWater
+   */
+  static setMultiColor(
+    colors: {r: number, g: number, b: number}[],
+    speed: number,
+    direction: number,
+    transitionType: number = 0x00
+  ): number[] {
+    // No minimum expansion — caller should pass correct LED count.
+    // No 32-pixel cap — 0x59 is variable length up to hardware max (300 LEDs).
+    const numPoints = Math.max(1, colors.length);
+
+    // Cap animated speed to hardware-proven range 1–31 (from Protocol/n.java).
+    // Static mode (0x00) does not use speed, but send 1 to avoid 0 edge cases.
+    const safeSpeed = transitionType === 0x00
+      ? 1
+      : Math.max(this.ANIM_SPEED_MIN, Math.min(this.ANIM_SPEED_MAX, Math.round(speed)));
+
     const totalLen = (numPoints * 3) + 9;
-    const payload = new Array(totalLen);
+    const payload = new Array(totalLen).fill(0);
     payload[0] = 0x59;
     payload[1] = (totalLen >> 8) & 0xFF;
     payload[2] = totalLen & 0xFF;
     let idx = 3;
-    for (const c of safeColors) {
-      payload[idx++] = c.r;
-      payload[idx++] = c.g;
-      payload[idx++] = c.b;
+    for (const c of colors) {
+      payload[idx++] = Math.max(0, Math.min(255, c.r | 0));
+      payload[idx++] = Math.max(0, Math.min(255, c.g | 0));
+      payload[idx++] = Math.max(0, Math.min(255, c.b | 0));
     }
     payload[idx++] = (numPoints >> 8) & 0xFF;
     payload[idx++] = numPoints & 0xFF;
-    payload[idx++] = transitionType;
-    payload[idx++] = speed;
-    payload[idx++] = direction;
+    payload[idx++] = transitionType & 0xFF;
+    payload[idx++] = safeSpeed;
+    payload[idx++] = direction & 0xFF;
     payload[idx] = this.calculateChecksum(payload.slice(0, totalLen - 1));
     return this.wrapCommand(payload);
   }
 
-  static setCustomMode(steps: {mode: number, speed: number, color1: {r: number, g: number, b: number}, color2: {r: number, g: number, b: number}}[]): number[] {
+  /**
+   * Build a 0x51 DIY Custom Mode packet (up to 32 steps, 291 bytes total).
+   *
+   * APK-proven format (Protocol/x.java v1):
+   *   [0x51, Step0(9 bytes), Step1(9 bytes), ..., Step31(9 bytes), 0x0F, checksum]
+   *
+   * Each active step: [0xF0, transMode, speed, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b]
+   * Each inactive step: [0x0F, 0, 0, 0, 0, 0, 0, 0, 0]
+   *
+   * IMPORTANT: transMode (step.mode) MUST be one of:
+   *   ZenggeProtocol.STEP_JUMP    = 0x3A  (hard cut)
+   *   ZenggeProtocol.STEP_GRADUAL = 0x3B  (smooth fade)
+   *   ZenggeProtocol.STEP_STROBE  = 0x3C  (rapid flash)
+   * Using mode 1 or 2 sends wrong transition codes to hardware.
+   *
+   * speed per step: 1–100 (full range valid for 0x51, unlike 0x59)
+   */
+  static setCustomMode(steps: {
+    mode: number;  // use STEP_JUMP (0x3A), STEP_GRADUAL (0x3B), or STEP_STROBE (0x3C)
+    speed: number; // 1–100
+    color1: {r: number, g: number, b: number}; // foreground
+    color2: {r: number, g: number, b: number}; // background
+  }[]): number[] {
     const safeSteps = steps.slice(0, 32);
     const payload = new Array(291).fill(0);
     payload[0] = 0x51;
@@ -432,21 +489,22 @@ export class ZenggeProtocol {
     for (let i = 0; i < 32; i++) {
       if (i < safeSteps.length) {
         const step = safeSteps[i];
-        payload[idx++] = 0xf0;
-        payload[idx++] = step.mode;
-        payload[idx++] = step.speed;
-        payload[idx++] = step.color1.r;
-        payload[idx++] = step.color1.g;
-        payload[idx++] = step.color1.b;
-        payload[idx++] = step.color2.r;
-        payload[idx++] = step.color2.g;
-        payload[idx++] = step.color2.b;
+        const safeSpeed = Math.max(1, Math.min(100, Math.round(step.speed)));
+        payload[idx++] = 0xF0; // active flag
+        payload[idx++] = step.mode & 0xFF; // must be 0x3A, 0x3B, or 0x3C
+        payload[idx++] = safeSpeed;
+        payload[idx++] = Math.max(0, Math.min(255, step.color1.r | 0));
+        payload[idx++] = Math.max(0, Math.min(255, step.color1.g | 0));
+        payload[idx++] = Math.max(0, Math.min(255, step.color1.b | 0));
+        payload[idx++] = Math.max(0, Math.min(255, step.color2.r | 0));
+        payload[idx++] = Math.max(0, Math.min(255, step.color2.g | 0));
+        payload[idx++] = Math.max(0, Math.min(255, step.color2.b | 0));
       } else {
-        payload[idx++] = 0x0f;
-        idx += 8;
+        payload[idx++] = 0x0F; // inactive flag
+        idx += 8;              // 8 zero bytes already filled
       }
     }
-    payload[289] = 0x0f;
+    payload[289] = 0x0F; // terminator
     payload[290] = this.calculateChecksum(payload.slice(0, 290));
     return this.wrapCommand(payload);
   }

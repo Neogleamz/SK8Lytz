@@ -30,6 +30,7 @@ import CircularKnob from './CircularKnob';
 import CameraTracker from './CameraTracker';
 import { getRbmPatternName } from '../constants/RbmPatterns';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { buildPatternPayload, getVisualizerFrame, type PatternId } from '../protocols/PatternEngine';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger } from '../services/AppLogger';
@@ -364,8 +365,9 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     );
 
     const arr = [...rearSection, ...midSection, ...frontSection];
-    // TransitionType 0 = native marquee flow so the mid section animates
-    writeToDevice(ZenggeProtocol.setMultiColor(arr, 60, 1, 0));
+    // TransitionType 0x03 = RunningWater — hardware natively bounces the mid section
+    // Fixed zones (rear/front) are locked by being at boundaries of the array
+    writeToDevice(ZenggeProtocol.setMultiColor(arr, 15, 1, 0x03));
   };
 
   useEffect(() => {
@@ -538,12 +540,15 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
      }
   };
 
-  /** Unified color sender */
+  /** Unified color sender — sends solid color instantly using actual LED count */
   const sendColor = async (r: number, g: number, b: number) => {
     if (!writeToDevice) return;
-    // Solid: length=10, transitionType=1 prevents hardware scrambling
-    const colors = Array(10).fill({ r, g, b });
-    await writeToDevice(ZenggeProtocol.setMultiColor(colors, 100, 1, 1));
+    const pts = hwSettings?.ledPoints || points || 16;
+    const segs = hwSettings?.segments || 1;
+    const numLEDs = Math.max(1, Math.floor(pts / segs));
+    // transitionType=0 (Static) = immediate hardware snap, no fade
+    const colors = Array(numLEDs).fill({ r, g, b });
+    await writeToDevice(ZenggeProtocol.setMultiColor(colors, 1, 1, 0x00));
   };
 
   /** Helper to parse a hex string array into GRB-sorted valid hardware RGB array */
@@ -557,7 +562,12 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
       });
   };
 
-  /** Helper to apply current fixed pattern state to devices */
+  /**
+   * Apply current fixed pattern state to devices.
+   * Delegates to PatternEngine — single source of truth for all 10 patterns.
+   * Ensures correct 0x59 / 0x51 protocol, correct transition constants,
+   * full LED count pixel arrays, and APK-proven speed clamping.
+   */
   const applyFixedPattern = async (
     patternId: number = fixedPatternId,
     fg: string = fixedFgColor,
@@ -568,81 +578,48 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     if (!writeToDevice) return;
 
     const factor = currentBrightness / 100;
-    const fgRgbRaw = { 
-      r: Math.round(parseInt(fg.slice(1, 3), 16) * factor), 
-      g: Math.round(parseInt(fg.slice(3, 5), 16) * factor), 
-      b: Math.round(parseInt(fg.slice(5, 7), 16) * factor) 
+    const fgRgbRaw = {
+      r: Math.round(parseInt(fg.slice(1, 3), 16) * factor),
+      g: Math.round(parseInt(fg.slice(3, 5), 16) * factor),
+      b: Math.round(parseInt(fg.slice(5, 7), 16) * factor),
     };
-    const bgRgbRaw = { 
-      r: Math.round(parseInt(bg.slice(1, 3), 16) * factor), 
-      g: Math.round(parseInt(bg.slice(3, 5), 16) * factor), 
-      b: Math.round(parseInt(bg.slice(5, 7), 16) * factor) 
+    const bgRgbRaw = {
+      r: Math.round(parseInt(bg.slice(1, 3), 16) * factor),
+      g: Math.round(parseInt(bg.slice(3, 5), 16) * factor),
+      b: Math.round(parseInt(bg.slice(5, 7), 16) * factor),
     };
-    
+
     const sortIdx = hwSettings?.colorSorting ?? 2;
     const fgRgb = ZenggeProtocol.applyColorSorting(fgRgbRaw.r, fgRgbRaw.g, fgRgbRaw.b, sortIdx);
     const bgRgb = ZenggeProtocol.applyColorSorting(bgRgbRaw.r, bgRgbRaw.g, bgRgbRaw.b, sortIdx);
 
     const pts = hwSettings?.ledPoints || points || 16;
     const segs = hwSettings?.segments || 1;
-    const effectivePoints = Math.max(1, Math.floor(pts / segs));
+    const numLEDs = Math.max(1, Math.floor(pts / segs));
 
-    if (patternId === 1) {
-      const forcedSpeed = currentSpeed > 0 ? currentSpeed : 100;
-      const solidColors = Array(effectivePoints).fill({ r: fgRgb.r, g: fgRgb.g, b: fgRgb.b }); // Buffer natively bounded
-      writeToDevice(ZenggeProtocol.setMultiColor(solidColors, forcedSpeed, 1, 1));
-    } else if (patternId === 6) {
-      writeToDevice(ZenggeProtocol.setCustomMode([
-        { mode: 1, speed: currentSpeed, color1: fgRgb, color2: bgRgb }, 
-        { mode: 1, speed: currentSpeed, color1: bgRgb, color2: fgRgb }
-      ]));
-    } else if (patternId === 7) {
-      writeToDevice(ZenggeProtocol.setCustomMode([
-        { mode: 2, speed: currentSpeed, color1: fgRgb, color2: bgRgb }, 
-        { mode: 2, speed: currentSpeed, color1: bgRgb, color2: fgRgb }
-      ]));
-    } else if (patternId === 8) {
-      writeToDevice(ZenggeProtocol.setCustomMode([
-        { mode: 2, speed: 100, color1: fgRgb, color2: bgRgb }, 
-        { mode: 2, speed: 100, color1: bgRgb, color2: fgRgb }
-      ]));
-    } else {
-      let arr: {r: number, g: number, b: number}[] = [];
-      if (patternId === 2) arr = [fgRgb, bgRgb, bgRgb, bgRgb, bgRgb, bgRgb, bgRgb, bgRgb];
-      if (patternId === 3) arr = [fgRgb, {r: Math.floor(fgRgb.r*0.5), g: Math.floor(fgRgb.g*0.5), b: Math.floor(fgRgb.b*0.5)}, {r: Math.floor(fgRgb.r*0.2), g: Math.floor(fgRgb.g*0.2), b: Math.floor(fgRgb.b*0.2)}, bgRgb, bgRgb, bgRgb];
-      if (patternId === 4) arr = [fgRgb, fgRgb, fgRgb, fgRgb, bgRgb, bgRgb, bgRgb, bgRgb];
-      if (patternId === 5) arr = [fgRgb, fgRgb, bgRgb, bgRgb];
-      if (patternId === 9) arr = [bgRgb, bgRgb, fgRgb, fgRgb, bgRgb, bgRgb];
-      if (patternId === 10) arr = [fgRgb, bgRgb, bgRgb, bgRgb, bgRgb, fgRgb];
-      
-      const chunk = [...arr];
-      while (arr.length > 0 && arr.length < effectivePoints) {
-        arr = [...arr, ...chunk];
-      }
-      arr = arr.slice(0, effectivePoints);
-      
-      // Send with TransitionType 0x03 (Running Water/Marquee) to actually animate across the matrix
-      writeToDevice(ZenggeProtocol.setMultiColor(arr, currentSpeed, 1, 3));
-    }
+    // PatternEngine handles all 10 patterns with correct protocol payloads:
+    //   Patterns 1,2,3,4,5,9,10 → 0x59 (MultiColor, RunningWater for animated)
+    //   Patterns 6,7,8          → 0x51 (DIY 2-step with STEP_GRADUAL/JUMP/STROBE)
+    const payload = buildPatternPayload(patternId, fgRgb, bgRgb, numLEDs, currentSpeed);
+    if (payload) writeToDevice(payload);
   };
 
   const applyEmergencyPattern = (spd: number, bright: number) => {
     if (!writeToDevice) return;
     const factor = bright / 100;
-    const red = { r: Math.round(255 * factor), g: 0, b: 0 };
-    const white = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: Math.round(255 * factor) };
+    const red    = { r: Math.round(255 * factor), g: 0, b: 0 };
+    const white  = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: Math.round(255 * factor) };
     const yellow = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: 0 };
-    const bg = { r: 0, g: 0, b: 0 };
-    
-    // Construct a 16-point buffer for the controller (Length >= 10 Safe)
+    const off    = { r: 0, g: 0, b: 0 };
+
+    // 16-pixel zone layout: [rear RED × 4][mid alternating yellow/off × 8][front WHITE × 4]
     const arr = [
-      red, red, red, red,      // Bottom
-      yellow, bg, yellow, bg,  // Flowing mid
-      white, white, white, white, // Top
-      yellow, bg, yellow, bg   // Flowing mid
+      red, red, red, red,
+      yellow, off, yellow, off, yellow, off, yellow, off,
+      white, white, white, white,
     ];
-    // EXPLICIT Transition Type 0x00 for Native Marquee Flow
-    writeToDevice(ZenggeProtocol.setMultiColor(arr, spd, 1, 0));
+    // TransitionType 0x03 = RunningWater: hardware scrolls mid section natively
+    writeToDevice(ZenggeProtocol.setMultiColor(arr, Math.min(spd, ZenggeProtocol.ANIM_SPEED_MAX), 1, 0x03));
   };
 
   const [musicPatternId, setMusicPatternId] = useState<number>(1);
@@ -923,6 +900,22 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     micSensitivity, musicHue, musicSecondaryHue, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle, musicPatternId, micSource, musicSetting,
     fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
   ]);
+
+  // ── Music Mode: re-send config whenever colors, pattern, or source change ──
+  // Fixes: color picker changes in Music Mode were updating state but not
+  // sending the updated setMusicConfig() command to hardware.
+  React.useEffect(() => {
+    if (activeMode !== 'MUSIC' || !writeToDevice) return;
+    handleMusicChange(
+      musicPatternId,
+      micSensitivity,
+      brightness,
+      micSource,
+      musicPrimaryColor,
+      musicSecondaryColor,
+      musicMatrixStyle
+    );
+  }, [musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
 
   const handleMusicChange = (
     patternId: number = musicPatternId,

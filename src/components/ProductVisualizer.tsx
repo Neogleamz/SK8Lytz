@@ -519,8 +519,12 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
              // BLE MTU drops payloads > 20 bytes into chunks, so rawHexPayload may literally only be the first 20 bytes.
              // If we already have the complete array from our props Native React State, DO NOT overwrite it with a truncated hex parse!
              if (!multiColors || multiColors.length === 0) {
+                 // 0x59 format: [opcode(1), totalLen(2), R,G,B × numPixels, numPts(2), transType(1), speed(1), dir(1), checksum(1)]
+                 // Pixel data: indices [3+offset .. length-7] (7 tail bytes: numPts×2, transType, speed, dir, checksum)
+                 // After wrapping: header is 8 bytes so payloadOffset=8 for wrapped packets.
+                 const pixelEnd = rawHexPayload.length - 7;
                  const colors = [];
-                 for (let i = 3 + payloadOffset; i < rawHexPayload.length - 6; i += 3) {
+                 for (let i = 3 + payloadOffset; i + 2 <= pixelEnd; i += 3) {
                     const rRaw = rawHexPayload[i] || 0;
                     const gRaw = rawHexPayload[i+1] || 0;
                     const bRaw = rawHexPayload[i+2] || 0;
