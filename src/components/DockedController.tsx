@@ -30,7 +30,7 @@ import CircularKnob from './CircularKnob';
 import CameraTracker from './CameraTracker';
 import { getRbmPatternName } from '../constants/RbmPatterns';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
-import { buildPatternPayload, getVisualizerFrame, type PatternId } from '../protocols/PatternEngine';
+import { buildPatternPayload } from '../protocols/PatternEngine';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger } from '../services/AppLogger';
@@ -526,7 +526,8 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
            const maxLen = Math.max(1, Math.floor(pts / segs));
            const appliedLength = (fav.multiLength || 16) > maxLen ? maxLen : (fav.multiLength || 16);
            
-           writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, fav.multiTransition, fav.speed));
+           // setMultiColor(colors, speed, direction, transitionType)
+           writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, speed, 1, fav.multiTransition));
         }
      } else if (fav.mode === 'CANDLE') {
         // Defer native command dispatch for candle
@@ -901,22 +902,6 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
   ]);
 
-  // ── Music Mode: re-send config whenever colors, pattern, or source change ──
-  // Fixes: color picker changes in Music Mode were updating state but not
-  // sending the updated setMusicConfig() command to hardware.
-  React.useEffect(() => {
-    if (activeMode !== 'MUSIC' || !writeToDevice) return;
-    handleMusicChange(
-      musicPatternId,
-      micSensitivity,
-      brightness,
-      micSource,
-      musicPrimaryColor,
-      musicSecondaryColor,
-      musicMatrixStyle
-    );
-  }, [musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
-
   const handleMusicChange = (
     patternId: number = musicPatternId,
     sens: number = micSensitivity,
@@ -927,25 +912,25 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     matrix: number = musicMatrixStyle
   ) => {
     if (!writeToDevice) return;
-    
+
     const isDeviceMic = src === 'DEVICE';
-    
-    const c1Raw = { 
-       r: parseInt(color1Hex.slice(1,3), 16) || 0, 
-       g: parseInt(color1Hex.slice(3,5), 16) || 0, 
-       b: parseInt(color1Hex.slice(5,7), 16) || 0 
+
+    const c1Raw = {
+       r: parseInt(color1Hex.slice(1,3), 16) || 0,
+       g: parseInt(color1Hex.slice(3,5), 16) || 0,
+       b: parseInt(color1Hex.slice(5,7), 16) || 0
     };
-    
-    const c2Raw = { 
-       r: parseInt(color2Hex.slice(1,3), 16) || 0, 
-       g: parseInt(color2Hex.slice(3,5), 16) || 0, 
-       b: parseInt(color2Hex.slice(5,7), 16) || 0 
+
+    const c2Raw = {
+       r: parseInt(color2Hex.slice(1,3), 16) || 0,
+       g: parseInt(color2Hex.slice(3,5), 16) || 0,
+       b: parseInt(color2Hex.slice(5,7), 16) || 0
     };
-    
+
     const sortIdx = hwSettings?.colorSorting ?? 2;
     const c1 = ZenggeProtocol.applyColorSorting(c1Raw.r, c1Raw.g, c1Raw.b, sortIdx);
     const c2 = ZenggeProtocol.applyColorSorting(c2Raw.r, c2Raw.g, c2Raw.b, sortIdx);
-    
+
     writeToDevice(ZenggeProtocol.setMusicConfig(
       isDeviceMic,
       matrix,
@@ -956,6 +941,17 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
       bright
     ));
   };
+
+  // ── Music Mode: re-send config on color/pattern/source change ──
+  // Placed AFTER handleMusicChange so the closure is always fresh.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  React.useEffect(() => {
+    if (activeMode !== 'MUSIC' || !writeToDevice) return;
+    handleMusicChange(
+      musicPatternId, micSensitivity, brightness, micSource,
+      musicPrimaryColor, musicSecondaryColor, musicMatrixStyle
+    );
+  }, [musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
 
   const getColorName = (hex: string) => {
     const map: {[key: string]: string} = {
@@ -1297,14 +1293,14 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                         <TouchableOpacity 
                           key={idx}
                           onPress={() => {
-                              setActiveQuickPresetIndex(idx);
+                           setActiveQuickPresetIndex(idx);
                               setFixedSubMode('MULTI');
                               setMultiColors(preset.colors);
                               setMultiTransition(preset.type);
                               if (writeToDevice) {
                                   const rgbColors = generateSortedColors(preset.colors);
                                   const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
-                                  writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, preset.type, speed));
+                                  writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, speed, 1, preset.type));
                               }
                           }}
                           style={{
@@ -1369,7 +1365,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                             setMultiColors(newArr);
                             const rgbColors = generateSortedColors(newArr);
                             const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
-                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, speed));
+                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, speed, 1, multiTransition));
                           }} />
                         ))}
                         {multiColors.length < 16 && (
@@ -1379,7 +1375,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                              setMultiColors(newArr);
                              const rgbColors = generateSortedColors(newArr);
                              const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
-                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, speed));
+                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, speed, 1, multiTransition));
                           }}>
                             <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold' }}>+</Text>
                           </TouchableOpacity>
@@ -1392,7 +1388,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                              setMultiColors(newArr);
                              const rgbColors = generateSortedColors(newArr);
                              const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
-                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, speed));
+                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, speed, 1, multiTransition));
                           }}>
                             <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold', lineHeight: 22 }}>-</Text>
                           </TouchableOpacity>
@@ -1426,7 +1422,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                                setMultiTransition(mode.val);
                                const rgbColors = generateSortedColors(multiColors);
                                const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
-                               if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, mode.val, speed));
+                               if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, speed, 1, mode.val));
                             }} 
                             style={{ 
                               paddingHorizontal: 12, paddingVertical: 6, 
@@ -1973,7 +1969,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                             });
                             const pts = hwSettings?.ledPoints || points || 16;
                             const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
-                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, speed));
+                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, speed, 1, multiTransition));
                           } else if (fixedSubMode === 'RBM') {
                             if (selectedPatternId === 100) {
                               applyEmergencyPattern(speed, val);
@@ -2022,7 +2018,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                             });
                             const pts = hwSettings?.ledPoints || points || 16;
                             const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
-                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, val));
+                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, val, 1, multiTransition));
                           } else if (fixedSubMode === 'RBM') {
                             if (selectedPatternId === 100) {
                               applyEmergencyPattern(val, brightness);

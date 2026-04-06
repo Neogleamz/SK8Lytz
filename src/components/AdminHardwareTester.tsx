@@ -143,9 +143,13 @@ export default function AdminHardwareTester({
       payload = ZenggeProtocol.wrapCommand(payload);
     } else if (protocol === '0x51') {
       const bg = { r: 0, g: 0, b: 0 };
+      // Map UI transitionType to APK-proven 0x51 step modes (STEP_JUMP=0x3A, STEP_GRADUAL=0x3B, STEP_STROBE=0x3C)
+      const stepMode = transitionType === 1 ? ZenggeProtocol.STEP_GRADUAL
+                     : transitionType === 2 ? ZenggeProtocol.STEP_STROBE
+                     : ZenggeProtocol.STEP_JUMP; // 0 and 3 both map to hard-cut
       payload = ZenggeProtocol.setCustomMode([
-        { mode: transitionType === 0 ? 1 : transitionType, speed, color1: color, color2: bg },
-        { mode: transitionType === 0 ? 1 : transitionType, speed, color1: bg, color2: color }
+        { mode: stepMode, speed, color1: color, color2: bg },
+        { mode: stepMode, speed, color1: bg, color2: color }
       ]);
     } else if (protocol === 'CAMERA') {
       payload = ZenggeProtocol.setColor(color.r, color.g, color.b);
