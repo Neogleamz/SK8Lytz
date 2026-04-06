@@ -317,6 +317,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   const lastAccelRef = useRef({ x: 0, y: 0, z: 0 });
 
   useEffect(() => {
+    if (Platform.OS === 'web') return; // Accelerometer not available on web
     if (activeMode !== 'STREET') {
       Accelerometer.removeAllListeners();
       if (streetBrakingRef.current) {
@@ -646,6 +647,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
 
   // -- App Microphone Logic --
   useEffect(() => {
+    if (Platform.OS === 'web') return; // expo-av Audio Recording not supported on web
     const isMusicActive = activeMode === 'MUSIC' || (activeMode === 'MULTIMODE' && fixedSubMode === 'MUSIC');
     if (isMusicActive && micSource === 'APP' && isPoweredOn) {
       startRecording();

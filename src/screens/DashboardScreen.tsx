@@ -276,9 +276,15 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           } catch {
             setAuthUsername(session.user.email?.split('@')[0] || 'Skater');
           }
-          const { data: groups, error } = await supabase.from('registered_groups').select('*').eq('user_id', CloudUserId).catch(() => ({ data: null, error: true }));
-          isOffline = !!error;
-          if (!error && groups && groups.length > 0) {
+          let groups: any[] | null = null;
+          try {
+            const result = await supabase.from('registered_groups').select('*').eq('user_id', CloudUserId);
+            groups = result.data;
+            isOffline = !!result.error;
+          } catch {
+            isOffline = true;
+          }
+          if (!isOffline && groups && groups.length > 0) {
             groupsToProcess = groups;
           }
         }
@@ -799,28 +805,32 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           
           for (const group of updatedGroups) {
             // Upsert Group
-            await supabase.from('registered_groups').upsert({
-              id: group.id,
-              user_id: userId,
-              group_name: group.name,
-              type: group.type,
-              created_at: new Date().toISOString()
-            }, { onConflict: 'id' }).catch(() => {});
+            try {
+              await supabase.from('registered_groups').upsert({
+                id: group.id,
+                user_id: userId,
+                group_name: group.name,
+                type: group.type,
+                created_at: new Date().toISOString()
+              }, { onConflict: 'id' });
+            } catch (_ge) { /* best-effort sync */ }
             
             // Upsert Devices in Group
             for (const deviceId of group.deviceIds) {
               const c = configs[deviceId];
               if (c) {
-                await supabase.from('registered_devices').upsert({
-                  id: deviceId,
-                  user_id: userId,
-                  group_id: group.id,
-                  custom_name: c.name || 'Unknown',
-                  points: c.points || 0,
-                  segments: c.segments || 0,
-                  sorting: c.sorting || 'GRB',
-                  strip_type: c.stripType || 'UNKNOWN'
-                }, { onConflict: 'id' }).catch(() => {});
+                try {
+                  await supabase.from('registered_devices').upsert({
+                    id: deviceId,
+                    user_id: userId,
+                    group_id: group.id,
+                    custom_name: c.name || 'Unknown',
+                    points: c.points || 0,
+                    segments: c.segments || 0,
+                    sorting: c.sorting || 'GRB',
+                    strip_type: c.stripType || 'UNKNOWN'
+                  }, { onConflict: 'id' });
+                } catch (_de) { /* best-effort sync */ }
               }
             }
           }
