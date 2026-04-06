@@ -484,7 +484,7 @@ export default function AdminHardwareTester({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0A0A0A' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#222', paddingTop: Platform.OS === 'android' ? 32 : 16 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#222' },
   closeBtn: { padding: 8, backgroundColor: '#222', borderRadius: 20 },
   title: { color: '#FFF', fontSize: 14, fontWeight: '900', letterSpacing: 1 },
   tabContainer: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#222', paddingHorizontal: 16 },

@@ -2021,3 +2021,35 @@ Crew Session Sharing:
 - Message format: Join my SK8Lytz crew [Name]! Use code: XXXXXX in the SK8Lytz app.
 
 
+  
+============================================================  
+SAFE AREA ARCHITECTURE (Updated 2026-04-06)  
+============================================================  
+  
+SafeAreaProvider wrapped at App.tsx root (line 90).  
+All screens and modals MUST use useSafeAreaInsets() for top/bottom clearance.  
+Do NOT use Platform.OS === 'ios' ? 34 : 16 or StatusBar.currentHeight hacks.  
+  
+Header Strategy:  
+ - DashboardScreen: paddingTop = insets.top + 12 (renderDashboardHeader)  
+ - AuthScreen: topButtons top = insets.top + 10; scrollContent paddingTop = insets.top + 60  
+  
+Modal Bottom Strategy:  
+ - DeviceRegistrationModal: ScrollView paddingBottom = insets.bottom + 24  
+ - FirstTimeSetupModal: sheet paddingBottom = insets.bottom + 16  
+ - DeviceSettingsModal: footer paddingBottom = insets.bottom (inline)  
+ - Sk8LytzProgrammerModal: footer paddingBottom = Math.max(insets.bottom, 16)  
+ - AdminHardwareTester: SafeAreaView handles all insets (no manual padding needed)  
+  
+============================================================  
+CREW HUB (Updated 2026-04-06)  
+============================================================  
+  
+Formerly 'Crew Sync' - now unified single-page 'Crew Hub'.  
+Location: src/components/CrewModal.tsx  
+  
+Discovery Radius Selector: 20mi, 50mi, 100mi, 250mi, Show All.  
+Default radius: 50 miles. Changing radius reloads sessions.  
+NearbySession interface includes crewName (from public_sessions view JOIN crews).  
+LocationService.getNearbyPublicSessions() accepts optional radiusMi param.  
+Public sessions: tap to join directly (no invite code required).  

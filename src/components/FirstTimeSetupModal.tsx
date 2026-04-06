@@ -16,6 +16,7 @@ import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView,
   TextInput, Animated, Platform, ActivityIndicator, KeyboardAvoidingView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { Typography } from '../theme/theme';
@@ -38,6 +39,7 @@ export default function FirstTimeSetupModal({
   onDismiss,
 }: FirstTimeSetupModalProps) {
   const { Colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>(1);
   const [devices, setDevices] = useState<PendingRegistration[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -325,7 +327,7 @@ export default function FirstTimeSetupModal({
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
-        <View style={[styles.sheet, { paddingBottom: Platform.OS === 'ios' ? 40 : 24 }]}>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
           {/* Progress dots */}
           <View style={styles.progressDots}>
             {([1, 2, 3] as Step[]).map(s => (

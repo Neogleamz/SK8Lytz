@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, Modal, SafeAreaView, TouchableOpacity,
   ScrollView, ActivityIndicator, Alert, Platform, Switch, TextInput
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
@@ -56,6 +57,7 @@ export default function Sk8LytzProgrammerModal({
   writeToDevice, isScanning, isScanProbing = false, handleScan
 }: Sk8LytzProgrammerModalProps) {
   const { Colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const bg       = isDark ? '#0a0d18' : '#f0f2f5';
   const cardBg   = isDark ? '#141829' : '#ffffff';
@@ -421,7 +423,7 @@ export default function Sk8LytzProgrammerModal({
         </ScrollView>
 
         {/* ── Action Footer ── */}
-        <View style={[s.footer, { backgroundColor: cardBg, borderColor: border }]}>
+        <View style={[s.footer, { backgroundColor: cardBg, borderColor: border, paddingBottom: Math.max(insets.bottom, 16) }]}>
             <TouchableOpacity 
                 style={[s.flashBtn, { opacity: (selectedIds.length === 0 || isFlashing) ? 0.5 : 1, backgroundColor: activeProfile === 'HALOZ' ? cyan : amber }]}
                 disabled={selectedIds.length === 0 || isFlashing}
@@ -486,7 +488,7 @@ const s = StyleSheet.create({
       left: 0,
       right: 0,
       padding: 16,
-      paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+      paddingBottom: 16, // insets.bottom applied inline via s.footerDynamic
       borderTopWidth: 1,
   },
   flashBtn: {

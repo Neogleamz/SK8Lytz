@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView, Platform, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Typography, Layout } from '../theme/theme';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
@@ -34,6 +35,7 @@ const deriveNames = (type: 'HALOZ' | 'SOULZ', position: 'Left' | 'Right' | null)
 };
 
 export default function DeviceSettingsModal({ isVisible, onClose, onSave, initialSettings, groups, writeToDevice }: DeviceSettingsModalProps) {
+  const insets = useSafeAreaInsets();
   const [type, setTypeState] = useState<'HALOZ' | 'SOULZ'>(initialSettings.type || 'SOULZ');
   const [position, setPosition] = useState<'Left' | 'Right' | null>(
     initialSettings.name?.includes('Left') ? 'Left' : initialSettings.name?.includes('Right') ? 'Right' : null
@@ -332,7 +334,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
 
           </ScrollView>
 
-          <View style={styles.footer}>
+          <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
               <Text style={styles.cancelButtonText}>CANCEL</Text>
             </TouchableOpacity>
@@ -368,7 +370,7 @@ const styles = StyleSheet.create({
   miniPillActive: { backgroundColor: Colors.secondary, borderColor: Colors.secondary },
   miniPillText: { color: Colors.textMuted, fontSize: 11, fontWeight: 'bold' },
   miniPillTextActive: { color: Colors.background },
-  footer: { flexDirection: 'row', gap: 12, marginBottom: Platform.OS === 'ios' ? 20 : 0 },
+  footer: { flexDirection: 'row', gap: 12, marginBottom: 0, paddingBottom: 0 },
   cancelButton: { flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 12, backgroundColor: Colors.surfaceHighlight },
   cancelButtonText: { color: Colors.textMuted, fontWeight: 'bold' },
   saveButton: { flex: 2, paddingVertical: 14, alignItems: 'center', borderRadius: 12, backgroundColor: Colors.primary },

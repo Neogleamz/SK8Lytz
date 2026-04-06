@@ -16,6 +16,7 @@ import {
   View, Text, StyleSheet, Modal, TouchableOpacity, TextInput,
   ActivityIndicator, Platform, ScrollView, KeyboardAvoidingView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { RegisteredDevice } from '../hooks/useRegistration';
@@ -50,7 +51,7 @@ export default function DeviceRegistrationModal({
 }: DeviceRegistrationModalProps) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
-  const iosBottom = Platform.OS === 'ios' ? 34 : 16;
+  const insets = useSafeAreaInsets();
 
   const [deviceName,   setDeviceName]   = useState('');
   const [productType,  setProductType]  = useState<'HALOZ' | 'SOULZ'>('SOULZ');
@@ -122,7 +123,7 @@ export default function DeviceRegistrationModal({
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.sheet}>
           <ScrollView
-            contentContainerStyle={[styles.body, { paddingBottom: iosBottom + 24 }]}
+            contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 24 }]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled">
 
