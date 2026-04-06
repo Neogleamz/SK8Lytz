@@ -14,6 +14,7 @@
 import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { AppLogger } from './AppLogger';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -26,7 +27,13 @@ export interface CrewSession {
   expires_at: string;
   is_active: boolean;
   last_scene?: Record<string, any> | null;
-  member_count?: number; // populated by fetchActiveSessions
+  member_count?: number;      // populated by fetchActiveSessions
+  // Migration 006 fields
+  status?: 'active' | 'scheduled' | 'ended';
+  location_label?: string;
+  location_coords?: { lat: number; lng: number };
+  scheduled_at?: string;
+  ended_at?: string;
 }
 
 export interface CrewMember {
@@ -61,14 +68,27 @@ class CrewService {
 
   // ── Session management ────────────────────────────────────────────────────
 
-  /** Create a new crew session. Caller becomes the leader. */
-  async createSession(name: string, displayName: string): Promise<CrewSession> {
+  /** Create a new crew session with optional geo location. Caller becomes the leader. */
+  async createSession(
+    name: string,
+    displayName: string,
+    opts?: { locationLabel?: string; locationCoords?: { lat: number; lng: number }; scheduledAt?: string }
+  ): Promise<CrewSession> {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) throw new Error('Must be signed in to create a crew');
 
+    const insertData: Record<string, any> = {
+      name,
+      leader_user_id: user.id,
+      status: opts?.scheduledAt ? 'scheduled' : 'active',
+    };
+    if (opts?.locationLabel)  insertData.location_label  = opts.locationLabel;
+    if (opts?.locationCoords) insertData.location_coords = opts.locationCoords;
+    if (opts?.scheduledAt)    insertData.scheduled_at    = opts.scheduledAt;
+
     const { data, error } = await supabase
       .from('crew_sessions')
-      .insert({ name, leader_user_id: user.id })
+      .insert(insertData)
       .select()
       .single();
 
@@ -79,7 +99,7 @@ class CrewService {
     await supabase.from('crew_members').insert({
       session_id: session.id,
       user_id: user.id,
-      display_name: displayName || user.email?.split('@')[0] || 'Leader',
+      display_name: displayName || 'Leader',
     });
 
     await this._persistSession(session);
@@ -119,7 +139,7 @@ class CrewService {
     const { error: memberErr } = await supabase.from('crew_members').upsert({
       session_id: session.id,
       user_id: user.id,
-      display_name: displayName || user.email?.split('@')[0] || 'Skater',
+      display_name: displayName || 'Skater',
     }, { onConflict: 'session_id,user_id' });
 
     if (memberErr) throw memberErr;
@@ -164,14 +184,15 @@ class CrewService {
   }
 
   /**
-   * Fetch all currently active crew sessions nearby (for browse UI).
-   * Returns sessions ordered by member count desc, most recent first.
+   * Fetch all currently active crew sessions (for browse UI).
+   * Also returns location_label and status with each session.
    */
   async fetchActiveSessions(): Promise<CrewSession[]> {
     const { data, error } = await supabase
       .from('crew_sessions')
       .select('*, crew_members(count)')
       .eq('is_active', true)
+      .eq('status', 'active')
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
       .limit(20);
@@ -182,6 +203,35 @@ class CrewService {
       ...s,
       member_count: s.crew_members?.[0]?.count ?? 0,
     })) as CrewSession[];
+  }
+
+  /** End the session (leader only). Sets status=ended, is_active=false. */
+  async endSession(): Promise<void> {
+    if (!this.currentSessionId || this.currentRole !== 'leader') return;
+
+    const { error } = await supabase
+      .from('crew_sessions')
+      .update({
+        status: 'ended',
+        is_active: false,
+        ended_at: new Date().toISOString(),
+      })
+      .eq('id', this.currentSessionId);
+
+    if (error) throw error;
+
+    // Broadcast END event so members know the session is over
+    this.channel?.send({
+      type: 'broadcast',
+      event: 'session_ended',
+      payload: { sessionId: this.currentSessionId },
+    });
+
+    this.unsubscribe();
+    await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
+    this.currentSessionId = null;
+    this.currentRole = null;
+    AppLogger.log('CREW_SESSION_ENDED', { reason: 'leader_ended' });
   }
 
   /** Fetch the last scene snapshot from a session (for late-arrival sync). */
@@ -321,6 +371,7 @@ class CrewService {
   subscribeAsMember(
     sessionId: string,
     onScene: (scene: Record<string, any>) => void,
+    onSessionEnded?: () => void,
   ): void {
     this._ensureUnsubscribed();
 
@@ -329,6 +380,14 @@ class CrewService {
       .on('broadcast', { event: 'scene_update' }, (payload: { payload: CrewScenePayload }) => {
         const crewPayload = payload.payload as CrewScenePayload;
         if (crewPayload?.scene) onScene(crewPayload.scene);
+      })
+      .on('broadcast', { event: 'session_ended' }, () => {
+        AppLogger.log('CREW_SESSION_LEFT', { reason: 'leader_ended_session', role: 'member' });
+        this.unsubscribe();
+        this.currentSessionId = null;
+        this.currentRole = null;
+        AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
+        onSessionEnded?.();
       })
       .subscribe();
   }

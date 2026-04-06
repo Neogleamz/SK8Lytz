@@ -153,6 +153,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [crewRole, setCrewRole] = useState<CrewRole>(null);
   const [isCrewModalVisible, setIsCrewModalVisible] = useState(false);
   const [scannerTab, setScannerTab] = useState<'DEVICES' | 'CREW'>('DEVICES');
+  const [crewModeSummary, setCrewModeSummary] = useState<string | undefined>(undefined);
   const dockedControllerRef = React.useRef<{ applyCloudScene: (s: any) => void }>(null);
 
   // ── Profile + Notifications state ────────────────────────────────────────
@@ -1784,6 +1785,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         onClose={() => setIsCrewModalVisible(false)}
         activeSession={crewSession}
         activeRole={crewRole}
+        currentModeSummary={crewModeSummary}
         onSessionReady={(session, role, lastScene) => {
           setCrewSession(session);
           setCrewRole(role);
@@ -1792,8 +1794,15 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           } else {
             crewService.subscribeAsMember(session.id, (scene) => {
               dockedControllerRef.current?.applyCloudScene(scene);
+            }, () => {
+              // session_ended callback — leader ended the session
+              setCrewSession(null);
+              setCrewRole(null);
+              setCrewModeSummary(undefined);
+              setScannerTab('DEVICES');
+              setIsCrewModalVisible(false);
+              Alert.alert('Session Ended', 'The crew leader has ended this session. Your skates will keep the current pattern.');
             });
-            // Immediately apply last known scene for late-arrival sync
             if (lastScene) {
               setTimeout(() => dockedControllerRef.current?.applyCloudScene(lastScene), 300);
             }
@@ -1802,6 +1811,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         onSessionLeft={() => {
           setCrewSession(null);
           setCrewRole(null);
+          setCrewModeSummary(undefined);
+          setScannerTab('DEVICES');
+        }}
+        onSessionEnded={() => {
+          setCrewSession(null);
+          setCrewRole(null);
+          setCrewModeSummary(undefined);
           setScannerTab('DEVICES');
         }}
       />
