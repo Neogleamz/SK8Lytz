@@ -318,9 +318,11 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   const lastAccelRef = useRef({ x: 0, y: 0, z: 0 });
 
   // ── Street Mode: Car-Light Pattern helper ─────────────────────────────────
-  // Rear 30% = red tail lights (brightened when braking)
-  // Front 30% = white headlights (always on)
-  // Middle 40% = cruise color, animated marquee
+  // SOULZ (linear strip, heel→toe):
+  //   Rear 30% = red tail lights, Middle 40% = amber cruise, Front 30% = white headlights
+  // HALOZ (2-segment × 8 ring):
+  //   8-LED frame: [RED×2][AMB×4][WHT×2]  →  mirrored to 16-LED array
+  //   Result: RED at BACK of ring, WHITE at FRONT, AMBER on both sides  ✅
   const applyStreetPattern = (
     isBraking: boolean,
     cruiseHex: string,
@@ -330,46 +332,60 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     const factor = brt / 100;
     const pts = hwSettings?.ledPoints || points || 16;
     const segs = hwSettings?.segments || 1;
-    // Use FULL strip length for the command so all segments receive it.
-    // When hardware segments > 1, the controller mirrors the pattern across zones.
-    const ledCount = Math.max(10, pts);
+    const isHalozRing = segs === 2 && pts === 16; // HALOZ hardware signature
+    const hwSpeed = Math.max(1, Math.min(ZenggeProtocol.ANIM_SPEED_MAX, 15));
 
     const cr = parseInt(cruiseHex.slice(1, 3), 16);
     const cg = parseInt(cruiseHex.slice(3, 5), 16);
     const cb = parseInt(cruiseHex.slice(5, 7), 16);
 
-    const rearCount   = Math.max(1, Math.round(ledCount * 0.3));
-    const frontCount  = Math.max(1, Math.round(ledCount * 0.3));
-    const midCount    = Math.max(1, ledCount - rearCount - frontCount);
-
     // Tail lights: dim red cruising, full red braking
     const tailBright = isBraking ? factor : factor * 0.45;
     const tailR = Math.round(255 * tailBright);
-    const tail = { r: tailR, g: 0, b: 0 };
+    const tail  = { r: tailR, g: 0, b: 0 };
 
     // Headlights: warm white, always steady
     const headVal = Math.round(255 * factor);
-    const head = { r: headVal, g: Math.round(headVal * 0.95), b: Math.round(headVal * 0.85) };
+    const head  = { r: headVal, g: Math.round(headVal * 0.95), b: Math.round(headVal * 0.85) };
 
-    // Cruise middle: user-chosen color, marquee bounce
+    // Amber cruise colour
     const crR = Math.round(cr * factor);
     const crG = Math.round(cg * factor);
     const crB = Math.round(cb * factor);
-    const crDim = { r: Math.round(crR * 0.3), g: Math.round(crG * 0.3), b: Math.round(crB * 0.3) };
-    const cruise = { r: crR, g: crG, b: crB };
+    const crDim   = { r: Math.round(crR * 0.3), g: Math.round(crG * 0.3), b: Math.round(crB * 0.3) };
+    const cruise  = { r: crR, g: crG, b: crB };
 
-    // Build per-LED array: [rear(tail)] [mid alternating] [front(head)]
-    const rearSection  = Array(rearCount).fill(tail);
-    const frontSection = Array(frontCount).fill(head);
-    // Alternating bright/dim for the mid section for a bouncing feel
-    const midSection   = Array.from({ length: midCount }, (_, i) =>
-      i % 2 === 0 ? cruise : crDim
-    );
+    let arr: { r: number; g: number; b: number }[];
 
-    const arr = [...rearSection, ...midSection, ...frontSection];
-    // TransitionType 0x03 = RunningWater — hardware natively bounces the mid section
-    // clampSpeed maps UI 0-100 → hardware 1-31 range
-    const hwSpeed = Math.max(1, Math.min(ZenggeProtocol.ANIM_SPEED_MAX, 15));
+    if (isHalozRing) {
+      // ── HALOZ 2-segment ring: design 8-LED frame then mirror to 16 ──
+      // Frame layout (Seg1, back→front): RED RED AMB AMB AMB AMB WHT WHT
+      // Mirror (Seg2, front→back reversed): WHT WHT AMB AMB AMB AMB RED RED
+      // Physical result on ring: back=RED, sides=AMB, front=WHT  ✅
+      const frame8 = [
+        tail, tail,                                          // [0-1] BACK — red
+        cruise, crDim, cruise, crDim,                       // [2-5] SIDES — amber bounce
+        head, head,                                          // [6-7] FRONT — white
+      ];
+      const mirror8 = [...frame8].reverse();                // Seg2: front→back mirror
+      arr = [...frame8, ...mirror8];
+    } else {
+      // ── SOULZ linear strip (heel→toe) ──
+      const ledCount   = Math.max(10, pts);
+      const rearCount  = Math.max(1, Math.round(ledCount * 0.3));
+      const frontCount = Math.max(1, Math.round(ledCount * 0.3));
+      const midCount   = Math.max(1, ledCount - rearCount - frontCount);
+      const midSection = Array.from({ length: midCount }, (_, i) =>
+        i % 2 === 0 ? cruise : crDim
+      );
+      arr = [
+        ...Array(rearCount).fill(tail),
+        ...midSection,
+        ...Array(frontCount).fill(head),
+      ];
+    }
+
+    // 0x03 = RunningWater — hardware animates the mid amber section natively
     writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpeed, 1, 0x03));
   };
 
@@ -619,19 +635,37 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   const applyEmergencyPattern = (spd: number, bright: number) => {
     if (!writeToDevice) return;
     const factor = bright / 100;
-    const red    = { r: Math.round(255 * factor), g: 0, b: 0 };
+    const pts  = hwSettings?.ledPoints || points || 16;
+    const segs = hwSettings?.segments || 1;
+    const isHalozRing = segs === 2 && pts === 16;
+    const hwSpd = Math.min(spd, ZenggeProtocol.ANIM_SPEED_MAX);
+
+    const red    = { r: Math.round(255 * factor), g: 0,                       b: 0 };
     const white  = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: Math.round(255 * factor) };
     const yellow = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: 0 };
     const off    = { r: 0, g: 0, b: 0 };
 
-    // 16-pixel zone layout: [rear RED × 4][mid alternating yellow/off × 8][front WHITE × 4]
-    const arr = [
-      red, red, red, red,
-      yellow, off, yellow, off, yellow, off, yellow, off,
-      white, white, white, white,
-    ];
-    // TransitionType 0x03 = RunningWater: hardware scrolls mid section natively
-    writeToDevice(ZenggeProtocol.setMultiColor(arr, Math.min(spd, ZenggeProtocol.ANIM_SPEED_MAX), 1, 0x03));
+    let arr: { r: number; g: number; b: number }[];
+
+    if (isHalozRing) {
+      // ── HALOZ 2-segment: 8-LED frame mirrored to 16 ──
+      // Frame: RED RED YEL off YEL off WHT WHT
+      // Mirror: WHT WHT off YEL off YEL RED RED
+      // Physical: back=RED, sides=flashing amber, front=WHITE  ✅
+      const frame8 = [red, red, yellow, off, yellow, off, white, white];
+      const mirror8 = [...frame8].reverse();
+      arr = [...frame8, ...mirror8];
+    } else {
+      // ── SOULZ linear: [rear RED×4][mid flash×8][front WHITE×4] ──
+      arr = [
+        red, red, red, red,
+        yellow, off, yellow, off, yellow, off, yellow, off,
+        white, white, white, white,
+      ];
+    }
+
+    // 0x03 = RunningWater: hardware scrolls mid section natively
+    writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpd, 1, 0x03));
   };
 
   const [musicPatternId, setMusicPatternId] = useState<number>(1);
@@ -1358,10 +1392,22 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                       </TouchableOpacity>
                     )}
 
-                    {isDiyBuilderExpanded && (
+                    {isDiyBuilderExpanded && (() => {
+                      const _diyPts  = hwSettings?.ledPoints || points || 16;
+                      const _diySegs = hwSettings?.segments || 1;
+                      const _maxDiy  = Math.max(1, Math.floor(_diyPts / _diySegs));
+                      const _isHalozDiy = _diySegs === 2 && _diyPts === 16;
+                      return (
                     <View style={{ marginTop: 12, padding: 10, backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderRadius: 12, borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                         <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: 'bold' }}>DIY ARRAY BUILDER</Text>
+                         <View>
+                           <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: 'bold' }}>DIY ARRAY BUILDER</Text>
+                           {_isHalozDiy && (
+                             <Text style={{ color: '#FFAA00', fontSize: 10, marginTop: 2 }}>
+                               ⚠ HALOZ: design {_maxDiy} LEDs — 2nd half mirrors automatically
+                             </Text>
+                           )}
+                         </View>
                          <TouchableOpacity onPress={() => setIsDiyBuilderExpanded(false)} style={{ padding: 4 }}>
                             <MaterialCommunityIcons name="chevron-up" size={24} color={Colors.textMuted} />
                          </TouchableOpacity>
@@ -1379,13 +1425,12 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                             if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, multiTransition));
                           }} />
                         ))}
-                        {multiColors.length < 16 && (
+                        {multiColors.length < _maxDiy && (
                           <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderWidth: 1, borderColor: Colors.isDark ? '#FFF' : Colors.text, justifyContent: 'center', alignItems: 'center' }} onPress={() => {
                              setFixedSubMode('MULTI');
                              const newArr = [...multiColors, selectedColor];
                              setMultiColors(newArr);
                              const rgbColors = generateSortedColors(newArr);
-                             const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
                             if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, multiTransition));
                           }}>
                             <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold' }}>+</Text>
@@ -1446,7 +1491,8 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                         ))}
                       </View>
                     </View>
-                    )}
+                    );
+                    })()}
                   </View>
                   )}
 

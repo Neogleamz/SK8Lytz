@@ -6,7 +6,7 @@
  *
  * Architecture:
  *  - Local buffer: compact LogEntry[] ({ t, e, d }) stored in AsyncStorage
- *    under '@sk8lytz_logs'. Rotates at MAX_ENTRIES (10,000) to cap storage.
+ *    under '@Sk8lytz_logs'. Rotates at MAX_ENTRIES (10,000) to cap storage.
  *  - Session ID: generated once at instantiation (telemetry_TIMESTAMP),
  *    stable for the entire app lifetime to prevent duplicate Supabase rows.
  *  - uploadLogsToSupabase(): merges with cloud Storage JSON, deduplicates,
@@ -31,7 +31,8 @@ import { supabase } from './supabaseClient';
 import * as Device from 'expo-device';
 import * as Battery from 'expo-battery';
 
-const STORAGE_KEY = '@sk8lytz_logs';
+const STORAGE_KEY = '@Sk8lytz_logs';         // canonical casing — matches @Sk8lytz_ convention
+const LEGACY_KEY  = '@sk8lytz_logs';          // old lowercase key — migrated on first load
 const MAX_ENTRIES = 10000; // ~1MB of compact log data before rotation
 
 export type EventType =
@@ -101,7 +102,16 @@ class AppLoggerService {
   private async ensureLoaded() {
     if (this.loaded) return;
     try {
-      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      let raw = await AsyncStorage.getItem(STORAGE_KEY);
+      // \u2500\u2500 One-time migration from legacy lowercase key \u2500\u2500
+      if (!raw) {
+        const legacy = await AsyncStorage.getItem(LEGACY_KEY);
+        if (legacy) {
+          await AsyncStorage.setItem(STORAGE_KEY, legacy);
+          await AsyncStorage.removeItem(LEGACY_KEY);
+          raw = legacy;
+        }
+      }
       this.buffer = raw ? JSON.parse(raw) : [];
     } catch {
       this.buffer = [];
