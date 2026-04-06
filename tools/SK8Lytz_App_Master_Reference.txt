@@ -2313,3 +2313,366 @@ Do NOT build features around ID range 101-210 without physical hardware test con
 Legacy `[0x71, 0x24, 0x0F, 0xA4]` may still work on older devices.
 
 ---
+
+---
+
+## ZENGGE APK — Additional Findings (Session 2, 2026-04-06)
+
+### J. Speed Range Discrepancy — 0x59 vs 0x42
+
+From `Protocol/n.java`:
+```java
+return tc.b.c(i10, ad.e.a(f10, 1, 31), false);
+```
+`ad.e.a(f10, 1, 31)` maps a normalized float (0.0-1.0) to the range **1–31** for the `0x59` animated pattern speed byte.
+
+| Protocol | Speed Range | Notes |
+|:---------|:-----------|:------|
+| `0x42` RBM | 1–100 (`0x01`–`0x64`) | Confirmed from APK; full 100-step range |
+| `0x59` MultiColor | **1–31** (`0x01`–`0x1F`) | Confirmed from Protocol/n.java; values >31 may behave erratically |
+| `0x51` DIY Custom | Per-step `0x01`–`0x64` | Each step has its own speed byte; full range |
+
+**SK8Lytz Action:** Cap `speed` parameter in `setMultiColor()` at `Math.min(speed, 31)` when sending animated 0x59 patterns (transitionType > 0). Static type (`0x00`) may not use speed at all, so cap only applies to animated transitions.
+
+---
+
+### K. "Quick 16-Color" Pattern — `tc.b.g()` (Undocumented in SK8Lytz)
+
+Found in `tc/b.java` method `g(int[] iArr, int i10, int i11, boolean z10)`:
+```
+Packet: [0x51, R1,G1,B1,0, R2,G2,B2,0, ...(×16 colors × 4 bytes), stepVal, transitionType, 0xFF, flag, checksum]
+Total: 70 bytes
+```
+- 16 color slots × 4 bytes each (`R, G, B, 0x00`)
+- `stepVal = 31 - brightness_slider_value` (so brightness 100% ? stepVal=0, brightness 0% ? stepVal=31)
+- `transitionType`: `58` (0x3A=Jump), `59` (0x3B=Gradual), `60` (0x3C=Strobe)
+- `flag = 0xF0` (ON) or `0x0F` (OFF)
+- Inactive color slots use `[1, 2, 3, 0]` as placeholder (not black)
+
+This is Zengge's "Quick Mix" feature — a single-segment pixel that cycles through up to 16 colors using hardware-native transitions. **Completely separate from the 32-step DIY mode.**
+
+SK8Lytz does not currently expose this mode. Could be added as "Color Cycle" in MultiMode.
+
+---
+
+### L. Sunrise/Sunset Scene Timer — `tc.b.J()` (0x61)
+
+The 56-byte `0x61` packet is a **dawn/dusk scene timer**, not a simple alarm. Each of up to 4 "steps" contains:
+- Active flag (`0xF0` = enabled, `0x0F` = disabled)
+- `speed_hi, speed_lo` — fade transition speed
+- `R1, G1, B1` — primary color for this scene slot
+- `R2, G2, B2` — secondary color
+- Transition type byte
+- `on_hour, on_minute` (start H:M, big-endian 16-bit encoded)
+- `brightness` or repeat flag
+- `off_hour, off_minute` (end H:M)
+
+This enables a daily "wake up" or "wind down" scene that gradually shifts lighting through up to 4 color phases on a repeating schedule. Not currently exposed in SK8Lytz.
+
+**Potential feature:** "Schedule" tab in Crew mode or standalone Schedule screen.
+
+---
+
+### M. MTU Negotiation Is BLE Firmware Version Gated
+
+From `ZGHBDeviceHandler.java` and `ZGHBWriteUtils.java`:
+```java
+if (ZGHBWriteUtils.getWriteVersion(zGHBDevice.getBleVersion()) >= 1) {
+    hBConnectionImpl.setRequestMtu(512);
+}
+```
+
+The device advertises its `bleVersion` in the manufacturer-specific advertisement data (parsed by `parseFirmwareFromAdvertisement()`). Only devices with `bleVersion >= 1` should have MTU 512 requested.
+
+**SK8Lytz current behavior:** We negotiate MTU via the BLE layer but do not check `bleVersion` before requesting 512. This is mostly harmless (devices just ignore unsupported MTU) but we should:
+1. Parse `bleVersion` from the advertisement (we already do this in `useBLE.ts`)
+2. Only send large single-packet 0x59 arrays (>20 bytes) if MTU was successfully negotiated
+
+**Practical limit:** Without MTU negotiation, BLE classic chunk size = 20 bytes. A 0x59 packet for 60 LEDs = `(60 × 3) + 9 = 189 bytes`. This needs chunking OR MTU 512 negotiated first.
+
+---
+
+### N. `SODataCommandItem` — Cloud Command Replay
+
+`SODataCommandItem.java` in `com.zengge.wifi.Model.SO` stores arbitrary BLE command payloads keyed to device IDs. Zengge uses this for:
+- Syncing "saved scenes" to cloud account
+- Replaying saved commands on new devices ("restore previous settings")
+- Group broadcast of saved states
+
+This explains how Zengge's "Scenes" feature works — scenes are just stored `SODataCommandItem` lists that get replayed in order. We could implement something similar in SK8Lytz using Supabase to store `[deviceId, hexPayload]` pairs as "Saved Scenes" tied to a crew or user.
+
+---
+
+### O. `VerticalSeekBar` — Speed Control UI Pattern
+
+Zengge uses a custom `VerticalSeekBar.java` widget for speed/brightness control in Symphony mode — a vertical draggable slider. Not a standard Android component. SK8Lytz uses standard horizontal sliders; this is just a note that Zengge orients speed control vertically in their advanced mode UI.
+
+---
+
+### P. BLE Write Timeout = 3000ms
+
+From `BleInterfaceProxy.java`:
+```java
+int i10 = 3000; // default timeout in ms
+// overridable via @g annotation on specific methods
+```
+All BLE commands have a **3-second timeout** by default. Commands that don't receive an ACK within 3s are silently dropped. This means:
+- Large chunked 0x59 payloads sent over multiple 20-byte writes must complete within ~3s total
+- If the device is busy or RF congested, commands can vanish without error
+- **SK8Lytz should add retry logic** for critical commands (power on/off, hardware settings write)
+
+---
+
+---
+
+## ZENGGE PROTOCOL — CODE-READY REFERENCE (For AI Code Generation)
+### This section is formatted for direct use when writing TypeScript code.
+### Each entry has: exact byte layout, TypeScript pseudo-code, and validation rules.
+
+---
+
+### Q. wrapCommand() — Transport Wrapper (ALL commands need this)
+
+Every raw payload must be wrapped before BLE write:
+```typescript
+// Format: [0x00, seq, 0x80, 0x00, lenHi, lenLo, (len+1), cmdFamily, ...rawPayload]
+// cmdFamily: always 0x0B for control commands
+// seq: 0-255 rolling counter (messageCounter % 256)
+function wrapCommand(rawPayload: number[], cmdFamily = 0x0B): number[] {
+  const seq = (messageCounter++) & 0xFF;
+  const len = rawPayload.length;
+  return [0x00, seq, 0x80, 0x00, (len>>8)&0xFF, len&0xFF, (len+1)&0xFF, cmdFamily, ...rawPayload];
+}
+// Total packet size = rawPayload.length + 8 header bytes
+// Checksum is INSIDE the rawPayload (last byte), NOT on the wrapped packet
+```
+
+---
+
+### R. Checksum Calculation
+```typescript
+function checksum(payload: number[]): number {
+  return payload.reduce((acc, v) => acc + v, 0) & 0xFF;
+  // Sum all bytes, take lowest byte only
+  // Applied to rawPayload BEFORE wrapping (exclude the checksum byte itself)
+}
+```
+
+---
+
+### S. BLE Chunking Rules (CRITICAL for large 0x59 packets)
+
+Without MTU negotiation: max 20 bytes per BLE write
+With MTU 512 negotiated: entire packet in one write
+
+```typescript
+// Chunk algorithm:
+const CHUNK_SIZE = 20; // classic BLE limit
+function chunkPacket(packet: number[]): number[][] {
+  const chunks: number[][] = [];
+  for (let i = 0; i < packet.length; i += CHUNK_SIZE) {
+    chunks.push(packet.slice(i, i + CHUNK_SIZE));
+  }
+  return chunks;
+}
+// Send chunks sequentially with ~50ms delay between each.
+// 3000ms total BLE timeout from BleInterfaceProxy applies across all chunks.
+
+// FOR SK8LYTZ:
+// Haloz (16 LEDs): 0x59 = (16*3)+9 = 57 bytes ? 3 chunks (no issue)
+// Soulz (43 LEDs): 0x59 = (43*3)+9 = 138 bytes ? 7 chunks (needs care)
+// Custom (120 LEDs): 0x59 = (120*3)+9 = 369 bytes ? 19 chunks (request MTU 512 first)
+```
+
+---
+
+### T. Hardware Animation Model (CRITICAL design decision)
+
+**The Zengge IC controller handles animation NATIVELY on the device.**
+We send ONE packet. The hardware loops and animates it autonomously.
+
+```
+transitionType in 0x59 packet:
+  0x00 (Static)      ? Hardware holds pixel array as-is. No animation. Instant.
+  0x01 (Gradual)     ? Hardware smoothly interpolates between color blocks. Soft fade.
+  0x02 (Strobe)      ? Hardware rapidly flashes full-strip ON/OFF at speed interval.
+  0x03 (RunningWater)? Hardware scrolls/marquees the pixel array in direction at speed.
+
+For 0x51 DIY steps:
+  0x3A (Jump)        ? Hardware hard-cuts between step colors at speed interval.
+  0x3B (Gradual)     ? Hardware cross-fades between step colors at speed interval.
+  0x3C (Strobe)      ? Hardware strobes each step color at speed interval.
+```
+
+**CONSEQUENCE FOR SK8LYTZ:**
+- `applyFixedPattern()` sends ONE command. The hardware animates it from there.
+- The visualizer (app side) must SIMULATE the hardware animation locally using a tick/loop.
+- We do NOT need to send repeated frames for animated patterns — one send is enough.
+- Speed for 0x59: use range 1–31 (0x01–0x1F). Values >31 may not behave predictably.
+- Speed for 0x51: use range 1–100 (0x01–0x64). Full range works here.
+
+---
+
+### U. 0x59 MultiColor — Complete Indexed Layout
+
+```typescript
+// Total size: (numLEDs * 3) + 9 bytes (before wrapCommand)
+// Index:  [Value]          [Description]
+//   [0]:  0x59             opcode
+//   [1]:  totalLen >> 8    total packet length high byte
+//   [2]:  totalLen & 0xFF  total packet length low byte
+//   [3]:  R[0]             pixel 0 red
+//   [4]:  G[0]             pixel 0 green
+//   [5]:  B[0]             pixel 0 blue
+//   [6]:  R[1]             pixel 1 red
+//   ... (3 bytes per pixel) ...
+//   [3 + n*3]:    numLEDs >> 8     pixel count high byte
+//   [3 + n*3 +1]: numLEDs & 0xFF   pixel count low byte
+//   [3 + n*3 +2]: transitionType   0=Static 1=Gradual 2=Strobe 3=RunningWater
+//   [3 + n*3 +3]: speed            1–31 for animated types; ignored for Static
+//   [3 + n*3 +4]: direction        1=Forward 0=Reverse
+//   [3 + n*3 +5]: checksum         sum(payload[0..totalLen-2]) & 0xFF
+
+// Notes:
+//   - No 32-pixel cap. numLEDs can be up to device max (typically 300).
+//   - Minimum 10 pixels recommended for smooth animation on hardware.
+//   - For Solid (pattern 1): transitionType=0, speed=100, all pixels = fgColor.
+//   - For animated patterns: transitionType=3, speed=10–25 for good visual range.
+```
+
+---
+
+### V. 0x51 Custom Steps — Complete Indexed Layout
+
+```typescript
+// Total size: 291 bytes (v1, 32 steps × 9 bytes)
+// Index:  [Value]         [Description]
+//   [0]:  0x51            opcode
+// Step i (i = 0..31):
+//   [1 + i*9]:    0xF0 (active) or 0x0F (inactive)
+//   [2 + i*9]:    transMode    0x3A=Jump, 0x3B=Gradual, 0x3C=Strobe
+//   [3 + i*9]:    speed        1–100
+//   [4 + i*9]:    color1.R     foreground red
+//   [5 + i*9]:    color1.G     foreground green
+//   [6 + i*9]:    color1.B     foreground blue
+//   [7 + i*9]:    color2.R     background red
+//   [8 + i*9]:    color2.G     background green
+//   [9 + i*9]:    color2.B     background blue
+//   [289]: 0x0F             terminator
+//   [290]: checksum         sum(payload[0..289]) & 0xFF
+
+// For Breath (pattern 6): 2 steps, transMode=0x3B, color1=FG, color2=BG
+// For Flash (pattern 7):  2 steps, transMode=0x3A, color1=FG, color2=BG
+// For Strobe (pattern 8): 2 steps, transMode=0x3A, speed=100, color1=FG, color2=BG
+```
+
+---
+
+### W. Pattern Frame Arrays — All 10 Fixed Patterns (For Visualizer Only)
+
+These define the pixel TEMPLATE that gets tiled to fill numLEDs.
+Hardware uses 0x59 transitionType=3 to scroll them natively.
+Visualizer simulates the scroll using animTick (0.0–1.0).
+
+```typescript
+// fg = foreground color, bg = background color, dim(c, f) = multiply RGB by f
+// Pattern 1 — Solid:        [fg] × numLEDs  (no tiling needed)
+// Pattern 2 — Single Dot:   [fg, bg, bg, bg, bg, bg, bg, bg]
+// Pattern 3 — Comet:        [fg, dim(fg,0.5), dim(fg,0.2), bg, bg, bg]
+// Pattern 4 — Dashed:       [fg, fg, fg, fg, bg, bg, bg, bg]
+// Pattern 5 — Alternating:  [fg, fg, bg, bg]
+// Pattern 6 — Breath:       0x51, 2-step Gradual, FG?BG?FG (hardware handles)
+// Pattern 7 — Flash:        0x51, 2-step Jump, FG?BG (hardware handles)
+// Pattern 8 — Strobe:       0x51, 2-step Jump speed=100, FG?BG (hardware handles)
+// Pattern 9 — Wave:         [bg, bg, fg, fg, bg, bg]
+// Pattern 10 — Pinch:       [fg, bg, bg, bg, bg, fg]
+
+// Tiling algorithm:
+// 1. Start with template array above
+// 2. Repeat template until length >= numLEDs
+// 3. Slice to exactly numLEDs
+// 4. Shift by Math.floor(animTick * numLEDs) positions for scroll simulation
+```
+
+---
+
+### X. 0x73 Music Mode — Complete Parameter Breakdown
+
+```typescript
+// Format: [0x73, micSource, modeType, patternId,
+//           c1R, c1G, c1B, c2R, c2G, c2B,
+//           0x20, sensitivity, brightness, checksum]
+// Total: 14 bytes + checksum (before wrap)
+
+// micSource:   0x00 = App mic (phone), 0x01 = Device mic (on-board)
+// modeType:    0x26 (38) = Light Bar (vu-meter style columns)
+//              0x27 (39) = Light Screen (matrix fill style)
+// patternId:   1–100 (selects which music-reactive animation)
+// c1R/G/B:     primary reactive color (peaks, loud sounds)
+// c2R/G/B:     secondary color (quiet background)
+// 0x20:        fixed constant (unknown purpose, always 0x20)
+// sensitivity: 1–100 (microphone gain)
+// brightness:  1–100 (output brightness)
+
+// Music magnitude push (sent continuously during audio):
+// Format: [0x74, magnitude, checksum]  — 3 bytes before wrap
+// magnitude: 0–255 (raw audio level)
+// Send at ~50ms interval for smooth animation
+```
+
+---
+
+### Y. Hardware Query/Response Flow
+
+```
+On BLE Connect:
+  1. Send queryHardwareSettings() [0x63, 0x12, 0x21, 0x0F, checksum]
+  2. Wait for NOTIFY response (up to 3000ms)
+  3. Parse response:
+     if response[0] == 0x63 && response.length >= 12:
+       icType     = response[3]   // index into IC_TYPES table
+       sorting    = response[4]   // index into COLOR_SORTING_RGB
+       pointsHi   = response[9]   // note: SWAPPED bytes in response!
+       pointsLo   = response[8]   // little-endian swapped
+       segments   = response[5]
+       micPoints  = response[6]
+       micSegs    = response[7]
+       points = (pointsHi << 8) | pointsLo
+  4. If no response after 3s: use SK8_DEFAULTS for device type
+
+// IMPORTANT: The points bytes are SWAPPED in the response (endian swap).
+// Write uses big-endian [hi, lo] but response comes back [lo, hi] at positions [8,9].
+```
+
+---
+
+### Z. "Quick 16-Color Cycle" — `tc.b.g()` Function Signature (TypeScript)
+
+```typescript
+// If we add this later as "Color Cycle" mode:
+static setQuick16ColorCycle(
+  colors: RGB[],          // up to 16 colors (pad with {1,2,3} if < 16)
+  brightness: number,     // 0–100 (maps to stepVal = 31 - Math.floor(brightness/100*31))
+  transMode: 0x3A | 0x3B | 0x3C,  // Jump | Gradual | Strobe
+  isOn: boolean
+): number[] {
+  const payload = new Array(70).fill(0);
+  payload[0] = 0x51;
+  for (let i = 0; i < 16; i++) {
+    const c = colors[i] || { r: 1, g: 2, b: 3 }; // inactive placeholder
+    payload[1 + i*4] = c.r;
+    payload[2 + i*4] = c.g;
+    payload[3 + i*4] = c.b;
+    payload[4 + i*4] = 0x00;
+  }
+  const stepVal = 31 - Math.floor((brightness / 100) * 31);
+  payload[65] = stepVal;
+  payload[66] = transMode;
+  payload[67] = 0xFF;
+  payload[68] = isOn ? 0xF0 : 0x0F;
+  payload[69] = checksum(payload.slice(0, 69));
+  return wrapCommand(payload);
+}
+```
+
+---
