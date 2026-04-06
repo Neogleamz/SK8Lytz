@@ -160,6 +160,13 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
 
         const segmentI = isHaloz ? (i % (renderLeds / 2)) : i;
         const activeSegmentLeds = isHaloz ? (renderLeds / 2) : renderLeds;
+        // HALOZ 2-segment mirror: Segment 2 (i >= renderLeds/2) runs the same pattern
+        // in REVERSE relative to its own start point (front of box → back of box).
+        // This mirrors Segment 1 (back→front) creating bilateral symmetry on the ring.
+        const isHalozSeg2 = isHaloz && (i >= renderLeds / 2);
+        // mirrorFrameSlot: given a frame of segLen, returns the mirrored index for Seg2
+        const mirrorSlot = (slot: number, segLen: number) =>
+          isHalozSeg2 ? Math.max(0, segLen - 1 - slot) : slot;
         
         // Raw smooth path interval
         const rawFract = (segmentI / activeSegmentLeds);
@@ -270,30 +277,35 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
                }
              } else {
                // ── All other RBM patterns: hardware-accurate pixel simulation ──
-               // getRbmVisualizerFrame returns RGB[] for every pattern motion type
-               // using the exact palette + motion model from the APK SymphonyBuild table.
-               const rbmFrame = getRbmVisualizerFrame(pid, numLeds, animTick);
-               const rawLedPos = (i / renderLeds) * rbmFrame.length;
-               const rSlot0 = Math.floor(rawLedPos) % Math.max(1, rbmFrame.length);
+               // HALOZ: generates 8-LED (per-segment) frame; Seg2 mirrors it reversed.
+               const rbmSegLeds = isHaloz ? Math.ceil(numLeds / 2) : numLeds;
+               const rbmFrame = getRbmVisualizerFrame(pid, rbmSegLeds, animTick);
+               const rawLedPos = (segmentI / activeSegmentLeds) * rbmFrame.length;
+               const rSlot0Raw = Math.floor(rawLedPos) % Math.max(1, rbmFrame.length);
+               const rSlot0 = mirrorSlot(rSlot0Raw, rbmFrame.length);
                const rSlotT = rawLedPos - Math.floor(rawLedPos);
                const RDIFF = 0.30;
                const rBoundary = Math.pow(Math.abs(rSlotT - 0.5) * 2, 2);
                const rBlend = RDIFF * rBoundary;
                const rCurr = rbmFrame[rSlot0] || rbmFrame[0] || { r: 255, g: 0, b: 0 };
-               const rAdjIdx = rSlotT < 0.5
-                 ? (rSlot0 - 1 + rbmFrame.length) % rbmFrame.length
-                 : (rSlot0 + 1) % rbmFrame.length;
-               const rAdj = rbmFrame[rAdjIdx] || rCurr;
+               const rAdjIdx = mirrorSlot(
+                 isHalozSeg2
+                   ? Math.max(0, rSlot0Raw - 1)   // mirrored: adjacent is previous in raw
+                   : (rSlot0Raw + 1) % rbmFrame.length,
+                 rbmFrame.length
+               );
+               const rAdj = rbmFrame[Math.min(rbmFrame.length - 1, Math.max(0, rAdjIdx))] || rCurr;
                dotColor = `#${Math.round(rCurr.r*(1-rBlend)+rAdj.r*rBlend).toString(16).padStart(2,'0')}${Math.round(rCurr.g*(1-rBlend)+rAdj.g*rBlend).toString(16).padStart(2,'0')}${Math.round(rCurr.b*(1-rBlend)+rAdj.b*rBlend).toString(16).padStart(2,'0')}`;
                dotOpacity = isPoweredOn ? Math.max(0.02, brightness / 100) : 0;
              }
           } else if (mode === 'MUSIC') {
              // ── Hardware-accurate music mode simulation ──
-             // getRbmMusicFrame uses SymphonyEffect motion templates + audio magnitude.
-             // Returns per-LED { pixels: RGB[], opacities: number[] } for direct mapping.
-             const musicFrame = getRbmMusicFrame(patternId || 1, numLeds, animTick, audioMagnitude, color);
-             const mRawPos = (i / renderLeds) * musicFrame.pixels.length;
-             const mSlot = Math.floor(mRawPos) % Math.max(1, musicFrame.pixels.length);
+             // HALOZ: generates 8-LED (per-segment) frame; Seg2 mirrors it reversed.
+             const musicSegLeds = isHaloz ? Math.ceil(numLeds / 2) : numLeds;
+             const musicFrame = getRbmMusicFrame(patternId || 1, musicSegLeds, animTick, audioMagnitude, color);
+             const mRawPos = (segmentI / activeSegmentLeds) * musicFrame.pixels.length;
+             const mSlotRaw = Math.floor(mRawPos) % Math.max(1, musicFrame.pixels.length);
+             const mSlot = mirrorSlot(mSlotRaw, musicFrame.pixels.length);
              const mPx = musicFrame.pixels[mSlot] || { r: 255, g: 255, b: 255 };
              dotColor = rgbToHex(mPx);
              dotOpacity = isPoweredOn ? (musicFrame.opacities[mSlot] ?? 1.0) * (brightness / 100) : 0;
@@ -315,27 +327,30 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
              };
 
            // Get the full per-LED pixel array from the PatternEngine at the current animation tick
-             const framePixels = getVisualizerFrame(pid, fgRgb, bgRgb, numLeds, animTick);
+             // HALOZ: generates 8-LED (per-segment) frame; Seg2 slot is mirrored.
+             const mmSegLeds = isHaloz ? Math.ceil(numLeds / 2) : numLeds;
+             const framePixels = getVisualizerFrame(pid, fgRgb, bgRgb, mmSegLeds, animTick);
 
              // ── Diffusion blending: blend adjacent LED colors near chip boundaries ──
-             // Physically: silicone diffusion mixes ~35% of adjacent LED into each boundary zone.
-             // Uses a quadratic falloff so the chip centre is pure; only edges blend.
-             const rawLedPos = (i / renderLeds) * framePixels.length;
-             const slot0 = Math.floor(rawLedPos) % Math.max(1, framePixels.length);
-             const slotT = rawLedPos - Math.floor(rawLedPos); // 0.0 → 1.0 through LED slot
+             const rawLedPos = (segmentI / activeSegmentLeds) * framePixels.length;
+             const slot0Raw = Math.floor(rawLedPos) % Math.max(1, framePixels.length);
+             const slot0 = mirrorSlot(slot0Raw, framePixels.length);
+             const slotT = rawLedPos - Math.floor(rawLedPos);
              const DIFF = 0.35;
-             const boundaryProx = Math.pow(Math.abs(slotT - 0.5) * 2, 2); // 0 at centre, 1 at edges
+             const boundaryProx = Math.pow(Math.abs(slotT - 0.5) * 2, 2);
              const blendAmt = DIFF * boundaryProx;
              const pCurr = framePixels[slot0] || fgRgb;
-             // At start of slot blend toward previous LED; at end blend toward next LED
-             const adjIdx = slotT < 0.5
-               ? (slot0 - 1 + framePixels.length) % framePixels.length
-               : (slot0 + 1) % framePixels.length;
-             const pAdj = framePixels[adjIdx] || fgRgb;
+             const adjIdx = mirrorSlot(
+               isHalozSeg2
+                 ? Math.max(0, slot0Raw - 1)
+                 : (slot0Raw + 1) % framePixels.length,
+               framePixels.length
+             );
+             const pAdj = framePixels[Math.min(framePixels.length - 1, Math.max(0, adjIdx))] || fgRgb;
              const pr = Math.round(pCurr.r * (1 - blendAmt) + pAdj.r * blendAmt);
              const pg = Math.round(pCurr.g * (1 - blendAmt) + pAdj.g * blendAmt);
              const pb = Math.round(pCurr.b * (1 - blendAmt) + pAdj.b * blendAmt);
-             dotColor = `#${pr.toString(16).padStart(2,'0')}${pg.toString(16).padStart(2,'0')}${pb.toString(16).padStart(2,'0')}`;
+             dotColor = `#${pr.toString(16).padStart(2,'0')}${pg.toString(16).padStart(2,'0')}${pb.toString(16).padStart(2,'00')}`;
              dotOpacity = isPoweredOn ? (brightness / 100) : 0;
           }
         }
