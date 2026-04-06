@@ -47,6 +47,7 @@ import AccountModal from '../components/AccountModal';
 import CrewMemberDashboard from '../components/CrewMemberDashboard';
 import { profileService } from '../services/ProfileService';
 import { notificationService } from '../services/NotificationService';
+import DeviceRegistrationModal from '../components/DeviceRegistrationModal';
 
 interface DeviceSettings {
   name: string;
@@ -87,7 +88,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // ── Registration system ────────────────────────────────────────────────────
   const {
     registeredDevices,
+    saveRegisteredDevice,
     saveAllRegisteredDevices,
+    checkDeviceClaimed,
     hasCloudRegistrations,
     migrateLegacyGroups,
     syncFromCloud,
@@ -188,15 +191,29 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     };
   }, []);
 
-  // ── First-Time Setup Wizard trigger ─────────────────────────────────────────
-  // Fires once after probe: if user has 0 cloud registrations, show setup wizard.
+  // ── Registration trigger: fires after BLE probe finds classifiable devices ──
+  // - No existing registrations → show bulk first-time setup wizard
+  // - Has existing registrations + new device MAC → single quick-register modal
   const wizardCheckedRef = React.useRef(false);
+  const [pendingNewDevice, setPendingNewDevice] = React.useState<any | null>(null);
+
   useEffect(() => {
     if (pendingRegistrations.length === 0) return;
     if (wizardCheckedRef.current) return;
     wizardCheckedRef.current = true;
-    hasCloudRegistrations().then(hasAny => {
-      if (!hasAny) setIsSetupWizardVisible(true);
+
+    hasCloudRegistrations().then(async hasAny => {
+      if (!hasAny) {
+        setIsSetupWizardVisible(true);
+      } else {
+        const first = pendingRegistrations[0];
+        if (!first) return;
+        const status = await checkDeviceClaimed(first.device_mac, {
+          firmwareVer: first.firmware_ver,
+          productId:   first.product_id,
+        });
+        if (status === 'unclaimed') setPendingNewDevice(first);
+      }
     });
   }, [pendingRegistrations]);
 
@@ -1788,6 +1805,19 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         onDismiss={() => {
           setIsSetupWizardVisible(false);
           clearPendingRegistrations();
+        }}
+      />
+
+      {/* Single-device quick-register — slides up when returning user connects a new unclaimed device */}
+      <DeviceRegistrationModal
+        device={pendingNewDevice}
+        existingGroups={[...new Set(registeredDevices.map((d: any) => d.group_name).filter(Boolean))]}
+        onDismiss={() => { setPendingNewDevice(null); wizardCheckedRef.current = false; clearPendingRegistrations(); }}
+        onRegistered={async (rd) => {
+          await saveRegisteredDevice(rd);
+          setPendingNewDevice(null);
+          clearPendingRegistrations();
+          wizardCheckedRef.current = false;
         }}
       />
 
