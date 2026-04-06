@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Alert,
   ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Animated
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabaseClient';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
@@ -22,7 +23,8 @@ type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
 
 export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuccess: () => void; onOfflineMode?: () => void }) {
   const { Colors, toggleTheme, isDark } = useTheme();
-  const styles = createStyles(Colors);
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(Colors, insets);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -379,11 +381,11 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
   );
 }
 
-const createStyles = (Colors: any) => StyleSheet.create({
+const createStyles = (Colors: any, insets: { top: number; bottom: number; left: number; right: number }) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   topButtons: {
-    position: 'absolute', top: Platform.OS === 'ios' ? 54 : 16, right: 16,
+    position: 'absolute', top: Math.max(insets.top + 10, 20), right: 16,
     flexDirection: 'row', gap: 8, zIndex: 10,
   },
   topBtn: {

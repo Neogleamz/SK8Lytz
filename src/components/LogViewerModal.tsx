@@ -610,7 +610,7 @@ function StatRow({ label, value, color, muted }: { label: string; value: string;
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, paddingTop: Platform.OS === 'ios' ? 50 : 24 },
+  root: { flex: 1 },
   modalHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1,
