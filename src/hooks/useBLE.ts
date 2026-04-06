@@ -22,6 +22,7 @@ import type { Device } from 'react-native-ble-plx';
 import * as ExpoDevice from 'expo-device';
 import { ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, ZENGGE_NOTIFY_UUID, ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
+import { Buffer } from 'buffer';
 
 let BleManager: any;
 let State: any;
@@ -104,9 +105,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
     }
     if (characteristic?.value) {
       try {
-        /* global Buffer */
-        const buffer = require('buffer').Buffer;
-        const data = Array.from(buffer.from(characteristic.value, 'base64')) as number[];
+        /* Buffer is imported at top of file */
+        const data = Array.from(Buffer.from(characteristic.value, 'base64')) as number[];
         // Read from ref — always has the latest callback, no stale closure
         if (dataReceivedCallbackRef.current) {
             dataReceivedCallbackRef.current(deviceId, data);
@@ -203,11 +203,11 @@ export default function useBLE(): BluetoothLowEnergyApi {
         if (manufacturerData) {
           try {
             /* global Buffer */
-            const buffer = require('buffer').Buffer.from(manufacturerData, 'base64');
+            const mfBuf = Buffer.from(manufacturerData, 'base64');
             // Index 9 is the device type code in many Zengge advertisement packets.
             // 0x33 (51) is the standard for addressable / Symphony controllers.
             // 0xBF is also seen in some Symphony variants.
-            if (buffer.length > 9 && (buffer[9] === 0x33 || buffer[9] === 0xBF)) {
+            if (mfBuf.length > 9 && (mfBuf[9] === 0x33 || mfBuf[9] === 0xBF)) {
               isSymphony = true;
             }
           } catch (e) {
@@ -248,7 +248,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
               let productId: number | undefined;
               if (manufacturerData) {
                 try {
-                  const { ZenggeProtocol } = require('../protocols/ZenggeProtocol');
+                  // ZenggeProtocol is already statically imported at the top of this file
                   const fwInfo = ZenggeProtocol.parseFirmwareFromAdvertisement(manufacturerData);
                   if (fwInfo) {
                     advFirmware = `v${fwInfo.firmwareVer}.${fwInfo.ledVersion} (BLE ${fwInfo.bleVersion})`;
@@ -347,8 +347,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
             (err: any, char: any) => {
               if (err || !char?.value) return;
               try {
-                const buffer = require('buffer').Buffer;
-                const raw = Array.from(buffer.from(char.value, 'base64')) as number[];
+                const raw = Array.from(Buffer.from(char.value, 'base64')) as number[];
                 const parsed = ZenggeProtocol.parseHardwareSettingsResponse(raw);
                 if (parsed) {
                   clearTimeout(timer);
@@ -361,7 +360,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
           // Send the 0x63 query
           const qp = ZenggeProtocol.queryHardwareSettings(false);
-          const b64 = require('buffer').Buffer.from(qp).toString('base64');
+          const b64 = Buffer.from(qp).toString('base64');
           conn.writeCharacteristicWithoutResponseForService(
             ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
           ).catch((e: any) => console.warn('[BLE Probe] query write failed', e));
@@ -506,7 +505,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
             '00002a26-0000-1000-8000-00805f9b34fb'
           );
           if (fwChar && fwChar.value) {
-            const rawFw = require('buffer').Buffer.from(fwChar.value, 'base64').toString('ascii');
+            const rawFw = Buffer.from(fwChar.value, 'base64').toString('ascii');
             const clean = rawFw.replace(/[^\x20-\x7E]/g, '');
             if (clean.length > 0) firmware = clean;
           }
@@ -520,7 +519,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
       setTimeout(async () => {
         try {
           const queryPayload = ZenggeProtocol.queryHardwareSettings(false);
-          const b64 = require('buffer').Buffer.from(queryPayload).toString('base64');
+          const b64 = Buffer.from(queryPayload).toString('base64');
           await deviceConnection.writeCharacteristicWithoutResponseForService(
             ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
           );
@@ -590,7 +589,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
               '00002a26-0000-1000-8000-00805f9b34fb'
             );
             if (fwChar && fwChar.value) {
-              const rawFw = require('buffer').Buffer.from(fwChar.value, 'base64').toString('ascii');
+              const rawFw = Buffer.from(fwChar.value, 'base64').toString('ascii');
               firmware = rawFw.replace(/[^\x20-\x7E]/g, '');
             }
           } catch (e) { }
@@ -602,7 +601,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
           setTimeout(async () => {
             try {
               const qp = ZenggeProtocol.queryHardwareSettings(false);
-              const b64 = require('buffer').Buffer.from(qp).toString('base64');
+              const b64 = Buffer.from(qp).toString('base64');
               await connCapture.writeCharacteristicWithoutResponseForService(
                 ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
               );
@@ -633,9 +632,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
     
     if (connectedDevices.length === 0 || Platform.OS === 'web') return;
     try {
-      /* global Buffer */
-      const buffer = require('buffer').Buffer;
-      const base64Payload = buffer.from(payload).toString('base64');
+      /* Buffer imported at top of file */
+      const base64Payload = Buffer.from(payload).toString('base64');
       
       const targets = targetDeviceId 
         ? connectedDevices.filter(d => d.id === targetDeviceId) 

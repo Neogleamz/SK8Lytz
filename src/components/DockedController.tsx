@@ -330,7 +330,9 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     const factor = brt / 100;
     const pts = hwSettings?.ledPoints || points || 16;
     const segs = hwSettings?.segments || 1;
-    const ledCount = Math.max(10, Math.floor(pts / segs));
+    // Use FULL strip length for the command so all segments receive it.
+    // When hardware segments > 1, the controller mirrors the pattern across zones.
+    const ledCount = Math.max(10, pts);
 
     const cr = parseInt(cruiseHex.slice(1, 3), 16);
     const cg = parseInt(cruiseHex.slice(3, 5), 16);
@@ -366,8 +368,9 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
 
     const arr = [...rearSection, ...midSection, ...frontSection];
     // TransitionType 0x03 = RunningWater — hardware natively bounces the mid section
-    // Fixed zones (rear/front) are locked by being at boundaries of the array
-    writeToDevice(ZenggeProtocol.setMultiColor(arr, 15, 1, 0x03));
+    // clampSpeed maps UI 0-100 → hardware 1-31 range
+    const hwSpeed = Math.max(1, Math.min(ZenggeProtocol.ANIM_SPEED_MAX, 15));
+    writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpeed, 1, 0x03));
   };
 
   useEffect(() => {
@@ -527,7 +530,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
            const appliedLength = (fav.multiLength || 16) > maxLen ? maxLen : (fav.multiLength || 16);
            
            // setMultiColor(colors, speed, direction, transitionType)
-           writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, speed, 1, fav.multiTransition));
+           writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, fav.multiTransition));
         }
      } else if (fav.mode === 'CANDLE') {
         // Defer native command dispatch for candle
@@ -562,6 +565,14 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
           return ZenggeProtocol.applyColorSorting(r, g, b, sortIdx);
       });
   };
+
+  /**
+   * Maps UI speed slider (0–100) to Zengge hardware speed range (1–31).
+   * The APK enforces 1–31 for all 0x59 animated patterns.
+   * Static patterns (transitionType=0x00) ignore speed — pass 1 for those.
+   */
+  const clampSpeed = (uiSpeed: number): number =>
+    Math.max(ZenggeProtocol.ANIM_SPEED_MIN, Math.min(ZenggeProtocol.ANIM_SPEED_MAX, Math.round((uiSpeed / 100) * ZenggeProtocol.ANIM_SPEED_MAX)));
 
   /**
    * Apply current fixed pattern state to devices.
@@ -1300,7 +1311,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                               if (writeToDevice) {
                                   const rgbColors = generateSortedColors(preset.colors);
                                   const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
-                                  writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, speed, 1, preset.type));
+                                  writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, preset.type));
                               }
                           }}
                           style={{
@@ -1365,7 +1376,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                             setMultiColors(newArr);
                             const rgbColors = generateSortedColors(newArr);
                             const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
-                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, speed, 1, multiTransition));
+                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, multiTransition));
                           }} />
                         ))}
                         {multiColors.length < 16 && (
@@ -1375,7 +1386,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                              setMultiColors(newArr);
                              const rgbColors = generateSortedColors(newArr);
                              const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
-                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, speed, 1, multiTransition));
+                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, multiTransition));
                           }}>
                             <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold' }}>+</Text>
                           </TouchableOpacity>
@@ -1388,7 +1399,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                              setMultiColors(newArr);
                              const rgbColors = generateSortedColors(newArr);
                              const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
-                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, speed, 1, multiTransition));
+                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, multiTransition));
                           }}>
                             <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold', lineHeight: 22 }}>-</Text>
                           </TouchableOpacity>
@@ -1422,7 +1433,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                                setMultiTransition(mode.val);
                                const rgbColors = generateSortedColors(multiColors);
                                const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
-                               if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, speed, 1, mode.val));
+                               if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, mode.val));
                             }} 
                             style={{ 
                               paddingHorizontal: 12, paddingVertical: 6, 
@@ -1969,7 +1980,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                             });
                             const pts = hwSettings?.ledPoints || points || 16;
                             const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
-                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, speed, 1, multiTransition));
+                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, multiTransition));
                           } else if (fixedSubMode === 'RBM') {
                             if (selectedPatternId === 100) {
                               applyEmergencyPattern(speed, val);
@@ -2018,7 +2029,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                             });
                             const pts = hwSettings?.ledPoints || points || 16;
                             const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
-                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, val, 1, multiTransition));
+                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(val), 1, multiTransition));
                           } else if (fixedSubMode === 'RBM') {
                             if (selectedPatternId === 100) {
                               applyEmergencyPattern(val, brightness);

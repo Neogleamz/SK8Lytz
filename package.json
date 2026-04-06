@@ -22,6 +22,7 @@
     "expo-battery": "^55.0.11",
     "expo-build-properties": "^55.0.10",
     "expo-camera": "~55.0.10",
+    "expo-clipboard": "~55.0.11",
     "expo-crypto": "~55.0.12",
     "expo-dev-client": "~55.0.18",
     "expo-device": "~55.0.10",

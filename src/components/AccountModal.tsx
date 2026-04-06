@@ -56,7 +56,7 @@ const AVATAR_COLORS = [
   '#FF8C00','#00E676','#00B0FF','#FF4081','#EA80FC',
 ];
 
-const NOTIF_PREF_KEY = '@sk8lytz_notif_prefs';
+const NOTIF_PREF_KEY = '@Sk8lytz_notif_prefs';
 
 function initials(name: string | null) {
   if (!name) return '?';

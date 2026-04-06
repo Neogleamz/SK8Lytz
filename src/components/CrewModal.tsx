@@ -16,8 +16,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal, TextInput,
   ActivityIndicator, FlatList, Alert, Platform, ScrollView, Animated, Image,
-  KeyboardAvoidingView, Share, Clipboard,
+  KeyboardAvoidingView, Share,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -74,7 +75,7 @@ export default function CrewModal({
   // null = show all; number = filter to within that many miles
   const [discoverRadiusMi, setDiscoverRadiusMi] = useState<number | null>(50);
   // Maps crewId → its currently live session (populated when hub loads)
-  const [crewActiveSessions, setCrewActiveSessions] = useState<Record<string, ReturnType<typeof activeSessions[0] | any>>>({});
+  const [crewActiveSessions, setCrewActiveSessions] = useState<Record<string, CrewSession | null>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -200,7 +201,7 @@ export default function CrewModal({
     profileService.getMyCrew().then((crews: PermanentCrew[]) => {
       setMyCrews(crews);
       setPermanentCrews(crews.map(c => ({ id: c.id, name: c.name })));
-    }).catch(() => {});
+    }).catch((e) => { console.warn('[CrewModal] Failed to load my crews:', e); });
   }, [visible, step]);
 
   // Load public crews for discover (manage tab) OR hub's Live Near You section
@@ -211,7 +212,7 @@ export default function CrewModal({
     setIsLoadingCrews(true);
     profileService.getPublicCrews().then(crews => {
       setPublicCrews(crews);
-    }).catch(() => {}).finally(() => setIsLoadingCrews(false));
+    }).catch((e) => { console.warn('[CrewModal] Failed to load public crews:', e); }).finally(() => setIsLoadingCrews(false));
   }, [visible, step, manageTab]);
 
   // Load nearby live sessions when hub or discover opens
@@ -222,7 +223,7 @@ export default function CrewModal({
     setIsLoadingNearby(true);
     locationService.getNearbyPublicSessions(discoverRadiusMi)
       .then(sessions => setNearbySessions(sessions))
-      .catch(() => {})
+      .catch((e) => { console.warn('[CrewModal] Failed to load nearby sessions:', e); })
       .finally(() => setIsLoadingNearby(false));
   }, [visible, step, manageTab, discoverRadiusMi]);
 
@@ -234,7 +235,7 @@ export default function CrewModal({
       const map: Record<string, CrewSession> = {};
       sessions.forEach(s => { map[s.id] = s; });
       setActiveSessions(sessions);
-    }).catch(() => {});
+    }).catch((e) => { console.warn('[CrewModal] Failed to load active sessions:', e); });
   }, [visible, step]);
 
   // Fetch member counts when viewing My Crews list (manage tab)
@@ -244,7 +245,7 @@ export default function CrewModal({
       if (crewMemberCounts[crew.id]) return;
       profileService.getCrewMembersForDisplay(crew.id).then(info => {
         setCrewMemberCounts(prev => ({ ...prev, [crew.id]: info }));
-      }).catch(() => {});
+      }).catch((e) => { console.warn('[CrewModal] Failed to load member counts:', e); });
     });
   }, [visible, step, manageTab, myCrews]);
 
@@ -1305,8 +1306,7 @@ export default function CrewModal({
           {/* Leader: invite code */}
           {isLeader && (
             <TouchableOpacity style={styles.inviteCodeRow} onPress={() => {
-              const { Clipboard } = require('react-native');
-              Clipboard.setString(currentSession.invite_code);
+            Clipboard.setStringAsync(currentSession.invite_code);
               Alert.alert('Copied!', `Code ${currentSession.invite_code} copied. Share it with your crew!`);
             }}>
               <Text style={styles.inviteCodeLabel}>CREW CODE</Text>
@@ -1807,7 +1807,7 @@ export default function CrewModal({
         <TouchableOpacity
           style={styles.mgCodeBox}
           onPress={() => {
-            Clipboard.setString(crew.invite_code ?? '');
+            Clipboard.setStringAsync(crew.invite_code ?? '');
             Alert.alert('Copied!', 'Invite code copied to clipboard.');
           }}
           activeOpacity={0.7}
