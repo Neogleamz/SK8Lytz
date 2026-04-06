@@ -14,7 +14,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, TextInput,
-  ActivityIndicator, Platform, ScrollView,
+  ActivityIndicator, Platform, ScrollView, KeyboardAvoidingView,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -51,6 +51,7 @@ export default function DeviceRegistrationModal({
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
   const { saveRegisteredDevice } = useRegistration();
+  const iosBottom = Platform.OS === 'ios' ? 34 : 16;
 
   const [deviceName,   setDeviceName]   = useState('');
   const [productType,  setProductType]  = useState<'HALOZ' | 'SOULZ'>('SOULZ');
@@ -118,8 +119,13 @@ export default function DeviceRegistrationModal({
   return (
     <Modal visible={!!device} transparent animationType="slide" statusBarTranslucent>
       <View style={styles.overlay}>
-        <View style={styles.sheet}>
-          <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.sheet}>
+          <ScrollView
+            contentContainerStyle={[styles.body, { paddingBottom: iosBottom + 24 }]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled">
 
             {/* Header */}
             <View style={styles.handle} />
@@ -216,7 +222,7 @@ export default function DeviceRegistrationModal({
             </TouchableOpacity>
 
           </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -237,7 +243,7 @@ function createStyles(Colors: any) {
       borderTopWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
     },
     body: {
-      alignItems: 'center', padding: 24, paddingBottom: 40,
+      alignItems: 'center', padding: 24,
     },
     handle: {
       width: 40, height: 4, borderRadius: 2,

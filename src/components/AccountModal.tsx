@@ -835,9 +835,8 @@ export default function AccountModal({
 
           <Text style={styles.sheetTitle}>Account</Text>
 
-          {/* Tab bar */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBarScroll}
-            contentContainerStyle={styles.tabBar}>
+          {/* Tab bar — fixed row, all 5 tabs share equal width */}
+          <View style={styles.tabBar}>
             {TABS.map(t => (
               <TouchableOpacity
                 key={t.id}
@@ -847,12 +846,13 @@ export default function AccountModal({
                   name={t.icon as any}
                   size={16}
                   color={tab === t.id ? '#000' : Colors.textMuted} />
-                <Text style={[styles.tabBtnText, tab === t.id && styles.tabBtnTextActive]}>
+                <Text style={[styles.tabBtnText, tab === t.id && styles.tabBtnTextActive]}
+                  numberOfLines={1}>
                   {t.label}
                 </Text>
               </TouchableOpacity>
             ))}
-          </ScrollView>
+          </View>
 
           {loading
             ? <ActivityIndicator style={{ marginTop: 50 }} size="large" color={Colors.primary} />
@@ -881,15 +881,17 @@ const createStyles = (Colors: any) => StyleSheet.create({
   sheetTitle: { color: Colors.text ?? '#FFF', fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 14 },
 
   // Tabs
-  tabBarScroll: { flexGrow: 0, marginBottom: 4 },
-  tabBar: { flexDirection: 'row', paddingHorizontal: 14, gap: 8, paddingBottom: 2 },
+  tabBar: {
+    flexDirection: 'row', paddingHorizontal: 10, gap: 6,
+    marginBottom: 4, paddingBottom: 2,
+  },
   tabBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingVertical: 8, paddingHorizontal: 14,
-    borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.06)',
+    flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+    paddingVertical: 8, paddingHorizontal: 4,
+    borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)',
   },
   tabBtnActive:     { backgroundColor: Colors.primary ?? '#FFAA00' },
-  tabBtnText:       { color: Colors.textMuted ?? '#888', fontSize: 12, fontWeight: '700' },
+  tabBtnText:       { color: Colors.textMuted ?? '#888', fontSize: 10, fontWeight: '700', textAlign: 'center' },
   tabBtnTextActive: { color: '#000' },
 
   // Body
