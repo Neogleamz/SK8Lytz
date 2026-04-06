@@ -340,7 +340,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
                  dotOpacity = mag;
                  dotColor = color;
              }
-          } else if (mode === 'FIXED') {
+          } else if (mode === 'MULTIMODE') {
              const fg = fixedFgColor || color;
              const bg = fixedBgColor || '#000000';
              const pid = patternId || 1;
@@ -512,7 +512,7 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
       }
 
       if (op === 0x59) {
-          simMode = mode === 'MULTICOLOR' ? 'MULTICOLOR' : 'FIXED';
+          simMode = mode === 'MULTICOLOR' ? 'MULTICOLOR' : 'MULTIMODE';
           if (mode === 'MULTICOLOR') {
              simPatternId = 1;
              
@@ -562,9 +562,9 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
   useEffect(() => {
     animValue.stopAnimation();
     
-    if (isPoweredOn && (simMode === 'MULTICOLOR' || simMode === 'PRESETS' || simMode === 'RBM' || simMode === 'MUSIC' || simMode === 'FIXED' || simMode === 'CANDLE')) {
+    if (isPoweredOn && (simMode === 'MULTICOLOR' || simMode === 'PRESETS' || simMode === 'RBM' || simMode === 'MUSIC' || simMode === 'MULTIMODE' || simMode === 'CANDLE')) {
       animValue.setValue(0);
-      const baseDuration = (simMode === 'MUSIC') ? 800 : (simMode === 'RBM' ? 2000 : (simMode === 'MULTICOLOR' ? (simMultiTransition === 2 ? 350 : 1500) : (simMode === 'FIXED' ? 1500 : (simMode === 'CANDLE' ? 400 : 3000))));
+      const baseDuration = (simMode === 'MUSIC') ? 800 : (simMode === 'RBM' ? 2000 : (simMode === 'MULTICOLOR' ? (simMultiTransition === 2 ? 350 : 1500) : (simMode === 'MULTIMODE' ? 1500 : (simMode === 'CANDLE' ? 400 : 3000))));
       // Speed 0 = 5x slower, Speed 100 = 0.4x faster
       const duration = baseDuration / (0.4 + (simSpeed / 100) * 2.1); 
       

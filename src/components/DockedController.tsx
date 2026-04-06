@@ -5,7 +5,7 @@
  * Renders as a bottom sheet overlay on DashboardScreen.
  *
  * Responsibilities:
- *  - Mode switching: Fixed, Music, Camera, Pattern (RBM), Candle, DIY Array
+ *  - Mode switching: MultiMode, Music, Camera, Pattern (RBM), Street (Accelerometer), DIY Array
  *  - Color picker, RGB sliders, brightness & speed knobs
  *  - Pattern wheel (ArcPatternWheel / VerticalPatternDrum)
  *  - Music EQ visualizer (SpectrumVisualizer)
@@ -37,11 +37,12 @@ import { supabase } from '../services/supabaseClient';
 import { ScenesService } from '../services/ScenesService';
 import { containsProfanity } from '../services/AuthUtils';
 import CommunityModal from './CommunityModal';
+import { Accelerometer } from 'expo-sensors';
 
 const AnimatedIcon = Animated.createAnimatedComponent(MaterialCommunityIcons);
 
 type ProductType = 'HALOZ' | 'SOULZ';
-type ModeType = 'PRESETS' | 'FIXED' | 'RBM' | 'MUSIC' | 'CAMERA' | 'CUSTOM' | 'MULTICOLOR' | 'CANDLE';
+type ModeType = 'PRESETS' | 'MULTIMODE' | 'RBM' | 'MUSIC' | 'STREET' | 'CAMERA';
 
 const MUSIC_PATTERNS = [
   'Soft',
@@ -137,7 +138,6 @@ export interface IFavoriteState {
   multiColors?: string[];
   multiTransition?: number;
   multiLength?: number;
-  candleAmplitude?: number;
   musicPrimaryColor?: string;
   musicSecondaryColor?: string;
   micSensitivity?: number;
@@ -161,7 +161,13 @@ interface Sk8lytzControllerProps {
   writeToDevice?: (payload: number[]) => Promise<void>;
   isPoweredOn?: boolean;
   onDisconnect?: () => void;
+  /** 'leader' = broadcast changes, 'member' = receive changes, null = solo */
+  crewRole?: 'leader' | 'member' | null;
+  /** Called with full scene snapshot whenever any mode/color changes (leader only) */
+  onCrewSceneChange?: (scene: Record<string, any>) => void;
 }
+
+export type DockedControllerHandle = { applyCloudScene: (scene: any) => void };
 
 // CURATED_PRESETS logic moved to internal component state for Supabase updating
 
@@ -207,7 +213,8 @@ const MarqueeText = ({ children, style }: any) => {
   );
 };
 
-export default function DockedController({ hwSettings, lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect }: Sk8lytzControllerProps) {
+const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
+function DockedController({ hwSettings, lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange }: Sk8lytzControllerProps, ref) {
   const { Colors, isDark } = useTheme();
   const styles = createStyles(Colors);
   const [lastSentPayload, setLastSentPayload] = useState<number[]>([]);
@@ -247,9 +254,6 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
   const [quickPromptTargetIndex, setQuickPromptTargetIndex] = useState(-1);
   const [activeQuickPresetIndex, setActiveQuickPresetIndex] = useState<number | null>(null);
 
-  // Street Mode Physics
-  const [streetSensitivity, setStreetSensitivity] = useState<number>(30);
-
   // Cloud Scene State
   const [isCommunityModalVisible, setIsCommunityModalVisible] = useState<boolean>(false);
   const [isPublishingCloud, setIsPublishingCloud] = useState<boolean>(false);
@@ -257,11 +261,11 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
 
   const captureEntireState = () => {
     return {
-       activeMode, fixedSubMode, 
-       selectedColor, selectedPatternId, brightness, speed, 
-       multiColors, multiLength, multiTransition, candleAmplitude,
+       activeMode, fixedSubMode,
+       selectedColor, selectedPatternId, brightness, speed,
+       multiColors, multiLength, multiTransition,
        musicPatternId, musicPrimaryColor, musicSecondaryColor, micSensitivity, micSource, musicMatrixStyle,
-       streetSensitivity
+       streetSensitivity, streetCruiseColor, streetBrakeColor
     };
   };
 
@@ -275,7 +279,6 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
     if (scene.multiColors) setMultiColors(scene.multiColors);
     if (scene.multiLength !== undefined) setMultiLength(scene.multiLength);
     if (scene.multiTransition !== undefined) setMultiTransition(scene.multiTransition);
-    if (scene.candleAmplitude !== undefined) setCandleAmplitude(scene.candleAmplitude);
     if (scene.musicPatternId !== undefined) setMusicPatternId(scene.musicPatternId);
     if (scene.musicPrimaryColor) setMusicPrimaryColor(scene.musicPrimaryColor);
     if (scene.musicSecondaryColor) setMusicSecondaryColor(scene.musicSecondaryColor);
@@ -283,61 +286,88 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
     if (scene.micSource !== undefined) setMicSource(scene.micSource);
     if (scene.musicMatrixStyle !== undefined) setMusicMatrixStyle(scene.musicMatrixStyle);
     if (scene.streetSensitivity !== undefined) setStreetSensitivity(scene.streetSensitivity);
+    if (scene.streetCruiseColor) setStreetCruiseColor(scene.streetCruiseColor);
+    if (scene.streetBrakeColor) setStreetBrakeColor(scene.streetBrakeColor);
   };
+
+  // Expose applyCloudScene to parent via ref (for crew member sync)
+  React.useImperativeHandle(ref, () => ({ applyCloudScene }), []);
 
   // Multi-Color DIY State
   const [multiColors, setMultiColors] = useState<string[]>(['#FF0000', '#00FF00', '#0000FF']);
-  const [multiTransition, setMultiTransition] = useState<number>(3); // 3=Running Water default
+  const [multiTransition, setMultiTransition] = useState<number>(3);
   const [multiLength, setMultiLength] = useState<number>(16);
-  const [candleAmplitude, setCandleAmplitude] = useState<number>(2);
 
   // Collapsible Layout States
   const [isFixedExpanded, setIsFixedExpanded] = useState<boolean>(true);
   const [isPresetsExpanded, setIsPresetsExpanded] = useState<boolean>(false);
-  const [isCandleExpanded, setIsCandleExpanded] = useState<boolean>(false);
   const [isProgramsExpanded, setIsProgramsExpanded] = useState<boolean>(false);
   const [isMusicExpanded, setIsMusicExpanded] = useState<boolean>(false);
   const [isCameraExpanded, setIsCameraExpanded] = useState<boolean>(false);
 
   // Active Sub-Mode for the Consolidated Fixed Tab
-  const [fixedSubMode, setFixedSubMode] = useState<'PATTERN' | 'MULTI' | 'CANDLE' | 'RBM' | 'MUSIC' | 'CAMERA'>('PATTERN');
+  const [fixedSubMode, setFixedSubMode] = useState<'PATTERN' | 'MULTI' | 'RBM' | 'MUSIC' | 'CAMERA'>('PATTERN');
 
-  const candleAnim = useRef(new Animated.Value(1)).current;
+  // ── Street Mode (Accelerometer Reactive) ──────────────────────────────────────
+  const [streetSensitivity, setStreetSensitivity] = useState<number>(30);
+  const [streetCruiseColor, setStreetCruiseColor] = useState<string>('#FF8C00');
+  const [streetBrakeColor, setStreetBrakeColor] = useState<string>('#FF0000');
+  const [isStreetBraking, setIsStreetBraking] = useState<boolean>(false);
+  const streetBrakingRef = useRef(false);
+  const lastAccelRef = useRef({ x: 0, y: 0, z: 0 });
 
   useEffect(() => {
-    let isActive = true;
-    if (fixedSubMode === 'CANDLE') {
-       const flicker = () => {
-          if (!isActive) return;
-          let minOp = 0.8; let maxOp = 1.0;
-          let minDur = 100; let maxDur = 300;
-
-          if (candleAmplitude === 1) { // CALM
-             minOp = 0.85; maxOp = 1.0; minDur = 300; maxDur = 600;
-          } else if (candleAmplitude === 2) { // FLICKERING
-             minOp = 0.5; maxOp = 1.0; minDur = 80; maxDur = 250;
-          } else { // TURBULENT
-             minOp = 0.2; maxOp = 1.0; minDur = 30; maxDur = 120;
-          }
-
-          const nextOp = Math.random() * (maxOp - minOp) + minOp;
-          const nextDur = Math.random() * (maxDur - minDur) + minDur;
-
-          Animated.timing(candleAnim, {
-             toValue: nextOp,
-             duration: nextDur,
-             useNativeDriver: true
-          }).start(({ finished }) => {
-             if (finished) flicker();
-          });
-       };
-       flicker();
-    } else {
-       candleAnim.stopAnimation();
-       candleAnim.setValue(1);
+    if (activeMode !== 'STREET') {
+      Accelerometer.removeAllListeners();
+      if (streetBrakingRef.current) {
+        streetBrakingRef.current = false;
+        setIsStreetBraking(false);
+      }
+      return;
     }
-    return () => { isActive = false; };
-  }, [fixedSubMode, candleAmplitude]);
+    Accelerometer.setUpdateInterval(80);
+    const sub = Accelerometer.addListener(({ x, y, z }) => {
+      const prev = lastAccelRef.current;
+      const jerkMag = Math.sqrt(
+        Math.pow(x - prev.x, 2) + Math.pow(y - prev.y, 2) + Math.pow(z - prev.z, 2)
+      );
+      lastAccelRef.current = { x, y, z };
+      const threshold = ((100 - streetSensitivity) / 100) * 2.5 + 0.3;
+      const isBraking = jerkMag > threshold;
+      if (isBraking !== streetBrakingRef.current) {
+        streetBrakingRef.current = isBraking;
+        setIsStreetBraking(isBraking);
+        if (writeToDevice) {
+          const col = isBraking ? streetBrakeColor : streetCruiseColor;
+          const r = parseInt(col.slice(1, 3), 16);
+          const g = parseInt(col.slice(3, 5), 16);
+          const b = parseInt(col.slice(5, 7), 16);
+          writeToDevice(ZenggeProtocol.setMultiColor(
+            Array(10).fill({ r, g, b }), 100, 1, 1
+          ));
+        }
+      }
+    });
+    return () => { sub.remove(); };
+  }, [activeMode, streetSensitivity, streetCruiseColor, streetBrakeColor]);
+
+  // ── Crew Leader Broadcast ────────────────────────────────────────────────
+  // When acting as leader, broadcast scene to crew on every meaningful change.
+  const crewBroadcastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (crewRole !== 'leader' || !onCrewSceneChange) return;
+    if (crewBroadcastTimer.current) clearTimeout(crewBroadcastTimer.current);
+    crewBroadcastTimer.current = setTimeout(() => {
+      onCrewSceneChange(captureEntireState());
+    }, 200);
+    return () => {
+      if (crewBroadcastTimer.current) clearTimeout(crewBroadcastTimer.current);
+    };
+  }, [
+    crewRole, activeMode, fixedSubMode, selectedColor, selectedPatternId,
+    brightness, speed, multiColors,
+    streetSensitivity, streetCruiseColor, streetBrakeColor,
+  ]);
 
   // Favorites Array
   const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
@@ -373,14 +403,13 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
      const newFav = {
         id: favPromptTargetId || Date.now().toString(),
         name,
-        mode: activeMode === 'FIXED' ? fixedSubMode : activeMode,
+        mode: activeMode === 'MULTIMODE' ? fixedSubMode : activeMode,
         color: selectedColor,
-        patternId: activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'FIXED' ? fixedPatternId : selectedPatternId),
+        patternId: activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'MULTIMODE' ? fixedPatternId : selectedPatternId),
         speed,
         brightness,
         fixedColorMode, fixedFgColor, fixedBgColor, fixedHue,
         multiColors, multiTransition, multiLength,
-        candleAmplitude,
         musicPrimaryColor, musicSecondaryColor, micSensitivity, micSource, musicMatrixStyle
      };
 
@@ -408,10 +437,10 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
   const loadFavorite = (favRaw: IFavoriteState) => {
      const fav: any = favRaw;
      setActiveFavoriteId(fav.id);
-     setActiveMode('FIXED');
+     setActiveMode('MULTIMODE');
        
      // Handle Legacy vs New Mode Signatures
-     const targetSubMode = fav.mode === 'FIXED' ? 'PATTERN' : (fav.mode === 'MULTICOLOR' ? 'MULTI' : fav.mode);
+     const targetSubMode = fav.mode === 'MULTIMODE' ? 'PATTERN' : (fav.mode === 'MULTICOLOR' ? 'MULTI' : fav.mode);
      setFixedSubMode(targetSubMode as any);
        
      setSpeed(fav.speed);
@@ -451,7 +480,6 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, fav.multiTransition, fav.speed));
         }
      } else if (fav.mode === 'CANDLE') {
-        setCandleAmplitude(fav.candleAmplitude);
         // Defer native command dispatch for candle
         setTimeout(() => {
            sendColor(parseInt(fav.color.slice(1,3),16)||0, parseInt(fav.color.slice(3,5),16)||0, parseInt(fav.color.slice(5,7),16)||0);
@@ -466,18 +494,9 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
   /** Unified color sender */
   const sendColor = async (r: number, g: number, b: number) => {
     if (!writeToDevice) return;
-    if (activeMode === 'CANDLE') {
-        const sortIdx = hwSettings?.colorSorting ?? 2;
-        const rawR = parseInt(selectedColor.slice(1, 3), 16) || 255;
-        const rawG = parseInt(selectedColor.slice(3, 5), 16) || 255;
-        const rawB = parseInt(selectedColor.slice(5, 7), 16) || 255;
-        const { r: finalR, g: finalG, b: finalB } = ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
-        await writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, candleAmplitude));
-    } else {
-        // Solid fallback explicitly forced to length=10, transitionType=1 to stop physical node scrambling/jumping. 
-        const colors = Array(10).fill({ r, g, b });
-        await writeToDevice(ZenggeProtocol.setMultiColor(colors, 100, 1, 1));
-    }
+    // Solid: length=10, transitionType=1 prevents hardware scrambling
+    const colors = Array(10).fill({ r, g, b });
+    await writeToDevice(ZenggeProtocol.setMultiColor(colors, 100, 1, 1));
   };
 
   /** Helper to parse a hex string array into GRB-sorted valid hardware RGB array */
@@ -627,7 +646,7 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
 
   // -- App Microphone Logic --
   useEffect(() => {
-    const isMusicActive = activeMode === 'MUSIC' || (activeMode === 'FIXED' && fixedSubMode === 'MUSIC');
+    const isMusicActive = activeMode === 'MUSIC' || (activeMode === 'MULTIMODE' && fixedSubMode === 'MUSIC');
     if (isMusicActive && micSource === 'APP' && isPoweredOn) {
       startRecording();
     } else {
@@ -795,7 +814,6 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
           if (parsed.fixedFgColor) setFixedFgColor(parsed.fixedFgColor);
           if (parsed.fixedBgColor) setFixedBgColor(parsed.fixedBgColor);
           if (parsed.fixedHue !== undefined) setFixedHue(parsed.fixedHue);
-          if (parsed.candleAmplitude !== undefined) setCandleAmplitude(parsed.candleAmplitude);
         } catch(e) {}
       }
     });
@@ -849,13 +867,13 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
     const stateBlob = {
       activeMode, selectedColor, selectedPatternId, brightness, speed,
       micSensitivity, musicHue, musicSecondaryHue, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle, musicPatternId, micSource, musicSetting,
-      fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue, candleAmplitude
+      fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
     };
     AsyncStorage.setItem('@Sk8lytz_ControllerState', JSON.stringify(stateBlob)).catch(() => {});
   }, [
     activeMode, selectedColor, selectedPatternId, brightness, speed, 
     micSensitivity, musicHue, musicSecondaryHue, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle, musicPatternId, micSource, musicSetting,
-    fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue, candleAmplitude
+    fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
   ]);
 
   const handleMusicChange = (
@@ -910,30 +928,28 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
 
   const currentStatusText = React.useMemo(() => {
     switch (activeMode) {
-      case 'FIXED':
+      case 'MULTIMODE':
         const fixedClr = fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
-        return `Fixed - ${getColorName(fixedClr)}`;
+        return `MultiMode - ${getColorName(fixedClr)}`;
       case 'RBM':
         return `Programs - ${getRbmPatternName(selectedPatternId)}`;
       case 'MUSIC':
         const patternName = MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`;
         return `Music - ${patternName}`;
+      case 'STREET': return isStreetBraking ? '🔴 BRAKING' : '🟠 CRUISING';
       case 'CAMERA': return 'Camera';
-      case 'CUSTOM': return 'Custom';
-      case 'MULTICOLOR': return 'Multicolor Array';
-      case 'CANDLE': return 'Candle Mode';
       case 'PRESETS': return 'Styles';
       default: return activeMode;
     }
-  }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, selectedPatternId, musicPatternId, selectedColor]);
+  }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, selectedPatternId, musicPatternId, selectedColor, isStreetBraking]);
   const modes = [
     { id: 'PRESETS', label: 'Styles', icon: 'star-outline' },
-    { id: 'FIXED', label: 'Fixed', icon: 'palette-outline' }
+    { id: 'MULTIMODE', label: 'Fixed', icon: 'palette-outline' }
   ];
 
   const visualizerColor = React.useMemo(() => {
-    if (activeMode === 'FIXED') {
-      if (fixedSubMode === 'CANDLE' || fixedSubMode === 'MULTI' || fixedSubMode === 'PATTERN' || fixedSubMode === 'CAMERA') return selectedColor;
+    if (activeMode === 'MULTIMODE') {
+      if (fixedSubMode === 'MULTI' || fixedSubMode === 'PATTERN' || fixedSubMode === 'CAMERA') return selectedColor;
       if (fixedSubMode === 'MUSIC') {
         const f = (n: number, k = (n + musicHue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
         const hex = [f(5), f(3), f(1)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
@@ -987,8 +1003,8 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
         <ProductVisualizer 
           product={activeProduct} 
           color={visualizerColor} 
-          mode={activeMode === 'PRESETS' ? 'MULTICOLOR' : activeMode === 'FIXED' ? (fixedSubMode === 'MULTI' ? 'MULTICOLOR' : (fixedSubMode === 'CANDLE' ? 'CANDLE' : (fixedSubMode === 'PATTERN' ? 'RBM' : (fixedSubMode === 'MUSIC' ? 'MUSIC' : (fixedSubMode === 'CAMERA' ? 'CAMERA' : 'FIXED'))))) : activeMode} 
-          patternId={activeMode === 'FIXED' && fixedSubMode === 'MUSIC' ? musicPatternId : (activeMode === 'FIXED' && fixedSubMode === 'PATTERN' ? fixedPatternId : selectedPatternId)} 
+          mode={activeMode === 'PRESETS' ? 'MULTICOLOR' : activeMode === 'MULTIMODE' ? (fixedSubMode === 'MULTI' ? 'MULTICOLOR' : (fixedSubMode === 'PATTERN' ? 'RBM' : (fixedSubMode === 'MUSIC' ? 'MUSIC' : (fixedSubMode === 'CAMERA' ? 'CAMERA' : 'MULTIMODE')))) : activeMode}
+          patternId={activeMode === 'MULTIMODE' && fixedSubMode === 'MUSIC' ? musicPatternId : (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' ? fixedPatternId : selectedPatternId)} 
           isPaired={isPaired}
           points={points}
           devices={devices}
@@ -1054,8 +1070,8 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                            <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.name}</MarqueeText>
                         </View>
                         {(() => {
-                           if (fav.mode === 'CANDLE' || (fav.mode === 'PATTERN' && fav.patternId === 1) || (fav.mode === 'FIXED' && fav.patternId === 1)) {
-                              const c = fav.mode === 'CANDLE' ? fav.color : (fav.fixedFgColor || Colors.primary);
+                           if ((fav.mode === 'PATTERN' && fav.patternId === 1) || (fav.mode === 'MULTIMODE' && fav.patternId === 1)) {
+                              const c = fav.fixedFgColor || Colors.primary;
                               return <View style={{ width: '60%', height: 6, borderRadius: 3, backgroundColor: c, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }} />;
                            } else if (fav.mode === 'MUSIC') {
                               return (
@@ -1064,7 +1080,7 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                                     <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
                                  </View>
                               );
-                           } else if (fav.mode === 'PATTERN' || fav.mode === 'FIXED') {
+                           } else if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') {
                               return (
                                  <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
                                     <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
@@ -1113,8 +1129,8 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                            <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
                         </View>
                         {(() => {
-                           if (fav.mode === 'CANDLE' || (fav.mode === 'PATTERN' && fav.patternId === 1) || (fav.mode === 'FIXED' && fav.patternId === 1)) {
-                              const c = fav.mode === 'CANDLE' ? fav.color : (fav.fixedFgColor || Colors.primary);
+                           if ((fav.mode === 'PATTERN' && fav.patternId === 1) || (fav.mode === 'MULTIMODE' && fav.patternId === 1)) {
+                              const c = fav.fixedFgColor || Colors.primary;
                               return <View style={{ width: '60%', height: 6, borderRadius: 3, backgroundColor: c, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }} />;
                            } else if (fav.mode === 'MUSIC') {
                               return (
@@ -1123,7 +1139,7 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                                     <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
                                  </View>
                               );
-                           } else if (fav.mode === 'PATTERN' || fav.mode === 'FIXED') {
+                           } else if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') {
                               return (
                                  <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
                                     <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
@@ -1148,10 +1164,10 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
             </View>
           )}
 
-          {activeMode === 'FIXED' && (
+          {activeMode === 'MULTIMODE' && (
             <View style={{ flex: 1, marginBottom: 8, justifyContent: 'flex-start' }}>
               
-              {/* UNIFIED SOLID & MULTI-COLOR PRESETS & CANDLE & DIY BUILDER */}
+              {/* UNIFIED SOLID & MULTI-COLOR PRESETS & DIY BUILDER */}
               {(fixedSubMode === 'MULTI' || fixedSubMode === 'PATTERN') && (
                 <View style={{ flex: 1, width: '100%', marginBottom: 4 }}>
                   
@@ -1524,7 +1540,7 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
 
 
                   <CameraTracker 
-                     isActive={activeMode === 'FIXED' && fixedSubMode === 'CAMERA'} 
+                     isActive={activeMode === 'MULTIMODE' && fixedSubMode === 'CAMERA'} 
                      onColorDetected={(hex) => {
                         setSelectedColor(hex);
                         const r = parseInt(hex.slice(1, 3), 16);
@@ -1538,51 +1554,96 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
             </View>
           )}
 
+          {/* ── STREET MODE UI ─────────────────────────────────────────────── */}
+          {activeMode === 'STREET' && (
+            <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 8 }}>
 
-          {activeMode === 'CUSTOM' && (
-            <View style={{ marginBottom: 8 }}>
-              <Text style={[Typography.title, isDark && { color: '#FFF' }]}>DIY Pattern Builder</Text>
-              
-              <View style={{ backgroundColor: Colors.surfaceHighlight, borderRadius: 8, padding: 12, marginTop: 16, marginBottom: 12 }}>
-                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                    <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#FF0000', marginRight: 12 }} />
-                    <Text style={{ color: '#FFF', flex: 1 }}>Step 1: Gradual Red</Text>
-                    <Text style={{ color: Colors.textMuted }}>65%</Text>
-                 </View>
-                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#0000FF', marginRight: 12 }} />
-                    <Text style={{ color: '#FFF', flex: 1 }}>Step 2: Jumping Blue</Text>
-                    <Text style={{ color: Colors.textMuted }}>40%</Text>
-                 </View>
+              {/* Live Status Badge */}
+              <View style={{
+                alignSelf: 'center', flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                backgroundColor: isStreetBraking ? 'rgba(255,0,0,0.15)' : 'rgba(255,140,0,0.12)',
+                borderWidth: 1, borderColor: isStreetBraking ? '#FF0000' : '#FF8C00',
+                borderRadius: 20, paddingHorizontal: 20, paddingVertical: 8, marginBottom: 20,
+              }}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: isStreetBraking ? '#FF0000' : '#FF8C00', marginRight: 8 }} />
+                <Text style={{ color: isStreetBraking ? '#FF4444' : '#FF8C00', fontSize: 15, fontWeight: '700', letterSpacing: 1.5 }}>
+                  {isStreetBraking ? '🔴  BRAKING' : '🟠  CRUISING'}
+                </Text>
               </View>
 
-              <TouchableOpacity 
-                style={[styles.presetCard, { borderLeftColor: Colors.primary }]}
-                onPress={() => {
-                  if (writeToDevice) {
-                    const steps = [
-                      { mode: 1, speed: 60, color1: { r: 255, g: 0, b: 0 }, color2: { r: 0, g: 0, b: 0 } },
-                      { mode: 2, speed: 40, color1: { r: 0, g: 0, b: 255 }, color2: { r: 0, g: 0, b: 0 } }
-                    ];
-                    writeToDevice(ZenggeProtocol.setCustomMode(steps));
-                  }
-                }}
-              >
-              </TouchableOpacity>
+              {/* Color Row */}
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+                {/* Cruise Color */}
+                <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(255,140,0,0.3)' }}>
+                  <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: '600', marginBottom: 8, letterSpacing: 0.5 }}>CRUISE COLOR</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {['#FF8C00','#FFAA00','#FFFFFF','#00AAFF','#00FF88','#FF00FF'].map(col => (
+                      <TouchableOpacity
+                        key={'cruise-' + col}
+                        onPress={() => {
+                          setStreetCruiseColor(col);
+                          if (!isStreetBraking && writeToDevice) {
+                            const r = parseInt(col.slice(1,3),16); const g = parseInt(col.slice(3,5),16); const b = parseInt(col.slice(5,7),16);
+                            writeToDevice(ZenggeProtocol.setMultiColor(Array(10).fill({r,g,b}),100,1,1));
+                          }
+                        }}
+                        style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: col, borderWidth: streetCruiseColor === col ? 2 : 0, borderColor: '#FFFFFF' }}
+                      />
+                    ))}
+                  </View>
+                </View>
+                {/* Brake Color */}
+                <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(255,0,0,0.3)' }}>
+                  <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: '600', marginBottom: 8, letterSpacing: 0.5 }}>BRAKE COLOR</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {['#FF0000','#FF3300','#FF6600','#FFFFFF','#FF00AA','#FFFF00'].map(col => (
+                      <TouchableOpacity
+                        key={'brake-' + col}
+                        onPress={() => {
+                          setStreetBrakeColor(col);
+                          if (isStreetBraking && writeToDevice) {
+                            const r = parseInt(col.slice(1,3),16); const g = parseInt(col.slice(3,5),16); const b = parseInt(col.slice(5,7),16);
+                            writeToDevice(ZenggeProtocol.setMultiColor(Array(10).fill({r,g,b}),100,1,1));
+                          }
+                        }}
+                        style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: col, borderWidth: streetBrakeColor === col ? 2 : 0, borderColor: '#FFFFFF' }}
+                      />
+                    ))}
+                  </View>
+                </View>
+              </View>
+
+              {/* Sensitivity Slider */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <MaterialCommunityIcons name="speedometer" size={20} color={Colors.textMuted} style={{ marginRight: 12, width: 28 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 4 }}>BRAKE SENSITIVITY — {streetSensitivity}%</Text>
+                  <CustomSlider
+                    value={streetSensitivity}
+                    minimumValue={5}
+                    maximumValue={95}
+                    onValueChange={setStreetSensitivity}
+                    style={{ width: '100%', height: 32 }}
+                  />
+                </View>
+              </View>
+
+              <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, textAlign: 'center', marginTop: 4 }}>
+                Higher sensitivity = triggers brake on lighter deceleration
+              </Text>
             </View>
           )}
+
         </View>
 
-
-
         {/* UNIVERSAL SLIDERS FOOTER - Hidden in PRESETS */}
-        {activeMode !== 'PRESETS' && (
+        {activeMode !== 'PRESETS' && activeMode !== 'STREET' && (
           <View style={[styles.sceneSlidersContainer, { marginTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 8, paddingBottom: 0 }]}>
             {/* Color Grid wrappers */}
-            {!(activeMode === 'FIXED' && fixedSubMode === 'RBM') && (
+            {!(activeMode === 'MULTIMODE' && fixedSubMode === 'RBM') && (
               <View style={{ marginBottom: 4 }}>
                 {/* Dynamic Selected Color Bar */}
-                {!(activeMode === 'FIXED' && (fixedSubMode === 'MUSIC' || (fixedSubMode === 'PATTERN' && fixedPatternId !== 1))) && (() => {
+                {!(activeMode === 'MULTIMODE' && (fixedSubMode === 'MUSIC' || (fixedSubMode === 'PATTERN' && fixedPatternId !== 1))) && (() => {
                   const dynamicColor = selectedColor;
                   
                   return (
@@ -1593,7 +1654,7 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                          const r = parseInt(dynamicColor.slice(1, 3), 16) || 255;
                          const g = parseInt(dynamicColor.slice(3, 5), 16) || 255;
                          const b = parseInt(dynamicColor.slice(5, 7), 16) || 255;
-                         if (activeMode === 'FIXED' && fixedSubMode !== 'PATTERN') sendColor(r, g, b);
+                         if (activeMode === 'MULTIMODE' && fixedSubMode !== 'PATTERN') sendColor(r, g, b);
                       }}
                       style={{
                         width: '100%',
@@ -1620,7 +1681,7 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                 })()}
 
                 {/* Music Mode Split Color Tracker */}
-                {(activeMode === 'FIXED' && fixedSubMode === 'MUSIC') && (() => {
+                {(activeMode === 'MULTIMODE' && fixedSubMode === 'MUSIC') && (() => {
                   const primHex = musicPrimaryColor;
                   const secHex = musicSecondaryColor;
                   
@@ -1648,7 +1709,7 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                 })()}
 
                 {/* Fixed Pattern Mode Split Color Tracker */}
-                {(activeMode === 'FIXED' && fixedSubMode === 'PATTERN' && fixedPatternId !== 1) && (
+                {(activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' && fixedPatternId !== 1) && (
                     <View style={{
                         flexDirection: 'row', width: '100%', height: 18, borderRadius: 9, marginBottom: 4,
                         borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'transparent'
@@ -1671,15 +1732,15 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                 )}
 
                 {/* 9 Preset Colors Grid */}
-                {!(activeMode === 'FIXED' && fixedSubMode === 'CAMERA') && (
+                {!(activeMode === 'MULTIMODE' && fixedSubMode === 'CAMERA') && (
                 <View style={[styles.colorGrid, { paddingHorizontal: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
                   {[
                     '#FF0000', '#FF8000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#800080', '#FF00FF', '#FFFFFF'
                   ].map((color, index) => {
                     let dynamicColor = selectedColor;
-                    if (activeMode === 'FIXED' && fixedSubMode === 'PATTERN') {
+                    if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
                       dynamicColor = fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
-                    } else if (activeMode === 'FIXED' && fixedSubMode === 'MUSIC') {
+                    } else if (activeMode === 'MULTIMODE' && fixedSubMode === 'MUSIC') {
                       dynamicColor = musicColorFocus === 'PRIMARY' ? musicPrimaryColor : musicSecondaryColor;
                     }
                     
@@ -1692,20 +1753,8 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                             '#FF0000': 0, '#FF8000': 30, '#FFFF00': 60, '#00FF00': 120, 
                             '#00FFFF': 180, '#0000FF': 240, '#800080': 280, '#FF00FF': 300, '#FFFFFF': 0
                           };
-                          if (activeMode === 'FIXED') {
-                            if (fixedSubMode === 'CANDLE') {
-                               setSelectedColor(color);
-                               if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
-                               if (writeToDevice) {
-                                   const rawR = parseInt(color.substring(1, 3), 16) || 255;
-                                   const rawG = parseInt(color.substring(3, 5), 16) || 255;
-                                   const rawB = parseInt(color.substring(5, 7), 16) || 255;
-                                   let finalR = rawR; let finalG = rawG; let finalB = rawB;
-                                   const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
-                                   if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
-                                   writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, candleAmplitude));
-                               }
-                            } else if (fixedSubMode === 'PATTERN') {
+                          if (activeMode === 'MULTIMODE') {
+                            if (fixedSubMode === 'PATTERN') {
                                let newFg = fixedFgColor;
                                let newBg = fixedBgColor;
                                if (fixedColorMode === 'FOREGROUND') {
@@ -1768,20 +1817,14 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
             {/* Old Color Focus Toggle for Music Mode has been moved above the color grid */}
 
             {/* Hue Slider */}
-            {!(activeMode === 'FIXED' && (fixedSubMode === 'RBM' || fixedSubMode === 'CAMERA')) && (
+            {!(activeMode === 'MULTIMODE' && (fixedSubMode === 'RBM' || fixedSubMode === 'CAMERA')) && (
               <View style={[styles.controlRow, { marginTop: 0, height: 32, flexShrink: 0 }]}>
                 <CustomSlider 
                   gradientTrack={true}
-                  value={activeMode === 'FIXED' ? (fixedSubMode === 'MUSIC' ? (musicColorFocus === 'PRIMARY' ? musicHue : musicSecondaryHue) : fixedHue) : selectedHue}
+                  value={activeMode === 'MULTIMODE' ? (fixedSubMode === 'MUSIC' ? (musicColorFocus === 'PRIMARY' ? musicHue : musicSecondaryHue) : fixedHue) : selectedHue}
                   onValueChange={(hue) => {
-                    if (activeMode === 'FIXED') {
-                      if (fixedSubMode === 'CANDLE') {
-                        setFixedHue(hue);
-                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
-                        const hex = rgb2hex(f(5), f(3), f(1));
-                        setSelectedColor(hex);
-                      } else if (fixedSubMode === 'PATTERN') {
+                    if (activeMode === 'MULTIMODE') {
+                      if (fixedSubMode === 'PATTERN') {
                         setFixedHue(hue);
                         const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
                         const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
@@ -1822,18 +1865,8 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                     }
                   }}
                   onSlidingComplete={(hue) => {
-                    if (activeMode === 'FIXED') {
-                      if (fixedSubMode === 'CANDLE') {
-                         if (writeToDevice) {
-                             const rawR = parseInt(selectedColor.substring(1, 3), 16) || 255;
-                             const rawG = parseInt(selectedColor.substring(3, 5), 16) || 255;
-                             const rawB = parseInt(selectedColor.substring(5, 7), 16) || 255;
-                             let finalR = rawR; let finalG = rawG; let finalB = rawB;
-                             const sorting = devices && devices.length > 0 ? devices[0].sorting || 'GRB' : 'GRB';
-                             if (sorting === 'GRB') { finalR = rawG; finalG = rawR; }
-                             writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, brightness, candleAmplitude));
-                         }
-                      } else if (fixedSubMode === 'PATTERN') {
+                    if (activeMode === 'MULTIMODE') {
+                      if (fixedSubMode === 'PATTERN') {
                          applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor);
                       } else if (fixedSubMode === 'MUSIC') {
                          const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
@@ -1863,7 +1896,7 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
             )}
 
             {/* Brightness Slider - Hidden in PRESETS and CAMERA (Presets have their own Brightness logic mapped inside the component block, while Camera explicitly forces raw camera detection bounds) */}
-            {!(activeMode === 'FIXED' && fixedSubMode === 'CAMERA') && (
+            {!(activeMode === 'MULTIMODE' && fixedSubMode === 'CAMERA') && (
             <View style={[styles.controlRow, { marginTop: 8, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                 <MaterialCommunityIcons name="white-balance-sunny" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
@@ -1876,10 +1909,10 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                   style={{ flex: 1 }}
                   onSlidingComplete={(val) => {
                     if (writeToDevice) {
-                      if (activeMode === 'FIXED' && fixedSubMode === 'MUSIC') {
+                      if (activeMode === 'MULTIMODE' && fixedSubMode === 'MUSIC') {
                         handleMusicChange(musicPatternId, micSensitivity, val, micSource);
                       } else {
-                        if (activeMode === 'FIXED') {
+                        if (activeMode === 'MULTIMODE') {
                           if (fixedSubMode === 'PATTERN') {
                             applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
                           } else if (fixedSubMode === 'MULTI') {
@@ -1894,13 +1927,6 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                             const pts = hwSettings?.ledPoints || points || 16;
                             const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
                             writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, speed));
-                          } else if (fixedSubMode === 'CANDLE') {
-                            const rawR = parseInt(selectedColor.substring(1, 3), 16) || 255;
-                            const rawG = parseInt(selectedColor.substring(3, 5), 16) || 255;
-                            const rawB = parseInt(selectedColor.substring(5, 7), 16) || 255;
-                            const sortIdx = hwSettings?.colorSorting ?? 2;
-                            const { r: finalR, g: finalG, b: finalB } = ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
-                            writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, speed, val, candleAmplitude));
                           } else if (fixedSubMode === 'RBM') {
                             if (selectedPatternId === 100) {
                               applyEmergencyPattern(speed, val);
@@ -1911,7 +1937,7 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                         } else {
                           // Standard scaled color for other modes
                           const factor = val / 100;
-                          const hex = activeMode === 'MULTICOLOR' ? '#FFFFFF' : selectedColor;
+                          const hex = selectedColor;
                           const r = Math.round(parseInt(hex.slice(1, 3), 16) * factor);
                           const g = Math.round(parseInt(hex.slice(3, 5), 16) * factor);
                           const b = Math.round(parseInt(hex.slice(5, 7), 16) * factor);
@@ -1926,7 +1952,7 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
             )}
 
             {/* Speed Slider - Hidden in MUSIC, and CAMERA */}
-            {!(activeMode === 'FIXED' && (fixedSubMode === 'MUSIC' || fixedSubMode === 'CAMERA')) && (
+            {!(activeMode === 'MULTIMODE' && (fixedSubMode === 'MUSIC' || fixedSubMode === 'CAMERA')) && (
               <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                   <MaterialCommunityIcons name="engine-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
@@ -1935,7 +1961,7 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                     onValueChange={setSpeed}
                     onSlidingComplete={(val) => {
                       if (writeToDevice) {
-                        if (activeMode === 'FIXED') {
+                        if (activeMode === 'MULTIMODE') {
                           if (fixedSubMode === 'PATTERN') {
                             applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
                           } else if (fixedSubMode === 'MULTI') {
@@ -1950,13 +1976,6 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
                             const pts = hwSettings?.ledPoints || points || 16;
                             const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
                             writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, appliedLength, multiTransition, val));
-                          } else if (fixedSubMode === 'CANDLE') {
-                            const rawR = parseInt(selectedColor.substring(1, 3), 16) || 255;
-                            const rawG = parseInt(selectedColor.substring(3, 5), 16) || 255;
-                            const rawB = parseInt(selectedColor.substring(5, 7), 16) || 255;
-                            const sortIdx = hwSettings?.colorSorting ?? 2;
-                            const { r: finalR, g: finalG, b: finalB } = ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
-                            writeToDevice(ZenggeProtocol.setCandleMode(finalR, finalG, finalB, val, brightness, candleAmplitude));
                           } else if (fixedSubMode === 'RBM') {
                             if (selectedPatternId === 100) {
                               applyEmergencyPattern(val, brightness);
@@ -1976,7 +1995,7 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
             )}
 
             {/* Sensitivity Slider - Visible ONLY in MUSIC */}
-            {(activeMode === 'FIXED' && fixedSubMode === 'MUSIC') && (
+            {(activeMode === 'MULTIMODE' && fixedSubMode === 'MUSIC') && (
               <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                   <MaterialCommunityIcons name="microphone-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
@@ -2006,19 +2025,22 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
               { id: 'MULTI', icon: 'palette' },
               { id: 'RBM', icon: 'animation-play' },
               { id: 'MUSIC', icon: 'music' },
+              { id: 'STREET', icon: 'run-fast' },
               { id: 'CAMERA', icon: 'camera' }
             ].map(dockItem => {
-              const isActive = (activeMode === 'FIXED' && (fixedSubMode === dockItem.id || (dockItem.id === 'MULTI' && (fixedSubMode === 'PATTERN' || fixedSubMode === 'CANDLE')))) || activeMode === dockItem.id;
+              const isActive = (activeMode === 'MULTIMODE' && (fixedSubMode === dockItem.id || (dockItem.id === 'MULTI' && (fixedSubMode === 'PATTERN')))) || activeMode === dockItem.id;
               return (
                 <TouchableOpacity
                   key={dockItem.id}
                   onPress={() => {
                      if (dockItem.id === 'HOME') {
                          if (onDisconnect) onDisconnect();
-                     } else if (dockItem.id === 'PRESETS') { 
-                         setActiveMode('PRESETS'); 
+                     } else if (dockItem.id === 'PRESETS') {
+                         setActiveMode('PRESETS');
+                     } else if (dockItem.id === 'STREET') {
+                         setActiveMode('STREET');
                      } else {
-                        setActiveMode('FIXED');
+                        setActiveMode('MULTIMODE');
                         if (dockItem.id === 'MULTI') {
                            setFixedSubMode('PATTERN');
                         } else {
@@ -2176,6 +2198,9 @@ export default function DockedController({ hwSettings, lockedProduct, isPaired, 
       </View>
   );
 }
+);
+
+export default DockedController;
 
 
 const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleSheet.create({

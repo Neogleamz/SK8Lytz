@@ -37,8 +37,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
 import LogViewerModal from '../components/LogViewerModal';
+import CrewModal from '../components/CrewModal';
+import { crewService, CrewSession, CrewRole } from '../services/CrewService';
 import AdminHardwareTester from '../components/AdminHardwareTester';
+import FirstTimeSetupModal from '../components/FirstTimeSetupModal';
 import { supabase } from '../services/supabaseClient';
+import { useRegistration, RegisteredDevice } from '../hooks/useRegistration';
 
 interface DeviceSettings {
   name: string;
@@ -71,8 +75,20 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     requestPermissions,
     setOnDataReceived,
     setOnHardwareProbed,
-    droppedOutDeviceIds
+    droppedOutDeviceIds,
+    pendingRegistrations,
+    clearPendingRegistrations,
   } = useBLE();
+
+  // ── Registration system ────────────────────────────────────────────────────
+  const {
+    registeredDevices,
+    saveAllRegisteredDevices,
+    hasCloudRegistrations,
+    migrateLegacyGroups,
+    syncFromCloud,
+    hasPendingSync,
+  } = useRegistration();
 
   // Sync connected+discovered devices into AppLogger whenever they change
   // so that parsed_session_devices has fresh data at upload time
@@ -128,10 +144,18 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(false);
+
+  // ── Crew Sync state ─────────────────────────────────────────────────────
+  const [crewSession, setCrewSession] = useState<CrewSession | null>(null);
+  const [crewRole, setCrewRole] = useState<CrewRole>(null);
+  const [isCrewModalVisible, setIsCrewModalVisible] = useState(false);
+  const [scannerTab, setScannerTab] = useState<'DEVICES' | 'CREW'>('DEVICES');
+  const dockedControllerRef = React.useRef<{ applyCloudScene: (s: any) => void }>(null);
   const [showHintText, setShowHintText] = useState(true);
   const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
   const [isSnifferVisible, setIsSnifferVisible] = useState(false);
+  const [isSetupWizardVisible, setIsSetupWizardVisible] = useState(false);
   const lastProcessedRef = React.useRef<string>('');
   const allDevicesRef = React.useRef(allDevices);
   const customGroupsRef = React.useRef(customGroups);
@@ -154,6 +178,30 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       subscription.remove();
     };
   }, []);
+
+  // ── First-Time Setup Wizard trigger ─────────────────────────────────────────
+  // Fires once after probe: if user has 0 cloud registrations, show setup wizard.
+  const wizardCheckedRef = React.useRef(false);
+  useEffect(() => {
+    if (pendingRegistrations.length === 0) return;
+    if (wizardCheckedRef.current) return;
+    wizardCheckedRef.current = true;
+    hasCloudRegistrations().then(hasAny => {
+      if (!hasAny) setIsSetupWizardVisible(true);
+    });
+  }, [pendingRegistrations]);
+
+  const handleRegistrationComplete = async (devices: RegisteredDevice[]) => {
+    const legacyDevices = await migrateLegacyGroups(allDevices, deviceConfigs);
+    const allToRegister = [
+      ...devices,
+      ...legacyDevices.filter(l => !devices.find(d => d.device_mac === l.device_mac)),
+    ];
+    await saveAllRegisteredDevices(allToRegister);
+    clearPendingRegistrations();
+    setIsSetupWizardVisible(false);
+    wizardCheckedRef.current = false;
+  };
 
   // Drop-out UI Alert
   useEffect(() => {
@@ -266,6 +314,37 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     const timerId = setTimeout(syncCloudAndAutoConnect, 1500);
     return () => clearTimeout(timerId);
   }, [isBluetoothSupported, isBluetoothEnabled]);
+
+  // ── Crew auto-rejoin on launch ────────────────────────────────────────────
+  useEffect(() => {
+    const tryRejoin = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const displayName = user.email?.split('@')[0] || 'Skater';
+      const result = await crewService.tryAutoRejoin(displayName);
+      if (!result) return;
+
+      const { session, role } = result;
+      setCrewSession(session);
+      setCrewRole(role);
+
+      if (role === 'leader') {
+        crewService.subscribeAsLeader(session.id, () => {});
+      } else {
+        crewService.subscribeAsMember(session.id, (scene) => {
+          dockedControllerRef.current?.applyCloudScene(scene);
+        });
+        // Apply last known scene immediately
+        const lastScene = await crewService.fetchLastScene(session.id).catch(() => null);
+        if (lastScene) {
+          setTimeout(() => dockedControllerRef.current?.applyCloudScene(lastScene), 500);
+        }
+      }
+    };
+    // Delay slightly to let auth session restore
+    const t = setTimeout(tryRejoin, 2000);
+    return () => clearTimeout(t);
+  }, []);
 
   // Bind BLE Notification Hardware Sync Hook
   useEffect(() => {
@@ -1018,6 +1097,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     return (
       <Animated.View {...edgePanResponder.panHandlers} style={{ flex: 1, backgroundColor: 'transparent' }}>
           <DockedController
+            ref={dockedControllerRef}
             hwSettings={activeHwSettings}
             lockedProduct={
               (displayConnectedDevices[0] as any)?.type || 
@@ -1032,6 +1112,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             writeToDevice={writeToDevice}
             isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
             onDisconnect={handleDisconnect}
+            crewRole={crewRole}
+            onCrewSceneChange={(scene: Record<string, any>) => crewService.broadcastScene(scene)}
           />
       </Animated.View>
     );
@@ -1281,6 +1363,56 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                       />
                   </View>
                 ) : null}
+                </View>
+
+                {/* ── Crew status pill (shown when in an active crew) ── */}
+                {crewSession && (
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 8,
+                      marginHorizontal: Layout.padding, marginTop: 8, marginBottom: 4,
+                      backgroundColor: crewRole === 'leader' ? 'rgba(255,170,0,0.12)' : 'rgba(0,170,255,0.1)',
+                      borderWidth: 1, borderColor: crewRole === 'leader' ? 'rgba(255,170,0,0.5)' : 'rgba(0,170,255,0.4)',
+                      borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7,
+                    }}
+                    onPress={() => setIsCrewModalVisible(true)}
+                  >
+                    <Text style={{ fontSize: 13 }}>{crewRole === 'leader' ? '👑' : '👥'}</Text>
+                    <Text style={{ color: crewRole === 'leader' ? '#FFAA00' : '#00AAFF', fontSize: 13, fontWeight: '700', flex: 1 }}>
+                      {crewRole === 'leader'
+                        ? `CREW LIVE · ${crewSession.name}`
+                        : `CREW SYNC · ${crewSession.name}`}
+                    </Text>
+                    <MaterialCommunityIcons name="chevron-right" size={16} color={crewRole === 'leader' ? '#FFAA00' : '#00AAFF'} />
+                  </TouchableOpacity>
+                )}
+
+                {/* ── DEVICES / CREW tab bar ── */}
+                <View style={{
+                  flexDirection: 'row', marginHorizontal: Layout.padding,
+                  marginTop: crewSession ? 4 : 12, marginBottom: 4,
+                  gap: 8,
+                }}>
+                  <TouchableOpacity
+                    style={[
+                      { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center',
+                        borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+                      scannerTab === 'DEVICES' && { backgroundColor: Colors.primary, borderColor: Colors.primary },
+                    ]}
+                    onPress={() => setScannerTab('DEVICES')}
+                  >
+                    <Text style={{ color: scannerTab === 'DEVICES' ? '#000' : Colors.textMuted, fontWeight: '700', fontSize: 13 }}>📡  DEVICES</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center',
+                        borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+                      scannerTab === 'CREW' && { backgroundColor: '#FFAA00', borderColor: '#FFAA00' },
+                    ]}
+                    onPress={() => { setScannerTab('CREW'); setIsCrewModalVisible(true); }}
+                  >
+                    <Text style={{ color: scannerTab === 'CREW' ? '#000' : Colors.textMuted, fontWeight: '700', fontSize: 13 }}>👥  CREW</Text>
+                  </TouchableOpacity>
                 </View>
 
                 <View style={{ paddingHorizontal: Layout.padding }}>
@@ -1610,6 +1742,44 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         handleDisconnect={disconnectFromDevice}
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
+      />
+      {/* First-Time Setup Wizard — auto-shows on first probe for new accounts */}
+      <FirstTimeSetupModal
+        visible={isSetupWizardVisible}
+        pendingRegistrations={pendingRegistrations}
+        onComplete={handleRegistrationComplete}
+        onDismiss={() => {
+          setIsSetupWizardVisible(false);
+          clearPendingRegistrations();
+        }}
+      />
+
+      {/* Crew Sync Modal */}
+      <CrewModal
+        visible={isCrewModalVisible}
+        onClose={() => setIsCrewModalVisible(false)}
+        activeSession={crewSession}
+        activeRole={crewRole}
+        onSessionReady={(session, role, lastScene) => {
+          setCrewSession(session);
+          setCrewRole(role);
+          if (role === 'leader') {
+            crewService.subscribeAsLeader(session.id, () => {});
+          } else {
+            crewService.subscribeAsMember(session.id, (scene) => {
+              dockedControllerRef.current?.applyCloudScene(scene);
+            });
+            // Immediately apply last known scene for late-arrival sync
+            if (lastScene) {
+              setTimeout(() => dockedControllerRef.current?.applyCloudScene(lastScene), 300);
+            }
+          }
+        }}
+        onSessionLeft={() => {
+          setCrewSession(null);
+          setCrewRole(null);
+          setScannerTab('DEVICES');
+        }}
       />
     </SafeAreaView>
   );

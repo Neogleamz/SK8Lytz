@@ -51,6 +51,25 @@ interface BluetoothLowEnergyApi {
   setOnHardwareProbed: (callback: (deviceId: string, config: any) => void) => void;
   droppedOutDeviceIds: string[];
   setDroppedOutDeviceIds: React.Dispatch<React.SetStateAction<string[]>>;
+  pendingRegistrations: PendingRegistration[];
+  clearPendingRegistrations: () => void;
+}
+
+// Auto-classify result — fed into FirstTimeSetupModal
+export interface PendingRegistration {
+  device_mac: string;
+  device_name: string;
+  product_type: 'HALOZ' | 'SOULZ';
+  position: 'Left' | 'Right';
+  group_name: string;
+  led_points: number;
+  segments: number;
+  ic_type: string;
+  color_sorting: string;
+  rssi: number;
+  firmware_ver?: number;
+  led_version?: number;
+  product_id?: number;
 }
 
 export default function useBLE(): BluetoothLowEnergyApi {
@@ -67,6 +86,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const [dataReceivedCallback, setDataReceivedCallback] = useState<((deviceId: string, data: number[]) => void) | undefined>();
   const [droppedOutDeviceIds, setDroppedOutDeviceIds] = useState<string[]>([]);
   const [isScanProbing, setIsScanProbing] = useState(false);
+  const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
   const disconnectListeners = useRef<Record<string, import('react-native-ble-plx').Subscription>>({});
   // Use ref (not state) so handleNotification always reads the CURRENT callback
   // without the stale closure problem — useState captures the value at subscription time
@@ -370,6 +390,66 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
     setIsScanProbing(false);
     console.log('[BLE Probe] Background probe complete.');
+
+    // ── Auto-classify after probe ──────────────────────────────────────────────
+    // Builds pendingRegistrations[] for FirstTimeSetupModal.
+    // Only fires when external code sets a callback needing classifications.
+    classifyProbeResults();
+  };
+
+  /**
+   * classifyProbeResults — called after probeAllDiscoveredDevices.
+   * Groups probed devices by product type, sorts by RSSI, assigns L/R.
+   * Populates pendingRegistrations state.
+   */
+  const classifyProbeResults = () => {
+    const probed = allDevicesRef2.current.filter(d => (d as any).hwPoints != null);
+    if (probed.length === 0) return;
+
+    const haloz: any[] = [];
+    const soulz: any[] = [];
+
+    for (const d of probed) {
+      const pts = (d as any).hwPoints as number;
+      if (pts <= 15)       haloz.push(d);
+      else if (pts >= 25)  soulz.push(d);
+      // else: ambiguous — skip
+    }
+
+    const assignPositions = (devices: any[], type: 'HALOZ' | 'SOULZ'): PendingRegistration[] => {
+      // Sort strongest RSSI first
+      const sorted = [...devices].sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999));
+      const positions: ('Left' | 'Right')[] = ['Left', 'Right'];
+      return sorted.slice(0, 2).map((d, i) => {
+        const pos = positions[i];
+        const groupName = `My SK8Lytz ${type}`;
+        return {
+          device_mac:   d.id,
+          device_name:  `${type} ${pos}`,
+          product_type: type,
+          position:     pos,
+          group_name:   groupName,
+          led_points:   (d as any).hwPoints,
+          segments:     (d as any).hwSegments ?? 1,
+          ic_type:      (d as any).hwStripType ?? 'WS2812B',
+          color_sorting: (d as any).hwSorting ?? 'GRB',
+          rssi:         d.rssi ?? -99,
+          firmware_ver: (d as any).firmwareVer,
+          led_version:  (d as any).ledVersion,
+          product_id:   (d as any).productId,
+        };
+      });
+    };
+
+    const results: PendingRegistration[] = [
+      ...assignPositions(haloz, 'HALOZ'),
+      ...assignPositions(soulz, 'SOULZ'),
+    ];
+
+    if (results.length > 0) {
+      console.log(`[BLE Classify] ${results.length} device(s) pending registration`);
+      setPendingRegistrations(results);
+    }
   };
 
   const connectToDevice = async (device: Device): Promise<string | undefined> => {
@@ -632,11 +712,14 @@ export default function useBLE(): BluetoothLowEnergyApi {
     setOnHardwareProbed: (callback: (deviceId: string, config: any) => void) => { hardwareProbedCallbackRef.current = callback; },
     droppedOutDeviceIds,
     setDroppedOutDeviceIds,
+    pendingRegistrations,
+    clearPendingRegistrations: () => setPendingRegistrations([]),
   }), [
     allDevices, 
     connectedDevices, 
     isScanning,
     isScanProbing,
+    pendingRegistrations,
     isBluetoothSupported, 
     isBluetoothEnabled, 
     dataReceivedCallback,

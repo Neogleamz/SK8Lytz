@@ -1771,3 +1771,179 @@ KEY FIX: displayConnectedDevices now merges deviceConfigs so ProductVisualizer
 receives sorting/points/segments on real hardware path (previously missed).
 
 ================================================================================
+
+
+================================================================================
+
+## SESSION UPDATE: 2026-04-05 - MODE ARCHITECTURE REFACTOR
+Session: 14d7070e-5e5c-4988-ae98-c83c26bdcd8e
+
+### 1. FIXED renamed to MULTIMODE
+- 45 occurrences renamed across DockedController.tsx, ProductVisualizer.tsx, CommunityModal.tsx
+- ModeType union, status text, all string literals updated.
+
+### 2. REMOVED DEAD MODES: CANDLE, CUSTOM, MULTICOLOR
+CANDLE removed from:
+  - ModeType, fixedSubMode union
+  - State vars: candleAmplitude, isCandleExpanded, candleAnim + flicker useEffect
+  - sendColor() BLE dispatch (candle-specific path removed)
+  - Hue slider onChange/onSlidingComplete handler
+  - Brightness slider handler
+  - Speed slider handler
+  - Favorites save payload (candleAmplitude field removed)
+  - Favorites load handler (setCandleAmplitude call removed)
+  - Quick color swatch handler (candle-specific setCandleMode call removed)
+  - IFavoriteState interface (candleAmplitude field removed)
+  Reason: ZenggeProtocol.setCandleMode() not supported by Zengge controller hardware.
+
+CUSTOM removed from ModeType (no active UI was using it).
+MULTICOLOR removed from ModeType (functionality lives inside MULTIMODE/MULTI submode).
+
+### 3. NEW MODE: STREET (Accelerometer-Reactive Lighting)
+File: DockedController.tsx
+Import added: import { Accelerometer } from 'expo-sensors';
+activeMode = 'STREET' (standalone, not a MULTIMODE sub-tab)
+Dock position: between MUSIC and CAMERA
+Dock icon: 'run-fast' (MaterialCommunityIcons)
+
+State variables added:
+  const [streetSensitivity, setStreetSensitivity] = useState<number>(30);
+  const [streetCruiseColor, setStreetCruiseColor] = useState<string>('#FF8C00');
+  const [streetBrakeColor, setStreetBrakeColor]   = useState<string>('#FF0000');
+  const [isStreetBraking, setIsStreetBraking]     = useState<boolean>(false);
+  const streetBrakingRef = useRef(false);
+  const lastAccelRef     = useRef({ x: 0, y: 0, z: 0 });
+
+Accelerometer subscription (active only when activeMode === 'STREET'):
+  - Update interval: 80ms (12.5Hz)
+  - Jerk magnitude = sqrt((x-px)^2 + (y-py)^2 + (z-pz)^2) per sample
+  - Threshold = ((100 - sensitivity) / 100) * 2.5 + 0.3  (range: 0.3g to 2.8g)
+  - Brake detected (jerk > threshold):
+      sends streetBrakeColor via ZenggeProtocol.setMultiColor(Array(10).fill({r,g,b}),100,1,1)
+  - Resume cruise (jerk <= threshold):
+      sends streetCruiseColor via same protocol
+  - Subscription removed automatically when leaving STREET mode
+  - isStreetBraking ref used to avoid setState thrashing
+
+Street Mode UI panel (rendered when activeMode === 'STREET'):
+  - Live status badge: orange CRUISING / red BRAKING with pulsing dot
+  - Cruise color swatches: #FF8C00 #FFAA00 #FFFFFF #00AAFF #00FF88 #FF00FF
+  - Brake color swatches:  #FF0000 #FF3300 #FF6600 #FFFFFF #FF00AA #FFFF00
+  - Sensitivity slider: 5% to 95% (higher = triggers brake on lighter decel)
+  - Universal sliders (hue, brightness, speed) hidden when in STREET mode
+
+currentStatusText:
+  case 'STREET': return isStreetBraking ? 'BRAKING' : 'CRUISING';
+
+Scene capture/restore updated:
+  captureEntireState() includes: streetSensitivity, streetCruiseColor, streetBrakeColor
+  applyCloudScene() restores:    streetSensitivity, streetCruiseColor, streetBrakeColor
+
+================================================================================
+
+## CREW SYNC MODE - DESIGN SPECIFICATION (Pending Implementation)
+
+### User Story
+A group of skaters at a rink currently must manually match colors/patterns.
+Crew Sync lets one designated "Crew Leader" control patterns for the entire crew.
+All members' skates update automatically when the leader changes their scene.
+
+### Architecture
+
+Feature lives at: Scanner/Dashboard level (NOT in DockedController)
+NOT a new dock mode â€” integrated into the device connection flow.
+
+Connection Flow (new):
+  [Old] Scan -> Connect to device/group
+  [New] Scan -> Join/Create Crew -> Connect to leader's device/group
+                                  OR connect own device as member
+
+Leader Role:
+  - Connects their own BLE device/group as normal
+  - DockedController operates in standard mode
+  - Every mode/color/pattern change calls CrewService.broadcast(captureEntireState())
+  - Broadcast goes to Supabase Realtime channel: crew:{sessionId}
+
+Member Role:
+  - Joins crew via invite code or crew list in scanner panel
+  - Connects their own BLE device/group locally
+  - Subscribes to crew channel; receives JSON scene payloads from leader
+  - Calls applyCloudScene(payload) on their DockedController
+  - applyCloudScene() triggers normal BLE write to their local hardware
+
+Key Design Decisions:
+  - BLE stays LOCAL per phone. Only scene JSON syncs via cloud.
+  - Only the leader's actions propagate. Members cannot override.
+  - Offline fallback: members retain last-received state if signal lost.
+  - Leader is assigned at session creation; transferable to any member.
+
+Supabase Schema (pending migration):
+  crew_sessions (
+    id UUID PK,
+    invite_code TEXT UNIQUE,
+    name TEXT,
+    leader_user_id UUID -> auth.users,
+    created_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ  -- defaults 12 hours
+  )
+  crew_members (
+    id UUID PK,
+    session_id UUID -> crew_sessions,
+    user_id UUID -> auth.users,
+    display_name TEXT,
+    joined_at TIMESTAMPTZ
+  )
+
+Files to create/modify (future sprint):
+  src/services/CrewService.ts      -- Supabase Realtime subscribe + broadcast
+  src/components/CrewModal.tsx     -- Create/Join crew UI, member list, leader toggle
+  src/screens/DashboardScreen.tsx  -- Crew panel tab in scanner, invite code UI
+  src/components/DockedController.tsx -- Wire captureEntireState() to CrewService.broadcast()
+                                       -- Wire Realtime received event to applyCloudScene()
+
+Channel format: crew:{sessionId}
+Broadcast payload: JSON from captureEntireState() (activeMode, colors, patterns, etc)
+
+================================================================================
+
+---
+
+## SESSION UPDATE — 2026-04-05/06: Crew Sync + Mode Architecture
+
+### Mode Architecture Changes
+- **FIXED → MULTIMODE**: Global rename across all files (45 occurrences)
+- **Removed modes**: CANDLE, CUSTOM, MULTICOLOR — fully purged from state, UI, BLE dispatch, favorites
+- **Street Mode**: Accelerometer-based motion-reactive lighting. Jerk detection distinguishes cruising vs braking state. Independent cruise/brake colors + sensitivity slider.
+
+### Crew Sync Feature — Full Implementation
+**Architecture**: Scanner/dashboard-level feature. BLE stays local; only scene JSON syncs through Supabase Realtime.
+
+#### Database (Supabase — Project ID: qefmeivpjyaukbwadgaz)
+- Table: crew_sessions — id, invite_code (6-char auto), name, leader_user_id, created_at, expires_at (12hr TTL), is_active, last_scene (JSONB)
+- Table: crew_members — id, session_id, user_id, display_name, joined_at
+- Index: idx_crew_sessions_active on (is_active, expires_at DESC)
+- RLS: enabled on both tables
+- Migration file: 	ools/002_crew_sessions.sql ✅ Applied
+
+#### Files Created/Modified
+- src/services/CrewService.ts — Session CRUD, Realtime pub/sub, last_scene persistence (5s throttle), fetchActiveSessions(), fetchLastScene(), joinSessionById(), transferLeadership(), tryAutoRejoin()
+- src/components/CrewModal.tsx — 4-step modal: landing / create / join (active sessions browser) / lobby (member list + leader handoff)
+- src/components/DockedController.tsx — forwardRef + useImperativeHandle (applyCloudScene), crewRole prop, crew leader broadcast useEffect (200ms debounce)
+- src/screens/DashboardScreen.tsx — DEVICES/CREW tab bar, crew status pill, CrewModal wired, auto-rejoin useEffect on mount (2s delay)
+
+#### Key Behaviors
+- **Browse active crews**: JOIN screen shows all live sessions — tap to join
+- **Late-arrival sync**: On join, fetches last_scene from DB and immediately applies to skates
+- **Leader handoff**: Visible toggle button in lobby — any member can be promoted
+- **Auto-rejoin**: AsyncStorage TTL (12hr) — reopening app reconnects to prior session
+- **Leader broadcast**: DockedController fires onCrewSceneChange on every mode/color state change (debounced 200ms) — CrewService persists to DB every 5s
+
+### Music Sync — Research / Planning Only (not implemented)
+**Problem**: Mic-based reactivity doesn't work when audio routes to headphones/BT speakers.
+**Planned approach (cross-platform iOS + Android)**:
+- Phase 1: Spotify Web API + Apple MusicKit — BPM/energy/valence, no native modules
+- Phase 2: ShazamKit (iOS) + ACRCloud (Android) — identify any song from mic fingerprint
+- Phase 3: Android MediaSession native module — auto-detect any playing app
+- Enables: BPM Choreography Mode (beat-synced LED patterns)
+- Reference: rain/14d7070e.../analysis_results.md
+
