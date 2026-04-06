@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator, Linking } from 'react-native';
 import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Buffer } from 'buffer';
 import { Colors } from '../theme/theme';
 
@@ -111,15 +112,29 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
   };
 
   if (!permission) {
-    return <View />;
+    // Still loading permission status — show spinner, not blank
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={[styles.message, { marginTop: 12 }]}>Checking camera access…</Text>
+      </View>
+    );
   }
 
   if (!permission.granted) {
+    const canAsk = permission.canAskAgain !== false;
     return (
-      <View style={styles.container}>
-        <Text style={styles.message}>We need your permission to show the camera</Text>
-        <TouchableOpacity style={styles.button} onPress={requestPermission}>
-          <Text style={{ color: Colors.isDark ? '#FFF' : '#000', fontWeight: 'bold' }}>GRANT PERMISSION</Text>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }]}>
+        <MaterialCommunityIcons name="camera-off" size={40} color={Colors.textMuted} style={{ marginBottom: 12 }} />
+        <Text style={styles.message}>
+          {canAsk
+            ? 'Camera access is needed to detect colors from your environment.'
+            : 'Camera access was denied. Please enable it in your device Settings → Apps → SK8Lytz → Permissions.'}
+        </Text>
+        <TouchableOpacity style={styles.button} onPress={canAsk ? requestPermission : () => Linking.openSettings()}>
+          <Text style={{ color: Colors.isDark ? '#FFF' : '#000', fontWeight: 'bold' }}>
+            {canAsk ? 'GRANT PERMISSION' : 'OPEN SETTINGS'}
+          </Text>
         </TouchableOpacity>
       </View>
     );

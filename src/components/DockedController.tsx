@@ -316,6 +316,58 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   const streetBrakingRef = useRef(false);
   const lastAccelRef = useRef({ x: 0, y: 0, z: 0 });
 
+  // ── Street Mode: Car-Light Pattern helper ─────────────────────────────────
+  // Rear 30% = red tail lights (brightened when braking)
+  // Front 30% = white headlights (always on)
+  // Middle 40% = cruise color, animated marquee
+  const applyStreetPattern = (
+    isBraking: boolean,
+    cruiseHex: string,
+    brt: number = brightness
+  ) => {
+    if (!writeToDevice) return;
+    const factor = brt / 100;
+    const pts = hwSettings?.ledPoints || points || 16;
+    const segs = hwSettings?.segments || 1;
+    const ledCount = Math.max(10, Math.floor(pts / segs));
+
+    const cr = parseInt(cruiseHex.slice(1, 3), 16);
+    const cg = parseInt(cruiseHex.slice(3, 5), 16);
+    const cb = parseInt(cruiseHex.slice(5, 7), 16);
+
+    const rearCount   = Math.max(1, Math.round(ledCount * 0.3));
+    const frontCount  = Math.max(1, Math.round(ledCount * 0.3));
+    const midCount    = Math.max(1, ledCount - rearCount - frontCount);
+
+    // Tail lights: dim red cruising, full red braking
+    const tailBright = isBraking ? factor : factor * 0.45;
+    const tailR = Math.round(255 * tailBright);
+    const tail = { r: tailR, g: 0, b: 0 };
+
+    // Headlights: warm white, always steady
+    const headVal = Math.round(255 * factor);
+    const head = { r: headVal, g: Math.round(headVal * 0.95), b: Math.round(headVal * 0.85) };
+
+    // Cruise middle: user-chosen color, marquee bounce
+    const crR = Math.round(cr * factor);
+    const crG = Math.round(cg * factor);
+    const crB = Math.round(cb * factor);
+    const crDim = { r: Math.round(crR * 0.3), g: Math.round(crG * 0.3), b: Math.round(crB * 0.3) };
+    const cruise = { r: crR, g: crG, b: crB };
+
+    // Build per-LED array: [rear(tail)] [mid alternating] [front(head)]
+    const rearSection  = Array(rearCount).fill(tail);
+    const frontSection = Array(frontCount).fill(head);
+    // Alternating bright/dim for the mid section for a bouncing feel
+    const midSection   = Array.from({ length: midCount }, (_, i) =>
+      i % 2 === 0 ? cruise : crDim
+    );
+
+    const arr = [...rearSection, ...midSection, ...frontSection];
+    // TransitionType 0 = native marquee flow so the mid section animates
+    writeToDevice(ZenggeProtocol.setMultiColor(arr, 60, 1, 0));
+  };
+
   useEffect(() => {
     if (Platform.OS === 'web') return; // Accelerometer not available on web
     if (activeMode !== 'STREET') {
@@ -326,6 +378,8 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
       }
       return;
     }
+    // Send initial cruise pattern when entering street mode
+    applyStreetPattern(false, streetCruiseColor);
     Accelerometer.setUpdateInterval(80);
     const sub = Accelerometer.addListener(({ x, y, z }) => {
       const prev = lastAccelRef.current;
@@ -338,19 +392,11 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
       if (isBraking !== streetBrakingRef.current) {
         streetBrakingRef.current = isBraking;
         setIsStreetBraking(isBraking);
-        if (writeToDevice) {
-          const col = isBraking ? streetBrakeColor : streetCruiseColor;
-          const r = parseInt(col.slice(1, 3), 16);
-          const g = parseInt(col.slice(3, 5), 16);
-          const b = parseInt(col.slice(5, 7), 16);
-          writeToDevice(ZenggeProtocol.setMultiColor(
-            Array(10).fill({ r, g, b }), 100, 1, 1
-          ));
-        }
+        applyStreetPattern(isBraking, streetCruiseColor);
       }
     });
     return () => { sub.remove(); };
-  }, [activeMode, streetSensitivity, streetCruiseColor, streetBrakeColor]);
+  }, [activeMode, streetSensitivity, streetCruiseColor]);
 
   // ── Crew Leader Broadcast ────────────────────────────────────────────────
   // When acting as leader, broadcast scene to crew on every meaningful change.
@@ -1545,6 +1591,8 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                      isActive={activeMode === 'MULTIMODE' && fixedSubMode === 'CAMERA'} 
                      onColorDetected={(hex) => {
                         setSelectedColor(hex);
+                        // Also apply to fixedFgColor so SOLID/STROBE patterns pick it up
+                        setFixedFgColor(hex);
                         const r = parseInt(hex.slice(1, 3), 16);
                         const g = parseInt(hex.slice(3, 5), 16);
                         const b = parseInt(hex.slice(5, 7), 16);
@@ -1560,59 +1608,63 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
           {activeMode === 'STREET' && (
             <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 8 }}>
 
+              {/* ── Street Visualizer ── */}
+              {/* Car-light zone bar */}
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 8 }}>LED LAYOUT PREVIEW</Text>
+                <View style={{ flexDirection: 'row', height: 28, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                  {/* Rear zone — red tail lights */}
+                  <View style={{ flex: 3, backgroundColor: isStreetBraking ? '#FF0000' : '#660000', justifyContent: 'center', alignItems: 'center' }}>
+                    <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>TAIL</Text>
+                  </View>
+                  {/* Middle zone — cruise color */}
+                  <View style={{ flex: 4, backgroundColor: streetCruiseColor, justifyContent: 'center', alignItems: 'center', opacity: 0.9 }}>
+                    <Text style={{ color: '#000', fontSize: 9, fontWeight: '800' }}>CRUISE</Text>
+                  </View>
+                  {/* Front zone — headlights */}
+                  <View style={{ flex: 3, backgroundColor: '#FFF5E0', justifyContent: 'center', alignItems: 'center' }}>
+                    <Text style={{ color: '#333', fontSize: 9, fontWeight: '800' }}>HEAD</Text>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+                  <Text style={{ color: '#990000', fontSize: 9 }}>🔴 30% Brake lights</Text>
+                  <Text style={{ color: streetCruiseColor, fontSize: 9 }}>● 40% Cruise</Text>
+                  <Text style={{ color: '#FFF5E0', fontSize: 9 }}>⬜ 30% Headlights</Text>
+                </View>
+              </View>
+
               {/* Live Status Badge */}
               <View style={{
                 alignSelf: 'center', flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                backgroundColor: isStreetBraking ? 'rgba(255,0,0,0.15)' : 'rgba(255,140,0,0.12)',
+                backgroundColor: isStreetBraking ? 'rgba(255,0,0,0.2)' : 'rgba(255,140,0,0.12)',
                 borderWidth: 1, borderColor: isStreetBraking ? '#FF0000' : '#FF8C00',
-                borderRadius: 20, paddingHorizontal: 20, paddingVertical: 8, marginBottom: 20,
+                borderRadius: 20, paddingHorizontal: 20, paddingVertical: 8, marginBottom: 16,
               }}>
                 <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: isStreetBraking ? '#FF0000' : '#FF8C00', marginRight: 8 }} />
                 <Text style={{ color: isStreetBraking ? '#FF4444' : '#FF8C00', fontSize: 15, fontWeight: '700', letterSpacing: 1.5 }}>
-                  {isStreetBraking ? '🔴  BRAKING' : '🟠  CRUISING'}
+                  {isStreetBraking ? '🔴  BRAKING — LIGHTS ON' : '🟠  CRUISING'}
                 </Text>
               </View>
 
-              {/* Color Row */}
-              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
-                {/* Cruise Color */}
-                <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(255,140,0,0.3)' }}>
-                  <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: '600', marginBottom: 8, letterSpacing: 0.5 }}>CRUISE COLOR</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                    {['#FF8C00','#FFAA00','#FFFFFF','#00AAFF','#00FF88','#FF00FF'].map(col => (
-                      <TouchableOpacity
-                        key={'cruise-' + col}
-                        onPress={() => {
-                          setStreetCruiseColor(col);
-                          if (!isStreetBraking && writeToDevice) {
-                            const r = parseInt(col.slice(1,3),16); const g = parseInt(col.slice(3,5),16); const b = parseInt(col.slice(5,7),16);
-                            writeToDevice(ZenggeProtocol.setMultiColor(Array(10).fill({r,g,b}),100,1,1));
-                          }
-                        }}
-                        style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: col, borderWidth: streetCruiseColor === col ? 2 : 0, borderColor: '#FFFFFF' }}
-                      />
-                    ))}
-                  </View>
+              {/* Cruise Color Picker only — brake is always red, auto-brightened */}
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(255,140,0,0.3)', marginBottom: 12 }}>
+                <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: '600', marginBottom: 8, letterSpacing: 0.5 }}>MIDDLE CRUISE COLOR</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {['#FF8C00','#FFAA00','#FFFFFF','#00AAFF','#00FF88','#FF00FF','#8B00FF','#00FFFF'].map(col => (
+                    <TouchableOpacity
+                      key={'cruise-' + col}
+                      onPress={() => {
+                        setStreetCruiseColor(col);
+                        applyStreetPattern(isStreetBraking, col);
+                      }}
+                      style={[
+                        { width: 30, height: 30, borderRadius: 15, backgroundColor: col },
+                        streetCruiseColor === col && { borderWidth: 3, borderColor: '#FFFFFF' },
+                      ]}
+                    />
+                  ))}
                 </View>
-                {/* Brake Color */}
-                <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(255,0,0,0.3)' }}>
-                  <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: '600', marginBottom: 8, letterSpacing: 0.5 }}>BRAKE COLOR</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                    {['#FF0000','#FF3300','#FF6600','#FFFFFF','#FF00AA','#FFFF00'].map(col => (
-                      <TouchableOpacity
-                        key={'brake-' + col}
-                        onPress={() => {
-                          setStreetBrakeColor(col);
-                          if (isStreetBraking && writeToDevice) {
-                            const r = parseInt(col.slice(1,3),16); const g = parseInt(col.slice(3,5),16); const b = parseInt(col.slice(5,7),16);
-                            writeToDevice(ZenggeProtocol.setMultiColor(Array(10).fill({r,g,b}),100,1,1));
-                          }
-                        }}
-                        style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: col, borderWidth: streetBrakeColor === col ? 2 : 0, borderColor: '#FFFFFF' }}
-                      />
-                    ))}
-                  </View>
-                </View>
+                <Text style={{ color: Colors.textMuted, fontSize: 10, marginTop: 8 }}>Brake lights are always red · auto-brightened on deceleration</Text>
               </View>
 
               {/* Sensitivity Slider */}
