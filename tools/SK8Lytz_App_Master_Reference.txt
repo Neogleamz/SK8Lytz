@@ -15,6 +15,14 @@ The SK8Lytz ecosystem provides high-performance, professional-grade LED control 
 
 ## 2. Hardware Specifications
 
+
+
+### Product Scope — App Compatibility
+| Product | App Compatible | Reason |
+|:---|:---|:---|
+| **SOULZ** | YES | Zengge BLE controller, WS2812B, full protocol support |
+| **HALOZ** | YES | Zengge BLE controller, WS2812B, full protocol support |
+| **CLIPZ** | NO | Not smart / not Bluetooth. RF remote only. Cannot connect to app. No app development needed. |
 ### Device Profiles
 
 | Profile | LED Count | IC Type | Default Color Order | Usage |
@@ -2665,6 +2673,7 @@ static setQuick16ColorCycle(
 ```
 
 ---
+
 
 
 
