@@ -15,6 +15,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal, TextInput,
   ActivityIndicator, FlatList, Alert, Platform, ScrollView, Animated, Image,
+  KeyboardAvoidingView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
@@ -1198,7 +1199,10 @@ export default function CrewModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent statusBarTranslucent>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
         <View style={styles.sheet}>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
             <MaterialCommunityIcons name="close" size={20} color={Colors.textMuted} />
@@ -1212,7 +1216,7 @@ export default function CrewModal({
           {step === 'manage'      && !selectedCrewDetail && renderManage()}
           {step === 'manage'      && !!selectedCrewDetail && renderCrewDetail()}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

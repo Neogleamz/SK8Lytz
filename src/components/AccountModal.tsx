@@ -859,7 +859,10 @@ export default function AccountModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent statusBarTranslucent>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
         <View style={styles.sheet}>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
             <MaterialCommunityIcons name="close" size={22} color={Colors.textMuted} />
@@ -895,7 +898,7 @@ export default function AccountModal({
             : renderSettings()
           }
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
