@@ -4,5 +4,9 @@
   "compilerOptions": {
     // Strict mode: catches null/undefined errors, implicit any, and unsafe operations
     "strict": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "supabase/functions"
+  ]
 }

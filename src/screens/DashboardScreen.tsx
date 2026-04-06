@@ -43,6 +43,9 @@ import AdminHardwareTester from '../components/AdminHardwareTester';
 import FirstTimeSetupModal from '../components/FirstTimeSetupModal';
 import { supabase } from '../services/supabaseClient';
 import { useRegistration, RegisteredDevice } from '../hooks/useRegistration';
+import ProfileModal from '../components/ProfileModal';
+import { profileService } from '../services/ProfileService';
+import { notificationService } from '../services/NotificationService';
 
 interface DeviceSettings {
   name: string;
@@ -151,6 +154,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isCrewModalVisible, setIsCrewModalVisible] = useState(false);
   const [scannerTab, setScannerTab] = useState<'DEVICES' | 'CREW'>('DEVICES');
   const dockedControllerRef = React.useRef<{ applyCloudScene: (s: any) => void }>(null);
+
+  // ── Profile + Notifications state ────────────────────────────────────────
+  const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
+  const [pendingJoinCrewId, setPendingJoinCrewId] = useState<string | null>(null);
   const [showHintText, setShowHintText] = useState(true);
   const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
@@ -344,6 +351,23 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     // Delay slightly to let auth session restore
     const t = setTimeout(tryRejoin, 2000);
     return () => clearTimeout(t);
+  }, []);
+
+  // ── Push notification init ────────────────────────────────────────────────
+  useEffect(() => {
+    // Wire notification tap → open CrewModal pre-loaded for that session
+    notificationService.setJoinHandler((crewId: string, _sessionId: string) => {
+      setPendingJoinCrewId(crewId);
+      setIsCrewModalVisible(true);
+    });
+
+    notificationService.init().catch(e =>
+      console.log('[Dashboard] Push notification init skipped:', e)
+    );
+
+    return () => {
+      notificationService.cleanup().catch(() => {});
+    };
   }, []);
 
   // Bind BLE Notification Hardware Sync Hook

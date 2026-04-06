@@ -58,7 +58,32 @@ export type EventType =
   | 'APP_BACKGROUNDED'
   | 'APP_FOREGROUNDED'
   | 'ERROR_CAUGHT'
-  | 'PERFORMANCE_METRIC';
+  | 'PERFORMANCE_METRIC'
+  // ── Crew Sync ─────────────────────────────────────────────
+  | 'CREW_SESSION_CREATED'
+  | 'CREW_SESSION_JOINED'
+  | 'CREW_SESSION_LEFT'
+  | 'CREW_SESSION_ENDED'
+  | 'CREW_LEADERSHIP_TRANSFERRED'
+  | 'CREW_SCENE_BROADCAST'
+  | 'CREW_SCENE_RECEIVED'
+  | 'CREW_AUTO_REJOINED'
+  | 'CREW_ERROR'
+  // ── Street Mode ───────────────────────────────────────────
+  | 'STREET_MODE_ACTIVATED'
+  | 'STREET_MODE_DEACTIVATED'
+  | 'STREET_JERK_DETECTED'
+  | 'STREET_SENSITIVITY_CHANGED'
+  // ── Push Notifications ────────────────────────────────────
+  | 'PUSH_TOKEN_REGISTERED'
+  | 'PUSH_NOTIFICATION_TAPPED'
+  | 'PUSH_NOTIFICATION_SENT'
+  // ── Profile & Crew Management ─────────────────────────────
+  | 'PROFILE_UPDATED'
+  | 'CREW_PERMANENT_CREATED'
+  | 'CREW_PERMANENT_JOINED'
+  | 'CREW_PERMANENT_LEFT'
+  | 'PUSH_TOKEN_UNREGISTERED';
 
 export interface LogEntry {
   t: number;        // timestamp ms

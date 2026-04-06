@@ -16,6 +16,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { crewService, CrewSession, CrewMember, CrewRole } from '../services/CrewService';
 import { supabase } from '../services/supabaseClient';
+import { profileService } from '../services/ProfileService';
+import { AppLogger } from '../services/AppLogger';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -65,7 +67,12 @@ export default function CrewModal({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setCurrentUserId(user.id);
-      setDisplayName(user.email?.split('@')[0] || 'Skater');
+      try {
+        const profile = await profileService.fetchOrCreateProfile();
+        setDisplayName(profile?.display_name || user.email?.split('@')[0] || 'Skater');
+      } catch {
+        setDisplayName(user.email?.split('@')[0] || 'Skater');
+      }
     };
     loadUser();
   }, []);
@@ -123,8 +130,10 @@ export default function CrewModal({
     setIsLoading(true); setErrorMsg('');
     try {
       const session = await crewService.createSession(crewName.trim(), displayName.trim());
+      AppLogger.log('CREW_SESSION_CREATED', { sessionId: session.id, crewName: crewName.trim(), displayName: displayName.trim() });
       await handleSessionJoined(session);
     } catch (e: any) {
+      AppLogger.log('CREW_ERROR', { action: 'create', error: e.message });
       setErrorMsg(e.message || 'Failed to create crew');
     } finally { setIsLoading(false); }
   };
@@ -134,8 +143,10 @@ export default function CrewModal({
     setIsLoading(true); setErrorMsg('');
     try {
       const session = await crewService.joinSession(inviteCode.trim(), displayName.trim());
+      AppLogger.log('CREW_SESSION_JOINED', { sessionId: session.id, crewName: session.name, method: 'code' });
       await handleSessionJoined(session);
     } catch (e: any) {
+      AppLogger.log('CREW_ERROR', { action: 'join_code', error: e.message });
       setErrorMsg(e.message || 'Could not find that crew. Check the code.');
     } finally { setIsLoading(false); }
   };
@@ -144,8 +155,10 @@ export default function CrewModal({
     setIsLoading(true); setErrorMsg('');
     try {
       const session = await crewService.joinSessionById(sessionId, displayName.trim());
+      AppLogger.log('CREW_SESSION_JOINED', { sessionId: session.id, crewName: session.name, method: 'browse' });
       await handleSessionJoined(session);
     } catch (e: any) {
+      AppLogger.log('CREW_ERROR', { action: 'join_id', error: e.message });
       setErrorMsg(e.message || 'Could not join that crew');
     } finally { setIsLoading(false); }
   };
@@ -156,6 +169,7 @@ export default function CrewModal({
       {
         text: 'Leave', style: 'destructive',
         onPress: async () => {
+          AppLogger.log('CREW_SESSION_LEFT', { sessionId: currentSession?.id, crewName: currentSession?.name, role: currentRole });
           await crewService.leaveSession();
           setCurrentSession(null);
           setCurrentRole(null);
@@ -179,6 +193,7 @@ export default function CrewModal({
           onPress: async () => {
             try {
               await crewService.transferLeadership(member.user_id);
+              AppLogger.log('CREW_LEADERSHIP_TRANSFERRED', { sessionId: currentSession?.id, newLeaderId: member.user_id, newLeaderName: member.display_name });
               setCurrentRole('member');
               setIsHandoffMode(false);
               // Refresh member list to show new leader

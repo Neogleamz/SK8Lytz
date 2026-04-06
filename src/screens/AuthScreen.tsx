@@ -6,6 +6,8 @@ import {
 import { supabase } from '../services/supabaseClient';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   checkPasswordComplexity,
   isCommonPassword,
@@ -14,10 +16,12 @@ import {
   PasswordStrength
 } from '../services/AuthUtils';
 
+const STORAGE_LAST_EMAIL = 'ng_auth_last_email';
+
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
 
 export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuccess: () => void; onOfflineMode?: () => void }) {
-  const { Colors } = useTheme();
+  const { Colors, toggleTheme, isDark } = useTheme();
   const styles = createStyles(Colors);
 
   const [email, setEmail] = useState('');
@@ -31,8 +35,14 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
   const [passwordStrength, setPasswordStrength] = useState<PasswordStrength | null>(null);
   const strengthAnim = useRef(new Animated.Value(0)).current;
 
+  // ─── Load saved email on mount ───────────────────────────────────────────────
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_LAST_EMAIL).then(saved => {
+      if (saved) setEmail(saved);
+    });
+  }, []);
 
-  // ─── MAGIC LINK ─────────────────────────────────────────────────────────
+  // ─── Password strength meter ─────────────────────────────────────────────────
   useEffect(() => {
     if ((mode === 'SIGNUP') && password.length > 0) {
       const s = checkPasswordComplexity(password);
@@ -67,17 +77,42 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
     }
   };
 
-  // ─── SIGN IN ─────────────────────────────────────────────────────────────────
+  // ─── SIGN IN (supports email OR username) ───────────────────────────────────
   const handleSignIn = async () => {
-    if (!email.trim() || !password) {
-      Alert.alert('Missing Fields', 'Please enter your email and password.');
+    const input = email.trim();
+    if (!input || !password) {
+      Alert.alert('Missing Fields', 'Please enter your email (or username) and password.');
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+
+    let loginEmail = input;
+
+    // If input has no '@', treat it as username and look up the email
+    if (!input.includes('@')) {
+      try {
+        const { data, error: rpcErr } = await supabase.rpc('get_email_by_username', { p_username: input });
+        if (rpcErr || !data) {
+          setLoading(false);
+          Alert.alert('Username Not Found', 'No account found with that username. Try signing in with your email instead.');
+          return;
+        }
+        loginEmail = data as string;
+      } catch {
+        setLoading(false);
+        Alert.alert('Error', 'Could not look up username. Please use your email to sign in.');
+        return;
+      }
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
     setLoading(false);
-    if (error) Alert.alert('Sign In Failed', error.message);
-    else onAuthSuccess();
+    if (error) {
+      Alert.alert('Sign In Failed', error.message);
+    } else {
+      await AsyncStorage.setItem(STORAGE_LAST_EMAIL, loginEmail);
+      onAuthSuccess();
+    }
   };
 
   // ─── SIGN UP ─────────────────────────────────────────────────────────────────
@@ -171,6 +206,23 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* Theme + Support buttons — top right corner */}
+      <View style={styles.topButtons}>
+        <TouchableOpacity style={styles.topBtn} onPress={toggleTheme}>
+          <MaterialCommunityIcons
+            name={isDark ? 'weather-sunny' : 'weather-night'}
+            size={18}
+            color={Colors.textMuted}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.topBtn}
+          onPress={() => Alert.alert('SK8Lytz Support', 'Need help?\n\n• Email: support@sk8lytz.com\n• Docs: sk8lytz.com/help\n• Discord: discord.gg/sk8lytz')}
+        >
+          <MaterialCommunityIcons name="help-circle-outline" size={18} color={Colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
 
         {/* Logo */}
@@ -198,15 +250,16 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             />
           )}
 
-          {/* Email */}
+          {/* Email or Username */}
           <TextInput
             style={styles.input}
-            placeholder="email@address.com"
+            placeholder={mode === 'LOGIN' ? 'Email or username' : 'email@address.com'}
             placeholderTextColor={Colors.textMuted}
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
-            keyboardType="email-address"
+            keyboardType={mode === 'LOGIN' ? 'default' : 'email-address'}
+            autoComplete={mode === 'LOGIN' ? 'off' : 'email'}
           />
 
           {/* Password (not on magic link, not on forgot) */}
@@ -329,6 +382,15 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
 const createStyles = (Colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  topButtons: {
+    position: 'absolute', top: Platform.OS === 'ios' ? 54 : 16, right: 16,
+    flexDirection: 'row', gap: 8, zIndex: 10,
+  },
+  topBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    alignItems: 'center', justifyContent: 'center',
+  },
   headerContainer: { alignItems: 'center', marginBottom: 40 },
   title: { fontSize: 42, fontWeight: '900', color: Colors.text, letterSpacing: -1, marginBottom: 8 },
   subtitle: { color: Colors.textMuted, fontSize: 14, textAlign: 'center' },
