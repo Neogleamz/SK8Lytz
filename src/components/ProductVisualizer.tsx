@@ -1,8 +1,10 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { View, StyleSheet, Animated, Text, TouchableOpacity } from 'react-native';
 import { getArchetypeFromId } from '../utils/RbmDictionary';
 import { MusicDictionary } from '../utils/MusicDictionary';
 import { useTheme } from '../context/ThemeContext';
+import { getVisualizerFrame } from '../protocols/PatternEngine';
+import type { RGB, PatternId } from '../protocols/PatternEngine';
 
 interface DeviceConfig {
   id?: string;
@@ -60,6 +62,13 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
   const { isDark } = useTheme();
   const product = String(device.type || fallbackProduct);
   const isHaloz = !product.toLowerCase().includes('soul');
+
+  // Track animValue tick (0.0–1.0) for PatternEngine frame generation
+  const [animTick, setAnimTick] = useState(0);
+  useEffect(() => {
+    const id = animValue.addListener(({ value }: { value: number }) => setAnimTick(value));
+    return () => animValue.removeListener(id);
+  }, [animValue]);
 
   // HALOZ actual hardware is composed of two segments making a ring of 16 LEDs.
   // SOULZ visualizer uses the pointsPerSide * 2 logic to visually double the strip.
@@ -341,56 +350,31 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
                  dotColor = color;
              }
           } else if (mode === 'MULTIMODE') {
-             const fg = fixedFgColor || color;
-             const bg = fixedBgColor || '#000000';
-             const pid = patternId || 1;
-             
-             if (pid === 1) { // Solid
-               dotColor = fg;
-               dotOpacity = 1.0;
-             } else if (pid === 2) { // Single Dot
-               dotColor = animValue.interpolate({
-                  inputRange: [0, Math.max(0, mirroredFract - 0.05), mirroredFract, Math.min(1, mirroredFract + 0.05), 1],
-                  outputRange: [bg, bg, fg, bg, bg]
-               });
-               dotOpacity = 1.0;
-             } else if (pid === 3) { // Comet
-               dotColor = animValue.interpolate({
-                  inputRange: [0, Math.max(0, mirroredFract - 0.3), mirroredFract, Math.min(1, mirroredFract + 0.05), 1],
-                  outputRange: [bg, bg, fg, bg, bg]
-               });
-               dotOpacity = animValue.interpolate({
-                  inputRange: [0, Math.max(0, mirroredFract - 0.3), mirroredFract, Math.min(1, mirroredFract + 0.05), 1],
-                  outputRange: [0.3, 0.3, 1, 0.3, 0.3]
-               });
-             } else if (pid === 4) { // Dashed
-               dotColor = (Math.floor(i / 4) % 2 === 0) ? fg : bg;
-               dotOpacity = 1.0;
-             } else if (pid === 5) { // Alternating
-               dotColor = (Math.floor(i / 2) % 2 === 0) ? fg : bg;
-               dotOpacity = 1.0;
-             } else if (pid === 6) { // Breath
-               dotColor = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [bg, fg, bg] });
-               dotOpacity = 1.0;
-             } else if (pid === 7) { // Flash
-               dotColor = animValue.interpolate({ inputRange: [0, 0.49, 0.5, 0.99, 1], outputRange: [fg, fg, bg, bg, fg] });
-               dotOpacity = 1.0;
-             } else if (pid === 8) { // Strobe
-               dotColor = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [fg, bg, fg] });
-               dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0, 1] });
-             } else if (pid === 9) { // Wave
-               dotColor = animValue.interpolate({
-                  inputRange: [0, Math.max(0, mirroredFract - 0.2), mirroredFract, Math.min(1, mirroredFract + 0.2), 1],
-                  outputRange: [bg, bg, fg, bg, bg]
-               });
-               dotOpacity = 1.0;
-             } else if (pid === 10) { // Pinch
-               dotColor = animValue.interpolate({
-                  inputRange: [0, Math.max(0, (1 - mirroredFract) - 0.2), (1 - mirroredFract), Math.min(1, (1-mirroredFract) + 0.2), 1],
-                  outputRange: [bg, bg, fg, bg, bg]
-               });
-               dotOpacity = 1.0;
-             }
+             const fgHex = fixedFgColor || color;
+             const bgHex = fixedBgColor || '#000000';
+             const pid = Math.max(1, Math.min(10, patternId || 1)) as PatternId;
+
+             // Parse fg/bg hex strings to RGB objects for PatternEngine
+             const fgRgb: RGB = {
+               r: parseInt(fgHex.slice(1,3), 16) || 0,
+               g: parseInt(fgHex.slice(3,5), 16) || 0,
+               b: parseInt(fgHex.slice(5,7), 16) || 0,
+             };
+             const bgRgb: RGB = {
+               r: parseInt(bgHex.slice(1,3), 16) || 0,
+               g: parseInt(bgHex.slice(3,5), 16) || 0,
+               b: parseInt(bgHex.slice(5,7), 16) || 0,
+             };
+
+             // Get the full per-LED pixel array from the PatternEngine at the current animation tick
+             const framePixels = getVisualizerFrame(pid, fgRgb, bgRgb, numLeds, animTick);
+
+             // Map this LED's position index to its pixel in the frame
+             // renderLeds > numLeds (for smooth path), so quantize back to numLeds slots
+             const ledSlot = Math.min(framePixels.length - 1, Math.floor((i / renderLeds) * framePixels.length));
+             const px = framePixels[ledSlot] || fgRgb;
+             dotColor = `#${px.r.toString(16).padStart(2,'0')}${px.g.toString(16).padStart(2,'0')}${px.b.toString(16).padStart(2,'0')}`;
+             dotOpacity = isPoweredOn ? (brightness / 100) : 0;
           }
         }
 
@@ -402,7 +386,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
         });
     }
     return list;
-  }, [product, mode, color, numLeds, patternId, isPoweredOn, audioMagnitude, fixedFgColor, fixedBgColor, multiColors, multiTransition, brightness, speed]);
+  }, [product, mode, color, numLeds, patternId, isPoweredOn, audioMagnitude, fixedFgColor, fixedBgColor, multiColors, multiTransition, brightness, speed, animTick]);
 
   return (
     <TouchableOpacity 
