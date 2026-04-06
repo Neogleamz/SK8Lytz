@@ -14,8 +14,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, Modal, TouchableOpacity, TextInput, Platform,
-  StyleSheet, ScrollView, ActivityIndicator, Alert, Switch,
+  StyleSheet, ScrollView, ActivityIndicator, Alert, Switch, Image,
+  KeyboardAvoidingView,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -86,6 +88,8 @@ export default function AccountModal({
   const [editName, setEditName] = useState('');
   const [editUsername, setEditUsername] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
+
   const [userEmail, setUserEmail] = useState('');
 
   // Security state
@@ -207,6 +211,26 @@ export default function AccountModal({
       Alert.alert('Error', e.message || 'Could not save profile');
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  // ── Profile photo ─────────────────────────────────────────────────────────
+
+  const handlePickProfilePhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Enable photo library access in Settings to set a profile photo.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true, aspect: [1, 1], quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setProfilePhotoUri(result.assets[0].uri);
+      // Note: full upload to Supabase Storage can be added when storage bucket is configured
+      AppLogger.log('PROFILE_UPDATED', { field: 'photo', uri: result.assets[0].uri });
+
     }
   };
 
@@ -420,10 +444,18 @@ export default function AccountModal({
 
   const renderProfile = () => (
     <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-      {/* Avatar */}
-      <View style={[styles.avatarCircle, { backgroundColor: profile?.avatar_color ?? '#FF8C00' }]}>
-        <Text style={styles.avatarText}>{initials(profile?.display_name ?? null)}</Text>
-      </View>
+      {/* Avatar — tappable to pick photo */}
+      <TouchableOpacity onPress={handlePickProfilePhoto} style={{ alignSelf: 'center', marginBottom: 4 }}>
+        {profilePhotoUri
+          ? <Image source={{ uri: profilePhotoUri }}
+              style={[styles.avatarCircle, { overflow: 'hidden' }]} />
+          : <View style={[styles.avatarCircle, { backgroundColor: profile?.avatar_color ?? '#FF8C00' }]}>
+              <Text style={styles.avatarText}>{initials(profile?.display_name ?? null)}</Text>
+            </View>}
+        <View style={{ position: 'absolute', bottom: 2, right: 2, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, padding: 3 }}>
+          <MaterialCommunityIcons name="camera" size={12} color="#FFF" />
+        </View>
+      </TouchableOpacity>
       <Text style={styles.emailDisplay}>{userEmail}</Text>
 
       {/* Display name */}

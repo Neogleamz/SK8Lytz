@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { useRegistration, RegisteredDevice } from '../hooks/useRegistration';
+import { RegisteredDevice } from '../hooks/useRegistration';
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -50,7 +50,6 @@ export default function DeviceRegistrationModal({
 }: DeviceRegistrationModalProps) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
-  const { saveRegisteredDevice } = useRegistration();
   const iosBottom = Platform.OS === 'ios' ? 34 : 16;
 
   const [deviceName,   setDeviceName]   = useState('');
@@ -107,7 +106,7 @@ export default function DeviceRegistrationModal({
         product_id:      device.product_id,
         rssi_at_register: device.rssi,
       };
-      await saveRegisteredDevice(rd);
+      // Let DashboardScreen handle the actual save via onRegistered callback
       onRegistered(rd);
     } catch (e: any) {
       setErrorMsg(e.message || 'Failed to register device');
