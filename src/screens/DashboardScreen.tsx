@@ -1117,7 +1117,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           />
       </Animated.View>
     );
-  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, activeHwSettings]);
+  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, activeHwSettings, crewRole]);
 
   const renderItem = useCallback(({ item }: { item: any }) => {
     const cachedConfig = deviceConfigs?.[item.id] || {};
