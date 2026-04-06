@@ -14,14 +14,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal, TextInput,
-  ActivityIndicator, FlatList, Alert, Platform, ScrollView, Animated,
+  ActivityIndicator, FlatList, Alert, Platform, ScrollView, Animated, Image,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { crewService, CrewSession, CrewMember, CrewRole } from '../services/CrewService';
 import { supabase } from '../services/supabaseClient';
-import { profileService } from '../services/ProfileService';
+import { profileService, PermanentCrew } from '../services/ProfileService';
 import { locationService } from '../services/LocationService';
 import { AppLogger } from '../services/AppLogger';
 
@@ -64,7 +65,7 @@ export default function CrewModal({
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
 
-  type ModalStep = 'landing' | 'create' | 'schedule' | 'join' | 'controller';
+  type ModalStep = 'landing' | 'create' | 'schedule' | 'join' | 'controller' | 'manage' | 'crew-detail';
   const [step, setStep] = useState<ModalStep>(activeSession ? 'controller' : 'landing');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -96,6 +97,28 @@ export default function CrewModal({
   const [inviteCode, setInviteCode] = useState('');
   const [activeSessions, setActiveSessions] = useState<CrewSession[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+
+  // ── Manage Crews Hub state ────────────────────────────────────────────────
+  const [manageTab, setManageTab] = useState<'mycrews' | 'discover' | 'create'>('mycrews');
+  const [myCrews, setMyCrews] = useState<PermanentCrew[]>([]);
+  const [publicCrews, setPublicCrews] = useState<PermanentCrew[]>([]);
+  const [selectedCrewDetail, setSelectedCrewDetail] = useState<PermanentCrew | null>(null);
+  const [isLoadingCrews, setIsLoadingCrews] = useState(false);
+  const [crewMemberCounts, setCrewMemberCounts] = useState<Record<string, { count: number; avatarColors: string[] }>>({});
+  // Create crew form
+  const [newCrewName,        setNewCrewName]        = useState('');
+  const [newCrewIsPublic,    setNewCrewIsPublic]    = useState(false);
+  const [newCrewColor,       setNewCrewColor]       = useState('#FFAA00');
+  const [newCrewIcon,        setNewCrewIcon]        = useState('account-group');
+  const [newCrewCity,        setNewCrewCity]        = useState('');
+  const [newCrewState,       setNewCrewState]       = useState('');
+  const [newCrewDescription, setNewCrewDescription] = useState('');
+  const [newCrewPhotoUri,    setNewCrewPhotoUri]    = useState<string | null>(null);
+  const [isCreatingCrew,     setIsCreatingCrew]     = useState(false);
+  const [createCrewError,    setCreateCrewError]    = useState('');
+  // Discover search
+  const [discoverRadius,     setDiscoverRadius]     = useState(50);
+  const [discoverSearch,     setDiscoverSearch]     = useState('');
 
   // Controller
   const [currentSession, setCurrentSession] = useState<CrewSession | null>(activeSession);
@@ -136,22 +159,34 @@ export default function CrewModal({
     loadUser();
   }, [visible]);
 
-  // Load permanent crews when the create/schedule form opens
+  // Load permanent crews when the create/schedule or manage step opens
   useEffect(() => {
-    if (!visible || (step !== 'create' && step !== 'schedule')) return;
-    profileService.getMyCrew().then((crews: any[]) =>
-      setPermanentCrews(crews.map(c => ({ id: c.id, name: c.name })))
-    ).catch(() => {});
+    if (!visible || (step !== 'create' && step !== 'schedule' && step !== 'manage')) return;
+    profileService.getMyCrew().then((crews: PermanentCrew[]) => {
+      setMyCrews(crews);
+      setPermanentCrews(crews.map(c => ({ id: c.id, name: c.name })));
+    }).catch(() => {});
   }, [visible, step]);
 
-  // ── Load permanent crews when entering create or schedule ──────────────────
-
+  // Load public crews when discover sub-tab is active
   useEffect(() => {
-    if (!visible || (step !== 'create' && step !== 'schedule')) return;
-    profileService.getMyCrew().then((crews: any[]) =>
-      setPermanentCrews(crews.map((c: any) => ({ id: c.id, name: c.name })))
-    ).catch(() => {});
-  }, [visible, step]);
+    if (!visible || step !== 'manage' || manageTab !== 'discover') return;
+    setIsLoadingCrews(true);
+    profileService.getPublicCrews().then(crews => {
+      setPublicCrews(crews);
+    }).catch(() => {}).finally(() => setIsLoadingCrews(false));
+  }, [visible, step, manageTab]);
+
+  // Fetch member counts when viewing My Crews list
+  useEffect(() => {
+    if (!visible || step !== 'manage' || manageTab !== 'mycrews' || myCrews.length === 0) return;
+    myCrews.forEach(crew => {
+      if (crewMemberCounts[crew.id]) return;
+      profileService.getCrewMembersForDisplay(crew.id).then(info => {
+        setCrewMemberCounts(prev => ({ ...prev, [crew.id]: info }));
+      }).catch(() => {});
+    });
+  }, [visible, step, manageTab, myCrews]);
 
   // ── Sync props → state ─────────────────────────────────────────────────────
 
@@ -362,7 +397,12 @@ export default function CrewModal({
 
       <TouchableOpacity style={styles.secondaryBtn} onPress={() => { setStep('join'); setErrorMsg(''); }}>
         <MaterialCommunityIcons name="pound" size={18} color={Colors.primary} />
-        <Text style={styles.secondaryBtnText}>Join a Crew</Text>
+        <Text style={styles.secondaryBtnText}>Join a Session by Code</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.secondaryBtn} onPress={() => { setStep('manage'); setManageTab('mycrews'); setErrorMsg(''); }}>
+        <MaterialCommunityIcons name="account-group-outline" size={18} color={Colors.primary} />
+        <Text style={styles.secondaryBtnText}>Manage Crews</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -393,23 +433,15 @@ export default function CrewModal({
               numberOfLines={1}>{crew.name}</Text>
           </TouchableOpacity>
         ))}
+        {/* 'New Crew' — navigates to Manage Crews hub to create a permanent crew */}
         <TouchableOpacity
-          style={[styles.crewChip, selectedCrewId === null && styles.crewChipActive]}
-          onPress={() => setSelectedCrewId(null)}>
-          <MaterialCommunityIcons name="plus" size={13}
-            color={selectedCrewId === null ? '#000' : Colors.primary} />
-          <Text style={[styles.crewChipText, selectedCrewId === null && styles.crewChipTextActive]}>New</Text>
+          style={[styles.crewChip, { borderStyle: 'dashed' }]}
+          onPress={() => { setStep('manage'); setManageTab('create'); }}>
+          <MaterialCommunityIcons name="plus" size={13} color={Colors.primary} />
+          <Text style={styles.crewChipText}>New Crew</Text>
         </TouchableOpacity>
-      </View>
 
-      {selectedCrewId === null && (
-        <>
-          <Text style={styles.label}>SESSION NAME</Text>
-          <TextInput style={styles.input} value={crewName} onChangeText={setCrewName}
-            placeholder="e.g. Friday Night Crew" placeholderTextColor={Colors.textMuted}
-            maxLength={32} autoFocus={permanentCrews.length === 0} />
-        </>
-      )}
+      </View>
 
       <Text style={styles.label}>YOUR NAME IN THIS SESSION</Text>
       <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName}
@@ -849,6 +881,318 @@ export default function CrewModal({
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER — Manage Crews Hub
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const AVATAR_COLORS = ['#FFAA00','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#DDA0DD','#E67E22','#00E676'];
+  const AVATAR_ICONS  = ['account-group','skateboarding','lightning-bolt','star','fire','rocket','shield','crown'];
+
+  const handlePickCrewPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') { Alert.alert('Permission needed', 'Enable photo library access in Settings.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true, aspect: [1, 1], quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) setNewCrewPhotoUri(result.assets[0].uri);
+  };
+
+  const handleCreateCrew = async () => {
+    if (!newCrewName.trim()) { setCreateCrewError('Enter a crew name'); return; }
+    setIsCreatingCrew(true); setCreateCrewError('');
+    try {
+      const crew = await profileService.createPermanentCrew(newCrewName.trim(), {
+        isPublic: newCrewIsPublic,
+        avatarColor: newCrewColor,
+        avatarIcon: newCrewIcon,
+        city: newCrewCity || undefined,
+        state: newCrewState || undefined,
+        description: newCrewDescription || undefined,
+      });
+      setMyCrews(prev => [...prev, crew]);
+      setPermanentCrews(prev => [...prev, { id: crew.id, name: crew.name }]);
+      setNewCrewName(''); setNewCrewCity(''); setNewCrewState(''); setNewCrewDescription('');
+      setNewCrewPhotoUri(null); setCreateCrewError('');
+      Alert.alert('Crew Created! 🎉', `"${crew.name}" is ready. Pick it when starting a session.`);
+      setManageTab('mycrews');
+    } catch (e: any) {
+      setCreateCrewError(e.message ?? 'Failed to create crew');
+    } finally { setIsCreatingCrew(false); }
+  };
+
+  const handleLeaveCrew = (crew: PermanentCrew) => {
+    Alert.alert('Leave Crew', `Leave "${crew.name}"? You can rejoin with the invite code.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Leave', style: 'destructive', onPress: async () => {
+        try {
+          await profileService.leavePermanentCrew(crew.id);
+          setMyCrews(prev => prev.filter(c => c.id !== crew.id));
+          setPermanentCrews(prev => prev.filter(c => c.id !== crew.id));
+          setSelectedCrewDetail(null);
+        } catch (e: any) { Alert.alert('Error', e.message); }
+      }},
+    ]);
+  };
+
+  const handleDeleteCrew = (crew: PermanentCrew) => {
+    Alert.alert('Delete Crew', `Permanently delete "${crew.name}" and remove all members?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        try {
+          await profileService.deleteCrew(crew.id);
+          setMyCrews(prev => prev.filter(c => c.id !== crew.id));
+          setPermanentCrews(prev => prev.filter(c => c.id !== crew.id));
+          setSelectedCrewDetail(null);
+        } catch (e: any) { Alert.alert('Error', e.message); }
+      }},
+    ]);
+  };
+
+  // ── Crew card (✔ responsive flex, no hardcoded widths) ─────────────────────────────
+  const renderCrewCard = (crew: PermanentCrew, onTap: () => void) => {
+    const info = crewMemberCounts[crew.id];
+    return (
+      <TouchableOpacity key={crew.id} style={styles.mgCrewCard} onPress={onTap}>
+        {/* Avatar */}
+        {crew.avatar_url
+          ? <Image source={{ uri: crew.avatar_url }} style={styles.mgAvatarImg} />
+          : <View style={[styles.mgAvatar, { backgroundColor: crew.avatar_color ?? '#FFAA00' }]}>
+              <MaterialCommunityIcons name={(crew.avatar_icon ?? 'account-group') as any} size={22} color="#000" />
+            </View>}
+        {/* Info */}
+        <View style={{ flex: 1 }}>
+          <Text style={styles.mgCrewName} numberOfLines={1}>{crew.name}</Text>
+          {(crew.city || crew.state) && (
+            <Text style={styles.mgCrewSub} numberOfLines={1}>
+              <MaterialCommunityIcons name="map-marker" size={11} color={Colors.textMuted} />
+              {' '}{[crew.city, crew.state].filter(Boolean).join(', ')}
+            </Text>
+          )}
+          {info && (
+            <View style={styles.mgAvatarRow}>
+              {info.avatarColors.slice(0, 5).map((c, i) => (
+                <View key={i} style={[styles.mgMemberDot, { backgroundColor: c, marginLeft: i > 0 ? -6 : 0 }]} />
+              ))}
+              <Text style={styles.mgMemberCount}>{info.count} member{info.count !== 1 ? 's' : ''}</Text>
+            </View>
+          )}
+        </View>
+        {/* Badges */}
+        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+          {crew.is_owner && <View style={styles.mgOwnerBadge}><Text style={styles.mgBadgeText}>Owner</Text></View>}
+          {crew.is_public
+            ? <View style={[styles.mgOwnerBadge, { backgroundColor: 'rgba(0,200,100,0.15)' }]}><Text style={[styles.mgBadgeText, { color: '#00C864' }]}>Public</Text></View>
+            : <View style={[styles.mgOwnerBadge, { backgroundColor: 'rgba(255,255,255,0.06)' }]}><Text style={[styles.mgBadgeText, { color: Colors.textMuted }]}>Private</Text></View>}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderManage = () => {
+    const filteredPublic = publicCrews.filter(c =>
+      !discoverSearch || c.name.toLowerCase().includes(discoverSearch.toLowerCase())
+    );
+    return (
+      <View style={{ flex: 1 }}>
+        {/* Header */}
+        <TouchableOpacity onPress={() => setStep('landing')} style={styles.backBtn}>
+          <MaterialCommunityIcons name="chevron-left" size={22} color={Colors.textMuted} />
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.titleLarge}>Manage Crews</Text>
+
+        {/* Sub-tabs */}
+        <View style={styles.mgTabBar}>
+          {([['mycrews','My Crews','account-group'],['discover','Discover','compass'],['create','Create','plus-circle']] as const).map(([id, label, icon]) => (
+            <TouchableOpacity key={id} style={[styles.mgTab, manageTab === id && styles.mgTabActive]} onPress={() => setManageTab(id)}>
+              <MaterialCommunityIcons name={icon as any} size={14} color={manageTab === id ? '#000' : Colors.textMuted} />
+              <Text style={[styles.mgTabText, manageTab === id && { color: '#000' }]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* MY CREWS */}
+        {manageTab === 'mycrews' && (
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+            {myCrews.length === 0
+              ? <Text style={styles.mgEmptyText}>You're not in any crews yet.{`\n`}Create one or join via invite code.</Text>
+              : myCrews.map(crew => renderCrewCard(crew, () => setSelectedCrewDetail(crew)))
+            }
+          </ScrollView>
+        )}
+
+        {/* DISCOVER */}
+        {manageTab === 'discover' && (
+          <View style={{ flex: 1 }}>
+            <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+              <TextInput
+                style={styles.mgSearchInput}
+                value={discoverSearch} onChangeText={setDiscoverSearch}
+                placeholder="Search public crews…" placeholderTextColor={Colors.textMuted} />
+              <Text style={styles.mgHint}>📍 Showing public crews globally — within ~{discoverRadius} miles by default</Text>
+            </View>
+            {isLoadingCrews
+              ? <ActivityIndicator style={{ marginTop: 40 }} size="large" color={Colors.primary} />
+              : filteredPublic.length === 0
+                ? <Text style={styles.mgEmptyText}>No public crews found.{`\n`}Be the first to create one!</Text>
+                : <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+                    {filteredPublic.map(crew => renderCrewCard(crew, () => setSelectedCrewDetail(crew)))}
+                  </ScrollView>
+            }
+          </View>
+        )}
+
+        {/* CREATE */}
+        {manageTab === 'create' && (
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ padding: 16, paddingBottom: 60 }}>
+            <Text style={styles.label}>CREW NAME</Text>
+            <TextInput style={styles.input} value={newCrewName} onChangeText={setNewCrewName}
+              placeholder="e.g. Friday Night Shredders" placeholderTextColor={Colors.textMuted} maxLength={40} />
+
+            <Text style={styles.label}>DESCRIPTION (OPTIONAL)</Text>
+            <TextInput style={[styles.input, { height: 72, textAlignVertical: 'top' }]}
+              value={newCrewDescription} onChangeText={setNewCrewDescription} multiline
+              placeholder="What's this crew about?" placeholderTextColor={Colors.textMuted} maxLength={120} />
+
+            {/* Avatar photo */}
+            <Text style={styles.label}>CREW PHOTO (OPTIONAL)</Text>
+            <TouchableOpacity style={styles.mgPhotoBtn} onPress={handlePickCrewPhoto}>
+              {newCrewPhotoUri
+                ? <Image source={{ uri: newCrewPhotoUri }} style={styles.mgPhotoBtnImg} />
+                : <><MaterialCommunityIcons name="camera-plus" size={22} color={Colors.primary} />
+                    <Text style={styles.mgPhotoBtnText}>Upload photo</Text></>}
+            </TouchableOpacity>
+
+            {/* Avatar color */}
+            <Text style={styles.label}>AVATAR COLOR</Text>
+            <View style={styles.mgColorRow}>
+              {AVATAR_COLORS.map(c => (
+                <TouchableOpacity key={c} onPress={() => setNewCrewColor(c)}
+                  style={[styles.mgColorSwatch, { backgroundColor: c }, newCrewColor === c && styles.mgColorActive]} />
+              ))}
+            </View>
+
+            {/* Avatar icon */}
+            <Text style={styles.label}>AVATAR ICON</Text>
+            <View style={styles.mgIconRow}>
+              {AVATAR_ICONS.map(ic => (
+                <TouchableOpacity key={ic} onPress={() => setNewCrewIcon(ic)}
+                  style={[styles.mgIconBtn, newCrewIcon === ic && { backgroundColor: newCrewColor }]}>
+                  <MaterialCommunityIcons name={ic as any} size={20} color={newCrewIcon === ic ? '#000' : Colors.textMuted} />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Location */}
+            <Text style={styles.label}>HOME CITY (OPTIONAL)</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TextInput style={[styles.input, { flex: 2 }]} value={newCrewCity} onChangeText={setNewCrewCity}
+                placeholder="City" placeholderTextColor={Colors.textMuted} />
+              <TextInput style={[styles.input, { flex: 1 }]} value={newCrewState} onChangeText={setNewCrewState}
+                placeholder="State" placeholderTextColor={Colors.textMuted} />
+            </View>
+
+            {/* Public / Private */}
+            <Text style={styles.label}>VISIBILITY</Text>
+            <View style={styles.visibilityRow}>
+              <TouchableOpacity style={[styles.visibilityBtn, !newCrewIsPublic && styles.visibilityBtnActive]}
+                onPress={() => setNewCrewIsPublic(false)}>
+                <MaterialCommunityIcons name="lock" size={15} color={!newCrewIsPublic ? '#000' : Colors.textMuted} />
+                <Text style={[styles.visibilityBtnText, !newCrewIsPublic && styles.visibilityBtnTextActive]}>Private</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.visibilityBtn, newCrewIsPublic && styles.visibilityBtnPublic]}
+                onPress={() => setNewCrewIsPublic(true)}>
+                <MaterialCommunityIcons name="earth" size={15} color={newCrewIsPublic ? '#000' : Colors.textMuted} />
+                <Text style={[styles.visibilityBtnText, newCrewIsPublic && styles.visibilityBtnTextActive]}>Public</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.hintText}>
+              {newCrewIsPublic ? '🌍 Anyone can find & join via Discover.' : '🔒 Invite code required to join.'}
+            </Text>
+
+            {createCrewError ? <Text style={{ color: '#FF4444', marginVertical: 8 }}>{createCrewError}</Text> : null}
+
+            <TouchableOpacity style={[styles.primaryBtn, { marginTop: 20 }]} onPress={handleCreateCrew} disabled={isCreatingCrew}>
+              {isCreatingCrew ? <ActivityIndicator size="small" color="#000" /> : <MaterialCommunityIcons name="check" size={18} color="#000" />}
+              <Text style={styles.primaryBtnText}>Create Crew</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        )}
+      </View>
+    );
+  };
+
+  // ── Crew Detail sheet ──────────────────────────────────────────────────────────────
+  const renderCrewDetail = () => {
+    const crew = selectedCrewDetail;
+    if (!crew) return null;
+    const info = crewMemberCounts[crew.id];
+    return (
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
+        <TouchableOpacity onPress={() => setSelectedCrewDetail(null)} style={styles.backBtn}>
+          <MaterialCommunityIcons name="chevron-left" size={22} color={Colors.textMuted} />
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+
+        {/* Crew avatar */}
+        <View style={{ alignItems: 'center', marginVertical: 16 }}>
+          {crew.avatar_url
+            ? <Image source={{ uri: crew.avatar_url }} style={[styles.mgAvatarImg, { width: 72, height: 72, borderRadius: 36 }]} />
+            : <View style={[styles.mgAvatar, { width: 72, height: 72, borderRadius: 36, backgroundColor: crew.avatar_color ?? '#FFAA00' }]}>
+                <MaterialCommunityIcons name={(crew.avatar_icon ?? 'account-group') as any} size={32} color="#000" />
+              </View>}
+          <Text style={[styles.titleLarge, { marginTop: 10, marginBottom: 2 }]}>{crew.name}</Text>
+          {(crew.city || crew.state) && (
+            <Text style={styles.mgCrewSub}>
+              <MaterialCommunityIcons name="map-marker" size={12} color={Colors.textMuted} />
+              {' '}{[crew.city, crew.state].filter(Boolean).join(', ')}
+            </Text>
+          )}
+          {crew.description && <Text style={[styles.mgHint, { textAlign: 'center', marginTop: 8 }]}>{crew.description}</Text>}
+        </View>
+
+        {/* Members  */}
+        <Text style={styles.label}>MEMBERS</Text>
+        <View style={styles.mgAvatarRow}>
+          {(info?.avatarColors ?? []).slice(0, 8).map((c, i) => (
+            <View key={i} style={[styles.mgMemberDot, { width: 32, height: 32, borderRadius: 16, backgroundColor: c, marginLeft: i > 0 ? -10 : 0, borderWidth: 2, borderColor: '#111' }]} />
+          ))}
+          <Text style={[styles.mgMemberCount, { marginLeft: 8 }]}>{info?.count ?? '?'} member{(info?.count ?? 0) !== 1 ? 's' : ''}</Text>
+        </View>
+
+        {/* Invite code */}
+        <Text style={styles.label}>INVITE CODE</Text>
+        <View style={styles.mgCodeBox}>
+          <Text style={styles.mgCodeText}>{crew.invite_code}</Text>
+          <Text style={styles.mgHint}>Share this code for others to join</Text>
+        </View>
+
+        {/* Status */}
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+          {crew.is_owner && <View style={styles.mgOwnerBadge}><Text style={styles.mgBadgeText}>👑 Owner</Text></View>}
+          {crew.is_public
+            ? <View style={[styles.mgOwnerBadge, { backgroundColor: 'rgba(0,200,100,0.15)' }]}><Text style={[styles.mgBadgeText, { color: '#00C864' }]}>🌍 Public</Text></View>
+            : <View style={[styles.mgOwnerBadge, { backgroundColor: 'rgba(255,255,255,0.06)' }]}><Text style={[styles.mgBadgeText, { color: Colors.textMuted }]}>🔒 Private</Text></View>}
+        </View>
+
+        {/* Actions */}
+        <View style={{ marginTop: 24, gap: 12 }}>
+          {crew.is_owner
+            ? <TouchableOpacity style={styles.dangerBtn} onPress={() => handleDeleteCrew(crew)}>
+                <MaterialCommunityIcons name="delete-forever" size={17} color="#FF4444" />
+                <Text style={styles.dangerBtnText}>Delete Crew</Text>
+              </TouchableOpacity>
+            : <TouchableOpacity style={styles.dangerBtn} onPress={() => handleLeaveCrew(crew)}>
+                <MaterialCommunityIcons name="exit-run" size={17} color="#FF6B00" />
+                <Text style={[styles.dangerBtnText, { color: '#FF6B00' }]}>Leave Crew</Text>
+              </TouchableOpacity>}
+        </View>
+      </ScrollView>
+    );
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // MAIN RENDER
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -860,11 +1204,13 @@ export default function CrewModal({
             <MaterialCommunityIcons name="close" size={20} color={Colors.textMuted} />
           </TouchableOpacity>
 
-          {step === 'landing'    && renderLanding()}
-          {step === 'create'     && renderCreate()}
-          {step === 'schedule'   && renderSchedule()}
-          {step === 'join'       && renderJoin()}
-          {step === 'controller' && renderController()}
+          {step === 'landing'     && renderLanding()}
+          {step === 'create'      && renderCreate()}
+          {step === 'schedule'    && renderSchedule()}
+          {step === 'join'        && renderJoin()}
+          {step === 'controller'  && renderController()}
+          {step === 'manage'      && !selectedCrewDetail && renderManage()}
+          {step === 'manage'      && !!selectedCrewDetail && renderCrewDetail()}
         </View>
       </View>
     </Modal>
@@ -1043,4 +1389,43 @@ const createStyles = (Colors: any) => StyleSheet.create({
   doneBtnText:{ color: '#000', fontSize: 14, fontWeight: '800' },
   endBtn:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderWidth: 1.5, borderColor: '#FF4444', borderRadius: 14, paddingVertical: 14 },
   endBtnText: { color: '#FF4444', fontSize: 13, fontWeight: '700' },
+
+  // ── Manage Crews Hub styles ────────────────────────────────────────────────
+  mgTabBar:      { flexDirection: 'row', paddingHorizontal: 12, gap: 6, marginBottom: 4 },
+  mgTab:         { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)' },
+  mgTabActive:   { backgroundColor: Colors.primary || '#FFAA00' },
+  mgTabText:     { fontSize: 11, fontWeight: '700', color: Colors.textMuted || '#888' },
+  mgEmptyText:   { color: Colors.textMuted || '#888', fontSize: 14, textAlign: 'center', marginTop: 40, lineHeight: 22 },
+  mgSearchInput: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', color: Colors.text || '#FFF', fontSize: 14, paddingHorizontal: 12, paddingVertical: 9, marginBottom: 6 },
+  mgHint:        { color: Colors.textMuted || '#888', fontSize: 11, lineHeight: 16 },
+
+  // Crew card
+  mgCrewCard:    { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: 14, marginBottom: 10 },
+  mgAvatar:      { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  mgAvatarImg:   { width: 44, height: 44, borderRadius: 22 },
+  mgCrewName:    { color: Colors.text || '#FFF', fontSize: 15, fontWeight: '700' },
+  mgCrewSub:     { color: Colors.textMuted || '#888', fontSize: 11, marginTop: 2 },
+  mgAvatarRow:   { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  mgMemberDot:   { width: 18, height: 18, borderRadius: 9 },
+  mgMemberCount: { color: Colors.textMuted || '#888', fontSize: 11, marginLeft: 6 },
+  mgOwnerBadge:  { backgroundColor: 'rgba(255,170,0,0.15)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  mgBadgeText:   { color: Colors.primary || '#FFAA00', fontSize: 10, fontWeight: '800' },
+
+  // Create crew form
+  mgPhotoBtn:    { height: 80, borderRadius: 12, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 4, overflow: 'hidden' },
+  mgPhotoBtnImg: { width: '100%', height: '100%', resizeMode: 'cover' },
+  mgPhotoBtnText:{ color: Colors.textMuted || '#888', fontSize: 13 },
+  mgColorRow:    { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 4 },
+  mgColorSwatch: { width: 32, height: 32, borderRadius: 16 },
+  mgColorActive: { borderWidth: 3, borderColor: '#FFF' },
+  mgIconRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  mgIconBtn:     { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.07)' },
+
+  // Crew detail
+  mgCodeBox:     { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 14, alignItems: 'center', gap: 4 },
+  mgCodeText:    { color: Colors.text || '#FFF', fontSize: 28, fontWeight: '900', letterSpacing: 6, fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace' },
+
+  // Danger actions
+  dangerBtn:     { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: 'rgba(255,68,68,0.4)', borderRadius: 12, padding: 14 },
+  dangerBtnText: { color: '#FF4444', fontSize: 14, fontWeight: '700' },
 });

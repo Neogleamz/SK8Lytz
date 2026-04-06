@@ -29,10 +29,24 @@ export interface PermanentCrew {
   owner_id: string | null;
   invite_code: string;
   created_at: string;
+  // Migration 008 enrichment
+  is_public?:    boolean;
+  avatar_color?: string;
+  avatar_icon?:  string;
+  avatar_url?:   string | null;
+  city?:         string | null;
+  state?:        string | null;
+  description?:  string | null;
   /** member_count is joined/computed client-side */
   member_count?: number;
   /** true if the current user is the owner */
   is_owner?: boolean;
+}
+
+export interface CrewMemberDisplay {
+  user_id: string;
+  display_name: string | null;
+  avatar_color: string;
 }
 
 export interface SessionHistoryItem {
@@ -149,7 +163,7 @@ class ProfileService {
 
     const { data, error } = await supabase
       .from('crew_memberships')
-      .select(`crews ( id, name, owner_id, invite_code, created_at )`)
+      .select(`crews ( id, name, owner_id, invite_code, created_at, is_public, avatar_color, avatar_icon, avatar_url, city, state, description )`)
       .eq('user_id', user.id)
       .order('joined_at', { ascending: true });
 
@@ -167,13 +181,21 @@ class ProfileService {
   /**
    * Create a new permanent crew and auto-join the creator as member.
    */
-  async createPermanentCrew(name: string): Promise<PermanentCrew> {
+  async createPermanentCrew(name: string, opts?: { isPublic?: boolean; avatarColor?: string; avatarIcon?: string; city?: string; state?: string; description?: string }): Promise<PermanentCrew> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    const insertData: any = { name, owner_id: user.id };
+    if (opts?.isPublic    !== undefined) insertData.is_public    = opts.isPublic;
+    if (opts?.avatarColor)               insertData.avatar_color = opts.avatarColor;
+    if (opts?.avatarIcon)                insertData.avatar_icon  = opts.avatarIcon;
+    if (opts?.city)                      insertData.city         = opts.city;
+    if (opts?.state)                     insertData.state        = opts.state;
+    if (opts?.description)               insertData.description  = opts.description;
+
     const { data: crew, error: crewErr } = await supabase
       .from('crews')
-      .insert({ name, owner_id: user.id })
+      .insert(insertData)
       .select()
       .single();
 
@@ -234,6 +256,89 @@ class ProfileService {
       .select('id', { count: 'exact', head: true })
       .eq('crew_id', crewId);
     return count ?? 0;
+  }
+
+  /**
+   * Get member count + avatar colors for display (privacy-safe — no names).
+   */
+  async getCrewMembersForDisplay(crewId: string): Promise<{ count: number; avatarColors: string[] }> {
+    const { data, error } = await supabase
+      .from('crew_memberships')
+      .select('user_profiles ( avatar_color )')
+      .eq('crew_id', crewId)
+      .limit(12);
+
+    if (error || !data) return { count: 0, avatarColors: [] };
+    const colors = data
+      .map((row: any) => row.user_profiles?.avatar_color)
+      .filter(Boolean) as string[];
+    const { count } = await supabase
+      .from('crew_memberships')
+      .select('id', { count: 'exact', head: true })
+      .eq('crew_id', crewId);
+    return { count: count ?? colors.length, avatarColors: colors };
+  }
+
+  /**
+   * Update crew details — owner only.
+   */
+  async updateCrew(crewId: string, fields: {
+    name?: string; isPublic?: boolean; avatarColor?: string;
+    avatarIcon?: string; avatarUrl?: string | null;
+    city?: string; state?: string; description?: string;
+  }): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const updates: any = {};
+    if (fields.name        !== undefined) updates.name         = fields.name;
+    if (fields.isPublic    !== undefined) updates.is_public    = fields.isPublic;
+    if (fields.avatarColor !== undefined) updates.avatar_color = fields.avatarColor;
+    if (fields.avatarIcon  !== undefined) updates.avatar_icon  = fields.avatarIcon;
+    if (fields.avatarUrl   !== undefined) updates.avatar_url   = fields.avatarUrl;
+    if (fields.city        !== undefined) updates.city         = fields.city;
+    if (fields.state       !== undefined) updates.state        = fields.state;
+    if (fields.description !== undefined) updates.description  = fields.description;
+
+    const { error } = await supabase
+      .from('crews')
+      .update(updates)
+      .eq('id', crewId)
+      .eq('owner_id', user.id);  // owner-only guard
+
+    if (error) throw error;
+  }
+
+  /**
+   * Fetch all public crews (for Discover tab), optionally filtered.
+   */
+  async getPublicCrews(): Promise<PermanentCrew[]> {
+    const { data, error } = await supabase
+      .from('crews')
+      .select('id, name, owner_id, invite_code, created_at, is_public, avatar_color, avatar_icon, avatar_url, city, state, description')
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error || !data) return [];
+    const { data: { user } } = await supabase.auth.getUser();
+    return data.map((crew: any) => ({ ...crew, is_owner: crew.owner_id === user?.id })) as PermanentCrew[];
+  }
+
+  /**
+   * Delete a crew — owner only. Cascades memberships via DB FK.
+   */
+  async deleteCrew(crewId: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { error } = await supabase
+      .from('crews')
+      .delete()
+      .eq('id', crewId)
+      .eq('owner_id', user.id);  // owner-only guard
+
+    if (error) throw error;
   }
 
   // ── Push Tokens ──────────────────────────────────────────
