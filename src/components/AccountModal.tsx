@@ -417,7 +417,15 @@ export default function AccountModal({
 
   // ── Sign Out ──────────────────────────────────────────────────────────────
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    if (Platform.OS === 'web') {
+      // On web, Alert.alert() shows a browser native confirm() which can block automation.
+      // Sign out directly — the app will redirect to AuthScreen via the auth state listener.
+      await supabase.auth.signOut();
+      onSignOut();
+      onClose();
+      return;
+    }
     Alert.alert('Sign Out', 'Sign out of your SK8Lytz account?', [
       { text: 'Cancel', style: 'cancel' },
       {

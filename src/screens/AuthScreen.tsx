@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Alert,
-  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Animated
+  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Animated, Linking
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabaseClient';
@@ -21,10 +21,25 @@ const STORAGE_LAST_EMAIL = 'ng_auth_last_email';
 
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
 
+/** Simple email format validator */
+const isValidEmail = (str: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str.trim());
+
+/** Show help info — uses Linking on web, Alert on native */
+const showHelp = () => {
+  if (Platform.OS === 'web') {
+    // On web, open support page rather than a blocking window.alert()
+    Linking.openURL('mailto:support@sk8lytz.com?subject=SK8Lytz%20Support');
+  } else {
+    Alert.alert(
+      'SK8Lytz Support',
+      'Need help?\n\n• Email: support@sk8lytz.com\n• Docs: sk8lytz.com/help\n• Discord: discord.gg/sk8lytz'
+    );
+  }
+};
+
 export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuccess: () => void; onOfflineMode?: () => void }) {
   const { Colors, toggleTheme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const styles = createStyles(Colors, insets);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,7 +50,12 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
   const [showPassword, setShowPassword] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<PasswordStrength | null>(null);
+  const [errorMessage, setErrorMessage] = useState('');   // << inline error state
+  const [successMessage, setSuccessMessage] = useState(''); // << inline success state
   const strengthAnim = useRef(new Animated.Value(0)).current;
+
+  // Derive styles reactively from Colors so theme toggle re-renders instantly
+  const styles = createStyles(Colors, insets);
 
   // ─── Load saved email on mount ───────────────────────────────────────────────
   useEffect(() => {
@@ -43,6 +63,12 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
       if (saved) setEmail(saved);
     });
   }, []);
+
+  // ─── Clear inline messages when mode changes ─────────────────────────────────
+  useEffect(() => {
+    setErrorMessage('');
+    setSuccessMessage('');
+  }, [mode]);
 
   // ─── Password strength meter ─────────────────────────────────────────────────
   useEffect(() => {
@@ -59,13 +85,22 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
     }
   }, [password, mode]);
 
+  /** Show an error inline — replaces Alert.alert() for validation/auth errors */
+  const showError = (msg: string) => {
+    setErrorMessage(msg);
+    setSuccessMessage('');
+  };
+
+  /** Show a success message inline */
+  const showSuccess = (msg: string) => {
+    setSuccessMessage(msg);
+    setErrorMessage('');
+  };
 
   // ─── MAGIC LINK ─────────────────────────────────────────────────────────────
   const handleMagicLink = async () => {
-    if (!email.trim()) {
-      Alert.alert('Email Required', 'Enter your email to receive a magic link.');
-      return;
-    }
+    if (!email.trim()) { showError('Enter your email to receive a magic link.'); return; }
+    if (!isValidEmail(email)) { showError('Please enter a valid email address.'); return; }
     setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
@@ -73,19 +108,27 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
     });
     setLoading(false);
     if (error) {
-      Alert.alert('Error', error.message);
+      showError(error.message);
     } else {
       setMagicSent(true);
     }
   };
 
-  // ─── SIGN IN (supports email OR username) ───────────────────────────────────
+  // ─── SIGN IN ─────────────────────────────────────────────────────────────────
   const handleSignIn = async () => {
     const input = email.trim();
-    if (!input || !password) {
-      Alert.alert('Missing Fields', 'Please enter your email (or username) and password.');
+
+    // FIX 1.1.2 + 1.2.2: Client-side validation with inline error
+    if (!input) { showError('Please enter your email or username.'); return; }
+    if (!password) { showError('Please enter your password.'); return; }
+
+    // If it looks like an email, validate the format
+    if (input.includes('@') && !isValidEmail(input)) {
+      showError('Please enter a valid email address (e.g. you@example.com).');
       return;
     }
+
+    setErrorMessage('');
     setLoading(true);
 
     let loginEmail = input;
@@ -96,22 +139,28 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         const { data, error: rpcErr } = await supabase.rpc('get_email_by_username', { p_username: input });
         if (rpcErr || !data) {
           setLoading(false);
-          Alert.alert('Username Not Found', 'No account found with that username. Try signing in with your email instead.');
+          showError('No account found with that username. Try signing in with your email instead.');
           return;
         }
         loginEmail = data as string;
       } catch {
         setLoading(false);
-        Alert.alert('Error', 'Could not look up username. Please use your email to sign in.');
+        showError('Could not look up username. Please use your email to sign in.');
         return;
       }
     }
 
+    // FIX 1.1.3: Display Supabase auth error inline instead of Alert
     const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
     setLoading(false);
     if (error) {
-      Alert.alert('Sign In Failed', error.message);
+      // Make auth errors more user-friendly
+      const msg = error.message.toLowerCase().includes('invalid login')
+        ? 'Incorrect email or password. Please try again.'
+        : error.message;
+      showError(msg);
     } else {
+      setErrorMessage('');
       await AsyncStorage.setItem(STORAGE_LAST_EMAIL, loginEmail);
       onAuthSuccess();
     }
@@ -119,36 +168,34 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
 
   // ─── SIGN UP ─────────────────────────────────────────────────────────────────
   const handleSignUp = async () => {
-    if (!username.trim()) { Alert.alert('Missing Field', 'Please enter a username.'); return; }
-    if (!email.trim()) { Alert.alert('Missing Field', 'Please enter your email.'); return; }
+    // FIX 1.2.2: All validation errors shown inline
+    if (!username.trim()) { showError('Please enter a username.'); return; }
+    if (!email.trim()) { showError('Please enter your email.'); return; }
+    if (!isValidEmail(email)) { showError('Please enter a valid email address.'); return; }
+    if (!password) { showError('Please enter a password.'); return; }
 
-    // Username profanity check
     if (containsProfanity(username)) {
-      Alert.alert('Invalid Username', 'Your username contains inappropriate language. Please choose a different name.');
+      showError('Your username contains inappropriate language. Please choose a different name.');
       return;
     }
 
-    // Complexity check
     const strength = checkPasswordComplexity(password);
     if (strength.errors.length > 0) {
-      Alert.alert('Weak Password', 'Your password must include:\n• ' + strength.errors.join('\n• '));
+      showError('Your password must include:\n• ' + strength.errors.join('\n• '));
       return;
     }
-    // Common password check
     if (isCommonPassword(password)) {
-      Alert.alert('Password Too Common', 'This password is in the list of most commonly used passwords. Please choose something more unique.');
+      showError('This password is too common. Please choose something more unique.');
       return;
     }
-    // HIBP check
+
+    setErrorMessage('');
     setHibpChecking(true);
     const hibp = await checkHIBP(password);
     setHibpChecking(false);
+
     if (hibp.pwned) {
-      Alert.alert(
-        '⚠️ Compromised Password',
-        `This exact password has appeared in ${hibp.count.toLocaleString()} data breaches. Please choose a different password.`,
-        [{ text: 'Choose Another', style: 'default' }]
-      );
+      showError(`⚠️ This password has appeared in ${hibp.count.toLocaleString()} data breaches. Please choose a different password.`);
       return;
     }
 
@@ -159,26 +206,27 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
       options: { data: { username: username.trim() } },
     });
     setLoading(false);
-    if (error) Alert.alert('Sign Up Failed', error.message);
-    else {
-      Alert.alert('✅ Account Created', 'Check your email for a verification link, then log in.');
-      setMode('LOGIN');
+    if (error) {
+      showError(error.message);
+    } else {
+      showSuccess('✅ Account created! Check your email for a verification link, then log in.');
+      setTimeout(() => setMode('LOGIN'), 3000);
     }
   };
 
   // ─── FORGOT PASSWORD ─────────────────────────────────────────────────────────
   const handleForgotPassword = async () => {
-    if (!email.trim()) {
-      Alert.alert('Email Required', 'Enter your email to reset your password.');
-      return;
-    }
+    // FIX 1.3.2: Blank email guard shown inline
+    if (!email.trim()) { showError('Please enter your email address.'); return; }
+    if (!isValidEmail(email)) { showError('Please enter a valid email address.'); return; }
+    setErrorMessage('');
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: 'sk8lytz://auth' });
     setLoading(false);
-    if (error) Alert.alert('Error', error.message);
-    else {
-      Alert.alert('Email Sent', 'Password reset instructions have been sent to your inbox.');
-      setMode('LOGIN');
+    if (error) {
+      showError(error.message);
+    } else {
+      showSuccess('📧 Password reset link sent! Check your inbox.');
     }
   };
 
@@ -186,6 +234,8 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
     setMode(newMode);
     setMagicSent(false);
     setPasswordStrength(null);
+    setErrorMessage('');
+    setSuccessMessage('');
   };
 
   // ─── MAGIC LINK SENT STATE ───────────────────────────────────────────────────
@@ -208,7 +258,8 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      {/* Theme + Support buttons — top right corner */}
+      {/* FIX 1.1.5: Theme toggle — styles now computed from Colors in render, so toggle re-renders correctly */}
+      {/* FIX 1.1.6: Help button uses web-safe showHelp() instead of Alert.alert() */}
       <View style={styles.topButtons}>
         <TouchableOpacity style={styles.topBtn} onPress={toggleTheme}>
           <MaterialCommunityIcons
@@ -217,10 +268,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             color={Colors.textMuted}
           />
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.topBtn}
-          onPress={() => Alert.alert('SK8Lytz Support', 'Need help?\n\n• Email: support@sk8lytz.com\n• Docs: sk8lytz.com/help\n• Discord: discord.gg/sk8lytz')}
-        >
+        <TouchableOpacity style={styles.topBtn} onPress={showHelp}>
           <MaterialCommunityIcons name="help-circle-outline" size={18} color={Colors.textMuted} />
         </TouchableOpacity>
       </View>
@@ -247,7 +295,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
               placeholder="Username"
               placeholderTextColor={Colors.textMuted}
               value={username}
-              onChangeText={setUsername}
+              onChangeText={t => { setUsername(t); setErrorMessage(''); }}
               autoCapitalize="none"
             />
           )}
@@ -258,7 +306,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             placeholder={mode === 'LOGIN' ? 'Email or username' : 'email@address.com'}
             placeholderTextColor={Colors.textMuted}
             value={email}
-            onChangeText={setEmail}
+            onChangeText={t => { setEmail(t); setErrorMessage(''); }}
             autoCapitalize="none"
             keyboardType={mode === 'LOGIN' ? 'default' : 'email-address'}
             autoComplete={mode === 'LOGIN' ? 'off' : 'email'}
@@ -273,7 +321,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
                   placeholder="Password"
                   placeholderTextColor={Colors.textMuted}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={t => { setPassword(t); setErrorMessage(''); }}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                 />
@@ -309,6 +357,22 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             </TouchableOpacity>
           )}
 
+          {/* ── Inline error message (replaces Alert.alert for all modes) ── */}
+          {!!errorMessage && (
+            <View style={styles.errorBanner}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={15} color="#FF6B6B" style={{ marginRight: 6 }} />
+              <Text style={styles.errorBannerText}>{errorMessage}</Text>
+            </View>
+          )}
+
+          {/* ── Inline success message ── */}
+          {!!successMessage && (
+            <View style={styles.successBanner}>
+              <MaterialCommunityIcons name="check-circle-outline" size={15} color="#4ADE80" style={{ marginRight: 6 }} />
+              <Text style={styles.successBannerText}>{successMessage}</Text>
+            </View>
+          )}
+
           {/* Primary action button */}
           <TouchableOpacity
             style={styles.primaryButton}
@@ -335,13 +399,6 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             )}
           </TouchableOpacity>
 
-          {/* Magic link option — disabled */}
-          {/* {mode === 'LOGIN' && (
-            <TouchableOpacity onPress={() => resetState('MAGIC_LINK')} style={styles.magicLinkButton}>
-              <Text style={styles.magicLinkText}>✨ Sign in with Magic Link instead</Text>
-            </TouchableOpacity>
-          )} */}
-
           {/* Toggle login / signup */}
           <View style={styles.toggleContainer}>
             <Text style={styles.toggleText}>
@@ -356,7 +413,6 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             </TouchableOpacity>
           </View>
         </View>
-
 
         {/* Offline mode option */}
         {(mode === 'LOGIN' || mode === 'MAGIC_LINK') && onOfflineMode && (
@@ -386,7 +442,7 @@ const createStyles = (Colors: any, insets: { top: number; bottom: number; left: 
   scrollContent: {
     flexGrow: 1, justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingTop: Math.max(insets.top + 60, 80), // clear the absolute topButtons row
+    paddingTop: Math.max(insets.top + 60, 80),
     paddingBottom: 24,
   },
   topButtons: {
@@ -415,6 +471,40 @@ const createStyles = (Colors: any, insets: { top: number; bottom: number; left: 
   },
   forgotPasswordContainer: { alignItems: 'flex-end', marginBottom: 16, marginTop: -4 },
   forgotPasswordText: { color: Colors.primary, fontSize: 13 },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255, 107, 107, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.3)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  errorBannerText: {
+    color: '#FF6B6B',
+    fontSize: 13,
+    lineHeight: 18,
+    flex: 1,
+  },
+  successBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(74, 222, 128, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(74, 222, 128, 0.3)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  successBannerText: {
+    color: '#4ADE80',
+    fontSize: 13,
+    lineHeight: 18,
+    flex: 1,
+  },
   primaryButton: {
     backgroundColor: Colors.primary,
     padding: 16,
@@ -440,21 +530,6 @@ const createStyles = (Colors: any, insets: { top: number; bottom: number; left: 
   toggleContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
   toggleText: { color: Colors.textMuted, fontSize: 14 },
   toggleLink: { color: Colors.primary, fontSize: 14, fontWeight: 'bold' },
-  oauthContainer: { marginTop: 8 },
-  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  divider: { flex: 1, height: 1, backgroundColor: Colors.surfaceHighlight },
-  dividerText: { color: Colors.textMuted, fontSize: 10, fontWeight: 'bold', marginHorizontal: 12 },
-  oauthButtonGroup: { flexDirection: 'row', gap: 10 },
-  oauthButton: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    padding: 13,
-    borderRadius: Layout.borderRadius,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.surfaceHighlight,
-  },
-  oauthButtonText: { color: Colors.text, fontWeight: 'bold', fontSize: 13 },
   offlineButton: {
     alignItems: 'center',
     marginTop: 20,
