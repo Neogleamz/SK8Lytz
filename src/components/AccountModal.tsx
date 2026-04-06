@@ -143,6 +143,7 @@ export default function AccountModal({
         setProfile(p);
         setEditName(p.display_name ?? '');
         setEditUsername(p.username ?? '');
+        if (p.avatar_url) setProfilePhotoUri(p.avatar_url); // Restore persisted photo
       }
       setCrews(c);
       setHistory(h);
@@ -226,11 +227,38 @@ export default function AccountModal({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true, aspect: [1, 1], quality: 0.7,
     });
-    if (!result.canceled && result.assets[0]) {
-      setProfilePhotoUri(result.assets[0].uri);
-      // Note: full upload to Supabase Storage can be added when storage bucket is configured
-      AppLogger.log('PROFILE_UPDATED', { field: 'photo', uri: result.assets[0].uri });
+    if (result.canceled || !result.assets[0]) return;
 
+    const asset = result.assets[0];
+    setProfilePhotoUri(asset.uri); // Optimistic local preview
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Fetch image as blob
+      const response = await fetch(asset.uri);
+      const blob = await response.blob();
+      const ext = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
+      const path = `${user.id}/avatar.${ext}`;
+
+      // Upload to Supabase Storage avatars bucket
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, blob, { contentType: `image/${ext}`, upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+
+      // Persist to profile
+      await profileService.updateProfile({ avatar_url: publicUrl });
+      setProfile(p => p ? { ...p, avatar_url: publicUrl } : p);
+      AppLogger.log('PROFILE_UPDATED', { field: 'photo', bucket: 'avatars', path });
+    } catch (e: any) {
+      console.warn('[AccountModal] Photo upload failed:', e.message);
+      Alert.alert('Upload failed', e.message ?? 'Could not upload photo. Try again.');
     }
   };
 
@@ -446,8 +474,8 @@ export default function AccountModal({
     <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
       {/* Avatar — tappable to pick photo */}
       <TouchableOpacity onPress={handlePickProfilePhoto} style={{ alignSelf: 'center', marginBottom: 4 }}>
-        {profilePhotoUri
-          ? <Image source={{ uri: profilePhotoUri }}
+        {(profilePhotoUri || profile?.avatar_url)
+          ? <Image source={{ uri: profilePhotoUri ?? profile?.avatar_url! }}
               style={[styles.avatarCircle, { overflow: 'hidden' }]} />
           : <View style={[styles.avatarCircle, { backgroundColor: profile?.avatar_color ?? '#FF8C00' }]}>
               <Text style={styles.avatarText}>{initials(profile?.display_name ?? null)}</Text>

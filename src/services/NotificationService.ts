@@ -105,7 +105,108 @@ class NotificationService {
 
   get pushToken() { return this.token; }
 
+  // ── Send notifications ────────────────────────────────────
+
+  /**
+   * Fire a local notification when a crew member joins or an invite is accepted.
+   * Call this after joinPublicCrewById / joinSession succeeds on the LEADER's device.
+   */
+  async sendCrewInviteNotification(opts: {
+    joinerName: string;
+    crewName: string;
+    crewId: string;
+    sessionId?: string;
+  }): Promise<void> {
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `🛼 ${opts.joinerName} joined your crew!`,
+          body: `${opts.joinerName} has joined "${opts.crewName}". Time to skate!`,
+          data: { crewId: opts.crewId, sessionId: opts.sessionId ?? '' },
+          sound: true,
+          ...(Platform.OS === 'android' ? { channelId: 'crew-alerts' } : {}),
+        },
+        trigger: null, // immediate
+      });
+      AppLogger.log('PUSH_NOTIFICATION_SENT', { type: 'crew_invite', crewId: opts.crewId });
+    } catch (err) {
+      console.warn('[NotificationService] sendCrewInviteNotification failed:', err);
+    }
+  }
+
+  /**
+   * Schedule a local "starting soon" reminder 15 minutes before a session.
+   * Returns the notification identifier so it can be cancelled if the session is cancelled.
+   */
+  async sendSessionStartingSoon(opts: {
+    sessionId: string;
+    sessionName: string;
+    crewName: string;
+    scheduledAt: Date;
+  }): Promise<string | null> {
+    const triggerDate = new Date(opts.scheduledAt.getTime() - 15 * 60 * 1000);
+    if (triggerDate <= new Date()) {
+      // Session starts in under 15 min — fire immediately
+      return this._scheduleSessionAlert(opts, null);
+    }
+    return this._scheduleSessionAlert(opts, { date: triggerDate });
+  }
+
+  /** Cancel a previously scheduled session reminder by its notification ID. */
+  async cancelSessionReminder(notificationId: string): Promise<void> {
+    try {
+      await Notifications.cancelScheduledNotificationAsync(notificationId);
+    } catch { /* already fired or didn't exist */ }
+  }
+
+  /** Send an immediate "session is starting now" local notification to all crew members. */
+  async sendSessionLiveAlert(opts: {
+    sessionId: string;
+    sessionName: string;
+    crewName: string;
+    locationLabel: string;
+  }): Promise<void> {
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `🛼 "${opts.sessionName}" is LIVE!`,
+          body: `Your ${opts.crewName} crew session is starting now at ${opts.locationLabel}. Let's skate!`,
+          data: { sessionId: opts.sessionId, crewId: '' },
+          sound: true,
+          ...(Platform.OS === 'android' ? { channelId: 'session-reminders' } : {}),
+        },
+        trigger: null,
+      });
+    } catch (err) {
+      console.warn('[NotificationService] sendSessionLiveAlert failed:', err);
+    }
+  }
+
   // ── Private ──────────────────────────────────────────────
+
+  private async _scheduleSessionAlert(
+    opts: { sessionId: string; sessionName: string; crewName: string; scheduledAt: Date },
+    trigger: { date: Date } | null,
+  ): Promise<string | null> {
+    try {
+      const id = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `⏰ Session starting in 15 min!`,
+          body: `"${opts.sessionName}" with ${opts.crewName} starts soon — get your skates on!`,
+          data: { sessionId: opts.sessionId, crewId: '' },
+          sound: true,
+          ...(Platform.OS === 'android' ? { channelId: 'session-reminders' } : {}),
+        },
+        trigger: trigger as any,
+      });
+      AppLogger.log('PUSH_NOTIFICATION_SENT', { type: 'session_reminder', subtype: 'scheduled', sessionId: opts.sessionId, trigger: trigger?.date?.toISOString() });
+      return id;
+    } catch (err) {
+      console.warn('[NotificationService] _scheduleSessionAlert failed:', err);
+      return null;
+    }
+  }
+
 
   private async _requestPermissions(): Promise<boolean> {
     if (Platform.OS === 'web') return false; // Web push not supported in this flow
@@ -126,6 +227,13 @@ class NotificationService {
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#FFAA00',
       description: 'Notifications when your crew starts skating',
+    });
+    await Notifications.setNotificationChannelAsync('session-reminders', {
+      name: 'Session Reminders',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 300, 200, 300],
+      lightColor: '#00C8FF',
+      description: 'Reminders before your scheduled skate sessions',
     });
   }
 

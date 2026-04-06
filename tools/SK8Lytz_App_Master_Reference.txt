@@ -1947,3 +1947,77 @@ Broadcast payload: JSON from captureEntireState() (activeMode, colors, patterns,
 - Enables: BPM Choreography Mode (beat-synced LED patterns)
 - Reference: rain/14d7070e.../analysis_results.md
 
+
+================================================================================
+RESPONSIVE UI REQUIREMENTS (Updated 2026-04-06)
+================================================================================
+
+TARGET DEVICES
+- Android minimum: Google Pixel 7 (412x892 dp, Android 13+)
+- iOS target:      iPhone 14   (390x844 pt, iOS 16+, home indicator ~34pt)
+
+RULES (enforced in ALL components)
+1. No hardcoded layout widths - use flex, 100%, or Dimensions.get(window)
+2. Icon/button tap targets 44x44 or 48x48 hardcoded are OK (a11y minimum)
+3. Bottom-anchored sheets need paddingBottom for iOS home indicator - use SafeAreaView or useSafeAreaInsets()
+4. Screens with TextInput must use KeyboardAvoidingView behavior=iOS:padding / Android:height
+5. Long lists and forms must use ScrollView or FlatList - no unconstrained overflow
+6. SafeAreaView wraps root screen - child components inherit safe area
+7. Android StatusBar: use StatusBar.currentHeight (not hardcoded 24)
+8. Platform.OS checks valid ONLY for genuine differences (StatusBar, font names, DatePicker)
+9. All modals: maxHeight: 92-93%, minHeight: 55-70% (percent not px)
+
+AUDIT RESULTS (Pixel 7 412x892 + iPhone 14 390x844) - Last run 2026-04-06
+File                         KbdAvoid  SafeArea              FlexSizing  Result
+DashboardScreen.tsx          N/A       SafeAreaView root     flex        PASS
+DockedController.tsx         N/A       inherits parent SAV   44/48 icons PASS
+AccountModal.tsx             YES       maxHeight 93%         % based     PASS
+CrewModal.tsx                YES       maxHeight 92%         flex        PASS
+CrewMemberDashboard.tsx      N/A       Dimensions.get SCREEN_W  flex     PASS
+LogViewerModal.tsx           N/A       SafeAreaView + iOS 50 flex        PASS
+AuthScreen.tsx               YES       iOS 54 / 16           flexGrow    PASS
+DeviceRegistrationModal.tsx  YES       iosBottom pattern     flex        PASS
+FirstTimeSetupModal.tsx      YES       40/24 inset           flex        PASS
+
+================================================================================
+PUSH NOTIFICATION SYSTEM (NotificationService.ts) - Added 2026-04-06
+================================================================================
+
+Android Channels:
+- crew-alerts       HIGH importance, amber (#FFAA00) light, 250ms vibration
+- session-reminders HIGH importance, cyan (#00C8FF) light, 300ms vibration
+
+Methods:
+- init()                        Request permissions, get Expo push token, register with Supabase
+- sendCrewInviteNotification()  Immediate local: X joined your crew!
+- sendSessionStartingSoon()     Schedule 15 min before session start (local)
+- sendSessionLiveAlert()        Immediate: Session is LIVE at [location]
+- cancelSessionReminder(id)     Cancel scheduled reminder (if session cancelled)
+- setJoinHandler(fn)            Callback when user taps notification (deeplink to crew/session)
+
+Integration:
+- Session creation (CrewModal.handleCreate): auto-schedules reminder if scheduledAt > now
+
+================================================================================
+CREW DISCOVERY SYSTEM - Added 2026-04-06
+================================================================================
+
+Nearby Session Discovery (LocationService.ts):
+- getNearbyPublicSessions() fetches from public_sessions view
+- Computes Haversine distance client-side (no PostGIS needed)
+- Returns NearbySession[]: id, name, leaderName, memberCount, locationLabel, distanceLabel, inviteCode
+- Sorted nearest-first
+
+Discover Tab (CrewModal.tsx manageTab=discover):
+- Unified ScrollView feed with single search bar
+- LIVE NOW: active crew sessions - 1-tap JOIN via joinSessionById() (no code needed)
+- PUBLIC CREWS: permanent crews by city/state - 1-tap Join via handleJoinPublicCrew()
+- Public content: zero friction, no invite code required
+- Private content: still requires invite code (Join by Code tab)
+
+Crew Session Sharing:
+- Tap invite code in detail view -> copy to clipboard
+- Share Invite Code button -> native OS share sheet (Instagram, iMessage, WhatsApp, Twitter, etc.)
+- Message format: Join my SK8Lytz crew [Name]! Use code: XXXXXX in the SK8Lytz app.
+
+

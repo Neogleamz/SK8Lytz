@@ -19,6 +19,7 @@ export interface UserProfile {
   display_name: string | null;
   avatar_color: string;
   username: string | null;     // added by migration 006
+  avatar_url?: string | null;  // added: profile photo in Supabase Storage
   created_at: string;
   updated_at: string;
 }
@@ -95,7 +96,7 @@ class ProfileService {
   /**
    * Update display name and/or avatar color for the current user.
    */
-  async updateProfile(fields: { display_name?: string | null; avatar_color?: string; username?: string | null }): Promise<void> {
+  async updateProfile(fields: { display_name?: string | null; avatar_color?: string; username?: string | null; avatar_url?: string | null }): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -104,6 +105,7 @@ class ProfileService {
     if (fields.display_name != null) cleanFields.display_name = fields.display_name;
     if (fields.avatar_color != null) cleanFields.avatar_color = fields.avatar_color;
     if (fields.username != null) cleanFields.username = fields.username.toLowerCase();
+    if (fields.avatar_url != null) cleanFields.avatar_url = fields.avatar_url;
 
     const { error } = await supabase
       .from('user_profiles')
@@ -398,6 +400,44 @@ class ProfileService {
       .eq('user_id', user.id)
       .eq('token', token);
   }
+
+  // ── Crew Stats ─────────────────────────────────────────────
+
+  /**
+   * Fetch session stats for a permanent crew.
+   * Returns total sessions, last active timestamp, and most-used scene name.
+   */
+  async getCrewStats(crewId: string): Promise<{
+    sessionCount: number;
+    lastActive: string | null;
+    topScene: string | null;
+  }> {
+    const { data, error } = await supabase
+      .from('crew_sessions')
+      .select('id, created_at, ended_at, last_scene')
+      .eq('crew_id', crewId)
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return { sessionCount: 0, lastActive: null, topScene: null };
+
+    const sessionCount = data.length;
+    const lastActive = data[0]?.ended_at ?? data[0]?.created_at ?? null;
+
+    // Tally scene names from last_scene JSONB { modeName, patternName, etc. }
+    const tally: Record<string, number> = {};
+    for (const s of data) {
+      const scene = s.last_scene as any;
+      const label: string | undefined =
+        scene?.modeName ?? scene?.patternName ?? scene?.activeMode ?? scene?.mode;
+      if (label) tally[label] = (tally[label] ?? 0) + 1;
+    }
+    const topScene = Object.keys(tally).length
+      ? Object.keys(tally).reduce((a, b) => tally[a] > tally[b] ? a : b)
+      : null;
+
+    return { sessionCount, lastActive, topScene };
+  }
 }
 
 export const profileService = new ProfileService();
+

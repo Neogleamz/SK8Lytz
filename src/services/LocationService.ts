@@ -68,6 +68,84 @@ class LocationService {
     }
   }
 
+  /**
+   * Fetch active public sessions sorted by distance from current position.
+   * Falls back to creation-date order if location permission denied.
+   */
+  async getNearbyPublicSessions(): Promise<NearbySession[]> {
+    const { supabase } = await import('./supabaseClient');
+
+    // Pull all active public sessions (via the security-invoker view)
+    const { data, error } = await supabase
+      .from('public_sessions')
+      .select('id, name, invite_code, location_label, location_coords, scheduled_at, created_at, leader_name, leader_username, member_count')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error || !data) return [];
+
+    // Try to get user location for distance sort
+    let userLat: number | null = null;
+    let userLng: number | null = null;
+    try {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+        userLat = pos.coords.latitude;
+        userLng = pos.coords.longitude;
+      }
+    } catch { /* location unavailable — sort by date */ }
+
+    const sessions: NearbySession[] = data.map((s: any) => {
+      const coords = s.location_coords as { lat?: number; lng?: number } | null;
+      let distanceMi: number | null = null;
+      let distanceLabel = '';
+
+      if (userLat !== null && userLng !== null && coords?.lat && coords?.lng) {
+        distanceMi = this._haversineMi(userLat, userLng, coords.lat, coords.lng);
+        distanceLabel = distanceMi < 0.1
+          ? 'Here now'
+          : distanceMi < 1
+            ? `${(distanceMi * 5280).toFixed(0)} ft away`
+            : `${distanceMi.toFixed(1)} mi away`;
+      }
+
+      return {
+        id:            s.id,
+        name:          s.name,
+        inviteCode:    s.invite_code,
+        locationLabel: s.location_label ?? 'Unknown Location',
+        leaderName:    s.leader_name ?? 'Unknown',
+        memberCount:   s.member_count ?? 0,
+        scheduledAt:   s.scheduled_at,
+        distanceMi,
+        distanceLabel,
+      };
+    });
+
+    // Sort: sessions with known distance first (nearest), then by date
+    return sessions.sort((a, b) => {
+      if (a.distanceMi !== null && b.distanceMi !== null) return a.distanceMi - b.distanceMi;
+      if (a.distanceMi !== null) return -1;
+      if (b.distanceMi !== null) return 1;
+      return 0;
+    });
+  }
+
+  /** Haversine distance in miles between two lat/lng points */
+  private _haversineMi(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 3958.8; // Earth radius in miles
+    const dLat = this._deg2rad(lat2 - lat1);
+    const dLng = this._deg2rad(lng2 - lng1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this._deg2rad(lat1)) * Math.cos(this._deg2rad(lat2)) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  private _deg2rad(deg: number): number { return deg * (Math.PI / 180); }
+
   private _buildLabel(geo: Location.LocationGeocodedAddress): string {
     // Priority: venue name → street → district → city + region
     const parts: string[] = [];
@@ -92,4 +170,17 @@ class LocationService {
   }
 }
 
+export interface NearbySession {
+  id:            string;
+  name:          string;
+  inviteCode:    string;
+  locationLabel: string;
+  leaderName:    string;
+  memberCount:   number;
+  scheduledAt:   string | null;
+  distanceMi:    number | null;
+  distanceLabel: string;
+}
+
 export const locationService = new LocationService();
+

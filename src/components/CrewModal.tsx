@@ -15,7 +15,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal, TextInput,
   ActivityIndicator, FlatList, Alert, Platform, ScrollView, Animated, Image,
-  KeyboardAvoidingView,
+  KeyboardAvoidingView, Share, Clipboard,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
@@ -24,8 +24,9 @@ import { useTheme } from '../context/ThemeContext';
 import { crewService, CrewSession, CrewMember, CrewRole } from '../services/CrewService';
 import { supabase } from '../services/supabaseClient';
 import { profileService, PermanentCrew } from '../services/ProfileService';
-import { locationService } from '../services/LocationService';
+import { locationService, NearbySession } from '../services/LocationService';
 import { AppLogger } from '../services/AppLogger';
+import { notificationService } from '../services/NotificationService';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -106,6 +107,9 @@ export default function CrewModal({
   const [selectedCrewDetail, setSelectedCrewDetail] = useState<PermanentCrew | null>(null);
   const [isLoadingCrews, setIsLoadingCrews] = useState(false);
   const [crewMemberCounts, setCrewMemberCounts] = useState<Record<string, { count: number; avatarColors: string[] }>>({});
+  const [nearbySessions, setNearbySessions] = useState<NearbySession[]>([]);
+  const [isLoadingNearby, setIsLoadingNearby] = useState(false);
+  const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
   // Create crew form
   const [newCrewName,        setNewCrewName]        = useState('');
   const [newCrewIsPublic,    setNewCrewIsPublic]    = useState(false);
@@ -121,8 +125,24 @@ export default function CrewModal({
   const [discoverRadius,     setDiscoverRadius]     = useState(50);
   const [discoverSearch,     setDiscoverSearch]     = useState('');
   const [joiningCrewId,      setJoiningCrewId]      = useState<string | null>(null);
+  const [editingCrewId,      setEditingCrewId]      = useState<string | null>(null);
+  const [editCrewName,       setEditCrewName]       = useState('');
+  const [editCrewIsPublic,   setEditCrewIsPublic]   = useState(false);
+  const [editCrewCity,       setEditCrewCity]       = useState('');
+  const [editCrewState,      setEditCrewState]      = useState('');
+  const [editCrewDesc,       setEditCrewDesc]       = useState('');
+  const [isSavingCrew,       setIsSavingCrew]       = useState(false);
+  const [crewStats,          setCrewStats]          = useState<Record<string, { sessionCount: number; lastActive: string | null; topScene: string | null }>>({});
+  // Fetch crew stats when detail view opens
+  useEffect(() => {
+    if (!selectedCrewDetail) return;
+    const id = selectedCrewDetail.id;
+    if (crewStats[id]) return; // already loaded
+    profileService.getCrewStats(id).then(stats =>
+      setCrewStats(prev => ({ ...prev, [id]: stats }))
+    );
+  }, [selectedCrewDetail]);
 
-  // Controller
   const [currentSession, setCurrentSession] = useState<CrewSession | null>(activeSession);
   const [currentRole, setCurrentRole] = useState<CrewRole>(activeRole);
   const [members, setMembers] = useState<CrewMember[]>([]);
@@ -177,6 +197,16 @@ export default function CrewModal({
     profileService.getPublicCrews().then(crews => {
       setPublicCrews(crews);
     }).catch(() => {}).finally(() => setIsLoadingCrews(false));
+  }, [visible, step, manageTab]);
+
+  // Load nearby live sessions when discover tab opens
+  useEffect(() => {
+    if (!visible || step !== 'manage' || manageTab !== 'discover') return;
+    setIsLoadingNearby(true);
+    locationService.getNearbyPublicSessions()
+      .then(sessions => setNearbySessions(sessions))
+      .catch(() => {})
+      .finally(() => setIsLoadingNearby(false));
   }, [visible, step, manageTab]);
 
   // Fetch member counts when viewing My Crews list
@@ -274,6 +304,18 @@ export default function CrewModal({
         sessionId: session.id, crewName: sessionName,
         hasLocation: !!locationLabel, scheduled: !!scheduled, isPublic,
       });
+
+      // Schedule a local push notification 15 min before if this is a future session
+      if (scheduled && scheduled > new Date()) {
+        const crewLabel = permanentCrews.find(c => c.id === selectedCrewId)?.name ?? sessionName;
+        notificationService.sendSessionStartingSoon({
+          sessionId: session.id,
+          sessionName,
+          crewName: crewLabel,
+          scheduledAt: scheduled,
+        }).catch(() => {}); // fire-and-forget, non-critical
+      }
+
       await handleSessionJoined(session);
     } catch (e: any) {
       AppLogger.log('CREW_ERROR', { action: 'create', error: e.message });
@@ -965,7 +1007,41 @@ export default function CrewModal({
     }
   };
 
-  // ── Crew card (✔ responsive flex, no hardcoded widths) ─────────────────────────────
+  // ── Start editing a crew (owner only) ────────────────────────────────────────
+  const handleStartEdit = (crew: PermanentCrew) => {
+    setEditCrewName(crew.name);
+    setEditCrewIsPublic(crew.is_public ?? false);
+    setEditCrewCity(crew.city ?? '');
+    setEditCrewState(crew.state ?? '');
+    setEditCrewDesc(crew.description ?? '');
+    setEditingCrewId(crew.id);
+  };
+
+  const handleSaveCrew = async (crew: PermanentCrew) => {
+    if (!editCrewName.trim()) return;
+    setIsSavingCrew(true);
+    try {
+      await profileService.updateCrew(crew.id, {
+        name: editCrewName.trim(),
+        isPublic: editCrewIsPublic,
+        city: editCrewCity.trim() || undefined,
+        state: editCrewState.trim() || undefined,
+        description: editCrewDesc.trim() || undefined,
+      });
+      // Update local state
+      const updated = { ...crew, name: editCrewName.trim(), is_public: editCrewIsPublic,
+        city: editCrewCity.trim() || undefined, state: editCrewState.trim() || undefined,
+        description: editCrewDesc.trim() || undefined };
+      setMyCrews(prev => prev.map(c => c.id === crew.id ? updated : c));
+      setSelectedCrewDetail(updated);
+      setEditingCrewId(null);
+    } catch (e: any) {
+      Alert.alert('Save failed', e.message ?? 'Unknown error');
+    } finally {
+      setIsSavingCrew(false);
+    }
+  };
+
   const renderCrewCard = (crew: PermanentCrew, onTap: () => void, showJoinBtn = false) => {
     const info = crewMemberCounts[crew.id];
     const alreadyMember = myCrews.some(c => c.id === crew.id);
@@ -1056,26 +1132,81 @@ export default function CrewModal({
           </ScrollView>
         )}
 
-        {/* DISCOVER */}
+        {/* DISCOVER — unified feed: live sessions + public crews */}
         {manageTab === 'discover' && (
-          <View style={{ flex: 1 }}>
-            <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
-              <TextInput
-                style={styles.mgSearchInput}
-                value={discoverSearch} onChangeText={setDiscoverSearch}
-                placeholder="Search public crews…" placeholderTextColor={Colors.textMuted} />
-              <Text style={styles.mgHint}>📍 Showing public crews globally — within ~{discoverRadius} miles by default</Text>
-            </View>
-            {isLoadingCrews
-              ? <ActivityIndicator style={{ marginTop: 40 }} size="large" color={Colors.primary} />
-              : filteredPublic.length === 0
-                ? <Text style={styles.mgEmptyText}>No public crews found.{`\n`}Be the first to create one!</Text>
-                : <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-                    {filteredPublic.map(crew => renderCrewCard(crew, () => setSelectedCrewDetail(crew), true))}
-                  </ScrollView>
+          <ScrollView
+            style={{ flex: 1 }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ padding: 16, paddingBottom: 50 }}
+          >
+            {/* Search bar */}
+            <TextInput
+              style={[styles.mgSearchInput, { marginBottom: 14 }]}
+              value={discoverSearch} onChangeText={setDiscoverSearch}
+              placeholder="Search sessions & crews…" placeholderTextColor={Colors.textMuted}
+            />
+
+            {/* ── LIVE NOW ── */}
+            <Text style={styles.label}>🔴 LIVE NOW</Text>
+            {isLoadingNearby
+              ? <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 10 }} />
+              : nearbySessions.length === 0
+                ? <Text style={[styles.mgHint, { marginBottom: 14 }]}>No active sessions right now — check back soon!</Text>
+                : nearbySessions
+                    .filter(s => !discoverSearch || s.name.toLowerCase().includes(discoverSearch.toLowerCase()) || s.leaderName.toLowerCase().includes(discoverSearch.toLowerCase()))
+                    .map(s => (
+                      <View key={s.id} style={styles.nearbySessionCard}>
+                        {/* Live badge */}
+                        <View style={{ position: 'absolute', top: 10, right: 10 }}>
+                          <View style={{ backgroundColor: '#FF3B30', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                            <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '900' }}>● LIVE</Text>
+                          </View>
+                        </View>
+                        <View style={{ flex: 1, paddingRight: 48 }}>
+                          <Text style={styles.nearbySessionName}>{s.name}</Text>
+                          <Text style={styles.nearbySessionSub}>
+                            📍 {s.locationLabel}
+                            {s.distanceLabel ? `  ·  ${s.distanceLabel}` : ''}
+                          </Text>
+                          <Text style={styles.nearbySessionSub}>
+                            👤 Led by {s.leaderName}  ·  {s.memberCount} skater{s.memberCount !== 1 ? 's' : ''} in session
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={[styles.nearbyJoinBtn, joiningSessionId === s.id && { opacity: 0.6 }]}
+                          disabled={joiningSessionId === s.id}
+                          onPress={async () => {
+                            try {
+                              setJoiningSessionId(s.id);
+                              const session = await crewService.joinSessionById(s.id, displayName);
+                              onSessionReady(session, 'member', null);
+                              onClose();
+                            } catch (e: any) {
+                              Alert.alert('Could not join', e.message ?? 'Try again.');
+                            } finally {
+                              setJoiningSessionId(null);
+                            }
+                          }}
+                        >
+                          {joiningSessionId === s.id
+                            ? <ActivityIndicator size="small" color="#000" />
+                            : <Text style={styles.nearbyJoinText}>JOIN</Text>}
+                        </TouchableOpacity>
+                      </View>
+                    ))
             }
-          </View>
+
+            {/* ── PUBLIC CREWS ── */}
+            <Text style={[styles.label, { marginTop: 8 }]}>🌍 PUBLIC CREWS</Text>
+            {(isLoadingCrews)
+              ? <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 10 }} />
+              : filteredPublic.length === 0
+                ? <Text style={styles.mgEmptyText}>No public crews found.{'\n'}Be the first to create one!</Text>
+                : filteredPublic.map(crew => renderCrewCard(crew, () => setSelectedCrewDetail(crew), true))
+            }
+          </ScrollView>
         )}
+
 
         {/* CREATE */}
         {manageTab === 'create' && (
@@ -1187,7 +1318,7 @@ export default function CrewModal({
           {crew.description && <Text style={[styles.mgHint, { textAlign: 'center', marginTop: 8 }]}>{crew.description}</Text>}
         </View>
 
-        {/* Members  */}
+        {/* Members */}
         <Text style={styles.label}>MEMBERS</Text>
         <View style={styles.mgAvatarRow}>
           {(info?.avatarColors ?? []).slice(0, 8).map((c, i) => (
@@ -1196,12 +1327,53 @@ export default function CrewModal({
           <Text style={[styles.mgMemberCount, { marginLeft: 8 }]}>{info?.count ?? '?'} member{(info?.count ?? 0) !== 1 ? 's' : ''}</Text>
         </View>
 
+        {/* Session stats */}
+        {(() => {
+          const stats = crewStats[crew.id];
+          const lastActiveStr = stats?.lastActive
+            ? new Date(stats.lastActive).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+            : null;
+          return (
+            <View style={styles.statsRow}>
+              <View style={styles.statCard}>
+                <Text style={styles.statNum}>{stats?.sessionCount ?? '—'}</Text>
+                <Text style={styles.statLabel}>Sessions</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statNum} numberOfLines={1}>{lastActiveStr ?? '—'}</Text>
+                <Text style={styles.statLabel}>Last Active</Text>
+              </View>
+              <View style={[styles.statCard, { flex: 1.4 }]}>
+                <Text style={styles.statNum} numberOfLines={1}>{stats?.topScene ?? '—'}</Text>
+                <Text style={styles.statLabel}>Top Scene</Text>
+              </View>
+            </View>
+          );
+        })()}
+
         {/* Invite code */}
         <Text style={styles.label}>INVITE CODE</Text>
-        <View style={styles.mgCodeBox}>
+        <TouchableOpacity
+          style={styles.mgCodeBox}
+          onPress={() => {
+            Clipboard.setString(crew.invite_code ?? '');
+            Alert.alert('Copied!', 'Invite code copied to clipboard.');
+          }}
+          activeOpacity={0.7}
+        >
           <Text style={styles.mgCodeText}>{crew.invite_code}</Text>
-          <Text style={styles.mgHint}>Share this code for others to join</Text>
-        </View>
+          <Text style={styles.mgHint}>Tap to copy · share with friends to join</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.shareBtn}
+          onPress={() => Share.share({
+            message: `Join my SK8Lytz crew "${crew.name}"! Use code: ${crew.invite_code} in the SK8Lytz app.`,
+            title: `Join ${crew.name} on SK8Lytz`,
+          })}
+        >
+          <MaterialCommunityIcons name="share-variant" size={17} color="#000" />
+          <Text style={styles.shareBtnText}>Share Invite Code</Text>
+        </TouchableOpacity>
 
         {/* Status */}
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
@@ -1213,6 +1385,59 @@ export default function CrewModal({
 
         {/* Actions */}
         <View style={{ marginTop: 24, gap: 12 }}>
+          {crew.is_owner && editingCrewId !== crew.id && (
+            <TouchableOpacity style={styles.editBtn} onPress={() => handleStartEdit(crew)}>
+              <MaterialCommunityIcons name="pencil" size={17} color={Colors.primary} />
+              <Text style={styles.editBtnText}>Edit Crew Settings</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Inline edit form */}
+          {crew.is_owner && editingCrewId === crew.id && (
+            <View style={{ gap: 10 }}>
+              <Text style={styles.label}>CREW NAME</Text>
+              <TextInput style={styles.input} value={editCrewName} onChangeText={setEditCrewName}
+                placeholder="Crew name" placeholderTextColor={Colors.textMuted} maxLength={40} />
+
+              <Text style={styles.label}>DESCRIPTION</Text>
+              <TextInput style={[styles.input, { height: 64, textAlignVertical: 'top' }]}
+                value={editCrewDesc} onChangeText={setEditCrewDesc} multiline
+                placeholder="What's this crew about?" placeholderTextColor={Colors.textMuted} maxLength={120} />
+
+              <Text style={styles.label}>LOCATION</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput style={[styles.input, { flex: 2 }]} value={editCrewCity} onChangeText={setEditCrewCity}
+                  placeholder="City" placeholderTextColor={Colors.textMuted} />
+                <TextInput style={[styles.input, { flex: 1 }]} value={editCrewState} onChangeText={setEditCrewState}
+                  placeholder="State" placeholderTextColor={Colors.textMuted} />
+              </View>
+
+              <Text style={styles.label}>VISIBILITY</Text>
+              <View style={styles.visibilityRow}>
+                <TouchableOpacity style={[styles.visibilityBtn, !editCrewIsPublic && styles.visibilityBtnActive]}
+                  onPress={() => setEditCrewIsPublic(false)}>
+                  <MaterialCommunityIcons name="lock" size={15} color={!editCrewIsPublic ? '#000' : Colors.textMuted} />
+                  <Text style={[styles.visibilityBtnText, !editCrewIsPublic && styles.visibilityBtnTextActive]}>Private</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.visibilityBtn, editCrewIsPublic && styles.visibilityBtnPublic]}
+                  onPress={() => setEditCrewIsPublic(true)}>
+                  <MaterialCommunityIcons name="earth" size={15} color={editCrewIsPublic ? '#000' : Colors.textMuted} />
+                  <Text style={[styles.visibilityBtnText, editCrewIsPublic && styles.visibilityBtnTextActive]}>Public</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                <TouchableOpacity style={[styles.primaryBtn, { flex: 1 }]} onPress={() => handleSaveCrew(crew)} disabled={isSavingCrew}>
+                  {isSavingCrew ? <ActivityIndicator size="small" color="#000" /> : <MaterialCommunityIcons name="check" size={17} color="#000" />}
+                  <Text style={styles.primaryBtnText}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.dangerBtn, { flex: 0.5 }]} onPress={() => setEditingCrewId(null)}>
+                  <Text style={[styles.dangerBtnText, { color: Colors.textMuted }]}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           {crew.is_owner
             ? <TouchableOpacity style={styles.dangerBtn} onPress={() => handleDeleteCrew(crew)}>
                 <MaterialCommunityIcons name="delete-forever" size={17} color="#FF4444" />
@@ -1466,4 +1691,25 @@ const createStyles = (Colors: any) => StyleSheet.create({
   // Danger actions
   dangerBtn:     { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: 'rgba(255,68,68,0.4)', borderRadius: 12, padding: 14 },
   dangerBtnText: { color: '#FF4444', fontSize: 14, fontWeight: '700' },
+
+  // Edit actions
+  editBtn:       { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: 'rgba(255,170,0,0.35)', borderRadius: 12, padding: 14 },
+  editBtnText:   { color: Colors.primary || '#FFAA00', fontSize: 14, fontWeight: '700' },
+
+  // Share invite
+  shareBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.primary || '#FFAA00', borderRadius: 12, paddingVertical: 13, marginTop: 8 },
+  shareBtnText:  { color: '#000', fontSize: 14, fontWeight: '800' },
+
+  // Crew stats row
+  statsRow:  { flexDirection: 'row', gap: 8, marginTop: 14, marginBottom: 4 },
+  statCard:  { flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12, alignItems: 'center' },
+  statNum:   { color: Colors.text || '#FFF', fontSize: 16, fontWeight: '800', textAlign: 'center' },
+  statLabel: { color: Colors.textMuted || '#888', fontSize: 10, fontWeight: '600', marginTop: 2, textAlign: 'center' },
+
+  // Nearby sessions
+  nearbySessionCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 12, marginBottom: 8 },
+  nearbySessionName: { color: Colors.text || '#FFF', fontSize: 14, fontWeight: '700' },
+  nearbySessionSub:  { color: Colors.textMuted || '#888', fontSize: 11, marginTop: 2 },
+  nearbyJoinBtn:     { backgroundColor: Colors.primary || '#FFAA00', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, minWidth: 56, alignItems: 'center' },
+  nearbyJoinText:    { color: '#000', fontSize: 13, fontWeight: '900' },
 });
