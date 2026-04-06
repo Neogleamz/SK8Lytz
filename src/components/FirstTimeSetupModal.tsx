@@ -14,7 +14,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView,
-  TextInput, Animated, Platform, ActivityIndicator,
+  TextInput, Animated, Platform, ActivityIndicator, KeyboardAvoidingView,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -321,8 +321,11 @@ export default function FirstTimeSetupModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onDismiss}>
-      <View style={styles.overlay}>
-        <View style={styles.sheet}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
+        <View style={[styles.sheet, { paddingBottom: Platform.OS === 'ios' ? 40 : 24 }]}>
           {/* Progress dots */}
           <View style={styles.progressDots}>
             {([1, 2, 3] as Step[]).map(s => (
@@ -336,7 +339,7 @@ export default function FirstTimeSetupModal({
             {step === 3 && renderStep3()}
           </Animated.View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
