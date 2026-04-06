@@ -142,6 +142,28 @@ export default function AccountModal({
       }
       setCrews(c);
       setHistory(h);
+
+      // ── Fetch cloud-registered devices from DB ─────────────────
+      try {
+        const { data: dbDevices } = await supabase
+          .from('registered_devices')
+          .select('device_mac, device_name, product_type, position, group_name, created_at')
+          .eq('user_id', user?.id ?? '')
+          .order('created_at', { ascending: false });
+
+        if (dbDevices && dbDevices.length > 0) {
+          setDevices(dbDevices.map((d: any) => ({
+            id: d.device_mac,
+            name: d.device_name ?? d.device_mac,
+            customName: d.group_name ?? undefined,
+            type: d.product_type ?? undefined,
+            registeredAt: d.created_at,
+          })));
+        }
+      } catch (devErr) {
+        console.warn('[AccountModal] Could not fetch cloud devices:', devErr);
+        // Falls back to whatever parent passed in as registeredDevices prop
+      }
     } catch (e) {
       console.warn('[AccountModal] loadData error:', e);
     } finally {
@@ -163,7 +185,9 @@ export default function AccountModal({
   useEffect(() => {
     if (visible) {
       loadData();
-      setDevices(registeredDevices);
+      // If parent provided devices, populate immediately;
+      // actual cloud devices are fetched inside loadData below.
+      if (registeredDevices.length > 0) setDevices(registeredDevices);
     }
   }, [visible, loadData, registeredDevices]);
 
@@ -313,9 +337,18 @@ export default function AccountModal({
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Forget', style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             onDeviceForgotten?.(device.id);
             setDevices(prev => prev.filter(d => d.id !== device.id));
+            // Also remove from Supabase registered_devices
+            try {
+              await supabase
+                .from('registered_devices')
+                .delete()
+                .eq('device_mac', device.id);
+            } catch (e) {
+              console.warn('[AccountModal] Could not remove device from cloud:', e);
+            }
           },
         },
       ]

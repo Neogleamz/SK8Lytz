@@ -3,7 +3,8 @@
  *
  * Full crew lifecycle modal with:
  *   Landing    → Create / Schedule / Join / Saved Crews
- *   Create     → Crew name, display name, geo-tag (optional), schedule (optional)
+ *   Create     → Crew picker (existing crews) or new name, public/private, location
+ *   Schedule   → Crew picker, DateTimePicker calendar, public/private, location
  *   Join       → Browse live sessions + code entry
  *   Controller → Leader OR Member session card (what/where/when/who)
  *                Leader: End Session, Hand Off, invite code copy
@@ -15,6 +16,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, Modal, TextInput,
   ActivityIndicator, FlatList, Alert, Platform, ScrollView, Animated,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { crewService, CrewSession, CrewMember, CrewRole } from '../services/CrewService';
@@ -67,13 +69,28 @@ export default function CrewModal({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Create / Schedule form
+  // ── Create / Schedule form state ───────────────────────────────────────────
   const [crewName, setCrewName] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationLabel, setLocationLabel] = useState('');
   const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | undefined>();
   const [scheduledDate, setScheduledDate] = useState<Date | null>(null);
+
+  // Crew picker + session visibility
+  const [permanentCrews, setPermanentCrews] = useState<{ id: string; name: string }[]>([]);
+  const [selectedCrewId, setSelectedCrewId] = useState<string | null>(null); // null = new session name
+  const [isPublic, setIsPublic] = useState(false);
+
+  // Native date/time picker for schedule form
+  const [schedDateTime, setSchedDateTime] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(19, 0, 0, 0);
+    return d;
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   // Join form
   const [inviteCode, setInviteCode] = useState('');
@@ -118,6 +135,23 @@ export default function CrewModal({
     };
     loadUser();
   }, [visible]);
+
+  // Load permanent crews when the create/schedule form opens
+  useEffect(() => {
+    if (!visible || (step !== 'create' && step !== 'schedule')) return;
+    profileService.getMyCrew().then((crews: any[]) =>
+      setPermanentCrews(crews.map(c => ({ id: c.id, name: c.name })))
+    ).catch(() => {});
+  }, [visible, step]);
+
+  // ── Load permanent crews when entering create or schedule ──────────────────
+
+  useEffect(() => {
+    if (!visible || (step !== 'create' && step !== 'schedule')) return;
+    profileService.getMyCrew().then((crews: any[]) =>
+      setPermanentCrews(crews.map((c: any) => ({ id: c.id, name: c.name })))
+    ).catch(() => {});
+  }, [visible, step]);
 
   // ── Sync props → state ─────────────────────────────────────────────────────
 
@@ -189,25 +223,24 @@ export default function CrewModal({
   // ── Create ─────────────────────────────────────────────────────────────────
 
   const handleCreate = async (scheduled?: Date) => {
-    if (!crewName.trim()) { setErrorMsg('Enter a crew name'); return; }
+    const sessionName = crewName.trim() || permanentCrews.find(c => c.id === selectedCrewId)?.name || '';
+    if (!sessionName) { setErrorMsg('Pick a crew or enter a session name'); return; }
     setIsLoading(true); setErrorMsg('');
     try {
-      const opts: Parameters<typeof crewService.createSession>[2] = {};
+      const opts: Parameters<typeof crewService.createSession>[2] = { isPublic };
       if (locationLabel) opts.locationLabel = locationLabel;
       if (locationCoords) opts.locationCoords = locationCoords;
       if (scheduled) opts.scheduledAt = scheduled.toISOString();
 
-      const session = await crewService.createSession(crewName.trim(), displayName.trim(), opts);
+      const session = await crewService.createSession(sessionName, displayName.trim(), opts);
       AppLogger.log('CREW_SESSION_CREATED', {
-        sessionId: session.id,
-        crewName: crewName.trim(),
-        hasLocation: !!locationLabel,
-        scheduled: !!scheduled,
+        sessionId: session.id, crewName: sessionName,
+        hasLocation: !!locationLabel, scheduled: !!scheduled, isPublic,
       });
       await handleSessionJoined(session);
     } catch (e: any) {
       AppLogger.log('CREW_ERROR', { action: 'create', error: e.message });
-      setErrorMsg(e.message || 'Failed to create crew');
+      setErrorMsg(e.message || 'Failed to create session');
     } finally { setIsLoading(false); }
   };
 
@@ -268,7 +301,6 @@ export default function CrewModal({
           text: 'End Session', style: 'destructive',
           onPress: async () => {
             try {
-              // Pass explicit sessionId — makes endSession robust against stale singleton state
               await crewService.endSession(currentSession?.id);
               setCurrentSession(null); setCurrentRole(null);
               setStep('landing'); setIsHandoffMode(false);
@@ -348,17 +380,60 @@ export default function CrewModal({
 
       <Text style={styles.titleLarge}>Start a Session</Text>
 
-      <Text style={styles.label}>CREW NAME</Text>
-      <TextInput style={styles.input} value={crewName} onChangeText={setCrewName}
-        placeholder="e.g. Friday Night Crew" placeholderTextColor={Colors.textMuted}
-        maxLength={32} autoFocus />
+      {/* ── Crew picker ── */}
+      <Text style={styles.label}>SESSION FOR</Text>
+      <View style={styles.crewPickerRow}>
+        {permanentCrews.map(crew => (
+          <TouchableOpacity key={crew.id}
+            style={[styles.crewChip, selectedCrewId === crew.id && styles.crewChipActive]}
+            onPress={() => { setSelectedCrewId(crew.id); setCrewName(''); }}>
+            <MaterialCommunityIcons name="account-group" size={13}
+              color={selectedCrewId === crew.id ? '#000' : Colors.primary} />
+            <Text style={[styles.crewChipText, selectedCrewId === crew.id && styles.crewChipTextActive]}
+              numberOfLines={1}>{crew.name}</Text>
+          </TouchableOpacity>
+        ))}
+        <TouchableOpacity
+          style={[styles.crewChip, selectedCrewId === null && styles.crewChipActive]}
+          onPress={() => setSelectedCrewId(null)}>
+          <MaterialCommunityIcons name="plus" size={13}
+            color={selectedCrewId === null ? '#000' : Colors.primary} />
+          <Text style={[styles.crewChipText, selectedCrewId === null && styles.crewChipTextActive]}>New</Text>
+        </TouchableOpacity>
+      </View>
 
-      <Text style={styles.label}>YOUR NAME IN CREW</Text>
+      {selectedCrewId === null && (
+        <>
+          <Text style={styles.label}>SESSION NAME</Text>
+          <TextInput style={styles.input} value={crewName} onChangeText={setCrewName}
+            placeholder="e.g. Friday Night Crew" placeholderTextColor={Colors.textMuted}
+            maxLength={32} autoFocus={permanentCrews.length === 0} />
+        </>
+      )}
+
+      <Text style={styles.label}>YOUR NAME IN THIS SESSION</Text>
       <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName}
         placeholder="Display name" placeholderTextColor={Colors.textMuted} maxLength={24} />
 
-      {/* Location (optional) */}
-      <Text style={styles.label}>SESSION LOCATION (OPTIONAL)</Text>
+      {/* ── Public / Private ── */}
+      <View style={styles.visibilityRow}>
+        <TouchableOpacity style={[styles.visibilityBtn, !isPublic && styles.visibilityBtnActive]}
+          onPress={() => setIsPublic(false)}>
+          <MaterialCommunityIcons name="lock" size={15} color={!isPublic ? '#000' : Colors.textMuted} />
+          <Text style={[styles.visibilityBtnText, !isPublic && styles.visibilityBtnTextActive]}>Private</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.visibilityBtn, isPublic && styles.visibilityBtnPublic]}
+          onPress={() => setIsPublic(true)}>
+          <MaterialCommunityIcons name="earth" size={15} color={isPublic ? '#000' : Colors.textMuted} />
+          <Text style={[styles.visibilityBtnText, isPublic && styles.visibilityBtnTextActive]}>Public</Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.hintText}>
+        {isPublic ? '🌍 Anyone nearby can find & join.' : '🔒 Crew code required to join.'}
+      </Text>
+
+      {/* ── Location ── */}
+      <Text style={styles.label}>LOCATION (OPTIONAL)</Text>
       {locationLabel ? (
         <View style={styles.locationChip}>
           <MaterialCommunityIcons name="map-marker" size={16} color={Colors.primary} />
@@ -385,7 +460,7 @@ export default function CrewModal({
         {isLoading ? <ActivityIndicator color="#000" /> : (
           <>
             <MaterialCommunityIcons name="lightning-bolt" size={18} color="#000" />
-            <Text style={styles.primaryBtnText}>Create & Start</Text>
+            <Text style={styles.primaryBtnText}>Create &amp; Start</Text>
           </>
         )}
       </TouchableOpacity>
@@ -396,27 +471,6 @@ export default function CrewModal({
   // RENDER — Schedule
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const [schedHour, setSchedHour] = useState('9');
-  const [schedMin, setSchedMin] = useState('00');
-  const [schedAmPm, setSchedAmPm] = useState<'AM' | 'PM'>('PM');
-  const [schedDayOffset, setSchedDayOffset] = useState(0); // 0=today, 1=tomorrow, etc.
-
-  const buildScheduledDate = (): Date => {
-    const d = new Date();
-    d.setDate(d.getDate() + schedDayOffset);
-    let h = parseInt(schedHour, 10) % 12;
-    if (schedAmPm === 'PM') h += 12;
-    d.setHours(h, parseInt(schedMin, 10), 0, 0);
-    return d;
-  };
-
-  const getDayLabel = (offset: number) => {
-    if (offset === 0) return 'Today';
-    if (offset === 1) return 'Tomorrow';
-    const d = new Date(); d.setDate(d.getDate() + offset);
-    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  };
-
   const renderSchedule = () => (
     <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
       <TouchableOpacity onPress={() => setStep('landing')} style={styles.backBtn}>
@@ -426,61 +480,104 @@ export default function CrewModal({
 
       <Text style={styles.titleLarge}>Schedule a Session</Text>
       <Text style={[styles.subtitle, { marginBottom: 16 }]}>
-        Your crew will get a push notification right away, and a reminder 15 minutes before.
+        Your crew gets a push notification immediately and a 15-min reminder.
       </Text>
 
-      <Text style={styles.label}>CREW NAME</Text>
-      <TextInput style={styles.input} value={crewName} onChangeText={setCrewName}
-        placeholder="e.g. Weekend Warriors" placeholderTextColor={Colors.textMuted} maxLength={32} autoFocus />
+      {/* ── Crew picker ── */}
+      <Text style={styles.label}>SESSION FOR</Text>
+      <View style={styles.crewPickerRow}>
+        {permanentCrews.map(crew => (
+          <TouchableOpacity key={crew.id}
+            style={[styles.crewChip, selectedCrewId === crew.id && styles.crewChipActive]}
+            onPress={() => { setSelectedCrewId(crew.id); setCrewName(''); }}>
+            <MaterialCommunityIcons name="account-group" size={13}
+              color={selectedCrewId === crew.id ? '#000' : Colors.primary} />
+            <Text style={[styles.crewChipText, selectedCrewId === crew.id && styles.crewChipTextActive]}
+              numberOfLines={1}>{crew.name}</Text>
+          </TouchableOpacity>
+        ))}
+        <TouchableOpacity
+          style={[styles.crewChip, selectedCrewId === null && styles.crewChipActive]}
+          onPress={() => setSelectedCrewId(null)}>
+          <MaterialCommunityIcons name="plus" size={13}
+            color={selectedCrewId === null ? '#000' : Colors.primary} />
+          <Text style={[styles.crewChipText, selectedCrewId === null && styles.crewChipTextActive]}>New</Text>
+        </TouchableOpacity>
+      </View>
 
-      <Text style={styles.label}>YOUR NAME IN CREW</Text>
+      {selectedCrewId === null && (
+        <>
+          <Text style={styles.label}>SESSION NAME</Text>
+          <TextInput style={styles.input} value={crewName} onChangeText={setCrewName}
+            placeholder="e.g. Weekend Warriors" placeholderTextColor={Colors.textMuted} maxLength={32} />
+        </>
+      )}
+
+      <Text style={styles.label}>YOUR NAME IN THIS SESSION</Text>
       <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName}
         placeholder="Display name" placeholderTextColor={Colors.textMuted} maxLength={24} />
 
-      {/* Day picker */}
-      <Text style={styles.label}>DAY</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ width: '100%' }}>
-        {[0, 1, 2, 3, 4, 5, 6].map(offset => (
-          <TouchableOpacity
-            key={offset}
-            style={[styles.dayChip, schedDayOffset === offset && styles.dayChipActive]}
-            onPress={() => setSchedDayOffset(offset)}
-          >
-            <Text style={[styles.dayChipText, schedDayOffset === offset && { color: '#000' }]}>
-              {getDayLabel(offset)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Time picker */}
-      <Text style={[styles.label, { marginTop: 16 }]}>TIME</Text>
-      <View style={styles.timeRow}>
-        <TextInput
-          style={styles.timeInput} value={schedHour}
-          onChangeText={v => setSchedHour(v.replace(/[^0-9]/g, '').slice(0, 2))}
-          keyboardType="number-pad" maxLength={2} placeholder="9"
-          placeholderTextColor={Colors.textMuted}
-        />
-        <Text style={styles.timeColon}>:</Text>
-        <TextInput
-          style={styles.timeInput} value={schedMin}
-          onChangeText={v => setSchedMin(v.replace(/[^0-9]/g, '').slice(0, 2))}
-          keyboardType="number-pad" maxLength={2} placeholder="00"
-          placeholderTextColor={Colors.textMuted}
-        />
-        <View style={styles.ampmRow}>
-          {(['AM', 'PM'] as const).map(val => (
-            <TouchableOpacity key={val}
-              style={[styles.ampmBtn, schedAmPm === val && styles.ampmBtnActive]}
-              onPress={() => setSchedAmPm(val)}>
-              <Text style={[styles.ampmText, schedAmPm === val && { color: '#000' }]}>{val}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+      {/* ── Public / Private ── */}
+      <View style={styles.visibilityRow}>
+        <TouchableOpacity style={[styles.visibilityBtn, !isPublic && styles.visibilityBtnActive]}
+          onPress={() => setIsPublic(false)}>
+          <MaterialCommunityIcons name="lock" size={15} color={!isPublic ? '#000' : Colors.textMuted} />
+          <Text style={[styles.visibilityBtnText, !isPublic && styles.visibilityBtnTextActive]}>Private</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.visibilityBtn, isPublic && styles.visibilityBtnPublic]}
+          onPress={() => setIsPublic(true)}>
+          <MaterialCommunityIcons name="earth" size={15} color={isPublic ? '#000' : Colors.textMuted} />
+          <Text style={[styles.visibilityBtnText, isPublic && styles.visibilityBtnTextActive]}>Public</Text>
+        </TouchableOpacity>
       </View>
+      <Text style={styles.hintText}>
+        {isPublic ? '🌍 Anyone nearby can find & join.' : '🔒 Crew code required to join.'}
+      </Text>
 
-      {/* Location optional */}
+      {/* ── Calendar Date/Time Picker ── */}
+      <Text style={[styles.label, { marginTop: 16 }]}>DATE &amp; TIME</Text>
+      <TouchableOpacity style={styles.datePickerBtn} onPress={() => setShowDatePicker(true)}>
+        <MaterialCommunityIcons name="calendar" size={18} color={Colors.primary} />
+        <Text style={styles.datePickerBtnText}>
+          {schedDateTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+        </Text>
+        <MaterialCommunityIcons name="chevron-right" size={18} color={Colors.textMuted} />
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.datePickerBtn} onPress={() => setShowTimePicker(true)}>
+        <MaterialCommunityIcons name="clock-outline" size={18} color={Colors.primary} />
+        <Text style={styles.datePickerBtnText}>
+          {schedDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+        </Text>
+        <MaterialCommunityIcons name="chevron-right" size={18} color={Colors.textMuted} />
+      </TouchableOpacity>
+
+      {showDatePicker && (
+        <DateTimePicker value={schedDateTime} mode="date"
+          display={Platform.OS === 'android' ? 'calendar' : 'spinner'}
+          minimumDate={new Date()}
+          onChange={(_evt: any, d?: Date) => {
+            setShowDatePicker(false);
+            if (d) {
+              const m = new Date(d);
+              m.setHours(schedDateTime.getHours(), schedDateTime.getMinutes());
+              setSchedDateTime(m);
+            }
+          }} />
+      )}
+      {showTimePicker && (
+        <DateTimePicker value={schedDateTime} mode="time"
+          display={Platform.OS === 'android' ? 'clock' : 'spinner'}
+          onChange={(_evt: any, d?: Date) => {
+            setShowTimePicker(false);
+            if (d) {
+              const m = new Date(schedDateTime);
+              m.setHours(d.getHours(), d.getMinutes());
+              setSchedDateTime(m);
+            }
+          }} />
+      )}
+
+      {/* ── Location ── */}
       <Text style={styles.label}>LOCATION (OPTIONAL)</Text>
       {locationLabel ? (
         <View style={styles.locationChip}>
@@ -504,11 +601,11 @@ export default function CrewModal({
       {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 
       <TouchableOpacity style={[styles.primaryBtn, isLoading && { opacity: 0.5 }]}
-        onPress={() => handleCreate(buildScheduledDate())} disabled={isLoading}>
+        onPress={() => handleCreate(schedDateTime)} disabled={isLoading}>
         {isLoading ? <ActivityIndicator color="#000" /> : (
           <>
             <MaterialCommunityIcons name="calendar-check" size={18} color="#000" />
-            <Text style={styles.primaryBtnText}>Schedule & Notify Crew</Text>
+            <Text style={styles.primaryBtnText}>Schedule &amp; Notify Crew</Text>
           </>
         )}
       </TouchableOpacity>
@@ -832,28 +929,25 @@ const createStyles = (Colors: any) => StyleSheet.create({
   },
   locationChipText: { flex: 1, color: Colors.primary || '#FFAA00', fontSize: 13 },
 
-  // Schedule
-  dayChip: {
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, marginRight: 8,
-  },
-  dayChipActive: { backgroundColor: Colors.primary || '#FFAA00', borderColor: 'transparent' },
-  dayChipText:  { color: Colors.text || '#FFF', fontSize: 13, fontWeight: '600' },
-  timeRow:      { flexDirection: 'row', alignItems: 'center', width: '100%', gap: 8 },
-  timeInput:    {
-    backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 10,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
-    color: Colors.text || '#FFF', fontSize: 28, fontWeight: '800', textAlign: 'center',
-    width: 62, paddingVertical: 8,
-  },
-  timeColon:    { color: Colors.text || '#FFF', fontSize: 28, fontWeight: '800' },
-  ampmRow:      { flexDirection: 'row', gap: 6, marginLeft: 4 },
-  ampmBtn:      {
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
-  },
-  ampmBtnActive: { backgroundColor: Colors.primary || '#FFAA00', borderColor: 'transparent' },
-  ampmText:     { color: Colors.text || '#FFF', fontSize: 14, fontWeight: '700' },
+  // Crew picker chips
+  crewPickerRow:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14, alignSelf: 'flex-start' },
+  crewChip:            { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, maxWidth: 160 },
+  crewChipActive:      { backgroundColor: '#FFAA00', borderColor: '#FFAA00' },
+  crewChipText:        { color: '#bbb', fontSize: 12, fontWeight: '700', flexShrink: 1 },
+  crewChipTextActive:  { color: '#000' },
+
+  // Public/Private visibility toggle
+  visibilityRow:           { flexDirection: 'row', gap: 10, marginBottom: 6, width: '100%' },
+  visibilityBtn:           { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)', borderRadius: 12, paddingVertical: 10 },
+  visibilityBtnActive:     { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.5)' },
+  visibilityBtnPublic:     { backgroundColor: '#00CC66', borderColor: '#00CC66' },
+  visibilityBtnText:       { color: '#999', fontSize: 13, fontWeight: '700' },
+  visibilityBtnTextActive: { color: '#fff' },
+  hintText:                { color: '#777', fontSize: 12, marginBottom: 12, alignSelf: 'flex-start' },
+
+  // Calendar date/time picker buttons
+  datePickerBtn:     { flexDirection: 'row', alignItems: 'center', gap: 10, width: '100%', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.14)', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14, marginBottom: 10 },
+  datePickerBtnText: { flex: 1, color: '#fff', fontSize: 14, fontWeight: '600' },
 
   // Join — sessions browser
   sessionCard: {
@@ -862,14 +956,14 @@ const createStyles = (Colors: any) => StyleSheet.create({
     borderRadius: 14, padding: 12, marginBottom: 8,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
-  sessionCardName: { color: Colors.text || '#FFF', fontSize: 14, fontWeight: '700' },
-  sessionCardMeta: { color: Colors.textMuted || '#888', fontSize: 11 },
+  sessionCardName:  { color: Colors.text || '#FFF', fontSize: 14, fontWeight: '700' },
+  sessionCardMeta:  { color: Colors.textMuted || '#888', fontSize: 11 },
   sessionCardRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  joinPill: { backgroundColor: Colors.primary || '#FFAA00', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
-  joinPillText: { color: '#000', fontSize: 12, fontWeight: '800' },
-  divider:      { flexDirection: 'row', alignItems: 'center', marginVertical: 14, width: '100%', gap: 8 },
-  dividerLine:  { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' },
-  dividerText:  { color: Colors.textMuted || '#888', fontSize: 10, fontWeight: '700', letterSpacing: 1 },
+  joinPill:         { backgroundColor: Colors.primary || '#FFAA00', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
+  joinPillText:     { color: '#000', fontSize: 12, fontWeight: '800' },
+  divider:          { flexDirection: 'row', alignItems: 'center', marginVertical: 14, width: '100%', gap: 8 },
+  dividerLine:      { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' },
+  dividerText:      { color: Colors.textMuted || '#888', fontSize: 10, fontWeight: '700', letterSpacing: 1 },
 
   // Controller card
   controllerCard: {
@@ -885,9 +979,9 @@ const createStyles = (Colors: any) => StyleSheet.create({
     backgroundColor: 'rgba(0,230,118,0.12)',
     borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
   },
-  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#00E676' },
+  liveDot:  { width: 7, height: 7, borderRadius: 4, backgroundColor: '#00E676' },
   liveText: { color: '#00E676', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
+  metaRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
   metaChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 20,

@@ -34,6 +34,8 @@ export interface CrewSession {
   location_coords?: { lat: number; lng: number };
   scheduled_at?: string;
   ended_at?: string;
+  // Migration 007 fields
+  is_public?: boolean;  // true = anyone nearby can join without a code
 }
 
 export interface CrewMember {
@@ -72,7 +74,7 @@ class CrewService {
   async createSession(
     name: string,
     displayName: string,
-    opts?: { locationLabel?: string; locationCoords?: { lat: number; lng: number }; scheduledAt?: string }
+    opts?: { locationLabel?: string; locationCoords?: { lat: number; lng: number }; scheduledAt?: string; isPublic?: boolean }
   ): Promise<CrewSession> {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) throw new Error('Must be signed in to create a crew');
@@ -85,6 +87,7 @@ class CrewService {
     if (opts?.locationLabel)  insertData.location_label  = opts.locationLabel;
     if (opts?.locationCoords) insertData.location_coords = opts.locationCoords;
     if (opts?.scheduledAt)    insertData.scheduled_at    = opts.scheduledAt;
+    if (opts?.isPublic !== undefined) insertData.is_public = opts.isPublic;
 
     const { data, error } = await supabase
       .from('crew_sessions')
@@ -192,7 +195,6 @@ class CrewService {
       .from('crew_sessions')
       .select('*, crew_members(count)')
       .eq('is_active', true)
-      .eq('status', 'active')
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
       .limit(20);
@@ -200,6 +202,42 @@ class CrewService {
     if (error || !data) return [];
 
     return data.map((s: any) => ({
+      ...s,
+      member_count: s.crew_members?.[0]?.count ?? 0,
+    })) as CrewSession[];
+  }
+
+  /**
+   * Fetch PUBLIC sessions only (open to anyone, no invite code needed).
+   * Used for location-based discovery browse. Requires migration 007.
+   */
+  async fetchPublicSessions(): Promise<CrewSession[]> {
+    try {
+      // Try the public_sessions view first (migration 007)
+      const { data, error } = await supabase
+        .from('public_sessions')
+        .select('*')
+        .limit(30);
+
+      if (!error && data) {
+        return data.map((s: any) => ({
+          ...s,
+          is_public: true,
+        })) as CrewSession[];
+      }
+    } catch {}
+
+    // Fallback: filter from crew_sessions directly
+    const { data } = await supabase
+      .from('crew_sessions')
+      .select('*, crew_members(count)')
+      .eq('is_active', true)
+      .eq('is_public', true)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    return (data ?? []).map((s: any) => ({
       ...s,
       member_count: s.crew_members?.[0]?.count ?? 0,
     })) as CrewSession[];
@@ -217,13 +255,17 @@ class CrewService {
     const sessionId = explicitSessionId ?? this.currentSessionId;
     if (!sessionId) throw new Error('No active session to end');
 
+    console.log('[CrewService] endSession called', { sessionId, currentRole: this.currentRole, userId: user.id });
+
     // DB-authoritative leader check — don't trust singleton state alone
     if (this.currentRole !== 'leader') {
-      const { data: session } = await supabase
+      const { data: session, error: fetchErr } = await supabase
         .from('crew_sessions')
         .select('leader_user_id')
         .eq('id', sessionId)
         .single();
+      console.log('[CrewService] leader check', { session, fetchErr });
+      if (fetchErr) throw new Error(`Could not verify session: ${fetchErr.message}`);
       if (!session || session.leader_user_id !== user.id) {
         throw new Error('Only the session leader can end the session');
       }
@@ -232,7 +274,8 @@ class CrewService {
       this.currentSessionId = sessionId;
     }
 
-    const { error } = await supabase
+    // Try full update with status + ended_at (requires migration 006)
+    const { error: fullError } = await supabase
       .from('crew_sessions')
       .update({
         status: 'ended',
@@ -241,7 +284,21 @@ class CrewService {
       })
       .eq('id', sessionId);
 
-    if (error) throw error;
+    if (fullError) {
+      console.warn('[CrewService] Full update failed (migration 006 may not be applied), trying fallback:', fullError.message);
+      // Fallback: just flip is_active — works even without migration 006
+      const { error: fallbackError } = await supabase
+        .from('crew_sessions')
+        .update({ is_active: false })
+        .eq('id', sessionId);
+
+      if (fallbackError) {
+        console.error('[CrewService] Fallback update also failed:', fallbackError.message);
+        throw new Error(`Could not end session: ${fallbackError.message}`);
+      }
+    }
+
+    console.log('[CrewService] DB update succeeded, broadcasting session_ended');
 
     // Broadcast END event so members know the session is over
     this.channel?.send({
@@ -255,6 +312,7 @@ class CrewService {
     this.currentSessionId = null;
     this.currentRole = null;
     AppLogger.log('CREW_SESSION_ENDED', { reason: 'leader_ended', sessionId });
+    console.log('[CrewService] endSession complete');
   }
 
   /** Fetch the last scene snapshot from a session (for late-arrival sync). */
