@@ -62,6 +62,7 @@ const EVENT_META: Record<EventType, { icon: string; color: string; label: string
   CREW_SESSION_JOINED:     { icon: 'account-plus',  color: '#00AAFF', label: 'Crew Joined' },
   CREW_SESSION_LEFT:       { icon: 'account-minus', color: '#FF6B6B', label: 'Crew Left' },
   CREW_SESSION_ENDED:      { icon: 'stop-circle',   color: '#FF6B6B', label: 'Session Ended' },
+  CREW_SESSION_SHARED:     { icon: 'share-variant', color: '#00E5FF', label: 'Session Shared' },
   CREW_LEADERSHIP_TRANSFERRED: { icon: 'crown',     color: '#FFD700', label: 'Leader Handoff' },
   CREW_SCENE_BROADCAST:    { icon: 'broadcast',     color: '#FFAA00', label: 'Scene Broadcast' },
   CREW_SCENE_RECEIVED:     { icon: 'download-circle', color: '#00AAFF', label: 'Scene Received' },

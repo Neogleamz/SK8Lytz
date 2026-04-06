@@ -24,6 +24,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { CrewSession, CrewRole } from '../services/CrewService';
 import { supabase } from '../services/supabaseClient';
+import { shareSessionInvite } from '../services/SessionShareService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -190,6 +191,18 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
         <View style={[styles.statusBadge, { backgroundColor: 'rgba(0,230,118,0.15)', borderColor: '#00E676' }]}>
           <Text style={[styles.statusBadgeText, { color: '#00E676' }]}>● LIVE</Text>
         </View>
+        <TouchableOpacity
+          style={styles.shareHeaderBtn}
+          onPress={() => shareSessionInvite({
+            name: session.name,
+            location_label: session.location_label,
+            invite_code: (session as any).invite_code,
+            scheduled_at: session.scheduled_at,
+            status: session.status,
+          })}
+        >
+          <MaterialCommunityIcons name="share-variant" size={18} color={Colors.primary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
@@ -299,13 +312,29 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
           </View>
         )}
 
-        {/* ── Leave button ── */}
-        <TouchableOpacity style={styles.leaveBtn} onPress={onLeave}>
-          <MaterialCommunityIcons name={isLeader ? 'stop-circle-outline' : 'exit-to-app'} size={18} color="#FF4444" />
-          <Text style={styles.leaveBtnText}>
-            {isLeader ? 'End Session' : 'Leave Session'}
-          </Text>
-        </TouchableOpacity>
+        {/* ── Action buttons ── */}
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+          <TouchableOpacity
+            style={styles.shareBtn}
+            onPress={() => shareSessionInvite({
+              name: session.name,
+              location_label: session.location_label,
+              invite_code: (session as any).invite_code,
+              scheduled_at: session.scheduled_at,
+              status: session.status,
+            })}
+          >
+            <MaterialCommunityIcons name="share-variant" size={16} color={Colors.primary} />
+            <Text style={styles.shareBtnText}>Share Session</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.leaveBtn, { flex: 1 }]} onPress={onLeave}>
+            <MaterialCommunityIcons name={isLeader ? 'stop-circle-outline' : 'exit-to-app'} size={16} color="#FF4444" />
+            <Text style={styles.leaveBtnText}>
+              {isLeader ? 'End Session' : 'Leave'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={{ height: 30 }} />
       </ScrollView>
@@ -379,7 +408,14 @@ const createStyles = (Colors: any) => StyleSheet.create({
   leaveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     borderWidth: 1.5, borderColor: '#FF4444', borderRadius: 14,
-    paddingVertical: 14, marginTop: 4,
+    paddingVertical: 12,
   },
-  leaveBtnText: { color: '#FF4444', fontSize: 15, fontWeight: '800' },
+  leaveBtnText: { color: '#FF4444', fontSize: 14, fontWeight: '800' },
+
+  shareHeaderBtn: { padding: 8, borderRadius: 20 },
+  shareBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 1.5, borderColor: 'rgba(255,170,0,0.4)', borderRadius: 14, paddingVertical: 12,
+  },
+  shareBtnText: { color: '#FFAA00', fontSize: 14, fontWeight: '700' },
 });
