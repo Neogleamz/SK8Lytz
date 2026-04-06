@@ -676,8 +676,11 @@ export default function AccountModal({
           <MaterialCommunityIcons name="chevron-left" size={20} color={Colors.textMuted} />
           <Text style={styles.backText}>My Crews</Text>
         </TouchableOpacity>
-        <Text style={styles.sectionHeader}>JOIN A CREW</Text>
-        <Text style={styles.label}>INVITE CODE</Text>
+        <Text style={styles.sectionHeader}>JOIN PRIVATE CREW</Text>
+        <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 12, lineHeight: 17 }}>
+          Enter the 6-character invite code from a private crew. Public crews don't need a code — browse them from the Crew Hub.
+        </Text>
+        <Text style={styles.label}>PRIVATE INVITE CODE</Text>
         <TextInput style={[styles.input, styles.codeInput]}
           value={joinCode} onChangeText={t => setJoinCode(t.toUpperCase())}
           placeholder="ABC123" placeholderTextColor={Colors.textMuted}
@@ -685,7 +688,7 @@ export default function AccountModal({
         {!!crewError && <Text style={styles.errorText}>{crewError}</Text>}
         <TouchableOpacity style={[styles.primaryBtn, crewLoading && { opacity: 0.6 }]}
           onPress={handleJoinCrew} disabled={crewLoading}>
-          {crewLoading ? <ActivityIndicator color="#000" /> : <Text style={styles.primaryBtnText}>Join Crew</Text>}
+          {crewLoading ? <ActivityIndicator color="#000" /> : <Text style={styles.primaryBtnText}>Join Private Crew</Text>}
         </TouchableOpacity>
       </View>
     );
@@ -709,9 +712,15 @@ export default function AccountModal({
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.crewCardName}>{crew.name}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                  <Text style={styles.crewCardCode}>
-                    Code: <Text style={{ color: '#FFAA00', fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace' }}>{crew.invite_code}</Text>
-                  </Text>
+                  {crew.is_public ? (
+                    // Public crew — no code needed, show badge instead
+                    <Text style={[styles.crewCardCode, { color: '#00C853' }]}>🌍 Public</Text>
+                  ) : (
+                    // Private crew — show invite code (owner shares it to invite others)
+                    <Text style={styles.crewCardCode}>
+                      Code: <Text style={{ color: '#FFAA00', fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace' }}>{crew.invite_code}</Text>
+                    </Text>
+                  )}
                   {crew.is_owner && <Text style={styles.ownerBadge}>OWNER</Text>}
                 </View>
               </View>
@@ -731,8 +740,8 @@ export default function AccountModal({
           <Text style={styles.primaryBtnText}>Create a Crew</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.secondaryBtn} onPress={() => { setCrewStep('join'); setCrewError(''); }}>
-          <MaterialCommunityIcons name="account-plus-outline" size={18} color={Colors.primary} />
-          <Text style={styles.secondaryBtnText}>Join by Code</Text>
+          <MaterialCommunityIcons name="lock-outline" size={18} color={Colors.textMuted} />
+          <Text style={[styles.secondaryBtnText, { color: Colors.textMuted }]}>Join Private Crew (by Code)</Text>
         </TouchableOpacity>
         <View style={{ height: 20 }} />
       </ScrollView>

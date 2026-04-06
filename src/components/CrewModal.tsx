@@ -460,13 +460,6 @@ export default function CrewModal({
             <Text style={styles.hubTitle}>Crew Hub</Text>
             <Text style={styles.hubSub}>Skate together · sync your light show</Text>
           </View>
-          <TouchableOpacity
-            style={styles.hubStartBtn}
-            onPress={() => { setStep('create'); setErrorMsg(''); }}
-          >
-            <MaterialCommunityIcons name="lightning-bolt" size={16} color="#000" />
-            <Text style={styles.hubStartBtnText}>Start Now</Text>
-          </TouchableOpacity>
         </View>
 
         {/* ── MY CREWS ── */}
@@ -551,17 +544,32 @@ export default function CrewModal({
                 ) : (
                   <View style={styles.hubNoSessionRow}>
                     <Text style={styles.hubNoSessionText}>No active session</Text>
-                    <TouchableOpacity
-                      style={styles.hubActionChip}
-                      onPress={() => {
-                        setSelectedCrewId(crew.id);
-                        setStep('schedule');
-                        setErrorMsg('');
-                      }}
-                    >
-                      <MaterialCommunityIcons name="calendar-plus" size={12} color={Colors.primary} />
-                      <Text style={styles.hubActionChipText}>Schedule</Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {/* Start Now — in card, next to Schedule */}
+                      <TouchableOpacity
+                        style={[styles.hubActionChip, { backgroundColor: Colors.primary }]}
+                        onPress={() => {
+                          setSelectedCrewId(crew.id);
+                          setCrewName(crew.name);
+                          setStep('create');
+                          setErrorMsg('');
+                        }}
+                      >
+                        <MaterialCommunityIcons name="lightning-bolt" size={12} color="#000" />
+                        <Text style={[styles.hubActionChipText, { color: '#000', fontWeight: '700' }]}>Start Now</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.hubActionChip}
+                        onPress={() => {
+                          setSelectedCrewId(crew.id);
+                          setStep('schedule');
+                          setErrorMsg('');
+                        }}
+                      >
+                        <MaterialCommunityIcons name="calendar-plus" size={12} color={Colors.primary} />
+                        <Text style={styles.hubActionChipText}>Schedule</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 )}
               </View>
@@ -569,7 +577,7 @@ export default function CrewModal({
           })
         )}
 
-        {/* Crew actions row */}
+        {/* Crew actions row — public join is frictionless (tap card above); private needs code */}
         <View style={styles.hubCrewActions}>
           <TouchableOpacity
             style={styles.hubCrewActionBtn}
@@ -582,8 +590,8 @@ export default function CrewModal({
             style={styles.hubCrewActionBtn}
             onPress={() => setShowCodeEntry(v => !v)}
           >
-            <MaterialCommunityIcons name="pound" size={15} color={Colors.primary} />
-            <Text style={styles.hubCrewActionBtnText}>Join by Code</Text>
+            <MaterialCommunityIcons name="lock-outline" size={15} color={Colors.textMuted} />
+            <Text style={[styles.hubCrewActionBtnText, { color: Colors.textMuted }]}>Private Code</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.hubCrewActionBtn}
@@ -594,9 +602,12 @@ export default function CrewModal({
           </TouchableOpacity>
         </View>
 
-        {/* Inline code entry (toggle) */}
+        {/* Inline private code entry — only for private crew sessions */}
         {showCodeEntry && (
           <View style={styles.hubCodeEntry}>
+            <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 6 }}>
+              🔒 Enter the invite code from a private crew session
+            </Text>
             <TextInput
               style={[styles.input, styles.codeInput, { marginBottom: 8 }]}
               value={inviteCode}
@@ -615,7 +626,7 @@ export default function CrewModal({
             >
               {isLoading
                 ? <ActivityIndicator color="#000" />
-                : <Text style={styles.primaryBtnText}>Join with Code</Text>
+                : <Text style={styles.primaryBtnText}>Join Private Session</Text>
               }
             </TouchableOpacity>
           </View>
