@@ -24,7 +24,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { crewService, CrewSession, CrewMember, CrewRole } from '../services/CrewService';
 import { supabase } from '../services/supabaseClient';
-import { profileService, PermanentCrew } from '../services/ProfileService';
+import { profileService, PermanentCrew, CrewMemberFull } from '../services/ProfileService';
 import { locationService, NearbySession } from '../services/LocationService';
 import { AppLogger } from '../services/AppLogger';
 import { notificationService } from '../services/NotificationService';
@@ -139,6 +139,12 @@ export default function CrewModal({
   const [editCrewDesc,       setEditCrewDesc]       = useState('');
   const [isSavingCrew,       setIsSavingCrew]       = useState(false);
   const [crewStats,          setCrewStats]          = useState<Record<string, { sessionCount: number; lastActive: string | null; topScene: string | null }>>({});
+  // Expandable crew card state
+  const [expandedCrewId,      setExpandedCrewId]     = useState<string | null>(null);
+  const [cardMembers,         setCardMembers]        = useState<Record<string, CrewMemberFull[]>>({});
+  const [loadingCardMembersFor, setLoadingCardMembersFor] = useState<string | null>(null);
+  const [makingOwnerFor,      setMakingOwnerFor]     = useState<string | null>(null);
+  const [showPublicCrewsOnHub, setShowPublicCrewsOnHub] = useState(false);
   // Fetch crew stats when detail view opens
   useEffect(() => {
     if (!selectedCrewDetail) return;
@@ -507,11 +513,26 @@ export default function CrewModal({
                       {crew.city ? ` · ${crew.city}` : ''}
                     </Text>
                   </View>
+                  {/* Expand/collapse chevron — replaces old ··· Manage nav */}
                   <TouchableOpacity
                     style={styles.hubCrewManageBtn}
-                    onPress={() => { setSelectedCrewDetail(crew); setStep('manage'); }}
+                    onPress={() => {
+                      const next = expandedCrewId === crew.id ? null : crew.id;
+                      setExpandedCrewId(next);
+                      // Lazy-load members on first expand
+                      if (next && !cardMembers[crew.id]) {
+                        setLoadingCardMembersFor(crew.id);
+                        profileService.getCrewMembersWithNames(crew.id)
+                          .then(members => setCardMembers(prev => ({ ...prev, [crew.id]: members })))
+                          .catch(() => {})
+                          .finally(() => setLoadingCardMembersFor(null));
+                      }
+                    }}
                   >
-                    <MaterialCommunityIcons name="dots-horizontal" size={18} color={Colors.textMuted} />
+                    <MaterialCommunityIcons
+                      name={expandedCrewId === crew.id ? 'chevron-up' : 'chevron-down'}
+                      size={20} color={Colors.textMuted}
+                    />
                   </TouchableOpacity>
                 </View>
 
@@ -545,7 +566,6 @@ export default function CrewModal({
                   <View style={styles.hubNoSessionRow}>
                     <Text style={styles.hubNoSessionText}>No active session</Text>
                     <View style={{ flexDirection: 'row', gap: 8 }}>
-                      {/* Start Now — in card, next to Schedule */}
                       <TouchableOpacity
                         style={[styles.hubActionChip, { backgroundColor: Colors.primary }]}
                         onPress={() => {
@@ -572,6 +592,126 @@ export default function CrewModal({
                     </View>
                   </View>
                 )}
+
+                {/* ── Expandable: member list + actions ── */}
+                {expandedCrewId === crew.id && (
+                  <View style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)', marginTop: 10, paddingTop: 12 }}>
+
+                    {/* Member list */}
+                    <Text style={[styles.hubCrewMeta, { fontWeight: '700', marginBottom: 8, letterSpacing: 0.5, color: Colors.textMuted }]}>
+                      MEMBERS
+                    </Text>
+                    {loadingCardMembersFor === crew.id ? (
+                      <ActivityIndicator size="small" color={Colors.primary} style={{ marginBottom: 10 }} />
+                    ) : (cardMembers[crew.id] ?? []).length === 0 ? (
+                      <Text style={[styles.hubCrewMeta, { marginBottom: 8 }]}>No members loaded yet.</Text>
+                    ) : (
+                      (cardMembers[crew.id] ?? []).map(member => {
+                        const memberIsOwner = member.role === 'owner';
+                        const isMakingThisOwner = makingOwnerFor === member.user_id;
+                        return (
+                          <View key={member.user_id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 5, gap: 10 }}>
+                            {/* Avatar dot */}
+                            <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: member.avatar_color, alignItems: 'center', justifyContent: 'center' }}>
+                              <Text style={{ color: '#000', fontWeight: '800', fontSize: 12 }}>
+                                {(member.display_name?.[0] ?? '?').toUpperCase()}
+                              </Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ color: Colors.text, fontSize: 13, fontWeight: '600' }}>
+                                {member.display_name ?? 'Unknown'}
+                                {member.user_id === currentUserId ? ' (you)' : ''}
+                              </Text>
+                              {memberIsOwner && (
+                                <Text style={{ color: '#FFD700', fontSize: 11 }}>👑 Owner</Text>
+                              )}
+                            </View>
+                            {/* Make/Revoke Owner — only visible to current user if they are owner, and not for themselves */}
+                            {isOwner && member.user_id !== currentUserId && (
+                              <TouchableOpacity
+                                disabled={isMakingThisOwner}
+                                onPress={async () => {
+                                  setMakingOwnerFor(member.user_id);
+                                  try {
+                                    if (memberIsOwner) {
+                                      await profileService.revokeCrewOwner(crew.id, member.user_id);
+                                    } else {
+                                      await profileService.assignCrewOwner(crew.id, member.user_id);
+                                    }
+                                    // Refresh member list
+                                    const updated = await profileService.getCrewMembersWithNames(crew.id);
+                                    setCardMembers(prev => ({ ...prev, [crew.id]: updated }));
+                                  } catch (e: any) {
+                                    Alert.alert('Error', e.message ?? 'Could not update role');
+                                  } finally {
+                                    setMakingOwnerFor(null);
+                                  }
+                                }}
+                                style={{
+                                  paddingHorizontal: 10, paddingVertical: 4,
+                                  borderRadius: 8,
+                                  backgroundColor: memberIsOwner ? 'rgba(255,68,68,0.12)' : 'rgba(255,208,0,0.12)',
+                                  borderWidth: 1,
+                                  borderColor: memberIsOwner ? 'rgba(255,68,68,0.3)' : 'rgba(255,208,0,0.3)',
+                                }}
+                              >
+                                {isMakingThisOwner
+                                  ? <ActivityIndicator size="small" color={memberIsOwner ? '#FF4444' : '#FFD700'} />
+                                  : <Text style={{ fontSize: 11, fontWeight: '700', color: memberIsOwner ? '#FF4444' : '#FFD700' }}>
+                                      {memberIsOwner ? 'Revoke' : '+ Owner'}
+                                    </Text>
+                                }
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        );
+                      })
+                    )}
+
+                    {/* Inline actions: Edit / Share Code / Leave / Delete */}
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
+                      {isOwner && (
+                        <TouchableOpacity
+                          style={[styles.hubActionChip]}
+                          onPress={() => { handleStartEdit(crew); setSelectedCrewDetail(crew); setStep('manage'); setManageTab('mycrews'); }}
+                        >
+                          <MaterialCommunityIcons name="pencil" size={12} color={Colors.primary} />
+                          <Text style={styles.hubActionChipText}>Edit Crew</Text>
+                        </TouchableOpacity>
+                      )}
+                      {!crew.is_public && (
+                        <TouchableOpacity
+                          style={styles.hubActionChip}
+                          onPress={() => Share.share({
+                            message: `Join my SK8Lytz crew "${crew.name}"! Use code: ${crew.invite_code} in the SK8Lytz app.`,
+                            title: `Join ${crew.name} on SK8Lytz`,
+                          })}
+                        >
+                          <MaterialCommunityIcons name="share-variant" size={12} color={Colors.primary} />
+                          <Text style={styles.hubActionChipText}>Share Code</Text>
+                        </TouchableOpacity>
+                      )}
+                      {!isOwner && (
+                        <TouchableOpacity
+                          style={[styles.hubActionChip, { borderColor: 'rgba(255,68,68,0.3)' }]}
+                          onPress={() => handleLeaveCrew(crew)}
+                        >
+                          <MaterialCommunityIcons name="exit-run" size={12} color="#FF6666" />
+                          <Text style={[styles.hubActionChipText, { color: '#FF6666' }]}>Leave</Text>
+                        </TouchableOpacity>
+                      )}
+                      {isOwner && (
+                        <TouchableOpacity
+                          style={[styles.hubActionChip, { borderColor: 'rgba(255,68,68,0.3)' }]}
+                          onPress={() => handleDeleteCrew(crew)}
+                        >
+                          <MaterialCommunityIcons name="trash-can-outline" size={12} color="#FF4444" />
+                          <Text style={[styles.hubActionChipText, { color: '#FF4444' }]}>Delete Crew</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                )}
               </View>
             );
           })
@@ -592,13 +732,6 @@ export default function CrewModal({
           >
             <MaterialCommunityIcons name="lock-outline" size={15} color={Colors.textMuted} />
             <Text style={[styles.hubCrewActionBtnText, { color: Colors.textMuted }]}>Private Code</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.hubCrewActionBtn}
-            onPress={() => { setStep('manage'); setManageTab('mycrews'); }}
-          >
-            <MaterialCommunityIcons name="cog-outline" size={15} color={Colors.textMuted} />
-            <Text style={[styles.hubCrewActionBtnText, { color: Colors.textMuted }]}>Manage</Text>
           </TouchableOpacity>
         </View>
 
@@ -702,6 +835,57 @@ export default function CrewModal({
               )}
             </TouchableOpacity>
           ))
+        )}
+
+        {/* ── PUBLIC CREWS ── */}
+        <View style={[styles.hubSectionRow, { marginTop: 16 }]}>
+          <Text style={styles.hubSectionLabel}>🌍 PUBLIC CREWS</Text>
+          <TouchableOpacity onPress={() => setShowPublicCrewsOnHub(v => !v)}>
+            <Text style={{ color: Colors.primary, fontSize: 12 }}>{showPublicCrewsOnHub ? 'Hide' : 'Browse'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {showPublicCrewsOnHub && (
+          isLoadingCrews ? (
+            <ActivityIndicator color={Colors.primary} style={{ marginVertical: 12 }} />
+          ) : publicCrews.length === 0 ? (
+            <View style={styles.hubEmptyCard}>
+              <Text style={styles.hubEmptyText}>No public crews found yet — create one!</Text>
+            </View>
+          ) : (
+            publicCrews.map(crew => {
+              const alreadyMember = myCrews.some(c => c.id === crew.id);
+              const isJoining = joiningCrewId === crew.id;
+              return (
+                <View key={crew.id} style={[styles.hubCrewCard, { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 }]}>
+                  <View style={[styles.hubCrewAvatar, { backgroundColor: crew.avatar_color || '#FFAA00' }]}>
+                    <MaterialCommunityIcons name={(crew.avatar_icon as any) || 'account-group'} size={18} color="#000" />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={styles.hubCrewName} numberOfLines={1}>{crew.name}</Text>
+                    <Text style={styles.hubCrewMeta}>
+                      {crew.city ? `📍 ${crew.city}` : '🌍 Public crew'}
+                    </Text>
+                  </View>
+                  {alreadyMember ? (
+                    <View style={[styles.hubJoinPill, { backgroundColor: 'rgba(0,200,100,0.15)' }]}>
+                      <Text style={[styles.hubJoinPillText, { color: '#00C864' }]}>✓ Member</Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.hubJoinPill}
+                      onPress={() => handleJoinPublicCrew(crew)}
+                      disabled={isJoining}
+                    >
+                      {isJoining
+                        ? <ActivityIndicator size="small" color="#000" />
+                        : <Text style={styles.hubJoinPillText}>JOIN</Text>}
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })
+          )
         )}
 
         {/* ── Schedule ── */}

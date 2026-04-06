@@ -50,6 +50,15 @@ export interface CrewMemberDisplay {
   avatar_color: string;
 }
 
+export interface CrewMemberFull {
+  membership_id: string;
+  user_id: string;
+  display_name: string | null;
+  avatar_color: string;
+  role: 'owner' | 'member';
+  joined_at: string;
+}
+
 export interface SessionHistoryItem {
   session_id: string;
   session_name: string;
@@ -436,6 +445,63 @@ class ProfileService {
       : null;
 
     return { sessionCount, lastActive, topScene };
+  }
+  /**
+   * Fetch all members of a permanent crew with their display names and roles.
+   * Used to render the expandable member list on the hub crew card.
+   */
+  async getCrewMembersWithNames(crewId: string): Promise<CrewMemberFull[]> {
+    const { data, error } = await supabase
+      .from('crew_memberships')
+      .select(`
+        id,
+        user_id,
+        role,
+        joined_at,
+        user_profiles ( display_name, avatar_color )
+      `)
+      .eq('crew_id', crewId)
+      .order('role', { ascending: false })   // owners first
+      .order('joined_at', { ascending: true });
+
+    if (error || !data) return [];
+
+    return data.map((row: any) => ({
+      membership_id: row.id,
+      user_id:      row.user_id,
+      display_name: row.user_profiles?.display_name ?? null,
+      avatar_color: row.user_profiles?.avatar_color ?? '#888',
+      role:         (row.role ?? 'member') as 'owner' | 'member',
+      joined_at:    row.joined_at,
+    })) as CrewMemberFull[];
+  }
+
+  /**
+   * Assign owner role to a crew member (multi-owner support — requires migration 009).
+   * Only existing owners can call this.
+   */
+  async assignCrewOwner(crewId: string, targetUserId: string): Promise<void> {
+    const { error } = await supabase
+      .from('crew_memberships')
+      .update({ role: 'owner' })
+      .eq('crew_id', crewId)
+      .eq('user_id', targetUserId);
+
+    if (error) throw error;
+  }
+
+  /**
+   * Revoke owner role from a crew member (demote to regular member).
+   * Only other owners can call this; cannot demote yourself if sole owner.
+   */
+  async revokeCrewOwner(crewId: string, targetUserId: string): Promise<void> {
+    const { error } = await supabase
+      .from('crew_memberships')
+      .update({ role: 'member' })
+      .eq('crew_id', crewId)
+      .eq('user_id', targetUserId);
+
+    if (error) throw error;
   }
 }
 
