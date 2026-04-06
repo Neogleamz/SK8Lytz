@@ -120,6 +120,7 @@ export default function CrewModal({
   // Discover search
   const [discoverRadius,     setDiscoverRadius]     = useState(50);
   const [discoverSearch,     setDiscoverSearch]     = useState('');
+  const [joiningCrewId,      setJoiningCrewId]      = useState<string | null>(null);
 
   // Controller
   const [currentSession, setCurrentSession] = useState<CrewSession | null>(activeSession);
@@ -949,9 +950,26 @@ export default function CrewModal({
     ]);
   };
 
+  // ── Join public crew directly from Discover tab ─────────────────────────────
+  const handleJoinPublicCrew = async (crew: PermanentCrew) => {
+    setJoiningCrewId(crew.id);
+    try {
+      const joined = await profileService.joinPublicCrewById(crew.id);
+      // Add to myCrews if not already there
+      setMyCrews(prev => prev.find(c => c.id === joined.id) ? prev : [...prev, joined]);
+      Alert.alert('Joined!', `You joined ${joined.name}. Find it in My Crews.`);
+    } catch (e: any) {
+      Alert.alert('Could not join', e.message ?? 'Unknown error');
+    } finally {
+      setJoiningCrewId(null);
+    }
+  };
+
   // ── Crew card (✔ responsive flex, no hardcoded widths) ─────────────────────────────
-  const renderCrewCard = (crew: PermanentCrew, onTap: () => void) => {
+  const renderCrewCard = (crew: PermanentCrew, onTap: () => void, showJoinBtn = false) => {
     const info = crewMemberCounts[crew.id];
+    const alreadyMember = myCrews.some(c => c.id === crew.id);
+    const isJoining = joiningCrewId === crew.id;
     return (
       <TouchableOpacity key={crew.id} style={styles.mgCrewCard} onPress={onTap}>
         {/* Avatar */}
@@ -978,12 +996,28 @@ export default function CrewModal({
             </View>
           )}
         </View>
-        {/* Badges */}
+        {/* Badges + Join */}
         <View style={{ alignItems: 'flex-end', gap: 4 }}>
           {crew.is_owner && <View style={styles.mgOwnerBadge}><Text style={styles.mgBadgeText}>Owner</Text></View>}
           {crew.is_public
             ? <View style={[styles.mgOwnerBadge, { backgroundColor: 'rgba(0,200,100,0.15)' }]}><Text style={[styles.mgBadgeText, { color: '#00C864' }]}>Public</Text></View>
             : <View style={[styles.mgOwnerBadge, { backgroundColor: 'rgba(255,255,255,0.06)' }]}><Text style={[styles.mgBadgeText, { color: Colors.textMuted }]}>Private</Text></View>}
+          {showJoinBtn && !alreadyMember && (
+            <TouchableOpacity
+              style={[styles.mgOwnerBadge, { backgroundColor: Colors.primary, paddingHorizontal: 10, paddingVertical: 5 }]}
+              onPress={(e) => { e.stopPropagation?.(); handleJoinPublicCrew(crew); }}
+              disabled={isJoining}
+            >
+              <Text style={[styles.mgBadgeText, { color: '#000', fontWeight: '800' }]}>
+                {isJoining ? '…' : 'Join'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {showJoinBtn && alreadyMember && (
+            <View style={[styles.mgOwnerBadge, { backgroundColor: 'rgba(0,200,100,0.12)' }]}>
+              <Text style={[styles.mgBadgeText, { color: '#00C864' }]}>✓ Joined</Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -1037,7 +1071,7 @@ export default function CrewModal({
               : filteredPublic.length === 0
                 ? <Text style={styles.mgEmptyText}>No public crews found.{`\n`}Be the first to create one!</Text>
                 : <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-                    {filteredPublic.map(crew => renderCrewCard(crew, () => setSelectedCrewDetail(crew)))}
+                    {filteredPublic.map(crew => renderCrewCard(crew, () => setSelectedCrewDetail(crew), true))}
                   </ScrollView>
             }
           </View>

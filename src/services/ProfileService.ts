@@ -234,6 +234,32 @@ class ProfileService {
   }
 
   /**
+   * Join a PUBLIC permanent crew directly by its crew ID (no invite code needed).
+   * Only works if is_public = true. Throws if crew is private or not found.
+   */
+  async joinPublicCrewById(crewId: string): Promise<PermanentCrew> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data: crew, error: findErr } = await supabase
+      .from('crews')
+      .select('*')
+      .eq('id', crewId)
+      .eq('is_public', true)
+      .single();
+
+    if (findErr || !crew) throw new Error('Crew not found or is private');
+
+    const { error: joinErr } = await supabase
+      .from('crew_memberships')
+      .upsert({ crew_id: crew.id, user_id: user.id }, { onConflict: 'crew_id,user_id' });
+
+    if (joinErr) throw joinErr;
+
+    return { ...crew, is_owner: crew.owner_id === user.id } as PermanentCrew;
+  }
+
+  /**
    * Leave a permanent crew (removes membership; doesn't delete crew).
    */
   async leavePermanentCrew(crewId: string): Promise<void> {
