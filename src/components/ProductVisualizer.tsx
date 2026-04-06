@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { View, StyleSheet, Animated, Text, TouchableOpacity } from 'react-native';
 import { getArchetypeFromId } from '../utils/RbmDictionary';
-import { MusicDictionary } from '../utils/MusicDictionary';
+import { getRbmVisualizerFrame, getRbmMusicFrame, rgbToHex } from '../utils/RbmSimulator';
 import { useTheme } from '../context/ThemeContext';
 import { getVisualizerFrame } from '../protocols/PatternEngine';
 import type { RGB, PatternId } from '../protocols/PatternEngine';
@@ -246,109 +246,57 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
              dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
           } else if (mode === 'RBM') {
              const pid = patternId || 1;
-             if (pid === 103) { // Emergency (Bouncing logic)
-               const isTop = mirroredFract > 0.8;
-               const isBottom = mirroredFract < 0.2;
-               if (isTop) {
-                 dotColor = '#FFFFFF';
-                 dotOpacity = 1.0;
-               } else if (isBottom) {
-                 dotColor = '#FF0000';
-                 dotOpacity = 1.0;
+
+             if (pid === 100) {
+               // ── Emergency pattern: 3-zone layout (custom SK8Lytz protocol) ──
+               // Zone 0–20%: Red (heel zone)
+               // Zone 20–80%: Bouncing yellow dot in middle
+               // Zone 80–100%: White (toe zone)
+               if (mirroredFract > 0.8) {
+                 dotColor = '#FFFFFF'; dotOpacity = 1.0;
+               } else if (mirroredFract < 0.2) {
+                 dotColor = '#FF0000'; dotOpacity = 1.0;
                } else {
-                 // Calculate t1 and t2 for the bounce logic to avoid using __getValue()
                  const target = (mirroredFract - 0.2) / 0.6;
                  const t1 = (1 + target) / 2;
                  const t2 = (1 - target) / 2;
                  const rawInputs = [0, Math.max(0, t2-0.08), t2, Math.min(1, t2+0.08), Math.max(0, t1-0.08), t1, Math.min(1, t1+0.08), 1].sort((a,b) => a-b);
-                 
-                 // React Native strictly enforces perfectly monotonically increasing bounds
                  const safeInputs = [rawInputs[0]];
                  for (let k = 1; k < rawInputs.length; k++) {
-                     if (rawInputs[k] > safeInputs[safeInputs.length - 1] + 0.001) {
-                         safeInputs.push(rawInputs[k]);
-                     }
+                     if (rawInputs[k] > safeInputs[safeInputs.length - 1] + 0.001) safeInputs.push(rawInputs[k]);
                  }
-                 
-                 dotOpacity = animValue.interpolate({
-                   inputRange: safeInputs,
-                   outputRange: safeInputs.map(v => 
-                      (Math.abs(v-t2) < 0.005 || Math.abs(v-t1) < 0.005) ? 1.0 : 0.1
-                   )
-                 });
-                 dotColor = animValue.interpolate({
-                   inputRange: safeInputs,
-                   outputRange: safeInputs.map(v => 
-                      (Math.abs(v-t2) < 0.005 || Math.abs(v-t1) < 0.005) ? '#FFFF00' : '#111111'
-                   )
-                 });
+                 dotOpacity = animValue.interpolate({ inputRange: safeInputs, outputRange: safeInputs.map(v => (Math.abs(v-t2) < 0.005 || Math.abs(v-t1) < 0.005) ? 1.0 : 0.1) });
+                 dotColor = animValue.interpolate({ inputRange: safeInputs, outputRange: safeInputs.map(v => (Math.abs(v-t2) < 0.005 || Math.abs(v-t1) < 0.005) ? '#FFFF00' : '#111111') });
                }
              } else {
-                 const archetype = getArchetypeFromId(pid);
-                 const rainbowColors = [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1].map(v => HSLToHex(v * 360, 100, 50));
-                 
-                 if (archetype === 'MARQUEE') {
-                     dotOpacity = animValue.interpolate({
-                         inputRange: [0, Math.max(0, mirroredFract - 0.2), mirroredFract, Math.min(1, mirroredFract + 0.2), 1],
-                         outputRange: [0.3, 0.3, 1, 0.3, 0.3]
-                     });
-                     dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
-                 } else if (archetype === 'BREATHING') {
-                     dotOpacity = animValue.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.2, 1, 0.2] });
-                     dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
-                 } else if (archetype === 'STROBE') {
-                     dotOpacity = animValue.interpolate({ inputRange: [0, 0.49, 0.5, 0.99, 1], outputRange: [1, 1, 0.1, 0.1, 1] });
-                     dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
-                 } else if (archetype === 'METEOR') { // Trail mapping
-                     dotOpacity = animValue.interpolate({
-                         inputRange: [0, Math.max(0, fract - 0.3), fract, Math.min(1, fract + 0.05), 1],
-                         outputRange: [0.1, 0.1, 1, 0.1, 0.1]
-                     });
-                     dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
-                 } else { // OUTLIERS fallback
-                     dotOpacity = animValue.interpolate({
-                         inputRange: [0, Math.max(0, mirroredFract - 0.2), mirroredFract, Math.min(1, mirroredFract + 0.2), 1],
-                         outputRange: [0.3, 0.3, 1, 0.3, 0.3]
-                     });
-                     dotColor = color; // Fallback to base UI explicitly
-                 }
+               // ── All other RBM patterns: hardware-accurate pixel simulation ──
+               // getRbmVisualizerFrame returns RGB[] for every pattern motion type
+               // using the exact palette + motion model from the APK SymphonyBuild table.
+               const rbmFrame = getRbmVisualizerFrame(pid, numLeds, animTick);
+               const rawLedPos = (i / renderLeds) * rbmFrame.length;
+               const rSlot0 = Math.floor(rawLedPos) % Math.max(1, rbmFrame.length);
+               const rSlotT = rawLedPos - Math.floor(rawLedPos);
+               const RDIFF = 0.30;
+               const rBoundary = Math.pow(Math.abs(rSlotT - 0.5) * 2, 2);
+               const rBlend = RDIFF * rBoundary;
+               const rCurr = rbmFrame[rSlot0] || rbmFrame[0] || { r: 255, g: 0, b: 0 };
+               const rAdjIdx = rSlotT < 0.5
+                 ? (rSlot0 - 1 + rbmFrame.length) % rbmFrame.length
+                 : (rSlot0 + 1) % rbmFrame.length;
+               const rAdj = rbmFrame[rAdjIdx] || rCurr;
+               dotColor = `#${Math.round(rCurr.r*(1-rBlend)+rAdj.r*rBlend).toString(16).padStart(2,'0')}${Math.round(rCurr.g*(1-rBlend)+rAdj.g*rBlend).toString(16).padStart(2,'0')}${Math.round(rCurr.b*(1-rBlend)+rAdj.b*rBlend).toString(16).padStart(2,'0')}`;
+               dotOpacity = isPoweredOn ? Math.max(0.02, brightness / 100) : 0;
              }
           } else if (mode === 'MUSIC') {
-             const h = 1 - mirroredFract;
-             const colorVal = parseInt(color.replace('#',''), 16) || 0;
-             const r = (colorVal >> 16) & 255;
-             const g = (colorVal >> 8) & 255;
-             const b = colorVal & 255;
-             const compHex = '#' + ((255-r)<<16 | (255-g)<<8 | (255-b)).toString(16).padStart(6, '0');
-             const mag = 0.1 + (audioMagnitude * 0.9);
-
-             const profile = MusicDictionary[patternId] || MusicDictionary[2];
-             const arch = profile.archetype;
-             
-             if (arch === 'VU_METER') {
-                 // Classic volume bar
-                 dotOpacity = (fract < audioMagnitude) ? 1.0 : 0.1;
-                 dotColor = (fract > 0.8) ? '#FF0000' : (fract > 0.6 ? '#FFFF00' : color);
-             } else if (arch === 'PULSE') {
-                 // Soft breathing matched to audio amplitudes
-                 dotOpacity = (audioMagnitude > 0.5) ? 1.0 : (0.2 + 0.3 * mag);
-                 dotColor = color;
-             } else if (arch === 'STROBE') {
-                 // Hard flashing threshold clipping
-                 dotOpacity = (audioMagnitude > 0.7) ? 1.0 : 0.1;
-                 dotColor = (audioMagnitude > 0.8 && i % 3 === 0) ? '#FFFFFF' : color;
-             } else if (arch === 'WAVE') {
-                 // Rainbow colors shifting over the animation loop explicitly bridging audio magnitude
-                 const rainbow = [0, 1/6, 2/6, 3/6, 4/6, 5/6, 1].map(v => HSLToHex((v) % 1 * 360, 100, 50));
-                 dotOpacity = animValue.interpolate({
-                     inputRange: [0, Math.max(0, mirroredFract - 0.2), mirroredFract, Math.min(1, mirroredFract + 0.2), 1],
-                     outputRange: [0.1, 0.1, mag, 0.1, 0.1]
-                 });
-                 dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbow });
-             } else {
-                 dotOpacity = mag;
-                 dotColor = color;
-             }
+             // ── Hardware-accurate music mode simulation ──
+             // getRbmMusicFrame uses SymphonyEffect motion templates + audio magnitude.
+             // Returns per-LED { pixels: RGB[], opacities: number[] } for direct mapping.
+             const musicFrame = getRbmMusicFrame(patternId || 1, numLeds, animTick, audioMagnitude, color);
+             const mRawPos = (i / renderLeds) * musicFrame.pixels.length;
+             const mSlot = Math.floor(mRawPos) % Math.max(1, musicFrame.pixels.length);
+             const mPx = musicFrame.pixels[mSlot] || { r: 255, g: 255, b: 255 };
+             dotColor = rgbToHex(mPx);
+             dotOpacity = isPoweredOn ? (musicFrame.opacities[mSlot] ?? 1.0) * (brightness / 100) : 0;
           } else if (mode === 'MULTIMODE') {
              const fgHex = fixedFgColor || color;
              const bgHex = fixedBgColor || '#000000';
