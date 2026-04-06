@@ -366,23 +366,45 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
                b: parseInt(bgHex.slice(5,7), 16) || 0,
              };
 
-             // Get the full per-LED pixel array from the PatternEngine at the current animation tick
+           // Get the full per-LED pixel array from the PatternEngine at the current animation tick
              const framePixels = getVisualizerFrame(pid, fgRgb, bgRgb, numLeds, animTick);
 
-             // Map this LED's position index to its pixel in the frame
-             // renderLeds > numLeds (for smooth path), so quantize back to numLeds slots
-             const ledSlot = Math.min(framePixels.length - 1, Math.floor((i / renderLeds) * framePixels.length));
-             const px = framePixels[ledSlot] || fgRgb;
-             dotColor = `#${px.r.toString(16).padStart(2,'0')}${px.g.toString(16).padStart(2,'0')}${px.b.toString(16).padStart(2,'0')}`;
+             // ── Diffusion blending: blend adjacent LED colors near chip boundaries ──
+             // Physically: silicone diffusion mixes ~35% of adjacent LED into each boundary zone.
+             // Uses a quadratic falloff so the chip centre is pure; only edges blend.
+             const rawLedPos = (i / renderLeds) * framePixels.length;
+             const slot0 = Math.floor(rawLedPos) % Math.max(1, framePixels.length);
+             const slotT = rawLedPos - Math.floor(rawLedPos); // 0.0 → 1.0 through LED slot
+             const DIFF = 0.35;
+             const boundaryProx = Math.pow(Math.abs(slotT - 0.5) * 2, 2); // 0 at centre, 1 at edges
+             const blendAmt = DIFF * boundaryProx;
+             const pCurr = framePixels[slot0] || fgRgb;
+             // At start of slot blend toward previous LED; at end blend toward next LED
+             const adjIdx = slotT < 0.5
+               ? (slot0 - 1 + framePixels.length) % framePixels.length
+               : (slot0 + 1) % framePixels.length;
+             const pAdj = framePixels[adjIdx] || fgRgb;
+             const pr = Math.round(pCurr.r * (1 - blendAmt) + pAdj.r * blendAmt);
+             const pg = Math.round(pCurr.g * (1 - blendAmt) + pAdj.g * blendAmt);
+             const pb = Math.round(pCurr.b * (1 - blendAmt) + pAdj.b * blendAmt);
+             dotColor = `#${pr.toString(16).padStart(2,'0')}${pg.toString(16).padStart(2,'0')}${pb.toString(16).padStart(2,'0')}`;
              dotOpacity = isPoweredOn ? (brightness / 100) : 0;
           }
         }
+
+        // ── LED Chip Boundary Softening (ALL modes, ALL shapes) ──────────────────
+        // Sub-LED position: 0=chip leading edge, 0.5=chip centre, 1=chip trailing edge.
+        // Quadratic bell-curve dims render points near chip boundaries ~18%,
+        // simulating the slight dark gap between physical LED chips through silicone.
+        const subLedPos = (rawFract * numLeds) - Math.floor(rawFract * numLeds);
+        const chipSoften = 1 - 0.18 * Math.pow(Math.abs(2 * subLedPos - 1), 2);
 
         list.push({
            key: `led_${i}`,
            position: { top, left, position: 'absolute' as const },
            activeColor: dotColor,
            activeOpacity: dotOpacity,
+           chipSoften,
         });
     }
     return list;
@@ -396,7 +418,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
     >
       <View style={[
         isHaloz ? styles.haloBase : styles.soulBase, 
-        { alignSelf: 'center', opacity: isPoweredOn ? (brightness === 0 ? 0 : 0.08 + Math.pow(brightness / 100, 0.6) * 0.92) : 0.2 }
+        { alignSelf: 'center', opacity: isPoweredOn ? (brightness === 0 ? 0 : Math.max(0.06, Math.pow(brightness / 100, 1.8))) : 0.15 }
       ]}>
          {/* Physical unlit silicone background track simulation */}
          {isHaloz && (
@@ -416,32 +438,68 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
          )}
 
          {leds.map(led => {
-            const diam = isHaloz ? 10 : 8; // Perfectly smooth continuous tube geometry
+            const diam = isHaloz ? 10 : 8;
 
             return (
-               <Animated.View key={led.key} style={[
-                  led.position, 
-                  { width: diam, height: diam, alignItems: 'center', justifyContent: 'center', overflow: 'visible', zIndex: 10, opacity: led.activeOpacity }
-               ]}>
-                  {/* CHROMATIC BLOOM TRACK (Retains sharp silicone shape while glowing dynamically) */}
-                  <Animated.View style={{
-                    position: 'absolute', width: diam * 2.4, height: diam * 2.4, borderRadius: (diam * 2.4)/2,
-                    backgroundColor: led.activeColor as any, 
-                    opacity: 0.12, 
-                  }} />
+               // Outer wrapper applies chipSoften (plain number) — compatible with Animated inner nodes.
+               // Two-layer opacity in RN multiplies: chipSoften × activeOpacity per LED.
+               <View key={led.key} style={[led.position, { width: diam, height: diam, alignItems: 'center', justifyContent: 'center', overflow: 'visible', zIndex: 10, opacity: led.chipSoften }]}>
+                  <Animated.View style={[{ position: 'absolute', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', opacity: led.activeOpacity }]}>
 
-                  {/* Perfectly Smooth Continuous Silicone Tube */}
-                  <Animated.View style={{
-                    position: 'absolute', width: '100%', height: '100%', borderRadius: diam/2,
-                    backgroundColor: led.activeColor as any, 
-                  }} />
-                  {/* Frosty Silicone Exterior Glaze */}
-                  <View style={{
-                    position: 'absolute', width: '100%', height: '100%', borderRadius: diam/2,
-                    backgroundColor: 'rgba(255, 255, 255, 0.12)', // Milky texture
-                    borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.05)'
-                  }} />
-               </Animated.View>
+                     {/* ── Layer 3: Outer atmospheric scatter ─────────────────────────────── */}
+                     {/* Simulates light diffusing into surrounding air/surface (~5mm radius) */}
+                     <Animated.View style={{
+                       position: 'absolute',
+                       width: diam * 5.5, height: diam * 5.5,
+                       borderRadius: (diam * 5.5) / 2,
+                       backgroundColor: led.activeColor as any,
+                       opacity: 0.03,
+                     }} />
+
+                     {/* ── Layer 2: Mid silicone bloom ─────────────────────────────────── */}
+                     {/* The silicone tube edge scatters light laterally — soft wide glow */}
+                     <Animated.View style={{
+                       position: 'absolute',
+                       width: diam * 3.2, height: diam * 3.2,
+                       borderRadius: (diam * 3.2) / 2,
+                       backgroundColor: led.activeColor as any,
+                       opacity: 0.10,
+                     }} />
+
+                     {/* ── Layer 1: Inner diffuse scatter ──────────────────────────────── */}
+                     {/* Closest to the chip: concentrated inner halo through the silicone walls */}
+                     <Animated.View style={{
+                       position: 'absolute',
+                       width: diam * 1.7, height: diam * 1.7,
+                       borderRadius: (diam * 1.7) / 2,
+                       backgroundColor: led.activeColor as any,
+                       opacity: 0.38,
+                     }} />
+
+                     {/* ── Main LED chip body ──────────────────────────────────────────── */}
+                     <Animated.View style={{
+                       position: 'absolute', width: '100%', height: '100%', borderRadius: diam / 2,
+                       backgroundColor: led.activeColor as any,
+                     }} />
+
+                     {/* ── Hot-spot chip centre ─────────────────────────────────────────── */}
+                     {/* Real LED phosphor package has a bright emitter core visible through silicone */}
+                     <View style={{
+                       position: 'absolute',
+                       width: diam * 0.32, height: diam * 0.32,
+                       borderRadius: (diam * 0.32) / 2,
+                       backgroundColor: 'rgba(255,255,255,0.55)',
+                     }} />
+
+                     {/* ── Frosty silicone exterior glaze ──────────────────────────────── */}
+                     <View style={{
+                       position: 'absolute', width: '100%', height: '100%', borderRadius: diam / 2,
+                       backgroundColor: 'rgba(255,255,255,0.09)',
+                       borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.05)',
+                     }} />
+
+                  </Animated.View>
+               </View>
             );
          })}
       </View>
