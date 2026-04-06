@@ -43,7 +43,8 @@ import AdminHardwareTester from '../components/AdminHardwareTester';
 import FirstTimeSetupModal from '../components/FirstTimeSetupModal';
 import { supabase } from '../services/supabaseClient';
 import { useRegistration, RegisteredDevice } from '../hooks/useRegistration';
-import ProfileModal from '../components/ProfileModal';
+import AccountModal from '../components/AccountModal';
+import CrewMemberDashboard from '../components/CrewMemberDashboard';
 import { profileService } from '../services/ProfileService';
 import { notificationService } from '../services/NotificationService';
 
@@ -152,12 +153,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [crewSession, setCrewSession] = useState<CrewSession | null>(null);
   const [crewRole, setCrewRole] = useState<CrewRole>(null);
   const [isCrewModalVisible, setIsCrewModalVisible] = useState(false);
-  const [scannerTab, setScannerTab] = useState<'DEVICES' | 'CREW'>('DEVICES');
   const [crewModeSummary, setCrewModeSummary] = useState<string | undefined>(undefined);
+  const [lastLeaderScene, setLastLeaderScene] = useState<Record<string, any> | null>(null);
   const dockedControllerRef = React.useRef<{ applyCloudScene: (s: any) => void }>(null);
 
   // ── Profile + Notifications state ────────────────────────────────────────
-  const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
+  const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
   const [pendingJoinCrewId, setPendingJoinCrewId] = useState<string | null>(null);
   const [showHintText, setShowHintText] = useState(true);
   const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
@@ -249,7 +250,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           CloudUserId = session.user.id;
-          setAuthUsername(session.user.user_metadata?.username || session.user.email || 'Skater');
+          // Fetch real display name from user_profiles (not user_metadata which may be empty)
+          try {
+            const profile = await profileService.fetchOrCreateProfile();
+            setAuthUsername(profile?.display_name || profile?.username || session.user.email?.split('@')[0] || 'Skater');
+          } catch {
+            setAuthUsername(session.user.email?.split('@')[0] || 'Skater');
+          }
           const { data: groups, error } = await supabase.from('registered_groups').select('*').eq('user_id', CloudUserId).catch(() => ({ data: null, error: true }));
           isOffline = !!error;
           if (!error && groups && groups.length > 0) {
@@ -1114,9 +1121,24 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   const MemoizedSk8lytzController = useMemo(() => {
     if (!isActuallyConnected) return null;
+    if (isTestModeActive) return null;
 
-    if (isTestModeActive) {
-      return null;
+    // ── Crew member view: show telemetry dashboard instead of full controller ──
+    if (crewSession && crewRole === 'member') {
+      return (
+        <CrewMemberDashboard
+          session={crewSession}
+          role={crewRole}
+          currentScene={lastLeaderScene}
+          onLeave={async () => {
+            await crewService.leaveSession().catch(() => {});
+            setCrewSession(null);
+            setCrewRole(null);
+            setLastLeaderScene(null);
+            setCrewModeSummary(undefined);
+          }}
+        />
+      );
     }
 
     return (
@@ -1142,7 +1164,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           />
       </Animated.View>
     );
-  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, activeHwSettings, crewRole]);
+  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, activeHwSettings, crewRole, crewSession, lastLeaderScene]);
 
   const renderItem = useCallback(({ item }: { item: any }) => {
     const cachedConfig = deviceConfigs?.[item.id] || {};
@@ -1300,7 +1322,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={handleLogout}
+              onPress={() => setIsAccountModalVisible(true)}
               style={{
                 flexDirection: 'row', alignItems: 'center',
                 paddingHorizontal: 8, paddingVertical: 5,
@@ -1326,7 +1348,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   {isOfflineMode ? 'OFFLINE' : 'ONLINE'}
                 </Text>
               </View>
-              <MaterialCommunityIcons name="logout" size={12} color={Colors.error} style={{ opacity: 0.8 }} />
+              <MaterialCommunityIcons name="account-cog" size={12} color={Colors.textMuted} style={{ opacity: 0.8 }} />
             </TouchableOpacity>
           </View>
 
@@ -1412,33 +1434,23 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   </TouchableOpacity>
                 )}
 
-                {/* ── DEVICES / CREW tab bar ── */}
-                <View style={{
-                  flexDirection: 'row', marginHorizontal: Layout.padding,
-                  marginTop: crewSession ? 4 : 12, marginBottom: 4,
-                  gap: 8,
-                }}>
+                {/* ── Crew Sync button (only when not in an active session — session banner handles it otherwise) ── */}
+                {!crewSession && (
                   <TouchableOpacity
-                    style={[
-                      { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center',
-                        borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-                      scannerTab === 'DEVICES' && { backgroundColor: Colors.primary, borderColor: Colors.primary },
-                    ]}
-                    onPress={() => setScannerTab('DEVICES')}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 6,
+                      marginHorizontal: Layout.padding, marginTop: 10, marginBottom: 2,
+                      backgroundColor: 'rgba(255,170,0,0.08)',
+                      borderWidth: 1, borderColor: 'rgba(255,170,0,0.2)',
+                      borderRadius: 10, paddingVertical: 9, paddingHorizontal: 14,
+                    }}
+                    onPress={() => setIsCrewModalVisible(true)}
                   >
-                    <Text style={{ color: scannerTab === 'DEVICES' ? '#000' : Colors.textMuted, fontWeight: '700', fontSize: 13 }}>📡  DEVICES</Text>
+                    <MaterialCommunityIcons name="account-group" size={16} color="#FFAA00" />
+                    <Text style={{ color: '#FFAA00', fontWeight: '700', fontSize: 13 }}>Crew Sync</Text>
+                    <Text style={{ color: Colors.textMuted, fontSize: 11, flex: 1, textAlign: 'right' }}>Start or join a session →</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center',
-                        borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-                      scannerTab === 'CREW' && { backgroundColor: '#FFAA00', borderColor: '#FFAA00' },
-                    ]}
-                    onPress={() => { setScannerTab('CREW'); setIsCrewModalVisible(true); }}
-                  >
-                    <Text style={{ color: scannerTab === 'CREW' ? '#000' : Colors.textMuted, fontWeight: '700', fontSize: 13 }}>👥  CREW</Text>
-                  </TouchableOpacity>
-                </View>
+                )}
 
                 <View style={{ paddingHorizontal: Layout.padding }}>
                 {customGroups.length > 0 && (
@@ -1794,12 +1806,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           } else {
             crewService.subscribeAsMember(session.id, (scene) => {
               dockedControllerRef.current?.applyCloudScene(scene);
+              setLastLeaderScene(scene); // track for member dashboard
             }, () => {
               // session_ended callback — leader ended the session
               setCrewSession(null);
               setCrewRole(null);
               setCrewModeSummary(undefined);
-              setScannerTab('DEVICES');
               setIsCrewModalVisible(false);
               Alert.alert('Session Ended', 'The crew leader has ended this session. Your skates will keep the current pattern.');
             });
@@ -1812,13 +1824,38 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           setCrewSession(null);
           setCrewRole(null);
           setCrewModeSummary(undefined);
-          setScannerTab('DEVICES');
         }}
         onSessionEnded={() => {
           setCrewSession(null);
           setCrewRole(null);
           setCrewModeSummary(undefined);
-          setScannerTab('DEVICES');
+        }}
+      />
+
+      {/* Account Management Modal */}
+      <AccountModal
+        visible={isAccountModalVisible}
+        onClose={() => setIsAccountModalVisible(false)}
+        onSignOut={handleLogout}
+        onJoinCrewSession={(crewId) => {
+          setPendingJoinCrewId(crewId);
+          setIsCrewModalVisible(true);
+          setIsAccountModalVisible(false);
+        }}
+        registeredDevices={allDevices.map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          customName: d.customName,
+          type: d.type,
+          registeredAt: d.registeredAt,
+        }))}
+        onDeviceRenamed={(deviceId, newName) => {
+          setAllDevices((prev: any[]) => prev.map((d: any) =>
+            d.id === deviceId ? { ...d, customName: newName } : d
+          ));
+        }}
+        onDeviceForgotten={(deviceId) => {
+          setAllDevices((prev: any[]) => prev.filter((d: any) => d.id !== deviceId));
         }}
       />
     </SafeAreaView>

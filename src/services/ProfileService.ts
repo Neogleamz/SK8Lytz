@@ -18,6 +18,7 @@ export interface UserProfile {
   user_id: string;
   display_name: string | null;
   avatar_color: string;
+  username: string | null;     // added by migration 006
   created_at: string;
   updated_at: string;
 }
@@ -80,13 +81,19 @@ class ProfileService {
   /**
    * Update display name and/or avatar color for the current user.
    */
-  async updateProfile(fields: { display_name?: string; avatar_color?: string }): Promise<void> {
+  async updateProfile(fields: { display_name?: string | null; avatar_color?: string; username?: string | null }): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    // Strip null/undefined values to avoid overwriting with null
+    const cleanFields: Record<string, any> = {};
+    if (fields.display_name != null) cleanFields.display_name = fields.display_name;
+    if (fields.avatar_color != null) cleanFields.avatar_color = fields.avatar_color;
+    if (fields.username != null) cleanFields.username = fields.username.toLowerCase();
+
     const { error } = await supabase
       .from('user_profiles')
-      .upsert({ user_id: user.id, ...fields }, { onConflict: 'user_id' });
+      .upsert({ user_id: user.id, ...cleanFields }, { onConflict: 'user_id' });
 
     if (error) throw error;
   }

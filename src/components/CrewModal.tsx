@@ -268,7 +268,8 @@ export default function CrewModal({
           text: 'End Session', style: 'destructive',
           onPress: async () => {
             try {
-              await crewService.endSession();
+              // Pass explicit sessionId — makes endSession robust against stale singleton state
+              await crewService.endSession(currentSession?.id);
               setCurrentSession(null); setCurrentRole(null);
               setStep('landing'); setIsHandoffMode(false);
               onSessionEnded(); onClose();

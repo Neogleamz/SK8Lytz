@@ -205,9 +205,32 @@ class CrewService {
     })) as CrewSession[];
   }
 
-  /** End the session (leader only). Sets status=ended, is_active=false. */
-  async endSession(): Promise<void> {
-    if (!this.currentSessionId || this.currentRole !== 'leader') return;
+  /**
+   * End the session (leader only).
+   * Accepts an explicit sessionId override in case the singleton state is stale
+   * (e.g. modal was rebuilt after a navigation change).
+   */
+  async endSession(explicitSessionId?: string): Promise<void> {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) throw new Error('Not authenticated');
+
+    const sessionId = explicitSessionId ?? this.currentSessionId;
+    if (!sessionId) throw new Error('No active session to end');
+
+    // DB-authoritative leader check — don't trust singleton state alone
+    if (this.currentRole !== 'leader') {
+      const { data: session } = await supabase
+        .from('crew_sessions')
+        .select('leader_user_id')
+        .eq('id', sessionId)
+        .single();
+      if (!session || session.leader_user_id !== user.id) {
+        throw new Error('Only the session leader can end the session');
+      }
+      // Fix stale state
+      this.currentRole = 'leader';
+      this.currentSessionId = sessionId;
+    }
 
     const { error } = await supabase
       .from('crew_sessions')
@@ -216,7 +239,7 @@ class CrewService {
         is_active: false,
         ended_at: new Date().toISOString(),
       })
-      .eq('id', this.currentSessionId);
+      .eq('id', sessionId);
 
     if (error) throw error;
 
@@ -224,14 +247,14 @@ class CrewService {
     this.channel?.send({
       type: 'broadcast',
       event: 'session_ended',
-      payload: { sessionId: this.currentSessionId },
+      payload: { sessionId },
     });
 
     this.unsubscribe();
     await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
     this.currentSessionId = null;
     this.currentRole = null;
-    AppLogger.log('CREW_SESSION_ENDED', { reason: 'leader_ended' });
+    AppLogger.log('CREW_SESSION_ENDED', { reason: 'leader_ended', sessionId });
   }
 
   /** Fetch the last scene snapshot from a session (for late-arrival sync). */
