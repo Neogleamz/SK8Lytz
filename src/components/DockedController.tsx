@@ -495,50 +495,40 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     const crDim   = { r: Math.round(crR * 0.3), g: Math.round(crG * 0.3), b: Math.round(crB * 0.3) };
     const cruise  = { r: crR, g: crG, b: crB };
 
-    // Apply color sorting BEFORE building array — must use probed hardware sort index
-    // (GRB strip needs bytes pre-swapped; hardware does NOT remap internally)
-    const sortIdx = hwSettings?.colorSorting ?? 2;
-    const applySort = (c: { r: number; g: number; b: number }) =>
-      ZenggeProtocol.applyColorSorting(c.r, c.g, c.b, sortIdx);
-
-    const sTail   = applySort(tail);
-    const sHead   = applySort(head);
-    const sCruise = applySort(cruise);
-    const sCrDim  = applySort(crDim);
-
+    // DO NOT apply applyColorSorting here.
+    // Hardware auto-remaps GRB internally via 0x81 config. Send pure RGB.
     let arr: { r: number; g: number; b: number }[];
 
     if (isHalozRing) {
       const frame8 = [
-        sTail,   sTail,
-        sCruise, sCrDim, sCruise, sCrDim,
-        sHead,   sHead,
+        tail,   tail,
+        cruise, crDim, cruise, crDim,
+        head,   head,
       ];
       const mirror8 = [...frame8].reverse();
       arr = [...frame8, ...mirror8];
     } else {
-      // Use only the probed LED count — no hardcoded fallback
       const ledCount   = Math.max(10, hwSettings?.ledPoints || pts);
       const rearCount  = Math.max(1, Math.round(ledCount * 0.3));
       const frontCount = Math.max(1, Math.round(ledCount * 0.3));
       const midCount   = Math.max(1, ledCount - rearCount - frontCount);
       const midSection = Array.from({ length: midCount }, (_, i) =>
-        i % 2 === 0 ? sCruise : sCrDim
+        i % 2 === 0 ? cruise : crDim
       );
       arr = [
-        ...Array(rearCount).fill(sTail),
+        ...Array(rearCount).fill(tail),
         ...midSection,
-        ...Array(frontCount).fill(sHead),
+        ...Array(frontCount).fill(head),
       ];
     }
 
-    // Transition type per motion state:
-    //   STOPPED / CRUISING / SLOWING / ACCELERATING → 0x00 Static (car lights sit fixed)
-    //   HARD_BRAKING → 0x02 Strobe (urgent flashing)
-    // RunningWater (0x03) was causing the car-light pattern to scroll/blink — wrong for this use case
-    const transType = currMotionState === 'HARD_BRAKING' ? 0x02 : 0x00;
+    // 0x01 = FREEZE (hardware locks array in place — static car lights, no scrolling)
+    // 0x02 = STROBE (urgent flashing for hard braking)
+    // NOTE: 0x00 is CASCADE (scrolling) — NOT static. Never use 0x00 for car lights.
+    const transType = currMotionState === 'HARD_BRAKING' ? 0x02 : 0x01;
     writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpeed, 1, transType));
   };
+
 
   // Update motion state helper
   const updateMotion = (newState: MotionState) => {
@@ -804,14 +794,11 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   const sendColor = async (r: number, g: number, b: number) => {
     if (!writeToDevice) return;
     // hwSettings.ledPoints IS the total LED count — do NOT divide by segments
-    // (segments is for hardware IC layout, not for payload pixel count)
     const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
-    // Apply color sorting using probed hardware value — GRB strips need pre-swapped bytes
-    const sortIdx = hwSettings?.colorSorting ?? 2;
-    const sorted = ZenggeProtocol.applyColorSorting(r, g, b, sortIdx);
-    // transitionType=0 (Static) = immediate hardware snap, no fade
-    const colors = Array(numLEDs).fill(sorted);
-    await writeToDevice(ZenggeProtocol.setMultiColor(colors, 1, 1, 0x00));
+    // DO NOT apply applyColorSorting — hardware auto-remaps GRB via 0x81 config
+    // transitionType=0x01 (FREEZE) = immediate hardware lock, no animation
+    const colors = Array(numLEDs).fill({ r, g, b });
+    await writeToDevice(ZenggeProtocol.setMultiColor(colors, 1, 1, 0x01));
   };
 
 
@@ -850,20 +837,18 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     if (!writeToDevice) return;
 
     const factor = currentBrightness / 100;
-    const fgRgbRaw = {
+    const fgRgb = {
       r: Math.round(parseInt(fg.slice(1, 3), 16) * factor),
       g: Math.round(parseInt(fg.slice(3, 5), 16) * factor),
       b: Math.round(parseInt(fg.slice(5, 7), 16) * factor),
     };
-    const bgRgbRaw = {
+    const bgRgb = {
       r: Math.round(parseInt(bg.slice(1, 3), 16) * factor),
       g: Math.round(parseInt(bg.slice(3, 5), 16) * factor),
       b: Math.round(parseInt(bg.slice(5, 7), 16) * factor),
     };
-
-    const sortIdx = hwSettings?.colorSorting ?? 2;
-    const fgRgb = ZenggeProtocol.applyColorSorting(fgRgbRaw.r, fgRgbRaw.g, fgRgbRaw.b, sortIdx);
-    const bgRgb = ZenggeProtocol.applyColorSorting(bgRgbRaw.r, bgRgbRaw.g, bgRgbRaw.b, sortIdx);
+    // DO NOT apply applyColorSorting here.
+    // Hardware auto-remaps GRB internally via 0x81 config. Send pure RGB.
 
     // hwSettings.ledPoints IS the total LED count — do NOT divide by segments
     // (segments is a hardware IC layout parameter, not a pixel-count divisor)

@@ -2178,6 +2178,104 @@ Required: `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, `ACCESS_FINE_LOCATION`
 | Duplicate session rows in Supabase | `sessionId` was `Date.now()` per upload | Fixed: `sessionId` set once at singleton constructor, UPSERT on conflict |
 | Device names null in Supabase | Wrong AsyncStorage key read by AppLogger | Fixed: reads `ng_device_configs` dict by MAC address |
 | CrewModal stacked navigation cards | Multiple navigation states accumulated on back press | Fixed: back always resets to `'landing'` state |
+| **R↔G color swap in MULTIMODE, PRESETS, STREET** | `activeHwSettings.colorSorting` used `d?.colorSorting ?? sortingIdx` — `??` does NOT catch `0`, so stale cached `colorSorting=0` (RGB) overrode the correct GRB default | Fixed (Apr 2026): gate on `d?.detected` flag: `d.detected ? d.colorSorting ?? sortingIdx : sortingIdx`. Only trust numeric index from actual 0x63 response. |
+| **`applyStreetPattern` sent pure RGB to GRB strip** | `applyColorSorting` was never called inside `applyStreetPattern` — tail/head/cruise colors went to hardware unsorted | Fixed (Apr 2026): Added `applySort()` helper inside function, applies `hwSettings.colorSorting` to all pixel objects before building the array. |
+| **Street mode LEDs blinking/scrolling instead of static** | `transitionType=3` (RunningWater) caused the car-light pixel array to scroll around the ring, appearing as a slow blinking effect | Fixed (Apr 2026): STOPPED/CRUISING/SLOWING/ACCELERATING now use `0x00` (Static). Only HARD_BRAKING uses `0x02` (Strobe). |
+| **`sendColor` sent pure RGB to GRB strip** | `applyColorSorting` was missing from `sendColor()` — solid color commands ignored hardware sort | Fixed (Apr 2026): Added `applyColorSorting` with probed `hwSettings.colorSorting` before filling the pixel array. |
+
+---
+
+## COLOR SORTING — ARCHITECTURE & RULES
+
+> [!CAUTION]
+> The hardware does NOT auto-remap pixel bytes based on 0x62 colorSorting config.
+> The app MUST pre-swap RGB bytes in software before sending any 0x59 payload.
+> Failure to do this causes R↔G channel inversion on GRB-wired strips (HALOZ / SOULZ).
+
+### How colorSorting flows
+```
+[Device 0x63 response] → parseHardwareSettingsResponse() → colorSorting (numeric)
+      ↓
+[DashboardScreen] setAllDevices() / setDeviceConfigs() stores colorSorting per device ID
+      ↓
+[activeHwSettings useMemo] (DashboardScreen L1132) builds hwSettings prop:
+  - detected=true  → use d.colorSorting from probed hardware response
+  - detected=false → use sortingIdx derived from device name string ('GRB' → 2)
+      ↓
+[DockedController] receives hwSettings.colorSorting (numeric)
+      ↓
+All payload builders call: ZenggeProtocol.applyColorSorting(r, g, b, hwSettings.colorSorting ?? 2)
+```
+
+### applyColorSorting Index Map (ZenggeProtocol.ts)
+| Index | Name | Byte order sent to hardware |
+|:---|:---|:---|
+| 0 | RGB | R, G, B |
+| 1 | RBG | R, B, G |
+| 2 | **GRB** ← HALOZ/SOULZ default | G, R, B |
+| 3 | GBR | G, B, R |
+| 4 | BRG | B, R, G |
+| 5 | BGR | B, G, R |
+
+> [!NOTE]
+> HALOZ and SOULZ are both WS2812B strips wired in GRB order → `colorSorting = 2`.
+> If the device hasn't been probed (detected=false), always assume GRB (2) as fallback.
+
+### Functions that MUST call applyColorSorting before setMultiColor
+| Function | File | Status |
+|:---|:---|:---|
+| `applyFixedPattern()` | `DockedController.tsx` | ✅ applied to fgRgb/bgRgb |
+| `sendColor()` | `DockedController.tsx` | ✅ fixed Apr 2026 |
+| `applyStreetPattern()` | `DockedController.tsx` | ✅ fixed Apr 2026 |
+| `generateSortedColors()` | `DockedController.tsx` | ✅ applied |
+| DIY multicolor slice handlers | `DockedController.tsx` L2232/2282 | ✅ applied |
+| `loadFavorite()` DIY path | `DockedController.tsx` L770 | ✅ applied |
+| `setColor()` in ZenggeProtocol | `ZenggeProtocol.ts` L366 | ⚠️ does NOT sort — only use for testing |
+
+---
+
+## 0x59 TRANSITION TYPES — COMPLETE REFERENCE
+
+> [!IMPORTANT]
+> There are TWO completely separate transition type systems. Never mix them.
+
+### 0x59 setMultiColor — `transitionType` parameter
+| Byte | Name | Description | Use case |
+|:---|:---|:---|:---|
+| `0x00` | **Static** | Freeze array in place, no animation | Solid colors, car lights, any non-moving pattern |
+| `0x01` | **Gradual** | Smooth crossfade between pixel states | Breathing-style animations on pixel arrays |
+| `0x02` | **Strobe** | Flash entire array on/off rapidly | Emergency braking, alert states |
+| `0x03` | **RunningWater** | Hardware scrolls pixel array around strip | Chasing/marquee patterns (dots, comets, dashes) |
+
+### 0x51 setCustomMode — step `mode` field
+| Byte | Constant | Description | Use case |
+|:---|:---|:---|:---|
+| `0x3A` | `STEP_JUMP` | Hard-cut between step colors | Flash (Pattern 7), Strobe (Pattern 8) |
+| `0x3B` | `STEP_GRADUAL` | Smooth fade between step colors | Breath (Pattern 6) |
+| `0x3C` | `STEP_STROBE` | Rapid flash between step colors | Not currently used |
+
+> [!WARNING]
+> `0x3A/3B/3C` are ONLY valid in `setCustomMode()` (0x51 command).
+> `0x00/01/02/03` are ONLY valid in `setMultiColor()` (0x59 command).
+> Passing 0x3A/3B/3C to setMultiColor sends garbage transitionType bytes to hardware.
+
+### Street Mode Transition Types (fixed Apr 2026)
+| Motion State | transitionType | Rationale |
+|:---|:---|:---|
+| STOPPED | `0x00` Static | Brake lights on, no movement |
+| CRUISING | `0x00` Static | Car light arrangement stays fixed |
+| SLOWING_DOWN | `0x00` Static | Yellow warning lights, no movement |
+| ACCELERATING | `0x00` Static | Normal riding lights, no movement |
+| HARD_BRAKING | `0x02` Strobe | Urgent flashing for safety |
+
+### Pattern Engine Transition Types (PatternEngine.ts)
+| Pattern | transitionType | Rationale |
+|:---|:---|:---|
+| 1 — Solid | `0x00` Static | No movement by definition |
+| 2–5, 9–10 | `0x03` RunningWater | Hardware scrolls the tiled pattern |
+| 6 — Breath | 0x51 `STEP_GRADUAL` | Two-step fade FG↔BG |
+| 7 — Flash | 0x51 `STEP_JUMP` | Two-step hard-cut FG↔BG |
+| 8 — Strobe | 0x51 `STEP_JUMP` @speed=100 | Two-step max-speed flash |
 
 ---
 

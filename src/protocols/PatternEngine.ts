@@ -4,14 +4,24 @@
  * SINGLE SOURCE OF TRUTH for all 10 Fixed Mode patterns.
  * Both the hardware payload and the app visualizer read from this engine.
  *
- * Hardware animation model (APK proven 2026-04-06):
+ * Hardware animation model (APK proven 2026-04-06, confirmed on device):
  *   - The IC strip controller animates NATIVELY once a 0x59 or 0x51 packet is sent.
  *   - We send ONE command; the hardware loops it autonomously.
  *   - The app visualizer SIMULATES that animation locally using an animTick (0.0–1.0).
  *
+ * CONFIRMED 0x59 Transition Type meanings (hardware-tested):
+ *   0x00 = CASCADE  — hardware scrolls/loops the pixel array (Running Water effect)
+ *   0x01 = FREEZE   — hardware locks the array in place (required for solid/static output)
+ *   0x02 = STROBE   — hardware strobes the full array on/off
+ *   (0x03 = unknown, not used — originally misidentified as RunningWater)
+ *
+ * COLOR: Send PURE RGB bytes. Hardware remaps to GRB internally via 0x81 config.
+ *        DO NOT apply applyColorSorting() before building any 0x59 payload.
+ *
  * Pattern split:
- *   Patterns 1–5, 9–10  → 0x59 with RunningWater (hardware scrolls pixel array)
- *   Patterns 6–8        → 0x51 two-step DIY (hardware fades/jumps between FG and BG)
+ *   Pattern  1       → 0x59 with FREEZE (0x01) — pixel array locked, no scroll
+ *   Patterns 2–5, 9–10 → 0x59 with CASCADE (0x00) — hardware scrolls pixel array
+ *   Patterns 6–8    → 0x51 two-step DIY (hardware fades/jumps between FG and BG)
  */
 
 import { ZenggeProtocol } from './ZenggeProtocol';
@@ -135,14 +145,16 @@ export function getVisualizerFrame(
 /**
  * Get the hardware pixel array for a pattern.
  * Used by applyFixedPattern() to build the 0x59 payload.
- * Color sorting should be applied to fg and bg BEFORE calling this.
+ *
+ * IMPORTANT: Pass raw RGB values — do NOT pre-sort with applyColorSorting().
+ * The hardware controller auto-remaps GRB internally via 0x81 config.
  *
  * For patterns 6–8: returns null (caller should use buildCustomModePayload instead).
  *
  * @param patternId  1–10
- * @param fg         Color-sorted foreground color
- * @param bg         Color-sorted background color
- * @param numLEDs    Actual device LED count
+ * @param fg         Raw foreground RGB (no color sorting)
+ * @param bg         Raw background RGB (no color sorting)
+ * @param numLEDs    Actual device LED count from hwSettings.ledPoints
  */
 export function getHardwarePixelArray(
   patternId: PatternId,
@@ -159,10 +171,14 @@ export function getHardwarePixelArray(
 
 /**
  * Get the 0x59 transition type for a pattern.
+ *
+ * CONFIRMED hardware meanings:
+ *   0x00 = CASCADE  — hardware scrolls the array (use for animated patterns)
+ *   0x01 = FREEZE   — hardware locks the array in place (use for solid/static)
  */
 export function getPatternTransitionType(patternId: PatternId): number {
-  if (patternId === 1) return 0x00; // Static — instant solid
-  return 0x03;                       // RunningWater — hardware scrolls
+  if (patternId === 1) return 0x01; // FREEZE — solid, locked, no scrolling
+  return 0x00;                       // CASCADE — hardware scrolls the pixel array
 }
 
 /**

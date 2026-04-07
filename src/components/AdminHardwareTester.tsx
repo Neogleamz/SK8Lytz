@@ -165,6 +165,9 @@ export default function AdminHardwareTester({
     } else if (protocol === '0x71') {
       payload = powerTesterState ? ZenggeProtocol.turnOn() : ZenggeProtocol.turnOff();
     } else if (protocol === 'MULTI') {
+      // NOTE: Intentionally sends pure RGB (no applyColorSorting) — this is a raw debug tool.
+      // The purpose is to observe exactly what the hardware receives, not to match app behavior.
+      // Production multicolor paths in DockedController.tsx DO apply color sorting.
       const rgbColors = multiColors.map(hex => ({ r: parseInt(hex.slice(1,3), 16) || 0, g: parseInt(hex.slice(3,5), 16) || 0, b: parseInt(hex.slice(5,7), 16) || 0 }));
       payload = ZenggeProtocol.setMultiColor(rgbColors, speed, 1, multiTransition);
     }
