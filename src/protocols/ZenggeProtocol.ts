@@ -8,6 +8,8 @@
  *   WRITE:  0x62 [ptsHigh] [ptsLow] [segHigh] [segLow] [icType] [sorting] [micPts] [micSegs] 0xF0 [cs]
  */
 
+import { Buffer } from 'buffer';
+
 export const ZENGGE_SERVICE_UUID        = '0000ffff-0000-1000-8000-00805f9b34fb';
 export const ZENGGE_CHARACTERISTIC_UUID = '0000ff01-0000-1000-8000-00805f9b34fb'; // WRITE
 export const ZENGGE_NOTIFY_UUID         = '0000ff02-0000-1000-8000-00805f9b34fb'; // NOTIFY (responses)
@@ -328,7 +330,7 @@ export class ZenggeProtocol {
     productId: number;
   } | null {
     try {
-      const buffer = require('buffer').Buffer.from(manufacturerDataBase64, 'base64');
+      const buffer = Buffer.from(manufacturerDataBase64, 'base64');
       if (buffer.length < 15) return null;
 
       const bleVersion = buffer[3] & 0xFF;

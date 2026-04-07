@@ -5,8 +5,21 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Buffer } from 'buffer';
 import { Colors } from '../theme/theme';
 
-let ImageManipulator: any = null;
-let jpeg: any = null;
+// Types for dynamically loaded native-only libraries
+type ImageManipulatorModule = {
+  manipulateAsync: (
+    uri: string,
+    actions: Array<{ crop?: { originX: number; originY: number; width: number; height: number } }>,
+    options: { base64?: boolean; format?: string; compress?: number }
+  ) => Promise<{ uri: string; base64?: string; width: number; height: number }>;
+  SaveFormat: { JPEG: string; PNG: string };
+};
+type JpegModule = {
+  decode: (buffer: Buffer, options?: { useTArray?: boolean }) => { width: number; height: number; data: Uint8Array };
+};
+
+let ImageManipulator: ImageManipulatorModule | null = null;
+let jpeg: JpegModule | null = null;
 
 if (Platform.OS !== 'web') {
   try {
@@ -42,8 +55,9 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
     );
   }
 
-  const handlePress = async (event: any) => {
+  const handlePress = async (event: { nativeEvent: { locationX: number; locationY: number } }) => {
     if (!isActive || !permission?.granted || !cameraRef.current || isProcessing || !layout.width || !layout.height) return;
+    if (!ImageManipulator || !jpeg) return; // native libs not loaded (should not happen on device)
 
     const { locationX, locationY } = event.nativeEvent;
     

@@ -31,6 +31,7 @@ import { locationService, NearbySession } from '../services/LocationService';
 import { AppLogger } from '../services/AppLogger';
 import { notificationService } from '../services/NotificationService';
 import { LocationPicker } from './LocationPicker';
+import CrewMemberDashboard from './CrewMemberDashboard';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -44,6 +45,8 @@ interface CrewModalProps {
   activeRole: CrewRole;
   /** Current mode/color being broadcast (leader's active state, for display in controller) */
   currentModeSummary?: string;
+  /** Last scene payload received from leader — passed to CrewMemberDashboard */
+  lastLeaderScene?: Record<string, any> | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -66,7 +69,7 @@ function _formatScheduled(iso: string): string {
 
 export default function CrewModal({
   visible, onClose, onSessionReady, onSessionLeft, onSessionEnded,
-  activeSession, activeRole, currentModeSummary,
+  activeSession, activeRole, currentModeSummary, lastLeaderScene,
 }: CrewModalProps) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
@@ -80,6 +83,8 @@ export default function CrewModal({
   const [_crewActiveSessions, _setCrewActiveSessions] = useState<Record<string, CrewSession | null>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  // Inline confirm action — replaces Alert.alert() for web+native compatibility
+  const [confirmAction, setConfirmAction] = useState<'end' | 'leave' | null>(null);
 
   // ── Create / Schedule form state ───────────────────────────────────────────
   const [crewName, setCrewName] = useState('');
@@ -335,7 +340,13 @@ export default function CrewModal({
   // ── Session joined helper ──────────────────────────────────────────────────
 
   const handleSessionJoined = async (session: CrewSession) => {
-    const role: CrewRole = session.leader_user_id === currentUserId ? 'leader' : 'member';
+    // Use the service's role as source of truth — it was just set by createSession()
+    // or joinSession() and is always correct. Do NOT use currentUserId here because
+    // it loads async and may still be '' when this fires, causing the leader to
+    // incorrectly see themselves as a member (and losing the End button).
+    const role: CrewRole =
+      crewService.currentRole ??                            // set by create/joinSession
+      (session.leader_user_id === currentUserId ? 'leader' : 'member'); // safe fallback
     setCurrentSession(session);
     setCurrentRole(role);
     setStep('controller');
@@ -358,7 +369,10 @@ export default function CrewModal({
       const crewInfo = myCrews.find(c => c.id === selectedCrewId);
       const isSessionPublic = crewInfo ? crewInfo.is_public : false;
 
-      const opts: Parameters<typeof crewService.createSession>[2] = { isPublic: isSessionPublic };
+      const opts: Parameters<typeof crewService.createSession>[2] = {
+        isPublic: isSessionPublic,
+        crewId:   selectedCrewId ?? undefined,  // links session to permanent crew for reliable hub matching
+      };
       if (locationLabel) opts.locationLabel = locationLabel;
       if (locationCoords) opts.locationCoords = locationCoords;
       if (scheduled) opts.scheduledAt = scheduled.toISOString();
@@ -427,44 +441,51 @@ export default function CrewModal({
   // ── Leave ──────────────────────────────────────────────────────────────────
 
   const handleLeave = () => {
-    Alert.alert('Leave Crew', `Leave "${currentSession?.name}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Leave', style: 'destructive',
-        onPress: async () => {
-          AppLogger.log('CREW_SESSION_LEFT', { sessionId: currentSession?.id, role: currentRole });
-          await crewService.leaveSession();
-          setCurrentSession(null); setCurrentRole(null);
-          setStep('landing'); setIsHandoffMode(false);
-          onSessionLeft(); onClose();
-        },
-      },
-    ]);
+    // If the leaving user IS the leader, ending the session is better than leaving
+    // (avoids a leaderless zombie session). Show the end-session dialog instead.
+    const effectiveIsLeader =
+      currentRole === 'leader' ||
+      currentSession?.leader_user_id === currentUserId;
+    if (effectiveIsLeader) {
+      handleEndSession();
+      return;
+    }
+    // Use inline confirm instead of Alert.alert (Alert.alert → window.confirm on web,
+    // which is silently blocked by browsers when triggered via synthetic touch events)
+    setConfirmAction('leave');
   };
 
   // ── End Session (leader) ────────────────────────────────────────────────────
 
   const handleEndSession = () => {
-    Alert.alert(
-      'End Session',
-      `End "${currentSession?.name}"? All members will be notified and the session will close. Their skates will keep the current pattern.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'End Session', style: 'destructive',
-          onPress: async () => {
-            try {
-              await crewService.endSession(currentSession?.id);
-              setCurrentSession(null); setCurrentRole(null);
-              setStep('landing'); setIsHandoffMode(false);
-              onSessionEnded(); onClose();
-            } catch (e: any) {
-              Alert.alert('Error', e.message);
-            }
-          },
-        },
-      ]
-    );
+    // Use inline confirm instead of Alert.alert (Alert.alert → window.confirm on web,
+    // which is silently blocked by browsers when triggered via synthetic touch events)
+    setConfirmAction('end');
+  };
+
+  const executeEndSession = async () => {
+    setConfirmAction(null);
+    try {
+      AppLogger.log('CREW_SESSION_ENDED', { sessionId: currentSession?.id, crewName: currentSession?.name, role: 'leader', reason: 'explicit_end' });
+      await crewService.endSession(currentSession?.id);
+      setCurrentSession(null); setCurrentRole(null);
+      setIsHandoffMode(false);
+      onSessionEnded();
+      setStep('landing');
+    } catch (e: any) {
+      AppLogger.log('CREW_ERROR', { action: 'end_session', error: e.message });
+      setErrorMsg(e.message || 'Could not end session');
+    }
+  };
+
+  const executeLeaveSession = async () => {
+    setConfirmAction(null);
+    AppLogger.log('CREW_SESSION_LEFT', { sessionId: currentSession?.id, role: currentRole });
+    await crewService.leaveSession();
+    setCurrentSession(null); setCurrentRole(null);
+    setIsHandoffMode(false);
+    onSessionLeft();
+    setStep('landing');
   };
 
   // ── Handoff ────────────────────────────────────────────────────────────────
@@ -496,11 +517,13 @@ export default function CrewModal({
   // ═══════════════════════════════════════════════════════════════════════════
 
   const renderLanding = () => {
-    // Find the live session that matches a given crew (by name match or crew membership)
+    // Find the live session that belongs to a given permanent crew.
+    // Match by crew_id first (reliable), fall back to name-string match for older sessions
+    // that pre-date the crew_id field.
     const getLiveSessionForCrew = (crew: PermanentCrew): CrewSession | null => {
       return activeSessions.find(s =>
-        s.name === crew.name ||
-        s.name.startsWith(crew.name + ' ')
+        (s.crew_id && s.crew_id === crew.id) ||
+        (!s.crew_id && (s.name === crew.name || s.name.startsWith(crew.name + ' ')))
       ) ?? null;
     };
 
@@ -567,10 +590,61 @@ export default function CrewModal({
                         </View>
                       )}
                     </View>
-                    <Text style={styles.hubCrewMeta}>
-                      {memberInfo ? `${memberInfo.count} member${memberInfo.count !== 1 ? 's' : ''}` : 'Loading...'}
-                      {crew.city ? ` · ${crew.city}` : ''}
-                    </Text>
+
+                    {/* Row 2: Member count + Public/Private badge */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
+                      <Text style={styles.hubCrewMeta}>
+                        {memberInfo ? `${memberInfo.count} member${memberInfo.count !== 1 ? 's' : ''}` : 'Loading...'}
+                        {crew.city ? ` · ${crew.city}` : ''}
+                      </Text>
+                      <View style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 3,
+                        backgroundColor: crew.is_public ? 'rgba(0,200,100,0.12)' : 'rgba(255,255,255,0.07)',
+                        paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8,
+                      }}>
+                        <MaterialCommunityIcons
+                          name={crew.is_public ? 'earth' : 'lock'}
+                          size={10}
+                          color={crew.is_public ? '#00C864' : Colors.textMuted}
+                        />
+                        <Text style={{ color: crew.is_public ? '#00C864' : Colors.textMuted, fontSize: 10, fontWeight: '600' }}>
+                          {crew.is_public ? 'Public' : 'Private'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Row 3: Leader */}
+                    {(() => {
+                      const leaderMember = cardMembers[crew.id]?.find(m => m.role === 'owner');
+                      const leaderName = isOwner
+                        ? 'You'
+                        : leaderMember?.display_name ?? null;
+                      return leaderName ? (
+                        <Text style={[styles.hubCrewMeta, { marginTop: 1 }]}>
+                          {isOwner ? '👑' : '🎯'} Leader: {leaderName}
+                        </Text>
+                      ) : null;
+                    })()}
+
+                    {/* Row 4: Invite code chip — private crews only */}
+                    {!crew.is_public && (
+                      <TouchableOpacity
+                        onPress={() => Clipboard.setStringAsync(crew.invite_code)}
+                        style={{
+                          flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5,
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+                          borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+                          alignSelf: 'flex-start',
+                        }}
+                      >
+                        <MaterialCommunityIcons name="key-variant" size={11} color={Colors.textMuted} />
+                        <Text style={{ color: Colors.textMuted, fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', letterSpacing: 1 }}>
+                          {crew.invite_code}
+                        </Text>
+                        <MaterialCommunityIcons name="content-copy" size={10} color={Colors.textMuted} />
+                      </TouchableOpacity>
+                    )}
                   </View>
                   {/* Expand/collapse chevron — replaces old ··· Manage nav */}
                   <TouchableOpacity
@@ -1271,12 +1345,19 @@ export default function CrewModal({
 
   const renderController = () => {
     if (!currentSession) return null;
-    const isLeader = currentRole === 'leader';
+    // Triple-check to be resilient against async/singleton state desync:
+    // 1. React state currentRole (set by handleSessionJoined)
+    // 2. Service singleton currentRole (set by createSession/joinSession)
+    // 3. Direct leader_user_id comparison (works even on modal reopen)
+    const isLeader =
+      currentRole === 'leader' ||
+      crewService.currentRole === 'leader' ||
+      currentSession.leader_user_id === currentUserId;
     const hasLocation = !!currentSession.location_label;
     const startedAt = timeAgo(currentSession.created_at);
 
     return (
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, overflow: 'hidden' }}>
         {/* ─── Session Card Header ─── */}
         <View style={styles.controllerCard}>
           {/* Crew name + live pill */}
@@ -1340,10 +1421,20 @@ export default function CrewModal({
           )}
         </View>
 
-        {/* ─── Member List ─── */}
-        <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-          {/* Leader handoff toggle */}
-          {isLeader && (
+        {/* ─── Member Dashboard (member role only) ─── */}
+        {!isLeader && (
+          <CrewMemberDashboard
+            session={currentSession}
+            role={currentRole}
+            currentScene={lastLeaderScene ?? null}
+            onLeave={handleLeave}
+          />
+        )}
+
+        {/* ─── Leader: Member List + Handoff ─── */}
+        {isLeader && (
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+            {/* Leader handoff toggle */}
             <View style={{ marginHorizontal: 16, marginTop: 12 }}>
               <TouchableOpacity
                 style={[styles.handoffToggle, isHandoffMode && styles.handoffToggleActive]}
@@ -1355,27 +1446,72 @@ export default function CrewModal({
                 </Text>
               </TouchableOpacity>
             </View>
-          )}
 
-          <Text style={[styles.label, { marginHorizontal: 20, marginTop: 14 }]}>
-            CREW MEMBERS ({members.length})
-          </Text>
-          {members.length === 0
-            ? <Text style={[styles.subtitle, { margin: 16, marginTop: 4, fontSize: 13 }]}>Waiting for skaters…</Text>
-            : members.map(m => (
-              <View key={m.id} style={{ paddingHorizontal: 16 }}>
-                {renderMemberRow({ item: m })}
-              </View>
-            ))
-          }
-          <View style={{ height: 110 }} />
-        </ScrollView>
+            <Text style={[styles.label, { marginHorizontal: 20, marginTop: 14 }]}>
+              CREW MEMBERS ({members.length})
+            </Text>
+            {members.length === 0
+              ? <Text style={[styles.subtitle, { margin: 16, marginTop: 4, fontSize: 13 }]}>Waiting for skaters…</Text>
+              : members.map(m => (
+                <View key={m.id} style={{ paddingHorizontal: 16 }}>
+                  {renderMemberRow({ item: m })}
+                </View>
+              ))
+            }
+            <View style={{ height: 16 }} />
+          </ScrollView>
+        )}
+
+        {/* ─── Inline Confirm Banner (replaces Alert.alert for web+native compat) ─── */}
+        {confirmAction !== null && (
+          <View style={{
+            marginHorizontal: 16, marginBottom: 8,
+            backgroundColor: 'rgba(255,40,40,0.12)',
+            borderWidth: 1.5, borderColor: '#FF4444',
+            borderRadius: 14, padding: 14,
+          }}>
+            <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '700', textAlign: 'center', marginBottom: 4 }}>
+              {confirmAction === 'end' ? '⚠️ End Session?' : '⚠️ Leave Session?'}
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, textAlign: 'center', marginBottom: 12 }}>
+              {confirmAction === 'end'
+                ? `All members will be notified and the session will close. Their skates keep the current pattern.`
+                : `You'll leave "${currentSession?.name}". Your skates keep the current pattern.`}
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setConfirmAction(null)}
+                style={{ flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center' }}
+              >
+                <Text style={{ color: '#aaa', fontWeight: '700' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={confirmAction === 'end' ? executeEndSession : executeLeaveSession}
+                style={{ flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: '#FF4444', alignItems: 'center' }}
+              >
+                <Text style={{ color: '#FFF', fontWeight: '800' }}>
+                  {confirmAction === 'end' ? 'End Session' : 'Leave'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* ─── Footer Actions ─── */}
         <View style={styles.controllerFooter}>
-          <TouchableOpacity style={styles.doneBtn} onPress={onClose}>
-            <Text style={styles.doneBtnText}>{isLeader ? '✓ Back to Skating' : '✓ Got It'}</Text>
+          {/* ← Hub: return to hub landing without closing the modal or ending the session */}
+          <TouchableOpacity
+            style={[styles.endBtn, { borderColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10 }]}
+            onPress={() => setStep('landing')}
+          >
+            <MaterialCommunityIcons name="arrow-left" size={15} color="#aaa" />
+            <Text style={[styles.endBtnText, { color: '#aaa' }]}> Hub</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.doneBtn} onPress={onClose}>
+            <Text style={styles.doneBtnText}>{'✓ Skate'}</Text>
+          </TouchableOpacity>
+
           {isLeader ? (
             <TouchableOpacity style={styles.endBtn} onPress={handleEndSession}>
               <MaterialCommunityIcons name="stop-circle" size={16} color="#FF4444" />
@@ -1422,6 +1558,10 @@ export default function CrewModal({
         inviteCode: !newCrewIsPublic ? newCrewCode : undefined,
         members: selectedMembers.map(m => m.user_id)
       });
+      AppLogger.log('CREW_PERMANENT_CREATED', {
+        crewId: crew.id, crewName: crew.name, isPublic: newCrewIsPublic,
+        city: newCrewCity || null, membersInvited: selectedMembers.length,
+      });
       setMyCrews(prev => [...prev, crew]);
       setPermanentCrews(prev => [...prev, { id: crew.id, name: crew.name }]);
       setNewCrewName(''); setNewCrewCity(''); setNewCrewState(''); setNewCrewDescription('');
@@ -1438,6 +1578,7 @@ export default function CrewModal({
   const executeLeaveCrew = async (crew: PermanentCrew) => {
     try {
       await profileService.leavePermanentCrew(crew.id);
+      AppLogger.log('CREW_PERMANENT_LEFT', { crewId: crew.id, crewName: crew.name, method: 'leave_btn' });
       setMyCrews(prev => prev.filter(c => c.id !== crew.id));
       setPermanentCrews(prev => prev.filter(c => c.id !== crew.id));
       setSelectedCrewDetail(null);
@@ -1448,6 +1589,7 @@ export default function CrewModal({
   const executeDeleteCrew = async (crew: PermanentCrew) => {
     try {
       await profileService.deleteCrew(crew.id);
+      AppLogger.log('CREW_PERMANENT_DELETED', { crewId: crew.id, crewName: crew.name });
       setMyCrews(prev => prev.filter(c => c.id !== crew.id));
       setPermanentCrews(prev => prev.filter(c => c.id !== crew.id));
       setSelectedCrewDetail(null);
@@ -1458,6 +1600,7 @@ export default function CrewModal({
   const handleLeaveCrew = async (crew: PermanentCrew) => {
     try {
       await profileService.leavePermanentCrew(crew.id);
+      AppLogger.log('CREW_PERMANENT_LEFT', { crewId: crew.id, crewName: crew.name, method: 'hub_card' });
       setMyCrews(prev => prev.filter(c => c.id !== crew.id));
       setPermanentCrews(prev => prev.filter(c => c.id !== crew.id));
       setSelectedCrewDetail(null);
@@ -1471,10 +1614,11 @@ export default function CrewModal({
     setJoiningCrewId(crew.id);
     try {
       const joined = await profileService.joinPublicCrewById(crew.id);
-      // Add to myCrews if not already there
+      AppLogger.log('CREW_PERMANENT_JOINED', { crewId: joined.id, crewName: joined.name, method: 'public_discover' });
       setMyCrews(prev => prev.find(c => c.id === joined.id) ? prev : [...prev, joined]);
       Alert.alert('Joined!', `You joined ${joined.name}. Find it in My Crews.`);
     } catch (e: any) {
+      AppLogger.log('CREW_ERROR', { action: 'join_public_crew', crewId: crew.id, error: e.message });
       Alert.alert('Could not join', e.message ?? 'Unknown error');
     } finally {
       setJoiningCrewId(null);
@@ -1500,6 +1644,7 @@ export default function CrewModal({
     try {
       const userIdsToAdd = selectedMembers.map(m => m.user_id);
       await profileService.addCrewMembers(crewId, userIdsToAdd);
+      AppLogger.log('CREW_MEMBERS_ADDED', { crewId, count: userIdsToAdd.length });
       Alert.alert('Success', `Added ${selectedMembers.length} skater(s) to the crew!`);
       // Clear selection
       setSelectedMembers([]);
@@ -1534,7 +1679,9 @@ export default function CrewModal({
       setMyCrews(prev => prev.map(c => c.id === crew.id ? updated : c));
       setSelectedCrewDetail(updated);
       setEditingCrewId(null);
+      AppLogger.log('CREW_PERMANENT_UPDATED', { crewId: crew.id, crewName: editCrewName.trim(), isPublic: editCrewIsPublic });
     } catch (e: any) {
+      AppLogger.log('CREW_ERROR', { action: 'save_crew', crewId: crew.id, error: e.message });
       Alert.alert('Save failed', e.message ?? 'Unknown error');
     } finally {
       setIsSavingCrew(false);
@@ -1779,7 +1926,10 @@ export default function CrewModal({
     const info = crewMemberCounts[crew.id];
     return (
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity onPress={() => setSelectedCrewDetail(null)} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => { setSelectedCrewDetail(null); setEditingCrewId(null); setStep('landing'); }}
+          style={styles.backBtn}
+        >
           <MaterialCommunityIcons name="chevron-left" size={22} color={Colors.textMuted} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
@@ -2055,7 +2205,7 @@ export default function CrewModal({
                       disabled={isAddingMembersTo === crew.id}
                     >
                       {isAddingMembersTo === crew.id ? <ActivityIndicator size="small" color="#000" /> : <MaterialCommunityIcons name="account-plus" size={18} color="#000" />}
-                      <Text style={styles.primaryBtnText}>Invite & Add Sktaters</Text>
+                      <Text style={styles.primaryBtnText}>Invite & Add Skaters</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -2146,6 +2296,8 @@ const createStyles = (Colors: any) => StyleSheet.create({
     backgroundColor: Colors.background || '#0D0D0D',
     borderTopLeftRadius: 26, borderTopRightRadius: 26,
     maxHeight: '92%', minHeight: '55%', paddingTop: 10,
+    flex: 1,  // ← Required: allows controller's ScrollView+footer to flex properly;
+              //   maxHeight:'92%' still caps the sheet height correctly in RN
   },
   closeBtn: { position: 'absolute', top: 10, right: 16, zIndex: 10, padding: 8 },
   body: { alignItems: 'center', paddingHorizontal: 24, paddingBottom: 32, paddingTop: 6 },
@@ -2189,7 +2341,7 @@ const createStyles = (Colors: any) => StyleSheet.create({
     borderRadius: 16, padding: 14, marginBottom: 10,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.09)',
   },
-  hubCrewCardTop: { flexDirection: 'row', alignItems: 'center' },
+  hubCrewCardTop: { flexDirection: 'row', alignItems: 'flex-start' },
   hubCrewAvatar: {
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',

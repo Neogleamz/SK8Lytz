@@ -85,6 +85,9 @@ export type EventType =
   | 'CREW_PERMANENT_CREATED'
   | 'CREW_PERMANENT_JOINED'
   | 'CREW_PERMANENT_LEFT'
+  | 'CREW_PERMANENT_DELETED'
+  | 'CREW_PERMANENT_UPDATED'
+  | 'CREW_MEMBERS_ADDED'
   | 'PUSH_TOKEN_UNREGISTERED';
 
 export interface LogEntry {
@@ -423,7 +426,7 @@ class AppLoggerService {
           // Extract Custom Hardware Names from ng_device_configs (keyed by device MAC)
           const customNameMap = new Map<string, string>();
           try {
-            const stored = await AsyncStorage.getItem('ng_device_configs');
+            const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
             if (stored) {
               const configs = JSON.parse(stored);
               for (const d of this.activeDevices) {

@@ -75,17 +75,57 @@ class LocationService {
   async getNearbyPublicSessions(radiusMi?: number | null): Promise<NearbySession[]> {
     const { supabase } = await import('./supabaseClient');
 
-    // Pull all active sessions the user is authorized to see (via RLS: public OR is member)
-    const { data, error } = await supabase
+    const SESSION_SELECT = 'id, name, invite_code, location_label, location_coords, scheduled_at, created_at, is_public, crew_members(count)';
+
+    // ── Query 1: All active PUBLIC sessions (visible to everyone in radius) ──
+    const { data: publicData } = await supabase
       .from('crew_sessions')
-      .select('id, name, invite_code, location_label, location_coords, scheduled_at, created_at, crew_members(count)')
+      .select(SESSION_SELECT)
       .eq('is_active', true)
+      .eq('is_public', true)
       .order('created_at', { ascending: false })
-      .limit(100);
+      .limit(80);
 
-    if (error || !data) return [];
+    // ── Query 2: Active sessions the user is a session-member of (private crew sessions) ──
+    // This covers private sessions from crews the user belongs to.
+    // We look at `crew_members` (session membership) not `crew_memberships` (permanent crew membership).
+    let privateData: any[] = [];
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: memberships } = await supabase
+          .from('crew_members')
+          .select('session_id')
+          .eq('user_id', user.id);
 
-    // Try to get user location for distance sort
+        const sessionIds = (memberships ?? []).map((m: any) => m.session_id).filter(Boolean);
+
+        if (sessionIds.length > 0) {
+          const { data: memberSessions } = await supabase
+            .from('crew_sessions')
+            .select(SESSION_SELECT)
+            .eq('is_active', true)
+            .eq('is_public', false)           // only grab private ones (public already covered above)
+            .in('id', sessionIds)
+            .order('created_at', { ascending: false });
+
+          privateData = memberSessions ?? [];
+        }
+      }
+    } catch { /* not logged in or query failed — skip private sessions */ }
+
+    // ── Merge + deduplicate by session id ────────────────────────────────────
+    const combined = [...(publicData ?? []), ...privateData];
+    const seen = new Set<string>();
+    const unique = combined.filter((s: any) => {
+      if (seen.has(s.id)) return false;
+      seen.add(s.id);
+      return true;
+    });
+
+    if (unique.length === 0) return [];
+
+    // ── Get user location for distance sort ──────────────────────────────────
     let userLat: number | null = null;
     let userLng: number | null = null;
     try {
@@ -97,7 +137,7 @@ class LocationService {
       }
     } catch { /* location unavailable - sort by date */ }
 
-    const sessions: NearbySession[] = data.map((s: any) => {
+    const sessions: NearbySession[] = unique.map((s: any) => {
       const coords = s.location_coords as { lat?: number; lng?: number } | null;
       let distanceMi: number | null = null;
       let distanceLabel = '';
@@ -120,6 +160,7 @@ class LocationService {
         crewName:      null,
         memberCount:   s.crew_members?.[0]?.count ?? 0,
         scheduledAt:   s.scheduled_at,
+        isPublic:      s.is_public ?? true,
         distanceMi,
         distanceLabel,
       };
@@ -133,7 +174,7 @@ class LocationService {
       return 0;
     });
 
-    // Apply radius filter if provided
+    // Apply radius filter (sessions without coords pass through — user might be at same location)
     if (radiusMi != null) {
       return sorted.filter(s => s.distanceMi === null || s.distanceMi <= radiusMi);
     }

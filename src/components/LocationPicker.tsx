@@ -71,7 +71,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
       } finally {
         setIsSearching(false);
       }
-    }, 600);
+    }, 900);
   };
 
   const selectSuggestion = (item: any) => {

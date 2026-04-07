@@ -469,12 +469,16 @@ export default function AdminHardwareTester({
                      }}>
                         <Text style={{ color: '#FFF', fontWeight: 'bold' }}>BURN TO V2 (0x62)</Text>
                      </TouchableOpacity>
-                     <TouchableOpacity style={[styles.txBtn, { flex: 1, backgroundColor: '#333' }]} onPress={() => {
-                         const pBytes = ZenggeProtocol.setHardwareConfig(parseInt(hwPoints)||43, hwColorOrder, hwStripType, parseInt(hwSegments)||1);
-                         handleTransmitPayload(pBytes.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' '));
-                     }}>
-                        <Text style={{ color: '#FFF', fontWeight: 'bold' }}>BURN LEGACY</Text>
-                     </TouchableOpacity>
+                      <TouchableOpacity
+                          disabled={detectedPoints !== null}
+                          style={[styles.txBtn, { flex: 1, backgroundColor: '#333', opacity: detectedPoints !== null ? 0.35 : 1 }]}
+                          onPress={() => {
+                            const pBytes = ZenggeProtocol.setHardwareConfig(parseInt(hwPoints)||43, hwColorOrder, hwStripType, parseInt(hwSegments)||1);
+                            handleTransmitPayload(pBytes.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' '));
+                          }}>
+                         <Text style={{ color: detectedPoints !== null ? '#888' : '#FFF', fontWeight: 'bold', fontSize: 11 }}>⚠️ LEGACY</Text>
+                         <Text style={{ color: '#666', fontSize: 9, marginTop: 2 }}>0x81 (deprecated)</Text>
+                      </TouchableOpacity>
                   </View>
                 </View>
               </ScrollView>

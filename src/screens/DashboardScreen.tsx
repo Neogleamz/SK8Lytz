@@ -14,9 +14,9 @@
  *  - BLE write dispatch (writeToDevice → useBLE → GATT)
  *
  * AsyncStorage keys:
- *  - ng_device_configs    → per-device settings dict (keyed by MAC)
- *  - ng_custom_groups     → user-defined multi-device groups
- *  - ng_processed_devices → cached discovered device list
+ *  - @Sk8lytz_device_configs    → per-device settings dict (keyed by MAC)
+ *  - @Sk8lytz_custom_groups     → user-defined multi-device groups
+ *  - @Sk8lytz_processed_devices → cached discovered device list
  *
  * Platform: React Native (Android + Web)
  */
@@ -724,8 +724,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     let didUpdateConfigs = false;
     
     const [resConfigs, resProcessed] = await Promise.all([
-      AsyncStorage.getItem('ng_device_configs'),
-      AsyncStorage.getItem('ng_processed_devices')
+      AsyncStorage.getItem('@Sk8lytz_device_configs'),
+      AsyncStorage.getItem('@Sk8lytz_processed_devices')
     ]);
 
     let configs: any = {};
@@ -781,13 +781,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
     const storagePromises = [];
     if (didUpdateProcessed) {
-      storagePromises.push(AsyncStorage.setItem('ng_processed_devices', JSON.stringify(processed)));
+      storagePromises.push(AsyncStorage.setItem('@Sk8lytz_processed_devices', JSON.stringify(processed)));
     }
     if (didUpdateGroups) {
-      storagePromises.push(AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups)));
+      storagePromises.push(AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(updatedGroups)));
     }
     if (didUpdateConfigs) {
-      storagePromises.push(AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs)));
+      storagePromises.push(AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs)));
     }
     if (storagePromises.length > 0) await Promise.all(storagePromises);
 
@@ -1840,6 +1840,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         activeSession={crewSession}
         activeRole={crewRole}
         currentModeSummary={crewModeSummary}
+        lastLeaderScene={lastLeaderScene}
         onSessionReady={(session, role, lastScene) => {
           setCrewSession(session);
           setCrewRole(role);
@@ -1858,19 +1859,25 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               Alert.alert('Session Ended', 'The crew leader has ended this session. Your skates will keep the current pattern.');
             });
             if (lastScene) {
+              setLastLeaderScene(lastScene); // seed dashboard immediately from persisted DB scene
               setTimeout(() => dockedControllerRef.current?.applyCloudScene(lastScene), 300);
             }
           }
         }}
         onSessionLeft={() => {
+          // Member left voluntarily — clear session and return to hub landing
           setCrewSession(null);
           setCrewRole(null);
           setCrewModeSummary(undefined);
+          // Don't close modal — CrewModal will reset step to 'landing' via its useEffect
+          // so the user lands back at the hub page naturally
         }}
         onSessionEnded={() => {
+          // Leader ended the session — clear all session state
           setCrewSession(null);
           setCrewRole(null);
           setCrewModeSummary(undefined);
+          // Don't force-close — CrewModal resets step to 'landing' via activeSession→null
         }}
       />
 

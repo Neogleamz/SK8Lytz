@@ -36,6 +36,8 @@ export interface CrewSession {
   ended_at?: string;
   // Migration 007 fields
   is_public?: boolean;  // true = anyone nearby can join without a code
+  // Migration 008 fields
+  crew_id?: string | null;  // FK to permanent crews table — enables reliable crew↔session matching
 }
 
 export interface CrewMember {
@@ -65,8 +67,10 @@ const MAX_MEMBERS_PER_SESSION  = 20;
 class CrewService {
   private channel: RealtimeChannel | null = null;
   private broadcastTimer: ReturnType<typeof setTimeout> | null = null;
-  private currentSessionId: string | null = null;
-  private currentRole: CrewRole = null;
+  /** The session ID this service instance is currently tracking. */
+  public currentSessionId: string | null = null;
+  /** The role of the signed-in user in the current session. Set by createSession/joinSession. */
+  public currentRole: CrewRole = null;
 
   // ── Session management ────────────────────────────────────────────────────
 
@@ -74,7 +78,7 @@ class CrewService {
   async createSession(
     name: string,
     displayName: string,
-    opts?: { locationLabel?: string; locationCoords?: { lat: number; lng: number }; scheduledAt?: string; isPublic?: boolean }
+    opts?: { locationLabel?: string; locationCoords?: { lat: number; lng: number }; scheduledAt?: string; isPublic?: boolean; crewId?: string }
   ): Promise<CrewSession> {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) throw new Error('Must be signed in to create a crew');
@@ -88,6 +92,7 @@ class CrewService {
     if (opts?.locationCoords) insertData.location_coords = opts.locationCoords;
     if (opts?.scheduledAt)    insertData.scheduled_at    = opts.scheduledAt;
     if (opts?.isPublic !== undefined) insertData.is_public = opts.isPublic;
+    if (opts?.crewId)         insertData.crew_id         = opts.crewId;
 
     const { data, error } = await supabase
       .from('crew_sessions')
@@ -255,62 +260,83 @@ class CrewService {
     const sessionId = explicitSessionId ?? this.currentSessionId;
     if (!sessionId) throw new Error('No active session to end');
 
-    console.log('[CrewService] endSession called', { sessionId, currentRole: this.currentRole, userId: user.id });
+    console.log('[CrewService] endSession called', { sessionId, userId: user.id });
 
-    // DB-authoritative leader check — don't trust singleton state alone
-    if (this.currentRole !== 'leader') {
-      const { data: session, error: fetchErr } = await supabase
-        .from('crew_sessions')
-        .select('leader_user_id')
-        .eq('id', sessionId)
-        .single();
-      console.log('[CrewService] leader check', { session, fetchErr });
-      if (fetchErr) throw new Error(`Could not verify session: ${fetchErr.message}`);
-      if (!session || session.leader_user_id !== user.id) {
-        throw new Error('Only the session leader can end the session');
-      }
-      // Fix stale state
-      this.currentRole = 'leader';
-      this.currentSessionId = sessionId;
-    }
-
-    // Try full update with status + ended_at (requires migration 006)
-    const { error: fullError } = await supabase
+    // ── Single update filtered by id AND leader_user_id ──────────────────────
+    // RLS-safe: Supabase only matches rows the policy allows.
+    // If count === 0, this user is not the leader (or session already ended).
+    // We try the full update (needs migration 006: status + ended_at columns).
+    const { error: fullError, data: fullData } = await supabase
       .from('crew_sessions')
       .update({
         status: 'ended',
         is_active: false,
         ended_at: new Date().toISOString(),
       })
-      .eq('id', sessionId);
+      .eq('id', sessionId)
+      .eq('leader_user_id', user.id)   // ← RLS-safe leader gate
+      .select('id');
 
     if (fullError) {
-      console.warn('[CrewService] Full update failed (migration 006 may not be applied), trying fallback:', fullError.message);
+      console.warn('[CrewService] Full update failed, trying fallback:', fullError.message);
       // Fallback: just flip is_active — works even without migration 006
-      const { error: fallbackError } = await supabase
+      const { error: fallbackError, data: fallbackData } = await supabase
         .from('crew_sessions')
         .update({ is_active: false })
-        .eq('id', sessionId);
+        .eq('id', sessionId)
+        .eq('leader_user_id', user.id)
+        .select('id');
 
-      if (fallbackError) {
-        console.error('[CrewService] Fallback update also failed:', fallbackError.message);
-        throw new Error(`Could not end session: ${fallbackError.message}`);
+      if (fallbackError) throw new Error(`Could not end session: ${fallbackError.message}`);
+      if (!fallbackData || fallbackData.length === 0) {
+        throw new Error('Only the session leader can end the session');
+      }
+    } else if (!fullData || fullData.length === 0) {
+      // 0 rows → either not leader or session doesn't exist
+      // Try fallback before giving up (handles column-missing scenario)
+      const { error: fbErr, data: fbData } = await supabase
+        .from('crew_sessions')
+        .update({ is_active: false })
+        .eq('id', sessionId)
+        .eq('leader_user_id', user.id)
+        .select('id');
+      if (fbErr || !fbData || fbData.length === 0) {
+        throw new Error('Only the session leader can end the session');
       }
     }
 
     console.log('[CrewService] DB update succeeded, broadcasting session_ended');
 
-    // Broadcast END event so members know the session is over
+    // Broadcast END event so members know the session is over.
+    // IMPORTANT: Do NOT call unsubscribe() immediately after send() — the Realtime
+    // channel needs ~500ms for the broadcast to propagate before the socket closes.
     this.channel?.send({
       type: 'broadcast',
       event: 'session_ended',
       payload: { sessionId },
     });
 
-    this.unsubscribe();
-    await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
+    // Clean up all crew_members rows for this session (no CASCADE in schema)
+    // Fire-and-forget: not critical if this fails — records expire naturally
+    supabase
+      .from('crew_members')
+      .delete()
+      .eq('session_id', sessionId)
+      .then(() => console.log('[CrewService] crew_members cleaned up for session', sessionId))
+      .catch((e: any) => console.warn('[CrewService] crew_members cleanup failed:', e.message));
+
+    // Delay channel teardown so the session_ended broadcast can propagate to members
+    const channelRef = this.channel;
+    this.channel = null;
     this.currentSessionId = null;
     this.currentRole = null;
+    setTimeout(() => {
+      if (channelRef) supabase.removeChannel(channelRef);
+      console.log('[CrewService] channel torn down after broadcast delay');
+    }, 600);
+
+    if (this.broadcastTimer) { clearTimeout(this.broadcastTimer); this.broadcastTimer = null; }
+    await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
     AppLogger.log('CREW_SESSION_ENDED', { reason: 'leader_ended', sessionId });
     console.log('[CrewService] endSession complete');
   }

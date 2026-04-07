@@ -544,11 +544,13 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
         streetBrakingRef.current = false;
         setIsStreetBraking(false);
       }
+      AppLogger.log('STREET_MODE_DEACTIVATED', { lastMotionState: motionStateRef.current, peakGForce, ...deviceContext });
       return;
     }
 
     // Initialize
     updateMotion('STOPPED');
+    AppLogger.log('STREET_MODE_ACTIVATED', { sensitivity: streetSensitivity, cruiseColor: streetCruiseColor, brakeColor: streetBrakeColor, ...deviceContext });
 
     if (Platform.OS === 'web') return;
 
@@ -614,6 +616,10 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
       const isActivePush = jerkMag > 0.4 && !isBraking;
 
       if (isBraking) {
+        if (!streetBrakingRef.current) {
+          // Only log on the leading edge of a brake event, not every accelerometer tick
+          AppLogger.log('STREET_JERK_DETECTED', { jerkMag: parseFloat(jerkMag.toFixed(3)), threshold: parseFloat(threshold.toFixed(3)), gpsSpeedMph: gpsSpeed, ...deviceContext });
+        }
         streetBrakingRef.current = true;
         setIsStreetBraking(true);
         updateMotion('HARD_BRAKING');
@@ -781,9 +787,9 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   /** Unified color sender — sends solid color instantly using actual LED count */
   const sendColor = async (r: number, g: number, b: number) => {
     if (!writeToDevice) return;
-    const pts = hwSettings?.ledPoints || points || 16;
-    const segs = hwSettings?.segments || 1;
-    const numLEDs = Math.max(1, Math.floor(pts / segs));
+    // hwSettings.ledPoints IS the total LED count — do NOT divide by segments
+    // (segments is for hardware IC layout, not for payload pixel count)
+    const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
     // transitionType=0 (Static) = immediate hardware snap, no fade
     const colors = Array(numLEDs).fill({ r, g, b });
     await writeToDevice(ZenggeProtocol.setMultiColor(colors, 1, 1, 0x00));
@@ -839,9 +845,9 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     const fgRgb = ZenggeProtocol.applyColorSorting(fgRgbRaw.r, fgRgbRaw.g, fgRgbRaw.b, sortIdx);
     const bgRgb = ZenggeProtocol.applyColorSorting(bgRgbRaw.r, bgRgbRaw.g, bgRgbRaw.b, sortIdx);
 
-    const pts = hwSettings?.ledPoints || points || 16;
-    const segs = hwSettings?.segments || 1;
-    const numLEDs = Math.max(1, Math.floor(pts / segs));
+    // hwSettings.ledPoints IS the total LED count — do NOT divide by segments
+    // (segments is a hardware IC layout parameter, not a pixel-count divisor)
+    const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
 
     // PatternEngine handles all 10 patterns with correct protocol payloads:
     //   Patterns 1,2,3,4,5,9,10 → 0x59 (MultiColor, RunningWater for animated)
@@ -991,6 +997,15 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
       AppLogger.log('SPEED_CHANGED', { value: speed, mode: activeMode, ...deviceContext });
     }, 600);
   }, [speed, activeMode, deviceContext]);
+
+  // Street sensitivity change logger (debounced 800ms — user drags slider)
+  useEffect(() => {
+    if (activeMode !== 'STREET') return;
+    clearTimeout(logTimers.current['streetSens']);
+    logTimers.current['streetSens'] = setTimeout(() => {
+      AppLogger.log('STREET_SENSITIVITY_CHANGED', { sensitivity: streetSensitivity, ...deviceContext });
+    }, 800);
+  }, [streetSensitivity, activeMode, deviceContext]);
 
   const startRecording = async () => {
     try {
@@ -1609,17 +1624,17 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
 
                     {isDiyBuilderExpanded && (() => {
                       const _diyPts  = hwSettings?.ledPoints || points || 16;
-                      const _diySegs = hwSettings?.segments || 1;
-                      const _maxDiy  = Math.max(1, Math.floor(_diyPts / _diySegs));
-                      const _isHalozDiy = _diySegs === 2 && _diyPts === 16;
-                      return (
+                      // ledPoints IS the total LED count — no division by segments
+                      const _maxDiy  = Math.max(1, _diyPts);
+                      const _isHalozDiy = (hwSettings?.segments || 1) === 2 && _diyPts === 16;
+                       return (
                     <View style={{ marginTop: 12, padding: 10, backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderRadius: 12, borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                          <View>
                            <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: 'bold' }}>DIY ARRAY BUILDER</Text>
                            {_isHalozDiy && (
                              <Text style={{ color: '#FFAA00', fontSize: 10, marginTop: 2 }}>
-                               ⚠ HALOZ: design {_maxDiy} LEDs — 2nd half mirrors automatically
+                               ⚠ HALOZ: design all {_maxDiy} LEDs — hardware loops natively
                              </Text>
                            )}
                          </View>
