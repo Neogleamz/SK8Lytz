@@ -2008,3 +2008,177 @@ fixedSubMode: useState<'PATTERN' | 'DIY'>('PATTERN')  -- MULTIMODE only
 ---
 
 *Last Updated: April 2026. Supabase schema, crew sessions, street mode, and telemetry documented above.*
+
+---
+
+## APPLOGGER — COMPLETE EVENT TYPE CATALOG
+
+**File**: `src/services/AppLogger.ts`
+**Pattern**: `AppLogger.log(EventType, payload?, deviceContext?)`
+**DeviceContext shape**: `{ deviceId, deviceName, groupId?, groupName?, deviceIds? }`
+
+| EventType | When to Use | Key Payload Fields |
+|:---|:---|:---|
+| `APP_OPENED` | App cold launch | — |
+| `DEVICE_DISCOVERED` | BLE scan finds compatible device | `deviceId`, `rssi`, `name` |
+| `SCAN_STARTED` | User triggers BLE scan | — |
+| `SCAN_COMPLETED` | Scan finishes | `deviceCount` |
+| `SCAN_FILTER_MATCH` | Device passes filter | `deviceId`, `reason` |
+| `SCAN_FILTER_REJECT` | Device fails filter | `deviceId`, `reason` |
+| `DEVICE_CONNECTED` | GATT connect succeeds | `deviceId`, `latency` |
+| `DEVICE_DISCONNECTED` | GATT disconnect | `deviceId` |
+| `BLE_CONNECTION_ERROR` | GATT error during connect | `deviceId`, `error` |
+| `BLE_WRITE_ERROR` | Write to characteristic failed | `deviceId`, `error` |
+| `PROTOCOL_ERROR` | Payload build error | `message` |
+| `DEVICE_RENAMED` | User saves custom device name | `deviceId`, `newName` |
+| `HARDWARE_CONFIG_CHANGED` | 0x62 write or config saved | `deviceId`, `points`, `icType`, `sorting` |
+| `MODE_CHANGED` | User switches active mode | `from`, `to` |
+| `PATTERN_CHANGED` | Pattern ID selected | `patternId`, `patternName` |
+| `COLOR_CHANGED` | Color picker or swatch picked | `color` (hex) |
+| `BRIGHTNESS_CHANGED` | Brightness slider changed | `brightness` (0-100) |
+| `SPEED_CHANGED` | Speed slider changed | `speed` (0-100) |
+| `RAW_PAYLOAD` | Admin hardware tester TX only | `hex`, `command` |
+| `SCREEN_OPENED` | Modal/screen opened | `screen` |
+| `PERFORMANCE_METRIC` | Latency measurement | `action`, `ms` |
+| `CREW_SESSION_STARTED` | Crew session created/joined | `crewId`, `role` |
+| `CREW_SESSION_ENDED` | Session ended by user | `crewId`, `duration` |
+| `CREW_PERMANENT_CREATED` | New permanent crew saved | `crewId`, `crewName`, `isPublic` |
+| `CREW_PERMANENT_UPDATED` | Crew settings saved | `crewId`, `changes` |
+| `CREW_PERMANENT_DELETED` | Crew deleted | `crewId` |
+| `CREW_PERMANENT_JOINED` | User joined a public crew | `crewId` |
+| `CREW_PERMANENT_LEFT` | User left a crew | `crewId` |
+| `CREW_MEMBERS_ADDED` | Members added to crew | `crewId`, `count` |
+| `STREET_MODE_ACTIVATED` | Street mode turned on | — |
+| `STREET_MODE_DEACTIVATED` | Street mode turned off | — |
+| `STREET_JERK_DETECTED` | Braking event (leading-edge only) | `jerkMagnitude`, `threshold` |
+| `STREET_SENSITIVITY_CHANGED` | Sensitivity slider changed (debounced 800ms) | `sensitivity` |
+
+> [!NOTE]
+> Group events MUST pass `deviceIds: string[]` in the device context. AppLogger unrolls these into per-device rows in Supabase. Single device events use `deviceId: string`.
+
+---
+
+## STREET MODE — TECHNICAL SPECIFICATION
+
+**File**: `src/components/DockedController.tsx`
+**Mode Name**: `STREET` (top-level `activeMode`)
+**Dock Icon**: `run-fast` (MaterialCommunityIcons)
+
+### State Variables
+```typescript
+const [streetSensitivity, setStreetSensitivity] = useState<number>(30);
+const [streetCruiseColor, setStreetCruiseColor] = useState<string>('#FF8C00');
+const [streetBrakeColor, setStreetBrakeColor]   = useState<string>('#FF0000');
+const [isStreetBraking, setIsStreetBraking]     = useState<boolean>(false);
+const streetBrakingRef = useRef(false);   // prevents setState thrashing
+const lastAccelRef     = useRef({ x: 0, y: 0, z: 0 });
+```
+
+### Accelerometer Logic
+- **Sensor**: `expo-sensors` `Accelerometer`
+- **Update interval**: 80ms (12.5Hz)
+- **Jerk calc**: `sqrt((x-px)^2 + (y-py)^2 + (z-pz)^2)` per sample
+- **Threshold formula**: `((100 - sensitivity) / 100) * 2.5 + 0.3` → range 0.3g–2.8g
+- **Brake trigger**: jerk > threshold → sends brakeColor via `setMultiColor(Array(10).fill({r,g,b}), 100, 1, 1)`
+- **Resume cruise**: jerk ≤ threshold → sends cruiseColor via same call
+- **Subscription lifecycle**: active ONLY when `activeMode === 'STREET'`, removed on mode change
+
+### UI Panel
+- Live status badge: orange **CRUISING** / red **BRAKING** with pulsing dot
+- Cruise color swatches: `#FF8C00 #FFAA00 #FFFFFF #00AAFF #00FF88 #FF00FF`
+- Brake color swatches:  `#FF0000 #FF3300 #FF6600 #FFFFFF #FF00AA #FFFF00`
+- Sensitivity slider: 5% to 95%
+- Standard hue/brightness/speed sliders hidden in STREET mode
+
+---
+
+## CREW HUB — QUICK REFERENCE
+
+**Files**: `src/components/CrewModal.tsx`, `src/services/CrewService.ts`
+**Access**: Via scanner panel "CREW HUB" button in `DashboardScreen`
+
+### Supabase Tables (Crew-Specific)
+
+| Table | Purpose | Key Columns |
+|:---|:---|:---|
+| `crew_sessions` | Active session state | `id`, `invite_code` (UNIQUE), `name`, `leader_user_id`, `is_public`, `city`, `max_members`, `expires_at` |
+| `crew_members` | Who is in each session | `session_id`, `user_id`, `display_name`, `role` ('leader'/'member'), `joined_at` |
+| `crew_permanent` | Persistent user-created crews | `id`, `owner_user_id`, `name`, `description`, `is_public`, `invite_code`, `city`, `created_at` |
+| `crew_permanent_members` | Persistent crew membership | `crew_id`, `user_id`, `role`, `joined_at` |
+
+### RLS Policy Pattern
+- All crew tables: authenticated users can INSERT their own rows.
+- `crew_sessions`: SELECT allowed for public sessions or where user is a member.
+- `crew_permanent`: SELECT allowed for `is_public=true` or owner.
+- DELETE: only crew owner / session leader.
+
+### Navigation State (CrewModal)
+```
+'landing'      → Hub home: My Crews list + active session status
+'detail'       → Viewing a specific crew's details
+'create'       → Create new crew form
+'edit'         → Edit crew settings
+'join'         → Join by invite code
+'session'      → Active session view (map, members, controls)
+```
+> [!IMPORTANT]
+> Back button in `CrewModal` always resets to `'landing'` — never push nested navigation states. This was a deliberate fix to prevent the stacked-card navigation bug.
+
+### Session Sync Architecture
+- **Polling-based** (current): `setInterval` every 5s calls Supabase REST to fetch session member list.
+- **NOT Realtime** (by design): Realtime would reduce latency but adds connection overhead. Polling is stable and predictable for current scale.
+- **Private crews**: `invite_code` displayed on crew card under "My Crews" when `is_public = false`.
+
+---
+
+## BUILD & DEPLOY — QUICK REFERENCE
+
+### Local Release APK
+```powershell
+# Build
+powershell -ExecutionPolicy Bypass -File tools\build-apk.ps1
+
+# Verify output
+Get-ChildItem android\app\build\outputs\apk -Recurse -Filter "*.apk" | Select Name, LastWriteTime
+
+# Install to connected device
+& ".local-builder\android-sdk\platform-tools\adb.exe" install -r "android\app\build\outputs\apk\release\SK8Lytz.apk"
+
+# Launch app
+& ".local-builder\android-sdk\platform-tools\adb.exe" shell am start -n com.neogleamz.sk8lytz/.MainActivity
+```
+
+### Dev Server
+```powershell
+npx expo start --web --clear
+```
+
+### Permissions (android/app/src/main/AndroidManifest.xml)
+Required: `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, `ACCESS_FINE_LOCATION`
+
+### Key Build Files
+| File | Purpose |
+|:---|:---|
+| `tools/build-apk.ps1` | One-command release build wrapper |
+| `android/app/build.gradle` | Version code, signing config, ProGuard |
+| `app.json` / `app.config.js` | Expo config, bundle ID, permissions |
+
+---
+
+## KNOWN ISSUES & GOTCHAS
+
+| Issue | Root Cause | Status / Fix |
+|:---|:---|:---|
+| GATT 133 errors on multi-device connect | Android BLE stack fails concurrent GATT connects | Fixed: `connectToDevices()` uses sequential `for...of`, NOT `Promise.all` |
+| `0x61` protocol in old docs | Confusion with timer command — wrong for fixed modes | Fixed: Section 5 correction note; use `0x59` per Section 13 |
+| `ng_device_configs` vs `@Sk8lytz_*` key mismatch | Legacy `ng_*` keys never updated | Documented: AppLogger reads `ng_device_configs`, DashboardScreen writes it. Both use this key by design — only theme/controller state uses `@Sk8lytz_*` |
+| LED points swapped in 0x63 response | Little-endian pair: `bArr[8]=Low, bArr[9]=High` | Fixed in `parseHardwareSettingsResponse()` — byte swap applied |
+| 0x59 array < 10 points → glitching | Hardware minimum chunk size | Fixed: Always pad to `>= 10` before transmitting |
+| `setOnDataReceived` required in ProgrammerModal | BLE RX notifications not reaching modal without prop | Documented: pass `setOnDataReceived` from `DashboardScreen` |
+| Duplicate session rows in Supabase | `sessionId` was `Date.now()` per upload | Fixed: `sessionId` set once at singleton constructor, UPSERT on conflict |
+| Device names null in Supabase | Wrong AsyncStorage key read by AppLogger | Fixed: reads `ng_device_configs` dict by MAC address |
+| CrewModal stacked navigation cards | Multiple navigation states accumulated on back press | Fixed: back always resets to `'landing'` state |
+
+---
+
+*Last Updated: April 2026 — SK8Lytz Master Reference. DO NOT SHORTEN. Add new entries at the bottom of each section.*

@@ -1135,18 +1135,25 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     // even when displayConnectedDevices comes from useBLE.connectedDevices (real hardware path)
     const cached = raw?.id ? (deviceConfigs[raw.id] || {}) : {};
     const d = { ...raw, ...cached };
+    // String-derived fallback for sorting when hardware hasn't been probed yet
     const s = d?.sorting || d?.colorSortingName || 'GRB';
     const sortingIdx = s === 'RGB' ? 0 : s === 'RBG' ? 1 : s === 'GRB' ? 2 : s === 'GBR' ? 3 : s === 'BRG' ? 4 : s === 'BGR' ? 5 : 2;
+    // CRITICAL: Only trust the numeric colorSorting index when hardware has been probed (detected=true).
+    // Stale cached data may have colorSorting=0 (RGB) from old parses, which ?? does NOT override
+    // because 0 is not null/undefined. Using detected as the gate prevents wrong cached values
+    // from overriding the GRB sortingIdx fallback derived from the device name string.
+    const colorSortingFinal = d?.detected ? (d.colorSorting ?? sortingIdx) : sortingIdx;
     return {
-      ledPoints: d?.points || d?.ledPoints || (d?.name?.toLowerCase().includes('soul') ? 43 : 16),
+      ledPoints: d?.ledPoints || d?.points || (d?.name?.toLowerCase().includes('soul') ? 43 : 16),
       segments:  d?.segments || 1,
       icType:    d?.icType || 1,
       icName:    d?.icName || d?.stripType || 'WS2812B',
-      colorSorting: d?.colorSorting ?? sortingIdx,
+      colorSorting: colorSortingFinal,
       colorSortingName: s,
       detected:  d?.detected || false,
     };
   }, [displayConnectedDevices, deviceConfigs]);
+
 
   const MemoizedSk8lytzController = useMemo(() => {
     if (!isActuallyConnected) return null;
