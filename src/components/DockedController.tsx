@@ -47,9 +47,11 @@ const AnalogGauge = ({
   max, 
   label, 
   unit = '',
-  color = '#00F0FF',
-  size = 96
-}: { value: number, min: number, max: number, label: string, unit?: string, color?: string, size?: number }) => {
+  defaultColor = '#00F0FF',
+  size = 140,
+  dangerVal,
+  criticalVal
+}: { value: number, min: number, max: number, label: string, unit?: string, defaultColor?: string, size?: number, dangerVal?: number, criticalVal?: number }) => {
   const radius = size * 0.42;
   const center = size / 2;
   const angleRange = 260; 
@@ -59,12 +61,18 @@ const AnalogGauge = ({
   const percent = (clampedVal - min) / (max - min);
   const currentAngle = startAngle + (percent * angleRange);
 
+  let activeColor = defaultColor;
+  if (criticalVal !== undefined && clampedVal >= criticalVal) activeColor = '#FF0000';
+  else if (dangerVal !== undefined && clampedVal >= dangerVal) activeColor = '#FF8C00';
+
   const polarToCartesian = (centerX: number, centerY: number, r: number, angleInDegrees: number) => {
     const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
     return { x: centerX + (r * Math.cos(angleInRadians)), y: centerY + (r * Math.sin(angleInRadians)) };
   };
 
   const describeArc = (x: number, y: number, r: number, sAngle: number, eAngle: number) => {
+    // If start closely matches end, return nothing
+    if (Math.abs(eAngle - sAngle) < 0.1) return "";
     const start = polarToCartesian(x, y, r, eAngle);
     const end = polarToCartesian(x, y, r, sAngle);
     const largeArcFlag = eAngle - sAngle <= 180 ? "0" : "1";
@@ -73,6 +81,17 @@ const AnalogGauge = ({
 
   const trackPath = describeArc(center, center, radius, startAngle, startAngle + angleRange);
   const fillPath = describeArc(center, center, radius, startAngle, currentAngle);
+
+  let dangerPath = "";
+  let criticalPath = "";
+  if (dangerVal !== undefined && criticalVal !== undefined) {
+    const dPercent = Math.max(0, Math.min(1, (dangerVal - min) / (max - min)));
+    const cPercent = Math.max(0, Math.min(1, (criticalVal - min) / (max - min)));
+    const dAngle = startAngle + (dPercent * angleRange);
+    const cAngle = startAngle + (cPercent * angleRange);
+    dangerPath = describeArc(center, center, radius, dAngle, cAngle);
+    criticalPath = describeArc(center, center, radius, cAngle, startAngle + angleRange);
+  }
 
   // Tick marks
   const numTicks = 8;
@@ -97,18 +116,22 @@ const AnalogGauge = ({
         <Svg width={size} height={size}>
           <Defs>
             <SvgLinearGradient id="grad" x1="0" y1="1" x2="1" y2="0">
-              <Stop offset="0" stopColor={color} stopOpacity="0.8" />
-              <Stop offset="1" stopColor="#FFF" stopOpacity="0.2" />
+              <Stop offset="0" stopColor={activeColor} stopOpacity="1" />
+              <Stop offset="1" stopColor={activeColor} stopOpacity="0.4" />
             </SvgLinearGradient>
           </Defs>
           {/* Background track */}
-          <Path d={trackPath} stroke="rgba(255,255,255,0.06)" strokeWidth={6} fill="none" strokeLinecap="round" />
-          {/* Active fill */}
-          <Path d={fillPath} stroke="url(#grad)" strokeWidth={8} fill="none" strokeLinecap="round" />
+          <Path d={trackPath} stroke="rgba(255,255,255,0.08)" strokeWidth={10} fill="none" strokeDasharray="6 4" strokeLinecap="butt" />
           
-          {/* Ticks */}
+          {dangerPath ? <Path d={dangerPath} stroke="rgba(255,140,0,0.3)" strokeWidth={10} fill="none" strokeDasharray="6 4" /> : null}
+          {criticalPath ? <Path d={criticalPath} stroke="rgba(255,0,0,0.35)" strokeWidth={10} fill="none" strokeDasharray="6 4" /> : null}
+
+          {/* Active fill */}
+          {fillPath ? <Path d={fillPath} stroke="url(#grad)" strokeWidth={10} fill="none" strokeDasharray="6 4" strokeLinecap="butt" /> : null}
+          
+          {/* Ticks (optional, but let's keep them very faint outside the dashed ring) */}
           {ticks.map((tick, i) => (
-             <Path key={i} d={`M ${tick.x1} ${tick.y1} L ${tick.x2} ${tick.y2}`} stroke={tick.isMajor ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.2)"} strokeWidth={tick.isMajor ? 2 : 1} />
+             <Path key={i} d={`M ${tick.x1} ${tick.y1} L ${tick.x2} ${tick.y2}`} stroke={tick.isMajor ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.15)"} strokeWidth={tick.isMajor ? 2 : 1} />
           ))}
           
           {/* Center Hub */}
@@ -117,16 +140,27 @@ const AnalogGauge = ({
         
         {/* Animated Needle */}
         <View style={{ position: 'absolute', width: size, height: size, justifyContent: 'center', alignItems: 'center', transform: [{ rotate: `${currentAngle}deg` }] }}>
-          <View style={{ width: 3, height: radius * 0.95, backgroundColor: '#FF3333', position: 'absolute', top: center - (radius * 0.95), borderTopLeftRadius: 1.5, borderTopRightRadius: 1.5, shadowColor: '#FF0000', shadowOpacity: 1, shadowRadius: 6 }} />
+          <View style={{ 
+              width: 4, height: radius * 0.90, 
+              backgroundColor: '#FF8C00', 
+              position: 'absolute', 
+              top: center - (radius * 0.90), 
+              borderTopLeftRadius: 2, 
+              borderTopRightRadius: 2, 
+              shadowColor: '#FF8C00', 
+              shadowOpacity: 1, 
+              shadowRadius: 10,
+              elevation: 8 
+            }} />
         </View>
 
         {/* Digital display */}
-        <View style={{ position: 'absolute', bottom: size * 0.15, alignItems: 'center' }}>
-            <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900', fontVariant: ['tabular-nums'], textShadowColor: color, textShadowRadius: 8 }}>{Math.floor(value)}</Text>
-            {unit ? <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: '800', marginTop: -2 }}>{unit}</Text> : null}
+        <View style={{ position: 'absolute', bottom: size * 0.12, alignItems: 'center' }}>
+            <Text style={{ color: '#FFF', fontSize: size * 0.22, fontWeight: '900', fontVariant: ['tabular-nums'], textShadowColor: activeColor !== '#00F0FF' ? activeColor : '#00F0FF', textShadowRadius: 16 }}>{Math.floor(value)}</Text>
+            {unit ? <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: size * 0.08, fontWeight: '900', marginTop: -2 }}>{unit}</Text> : null}
         </View>
       </View>
-      <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: 4 }}>{label}</Text>
+      <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '900', letterSpacing: 2, marginTop: 4 }}>{label}</Text>
     </View>
   );
 };
@@ -1828,6 +1862,20 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                 </View>
               </View>
 
+              {/* Status Bar */}
+              <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent', paddingVertical: 4, marginBottom: 12 }}>
+                  <Text style={{
+                    color: (motionState === 'HARD_BRAKING' || motionState === 'STOPPED') ? '#FF4444' : motionState === 'SLOWING_DOWN' ? '#FFD700' : '#00FF00',
+                    fontSize: 16, fontWeight: '900', letterSpacing: 4
+                  }}>
+                    {motionState === 'STOPPED' && '>> STOPPED <<'}
+                    {motionState === 'HARD_BRAKING' && '>> HARD BRAKING <<'}
+                    {motionState === 'SLOWING_DOWN' && '>> DECELERATING <<'}
+                    {motionState === 'ACCELERATING' && '>> ACCELERATING <<'}
+                    {motionState === 'CRUISING' && '>> CRUZING <<'}
+                  </Text>
+              </View>
+
               <View style={{
                 flexDirection: 'row',
                 backgroundColor: 'rgba(0,0,0,0.4)',
@@ -1873,23 +1921,9 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
 
                 {/* CENTER: Telemetry Gauges */}
                 <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
-                   <AnalogGauge value={gpsSpeed} min={0} max={35} label="SPEED" unit="MPH" color="#00F0FF" />
-                   <AnalogGauge value={peakGForce} min={0.3} max={2.2} label="G-FORCE" unit="G" color="#FFD700" />
+                   <AnalogGauge value={gpsSpeed}   min={0}   max={25}  label="SPEED"   unit="MPH" defaultColor="#00F0FF" dangerVal={15} criticalVal={20} />
+                   <AnalogGauge value={peakGForce} min={0.3} max={2.5} label="G-FORCE" unit="G"   defaultColor="#FFD700" dangerVal={1.2} criticalVal={1.8} />
                 </View>
-              </View>
-
-              {/* Status Bar */}
-              <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent', paddingVertical: 4, marginBottom: 16 }}>
-                  <Text style={{
-                    color: (motionState === 'HARD_BRAKING' || motionState === 'STOPPED') ? '#FF4444' : motionState === 'SLOWING_DOWN' ? '#FFD700' : '#00FF00',
-                    fontSize: 16, fontWeight: '900', letterSpacing: 4
-                  }}>
-                    {motionState === 'STOPPED' && '>> STOPPED <<'}
-                    {motionState === 'HARD_BRAKING' && '>> HARD BRAKING <<'}
-                    {motionState === 'SLOWING_DOWN' && '>> DECELERATING <<'}
-                    {motionState === 'ACCELERATING' && '>> ACCELERATING <<'}
-                    {motionState === 'CRUISING' && '>> CRUZING <<'}
-                  </Text>
               </View>
             </View>
           )}
