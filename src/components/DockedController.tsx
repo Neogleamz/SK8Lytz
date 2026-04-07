@@ -2298,7 +2298,9 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
             {(activeMode === 'STREET') && (
               <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialCommunityIcons name="octagon-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
+                  <TouchableOpacity onPress={() => Alert.alert('Braking Sensitivity', 'Adjusts how hard you need to brake before the red tail lights trigger.\n\n• High Sensitivity: Detects very light slowing down.\n• Low Sensitivity: Requires harder, sudden braking stops.')}>
+                    <MaterialCommunityIcons name="octagon-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
+                  </TouchableOpacity>
                   <CustomSlider 
                     value={streetSensitivity}
                     onValueChange={setStreetSensitivity}
