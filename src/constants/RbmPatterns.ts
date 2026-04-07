@@ -303,10 +303,10 @@ export const RBM_PATTERNS = [
 
 export const getRbmPatternName = (index: number): string => {
   if (index === 103) {
-    return '103: Emergency Protocol';
+    return 'Emergency Protocol';
   }
   if (index >= 1 && index <= RBM_PATTERNS.length) {
-    return `${index}: ${RBM_PATTERNS[index - 1]}`;
+    return RBM_PATTERNS[index - 1];
   }
   return `Effect ${index}`;
 };

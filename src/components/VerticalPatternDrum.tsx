@@ -127,7 +127,7 @@ const VerticalPatternDrum = ({
                    >
                      <View style={[styles.itemTextWrapper, isSelected && styles.selectedItemWrapper]}>
                        <Text style={[styles.itemLabel, isSelected && styles.selectedItemLabel]} numberOfLines={1}>
-                         {itemVal.toString().padStart(2, '0')}. {itemLabel ? itemLabel(itemVal) : `Pattern ${itemVal}`}
+                         {itemLabel ? itemLabel(itemVal) : `Pattern ${itemVal}`}
                        </Text>
                      </View>
                    </TouchableOpacity>
