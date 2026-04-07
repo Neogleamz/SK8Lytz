@@ -1005,6 +1005,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
       const { recording: newRecording } = await Audio.Recording.createAsync(
         {
           ...Audio.RecordingOptionsPresets.LOW_QUALITY,
+          isMeteringEnabled: true, // REQUIRED: enables stats.metering — without this mic always reads silence
           android: {
             ...Audio.RecordingOptionsPresets.LOW_QUALITY.android,
             extension: '.m4a',
