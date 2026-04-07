@@ -75,10 +75,11 @@ class LocationService {
   async getNearbyPublicSessions(radiusMi?: number | null): Promise<NearbySession[]> {
     const { supabase } = await import('./supabaseClient');
 
-    // Pull all active public sessions (via the security-invoker view)
+    // Pull all active sessions the user is authorized to see (via RLS: public OR is member)
     const { data, error } = await supabase
-      .from('public_sessions')
-      .select('id, name, invite_code, location_label, location_coords, scheduled_at, created_at, leader_name, leader_username, crew_name, member_count')
+      .from('crew_sessions')
+      .select('id, name, invite_code, location_label, location_coords, scheduled_at, created_at, crew_members(count)')
+      .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(100);
 
@@ -94,7 +95,7 @@ class LocationService {
         userLat = pos.coords.latitude;
         userLng = pos.coords.longitude;
       }
-    } catch { /* location unavailable — sort by date */ }
+    } catch { /* location unavailable - sort by date */ }
 
     const sessions: NearbySession[] = data.map((s: any) => {
       const coords = s.location_coords as { lat?: number; lng?: number } | null;
@@ -115,9 +116,9 @@ class LocationService {
         name:          s.name,
         inviteCode:    s.invite_code,
         locationLabel: s.location_label ?? 'Unknown Location',
-        leaderName:    s.leader_name ?? 'Unknown',
-        crewName:      s.crew_name ?? null,
-        memberCount:   s.member_count ?? 0,
+        leaderName:    'Unknown',
+        crewName:      null,
+        memberCount:   s.crew_members?.[0]?.count ?? 0,
         scheduledAt:   s.scheduled_at,
         distanceMi,
         distanceLabel,

@@ -30,6 +30,7 @@ import { profileService, PermanentCrew, CrewMemberFull } from '../services/Profi
 import { locationService, NearbySession } from '../services/LocationService';
 import { AppLogger } from '../services/AppLogger';
 import { notificationService } from '../services/NotificationService';
+import { LocationPicker } from './LocationPicker';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -545,12 +546,17 @@ export default function CrewModal({
               <View key={crew.id} style={styles.hubCrewCard}>
                 {/* Crew avatar + name */}
                 <View style={styles.hubCrewCardTop}>
-                  <View style={[styles.hubCrewAvatar, { backgroundColor: crew.avatar_color || '#FFAA00' }]}>
-                    <MaterialCommunityIcons
-                      name={(crew.avatar_icon as any) || 'account-group'}
-                      size={20}
-                      color="#000"
-                    />
+                  <View style={{ position: 'relative' }}>
+                    {crew.avatar_url ? (
+                      <Image source={{ uri: crew.avatar_url }} style={[styles.hubCrewAvatar, { width: 36, height: 36, borderRadius: 18 }]} />
+                    ) : (
+                      <View style={[styles.hubCrewAvatar, { backgroundColor: crew.avatar_color || '#FFAA00' }]}>
+                        <MaterialCommunityIcons name={(crew.avatar_icon as any) || 'account-group'} size={20} color="#000" />
+                      </View>
+                    )}
+                    {!crew.is_public && (
+                      <MaterialCommunityIcons name="lock" size={12} color="#FFF" style={{ position: 'absolute', top: -3, right: -3, backgroundColor: '#000', borderRadius: 6, overflow: 'hidden' }} />
+                    )}
                   </View>
                   <View style={{ flex: 1, marginLeft: 10 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -983,67 +989,43 @@ export default function CrewModal({
       {/* ── Crew picker ── */}
       <Text style={styles.label}>SESSION FOR</Text>
       <View style={styles.crewPickerRow}>
-        {permanentCrews.map(crew => (
-          <TouchableOpacity key={crew.id}
-            style={[styles.crewChip, selectedCrewId === crew.id && styles.crewChipActive]}
-            onPress={() => { setSelectedCrewId(crew.id); setCrewName(''); }}>
-            <MaterialCommunityIcons name="account-group" size={13}
-              color={selectedCrewId === crew.id ? '#000' : Colors.primary} />
-            <Text style={[styles.crewChipText, selectedCrewId === crew.id && styles.crewChipTextActive]}
-              numberOfLines={1}>{crew.name}</Text>
-          </TouchableOpacity>
-        ))}
-        {/* 'New Crew' — navigates to Manage Crews hub to create a permanent crew */}
-        <TouchableOpacity
-          style={[styles.crewChip, { borderStyle: 'dashed' }]}
-          onPress={() => setStep('manage')}>
-          <MaterialCommunityIcons name="plus" size={13} color={Colors.primary} />
-          <Text style={styles.crewChipText}>New Crew</Text>
-        </TouchableOpacity>
-
+        {myCrews.map(crew => {
+          const isSelected = selectedCrewId === crew.id;
+          return (
+            <TouchableOpacity key={crew.id}
+              style={[styles.crewChip, isSelected && styles.crewChipActive]}
+              onPress={() => { setSelectedCrewId(crew.id); setCrewName(''); }}>
+              <View style={{ position: 'relative' }}>
+                {crew.avatar_url ? (
+                  <Image source={{ uri: crew.avatar_url }} style={{ width: 16, height: 16, borderRadius: 8, marginRight: 2 }} />
+                ) : (
+                  <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: crew.avatar_color || '#FFAA00', alignItems: 'center', justifyContent: 'center', marginRight: 2 }}>
+                    <MaterialCommunityIcons name={(crew.avatar_icon as any) || 'account-group'} size={10} color="#000" />
+                  </View>
+                )}
+                {!crew.is_public && (
+                  <MaterialCommunityIcons name="lock" size={8} color={isSelected ? '#000' : Colors.primary} style={{ position: 'absolute', top: -4, right: -4, backgroundColor: isSelected ? '#FFAA00' : '#1C1C1E', borderRadius: 4, overflow: 'hidden' }} />
+                )}
+              </View>
+              <Text style={[styles.crewChipText, isSelected && styles.crewChipTextActive]}
+                numberOfLines={1}>{crew.name}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <Text style={styles.label}>YOUR NAME IN THIS SESSION</Text>
       <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName}
         placeholder="Display name" placeholderTextColor={Colors.textMuted} maxLength={24} />
-
-      {/* ── Public / Private ── */}
-      <View style={styles.visibilityRow}>
-        <TouchableOpacity style={[styles.visibilityBtn, !isPublic && styles.visibilityBtnActive]}
-          onPress={() => setIsPublic(false)}>
-          <MaterialCommunityIcons name="lock" size={15} color={!isPublic ? '#000' : Colors.textMuted} />
-          <Text style={[styles.visibilityBtnText, !isPublic && styles.visibilityBtnTextActive]}>Private</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.visibilityBtn, isPublic && styles.visibilityBtnPublic]}
-          onPress={() => setIsPublic(true)}>
-          <MaterialCommunityIcons name="earth" size={15} color={isPublic ? '#000' : Colors.textMuted} />
-          <Text style={[styles.visibilityBtnText, isPublic && styles.visibilityBtnTextActive]}>Public</Text>
-        </TouchableOpacity>
-      </View>
-      <Text style={styles.hintText}>
-        {isPublic ? '🌍 Anyone nearby can find & join.' : '🔒 Crew code required to join.'}
-      </Text>
-
-      {/* ── Location ── */}
-      <Text style={styles.label}>LOCATION (OPTIONAL)</Text>
-      {locationLabel ? (
-        <View style={styles.locationChip}>
-          <MaterialCommunityIcons name="map-marker" size={16} color={Colors.primary} />
-          <Text style={styles.locationChipText} numberOfLines={1}>{locationLabel}</Text>
-          <TouchableOpacity onPress={() => { setLocationLabel(''); setLocationCoords(undefined); }}>
-            <MaterialCommunityIcons name="close-circle" size={16} color={Colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity style={styles.locationBtn} onPress={handleDetectLocation} disabled={isGettingLocation}>
-          {isGettingLocation
-            ? <ActivityIndicator size="small" color={Colors.primary} />
-            : <MaterialCommunityIcons name="crosshairs-gps" size={16} color={Colors.primary} />}
-          <Text style={styles.locationBtnText}>
-            {isGettingLocation ? 'Detecting location…' : 'Detect my location'}
-          </Text>
-        </TouchableOpacity>
-      )}
+      <LocationPicker
+        locationLabel={locationLabel}
+        onLocationLabelChange={setLocationLabel}
+        locationCoords={locationCoords}
+        onLocationCoordsChange={setLocationCoords}
+        isGettingLocation={isGettingLocation}
+        onDetectLocation={handleDetectLocation}
+        searchRadiusMi={discoverRadiusMi || undefined}
+      />
 
       {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 
@@ -1084,13 +1066,18 @@ export default function CrewModal({
             <TouchableOpacity key={crew.id}
               style={[styles.crewChip, isSelected && styles.crewChipActive]}
               onPress={() => { setSelectedCrewId(crew.id); setCrewName(''); }}>
-              {crew.avatar_url ? (
-                <Image source={{ uri: crew.avatar_url }} style={{ width: 16, height: 16, borderRadius: 8, marginRight: 2 }} />
-              ) : (
-                <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: crew.avatar_color || '#FFAA00', alignItems: 'center', justifyContent: 'center', marginRight: 2 }}>
-                  <MaterialCommunityIcons name={(crew.avatar_icon as any) || 'account-group'} size={10} color="#000" />
-                </View>
-              )}
+              <View style={{ position: 'relative' }}>
+                {crew.avatar_url ? (
+                  <Image source={{ uri: crew.avatar_url }} style={{ width: 16, height: 16, borderRadius: 8, marginRight: 2 }} />
+                ) : (
+                  <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: crew.avatar_color || '#FFAA00', alignItems: 'center', justifyContent: 'center', marginRight: 2 }}>
+                    <MaterialCommunityIcons name={(crew.avatar_icon as any) || 'account-group'} size={10} color="#000" />
+                  </View>
+                )}
+                {!crew.is_public && (
+                  <MaterialCommunityIcons name="lock" size={8} color={isSelected ? '#000' : Colors.primary} style={{ position: 'absolute', top: -4, right: -4, backgroundColor: isSelected ? '#FFAA00' : '#1C1C1E', borderRadius: 4, overflow: 'hidden' }} />
+                )}
+              </View>
               <Text style={[styles.crewChipText, isSelected && styles.crewChipTextActive]}
                 numberOfLines={1}>{crew.name}</Text>
             </TouchableOpacity>
@@ -1145,30 +1132,15 @@ export default function CrewModal({
       )}
 
       {/* ── Location ── */}
-      <Text style={styles.label}>LOCATION (OPTIONAL)</Text>
-      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 16 }}>
-        <TextInput
-          style={[styles.input, { flex: 1, marginBottom: 0 }]}
-          value={locationLabel}
-          onChangeText={(txt) => { setLocationLabel(txt); setLocationCoords(undefined); }}
-          placeholder="Enter address or park name"
-          placeholderTextColor={Colors.textMuted}
-        />
-        <TouchableOpacity
-          style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
-          onPress={handleDetectLocation}
-          disabled={isGettingLocation}
-        >
-          {isGettingLocation ? (
-            <ActivityIndicator size="small" color={Colors.primary} />
-          ) : (
-            <MaterialCommunityIcons name="crosshairs-gps" size={20} color={locationCoords ? Colors.primary : Colors.textMuted} />
-          )}
-        </TouchableOpacity>
-      </View>
-      {locationCoords && (
-        <Text style={{ color: Colors.primary, fontSize: 10, marginTop: -12, marginBottom: 16, paddingHorizontal: 4, fontWeight: '700' }}>✓ Exact GPS coordinates attached</Text>
-      )}
+      <LocationPicker
+        locationLabel={locationLabel}
+        onLocationLabelChange={setLocationLabel}
+        locationCoords={locationCoords}
+        onLocationCoordsChange={setLocationCoords}
+        isGettingLocation={isGettingLocation}
+        onDetectLocation={handleDetectLocation}
+        searchRadiusMi={discoverRadiusMi || undefined}
+      />
 
       {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 
@@ -1483,6 +1455,17 @@ export default function CrewModal({
     } catch (e: any) { Alert.alert('Error', e.message); }
   };
 
+  const handleLeaveCrew = async (crew: PermanentCrew) => {
+    try {
+      await profileService.leavePermanentCrew(crew.id);
+      setMyCrews(prev => prev.filter(c => c.id !== crew.id));
+      setPermanentCrews(prev => prev.filter(c => c.id !== crew.id));
+      setSelectedCrewDetail(null);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to leave crew.');
+    }
+  };
+
   // ── Join public crew directly from Discover tab ─────────────────────────────
   const handleJoinPublicCrew = async (crew: PermanentCrew) => {
     setJoiningCrewId(crew.id);
@@ -1565,11 +1548,16 @@ export default function CrewModal({
     return (
       <TouchableOpacity key={crew.id} style={styles.mgCrewCard} onPress={onTap}>
         {/* Avatar */}
-        {crew.avatar_url
-          ? <Image source={{ uri: crew.avatar_url }} style={styles.mgAvatarImg} />
-          : <View style={[styles.mgAvatar, { backgroundColor: crew.avatar_color ?? '#FFAA00' }]}>
-            <MaterialCommunityIcons name={(crew.avatar_icon ?? 'account-group') as any} size={22} color="#000" />
-          </View>}
+        <View style={{ position: 'relative' }}>
+          {crew.avatar_url
+            ? <Image source={{ uri: crew.avatar_url }} style={styles.mgAvatarImg} />
+            : <View style={[styles.mgAvatar, { backgroundColor: crew.avatar_color ?? '#FFAA00' }]}>
+              <MaterialCommunityIcons name={(crew.avatar_icon ?? 'account-group') as any} size={22} color="#000" />
+            </View>}
+          {!crew.is_public && (
+            <MaterialCommunityIcons name="lock" size={14} color="#FFF" style={{ position: 'absolute', top: -4, right: -4, backgroundColor: '#000', borderRadius: 7, overflow: 'hidden' }} />
+          )}
+        </View>
         {/* Info */}
         <View style={{ flex: 1 }}>
           <Text style={styles.mgCrewName} numberOfLines={1}>{crew.name}</Text>
@@ -1797,12 +1785,19 @@ export default function CrewModal({
         </TouchableOpacity>
 
         {/* Crew avatar */}
-        <View style={{ alignItems: 'center', marginVertical: 16 }}>
-          {crew.avatar_url
-            ? <Image source={{ uri: crew.avatar_url }} style={[styles.mgAvatarImg, { width: 72, height: 72, borderRadius: 36 }]} />
-            : <View style={[styles.mgAvatar, { width: 72, height: 72, borderRadius: 36, backgroundColor: crew.avatar_color ?? '#FFAA00' }]}>
-              <MaterialCommunityIcons name={(crew.avatar_icon ?? 'account-group') as any} size={32} color="#000" />
-            </View>}
+        {editingCrewId !== crew.id && (
+          <>
+            <View style={{ alignItems: 'center', marginVertical: 16 }}>
+          <View style={{ position: 'relative' }}>
+            {crew.avatar_url
+              ? <Image source={{ uri: crew.avatar_url }} style={[styles.mgAvatarImg, { width: 72, height: 72, borderRadius: 36 }]} />
+              : <View style={[styles.mgAvatar, { width: 72, height: 72, borderRadius: 36, backgroundColor: crew.avatar_color ?? '#FFAA00' }]}>
+                <MaterialCommunityIcons name={(crew.avatar_icon ?? 'account-group') as any} size={32} color="#000" />
+              </View>}
+            {!crew.is_public && (
+              <MaterialCommunityIcons name="lock" size={18} color="#FFF" style={{ position: 'absolute', top: -2, right: -2, backgroundColor: '#000', borderRadius: 10, padding: 2, overflow: 'hidden', borderWidth: 2, borderColor: '#1C1C1E' }} />
+            )}
+          </View>
           <Text style={[styles.titleLarge, { marginTop: 10, marginBottom: 2 }]}>{crew.name}</Text>
           {(crew.city || crew.state) && (
             <Text style={styles.mgCrewSub}>
@@ -1889,13 +1884,17 @@ export default function CrewModal({
               <Text style={styles.editBtnText}>Edit Crew Settings</Text>
             </TouchableOpacity>
           )}
+        </View>
+          </>
+        )}
 
-          {/* Inline edit form */}
-          {crew.is_owner && editingCrewId === crew.id && (
-            <View style={{ gap: 10 }}>
-              <Text style={styles.label}>CREW NAME</Text>
-              <TextInput style={styles.input} value={editCrewName} onChangeText={setEditCrewName}
-                placeholder="Crew name" placeholderTextColor={Colors.textMuted} maxLength={40} />
+        {/* Inline edit form */}
+        {crew.is_owner && editingCrewId === crew.id && (
+          <View style={{ gap: 10, marginTop: 12 }}>
+            <Text style={[styles.titleLarge, { marginBottom: 12 }]}>Edit Crew Settings</Text>
+            <Text style={styles.label}>CREW NAME</Text>
+            <TextInput style={styles.input} value={editCrewName} onChangeText={setEditCrewName}
+              placeholder="Crew name" placeholderTextColor={Colors.textMuted} maxLength={40} />
 
               <Text style={styles.label}>DESCRIPTION</Text>
               <TextInput style={[styles.input, { height: 64, textAlignVertical: 'top' }]}
@@ -2107,7 +2106,6 @@ export default function CrewModal({
                 <Text style={[styles.dangerBtnText, { color: '#FF6B00' }]}>Leave Crew</Text>
               </TouchableOpacity>
             )}
-        </View>
       </ScrollView>
     );
   };
@@ -2474,4 +2472,5 @@ const createStyles = (Colors: any) => StyleSheet.create({
   radiusPillActive: { backgroundColor: Colors.primary || '#FFAA00', borderColor: Colors.primary || '#FFAA00' },
   radiusPillText: { color: Colors.textMuted || '#888', fontSize: 12, fontWeight: '700' },
   radiusPillTextActive: { color: '#000', fontSize: 12, fontWeight: '700' },
+  controlRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, marginTop: 12 },
 });
