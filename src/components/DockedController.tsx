@@ -155,12 +155,12 @@ const AnalogGauge = ({
         </View>
 
         {/* Digital display */}
-        <View style={{ position: 'absolute', bottom: size * 0.12, alignItems: 'center' }}>
+        <View style={{ position: 'absolute', right: size * 0.15, top: size * 0.45, alignItems: 'flex-end' }}>
             <Text style={{ color: '#FFF', fontSize: size * 0.22, fontWeight: '900', fontVariant: ['tabular-nums'], textShadowColor: activeColor !== '#00F0FF' ? activeColor : '#00F0FF', textShadowRadius: 16 }}>{Math.floor(value)}</Text>
-            {unit ? <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: size * 0.08, fontWeight: '900', marginTop: -2 }}>{unit}</Text> : null}
+            {unit ? <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: size * 0.08, fontWeight: '800', marginTop: -4 }}>{unit}</Text> : null}
         </View>
       </View>
-      <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '900', letterSpacing: 2, marginTop: 4 }}>{label}</Text>
+      <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '900', letterSpacing: 2, marginTop: -4 }}>{label}</Text>
     </View>
   );
 };
@@ -1843,88 +1843,92 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
           {/* ── STREET MODE UI: FAST & FURIOUS DASHBOARD ─────────────────── */}
           {activeMode === 'STREET' && (
             <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 8 }}>
-
-              {/* ── Street Visualizer: Car-light zone bar ── */}
-              <View style={{ marginBottom: 12 }}>
-                <View style={{ flexDirection: 'row', height: 28, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-                  {/* Rear zone — red tail lights */}
-                  <View style={{ flex: 3, backgroundColor: isStreetBraking ? '#FF0000' : '#660000', justifyContent: 'center', alignItems: 'center' }}>
-                    <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>TAIL (30%)</Text>
-                  </View>
-                  {/* Middle zone — cruise color */}
-                  <View style={{ flex: 4, backgroundColor: streetCruiseColor, justifyContent: 'center', alignItems: 'center', opacity: 0.9 }}>
-                    <Text style={{ color: '#000', fontSize: 9, fontWeight: '800' }}>CRUISE (40%)</Text>
-                  </View>
-                  {/* Front zone — headlights */}
-                  <View style={{ flex: 3, backgroundColor: '#FFF5E0', justifyContent: 'center', alignItems: 'center' }}>
-                    <Text style={{ color: '#333', fontSize: 9, fontWeight: '800' }}>HEAD (30%)</Text>
+              <ScrollView 
+                 contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
+                 showsVerticalScrollIndicator={false}
+              >
+                {/* ── Street Visualizer: Car-light zone bar ── */}
+                <View style={{ marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', height: 28, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                    {/* Rear zone — red tail lights */}
+                    <View style={{ flex: 3, backgroundColor: isStreetBraking ? '#FF0000' : '#660000', justifyContent: 'center', alignItems: 'center' }}>
+                      <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>TAIL (30%)</Text>
+                    </View>
+                    {/* Middle zone — cruise color */}
+                    <View style={{ flex: 4, backgroundColor: streetCruiseColor, justifyContent: 'center', alignItems: 'center', opacity: 0.9 }}>
+                      <Text style={{ color: '#000', fontSize: 9, fontWeight: '800' }}>CRUISE (40%)</Text>
+                    </View>
+                    {/* Front zone — headlights */}
+                    <View style={{ flex: 3, backgroundColor: '#FFF5E0', justifyContent: 'center', alignItems: 'center' }}>
+                      <Text style={{ color: '#333', fontSize: 9, fontWeight: '800' }}>HEAD (30%)</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
 
-              {/* Status Bar */}
-              <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent', paddingVertical: 4, marginBottom: 12 }}>
-                  <Text style={{
-                    color: (motionState === 'HARD_BRAKING' || motionState === 'STOPPED') ? '#FF4444' : motionState === 'SLOWING_DOWN' ? '#FFD700' : '#00FF00',
-                    fontSize: 16, fontWeight: '900', letterSpacing: 4
-                  }}>
-                    {motionState === 'STOPPED' && '>> STOPPED <<'}
-                    {motionState === 'HARD_BRAKING' && '>> HARD BRAKING <<'}
-                    {motionState === 'SLOWING_DOWN' && '>> DECELERATING <<'}
-                    {motionState === 'ACCELERATING' && '>> ACCELERATING <<'}
-                    {motionState === 'CRUISING' && '>> CRUZING <<'}
-                  </Text>
-              </View>
+                {/* Status Bar */}
+                <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent', paddingVertical: 4, marginBottom: 12 }}>
+                    <Text style={{
+                      color: (motionState === 'HARD_BRAKING' || motionState === 'STOPPED') ? '#FF4444' : motionState === 'SLOWING_DOWN' ? '#FFD700' : '#00FF00',
+                      fontSize: 16, fontWeight: '900', letterSpacing: 4
+                    }}>
+                      {motionState === 'STOPPED' && '>> STOPPED <<'}
+                      {motionState === 'HARD_BRAKING' && '>> HARD BRAKING <<'}
+                      {motionState === 'SLOWING_DOWN' && '>> DECELERATING <<'}
+                      {motionState === 'ACCELERATING' && '>> ACCELERATING <<'}
+                      {motionState === 'CRUISING' && '>> CRUZING <<'}
+                    </Text>
+                </View>
 
-              <View style={{
-                flexDirection: 'row',
-                backgroundColor: 'rgba(0,0,0,0.4)',
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.05)',
-                overflow: 'hidden',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                paddingVertical: 12,
-                marginBottom: 16,
-              }}>
-                {/* LEFT: Stoplight Vertical Graphic */}
                 <View style={{
-                  width: 60,
-                  borderRightWidth: 1,
-                  borderRightColor: 'rgba(255,255,255,0.05)',
-                  justifyContent: 'center',
+                  flexDirection: 'row',
+                  backgroundColor: 'rgba(0,0,0,0.4)',
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.05)',
+                  overflow: 'hidden',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
+                  paddingVertical: 12,
+                  marginBottom: 16,
                 }}>
-                  {/* Red Light */}
+                  {/* LEFT: Stoplight Vertical Graphic */}
                   <View style={{
-                    width: 24, height: 24, borderRadius: 12, marginBottom: 8,
-                    backgroundColor: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? '#FF0000' : '#330000',
-                    shadowColor: '#FF0000', shadowOpacity: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? 1 : 0, shadowRadius: 12, elevation: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? 10 : 0,
-                    borderWidth: 1, borderColor: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? '#FFAAAA' : '#000',
-                  }} />
-                  {/* Yellow Light */}
-                  <View style={{
-                    width: 24, height: 24, borderRadius: 12, marginBottom: 8,
-                    backgroundColor: motionState === 'SLOWING_DOWN' ? '#FFFF00' : '#444400',
-                    shadowColor: '#FFFF00', shadowOpacity: motionState === 'SLOWING_DOWN' ? 1 : 0, shadowRadius: 12, elevation: motionState === 'SLOWING_DOWN' ? 10 : 0,
-                    borderWidth: 1, borderColor: motionState === 'SLOWING_DOWN' ? '#FFFFAA' : '#000',
-                  }} />
-                  {/* Green Light */}
-                  <View style={{
-                    width: 24, height: 24, borderRadius: 12,
-                    backgroundColor: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? '#00FF00' : '#003300',
-                    shadowColor: '#00FF00', shadowOpacity: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? 1 : 0, shadowRadius: 12, elevation: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? 10 : 0,
-                    borderWidth: 1, borderColor: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? '#AAFFAA' : '#000',
-                  }} />
-                </View>
+                    width: 60,
+                    borderRightWidth: 1,
+                    borderRightColor: 'rgba(255,255,255,0.05)',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}>
+                    {/* Red Light */}
+                    <View style={{
+                      width: 24, height: 24, borderRadius: 12, marginBottom: 8,
+                      backgroundColor: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? '#FF0000' : '#330000',
+                      shadowColor: '#FF0000', shadowOpacity: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? 1 : 0, shadowRadius: 12, elevation: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? 10 : 0,
+                      borderWidth: 1, borderColor: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? '#FFAAAA' : '#000',
+                    }} />
+                    {/* Yellow Light */}
+                    <View style={{
+                      width: 24, height: 24, borderRadius: 12, marginBottom: 8,
+                      backgroundColor: motionState === 'SLOWING_DOWN' ? '#FFFF00' : '#444400',
+                      shadowColor: '#FFFF00', shadowOpacity: motionState === 'SLOWING_DOWN' ? 1 : 0, shadowRadius: 12, elevation: motionState === 'SLOWING_DOWN' ? 10 : 0,
+                      borderWidth: 1, borderColor: motionState === 'SLOWING_DOWN' ? '#FFFFAA' : '#000',
+                    }} />
+                    {/* Green Light */}
+                    <View style={{
+                      width: 24, height: 24, borderRadius: 12,
+                      backgroundColor: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? '#00FF00' : '#003300',
+                      shadowColor: '#00FF00', shadowOpacity: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? 1 : 0, shadowRadius: 12, elevation: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? 10 : 0,
+                      borderWidth: 1, borderColor: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? '#AAFFAA' : '#000',
+                    }} />
+                  </View>
 
-                {/* CENTER: Telemetry Gauges */}
-                <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
-                   <AnalogGauge value={gpsSpeed}   min={0}   max={25}  label="SPEED"   unit="MPH" defaultColor="#00F0FF" dangerVal={15} criticalVal={20} />
-                   <AnalogGauge value={peakGForce} min={0.3} max={2.5} label="G-FORCE" unit="G"   defaultColor="#FFD700" dangerVal={1.2} criticalVal={1.8} />
+                  {/* CENTER: Telemetry Gauges */}
+                  <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
+                     <AnalogGauge value={gpsSpeed}   min={0}   max={25}  label="SPEED"   unit="MPH" defaultColor="#00F0FF" dangerVal={15} criticalVal={20} />
+                     <AnalogGauge value={peakGForce} min={0.3} max={2.5} label="G-FORCE" unit="G"   defaultColor="#FFD700" dangerVal={1.2} criticalVal={1.8} />
+                  </View>
                 </View>
-              </View>
+              </ScrollView>
             </View>
           )}
 
