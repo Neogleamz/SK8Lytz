@@ -1812,7 +1812,6 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
 
               {/* ── Street Visualizer: Car-light zone bar ── */}
               <View style={{ marginBottom: 12 }}>
-                <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 8 }}>LED LAYOUT PREVIEW</Text>
                 <View style={{ flexDirection: 'row', height: 28, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
                   {/* Rear zone — red tail lights */}
                   <View style={{ flex: 3, backgroundColor: isStreetBraking ? '#FF0000' : '#660000', justifyContent: 'center', alignItems: 'center' }}>
