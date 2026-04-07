@@ -192,7 +192,7 @@ class ProfileService {
   /**
    * Create a new permanent crew and auto-join the creator as member.
    */
-  async createPermanentCrew(name: string, opts?: { isPublic?: boolean; avatarColor?: string; avatarIcon?: string; city?: string; state?: string; description?: string }): Promise<PermanentCrew> {
+  async createPermanentCrew(name: string, opts?: { isPublic?: boolean; avatarColor?: string; avatarIcon?: string; city?: string; state?: string; description?: string; inviteCode?: string; members?: string[] }): Promise<PermanentCrew> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -203,6 +203,7 @@ class ProfileService {
     if (opts?.city)                      insertData.city         = opts.city;
     if (opts?.state)                     insertData.state        = opts.state;
     if (opts?.description)               insertData.description  = opts.description;
+    if (opts?.inviteCode)                insertData.invite_code  = opts.inviteCode;
 
     const { data: crew, error: crewErr } = await supabase
       .from('crews')
@@ -213,9 +214,20 @@ class ProfileService {
     if (crewErr || !crew) throw crewErr ?? new Error('Failed to create crew');
 
     // Auto-join creator as first member
+    const memberships = [{ crew_id: crew.id, user_id: user.id }];
+    
+    // Add additional members if provided
+    if (opts?.members && opts.members.length > 0) {
+      opts.members.forEach(memberId => {
+        if (memberId !== user.id) {
+          memberships.push({ crew_id: crew.id, user_id: memberId });
+        }
+      });
+    }
+
     await supabase
       .from('crew_memberships')
-      .insert({ crew_id: crew.id, user_id: user.id });
+      .insert(memberships);
 
     return { ...crew, is_owner: true } as PermanentCrew;
   }
@@ -372,8 +384,7 @@ class ProfileService {
     const { error } = await supabase
       .from('crews')
       .delete()
-      .eq('id', crewId)
-      .eq('owner_id', user.id);  // owner-only guard
+      .eq('id', crewId);
 
     if (error) throw error;
   }
@@ -503,7 +514,49 @@ class ProfileService {
 
     if (error) throw error;
   }
+
+  /**
+   * Remove a member from a crew.
+   * Only owners can call this.
+   */
+  async removeCrewMember(crewId: string, targetUserId: string): Promise<void> {
+    const { error } = await supabase
+      .from('crew_memberships')
+      .delete()
+      .eq('crew_id', crewId)
+      .eq('user_id', targetUserId);
+
+    if (error) throw error;
+  }
+
+  /**
+   * Add multiple members to an existing crew.
+   */
+  async addCrewMembers(crewId: string, userIds: string[]): Promise<void> {
+    if (!userIds.length) return;
+    const memberships = userIds.map(id => ({ crew_id: crewId, user_id: id }));
+    
+    const { error } = await supabase
+      .from('crew_memberships')
+      .insert(memberships);
+
+    if (error) throw error;
+  }
+
+  async searchUsers(query: string): Promise<{user_id: string, username: string | null, display_name: string | null}[]> {
+    if (!query.trim()) return [];
+    const searchTerms = `%${query.trim()}%`;
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('user_id, username, display_name')
+      .or(`username.ilike.${searchTerms},display_name.ilike.${searchTerms}`)
+      .limit(10);
+    if (error) {
+      console.warn('Search users error:', error);
+      return [];
+    }
+    return data ?? [];
+  }
 }
 
 export const profileService = new ProfileService();
-

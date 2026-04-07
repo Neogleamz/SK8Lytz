@@ -23,6 +23,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import CustomSlider from './CustomSlider';
 import { crewService, CrewSession, CrewMember, CrewRole } from '../services/CrewService';
 import { supabase } from '../services/supabaseClient';
 import { profileService, PermanentCrew, CrewMemberFull } from '../services/ProfileService';
@@ -75,7 +76,7 @@ export default function CrewModal({
   // null = show all; number = filter to within that many miles
   const [discoverRadiusMi, setDiscoverRadiusMi] = useState<number | null>(50);
   // Maps crewId → its currently live session (populated when hub loads)
-  const [_crewActiveSessions, _setCrewActiveSessions] = useState<Record<string, CrewSession | null>>({}); 
+  const [_crewActiveSessions, _setCrewActiveSessions] = useState<Record<string, CrewSession | null>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -108,7 +109,7 @@ export default function CrewModal({
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
   // ── Manage Crews Hub state ────────────────────────────────────────────────
-  const [manageTab, setManageTab] = useState<'mycrews' | 'discover' | 'create'>('mycrews');
+  const [_manageTab, _setManageTab] = useState<'mycrews' | 'discover' | 'create'>('mycrews');
   const [myCrews, setMyCrews] = useState<PermanentCrew[]>([]);
   const [publicCrews, setPublicCrews] = useState<PermanentCrew[]>([]);
   const [selectedCrewDetail, setSelectedCrewDetail] = useState<PermanentCrew | null>(null);
@@ -118,34 +119,52 @@ export default function CrewModal({
   const [isLoadingNearby, setIsLoadingNearby] = useState(false);
   const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
   // Create crew form
-  const [newCrewName,        setNewCrewName]        = useState('');
-  const [newCrewIsPublic,    setNewCrewIsPublic]    = useState(false);
-  const [newCrewColor,       setNewCrewColor]       = useState('#FFAA00');
-  const [newCrewIcon,        setNewCrewIcon]        = useState('account-group');
-  const [newCrewCity,        setNewCrewCity]        = useState('');
-  const [newCrewState,       setNewCrewState]       = useState('');
+  const [newCrewName, setNewCrewName] = useState('');
+  const [newCrewIsPublic, setNewCrewIsPublic] = useState(false);
+  const [newCrewColor, setNewCrewColor] = useState('#FFAA00');
+  const [newCrewIcon, setNewCrewIcon] = useState('roller-skate');
+  const [newCrewCity, setNewCrewCity] = useState('');
+  const [newCrewState, setNewCrewState] = useState('');
   const [newCrewDescription, setNewCrewDescription] = useState('');
-  const [newCrewPhotoUri,    setNewCrewPhotoUri]    = useState<string | null>(null);
-  const [isCreatingCrew,     setIsCreatingCrew]     = useState(false);
-  const [createCrewError,    setCreateCrewError]    = useState('');
-  // Discover search
-  const [_discoverRadius,     setDiscoverRadius]     = useState(50);
-  const [discoverSearch,     setDiscoverSearch]     = useState('');
-  const [joiningCrewId,      setJoiningCrewId]      = useState<string | null>(null);
-  const [editingCrewId,      setEditingCrewId]      = useState<string | null>(null);
-  const [editCrewName,       setEditCrewName]       = useState('');
-  const [editCrewIsPublic,   setEditCrewIsPublic]   = useState(false);
-  const [editCrewCity,       setEditCrewCity]       = useState('');
-  const [editCrewState,      setEditCrewState]      = useState('');
-  const [editCrewDesc,       setEditCrewDesc]       = useState('');
-  const [isSavingCrew,       setIsSavingCrew]       = useState(false);
-  const [crewStats,          setCrewStats]          = useState<Record<string, { sessionCount: number; lastActive: string | null; topScene: string | null }>>({});
-  // Expandable crew card state
-  const [expandedCrewId,      setExpandedCrewId]     = useState<string | null>(null);
-  const [cardMembers,         setCardMembers]        = useState<Record<string, CrewMemberFull[]>>({});
+  const [newCrewPhotoUri, setNewCrewPhotoUri] = useState<string | null>(null);
+  const [isCreatingCrew, setIsCreatingCrew] = useState(false);
+  const [createCrewError, setCreateCrewError] = useState('');
+  const [confirmingDeleteCrewId, setConfirmingDeleteCrewId] = useState<string | null>(null);
+  const [confirmingLeaveCrewId, setConfirmingLeaveCrewId] = useState<string | null>(null);
+  const [_discoverRadius, setDiscoverRadius] = useState(50);
+  const [_discoverSearch, setDiscoverSearch] = useState('');
+  const [joiningCrewId, setJoiningCrewId] = useState<string | null>(null);
+  const [editingCrewId, setEditingCrewId] = useState<string | null>(null);
+  const [editCrewName, setEditCrewName] = useState('');
+  const [editCrewIsPublic, setEditCrewIsPublic] = useState(false);
+  const [editCrewCity, setEditCrewCity] = useState('');
+  const [editCrewState, setEditCrewState] = useState('');
+  const [editCrewDesc, setEditCrewDesc] = useState('');
+  const [isSavingCrew, setIsSavingCrew] = useState(false);
+  const [crewStats, setCrewStats] = useState<Record<string, { sessionCount: number; lastActive: string | null; topScene: string | null }>>({});
+  const [expandedCrewId, setExpandedCrewId] = useState<string | null>(null);
+  const [newCrewCode, setNewCrewCode] = useState(() => Math.random().toString(36).substring(2, 8).toUpperCase());
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState<{ user_id: string, username: string | null, display_name: string | null }[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<{ user_id: string, username: string | null, display_name: string | null }[]>([]);
+  const [newCrewHue, setNewCrewHue] = useState(40);
+  const [cardMembers, setCardMembers] = useState<Record<string, CrewMemberFull[]>>({});
   const [loadingCardMembersFor, setLoadingCardMembersFor] = useState<string | null>(null);
-  const [makingOwnerFor,      setMakingOwnerFor]     = useState<string | null>(null);
+  const [makingOwnerFor, setMakingOwnerFor] = useState<string | null>(null);
+  const [isRemovingUserFor, setIsRemovingUserFor] = useState<string | null>(null);
+  const [isAddingMembersTo, setIsAddingMembersTo] = useState<string | null>(null);
   const [showPublicCrewsOnHub, setShowPublicCrewsOnHub] = useState(false);
+
+  // Helper to load full member details into cardMembers
+  const loadCrewMembers = (crewId: string) => {
+    if (cardMembers[crewId]) return;
+    setLoadingCardMembersFor(crewId);
+    profileService.getCrewMembersWithNames(crewId)
+      .then(members => setCardMembers(prev => ({ ...prev, [crewId]: members })))
+      .catch(() => { })
+      .finally(() => setLoadingCardMembersFor(null));
+  };
+
   // Fetch crew stats when detail view opens
   useEffect(() => {
     if (!selectedCrewDetail) return;
@@ -204,28 +223,40 @@ export default function CrewModal({
     }).catch((e) => { console.warn('[CrewModal] Failed to load my crews:', e); });
   }, [visible, step]);
 
-  // Load public crews for discover (manage tab) OR hub's Live Near You section
+  // Load public crews when hub opens
   useEffect(() => {
     if (!visible) return;
-    const shouldLoad = step === 'landing' || (step === 'manage' && manageTab === 'discover');
+    const shouldLoad = step === 'landing';
     if (!shouldLoad) return;
     setIsLoadingCrews(true);
     profileService.getPublicCrews().then(crews => {
       setPublicCrews(crews);
     }).catch((e) => { console.warn('[CrewModal] Failed to load public crews:', e); }).finally(() => setIsLoadingCrews(false));
-  }, [visible, step, manageTab]);
+  }, [visible, step]);
 
-  // Load nearby live sessions when hub or discover opens
+  // Load nearby live sessions when hub opens
   useEffect(() => {
     if (!visible) return;
-    const shouldLoad = step === 'landing' || (step === 'manage' && manageTab === 'discover');
+    const shouldLoad = step === 'landing';
     if (!shouldLoad) return;
     setIsLoadingNearby(true);
     locationService.getNearbyPublicSessions(discoverRadiusMi)
       .then(sessions => setNearbySessions(sessions))
       .catch((e) => { console.warn('[CrewModal] Failed to load nearby sessions:', e); })
       .finally(() => setIsLoadingNearby(false));
-  }, [visible, step, manageTab, discoverRadiusMi]);
+  }, [visible, step, discoverRadiusMi]);
+
+  // Search users for invite
+  useEffect(() => {
+    if (!userSearchQuery.trim()) {
+      setUserSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      profileService.searchUsers(userSearchQuery).then(setUserSearchResults);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [userSearchQuery]);
 
   // Load active sessions for hub → map them to their crew
   useEffect(() => {
@@ -238,16 +269,16 @@ export default function CrewModal({
     }).catch((e) => { console.warn('[CrewModal] Failed to load active sessions:', e); });
   }, [visible, step]);
 
-  // Fetch member counts when viewing My Crews list (manage tab)
+  // Fetch member counts for My Crews on hub landing
   useEffect(() => {
-    if (!visible || step !== 'manage' || manageTab !== 'mycrews' || myCrews.length === 0) return;
+    if (!visible || step !== 'landing' || myCrews.length === 0) return;
     myCrews.forEach(crew => {
       if (crewMemberCounts[crew.id]) return;
       profileService.getCrewMembersForDisplay(crew.id).then(info => {
         setCrewMemberCounts(prev => ({ ...prev, [crew.id]: info }));
       }).catch((e) => { console.warn('[CrewModal] Failed to load member counts:', e); });
     });
-  }, [visible, step, manageTab, myCrews]);
+  }, [visible, step, myCrews]);
 
   // ── Sync props → state ─────────────────────────────────────────────────────
 
@@ -323,7 +354,10 @@ export default function CrewModal({
     if (!sessionName) { setErrorMsg('Pick a crew or enter a session name'); return; }
     setIsLoading(true); setErrorMsg('');
     try {
-      const opts: Parameters<typeof crewService.createSession>[2] = { isPublic };
+      const crewInfo = myCrews.find(c => c.id === selectedCrewId);
+      const isSessionPublic = crewInfo ? crewInfo.is_public : false;
+
+      const opts: Parameters<typeof crewService.createSession>[2] = { isPublic: isSessionPublic };
       if (locationLabel) opts.locationLabel = locationLabel;
       if (locationCoords) opts.locationCoords = locationCoords;
       if (scheduled) opts.scheduledAt = scheduled.toISOString();
@@ -342,7 +376,7 @@ export default function CrewModal({
           sessionName,
           crewName: crewLabel,
           scheduledAt: scheduled,
-        }).catch(() => {}); // fire-and-forget, non-critical
+        }).catch(() => { }); // fire-and-forget, non-critical
       }
 
       await handleSessionJoined(session);
@@ -355,15 +389,25 @@ export default function CrewModal({
   // ── Join ───────────────────────────────────────────────────────────────────
 
   const handleJoinByCode = async () => {
-    if (inviteCode.trim().length < 6) { setErrorMsg('Enter the 6-character crew code'); return; }
+    if (inviteCode.trim().length < 6) { setErrorMsg('Enter the 6-character crew invite code'); return; }
     setIsLoading(true); setErrorMsg('');
     try {
-      const session = await crewService.joinSession(inviteCode.trim(), displayName.trim());
-      AppLogger.log('CREW_SESSION_JOINED', { sessionId: session.id, crewName: session.name, method: 'code' });
-      await handleSessionJoined(session);
+      const crew = await profileService.joinPermanentCrew(inviteCode.trim());
+      AppLogger.log('CREW_SESSION_JOINED', { crewId: crew.id, crewName: crew.name, method: 'permanent_code' });
+      // Refresh my crews list so the new crew appears immediately
+      const updatedCrews = await profileService.getMyCrew();
+      setMyCrews(updatedCrews);
+      setPermanentCrews(updatedCrews.map(c => ({ id: c.id, name: c.name })));
+      setShowCodeEntry(false);
+      setInviteCode('');
+      Alert.alert(
+        '🛹 Joined!',
+        `You're now a member of "${crew.name}". When they start a session you'll see it under My Crews.`,
+        [{ text: 'Nice!' }]
+      );
     } catch (e: any) {
-      AppLogger.log('CREW_ERROR', { action: 'join_code', error: e.message });
-      setErrorMsg(e.message || 'Could not find that crew. Check the code.');
+      AppLogger.log('CREW_ERROR', { action: 'join_crew_by_code', error: e.message });
+      setErrorMsg(e.message || 'Crew not found — check the code and try again.');
     } finally { setIsLoading(false); }
   };
 
@@ -470,7 +514,15 @@ export default function CrewModal({
         </View>
 
         {/* ── MY CREWS ── */}
-        <Text style={styles.hubSectionLabel}>MY CREWS</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, marginTop: 4, width: '100%' }}>
+          <Text style={[styles.hubSectionLabel, { marginBottom: 0, marginTop: 0 }]}>MY CREWS</Text>
+          {myCrews.length > 0 && (
+            <TouchableOpacity onPress={() => setStep('manage')} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+              <MaterialCommunityIcons name="plus" size={14} color={Colors.primary} />
+              <Text style={{ color: Colors.primary, fontSize: 11, fontWeight: '700', marginLeft: 4 }}>New Crew</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {myCrews.length === 0 ? (
           <View style={styles.hubEmptyCard}>
@@ -478,7 +530,7 @@ export default function CrewModal({
             <Text style={styles.hubEmptyText}>You haven't joined any crews yet</Text>
             <TouchableOpacity
               style={[styles.hubActionChip, { marginTop: 10 }]}
-              onPress={() => { setStep('manage'); setManageTab('create'); }}
+              onPress={() => setStep('manage')}
             >
               <MaterialCommunityIcons name="plus" size={14} color={Colors.primary} />
               <Text style={styles.hubActionChipText}>Create a Crew</Text>
@@ -520,14 +572,7 @@ export default function CrewModal({
                     onPress={() => {
                       const next = expandedCrewId === crew.id ? null : crew.id;
                       setExpandedCrewId(next);
-                      // Lazy-load members on first expand
-                      if (next && !cardMembers[crew.id]) {
-                        setLoadingCardMembersFor(crew.id);
-                        profileService.getCrewMembersWithNames(crew.id)
-                          .then(members => setCardMembers(prev => ({ ...prev, [crew.id]: members })))
-                          .catch(() => {})
-                          .finally(() => setLoadingCardMembersFor(null));
-                      }
+                      if (next) loadCrewMembers(crew.id);
                     }}
                   >
                     <MaterialCommunityIcons
@@ -659,8 +704,8 @@ export default function CrewModal({
                                 {isMakingThisOwner
                                   ? <ActivityIndicator size="small" color={memberIsOwner ? '#FF4444' : '#FFD700'} />
                                   : <Text style={{ fontSize: 11, fontWeight: '700', color: memberIsOwner ? '#FF4444' : '#FFD700' }}>
-                                      {memberIsOwner ? 'Revoke' : '+ Owner'}
-                                    </Text>
+                                    {memberIsOwner ? 'Revoke' : '+ Owner'}
+                                  </Text>
                                 }
                               </TouchableOpacity>
                             )}
@@ -674,7 +719,7 @@ export default function CrewModal({
                       {isOwner && (
                         <TouchableOpacity
                           style={[styles.hubActionChip]}
-                          onPress={() => { handleStartEdit(crew); setSelectedCrewDetail(crew); setStep('manage'); setManageTab('mycrews'); }}
+                          onPress={() => { handleStartEdit(crew); setSelectedCrewDetail(crew); setStep('manage'); }}
                         >
                           <MaterialCommunityIcons name="pencil" size={12} color={Colors.primary} />
                           <Text style={styles.hubActionChipText}>Edit Crew</Text>
@@ -702,13 +747,24 @@ export default function CrewModal({
                         </TouchableOpacity>
                       )}
                       {isOwner && (
-                        <TouchableOpacity
-                          style={[styles.hubActionChip, { borderColor: 'rgba(255,68,68,0.3)' }]}
-                          onPress={() => handleDeleteCrew(crew)}
-                        >
-                          <MaterialCommunityIcons name="trash-can-outline" size={12} color="#FF4444" />
-                          <Text style={[styles.hubActionChipText, { color: '#FF4444' }]}>Delete Crew</Text>
-                        </TouchableOpacity>
+                        confirmingDeleteCrewId === crew.id ? (
+                          <View style={{ flexDirection: 'row', gap: 4 }}>
+                            <TouchableOpacity style={[styles.hubActionChip, { borderColor: '#FF4444', backgroundColor: 'rgba(255,68,68,0.2)' }]} onPress={() => executeDeleteCrew(crew)}>
+                              <Text style={[styles.hubActionChipText, { color: '#FFF' }]}>Confirm?</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.hubActionChip} onPress={() => setConfirmingDeleteCrewId(null)}>
+                              <Text style={styles.hubActionChipText}>X</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <TouchableOpacity
+                            style={[styles.hubActionChip, { borderColor: 'rgba(255,68,68,0.3)' }]}
+                            onPress={() => setConfirmingDeleteCrewId(crew.id)}
+                          >
+                            <MaterialCommunityIcons name="trash-can-outline" size={12} color="#FF4444" />
+                            <Text style={[styles.hubActionChipText, { color: '#FF4444' }]}>Delete Crew</Text>
+                          </TouchableOpacity>
+                        )
                       )}
                     </View>
                   </View>
@@ -718,29 +774,28 @@ export default function CrewModal({
           })
         )}
 
-        {/* Crew actions row — public join is frictionless (tap card above); private needs code */}
-        <View style={styles.hubCrewActions}>
-          <TouchableOpacity
-            style={styles.hubCrewActionBtn}
-            onPress={() => { setStep('manage'); setManageTab('create'); }}
-          >
-            <MaterialCommunityIcons name="plus-circle-outline" size={15} color={Colors.primary} />
-            <Text style={styles.hubCrewActionBtnText}>Create Crew</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.hubCrewActionBtn}
-            onPress={() => setShowCodeEntry(v => !v)}
-          >
-            <MaterialCommunityIcons name="lock-outline" size={15} color={Colors.textMuted} />
-            <Text style={[styles.hubCrewActionBtnText, { color: Colors.textMuted }]}>Private Code</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Single full-width private code join button */}
+        <TouchableOpacity
+          style={[styles.hubCrewActionBtn, { width: '100%', marginTop: 4 }]}
+          onPress={() => setShowCodeEntry(v => !v)}
+          activeOpacity={0.75}
+        >
+          <MaterialCommunityIcons name="lock-outline" size={16} color={showCodeEntry ? Colors.primary : Colors.textMuted} />
+          <Text style={[styles.hubCrewActionBtnText, showCodeEntry && { color: Colors.primary }]}>
+            Join Private Crew with Code
+          </Text>
+          <MaterialCommunityIcons
+            name={showCodeEntry ? 'chevron-up' : 'chevron-down'}
+            size={16} color={Colors.textMuted}
+            style={{ marginLeft: 'auto' }}
+          />
+        </TouchableOpacity>
 
-        {/* Inline private code entry — only for private crew sessions */}
+        {/* Inline private code entry — join a private crew by invite code */}
         {showCodeEntry && (
           <View style={styles.hubCodeEntry}>
             <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 6 }}>
-              🔒 Enter the invite code from a private crew session
+              🔒 Enter the 6-character invite code for the private crew
             </Text>
             <TextInput
               style={[styles.input, styles.codeInput, { marginBottom: 8 }]}
@@ -760,7 +815,7 @@ export default function CrewModal({
             >
               {isLoading
                 ? <ActivityIndicator color="#000" />
-                : <Text style={styles.primaryBtnText}>Join Private Session</Text>
+                : <Text style={styles.primaryBtnText}>Join Crew</Text>
               }
             </TouchableOpacity>
           </View>
@@ -773,7 +828,7 @@ export default function CrewModal({
             setIsLoadingNearby(true);
             locationService.getNearbyPublicSessions(discoverRadiusMi)
               .then(s => setNearbySessions(s))
-              .catch(() => {})
+              .catch(() => { })
               .finally(() => setIsLoadingNearby(false));
           }}>
             <MaterialCommunityIcons name="refresh" size={15} color={Colors.textMuted} />
@@ -841,8 +896,17 @@ export default function CrewModal({
         {/* ── PUBLIC CREWS ── */}
         <View style={[styles.hubSectionRow, { marginTop: 16 }]}>
           <Text style={styles.hubSectionLabel}>🌍 PUBLIC CREWS</Text>
-          <TouchableOpacity onPress={() => setShowPublicCrewsOnHub(v => !v)}>
-            <Text style={{ color: Colors.primary, fontSize: 12 }}>{showPublicCrewsOnHub ? 'Hide' : 'Browse'}</Text>
+          <TouchableOpacity
+            onPress={() => setShowPublicCrewsOnHub(v => !v)}
+            style={[styles.hubActionChip, { borderColor: 'rgba(255,255,255,0.15)' }]}
+          >
+            <MaterialCommunityIcons
+              name={showPublicCrewsOnHub ? 'eye-off-outline' : 'eye-outline'}
+              size={12} color={Colors.textMuted}
+            />
+            <Text style={[styles.hubActionChipText, { color: Colors.textMuted }]}>
+              {showPublicCrewsOnHub ? 'Hide' : 'Browse'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -932,7 +996,7 @@ export default function CrewModal({
         {/* 'New Crew' — navigates to Manage Crews hub to create a permanent crew */}
         <TouchableOpacity
           style={[styles.crewChip, { borderStyle: 'dashed' }]}
-          onPress={() => { setStep('manage'); setManageTab('create'); }}>
+          onPress={() => setStep('manage')}>
           <MaterialCommunityIcons name="plus" size={13} color={Colors.primary} />
           <Text style={styles.crewChipText}>New Crew</Text>
         </TouchableOpacity>
@@ -1014,55 +1078,30 @@ export default function CrewModal({
       {/* ── Crew picker ── */}
       <Text style={styles.label}>SESSION FOR</Text>
       <View style={styles.crewPickerRow}>
-        {permanentCrews.map(crew => (
-          <TouchableOpacity key={crew.id}
-            style={[styles.crewChip, selectedCrewId === crew.id && styles.crewChipActive]}
-            onPress={() => { setSelectedCrewId(crew.id); setCrewName(''); }}>
-            <MaterialCommunityIcons name="account-group" size={13}
-              color={selectedCrewId === crew.id ? '#000' : Colors.primary} />
-            <Text style={[styles.crewChipText, selectedCrewId === crew.id && styles.crewChipTextActive]}
-              numberOfLines={1}>{crew.name}</Text>
-          </TouchableOpacity>
-        ))}
-        <TouchableOpacity
-          style={[styles.crewChip, selectedCrewId === null && styles.crewChipActive]}
-          onPress={() => setSelectedCrewId(null)}>
-          <MaterialCommunityIcons name="plus" size={13}
-            color={selectedCrewId === null ? '#000' : Colors.primary} />
-          <Text style={[styles.crewChipText, selectedCrewId === null && styles.crewChipTextActive]}>New</Text>
-        </TouchableOpacity>
+        {myCrews.map(crew => {
+          const isSelected = selectedCrewId === crew.id;
+          return (
+            <TouchableOpacity key={crew.id}
+              style={[styles.crewChip, isSelected && styles.crewChipActive]}
+              onPress={() => { setSelectedCrewId(crew.id); setCrewName(''); }}>
+              {crew.avatar_url ? (
+                <Image source={{ uri: crew.avatar_url }} style={{ width: 16, height: 16, borderRadius: 8, marginRight: 2 }} />
+              ) : (
+                <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: crew.avatar_color || '#FFAA00', alignItems: 'center', justifyContent: 'center', marginRight: 2 }}>
+                  <MaterialCommunityIcons name={(crew.avatar_icon as any) || 'account-group'} size={10} color="#000" />
+                </View>
+              )}
+              <Text style={[styles.crewChipText, isSelected && styles.crewChipTextActive]}
+                numberOfLines={1}>{crew.name}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
-
-      {selectedCrewId === null && (
-        <>
-          <Text style={styles.label}>SESSION NAME</Text>
-          <TextInput style={styles.input} value={crewName} onChangeText={setCrewName}
-            placeholder="e.g. Weekend Warriors" placeholderTextColor={Colors.textMuted} maxLength={32} />
-        </>
-      )}
 
       <Text style={styles.label}>YOUR NAME IN THIS SESSION</Text>
       <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName}
         placeholder="Display name" placeholderTextColor={Colors.textMuted} maxLength={24} />
 
-      {/* ── Public / Private ── */}
-      <View style={styles.visibilityRow}>
-        <TouchableOpacity style={[styles.visibilityBtn, !isPublic && styles.visibilityBtnActive]}
-          onPress={() => setIsPublic(false)}>
-          <MaterialCommunityIcons name="lock" size={15} color={!isPublic ? '#000' : Colors.textMuted} />
-          <Text style={[styles.visibilityBtnText, !isPublic && styles.visibilityBtnTextActive]}>Private</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.visibilityBtn, isPublic && styles.visibilityBtnPublic]}
-          onPress={() => setIsPublic(true)}>
-          <MaterialCommunityIcons name="earth" size={15} color={isPublic ? '#000' : Colors.textMuted} />
-          <Text style={[styles.visibilityBtnText, isPublic && styles.visibilityBtnTextActive]}>Public</Text>
-        </TouchableOpacity>
-      </View>
-      <Text style={styles.hintText}>
-        {isPublic ? '🌍 Anyone nearby can find & join.' : '🔒 Crew code required to join.'}
-      </Text>
-
-      {/* ── Calendar Date/Time Picker ── */}
       <Text style={[styles.label, { marginTop: 16 }]}>DATE &amp; TIME</Text>
       <TouchableOpacity style={styles.datePickerBtn} onPress={() => setShowDatePicker(true)}>
         <MaterialCommunityIcons name="calendar" size={18} color={Colors.primary} />
@@ -1107,23 +1146,28 @@ export default function CrewModal({
 
       {/* ── Location ── */}
       <Text style={styles.label}>LOCATION (OPTIONAL)</Text>
-      {locationLabel ? (
-        <View style={styles.locationChip}>
-          <MaterialCommunityIcons name="map-marker" size={16} color={Colors.primary} />
-          <Text style={styles.locationChipText} numberOfLines={1}>{locationLabel}</Text>
-          <TouchableOpacity onPress={() => { setLocationLabel(''); setLocationCoords(undefined); }}>
-            <MaterialCommunityIcons name="close-circle" size={16} color={Colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity style={styles.locationBtn} onPress={handleDetectLocation} disabled={isGettingLocation}>
-          {isGettingLocation
-            ? <ActivityIndicator size="small" color={Colors.primary} />
-            : <MaterialCommunityIcons name="crosshairs-gps" size={16} color={Colors.primary} />}
-          <Text style={styles.locationBtnText}>
-            {isGettingLocation ? 'Detecting…' : 'Detect my location'}
-          </Text>
+      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 16 }}>
+        <TextInput
+          style={[styles.input, { flex: 1, marginBottom: 0 }]}
+          value={locationLabel}
+          onChangeText={(txt) => { setLocationLabel(txt); setLocationCoords(undefined); }}
+          placeholder="Enter address or park name"
+          placeholderTextColor={Colors.textMuted}
+        />
+        <TouchableOpacity
+          style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
+          onPress={handleDetectLocation}
+          disabled={isGettingLocation}
+        >
+          {isGettingLocation ? (
+            <ActivityIndicator size="small" color={Colors.primary} />
+          ) : (
+            <MaterialCommunityIcons name="crosshairs-gps" size={20} color={locationCoords ? Colors.primary : Colors.textMuted} />
+          )}
         </TouchableOpacity>
+      </View>
+      {locationCoords && (
+        <Text style={{ color: Colors.primary, fontSize: 10, marginTop: -12, marginBottom: 16, paddingHorizontal: 4, fontWeight: '700' }}>✓ Exact GPS coordinates attached</Text>
       )}
 
       {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
@@ -1232,7 +1276,7 @@ export default function CrewModal({
 
   const renderMemberRow = ({ item }: { item: CrewMember }) => {
     const isLeader = item.user_id === currentSession?.leader_user_id;
-    const isMe     = item.user_id === currentUserId;
+    const isMe = item.user_id === currentUserId;
     const canHandoff = currentRole === 'leader' && !isLeader && isHandoffMode;
     return (
       <View style={styles.memberRow}>
@@ -1306,7 +1350,7 @@ export default function CrewModal({
           {/* Leader: invite code */}
           {isLeader && (
             <TouchableOpacity style={styles.inviteCodeRow} onPress={() => {
-            Clipboard.setStringAsync(currentSession.invite_code);
+              Clipboard.setStringAsync(currentSession.invite_code);
               Alert.alert('Copied!', `Code ${currentSession.invite_code} copied. Share it with your crew!`);
             }}>
               <Text style={styles.inviteCodeLabel}>CREW CODE</Text>
@@ -1379,8 +1423,8 @@ export default function CrewModal({
   // RENDER — Manage Crews Hub
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const AVATAR_COLORS = ['#FFAA00','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#DDA0DD','#E67E22','#00E676'];
-  const AVATAR_ICONS  = ['account-group','skateboarding','lightning-bolt','star','fire','rocket','shield','crown'];
+  // Extended sporty & trendy icons
+  const AVATAR_ICONS = ['roller-skate', 'account-group', 'skateboarding', 'shoe-sneaker', 'lightning-bolt', 'fire', 'star-shooting', 'crown', 'skull', 'headphones', 'rocket', 'flag-checkered', 'trophy', 'emoticon-cool-outline'];
 
   const handlePickCrewPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -1403,44 +1447,40 @@ export default function CrewModal({
         city: newCrewCity || undefined,
         state: newCrewState || undefined,
         description: newCrewDescription || undefined,
+        inviteCode: !newCrewIsPublic ? newCrewCode : undefined,
+        members: selectedMembers.map(m => m.user_id)
       });
       setMyCrews(prev => [...prev, crew]);
       setPermanentCrews(prev => [...prev, { id: crew.id, name: crew.name }]);
       setNewCrewName(''); setNewCrewCity(''); setNewCrewState(''); setNewCrewDescription('');
       setNewCrewPhotoUri(null); setCreateCrewError('');
+      setSelectedMembers([]); setUserSearchQuery('');
+      setNewCrewCode(Math.random().toString(36).substring(2, 8).toUpperCase());
       Alert.alert('Crew Created! 🎉', `"${crew.name}" is ready. Pick it when starting a session.`);
-      setManageTab('mycrews');
+      setStep('landing');  // Return to hub to show the new crew
     } catch (e: any) {
       setCreateCrewError(e.message ?? 'Failed to create crew');
     } finally { setIsCreatingCrew(false); }
   };
 
-  const handleLeaveCrew = (crew: PermanentCrew) => {
-    Alert.alert('Leave Crew', `Leave "${crew.name}"? You can rejoin with the invite code.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Leave', style: 'destructive', onPress: async () => {
-        try {
-          await profileService.leavePermanentCrew(crew.id);
-          setMyCrews(prev => prev.filter(c => c.id !== crew.id));
-          setPermanentCrews(prev => prev.filter(c => c.id !== crew.id));
-          setSelectedCrewDetail(null);
-        } catch (e: any) { Alert.alert('Error', e.message); }
-      }},
-    ]);
+  const executeLeaveCrew = async (crew: PermanentCrew) => {
+    try {
+      await profileService.leavePermanentCrew(crew.id);
+      setMyCrews(prev => prev.filter(c => c.id !== crew.id));
+      setPermanentCrews(prev => prev.filter(c => c.id !== crew.id));
+      setSelectedCrewDetail(null);
+      setConfirmingLeaveCrewId(null);
+    } catch (e: any) { Alert.alert('Error', e.message); }
   };
 
-  const handleDeleteCrew = (crew: PermanentCrew) => {
-    Alert.alert('Delete Crew', `Permanently delete "${crew.name}" and remove all members?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-        try {
-          await profileService.deleteCrew(crew.id);
-          setMyCrews(prev => prev.filter(c => c.id !== crew.id));
-          setPermanentCrews(prev => prev.filter(c => c.id !== crew.id));
-          setSelectedCrewDetail(null);
-        } catch (e: any) { Alert.alert('Error', e.message); }
-      }},
-    ]);
+  const executeDeleteCrew = async (crew: PermanentCrew) => {
+    try {
+      await profileService.deleteCrew(crew.id);
+      setMyCrews(prev => prev.filter(c => c.id !== crew.id));
+      setPermanentCrews(prev => prev.filter(c => c.id !== crew.id));
+      setSelectedCrewDetail(null);
+      setConfirmingDeleteCrewId(null);
+    } catch (e: any) { Alert.alert('Error', e.message); }
   };
 
   // ── Join public crew directly from Discover tab ─────────────────────────────
@@ -1466,6 +1506,29 @@ export default function CrewModal({
     setEditCrewState(crew.state ?? '');
     setEditCrewDesc(crew.description ?? '');
     setEditingCrewId(crew.id);
+    setSelectedMembers([]);
+    setUserSearchQuery('');
+    loadCrewMembers(crew.id);
+  };
+
+  const handleAddMembersToCrew = async (crewId: string) => {
+    if (selectedMembers.length === 0) return;
+    setIsAddingMembersTo(crewId);
+    try {
+      const userIdsToAdd = selectedMembers.map(m => m.user_id);
+      await profileService.addCrewMembers(crewId, userIdsToAdd);
+      Alert.alert('Success', `Added ${selectedMembers.length} skater(s) to the crew!`);
+      // Clear selection
+      setSelectedMembers([]);
+      setUserSearchQuery('');
+      // Force refresh member lists
+      setCardMembers(prev => ({ ...prev, [crewId]: undefined as any }));
+      loadCrewMembers(crewId);
+    } catch (e: any) {
+      Alert.alert('Error', e.message ?? 'Could not add members to crew.');
+    } finally {
+      setIsAddingMembersTo(null);
+    }
   };
 
   const handleSaveCrew = async (crew: PermanentCrew) => {
@@ -1480,9 +1543,11 @@ export default function CrewModal({
         description: editCrewDesc.trim() || undefined,
       });
       // Update local state
-      const updated = { ...crew, name: editCrewName.trim(), is_public: editCrewIsPublic,
+      const updated = {
+        ...crew, name: editCrewName.trim(), is_public: editCrewIsPublic,
         city: editCrewCity.trim() || undefined, state: editCrewState.trim() || undefined,
-        description: editCrewDesc.trim() || undefined };
+        description: editCrewDesc.trim() || undefined
+      };
       setMyCrews(prev => prev.map(c => c.id === crew.id ? updated : c));
       setSelectedCrewDetail(updated);
       setEditingCrewId(null);
@@ -1503,8 +1568,8 @@ export default function CrewModal({
         {crew.avatar_url
           ? <Image source={{ uri: crew.avatar_url }} style={styles.mgAvatarImg} />
           : <View style={[styles.mgAvatar, { backgroundColor: crew.avatar_color ?? '#FFAA00' }]}>
-              <MaterialCommunityIcons name={(crew.avatar_icon ?? 'account-group') as any} size={22} color="#000" />
-            </View>}
+            <MaterialCommunityIcons name={(crew.avatar_icon ?? 'account-group') as any} size={22} color="#000" />
+          </View>}
         {/* Info */}
         <View style={{ flex: 1 }}>
           <Text style={styles.mgCrewName} numberOfLines={1}>{crew.name}</Text>
@@ -1551,9 +1616,6 @@ export default function CrewModal({
   };
 
   const renderManage = () => {
-    const filteredPublic = publicCrews.filter(c =>
-      !discoverSearch || c.name.toLowerCase().includes(discoverSearch.toLowerCase())
-    );
     return (
       <View style={{ flex: 1 }}>
         {/* Header */}
@@ -1561,184 +1623,166 @@ export default function CrewModal({
           <MaterialCommunityIcons name="chevron-left" size={22} color={Colors.textMuted} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
-        <Text style={styles.titleLarge}>Manage Crews</Text>
+        <Text style={styles.titleLarge}>Create a Crew</Text>
 
-        {/* Sub-tabs */}
-        <View style={styles.mgTabBar}>
-          {([['mycrews','My Crews','account-group'],['discover','Discover','compass'],['create','Create','plus-circle']] as const).map(([id, label, icon]) => (
-            <TouchableOpacity key={id} style={[styles.mgTab, manageTab === id && styles.mgTabActive]} onPress={() => setManageTab(id)}>
-              <MaterialCommunityIcons name={icon as any} size={14} color={manageTab === id ? '#000' : Colors.textMuted} />
-              <Text style={[styles.mgTabText, manageTab === id && { color: '#000' }]}>{label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ padding: 16, paddingBottom: 60 }}>
 
-        {/* MY CREWS */}
-        {manageTab === 'mycrews' && (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-            {myCrews.length === 0
-              ? <Text style={styles.mgEmptyText}>You're not in any crews yet.{`\n`}Create one or join via invite code.</Text>
-              : myCrews.map(crew => renderCrewCard(crew, () => setSelectedCrewDetail(crew)))
-            }
-          </ScrollView>
-        )}
+          <Text style={styles.label}>CREW NAME</Text>
+          <TextInput style={styles.input} value={newCrewName} onChangeText={setNewCrewName}
+            placeholder="e.g. Friday Night Shredders" placeholderTextColor={Colors.textMuted} maxLength={40} />
 
-        {/* DISCOVER — unified feed: live sessions + public crews */}
-        {manageTab === 'discover' && (
-          <ScrollView
-            style={{ flex: 1 }}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ padding: 16, paddingBottom: 50 }}
-          >
-            {/* Search bar */}
-            <TextInput
-              style={[styles.mgSearchInput, { marginBottom: 14 }]}
-              value={discoverSearch} onChangeText={setDiscoverSearch}
-              placeholder="Search sessions & crews…" placeholderTextColor={Colors.textMuted}
-            />
+          <Text style={styles.label}>DESCRIPTION (OPTIONAL)</Text>
+          <TextInput style={[styles.input, { height: 72, textAlignVertical: 'top' }]}
+            value={newCrewDescription} onChangeText={setNewCrewDescription} multiline
+            placeholder="What's this crew about?" placeholderTextColor={Colors.textMuted} maxLength={120} />
 
-            {/* ── LIVE NOW ── */}
-            <Text style={styles.label}>🔴 LIVE NOW</Text>
-            {isLoadingNearby
-              ? <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 10 }} />
-              : nearbySessions.length === 0
-                ? <Text style={[styles.mgHint, { marginBottom: 14 }]}>No active sessions right now — check back soon!</Text>
-                : nearbySessions
-                    .filter(s => !discoverSearch || s.name.toLowerCase().includes(discoverSearch.toLowerCase()) || s.leaderName.toLowerCase().includes(discoverSearch.toLowerCase()))
-                    .map(s => (
-                      <View key={s.id} style={styles.nearbySessionCard}>
-                        {/* Live badge */}
-                        <View style={{ position: 'absolute', top: 10, right: 10 }}>
-                          <View style={{ backgroundColor: '#FF3B30', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                            <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '900' }}>● LIVE</Text>
-                          </View>
-                        </View>
-                        <View style={{ flex: 1, paddingRight: 48 }}>
-                          <Text style={styles.nearbySessionName}>{s.name}</Text>
-                          <Text style={styles.nearbySessionSub}>
-                            📍 {s.locationLabel}
-                            {s.distanceLabel ? `  ·  ${s.distanceLabel}` : ''}
-                          </Text>
-                          <Text style={styles.nearbySessionSub}>
-                            👤 Led by {s.leaderName}  ·  {s.memberCount} skater{s.memberCount !== 1 ? 's' : ''} in session
-                          </Text>
-                        </View>
-                        <TouchableOpacity
-                          style={[styles.nearbyJoinBtn, joiningSessionId === s.id && { opacity: 0.6 }]}
-                          disabled={joiningSessionId === s.id}
-                          onPress={async () => {
-                            try {
-                              setJoiningSessionId(s.id);
-                              const session = await crewService.joinSessionById(s.id, displayName);
-                              onSessionReady(session, 'member', null);
-                              onClose();
-                            } catch (e: any) {
-                              Alert.alert('Could not join', e.message ?? 'Try again.');
-                            } finally {
-                              setJoiningSessionId(null);
-                            }
-                          }}
-                        >
-                          {joiningSessionId === s.id
-                            ? <ActivityIndicator size="small" color="#000" />
-                            : <Text style={styles.nearbyJoinText}>JOIN</Text>}
-                        </TouchableOpacity>
-                      </View>
-                    ))
-            }
+          {/* Unified Avatar Selection */}
+          <View style={{ marginBottom: 16 }}>
+            <Text style={styles.label}>CREW AVATAR</Text>
 
-            {/* ── PUBLIC CREWS ── */}
-            <Text style={[styles.label, { marginTop: 8 }]}>🌍 PUBLIC CREWS</Text>
-            {(isLoadingCrews)
-              ? <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 10 }} />
-              : filteredPublic.length === 0
-                ? <Text style={styles.mgEmptyText}>No public crews found.{'\n'}Be the first to create one!</Text>
-                : filteredPublic.map(crew => renderCrewCard(crew, () => setSelectedCrewDetail(crew), true))
-            }
-          </ScrollView>
-        )}
-
-
-        {/* CREATE */}
-        {manageTab === 'create' && (
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ padding: 16, paddingBottom: 60 }}>
-            <Text style={styles.label}>CREW NAME</Text>
-            <TextInput style={styles.input} value={newCrewName} onChangeText={setNewCrewName}
-              placeholder="e.g. Friday Night Shredders" placeholderTextColor={Colors.textMuted} maxLength={40} />
-
-            <Text style={styles.label}>DESCRIPTION (OPTIONAL)</Text>
-            <TextInput style={[styles.input, { height: 72, textAlignVertical: 'top' }]}
-              value={newCrewDescription} onChangeText={setNewCrewDescription} multiline
-              placeholder="What's this crew about?" placeholderTextColor={Colors.textMuted} maxLength={120} />
-
-            {/* Avatar photo */}
-            <Text style={styles.label}>CREW PHOTO (OPTIONAL)</Text>
-            <TouchableOpacity style={styles.mgPhotoBtn} onPress={handlePickCrewPhoto}>
-              {newCrewPhotoUri
-                ? <Image source={{ uri: newCrewPhotoUri }} style={styles.mgPhotoBtnImg} />
-                : <><MaterialCommunityIcons name="camera-plus" size={22} color={Colors.primary} />
-                    <Text style={styles.mgPhotoBtnText}>Upload photo</Text></>}
-            </TouchableOpacity>
-
-            {/* Avatar color */}
-            <Text style={styles.label}>AVATAR COLOR</Text>
-            <View style={styles.mgColorRow}>
-              {AVATAR_COLORS.map(c => (
-                <TouchableOpacity key={c} onPress={() => setNewCrewColor(c)}
-                  style={[styles.mgColorSwatch, { backgroundColor: c }, newCrewColor === c && styles.mgColorActive]} />
-              ))}
-            </View>
-
-            {/* Avatar icon */}
-            <Text style={styles.label}>AVATAR ICON</Text>
-            <View style={styles.mgIconRow}>
-              {AVATAR_ICONS.map(ic => (
-                <TouchableOpacity key={ic} onPress={() => setNewCrewIcon(ic)}
-                  style={[styles.mgIconBtn, newCrewIcon === ic && { backgroundColor: newCrewColor }]}>
-                  <MaterialCommunityIcons name={ic as any} size={20} color={newCrewIcon === ic ? '#000' : Colors.textMuted} />
+            {newCrewPhotoUri ? (
+              <View style={{ alignItems: 'center', marginBottom: 8, padding: 16, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+                <TouchableOpacity style={[styles.mgPhotoBtn, { height: 120, width: 120, borderRadius: 60, marginBottom: 12 }]} onPress={handlePickCrewPhoto}>
+                  <Image source={{ uri: newCrewPhotoUri }} style={styles.mgPhotoBtnImg} />
                 </TouchableOpacity>
+                <TouchableOpacity onPress={() => setNewCrewPhotoUri(null)} style={{ paddingVertical: 8, paddingHorizontal: 16, backgroundColor: 'rgba(255,68,68,0.1)', borderRadius: 20 }}>
+                  <Text style={{ color: '#FF4444', fontWeight: 'bold' }}>Remove Photo</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  {/* Live Avatar Preview */}
+                  <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: newCrewColor, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)' }}>
+                    <MaterialCommunityIcons name={newCrewIcon as any} size={38} color="#000" />
+                  </View>
+
+                  {/* Photo Upload Option */}
+                  <TouchableOpacity style={[styles.mgPhotoBtn, { height: 60, flex: 1, marginBottom: 0 }]} onPress={handlePickCrewPhoto}>
+                    <MaterialCommunityIcons name="camera-plus" size={22} color={Colors.primary} />
+                    <Text style={styles.mgPhotoBtnText}>Upload Photo instead</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+                  <Text style={[styles.label, { marginHorizontal: 10, marginTop: 0, color: 'rgba(255,255,255,0.3)' }]}>OR PICK AN ICON</Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+                </View>
+
+                {/* Avatar Icon */}
+                <View style={styles.mgIconRow}>
+                  {AVATAR_ICONS.map(ic => (
+                    <TouchableOpacity key={ic} onPress={() => setNewCrewIcon(ic)}
+                      style={[styles.mgIconBtn, newCrewIcon === ic && { backgroundColor: newCrewColor }]}>
+                      <MaterialCommunityIcons name={ic as any} size={22} color={newCrewIcon === ic ? '#000' : Colors.textMuted} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Hue Slider for Icon Color */}
+                <Text style={[styles.label, { marginTop: 16, marginBottom: 8 }]}>ICON COLOR</Text>
+                <View style={[styles.controlRow, { flexShrink: 0, minHeight: 40 }]}>
+                  <CustomSlider
+                    gradientTrack={true}
+                    value={newCrewHue}
+                    onValueChange={(hue) => {
+                      setNewCrewHue(hue);
+                      const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                      const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+                      setNewCrewColor(rgb2hex(f(5), f(3), f(1)));
+                    }}
+                    minimumValue={0}
+                    maximumValue={360}
+                    style={{ flex: 1 }}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Public / Private */}
+          <Text style={styles.label}>VISIBILITY</Text>
+          <View style={styles.visibilityRow}>
+            <TouchableOpacity style={[styles.visibilityBtn, !newCrewIsPublic && styles.visibilityBtnActive]}
+              onPress={() => setNewCrewIsPublic(false)}>
+              <MaterialCommunityIcons name="lock" size={15} color={!newCrewIsPublic ? '#000' : Colors.textMuted} />
+              <Text style={[styles.visibilityBtnText, !newCrewIsPublic && styles.visibilityBtnTextActive]}>Private</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.visibilityBtn, newCrewIsPublic && styles.visibilityBtnPublic]}
+              onPress={() => setNewCrewIsPublic(true)}>
+              <MaterialCommunityIcons name="earth" size={15} color={newCrewIsPublic ? '#000' : Colors.textMuted} />
+              <Text style={[styles.visibilityBtnText, newCrewIsPublic && styles.visibilityBtnTextActive]}>Public</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.hintText, { marginBottom: 16 }]}>
+            {newCrewIsPublic ? '🌍 Anyone can find & join via Discover.' : '🔒 Invite code required to join.'}
+          </Text>
+
+          {/* Home City */}
+          <Text style={styles.label}>HOME CITY (OPTIONAL)</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+            <TextInput style={[styles.input, { flex: 2 }]} value={newCrewCity} onChangeText={setNewCrewCity}
+              placeholder="City" placeholderTextColor={Colors.textMuted} />
+            <TextInput style={[styles.input, { flex: 1 }]} value={newCrewState} onChangeText={setNewCrewState}
+              placeholder="State" placeholderTextColor={Colors.textMuted} />
+          </View>
+
+          {/* Add Members Section */}
+          <Text style={styles.label}>ADD MEMBERS</Text>
+          <View style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: selectedMembers.length > 0 ? 8 : 0 }}>
+              {selectedMembers.map(member => (
+                <View key={member.user_id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primary || '#FFAA00', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 4, gap: 4 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#000' }}>@{member.username || member.display_name}</Text>
+                  <TouchableOpacity onPress={() => setSelectedMembers(prev => prev.filter(m => m.user_id !== member.user_id))}>
+                    <MaterialCommunityIcons name="close-circle" size={16} color="rgba(0,0,0,0.6)" />
+                  </TouchableOpacity>
+                </View>
               ))}
             </View>
+            <TextInput style={[styles.input, { marginBottom: 0 }]} value={userSearchQuery} onChangeText={setUserSearchQuery} placeholder="Search username..." placeholderTextColor={Colors.textMuted} />
+            {userSearchResults.length > 0 && (
+              <View style={{ marginTop: 8, gap: 4 }}>
+                {userSearchResults.map(u => (
+                  !selectedMembers.find(m => m.user_id === u.user_id) && (
+                    <TouchableOpacity key={u.user_id} onPress={() => { setSelectedMembers(prev => [...prev, u]); setUserSearchQuery(''); }} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', padding: 8, borderRadius: 8 }}>
+                      <MaterialCommunityIcons name="account" size={16} color={Colors.textMuted} style={{ marginRight: 6 }} />
+                      <Text style={{ color: '#FFF', fontSize: 13, flex: 1 }}>{u.display_name} <Text style={{ color: Colors.textMuted }}>@{u.username}</Text></Text>
+                      <MaterialCommunityIcons name="plus" size={18} color={Colors.primary} />
+                    </TouchableOpacity>
+                  )
+                ))}
+              </View>
+            )}
+          </View>
 
-            {/* Location */}
-            <Text style={styles.label}>HOME CITY (OPTIONAL)</Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TextInput style={[styles.input, { flex: 2 }]} value={newCrewCity} onChangeText={setNewCrewCity}
-                placeholder="City" placeholderTextColor={Colors.textMuted} />
-              <TextInput style={[styles.input, { flex: 1 }]} value={newCrewState} onChangeText={setNewCrewState}
-                placeholder="State" placeholderTextColor={Colors.textMuted} />
+          {/* Render private code preview if private */}
+          {!newCrewIsPublic && (
+            <View style={{ backgroundColor: 'rgba(255,170,0,0.05)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,170,0,0.2)', padding: 16, alignItems: 'center', marginTop: 12, marginBottom: 8 }}>
+              <Text style={{ color: 'rgba(255,170,0,0.8)', fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 6 }}>PRIVATE INVITE CODE</Text>
+              <Text style={{ color: Colors.primary || '#FFAA00', fontSize: 26, fontWeight: '900', letterSpacing: 6, fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace' }}>
+                {newCrewCode}
+              </Text>
+              <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 6, textAlign: 'center' }}>
+                Share this code with friends so they can join your crew.
+              </Text>
             </View>
+          )}
 
-            {/* Public / Private */}
-            <Text style={styles.label}>VISIBILITY</Text>
-            <View style={styles.visibilityRow}>
-              <TouchableOpacity style={[styles.visibilityBtn, !newCrewIsPublic && styles.visibilityBtnActive]}
-                onPress={() => setNewCrewIsPublic(false)}>
-                <MaterialCommunityIcons name="lock" size={15} color={!newCrewIsPublic ? '#000' : Colors.textMuted} />
-                <Text style={[styles.visibilityBtnText, !newCrewIsPublic && styles.visibilityBtnTextActive]}>Private</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.visibilityBtn, newCrewIsPublic && styles.visibilityBtnPublic]}
-                onPress={() => setNewCrewIsPublic(true)}>
-                <MaterialCommunityIcons name="earth" size={15} color={newCrewIsPublic ? '#000' : Colors.textMuted} />
-                <Text style={[styles.visibilityBtnText, newCrewIsPublic && styles.visibilityBtnTextActive]}>Public</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.hintText}>
-              {newCrewIsPublic ? '🌍 Anyone can find & join via Discover.' : '🔒 Invite code required to join.'}
-            </Text>
+          {createCrewError ? <Text style={{ color: '#FF4444', marginVertical: 8 }}>{createCrewError}</Text> : null}
 
-            {createCrewError ? <Text style={{ color: '#FF4444', marginVertical: 8 }}>{createCrewError}</Text> : null}
-
-            <TouchableOpacity style={[styles.primaryBtn, { marginTop: 20 }]} onPress={handleCreateCrew} disabled={isCreatingCrew}>
-              {isCreatingCrew ? <ActivityIndicator size="small" color="#000" /> : <MaterialCommunityIcons name="check" size={18} color="#000" />}
-              <Text style={styles.primaryBtnText}>Create Crew</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        )}
+          <TouchableOpacity style={[styles.primaryBtn, { marginTop: 20 }]} onPress={handleCreateCrew} disabled={isCreatingCrew}>
+            {isCreatingCrew ? <ActivityIndicator size="small" color="#000" /> : <MaterialCommunityIcons name="check" size={18} color="#000" />}
+            <Text style={styles.primaryBtnText}>Create Crew</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
     );
   };
+
 
   // ── Crew Detail sheet ──────────────────────────────────────────────────────────────
   const renderCrewDetail = () => {
@@ -1757,8 +1801,8 @@ export default function CrewModal({
           {crew.avatar_url
             ? <Image source={{ uri: crew.avatar_url }} style={[styles.mgAvatarImg, { width: 72, height: 72, borderRadius: 36 }]} />
             : <View style={[styles.mgAvatar, { width: 72, height: 72, borderRadius: 36, backgroundColor: crew.avatar_color ?? '#FFAA00' }]}>
-                <MaterialCommunityIcons name={(crew.avatar_icon ?? 'account-group') as any} size={32} color="#000" />
-              </View>}
+              <MaterialCommunityIcons name={(crew.avatar_icon ?? 'account-group') as any} size={32} color="#000" />
+            </View>}
           <Text style={[styles.titleLarge, { marginTop: 10, marginBottom: 2 }]}>{crew.name}</Text>
           {(crew.city || crew.state) && (
             <Text style={styles.mgCrewSub}>
@@ -1770,14 +1814,17 @@ export default function CrewModal({
         </View>
 
         {/* Members */}
-        <Text style={styles.label}>MEMBERS</Text>
-        <View style={styles.mgAvatarRow}>
-          {(info?.avatarColors ?? []).slice(0, 8).map((c, i) => (
-            <View key={i} style={[styles.mgMemberDot, { width: 32, height: 32, borderRadius: 16, backgroundColor: c, marginLeft: i > 0 ? -10 : 0, borderWidth: 2, borderColor: '#111' }]} />
-          ))}
-          <Text style={[styles.mgMemberCount, { marginLeft: 8 }]}>{info?.count ?? '?'} member{(info?.count ?? 0) !== 1 ? 's' : ''}</Text>
-        </View>
-
+        {editingCrewId !== crew.id && (
+          <>
+            <Text style={styles.label}>MEMBERS</Text>
+            <View style={styles.mgAvatarRow}>
+              {(info?.avatarColors ?? []).slice(0, 8).map((c, i) => (
+                <View key={i} style={[styles.mgMemberDot, { width: 32, height: 32, borderRadius: 16, backgroundColor: c, marginLeft: i > 0 ? -10 : 0, borderWidth: 2, borderColor: '#111' }]} />
+              ))}
+              <Text style={[styles.mgMemberCount, { marginLeft: 8 }]}>{info?.count ?? '?'} member{(info?.count ?? 0) !== 1 ? 's' : ''}</Text>
+            </View>
+          </>
+        )}
         {/* Session stats */}
         {(() => {
           const stats = crewStats[crew.id];
@@ -1877,27 +1924,189 @@ export default function CrewModal({
                 </TouchableOpacity>
               </View>
 
-              <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
-                <TouchableOpacity style={[styles.primaryBtn, { flex: 1 }]} onPress={() => handleSaveCrew(crew)} disabled={isSavingCrew}>
+              {/* Edit Current Members List */}
+              <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)', paddingTop: 16 }}>
+                <Text style={styles.label}>MANAGE MEMBERS</Text>
+                {loadingCardMembersFor === crew.id ? (
+                  <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 10 }} />
+                ) : (cardMembers[crew.id] ?? []).length === 0 ? (
+                  <Text style={[styles.mgHint, { marginBottom: 12 }]}>No members loaded.</Text>
+                ) : (
+                  (cardMembers[crew.id] ?? []).map(member => {
+                    const memberIsOwner = member.role === 'owner';
+                    const isMakingThisOwner = makingOwnerFor === member.user_id;
+                    const isRemovingThis = isRemovingUserFor === member.user_id;
+                    return (
+                      <View key={member.user_id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' }}>
+                        <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: member.avatar_color, alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ color: '#000', fontWeight: '800', fontSize: 13 }}>{(member.display_name?.[0] ?? '?').toUpperCase()}</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '700' }}>
+                            {member.display_name ?? 'Unknown'}
+                            {member.user_id === currentUserId ? ' (you)' : ''}
+                          </Text>
+                          <Text style={{ color: memberIsOwner ? '#FFD700' : Colors.textMuted, fontSize: 12, fontWeight: '600' }}>
+                            {memberIsOwner ? '👑 Owner' : 'Skater'}
+                          </Text>
+                        </View>
+                        {/* Owner actions */}
+                        {crew.is_owner && member.user_id !== currentUserId && (
+                          <View style={{ flexDirection: 'row', gap: 6 }}>
+                            {/* Make/Revoke Owner */}
+                            <TouchableOpacity
+                              disabled={isMakingThisOwner}
+                              onPress={async () => {
+                                setMakingOwnerFor(member.user_id);
+                                try {
+                                  if (memberIsOwner) await profileService.revokeCrewOwner(crew.id, member.user_id);
+                                  else await profileService.assignCrewOwner(crew.id, member.user_id);
+                                  const updated = await profileService.getCrewMembersWithNames(crew.id);
+                                  setCardMembers(prev => ({ ...prev, [crew.id]: updated }));
+                                } catch (e: any) {
+                                  Alert.alert('Error', e.message ?? 'Could not update role');
+                                } finally {
+                                  setMakingOwnerFor(null);
+                                }
+                              }}
+                              style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: memberIsOwner ? 'rgba(255,68,68,0.12)' : 'rgba(255,208,0,0.12)', borderWidth: 1, borderColor: memberIsOwner ? 'rgba(255,68,68,0.3)' : 'rgba(255,208,0,0.3)' }}
+                            >
+                              {isMakingThisOwner ? <ActivityIndicator size="small" color={memberIsOwner ? '#FF4444' : '#FFD700'} /> : <Text style={{ fontSize: 11, fontWeight: '800', color: memberIsOwner ? '#FF4444' : '#FFD700' }}>{memberIsOwner ? 'Revoke' : '+ Owner'}</Text>}
+                            </TouchableOpacity>
+                            {/* Remove Member */}
+                            <TouchableOpacity
+                              disabled={isRemovingThis}
+                              onPress={() => {
+                                Alert.alert('Remove Skater', `Are you sure you want to remove ${member.display_name} from the crew?`, [
+                                  { text: 'Cancel', style: 'cancel' },
+                                  {
+                                    text: 'Remove', style: 'destructive', onPress: async () => {
+                                      setIsRemovingUserFor(member.user_id);
+                                      try {
+                                        await profileService.removeCrewMember(crew.id, member.user_id);
+                                        const updated = await profileService.getCrewMembersWithNames(crew.id);
+                                        setCardMembers(prev => ({ ...prev, [crew.id]: updated }));
+                                        // Update overall counts natively if we can
+                                        setCrewMemberCounts(prev => {
+                                          const prevCount = prev[crew.id];
+                                          if (!prevCount) return prev;
+                                          return { ...prev, [crew.id]: { ...prevCount, count: Math.max(0, prevCount.count - 1) } };
+                                        });
+                                      } catch (e: any) {
+                                        Alert.alert('Error', e.message ?? 'Could not remove member');
+                                      } finally {
+                                        setIsRemovingUserFor(null);
+                                      }
+                                    }
+                                  }
+                                ]);
+                              }}
+                              style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: 'rgba(255,68,68,0.12)', borderWidth: 1, borderColor: 'rgba(255,68,68,0.3)' }}
+                            >
+                              {isRemovingThis ? <ActivityIndicator size="small" color="#FF4444" /> : <MaterialCommunityIcons name="account-remove" size={14} color="#FF4444" />}
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })
+                )}
+              </View>
+
+              {/* Add Members Section */}
+              <View style={{ marginTop: 12 }}>
+                <Text style={styles.label}>ADD NEW SKATERS</Text>
+                <View style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginBottom: 8 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: selectedMembers.length > 0 ? 8 : 0 }}>
+                    {selectedMembers.map(member => (
+                      <View key={member.user_id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primary || '#FFAA00', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 4, gap: 4 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#000' }}>@{member.username || member.display_name}</Text>
+                        <TouchableOpacity onPress={() => setSelectedMembers(prev => prev.filter(m => m.user_id !== member.user_id))}>
+                          <MaterialCommunityIcons name="close-circle" size={16} color="rgba(0,0,0,0.6)" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+                    <MaterialCommunityIcons name="magnify" size={18} color={Colors.textMuted} />
+                    <TextInput style={{ flex: 1, color: '#fff', fontSize: 13, marginLeft: 8 }} value={userSearchQuery} onChangeText={setUserSearchQuery} placeholder="Search exact username..." placeholderTextColor={Colors.textMuted} autoCapitalize="none" autoCorrect={false} />
+                    {userSearchQuery.length > 0 && (
+                      <TouchableOpacity onPress={() => setUserSearchQuery('')}>
+                        <MaterialCommunityIcons name="close-circle" size={16} color={Colors.textMuted} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  {userSearchResults.length > 0 && userSearchQuery.trim().length > 0 && (
+                    <View style={{ marginTop: 8, gap: 4 }}>
+                      {userSearchResults.map(u =>
+                        !cardMembers[crew.id]?.some(mem => mem.user_id === u.user_id) &&
+                        !selectedMembers.some(sm => sm.user_id === u.user_id) && (
+                          <TouchableOpacity key={u.user_id} onPress={() => { setSelectedMembers(prev => [...prev, u]); setUserSearchQuery(''); }} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', padding: 8, borderRadius: 8 }}>
+                            <MaterialCommunityIcons name="account" size={16} color={Colors.textMuted} style={{ marginRight: 6 }} />
+                            <Text style={{ color: '#FFF', fontSize: 13, flex: 1 }}>{u.display_name} <Text style={{ color: Colors.textMuted }}>@{u.username}</Text></Text>
+                            <MaterialCommunityIcons name="plus" size={18} color={Colors.primary} />
+                          </TouchableOpacity>
+                        ))}
+                    </View>
+                  )}
+                  {selectedMembers.length > 0 && (
+                    <TouchableOpacity
+                      style={[styles.primaryBtn, { marginTop: 12 }]}
+                      onPress={() => handleAddMembersToCrew(crew.id)}
+                      disabled={isAddingMembersTo === crew.id}
+                    >
+                      {isAddingMembersTo === crew.id ? <ActivityIndicator size="small" color="#000" /> : <MaterialCommunityIcons name="account-plus" size={18} color="#000" />}
+                      <Text style={styles.primaryBtnText}>Invite & Add Sktaters</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)' }}>
+                <TouchableOpacity style={[styles.primaryBtn, { flex: 1, marginTop: 0 }]} onPress={() => handleSaveCrew(crew)} disabled={isSavingCrew}>
                   {isSavingCrew ? <ActivityIndicator size="small" color="#000" /> : <MaterialCommunityIcons name="check" size={17} color="#000" />}
-                  <Text style={styles.primaryBtnText}>Save</Text>
+                  <Text style={styles.primaryBtnText}>Save Changes</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.dangerBtn, { flex: 0.5 }]} onPress={() => setEditingCrewId(null)}>
-                  <Text style={[styles.dangerBtnText, { color: Colors.textMuted }]}>Cancel</Text>
+                <TouchableOpacity style={{ flex: 0.5, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', marginTop: 0 }} onPress={() => setEditingCrewId(null)}>
+                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>Cancel</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
 
           {crew.is_owner
-            ? <TouchableOpacity style={styles.dangerBtn} onPress={() => handleDeleteCrew(crew)}>
+            ? confirmingDeleteCrewId === crew.id ? (
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity style={[styles.dangerBtn, { flex: 1, backgroundColor: 'rgba(255,68,68,0.3)' }]} onPress={() => executeDeleteCrew(crew)}>
+                  <MaterialCommunityIcons name="check" size={17} color="#FFF" />
+                  <Text style={[styles.dangerBtnText, { color: '#FFF' }]}>Confirm Delete</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.dangerBtn, { flex: 1 }]} onPress={() => setConfirmingDeleteCrewId(null)}>
+                  <Text style={styles.dangerBtnText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.dangerBtn} onPress={() => setConfirmingDeleteCrewId(crew.id)}>
                 <MaterialCommunityIcons name="delete-forever" size={17} color="#FF4444" />
                 <Text style={styles.dangerBtnText}>Delete Crew</Text>
               </TouchableOpacity>
-            : <TouchableOpacity style={styles.dangerBtn} onPress={() => handleLeaveCrew(crew)}>
+            )
+            : confirmingLeaveCrewId === crew.id ? (
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity style={[styles.dangerBtn, { flex: 1, backgroundColor: 'rgba(255,107,0,0.3)' }]} onPress={() => executeLeaveCrew(crew)}>
+                  <MaterialCommunityIcons name="check" size={17} color="#FFF" />
+                  <Text style={[styles.dangerBtnText, { color: '#FFF' }]}>Confirm Leave</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.dangerBtn, { flex: 1 }]} onPress={() => setConfirmingLeaveCrewId(null)}>
+                  <Text style={styles.dangerBtnText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.dangerBtn} onPress={() => setConfirmingLeaveCrewId(crew.id)}>
                 <MaterialCommunityIcons name="exit-run" size={17} color="#FF6B00" />
                 <Text style={[styles.dangerBtnText, { color: '#FF6B00' }]}>Leave Crew</Text>
-              </TouchableOpacity>}
+              </TouchableOpacity>
+            )}
         </View>
       </ScrollView>
     );
@@ -1918,13 +2127,13 @@ export default function CrewModal({
             <MaterialCommunityIcons name="close" size={20} color={Colors.textMuted} />
           </TouchableOpacity>
 
-          {step === 'landing'     && renderLanding()}
-          {step === 'create'      && renderCreate()}
-          {step === 'schedule'    && renderSchedule()}
-          {step === 'join'        && renderJoin()}
-          {step === 'controller'  && renderController()}
-          {step === 'manage'      && !selectedCrewDetail && renderManage()}
-          {step === 'manage'      && !!selectedCrewDetail && renderCrewDetail()}
+          {step === 'landing' && renderLanding()}
+          {step === 'create' && renderCreate()}
+          {step === 'schedule' && renderSchedule()}
+          {step === 'join' && renderJoin()}
+          {step === 'controller' && renderController()}
+          {step === 'manage' && !selectedCrewDetail && renderManage()}
+          {step === 'manage' && !!selectedCrewDetail && renderCrewDetail()}
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -1934,26 +2143,26 @@ export default function CrewModal({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const createStyles = (Colors: any) => StyleSheet.create({
-  overlay:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: Colors.background || '#0D0D0D',
     borderTopLeftRadius: 26, borderTopRightRadius: 26,
-    maxHeight: '92%', minHeight: '55%', paddingTop: 22,
+    maxHeight: '92%', minHeight: '55%', paddingTop: 10,
   },
-  closeBtn: { position: 'absolute', top: 16, right: 16, zIndex: 10, padding: 8 },
-  body:     { alignItems: 'center', paddingHorizontal: 24, paddingBottom: 32, paddingTop: 8 },
+  closeBtn: { position: 'absolute', top: 10, right: 16, zIndex: 10, padding: 8 },
+  body: { alignItems: 'center', paddingHorizontal: 24, paddingBottom: 32, paddingTop: 6 },
 
   // Typography
   titleLarge: { color: Colors.text || '#FFF', fontSize: 24, fontWeight: '800', marginBottom: 8, textAlign: 'center' },
-  subtitle:   { color: Colors.textMuted || '#888', fontSize: 13, textAlign: 'center', lineHeight: 19, marginBottom: 20 },
+  subtitle: { color: Colors.textMuted || '#888', fontSize: 13, textAlign: 'center', lineHeight: 19, marginBottom: 20 },
 
   // ── Crew Hub styles ──────────────────────────────────────────────────────
   hubHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    width: '100%', marginBottom: 18, paddingTop: 4,
+    width: '100%', marginBottom: 18, paddingTop: 0,
   },
-  hubTitle:       { color: Colors.text || '#FFF', fontSize: 22, fontWeight: '900' },
-  hubSub:         { color: Colors.textMuted || '#888', fontSize: 11, marginTop: 2 },
+  hubTitle: { color: Colors.text || '#FFF', fontSize: 22, fontWeight: '900' },
+  hubSub: { color: Colors.textMuted || '#888', fontSize: 11, marginTop: 2 },
   hubStartBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: Colors.primary || '#FFAA00',
@@ -1982,14 +2191,14 @@ const createStyles = (Colors: any) => StyleSheet.create({
     borderRadius: 16, padding: 14, marginBottom: 10,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.09)',
   },
-  hubCrewCardTop:   { flexDirection: 'row', alignItems: 'center' },
+  hubCrewCardTop: { flexDirection: 'row', alignItems: 'center' },
   hubCrewAvatar: {
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
   },
-  hubCrewName:    { color: Colors.text || '#FFF', fontSize: 15, fontWeight: '700' },
-  hubCrewMeta:    { color: Colors.textMuted || '#888', fontSize: 11, marginTop: 2 },
-  hubOwnerBadge:  { backgroundColor: 'rgba(255,170,0,0.15)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  hubCrewName: { color: Colors.text || '#FFF', fontSize: 15, fontWeight: '700' },
+  hubCrewMeta: { color: Colors.textMuted || '#888', fontSize: 11, marginTop: 2 },
+  hubOwnerBadge: { backgroundColor: 'rgba(255,170,0,0.15)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   hubOwnerBadgeText: { color: Colors.primary || '#FFAA00', fontSize: 9, fontWeight: '800' },
   hubCrewManageBtn: { padding: 6 },
 
@@ -1999,7 +2208,7 @@ const createStyles = (Colors: any) => StyleSheet.create({
     backgroundColor: 'rgba(0,230,118,0.08)',
     borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,230,118,0.2)',
   },
-  hubLiveDot:         { width: 8, height: 8, borderRadius: 4, backgroundColor: '#00E676' },
+  hubLiveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#00E676' },
   hubLiveSessionName: { color: Colors.text || '#FFF', fontSize: 13, fontWeight: '700' },
   hubLiveSessionMeta: { color: Colors.textMuted || '#888', fontSize: 10, marginTop: 1 },
   hubJoinPill: {
@@ -2039,7 +2248,7 @@ const createStyles = (Colors: any) => StyleSheet.create({
     borderRadius: 14, padding: 14,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
   },
-  label:      { color: Colors.textMuted || '#888', fontSize: 10, fontWeight: '700', letterSpacing: 1.2, alignSelf: 'flex-start', marginBottom: 5, marginTop: 12 },
+  label: { color: Colors.textMuted || '#888', fontSize: 10, fontWeight: '700', letterSpacing: 1.2, alignSelf: 'flex-start', marginBottom: 5, marginTop: 12 },
 
   // Buttons
   primaryBtn: {
@@ -2047,15 +2256,15 @@ const createStyles = (Colors: any) => StyleSheet.create({
     backgroundColor: Colors.primary || '#FFAA00',
     borderRadius: 14, paddingVertical: 14, paddingHorizontal: 24, width: '100%', marginTop: 16,
   },
-  primaryBtnText:   { color: '#000', fontSize: 15, fontWeight: '800' },
+  primaryBtnText: { color: '#000', fontSize: 15, fontWeight: '800' },
   secondaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     borderWidth: 1.5, borderColor: Colors.primary || '#FFAA00',
     borderRadius: 14, paddingVertical: 13, paddingHorizontal: 24, width: '100%', marginTop: 10,
   },
   secondaryBtnText: { color: Colors.primary || '#FFAA00', fontSize: 15, fontWeight: '700' },
-  backBtn:    { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginBottom: 10, gap: 2 },
-  backText:   { color: Colors.textMuted || '#888', fontSize: 14 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginBottom: 10, gap: 2 },
+  backText: { color: Colors.textMuted || '#888', fontSize: 14 },
 
   // Input
   input: {
@@ -2064,9 +2273,11 @@ const createStyles = (Colors: any) => StyleSheet.create({
     color: Colors.text || '#FFF', fontSize: 15,
     paddingHorizontal: 14, paddingVertical: 11, width: '100%', marginBottom: 2,
   },
-  codeInput: { fontSize: 26, fontWeight: '900', letterSpacing: 8, textAlign: 'center',
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace' },
-  errorText:  { color: '#FF4444', fontSize: 12, marginTop: 6, textAlign: 'center' },
+  codeInput: {
+    fontSize: 26, fontWeight: '900', letterSpacing: 8, textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace'
+  },
+  errorText: { color: '#FF4444', fontSize: 12, marginTop: 6, textAlign: 'center' },
 
   // Location
   locationBtn: {
@@ -2083,23 +2294,23 @@ const createStyles = (Colors: any) => StyleSheet.create({
   locationChipText: { flex: 1, color: Colors.primary || '#FFAA00', fontSize: 13 },
 
   // Crew picker chips
-  crewPickerRow:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14, alignSelf: 'flex-start' },
-  crewChip:            { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, maxWidth: 160 },
-  crewChipActive:      { backgroundColor: '#FFAA00', borderColor: '#FFAA00' },
-  crewChipText:        { color: '#bbb', fontSize: 12, fontWeight: '700', flexShrink: 1 },
-  crewChipTextActive:  { color: '#000' },
+  crewPickerRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14, alignSelf: 'flex-start' },
+  crewChip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, maxWidth: 160 },
+  crewChipActive: { backgroundColor: '#FFAA00', borderColor: '#FFAA00' },
+  crewChipText: { color: '#bbb', fontSize: 12, fontWeight: '700', flexShrink: 1 },
+  crewChipTextActive: { color: '#000' },
 
   // Public/Private visibility toggle
-  visibilityRow:           { flexDirection: 'row', gap: 10, marginBottom: 6, width: '100%' },
-  visibilityBtn:           { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)', borderRadius: 12, paddingVertical: 10 },
-  visibilityBtnActive:     { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.5)' },
-  visibilityBtnPublic:     { backgroundColor: '#00CC66', borderColor: '#00CC66' },
-  visibilityBtnText:       { color: '#999', fontSize: 13, fontWeight: '700' },
+  visibilityRow: { flexDirection: 'row', gap: 10, marginBottom: 6, width: '100%' },
+  visibilityBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)', borderRadius: 12, paddingVertical: 10 },
+  visibilityBtnActive: { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.5)' },
+  visibilityBtnPublic: { backgroundColor: '#00CC66', borderColor: '#00CC66' },
+  visibilityBtnText: { color: '#999', fontSize: 13, fontWeight: '700' },
   visibilityBtnTextActive: { color: '#fff' },
-  hintText:                { color: '#777', fontSize: 12, marginBottom: 12, alignSelf: 'flex-start' },
+  hintText: { color: '#777', fontSize: 12, marginBottom: 12, alignSelf: 'flex-start' },
 
   // Calendar date/time picker buttons
-  datePickerBtn:     { flexDirection: 'row', alignItems: 'center', gap: 10, width: '100%', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.14)', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14, marginBottom: 10 },
+  datePickerBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, width: '100%', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.14)', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14, marginBottom: 10 },
   datePickerBtnText: { flex: 1, color: '#fff', fontSize: 14, fontWeight: '600' },
 
   // Join — sessions browser
@@ -2109,14 +2320,14 @@ const createStyles = (Colors: any) => StyleSheet.create({
     borderRadius: 14, padding: 12, marginBottom: 8,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
-  sessionCardName:  { color: Colors.text || '#FFF', fontSize: 14, fontWeight: '700' },
-  sessionCardMeta:  { color: Colors.textMuted || '#888', fontSize: 11 },
+  sessionCardName: { color: Colors.text || '#FFF', fontSize: 14, fontWeight: '700' },
+  sessionCardMeta: { color: Colors.textMuted || '#888', fontSize: 11 },
   sessionCardRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  joinPill:         { backgroundColor: Colors.primary || '#FFAA00', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
-  joinPillText:     { color: '#000', fontSize: 12, fontWeight: '800' },
-  divider:          { flexDirection: 'row', alignItems: 'center', marginVertical: 14, width: '100%', gap: 8 },
-  dividerLine:      { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' },
-  dividerText:      { color: Colors.textMuted || '#888', fontSize: 10, fontWeight: '700', letterSpacing: 1 },
+  joinPill: { backgroundColor: Colors.primary || '#FFAA00', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
+  joinPillText: { color: '#000', fontSize: 12, fontWeight: '800' },
+  divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 14, width: '100%', gap: 8 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' },
+  dividerText: { color: Colors.textMuted || '#888', fontSize: 10, fontWeight: '700', letterSpacing: 1 },
 
   // Controller card
   controllerCard: {
@@ -2126,15 +2337,15 @@ const createStyles = (Colors: any) => StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
   controllerCrewName: { color: Colors.text || '#FFF', fontSize: 20, fontWeight: '900', flex: 1 },
-  controllerRole:     { color: Colors.textMuted || '#888', fontSize: 12, marginBottom: 10 },
+  controllerRole: { color: Colors.textMuted || '#888', fontSize: 12, marginBottom: 10 },
   livePill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: 'rgba(0,230,118,0.12)',
     borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
   },
-  liveDot:  { width: 7, height: 7, borderRadius: 4, backgroundColor: '#00E676' },
+  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#00E676' },
   liveText: { color: '#00E676', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
-  metaRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
   metaChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 20,
@@ -2154,12 +2365,12 @@ const createStyles = (Colors: any) => StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,170,0,0.2)',
   },
   inviteCodeLabel: { color: 'rgba(255,170,0,0.6)', fontSize: 10, fontWeight: '700', letterSpacing: 1 },
-  inviteCode:      { color: '#FFD700', fontSize: 22, fontWeight: '900', fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace', letterSpacing: 4, flex: 1 },
+  inviteCode: { color: '#FFD700', fontSize: 22, fontWeight: '900', fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace', letterSpacing: 4, flex: 1 },
   syncRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8,
     backgroundColor: 'rgba(0,170,255,0.08)', borderRadius: 10, padding: 10,
   },
-  syncDot:  { width: 8, height: 8, borderRadius: 4, backgroundColor: '#00AAFF' },
+  syncDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#00AAFF' },
   syncText: { color: '#00AAFF', fontSize: 11, fontWeight: '600', flex: 1 },
 
   // Member rows
@@ -2171,16 +2382,16 @@ const createStyles = (Colors: any) => StyleSheet.create({
     width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center', justifyContent: 'center',
   },
-  memberAvatarText:   { color: '#FFF', fontSize: 15, fontWeight: '700' },
-  memberName:         { color: Colors.text || '#FFF', fontSize: 14, fontWeight: '600' },
-  memberLeaderBadge:  { color: '#FFD700', fontSize: 10, marginTop: 1 },
+  memberAvatarText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+  memberName: { color: Colors.text || '#FFF', fontSize: 14, fontWeight: '600' },
+  memberLeaderBadge: { color: '#FFD700', fontSize: 10, marginTop: 1 },
   handoffToggle: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     borderWidth: 1.5, borderColor: '#FFD700', borderRadius: 10,
     paddingVertical: 9, paddingHorizontal: 14,
   },
   handoffToggleActive: { backgroundColor: '#FFD700' },
-  handoffToggleText:   { color: '#FFD700', fontSize: 13, fontWeight: '700' },
+  handoffToggleText: { color: '#FFD700', fontSize: 13, fontWeight: '700' },
   handoffBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: '#FFD700', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
@@ -2192,75 +2403,75 @@ const createStyles = (Colors: any) => StyleSheet.create({
     flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingBottom: 28, paddingTop: 8,
     borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
   },
-  doneBtn:    { flex: 2, backgroundColor: Colors.primary || '#FFAA00', borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
-  doneBtnText:{ color: '#000', fontSize: 14, fontWeight: '800' },
-  endBtn:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderWidth: 1.5, borderColor: '#FF4444', borderRadius: 14, paddingVertical: 14 },
+  doneBtn: { flex: 2, backgroundColor: Colors.primary || '#FFAA00', borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
+  doneBtnText: { color: '#000', fontSize: 14, fontWeight: '800' },
+  endBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderWidth: 1.5, borderColor: '#FF4444', borderRadius: 14, paddingVertical: 14 },
   endBtnText: { color: '#FF4444', fontSize: 13, fontWeight: '700' },
 
   // ── Manage Crews Hub styles ────────────────────────────────────────────────
-  mgTabBar:      { flexDirection: 'row', paddingHorizontal: 12, gap: 6, marginBottom: 4 },
-  mgTab:         { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)' },
-  mgTabActive:   { backgroundColor: Colors.primary || '#FFAA00' },
-  mgTabText:     { fontSize: 11, fontWeight: '700', color: Colors.textMuted || '#888' },
-  mgEmptyText:   { color: Colors.textMuted || '#888', fontSize: 14, textAlign: 'center', marginTop: 40, lineHeight: 22 },
+  mgTabBar: { flexDirection: 'row', paddingHorizontal: 12, gap: 6, marginBottom: 4 },
+  mgTab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)' },
+  mgTabActive: { backgroundColor: Colors.primary || '#FFAA00' },
+  mgTabText: { fontSize: 11, fontWeight: '700', color: Colors.textMuted || '#888' },
+  mgEmptyText: { color: Colors.textMuted || '#888', fontSize: 14, textAlign: 'center', marginTop: 40, lineHeight: 22 },
   mgSearchInput: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', color: Colors.text || '#FFF', fontSize: 14, paddingHorizontal: 12, paddingVertical: 9, marginBottom: 6 },
-  mgHint:        { color: Colors.textMuted || '#888', fontSize: 11, lineHeight: 16 },
+  mgHint: { color: Colors.textMuted || '#888', fontSize: 11, lineHeight: 16 },
 
   // Crew card
-  mgCrewCard:    { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: 14, marginBottom: 10 },
-  mgAvatar:      { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  mgAvatarImg:   { width: 44, height: 44, borderRadius: 22 },
-  mgCrewName:    { color: Colors.text || '#FFF', fontSize: 15, fontWeight: '700' },
-  mgCrewSub:     { color: Colors.textMuted || '#888', fontSize: 11, marginTop: 2 },
-  mgAvatarRow:   { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  mgMemberDot:   { width: 18, height: 18, borderRadius: 9 },
+  mgCrewCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: 14, marginBottom: 10 },
+  mgAvatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  mgAvatarImg: { width: 44, height: 44, borderRadius: 22 },
+  mgCrewName: { color: Colors.text || '#FFF', fontSize: 15, fontWeight: '700' },
+  mgCrewSub: { color: Colors.textMuted || '#888', fontSize: 11, marginTop: 2 },
+  mgAvatarRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  mgMemberDot: { width: 18, height: 18, borderRadius: 9 },
   mgMemberCount: { color: Colors.textMuted || '#888', fontSize: 11, marginLeft: 6 },
-  mgOwnerBadge:  { backgroundColor: 'rgba(255,170,0,0.15)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  mgBadgeText:   { color: Colors.primary || '#FFAA00', fontSize: 10, fontWeight: '800' },
+  mgOwnerBadge: { backgroundColor: 'rgba(255,170,0,0.15)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  mgBadgeText: { color: Colors.primary || '#FFAA00', fontSize: 10, fontWeight: '800' },
 
   // Create crew form
-  mgPhotoBtn:    { height: 80, borderRadius: 12, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 4, overflow: 'hidden' },
+  mgPhotoBtn: { height: 80, borderRadius: 12, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 4, overflow: 'hidden' },
   mgPhotoBtnImg: { width: '100%', height: '100%', resizeMode: 'cover' },
-  mgPhotoBtnText:{ color: Colors.textMuted || '#888', fontSize: 13 },
-  mgColorRow:    { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 4 },
+  mgPhotoBtnText: { color: Colors.textMuted || '#888', fontSize: 13 },
+  mgColorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 4 },
   mgColorSwatch: { width: 32, height: 32, borderRadius: 16 },
   mgColorActive: { borderWidth: 3, borderColor: '#FFF' },
-  mgIconRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
-  mgIconBtn:     { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.07)' },
+  mgIconRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  mgIconBtn: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.07)' },
 
   // Crew detail
-  mgCodeBox:     { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 14, alignItems: 'center', gap: 4 },
-  mgCodeText:    { color: Colors.text || '#FFF', fontSize: 28, fontWeight: '900', letterSpacing: 6, fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace' },
+  mgCodeBox: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 14, alignItems: 'center', gap: 4 },
+  mgCodeText: { color: Colors.text || '#FFF', fontSize: 28, fontWeight: '900', letterSpacing: 6, fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace' },
 
   // Danger actions
-  dangerBtn:     { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: 'rgba(255,68,68,0.4)', borderRadius: 12, padding: 14 },
+  dangerBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: 'rgba(255,68,68,0.4)', borderRadius: 12, padding: 14 },
   dangerBtnText: { color: '#FF4444', fontSize: 14, fontWeight: '700' },
 
   // Edit actions
-  editBtn:       { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: 'rgba(255,170,0,0.35)', borderRadius: 12, padding: 14 },
-  editBtnText:   { color: Colors.primary || '#FFAA00', fontSize: 14, fontWeight: '700' },
+  editBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: 'rgba(255,170,0,0.35)', borderRadius: 12, padding: 14 },
+  editBtnText: { color: Colors.primary || '#FFAA00', fontSize: 14, fontWeight: '700' },
 
   // Share invite
-  shareBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.primary || '#FFAA00', borderRadius: 12, paddingVertical: 13, marginTop: 8 },
-  shareBtnText:  { color: '#000', fontSize: 14, fontWeight: '800' },
+  shareBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.primary || '#FFAA00', borderRadius: 12, paddingVertical: 13, marginTop: 8 },
+  shareBtnText: { color: '#000', fontSize: 14, fontWeight: '800' },
 
   // Crew stats row
-  statsRow:  { flexDirection: 'row', gap: 8, marginTop: 14, marginBottom: 4 },
-  statCard:  { flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12, alignItems: 'center' },
-  statNum:   { color: Colors.text || '#FFF', fontSize: 16, fontWeight: '800', textAlign: 'center' },
+  statsRow: { flexDirection: 'row', gap: 8, marginTop: 14, marginBottom: 4 },
+  statCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12, alignItems: 'center' },
+  statNum: { color: Colors.text || '#FFF', fontSize: 16, fontWeight: '800', textAlign: 'center' },
   statLabel: { color: Colors.textMuted || '#888', fontSize: 10, fontWeight: '600', marginTop: 2, textAlign: 'center' },
 
   // Nearby sessions
   nearbySessionCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 12, marginBottom: 8 },
   nearbySessionName: { color: Colors.text || '#FFF', fontSize: 14, fontWeight: '700' },
-  nearbySessionSub:  { color: Colors.textMuted || '#888', fontSize: 11, marginTop: 2 },
-  nearbyJoinBtn:     { backgroundColor: Colors.primary || '#FFAA00', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, minWidth: 56, alignItems: 'center' },
-  nearbyJoinText:    { color: '#000', fontSize: 13, fontWeight: '900' },
+  nearbySessionSub: { color: Colors.textMuted || '#888', fontSize: 11, marginTop: 2 },
+  nearbyJoinBtn: { backgroundColor: Colors.primary || '#FFAA00', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, minWidth: 56, alignItems: 'center' },
+  nearbyJoinText: { color: '#000', fontSize: 13, fontWeight: '900' },
 
   // Radius pill selector
-  radiusPillRow:       { flexDirection: 'row', gap: 6, paddingHorizontal: 2, paddingBottom: 2 },
-  radiusPill:          { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  radiusPillActive:    { backgroundColor: Colors.primary || '#FFAA00', borderColor: Colors.primary || '#FFAA00' },
-  radiusPillText:      { color: Colors.textMuted || '#888', fontSize: 12, fontWeight: '700' },
-  radiusPillTextActive:{ color: '#000', fontSize: 12, fontWeight: '700' },
+  radiusPillRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 2, paddingBottom: 2 },
+  radiusPill: { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  radiusPillActive: { backgroundColor: Colors.primary || '#FFAA00', borderColor: Colors.primary || '#FFAA00' },
+  radiusPillText: { color: Colors.textMuted || '#888', fontSize: 12, fontWeight: '700' },
+  radiusPillTextActive: { color: '#000', fontSize: 12, fontWeight: '700' },
 });

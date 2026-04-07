@@ -1,4 +1,4 @@
-# SK8Lytz App: System Master Reference (EXHAUSTIVE)
+﻿# SK8Lytz App: System Master Reference (EXHAUSTIVE)
 
 This is the definitive technical manual for the SK8Lytz LED control system. It consolidates all protocol specifications, pattern listings, hardware configurations, and implementation details necessary for development. **DO NOT SHORTEN THIS DOCUMENT.**
 
@@ -17,7 +17,7 @@ The SK8Lytz ecosystem provides high-performance, professional-grade LED control 
 
 
 
-### Product Scope — App Compatibility
+### Product Scope â€” App Compatibility
 | Product | App Compatible | Reason |
 |:---|:---|:---|
 | **SOULZ** | YES | Zengge BLE controller, WS2812B, full protocol support |
@@ -350,7 +350,7 @@ To maintain consistent branding and clarity, the app uses specific emojis for de
 | **Device Name** | `SK8Lytz-****` | Fallback for factory names, using last 4 MAC digits. |
 | **RSSI Display** | `-XX dBm` | Displayed alongside MAC, "RSSI:" label removed. |
 | **Demo MACs** | `00:DE:M0:00:00:0X` | Realistic dummy format for IDs starting with `sim-`. |
-| **Pattern Wheel** | Circular | Looping logic (1 ↔ 100). |
+| **Pattern Wheel** | Circular | Looping logic (1 â†” 100). |
 | **Pattern Hold** | 500ms Skip | Long-press auto-scroll triggers after 0.5s. |
 
 ---
@@ -915,7 +915,7 @@ all hardware settings for Zengge Symphony addressable LED controllers
 The Zengge app sends a 5-byte query packet to request the current hardware
 configuration from the device. This is sent once immediately on connection.
 
-**Source**: `tc/b.java → public static byte[] f0(boolean z10)`
+**Source**: `tc/b.java â†’ public static byte[] f0(boolean z10)`
 
 ```
 QUERY PACKET FORMAT (5 bytes raw, before V2 wrapper):
@@ -933,7 +933,7 @@ any pattern or config commands.
 
 ### B. RESPONSE PACKET: Hardware Settings Reply (opcode 0x63 / 99 in position [0])
 
-**Source**: `tc/b.java → static class a → public static SymphonyICTypeItem g(byte[] bArr)`
+**Source**: `tc/b.java â†’ static class a â†’ public static SymphonyICTypeItem g(byte[] bArr)`
 
 The device responds with a 12-byte packet. Validation: `bArr[0] == 99` AND
 `bArr[11] == checksum(bArr, 11)`.
@@ -961,14 +961,14 @@ ledPoints = ((bArr[9] & 0xFF) << 8) | (bArr[8] & 0xFF)
 // meaning bArr[8]=Low, bArr[9]=High (little-endian pair in that field)
 ```
 
-**Parsing IC Type**: `bArr[3] & 0xFF` → lookup in IC Type Table
-**Parsing Color Sorting**: `bArr[10] & 0xFF` → lookup in Sorting Table
+**Parsing IC Type**: `bArr[3] & 0xFF` â†’ lookup in IC Type Table
+**Parsing Color Sorting**: `bArr[10] & 0xFF` â†’ lookup in Sorting Table
 
 ---
 
 ### C. WRITE COMMAND: Set Hardware Settings (opcode 0x62 / 98)
 
-**Source**: `tc/b.java → public static byte[] C(int i10, int i11, int i12, int i13, int i14, int i15)`
+**Source**: `tc/b.java â†’ public static byte[] C(int i10, int i11, int i12, int i13, int i14, int i15)`
 
 The full 11-byte set-hardware-config command (before V2 wrapper):
 
@@ -998,7 +998,7 @@ WRITE PACKET FORMAT (11 bytes):
 
 ### D. IC TYPE TABLE (Strip Type / "Wiring Type")
 
-**Source**: `dd/i.java → public static ArrayList<SymphonyICTypeItem> m(boolean z10, int i10)`
+**Source**: `dd/i.java â†’ public static ArrayList<SymphonyICTypeItem> m(boolean z10, int i10)`
 
 This is the complete list for the A3/A2 controller (our HALOZ/SOULZ hardware).
 The `ICType` byte in the packet corresponds to the index value (field `f23990a`).
@@ -1025,7 +1025,7 @@ For non-mic mode (z10=false, which is our use case):
 
 ### E. COLOR SORTING TABLE (Strip Type Ordering)
 
-**Source**: `SymphonySettingForA3.java → b1() method`
+**Source**: `SymphonySettingForA3.java â†’ b1() method`
 
 Color sorting index values used in both query response byte[10] and write
 command byte[6]:
@@ -1114,19 +1114,19 @@ from `ledPoints`:
 
 - **ledPoints**: Individual LED pixel count per segment.
 - **ledSegments**: How many of those segments are chained.
-- **Total LEDs**: `ledPoints × ledSegments` (max 2048).
+- **Total LEDs**: `ledPoints Ã— ledSegments` (max 2048).
 
-For SK8Lytz HALOZ (16 LEDs): points=16, segments=1 → total=16
-For SK8Lytz SOULZ (43 LEDs): points=43, segments=1 → total=43
+For SK8Lytz HALOZ (16 LEDs): points=16, segments=1 â†’ total=16
+For SK8Lytz SOULZ (43 LEDs): points=43, segments=1 â†’ total=43
 
-The Zengge settings UI displays: "Points", "Segments", and "Sum" (= P × S).
+The Zengge settings UI displays: "Points", "Segments", and "Sum" (= P Ã— S).
 
 ---
 
 ### H. FULL ROUND-TRIP WORKFLOW (On Connection)
 
 1. **BLE connection established** to device.
-2. **Send query**: `f0(hasMic)` → `[0x63, 0x12, 0x21, 0xF0|0x0F, checksum]`
+2. **Send query**: `f0(hasMic)` â†’ `[0x63, 0x12, 0x21, 0xF0|0x0F, checksum]`
    - Wrap in V2 packet wrapper before sending.
 3. **Await 12-byte response** starting with `bArr[0] == 0x63`.
 4. **Parse response**:
@@ -1135,7 +1135,7 @@ The Zengge settings UI displays: "Points", "Segments", and "Sum" (= P × S).
    - `icParamD = bArr[5] & 0xFF` (T0L)
    - `icParamE = bArr[6] & 0xFF` (T1H)
    - `icParamF = bArr[7] & 0xFF` (T1L)
-   - `ledPoints = g2.c.a([bArr[9], bArr[8]])` ← low/high SWAPPED
+   - `ledPoints = g2.c.a([bArr[9], bArr[8]])` â† low/high SWAPPED
    - `colorSorting = bArr[10] & 0xFF`
 5. **Look up IC name** from IC Type Table using `icType` index.
 6. **Look up color order name** from Sorting Table using `colorSorting`.
@@ -1176,11 +1176,11 @@ protocol should be used for the full hardware settings dialog.
 
 ---
 
-*End of Hardware Settings Deep Reverse Engineering Section — April 2026*
+*End of Hardware Settings Deep Reverse Engineering Section â€” April 2026*
 
 
 ================================================================================
-SECTION 17: HARDWARE SETTINGS INTEGRATION — IMPLEMENTATION STATUS (April 2026)
+SECTION 17: HARDWARE SETTINGS INTEGRATION â€” IMPLEMENTATION STATUS (April 2026)
 ================================================================================
 
 This section documents the completed implementation of the Zengge 0x62/0x63
@@ -1193,7 +1193,7 @@ A. FILES MODIFIED
 1. src/protocols/ZenggeProtocol.ts  (COMPLETE REWRITE)
    - queryHardwareSettings(hasMic)
        Builds correct 5-byte query: [0x63, 0x12, 0x21, 0x0F, checksum]
-       Source: tc/b.java → f0(boolean)
+       Source: tc/b.java â†’ f0(boolean)
 
    - parseHardwareSettingsResponse(raw)
        Parses 12-byte response from device.
@@ -1205,11 +1205,11 @@ A. FILES MODIFIED
    - writeHardwareSettings(points, segments, icType, sorting, micPts?, micSegs?)
        Builds correct 11-byte write: [0x62, ptsHi, ptsLo, segHi, segLo,
          icType, sorting, micPts, micSegs, 0xF0, checksum]
-       Source: tc/b.java → C(int, int, int, int, int, int)
+       Source: tc/b.java â†’ C(int, int, int, int, int, int)
 
    - parseFirmwareFromAdvertisement(base64)
        Extracts firmware version from BLE scan advertisement manufacturer data.
-       Source: ZGHBDevice.java → setDeviceInfo(byte[])
+       Source: ZGHBDevice.java â†’ setDeviceInfo(byte[])
        Bytes: [12] = fw low, [14] >> 2 = fw high (when bleVersion >= 6)
 
    - HardwareSettings interface: ledPoints, segments, icType, icName,
@@ -1223,21 +1223,21 @@ A. FILES MODIFIED
 
 
 2. src/components/Sk8LytzProgrammerModal.tsx  (COMPLETE REBUILD)
-   Full scan → query → settings → write flow:
-   - SCAN DEVICES button → triggers BLE scan via handleScan prop
+   Full scan â†’ query â†’ settings â†’ write flow:
+   - SCAN DEVICES button â†’ triggers BLE scan via handleScan prop
    - Firmware parsed from advertisement data as devices are discovered
    - RSSI signal strength bars (4-level: green/amber/orange/red)
-   - QUERY button per device → sends 0x63, waits up to 5s for response
-   - QUERY ALL button → sequential query of all visible devices
-   - Device tap → opens full-screen settings panel showing:
-       • Device MAC, firmware version, BLE version (read-only)
-       • ✓ LIVE badge when data came from physical 0x63 response
-       • LED POINTS + SEGMENTS inputs with constraint validation
-       • Total LED count display (red if exceeds 2048 max)
-       • IC STRIP TYPE horizontal chip picker (all 11 IC types)
-       • COLOR SORTING chip grid (RGB/RBG/GRB/GBR/BRG/BGR)
-       • HALOZ / SOULZ quick preset buttons
-       • WRITE TO HARDWARE (0x62) save footer button
+   - QUERY button per device â†’ sends 0x63, waits up to 5s for response
+   - QUERY ALL button â†’ sequential query of all visible devices
+   - Device tap â†’ opens full-screen settings panel showing:
+       â€¢ Device MAC, firmware version, BLE version (read-only)
+       â€¢ âœ“ LIVE badge when data came from physical 0x63 response
+       â€¢ LED POINTS + SEGMENTS inputs with constraint validation
+       â€¢ Total LED count display (red if exceeds 2048 max)
+       â€¢ IC STRIP TYPE horizontal chip picker (all 11 IC types)
+       â€¢ COLOR SORTING chip grid (RGB/RBG/GRB/GBR/BRG/BGR)
+       â€¢ HALOZ / SOULZ quick preset buttons
+       â€¢ WRITE TO HARDWARE (0x62) save footer button
    - AsyncStorage caching: settings cached per device MAC address
      Cache key: @sk8_hw_<deviceId>
    - setOnDataReceived prop: listener for incoming BLE data to capture 0x63 responses
@@ -1245,35 +1245,35 @@ A. FILES MODIFIED
 
 3. src/components/ProtocolSnifferModal.tsx  (TARGETED FIXES)
    - AUTO PROBE button: now sends correct queryHardwareSettings(false) command
-     (was incorrectly sending [0x63, 0x14, 0x00, 0x00] — wrong bytes)
+     (was incorrectly sending [0x63, 0x14, 0x00, 0x00] â€” wrong bytes)
    - RX parsing: parseHardwareSettingsResponse() is now PRIMARY parser
      Falls back to legacy parseHardwareConfig() for old 0x81/0x10 responses
    - renderAnalyzedPayload() labels:
-       [0x63 HW RESP] — decoded: LEDS, IC type name, sorting name
-       [0x62 HW WRITE] — decoded: LEDS, SEGS, IC type name, sorting name
-       [0x63 WRAPPED] — V2-wrapped 0x63 responses
-   - Probe dictionary: "0x63 HW QUERY ✓" highlighted in green with correct bytes
-   - Config Injector: PREPARE 0x62 ✓ button (new) + 0x81 (legacy) side-by-side
+       [0x63 HW RESP] â€” decoded: LEDS, IC type name, sorting name
+       [0x62 HW WRITE] â€” decoded: LEDS, SEGS, IC type name, sorting name
+       [0x63 WRAPPED] â€” V2-wrapped 0x63 responses
+   - Probe dictionary: "0x63 HW QUERY âœ“" highlighted in green with correct bytes
+   - Config Injector: PREPARE 0x62 âœ“ button (new) + 0x81 (legacy) side-by-side
    - Fixed TextInput white-on-white display bug (was color:#FFF on bg:#F5F5F7)
-   - detectedLive state flag: shows "✓ LIVE — from 0x63 hardware response" banner
+   - detectedLive state flag: shows "âœ“ LIVE â€” from 0x63 hardware response" banner
 
 --------------------------------------------------------------------------------
-B. IC TYPE TABLE (complete — all 11 types, source: dd/i.java)
+B. IC TYPE TABLE (complete â€” all 11 types, source: dd/i.java)
 --------------------------------------------------------------------------------
 
   Index | Name        | SK8Lytz Use
   ------|-------------|------------------
   1     | WS2812B     | HALOZ default
   2     | SM16703     | SOULZ default
-  3     | SM16704     | —
-  4     | WS2811      | —
-  5     | UCS1903     | —
-  6     | SK6812      | —
-  7     | SK6812RGBW  | —
-  8     | INK1003     | —
-  9     | UCS2904B    | —
-  10    | JY1903      | —
-  11    | WS2812E     | —
+  3     | SM16704     | â€”
+  4     | WS2811      | â€”
+  5     | UCS1903     | â€”
+  6     | SK6812      | â€”
+  7     | SK6812RGBW  | â€”
+  8     | INK1003     | â€”
+  9     | UCS2904B    | â€”
+  10    | JY1903      | â€”
+  11    | WS2812E     | â€”
 
 --------------------------------------------------------------------------------
 C. COLOR SORTING TABLE (RGB mode, 0-indexed, source: SymphonySettingForA3.java)
@@ -1281,18 +1281,18 @@ C. COLOR SORTING TABLE (RGB mode, 0-indexed, source: SymphonySettingForA3.java)
 
   Index | Name | Notes
   ------|------|---------------------------
-  0     | RGB  | —
-  1     | RBG  | —
+  0     | RGB  | â€”
+  1     | RBG  | â€”
   2     | GRB  | Default for WS2812B/SM16703
-  3     | GBR  | —
-  4     | BRG  | —
-  5     | BGR  | —
+  3     | GBR  | â€”
+  4     | BRG  | â€”
+  5     | BGR  | â€”
 
 --------------------------------------------------------------------------------
 D. KNOWN CONSTRAINTS & DESIGN DECISIONS
 --------------------------------------------------------------------------------
 
-  - Segments NOT returned in 0x63 response — managed as local state, defaults to 1
+  - Segments NOT returned in 0x63 response â€” managed as local state, defaults to 1
   - All LED point parsing uses little-endian byte swap: (bytes[9]<<8)|bytes[8]
   - 0x62/0x63 pair deprecates 0x81 for hardware settings (0x81 kept for compat)
   - Firmware version extracted from BLE advertisement, NOT via command
@@ -1310,7 +1310,7 @@ D. KNOWN CONSTRAINTS & DESIGN DECISIONS
 
 ---
 
-## 21. CODEBASE ARCHITECTURE — COMPLETE FILE REFERENCE
+## 21. CODEBASE ARCHITECTURE â€” COMPLETE FILE REFERENCE
 
 *Last Updated: April 5, 2026. DO NOT SHORTEN THIS SECTION.*
 
@@ -1327,7 +1327,7 @@ This section documents every source file in the SK8Lytz application: what it is,
 
 **`App.tsx`** (root)
 - Wraps the entire application in the `ThemeContext.Provider` to make light/dark theme state globally available.
-- Renders `DashboardScreen` as the sole top-level screen — this app has no navigator.
+- Renders `DashboardScreen` as the sole top-level screen â€” this app has no navigator.
 - **Why**: Single-screen app architecture keeps performance lean for BLE-intensive operations.
 - **When**: Mounted immediately after `index.ts` and remains alive for the entire app lifetime.
 
@@ -1338,7 +1338,7 @@ This section documents every source file in the SK8Lytz application: what it is,
 **`android/`** (directory)
 - Native Android Gradle project generated by Expo's prebuild system.
 - **Why**: Required to produce an installable APK. The `build.gradle` files here configure signing, ProGuard, and native library resolution.
-- **Key file**: `android/app/build.gradle` — release signing config, version code, and native dependency resolution.
+- **Key file**: `android/app/build.gradle` â€” release signing config, version code, and native dependency resolution.
 
 **`tools/build-apk.ps1`** and **`tools/install-on-device.ps1`**
 - PowerShell scripts that wrap `./gradlew assembleRelease` and `adb install` for one-command build + deploy.
@@ -1349,25 +1349,25 @@ This section documents every source file in the SK8Lytz application: what it is,
 
 ### B. SCREENS (`src/screens/`)
 
-**`DashboardScreen.tsx`** ← *The application's entire UI lives here*
+**`DashboardScreen.tsx`** â† *The application's entire UI lives here*
 - **Role**: The single root screen. Owns ALL top-level application state.
 - **What it manages**:
   - BLE lifecycle: scan, connect, disconnect, multi-device group sync
   - Device roster: `allDevices` (discovered), `connectedDevices` (active GATT connections)
-  - Custom groups: `customGroups` — user-saved multi-device groups with name + member list
-  - Device configs: `deviceConfigs` — per-device settings (name, type, LED points, segments, sorting, strip type) loaded from `ng_device_configs` in AsyncStorage
+  - Custom groups: `customGroups` â€” user-saved multi-device groups with name + member list
+  - Device configs: `deviceConfigs` â€” per-device settings (name, type, LED points, segments, sorting, strip type) loaded from `ng_device_configs` in AsyncStorage
   - Power states: per-device on/off boolean map
   - UI modal visibility flags: settings panel, group builder, analytics, hardware tester, programmer
-  - BLE write dispatch: `writeToDevice()` — routes commands to specific devices or all connected
+  - BLE write dispatch: `writeToDevice()` â€” routes commands to specific devices or all connected
 - **Key functions**:
-  - `saveSettings()` — persists hardware config and fires `HARDWARE_CONFIG_CHANGED` + `DEVICE_RENAMED` audit events
-  - `saveGroup()` — creates or updates a custom device group
-  - `handleGlobalPowerToggle()` — sends power ON/OFF to a set of device IDs
-  - `openDeviceSettings()` — triggers a 0x63 hardware query on the target device before opening the settings modal
+  - `saveSettings()` â€” persists hardware config and fires `HARDWARE_CONFIG_CHANGED` + `DEVICE_RENAMED` audit events
+  - `saveGroup()` â€” creates or updates a custom device group
+  - `handleGlobalPowerToggle()` â€” sends power ON/OFF to a set of device IDs
+  - `openDeviceSettings()` â€” triggers a 0x63 hardware query on the target device before opening the settings modal
 - **AsyncStorage keys it owns**:
-  - `ng_device_configs` — dict keyed by MAC address, contains { name, type, points, segments, sorting, stripType, groupId }
-  - `ng_custom_groups` — array of { id, name, isGroup, deviceIds }
-  - `ng_processed_devices` — cached list of previously seen devices
+  - `ng_device_configs` â€” dict keyed by MAC address, contains { name, type, points, segments, sorting, stripType, groupId }
+  - `ng_custom_groups` â€” array of { id, name, isGroup, deviceIds }
+  - `ng_processed_devices` â€” cached list of previously seen devices
 - **Why it's massive (61KB)**: Deliberately monolithic. BLE state cannot safely be split across components without introducing race conditions between connection events and UI re-renders. All hardware-touching logic must be co-located.
 - **When it runs**: Active from app open to close. Never unmounted.
 
@@ -1375,71 +1375,71 @@ This section documents every source file in the SK8Lytz application: what it is,
 
 ### C. HOOKS (`src/hooks/`)
 
-**`useBLE.ts`** ← *The Bluetooth engine*
+**`useBLE.ts`** â† *The Bluetooth engine*
 - **Role**: All BLE hardware interactions. Wraps `react-native-ble-plx`.
 - **What it exposes**:
-  - `scanForPeripherals()` — starts a 5-second BLE scan. Applies strict filtering: only accepts devices that are Symphony-type (manufacturer byte 9 = 0x33/0xBF), have a known name prefix (lednet/sk8/zg/halo/soul), or advertise the Zengge service UUID. Logs `DEVICE_DISCOVERED` or `SCAN_FILTER_REJECT` for every candidate.
-  - `connectToDevice(device)` — connects to a single device, discovers GATT services, starts characteristic monitoring for RX notifications, and attempts firmware read from both advertisement data and GATT 0x180A/0x2A26. Logs `DEVICE_CONNECTED` + `PERFORMANCE_METRIC` (latency).
-  - `connectToDevices(devices[])` — sequential (NOT parallel) connection loop for group sync. Android GATT 133 errors occur if connections are attempted concurrently with `Promise.all`. Must be one-by-one.
-  - `writeToDevice(payload, targetDeviceId?)` — encodes payload to base64, writes to `ZENGGE_CHARACTERISTIC_UUID`. If `targetDeviceId` is given, sends only to that device. Otherwise broadcasts to all connected.
-  - `disconnectFromDevice()` — cancels all active GATT connections.
+  - `scanForPeripherals()` â€” starts a 5-second BLE scan. Applies strict filtering: only accepts devices that are Symphony-type (manufacturer byte 9 = 0x33/0xBF), have a known name prefix (lednet/sk8/zg/halo/soul), or advertise the Zengge service UUID. Logs `DEVICE_DISCOVERED` or `SCAN_FILTER_REJECT` for every candidate.
+  - `connectToDevice(device)` â€” connects to a single device, discovers GATT services, starts characteristic monitoring for RX notifications, and attempts firmware read from both advertisement data and GATT 0x180A/0x2A26. Logs `DEVICE_CONNECTED` + `PERFORMANCE_METRIC` (latency).
+  - `connectToDevices(devices[])` â€” sequential (NOT parallel) connection loop for group sync. Android GATT 133 errors occur if connections are attempted concurrently with `Promise.all`. Must be one-by-one.
+  - `writeToDevice(payload, targetDeviceId?)` â€” encodes payload to base64, writes to `ZENGGE_CHARACTERISTIC_UUID`. If `targetDeviceId` is given, sends only to that device. Otherwise broadcasts to all connected.
+  - `disconnectFromDevice()` â€” cancels all active GATT connections.
 - **Why it's a hook**: React's rendering lifecycle must track `connectedDevices` and `allDevices` as reactive state. Hooks allow BLE events to trigger re-renders cleanly.
 - **When it runs**: Instantiated once in `DashboardScreen` and never recreated. The `useMemo` return value is stable across re-renders.
-- **Critical design note**: `connectToDevices` uses a `for...of` sequential loop by design. Do NOT refactor to `Promise.all` — this causes GATT 133 errors on Android.
+- **Critical design note**: `connectToDevices` uses a `for...of` sequential loop by design. Do NOT refactor to `Promise.all` â€” this causes GATT 133 errors on Android.
 
 ---
 
 ### D. PROTOCOLS (`src/protocols/`)
 
-**`ZenggeProtocol.ts`** ← *The hardware communication specification*
+**`ZenggeProtocol.ts`** â† *The hardware communication specification*
 - **Role**: Single source of truth for all BLE command payloads. Every byte sent to Zengge LED controllers is generated here.
 - **Key exports**:
-  - `ZENGGE_SERVICE_UUID` / `ZENGGE_CHARACTERISTIC_UUID` — BLE GATT addresses for all read/write operations
-  - `IC_TYPES` — map of IC chip indices (1-11) to names (WS2812B, SM16703, etc.)
-  - `COLOR_SORTING_RGB` — map of color order indices (0-5) to names (RGB, GRB, etc.)
-  - `SK8_DEFAULTS` — factory defaults for HALOZ (16L, WS2812B, GRB) and SOULZ (43L, SM16703, GRB)
-  - `HW_CONSTRAINTS` — max points (300), max PxS (2048), mic constraints
-  - `wrapCommand(raw)` — applies the 8-byte V2 packet header (seq counter, length, 0x0B family)
-  - `calculateChecksum(payload)` — sum & 0xFF
-  - `queryHardwareSettings()` — builds 0x63 query (5 bytes) to read EEPROM config from device
-  - `queryHardwareConfig()` — alias for queryHardwareSettings, used in some call sites
-  - `parseHardwareSettingsResponse(data)` — decodes the 12-byte 0x63 response: extracts IC type, color sorting, LED points (little-endian swapped bytes 8+9)
-  - `writeHardwareSettings(points, segs, icType, sorting)` — builds 0x62 EEPROM write command
-  - `parseFirmwareFromAdvertisement(base64)` — decodes firmware version from BLE scan advertisement manufacturer data
-  - `solidColor(r,g,b)` — 0x31 fixed color command
-  - `rbmPattern(id)` — 0x42 pattern selection (1-210)
-  - `musicMode(id)` — music sync mode selection
-  - `cameraMode(id)` — camera light tracking mode
-  - `power(on)` — 0x71 power on/off
-  - `setBrightness(pct)` — brightness 0-100
-  - `setSpeed(pct)` — effect speed 0-100
-  - `applyColorSorting(r,g,b, sortingIndex)` — remaps RGB values to the hardware's expected color channel order
+  - `ZENGGE_SERVICE_UUID` / `ZENGGE_CHARACTERISTIC_UUID` â€” BLE GATT addresses for all read/write operations
+  - `IC_TYPES` â€” map of IC chip indices (1-11) to names (WS2812B, SM16703, etc.)
+  - `COLOR_SORTING_RGB` â€” map of color order indices (0-5) to names (RGB, GRB, etc.)
+  - `SK8_DEFAULTS` â€” factory defaults for HALOZ (16L, WS2812B, GRB) and SOULZ (43L, SM16703, GRB)
+  - `HW_CONSTRAINTS` â€” max points (300), max PxS (2048), mic constraints
+  - `wrapCommand(raw)` â€” applies the 8-byte V2 packet header (seq counter, length, 0x0B family)
+  - `calculateChecksum(payload)` â€” sum & 0xFF
+  - `queryHardwareSettings()` â€” builds 0x63 query (5 bytes) to read EEPROM config from device
+  - `queryHardwareConfig()` â€” alias for queryHardwareSettings, used in some call sites
+  - `parseHardwareSettingsResponse(data)` â€” decodes the 12-byte 0x63 response: extracts IC type, color sorting, LED points (little-endian swapped bytes 8+9)
+  - `writeHardwareSettings(points, segs, icType, sorting)` â€” builds 0x62 EEPROM write command
+  - `parseFirmwareFromAdvertisement(base64)` â€” decodes firmware version from BLE scan advertisement manufacturer data
+  - `solidColor(r,g,b)` â€” 0x31 fixed color command
+  - `rbmPattern(id)` â€” 0x42 pattern selection (1-210)
+  - `musicMode(id)` â€” music sync mode selection
+  - `cameraMode(id)` â€” camera light tracking mode
+  - `power(on)` â€” 0x71 power on/off
+  - `setBrightness(pct)` â€” brightness 0-100
+  - `setSpeed(pct)` â€” effect speed 0-100
+  - `applyColorSorting(r,g,b, sortingIndex)` â€” remaps RGB values to the hardware's expected color channel order
 - **Why it's separate**: Protocol logic is completely hardware-specific with no React dependencies. Isolating it enables unit testing and reuse in admin/debug tools.
-- **When it runs**: Called any time a command needs to be sent — from `DockedController`, `DeviceSettingsModal`, `AdminHardwareTester`, and `Sk8LytzProgrammerModal`.
+- **When it runs**: Called any time a command needs to be sent â€” from `DockedController`, `DeviceSettingsModal`, `AdminHardwareTester`, and `Sk8LytzProgrammerModal`.
 
 ---
 
 ### E. SERVICES (`src/services/`)
 
-**`AppLogger.ts`** ← *The analytics and telemetry engine*
+**`AppLogger.ts`** â† *The analytics and telemetry engine*
 - **Role**: Captures all significant application events and uploads them to Supabase for remote analytics.
 - **Design**: Singleton exported as `AppLogger` (instance of `AppLoggerService`). Never instantiated twice.
 - **Local buffer**: Events are stored in a compact `LogEntry[]` array (`{ t: timestamp, e: EventType, d: payload }`). Buffer is persisted to AsyncStorage key `@sk8lytz_logs` and rotates at 10,000 entries.
 - **Event types logged**: `APP_OPENED`, `DEVICE_DISCOVERED`, `DEVICE_CONNECTED`, `DEVICE_DISCONNECTED`, `DEVICE_RENAMED`, `MODE_CHANGED`, `PATTERN_CHANGED`, `COLOR_CHANGED`, `BRIGHTNESS_CHANGED`, `SPEED_CHANGED`, `HARDWARE_CONFIG_CHANGED`, `SCAN_STARTED/COMPLETED/FILTER_MATCH/REJECT`, `BLE_WRITE_ERROR`, `BLE_CONNECTION_ERROR`, `PROTOCOL_ERROR`, `RAW_PAYLOAD` (hardware tester only), `SCREEN_OPENED`, `PERFORMANCE_METRIC`
-- **`uploadLogsToSupabase()`** — the main upload function. On success:
+- **`uploadLogsToSupabase()`** â€” the main upload function. On success:
   1. Merges with any existing cloud JSON in `sk8lytz-logs` Storage bucket (deduplicates by `t+e` fingerprint, excludes `RAW_PAYLOAD`)
   2. Uploads merged JSON back to Storage
   3. Runs the **Enterprise DB Injection Stream**: pushes current delta to 6 normalized Postgres tables
   4. **Clears local buffer** after confirmed successful Postgres push (rotation)
 - **Custom device name resolution**: Reads `ng_device_configs` from AsyncStorage (same key `DashboardScreen` writes), builds a `customNameMap` keyed by device MAC, and injects the custom name into all Supabase row payloads.
-- **Session ID**: A single `sessionId` (`telemetry_TIMESTAMP`) is generated at singleton instantiation and reused for the entire app lifetime session — prevents duplicate session stats/device rows on repeated uploads via Upsert constraints.
+- **Session ID**: A single `sessionId` (`telemetry_TIMESTAMP`) is generated at singleton instantiation and reused for the entire app lifetime session â€” prevents duplicate session stats/device rows on repeated uploads via Upsert constraints.
 - **Supabase tables written**:
-  - `parsed_session_stats` — one row per session (upserted on `session_id`)
-  - `parsed_session_devices` — one row per device per session (upserted on `session_id, device_id`)
-  - `parsed_mode_usage` — mode change frequency per device (group events unrolled per device)
-  - `parsed_pattern_usage` — pattern selection frequency per device
-  - `parsed_color_usage` — color selection frequency per device
-  - `parsed_logs` — full event trace (group events flatMapped per device)
+  - `parsed_session_stats` â€” one row per session (upserted on `session_id`)
+  - `parsed_session_devices` â€” one row per device per session (upserted on `session_id, device_id`)
+  - `parsed_mode_usage` â€” mode change frequency per device (group events unrolled per device)
+  - `parsed_pattern_usage` â€” pattern selection frequency per device
+  - `parsed_color_usage` â€” color selection frequency per device
+  - `parsed_logs` â€” full event trace (group events flatMapped per device)
 - **Why `RAW_PAYLOAD` is excluded**: Raw BLE hex dumps are for the hardware tester terminal only. Including them in the analytics stream would generate millions of low-value rows and degrade query performance.
 - **When it runs**: `AppLogger.log()` is called synchronously throughout the app. `uploadLogsToSupabase()` is triggered manually or on app background.
 
@@ -1452,18 +1452,18 @@ This section documents every source file in the SK8Lytz application: what it is,
 
 ### F. COMPONENTS (`src/components/`)
 
-**`DockedController.tsx`** ← *The primary user control interface (125KB)*
+**`DockedController.tsx`** â† *The primary user control interface (125KB)*
 - **Role**: The full-featured LED control panel. Renders as a slide-up sheet docked to the bottom of the screen.
 - **What it controls**: Mode switching (Fixed, Music, Camera, Pattern, etc.), color picker and RGB sliders, brightness/speed knobs, pattern wheel, music visualizer EQ, DIY array builder, favorites system, quick presets, power toggle.
 - **Analytics**: Builds `deviceContext` (single device or group with `deviceIds` array) and logs `MODE_CHANGED`, `PATTERN_CHANGED`, `COLOR_CHANGED` with the full target context. Group events include the complete `deviceIds` array so the telemetry engine can unroll them.
 - **Why it's huge**: Every UI control mode (10+ modes) has its own internal sub-state. Splitting into sub-components risks prop-drilling BLE write callbacks 5+ levels deep.
 
-**`AdminHardwareTester.tsx`** ← *The developer/admin diagnostic tool*
+**`AdminHardwareTester.tsx`** â† *The developer/admin diagnostic tool*
 - **Role**: Hidden admin panel for BLE packet inspection, payload generation, and EEPROM configuration. Accessible via secret gesture in DashboardScreen.
 - **Tabs**:
   - **SNIFFER**: Live RX/TX BLE packet timeline. Parses 0x63 hardware responses and 0x81 status pings in real-time. Logs `RAW_PAYLOAD` events (the only place this event type is written).
   - **FACTORY**: Payload generator for any Zengge command type (Solid, RBM, Music, Camera, Custom hex). Can fire directly to hardware.
-  - **CONFIG**: EEPROM configurator — shows current hardware settings, validates constraints, and writes 0x62 burn commands to device.
+  - **CONFIG**: EEPROM configurator â€” shows current hardware settings, validates constraints, and writes 0x62 burn commands to device.
 - **Why separate from DockedController**: Admin tools must not be accessible to end users. The separate component allows it to be gated behind an undocumented activation pattern.
 - **When it runs**: Rendered only when the admin modal is open. Not mounted at app start.
 
@@ -1473,15 +1473,15 @@ This section documents every source file in the SK8Lytz application: what it is,
 - **Saves to**: `ng_device_configs` AsyncStorage key (same as what AppLogger reads for name resolution).
 - **Fires**: `HARDWARE_CONFIG_CHANGED` and `DEVICE_RENAMED` telemetry events on save.
 
-**`LogViewerModal.tsx`** ← *The SK8Lytz Analytics viewer*
+**`LogViewerModal.tsx`** â† *The SK8Lytz Analytics viewer*
 - **Role**: In-app analytics dashboard. Reads from the local AppLogger buffer.
 - **Tabs**: LOGS timeline (virtualized, newest first), STATS (mode/pattern/color usage charts), DEVICES (all seen devices with config info), EXPORT (JSON dump trigger).
 - **Event map**: Maps every `EventType` to an icon, color, and label for display.
 - **Why local-only**: The analytics viewer shows the current device's session data. Historical cross-device data requires a future Supabase query endpoint (currently append-only, no SELECT policy for anon role).
 
-**`Sk8LytzProgrammerModal.tsx`** ← *The hardware burn programmer*
+**`Sk8LytzProgrammerModal.tsx`** â† *The hardware burn programmer*
 - **Role**: EEPROM programmer for batch hardware configuration. Scans visible devices, queries their current settings via 0x63, and writes new settings via 0x62.
-- **Cache key**: `@sk8_hw_<deviceId>` — separate from `ng_device_configs` (device display settings vs hardware EEPROM settings).
+- **Cache key**: `@sk8_hw_<deviceId>` â€” separate from `ng_device_configs` (device display settings vs hardware EEPROM settings).
 - **Why separate from DeviceSettingsModal**: The programmer targets raw hardware at protocol level. The DeviceSettingsModal is for end-user name/group/display management.
 
 **`ProductVisualizer.tsx`**
@@ -1539,7 +1539,7 @@ This section documents every source file in the SK8Lytz application: what it is,
 - **Role**: Lookup helper that maps pattern IDs to names, and names back to IDs. Used by `DockedController` and `AppLogger` to resolve human-readable pattern names for the analytics event payload.
 
 **`MusicDictionary.ts`**
-- **Role**: Same pattern as `RbmDictionary` but for music sync mode IDs (modes 1-16). Maps mode ID → display name.
+- **Role**: Same pattern as `RbmDictionary` but for music sync mode IDs (modes 1-16). Maps mode ID â†’ display name.
 
 ---
 
@@ -1561,11 +1561,11 @@ This section documents every source file in the SK8Lytz application: what it is,
 - **`src/services/ScenesService.ts`**: Manages Supabase DB bindings for scenes, secure RPC upvote firing, and session retrieval.
 - **`src/components/CommunityModal.tsx`**: Renders `FlatList` UI displaying `ICloudScene` items mapped from Postgres.
 
-**RLS Policy Design**: All telemetry tables use `INSERT WITH CHECK (true)` for the public (anon) role. There is intentionally NO `SELECT` policy for anon — data can flow in from the app but cannot be read back without authenticated credentials. This prevents telemetry leakage via the public anon key.
+**RLS Policy Design**: All telemetry tables use `INSERT WITH CHECK (true)` for the public (anon) role. There is intentionally NO `SELECT` policy for anon â€” data can flow in from the app but cannot be read back without authenticated credentials. This prevents telemetry leakage via the public anon key.
 
 **Storage Bucket**: `sk8lytz-logs`
-- `logs_<bleMac>.json` — merged session log files per primary device MAC
-- `sk8lytz-picks.json` — curated preset list (SK8Lytz Picks), fetched at app launch
+- `logs_<bleMac>.json` â€” merged session log files per primary device MAC
+- `sk8lytz-picks.json` â€” curated preset list (SK8Lytz Picks), fetched at app launch
 
 ---
 
@@ -1586,7 +1586,7 @@ This section documents every source file in the SK8Lytz application: what it is,
 
 ---
 
-### L. BUG FIX LOG — April 5 2026 Session
+### L. BUG FIX LOG â€” April 5 2026 Session
 
 | Bug | Root Cause | Fix Applied |
 |---|---|---|
@@ -1598,17 +1598,17 @@ This section documents every source file in the SK8Lytz application: what it is,
 
 ---
 
-*Section 21 last updated: April 5, 2026 — Covers all files as of the Enterprise Telemetry Hardening session.*
+*Section 21 last updated: April 5, 2026 â€” Covers all files as of the Enterprise Telemetry Hardening session.*
 
 ---
 
-### M. FEATURES ADDED — April 5 2026 Cloud-Sync & Security Session
+### M. FEATURES ADDED â€” April 5 2026 Cloud-Sync & Security Session
 
 #### M1. Authentication System Overhaul (src/screens/AuthScreen.tsx)
 - Password complexity: min 8 chars, uppercase, number, special char. Live animated strength bar.
-- HaveIBeenPwned: SHA1 via expo-crypto, k-anonymity API — only first 5 chars sent. Blocks breached passwords.
+- HaveIBeenPwned: SHA1 via expo-crypto, k-anonymity API â€” only first 5 chars sent. Blocks breached passwords.
 - Top-100 bad password blocklist (embedded Set), checked before HIBP call.
-- Magic Link: signInWithOtp() — passwordless email link with confirmation screen.
+- Magic Link: signInWithOtp() â€” passwordless email link with confirmation screen.
 - Offline mode button: "Continue Offline" bypasses auth, all BLE works, cloud sync disabled.
 - OAuth: Google / Facebook / Apple via expo-auth-session + signInWithOAuth().
 - Show/Hide password toggle, Forgot password flow, HIBP attribution footer.
@@ -1647,16 +1647,16 @@ This section documents every source file in the SK8Lytz application: what it is,
 - tools/CloudScenesTable.sql: shared_scenes table + RLS + RPC functions
 
 #### M8. New Files
-- src/services/AuthUtils.ts — password validation, HIBP, top-100, profanity filter
-- src/services/ScenesService.ts — cloud scenes CRUD
-- src/components/CommunityModal.tsx — community browse/apply UI
+- src/services/AuthUtils.ts â€” password validation, HIBP, top-100, profanity filter
+- src/services/ScenesService.ts â€” cloud scenes CRUD
+- src/components/CommunityModal.tsx â€” community browse/apply UI
 - tools/AddMissingTelemetryColumns.sql
 - tools/AddHostDeviceTelemetryColumns.sql
 - tools/CloudScenesTable.sql
 
 *Section M last updated: April 5, 2026*
 
- — Covers all files as of the Enterprise Telemetry Hardening session.*
+ â€” Covers all files as of the Enterprise Telemetry Hardening session.*
 
 
 ---
@@ -1665,19 +1665,19 @@ This section documents every source file in the SK8Lytz application: what it is,
 
 #### How All Hardware Settings Are Retrieved At Once
 
-The Zengge/Triones controller exposes all hardware configuration (LED points, segments, IC type, color order, etc.) via a single **0x63 EEPROM query** — a BLE write that triggers a notification response packed with all hardware values.
+The Zengge/Triones controller exposes all hardware configuration (LED points, segments, IC type, color order, etc.) via a single **0x63 EEPROM query** â€” a BLE write that triggers a notification response packed with all hardware values.
 
 **Trigger Command (sent by app after BLE connect):**
 Written to the WRITE characteristic during DashboardScreen connection.
 
 **Parsed Response Fields (via ZenggeProtocol.parseHardwareSettings):**
-- `ledPoints` — Total LED count (bytes 8-9, 16-bit LE)
-- `segments` — Number of independent segments
-- `icType` — Internal IC code (e.g. 1 = WS2812B, 2 = SK6812, 3 = APA102)
-- `icName` — Human-readable strip type string
-- `colorSorting` — Color order index (0=RGB, 1=RBG, 2=GRB, 3=GBR, 4=BRG, 5=BGR)
-- `colorSortingName` — Human-readable color order string (e.g. "GRB")
-- `firmware` — Firmware version parsed from advertisement on discovery
+- `ledPoints` â€” Total LED count (bytes 8-9, 16-bit LE)
+- `segments` â€” Number of independent segments
+- `icType` â€” Internal IC code (e.g. 1 = WS2812B, 2 = SK6812, 3 = APA102)
+- `icName` â€” Human-readable strip type string
+- `colorSorting` â€” Color order index (0=RGB, 1=RBG, 2=GRB, 3=GBR, 4=BRG, 5=BGR)
+- `colorSortingName` â€” Human-readable color order string (e.g. "GRB")
+- `firmware` â€” Firmware version parsed from advertisement on discovery
 
 **Storage After Ping:**
 Results are merged into `ng_device_configs` in AsyncStorage, keyed by device MAC:
@@ -1687,11 +1687,11 @@ Results are merged into `ng_device_configs` in AsyncStorage, keyed by device MAC
 Simple Scanner reads `allDevices` = raw BLE scan results. Hardware fields only arrive after connecting and receiving the 0x63 notification. The scanner now:
 1. Checks `ng_device_configs[device.id]` for cached values from previous sessions
 2. If cached: shows real values immediately
-3. If no cache: shows "— connect" and provides a CONNECT button
+3. If no cache: shows "â€” connect" and provides a CONNECT button
 4. After CONNECT: calls `connectToDevice(d)` inline, then re-reads `ng_device_configs` to refresh the card live
 
 **Simple Scanner CONNECT Flow:**
-`CONNECT tap` → `connectToDevice(device)` (useBLE) → BLE GATT connect → char subscribe → 0x63 ping write → 0x63 notification parsed → DashboardScreen writes to `ng_device_configs` → LogViewerModal re-reads `ng_device_configs` → card updates with real values
+`CONNECT tap` â†’ `connectToDevice(device)` (useBLE) â†’ BLE GATT connect â†’ char subscribe â†’ 0x63 ping write â†’ 0x63 notification parsed â†’ DashboardScreen writes to `ng_device_configs` â†’ LogViewerModal re-reads `ng_device_configs` â†’ card updates with real values
 
 *Section N last updated: April 5, 2026*
 
@@ -1848,7 +1848,7 @@ All members' skates update automatically when the leader changes their scene.
 ### Architecture
 
 Feature lives at: Scanner/Dashboard level (NOT in DockedController)
-NOT a new dock mode â€” integrated into the device connection flow.
+NOT a new dock mode Ã¢â‚¬â€ integrated into the device connection flow.
 
 Connection Flow (new):
   [Old] Scan -> Connect to device/group
@@ -1905,42 +1905,42 @@ Broadcast payload: JSON from captureEntireState() (activeMode, colors, patterns,
 
 ---
 
-## SESSION UPDATE — 2026-04-05/06: Crew Sync + Mode Architecture
+## SESSION UPDATE â€” 2026-04-05/06: Crew Sync + Mode Architecture
 
 ### Mode Architecture Changes
-- **FIXED → MULTIMODE**: Global rename across all files (45 occurrences)
-- **Removed modes**: CANDLE, CUSTOM, MULTICOLOR — fully purged from state, UI, BLE dispatch, favorites
+- **FIXED â†’ MULTIMODE**: Global rename across all files (45 occurrences)
+- **Removed modes**: CANDLE, CUSTOM, MULTICOLOR â€” fully purged from state, UI, BLE dispatch, favorites
 - **Street Mode**: Accelerometer-based motion-reactive lighting. Jerk detection distinguishes cruising vs braking state. Independent cruise/brake colors + sensitivity slider.
 
-### Crew Sync Feature — Full Implementation
+### Crew Sync Feature â€” Full Implementation
 **Architecture**: Scanner/dashboard-level feature. BLE stays local; only scene JSON syncs through Supabase Realtime.
 
-#### Database (Supabase — Project ID: qefmeivpjyaukbwadgaz)
-- Table: crew_sessions — id, invite_code (6-char auto), name, leader_user_id, created_at, expires_at (12hr TTL), is_active, last_scene (JSONB)
-- Table: crew_members — id, session_id, user_id, display_name, joined_at
+#### Database (Supabase â€” Project ID: qefmeivpjyaukbwadgaz)
+- Table: crew_sessions â€” id, invite_code (6-char auto), name, leader_user_id, created_at, expires_at (12hr TTL), is_active, last_scene (JSONB)
+- Table: crew_members â€” id, session_id, user_id, display_name, joined_at
 - Index: idx_crew_sessions_active on (is_active, expires_at DESC)
 - RLS: enabled on both tables
-- Migration file: 	ools/002_crew_sessions.sql ✅ Applied
+- Migration file: 	ools/002_crew_sessions.sql âœ… Applied
 
 #### Files Created/Modified
-- src/services/CrewService.ts — Session CRUD, Realtime pub/sub, last_scene persistence (5s throttle), fetchActiveSessions(), fetchLastScene(), joinSessionById(), transferLeadership(), tryAutoRejoin()
-- src/components/CrewModal.tsx — 4-step modal: landing / create / join (active sessions browser) / lobby (member list + leader handoff)
-- src/components/DockedController.tsx — forwardRef + useImperativeHandle (applyCloudScene), crewRole prop, crew leader broadcast useEffect (200ms debounce)
-- src/screens/DashboardScreen.tsx — DEVICES/CREW tab bar, crew status pill, CrewModal wired, auto-rejoin useEffect on mount (2s delay)
+- src/services/CrewService.ts â€” Session CRUD, Realtime pub/sub, last_scene persistence (5s throttle), fetchActiveSessions(), fetchLastScene(), joinSessionById(), transferLeadership(), tryAutoRejoin()
+- src/components/CrewModal.tsx â€” 4-step modal: landing / create / join (active sessions browser) / lobby (member list + leader handoff)
+- src/components/DockedController.tsx â€” forwardRef + useImperativeHandle (applyCloudScene), crewRole prop, crew leader broadcast useEffect (200ms debounce)
+- src/screens/DashboardScreen.tsx â€” DEVICES/CREW tab bar, crew status pill, CrewModal wired, auto-rejoin useEffect on mount (2s delay)
 
 #### Key Behaviors
-- **Browse active crews**: JOIN screen shows all live sessions — tap to join
+- **Browse active crews**: JOIN screen shows all live sessions â€” tap to join
 - **Late-arrival sync**: On join, fetches last_scene from DB and immediately applies to skates
-- **Leader handoff**: Visible toggle button in lobby — any member can be promoted
-- **Auto-rejoin**: AsyncStorage TTL (12hr) — reopening app reconnects to prior session
-- **Leader broadcast**: DockedController fires onCrewSceneChange on every mode/color state change (debounced 200ms) — CrewService persists to DB every 5s
+- **Leader handoff**: Visible toggle button in lobby â€” any member can be promoted
+- **Auto-rejoin**: AsyncStorage TTL (12hr) â€” reopening app reconnects to prior session
+- **Leader broadcast**: DockedController fires onCrewSceneChange on every mode/color state change (debounced 200ms) â€” CrewService persists to DB every 5s
 
-### Music Sync — Research / Planning Only (not implemented)
+### Music Sync â€” Research / Planning Only (not implemented)
 **Problem**: Mic-based reactivity doesn't work when audio routes to headphones/BT speakers.
 **Planned approach (cross-platform iOS + Android)**:
-- Phase 1: Spotify Web API + Apple MusicKit — BPM/energy/valence, no native modules
-- Phase 2: ShazamKit (iOS) + ACRCloud (Android) — identify any song from mic fingerprint
-- Phase 3: Android MediaSession native module — auto-detect any playing app
+- Phase 1: Spotify Web API + Apple MusicKit â€” BPM/energy/valence, no native modules
+- Phase 2: ShazamKit (iOS) + ACRCloud (Android) â€” identify any song from mic fingerprint
+- Phase 3: Android MediaSession native module â€” auto-detect any playing app
 - Enables: BPM Choreography Mode (beat-synced LED patterns)
 - Reference: rain/14d7070e.../analysis_results.md
 
@@ -2683,7 +2683,7 @@ static setQuick16ColorCycle(
 
 ---
 
-## 16. DockedController: Mode Architecture (FINALIZED — April 2026)
+## 16. DockedController: Mode Architecture (FINALIZED â€” April 2026)
 
 ### 6-Mode Taxonomy (activeMode)
 All UI modes map to a single top-level `activeMode` state. There are NO sub-modes for PROGRAMS, MUSIC, or CAMERA.
@@ -2705,22 +2705,22 @@ Used exclusively when activeMode === 'MULTIMODE':
 CRITICAL: PROGRAMS, MUSIC, and CAMERA are NOT and NEVER WERE fixedSubModes. They are top-level activeMode values.
 
 ### Dock Routing (DockedController.tsx)
-HOME       → onDisconnect()
-FAVORITES  → setActiveMode('FAVORITES')
-MULTI      → setActiveMode('MULTIMODE') + setFixedSubMode('PATTERN')
-PROGRAMS   → setActiveMode('PROGRAMS')
-MUSIC      → setActiveMode('MUSIC')
-STREET     → setActiveMode('STREET')
-CAMERA     → setActiveMode('CAMERA')
+HOME       â†’ onDisconnect()
+FAVORITES  â†’ setActiveMode('FAVORITES')
+MULTI      â†’ setActiveMode('MULTIMODE') + setFixedSubMode('PATTERN')
+PROGRAMS   â†’ setActiveMode('PROGRAMS')
+MUSIC      â†’ setActiveMode('MUSIC')
+STREET     â†’ setActiveMode('STREET')
+CAMERA     â†’ setActiveMode('CAMERA')
 
-### loadFavorite — Legacy Mode Normalization
+### loadFavorite â€” Legacy Mode Normalization
 Saved favorites may have old mode names. The normalization map:
-  'RBM' | 'PROGRAMS'              → 'PROGRAMS'    (top-level activeMode)
-  'PRESETS' | 'FAVORITES'         → 'FAVORITES'   (top-level activeMode)
-  'MULTIMODE' | 'PATTERN'         → MULTIMODE + fixedSubMode='PATTERN'
-  'MULTI' | 'DIY' | 'MULTICOLOR'  → MULTIMODE + fixedSubMode='DIY'
-  'MUSIC'                         → 'MUSIC'        (top-level activeMode)
-  'CAMERA'                        → 'CAMERA'       (top-level activeMode)
+  'RBM' | 'PROGRAMS'              â†’ 'PROGRAMS'    (top-level activeMode)
+  'PRESETS' | 'FAVORITES'         â†’ 'FAVORITES'   (top-level activeMode)
+  'MULTIMODE' | 'PATTERN'         â†’ MULTIMODE + fixedSubMode='PATTERN'
+  'MULTI' | 'DIY' | 'MULTICOLOR'  â†’ MULTIMODE + fixedSubMode='DIY'
+  'MUSIC'                         â†’ 'MUSIC'        (top-level activeMode)
+  'CAMERA'                        â†’ 'CAMERA'       (top-level activeMode)
 
 ### Slider/Dispatch Logic per Mode
 - Hue Slider: Routes to fixedHue (MULTIMODE/PATTERN), musicHue (MUSIC), selectedHue (others)
@@ -2733,14 +2733,14 @@ type ModeType = 'FAVORITES' | 'MULTIMODE' | 'PROGRAMS' | 'MUSIC' | 'STREET' | 'C
 fixedSubMode: useState<'PATTERN' | 'DIY'>('PATTERN')  -- MULTIMODE only
 
 ### Naming History (April 2026 Refactor)
-- PRESETS     → renamed to FAVORITES
-- RBM         → renamed to PROGRAMS  
-- MULTI       → renamed to DIY (fixedSubMode)
-- PROGRAMS, MUSIC, CAMERA → promoted from fixedSubMode to top-level activeMode
+- PRESETS     â†’ renamed to FAVORITES
+- RBM         â†’ renamed to PROGRAMS  
+- MULTI       â†’ renamed to DIY (fixedSubMode)
+- PROGRAMS, MUSIC, CAMERA â†’ promoted from fixedSubMode to top-level activeMode
 
 ---
 
-## SESSION LOG � April 7 2026: Street Mode Dashboard Finalization & TS Cleanup
+## SESSION LOG — April 7 2026: Street Mode Dashboard Finalization & TS Cleanup
 
 ### Street Mode Dashboard (DockedController.tsx)
 - Enforced `flexShrink: 0` on universal sliders footer to prevent squishing on tall displays
