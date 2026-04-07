@@ -1879,10 +1879,10 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
               </View>
 
               {/* Status Bar */}
-              <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)', paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginBottom: 12 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent', paddingVertical: 4, marginBottom: 16 }}>
                   <Text style={{
                     color: (motionState === 'HARD_BRAKING' || motionState === 'STOPPED') ? '#FF4444' : motionState === 'SLOWING_DOWN' ? '#FFD700' : '#00FF00',
-                    fontSize: 12, fontWeight: '800', letterSpacing: 3
+                    fontSize: 16, fontWeight: '900', letterSpacing: 4
                   }}>
                     {motionState === 'STOPPED' && '>> STOPPED <<'}
                     {motionState === 'HARD_BRAKING' && '>> HARD BRAKING <<'}
