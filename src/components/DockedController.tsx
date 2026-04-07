@@ -155,7 +155,7 @@ const AnalogGauge = ({
         </View>
 
         {/* Digital display */}
-        <View style={{ position: 'absolute', right: size * 0.15, top: size * 0.45, alignItems: 'flex-end' }}>
+        <View style={{ position: 'absolute', right: size * 0.15, top: size * 0.32, alignItems: 'flex-end' }}>
             <Text style={{ color: '#FFF', fontSize: size * 0.22, fontWeight: '900', fontVariant: ['tabular-nums'], textShadowColor: activeColor !== '#00F0FF' ? activeColor : '#00F0FF', textShadowRadius: 16 }}>{Math.floor(value)}</Text>
             {unit ? <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: size * 0.08, fontWeight: '800', marginTop: -4 }}>{unit}</Text> : null}
         </View>
