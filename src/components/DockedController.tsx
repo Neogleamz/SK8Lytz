@@ -2199,7 +2199,9 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
             {!(activeMode === 'MULTIMODE' && fixedSubMode === 'DIY') && !(activeMode === 'CAMERA') && !(activeMode === 'STREET') && (
             <View style={[styles.controlRow, { marginTop: 8, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialCommunityIcons name="white-balance-sunny" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
+                <TouchableOpacity onPress={() => Alert.alert('Brightness', 'Adjust the global brightness of the LEDs.\n\nLowering the brightness also significantly improves battery life on your device.')}>
+                  <MaterialCommunityIcons name="white-balance-sunny" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
+                </TouchableOpacity>
 
                 <CustomSlider 
                   value={brightness}
@@ -2254,7 +2256,9 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
             {!(activeMode === 'MUSIC' || activeMode === 'CAMERA') && (
               <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialCommunityIcons name="engine-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
+                  <TouchableOpacity onPress={() => Alert.alert('Speed Setting', 'Adjust the animation speed of the active pattern or color transition.\n\n• High Speed: Faster strobing or sweeping.\n• Low Speed: Smooth, ambient pulsing transitions.')}>
+                    <MaterialCommunityIcons name="engine-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
+                  </TouchableOpacity>
                   <CustomSlider 
                     value={speed}
                     onValueChange={setSpeed}
@@ -2316,7 +2320,9 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
             {(activeMode === 'MUSIC') && (
               <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialCommunityIcons name="microphone-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
+                  <TouchableOpacity onPress={() => Alert.alert('Microphone Sensitivity', 'Adjust how sensitive the microphone is to ambient noise and music.\n\n• Increase: For quiet environments or acoustic music.\n• Decrease: For loud clubs or busy streets to prevent clipping.')}>
+                    <MaterialCommunityIcons name="microphone-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
+                  </TouchableOpacity>
                   <CustomSlider 
                     value={micSensitivity}
                     onValueChange={setMicSensitivity}
