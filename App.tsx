@@ -9,6 +9,10 @@ import { useFonts, Righteous_400Regular } from '@expo-google-fonts/righteous';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppLogger } from './src/services/AppLogger';
 import { supabase } from './src/services/supabaseClient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const STORAGE_OFFLINE_SKIP   = '@Sk8lytz_offline_skip';
+const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -27,15 +31,56 @@ function AppContent() {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
-      setSession(session);
+    const init = async () => {
+      // ── 1. Check if user previously chose Continue Offline ──
+      const offlineSkip = await AsyncStorage.getItem(STORAGE_OFFLINE_SKIP);
+      if (offlineSkip === 'true') {
+        setOfflineMode(true);
+        setSessionLoaded(true);
+        return;
+      }
+
+      // ── 2. Check active Supabase session ──
+      const { data: { session: existing } } = await supabase.auth.getSession();
+      if (existing) {
+        setSession(existing);
+        setSessionLoaded(true);
+        return;
+      }
+
+      // ── 3. Try auto-login with remembered credentials ──
+      const raw = await AsyncStorage.getItem(STORAGE_REMEMBER_CREDS);
+      if (raw) {
+        try {
+          const saved = JSON.parse(raw);
+          if (saved.rememberMe && saved.email && saved.password) {
+            const { data, error } = await supabase.auth.signInWithPassword({
+              email: saved.email,
+              password: saved.password,
+            });
+            if (!error && data.session) {
+              setSession(data.session);
+              setSessionLoaded(true);
+              return;
+            } else {
+              // Credentials stale — clear password but keep email
+              await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: saved.email, rememberMe: false }));
+            }
+          }
+        } catch {}
+      }
+
       setSessionLoaded(true);
-    });
+    };
+
+    init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setSession(session);
-      // If session is cleared (logout), also exit offline mode
-      if (!session) setOfflineMode(false);
+      if (!session) {
+        setOfflineMode(false);
+        AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP);
+      }
     });
 
     return () => subscription.unsubscribe();

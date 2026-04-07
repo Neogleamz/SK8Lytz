@@ -17,7 +17,9 @@ import {
   PasswordStrength
 } from '../services/AuthUtils';
 
-const STORAGE_LAST_EMAIL = 'ng_auth_last_email';
+const STORAGE_LAST_EMAIL    = '@Sk8lytz_auth_last_email';
+const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';  // { email, password, rememberMe }
+const STORAGE_OFFLINE_SKIP  = '@Sk8lytz_offline_skip';     // 'true' if user chose Continue Offline
 
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
 
@@ -50,17 +52,35 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
   const [showPassword, setShowPassword] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<PasswordStrength | null>(null);
-  const [errorMessage, setErrorMessage] = useState('');   // << inline error state
-  const [successMessage, setSuccessMessage] = useState(''); // << inline success state
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const strengthAnim = useRef(new Animated.Value(0)).current;
 
   // Derive styles reactively from Colors so theme toggle re-renders instantly
   const styles = createStyles(Colors, insets);
 
-  // ─── Load saved email on mount ───────────────────────────────────────────────
+  // ─── Load saved credentials / remember-me on mount ──────────────────────────────────────
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_LAST_EMAIL).then(saved => {
-      if (saved) setEmail(saved);
+    AsyncStorage.getItem(STORAGE_REMEMBER_CREDS).then(raw => {
+      if (raw) {
+        try {
+          const saved = JSON.parse(raw);
+          if (saved.rememberMe) {
+            setEmail(saved.email || '');
+            setPassword(saved.password || '');
+            setRememberMe(true);
+          } else {
+            // Only pre-fill email, not password
+            setEmail(saved.email || '');
+          }
+        } catch {}
+      } else {
+        // Fall back to legacy last-email key
+        AsyncStorage.getItem(STORAGE_LAST_EMAIL).then(saved => {
+          if (saved) setEmail(saved);
+        });
+      }
     });
   }, []);
 
@@ -154,14 +174,20 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
     const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
     setLoading(false);
     if (error) {
-      // Make auth errors more user-friendly
       const msg = error.message.toLowerCase().includes('invalid login')
         ? 'Incorrect email or password. Please try again.'
         : error.message;
       showError(msg);
     } else {
       setErrorMessage('');
-      await AsyncStorage.setItem(STORAGE_LAST_EMAIL, loginEmail);
+      // Save/clear remember-me credentials
+      if (rememberMe) {
+        await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: loginEmail, password, rememberMe: true }));
+      } else {
+        await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: loginEmail, rememberMe: false }));
+      }
+      // Clear offline skip if logging in properly
+      await AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP);
       onAuthSuccess();
     }
   };
@@ -352,9 +378,25 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
 
           {/* Forgot password link (login only) */}
           {mode === 'LOGIN' && (
-            <TouchableOpacity onPress={() => resetState('FORGOT_PASSWORD')} style={styles.forgotPasswordContainer}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, marginTop: -4 }}>
+              {/* Remember me checkbox */}
+              <TouchableOpacity
+                onPress={() => setRememberMe(v => !v)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                activeOpacity={0.7}
+              >
+                <View style={[
+                  styles.checkbox,
+                  rememberMe && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                ]}>
+                  {rememberMe && <MaterialCommunityIcons name="check" size={12} color="#000" />}
+                </View>
+                <Text style={{ color: Colors.textMuted, fontSize: 13 }}>Remember me</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => resetState('FORGOT_PASSWORD')}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {/* ── Inline error message (replaces Alert.alert for all modes) ── */}
@@ -417,7 +459,10 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         {/* Offline mode option */}
         {(mode === 'LOGIN' || mode === 'MAGIC_LINK') && onOfflineMode && (
           <TouchableOpacity
-            onPress={onOfflineMode}
+            onPress={async () => {
+              await AsyncStorage.setItem(STORAGE_OFFLINE_SKIP, 'true');
+              onOfflineMode();
+            }}
             style={styles.offlineButton}
           >
             <Text style={styles.offlineButtonText}>📵 Continue Offline</Text>
@@ -471,6 +516,12 @@ const createStyles = (Colors: any, insets: { top: number; bottom: number; left: 
   },
   forgotPasswordContainer: { alignItems: 'flex-end', marginBottom: 16, marginTop: -4 },
   forgotPasswordText: { color: Colors.primary, fontSize: 13 },
+  checkbox: {
+    width: 18, height: 18, borderRadius: 4,
+    borderWidth: 1.5, borderColor: Colors.textMuted,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',

@@ -43,7 +43,7 @@ import { Accelerometer } from 'expo-sensors';
 const AnimatedIcon = Animated.createAnimatedComponent(MaterialCommunityIcons);
 
 type ProductType = 'HALOZ' | 'SOULZ';
-type ModeType = 'PRESETS' | 'MULTIMODE' | 'RBM' | 'MUSIC' | 'STREET' | 'CAMERA';
+type ModeType = 'FAVORITES' | 'MULTIMODE' | 'PROGRAMS' | 'MUSIC' | 'STREET' | 'CAMERA';
 
 const MUSIC_PATTERNS = [
   'Soft',
@@ -228,7 +228,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   };
   
   const [activeProduct, setActiveProduct] = useState<ProductType>(lockedProduct || 'HALOZ');
-  const [activeMode, setActiveMode] = useState<ModeType>('PRESETS');
+  const [activeMode, setActiveMode] = useState<ModeType>('FAVORITES');
   const [selectedColor, setSelectedColor] = useState<string>('#00F0FF');
   const [selectedHue, setSelectedHue] = useState<number>(180);
   const [selectedPatternId, setSelectedPatternId] = useState<number>(1);
@@ -307,7 +307,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   const [isCameraExpanded, setIsCameraExpanded] = useState<boolean>(false);
 
   // Active Sub-Mode for the Consolidated Fixed Tab
-  const [fixedSubMode, setFixedSubMode] = useState<'PATTERN' | 'MULTI' | 'RBM' | 'MUSIC' | 'CAMERA'>('PATTERN');
+  const [fixedSubMode, setFixedSubMode] = useState<'PATTERN' | 'DIY'>('PATTERN');
 
   // ── Street Mode (Accelerometer Reactive) ──────────────────────────────────────
   const [streetSensitivity, setStreetSensitivity] = useState<number>(30);
@@ -505,33 +505,42 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   const loadFavorite = (favRaw: IFavoriteState) => {
      const fav: any = favRaw;
      setActiveFavoriteId(fav.id);
-     setActiveMode('MULTIMODE');
-       
-     // Handle Legacy vs New Mode Signatures
-     const targetSubMode = fav.mode === 'MULTIMODE' ? 'PATTERN' : (fav.mode === 'MULTICOLOR' ? 'MULTI' : fav.mode);
-     setFixedSubMode(targetSubMode as any);
-       
      setSpeed(fav.speed);
      setBrightness(fav.brightness);
      if (fav.color) setSelectedColor(fav.color);
-       
-     if (targetSubMode === 'PATTERN') {
+
+     // Normalize legacy mode names to new taxonomy
+     const legacyMode = (fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'PROGRAMS'
+       : (fav.mode === 'FAVORITES' || fav.mode === 'PRESETS') ? 'FAVORITES'
+       : fav.mode;
+
+     if (legacyMode === 'PROGRAMS') {
+        setActiveMode('PROGRAMS');
+        setSelectedPatternId(fav.patternId);
+        if (writeToDevice) writeToDevice(ZenggeProtocol.setCustomRbm(fav.patternId, fav.speed, fav.brightness));
+     } else if (legacyMode === 'MUSIC') {
+        setActiveMode('MUSIC');
+        setMusicPatternId(fav.patternId);
+        handleMusicChange(fav.patternId, micSensitivity, fav.brightness, micSource);
+     } else if (legacyMode === 'CAMERA') {
+        setActiveMode('CAMERA');
+     } else if (legacyMode === 'FAVORITES') {
+        setActiveMode('FAVORITES');
+     } else if (legacyMode === 'MULTIMODE' || legacyMode === 'PATTERN') {
+        setActiveMode('MULTIMODE');
+        setFixedSubMode('PATTERN');
         setFixedPatternId(fav.patternId);
         setFixedColorMode(fav.fixedColorMode);
         setFixedFgColor(fav.fixedFgColor);
         setFixedBgColor(fav.fixedBgColor);
         applyFixedPattern(fav.patternId, fav.fixedFgColor, fav.fixedBgColor, fav.speed, fav.brightness);
-     } else if (targetSubMode === 'RBM') {
-        setSelectedPatternId(fav.patternId);
-        if (writeToDevice) writeToDevice(ZenggeProtocol.setCustomRbm(fav.patternId, fav.speed, fav.brightness));
-     } else if (targetSubMode === 'MUSIC') {
-        setMusicPatternId(fav.patternId);
-        handleMusicChange(fav.patternId, micSensitivity, fav.brightness, micSource);
-     } else if (targetSubMode === 'MULTI') {
-        setMultiColors(fav.multiColors);
-        setMultiTransition(fav.multiTransition);
+     } else if (legacyMode === 'MULTI' || legacyMode === 'DIY' || legacyMode === 'MULTICOLOR') {
+        setActiveMode('MULTIMODE');
+        setFixedSubMode('DIY');
+        setMultiColors(fav.multiColors || []);
+        setMultiTransition(fav.multiTransition || 3);
         setMultiLength(fav.multiLength || 16);
-        if (writeToDevice) {
+        if (writeToDevice && fav.multiColors) {
            const sortIdx = hwSettings?.colorSorting ?? 2;
            const rgbColors = fav.multiColors.map((h: string) => {
               const r = parseInt(h.slice(1,3), 16) || 0;
@@ -539,26 +548,15 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
               const b = parseInt(h.slice(5,7), 16) || 0;
               return ZenggeProtocol.applyColorSorting(r, g, b, sortIdx);
            });
-           
-           const pts = hwSettings?.ledPoints || points || 16;
-           const segs = hwSettings?.segments || 1;
-           const maxLen = Math.max(1, Math.floor(pts / segs));
-           const appliedLength = (fav.multiLength || 16) > maxLen ? maxLen : (fav.multiLength || 16);
-           
-           // setMultiColor(colors, speed, direction, transitionType)
-           writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, fav.multiTransition));
+           writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(fav.speed), 1, fav.multiTransition));
         }
-     } else if (fav.mode === 'CANDLE') {
-        // Defer native command dispatch for candle
-        setTimeout(() => {
-           sendColor(parseInt(fav.color.slice(1,3),16)||0, parseInt(fav.color.slice(3,5),16)||0, parseInt(fav.color.slice(5,7),16)||0);
-        }, 100);
      } else {
-        setTimeout(() => {
+        // Unknown/legacy mode - best-effort color dispatch
+        if (fav.color) setTimeout(() => {
            sendColor(parseInt(fav.color.slice(1,3),16)||0, parseInt(fav.color.slice(3,5),16)||0, parseInt(fav.color.slice(5,7),16)||0);
         }, 100);
      }
-  };
+  }
 
   /** Unified color sender — sends solid color instantly using actual LED count */
   const sendColor = async (r: number, g: number, b: number) => {
@@ -717,7 +715,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   // -- App Microphone Logic --
   useEffect(() => {
     if (Platform.OS === 'web') return; // expo-av Audio Recording not supported on web
-    const isMusicActive = activeMode === 'MUSIC' || (activeMode === 'MULTIMODE' && fixedSubMode === 'MUSIC');
+    const isMusicActive = activeMode === 'MUSIC';
     if (isMusicActive && micSource === 'APP' && isPoweredOn) {
       startRecording();
     } else {
@@ -900,7 +898,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                    const defaultFavorites = [{
                        id: 'default-1',
                        name: 'Programs - ' + getRbmPatternName(3),
-                       mode: 'RBM',
+                       mode: 'PROGRAMS',
                        patternId: 3,
                        speed: 50,
                        brightness: 90
@@ -914,7 +912,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
             const defaultFavorites = [{
                 id: 'default-1',
                 name: 'Programs - ' + getRbmPatternName(3),
-                mode: 'RBM',
+                mode: 'PROGRAMS',
                 patternId: 3,
                 speed: 50,
                 brightness: 90
@@ -1013,31 +1011,31 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
       case 'MULTIMODE':
         const fixedClr = fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
         return `MultiMode - ${getColorName(fixedClr)}`;
-      case 'RBM':
+      case 'PROGRAMS':
         return `Programs - ${getRbmPatternName(selectedPatternId)}`;
       case 'MUSIC':
         const patternName = MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`;
         return `Music - ${patternName}`;
       case 'STREET': return isStreetBraking ? '🔴 BRAKING' : '🟠 CRUISING';
       case 'CAMERA': return 'Camera';
-      case 'PRESETS': return 'Styles';
+      case 'FAVORITES': return 'Styles';
       default: return activeMode;
     }
   }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, selectedPatternId, musicPatternId, selectedColor, isStreetBraking]);
   const modes = [
-    { id: 'PRESETS', label: 'Styles', icon: 'star-outline' },
+    { id: 'FAVORITES', label: 'Styles', icon: 'star-outline' },
     { id: 'MULTIMODE', label: 'Fixed', icon: 'palette-outline' }
   ];
 
   const visualizerColor = React.useMemo(() => {
     if (activeMode === 'MULTIMODE') {
-      if (fixedSubMode === 'MULTI' || fixedSubMode === 'PATTERN' || fixedSubMode === 'CAMERA') return selectedColor;
-      if (fixedSubMode === 'MUSIC') {
-        const f = (n: number, k = (n + musicHue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-        const hex = [f(5), f(3), f(1)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
-        return `#${hex}`;
-      }
-      return fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
+      if (fixedSubMode === 'PATTERN') return fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
+      return selectedColor; // DIY
+    }
+    if (activeMode === 'MUSIC') {
+      const f = (n: number, k = (n + musicHue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+      const hex = [f(5), f(3), f(1)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+      return `#${hex}`;
     }
     return selectedColor;
   }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, musicHue, selectedColor, fixedSubMode]);
@@ -1085,8 +1083,8 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
         <ProductVisualizer 
           product={activeProduct} 
           color={visualizerColor} 
-          mode={activeMode === 'PRESETS' ? 'MULTICOLOR' : activeMode === 'MULTIMODE' ? (fixedSubMode === 'MULTI' ? 'MULTICOLOR' : (fixedSubMode === 'PATTERN' ? 'RBM' : (fixedSubMode === 'MUSIC' ? 'MUSIC' : (fixedSubMode === 'CAMERA' ? 'CAMERA' : 'MULTIMODE')))) : activeMode}
-          patternId={activeMode === 'MULTIMODE' && fixedSubMode === 'MUSIC' ? musicPatternId : (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' ? fixedPatternId : selectedPatternId)} 
+          mode={activeMode === 'FAVORITES' ? 'MULTICOLOR' : activeMode === 'MULTIMODE' ? (fixedSubMode === 'DIY' ? 'MULTICOLOR' : 'MULTIMODE') : activeMode}
+          patternId={activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' ? fixedPatternId : selectedPatternId)} 
           isPaired={isPaired}
           points={points}
           devices={devices}
@@ -1099,8 +1097,8 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
           statusText={currentStatusText}
           audioMagnitude={audioMagnitude}
           rawHexPayload={lastSentPayload}
-          multiColors={activeMode === 'PRESETS' ? ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'] : multiColors}
-          multiTransition={activeMode === 'PRESETS' ? 3 : multiTransition}
+          multiColors={activeMode === 'FAVORITES' ? ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'] : multiColors}
+          multiTransition={activeMode === 'FAVORITES' ? 3 : multiTransition}
         />
       </View>
       </View>
@@ -1109,7 +1107,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
 
       <View style={[styles.controlsContainer, { padding: 4, overflow: 'hidden' }]}>
         <View style={[styles.activeModeContainer, { flex: 1, justifyContent: 'space-evenly' }]}>
-          {activeMode === 'PRESETS' && (
+          {activeMode === 'FAVORITES' && (
             <View style={{ flex: 1, paddingHorizontal: Layout.padding, justifyContent: 'space-evenly' }}>
               
               <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13 }]}>YOURS</Text>
@@ -1250,7 +1248,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
             <View style={{ flex: 1, marginBottom: 8, justifyContent: 'flex-start' }}>
               
               {/* UNIFIED SOLID & MULTI-COLOR PRESETS & DIY BUILDER */}
-              {(fixedSubMode === 'MULTI' || fixedSubMode === 'PATTERN') && (
+              {(fixedSubMode === 'DIY' || fixedSubMode === 'PATTERN') && (
                 <View style={{ flex: 1, width: '100%', marginBottom: 4 }}>
                   
                   {/* UNIFIED TOGGLE */}
@@ -1265,10 +1263,10 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                       <Text style={{ color: fixedSubMode === 'PATTERN' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Solid Patterns</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
-                      onPress={() => setFixedSubMode('MULTI')}
-                      style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'MULTI' ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
+                      onPress={() => setFixedSubMode('DIY')}
+                      style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'DIY' ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
                     >
-                      <Text style={{ color: fixedSubMode === 'MULTI' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Presets & DIY</Text>
+                      <Text style={{ color: fixedSubMode === 'DIY' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Presets & DIY</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -1324,7 +1322,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                   )}
 
                   {/* QUICK PRESETS TIER */}
-                  {fixedSubMode === 'MULTI' && (
+                  {fixedSubMode === 'DIY' && (
                   <View style={{ flex: 1, paddingBottom: 6 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                        <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: 'bold' }}>PRESETS & DIY</Text>
@@ -1339,7 +1337,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                           key={idx}
                           onPress={() => {
                            setActiveQuickPresetIndex(idx);
-                              setFixedSubMode('MULTI');
+                              setFixedSubMode('DIY');
                               setMultiColors(preset.colors);
                               setMultiTransition(preset.type);
                               if (writeToDevice) {
@@ -1358,7 +1356,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                             style={{ position: 'absolute', right: 10, top: '50%', marginTop: -14, padding: 6, zIndex: 10 }}
                             onPress={() => {
                                setActiveQuickPresetIndex(idx);
-                               setFixedSubMode('MULTI');
+                               setFixedSubMode('DIY');
                                setMultiColors(preset.colors);
                                setMultiTransition(preset.type);
                                setIsDiyBuilderExpanded(true);
@@ -1416,7 +1414,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                         {multiColors.map((hex, index) => (
                           <TouchableOpacity key={index} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: hex, borderWidth: 2, borderColor: '#FFF', shadowColor: hex, shadowOpacity: 0.8, shadowRadius: 4 }} onPress={() => {
-                            setFixedSubMode('MULTI');
+                            setFixedSubMode('DIY');
                             const newArr = [...multiColors];
                             newArr[index] = selectedColor;
                             setMultiColors(newArr);
@@ -1427,7 +1425,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                         ))}
                         {multiColors.length < _maxDiy && (
                           <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderWidth: 1, borderColor: Colors.isDark ? '#FFF' : Colors.text, justifyContent: 'center', alignItems: 'center' }} onPress={() => {
-                             setFixedSubMode('MULTI');
+                             setFixedSubMode('DIY');
                              const newArr = [...multiColors, selectedColor];
                              setMultiColors(newArr);
                              const rgbColors = generateSortedColors(newArr);
@@ -1438,7 +1436,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                         )}
                         {multiColors.length > 1 && (
                           <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,0,0,0.3)', borderWidth: 1, borderColor: Colors.isDark ? '#FFF' : Colors.text, justifyContent: 'center', alignItems: 'center' }} onPress={() => {
-                             setFixedSubMode('MULTI');
+                             setFixedSubMode('DIY');
                              const newArr = [...multiColors];
                              newArr.pop();
                              setMultiColors(newArr);
@@ -1474,7 +1472,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                           <TouchableOpacity 
                             key={mode.val} 
                             onPress={() => {
-                               setFixedSubMode('MULTI');
+                               setFixedSubMode('DIY');
                                setMultiTransition(mode.val);
                                const rgbColors = generateSortedColors(multiColors);
                                const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
@@ -1496,155 +1494,6 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                   </View>
                   )}
 
-                </View>
-              )}
-              {/* PROGRAMS */}
-              {fixedSubMode === 'RBM' && (
-                <View style={{ width: '100%', paddingVertical: 8, height: 350 }}>
-                  <VerticalPatternDrum 
-                    value={selectedPatternId}
-                    onValueChange={(pid) => {
-                      setFixedSubMode('RBM');
-                      setSelectedPatternId(pid);
-                      if (writeToDevice) {
-                          if (pid === 103) {
-                              applyEmergencyPattern(speed, brightness);
-                          } else {
-                              writeToDevice(ZenggeProtocol.setCustomRbm(pid, speed, brightness));
-                          }
-                      }
-                    }}
-                    min={1}
-                    max={103}
-                    itemLabel={(val) => {
-                       const name = getRbmPatternName(val);
-                       return name.split(': ')[1] || name;
-                    }}
-                  />
-                </View>
-              )}
-
-              {/* MUSIC SYNC */}
-              {fixedSubMode === 'MUSIC' && (
-                <View style={{ flex: 1, width: '100%', marginBottom: 4 }}>
-                  <View style={{ flexDirection: 'row', marginBottom: 6, marginTop: 2, flexShrink: 0, minHeight: 36 }}>
-                    <TouchableOpacity 
-                      onPress={() => {
-                         setFixedSubMode('MUSIC');
-                         setMusicMatrixStyle(39);
-                         handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 39);
-                      }}
-                      style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: musicMatrixStyle === 39 ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
-                    >
-                      <Text style={{ color: musicMatrixStyle === 39 ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Light Screen</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      onPress={() => {
-                         setFixedSubMode('MUSIC');
-                         setMusicMatrixStyle(38);
-                         handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 38);
-                      }}
-                      style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: musicMatrixStyle === 38 ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
-                    >
-                      <Text style={{ color: musicMatrixStyle === 38 ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Light Bar</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <View style={{ flex: 1, width: '100%', justifyContent: 'space-evenly' }}>
-                  <View style={[styles.musicToggleHeader, { justifyContent: 'center' }]}>
-                <View style={[styles.musicModeIndicator, { alignItems: 'center' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <TouchableOpacity onPress={() => {
-                      setFixedSubMode('MUSIC');
-                      const pid = musicPatternId > 1 ? musicPatternId - 1 : MUSIC_PATTERNS.length;
-                      setMusicPatternId(pid);
-                      handleMusicChange(pid);
-                    }} style={{ paddingHorizontal: 10 }}>
-                      <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'<'}</Text>
-                    </TouchableOpacity>
-                    <View style={[styles.musicModeCircle, { width: 32, height: 32, borderRadius: 16 }]}>
-                      <Text style={[styles.musicModeNumber, { fontSize: 14 }]}>{musicPatternId}</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => {
-                      setFixedSubMode('MUSIC');
-                      const pid = musicPatternId < MUSIC_PATTERNS.length ? musicPatternId + 1 : 1;
-                      setMusicPatternId(pid);
-                      handleMusicChange(pid);
-                    }} style={{ paddingHorizontal: 10 }}>
-                      <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'>'}</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={[Typography.caption, { marginTop: 4, color: Colors.primary, fontWeight: 'bold', fontSize: 13 }]}>
-                    {MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={[styles.musicVisualizerSection, { flex: 1, justifyContent: 'center' }]}>
-                <SpectrumVisualizer magnitude={audioMagnitude} />
-              </View>
-
-              <View style={styles.micControlSection}>
-                <TouchableOpacity 
-                  style={[styles.micIconBtn, micSource === 'APP' && styles.micBtnActive]} 
-                  onPress={() => {
-                    setFixedSubMode('MUSIC');
-                    setMicSource('APP');
-                    handleMusicChange(musicPatternId, micSensitivity, brightness, 'APP');
-                  }}
-                >
-                  <View style={[styles.micIconCircle, micSource === 'APP' && { backgroundColor: Colors.primary }]}>
-                    <Text style={[styles.micIconText, micSource === 'APP' && { color: '#FFF' }]}>🎙️</Text>
-                  </View>
-                  <Text style={[styles.micSubText, micSource === 'APP' && { color: Colors.primary, fontWeight: 'bold' }]}>APP MIC</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={styles.playButtonMain}
-                  onPress={() => handleMusicChange()}
-                >
-                  <View style={styles.playIconInner}>
-                    <MaterialCommunityIcons name="play" size={24} color="#FFF" />
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={[styles.micIconBtn, micSource === 'DEVICE' && styles.micBtnActive]} 
-                  onPress={() => {
-                    setFixedSubMode('MUSIC');
-                    setMicSource('DEVICE');
-                    handleMusicChange(musicPatternId, micSensitivity, brightness, 'DEVICE');
-                  }}
-                >
-                  <View style={[styles.micIconCircle, micSource === 'DEVICE' && { backgroundColor: Colors.primary }]}>
-                    <Text style={[styles.micIconText, micSource === 'DEVICE' && { color: '#FFF' }]}>🎤</Text>
-                  </View>
-                  <Text style={[styles.micSubText, micSource === 'DEVICE' && { color: Colors.primary, fontWeight: 'bold' }]}>DEVICE MIC</Text>
-                </TouchableOpacity>
-              </View>
-
-                </View>
-                </View>
-              )}
-
-
-
-              {/* CAMERA */}
-              {fixedSubMode === 'CAMERA' && (
-                <View style={{ flex: 1 }}>
-
-
-                  <CameraTracker 
-                     isActive={activeMode === 'MULTIMODE' && fixedSubMode === 'CAMERA'} 
-                     onColorDetected={(hex) => {
-                        setSelectedColor(hex);
-                        // Also apply to fixedFgColor so SOLID/STROBE patterns pick it up
-                        setFixedFgColor(hex);
-                        const r = parseInt(hex.slice(1, 3), 16);
-                        const g = parseInt(hex.slice(3, 5), 16);
-                        const b = parseInt(hex.slice(5, 7), 16);
-                        sendColor(r, g, b);
-                     }} 
-                  />
                 </View>
               )}
             </View>
@@ -1737,13 +1586,13 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
         </View>
 
         {/* UNIVERSAL SLIDERS FOOTER - Hidden in PRESETS */}
-        {activeMode !== 'PRESETS' && activeMode !== 'STREET' && (
+        {activeMode !== 'FAVORITES' && activeMode !== 'STREET' && (
           <View style={[styles.sceneSlidersContainer, { marginTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 8, paddingBottom: 0 }]}>
             {/* Color Grid wrappers */}
-            {!(activeMode === 'MULTIMODE' && fixedSubMode === 'RBM') && (
+            {!(activeMode === 'PROGRAMS') && (
               <View style={{ marginBottom: 4 }}>
                 {/* Dynamic Selected Color Bar */}
-                {!(activeMode === 'MULTIMODE' && (fixedSubMode === 'MUSIC' || (fixedSubMode === 'PATTERN' && fixedPatternId !== 1))) && (() => {
+                {!(activeMode === 'MUSIC' || (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' && fixedPatternId !== 1)) && (() => {
                   const dynamicColor = selectedColor;
                   
                   return (
@@ -1781,7 +1630,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                 })()}
 
                 {/* Music Mode Split Color Tracker */}
-                {(activeMode === 'MULTIMODE' && fixedSubMode === 'MUSIC') && (() => {
+                {(activeMode === 'MUSIC') && (() => {
                   const primHex = musicPrimaryColor;
                   const secHex = musicSecondaryColor;
                   
@@ -1832,7 +1681,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                 )}
 
                 {/* 9 Preset Colors Grid */}
-                {!(activeMode === 'MULTIMODE' && fixedSubMode === 'CAMERA') && (
+                {!(activeMode === 'CAMERA') && (
                 <View style={[styles.colorGrid, { paddingHorizontal: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
                   {[
                     '#FF0000', '#FF8000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#800080', '#FF00FF', '#FFFFFF'
@@ -1840,7 +1689,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                     let dynamicColor = selectedColor;
                     if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
                       dynamicColor = fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
-                    } else if (activeMode === 'MULTIMODE' && fixedSubMode === 'MUSIC') {
+                    } else if (activeMode === 'MUSIC') {
                       dynamicColor = musicColorFocus === 'PRIMARY' ? musicPrimaryColor : musicSecondaryColor;
                     }
                     
@@ -1868,20 +1717,20 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                                }
                                if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
                                applyFixedPattern(fixedPatternId, newFg, newBg);
-                            } else if (fixedSubMode === 'MUSIC') {
-                               if (musicColorFocus === 'PRIMARY') {
-                                   setMusicPrimaryColor(color);
-                                   if (hueMap[color] !== undefined) setMusicHue(hueMap[color]);
-                                   handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, color, musicSecondaryColor);
-                               } else {
-                                   setMusicSecondaryColor(color);
-                                   if (hueMap[color] !== undefined) setMusicSecondaryHue(hueMap[color]);
-                                   handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, color);
-                               }
                             } else {
                                setSelectedColor(color);
                                if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
                             }
+                          } else if (activeMode === 'MUSIC') {
+                               if (musicColorFocus === 'PRIMARY') {
+                                   setMusicPrimaryColor(color);
+                                   if (hueMap[color] !== undefined) setMusicHue(hueMap[color]);
+                                   handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, color, musicSecondaryColor, musicMatrixStyle);
+                               } else {
+                                   setMusicSecondaryColor(color);
+                                   if (hueMap[color] !== undefined) setMusicSecondaryHue(hueMap[color]);
+                                   handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, color, musicMatrixStyle);
+                               }
                           } else {
                             setSelectedColor(color);
                             if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
@@ -1917,11 +1766,11 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
             {/* Old Color Focus Toggle for Music Mode has been moved above the color grid */}
 
             {/* Hue Slider */}
-            {!(activeMode === 'MULTIMODE' && (fixedSubMode === 'RBM' || fixedSubMode === 'CAMERA')) && (
+            {!(activeMode === 'PROGRAMS' || activeMode === 'CAMERA') && (
               <View style={[styles.controlRow, { marginTop: 0, height: 32, flexShrink: 0 }]}>
                 <CustomSlider 
                   gradientTrack={true}
-                  value={activeMode === 'MULTIMODE' ? (fixedSubMode === 'MUSIC' ? (musicColorFocus === 'PRIMARY' ? musicHue : musicSecondaryHue) : fixedHue) : selectedHue}
+                  value={activeMode === 'MUSIC' ? (musicColorFocus === 'PRIMARY' ? musicHue : musicSecondaryHue) : activeMode === 'MULTIMODE' ? fixedHue : selectedHue}
                   onValueChange={(hue) => {
                     if (activeMode === 'MULTIMODE') {
                       if (fixedSubMode === 'PATTERN') {
@@ -1936,17 +1785,6 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                             setFixedBgColor(hex);
                             setSelectedColor(hex);
                         }
-                      } else if (fixedSubMode === 'MUSIC') {
-                         const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                         const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
-                         const hex = rgb2hex(f(5), f(3), f(1));
-                         if (musicColorFocus === 'PRIMARY') {
-                            setMusicPrimaryColor(hex);
-                            setMusicHue(hue);
-                         } else {
-                            setMusicSecondaryColor(hex);
-                            setMusicSecondaryHue(hue);
-                         }
                       } else {
                         setFixedHue(hue);
                         const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
@@ -1955,8 +1793,11 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                         setSelectedColor(hex);
                       }
                     } else if (activeMode === 'MUSIC') {
-                      if (musicColorFocus === 'PRIMARY') setMusicHue(hue);
-                      else setMusicSecondaryHue(hue);
+                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                       const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+                       const hex = rgb2hex(f(5), f(3), f(1));
+                       if (musicColorFocus === 'PRIMARY') { setMusicPrimaryColor(hex); setMusicHue(hue); }
+                       else { setMusicSecondaryColor(hex); setMusicSecondaryHue(hue); }
                     } else {
                       setSelectedHue(hue);
                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
@@ -1968,7 +1809,8 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                     if (activeMode === 'MULTIMODE') {
                       if (fixedSubMode === 'PATTERN') {
                          applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor);
-                      } else if (fixedSubMode === 'MUSIC') {
+                      }
+                     } else if (activeMode === 'MUSIC') {
                          const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
                          const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
                          const hex = rgb2hex(f(5), f(3), f(1));
@@ -1977,9 +1819,6 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                          } else {
                             handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, hex, musicMatrixStyle);
                          }
-                      }
-                     } else if (activeMode === 'MUSIC') {
-                       // Deprecated top route
                      } else {
                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
                       const r = Math.round(f(5) * 255);
@@ -1996,7 +1835,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
             )}
 
             {/* Brightness Slider - Hidden in PRESETS and CAMERA (Presets have their own Brightness logic mapped inside the component block, while Camera explicitly forces raw camera detection bounds) */}
-            {!(activeMode === 'MULTIMODE' && fixedSubMode === 'CAMERA') && (
+            {!(activeMode === 'CAMERA') && (
             <View style={[styles.controlRow, { marginTop: 8, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                 <MaterialCommunityIcons name="white-balance-sunny" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
@@ -2009,13 +1848,13 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                   style={{ flex: 1 }}
                   onSlidingComplete={(val) => {
                     if (writeToDevice) {
-                      if (activeMode === 'MULTIMODE' && fixedSubMode === 'MUSIC') {
+                      if (activeMode === 'MUSIC') {
                         handleMusicChange(musicPatternId, micSensitivity, val, micSource);
                       } else {
                         if (activeMode === 'MULTIMODE') {
                           if (fixedSubMode === 'PATTERN') {
                             applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
-                          } else if (fixedSubMode === 'MULTI') {
+                          } else if (fixedSubMode === 'DIY') {
                             const factor = val / 100;
                             const sortIdx = hwSettings?.colorSorting ?? 2;
                             const rgbColors = multiColors.map(h => {
@@ -2027,12 +1866,12 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                             const pts = hwSettings?.ledPoints || points || 16;
                             const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
                             writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, multiTransition));
-                          } else if (fixedSubMode === 'RBM') {
-                            if (selectedPatternId === 100) {
-                              applyEmergencyPattern(speed, val);
-                            } else {
-                              writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, speed, val));
-                            }
+                          }
+                        } else if (activeMode === 'PROGRAMS') {
+                          if (selectedPatternId === 100) {
+                            applyEmergencyPattern(speed, val);
+                          } else {
+                            writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, speed, val));
                           }
                         } else {
                           // Standard scaled color for other modes
@@ -2052,7 +1891,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
             )}
 
             {/* Speed Slider - Hidden in MUSIC, and CAMERA */}
-            {!(activeMode === 'MULTIMODE' && (fixedSubMode === 'MUSIC' || fixedSubMode === 'CAMERA')) && (
+            {!(activeMode === 'MUSIC' || activeMode === 'CAMERA') && (
               <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                   <MaterialCommunityIcons name="engine-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
@@ -2064,7 +1903,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                         if (activeMode === 'MULTIMODE') {
                           if (fixedSubMode === 'PATTERN') {
                             applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
-                          } else if (fixedSubMode === 'MULTI') {
+                          } else if (fixedSubMode === 'DIY') {
                             const factor = brightness / 100;
                             const sortIdx = hwSettings?.colorSorting ?? 2;
                             const rgbColors = multiColors.map(h => {
@@ -2076,12 +1915,12 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                             const pts = hwSettings?.ledPoints || points || 16;
                             const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
                             writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(val), 1, multiTransition));
-                          } else if (fixedSubMode === 'RBM') {
-                            if (selectedPatternId === 100) {
-                              applyEmergencyPattern(val, brightness);
-                            } else {
-                              writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
-                            }
+                          }
+                        } else if (activeMode === 'PROGRAMS') {
+                          if (selectedPatternId === 100) {
+                            applyEmergencyPattern(val, brightness);
+                          } else {
+                            writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
                           }
                         }
                       }
@@ -2095,7 +1934,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
             )}
 
             {/* Sensitivity Slider - Visible ONLY in MUSIC */}
-            {(activeMode === 'MULTIMODE' && fixedSubMode === 'MUSIC') && (
+            {(activeMode === 'MUSIC') && (
               <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                   <MaterialCommunityIcons name="microphone-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
@@ -2121,22 +1960,22 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
           <View style={[styles.floatingDock, { marginBottom: 0 }]}>
             {[
               { id: 'HOME', icon: 'home-outline' },
-              { id: 'PRESETS', icon: 'cards-heart-outline' },
+              { id: 'FAVORITES', icon: 'cards-heart-outline' },
               { id: 'MULTI', icon: 'palette' },
               { id: 'RBM', icon: 'animation-play' },
               { id: 'MUSIC', icon: 'music' },
               { id: 'STREET', icon: 'run-fast' },
               { id: 'CAMERA', icon: 'camera' }
             ].map(dockItem => {
-              const isActive = (activeMode === 'MULTIMODE' && (fixedSubMode === dockItem.id || (dockItem.id === 'MULTI' && (fixedSubMode === 'PATTERN')))) || activeMode === dockItem.id;
+              const isActive = dockItem.id === 'MULTI' ? activeMode === 'MULTIMODE' : activeMode === dockItem.id;
               return (
                 <TouchableOpacity
                   key={dockItem.id}
                   onPress={() => {
                      if (dockItem.id === 'HOME') {
                          if (onDisconnect) onDisconnect();
-                     } else if (dockItem.id === 'PRESETS') {
-                         setActiveMode('PRESETS');
+                     } else if (dockItem.id === 'FAVORITES') {
+                         setActiveMode('FAVORITES');
                      } else if (dockItem.id === 'STREET') {
                          setActiveMode('STREET');
                      } else {

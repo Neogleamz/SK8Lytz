@@ -248,10 +248,10 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
                    outputRange: [0.2, 0.2, 1, 0.2, 0.2]
                 });
              }
-          } else if (mode === 'PRESETS') {
+          } else if (mode === 'FAVORITES') {
              const rainbowColors = [0, 1/6, 2/6, 3/6, 4/6, 5/6, 1].map(v => HSLToHex((v - mirroredFract + 1) % 1 * 360, 100, 50));
              dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
-          } else if (mode === 'RBM') {
+          } else if (mode === 'PROGRAMS') {
              const pid = patternId || 1;
 
              if (pid === 100) {
@@ -542,7 +542,7 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
           }
           simSpeed = rawHexPayload[rawHexPayload.length - 3] || speed;
       } else if (op === 0x42) {
-          simMode = 'RBM';
+          simMode = 'PROGRAMS';
           simPatternId = rawHexPayload[1 + payloadOffset] || patternId;
           simSpeed = rawHexPayload[2 + payloadOffset] || speed;
           simBrightness = rawHexPayload[3 + payloadOffset] || brightness;
@@ -571,9 +571,9 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
   useEffect(() => {
     animValue.stopAnimation();
     
-    if (isPoweredOn && (simMode === 'MULTICOLOR' || simMode === 'PRESETS' || simMode === 'RBM' || simMode === 'MUSIC' || simMode === 'MULTIMODE' || simMode === 'CANDLE')) {
+    if (isPoweredOn && (simMode === 'MULTICOLOR' || simMode === 'FAVORITES' || simMode === 'PROGRAMS' || simMode === 'MUSIC' || simMode === 'MULTIMODE' || simMode === 'CANDLE')) {
       animValue.setValue(0);
-      const baseDuration = (simMode === 'MUSIC') ? 800 : (simMode === 'RBM' ? 2000 : (simMode === 'MULTICOLOR' ? (simMultiTransition === 2 ? 350 : 1500) : (simMode === 'MULTIMODE' ? 1500 : (simMode === 'CANDLE' ? 400 : 3000))));
+      const baseDuration = (simMode === 'MUSIC') ? 800 : (simMode === 'PROGRAMS' ? 2000 : (simMode === 'MULTICOLOR' ? (simMultiTransition === 2 ? 350 : 1500) : (simMode === 'MULTIMODE' ? 1500 : (simMode === 'CANDLE' ? 400 : 3000))));
       // Speed 0 = 5x slower, Speed 100 = 0.4x faster
       const duration = baseDuration / (0.4 + (simSpeed / 100) * 2.1); 
       
