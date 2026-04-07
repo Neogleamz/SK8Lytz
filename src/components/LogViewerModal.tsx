@@ -80,6 +80,9 @@ const EVENT_META: Record<EventType, { icon: string; color: string; label: string
   CREW_PERMANENT_CREATED:  { icon: 'star-circle',   color: '#FFAA00', label: 'Perm Crew Created' },
   CREW_PERMANENT_JOINED:   { icon: 'star-plus',     color: '#00AAFF', label: 'Perm Crew Joined' },
   CREW_PERMANENT_LEFT:     { icon: 'star-minus',    color: '#FF6B6B', label: 'Perm Crew Left' },
+  CREW_PERMANENT_DELETED:  { icon: 'star-off',      color: '#FF4040', label: 'Perm Crew Deleted' },
+  CREW_PERMANENT_UPDATED:  { icon: 'star-settings', color: '#FFD700', label: 'Perm Crew Updated' },
+  CREW_MEMBERS_ADDED:      { icon: 'account-multiple-plus', color: '#00AAFF', label: 'Members Added' },
 };
 
 function formatTime(ms: number): string {
@@ -122,6 +125,7 @@ interface LogViewerModalProps {
   onClose: () => void;
   onOpenProgrammer?: () => void;
   onOpenSniffer?: () => void;
+  onOpenLab?: () => void;
   writeToDevice?: (data: number[], deviceId?: string) => Promise<void>;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
   connectedDevices?: { id: string, name: string | null }[];
@@ -133,7 +137,7 @@ interface LogViewerModalProps {
   liveDeviceConfigs?: Record<string, any>;
 }
 
-export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll, onConnectToDevice, liveDeviceConfigs }: LogViewerModalProps) {
+export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, onOpenLab, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll, onConnectToDevice, liveDeviceConfigs }: LogViewerModalProps) {
   const { isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -493,7 +497,7 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={{ backgroundColor: 'rgba(152, 251, 152, 0.1)', borderColor: '#98FB98', borderWidth: 1, paddingVertical: 14, borderRadius: 8 }}
+            style={{ backgroundColor: 'rgba(152, 251, 152, 0.1)', borderColor: '#98FB98', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
             onPress={() => {
               if (onOpenSniffer) onOpenSniffer();
             }}
@@ -501,6 +505,18 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 16, marginRight: 8 }}>💉</Text>
               <Text style={{ color: '#98FB98', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch Hardware Tester</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={{ backgroundColor: 'rgba(255, 165, 0, 0.1)', borderColor: '#FFA500', borderWidth: 1, paddingVertical: 14, borderRadius: 8 }}
+            onPress={() => {
+              if (onOpenLab) onOpenLab();
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>🔬</Text>
+              <Text style={{ color: '#FFA500', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>LED Diagnostic Lab</Text>
             </View>
           </TouchableOpacity>
         </View>

@@ -41,6 +41,7 @@ import LogViewerModal from '../components/LogViewerModal';
 import CrewModal from '../components/CrewModal';
 import { crewService, CrewSession, CrewRole } from '../services/CrewService';
 import AdminHardwareTester from '../components/AdminHardwareTester';
+import Sk8LytzDiagnosticLab from '../components/Sk8LytzDiagnosticLab';
 import FirstTimeSetupModal from '../components/FirstTimeSetupModal';
 import { supabase } from '../services/supabaseClient';
 import { useRegistration, RegisteredDevice } from '../hooks/useRegistration';
@@ -169,6 +170,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
   const [isSnifferVisible, setIsSnifferVisible] = useState(false);
+  const [isLabVisible, setIsLabVisible] = useState(false);
   const [isSetupWizardVisible, setIsSetupWizardVisible] = useState(false);
   const lastProcessedRef = React.useRef<string>('');
   const allDevicesRef = React.useRef(allDevices);
@@ -1768,6 +1770,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             setLogsVisible(false);
             setIsSnifferVisible(true);
         }}
+        onOpenLab={() => {
+            setLogsVisible(false);
+            setIsLabVisible(true);
+        }}
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
         connectedDevices={connectedDevices as any[]}
@@ -1815,6 +1821,15 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         handleDisconnect={disconnectFromDevice}
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
+      />
+      {/* LED Diagnostic Lab — long-press the SNIFFER button to open */}
+      <Sk8LytzDiagnosticLab
+        visible={isLabVisible ?? false}
+        onClose={() => setIsLabVisible(false)}
+        connectedDevices={connectedDevices as any[]}
+        writeToDevice={writeToDevice}
+        liveRxPayload={lastRawNotification}
+        hwSettings={activeHwSettings ?? undefined}
       />
       {/* First-Time Setup Wizard — auto-shows on first probe for new accounts */}
       <FirstTimeSetupModal
