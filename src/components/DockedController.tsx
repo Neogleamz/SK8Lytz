@@ -1167,7 +1167,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                                     <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
                                  </View>
                               );
-                           } else if (fav.mode === 'MULTI') {
+                           } else if (fav.mode === 'MULTI' || fav.mode === 'DIY') {
                               const colors = fav.multiColors || ['#FFFFFF'];
                               return (
                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
@@ -1175,7 +1175,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                                  </View>
                               );
                            } else {
-                              return <MaterialCommunityIcons name={fav.mode === 'RBM' ? 'animation-play' : 'shape-square-plus'} size={14} color={Colors.primary} style={{ marginTop: 4, marginBottom: 2 }} />;
+                              return <MaterialCommunityIcons name={(fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'animation-play' : 'shape-square-plus'} size={14} color={Colors.primary} style={{ marginTop: 4, marginBottom: 2 }} />;
                            }
                         })()}
                       </TouchableOpacity>
@@ -1226,7 +1226,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                                     <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
                                  </View>
                               );
-                           } else if (fav.mode === 'MULTI') {
+                           } else if (fav.mode === 'MULTI' || fav.mode === 'DIY') {
                               const colors = fav.multiColors || ['#FFFFFF'];
                               return (
                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
@@ -1234,7 +1234,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                                  </View>
                               );
                            } else {
-                              return <MaterialCommunityIcons name={fav.mode === 'RBM' ? 'animation-play' : 'shape-square-plus'} size={14} color={Colors.secondary} style={{ marginTop: 4, marginBottom: 2 }} />;
+                              return <MaterialCommunityIcons name={(fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'animation-play' : 'shape-square-plus'} size={14} color={Colors.secondary} style={{ marginTop: 4, marginBottom: 2 }} />;
                            }
                         })()}
                       </TouchableOpacity>
@@ -1962,7 +1962,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
               { id: 'HOME', icon: 'home-outline' },
               { id: 'FAVORITES', icon: 'cards-heart-outline' },
               { id: 'MULTI', icon: 'palette' },
-              { id: 'RBM', icon: 'animation-play' },
+              { id: 'PROGRAMS', icon: 'animation-play' },
               { id: 'MUSIC', icon: 'music' },
               { id: 'STREET', icon: 'run-fast' },
               { id: 'CAMERA', icon: 'camera' }
@@ -1978,13 +1978,16 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                          setActiveMode('FAVORITES');
                      } else if (dockItem.id === 'STREET') {
                          setActiveMode('STREET');
+                     } else if (dockItem.id === 'PROGRAMS') {
+                         setActiveMode('PROGRAMS');
+                     } else if (dockItem.id === 'MUSIC') {
+                         setActiveMode('MUSIC');
+                     } else if (dockItem.id === 'CAMERA') {
+                         setActiveMode('CAMERA');
                      } else {
+                        // MULTI -> MULTIMODE
                         setActiveMode('MULTIMODE');
-                        if (dockItem.id === 'MULTI') {
-                           setFixedSubMode('PATTERN');
-                        } else {
-                           setFixedSubMode(dockItem.id as any);
-                        }
+                        setFixedSubMode('PATTERN');
                      }
                   }}
                   style={[styles.dockIconCont, isActive && styles.dockIconActive]}
