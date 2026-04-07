@@ -1953,8 +1953,8 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                       }}
                       style={{
                         width: '100%',
-                        height: 14,
-                        borderRadius: 7,
+                        height: 18,
+                        borderRadius: 9,
                         backgroundColor: dynamicColor,
                         justifyContent: 'center',
                         alignItems: 'center',
@@ -2254,7 +2254,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
 
             {/* Speed Slider - Hidden in MUSIC, and CAMERA */}
             {!(activeMode === 'MUSIC' || activeMode === 'CAMERA') && (
-              <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
+              <View style={[styles.controlRow, { marginTop: (activeMode === 'STREET' || (activeMode === 'MULTIMODE' && fixedSubMode === 'DIY')) ? 8 : 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                   <TouchableOpacity onPress={() => Alert.alert('Speed Setting', 'Adjust the animation speed of the active pattern or color transition.\n\n• High Speed: Faster strobing or sweeping.\n• Low Speed: Smooth, ambient pulsing transitions.')}>
                     <MaterialCommunityIcons name="engine-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
