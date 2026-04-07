@@ -1932,7 +1932,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
 
         {/* UNIVERSAL SLIDERS FOOTER - Hidden in FAVORITES only */}
         {activeMode !== 'FAVORITES' && (
-          <View style={[styles.sceneSlidersContainer, { marginTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 8, paddingBottom: 0 }]}>
+          <View style={[styles.sceneSlidersContainer, { marginTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 8, paddingBottom: 0, flexShrink: 0 }]}>
             {/* Color Grid wrappers */}
             {!(activeMode === 'PROGRAMS') && (
               <View style={{ marginBottom: 4 }}>
