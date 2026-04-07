@@ -1878,11 +1878,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
               <View style={{
                 flex: 1,
                 flexDirection: 'row',
-                backgroundColor: 'rgba(0,0,0,0.4)',
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.05)',
-                overflow: 'hidden',
+                backgroundColor: 'transparent',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 paddingVertical: 10,
@@ -1891,8 +1887,6 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                 {/* LEFT: Stoplight Vertical Graphic */}
                 <View style={{
                   width: 50,
-                  borderRightWidth: 1,
-                  borderRightColor: 'rgba(255,255,255,0.05)',
                   justifyContent: 'center',
                   alignItems: 'center',
                 }}>
