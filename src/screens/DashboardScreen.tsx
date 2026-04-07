@@ -95,8 +95,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     checkDeviceClaimed,
     hasCloudRegistrations,
     migrateLegacyGroups,
-    syncFromCloud,
-    hasPendingSync,
+    syncFromCloud: _syncFromCloud,
+    hasPendingSync: _hasPendingSync,
   } = useRegistration();
 
   // Sync connected+discovered devices into AppLogger whenever they change
@@ -164,7 +164,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   // ── Profile + Notifications state ────────────────────────────────────────
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
-  const [pendingJoinCrewId, setPendingJoinCrewId] = useState<string | null>(null);
+  const [_pendingJoinCrewId, setPendingJoinCrewId] = useState<string | null>(null);
   const [showHintText, setShowHintText] = useState(true);
   const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
@@ -560,7 +560,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       if (granted) {
         console.log('[SK8Lytz] Manual Scan Initiated');
         AppLogger.log('SCAN_STARTED');
-        const scanStartTime = Date.now();
+        const _scanStartTime = Date.now();
         isProvisioningTriggered.current = true;
         AsyncStorage.removeItem('ng_processed_devices');
         lastProcessedRef.current = '';

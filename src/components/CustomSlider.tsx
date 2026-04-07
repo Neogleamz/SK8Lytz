@@ -16,7 +16,7 @@ interface CustomSliderProps {
 const CustomSlider = ({ value, onValueChange, onSlidingComplete, minimumValue = 0, maximumValue = 100, style, gradientTrack = false }: CustomSliderProps) => {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
-  const [containerWidth, setContainerWidth] = useState(0);
+  const [_containerWidth, setContainerWidth] = useState(0);
   const containerWidthRef = useRef(0);
   
   const [localValue, setLocalValue] = useState(value);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator, Linking } from 'react-native';
-import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Buffer } from 'buffer';
 import { Colors } from '../theme/theme';

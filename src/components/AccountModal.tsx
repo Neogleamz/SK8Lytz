@@ -93,14 +93,14 @@ export default function AccountModal({
   const [userEmail, setUserEmail] = useState('');
 
   // Security state
-  const [currentPwd, setCurrentPwd] = useState('');
+  const [_currentPwd, setCurrentPwd] = useState('');
   const [newPwd, setNewPwd] = useState('');
   const [confirmPwd, setConfirmPwd] = useState('');
   const [securityMsg, setSecurityMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
   const [savingPwd, setSavingPwd] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [savingEmail, setSavingEmail] = useState(false);
-  const [showCurrentPwd, setShowCurrentPwd] = useState(false);
+  const [_showCurrentPwd, _setShowCurrentPwd] = useState(false);
   const [showNewPwd, setShowNewPwd] = useState(false);
 
   // Crews state
@@ -123,7 +123,7 @@ export default function AccountModal({
   const [notifCrewInvites, setNotifCrewInvites] = useState(true);
   const [notifSessionReminders, setNotifSessionReminders] = useState(true);
   const [notifLeaderHandoff, setNotifLeaderHandoff] = useState(true);
-  const [savingNotifs, setSavingNotifs] = useState(false);
+  const [_savingNotifs, setSavingNotifs] = useState(false);
 
   // ── Load data ─────────────────────────────────────────────────────────────
 

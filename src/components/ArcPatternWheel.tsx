@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, NativeSyntheticEvent, NativeScrollEvent, TouchableOpacity, LayoutChangeEvent, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, NativeSyntheticEvent, NativeScrollEvent, TouchableOpacity, LayoutChangeEvent } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -25,8 +25,8 @@ export default function ArcPatternWheel({
   const holdTimerRef = useRef<any>(null);
   const skipIntervalRef = useRef<any>(null);
   const commitTimeoutRef = useRef<any>(null);
-  const isScrollingRef = useRef(false);
-  const lastScrolledValueRef = useRef(value);
+  const _isScrollingRef = useRef(false);
+  const _lastScrolledValueRef = useRef(value);
 
   const [containerWidth, setContainerWidth] = useState(0);
   const itemWidth = containerWidth > 0 ? containerWidth / VISIBLE_ITEMS : 70;
@@ -59,7 +59,7 @@ export default function ArcPatternWheel({
   const scrollToValue = useCallback(
     (val: number, animated = true) => {
       if (!flatListRef.current || containerWidth === 0) return;
-      const offset = flatListRef.current as any;
+      const _offset = flatListRef.current as any;
       // Read current scroll position quietly from the FlatList's internal state
       const currentOffset = (flatListRef.current as any)._listRef?._scrollMetrics?.offset ?? 0;
       const currentRep = Math.floor(currentOffset / (patternCount * itemWidth));

@@ -86,7 +86,7 @@ function initials(name: string | null): string {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
-const { width: SCREEN_W } = Dimensions.get('window');
+const { width: _SCREEN_W } = Dimensions.get('window');
 
 // ─── Mini Visualizer ─────────────────────────────────────────────────────────
 

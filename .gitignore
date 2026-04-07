@@ -82,3 +82,11 @@ theme.js
 
 # AI agent config (local only)
 .agents/
+
+# Scratch tool / analysis files (local only)
+diff.txt
+tools/cleanup_pass2.py
+tools/dead_code_cleanup.py
+tools/dockedcontroller_cleanup.py
+tools/tsc_out.txt
+tools/docked_old.tsx

@@ -54,7 +54,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(m / 60)}h ago`;
 }
 
-function formatScheduled(iso: string): string {
+function _formatScheduled(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
     + ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -75,7 +75,7 @@ export default function CrewModal({
   // null = show all; number = filter to within that many miles
   const [discoverRadiusMi, setDiscoverRadiusMi] = useState<number | null>(50);
   // Maps crewId → its currently live session (populated when hub loads)
-  const [crewActiveSessions, setCrewActiveSessions] = useState<Record<string, CrewSession | null>>({});
+  const [_crewActiveSessions, _setCrewActiveSessions] = useState<Record<string, CrewSession | null>>({}); 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -85,7 +85,7 @@ export default function CrewModal({
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationLabel, setLocationLabel] = useState('');
   const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | undefined>();
-  const [scheduledDate, setScheduledDate] = useState<Date | null>(null);
+  const [_scheduledDate, _setScheduledDate] = useState<Date | null>(null);
 
   // Crew picker + session visibility
   const [permanentCrews, setPermanentCrews] = useState<{ id: string; name: string }[]>([]);
@@ -129,7 +129,7 @@ export default function CrewModal({
   const [isCreatingCrew,     setIsCreatingCrew]     = useState(false);
   const [createCrewError,    setCreateCrewError]    = useState('');
   // Discover search
-  const [discoverRadius,     setDiscoverRadius]     = useState(50);
+  const [_discoverRadius,     setDiscoverRadius]     = useState(50);
   const [discoverSearch,     setDiscoverSearch]     = useState('');
   const [joiningCrewId,      setJoiningCrewId]      = useState<string | null>(null);
   const [editingCrewId,      setEditingCrewId]      = useState<string | null>(null);

@@ -1,4 +1,4 @@
-﻿# SK8Lytz App: System Master Reference (EXHAUSTIVE)
+# SK8Lytz App: System Master Reference (EXHAUSTIVE)
 
 This is the definitive technical manual for the SK8Lytz LED control system. It consolidates all protocol specifications, pattern listings, hardware configurations, and implementation details necessary for development. **DO NOT SHORTEN THIS DOCUMENT.**
 
@@ -2737,3 +2737,36 @@ fixedSubMode: useState<'PATTERN' | 'DIY'>('PATTERN')  -- MULTIMODE only
 - RBM         → renamed to PROGRAMS  
 - MULTI       → renamed to DIY (fixedSubMode)
 - PROGRAMS, MUSIC, CAMERA → promoted from fixedSubMode to top-level activeMode
+
+---
+
+## SESSION LOG � April 7 2026: Street Mode Dashboard Finalization & TS Cleanup
+
+### Street Mode Dashboard (DockedController.tsx)
+- Enforced `flexShrink: 0` on universal sliders footer to prevent squishing on tall displays
+- Removed dark background/border from Street Mode telemetry gauges (transparent floating look)
+- Brightness slider hidden in Street Mode; margins synced accordingly
+- Dynamic color bar height aligned to match split trackers across all modes
+
+### Audio-Reactive / Music Mode (DockedController.tsx)
+- CRITICAL FIX: Added `isMeteringEnabled: true` to Audio.Recording.createAsync() config
+  - Without this flag, stats.metering is always null - App Mic mode never reacts to sound
+- Device Mic (isDeviceMic: true) confirmed working via ZenggeProtocol.setMusicConfig()
+  - Delegates to hardware internal microphone; no app-side metering needed
+
+### Pattern Selector Cleanup
+- Removed numeric index prefixes (e.g. '01.') from RbmPatterns.ts pattern name strings
+- Removed duplicate prefix display logic from VerticalPatternDrum.tsx
+
+### TypeScript Cleanup (April 7 2026)
+- tsconfig.json: Added 'tools' to exclude array
+- .gitignore: Added scratch tool files
+- Fixed ~43 unused variable warnings across 8 source files:
+  - AccountModal.tsx: _currentPwd, _showCurrentPwd, _savingNotifs
+  - ArcPatternWheel.tsx: removed unused Platform import; prefixed _isScrollingRef etc
+  - CameraTracker.tsx: removed unused Camera import
+  - CrewMemberDashboard.tsx: prefixed _SCREEN_W
+  - CrewModal.tsx: prefixed _formatScheduled, _crewActiveSessions, _scheduledDate, _discoverRadius
+  - CustomSlider.tsx: prefixed _containerWidth
+  - DashboardScreen.tsx: aliased syncFromCloud/_hasPendingSync; prefixed _pendingJoinCrewId, _scanStartTime
+
