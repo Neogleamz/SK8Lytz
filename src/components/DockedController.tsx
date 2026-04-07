@@ -434,7 +434,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     const isHalozRing = segs === 2 && pts === 16; // HALOZ hardware signature
     const hwSpeed = clampSpeed(spd);
 
-    let cruiseHex = '#00FF00'; // Default Green (ACCELERATING / CRUISING)
+    let cruiseHex = streetCruiseColor; // Use user selected color for ACCELERATING / CRUISING
     if (currMotionState === 'STOPPED') cruiseHex = '#FF0000';
     else if (currMotionState === 'SLOWING_DOWN') cruiseHex = '#FFFF00';
     else if (currMotionState === 'HARD_BRAKING') cruiseHex = '#FF0000';
@@ -1884,11 +1884,11 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                     color: (motionState === 'HARD_BRAKING' || motionState === 'STOPPED') ? '#FF4444' : motionState === 'SLOWING_DOWN' ? '#FFD700' : '#00FF00',
                     fontSize: 12, fontWeight: '800', letterSpacing: 3
                   }}>
-                    {motionState === 'STOPPED' && '>> SYS: STOPPED <<'}
-                    {motionState === 'HARD_BRAKING' && '>> SYS: HARD BRAKING <<'}
-                    {motionState === 'SLOWING_DOWN' && '>> SYS: DECELERATING <<'}
-                    {motionState === 'ACCELERATING' && '>> SYS: ACCELERATING <<'}
-                    {motionState === 'CRUISING' && '>> SYS: CRUZING <<'}
+                    {motionState === 'STOPPED' && '>> STOPPED <<'}
+                    {motionState === 'HARD_BRAKING' && '>> HARD BRAKING <<'}
+                    {motionState === 'SLOWING_DOWN' && '>> DECELERATING <<'}
+                    {motionState === 'ACCELERATING' && '>> ACCELERATING <<'}
+                    {motionState === 'CRUISING' && '>> CRUZING <<'}
                   </Text>
               </View>
             </View>
@@ -2119,6 +2119,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                        const hex = rgb2hex(f(5), f(3), f(1));
                        setStreetCruiseColor(hex);
                        setSelectedHue(hue);
+                       applyStreetPattern(motionStateRef.current);
                     } else {
                       setSelectedHue(hue);
                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
