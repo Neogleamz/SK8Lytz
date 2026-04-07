@@ -1,11 +1,11 @@
-import { View, Text, StyleSheet, Image } from 'react-native';
-import { Colors, Typography, Layout } from '../theme/theme';
+import { View, StyleSheet, Image } from 'react-native';
+import { Colors, Layout } from '../theme/theme';
 
 interface HeaderProps {
   title?: string;
 }
 
-export default function Header({ title }: HeaderProps) {
+export default function Header({}: HeaderProps) {
   return (
     <View style={styles.container}>
       <Image 

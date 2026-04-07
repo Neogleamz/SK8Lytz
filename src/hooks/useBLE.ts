@@ -467,7 +467,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
       
       // Register dropout listener
       if (disconnectListeners.current[device.id]) disconnectListeners.current[device.id].remove();
-      disconnectListeners.current[device.id] = bleManager.onDeviceDisconnected(device.id, (error: any, d: any) => {
+      disconnectListeners.current[device.id] = bleManager.onDeviceDisconnected(device.id, (error: any, _d: any) => {
         console.warn(`[BLE] Device dropout detected for ${device.id}`);
         AppLogger.log('DEVICE_DISCONNECTED', { id: device.id, reason: 'dropout', error: error?.message });
         setDroppedOutDeviceIds(prev => [...prev, device.id]);
@@ -564,7 +564,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
           
           // Register dropout listener
           if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
-          disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any, d: any) => {
+          disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any, _d: any) => {
             console.warn(`[BLE] Device dropout detected for ${conn.id} in group`);
             AppLogger.log('DEVICE_DISCONNECTED', { id: conn.id, reason: 'dropout', context: 'group', error: error?.message });
             setDroppedOutDeviceIds(prev => [...prev, conn.id]);

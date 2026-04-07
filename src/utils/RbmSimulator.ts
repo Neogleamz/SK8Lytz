@@ -12,7 +12,7 @@
  * to audio-reactive pixel arrays using the same motion primitives.
  */
 
-import { getRbmPattern, PALETTE, BG_HEX, type RbmPattern, type RbmMotion, type RbmColorPalette } from './RbmDictionary';
+import { getRbmPattern, PALETTE, BG_HEX, type RbmMotion, type RbmColorPalette } from './RbmDictionary';
 
 // ── Internal RGB type (matches PatternEngine for compatibility) ──────────────
 export interface RGB { r: number; g: number; b: number; }
@@ -421,7 +421,6 @@ export function getRbmMusicFrame(
     }
     case 13: { // Snow — drifting dots falling end→start
       for (let i = 0; i < n; i++) {
-        const pos = (i / n + animTick) % 1;
         // "Snowflake" at every 1/4 of strip, drifting
         const snowflake = Math.abs(Math.sin(i * 47.3 + Math.floor(animTick * 3) * 1234.5)) > (1 - mag * 0.7);
         pixels[i] = snowflake ? { ...white } : { ...base };

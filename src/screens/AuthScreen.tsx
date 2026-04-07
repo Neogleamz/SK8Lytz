@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabaseClient';
-import { Typography, Layout } from '../theme/theme';
+import { Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -55,6 +55,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [rememberOffline, setRememberOffline] = useState(false);
   const strengthAnim = useRef(new Animated.Value(0)).current;
 
   // Derive styles reactively from Colors so theme toggle re-renders instantly
@@ -460,13 +461,31 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         {(mode === 'LOGIN' || mode === 'MAGIC_LINK') && onOfflineMode && (
           <TouchableOpacity
             onPress={async () => {
-              await AsyncStorage.setItem(STORAGE_OFFLINE_SKIP, 'true');
+              if (rememberOffline) {
+                await AsyncStorage.setItem(STORAGE_OFFLINE_SKIP, 'true');
+              }
               onOfflineMode();
             }}
             style={styles.offlineButton}
+            activeOpacity={0.7}
           >
             <Text style={styles.offlineButtonText}>📵 Continue Offline</Text>
             <Text style={styles.offlineButtonSub}>No account needed · Cloud sync disabled</Text>
+            
+            {/* Remember Checkbox inside button */}
+            <TouchableOpacity
+              onPress={() => setRememberOffline(v => !v)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, paddingVertical: 4 }}
+              activeOpacity={0.7}
+            >
+              <View style={[
+                styles.checkbox,
+                rememberOffline && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+              ]}>
+                {rememberOffline && <MaterialCommunityIcons name="check" size={12} color="#000" />}
+              </View>
+              <Text style={{ color: Colors.textMuted, fontSize: 13, fontWeight: 'bold' }}>Remember my choice</Text>
+            </TouchableOpacity>
           </TouchableOpacity>
         )}
 
@@ -583,7 +602,7 @@ const createStyles = (Colors: any, insets: { top: number; bottom: number; left: 
   toggleLink: { color: Colors.primary, fontSize: 14, fontWeight: 'bold' },
   offlineButton: {
     alignItems: 'center',
-    marginTop: 20,
+    width: '100%',
     paddingVertical: 14,
     borderRadius: Layout.borderRadius,
     borderWidth: 1,

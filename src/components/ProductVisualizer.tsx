@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { View, StyleSheet, Animated, Text, TouchableOpacity } from 'react-native';
-import { getArchetypeFromId } from '../utils/RbmDictionary';
 import { getRbmVisualizerFrame, getRbmMusicFrame, rgbToHex } from '../utils/RbmSimulator';
 import { useTheme } from '../context/ThemeContext';
 import { getVisualizerFrame } from '../protocols/PatternEngine';
@@ -32,6 +31,8 @@ interface ProductVisualizerProps {
   rawHexPayload?: number[];
   multiColors?: string[];
   multiTransition?: number;
+  isStreetBraking?: boolean;
+  streetCruiseColor?: string;
 }
 
 // Convert HSL to Hex manually as React Native Interpolate handles strict string maps better
@@ -58,7 +59,7 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload, simMode }: any) => {
+const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload: _rawHexPayload, simMode: _simMode, isStreetBraking = false, streetCruiseColor = '#FF8C00' }: any) => {
   const { isDark } = useTheme();
   const product = String(device.type || fallbackProduct);
   const isHaloz = !product.toLowerCase().includes('soul');
@@ -74,7 +75,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
   // SOULZ visualizer uses the pointsPerSide * 2 logic to visually double the strip.
   const devicePoints = device?.points || fallbackPoints || (isHaloz ? 16 : 43);
   const deviceSegments = device?.segments || 1;
-  const numLeds = isHaloz ? Math.floor(devicePoints / deviceSegments) : Math.floor(devicePoints / deviceSegments) * 2;
+  const numLeds = Math.floor(devicePoints / deviceSegments); // 16 or 43
 
   const leds = useMemo(() => {
     const list = [];
@@ -113,19 +114,37 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
             left = (80 + x) * S;
             top = (120 + y) * S;
         } else {
-            const fract = i / numSamples;
-            const angle = (fract * 2 * Math.PI) + (Math.PI / 2);
-            top = (150 + Math.sin(angle) * 150) * S;
-            const verticalPos = Math.sin(angle);
-            const pinch = 1 - 0.3 * Math.exp(-Math.pow(verticalPos - 0.1, 2) * 5); 
-            left = (70 + (Math.cos(angle) * 70 * pinch)) * S;
+            // SOULZ: Maintain the exact classic U/oval contour, but mathematically trace the coordinates 
+            // from bottom-to-top on BOTH halves so the physical point array matches the 2 identical upward strips.
+            const half = Math.floor(numSamples / 2);
+            if (i < half) {
+                // Left side: trace from bottom center (π/2) ascending up the left edge to top center (3π/2)
+                const fract = i / Math.max(1, half - 1);
+                const angle = (Math.PI / 2) + fract * Math.PI;
+                top = (150 + Math.sin(angle) * 150) * S;
+                const verticalPos = Math.sin(angle);
+                const pinch = 1 - 0.3 * Math.exp(-Math.pow(verticalPos - 0.1, 2) * 5); 
+                left = (70 + (Math.cos(angle) * 70 * pinch)) * S;
+            } else {
+                // Right side: trace from bottom center (π/2) ascending up the right edge to top center (-π/2)
+                const fract = (i - half) / Math.max(1, (numSamples - half) - 1);
+                const angle = (Math.PI / 2) - fract * Math.PI;
+                top = (150 + Math.sin(angle) * 150) * S;
+                const verticalPos = Math.sin(angle);
+                const pinch = 1 - 0.3 * Math.exp(-Math.pow(verticalPos - 0.1, 2) * 5); 
+                left = (70 + (Math.cos(angle) * 70 * pinch)) * S;
+            }
         }
 
         if (i > 0) {
             const prev = pathSamples[i - 1];
             const dx = left - prev.left;
             const dy = top - prev.top;
-            totalLength += Math.sqrt(dx*dx + dy*dy);
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            // Ignore large jump (returning to the bottom center for the right strip)
+            if (dist < 100 * S) {
+                 totalLength += dist;
+            }
         }
         pathSamples.push({ top, left, length: totalLength });
     }
@@ -138,6 +157,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
         let left = 0;
         let top = 0;
         const outerDiam = isHaloz ? 16 : 12; // Reverted to physical 6mm strip dimensions
+
         const offset = outerDiam / 2;
 
         const targetLength = (i / renderLeds) * totalLength;
@@ -158,8 +178,8 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
         left = p1.left + (p2.left - p1.left) * t - offset;
         top = p1.top + (p2.top - p1.top) * t - offset;
 
-        const segmentI = isHaloz ? (i % (renderLeds / 2)) : i;
-        const activeSegmentLeds = isHaloz ? (renderLeds / 2) : renderLeds;
+        const segmentI = i % (renderLeds / 2);
+        const activeSegmentLeds = renderLeds / 2;
         // HALOZ 2-segment mirror: Segment 2 (i >= renderLeds/2) runs the same pattern
         // in REVERSE relative to its own start point (front of box → back of box).
         // This mirrors Segment 1 (back→front) creating bilateral symmetry on the ring.
@@ -228,7 +248,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
                    // Create an infinite loop array wrapping
                    const doubleColors = [...multiColors, ...multiColors, ...multiColors];
                    const maxLenStr = doubleColors.length - 1;
-                   const pointsArr = Array.from({length: maxLenStr + 1}, (_, idx) => idx / maxLenStr);
+                   const _pointsArr = Array.from({length: maxLenStr + 1}, (_, idx) => idx / maxLenStr);
                    
                    // Fract controls spatial shift, animValue controls temporal shift
                    // We want spatial gradients that physically slide over time
@@ -309,6 +329,32 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
              const mPx = musicFrame.pixels[mSlot] || { r: 255, g: 255, b: 255 };
              dotColor = rgbToHex(mPx);
              dotOpacity = isPoweredOn ? (musicFrame.opacities[mSlot] ?? 1.0) * (brightness / 100) : 0;
+          } else if (mode === 'STREET') {
+             // ── Street Mode: zone-based car-light layout ──
+             // fract 0.0–0.3  → TAIL  (red: dim cruising, bright braking)
+             // fract 0.3–0.7  → CRUISE (user color, animated running water)
+             // fract 0.7–1.0  → HEAD  (warm white, always steady)
+             if (fract < 0.3) {
+               dotColor = '#FF2200';
+               dotOpacity = isStreetBraking ? (brightness / 100) : (brightness / 100) * 0.42;
+             } else if (fract >= 0.7) {
+               dotColor = '#FFF5E0';
+               dotOpacity = brightness / 100;
+             } else {
+               dotColor = streetCruiseColor;
+               const cruiseFract = (fract - 0.3) / 0.4;
+               
+               // Triangle wave: goes 0 to 1 back to 0, creating a bouncing pulse
+               const bounceT = animTick <= 0.5 ? animTick * 2 : (1 - animTick) * 2;
+               const dist = Math.abs(cruiseFract - bounceT);
+               
+               if (dist < 0.18) {
+                   const glow = 1 - (dist / 0.18); 
+                   dotOpacity = 0.3 + glow * ((brightness / 100) - 0.3);
+               } else {
+                   dotOpacity = 0.3;
+               }
+             }
           } else if (mode === 'MULTIMODE') {
              const fgHex = fixedFgColor || color;
              const bgHex = fixedBgColor || '#000000';
@@ -371,7 +417,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
         });
     }
     return list;
-  }, [product, mode, color, numLeds, patternId, isPoweredOn, audioMagnitude, fixedFgColor, fixedBgColor, multiColors, multiTransition, brightness, speed, animTick]);
+  }, [product, mode, color, numLeds, patternId, isPoweredOn, audioMagnitude, fixedFgColor, fixedBgColor, multiColors, multiTransition, brightness, speed, animTick, isStreetBraking, streetCruiseColor]);
 
   return (
     <TouchableOpacity 
@@ -401,7 +447,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
          )}
 
          {leds.map(led => {
-            const diam = isHaloz ? 10 : 8;
+            const diam = isHaloz ? 7.6 : 5.7;
 
             return (
                // Outer wrapper applies chipSoften (plain number) — compatible with Animated inner nodes.
@@ -477,7 +523,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
     </TouchableOpacity>
   );
 });
-const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText, audioMagnitude = 0, rawHexPayload, multiColors, multiTransition }: ProductVisualizerProps) => {
+const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText: _statusText, audioMagnitude = 0, rawHexPayload, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00' }: ProductVisualizerProps) => {
   const { isDark } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
 
@@ -517,7 +563,7 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
       }
 
       if (op === 0x59) {
-          simMode = mode === 'MULTICOLOR' ? 'MULTICOLOR' : 'MULTIMODE';
+          simMode = mode === 'MULTICOLOR' ? 'MULTICOLOR' : mode === 'STREET' ? 'STREET' : 'MULTIMODE';
           if (mode === 'MULTICOLOR') {
              simPatternId = 1;
              
@@ -571,9 +617,9 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
   useEffect(() => {
     animValue.stopAnimation();
     
-    if (isPoweredOn && (simMode === 'MULTICOLOR' || simMode === 'FAVORITES' || simMode === 'PROGRAMS' || simMode === 'MUSIC' || simMode === 'MULTIMODE' || simMode === 'CANDLE')) {
+    if (isPoweredOn && (simMode === 'STREET' || simMode === 'MULTICOLOR' || simMode === 'FAVORITES' || simMode === 'PROGRAMS' || simMode === 'MUSIC' || simMode === 'MULTIMODE' || simMode === 'CANDLE')) {
       animValue.setValue(0);
-      const baseDuration = (simMode === 'MUSIC') ? 800 : (simMode === 'PROGRAMS' ? 2000 : (simMode === 'MULTICOLOR' ? (simMultiTransition === 2 ? 350 : 1500) : (simMode === 'MULTIMODE' ? 1500 : (simMode === 'CANDLE' ? 400 : 3000))));
+      const baseDuration = (simMode === 'MUSIC') ? 800 : (simMode === 'PROGRAMS' ? 2000 : (simMode === 'MULTICOLOR' ? (simMultiTransition === 2 ? 350 : 1500) : (simMode === 'MULTIMODE' ? 1500 : (simMode === 'CANDLE' ? 400 : (simMode === 'STREET' ? 1400 : 3000)))));
       // Speed 0 = 5x slower, Speed 100 = 0.4x faster
       const duration = baseDuration / (0.4 + (simSpeed / 100) * 2.1); 
       
@@ -617,6 +663,8 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
              audioMagnitude={simAudioMag}
              multiColors={simMultiColors}
              multiTransition={simMultiTransition}
+             isStreetBraking={isStreetBraking}
+             streetCruiseColor={streetCruiseColor}
            />
          ))}
       </View>

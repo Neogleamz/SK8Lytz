@@ -8,7 +8,7 @@
  *  - Mode switching: MultiMode, Music, Camera, Pattern (RBM), Street (Accelerometer), DIY Array
  *  - Color picker, RGB sliders, brightness & speed knobs
  *  - Pattern wheel (ArcPatternWheel / VerticalPatternDrum)
- *  - Music EQ visualizer (SpectrumVisualizer)
+ *  - Music mic source controls (APP MIC / DEVICE MIC)
  *  - Favorites system and Quick Presets
  *  - Per-device and group analytics telemetry (MODE_CHANGED, PATTERN_CHANGED, COLOR_CHANGED)
  *
@@ -16,17 +16,14 @@
  * Platform: React Native (Android + Web)
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Platform, Modal, TextInput, Animated, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, TextInput, Animated, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Typography, Layout } from '../theme/theme';
 import { Audio } from 'expo-av';
-import { Buffer } from 'buffer';
 import { useTheme } from '../context/ThemeContext';
 import ProductVisualizer from './ProductVisualizer';
 import CustomSlider from './CustomSlider';
 import VerticalPatternDrum from './VerticalPatternDrum';
-import SpectrumVisualizer from './SpectrumVisualizer';
-import CircularKnob from './CircularKnob';
 import CameraTracker from './CameraTracker';
 import { getRbmPatternName } from '../constants/RbmPatterns';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
@@ -39,8 +36,102 @@ import { ScenesService } from '../services/ScenesService';
 import { containsProfanity } from '../services/AuthUtils';
 import CommunityModal from './CommunityModal';
 import { Accelerometer } from 'expo-sensors';
+import * as Location from 'expo-location';
+import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 
-const AnimatedIcon = Animated.createAnimatedComponent(MaterialCommunityIcons);
+type MotionState = 'STOPPED' | 'ACCELERATING' | 'CRUISING' | 'SLOWING_DOWN' | 'HARD_BRAKING';
+
+const AnalogGauge = ({ 
+  value, 
+  min, 
+  max, 
+  label, 
+  unit = '',
+  color = '#00F0FF',
+  size = 96
+}: { value: number, min: number, max: number, label: string, unit?: string, color?: string, size?: number }) => {
+  const radius = size * 0.42;
+  const center = size / 2;
+  const angleRange = 260; 
+  const startAngle = -220; // Starts bottom-left
+  
+  const clampedVal = Math.min(Math.max(value, min), max);
+  const percent = (clampedVal - min) / (max - min);
+  const currentAngle = startAngle + (percent * angleRange);
+
+  const polarToCartesian = (centerX: number, centerY: number, r: number, angleInDegrees: number) => {
+    const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+    return { x: centerX + (r * Math.cos(angleInRadians)), y: centerY + (r * Math.sin(angleInRadians)) };
+  };
+
+  const describeArc = (x: number, y: number, r: number, sAngle: number, eAngle: number) => {
+    const start = polarToCartesian(x, y, r, eAngle);
+    const end = polarToCartesian(x, y, r, sAngle);
+    const largeArcFlag = eAngle - sAngle <= 180 ? "0" : "1";
+    return ["M", start.x, start.y, "A", r, r, 0, largeArcFlag, 0, end.x, end.y].join(" ");
+  };
+
+  const trackPath = describeArc(center, center, radius, startAngle, startAngle + angleRange);
+  const fillPath = describeArc(center, center, radius, startAngle, currentAngle);
+
+  // Tick marks
+  const numTicks = 8;
+  const ticks = Array.from({length: numTicks + 1}).map((_, i) => {
+    const p = i / numTicks;
+    const a = startAngle + (p * angleRange);
+    const rad = (a - 90) * Math.PI / 180;
+    const isMajor = i % 2 === 0;
+    const innerRadius = radius - (isMajor ? 8 : 4);
+    return {
+      x1: center + radius * Math.cos(rad),
+      y1: center + radius * Math.sin(rad),
+      x2: center + innerRadius * Math.cos(rad),
+      y2: center + innerRadius * Math.sin(rad),
+      isMajor
+    };
+  });
+
+  return (
+    <View style={{ alignItems: 'center', marginHorizontal: 2 }}>
+      <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+        <Svg width={size} height={size}>
+          <Defs>
+            <SvgLinearGradient id="grad" x1="0" y1="1" x2="1" y2="0">
+              <Stop offset="0" stopColor={color} stopOpacity="0.8" />
+              <Stop offset="1" stopColor="#FFF" stopOpacity="0.2" />
+            </SvgLinearGradient>
+          </Defs>
+          {/* Background track */}
+          <Path d={trackPath} stroke="rgba(255,255,255,0.06)" strokeWidth={6} fill="none" strokeLinecap="round" />
+          {/* Active fill */}
+          <Path d={fillPath} stroke="url(#grad)" strokeWidth={8} fill="none" strokeLinecap="round" />
+          
+          {/* Ticks */}
+          {ticks.map((tick, i) => (
+             <Path key={i} d={`M ${tick.x1} ${tick.y1} L ${tick.x2} ${tick.y2}`} stroke={tick.isMajor ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.2)"} strokeWidth={tick.isMajor ? 2 : 1} />
+          ))}
+          
+          {/* Center Hub */}
+          <Circle cx={center} cy={center} r={6} fill="#222" stroke="rgba(255,255,255,0.2)" strokeWidth={2} />
+        </Svg>
+        
+        {/* Animated Needle */}
+        <View style={{ position: 'absolute', width: size, height: size, justifyContent: 'center', alignItems: 'center', transform: [{ rotate: `${currentAngle}deg` }] }}>
+          <View style={{ width: 3, height: radius * 0.95, backgroundColor: '#FF3333', position: 'absolute', top: center - (radius * 0.95), borderTopLeftRadius: 1.5, borderTopRightRadius: 1.5, shadowColor: '#FF0000', shadowOpacity: 1, shadowRadius: 6 }} />
+        </View>
+
+        {/* Digital display */}
+        <View style={{ position: 'absolute', bottom: size * 0.15, alignItems: 'center' }}>
+            <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900', fontVariant: ['tabular-nums'], textShadowColor: color, textShadowRadius: 8 }}>{Math.floor(value)}</Text>
+            {unit ? <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: '800', marginTop: -2 }}>{unit}</Text> : null}
+        </View>
+      </View>
+      <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '800', letterSpacing: 2, marginTop: 4 }}>{label}</Text>
+    </View>
+  );
+};
+
+
 
 type ProductType = 'HALOZ' | 'SOULZ';
 type ModeType = 'FAVORITES' | 'MULTIMODE' | 'PROGRAMS' | 'MUSIC' | 'STREET' | 'CAMERA';
@@ -92,8 +183,6 @@ const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segme
     if (patternId === 1) return fullArray;
     return [...fullArray.slice(fullArray.length - offset), ...fullArray.slice(0, fullArray.length - offset)];
   }, [fullArray, offset, patternId]);
-  
-  const dotsPerSegment = Math.max(1, Math.floor(points / Math.max(1, segments)));
 
   return (
     <View style={{ flex: 1, marginRight: 8, height: 8, overflow: 'hidden' }}>
@@ -218,6 +307,15 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 function DockedController({ hwSettings, lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange }: Sk8lytzControllerProps, ref) {
   const { Colors, isDark } = useTheme();
   const styles = createStyles(Colors);
+
+  /**
+   * Perceptual brightness factor — lifts the floor so LEDs stay visible at low %.
+   * At 0% → 0 (truly off). At 5% → ~14% (dim outline visible). At 100% → 1.0.
+   * Formula: brt > 0 ? 0.10 + 0.90 * (brt/100) : 0
+   */
+  const brtFactor = (brt: number): number =>
+    brt > 0 ? 0.10 + 0.90 * (brt / 100) : 0;
+
   const [lastSentPayload, setLastSentPayload] = useState<number[]>([]);
   
   const writeToDevice = async (payload: number[]) => {
@@ -299,13 +397,6 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   const [multiTransition, setMultiTransition] = useState<number>(3);
   const [multiLength, setMultiLength] = useState<number>(16);
 
-  // Collapsible Layout States
-  const [isFixedExpanded, setIsFixedExpanded] = useState<boolean>(true);
-  const [isPresetsExpanded, setIsPresetsExpanded] = useState<boolean>(false);
-  const [isProgramsExpanded, setIsProgramsExpanded] = useState<boolean>(false);
-  const [isMusicExpanded, setIsMusicExpanded] = useState<boolean>(false);
-  const [isCameraExpanded, setIsCameraExpanded] = useState<boolean>(false);
-
   // Active Sub-Mode for the Consolidated Fixed Tab
   const [fixedSubMode, setFixedSubMode] = useState<'PATTERN' | 'DIY'>('PATTERN');
 
@@ -317,6 +408,14 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   const streetBrakingRef = useRef(false);
   const lastAccelRef = useRef({ x: 0, y: 0, z: 0 });
 
+  // Dashboard Telemetry Tracking State
+  const [motionState, setMotionState] = useState<MotionState>('STOPPED');
+  const [gpsSpeed, setGpsSpeed] = useState<number>(0);
+  const [peakGForce, setPeakGForce] = useState<number>(1.0);
+  const motionStateRef = useRef<MotionState>('STOPPED');
+  const lastGpsSpeeds = useRef<number[]>([]);
+  const locationSubRef = useRef<Location.LocationSubscription | null>(null);
+
   // ── Street Mode: Car-Light Pattern helper ─────────────────────────────────
   // SOULZ (linear strip, heel→toe):
   //   Rear 30% = red tail lights, Middle 40% = amber cruise, Front 30% = white headlights
@@ -324,16 +423,23 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   //   8-LED frame: [RED×2][AMB×4][WHT×2]  →  mirrored to 16-LED array
   //   Result: RED at BACK of ring, WHITE at FRONT, AMBER on both sides  ✅
   const applyStreetPattern = (
-    isBraking: boolean,
-    cruiseHex: string,
-    brt: number = brightness
+    currMotionState: MotionState,
+    brt: number = brightness,
+    spd: number = speed
   ) => {
     if (!writeToDevice) return;
-    const factor = brt / 100;
+    const factor = brtFactor(brt);
     const pts = hwSettings?.ledPoints || points || 16;
     const segs = hwSettings?.segments || 1;
     const isHalozRing = segs === 2 && pts === 16; // HALOZ hardware signature
-    const hwSpeed = Math.max(1, Math.min(ZenggeProtocol.ANIM_SPEED_MAX, 15));
+    const hwSpeed = clampSpeed(spd);
+
+    let cruiseHex = '#00FF00'; // Default Green (ACCELERATING / CRUISING)
+    if (currMotionState === 'STOPPED') cruiseHex = '#FF0000';
+    else if (currMotionState === 'SLOWING_DOWN') cruiseHex = '#FFFF00';
+    else if (currMotionState === 'HARD_BRAKING') cruiseHex = '#FF0000';
+
+    const isBraking = currMotionState === 'HARD_BRAKING' || currMotionState === 'STOPPED';
 
     const cr = parseInt(cruiseHex.slice(1, 3), 16);
     const cg = parseInt(cruiseHex.slice(3, 5), 16);
@@ -348,7 +454,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     const headVal = Math.round(255 * factor);
     const head  = { r: headVal, g: Math.round(headVal * 0.95), b: Math.round(headVal * 0.85) };
 
-    // Amber cruise colour
+    // Dashboard Cruise Color
     const crR = Math.round(cr * factor);
     const crG = Math.round(cg * factor);
     const crB = Math.round(cb * factor);
@@ -358,19 +464,14 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     let arr: { r: number; g: number; b: number }[];
 
     if (isHalozRing) {
-      // ── HALOZ 2-segment ring: design 8-LED frame then mirror to 16 ──
-      // Frame layout (Seg1, back→front): RED RED AMB AMB AMB AMB WHT WHT
-      // Mirror (Seg2, front→back reversed): WHT WHT AMB AMB AMB AMB RED RED
-      // Physical result on ring: back=RED, sides=AMB, front=WHT  ✅
       const frame8 = [
-        tail, tail,                                          // [0-1] BACK — red
-        cruise, crDim, cruise, crDim,                       // [2-5] SIDES — amber bounce
-        head, head,                                          // [6-7] FRONT — white
+        tail, tail,
+        cruise, crDim, cruise, crDim,
+        head, head,
       ];
-      const mirror8 = [...frame8].reverse();                // Seg2: front→back mirror
+      const mirror8 = [...frame8].reverse();
       arr = [...frame8, ...mirror8];
     } else {
-      // ── SOULZ linear strip (heel→toe) ──
       const ledCount   = Math.max(10, pts);
       const rearCount  = Math.max(1, Math.round(ledCount * 0.3));
       const frontCount = Math.max(1, Math.round(ledCount * 0.3));
@@ -385,39 +486,124 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
       ];
     }
 
-    // 0x03 = RunningWater — hardware animates the mid amber section natively
-    writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpeed, 1, 0x03));
+    const transType = currMotionState === 'HARD_BRAKING' ? 2 : 3; // 2 = Strobe, 3 = RunningWater
+    writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpeed, 1, transType));
+  };
+
+  // Update motion state helper
+  const updateMotion = (newState: MotionState) => {
+    if (newState !== motionStateRef.current) {
+      motionStateRef.current = newState;
+      setMotionState(newState);
+      applyStreetPattern(newState);
+    }
   };
 
   useEffect(() => {
-    if (Platform.OS === 'web') return; // Accelerometer not available on web
     if (activeMode !== 'STREET') {
-      Accelerometer.removeAllListeners();
+      if (Platform.OS !== 'web') Accelerometer.removeAllListeners();
+      if (locationSubRef.current) {
+         locationSubRef.current.remove();
+         locationSubRef.current = null;
+      }
       if (streetBrakingRef.current) {
         streetBrakingRef.current = false;
         setIsStreetBraking(false);
       }
       return;
     }
-    // Send initial cruise pattern when entering street mode
-    applyStreetPattern(false, streetCruiseColor);
+
+    // Initialize
+    updateMotion('STOPPED');
+
+    if (Platform.OS === 'web') return;
+
+    // Start Location tracking
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+           locationSubRef.current = await Location.watchPositionAsync(
+             { accuracy: Location.Accuracy.Balanced, timeInterval: 1000, distanceInterval: 1 },
+             (pos) => {
+                const spdMpS = pos.coords.speed || 0;
+                const spdMph = Math.max(0, spdMpS * 2.23694);
+                setGpsSpeed(spdMph);
+
+                // Add to rolling history
+                lastGpsSpeeds.current.push(spdMph);
+                if (lastGpsSpeeds.current.length > 3) lastGpsSpeeds.current.shift();
+
+                // If not hard braking, evaluate soft states
+                if (motionStateRef.current !== 'HARD_BRAKING') {
+                    if (spdMph < 1.0 && peakGForce < 1.1) {
+                       updateMotion('STOPPED');
+                    } else if (lastGpsSpeeds.current.length >= 2) {
+                       const oldSpd = lastGpsSpeeds.current[0];
+                       // If speed dropped by > 1.0mph in recent samples
+                       if (oldSpd - spdMph > 1.0) {
+                          updateMotion('SLOWING_DOWN');
+                       } else if (spdMph >= 1.0) {
+                          updateMotion('CRUISING');
+                       }
+                    } else if (spdMph >= 1.0) {
+                       updateMotion('CRUISING');
+                    }
+                }
+             }
+           );
+        }
+      } catch (e) {
+         console.warn("Location permission denied or unavailable", e);
+      }
+    })();
+
+    // Accelerometer tracking
     Accelerometer.setUpdateInterval(80);
     const sub = Accelerometer.addListener(({ x, y, z }) => {
       const prev = lastAccelRef.current;
+      const gMag = Math.sqrt(x*x + y*y + z*z);
+      
+      // Update peak G-Force display smoothing (decay back to 1.0)
+      setPeakGForce(prevG => {
+         if (gMag > prevG) return parseFloat(gMag.toFixed(2));
+         return parseFloat((prevG * 0.95 + 1.0 * 0.05).toFixed(2));
+      });
+
       const jerkMag = Math.sqrt(
         Math.pow(x - prev.x, 2) + Math.pow(y - prev.y, 2) + Math.pow(z - prev.z, 2)
       );
       lastAccelRef.current = { x, y, z };
       const threshold = ((100 - streetSensitivity) / 100) * 2.5 + 0.3;
+      
       const isBraking = jerkMag > threshold;
-      if (isBraking !== streetBrakingRef.current) {
-        streetBrakingRef.current = isBraking;
-        setIsStreetBraking(isBraking);
-        applyStreetPattern(isBraking, streetCruiseColor);
+      const isActivePush = jerkMag > 0.4 && !isBraking;
+
+      if (isBraking) {
+        streetBrakingRef.current = true;
+        setIsStreetBraking(true);
+        updateMotion('HARD_BRAKING');
+      } else {
+        if (streetBrakingRef.current) {
+           streetBrakingRef.current = false;
+           setIsStreetBraking(false);
+           // Re-evaluate state gracefully
+           if (lastGpsSpeeds.current[lastGpsSpeeds.current.length - 1] < 1.0) updateMotion('STOPPED');
+           else updateMotion('CRUISING');
+        } else if (isActivePush && motionStateRef.current !== 'SLOWING_DOWN') {
+           updateMotion('ACCELERATING');
+        }
       }
     });
-    return () => { sub.remove(); };
-  }, [activeMode, streetSensitivity, streetCruiseColor]);
+
+    return () => { 
+       sub.remove(); 
+       if (locationSubRef.current) {
+          locationSubRef.current.remove();
+          locationSubRef.current = null;
+       }
+    };
+  }, [activeMode, streetSensitivity, brightness, speed]);
 
   // ── Crew Leader Broadcast ────────────────────────────────────────────────
   // When acting as leader, broadcast scene to crew on every meaningful change.
@@ -1022,11 +1208,6 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
       default: return activeMode;
     }
   }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, selectedPatternId, musicPatternId, selectedColor, isStreetBraking]);
-  const modes = [
-    { id: 'FAVORITES', label: 'Styles', icon: 'star-outline' },
-    { id: 'MULTIMODE', label: 'Fixed', icon: 'palette-outline' }
-  ];
-
   const visualizerColor = React.useMemo(() => {
     if (activeMode === 'MULTIMODE') {
       if (fixedSubMode === 'PATTERN') return fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
@@ -1099,6 +1280,8 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
           rawHexPayload={lastSentPayload}
           multiColors={activeMode === 'FAVORITES' ? ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'] : multiColors}
           multiTransition={activeMode === 'FAVORITES' ? 3 : multiTransition}
+          isStreetBraking={isStreetBraking}
+          streetCruiseColor={streetCruiseColor}
         />
       </View>
       </View>
@@ -1342,7 +1525,6 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                               setMultiTransition(preset.type);
                               if (writeToDevice) {
                                   const rgbColors = generateSortedColors(preset.colors);
-                                  const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
                                   writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, preset.type));
                               }
                           }}
@@ -1419,7 +1601,6 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                             newArr[index] = selectedColor;
                             setMultiColors(newArr);
                             const rgbColors = generateSortedColors(newArr);
-                            const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
                             if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, multiTransition));
                           }} />
                         ))}
@@ -1441,7 +1622,6 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                              newArr.pop();
                              setMultiColors(newArr);
                              const rgbColors = generateSortedColors(newArr);
-                             const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
                             if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, multiTransition));
                           }}>
                             <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold', lineHeight: 22 }}>-</Text>
@@ -1475,7 +1655,6 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                                setFixedSubMode('DIY');
                                setMultiTransition(mode.val);
                                const rgbColors = generateSortedColors(multiColors);
-                               const pts = hwSettings?.ledPoints || points || 16; const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
                                if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, mode.val));
                             }} 
                             style={{ 
@@ -1499,101 +1678,234 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
             </View>
           )}
 
-          {/* ── STREET MODE UI ─────────────────────────────────────────────── */}
+          {/* ── PROGRAMS MODE UI ────────────────────────────────────────────── */}
+          {activeMode === 'PROGRAMS' && (
+            <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 4 }}>
+              <VerticalPatternDrum
+                value={selectedPatternId}
+                onValueChange={(id: number) => {
+                  setSelectedPatternId(id);
+                  if (writeToDevice) {
+                    if (id === 100) {
+                      applyEmergencyPattern(speed, brightness);
+                    } else {
+                      writeToDevice(ZenggeProtocol.setCustomRbm(id, speed, brightness));
+                    }
+                  }
+                }}
+                itemLabel={(id) => getRbmPatternName(id)}
+              />
+            </View>
+          )}
+
+          {/* ── MUSIC MODE UI ────────────────────────────────────────────────── */}
+          {activeMode === 'MUSIC' && (
+            <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 4, overflow: 'hidden' }}>
+              {/* Matrix Style: Light Screen / Light Bar */}
+              <View style={{ flexDirection: 'row', marginBottom: 6, marginTop: 2, flexShrink: 0, minHeight: 36 }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setMusicMatrixStyle(39);
+                    handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 39);
+                  }}
+                  style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: musicMatrixStyle === 39 ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
+                >
+                  <Text style={{ color: musicMatrixStyle === 39 ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Light Screen</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setMusicMatrixStyle(38);
+                    handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 38);
+                  }}
+                  style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: musicMatrixStyle === 38 ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
+                >
+                  <Text style={{ color: musicMatrixStyle === 38 ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Light Bar</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ flex: 1, justifyContent: 'space-evenly' }}>
+                <View style={[styles.musicToggleHeader, { justifyContent: 'center' }]}>
+                  <View style={[styles.musicModeIndicator, { alignItems: 'center' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <TouchableOpacity onPress={() => {
+                        const pid = musicPatternId > 1 ? musicPatternId - 1 : MUSIC_PATTERNS.length;
+                        setMusicPatternId(pid);
+                        handleMusicChange(pid);
+                      }} style={{ paddingHorizontal: 10 }}>
+                        <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'<'}</Text>
+                      </TouchableOpacity>
+                      <View style={[styles.musicModeCircle, { width: 32, height: 32, borderRadius: 16 }]}>
+                        <Text style={[styles.musicModeNumber, { fontSize: 14 }]}>{musicPatternId}</Text>
+                      </View>
+                      <TouchableOpacity onPress={() => {
+                        const pid = musicPatternId < MUSIC_PATTERNS.length ? musicPatternId + 1 : 1;
+                        setMusicPatternId(pid);
+                        handleMusicChange(pid);
+                      }} style={{ paddingHorizontal: 10 }}>
+                        <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'>'}</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={[Typography.caption, { marginTop: 4, color: Colors.primary, fontWeight: 'bold', fontSize: 13 }]}>
+                      {MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.micControlSection}>
+                  <TouchableOpacity
+                    style={[styles.micIconBtn, micSource === 'APP' && styles.micBtnActive]}
+                    onPress={() => {
+                      setMicSource('APP');
+                      handleMusicChange(musicPatternId, micSensitivity, brightness, 'APP');
+                    }}
+                  >
+                    <View style={[styles.micIconCircle, micSource === 'APP' && { backgroundColor: Colors.primary }]}>
+                      <MaterialCommunityIcons name="microphone-outline" size={20} color={micSource === 'APP' ? '#FFF' : Colors.textMuted} />
+                    </View>
+                    <Text style={[styles.micSubText, micSource === 'APP' && { color: Colors.primary, fontWeight: 'bold' }]}>APP MIC</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.playButtonMain}
+                    onPress={() => handleMusicChange()}
+                  >
+                    <View style={styles.playIconInner}>
+                      <MaterialCommunityIcons name="play" size={24} color="#FFF" />
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.micIconBtn, micSource === 'DEVICE' && styles.micBtnActive]}
+                    onPress={() => {
+                      setMicSource('DEVICE');
+                      handleMusicChange(musicPatternId, micSensitivity, brightness, 'DEVICE');
+                    }}
+                  >
+                    <View style={[styles.micIconCircle, micSource === 'DEVICE' && { backgroundColor: Colors.primary }]}>
+                      <MaterialCommunityIcons name="bluetooth-audio" size={20} color={micSource === 'DEVICE' ? '#FFF' : Colors.textMuted} />
+                    </View>
+                    <Text style={[styles.micSubText, micSource === 'DEVICE' && { color: Colors.primary, fontWeight: 'bold' }]}>DEVICE MIC</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* ── CAMERA MODE UI ────────────────────────────────────────────────── */}
+          {activeMode === 'CAMERA' && (
+            <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 4 }}>
+              <CameraTracker
+                isActive={activeMode === 'CAMERA'}
+                onColorDetected={(hex: string) => {
+                  setSelectedColor(hex);
+                  const r = parseInt(hex.slice(1, 3), 16);
+                  const g = parseInt(hex.slice(3, 5), 16);
+                  const b = parseInt(hex.slice(5, 7), 16);
+                  sendColor(r, g, b);
+                }}
+              />
+            </View>
+          )}
+
+          {/* ── STREET MODE UI: FAST & FURIOUS DASHBOARD ─────────────────── */}
           {activeMode === 'STREET' && (
             <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 8 }}>
 
-              {/* ── Street Visualizer ── */}
-              {/* Car-light zone bar */}
-              <View style={{ marginBottom: 16 }}>
+              {/* ── Street Visualizer: Car-light zone bar ── */}
+              <View style={{ marginBottom: 12 }}>
                 <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 8 }}>LED LAYOUT PREVIEW</Text>
                 <View style={{ flexDirection: 'row', height: 28, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
                   {/* Rear zone — red tail lights */}
                   <View style={{ flex: 3, backgroundColor: isStreetBraking ? '#FF0000' : '#660000', justifyContent: 'center', alignItems: 'center' }}>
-                    <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>TAIL</Text>
+                    <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>TAIL (30%)</Text>
                   </View>
                   {/* Middle zone — cruise color */}
                   <View style={{ flex: 4, backgroundColor: streetCruiseColor, justifyContent: 'center', alignItems: 'center', opacity: 0.9 }}>
-                    <Text style={{ color: '#000', fontSize: 9, fontWeight: '800' }}>CRUISE</Text>
+                    <Text style={{ color: '#000', fontSize: 9, fontWeight: '800' }}>CRUISE (40%)</Text>
                   </View>
                   {/* Front zone — headlights */}
                   <View style={{ flex: 3, backgroundColor: '#FFF5E0', justifyContent: 'center', alignItems: 'center' }}>
-                    <Text style={{ color: '#333', fontSize: 9, fontWeight: '800' }}>HEAD</Text>
+                    <Text style={{ color: '#333', fontSize: 9, fontWeight: '800' }}>HEAD (30%)</Text>
                   </View>
                 </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
-                  <Text style={{ color: '#990000', fontSize: 9 }}>🔴 30% Brake lights</Text>
-                  <Text style={{ color: streetCruiseColor, fontSize: 9 }}>● 40% Cruise</Text>
-                  <Text style={{ color: '#FFF5E0', fontSize: 9 }}>⬜ 30% Headlights</Text>
-                </View>
               </View>
 
-              {/* Live Status Badge */}
               <View style={{
-                alignSelf: 'center', flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                backgroundColor: isStreetBraking ? 'rgba(255,0,0,0.2)' : 'rgba(255,140,0,0.12)',
-                borderWidth: 1, borderColor: isStreetBraking ? '#FF0000' : '#FF8C00',
-                borderRadius: 20, paddingHorizontal: 20, paddingVertical: 8, marginBottom: 16,
+                flexDirection: 'row',
+                backgroundColor: 'rgba(0,0,0,0.4)',
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.05)',
+                overflow: 'hidden',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingVertical: 12,
+                marginBottom: 16,
               }}>
-                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: isStreetBraking ? '#FF0000' : '#FF8C00', marginRight: 8 }} />
-                <Text style={{ color: isStreetBraking ? '#FF4444' : '#FF8C00', fontSize: 15, fontWeight: '700', letterSpacing: 1.5 }}>
-                  {isStreetBraking ? '🔴  BRAKING — LIGHTS ON' : '🟠  CRUISING'}
-                </Text>
-              </View>
-
-              {/* Cruise Color Picker only — brake is always red, auto-brightened */}
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(255,140,0,0.3)', marginBottom: 12 }}>
-                <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: '600', marginBottom: 8, letterSpacing: 0.5 }}>MIDDLE CRUISE COLOR</Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {['#FF8C00','#FFAA00','#FFFFFF','#00AAFF','#00FF88','#FF00FF','#8B00FF','#00FFFF'].map(col => (
-                    <TouchableOpacity
-                      key={'cruise-' + col}
-                      onPress={() => {
-                        setStreetCruiseColor(col);
-                        applyStreetPattern(isStreetBraking, col);
-                      }}
-                      style={[
-                        { width: 30, height: 30, borderRadius: 15, backgroundColor: col },
-                        streetCruiseColor === col && { borderWidth: 3, borderColor: '#FFFFFF' },
-                      ]}
-                    />
-                  ))}
+                {/* LEFT: Stoplight Vertical Graphic */}
+                <View style={{
+                  width: 60,
+                  borderRightWidth: 1,
+                  borderRightColor: 'rgba(255,255,255,0.05)',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  {/* Red Light */}
+                  <View style={{
+                    width: 24, height: 24, borderRadius: 12, marginBottom: 8,
+                    backgroundColor: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? '#FF0000' : '#330000',
+                    shadowColor: '#FF0000', shadowOpacity: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? 1 : 0, shadowRadius: 12, elevation: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? 10 : 0,
+                    borderWidth: 1, borderColor: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? '#FFAAAA' : '#000',
+                  }} />
+                  {/* Yellow Light */}
+                  <View style={{
+                    width: 24, height: 24, borderRadius: 12, marginBottom: 8,
+                    backgroundColor: motionState === 'SLOWING_DOWN' ? '#FFFF00' : '#444400',
+                    shadowColor: '#FFFF00', shadowOpacity: motionState === 'SLOWING_DOWN' ? 1 : 0, shadowRadius: 12, elevation: motionState === 'SLOWING_DOWN' ? 10 : 0,
+                    borderWidth: 1, borderColor: motionState === 'SLOWING_DOWN' ? '#FFFFAA' : '#000',
+                  }} />
+                  {/* Green Light */}
+                  <View style={{
+                    width: 24, height: 24, borderRadius: 12,
+                    backgroundColor: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? '#00FF00' : '#003300',
+                    shadowColor: '#00FF00', shadowOpacity: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? 1 : 0, shadowRadius: 12, elevation: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? 10 : 0,
+                    borderWidth: 1, borderColor: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? '#AAFFAA' : '#000',
+                  }} />
                 </View>
-                <Text style={{ color: Colors.textMuted, fontSize: 10, marginTop: 8 }}>Brake lights are always red · auto-brightened on deceleration</Text>
-              </View>
 
-              {/* Sensitivity Slider */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                <MaterialCommunityIcons name="speedometer" size={20} color={Colors.textMuted} style={{ marginRight: 12, width: 28 }} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 4 }}>BRAKE SENSITIVITY — {streetSensitivity}%</Text>
-                  <CustomSlider
-                    value={streetSensitivity}
-                    minimumValue={5}
-                    maximumValue={95}
-                    onValueChange={setStreetSensitivity}
-                    style={{ width: '100%', height: 32 }}
-                  />
+                {/* CENTER: Telemetry Gauges */}
+                <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
+                   <AnalogGauge value={gpsSpeed} min={0} max={35} label="SPEED" unit="MPH" color="#00F0FF" />
+                   <AnalogGauge value={peakGForce} min={0.3} max={2.2} label="G-FORCE" unit="G" color="#FFD700" />
                 </View>
               </View>
 
-              <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, textAlign: 'center', marginTop: 4 }}>
-                Higher sensitivity = triggers brake on lighter deceleration
-              </Text>
+              {/* Status Bar */}
+              <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)', paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginBottom: 12 }}>
+                  <Text style={{
+                    color: (motionState === 'HARD_BRAKING' || motionState === 'STOPPED') ? '#FF4444' : motionState === 'SLOWING_DOWN' ? '#FFD700' : '#00FF00',
+                    fontSize: 12, fontWeight: '800', letterSpacing: 3
+                  }}>
+                    {motionState === 'STOPPED' && '>> SYS: STOPPED <<'}
+                    {motionState === 'HARD_BRAKING' && '>> SYS: HARD BRAKING <<'}
+                    {motionState === 'SLOWING_DOWN' && '>> SYS: DECELERATING <<'}
+                    {motionState === 'ACCELERATING' && '>> SYS: ACCELERATING <<'}
+                    {motionState === 'CRUISING' && '>> SYS: CRUZING <<'}
+                  </Text>
+              </View>
             </View>
           )}
 
         </View>
 
-        {/* UNIVERSAL SLIDERS FOOTER - Hidden in PRESETS */}
-        {activeMode !== 'FAVORITES' && activeMode !== 'STREET' && (
+        {/* UNIVERSAL SLIDERS FOOTER - Hidden in FAVORITES only */}
+        {activeMode !== 'FAVORITES' && (
           <View style={[styles.sceneSlidersContainer, { marginTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 8, paddingBottom: 0 }]}>
             {/* Color Grid wrappers */}
             {!(activeMode === 'PROGRAMS') && (
               <View style={{ marginBottom: 4 }}>
                 {/* Dynamic Selected Color Bar */}
                 {!(activeMode === 'MUSIC' || (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' && fixedPatternId !== 1)) && (() => {
-                  const dynamicColor = selectedColor;
+                  const dynamicColor = activeMode === 'STREET' ? streetCruiseColor : selectedColor;
                   
                   return (
                     <TouchableOpacity 
@@ -1604,6 +1916,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                          const g = parseInt(dynamicColor.slice(3, 5), 16) || 255;
                          const b = parseInt(dynamicColor.slice(5, 7), 16) || 255;
                          if (activeMode === 'MULTIMODE' && fixedSubMode !== 'PATTERN') sendColor(r, g, b);
+                         else if (activeMode === 'STREET') applyStreetPattern(motionStateRef.current);
                       }}
                       style={{
                         width: '100%',
@@ -1692,7 +2005,6 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                     } else if (activeMode === 'MUSIC') {
                       dynamicColor = musicColorFocus === 'PRIMARY' ? musicPrimaryColor : musicSecondaryColor;
                     }
-                    
                     const isActive = typeof dynamicColor === 'string' && dynamicColor.toUpperCase() === color.toUpperCase();
                     return (
                       <TouchableOpacity 
@@ -1731,6 +2043,10 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                                    if (hueMap[color] !== undefined) setMusicSecondaryHue(hueMap[color]);
                                    handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, color, musicMatrixStyle);
                                }
+                          } else if (activeMode === 'STREET') {
+                             setStreetCruiseColor(color);
+                             if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
+                             applyStreetPattern(motionStateRef.current);
                           } else {
                             setSelectedColor(color);
                             if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
@@ -1767,7 +2083,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
 
             {/* Hue Slider */}
             {!(activeMode === 'PROGRAMS' || activeMode === 'CAMERA') && (
-              <View style={[styles.controlRow, { marginTop: 0, height: 32, flexShrink: 0 }]}>
+              <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
                 <CustomSlider 
                   gradientTrack={true}
                   value={activeMode === 'MUSIC' ? (musicColorFocus === 'PRIMARY' ? musicHue : musicSecondaryHue) : activeMode === 'MULTIMODE' ? fixedHue : selectedHue}
@@ -1798,6 +2114,12 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                        const hex = rgb2hex(f(5), f(3), f(1));
                        if (musicColorFocus === 'PRIMARY') { setMusicPrimaryColor(hex); setMusicHue(hue); }
                        else { setMusicSecondaryColor(hex); setMusicSecondaryHue(hue); }
+                    } else if (activeMode === 'STREET') {
+                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                       const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+                       const hex = rgb2hex(f(5), f(3), f(1));
+                       setStreetCruiseColor(hex);
+                       setSelectedHue(hue);
                     } else {
                       setSelectedHue(hue);
                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
@@ -1819,6 +2141,11 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                          } else {
                             handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, hex, musicMatrixStyle);
                          }
+                     } else if (activeMode === 'STREET') {
+                         const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                         const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+                         const hex = rgb2hex(f(5), f(3), f(1));
+                         applyStreetPattern(motionStateRef.current);
                      } else {
                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
                       const r = Math.round(f(5) * 255);
@@ -1829,13 +2156,13 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                   }}
                   minimumValue={0}
                   maximumValue={360}
-                  style={{ position: 'absolute', width: '100%', height: 32 }}
+                  style={{ flex: 1 }}
                 />
               </View>
             )}
 
-            {/* Brightness Slider - Hidden in PRESETS and CAMERA (Presets have their own Brightness logic mapped inside the component block, while Camera explicitly forces raw camera detection bounds) */}
-            {!(activeMode === 'CAMERA') && (
+            {/* Brightness Slider - Hidden in DIY, CAMERA, and STREET */}
+            {!(activeMode === 'MULTIMODE' && fixedSubMode === 'DIY') && !(activeMode === 'CAMERA') && !(activeMode === 'STREET') && (
             <View style={[styles.controlRow, { marginTop: 8, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                 <MaterialCommunityIcons name="white-balance-sunny" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
@@ -1855,7 +2182,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                           if (fixedSubMode === 'PATTERN') {
                             applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
                           } else if (fixedSubMode === 'DIY') {
-                            const factor = val / 100;
+                            const factor = brtFactor(val);
                             const sortIdx = hwSettings?.colorSorting ?? 2;
                             const rgbColors = multiColors.map(h => {
                                 const rawR = Math.round((parseInt(h.slice(1,3), 16) || 0) * factor);
@@ -1863,8 +2190,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                                 const rawB = Math.round((parseInt(h.slice(5,7), 16) || 0) * factor);
                                 return ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
                             });
-                            const pts = hwSettings?.ledPoints || points || 16;
-                            const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                           
                             writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, multiTransition));
                           }
                         } else if (activeMode === 'PROGRAMS') {
@@ -1875,7 +2201,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                           }
                         } else {
                           // Standard scaled color for other modes
-                          const factor = val / 100;
+                          const factor = brtFactor(val);
                           const hex = selectedColor;
                           const r = Math.round(parseInt(hex.slice(1, 3), 16) * factor);
                           const g = Math.round(parseInt(hex.slice(3, 5), 16) * factor);
@@ -1904,7 +2230,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                           if (fixedSubMode === 'PATTERN') {
                             applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
                           } else if (fixedSubMode === 'DIY') {
-                            const factor = brightness / 100;
+                            const factor = brtFactor(brightness);
                             const sortIdx = hwSettings?.colorSorting ?? 2;
                             const rgbColors = multiColors.map(h => {
                                 const rawR = Math.round((parseInt(h.slice(1,3), 16) || 0) * factor);
@@ -1912,8 +2238,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                                 const rawB = Math.round((parseInt(h.slice(5,7), 16) || 0) * factor);
                                 return ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
                             });
-                            const pts = hwSettings?.ledPoints || points || 16;
-                            const appliedLength = Math.min(multiLength, Math.max(1, Math.floor(pts / (hwSettings?.segments || 1))));
+                           
                             writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(val), 1, multiTransition));
                           }
                         } else if (activeMode === 'PROGRAMS') {
@@ -1922,11 +2247,29 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                           } else {
                             writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
                           }
+                        } else if (activeMode === 'STREET') {
+                          applyStreetPattern(motionStateRef.current, brightness, val);
                         }
                       }
                     }}
                     minimumValue={0}
                     maximumValue={100}
+                    style={{ flex: 1 }}
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Street Brake Sensitivity Slider - Visible ONLY in STREET */}
+            {(activeMode === 'STREET') && (
+              <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                  <MaterialCommunityIcons name="octagon-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
+                  <CustomSlider 
+                    value={streetSensitivity}
+                    onValueChange={setStreetSensitivity}
+                    minimumValue={5}
+                    maximumValue={95}
                     style={{ flex: 1 }}
                   />
                 </View>
@@ -2335,7 +2678,8 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     borderRadius: 25,
     padding: 4,
     alignItems: 'center',
-    margin: 12,
+    marginVertical: 4,
+    marginHorizontal: 4,
     borderWidth: 1,
     borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
   },
@@ -2388,10 +2732,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     alignItems: 'center',
     justifyContent: 'center',
   },
-  musicVisualizerSection: {
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
+
   micControlSection: {
     flexDirection: 'row',
     alignItems: 'center',

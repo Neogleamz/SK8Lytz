@@ -1,41 +1,47 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
-import { Colors } from '../theme/theme';
 
 const BARS_COUNT = 30;
+const BAR_MIN_H = 6;   // Minimum visible height even at silence
+const BAR_MAX_H = 48;  // Maximum bar height at full magnitude
+const BAR_WIDTH = 5;   // Fixed width per bar — prevents too-wide bars on large screens
 
 export default function SpectrumVisualizer({ magnitude }: { magnitude?: number }) {
-  const animations = useRef(Array(BARS_COUNT).fill(0).map(() => new Animated.Value(0))).current;
+  const animations = useRef(Array(BARS_COUNT).fill(0).map(() => new Animated.Value(0.15))).current;
   const loopActive = useRef(true);
 
   useEffect(() => {
     if (magnitude !== undefined) {
       loopActive.current = false;
-      animations.forEach((anim, i) => {
-        // Add pseudo-frequency randomness but anchor to magnitude to make it dance realistically to the DB peaks
-        const randomness = Math.random() * 0.5 + 0.5;
+      animations.forEach((anim, _i) => {
+        // Lift the floor: even at magnitude=0 we show a little activity.
+        // Map 0..1 → 0.15..1.0 so bars never fully collapse.
+        const randomness = Math.random() * 0.4 + 0.6; // 0.6–1.0
+        const floor = 0.15;
+        const toValue = floor + (1 - floor) * magnitude * randomness;
         Animated.spring(anim, {
-          toValue: magnitude * randomness,
+          toValue,
           useNativeDriver: false,
-          speed: 24,
-          bounciness: 8
+          speed: 28,
+          bounciness: 6,
         }).start();
       });
     } else {
+      // Demo loop mode when no magnitude is supplied
       loopActive.current = true;
       const runAnimation = (anim: Animated.Value) => {
         if (!loopActive.current) return;
         Animated.sequence([
           Animated.timing(anim, {
-            toValue: Math.random(),
+            toValue: 0.3 + Math.random() * 0.7,
             duration: 300 + Math.random() * 500,
             useNativeDriver: false,
           }),
           Animated.timing(anim, {
-            toValue: 0.2 + Math.random() * 0.3,
+            toValue: 0.15 + Math.random() * 0.3,
             duration: 300 + Math.random() * 500,
             useNativeDriver: false,
-          })
+          }),
         ]).start(() => runAnimation(anim));
       };
       animations.forEach(runAnimation);
@@ -48,35 +54,39 @@ export default function SpectrumVisualizer({ magnitude }: { magnitude?: number }
         {animations.map((anim, i) => {
           const height = anim.interpolate({
             inputRange: [0, 1],
-            outputRange: [4, 40],
+            outputRange: [BAR_MIN_H, BAR_MAX_H],
           });
-          
-          // Color based on index (rainbow)
+
+          // Rainbow spectrum across bars
           const hue = (i / BARS_COUNT) * 280;
-          const color = `hsl(${hue}, 80%, 60%)`;
+          const color = `hsl(${hue}, 90%, 60%)`;
 
           return (
             <View key={i} style={styles.barContainer}>
-              <Animated.View 
+              <Animated.View
                 style={[
-                  styles.bar, 
-                  { 
-                    height, 
+                  styles.bar,
+                  {
+                    height,
                     backgroundColor: color,
-                    borderTopLeftRadius: 3,
-                    borderTopRightRadius: 3,
-                  }
-                ]} 
+                    shadowColor: color,
+                    shadowOpacity: 0.7,
+                    shadowRadius: 4,
+                    shadowOffset: { width: 0, height: 0 },
+                    elevation: 4,
+                  },
+                ]}
               />
-              {/* Top dots/peaks effect from screenshot */}
-              <Animated.View 
+              {/* Peak dot */}
+              <Animated.View
                 style={[
-                  styles.peak, 
-                  { 
-                    transform: [{ translateY: anim.interpolate({ inputRange: [0,1], outputRange: [0, -20]}) }],
-                    opacity: 0.8
-                  }
-                ]} 
+                  styles.peak,
+                  {
+                    transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [0, -(BAR_MAX_H - 8)] }) }],
+                    backgroundColor: color,
+                    opacity: 0.9,
+                  },
+                ]}
               />
             </View>
           );
@@ -88,36 +98,38 @@ export default function SpectrumVisualizer({ magnitude }: { magnitude?: number }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 4,
-    backgroundColor: 'rgba(255,110,0,0.05)',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(0,0,0,0.4)',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 50,
+    minHeight: 56,
     borderWidth: 1,
-    borderColor: 'rgba(255,110,0,0.1)',
+    borderColor: 'rgba(255,110,0,0.15)',
   },
   visualizerArea: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    height: 40,
+    height: BAR_MAX_H,
     width: '100%',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 2,
   },
   barContainer: {
-    flex: 1,
+    width: BAR_WIDTH,
     alignItems: 'center',
-    marginHorizontal: 1,
   },
   bar: {
-    width: '100%',
+    width: BAR_WIDTH,
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 2,
   },
   peak: {
-    width: 3,
-    height: 3,
-    backgroundColor: '#FFF',
-    borderRadius: 2,
+    width: BAR_WIDTH,
+    height: 2,
+    borderRadius: 1,
     position: 'absolute',
-    top: 5,
-  }
+    top: 2,
+  },
 });

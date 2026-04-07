@@ -1,10 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, NativeSyntheticEvent, NativeScrollEvent, TouchableOpacity, FlatList } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
 const ITEM_HEIGHT = 44;
-const VISIBLE_ITEMS = 5;
 
 const VerticalPatternDrum = ({
   value,

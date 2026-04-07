@@ -23,7 +23,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView,
-  Share, Alert, FlatList, Platform, SafeAreaView, TextInput
+  Share, Alert, FlatList, Platform, SafeAreaView
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
@@ -133,8 +133,8 @@ interface LogViewerModalProps {
   liveDeviceConfigs?: Record<string, any>;
 }
 
-export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, writeToDevice, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll, onConnectToDevice, liveDeviceConfigs }: LogViewerModalProps) {
-  const { Colors, isDark } = useTheme();
+export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll, onConnectToDevice, liveDeviceConfigs }: LogViewerModalProps) {
+  const { isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stats, setStats] = useState<any>(null);
@@ -253,7 +253,6 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
         {uniqueIds.map((id, i) => {
           const meta = uniqueMeta.get(id) || {};
           const config = deviceConfigs[id] || {};
-          const sortingLabel = config.sorting === 'leftToRight' ? 'L→R' : config.sorting === 'rightToLeft' ? 'R→L' : config.sorting;
 
           return (
             <View key={i} style={[styles.deviceCard, { backgroundColor: cardBg, borderColor }]}>

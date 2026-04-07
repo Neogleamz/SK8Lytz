@@ -1,5 +1,4 @@
 import { supabase } from './supabaseClient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface ICloudScene {
   id: string;
