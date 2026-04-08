@@ -223,6 +223,11 @@ export default function PositionalGradientBuilder({
                        onPress={() => loadPreset(p)}
                        style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#222' : '#E0E0E0', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
                     >
+                       <View style={{ flexDirection: 'row', marginRight: 8 }}>
+                           {p.nodes.map((n, i) => (
+                               <View key={n.id} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: n.colorHex, marginLeft: i === 0 ? 0 : -4, borderWidth: 1, borderColor: isDark ? '#222' : '#E0E0E0' }} />
+                           ))}
+                       </View>
                        <MaterialCommunityIcons name={p.id.startsWith('local_') ? 'cellphone' : 'cloud-check'} size={12} color={Colors.textMuted} style={{ marginRight: 4 }} />
                        <Text style={{ color: '#FFF', fontSize: 11, fontWeight: 'bold' }}>{p.name}</Text>
                     </TouchableOpacity>
