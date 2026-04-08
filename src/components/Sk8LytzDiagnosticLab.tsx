@@ -214,12 +214,13 @@ export default function Sk8LytzDiagnosticLab({
 
   const transmit = useCallback(async (bytes: number[], note?: string) => {
     if (!writeToDevice) return;
-    await writeToDevice(bytes).catch(console.warn);
+    // Pass targetDeviceId so payload goes to the specific targeted device only
+    await writeToDevice(bytes, targetDeviceId ?? undefined).catch(console.warn);
     const hexStr = bytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
     setLastSent(hexStr);
     setLastNote(note || '');
-    setLogs(prev => [{ dir: 'TX' as const, hex: hexStr, t: Date.now(), note }, ...prev].slice(0, 200));
-  }, [writeToDevice]);
+    setLogs(prev => [{ dir: 'TX' as const, hex: hexStr, t: Date.now(), note, dev: targetDeviceId ?? undefined }, ...prev].slice(0, 200));
+  }, [writeToDevice, targetDeviceId]);
 
   const sendRawHex = useCallback(async (hexStr: string, note?: string) => {
     const bytes = hexStr.replace(/[^0-9A-Fa-f]/g, '').match(/.{1,2}/g)?.map(h => parseInt(h, 16)) || [];
@@ -735,6 +736,7 @@ export default function Sk8LytzDiagnosticLab({
 
         {/* Content */}
         <View style={S.content}>
+          {tab === 'DEVICES'    && renderDevicesTab()}
           {tab === 'COLOR'      && renderColorTab()}
           {tab === 'TRANSITION' && renderTransitionTab()}
           {tab === 'BUILDER'    && renderBuilderTab()}
