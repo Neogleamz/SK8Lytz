@@ -79,7 +79,11 @@ export default function PositionalGradientBuilder({
   const previewLeds = PositionalMathBuffer.generateArray(nodes, 100, fillMode === 'GRADIENT');
 
   return (
-    <View style={{ flex: 1, backgroundColor: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.03)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'transparent' }}>
+    <ScrollView 
+       style={{ flex: 1, backgroundColor: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.03)', borderRadius: 12, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'transparent' }}
+       contentContainerStyle={{ padding: 12, paddingBottom: 24 }}
+       showsVerticalScrollIndicator={false}
+    >
       
       {/* 1. TOP HEADER - ADD NODE */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -191,6 +195,6 @@ export default function PositionalGradientBuilder({
           ))}
       </View>
 
-    </View>
+    </ScrollView>
   );
 }
