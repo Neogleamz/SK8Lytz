@@ -23,6 +23,7 @@ import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
 import ProductVisualizer from './ProductVisualizer';
 import CustomSlider from './CustomSlider';
+import TacticalSlider from './TacticalSlider';
 import VerticalPatternDrum from './VerticalPatternDrum';
 import CameraTracker from './CameraTracker';
 import { getRbmPatternName } from '../constants/RbmPatterns';
@@ -41,6 +42,7 @@ import CommunityModal from './CommunityModal';
 import { Accelerometer } from 'expo-sensors';
 import * as Location from 'expo-location';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import MarqueeText from './MarqueeText';
 
 type MotionState = 'STOPPED' | 'ACCELERATING' | 'CRUISING' | 'SLOWING_DOWN' | 'HARD_BRAKING';
 
@@ -298,47 +300,7 @@ export type DockedControllerHandle = { applyCloudScene: (scene: any) => void };
 
 // CURATED_PRESETS logic moved to internal component state for Supabase updating
 
-const MarqueeText = ({ children, style }: any) => {
-  const [textWidth, setTextWidth] = useState(0);
-  const [containerWidth, setContainerWidth] = useState(0);
-  const anim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (textWidth > containerWidth && containerWidth > 0) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(1500),
-          Animated.timing(anim, {
-            toValue: -(textWidth - containerWidth + 8),
-            duration: 18 * (textWidth - containerWidth),
-            useNativeDriver: true,
-          }),
-          Animated.delay(1000),
-          Animated.timing(anim, {
-            toValue: 0,
-            duration: 0,
-            useNativeDriver: true,
-          })
-        ])
-      ).start();
-    } else {
-      anim.setValue(0);
-      anim.stopAnimation();
-    }
-  }, [textWidth, containerWidth]);
-
-  return (
-    <View style={{ overflow: 'hidden', width: '100%', alignItems: 'center', marginVertical: 2 }} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
-      <Animated.Text
-        numberOfLines={1}
-        onLayout={(e) => setTextWidth(e.nativeEvent.layout.width)}
-        style={[style, { transform: [{ translateX: anim }] }]}
-      >
-        {children}
-      </Animated.Text>
-    </View>
-  );
-};
+// MarqueeText moved to standalone component MarqueeText.tsx
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
 function DockedController({ hwSettings, lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange }: Sk8lytzControllerProps, ref) {
@@ -364,6 +326,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   
   const [activeProduct, setActiveProduct] = useState<ProductType>(lockedProduct || 'HALOZ');
   const [activeMode, setActiveMode] = useState<ModeType>('FAVORITES');
+  const [lastOperatingMode, setLastOperatingMode] = useState<ModeType>('MULTIMODE');
   const [selectedColor, setSelectedColor] = useState<string>('#00F0FF');
   const [selectedHue, setSelectedHue] = useState<number>(180);
   const [selectedPatternId, setSelectedPatternId] = useState<number>(1);
@@ -435,7 +398,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   const [multiLength, setMultiLength] = useState<number>(16);
 
   // Active Sub-Mode for the Consolidated Fixed Tab
-  const [fixedSubMode, setFixedSubMode] = useState<'PATTERN' | 'DIY' | 'BUILDER'>('PATTERN');
+  const [fixedSubMode, setFixedSubMode] = useState<'PATTERN' | 'BUILDER'>('PATTERN');
 
   // Multi-Color Builder State
   const [builderNodes, setBuilderNodes] = useState<BuilderNode[]>([
@@ -444,6 +407,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   ]);
   const [builderFillMode, setBuilderFillMode] = useState<'GRADIENT' | 'SOLID'>('GRADIENT');
   const [builderTransitionType, setBuilderTransitionType] = useState<number>(1);
+  const [builderDirection, setBuilderDirection] = useState<number>(1);
 
   // ── Street Mode (Accelerometer Reactive) ──────────────────────────────────────
   const [streetSensitivity, setStreetSensitivity] = useState<number>(30);
@@ -779,7 +743,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
         applyFixedPattern(fav.patternId, fav.fixedFgColor, fav.fixedBgColor, fav.speed, fav.brightness);
      } else if (legacyMode === 'MULTI' || legacyMode === 'DIY' || legacyMode === 'MULTICOLOR') {
         setActiveMode('MULTIMODE');
-        setFixedSubMode('DIY');
+        setFixedSubMode('BUILDER');
         setMultiColors(fav.multiColors || []);
         setMultiTransition(fav.multiTransition || 3);
         setMultiLength(fav.multiLength || 16);
@@ -1290,7 +1254,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   const visualizerColor = React.useMemo(() => {
     if (activeMode === 'MULTIMODE') {
       if (fixedSubMode === 'PATTERN') return fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
-      return selectedColor; // DIY
+      return selectedColor; // BUILDER
     }
     if (activeMode === 'MUSIC') {
       const f = (n: number, k = (n + musicHue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
@@ -1343,7 +1307,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
         <ProductVisualizer 
           product={activeProduct} 
           color={visualizerColor} 
-          mode={activeMode === 'FAVORITES' ? 'MULTICOLOR' : activeMode === 'MULTIMODE' ? (fixedSubMode === 'DIY' ? 'MULTICOLOR' : 'MULTIMODE') : activeMode}
+          mode={activeMode === 'FAVORITES' ? (lastOperatingMode === 'MULTIMODE' ? (fixedSubMode === 'BUILDER' ? 'BUILDER' : 'MULTIMODE') : lastOperatingMode) : activeMode === 'MULTIMODE' ? (fixedSubMode === 'BUILDER' ? 'BUILDER' : 'MULTIMODE') : activeMode}
           patternId={activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' ? fixedPatternId : selectedPatternId)} 
           isPaired={isPaired}
           points={points}
@@ -1357,10 +1321,14 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
           statusText={currentStatusText}
           audioMagnitude={audioMagnitude}
           rawHexPayload={lastSentPayload}
-          multiColors={activeMode === 'FAVORITES' ? ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'] : multiColors}
-          multiTransition={activeMode === 'FAVORITES' ? 3 : multiTransition}
+          multiColors={multiColors}
+          multiTransition={multiTransition}
           isStreetBraking={isStreetBraking}
           streetCruiseColor={streetCruiseColor}
+          builderNodes={builderNodes}
+          builderFillMode={builderFillMode}
+          builderTransitionType={builderTransitionType}
+          builderDirection={builderDirection}
         />
       </View>
       </View>
@@ -1429,7 +1397,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                                     <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
                                  </View>
                               );
-                           } else if (fav.mode === 'MULTI' || fav.mode === 'DIY') {
+                           } else if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
                               const colors = fav.multiColors || ['#FFFFFF'];
                               return (
                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
@@ -1488,7 +1456,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                                     <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
                                  </View>
                               );
-                           } else if (fav.mode === 'MULTI' || fav.mode === 'DIY') {
+                           } else if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
                               const colors = fav.multiColors || ['#FFFFFF'];
                               return (
                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
@@ -1509,8 +1477,8 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
           {activeMode === 'MULTIMODE' && (
             <View style={{ flex: 1, marginBottom: 8, justifyContent: 'flex-start' }}>
               
-              {/* UNIFIED SOLID & MULTI-COLOR PRESETS & PRO EFFECTS & POSITIONAL BUILDER */}
-              {(fixedSubMode === 'DIY' || fixedSubMode === 'PATTERN' || fixedSubMode === 'BUILDER') && (
+              {/* UNIFIED PRO EFFECTS & POSITIONAL BUILDER */}
+              {(fixedSubMode === 'PATTERN' || fixedSubMode === 'BUILDER') && (
                 <View style={{ flex: 1, width: '100%', marginBottom: 4 }}>
                   
                   {/* UNIFIED TOGGLE */}
@@ -1523,12 +1491,6 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                       style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'PATTERN' ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
                     >
                       <Text style={{ color: fixedSubMode === 'PATTERN' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Pro Effects</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      onPress={() => setFixedSubMode('DIY')}
-                      style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'DIY' ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}
-                    >
-                      <Text style={{ color: fixedSubMode === 'DIY' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Presets & DIY</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                       onPress={() => setFixedSubMode('BUILDER')}
@@ -1587,182 +1549,13 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                              speed={speed} 
                              points={devices?.[0]?.points || points || 16} 
                              segments={devices?.[0]?.segments || 1} 
-                             direction={true} // Defaults to true for normal play
+                             direction={true} 
                              fgColorHex={fixedFgColor}
                              bgColorHex={fixedBgColor}
                           />
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
-                  </View>
-                  )}
-
-                  {/* QUICK PRESETS TIER */}
-                  {fixedSubMode === 'DIY' && (
-                  <View style={{ flex: 1, paddingBottom: 6 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                       <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: 'bold' }}>PRESETS & DIY</Text>
-                       <TouchableOpacity onPress={() => setIsCommunityModalVisible(true)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,255,0,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
-                          <MaterialCommunityIcons name="cloud-search" size={14} color="#00C853" style={{ marginRight: 4 }} />
-                          <Text style={{ color: '#00C853', fontSize: 10, fontWeight: 'bold' }}>COMMUNITY</Text>
-                       </TouchableOpacity>
-                    </View>
-                    <View style={{ flex: 1, flexDirection: 'column', flexWrap: 'wrap', alignContent: 'stretch', gap: 4 }}>
-                      {quickPresets.map((preset, idx) => (
-                        <TouchableOpacity 
-                          key={idx}
-                          onPress={() => {
-                           setActiveQuickPresetIndex(idx);
-                              setFixedSubMode('DIY');
-                              setMultiColors(preset.colors);
-                              setMultiTransition(preset.type);
-                              if (writeToDevice) {
-                                  const rgbColors = generateSortedColors(preset.colors);
-                                  writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, preset.type));
-                              }
-                          }}
-                          style={{
-                              flex: 1, minHeight: 45, justifyContent: 'center', paddingHorizontal: 10,
-                              backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', 
-                              borderRadius: 8, borderWidth: 1, borderColor: activeQuickPresetIndex === idx ? Colors.primary : (Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')
-                          }}
-                        >
-                          <TouchableOpacity 
-                            style={{ position: 'absolute', right: 10, top: '50%', marginTop: -14, padding: 6, zIndex: 10 }}
-                            onPress={() => {
-                               setActiveQuickPresetIndex(idx);
-                               setFixedSubMode('DIY');
-                               setMultiColors(preset.colors);
-                               setMultiTransition(preset.type);
-                               setIsDiyBuilderExpanded(true);
-                            }}
-                          >
-                             <MaterialCommunityIcons name="pencil-outline" size={16} color={Colors.textMuted} />
-                          </TouchableOpacity>
-
-                          <View style={{ width: '80%', height: 20, justifyContent: 'center', alignItems: 'center' }}>
-                            <MarqueeText style={{ color: Colors.text, fontWeight: 'bold', fontSize: 11 }}>{preset.name}</MarqueeText>
-                          </View>
-                          <View style={{ flexDirection: 'row', gap: 2, justifyContent: 'center', marginRight: '15%' }}>
-                             {preset.colors.slice(0,6).map((c: string, i: number) => (
-                                <View key={i} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c }} />
-                             ))}
-                             {preset.colors.length > 6 && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#888' }} />}
-                          </View>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-
-                    {!isDiyBuilderExpanded && (
-                      <TouchableOpacity 
-                        style={{ marginTop: 8, padding: 12, backgroundColor: Colors.surfaceHighlight, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
-                        onPress={() => {
-                           setActiveQuickPresetIndex(null);
-                           setIsDiyBuilderExpanded(true);
-                        }}
-                      >
-                        <Text style={{ color: Colors.text, fontWeight: 'bold', fontSize: 12 }}>+ Create New DIY Array</Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {isDiyBuilderExpanded && (() => {
-                      const _diyPts  = hwSettings?.ledPoints || points || 16;
-                      // ledPoints IS the total LED count — no division by segments
-                      const _maxDiy  = Math.max(1, _diyPts);
-                      const _isHalozDiy = (hwSettings?.segments || 1) === 2 && _diyPts === 16;
-                       return (
-                    <View style={{ marginTop: 12, padding: 10, backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderRadius: 12, borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                         <View>
-                           <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: 'bold' }}>DIY ARRAY BUILDER</Text>
-                           {_isHalozDiy && (
-                             <Text style={{ color: '#FFAA00', fontSize: 10, marginTop: 2 }}>
-                               ⚠ HALOZ: design all {_maxDiy} LEDs — hardware loops natively
-                             </Text>
-                           )}
-                         </View>
-                         <TouchableOpacity onPress={() => setIsDiyBuilderExpanded(false)} style={{ padding: 4 }}>
-                            <MaterialCommunityIcons name="chevron-up" size={24} color={Colors.textMuted} />
-                         </TouchableOpacity>
-                      </View>
-
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                        {multiColors.map((hex, index) => (
-                          <TouchableOpacity key={index} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: hex, borderWidth: 2, borderColor: '#FFF', shadowColor: hex, shadowOpacity: 0.8, shadowRadius: 4 }} onPress={() => {
-                            setFixedSubMode('DIY');
-                            const newArr = [...multiColors];
-                            newArr[index] = selectedColor;
-                            setMultiColors(newArr);
-                            const rgbColors = generateSortedColors(newArr);
-                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, multiTransition));
-                          }} />
-                        ))}
-                        {multiColors.length < _maxDiy && (
-                          <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderWidth: 1, borderColor: Colors.isDark ? '#FFF' : Colors.text, justifyContent: 'center', alignItems: 'center' }} onPress={() => {
-                             setFixedSubMode('DIY');
-                             const newArr = [...multiColors, selectedColor];
-                             setMultiColors(newArr);
-                             const rgbColors = generateSortedColors(newArr);
-                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, multiTransition));
-                          }}>
-                            <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold' }}>+</Text>
-                          </TouchableOpacity>
-                        )}
-                        {multiColors.length > 1 && (
-                          <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,0,0,0.3)', borderWidth: 1, borderColor: Colors.isDark ? '#FFF' : Colors.text, justifyContent: 'center', alignItems: 'center' }} onPress={() => {
-                             setFixedSubMode('DIY');
-                             const newArr = [...multiColors];
-                             newArr.pop();
-                             setMultiColors(newArr);
-                             const rgbColors = generateSortedColors(newArr);
-                            if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, multiTransition));
-                          }}>
-                            <Text style={{ color: Colors.text, fontSize: 20, fontWeight: 'bold', lineHeight: 22 }}>-</Text>
-                          </TouchableOpacity>
-                        )}
-                        <TouchableOpacity style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.primary, borderWidth: 1, borderColor: Colors.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)', justifyContent: 'center', alignItems: 'center', marginLeft: 'auto' }} onPress={() => {
-                            if (activeQuickPresetIndex !== null && quickPresets[activeQuickPresetIndex]) {
-                                setQuickPromptTargetIndex(activeQuickPresetIndex);
-                                setQuickPromptName(quickPresets[activeQuickPresetIndex].name);
-                            } else {
-                                setQuickPromptTargetIndex(-1);
-                                setQuickPromptName('Custom Preset');
-                            }
-                            setIsQuickPromptVisible(true);
-                        }}>
-                          <MaterialCommunityIcons name="content-save" size={16} color="#000" />
-                        </TouchableOpacity>
-                      </View>
-
-                      <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 4, marginTop: 12, fontWeight: 'bold' }}>TRANSITION TYPE</Text>
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 }}>
-                        {[
-                          { label: 'Static', val: 0 },
-                          { label: 'Gradual', val: 1 },
-                          { label: 'Strobe', val: 2 },
-                          { label: 'Running Water', val: 3 }
-                        ].map((mode) => (
-                          <TouchableOpacity 
-                            key={mode.val} 
-                            onPress={() => {
-                               setFixedSubMode('DIY');
-                               setMultiTransition(mode.val);
-                               const rgbColors = generateSortedColors(multiColors);
-                               if(writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, mode.val));
-                            }} 
-                            style={{ 
-                              paddingHorizontal: 12, paddingVertical: 6, 
-                              backgroundColor: multiTransition === mode.val ? Colors.primary : (Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'), 
-                              borderRadius: 8, marginRight: 6, marginBottom: 6 
-                            }}
-                          >
-                            <Text style={{ color: multiTransition === mode.val ? '#000' : Colors.text, fontWeight: 'bold', fontSize: 11 }}>{mode.label}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
-                    );
-                    })()}
                   </View>
                   )}
 
@@ -1775,6 +1568,8 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                          onFillModeChange={setBuilderFillMode}
                          transitionType={builderTransitionType}
                          onTransitionTypeChange={setBuilderTransitionType}
+                         direction={builderDirection}
+                         onDirectionChange={setBuilderDirection}
                          speed={speed}
                          deviceLedCount={hwSettings?.ledPoints || points || 150}
                          selectedColor={selectedColor}
@@ -2271,147 +2066,123 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
               </View>
             )}
 
-            {/* Brightness Slider - Hidden in DIY, CAMERA, and STREET */}
-            {!(activeMode === 'MULTIMODE' && fixedSubMode === 'DIY') && !(activeMode === 'CAMERA') && !(activeMode === 'STREET') && (
-            <View style={[styles.controlRow, { marginTop: 8, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
-              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                <TouchableOpacity onPress={() => Alert.alert('Brightness', 'Adjust the global brightness of the LEDs.\n\nLowering the brightness also significantly improves battery life on your device.')}>
-                  <MaterialCommunityIcons name="white-balance-sunny" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
-                </TouchableOpacity>
-
-                <CustomSlider 
-                  value={brightness}
-                  onValueChange={setBrightness}
-                  minimumValue={0}
-                  maximumValue={100}
-                  style={{ flex: 1 }}
-                  onSlidingComplete={(val) => {
-                    if (writeToDevice) {
-                      if (activeMode === 'MUSIC') {
-                        handleMusicChange(musicPatternId, micSensitivity, val, micSource);
-                      } else {
-                        if (activeMode === 'MULTIMODE') {
-                          if (fixedSubMode === 'PATTERN') {
-                            applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
-                          } else if (fixedSubMode === 'DIY') {
-                            const factor = brtFactor(val);
-                            const sortIdx = hwSettings?.colorSorting ?? 2;
-                            const rgbColors = multiColors.map(h => {
-                                const rawR = Math.round((parseInt(h.slice(1,3), 16) || 0) * factor);
-                                const rawG = Math.round((parseInt(h.slice(3,5), 16) || 0) * factor);
-                                const rawB = Math.round((parseInt(h.slice(5,7), 16) || 0) * factor);
-                                return ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
-                            });
-                           
-                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(speed), 1, multiTransition));
-                          }
-                        } else if (activeMode === 'PROGRAMS') {
-                          if (selectedPatternId === 100) {
-                            applyEmergencyPattern(speed, val);
-                          } else {
-                            writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, speed, val));
-                          }
-                        } else {
-                          // Standard scaled color for other modes
-                          const factor = brtFactor(val);
-                          const hex = selectedColor;
-                          const r = Math.round(parseInt(hex.slice(1, 3), 16) * factor);
-                          const g = Math.round(parseInt(hex.slice(3, 5), 16) * factor);
-                          const b = Math.round(parseInt(hex.slice(5, 7), 16) * factor);
-                          sendColor(r, g, b);
+            {/* TACTICAL UNIVERSAL SLIDERS SECTIONS (50/50 Split) */}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, marginBottom: 4, minHeight: 44 }}>
+              
+              {/* === LEFT SLOT COMPUTATION === */}
+              {/* Brightness is standard on left, UNLESS it's Street (Brake Sens) or Music (Mic Sens) or DIY (Nothing) */}
+              
+              {!(activeMode === 'CAMERA') && !(activeMode === 'STREET') && !(activeMode === 'MUSIC') && (
+                  <TacticalSlider 
+                      style={{ flex: 1 }}
+                      iconName="white-balance-sunny"
+                      label="BRIGHTNESS"
+                      fillColor="#00F0FF"
+                      value={brightness}
+                      onValueChange={setBrightness}
+                      minimumValue={0}
+                      maximumValue={100}
+                      onSlidingComplete={(val: number) => {
+                        if (writeToDevice) {
+                           if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
+                             applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
+                           } else if (activeMode === 'PROGRAMS') {
+                             if (selectedPatternId === 100) applyEmergencyPattern(speed, val);
+                             else writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, speed, val));
+                           } else {
+                             const factor = brtFactor(val);
+                             const hex = selectedColor;
+                             const r = Math.round(parseInt(hex.slice(1, 3), 16) * factor);
+                             const g = Math.round(parseInt(hex.slice(3, 5), 16) * factor);
+                             const b = Math.round(parseInt(hex.slice(5, 7), 16) * factor);
+                             sendColor(r, g, b);
+                           }
                         }
-                      }
-                    }
-                  }}
-                />
-              </View>
+                      }}
+                  />
+              )}
+
+              {activeMode === 'MUSIC' && (
+                  <TacticalSlider 
+                      style={{ flex: 1 }}
+                      iconName="microphone-outline"
+                      label="MIC SENSITIVITY"
+                      fillColor="#FF0055"
+                      value={micSensitivity}
+                      onValueChange={setMicSensitivity}
+                      minimumValue={0}
+                      maximumValue={100}
+                      onSlidingComplete={(val: number) => handleMusicChange(musicPatternId, val, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle)}
+                  />
+              )}
+
+              {activeMode === 'STREET' && (
+                  <TacticalSlider 
+                      style={{ flex: 1 }}
+                      iconName="octagon-outline"
+                      label="BRAKE SENSITIVITY"
+                      fillColor="#FF3300"
+                      value={streetSensitivity}
+                      onValueChange={setStreetSensitivity}
+                      minimumValue={5}
+                      maximumValue={95}
+                  />
+              )}
+
+              {/* === RIGHT SLOT COMPUTATION === */}
+              {/* Speed is standard on right, but Music puts Brightness here. Camera has nothing. */}
+              
+              {!(activeMode === 'MUSIC' || activeMode === 'CAMERA') && (
+                  <TacticalSlider 
+                      style={{ flex: 1 }}
+                      iconName="engine-outline"
+                      label="SPEED"
+                      fillColor="#FF9900"
+                      value={speed}
+                      onValueChange={setSpeed}
+                      minimumValue={0}
+                      maximumValue={100}
+                      onSlidingComplete={(val: number) => {
+                        if (writeToDevice) {
+                          if (activeMode === 'MULTIMODE') {
+                            if (fixedSubMode === 'PATTERN') {
+                              applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
+                            } else if (fixedSubMode === 'BUILDER') {
+                              const factor = brtFactor(brightness);
+                              const sortIdx = hwSettings?.colorSorting ?? 2;
+                              const rgbColors = multiColors.map(h => {
+                                  const rawR = Math.round((parseInt(h.slice(1,3), 16) || 0) * factor);
+                                  const rawG = Math.round((parseInt(h.slice(3,5), 16) || 0) * factor);
+                                  const rawB = Math.round((parseInt(h.slice(5,7), 16) || 0) * factor);
+                                  return ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
+                              });
+                              writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(val), 1, multiTransition));
+                            }
+                          } else if (activeMode === 'PROGRAMS') {
+                            if (selectedPatternId === 100) applyEmergencyPattern(val, brightness);
+                            else writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
+                          } else if (activeMode === 'STREET') {
+                            applyStreetPattern(motionStateRef.current, brightness, val);
+                          }
+                        }
+                      }}
+                  />
+              )}
+
+              {activeMode === 'MUSIC' && (
+                  <TacticalSlider 
+                      style={{ flex: 1 }}
+                      iconName="white-balance-sunny"
+                      label="BRIGHTNESS"
+                      fillColor="#00F0FF"
+                      value={brightness}
+                      onValueChange={setBrightness}
+                      minimumValue={0}
+                      maximumValue={100}
+                      onSlidingComplete={(val: number) => handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle)}
+                  />
+              )}
             </View>
-            )}
-
-            {/* Speed Slider - Hidden in MUSIC, and CAMERA */}
-            {!(activeMode === 'MUSIC' || activeMode === 'CAMERA') && (
-              <View style={[styles.controlRow, { marginTop: (activeMode === 'STREET' || (activeMode === 'MULTIMODE' && fixedSubMode === 'DIY')) ? 8 : 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                  <TouchableOpacity onPress={() => Alert.alert('Speed Setting', 'Adjust the animation speed of the active pattern or color transition.\n\n• High Speed: Faster strobing or sweeping.\n• Low Speed: Smooth, ambient pulsing transitions.')}>
-                    <MaterialCommunityIcons name="engine-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
-                  </TouchableOpacity>
-                  <CustomSlider 
-                    value={speed}
-                    onValueChange={setSpeed}
-                    onSlidingComplete={(val) => {
-                      if (writeToDevice) {
-                        if (activeMode === 'MULTIMODE') {
-                          if (fixedSubMode === 'PATTERN') {
-                            applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
-                          } else if (fixedSubMode === 'DIY') {
-                            const factor = brtFactor(brightness);
-                            const sortIdx = hwSettings?.colorSorting ?? 2;
-                            const rgbColors = multiColors.map(h => {
-                                const rawR = Math.round((parseInt(h.slice(1,3), 16) || 0) * factor);
-                                const rawG = Math.round((parseInt(h.slice(3,5), 16) || 0) * factor);
-                                const rawB = Math.round((parseInt(h.slice(5,7), 16) || 0) * factor);
-                                return ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
-                            });
-                           
-                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(val), 1, multiTransition));
-                          }
-                        } else if (activeMode === 'PROGRAMS') {
-                          if (selectedPatternId === 100) {
-                            applyEmergencyPattern(val, brightness);
-                          } else {
-                            writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
-                          }
-                        } else if (activeMode === 'STREET') {
-                          applyStreetPattern(motionStateRef.current, brightness, val);
-                        }
-                      }
-                    }}
-                    minimumValue={0}
-                    maximumValue={100}
-                    style={{ flex: 1 }}
-                  />
-                </View>
-              </View>
-            )}
-
-            {/* Street Brake Sensitivity Slider - Visible ONLY in STREET */}
-            {(activeMode === 'STREET') && (
-              <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                  <TouchableOpacity onPress={() => Alert.alert('Braking Sensitivity', 'Adjusts how hard you need to brake before the red tail lights trigger.\n\n• High Sensitivity: Detects very light slowing down.\n• Low Sensitivity: Requires harder, sudden braking stops.')}>
-                    <MaterialCommunityIcons name="octagon-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
-                  </TouchableOpacity>
-                  <CustomSlider 
-                    value={streetSensitivity}
-                    onValueChange={setStreetSensitivity}
-                    minimumValue={5}
-                    maximumValue={95}
-                    style={{ flex: 1 }}
-                  />
-                </View>
-              </View>
-            )}
-
-            {/* Sensitivity Slider - Visible ONLY in MUSIC */}
-            {(activeMode === 'MUSIC') && (
-              <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                  <TouchableOpacity onPress={() => Alert.alert('Microphone Sensitivity', 'Adjust how sensitive the microphone is to ambient noise and music.\n\n• Increase: For quiet environments or acoustic music.\n• Decrease: For loud clubs or busy streets to prevent clipping.')}>
-                    <MaterialCommunityIcons name="microphone-outline" size={22} color={Colors.textMuted} style={{ marginRight: 12, width: 30, textAlign: 'center', flexShrink: 0 }} />
-                  </TouchableOpacity>
-                  <CustomSlider 
-                    value={micSensitivity}
-                    onValueChange={setMicSensitivity}
-                    onSlidingComplete={(val) => {
-                      handleMusicChange(musicPatternId, val, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
-                    }}
-                    minimumValue={0}
-                    maximumValue={100}
-                    style={{ flex: 1 }}
-                  />
-                </View>
-              </View>
-            )}
           </View>
         )}
       </View>
@@ -2439,15 +2210,20 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                          setActiveMode('FAVORITES');
                      } else if (dockItem.id === 'STREET') {
                          setActiveMode('STREET');
+                         setLastOperatingMode('STREET');
                      } else if (dockItem.id === 'PROGRAMS') {
                          setActiveMode('PROGRAMS');
+                         setLastOperatingMode('PROGRAMS');
                      } else if (dockItem.id === 'MUSIC') {
                          setActiveMode('MUSIC');
+                         setLastOperatingMode('MUSIC');
                      } else if (dockItem.id === 'CAMERA') {
                          setActiveMode('CAMERA');
+                         setLastOperatingMode('CAMERA');
                      } else {
                         // MULTI -> MULTIMODE
                         setActiveMode('MULTIMODE');
+                        setLastOperatingMode('MULTIMODE');
                         setFixedSubMode('PATTERN');
                      }
                   }}
@@ -2687,6 +2463,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   },
   activeModeContainer: {
     flex: 1,
+    overflow: 'hidden',
   },
   controlRow: {
     marginTop: 6,

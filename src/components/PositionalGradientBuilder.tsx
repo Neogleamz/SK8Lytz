@@ -8,6 +8,7 @@ import CustomSlider from './CustomSlider';
 import { supabase } from '../services/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Modal, TextInput, ActivityIndicator, Alert } from 'react-native';
+import MarqueeText from './MarqueeText';
 
 interface Props {
   nodes: BuilderNode[];
@@ -16,6 +17,8 @@ interface Props {
   onFillModeChange: (mode: 'GRADIENT' | 'SOLID') => void;
   transitionType: number;
   onTransitionTypeChange: (type: number) => void;
+  direction: number;
+  onDirectionChange: (dir: number) => void;
   speed: number;
   deviceLedCount: number;
   selectedColor: string; // The universal color passed from DockedController
@@ -26,6 +29,7 @@ export default function PositionalGradientBuilder({
    nodes, onNodesChange, 
    fillMode, onFillModeChange, 
    transitionType, onTransitionTypeChange,
+   direction, onDirectionChange,
    speed, deviceLedCount, selectedColor, writeToDevice
 }: Props) {
   const { Colors, isDark } = useTheme();
@@ -166,10 +170,10 @@ export default function PositionalGradientBuilder({
          const generatedRgbArray = PositionalMathBuffer.generateArray(nodes, deviceLedCount, fillMode === 'GRADIENT');
          // Normalize speed 0-100 to 0x01-0x1F (1-31)
          const mappedSpeed = Math.max(1, Math.min(31, Math.round((speed / 100) * 31)));
-         const payload = ZenggeProtocol.setMultiColor(generatedRgbArray, mappedSpeed, 1, transitionType);
+         const payload = ZenggeProtocol.setMultiColor(generatedRgbArray, mappedSpeed, direction, transitionType);
          writeToDevice(payload);
      }
-  }, [nodes, fillMode, transitionType, speed, deviceLedCount]);
+  }, [nodes, fillMode, transitionType, direction, speed, deviceLedCount]);
 
   const addNode = () => {
       let newPosition = 50;
@@ -212,122 +216,178 @@ export default function PositionalGradientBuilder({
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.03)', borderRadius: 12, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'transparent', padding: 8 }}>
       
-      {/* 0. LIBRARY SHELF (SAVED PRESETS) */}
-      {presets.length > 0 && (
-         <View style={{ marginBottom: 12, paddingBottom: 8, borderBottomWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                {presets.map(p => (
-                    <TouchableOpacity 
-                       key={p.id}
-                       onLongPress={() => deletePreset(p)}
-                       onPress={() => loadPreset(p)}
-                       style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#222' : '#E0E0E0', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
-                    >
-                       <View style={{ flexDirection: 'row', marginRight: 8 }}>
-                           {p.nodes.map((n, i) => (
-                               <View key={n.id} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: n.colorHex, marginLeft: i === 0 ? 0 : -4, borderWidth: 1, borderColor: isDark ? '#222' : '#E0E0E0' }} />
-                           ))}
-                       </View>
-                       <MaterialCommunityIcons name={p.id.startsWith('local_') ? 'cellphone' : 'cloud-check'} size={12} color={Colors.textMuted} style={{ marginRight: 4 }} />
-                       <Text style={{ color: '#FFF', fontSize: 11, fontWeight: 'bold' }}>{p.name}</Text>
-                    </TouchableOpacity>
-                ))}
-            </ScrollView>
-         </View>
-      )}
+      {/* 0. STABILIZED LIBRARY SHELF (SAVED PRESETS) */}
+      <View style={{ height: 68, marginBottom: 4, paddingBottom: 4, borderBottomWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
+         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 4 }}>
+            {Array.from({ length: 8 }).map((_, idx) => {
+               const p = presets[idx];
+               if (isLoadingLibrary) {
+                  return (
+                     <View key={`skeleton_${idx}`} style={{ width: 110, height: 50, borderRadius: 12, backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ opacity: 0.3 }}>
+                           <ActivityIndicator size="small" color={Colors.textMuted} />
+                        </View>
+                     </View>
+                  );
+               }
+               if (!p) {
+                  return (
+                     <View key={`empty_${idx}`} style={{ width: 110, height: 50, borderRadius: 12, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', opacity: 0.4 }}>
+                        <MaterialCommunityIcons name="plus" size={16} color={Colors.textMuted} />
+                        <Text style={{ color: Colors.textMuted, fontSize: 8, fontWeight: 'bold' }}>SLOT {idx + 1}</Text>
+                     </View>
+                  );
+               }
+               
+               // Generate a simple color pattern for the background
+               const pillPreviewColors = PositionalMathBuffer.generateArray(p.nodes, 10, p.fill_mode === 'GRADIENT');
 
-      {/* 1. TOP HEADER - ADD NODE & SAVE */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-         <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: 'bold' }}>LAYOUT (MAX 16)</Text>
-         <View style={{ flexDirection: 'row', gap: 6 }}>
-             <TouchableOpacity 
-                onPress={() => setSaveModalVisible(true)}
-                style={{ paddingHorizontal: 8, paddingVertical: 2, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, flexDirection: 'row', alignItems: 'center' }}
-             >
-                <MaterialCommunityIcons name="content-save" size={12} color={Colors.textMuted} style={{ marginRight: 2 }} />
-                <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: 'bold' }}>SAVE</Text>
-             </TouchableOpacity>
-             <TouchableOpacity 
-                onPress={addNode}
-                disabled={nodes.length >= 16}
-                style={{ paddingHorizontal: 8, paddingVertical: 2, backgroundColor: nodes.length >= 16 ? 'rgba(255,255,255,0.1)' : Colors.primary, borderRadius: 12 }}
-             >
-                <Text style={{ color: nodes.length >= 16 ? 'rgba(255,255,255,0.3)' : '#000', fontSize: 10, fontWeight: 'bold' }}>+ ADD PIN</Text>
-             </TouchableOpacity>
-         </View>
+               return (
+                  <TouchableOpacity 
+                     key={p.id}
+                     onLongPress={() => deletePreset(p)}
+                     onPress={() => loadPreset(p)}
+                     activeOpacity={0.8}
+                     style={{ width: 110, height: 50, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: '#111' }}
+                  >
+                     {/* Pattern Background */}
+                     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, flexDirection: 'row', opacity: 0.4 }}>
+                        {pillPreviewColors.map((c, i) => (
+                           <View key={i} style={{ flex: 1, backgroundColor: `rgb(${c.r}, ${c.g}, ${c.b})` }} />
+                        ))}
+                     </View>
+                     
+                     {/* Overlay Content */}
+                     <View style={{ flex: 1, padding: 6, justifyContent: 'space-between' }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                           <MaterialCommunityIcons name={p.id.startsWith('local_') ? 'cellphone' : 'cloud-check'} size={12} color="#FFF" style={{ opacity: 0.8 }} />
+                           <View style={{ flexDirection: 'row' }}>
+                              {p.nodes.slice(0, 3).map((n, i) => (
+                                 <View key={n.id} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: n.colorHex, marginLeft: i === 0 ? 0 : -2, borderWidth: 0.5, borderColor: '#000' }} />
+                              ))}
+                           </View>
+                        </View>
+                        
+                        <MarqueeText style={{ color: '#FFF', fontSize: 10, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 2 }}>
+                           {p.name.toUpperCase()}
+                        </MarqueeText>
+                     </View>
+                  </TouchableOpacity>
+               );
+            })}
+         </ScrollView>
+      </View>
+
+      {/* 1. TOP HEADER - LAYOUT & SAVE */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+         <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold' }}>LAYOUT (MAX 16)</Text>
+         <TouchableOpacity 
+            onPress={() => setSaveModalVisible(true)}
+            style={{ paddingHorizontal: 6, paddingVertical: 2, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, flexDirection: 'row', alignItems: 'center' }}
+         >
+            <MaterialCommunityIcons name="content-save" size={10} color={Colors.textMuted} style={{ marginRight: 2 }} />
+            <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold' }}>SAVE</Text>
+         </TouchableOpacity>
       </View>
 
       {/* 2. VISUAL MAP PREVIEW */}
-      <View style={{ width: '100%', height: 10, borderRadius: 5, flexDirection: 'row', overflow: 'hidden', marginBottom: 8 }}>
+      <View style={{ width: '100%', height: 10, borderRadius: 5, flexDirection: 'row', overflow: 'hidden', marginBottom: 4 }}>
          {previewLeds.map((c, i) => (
              <View key={i} style={{ flex: 1, backgroundColor: `rgb(${c.r}, ${c.g}, ${c.b})` }} />
          ))}
       </View>
 
       {/* 3. PIN SELECTOR ROW */}
-      <View style={{ marginBottom: 8 }}>
-         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+      <View style={{ marginBottom: 4 }}>
+         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, alignItems: 'center' }}>
             {nodes.map(n => (
                 <TouchableOpacity 
                    key={n.id}
                    onPress={() => setActiveNodeId(n.id)}
                    style={{
-                       width: 30, height: 30, borderRadius: 15, backgroundColor: n.colorHex,
+                       width: 24, height: 24, borderRadius: 12, backgroundColor: n.colorHex,
                        borderWidth: activeNodeId === n.id ? 2 : 1,
                        borderColor: activeNodeId === n.id ? Colors.primary : 'rgba(255,255,255,0.3)',
                        justifyContent: 'center', alignItems: 'center',
                        shadowColor: n.colorHex, shadowOpacity: activeNodeId === n.id ? 0.6 : 0, shadowRadius: 4
                    }}
                 >
-                   {activeNodeId === n.id && <MaterialCommunityIcons name="map-marker-down" size={14} color={['#FFFFFF', '#FFF'].includes(n.colorHex.toUpperCase()) ? '#000' : '#FFF'} />}
+                   {activeNodeId === n.id && <MaterialCommunityIcons name="map-marker-down" size={12} color={['#FFFFFF', '#FFF', '#FFFF00', '#00FF00'].includes(n.colorHex.toUpperCase()) ? '#000' : '#FFF'} />}
                 </TouchableOpacity>
             ))}
+            {nodes.length < 16 && (
+                <TouchableOpacity 
+                   onPress={addNode}
+                   style={{
+                       width: 24, height: 24, borderRadius: 12, 
+                       borderWidth: 1, borderColor: Colors.textMuted, borderStyle: 'dashed',
+                       justifyContent: 'center', alignItems: 'center',
+                       backgroundColor: 'rgba(255,255,255,0.05)'
+                   }}
+                >
+                   <MaterialCommunityIcons name="plus" size={14} color={Colors.textMuted} />
+                </TouchableOpacity>
+            )}
          </ScrollView>
       </View>
 
       {/* 4. ACTIVE PIN EDITOR */}
       {activeNode && (
-         <View style={{ backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 8, padding: 8, marginBottom: 8 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-               <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 11 }}>Edit Pin @ {activeNode.position}%</Text>
-               <TouchableOpacity onPress={() => removeNode(activeNode.id)} disabled={nodes.length <= 1}>
-                   <MaterialCommunityIcons name="trash-can-outline" size={16} color={nodes.length <= 1 ? 'rgba(255,255,255,0.2)' : '#FF4444'} />
-               </TouchableOpacity>
-            </View>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 0 }}>
-                <MaterialCommunityIcons name="arrow-left-right" size={16} color={Colors.textMuted} style={{ marginRight: 6 }} />
-                <CustomSlider 
-                    value={activeNode.position}
-                    onValueChange={(val) => updateNode(activeNode.id, { position: Math.round(val) })}
-                    minimumValue={0}
-                    maximumValue={100}
-                    style={{ flex: 1, transform: [{ scale: 0.95 }] }}
-                />
-            </View>
+         <View style={{ backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 4, flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 10, width: 36 }}>@{activeNode.position}%</Text>
+            <CustomSlider 
+                value={activeNode.position}
+                onValueChange={(val) => updateNode(activeNode.id, { position: Math.round(val) })}
+                minimumValue={0}
+                maximumValue={100}
+                style={{ flex: 1, transform: [{ scale: 0.95 }], height: 30 }}
+            />
+            <TouchableOpacity onPress={() => removeNode(activeNode.id)} disabled={nodes.length <= 1} style={{ marginLeft: 8 }}>
+                <MaterialCommunityIcons name="trash-can-outline" size={16} color={nodes.length <= 1 ? 'rgba(255,255,255,0.2)' : '#FF4444'} />
+            </TouchableOpacity>
          </View>
       )}
 
       {/* 5. BEHAVIOR TIER */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: 'bold' }}>BEHAVIOR</Text>
-          <View style={{ flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: 2, flex: 0.7 }}>
-              <TouchableOpacity 
-                  onPress={() => onFillModeChange('GRADIENT')}
-                  style={{ flex: 1, paddingVertical: 4, alignItems: 'center', backgroundColor: fillMode === 'GRADIENT' ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
-              >
-                  <Text style={{ color: fillMode === 'GRADIENT' ? Colors.primary : Colors.textMuted, fontWeight: 'bold', fontSize: 9 }}>GRADIENT</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                  onPress={() => onFillModeChange('SOLID')}
-                  style={{ flex: 1, paddingVertical: 4, alignItems: 'center', backgroundColor: fillMode === 'SOLID' ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
-              >
-                  <Text style={{ color: fillMode === 'SOLID' ? Colors.primary : Colors.textMuted, fontWeight: 'bold', fontSize: 9 }}>FILL-IN</Text>
-              </TouchableOpacity>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
+          <View style={{ flex: 1 }}>
+              <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold', marginBottom: 2 }}>FILLING</Text>
+              <View style={{ flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: 2 }}>
+                  <TouchableOpacity 
+                      onPress={() => onFillModeChange('GRADIENT')}
+                      style={{ flex: 1, paddingVertical: 2, alignItems: 'center', backgroundColor: fillMode === 'GRADIENT' ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
+                  >
+                      <Text style={{ color: fillMode === 'GRADIENT' ? Colors.primary : Colors.textMuted, fontWeight: 'bold', fontSize: 9 }}>GRADIENT</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                      onPress={() => onFillModeChange('SOLID')}
+                      style={{ flex: 1, paddingVertical: 2, alignItems: 'center', backgroundColor: fillMode === 'SOLID' ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
+                  >
+                      <Text style={{ color: fillMode === 'SOLID' ? Colors.primary : Colors.textMuted, fontWeight: 'bold', fontSize: 9 }}>SOLID</Text>
+                  </TouchableOpacity>
+              </View>
+          </View>
+
+          <View style={{ flex: 1 }}>
+              <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold', marginBottom: 2 }}>DIRECTION</Text>
+              <View style={{ flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: 2 }}>
+                  <TouchableOpacity 
+                      onPress={() => onDirectionChange(1)}
+                      style={{ flex: 1, paddingVertical: 2, alignItems: 'center', backgroundColor: direction === 1 ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
+                  >
+                      <Text style={{ color: direction === 1 ? Colors.primary : Colors.textMuted, fontWeight: 'bold', fontSize: 9 }}>FORWARD</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                      onPress={() => onDirectionChange(0)}
+                      style={{ flex: 1, paddingVertical: 2, alignItems: 'center', backgroundColor: direction === 0 ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
+                  >
+                      <Text style={{ color: direction === 0 ? Colors.primary : Colors.textMuted, fontWeight: 'bold', fontSize: 9 }}>REVERSE</Text>
+                  </TouchableOpacity>
+              </View>
           </View>
       </View>
 
-      <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>ANIMATION</Text>
+      <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold', marginBottom: 2 }}>ANIMATION</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
           {[
               { id: 1, label: 'STATIC' },
@@ -339,9 +399,9 @@ export default function PositionalGradientBuilder({
               <TouchableOpacity 
                   key={t.id}
                   onPress={() => onTransitionTypeChange(t.id)}
-                  style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: transitionType === t.id ? Colors.primary : 'rgba(255,255,255,0.1)', backgroundColor: transitionType === t.id ? 'rgba(0,240,255,0.1)' : 'transparent' }}
+                  style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: transitionType === t.id ? Colors.primary : 'rgba(255,255,255,0.1)', backgroundColor: transitionType === t.id ? 'rgba(0,240,255,0.1)' : 'transparent' }}
               >
-                  <Text style={{ color: transitionType === t.id ? Colors.primary : Colors.textMuted, fontSize: 10, fontWeight: 'bold' }}>{t.label}</Text>
+                  <Text style={{ color: transitionType === t.id ? Colors.primary : Colors.textMuted, fontSize: 9, fontWeight: 'bold' }}>{t.label}</Text>
               </TouchableOpacity>
           ))}
       </View>

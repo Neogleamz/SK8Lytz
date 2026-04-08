@@ -6,7 +6,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🔴 High Priority / Needs Testing NOW
 
-- [ ] **#1 — Positional Array Builder UI** — Create a new submode in MULTIMODE called `BUILDER`. Implement a node-based positional mapping interface where users can define points along the strip mapped to Hex colors, and transition types (STATIC, RUNNING_WATER, STROBE). (Depends on the Math protocol bindings logic discovered during our 0x59 audit).
+- [x] **#1 — Positional Array Builder UI** — Create a new submode in MULTIMODE called `BUILDER`. Implement a node-based positional mapping interface where users can define points along the strip mapped to Hex colors, and transition types (STATIC, RUNNING_WATER, STROBE). (Depends on the Math protocol bindings logic discovered during our 0x59 audit).
 - [ ] **#2 — Verify Supabase `led_diagnostics` table** — Confirm Diagnostic Lab successfully pushes telemetry to Supabase. Query table after live test.
 
 ---
@@ -22,9 +22,10 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] **#9 — Street Mode: Cruise LED bounce animation** — Mid-section cruise LEDs (between rear RED taillights and front WHITE headlights) should bounce/chase between the two zones. 
 - [ ] **#10 — Street Mode: Tail light dimming** — Rear RED taillights should be **50% brightness** while CRUISING or ACCELERATING, ramp to **100%** when BRAKING or STOPPED. Fix `applyStreetPattern()`: `tailBright = isBraking ? factor : factor * 0.5`.
 - [ ] **#11 — Visualizer: Street Mode parity** — `ProductVisualizer.tsx` must reflect tail dimming (50% cruise, 100% brake) and show the bouncing cruise LED animation matching hardware output.
-- [ ] **#12 — Dashboard Header Layout** — Move Support and Theme icons to the far RIGHT side of the header, grouped next to each other matching Auth card icon style. Username/status pill left-justified. 
+- [x] **#12 — Dashboard Header Layout** — Move Support and Theme icons to the far RIGHT side of the header, grouped next to each other matching Auth card icon style. Username/status pill left-justified. 
 - [ ] **#13 — Lab 0x73 Music Mode parity** — Lab BUILDER's 0x73 section is missing Light Screen (0x27) vs Light Bar (0x26) matrix style toggle, primary/secondary color pickers, and mic source.
 - [ ] **#14 — Music Mode: Sound column/drop color not applied** — Main app music mode is functioning but color changes for patterns that use "sound column" and "drop" effects are not being accepted/applied.
+- [ ] **#15 — Visualizer Parity: Pro Effects Patterns** — Exhaustively review and tune the interpolation mathematics for all 33 of the 'pro effects' patterns to make them physically accurate within the product visualizer.
 
 ---
 
@@ -33,7 +34,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] **#15 — Community Hub: Builder Preset Integration** — Allow users to submit and pull Custom Builder Presets using the public `shared_scenes` Community Library.
 - [ ] **#16 — Device Grouping Audit & Redesign** — A "ghost group" keeps persisting across installs. Need to Audit all grouping logic in `DashboardScreen.tsx`, `AsyncStorage`, and `registered_groups`.
 - [ ] **#17 — Web E2E Verification** — Map static thumbnails and address autocomplete in browser environment.
-- [ ] **#25 — Builder UI Enhancement** — Move the '+ ADD PIN' button from the header directly into the visual layout map as a blank circular pin with a plus sign.
+- [x] **#25 — Builder UI Enhancement** — Move the '+ ADD PIN' button from the header directly into the visual layout map as a blank circular pin with a plus sign.
 - [ ] **#18 — Native Platform Verification** — MapView bounds on physical Android/iOS devices for coordinate accuracy.
 - [ ] **#19 — Automated Testing Suite** — Expand E2E tests for Location flows, crew session creation, and LED payload correctness.
 - [ ] **#20 — Security & Performance Review** — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges.
@@ -41,6 +42,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] **#22 — Crew Hub layout refinement** — Spacing, dashboard layout, member count display, and session timer as platform grows.
 - [ ] **#23 — `setColor()` in ZenggeProtocol** — Does NOT apply color sorting. Should be removed or marked internal-only.
 - [ ] **#24 — `0x81` legacy command audit** — Confirm it's no longer being sent on connect. `0x62` (EEPROM write) is the correct command. Remove any remaining `0x81` calls.
+- [ ] **#26 — SK8Lytz Picks Database Migration** — Transition the curated "SK8Lytz Picks" from local JSON files to a dynamic Supabase-driven backend for real-time updates.
 
 ---
 
@@ -70,9 +72,10 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] Street mode transition type: HARD_BRAKING → Strobe (0x02), CRUISE → FREEZE (0x01) (Apr 2026)
 - [x] Crew Hub Edit nav trap: Back always returns to hub landing (Apr 2026)
 - [x] Session end flow: End Session button visible and functional in DockedController (Apr 2026)
+- [x] Builder UI Layout Compression: Collapsed elements prevent clipping under docked controller (Apr 2026)
+- [x] Builder UI Stabilization: 8-slot Tactical Grid & Marquee names (Apr 2026)
+- [x] Legacy Deprecation: DIY mode replaced by Builder workflow (Apr 2026)
+- [x] POSITIONAL Multicolor Gradient/Fill-In System (Deep Dive) (Apr 2026)
 
 ---
-*Last updated: 2026-04-08 | Automated sorting iteration*nd Session button visible and functional in DockedController (Apr 2026)
-
----
-*Last updated: 2026-04-08 | #1 and #2 completed. Items #3–#25 active.*
+*Last updated: 2026-04-08 | #1 and #12 completed. Next priority: #2 & #3.*

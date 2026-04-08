@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { getVisualizerFrame } from '../protocols/PatternEngine';
 import type { RGB, PatternId } from '../protocols/PatternEngine';
 import { ZenggeVisualizerMath } from '../protocols/ZenggeVisualizerMath';
+import { PositionalMathBuffer } from '../protocols/PositionalMathBuffer';
 
 interface DeviceConfig {
   id?: string;
@@ -34,6 +35,10 @@ interface ProductVisualizerProps {
   multiTransition?: number;
   isStreetBraking?: boolean;
   streetCruiseColor?: string;
+  builderNodes?: any[];
+  builderFillMode?: 'GRADIENT' | 'SOLID';
+  builderTransitionType?: number;
+  builderDirection?: number;
 }
 
 // Convert HSL to Hex manually as React Native Interpolate handles strict string maps better
@@ -60,7 +65,7 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload: _rawHexPayload, simMode: _simMode, isStreetBraking = false, streetCruiseColor = '#FF8C00' }: any) => {
+const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload: _rawHexPayload, simMode: _simMode, isStreetBraking = false, streetCruiseColor = '#FF8C00', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1 }: any) => {
   const { isDark } = useTheme();
   const product = String(device.type || fallbackProduct);
   const isHaloz = !product.toLowerCase().includes('soul');
@@ -415,6 +420,61 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
              const pb = Math.round(pCurr.b * (1 - blendAmt) + pAdj.b * blendAmt);
              dotColor = `#${pr.toString(16).padStart(2,'0')}${pg.toString(16).padStart(2,'0')}${pb.toString(16).padStart(2,'00')}`;
              dotOpacity = isPoweredOn ? (brightness / 100) : 0;
+          } else if (mode === 'BUILDER') {
+              let builderPixels: RGB[];
+              if (!builderNodes || builderNodes.length === 0) {
+                 builderPixels = Array.from({ length: activeSegmentLeds }).map(() => ({ r: 255, g: 0, b: 0 }));
+              } else {
+                 builderPixels = PositionalMathBuffer.generateArray(builderNodes, activeSegmentLeds, builderFillMode === 'GRADIENT');
+              }
+              
+              if (builderTransitionType === 4 || builderTransitionType === 5) {
+                 const steps = activeSegmentLeds;
+                 const directionMultiplier = builderDirection === 0 ? -1 : 1;
+                 let shiftAmount = animTick * steps * directionMultiplier;
+                 if (builderTransitionType === 5) {
+                     shiftAmount = Math.floor(shiftAmount);
+                 }
+                 const newArr = [];
+                 for (let k = 0; k < steps; k++) {
+                     let sourceIdx = Math.floor(k - shiftAmount) % steps;
+                     if (sourceIdx < 0) sourceIdx += steps;
+                     newArr.push(builderPixels[sourceIdx]);
+                 }
+                 builderPixels = newArr;
+              }
+
+              const rawLedPos = (segmentI / activeSegmentLeds) * builderPixels.length;
+              const slot0Raw = Math.floor(rawLedPos) % Math.max(1, builderPixels.length);
+              const slot0 = mirrorSlot(slot0Raw, builderPixels.length);
+              const slotT = rawLedPos - Math.floor(rawLedPos);
+              const DIFF = 0.35;
+              const boundaryProx = Math.pow(Math.abs(slotT - 0.5) * 2, 2);
+              const blendAmt = DIFF * boundaryProx;
+              const pCurr = builderPixels[slot0] || {r:0,g:0,b:0};
+              const adjIdx = mirrorSlot(
+                isHalozSeg2
+                  ? Math.max(0, slot0Raw - 1)
+                  : (slot0Raw + 1) % builderPixels.length,
+                builderPixels.length
+              );
+              const pAdj = builderPixels[Math.min(builderPixels.length - 1, Math.max(0, adjIdx))] || pCurr;
+              const pr = Math.round(pCurr.r * (1 - blendAmt) + pAdj.r * blendAmt);
+              const pg = Math.round(pCurr.g * (1 - blendAmt) + pAdj.g * blendAmt);
+              const pb = Math.round(pCurr.b * (1 - blendAmt) + pAdj.b * blendAmt);
+              dotColor = `#${pr.toString(16).padStart(2,'0')}${pg.toString(16).padStart(2,'0')}${pb.toString(16).padStart(2,'00')}`;
+              
+              if (builderTransitionType === 1) { // Static
+                  dotOpacity = isPoweredOn ? (brightness / 100) : 0;
+              } else if (builderTransitionType === 2) { // Gradual breath
+                  const t = animTick < 0.5 ? animTick * 2 : (1 - animTick) * 2; // Triangle wave 0-1
+                  dotOpacity = isPoweredOn ? (0.2 + t * 0.8) * (brightness / 100) : 0;
+              } else if (builderTransitionType === 3) { // Strobe
+                  const t = animTick < 0.5 ? 1 : 0; // Hard step
+                  dotOpacity = isPoweredOn ? Math.max(0.01, t) * (brightness / 100) : 0;
+              } else {
+                  dotOpacity = isPoweredOn ? (brightness / 100) : 0;
+              }
           }
         }
 
@@ -434,7 +494,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
         });
     }
     return list;
-  }, [product, mode, color, numLeds, patternId, isPoweredOn, audioMagnitude, fixedFgColor, fixedBgColor, multiColors, multiTransition, brightness, speed, animTick, isStreetBraking, streetCruiseColor]);
+  }, [product, mode, color, numLeds, patternId, isPoweredOn, audioMagnitude, fixedFgColor, fixedBgColor, multiColors, multiTransition, brightness, speed, animTick, isStreetBraking, streetCruiseColor, builderNodes, builderFillMode, builderTransitionType, builderDirection]);
 
   return (
     <TouchableOpacity 
@@ -540,7 +600,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
     </TouchableOpacity>
   );
 });
-const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText: _statusText, audioMagnitude = 0, rawHexPayload, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00' }: ProductVisualizerProps) => {
+const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText: _statusText, audioMagnitude = 0, rawHexPayload, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1 }: ProductVisualizerProps) => {
   const { isDark } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
 
@@ -580,7 +640,7 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
       }
 
       if (op === 0x59) {
-          simMode = mode === 'MULTICOLOR' ? 'MULTICOLOR' : mode === 'STREET' ? 'STREET' : 'MULTIMODE';
+          simMode = mode === 'MULTICOLOR' ? 'MULTICOLOR' : mode === 'BUILDER' ? 'BUILDER' : mode === 'STREET' ? 'STREET' : 'MULTIMODE';
           if (mode === 'MULTICOLOR') {
              simPatternId = 1;
              
@@ -634,9 +694,9 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
   useEffect(() => {
     animValue.stopAnimation();
     
-    if (isPoweredOn && (simMode === 'STREET' || simMode === 'MULTICOLOR' || simMode === 'FAVORITES' || simMode === 'PROGRAMS' || simMode === 'MUSIC' || simMode === 'MULTIMODE' || simMode === 'CANDLE')) {
+    if (isPoweredOn && (simMode === 'BUILDER' || simMode === 'STREET' || simMode === 'MULTICOLOR' || simMode === 'FAVORITES' || simMode === 'PROGRAMS' || simMode === 'MUSIC' || simMode === 'MULTIMODE' || simMode === 'CANDLE')) {
       animValue.setValue(0);
-      const baseDuration = (simMode === 'MUSIC') ? 800 : (simMode === 'PROGRAMS' ? 2000 : (simMode === 'MULTICOLOR' ? (simMultiTransition === 2 ? 350 : 1500) : (simMode === 'MULTIMODE' ? 1500 : (simMode === 'CANDLE' ? 400 : (simMode === 'STREET' ? 1400 : 3000)))));
+      const baseDuration = (simMode === 'MUSIC') ? 800 : (simMode === 'PROGRAMS' ? 2000 : (simMode === 'MULTICOLOR' || simMode === 'BUILDER' ? (simMultiTransition === 2 || builderTransitionType === 3 ? 350 : 1500) : (simMode === 'MULTIMODE' ? 1500 : (simMode === 'CANDLE' ? 400 : (simMode === 'STREET' ? 1400 : 3000)))));
       // Speed 0 = 5x slower, Speed 100 = 0.4x faster
       const duration = baseDuration / (0.4 + (simSpeed / 100) * 2.1); 
       
@@ -682,6 +742,10 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
              multiTransition={simMultiTransition}
              isStreetBraking={isStreetBraking}
              streetCruiseColor={streetCruiseColor}
+             builderNodes={builderNodes}
+             builderFillMode={builderFillMode}
+             builderTransitionType={builderTransitionType}
+             builderDirection={builderDirection}
            />
          ))}
       </View>
