@@ -835,18 +835,26 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     if (!writeToDevice) return;
 
     const factor = currentBrightness / 100;
-    const fgRgb = {
-      r: Math.round(parseInt(fg.slice(1, 3), 16) * factor),
-      g: Math.round(parseInt(fg.slice(3, 5), 16) * factor),
-      b: Math.round(parseInt(fg.slice(5, 7), 16) * factor),
+    // The Master Reference dictates applyColorSorting must be invoked.
+    // parseAndSortColor safely handles the GRB translation for hardware alignment.
+    const parseAndSortColor = (hexStr: string) => {
+      const h = hexStr || '#000000';
+      const r_raw = parseInt(h.substring(1, 3), 16) || 0;
+      const g_raw = parseInt(h.substring(3, 5), 16) || 0;
+      const b_raw = parseInt(h.substring(5, 7), 16) || 0;
+      return ZenggeProtocol.applyColorSorting(r_raw, g_raw, b_raw, hwSettings?.colorSorting ?? 2);
     };
-    const bgRgb = {
-      r: Math.round(parseInt(bg.slice(1, 3), 16) * factor),
-      g: Math.round(parseInt(bg.slice(3, 5), 16) * factor),
-      b: Math.round(parseInt(bg.slice(5, 7), 16) * factor),
+
+    const fgRgb = parseAndSortColor(fg);
+    const bgRgb = parseAndSortColor(bg);
+
+    // For Solid mode only, we scale manually by the brightness factor.
+    // 0x51 custom engines expect raw colors (brightness is hardware buffered natively).
+    const fgRgbScaled = {
+      r: Math.round(fgRgb.r * factor),
+      g: Math.round(fgRgb.g * factor),
+      b: Math.round(fgRgb.b * factor),
     };
-    // DO NOT apply applyColorSorting here.
-    // Hardware auto-remaps GRB internally via 0x81 config. Send pure RGB.
 
     // hwSettings.ledPoints IS the total LED count — do NOT divide by segments
     // (segments is a hardware IC layout parameter, not a pixel-count divisor)
@@ -855,16 +863,19 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     // Effect #1 is the newly inserted Solid override that uses classic 0x59 fill instead of 0x51 Custom Mode
     if (patternId === 1) {
       // 0x01 transition = FREEZE, sending padded array to ensure solid stability
-      const colors = Array(numLEDs).fill(fgRgb);
+      const colors = Array(numLEDs).fill(fgRgbScaled);
       const payload = ZenggeProtocol.setMultiColor(colors, 1, 1, 0x01);
       if (payload) writeToDevice(payload);
       return;
     }
 
-    // Directly map the 2-34 Pattern IDs back into the 1-33 Custom Mode subset
-    const s = Math.floor(currentSpeed / 3) + 1; // Normalize 1-100 to 1-31 hardware speed
+    // The original working implementation clamped 0x51 speeds to 1-31.
+    // If we pass >31, the hardware IC may silently reject the payload.
+    const s = Math.floor(currentSpeed / 3) + 1; // Normalize 1-100 to 1-31
+
+    // Revert alignment to the functional baseline: dispatch patternId as originally mapped.
     const payload = ZenggeProtocol.setCustomMode([{
-      mode: patternId - 1,
+      mode: patternId,
       speed: s,
       color1: fgRgb,
       color2: bgRgb
