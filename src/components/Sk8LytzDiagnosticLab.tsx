@@ -147,6 +147,7 @@ export default function Sk8LytzDiagnosticLab({
   const [bldMusicMode, setBldMusicMode] = useState('1');
   const [bldSens, setBldSens] = useState('100');
   const [bldC2, setBldC2] = useState({r:0, g:0, b:255});
+  const [bldMatrixStyle, setBldMatrixStyle] = useState<0x26 | 0x27>(0x27); // 0x27=Light Screen, 0x26=Light Bar
 
   // Builder 0x62
   const [bldIc, setBldIc] = useState('WS2812B');
@@ -179,11 +180,11 @@ export default function Sk8LytzDiagnosticLab({
         const c1 = bldColors[0] || {r:255,g:0,b:0};
         const s = parseInt(bldSens) || 100;
         const br = parseInt(bldBright) || 100;
-        // modeType = bldMusicMode (the symphony pattern to select, byte 2)
-        // patternId = 0x27 (Light Screen matrix style, same as main app)
-        const wrapped = ZenggeProtocol.setMusicConfig(bldMic, id, 0x27, c1, bldC2, s, br);
+        // modeType=id (symphony pattern 1-13), matrixStyle=0x27(LightScreen) or 0x26(LightBar)
+        const wrapped = ZenggeProtocol.setMusicConfig(bldMic, id, bldMatrixStyle, c1, bldC2, s, br);
         const hex = wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
-        setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x73] Symphony Config', `Mic: ${bldMic}`, `Pattern: ${id}`, `Sens: ${s} Bright: ${br}`] });
+        const matrixLabel = bldMatrixStyle === 0x27 ? 'Light Screen (0x27)' : 'Light Bar (0x26)';
+        setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x73] Symphony/Music Config', `Mode: ${id} | Matrix: ${matrixLabel}`, `Mic: ${bldMic ? 'DEVICE' : 'APP'} | Sens: ${s} | Bright: ${br}`, `C1 RGB(${c1.r},${c1.g},${c1.b}) | C2 RGB(${bldC2.r},${bldC2.g},${bldC2.b})`] });
         setBldHexOverride(hex);
       } else if (bldProtocol === '0x62') {
         const pts = parseInt(bldPoints) || 16;
@@ -195,7 +196,7 @@ export default function Sk8LytzDiagnosticLab({
       }
     } catch(e) { }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bldProtocol, bldColors, bldTrans, bldSpeed, bldPoints, bldDir, bldPatternId, bldBright, bldMic, bldMusicMode, bldSens, bldC2, bldIc, bldOrder, bldSegs]);
+  }, [bldProtocol, bldColors, bldTrans, bldSpeed, bldPoints, bldDir, bldPatternId, bldBright, bldMic, bldMusicMode, bldSens, bldC2, bldMatrixStyle, bldIc, bldOrder, bldSegs]);
 
   // RX listener
   useEffect(() => {
@@ -581,6 +582,29 @@ export default function Sk8LytzDiagnosticLab({
                  <Text style={{ color: bldMic ? '#00f0ff' : '#888', textAlign: 'center', fontSize: 11, fontWeight: 'bold' }}>{bldMic ? 'DEVICE' : 'APP'}</Text>
               </TouchableOpacity>
             </View>
+          </View>
+
+          {/* Matrix Style — Light Screen vs Light Bar */}
+          <Text style={{ color: '#888', fontSize: 10, marginBottom: 6 }}>MATRIX STYLE</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+            <TouchableOpacity
+              onPress={() => setBldMatrixStyle(0x27)}
+              style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center',
+                backgroundColor: bldMatrixStyle === 0x27 ? '#00E676' : '#1A1A1A',
+                borderWidth: 1, borderColor: bldMatrixStyle === 0x27 ? '#00E676' : '#333' }}
+            >
+              <Text style={{ color: bldMatrixStyle === 0x27 ? '#000' : '#888', fontWeight: 'bold', fontSize: 11 }}>LIGHT SCREEN</Text>
+              <Text style={{ color: bldMatrixStyle === 0x27 ? '#003300' : '#555', fontSize: 9 }}>0x27</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setBldMatrixStyle(0x26)}
+              style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center',
+                backgroundColor: bldMatrixStyle === 0x26 ? '#FF9500' : '#1A1A1A',
+                borderWidth: 1, borderColor: bldMatrixStyle === 0x26 ? '#FF9500' : '#333' }}
+            >
+              <Text style={{ color: bldMatrixStyle === 0x26 ? '#000' : '#888', fontWeight: 'bold', fontSize: 11 }}>LIGHT BAR</Text>
+              <Text style={{ color: bldMatrixStyle === 0x26 ? '#332200' : '#555', fontSize: 9 }}>0x26</Text>
+            </TouchableOpacity>
           </View>
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
             <View style={{ flex: 1 }}>
