@@ -1526,9 +1526,15 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                     </TouchableOpacity>
                     <TouchableOpacity 
                       onPress={() => setFixedSubMode('DIY')}
-                      style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'DIY' ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
+                      style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'DIY' ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}
                     >
                       <Text style={{ color: fixedSubMode === 'DIY' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Presets & DIY</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      onPress={() => setFixedSubMode('BUILDER')}
+                      style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'BUILDER' ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
+                    >
+                      <Text style={{ color: fixedSubMode === 'BUILDER' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Builder</Text>
                     </TouchableOpacity>
                   </View>
 
