@@ -700,7 +700,27 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
           simBrightness = rawHexPayload[6 + payloadOffset] || 100;
           // Candle Amplitude stored at index 7 controls visualizer flicker speed natively
           const candleAmp = rawHexPayload[7 + payloadOffset] || 2;
-          simSpeed = candleAmp === 1 ? -9 : (candleAmp === 2 ? 40 : 100); 
+          simSpeed = candleAmp === 1 ? -9 : (candleAmp === 2 ? 40 : 100);
+      } else if (op === 0x51) {
+          // Pro Effects payload (0x51 DIY Custom Mode — 32 steps × 9 bytes)
+          // Step 0 starts at byte [1 + payloadOffset]:
+          //   [0] = 0xF0 (active) or 0x0F (inactive)
+          //   [1] = hwEffectId (1-33 for Pro Effects)
+          //   [2] = speed
+          //   [3..5] = FG color R,G,B
+          //   [6..8] = BG color R,G,B
+          simMode = 'MULTIMODE';
+          const step0ActiveFlag = rawHexPayload[1 + payloadOffset];
+          if (step0ActiveFlag === 0xF0) {
+              const hwEffectId = rawHexPayload[2 + payloadOffset] || 1; // hardware 1-33
+              simPatternId = hwEffectId + 1; // map hardware 1-33 → UI 2-34
+              simSpeed = rawHexPayload[3 + payloadOffset] || simSpeed;
+              // Restore FG color for visualizer from the payload
+              const fgR = rawHexPayload[4 + payloadOffset] || 0;
+              const fgG = rawHexPayload[5 + payloadOffset] || 0;
+              const fgB = rawHexPayload[6 + payloadOffset] || 0;
+              simColor = `#${fgR.toString(16).padStart(2,'0')}${fgG.toString(16).padStart(2,'0')}${fgB.toString(16).padStart(2,'0')}`;
+          }
       }
   }
 

@@ -432,9 +432,12 @@ export class ZenggeProtocol {
     direction: number,
     transitionType: number = 0x00
   ): number[] {
-    // No minimum expansion — caller should pass correct LED count.
-    // No 32-pixel cap — 0x59 is variable length up to hardware max (300 LEDs).
-    const numPoints = Math.max(1, colors.length);
+    // Enforce an absolute minimum matrix length of 12! Master Reference explicitly warns that 0x59 payloads < 10 cause hardware memory lock glitching!
+    const numPoints = Math.max(12, colors.length);
+    
+    // Pad the physical array out to numPoints internally if the caller under-filled it
+    const paddedColors = new Array(numPoints).fill(colors[0] || {r:0, g:0, b:0});
+    for(let i=0; i<colors.length; i++) paddedColors[i] = colors[i];
 
     // Speed mapping: user-facing 0–100 → hardware 1–31.
     // Previously 0x00 (CASCADE) was HARDCODED to speed=1 — that was wrong, made animations look frozen.
@@ -447,7 +450,7 @@ export class ZenggeProtocol {
     payload[1] = (totalLen >> 8) & 0xFF;
     payload[2] = totalLen & 0xFF;
     let idx = 3;
-    for (const c of colors) {
+    for (const c of paddedColors) {
       payload[idx++] = Math.max(0, Math.min(255, c.r | 0));
       payload[idx++] = Math.max(0, Math.min(255, c.g | 0));
       payload[idx++] = Math.max(0, Math.min(255, c.b | 0));

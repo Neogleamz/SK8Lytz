@@ -15,7 +15,7 @@
  * Depends on: ZenggeProtocol, AppLogger, useBLE (via prop injection), ThemeContext
  * Platform: React Native (Android + Web)
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, TextInput, Animated, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Typography, Layout } from '../theme/theme';
@@ -820,57 +820,10 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     Math.max(ZenggeProtocol.ANIM_SPEED_MIN, Math.min(ZenggeProtocol.ANIM_SPEED_MAX, Math.round((uiSpeed / 100) * ZenggeProtocol.ANIM_SPEED_MAX)));
 
   /**
-   * Apply current fixed pattern state to devices.
-   * Delegates to PatternEngine — single source of truth for all 10 patterns.
-   * Ensures correct 0x59 / 0x51 protocol, correct transition constants,
-   * full LED count pixel arrays, and APK-proven speed clamping.
+   * applyFixedPattern — defined after fixedPatternId/fixedFgColor/fixedBgColor state
+   * (see below, after those useState declarations). Forward-declared here as a placeholder
+   * to preserve the surrounding comment block.
    */
-  const applyFixedPattern = async (
-    patternId: number = fixedPatternId,
-    fg: string = fixedFgColor,
-    bg: string = fixedBgColor,
-    currentSpeed: number = speed,
-    currentBrightness: number = brightness
-  ) => {
-    if (!writeToDevice) return;
-
-    const factor = currentBrightness / 100;
-    const fgRgb = {
-      r: Math.round(parseInt(fg.slice(1, 3), 16) * factor),
-      g: Math.round(parseInt(fg.slice(3, 5), 16) * factor),
-      b: Math.round(parseInt(fg.slice(5, 7), 16) * factor),
-    };
-    const bgRgb = {
-      r: Math.round(parseInt(bg.slice(1, 3), 16) * factor),
-      g: Math.round(parseInt(bg.slice(3, 5), 16) * factor),
-      b: Math.round(parseInt(bg.slice(5, 7), 16) * factor),
-    };
-    // DO NOT apply applyColorSorting here.
-    // Hardware auto-remaps GRB internally via 0x81 config. Send pure RGB.
-
-    // hwSettings.ledPoints IS the total LED count — do NOT divide by segments
-    // (segments is a hardware IC layout parameter, not a pixel-count divisor)
-    const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
-
-    // Effect #1 is the newly inserted Solid override that uses classic 0x59 fill instead of 0x51 Custom Mode
-    if (patternId === 1) {
-      // 0x00 transition = SOLID
-      const payload = ZenggeProtocol.setMultiColor([fgRgb], 0x00, currentSpeed);
-      if (payload) writeToDevice(payload);
-      return;
-    }
-
-    // Directly map the 2-34 Pattern IDs back into the 1-33 Custom Mode subset
-    const s = Math.floor(currentSpeed / 3) + 1; // Normalize 1-100 to 1-31 hardware speed
-    const payload = ZenggeProtocol.setCustomMode([{
-      mode: patternId - 1,
-      speed: s,
-      color1: fgRgb,
-      color2: bgRgb
-    }]);
-
-    if (payload) writeToDevice(payload);
-  };
 
   const applyEmergencyPattern = (spd: number, bright: number) => {
     if (!writeToDevice) return;
@@ -923,19 +876,81 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   const [fixedBgColor, setFixedBgColor] = useState<string>('#000000');
   const [fixedHue, setFixedHue] = useState<number>(120);
 
+  /**
+   * applyFixedPattern — wrapped in useCallback so the reactive useEffect always
+   * holds a fresh closure over parentWriteToDevice, hwSettings, and all color/speed state.
+   *
+   * ROOT CAUSE FIX: The old plain `const` was not in the useEffect dependency array.
+   * When parentWriteToDevice first became available (device connected), the useEffect
+   * did not re-run if no other dep changed — so the stale closure (with undefined
+   * parentWriteToDevice) silently swallowed all Pro Effect dispatches.
+   */
+  const applyFixedPattern = useCallback(async (
+    patternId: number = fixedPatternId,
+    fg: string = fixedFgColor,
+    bg: string = fixedBgColor,
+    currentSpeed: number = speed,
+    currentBrightness: number = brightness
+  ) => {
+    // Guard on the REAL BLE writer — the local writeToDevice wrapper is always truthy
+    if (!parentWriteToDevice) return;
+
+    const factor = currentBrightness / 100;
+
+    // hwSettings.ledPoints IS the total LED count — do NOT divide by segments.
+    // Math.max(12,...) enforces the 0x59 minimum that prevents hardware matrix locking.
+    const numLEDs = Math.max(12, hwSettings?.ledPoints || points || 16);
+
+    // Effect #1 is the one-off Solid override: uses 0x59 FREEZE instead of 0x51
+    if (patternId === 1) {
+      // Scale brightness for 0x59 (full pixel array fill — hardware doesn't auto-scale here)
+      const fgRgbScaled = {
+        r: Math.round((parseInt(fg.substring(1, 3), 16) || 0) * factor),
+        g: Math.round((parseInt(fg.substring(3, 5), 16) || 0) * factor),
+        b: Math.round((parseInt(fg.substring(5, 7), 16) || 0) * factor),
+      };
+      // Pad to numLEDs to prevent Hardware Matrix Locking (< 10 pixel bug)
+      const paddedArray = new Array(numLEDs).fill(fgRgbScaled);
+      // 0x01 = FREEZE: locks array in place, no cascade ghosting
+      const payload = ZenggeProtocol.setMultiColor(paddedArray, clampSpeed(currentSpeed), 1, 0x01);
+      if (payload) writeToDevice(payload);
+      return;
+    }
+
+    // Pro Effects 2-34 → hardware 0x51 modes 1-33.
+    // Pure unmodified RGB — hardware handles brightness natively for 0x51.
+    const fgRaw = {
+      r: parseInt(fg.substring(1, 3), 16) || 0,
+      g: parseInt(fg.substring(3, 5), 16) || 0,
+      b: parseInt(fg.substring(5, 7), 16) || 0,
+    };
+    const bgRaw = {
+      r: parseInt(bg.substring(1, 3), 16) || 0,
+      g: parseInt(bg.substring(3, 5), 16) || 0,
+      b: parseInt(bg.substring(5, 7), 16) || 0,
+    };
+
+    // UI IDs 2-34 → hardware modes 1-33 (subtract 1).
+    // Speed: normalize 1-100 → 1-31 (proven 2AM formula for 0x51).
+    const payload = ZenggeProtocol.setCustomMode([{
+      mode: patternId - 1,
+      speed: Math.floor(currentSpeed / 3) + 1,
+      color1: fgRaw,
+      color2: bgRaw
+    }]);
+    if (payload) writeToDevice(payload);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parentWriteToDevice, hwSettings, points, fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness]);
+
   // --- PRO EFFECTS REACTIVITY LOGIC ---
-  const applyFixedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // applyFixedPattern is useCallback-stabilized, so it is safe to include in deps.
+  // The stale-closure fix: adding applyFixedPattern as a dep ensures the effect always
+  // re-runs when the BLE writer or hwSettings become available (e.g. device connects).
   useEffect(() => {
     if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
-      if (applyFixedRef.current) clearTimeout(applyFixedRef.current);
-      applyFixedRef.current = setTimeout(() => {
-        applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness);
-      }, 50);
+      applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness);
     }
-    return () => {
-       if (applyFixedRef.current) clearTimeout(applyFixedRef.current);
-    }
-  }, [fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, activeMode, fixedSubMode]);
+  }, [fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, activeMode, fixedSubMode, applyFixedPattern]);
 
   // -- Curated Presets (SK8Lytz Picks) -- driven from Supabase DB table
   const [curatedPresets, setCuratedPresets] = useState<IFavoriteState[]>([]);
@@ -1599,6 +1614,41 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                             setFixedSubMode('PATTERN');
                             setFixedPatternId(effect.id);
                             
+                            // Immediately push the new 0x51 DIY mode payload
+                            if (writeToDevice) {
+                              if (effect.id === 1) {
+                                // Solid one-off: use hwSettings LED count, consistent with applyFixedPattern
+                                // Math.max(12,...) enforces the 0x59 minimum to prevent hardware matrix locking
+                                const localNumLEDs = Math.max(12, hwSettings?.ledPoints || points || 16);
+                                const paddedArray = new Array(localNumLEDs).fill({
+                                  r: Math.round((parseInt((fixedFgColor || '#FF0000').substring(1, 3), 16) || 0) * (brightness / 100)),
+                                  g: Math.round((parseInt((fixedFgColor || '#FF0000').substring(3, 5), 16) || 0) * (brightness / 100)),
+                                  b: Math.round((parseInt((fixedFgColor || '#FF0000').substring(5, 7), 16) || 0) * (brightness / 100))
+                                });
+                                // 0x01 = FREEZE to prevent cascade ghosting
+                                writeToDevice(ZenggeProtocol.setMultiColor(paddedArray, clampSpeed(speed), 1, 0x01));
+                              } else {
+                                const hexToRcb = (hex: string) => {
+                                  const h = hex || '#000000';
+                                  return {
+                                    r: parseInt(h.substring(1, 3), 16) || 0,
+                                    g: parseInt(h.substring(3, 5), 16) || 0,
+                                    b: parseInt(h.substring(5, 7), 16) || 0,
+                                  };
+                                };
+                                writeToDevice(ZenggeProtocol.setCustomMode([
+                                  {
+                                    // UI IDs are 1-34; hardware 0x51 modes are 1-33.
+                                    // ID 1 = Solid (0x59 path above). IDs 2-34 → hw modes 1-33 (subtract 1).
+                                    mode: effect.id - 1,
+                                    speed: Math.floor(speed / 3) + 1, // normalize 1-100 to 1-31 (proven 2AM formula)
+                                    color1: hexToRcb(fixedFgColor || '#FF0000'),
+                                    color2: hexToRcb(fixedBgColor || '#000000')
+                                  }
+                                ]));
+                              }
+                            }
+
                             if (effect.id === 1) {
                                setFixedColorMode('FOREGROUND');
                             }
