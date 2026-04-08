@@ -471,7 +471,17 @@ export default function useBLE(): BluetoothLowEnergyApi {
       const deviceConnection = await bleManager.connectToDevice(device.id);
       setConnectedDevices([deviceConnection]);
       await deviceConnection.discoverAllServicesAndCharacteristics();
-      
+
+      // Request large MTU so payloads up to ~509 bytes go through as single writes.
+      // The 0x51 Pro Effects command is 299 bytes — requires MTU > 302.
+      // Android negotiates down to hardware max automatically; we just request the ceiling.
+      try {
+        const negotiated = await deviceConnection.requestMTU(512);
+        console.log(`[BLE] MTU negotiated: ${negotiated.mtu} bytes for ${device.id}`);
+      } catch (mtuErr: any) {
+        console.warn('[BLE] MTU negotiation failed (continuing with default):', mtuErr?.message);
+      }
+
       // Register dropout listener
       if (disconnectListeners.current[device.id]) disconnectListeners.current[device.id].remove();
       disconnectListeners.current[device.id] = bleManager.onDeviceDisconnected(device.id, (error: any, _d: any) => {
@@ -568,7 +578,15 @@ export default function useBLE(): BluetoothLowEnergyApi {
           const conn = await bleManager.connectToDevice(device.id);
           connections.push(conn);
           await conn.discoverAllServicesAndCharacteristics();
-          
+
+          // Request large MTU for large payloads (0x51 Pro Effects = 299 bytes)
+          try {
+            const negotiated = await conn.requestMTU(512);
+            console.log(`[BLE] MTU negotiated: ${negotiated.mtu} bytes for ${conn.id} (group)`);
+          } catch (mtuErr: any) {
+            console.warn('[BLE] MTU negotiation failed for group device (continuing):', mtuErr?.message);
+          }
+
           // Register dropout listener
           if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
           disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any, _d: any) => {
@@ -633,13 +651,16 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
   const writeToDevice = async (payload: number[], targetDeviceId?: string) => {
     const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
-    console.log(`[BLE WRITE${payload.length > 20 ? ` CHUNKED(${payload.length}B)` : ''}]${targetDeviceId ? ` [Target: ${targetDeviceId}]` : ''}`, hexString.substring(0, 80));
+    console.log(`[BLE WRITE ${payload.length}B]${targetDeviceId ? ` [Target: ${targetDeviceId}]` : ''}`, hexString.substring(0, 80));
     AppLogger.setLastTxPayload(hexString);
 
     // Use ref so this always reads the CURRENT connectedDevices — never a stale closure.
     // ROOT CAUSE FIX: stale writeToDevice saw connectedDevices=[] and returned early.
     if (connectedDevicesRef.current.length === 0 || Platform.OS === 'web') return;
     try {
+      /* Buffer imported at top of file */
+      const base64Payload = Buffer.from(payload).toString('base64');
+
       const targets = targetDeviceId
         ? connectedDevicesRef.current.filter(d => d.id === targetDeviceId)
         : connectedDevicesRef.current;
@@ -649,48 +670,17 @@ export default function useBLE(): BluetoothLowEnergyApi {
         return;
       }
 
-      // ── BLE MTU Chunking ──────────────────────────────────────────────────────
-      // Default BLE 4.0 MTU = 23 bytes, effective payload = 20 bytes.
-      // The 0x51 Pro Effects payload is 299 bytes — must be chunked or it is
-      // silently dropped by the BLE stack (no error returned).
-      // Strategy: split into 20-byte chunks, send sequentially with 10ms gap.
-      // This matches the Zengge app's proven transmission strategy.
-      const CHUNK_SIZE = 20;
-      if (payload.length > CHUNK_SIZE) {
-        for (const device of targets) {
-          for (let offset = 0; offset < payload.length; offset += CHUNK_SIZE) {
-            const chunk = payload.slice(offset, offset + CHUNK_SIZE);
-            const base64Chunk = Buffer.from(chunk).toString('base64');
-            try {
-              await device.writeCharacteristicWithoutResponseForService(
-                ZENGGE_SERVICE_UUID,
-                ZENGGE_CHARACTERISTIC_UUID,
-                base64Chunk
-              );
-            } catch (chunkError: any) {
-              console.warn(`[BLE] Chunk write failed at offset ${offset} for ${device.id}`, chunkError?.message);
-              AppLogger.log('BLE_WRITE_ERROR', { error: chunkError?.message || String(chunkError), target: device.id, offset, payloadLen: payload.length });
-              break; // stop sending further chunks to this device on error
-            }
-            // 10ms gap between chunks — gives BLE stack time to flush the write queue
-            if (offset + CHUNK_SIZE < payload.length) {
-              await new Promise(r => setTimeout(r, 10));
-            }
-          }
-        }
-        return;
-      }
-
-      // Small payload (≤ 20 bytes): single write, no chunking needed
-      const base64Payload = Buffer.from(payload).toString('base64');
+      // Single atomic write — MTU is negotiated to 512 bytes in connectToDevice,
+      // so payloads up to ~509 bytes (including 0x51 Pro Effects at 299 bytes) go
+      // through as one write. Never chunk — the Zengge hardware cannot reassemble fragments.
       const writePromises = targets.map(device =>
         device.writeCharacteristicWithoutResponseForService(
           ZENGGE_SERVICE_UUID,
           ZENGGE_CHARACTERISTIC_UUID,
           base64Payload
         ).catch((writeError: any) => {
-          console.warn(`Write failed specifically for ${device.id}`, writeError);
-          AppLogger.log('BLE_WRITE_ERROR', { error: writeError?.message || String(writeError), target: device.id, payloadHex: hexString });
+          console.warn(`Write failed for ${device.id}`, writeError?.message);
+          AppLogger.log('BLE_WRITE_ERROR', { error: writeError?.message || String(writeError), target: device.id, payloadLen: payload.length });
           return { error: writeError, failedId: device.id };
         })
       );
@@ -698,11 +688,11 @@ export default function useBLE(): BluetoothLowEnergyApi {
       const results = await Promise.all(writePromises);
       const failures = results.filter(r => r && (r as any).error);
       if (failures.length > 0) {
-        console.warn(`[BLE] Silent write failures on: ${failures.map(f => (f as any).failedId).join(', ')}`);
+        console.warn(`[BLE] Write failures: ${failures.map(f => (f as any).failedId).join(', ')}`);
       }
     } catch (e: any) {
       console.warn('Fatal Write catch', e);
-      AppLogger.log('BLE_WRITE_ERROR', { error: e?.message || String(e), target: targetDeviceId, payloadHex: hexString });
+      AppLogger.log('BLE_WRITE_ERROR', { error: e?.message || String(e), target: targetDeviceId, payloadLen: payload.length });
     }
   };
 
