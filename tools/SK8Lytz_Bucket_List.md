@@ -42,6 +42,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ---
 
+## ✅ Completed This Session (Apr 2026)
+
 - [x] **#1 — Positional Array Builder UI** — Builder submode in MULTIMODE with node-based gradient interface
 - [x] **#4 — Crew Hub: private crew invite code display** — Private crew cards show invite code under "My Crews"
 - [x] **#5 — DIY Array Builder retired** — Fully replaced by new Builder workflow; legacy DIY mode scrubbed
@@ -55,7 +57,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] **#31 — Legacy Tool Retirement** — Retired Simple Scanner and Admin Hardware Tester; consolidated discovery and testing into LED Diagnostic Lab.
 - [x] **#32 — Diagnostic Lab UI Modernization** — Restyled Lab header, exit logic, and card styling to achieve 1:1 visual parity with the Programmer modal.
 - [x] **#33 — Lab Navigation Flow** — Standardized "Exit" behavior to return users to the Analytics view, maintaining context during debug sessions.
-- [x] **#35 — Pro Effects Stale Closure Regression Fixed** — ROOT CAUSE: `applyFixedPattern` was a plain `const` that was never included in the reactive `useEffect` dependency array. When `parentWriteToDevice` first became available (device connected), the stale closure silently swallowed all `0x51` dispatches. Fix: wrapped in `useCallback` with `parentWriteToDevice` in deps; moved after dependent `useState` declarations; removed `setTimeout` debounce; added `applyFixedPattern` to reactive `useEffect` deps. Also unified Solid (ID 1) `onPress` LED count to use `hwSettings?.ledPoints` with 12px minimum (was using `devices?.[0]?.points`). Added `0x51` decoder to `ProductVisualizer` so the dot visualizer syncs to active Pro Effect from raw payload.
 
 ## ✅ Completed Previously
 
@@ -83,3 +84,4 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] Builder UI Stabilization: 8-slot Tactical Grid with Marquee names
 
 ---
+*Last updated: 2026-04-08 | This session: #1, #4, #5, #6, #9-#12, #25, #26, #31-#33 complete. Next: #3, #13, #14.*

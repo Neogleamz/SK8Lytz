@@ -15,7 +15,7 @@
  * Depends on: ZenggeProtocol, AppLogger, useBLE (via prop injection), ThemeContext
  * Platform: React Native (Android + Web)
  */
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, TextInput, Animated, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Typography, Layout } from '../theme/theme';
@@ -46,11 +46,11 @@ import MarqueeText from './MarqueeText';
 
 type MotionState = 'STOPPED' | 'ACCELERATING' | 'CRUISING' | 'SLOWING_DOWN' | 'HARD_BRAKING';
 
-const AnalogGauge = ({ 
-  value, 
-  min, 
-  max, 
-  label, 
+const AnalogGauge = ({
+  value,
+  min,
+  max,
+  label,
   unit = '',
   defaultColor = '#00F0FF',
   size = 140,
@@ -59,9 +59,9 @@ const AnalogGauge = ({
 }: { value: number, min: number, max: number, label: string, unit?: string, defaultColor?: string, size?: number, dangerVal?: number, criticalVal?: number }) => {
   const radius = size * 0.42;
   const center = size / 2;
-  const angleRange = 260; 
+  const angleRange = 260;
   const startAngle = -220; // Starts bottom-left
-  
+
   const clampedVal = Math.min(Math.max(value, min), max);
   const percent = (clampedVal - min) / (max - min);
   const currentAngle = startAngle + (percent * angleRange);
@@ -100,7 +100,7 @@ const AnalogGauge = ({
 
   // Tick marks
   const numTicks = 8;
-  const ticks = Array.from({length: numTicks + 1}).map((_, i) => {
+  const ticks = Array.from({ length: numTicks + 1 }).map((_, i) => {
     const p = i / numTicks;
     const a = startAngle + (p * angleRange);
     const rad = (a - 90) * Math.PI / 180;
@@ -127,42 +127,42 @@ const AnalogGauge = ({
           </Defs>
           {/* Background track */}
           <Path d={trackPath} stroke="rgba(255,255,255,0.08)" strokeWidth={10} fill="none" strokeDasharray="6 4" strokeLinecap="butt" />
-          
+
           {dangerPath ? <Path d={dangerPath} stroke="rgba(255,140,0,0.3)" strokeWidth={10} fill="none" strokeDasharray="6 4" /> : null}
           {criticalPath ? <Path d={criticalPath} stroke="rgba(255,0,0,0.35)" strokeWidth={10} fill="none" strokeDasharray="6 4" /> : null}
 
           {/* Active fill */}
           {fillPath ? <Path d={fillPath} stroke="url(#grad)" strokeWidth={10} fill="none" strokeDasharray="6 4" strokeLinecap="butt" /> : null}
-          
+
           {/* Ticks (optional, but let's keep them very faint outside the dashed ring) */}
           {ticks.map((tick, i) => (
-             <Path key={i} d={`M ${tick.x1} ${tick.y1} L ${tick.x2} ${tick.y2}`} stroke={tick.isMajor ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.15)"} strokeWidth={tick.isMajor ? 2 : 1} />
+            <Path key={i} d={`M ${tick.x1} ${tick.y1} L ${tick.x2} ${tick.y2}`} stroke={tick.isMajor ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.15)"} strokeWidth={tick.isMajor ? 2 : 1} />
           ))}
-          
+
           {/* Center Hub */}
           <Circle cx={center} cy={center} r={6} fill="#222" stroke="rgba(255,255,255,0.2)" strokeWidth={2} />
         </Svg>
-        
+
         {/* Animated Needle */}
         <View style={{ position: 'absolute', width: size, height: size, justifyContent: 'center', alignItems: 'center', transform: [{ rotate: `${currentAngle}deg` }] }}>
-          <View style={{ 
-              width: 4, height: radius * 0.90, 
-              backgroundColor: '#FF8C00', 
-              position: 'absolute', 
-              top: center - (radius * 0.90), 
-              borderTopLeftRadius: 2, 
-              borderTopRightRadius: 2, 
-              shadowColor: '#FF8C00', 
-              shadowOpacity: 1, 
-              shadowRadius: 10,
-              elevation: 8 
-            }} />
+          <View style={{
+            width: 4, height: radius * 0.90,
+            backgroundColor: '#FF8C00',
+            position: 'absolute',
+            top: center - (radius * 0.90),
+            borderTopLeftRadius: 2,
+            borderTopRightRadius: 2,
+            shadowColor: '#FF8C00',
+            shadowOpacity: 1,
+            shadowRadius: 10,
+            elevation: 8
+          }} />
         </View>
 
         {/* Digital display */}
         <View style={{ position: 'absolute', right: size * 0.15, top: size * 0.32, alignItems: 'flex-end' }}>
-            <Text style={{ color: '#FFF', fontSize: size * 0.22, fontWeight: '900', fontVariant: ['tabular-nums'], textShadowColor: activeColor !== '#00F0FF' ? activeColor : '#00F0FF', textShadowRadius: 16 }}>{Math.floor(value)}</Text>
-            {unit ? <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: size * 0.08, fontWeight: '800', marginTop: -4 }}>{unit}</Text> : null}
+          <Text style={{ color: '#FFF', fontSize: size * 0.22, fontWeight: '900', fontVariant: ['tabular-nums'], textShadowColor: activeColor !== '#00F0FF' ? activeColor : '#00F0FF', textShadowRadius: 16 }}>{Math.floor(value)}</Text>
+          {unit ? <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: size * 0.08, fontWeight: '800', marginTop: -4 }}>{unit}</Text> : null}
         </View>
       </View>
       <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '900', letterSpacing: 2, marginTop: -4 }}>{label}</Text>
@@ -196,22 +196,22 @@ const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segme
 
   // Extend the 8-element static base array explicitly to match physical point counts natively
   const fullArray = React.useMemo(() => {
-     const arr: string[] = [];
-     
-     // Hardware repeats the geometric bounds across the segment boundary safely
-     const dotsPerSegment = Math.max(1, Math.floor(points / Math.max(1, segments)));
-     
-     for (let i = 0; i < points; i++) {
-        // Map native segment repetitions safely simulating string data
-        const segmentLocalIndex = i % dotsPerSegment;
-        arr.push(baseDots[segmentLocalIndex % baseDots.length]);
-     }
-     return arr;
+    const arr: string[] = [];
+
+    // Hardware repeats the geometric bounds across the segment boundary safely
+    const dotsPerSegment = Math.max(1, Math.floor(points / Math.max(1, segments)));
+
+    for (let i = 0; i < points; i++) {
+      // Map native segment repetitions safely simulating string data
+      const segmentLocalIndex = i % dotsPerSegment;
+      arr.push(baseDots[segmentLocalIndex % baseDots.length]);
+    }
+    return arr;
   }, [baseDots, points, segments]);
 
   React.useEffect(() => {
-    if (patternId === 1) return; 
-    const intervalTime = Math.max(30, 200 - (speed * 1.7)); 
+    if (patternId === 1) return;
+    const intervalTime = Math.max(30, 200 - (speed * 1.7));
     const int = setInterval(() => {
       setOffset(o => (o + 1) % fullArray.length);
     }, intervalTime);
@@ -227,13 +227,13 @@ const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segme
     <View style={{ flex: 1, marginRight: 8, height: 8, overflow: 'hidden' }}>
       <View style={{ flex: 1, flexDirection: 'row', gap: 2 }}>
         {displayedDots.slice(0, 10).map((c, i) => (
-          <View 
-             key={i} 
-             style={{ 
-               flex: 1,
-               borderRadius: 4, 
-               backgroundColor: c
-             }} 
+          <View
+            key={i}
+            style={{
+              flex: 1,
+              borderRadius: 4,
+              backgroundColor: c
+            }}
           />
         ))}
       </View>
@@ -303,269 +303,269 @@ export type DockedControllerHandle = { applyCloudScene: (scene: any) => void };
 // MarqueeText moved to standalone component MarqueeText.tsx
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
-function DockedController({ hwSettings, lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange }: Sk8lytzControllerProps, ref) {
-  const { Colors, isDark } = useTheme();
-  const styles = createStyles(Colors);
+  function DockedController({ hwSettings, lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange }: Sk8lytzControllerProps, ref) {
+    const { Colors, isDark } = useTheme();
+    const styles = createStyles(Colors);
 
-  /**
-   * Perceptual brightness factor — lifts the floor so LEDs stay visible at low %.
-   * At 0% → 0 (truly off). At 5% → ~14% (dim outline visible). At 100% → 1.0.
-   * Formula: brt > 0 ? 0.10 + 0.90 * (brt/100) : 0
-   */
-  const brtFactor = (brt: number): number =>
-    brt > 0 ? 0.10 + 0.90 * (brt / 100) : 0;
+    /**
+     * Perceptual brightness factor — lifts the floor so LEDs stay visible at low %.
+     * At 0% → 0 (truly off). At 5% → ~14% (dim outline visible). At 100% → 1.0.
+     * Formula: brt > 0 ? 0.10 + 0.90 * (brt/100) : 0
+     */
+    const brtFactor = (brt: number): number =>
+      brt > 0 ? 0.10 + 0.90 * (brt / 100) : 0;
 
-  const [lastSentPayload, setLastSentPayload] = useState<number[]>([]);
-  
-  const writeToDevice = async (payload: number[]) => {
-    setLastSentPayload([...payload]);
-    if (parentWriteToDevice) {
-      await parentWriteToDevice(payload);
-    }
-  };
-  
-  const [activeProduct, setActiveProduct] = useState<ProductType>(lockedProduct || 'HALOZ');
-  const [activeMode, setActiveMode] = useState<ModeType>('FAVORITES');
-  const [lastOperatingMode, setLastOperatingMode] = useState<ModeType>('MULTIMODE');
-  const [selectedColor, setSelectedColor] = useState<string>('#00F0FF');
-  const [selectedHue, setSelectedHue] = useState<number>(180);
-  const [selectedPatternId, setSelectedPatternId] = useState<number>(1);
-  const [brightness, setBrightness] = useState<number>(90);
-  const [speed, setSpeed] = useState<number>(50);
-  const [micSensitivity, setMicSensitivity] = useState<number>(80);
-  const [musicHue, setMusicHue] = useState(180);
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
-  const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
+    const [lastSentPayload, setLastSentPayload] = useState<number[]>([]);
 
-  const [quickPresets, setQuickPresets] = useState<IQuickPreset[]>([
-    { name: 'Rainbow', colors: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'], type: 3 },
-    { name: 'America', colors: ['#FF0000', '#FFFFFF', '#0000FF'], type: 3 },
-    { name: 'Cyberpunk', colors: ['#00FFFF', '#FF00FF', '#FFFF00'], type: 3 },
-    { name: 'Forest', colors: ['#00FF00', '#008000', '#228B22', '#32CD32'], type: 1 },
-    { name: 'Sunset', colors: ['#FF0000', '#FF4500', '#FF8C00', '#FFA500'], type: 1 },
-    { name: 'Ice', colors: ['#FFFFFF', '#E0FFFF', '#00FFFF', '#0000FF'], type: 1 },
-    { name: 'Custom 1', colors: ['#000000', '#FFFFFF', '#000000'], type: 3 },
-    { name: 'Custom 2', colors: ['#000000', '#FFFFFF', '#000000'], type: 3 }
-  ]);
-  const [isQuickPromptVisible, setIsQuickPromptVisible] = useState(false);
-  const [quickPromptName, setQuickPromptName] = useState('');
-  const [quickPromptTargetIndex, setQuickPromptTargetIndex] = useState(-1);
-  const [activeQuickPresetIndex, setActiveQuickPresetIndex] = useState<number | null>(null);
-
-  // Cloud Scene State
-  const [isCommunityModalVisible, setIsCommunityModalVisible] = useState<boolean>(false);
-  const [isPublishingCloud, setIsPublishingCloud] = useState<boolean>(false);
-  const [cloudPublicToggle, setCloudPublicToggle] = useState<boolean>(true);
-
-  const captureEntireState = () => {
-    return {
-       activeMode, fixedSubMode,
-       selectedColor, selectedPatternId, brightness, speed,
-       multiColors, multiLength, multiTransition,
-       musicPatternId, musicPrimaryColor, musicSecondaryColor, micSensitivity, micSource, musicMatrixStyle,
-       streetSensitivity, streetCruiseColor, streetBrakeColor
+    const writeToDevice = async (payload: number[]) => {
+      setLastSentPayload([...payload]);
+      if (parentWriteToDevice) {
+        await parentWriteToDevice(payload);
+      }
     };
-  };
 
-  const applyCloudScene = (scene: any) => {
-    if (scene.activeMode) setActiveMode(scene.activeMode);
-    if (scene.fixedSubMode) setFixedSubMode(scene.fixedSubMode);
-    if (scene.selectedColor) setSelectedColor(scene.selectedColor);
-    if (scene.selectedPatternId) setSelectedPatternId(scene.selectedPatternId);
-    if (scene.brightness !== undefined) setBrightness(scene.brightness);
-    if (scene.speed !== undefined) setSpeed(scene.speed);
-    if (scene.multiColors) setMultiColors(scene.multiColors);
-    if (scene.multiLength !== undefined) setMultiLength(scene.multiLength);
-    if (scene.multiTransition !== undefined) setMultiTransition(scene.multiTransition);
-    if (scene.musicPatternId !== undefined) setMusicPatternId(scene.musicPatternId);
-    if (scene.musicPrimaryColor) setMusicPrimaryColor(scene.musicPrimaryColor);
-    if (scene.musicSecondaryColor) setMusicSecondaryColor(scene.musicSecondaryColor);
-    if (scene.micSensitivity !== undefined) setMicSensitivity(scene.micSensitivity);
-    if (scene.micSource !== undefined) setMicSource(scene.micSource);
-    if (scene.musicMatrixStyle !== undefined) setMusicMatrixStyle(scene.musicMatrixStyle);
-    if (scene.streetSensitivity !== undefined) setStreetSensitivity(scene.streetSensitivity);
-    if (scene.streetCruiseColor) setStreetCruiseColor(scene.streetCruiseColor);
-    if (scene.streetBrakeColor) setStreetBrakeColor(scene.streetBrakeColor);
-  };
+    const [activeProduct, setActiveProduct] = useState<ProductType>(lockedProduct || 'HALOZ');
+    const [activeMode, setActiveMode] = useState<ModeType>('FAVORITES');
+    const [lastOperatingMode, setLastOperatingMode] = useState<ModeType>('MULTIMODE');
+    const [selectedColor, setSelectedColor] = useState<string>('#00F0FF');
+    const [selectedHue, setSelectedHue] = useState<number>(180);
+    const [selectedPatternId, setSelectedPatternId] = useState<number>(1);
+    const [brightness, setBrightness] = useState<number>(90);
+    const [speed, setSpeed] = useState<number>(50);
+    const [micSensitivity, setMicSensitivity] = useState<number>(80);
+    const [musicHue, setMusicHue] = useState(180);
+    const [recording, setRecording] = useState<Audio.Recording | null>(null);
+    const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
+    const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Expose applyCloudScene to parent via ref (for crew member sync)
-  React.useImperativeHandle(ref, () => ({ applyCloudScene }), []);
+    const [quickPresets, setQuickPresets] = useState<IQuickPreset[]>([
+      { name: 'Rainbow', colors: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'], type: 3 },
+      { name: 'America', colors: ['#FF0000', '#FFFFFF', '#0000FF'], type: 3 },
+      { name: 'Cyberpunk', colors: ['#00FFFF', '#FF00FF', '#FFFF00'], type: 3 },
+      { name: 'Forest', colors: ['#00FF00', '#008000', '#228B22', '#32CD32'], type: 1 },
+      { name: 'Sunset', colors: ['#FF0000', '#FF4500', '#FF8C00', '#FFA500'], type: 1 },
+      { name: 'Ice', colors: ['#FFFFFF', '#E0FFFF', '#00FFFF', '#0000FF'], type: 1 },
+      { name: 'Custom 1', colors: ['#000000', '#FFFFFF', '#000000'], type: 3 },
+      { name: 'Custom 2', colors: ['#000000', '#FFFFFF', '#000000'], type: 3 }
+    ]);
+    const [isQuickPromptVisible, setIsQuickPromptVisible] = useState(false);
+    const [quickPromptName, setQuickPromptName] = useState('');
+    const [quickPromptTargetIndex, setQuickPromptTargetIndex] = useState(-1);
+    const [activeQuickPresetIndex, setActiveQuickPresetIndex] = useState<number | null>(null);
 
-  // Multi-Color DIY State
-  const [multiColors, setMultiColors] = useState<string[]>(['#FF0000', '#00FF00', '#0000FF']);
-  const [multiTransition, setMultiTransition] = useState<number>(3);
-  const [multiLength, setMultiLength] = useState<number>(16);
+    // Cloud Scene State
+    const [isCommunityModalVisible, setIsCommunityModalVisible] = useState<boolean>(false);
+    const [isPublishingCloud, setIsPublishingCloud] = useState<boolean>(false);
+    const [cloudPublicToggle, setCloudPublicToggle] = useState<boolean>(true);
 
-  // Active Sub-Mode for the Consolidated Fixed Tab
-  const [fixedSubMode, setFixedSubMode] = useState<'PATTERN' | 'BUILDER'>('PATTERN');
+    const captureEntireState = () => {
+      return {
+        activeMode, fixedSubMode,
+        selectedColor, selectedPatternId, brightness, speed,
+        multiColors, multiLength, multiTransition,
+        musicPatternId, musicPrimaryColor, musicSecondaryColor, micSensitivity, micSource, musicMatrixStyle,
+        streetSensitivity, streetCruiseColor, streetBrakeColor
+      };
+    };
 
-  // Multi-Color Builder State
-  const [builderNodes, setBuilderNodes] = useState<BuilderNode[]>([
+    const applyCloudScene = (scene: any) => {
+      if (scene.activeMode) setActiveMode(scene.activeMode);
+      if (scene.fixedSubMode) setFixedSubMode(scene.fixedSubMode);
+      if (scene.selectedColor) setSelectedColor(scene.selectedColor);
+      if (scene.selectedPatternId) setSelectedPatternId(scene.selectedPatternId);
+      if (scene.brightness !== undefined) setBrightness(scene.brightness);
+      if (scene.speed !== undefined) setSpeed(scene.speed);
+      if (scene.multiColors) setMultiColors(scene.multiColors);
+      if (scene.multiLength !== undefined) setMultiLength(scene.multiLength);
+      if (scene.multiTransition !== undefined) setMultiTransition(scene.multiTransition);
+      if (scene.musicPatternId !== undefined) setMusicPatternId(scene.musicPatternId);
+      if (scene.musicPrimaryColor) setMusicPrimaryColor(scene.musicPrimaryColor);
+      if (scene.musicSecondaryColor) setMusicSecondaryColor(scene.musicSecondaryColor);
+      if (scene.micSensitivity !== undefined) setMicSensitivity(scene.micSensitivity);
+      if (scene.micSource !== undefined) setMicSource(scene.micSource);
+      if (scene.musicMatrixStyle !== undefined) setMusicMatrixStyle(scene.musicMatrixStyle);
+      if (scene.streetSensitivity !== undefined) setStreetSensitivity(scene.streetSensitivity);
+      if (scene.streetCruiseColor) setStreetCruiseColor(scene.streetCruiseColor);
+      if (scene.streetBrakeColor) setStreetBrakeColor(scene.streetBrakeColor);
+    };
+
+    // Expose applyCloudScene to parent via ref (for crew member sync)
+    React.useImperativeHandle(ref, () => ({ applyCloudScene }), []);
+
+    // Multi-Color DIY State
+    const [multiColors, setMultiColors] = useState<string[]>(['#FF0000', '#00FF00', '#0000FF']);
+    const [multiTransition, setMultiTransition] = useState<number>(3);
+    const [multiLength, setMultiLength] = useState<number>(16);
+
+    // Active Sub-Mode for the Consolidated Fixed Tab
+    const [fixedSubMode, setFixedSubMode] = useState<'PATTERN' | 'BUILDER'>('PATTERN');
+
+    // Multi-Color Builder State
+    const [builderNodes, setBuilderNodes] = useState<BuilderNode[]>([
       { id: 'node_1', position: 0, colorHex: '#FF0000' },
       { id: 'node_2', position: 100, colorHex: '#00F0FF' }
-  ]);
-  const [builderFillMode, setBuilderFillMode] = useState<'GRADIENT' | 'SOLID'>('GRADIENT');
-  const [builderTransitionType, setBuilderTransitionType] = useState<number>(1);
-  const [builderDirection, setBuilderDirection] = useState<number>(1);
+    ]);
+    const [builderFillMode, setBuilderFillMode] = useState<'GRADIENT' | 'SOLID'>('GRADIENT');
+    const [builderTransitionType, setBuilderTransitionType] = useState<number>(1);
+    const [builderDirection, setBuilderDirection] = useState<number>(1);
 
-  // ── Street Mode (Accelerometer Reactive) ──────────────────────────────────────
-  const [streetSensitivity, setStreetSensitivity] = useState<number>(30);
-  const [streetCruiseColor, setStreetCruiseColor] = useState<string>('#FF8C00');
-  const [streetBrakeColor, setStreetBrakeColor] = useState<string>('#FF0000');
-  const [isStreetBraking, setIsStreetBraking] = useState<boolean>(false);
-  const streetBrakingRef = useRef(false);
-  const lastAccelRef = useRef({ x: 0, y: 0, z: 0 });
+    // ── Street Mode (Accelerometer Reactive) ──────────────────────────────────────
+    const [streetSensitivity, setStreetSensitivity] = useState<number>(30);
+    const [streetCruiseColor, setStreetCruiseColor] = useState<string>('#FF8C00');
+    const [streetBrakeColor, setStreetBrakeColor] = useState<string>('#FF0000');
+    const [isStreetBraking, setIsStreetBraking] = useState<boolean>(false);
+    const streetBrakingRef = useRef(false);
+    const lastAccelRef = useRef({ x: 0, y: 0, z: 0 });
 
-  // Dashboard Telemetry Tracking State
-  const [motionState, setMotionState] = useState<MotionState>('STOPPED');
-  const [gpsSpeed, setGpsSpeed] = useState<number>(0);
-  const [peakGForce, setPeakGForce] = useState<number>(1.0);
-  const motionStateRef = useRef<MotionState>('STOPPED');
-  const lastGpsSpeeds = useRef<number[]>([]);
-  const locationSubRef = useRef<Location.LocationSubscription | null>(null);
+    // Dashboard Telemetry Tracking State
+    const [motionState, setMotionState] = useState<MotionState>('STOPPED');
+    const [gpsSpeed, setGpsSpeed] = useState<number>(0);
+    const [peakGForce, setPeakGForce] = useState<number>(1.0);
+    const motionStateRef = useRef<MotionState>('STOPPED');
+    const lastGpsSpeeds = useRef<number[]>([]);
+    const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
-  // ── Street Mode: Car-Light Pattern helper ─────────────────────────────────
-  // SOULZ (linear strip, heel→toe):
-  //   Rear 30% = red tail lights, Middle 40% = amber cruise, Front 30% = white headlights
-  // HALOZ (2-segment × 8 ring):
-  //   8-LED frame: [RED×2][AMB×4][WHT×2]  →  mirrored to 16-LED array
-  //   Result: RED at BACK of ring, WHITE at FRONT, AMBER on both sides  ✅
-  //
-  // #9 — Cruise bounce chase: tick 0.0→1.0 shifts the bright spot through the mid zone
-  const cruiseChaseRef = useRef(0);
-  const applyStreetPattern = (
-    currMotionState: MotionState,
-    brt: number = brightness,
-    spd: number = speed
-  ) => {
-    if (!writeToDevice) return;
-    const factor = brtFactor(brt);
-    const pts = hwSettings?.ledPoints || points || 16;
-    const segs = hwSettings?.segments || 1;
-    const isHalozRing = segs === 2 && pts === 16; // HALOZ hardware signature
-    const hwSpeed = clampSpeed(spd);
+    // ── Street Mode: Car-Light Pattern helper ─────────────────────────────────
+    // SOULZ (linear strip, heel→toe):
+    //   Rear 30% = red tail lights, Middle 40% = amber cruise, Front 30% = white headlights
+    // HALOZ (2-segment × 8 ring):
+    //   8-LED frame: [RED×2][AMB×4][WHT×2]  →  mirrored to 16-LED array
+    //   Result: RED at BACK of ring, WHITE at FRONT, AMBER on both sides  ✅
+    //
+    // #9 — Cruise bounce chase: tick 0.0→1.0 shifts the bright spot through the mid zone
+    const cruiseChaseRef = useRef(0);
+    const applyStreetPattern = (
+      currMotionState: MotionState,
+      brt: number = brightness,
+      spd: number = speed
+    ) => {
+      if (!writeToDevice) return;
+      const factor = brtFactor(brt);
+      const pts = hwSettings?.ledPoints || points || 16;
+      const segs = hwSettings?.segments || 1;
+      const isHalozRing = segs === 2 && pts === 16; // HALOZ hardware signature
+      const hwSpeed = clampSpeed(spd);
 
-    let cruiseHex = streetCruiseColor; // Use user selected color for ACCELERATING / CRUISING
-    if (currMotionState === 'STOPPED') cruiseHex = '#FF0000';
-    else if (currMotionState === 'SLOWING_DOWN') cruiseHex = '#FFFF00';
-    else if (currMotionState === 'HARD_BRAKING') cruiseHex = '#FF0000';
+      let cruiseHex = streetCruiseColor; // Use user selected color for ACCELERATING / CRUISING
+      if (currMotionState === 'STOPPED') cruiseHex = '#FF0000';
+      else if (currMotionState === 'SLOWING_DOWN') cruiseHex = '#FFFF00';
+      else if (currMotionState === 'HARD_BRAKING') cruiseHex = '#FF0000';
 
-    const isBraking = currMotionState === 'HARD_BRAKING' || currMotionState === 'STOPPED';
+      const isBraking = currMotionState === 'HARD_BRAKING' || currMotionState === 'STOPPED';
 
-    const cr = parseInt(cruiseHex.slice(1, 3), 16);
-    const cg = parseInt(cruiseHex.slice(3, 5), 16);
-    const cb = parseInt(cruiseHex.slice(5, 7), 16);
+      const cr = parseInt(cruiseHex.slice(1, 3), 16);
+      const cg = parseInt(cruiseHex.slice(3, 5), 16);
+      const cb = parseInt(cruiseHex.slice(5, 7), 16);
 
-    // Tail lights: ABSOLUTE brightness — 100% (255) braking, 50% (127) cruising.
-    // Street Mode has no brightness slider — these are fixed car safety values.
-    const tailR = isBraking ? 255 : 127;
-    const tail  = { r: tailR, g: 0, b: 0 };
+      // Tail lights: ABSOLUTE brightness — 100% (255) braking, 50% (127) cruising.
+      // Street Mode has no brightness slider — these are fixed car safety values.
+      const tailR = isBraking ? 255 : 127;
+      const tail = { r: tailR, g: 0, b: 0 };
 
-    // Headlights: warm white, always steady
-    const headVal = Math.round(255 * factor);
-    const head  = { r: headVal, g: Math.round(headVal * 0.95), b: Math.round(headVal * 0.85) };
+      // Headlights: warm white, always steady
+      const headVal = Math.round(255 * factor);
+      const head = { r: headVal, g: Math.round(headVal * 0.95), b: Math.round(headVal * 0.85) };
 
-    // Dashboard Cruise Color
-    const crR = Math.round(cr * factor);
-    const crG = Math.round(cg * factor);
-    const crB = Math.round(cb * factor);
-    const crDim   = { r: Math.round(crR * 0.3), g: Math.round(crG * 0.3), b: Math.round(crB * 0.3) };
-    const cruise  = { r: crR, g: crG, b: crB };
+      // Dashboard Cruise Color
+      const crR = Math.round(cr * factor);
+      const crG = Math.round(cg * factor);
+      const crB = Math.round(cb * factor);
+      const crDim = { r: Math.round(crR * 0.3), g: Math.round(crG * 0.3), b: Math.round(crB * 0.3) };
+      const cruise = { r: crR, g: crG, b: crB };
 
-    // DO NOT apply applyColorSorting here.
-    // Hardware auto-remaps GRB internally via 0x81 config. Send pure RGB.
-    let arr: { r: number; g: number; b: number }[];
+      // DO NOT apply applyColorSorting here.
+      // Hardware auto-remaps GRB internally via 0x81 config. Send pure RGB.
+      let arr: { r: number; g: number; b: number }[];
 
-    // #9 — Cruise bounce chase animation
-    // Advance tick for chase direction-flip (0→1→0 triangle)
-    const isCruising = currMotionState === 'CRUISING' || currMotionState === 'ACCELERATING';
-    if (isCruising) {
-      cruiseChaseRef.current = (cruiseChaseRef.current + 0.07) % 2; // 0‑2 range for triangle wave
-    } else {
-      cruiseChaseRef.current = 0; // Reset on non-cruise states
-    }
-    const chaseTick = cruiseChaseRef.current <= 1 ? cruiseChaseRef.current : 2 - cruiseChaseRef.current; // Triangle 0→1→0
-
-    if (isHalozRing) {
-      // HALOZ: 8-LED ring frame. Chase bright spot through the 4 cruise LEDs (idx 2-5)
-      const chaseSlot = Math.floor(chaseTick * 3); // 0,1,2,3 through 4 cruise positions
-      const frame8 = [
-        tail, tail,
-        chaseSlot === 0 ? cruise : crDim,
-        chaseSlot === 1 ? cruise : crDim,
-        chaseSlot === 2 ? cruise : crDim,
-        chaseSlot === 3 ? cruise : crDim,
-        head, head,
-      ];
-      const mirror8 = [...frame8].reverse();
-      arr = [...frame8, ...mirror8];
-    } else {
-      const ledCount   = Math.max(10, hwSettings?.ledPoints || pts);
-      const rearCount  = Math.max(1, Math.round(ledCount * 0.3));
-      const frontCount = Math.max(1, Math.round(ledCount * 0.3));
-      const midCount   = Math.max(1, ledCount - rearCount - frontCount);
-      // Chase bright spot bounces through the mid section
-      const chasePos = Math.round(chaseTick * (midCount - 1));
-      const midSection = Array.from({ length: midCount }, (_, i) => {
-        const dist = Math.abs(i - chasePos);
-        if (dist === 0) return cruise;
-        if (dist === 1) return { r: Math.round(crR * 0.6), g: Math.round(crG * 0.6), b: Math.round(crB * 0.6) };
-        return crDim;
-      });
-      arr = [
-        ...Array(rearCount).fill(tail),
-        ...midSection,
-        ...Array(frontCount).fill(head),
-      ];
-    }
-
-    // 0x01 = FREEZE (hardware locks array in place — static car lights, no scrolling)
-    // 0x02 = STROBE (urgent flashing for hard braking)
-    // NOTE: 0x00 is CASCADE (scrolling) — NOT static. Never use 0x00 for car lights.
-    const transType = currMotionState === 'HARD_BRAKING' ? 0x02 : 0x01;
-    writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpeed, 1, transType));
-  };
-
-
-  // Update motion state helper
-  const updateMotion = (newState: MotionState) => {
-    if (newState !== motionStateRef.current) {
-      motionStateRef.current = newState;
-      setMotionState(newState);
-      applyStreetPattern(newState);
-    }
-  };
-
-  useEffect(() => {
-    if (activeMode !== 'STREET') {
-      if (Platform.OS !== 'web') Accelerometer.removeAllListeners();
-      if (locationSubRef.current) {
-         locationSubRef.current.remove();
-         locationSubRef.current = null;
+      // #9 — Cruise bounce chase animation
+      // Advance tick for chase direction-flip (0→1→0 triangle)
+      const isCruising = currMotionState === 'CRUISING' || currMotionState === 'ACCELERATING';
+      if (isCruising) {
+        cruiseChaseRef.current = (cruiseChaseRef.current + 0.07) % 2; // 0‑2 range for triangle wave
+      } else {
+        cruiseChaseRef.current = 0; // Reset on non-cruise states
       }
-      if (streetBrakingRef.current) {
-        streetBrakingRef.current = false;
-        setIsStreetBraking(false);
+      const chaseTick = cruiseChaseRef.current <= 1 ? cruiseChaseRef.current : 2 - cruiseChaseRef.current; // Triangle 0→1→0
+
+      if (isHalozRing) {
+        // HALOZ: 8-LED ring frame. Chase bright spot through the 4 cruise LEDs (idx 2-5)
+        const chaseSlot = Math.floor(chaseTick * 3); // 0,1,2,3 through 4 cruise positions
+        const frame8 = [
+          tail, tail,
+          chaseSlot === 0 ? cruise : crDim,
+          chaseSlot === 1 ? cruise : crDim,
+          chaseSlot === 2 ? cruise : crDim,
+          chaseSlot === 3 ? cruise : crDim,
+          head, head,
+        ];
+        const mirror8 = [...frame8].reverse();
+        arr = [...frame8, ...mirror8];
+      } else {
+        const ledCount = Math.max(10, hwSettings?.ledPoints || pts);
+        const rearCount = Math.max(1, Math.round(ledCount * 0.3));
+        const frontCount = Math.max(1, Math.round(ledCount * 0.3));
+        const midCount = Math.max(1, ledCount - rearCount - frontCount);
+        // Chase bright spot bounces through the mid section
+        const chasePos = Math.round(chaseTick * (midCount - 1));
+        const midSection = Array.from({ length: midCount }, (_, i) => {
+          const dist = Math.abs(i - chasePos);
+          if (dist === 0) return cruise;
+          if (dist === 1) return { r: Math.round(crR * 0.6), g: Math.round(crG * 0.6), b: Math.round(crB * 0.6) };
+          return crDim;
+        });
+        arr = [
+          ...Array(rearCount).fill(tail),
+          ...midSection,
+          ...Array(frontCount).fill(head),
+        ];
       }
-      AppLogger.log('STREET_MODE_DEACTIVATED', { lastMotionState: motionStateRef.current, peakGForce, ...deviceContext });
-      return;
-    }
 
-    // Initialize
-    updateMotion('STOPPED');
-    AppLogger.log('STREET_MODE_ACTIVATED', { sensitivity: streetSensitivity, cruiseColor: streetCruiseColor, brakeColor: streetBrakeColor, ...deviceContext });
+      // 0x01 = FREEZE (hardware locks array in place — static car lights, no scrolling)
+      // 0x02 = STROBE (urgent flashing for hard braking)
+      // NOTE: 0x00 is CASCADE (scrolling) — NOT static. Never use 0x00 for car lights.
+      const transType = currMotionState === 'HARD_BRAKING' ? 0x02 : 0x01;
+      writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpeed, 1, transType));
+    };
 
-    if (Platform.OS === 'web') return;
 
-    // Start Location tracking
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-           locationSubRef.current = await Location.watchPositionAsync(
-             { accuracy: Location.Accuracy.Balanced, timeInterval: 1000, distanceInterval: 1 },
-             (pos) => {
+    // Update motion state helper
+    const updateMotion = (newState: MotionState) => {
+      if (newState !== motionStateRef.current) {
+        motionStateRef.current = newState;
+        setMotionState(newState);
+        applyStreetPattern(newState);
+      }
+    };
+
+    useEffect(() => {
+      if (activeMode !== 'STREET') {
+        if (Platform.OS !== 'web') Accelerometer.removeAllListeners();
+        if (locationSubRef.current) {
+          locationSubRef.current.remove();
+          locationSubRef.current = null;
+        }
+        if (streetBrakingRef.current) {
+          streetBrakingRef.current = false;
+          setIsStreetBraking(false);
+        }
+        AppLogger.log('STREET_MODE_DEACTIVATED', { lastMotionState: motionStateRef.current, peakGForce, ...deviceContext });
+        return;
+      }
+
+      // Initialize
+      updateMotion('STOPPED');
+      AppLogger.log('STREET_MODE_ACTIVATED', { sensitivity: streetSensitivity, cruiseColor: streetCruiseColor, brakeColor: streetBrakeColor, ...deviceContext });
+
+      if (Platform.OS === 'web') return;
+
+      // Start Location tracking
+      (async () => {
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status === 'granted') {
+            locationSubRef.current = await Location.watchPositionAsync(
+              { accuracy: Location.Accuracy.Balanced, timeInterval: 1000, distanceInterval: 1 },
+              (pos) => {
                 const spdMpS = pos.coords.speed || 0;
                 const spdMph = Math.max(0, spdMpS * 2.23694);
                 setGpsSpeed(spdMph);
@@ -576,129 +576,129 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
 
                 // If not hard braking, evaluate soft states
                 if (motionStateRef.current !== 'HARD_BRAKING') {
-                    if (spdMph < 1.0 && peakGForce < 1.1) {
-                       updateMotion('STOPPED');
-                    } else if (lastGpsSpeeds.current.length >= 2) {
-                       const oldSpd = lastGpsSpeeds.current[0];
-                       // If speed dropped by > 1.0mph in recent samples
-                       if (oldSpd - spdMph > 1.0) {
-                          updateMotion('SLOWING_DOWN');
-                       } else if (spdMph >= 1.0) {
-                          updateMotion('CRUISING');
-                       }
+                  if (spdMph < 1.0 && peakGForce < 1.1) {
+                    updateMotion('STOPPED');
+                  } else if (lastGpsSpeeds.current.length >= 2) {
+                    const oldSpd = lastGpsSpeeds.current[0];
+                    // If speed dropped by > 1.0mph in recent samples
+                    if (oldSpd - spdMph > 1.0) {
+                      updateMotion('SLOWING_DOWN');
                     } else if (spdMph >= 1.0) {
-                       updateMotion('CRUISING');
+                      updateMotion('CRUISING');
                     }
+                  } else if (spdMph >= 1.0) {
+                    updateMotion('CRUISING');
+                  }
                 }
-             }
-           );
+              }
+            );
+          }
+        } catch (e) {
+          console.warn("Location permission denied or unavailable", e);
         }
-      } catch (e) {
-         console.warn("Location permission denied or unavailable", e);
-      }
-    })();
+      })();
 
-    // Accelerometer tracking
-    Accelerometer.setUpdateInterval(80);
-    const sub = Accelerometer.addListener(({ x, y, z }) => {
-      const prev = lastAccelRef.current;
-      const gMag = Math.sqrt(x*x + y*y + z*z);
-      
-      // Update peak G-Force display smoothing (decay back to 1.0)
-      setPeakGForce(prevG => {
-         if (gMag > prevG) return parseFloat(gMag.toFixed(2));
-         return parseFloat((prevG * 0.95 + 1.0 * 0.05).toFixed(2));
+      // Accelerometer tracking
+      Accelerometer.setUpdateInterval(80);
+      const sub = Accelerometer.addListener(({ x, y, z }) => {
+        const prev = lastAccelRef.current;
+        const gMag = Math.sqrt(x * x + y * y + z * z);
+
+        // Update peak G-Force display smoothing (decay back to 1.0)
+        setPeakGForce(prevG => {
+          if (gMag > prevG) return parseFloat(gMag.toFixed(2));
+          return parseFloat((prevG * 0.95 + 1.0 * 0.05).toFixed(2));
+        });
+
+        const jerkMag = Math.sqrt(
+          Math.pow(x - prev.x, 2) + Math.pow(y - prev.y, 2) + Math.pow(z - prev.z, 2)
+        );
+        lastAccelRef.current = { x, y, z };
+        const threshold = ((100 - streetSensitivity) / 100) * 2.5 + 0.3;
+
+        const isBraking = jerkMag > threshold;
+        const isActivePush = jerkMag > 0.4 && !isBraking;
+
+        if (isBraking) {
+          if (!streetBrakingRef.current) {
+            // Only log on the leading edge of a brake event, not every accelerometer tick
+            AppLogger.log('STREET_JERK_DETECTED', { jerkMag: parseFloat(jerkMag.toFixed(3)), threshold: parseFloat(threshold.toFixed(3)), gpsSpeedMph: gpsSpeed, ...deviceContext });
+          }
+          streetBrakingRef.current = true;
+          setIsStreetBraking(true);
+          updateMotion('HARD_BRAKING');
+        } else {
+          if (streetBrakingRef.current) {
+            streetBrakingRef.current = false;
+            setIsStreetBraking(false);
+            // Re-evaluate state gracefully
+            if (lastGpsSpeeds.current[lastGpsSpeeds.current.length - 1] < 1.0) updateMotion('STOPPED');
+            else updateMotion('CRUISING');
+          } else if (isActivePush && motionStateRef.current !== 'SLOWING_DOWN') {
+            updateMotion('ACCELERATING');
+          }
+        }
       });
 
-      const jerkMag = Math.sqrt(
-        Math.pow(x - prev.x, 2) + Math.pow(y - prev.y, 2) + Math.pow(z - prev.z, 2)
-      );
-      lastAccelRef.current = { x, y, z };
-      const threshold = ((100 - streetSensitivity) / 100) * 2.5 + 0.3;
-      
-      const isBraking = jerkMag > threshold;
-      const isActivePush = jerkMag > 0.4 && !isBraking;
-
-      if (isBraking) {
-        if (!streetBrakingRef.current) {
-          // Only log on the leading edge of a brake event, not every accelerometer tick
-          AppLogger.log('STREET_JERK_DETECTED', { jerkMag: parseFloat(jerkMag.toFixed(3)), threshold: parseFloat(threshold.toFixed(3)), gpsSpeedMph: gpsSpeed, ...deviceContext });
-        }
-        streetBrakingRef.current = true;
-        setIsStreetBraking(true);
-        updateMotion('HARD_BRAKING');
-      } else {
-        if (streetBrakingRef.current) {
-           streetBrakingRef.current = false;
-           setIsStreetBraking(false);
-           // Re-evaluate state gracefully
-           if (lastGpsSpeeds.current[lastGpsSpeeds.current.length - 1] < 1.0) updateMotion('STOPPED');
-           else updateMotion('CRUISING');
-        } else if (isActivePush && motionStateRef.current !== 'SLOWING_DOWN') {
-           updateMotion('ACCELERATING');
-        }
-      }
-    });
-
-    return () => { 
-       sub.remove(); 
-       if (locationSubRef.current) {
+      return () => {
+        sub.remove();
+        if (locationSubRef.current) {
           locationSubRef.current.remove();
           locationSubRef.current = null;
-       }
-    };
-  }, [activeMode, streetSensitivity, brightness, speed]);
+        }
+      };
+    }, [activeMode, streetSensitivity, brightness, speed]);
 
-  // ── Crew Leader Broadcast ────────────────────────────────────────────────
-  // When acting as leader, broadcast scene to crew on every meaningful change.
-  const crewBroadcastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (crewRole !== 'leader' || !onCrewSceneChange) return;
-    if (crewBroadcastTimer.current) clearTimeout(crewBroadcastTimer.current);
-    crewBroadcastTimer.current = setTimeout(() => {
-      onCrewSceneChange(captureEntireState());
-    }, 200);
-    return () => {
+    // ── Crew Leader Broadcast ────────────────────────────────────────────────
+    // When acting as leader, broadcast scene to crew on every meaningful change.
+    const crewBroadcastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => {
+      if (crewRole !== 'leader' || !onCrewSceneChange) return;
       if (crewBroadcastTimer.current) clearTimeout(crewBroadcastTimer.current);
-    };
-  }, [
-    crewRole, activeMode, fixedSubMode, selectedColor, selectedPatternId,
-    brightness, speed, multiColors,
-    streetSensitivity, streetCruiseColor, streetBrakeColor,
-  ]);
+      crewBroadcastTimer.current = setTimeout(() => {
+        onCrewSceneChange(captureEntireState());
+      }, 200);
+      return () => {
+        if (crewBroadcastTimer.current) clearTimeout(crewBroadcastTimer.current);
+      };
+    }, [
+      crewRole, activeMode, fixedSubMode, selectedColor, selectedPatternId,
+      brightness, speed, multiColors,
+      streetSensitivity, streetCruiseColor, streetBrakeColor,
+    ]);
 
-  // Favorites Array
-  const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
+    // Favorites Array
+    const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
 
-  const [isFavPromptVisible, setIsFavPromptVisible] = useState(false);
-  const [favPromptName, setFavPromptName] = useState('');
-  const [favPromptTargetId, setFavPromptTargetId] = useState<string | null>(null);
-  const [activeFavoriteId, setActiveFavoriteId] = useState<string | null>(null);
-  const [isDiyBuilderExpanded, setIsDiyBuilderExpanded] = useState(false);
+    const [isFavPromptVisible, setIsFavPromptVisible] = useState(false);
+    const [favPromptName, setFavPromptName] = useState('');
+    const [favPromptTargetId, setFavPromptTargetId] = useState<string | null>(null);
+    const [activeFavoriteId, setActiveFavoriteId] = useState<string | null>(null);
+    const [isDiyBuilderExpanded, setIsDiyBuilderExpanded] = useState(false);
 
-  const handleSaveFavoriteClick = () => {
-     if (activeFavoriteId) {
+    const handleSaveFavoriteClick = () => {
+      if (activeFavoriteId) {
         const activeFav = favorites.find(f => f.id === activeFavoriteId);
         if (activeFav) {
-           setFavPromptTargetId(activeFav.id);
-           setFavPromptName(activeFav.name);
-           setIsFavPromptVisible(true);
-           return;
+          setFavPromptTargetId(activeFav.id);
+          setFavPromptName(activeFav.name);
+          setIsFavPromptVisible(true);
+          return;
         }
-     }
-     let defaultName = '';
-     try { defaultName = currentStatusText || `${activeMode} Preset`; } catch(e) { defaultName = `${activeMode} Preset`; }
-     setFavPromptTargetId(null);
-     setFavPromptName(defaultName);
-     setIsFavPromptVisible(true);
-  };
+      }
+      let defaultName = '';
+      try { defaultName = currentStatusText || `${activeMode} Preset`; } catch (e) { defaultName = `${activeMode} Preset`; }
+      setFavPromptTargetId(null);
+      setFavPromptName(defaultName);
+      setIsFavPromptVisible(true);
+    };
 
-  const handleConfirmSaveFavorite = () => {
-     let defaultName = '';
-     try { defaultName = currentStatusText || `${activeMode} Preset`; } catch(e) { defaultName = `${activeMode} Preset`; }
-     const name = favPromptName.trim() || defaultName;
+    const handleConfirmSaveFavorite = () => {
+      let defaultName = '';
+      try { defaultName = currentStatusText || `${activeMode} Preset`; } catch (e) { defaultName = `${activeMode} Preset`; }
+      const name = favPromptName.trim() || defaultName;
 
-     const newFav = {
+      const newFav = {
         id: favPromptTargetId || Date.now().toString(),
         name,
         mode: activeMode === 'MULTIMODE' ? fixedSubMode : activeMode,
@@ -709,54 +709,54 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
         fixedColorMode, fixedFgColor, fixedBgColor, fixedHue,
         multiColors, multiTransition, multiLength,
         musicPrimaryColor, musicSecondaryColor, micSensitivity, micSource, musicMatrixStyle
-     };
+      };
 
-     if (favPromptTargetId) {
+      if (favPromptTargetId) {
         const newFavorites = favorites.map(f => f.id === favPromptTargetId ? newFav : f);
         setFavorites(newFavorites);
         AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
         setIsFavPromptVisible(false);
         setFavPromptTargetId(null);
         return;
-     }
+      }
 
-     const newFavorites = [...favorites, newFav];
-     setFavorites(newFavorites);
-     AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
-     setIsFavPromptVisible(false);
-  };
+      const newFavorites = [...favorites, newFav];
+      setFavorites(newFavorites);
+      AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
+      setIsFavPromptVisible(false);
+    };
 
-  const deleteFavorite = (id: string) => {
-     const newFavorites = favorites.filter(f => f.id !== id);
-     setFavorites(newFavorites);
-     AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
-  };
+    const deleteFavorite = (id: string) => {
+      const newFavorites = favorites.filter(f => f.id !== id);
+      setFavorites(newFavorites);
+      AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
+    };
 
-  const loadFavorite = (favRaw: IFavoriteState) => {
-     const fav: any = favRaw;
-     setActiveFavoriteId(fav.id);
-     setSpeed(fav.speed);
-     setBrightness(fav.brightness);
-     if (fav.color) setSelectedColor(fav.color);
+    const loadFavorite = (favRaw: IFavoriteState) => {
+      const fav: any = favRaw;
+      setActiveFavoriteId(fav.id);
+      setSpeed(fav.speed);
+      setBrightness(fav.brightness);
+      if (fav.color) setSelectedColor(fav.color);
 
-     // Normalize legacy mode names to new taxonomy
-     const legacyMode = (fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'PROGRAMS'
-       : (fav.mode === 'FAVORITES' || fav.mode === 'PRESETS') ? 'FAVORITES'
-       : fav.mode;
+      // Normalize legacy mode names to new taxonomy
+      const legacyMode = (fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'PROGRAMS'
+        : (fav.mode === 'FAVORITES' || fav.mode === 'PRESETS') ? 'FAVORITES'
+          : fav.mode;
 
-     if (legacyMode === 'PROGRAMS') {
+      if (legacyMode === 'PROGRAMS') {
         setActiveMode('PROGRAMS');
         setSelectedPatternId(fav.patternId);
         if (writeToDevice) writeToDevice(ZenggeProtocol.setCustomRbm(fav.patternId, fav.speed, fav.brightness));
-     } else if (legacyMode === 'MUSIC') {
+      } else if (legacyMode === 'MUSIC') {
         setActiveMode('MUSIC');
         setMusicPatternId(fav.patternId);
         handleMusicChange(fav.patternId, micSensitivity, fav.brightness, micSource);
-     } else if (legacyMode === 'CAMERA') {
+      } else if (legacyMode === 'CAMERA') {
         setActiveMode('CAMERA');
-     } else if (legacyMode === 'FAVORITES') {
+      } else if (legacyMode === 'FAVORITES') {
         setActiveMode('FAVORITES');
-     } else if (legacyMode === 'MULTIMODE' || legacyMode === 'PATTERN') {
+      } else if (legacyMode === 'MULTIMODE' || legacyMode === 'PATTERN') {
         setActiveMode('MULTIMODE');
         setFixedSubMode('PATTERN');
         setFixedPatternId(fav.patternId);
@@ -764,1095 +764,1091 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
         setFixedFgColor(fav.fixedFgColor);
         setFixedBgColor(fav.fixedBgColor);
         applyFixedPattern(fav.patternId, fav.fixedFgColor, fav.fixedBgColor, fav.speed, fav.brightness);
-     } else if (legacyMode === 'MULTI' || legacyMode === 'DIY' || legacyMode === 'MULTICOLOR') {
+      } else if (legacyMode === 'MULTI' || legacyMode === 'DIY' || legacyMode === 'MULTICOLOR') {
         setActiveMode('MULTIMODE');
         setFixedSubMode('BUILDER');
         setMultiColors(fav.multiColors || []);
         setMultiTransition(fav.multiTransition || 3);
         setMultiLength(fav.multiLength || 16);
         if (writeToDevice && fav.multiColors) {
-           const sortIdx = hwSettings?.colorSorting ?? 2;
-           const rgbColors = fav.multiColors.map((h: string) => {
-              const r = parseInt(h.slice(1,3), 16) || 0;
-              const g = parseInt(h.slice(3,5), 16) || 0;
-              const b = parseInt(h.slice(5,7), 16) || 0;
-              return ZenggeProtocol.applyColorSorting(r, g, b, sortIdx);
-           });
-           writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(fav.speed), 1, fav.multiTransition));
+          const sortIdx = hwSettings?.colorSorting ?? 2;
+          const rgbColors = fav.multiColors.map((h: string) => {
+            const r = parseInt(h.slice(1, 3), 16) || 0;
+            const g = parseInt(h.slice(3, 5), 16) || 0;
+            const b = parseInt(h.slice(5, 7), 16) || 0;
+            return ZenggeProtocol.applyColorSorting(r, g, b, sortIdx);
+          });
+          writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(fav.speed), 1, fav.multiTransition));
         }
-     } else {
+      } else {
         // Unknown/legacy mode - best-effort color dispatch
         if (fav.color) setTimeout(() => {
-           sendColor(parseInt(fav.color.slice(1,3),16)||0, parseInt(fav.color.slice(3,5),16)||0, parseInt(fav.color.slice(5,7),16)||0);
+          sendColor(parseInt(fav.color.slice(1, 3), 16) || 0, parseInt(fav.color.slice(3, 5), 16) || 0, parseInt(fav.color.slice(5, 7), 16) || 0);
         }, 100);
-     }
-  }
+      }
+    }
 
-  /** Unified color sender — sends solid color instantly using actual LED count */
-  const sendColor = async (r: number, g: number, b: number) => {
-    if (!writeToDevice) return;
-    // hwSettings.ledPoints IS the total LED count — do NOT divide by segments
-    const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
-    // DO NOT apply applyColorSorting — hardware auto-remaps GRB via 0x81 config
-    // transitionType=0x01 (FREEZE) = immediate hardware lock, no animation
-    const colors = Array(numLEDs).fill({ r, g, b });
-    await writeToDevice(ZenggeProtocol.setMultiColor(colors, 1, 1, 0x01));
-  };
+    /** Unified color sender — sends solid color instantly using actual LED count */
+    const sendColor = async (r: number, g: number, b: number) => {
+      if (!writeToDevice) return;
+      // hwSettings.ledPoints IS the total LED count — do NOT divide by segments
+      const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
+      // DO NOT apply applyColorSorting — hardware auto-remaps GRB via 0x81 config
+      // transitionType=0x01 (FREEZE) = immediate hardware lock, no animation
+      const colors = Array(numLEDs).fill({ r, g, b });
+      await writeToDevice(ZenggeProtocol.setMultiColor(colors, 1, 1, 0x01));
+    };
 
 
-  /** Helper to parse a hex string array into GRB-sorted valid hardware RGB array */
-  const generateSortedColors = (hexArray: string[]) => {
+    /** Helper to parse a hex string array into GRB-sorted valid hardware RGB array */
+    const generateSortedColors = (hexArray: string[]) => {
       const sortIdx = hwSettings?.colorSorting ?? 2;
       return hexArray.map(h => {
-          const r = parseInt(h.slice(1,3), 16) || 0;
-          const g = parseInt(h.slice(3,5), 16) || 0;
-          const b = parseInt(h.slice(5,7), 16) || 0;
-          return ZenggeProtocol.applyColorSorting(r, g, b, sortIdx);
+        const r = parseInt(h.slice(1, 3), 16) || 0;
+        const g = parseInt(h.slice(3, 5), 16) || 0;
+        const b = parseInt(h.slice(5, 7), 16) || 0;
+        return ZenggeProtocol.applyColorSorting(r, g, b, sortIdx);
       });
-  };
+    };
 
-  /**
-   * Maps UI speed slider (0–100) to Zengge hardware speed range (1–31).
-   * The APK enforces 1–31 for all 0x59 animated patterns.
-   * Static patterns (transitionType=0x00) ignore speed — pass 1 for those.
-   */
-  const clampSpeed = (uiSpeed: number): number =>
-    Math.max(ZenggeProtocol.ANIM_SPEED_MIN, Math.min(ZenggeProtocol.ANIM_SPEED_MAX, Math.round((uiSpeed / 100) * ZenggeProtocol.ANIM_SPEED_MAX)));
+    /**
+     * Maps UI speed slider (0–100) to Zengge hardware speed range (1–31).
+     * The APK enforces 1–31 for all 0x59 animated patterns.
+     * Static patterns (transitionType=0x00) ignore speed — pass 1 for those.
+     */
+    const clampSpeed = (uiSpeed: number): number =>
+      Math.max(ZenggeProtocol.ANIM_SPEED_MIN, Math.min(ZenggeProtocol.ANIM_SPEED_MAX, Math.round((uiSpeed / 100) * ZenggeProtocol.ANIM_SPEED_MAX)));
 
-  /**
-   * applyFixedPattern — defined after fixedPatternId/fixedFgColor/fixedBgColor state
-   * (see below, after those useState declarations). Forward-declared here as a placeholder
-   * to preserve the surrounding comment block.
-   */
+    /**
+     * Apply current fixed pattern state to devices.
+     * Delegates to PatternEngine — single source of truth for all 10 patterns.
+     * Ensures correct 0x59 / 0x51 protocol, correct transition constants,
+     * full LED count pixel arrays, and APK-proven speed clamping.
+     */
+    const applyFixedPattern = async (
+      patternId: number = fixedPatternId,
+      fg: string = fixedFgColor,
+      bg: string = fixedBgColor,
+      currentSpeed: number = speed,
+      currentBrightness: number = brightness
+    ) => {
+      if (!writeToDevice) return;
 
-  const applyEmergencyPattern = (spd: number, bright: number) => {
-    if (!writeToDevice) return;
-    const factor = bright / 100;
-    const pts  = hwSettings?.ledPoints || points || 16;
-    const segs = hwSettings?.segments || 1;
-    const isHalozRing = segs === 2 && pts === 16;
-    const hwSpd = Math.min(spd, ZenggeProtocol.ANIM_SPEED_MAX);
+      const factor = currentBrightness / 100;
 
-    const red    = { r: Math.round(255 * factor), g: 0,                       b: 0 };
-    const white  = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: Math.round(255 * factor) };
-    const yellow = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: 0 };
-    const off    = { r: 0, g: 0, b: 0 };
+      // hwSettings.ledPoints IS the total LED count — do NOT divide by segments
+      const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
 
-    let arr: { r: number; g: number; b: number }[];
+      // Effect #1 is the newly inserted Solid override that uses classic 0x59 fill instead of 0x51 Custom Mode
+      if (patternId === 1) {
+        // Scale brightness manually for 0x59 since it's an array fill
+        const fgRgbScaled = {
+          r: Math.round((parseInt(fg.substring(1, 3), 16) || 0) * factor),
+          g: Math.round((parseInt(fg.substring(3, 5), 16) || 0) * factor),
+          b: Math.round((parseInt(fg.substring(5, 7), 16) || 0) * factor),
+        };
 
-    if (isHalozRing) {
-      // ── HALOZ 2-segment: 8-LED frame mirrored to 16 ──
-      // Frame: RED RED YEL off YEL off WHT WHT
-      // Mirror: WHT WHT off YEL off YEL RED RED
-      // Physical: back=RED, sides=flashing amber, front=WHITE  ✅
-      const frame8 = [red, red, yellow, off, yellow, off, white, white];
-      const mirror8 = [...frame8].reverse();
-      arr = [...frame8, ...mirror8];
-    } else {
-      // ── SOULZ linear: [rear RED×4][mid flash×8][front WHITE×4] ──
-      arr = [
-        red, red, red, red,
-        yellow, off, yellow, off, yellow, off, yellow, off,
-        white, white, white, white,
-      ];
-    }
+        // CRITICAL: Pad the array to numLEDs to prevent Hardware Matrix Locking (length < 10 bug).
+        const paddedArray = new Array(numLEDs).fill(fgRgbScaled);
 
-    // 0x03 = RunningWater: hardware scrolls mid section natively
-    writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpd, 1, 0x03));
-  };
+        // Transition must be 0x01 (FREEZE) so the identical pixels do not spin off into missing sections (Cascade ghosting).
+        const payload = ZenggeProtocol.setMultiColor(paddedArray, clampSpeed(currentSpeed), 1, 0x01);
 
-  const [musicPatternId, setMusicPatternId] = useState<number>(1);
-  const [micSource, setMicSource] = useState<'APP' | 'DEVICE'>('APP');
-  const [musicMatrixStyle, setMusicMatrixStyle] = useState<number>(39); // 0x27 (39) Light Screen, 0x26 (38) Light Bar
-  const [musicSecondaryHue, setMusicSecondaryHue] = useState<number>(300);
-  const [musicPrimaryColor, setMusicPrimaryColor] = useState<string>('#FF00FF');
-  const [musicSecondaryColor, setMusicSecondaryColor] = useState<string>('#00FFFF');
-  const [musicColorFocus, setMusicColorFocus] = useState<'PRIMARY' | 'SECONDARY'>('PRIMARY');
-  const [musicSetting, setMusicSetting] = useState<'SENSITIVITY' | 'BRIGHTNESS'>('SENSITIVITY');
+        if (payload) writeToDevice(payload);
+        return;
+      }
 
-  const [fixedPatternId, setFixedPatternId] = useState<number>(1);
-  const [fixedColorMode, setFixedColorMode] = useState<'FOREGROUND' | 'BACKGROUND'>('FOREGROUND');
-  const [fixedFgColor, setFixedFgColor] = useState<string>('#00FF00');
-  const [fixedBgColor, setFixedBgColor] = useState<string>('#000000');
-  const [fixedHue, setFixedHue] = useState<number>(120);
-
-  /**
-   * applyFixedPattern — wrapped in useCallback so the reactive useEffect always
-   * holds a fresh closure over parentWriteToDevice, hwSettings, and all color/speed state.
-   *
-   * ROOT CAUSE FIX: The old plain `const` was not in the useEffect dependency array.
-   * When parentWriteToDevice first became available (device connected), the useEffect
-   * did not re-run if no other dep changed — so the stale closure (with undefined
-   * parentWriteToDevice) silently swallowed all Pro Effect dispatches.
-   */
-  const applyFixedPattern = useCallback(async (
-    patternId: number = fixedPatternId,
-    fg: string = fixedFgColor,
-    bg: string = fixedBgColor,
-    currentSpeed: number = speed,
-    currentBrightness: number = brightness
-  ) => {
-    // Guard on the REAL BLE writer — the local writeToDevice wrapper is always truthy
-    if (!parentWriteToDevice) return;
-
-    const factor = currentBrightness / 100;
-
-    // hwSettings.ledPoints IS the total LED count — do NOT divide by segments.
-    // Math.max(12,...) enforces the 0x59 minimum that prevents hardware matrix locking.
-    const numLEDs = Math.max(12, hwSettings?.ledPoints || points || 16);
-
-    // Effect #1 is the one-off Solid override: uses 0x59 FREEZE instead of 0x51
-    if (patternId === 1) {
-      // Scale brightness for 0x59 (full pixel array fill — hardware doesn't auto-scale here)
-      const fgRgbScaled = {
-        r: Math.round((parseInt(fg.substring(1, 3), 16) || 0) * factor),
-        g: Math.round((parseInt(fg.substring(3, 5), 16) || 0) * factor),
-        b: Math.round((parseInt(fg.substring(5, 7), 16) || 0) * factor),
+      // 0x51 Custom Engines expect pure, unmodified hexadecimal parameters.
+      // The hardware engines interpret brightness separately natively.
+      const fgRaw = {
+        r: parseInt(fg.substring(1, 3), 16) || 0,
+        g: parseInt(fg.substring(3, 5), 16) || 0,
+        b: parseInt(fg.substring(5, 7), 16) || 0,
       };
-      // Pad to numLEDs to prevent Hardware Matrix Locking (< 10 pixel bug)
-      const paddedArray = new Array(numLEDs).fill(fgRgbScaled);
-      // 0x01 = FREEZE: locks array in place, no cascade ghosting
-      const payload = ZenggeProtocol.setMultiColor(paddedArray, clampSpeed(currentSpeed), 1, 0x01);
+      const bgRaw = {
+        r: parseInt(bg.substring(1, 3), 16) || 0,
+        g: parseInt(bg.substring(3, 5), 16) || 0,
+        b: parseInt(bg.substring(5, 7), 16) || 0,
+      };
+
+      // Dispatch mapped patternId
+      // UI patternId is 1-34; hardware 0x51 modes are 1-33. ID 1 = Solid (handled above). IDs 2-34 → hw modes 1-33.
+      // Speed: normalize 1-100 to 1-31 — proven working formula from 2AM commit.
+      const payload = ZenggeProtocol.setCustomMode([{
+        mode: patternId - 1,
+        speed: Math.floor(currentSpeed / 3) + 1,
+        color1: fgRaw,
+        color2: bgRaw
+      }]);
+
       if (payload) writeToDevice(payload);
-      return;
-    }
-
-    // Pro Effects 2-34 → hardware 0x51 modes 1-33.
-    // Pure unmodified RGB — hardware handles brightness natively for 0x51.
-    const fgRaw = {
-      r: parseInt(fg.substring(1, 3), 16) || 0,
-      g: parseInt(fg.substring(3, 5), 16) || 0,
-      b: parseInt(fg.substring(5, 7), 16) || 0,
-    };
-    const bgRaw = {
-      r: parseInt(bg.substring(1, 3), 16) || 0,
-      g: parseInt(bg.substring(3, 5), 16) || 0,
-      b: parseInt(bg.substring(5, 7), 16) || 0,
     };
 
-    // UI IDs 2-34 → hardware modes 1-33 (subtract 1).
-    // Speed: normalize 1-100 → 1-31 (proven 2AM formula for 0x51).
-    const payload = ZenggeProtocol.setCustomMode([{
-      mode: patternId - 1,
-      speed: Math.floor(currentSpeed / 3) + 1,
-      color1: fgRaw,
-      color2: bgRaw
-    }]);
-    if (payload) writeToDevice(payload);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parentWriteToDevice, hwSettings, points, fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness]);
+    const applyEmergencyPattern = (spd: number, bright: number) => {
+      if (!writeToDevice) return;
+      const factor = bright / 100;
+      const pts = hwSettings?.ledPoints || points || 16;
+      const segs = hwSettings?.segments || 1;
+      const isHalozRing = segs === 2 && pts === 16;
+      const hwSpd = Math.min(spd, ZenggeProtocol.ANIM_SPEED_MAX);
 
-  // --- PRO EFFECTS REACTIVITY LOGIC ---
-  // applyFixedPattern is useCallback-stabilized, so it is safe to include in deps.
-  // The stale-closure fix: adding applyFixedPattern as a dep ensures the effect always
-  // re-runs when the BLE writer or hwSettings become available (e.g. device connects).
-  useEffect(() => {
-    if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
-      applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness);
-    }
-  }, [fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, activeMode, fixedSubMode, applyFixedPattern]);
+      const red = { r: Math.round(255 * factor), g: 0, b: 0 };
+      const white = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: Math.round(255 * factor) };
+      const yellow = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: 0 };
+      const off = { r: 0, g: 0, b: 0 };
 
-  // -- Curated Presets (SK8Lytz Picks) -- driven from Supabase DB table
-  const [curatedPresets, setCuratedPresets] = useState<IFavoriteState[]>([]);
-  const [picksLoading, setPicksLoading] = useState(true);
+      let arr: { r: number; g: number; b: number }[];
 
-  useEffect(() => {
-    const fetchPicks = async () => {
+      if (isHalozRing) {
+        // ── HALOZ 2-segment: 8-LED frame mirrored to 16 ──
+        // Frame: RED RED YEL off YEL off WHT WHT
+        // Mirror: WHT WHT off YEL off YEL RED RED
+        // Physical: back=RED, sides=flashing amber, front=WHITE  ✅
+        const frame8 = [red, red, yellow, off, yellow, off, white, white];
+        const mirror8 = [...frame8].reverse();
+        arr = [...frame8, ...mirror8];
+      } else {
+        // ── SOULZ linear: [rear RED×4][mid flash×8][front WHITE×4] ──
+        arr = [
+          red, red, red, red,
+          yellow, off, yellow, off, yellow, off, yellow, off,
+          white, white, white, white,
+        ];
+      }
+
+      // 0x03 = RunningWater: hardware scrolls mid section natively
+      writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpd, 1, 0x03));
+    };
+
+    const [musicPatternId, setMusicPatternId] = useState<number>(1);
+    const [micSource, setMicSource] = useState<'APP' | 'DEVICE'>('APP');
+    const [musicMatrixStyle, setMusicMatrixStyle] = useState<number>(39); // 0x27 (39) Light Screen, 0x26 (38) Light Bar
+    const [musicSecondaryHue, setMusicSecondaryHue] = useState<number>(300);
+    const [musicPrimaryColor, setMusicPrimaryColor] = useState<string>('#FF00FF');
+    const [musicSecondaryColor, setMusicSecondaryColor] = useState<string>('#00FFFF');
+    const [musicColorFocus, setMusicColorFocus] = useState<'PRIMARY' | 'SECONDARY'>('PRIMARY');
+    const [musicSetting, setMusicSetting] = useState<'SENSITIVITY' | 'BRIGHTNESS'>('SENSITIVITY');
+
+    const [fixedPatternId, setFixedPatternId] = useState<number>(1);
+    const [fixedColorMode, setFixedColorMode] = useState<'FOREGROUND' | 'BACKGROUND'>('FOREGROUND');
+    const [fixedFgColor, setFixedFgColor] = useState<string>('#00FF00');
+    const [fixedBgColor, setFixedBgColor] = useState<string>('#000000');
+    const [fixedHue, setFixedHue] = useState<number>(120);
+
+    // --- PRO EFFECTS REACTIVITY LOGIC ---
+    const applyFixedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => {
+      if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
+        if (applyFixedRef.current) clearTimeout(applyFixedRef.current);
+        applyFixedRef.current = setTimeout(() => {
+          applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness);
+        }, 50);
+      }
+      return () => {
+        if (applyFixedRef.current) clearTimeout(applyFixedRef.current);
+      }
+    }, [fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, activeMode, fixedSubMode]);
+
+    // -- Curated Presets (SK8Lytz Picks) -- driven from Supabase DB table
+    const [curatedPresets, setCuratedPresets] = useState<IFavoriteState[]>([]);
+    const [picksLoading, setPicksLoading] = useState(true);
+
+    useEffect(() => {
+      const fetchPicks = async () => {
+        try {
+          if (!supabase) return;
+          // Filter: is_active = true AND (active_from is null OR active_from <= today)
+          //                           AND (active_until is null OR active_until >= today)
+          const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
+          const { data, error } = await supabase
+            .from('sk8lytz_picks')
+            .select('*')
+            .eq('is_active', true)
+            .or(`active_from.is.null,active_from.lte.${today}`)
+            .or(`active_until.is.null,active_until.gte.${today}`)
+            .order('sort_order', { ascending: true });
+
+          if (error) {
+            console.warn('[SK8Lytz Picks] Failed to fetch from DB:', error.message);
+            return;
+          }
+
+          if (data && Array.isArray(data)) {
+            // Map snake_case DB columns → IFavoriteState camelCase
+            const mapped: IFavoriteState[] = data.map((row: any) => ({
+              id: row.id,
+              name: row.name,
+              customName: row.custom_name,
+              mode: row.mode,
+              color: row.color,
+              patternId: row.pattern_id,
+              speed: row.speed ?? 50,
+              brightness: row.brightness ?? 90,
+              fixedColorMode: row.fixed_color_mode,
+              fixedFgColor: row.fixed_fg_color,
+              fixedBgColor: row.fixed_bg_color,
+              fixedHue: row.fixed_hue,
+              multiColors: row.multi_colors ?? undefined,
+              multiTransition: row.multi_transition,
+              multiLength: row.multi_length,
+              musicPrimaryColor: row.music_primary_color,
+              musicSecondaryColor: row.music_secondary_color,
+              micSensitivity: row.mic_sensitivity,
+              micSource: row.mic_source,
+              musicMatrixStyle: row.music_matrix_style,
+            }));
+            setCuratedPresets(mapped);
+          }
+        } catch (e) {
+          console.warn('[SK8Lytz Picks] Exception fetching from DB:', e);
+        } finally {
+          setPicksLoading(false);
+        }
+      };
+      fetchPicks();
+    }, []);
+
+    // -- App Microphone Logic --
+    useEffect(() => {
+      if (Platform.OS === 'web') return; // expo-av Audio Recording not supported on web
+      const isMusicActive = activeMode === 'MUSIC';
+      if (isMusicActive && micSource === 'APP' && isPoweredOn) {
+        startRecording();
+      } else {
+        stopRecording();
+      }
+      return () => {
+        stopRecording();
+      };
+    }, [activeMode, fixedSubMode, micSource, isPoweredOn]);
+
+    // -- Analytics Logging --
+    const logTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+    const deviceContext = React.useMemo(() => {
+      if (!devices || devices.length === 0) return { target: 'none' };
+      if (devices.length === 1) return { target: 'device', deviceId: devices[0].id };
+      return { target: 'group', deviceIds: devices.map(d => d.id), groupSize: devices.length };
+    }, [devices]);
+
+    // Mode change logger
+    useEffect(() => {
+      AppLogger.log('MODE_CHANGED', { mode: activeMode, ...deviceContext });
+    }, [activeMode, deviceContext]);
+
+    useEffect(() => {
+      const name = getRbmPatternName(selectedPatternId);
+      AppLogger.log('PATTERN_CHANGED', {
+        pattern: `ID:${selectedPatternId}`,
+        name,
+        mode: activeMode,
+        color: selectedColor,
+        ...deviceContext
+      });
+    }, [selectedPatternId, deviceContext]);
+
+    // Color change logger
+    useEffect(() => {
+      AppLogger.log('COLOR_CHANGED', { hex: selectedColor, ...deviceContext });
+    }, [selectedColor, deviceContext]);
+
+    // Brightness change logger (debounced 600ms)
+    useEffect(() => {
+      clearTimeout(logTimers.current['brightness']);
+      logTimers.current['brightness'] = setTimeout(() => {
+        AppLogger.log('BRIGHTNESS_CHANGED', { value: brightness, mode: activeMode, ...deviceContext });
+      }, 600);
+    }, [brightness, activeMode, deviceContext]);
+
+    // Speed change logger (debounced 600ms)
+    useEffect(() => {
+      clearTimeout(logTimers.current['speed']);
+      logTimers.current['speed'] = setTimeout(() => {
+        AppLogger.log('SPEED_CHANGED', { value: speed, mode: activeMode, ...deviceContext });
+      }, 600);
+    }, [speed, activeMode, deviceContext]);
+
+    // Street sensitivity change logger (debounced 800ms — user drags slider)
+    useEffect(() => {
+      if (activeMode !== 'STREET') return;
+      clearTimeout(logTimers.current['streetSens']);
+      logTimers.current['streetSens'] = setTimeout(() => {
+        AppLogger.log('STREET_SENSITIVITY_CHANGED', { sensitivity: streetSensitivity, ...deviceContext });
+      }, 800);
+    }, [streetSensitivity, activeMode, deviceContext]);
+
+    const startRecording = async () => {
       try {
-        if (!supabase) return;
-        // Filter: is_active = true AND (active_from is null OR active_from <= today)
-        //                           AND (active_until is null OR active_until >= today)
-        const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
-        const { data, error } = await supabase
-          .from('sk8lytz_picks')
-          .select('*')
-          .eq('is_active', true)
-          .or(`active_from.is.null,active_from.lte.${today}`)
-          .or(`active_until.is.null,active_until.gte.${today}`)
-          .order('sort_order', { ascending: true });
+        const { granted } = await Audio.requestPermissionsAsync();
+        if (!granted) return;
 
-        if (error) {
-          console.warn('[SK8Lytz Picks] Failed to fetch from DB:', error.message);
-          return;
-        }
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
 
-        if (data && Array.isArray(data)) {
-          // Map snake_case DB columns → IFavoriteState camelCase
-          const mapped: IFavoriteState[] = data.map((row: any) => ({
-            id: row.id,
-            name: row.name,
-            customName: row.custom_name,
-            mode: row.mode,
-            color: row.color,
-            patternId: row.pattern_id,
-            speed: row.speed ?? 50,
-            brightness: row.brightness ?? 90,
-            fixedColorMode: row.fixed_color_mode,
-            fixedFgColor: row.fixed_fg_color,
-            fixedBgColor: row.fixed_bg_color,
-            fixedHue: row.fixed_hue,
-            multiColors: row.multi_colors ?? undefined,
-            multiTransition: row.multi_transition,
-            multiLength: row.multi_length,
-            musicPrimaryColor: row.music_primary_color,
-            musicSecondaryColor: row.music_secondary_color,
-            micSensitivity: row.mic_sensitivity,
-            micSource: row.mic_source,
-            musicMatrixStyle: row.music_matrix_style,
-          }));
-          setCuratedPresets(mapped);
-        }
-      } catch (e) {
-        console.warn('[SK8Lytz Picks] Exception fetching from DB:', e);
-      } finally {
-        setPicksLoading(false);
+        const { recording: newRecording } = await Audio.Recording.createAsync(
+          {
+            ...Audio.RecordingOptionsPresets.LOW_QUALITY,
+            isMeteringEnabled: true, // REQUIRED: enables stats.metering — without this mic always reads silence
+            android: {
+              ...Audio.RecordingOptionsPresets.LOW_QUALITY.android,
+              extension: '.m4a',
+              outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+              audioEncoder: Audio.AndroidAudioEncoder.AAC,
+              sampleRate: 44100,
+              numberOfChannels: 1,
+              bitRate: 128000,
+            },
+            ios: {
+              ...Audio.RecordingOptionsPresets.LOW_QUALITY.ios,
+              extension: '.m4a',
+              outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+              audioQuality: Audio.IOSAudioQuality.MIN,
+              sampleRate: 44100,
+              numberOfChannels: 1,
+              bitRate: 128000,
+              linearPCMBitDepth: 16,
+              linearPCMIsBigEndian: false,
+              linearPCMIsFloat: false,
+            },
+          },
+          null, // initialStatus
+          50 // progressUpdateIntervalMillis
+        );
+
+        await newRecording.setProgressUpdateInterval(50);
+        setRecording(newRecording);
+
+        // Start magnitude stream
+        magnitudeInterval.current = setInterval(async () => {
+          if (!writeToDevice) return;
+          const stats = await newRecording.getStatusAsync();
+          if (stats.canRecord && stats.isRecording) {
+            // stats.metering ranges from -160 to 0. 
+            // Typical music peaks around -20 to 0.
+            const metering = stats.metering ?? -160;
+            // Map -60...0 to 0...1 for usable visualization
+            const normalized = Math.max(0, Math.min(1, (metering + 60) / 60));
+
+            setAudioMagnitude(normalized);
+
+            // Send to physical device (Symphony 0x74 command expects 0-255)
+            const deviceMag = Math.floor(normalized * 255);
+            writeToDevice(ZenggeProtocol.sendMusicMagnitude(deviceMag));
+          }
+        }, 50);
+
+      } catch (err) {
+        console.error('Failed to start recording', err);
       }
     };
-    fetchPicks();
-  }, []);
 
-  // -- App Microphone Logic --
-  useEffect(() => {
-    if (Platform.OS === 'web') return; // expo-av Audio Recording not supported on web
-    const isMusicActive = activeMode === 'MUSIC';
-    if (isMusicActive && micSource === 'APP' && isPoweredOn) {
-      startRecording();
-    } else {
-      stopRecording();
-    }
-    return () => {
-      stopRecording();
+    const stopRecording = async () => {
+      if (magnitudeInterval.current) {
+        clearInterval(magnitudeInterval.current);
+        magnitudeInterval.current = null;
+      }
+      if (recording) {
+        try {
+          await recording.stopAndUnloadAsync();
+        } catch (e) { }
+        setRecording(null);
+      }
     };
-  }, [activeMode, fixedSubMode, micSource, isPoweredOn]);
 
-  // -- Analytics Logging --
-  const logTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+    React.useEffect(() => {
+      if (lockedProduct) {
+        setActiveProduct(lockedProduct);
+      }
+    }, [lockedProduct]);
 
-  const deviceContext = React.useMemo(() => {
-    if (!devices || devices.length === 0) return { target: 'none' };
-    if (devices.length === 1) return { target: 'device', deviceId: devices[0].id };
-    return { target: 'group', deviceIds: devices.map(d => d.id), groupSize: devices.length };
-  }, [devices]);
-
-  // Mode change logger
-  useEffect(() => {
-    AppLogger.log('MODE_CHANGED', { mode: activeMode, ...deviceContext });
-  }, [activeMode, deviceContext]);
-
-  useEffect(() => {
-    const name = getRbmPatternName(selectedPatternId);
-    AppLogger.log('PATTERN_CHANGED', { 
-      pattern: `ID:${selectedPatternId}`, 
-      name,
-      mode: activeMode,
-      color: selectedColor,
-      ...deviceContext
-    });
-  }, [selectedPatternId, deviceContext]);
-
-  // Color change logger
-  useEffect(() => {
-    AppLogger.log('COLOR_CHANGED', { hex: selectedColor, ...deviceContext });
-  }, [selectedColor, deviceContext]);
-
-  // Brightness change logger (debounced 600ms)
-  useEffect(() => {
-    clearTimeout(logTimers.current['brightness']);
-    logTimers.current['brightness'] = setTimeout(() => {
-      AppLogger.log('BRIGHTNESS_CHANGED', { value: brightness, mode: activeMode, ...deviceContext });
-    }, 600);
-  }, [brightness, activeMode, deviceContext]);
-
-  // Speed change logger (debounced 600ms)
-  useEffect(() => {
-    clearTimeout(logTimers.current['speed']);
-    logTimers.current['speed'] = setTimeout(() => {
-      AppLogger.log('SPEED_CHANGED', { value: speed, mode: activeMode, ...deviceContext });
-    }, 600);
-  }, [speed, activeMode, deviceContext]);
-
-  // Street sensitivity change logger (debounced 800ms — user drags slider)
-  useEffect(() => {
-    if (activeMode !== 'STREET') return;
-    clearTimeout(logTimers.current['streetSens']);
-    logTimers.current['streetSens'] = setTimeout(() => {
-      AppLogger.log('STREET_SENSITIVITY_CHANGED', { sensitivity: streetSensitivity, ...deviceContext });
-    }, 800);
-  }, [streetSensitivity, activeMode, deviceContext]);
-
-  const startRecording = async () => {
-    try {
-      const { granted } = await Audio.requestPermissionsAsync();
-      if (!granted) return;
-
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+    React.useEffect(() => {
+      AsyncStorage.getItem('@Sk8lytz_ControllerState').then((saved) => {
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            // if (parsed.activeMode) setActiveMode(parsed.activeMode); // Ensure Docked Mode always defaults to PRESETS on load
+            if (parsed.selectedColor) setSelectedColor(parsed.selectedColor);
+            if (parsed.selectedPatternId) setSelectedPatternId(parsed.selectedPatternId);
+            if (parsed.brightness !== undefined) setBrightness(parsed.brightness);
+            else setBrightness(90);
+            if (parsed.speed !== undefined) setSpeed(parsed.speed);
+            else setSpeed(50);
+            if (parsed.micSensitivity !== undefined) setMicSensitivity(parsed.micSensitivity);
+            if (parsed.musicHue !== undefined) setMusicHue(parsed.musicHue);
+            if (parsed.musicSecondaryHue !== undefined) setMusicSecondaryHue(parsed.musicSecondaryHue);
+            if (parsed.musicPrimaryColor) setMusicPrimaryColor(parsed.musicPrimaryColor);
+            if (parsed.musicSecondaryColor) setMusicSecondaryColor(parsed.musicSecondaryColor);
+            if (parsed.musicMatrixStyle) setMusicMatrixStyle(parsed.musicMatrixStyle);
+            if (parsed.musicPatternId) setMusicPatternId(parsed.musicPatternId);
+            if (parsed.micSource) setMicSource(parsed.micSource);
+            if (parsed.musicSetting) setMusicSetting(parsed.musicSetting);
+            if (parsed.fixedPatternId) setFixedPatternId(parsed.fixedPatternId);
+            if (parsed.fixedColorMode) setFixedColorMode(parsed.fixedColorMode);
+            if (parsed.fixedFgColor) setFixedFgColor(parsed.fixedFgColor);
+            if (parsed.fixedBgColor) setFixedBgColor(parsed.fixedBgColor);
+            if (parsed.fixedHue !== undefined) setFixedHue(parsed.fixedHue);
+          } catch (e) { }
+        }
       });
 
-      const { recording: newRecording } = await Audio.Recording.createAsync(
-        {
-          ...Audio.RecordingOptionsPresets.LOW_QUALITY,
-          isMeteringEnabled: true, // REQUIRED: enables stats.metering — without this mic always reads silence
-          android: {
-            ...Audio.RecordingOptionsPresets.LOW_QUALITY.android,
-            extension: '.m4a',
-            outputFormat: Audio.AndroidOutputFormat.MPEG_4,
-            audioEncoder: Audio.AndroidAudioEncoder.AAC,
-            sampleRate: 44100,
-            numberOfChannels: 1,
-            bitRate: 128000,
-          },
-          ios: {
-            ...Audio.RecordingOptionsPresets.LOW_QUALITY.ios,
-            extension: '.m4a',
-            outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
-            audioQuality: Audio.IOSAudioQuality.MIN,
-            sampleRate: 44100,
-            numberOfChannels: 1,
-            bitRate: 128000,
-            linearPCMBitDepth: 16,
-            linearPCMIsBigEndian: false,
-            linearPCMIsFloat: false,
-          },
-        },
-        null, // initialStatus
-        50 // progressUpdateIntervalMillis
-      );
-      
-      await newRecording.setProgressUpdateInterval(50);
-      setRecording(newRecording);
-
-      // Start magnitude stream
-      magnitudeInterval.current = setInterval(async () => {
-        if (!writeToDevice) return;
-        const stats = await newRecording.getStatusAsync();
-        if (stats.canRecord && stats.isRecording) {
-          // stats.metering ranges from -160 to 0. 
-          // Typical music peaks around -20 to 0.
-          const metering = stats.metering ?? -160;
-          // Map -60...0 to 0...1 for usable visualization
-          const normalized = Math.max(0, Math.min(1, (metering + 60) / 60));
-          
-          setAudioMagnitude(normalized);
-          
-          // Send to physical device (Symphony 0x74 command expects 0-255)
-          const deviceMag = Math.floor(normalized * 255);
-          writeToDevice(ZenggeProtocol.sendMusicMagnitude(deviceMag));
-        }
-      }, 50);
-
-    } catch (err) {
-      console.error('Failed to start recording', err);
-    }
-  };
-
-  const stopRecording = async () => {
-    if (magnitudeInterval.current) {
-      clearInterval(magnitudeInterval.current);
-      magnitudeInterval.current = null;
-    }
-    if (recording) {
-      try {
-        await recording.stopAndUnloadAsync();
-      } catch (e) {}
-      setRecording(null);
-    }
-  };
-
-  React.useEffect(() => {
-    if (lockedProduct) {
-      setActiveProduct(lockedProduct);
-    }
-  }, [lockedProduct]);
-
-  React.useEffect(() => {
-    AsyncStorage.getItem('@Sk8lytz_ControllerState').then((saved) => {
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          // if (parsed.activeMode) setActiveMode(parsed.activeMode); // Ensure Docked Mode always defaults to PRESETS on load
-          if (parsed.selectedColor) setSelectedColor(parsed.selectedColor);
-          if (parsed.selectedPatternId) setSelectedPatternId(parsed.selectedPatternId);
-          if (parsed.brightness !== undefined) setBrightness(parsed.brightness);
-          else setBrightness(90);
-          if (parsed.speed !== undefined) setSpeed(parsed.speed);
-          else setSpeed(50);
-          if (parsed.micSensitivity !== undefined) setMicSensitivity(parsed.micSensitivity);
-          if (parsed.musicHue !== undefined) setMusicHue(parsed.musicHue);
-          if (parsed.musicSecondaryHue !== undefined) setMusicSecondaryHue(parsed.musicSecondaryHue);
-          if (parsed.musicPrimaryColor) setMusicPrimaryColor(parsed.musicPrimaryColor);
-          if (parsed.musicSecondaryColor) setMusicSecondaryColor(parsed.musicSecondaryColor);
-          if (parsed.musicMatrixStyle) setMusicMatrixStyle(parsed.musicMatrixStyle);
-          if (parsed.musicPatternId) setMusicPatternId(parsed.musicPatternId);
-          if (parsed.micSource) setMicSource(parsed.micSource);
-          if (parsed.musicSetting) setMusicSetting(parsed.musicSetting);
-          if (parsed.fixedPatternId) setFixedPatternId(parsed.fixedPatternId);
-          if (parsed.fixedColorMode) setFixedColorMode(parsed.fixedColorMode);
-          if (parsed.fixedFgColor) setFixedFgColor(parsed.fixedFgColor);
-          if (parsed.fixedBgColor) setFixedBgColor(parsed.fixedBgColor);
-          if (parsed.fixedHue !== undefined) setFixedHue(parsed.fixedHue);
-        } catch(e) {}
-      }
-    });
-
-    AsyncStorage.getItem('@Sk8lytz_Favorites').then((saved) => {
+      AsyncStorage.getItem('@Sk8lytz_Favorites').then((saved) => {
         if (saved) {
-            try {
-                const parsed: IFavoriteState[] = JSON.parse(saved);
-                if (parsed && parsed.length > 0) {
-                   // One-time migration: rewrite legacy 'DIY'/'MULTI'/'MULTICOLOR' mode
-                   // entries to 'BUILDER' so stored data stays clean
-                   let needsMigration = false;
-                   const migrated = parsed.map(f => {
-                     if (f.mode === 'DIY' || f.mode === 'MULTI' || f.mode === 'MULTICOLOR') {
-                       needsMigration = true;
-                       return { ...f, mode: 'BUILDER' };
-                     }
-                     if (f.mode === 'RBM') {
-                       needsMigration = true;
-                       return { ...f, mode: 'PROGRAMS' };
-                     }
-                     return f;
-                   });
-                   if (needsMigration) {
-                     console.log('[SK8Lytz Favorites] Migrated legacy mode entries to new taxonomy.');
-                     AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(migrated));
-                   }
-                   setFavorites(migrated);
-                } else {
-                   // Fallback to default if somehow parsed as empty
-                   const defaultFavorites = [{
-                       id: 'default-1',
-                       name: 'Programs - ' + getRbmPatternName(3),
-                       mode: 'PROGRAMS',
-                       patternId: 3,
-                       speed: 50,
-                       brightness: 90
-                   }];
-                   setFavorites(defaultFavorites);
-                   AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(defaultFavorites));
+          try {
+            const parsed: IFavoriteState[] = JSON.parse(saved);
+            if (parsed && parsed.length > 0) {
+              // One-time migration: rewrite legacy 'DIY'/'MULTI'/'MULTICOLOR' mode
+              // entries to 'BUILDER' so stored data stays clean
+              let needsMigration = false;
+              const migrated = parsed.map(f => {
+                if (f.mode === 'DIY' || f.mode === 'MULTI' || f.mode === 'MULTICOLOR') {
+                  needsMigration = true;
+                  return { ...f, mode: 'BUILDER' };
                 }
-            } catch(e) {}
-        } else {
-            // First time load, inject default Program mode pattern 3
-            const defaultFavorites = [{
+                if (f.mode === 'RBM') {
+                  needsMigration = true;
+                  return { ...f, mode: 'PROGRAMS' };
+                }
+                return f;
+              });
+              if (needsMigration) {
+                console.log('[SK8Lytz Favorites] Migrated legacy mode entries to new taxonomy.');
+                AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(migrated));
+              }
+              setFavorites(migrated);
+            } else {
+              // Fallback to default if somehow parsed as empty
+              const defaultFavorites = [{
                 id: 'default-1',
                 name: 'Programs - ' + getRbmPatternName(3),
                 mode: 'PROGRAMS',
                 patternId: 3,
                 speed: 50,
                 brightness: 90
-            }];
-            setFavorites(defaultFavorites);
-            AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(defaultFavorites));
+              }];
+              setFavorites(defaultFavorites);
+              AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(defaultFavorites));
+            }
+          } catch (e) { }
+        } else {
+          // First time load, inject default Program mode pattern 3
+          const defaultFavorites = [{
+            id: 'default-1',
+            name: 'Programs - ' + getRbmPatternName(3),
+            mode: 'PROGRAMS',
+            patternId: 3,
+            speed: 50,
+            brightness: 90
+          }];
+          setFavorites(defaultFavorites);
+          AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(defaultFavorites));
         }
-    });
+      });
 
-    AsyncStorage.getItem('@Sk8lytz_QuickPresets').then((saved) => {
+      AsyncStorage.getItem('@Sk8lytz_QuickPresets').then((saved) => {
         if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                if (parsed && parsed.length > 0) setQuickPresets(parsed);
-            } catch(e) {}
+          try {
+            const parsed = JSON.parse(saved);
+            if (parsed && parsed.length > 0) setQuickPresets(parsed);
+          } catch (e) { }
         }
-    });
-  }, []);
+      });
+    }, []);
 
-  React.useEffect(() => {
-    const stateBlob = {
+    React.useEffect(() => {
+      const stateBlob = {
+        activeMode, selectedColor, selectedPatternId, brightness, speed,
+        micSensitivity, musicHue, musicSecondaryHue, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle, musicPatternId, micSource, musicSetting,
+        fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
+      };
+      AsyncStorage.setItem('@Sk8lytz_ControllerState', JSON.stringify(stateBlob)).catch(() => { });
+    }, [
       activeMode, selectedColor, selectedPatternId, brightness, speed,
       micSensitivity, musicHue, musicSecondaryHue, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle, musicPatternId, micSource, musicSetting,
       fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
+    ]);
+
+    const handleMusicChange = (
+      patternId: number = musicPatternId,
+      sens: number = micSensitivity,
+      bright: number = brightness,
+      src: 'APP' | 'DEVICE' = micSource,
+      color1Hex: string = musicPrimaryColor,
+      color2Hex: string = musicSecondaryColor,
+      matrix: number = musicMatrixStyle
+    ) => {
+      if (!writeToDevice) return;
+
+      const isDeviceMic = src === 'DEVICE';
+
+      const c1Raw = {
+        r: parseInt(color1Hex.slice(1, 3), 16) || 0,
+        g: parseInt(color1Hex.slice(3, 5), 16) || 0,
+        b: parseInt(color1Hex.slice(5, 7), 16) || 0
+      };
+
+      const c2Raw = {
+        r: parseInt(color2Hex.slice(1, 3), 16) || 0,
+        g: parseInt(color2Hex.slice(3, 5), 16) || 0,
+        b: parseInt(color2Hex.slice(5, 7), 16) || 0
+      };
+
+      const sortIdx = hwSettings?.colorSorting ?? 2;
+      const c1 = ZenggeProtocol.applyColorSorting(c1Raw.r, c1Raw.g, c1Raw.b, sortIdx);
+      const c2 = ZenggeProtocol.applyColorSorting(c2Raw.r, c2Raw.g, c2Raw.b, sortIdx);
+
+      writeToDevice(ZenggeProtocol.setMusicConfig(
+        isDeviceMic,
+        matrix,
+        patternId,
+        c1,
+        c2,
+        sens,
+        bright
+      ));
     };
-    AsyncStorage.setItem('@Sk8lytz_ControllerState', JSON.stringify(stateBlob)).catch(() => {});
-  }, [
-    activeMode, selectedColor, selectedPatternId, brightness, speed, 
-    micSensitivity, musicHue, musicSecondaryHue, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle, musicPatternId, micSource, musicSetting,
-    fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
-  ]);
 
-  const handleMusicChange = (
-    patternId: number = musicPatternId,
-    sens: number = micSensitivity,
-    bright: number = brightness,
-    src: 'APP' | 'DEVICE' = micSource,
-    color1Hex: string = musicPrimaryColor,
-    color2Hex: string = musicSecondaryColor,
-    matrix: number = musicMatrixStyle
-  ) => {
-    if (!writeToDevice) return;
+    // ── Music Mode: re-send config on color/pattern/source change ──
+    // Placed AFTER handleMusicChange so the closure is always fresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    React.useEffect(() => {
+      if (activeMode !== 'MUSIC' || !writeToDevice) return;
+      handleMusicChange(
+        musicPatternId, micSensitivity, brightness, micSource,
+        musicPrimaryColor, musicSecondaryColor, musicMatrixStyle
+      );
+    }, [musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
 
-    const isDeviceMic = src === 'DEVICE';
-
-    const c1Raw = {
-       r: parseInt(color1Hex.slice(1,3), 16) || 0,
-       g: parseInt(color1Hex.slice(3,5), 16) || 0,
-       b: parseInt(color1Hex.slice(5,7), 16) || 0
+    const getColorName = (hex: string) => {
+      const map: { [key: string]: string } = {
+        '#FF0000': 'Red', '#FFFF00': 'Yellow', '#00FF00': 'Green',
+        '#00FFFF': 'Cyan', '#0000FF': 'Blue', '#FF00FF': 'Magenta',
+        '#FFFFFF': 'White', '#000000': 'Black'
+      };
+      const upperHex = hex.toUpperCase();
+      return map[upperHex] || 'Custom';
     };
 
-    const c2Raw = {
-       r: parseInt(color2Hex.slice(1,3), 16) || 0,
-       g: parseInt(color2Hex.slice(3,5), 16) || 0,
-       b: parseInt(color2Hex.slice(5,7), 16) || 0
-    };
+    const currentStatusText = React.useMemo(() => {
+      switch (activeMode) {
+        case 'MULTIMODE':
+          const fixedClr = fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
+          return `MultiMode - ${getColorName(fixedClr)}`;
+        case 'PROGRAMS':
+          return `Programs - ${getRbmPatternName(selectedPatternId)}`;
+        case 'MUSIC':
+          const patternName = MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`;
+          return `Music - ${patternName}`;
+        case 'STREET': return isStreetBraking ? '🔴 BRAKING' : '🟠 CRUISING';
+        case 'CAMERA': return 'Camera';
+        case 'FAVORITES': return 'Styles';
+        default: return activeMode;
+      }
+    }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, selectedPatternId, musicPatternId, selectedColor, isStreetBraking]);
+    const visualizerColor = React.useMemo(() => {
+      if (activeMode === 'MULTIMODE') {
+        if (fixedSubMode === 'PATTERN') return fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
+        return selectedColor; // BUILDER
+      }
+      if (activeMode === 'MUSIC') {
+        const f = (n: number, k = (n + musicHue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+        const hex = [f(5), f(3), f(1)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+        return `#${hex}`;
+      }
+      return selectedColor;
+    }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, musicHue, selectedColor, fixedSubMode]);
 
-    const sortIdx = hwSettings?.colorSorting ?? 2;
-    const c1 = ZenggeProtocol.applyColorSorting(c1Raw.r, c1Raw.g, c1Raw.b, sortIdx);
-    const c2 = ZenggeProtocol.applyColorSorting(c2Raw.r, c2Raw.g, c2Raw.b, sortIdx);
+    return (
+      <View style={styles.container}>
 
-    writeToDevice(ZenggeProtocol.setMusicConfig(
-      isDeviceMic,
-      matrix,
-      patternId,
-      c1,
-      c2,
-      sens,
-      bright
-    ));
-  };
+        {/* Product Selector - Only show if NO lockedProduct is provided */}
+        {!lockedProduct && (
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, activeProduct === 'HALOZ' && styles.activeTab]}
+              onPress={() => setActiveProduct('HALOZ')}
+            >
+              {activeProduct === 'HALOZ' && (
+                <LinearGradient colors={[Colors.primary, Colors.accent]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+              )}
+              <Text style={[styles.tabText, activeProduct === 'HALOZ' && styles.activeTabText]}>
+                HALOZ
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeProduct === 'SOULZ' && styles.activeTab]}
+              onPress={() => setActiveProduct('SOULZ')}
+            >
+              {activeProduct === 'SOULZ' && (
+                <LinearGradient colors={[Colors.secondary, Colors.accent]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+              )}
+              <Text style={[styles.tabText, activeProduct === 'SOULZ' && styles.activeTabText]}>
+                SOULZ
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-  // ── Music Mode: re-send config on color/pattern/source change ──
-  // Placed AFTER handleMusicChange so the closure is always fresh.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  React.useEffect(() => {
-    if (activeMode !== 'MUSIC' || !writeToDevice) return;
-    handleMusicChange(
-      musicPatternId, micSensitivity, brightness, micSource,
-      musicPrimaryColor, musicSecondaryColor, musicMatrixStyle
-    );
-  }, [musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
-
-  const getColorName = (hex: string) => {
-    const map: {[key: string]: string} = {
-      '#FF0000': 'Red', '#FFFF00': 'Yellow', '#00FF00': 'Green', 
-      '#00FFFF': 'Cyan', '#0000FF': 'Blue', '#FF00FF': 'Magenta', 
-      '#FFFFFF': 'White', '#000000': 'Black'
-    };
-    const upperHex = hex.toUpperCase();
-    return map[upperHex] || 'Custom';
-  };
-
-  const currentStatusText = React.useMemo(() => {
-    switch (activeMode) {
-      case 'MULTIMODE':
-        const fixedClr = fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
-        return `MultiMode - ${getColorName(fixedClr)}`;
-      case 'PROGRAMS':
-        return `Programs - ${getRbmPatternName(selectedPatternId)}`;
-      case 'MUSIC':
-        const patternName = MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`;
-        return `Music - ${patternName}`;
-      case 'STREET': return isStreetBraking ? '🔴 BRAKING' : '🟠 CRUISING';
-      case 'CAMERA': return 'Camera';
-      case 'FAVORITES': return 'Styles';
-      default: return activeMode;
-    }
-  }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, selectedPatternId, musicPatternId, selectedColor, isStreetBraking]);
-  const visualizerColor = React.useMemo(() => {
-    if (activeMode === 'MULTIMODE') {
-      if (fixedSubMode === 'PATTERN') return fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
-      return selectedColor; // BUILDER
-    }
-    if (activeMode === 'MUSIC') {
-      const f = (n: number, k = (n + musicHue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-      const hex = [f(5), f(3), f(1)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
-      return `#${hex}`;
-    }
-    return selectedColor;
-  }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, musicHue, selectedColor, fixedSubMode]);
-
-  return (
-    <View style={styles.container}>
-      
-      {/* Product Selector - Only show if NO lockedProduct is provided */}
-      {!lockedProduct && (
-        <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tab, activeProduct === 'HALOZ' && styles.activeTab]} 
-            onPress={() => setActiveProduct('HALOZ')}
-          >
-            {activeProduct === 'HALOZ' && (
-              <LinearGradient colors={[Colors.primary, Colors.accent]} start={{x: 0, y: 0}} end={{x: 1, y: 1}} style={StyleSheet.absoluteFill} />
-            )}
-            <Text style={[styles.tabText, activeProduct === 'HALOZ' && styles.activeTabText]}>
-               HALOZ
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, activeProduct === 'SOULZ' && styles.activeTab]} 
-            onPress={() => setActiveProduct('SOULZ')}
-          >
-            {activeProduct === 'SOULZ' && (
-              <LinearGradient colors={[Colors.secondary, Colors.accent]} start={{x: 0, y: 0}} end={{x: 1, y: 1}} style={StyleSheet.absoluteFill} />
-            )}
-            <Text style={[styles.tabText, activeProduct === 'SOULZ' && styles.activeTabText]}>
-              SOULZ
-            </Text>
-          </TouchableOpacity>
+        {/* Visual Product Shape Selector/Indicator - ENLARGED FOCUS */}
+        <View style={styles.visualizerWrapper}>
+          <View style={{ marginBottom: 8, width: '100%' }}>
+            <TouchableOpacity
+              style={{ position: 'absolute', top: 12, right: 16, zIndex: 100, backgroundColor: 'rgba(255,255,255,0.1)', padding: 6, borderRadius: 20 }}
+              onPress={handleSaveFavoriteClick}
+            >
+              <MaterialCommunityIcons name="heart-plus-outline" size={22} color={Colors.primary} />
+            </TouchableOpacity>
+            <ProductVisualizer
+              product={activeProduct}
+              color={visualizerColor}
+              mode={activeMode === 'FAVORITES' ? (lastOperatingMode === 'MULTIMODE' ? (fixedSubMode === 'BUILDER' ? 'BUILDER' : 'MULTIMODE') : lastOperatingMode) : activeMode === 'MULTIMODE' ? (fixedSubMode === 'BUILDER' ? 'BUILDER' : 'MULTIMODE') : activeMode}
+              patternId={activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' ? fixedPatternId : selectedPatternId)}
+              isPaired={isPaired}
+              points={points}
+              devices={devices}
+              onLongPressDevice={onLongPressDevice}
+              brightness={brightness}
+              speed={speed}
+              fixedFgColor={fixedFgColor}
+              fixedBgColor={fixedBgColor}
+              isPoweredOn={isPoweredOn}
+              statusText={currentStatusText}
+              audioMagnitude={audioMagnitude}
+              rawHexPayload={lastSentPayload}
+              multiColors={multiColors}
+              multiTransition={multiTransition}
+              isStreetBraking={isStreetBraking}
+              streetCruiseColor={streetCruiseColor}
+              motionState={motionState}
+              builderNodes={builderNodes}
+              builderFillMode={builderFillMode}
+              builderTransitionType={builderTransitionType}
+              builderDirection={builderDirection}
+            />
+          </View>
         </View>
-      )}
 
-      {/* Visual Product Shape Selector/Indicator - ENLARGED FOCUS */}
-      <View style={styles.visualizerWrapper}>
-      <View style={{ marginBottom: 8, width: '100%' }}>
-        <TouchableOpacity 
-           style={{ position: 'absolute', top: 12, right: 16, zIndex: 100, backgroundColor: 'rgba(255,255,255,0.1)', padding: 6, borderRadius: 20 }}
-           onPress={handleSaveFavoriteClick}
-        >
-           <MaterialCommunityIcons name="heart-plus-outline" size={22} color={Colors.primary} />
-        </TouchableOpacity>
-        <ProductVisualizer 
-          product={activeProduct} 
-          color={visualizerColor} 
-          mode={activeMode === 'FAVORITES' ? (lastOperatingMode === 'MULTIMODE' ? (fixedSubMode === 'BUILDER' ? 'BUILDER' : 'MULTIMODE') : lastOperatingMode) : activeMode === 'MULTIMODE' ? (fixedSubMode === 'BUILDER' ? 'BUILDER' : 'MULTIMODE') : activeMode}
-          patternId={activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' ? fixedPatternId : selectedPatternId)} 
-          isPaired={isPaired}
-          points={points}
-          devices={devices}
-          onLongPressDevice={onLongPressDevice}
-          brightness={brightness}
-          speed={speed}
-          fixedFgColor={fixedFgColor}
-          fixedBgColor={fixedBgColor}
-          isPoweredOn={isPoweredOn}
-          statusText={currentStatusText}
-          audioMagnitude={audioMagnitude}
-          rawHexPayload={lastSentPayload}
-          multiColors={multiColors}
-          multiTransition={multiTransition}
-          isStreetBraking={isStreetBraking}
-          streetCruiseColor={streetCruiseColor}
-          motionState={motionState}
-          builderNodes={builderNodes}
-          builderFillMode={builderFillMode}
-          builderTransitionType={builderTransitionType}
-          builderDirection={builderDirection}
-        />
-      </View>
-      </View>
-      
-      {/* Removed Active Mode Header to save vertical space */}
+        {/* Removed Active Mode Header to save vertical space */}
 
-      <View style={[styles.controlsContainer, { padding: 4, overflow: 'hidden' }]}>
-        <View style={[styles.activeModeContainer, { flex: 1, justifyContent: 'space-evenly' }]}>
-          {activeMode === 'FAVORITES' && (
-            <View style={{ flex: 1, paddingHorizontal: Layout.padding, justifyContent: 'space-evenly' }}>
-              
-              <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13 }]}>YOURS</Text>
-              
-              <View style={[styles.presetContainer, { flex: 1 }]}>
-                 {Array.from({ length: 4 }).map((_, idx) => {
+        <View style={[styles.controlsContainer, { padding: 4, overflow: 'hidden' }]}>
+          <View style={[styles.activeModeContainer, { flex: 1, justifyContent: 'space-evenly' }]}>
+            {activeMode === 'FAVORITES' && (
+              <View style={{ flex: 1, paddingHorizontal: Layout.padding, justifyContent: 'space-evenly' }}>
+
+                <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13 }]}>YOURS</Text>
+
+                <View style={[styles.presetContainer, { flex: 1 }]}>
+                  {Array.from({ length: 4 }).map((_, idx) => {
                     const fav = favorites[idx];
                     if (!fav) return <View key={`empty-yours-${idx}`} style={[styles.presetCard, { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
                     return (
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         key={fav.id}
                         style={[styles.presetCard, { borderColor: Colors.primary }]}
                         onPress={() => loadFavorite(fav)}
                       >
-                        <TouchableOpacity 
-                           style={{ position: 'absolute', right: 4, top: 4, zIndex: 10, padding: 4 }} 
-                           onPress={() => {
-                              setFavPromptTargetId(fav.id);
-                              setFavPromptName(fav.name);
-                              setIsFavPromptVisible(true);
-                           }}
+                        <TouchableOpacity
+                          style={{ position: 'absolute', right: 4, top: 4, zIndex: 10, padding: 4 }}
+                          onPress={() => {
+                            setFavPromptTargetId(fav.id);
+                            setFavPromptName(fav.name);
+                            setIsFavPromptVisible(true);
+                          }}
                         >
-                           <MaterialCommunityIcons name="pencil-outline" size={12} color={Colors.textMuted} />
+                          <MaterialCommunityIcons name="pencil-outline" size={12} color={Colors.textMuted} />
                         </TouchableOpacity>
 
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%', marginTop: 2, marginBottom: 2, gap: 10, opacity: 0.8, paddingHorizontal: 16 }}>
-                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                              {fav.mode === 'MUSIC' ? (
-                                 <><MaterialCommunityIcons name="microphone-outline" size={9} color={Colors.primary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.micSensitivity || fav.speed || 50)}%</Text></>
-                              ) : (
-                                 <><MaterialCommunityIcons name="speedometer" size={9} color={Colors.primary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.speed || 50)}%</Text></>
-                              )}
-                           </View>
-                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                              <MaterialCommunityIcons name="brightness-6" size={9} color={Colors.primary} />
-                              <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
-                           </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                            {fav.mode === 'MUSIC' ? (
+                              <><MaterialCommunityIcons name="microphone-outline" size={9} color={Colors.primary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.micSensitivity || fav.speed || 50)}%</Text></>
+                            ) : (
+                              <><MaterialCommunityIcons name="speedometer" size={9} color={Colors.primary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.speed || 50)}%</Text></>
+                            )}
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                            <MaterialCommunityIcons name="brightness-6" size={9} color={Colors.primary} />
+                            <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
+                          </View>
                         </View>
                         <View style={{ width: '100%', minHeight: 20, justifyContent: 'center', alignItems: 'center' }}>
-                           <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.name}</MarqueeText>
+                          <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.name}</MarqueeText>
                         </View>
                         {(() => {
-                           if ((fav.mode === 'PATTERN' && fav.patternId === 1) || (fav.mode === 'MULTIMODE' && fav.patternId === 1)) {
-                              const c = fav.fixedFgColor || Colors.primary;
-                              return <View style={{ width: '60%', height: 6, borderRadius: 3, backgroundColor: c, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }} />;
-                           } else if (fav.mode === 'MUSIC') {
-                              return (
-                                 <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
-                                    <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
-                                    <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
-                                 </View>
-                              );
-                           } else if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') {
-                              return (
-                                 <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
-                                    <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
-                                    <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
-                                 </View>
-                              );
-                           } else if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
-                              const colors = fav.multiColors || ['#FFFFFF'];
-                              return (
-                                 <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
-                                    {colors.map((c: string, i: number) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}
-                                 </View>
-                              );
-                           } else {
-                              return <MaterialCommunityIcons name={(fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'animation-play' : 'shape-square-plus'} size={14} color={Colors.primary} style={{ marginTop: 4, marginBottom: 2 }} />;
-                           }
+                          if ((fav.mode === 'PATTERN' && fav.patternId === 1) || (fav.mode === 'MULTIMODE' && fav.patternId === 1)) {
+                            const c = fav.fixedFgColor || Colors.primary;
+                            return <View style={{ width: '60%', height: 6, borderRadius: 3, backgroundColor: c, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }} />;
+                          } else if (fav.mode === 'MUSIC') {
+                            return (
+                              <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
+                                <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
+                                <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
+                              </View>
+                            );
+                          } else if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') {
+                            return (
+                              <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
+                                <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
+                                <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
+                              </View>
+                            );
+                          } else if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
+                            const colors = fav.multiColors || ['#FFFFFF'];
+                            return (
+                              <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
+                                {colors.map((c: string, i: number) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}
+                              </View>
+                            );
+                          } else {
+                            return <MaterialCommunityIcons name={(fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'animation-play' : 'shape-square-plus'} size={14} color={Colors.primary} style={{ marginTop: 4, marginBottom: 2 }} />;
+                          }
                         })()}
                       </TouchableOpacity>
                     );
-                 })}
-              </View>
+                  })}
+                </View>
 
-              <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, marginTop: 4 }]}>SK8Lytz Picks</Text>
-              
-              <View style={[styles.presetContainer, { flex: 1 }]}>
-                 {Array.from({ length: Math.max(4, curatedPresets.length) }).map((_, idx) => {
+                <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, marginTop: 4 }]}>SK8Lytz Picks</Text>
+
+                <View style={[styles.presetContainer, { flex: 1 }]}>
+                  {Array.from({ length: Math.max(4, curatedPresets.length) }).map((_, idx) => {
                     const fav = curatedPresets[idx];
                     if (!fav) return <View key={`empty-ours-${idx}`} style={[styles.presetCard, { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
                     return (
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         key={fav.id}
                         style={[styles.presetCard, { borderColor: Colors.secondary }]}
                         onPress={() => loadFavorite(fav)}
                       >
                         <View style={{ width: '100%', minHeight: 20, justifyContent: 'center', alignItems: 'center', marginTop: 2 }}>
-                           <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.customName || fav.name}</MarqueeText>
+                          <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.customName || fav.name}</MarqueeText>
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 2, marginBottom: 4, gap: 4, opacity: 0.8 }}>
-                           {fav.mode === 'MUSIC' ? (
-                              <><MaterialCommunityIcons name="microphone-outline" size={10} color={Colors.secondary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.micSensitivity || fav.speed || 50)}%</Text></>
-                           ) : (
-                              <><MaterialCommunityIcons name="speedometer" size={10} color={Colors.secondary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.speed || 50)}%</Text></>
-                           )}
-                           <Text style={{ fontSize: 9, color: Colors.textMuted }}> | </Text>
-                           <MaterialCommunityIcons name="brightness-6" size={10} color={Colors.secondary} />
-                           <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
+                          {fav.mode === 'MUSIC' ? (
+                            <><MaterialCommunityIcons name="microphone-outline" size={10} color={Colors.secondary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.micSensitivity || fav.speed || 50)}%</Text></>
+                          ) : (
+                            <><MaterialCommunityIcons name="speedometer" size={10} color={Colors.secondary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.speed || 50)}%</Text></>
+                          )}
+                          <Text style={{ fontSize: 9, color: Colors.textMuted }}> | </Text>
+                          <MaterialCommunityIcons name="brightness-6" size={10} color={Colors.secondary} />
+                          <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
                         </View>
                         {(() => {
-                           if ((fav.mode === 'PATTERN' && fav.patternId === 1) || (fav.mode === 'MULTIMODE' && fav.patternId === 1)) {
-                              const c = fav.fixedFgColor || Colors.primary;
-                              return <View style={{ width: '60%', height: 6, borderRadius: 3, backgroundColor: c, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }} />;
-                           } else if (fav.mode === 'MUSIC') {
-                              return (
-                                 <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
-                                    <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
-                                    <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
-                                 </View>
-                              );
-                           } else if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') {
-                              return (
-                                 <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
-                                    <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
-                                    <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
-                                 </View>
-                              );
-                           } else if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
-                              const colors = fav.multiColors || ['#FFFFFF'];
-                              return (
-                                 <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
-                                    {colors.map((c: string, i: number) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}
-                                 </View>
-                              );
-                           } else {
-                              return <MaterialCommunityIcons name={(fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'animation-play' : 'shape-square-plus'} size={14} color={Colors.secondary} style={{ marginTop: 4, marginBottom: 2 }} />;
-                           }
+                          if ((fav.mode === 'PATTERN' && fav.patternId === 1) || (fav.mode === 'MULTIMODE' && fav.patternId === 1)) {
+                            const c = fav.fixedFgColor || Colors.primary;
+                            return <View style={{ width: '60%', height: 6, borderRadius: 3, backgroundColor: c, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }} />;
+                          } else if (fav.mode === 'MUSIC') {
+                            return (
+                              <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
+                                <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
+                                <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
+                              </View>
+                            );
+                          } else if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') {
+                            return (
+                              <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
+                                <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
+                                <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
+                              </View>
+                            );
+                          } else if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
+                            const colors = fav.multiColors || ['#FFFFFF'];
+                            return (
+                              <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
+                                {colors.map((c: string, i: number) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}
+                              </View>
+                            );
+                          } else {
+                            return <MaterialCommunityIcons name={(fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'animation-play' : 'shape-square-plus'} size={14} color={Colors.secondary} style={{ marginTop: 4, marginBottom: 2 }} />;
+                          }
                         })()}
                       </TouchableOpacity>
                     );
-                 })}
+                  })}
+                </View>
               </View>
-            </View>
-          )}
+            )}
 
-          {activeMode === 'MULTIMODE' && (
-            <View style={{ flex: 1, marginBottom: 8, justifyContent: 'flex-start' }}>
-              
-              {/* UNIFIED PRO EFFECTS & POSITIONAL BUILDER */}
-              {(fixedSubMode === 'PATTERN' || fixedSubMode === 'BUILDER') && (
-                <View style={{ flex: 1, width: '100%', marginBottom: 4 }}>
-                  
-                  {/* UNIFIED TOGGLE */}
-                  <View style={{ flexDirection: 'row', marginBottom: 6, marginTop: 2, flexShrink: 0, minHeight: 36 }}>
-                    <TouchableOpacity 
-                      onPress={() => {
-                        setFixedSubMode('PATTERN');
-                        if (fixedPatternId === 1) setFixedPatternId(2);
-                      }}
-                      style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'PATTERN' ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
-                    >
-                      <Text style={{ color: fixedSubMode === 'PATTERN' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Pro Effects</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      onPress={() => setFixedSubMode('BUILDER')}
-                      style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'BUILDER' ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
-                    >
-                      <Text style={{ color: fixedSubMode === 'BUILDER' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Builder</Text>
-                    </TouchableOpacity>
-                  </View>
+            {activeMode === 'MULTIMODE' && (
+              <View style={{ flex: 1, marginBottom: 8, justifyContent: 'flex-start' }}>
 
-                  {/* PRO EFFECTS TIER (Formerly Solid Patterns) */}
-                  {fixedSubMode === 'PATTERN' && (
-                  <View style={{ flex: 1, paddingBottom: 6 }}>
-                    <ScrollView 
-                       style={{ flex: 1, backgroundColor: Colors.isDark ? '#000000' : 'rgba(0,0,0,0.04)', borderRadius: 8 }} 
-                       contentContainerStyle={{ padding: 8, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}
-                       showsVerticalScrollIndicator={false}
-                    >
-                      {ZENGGE_EFFECTS.map(effect => (
-                        <TouchableOpacity 
-                          key={effect.id}
-                          onPress={() => {
-                            setFixedSubMode('PATTERN');
-                            setFixedPatternId(effect.id);
-                            
-                            // Immediately push the new 0x51 DIY mode payload
-                            if (writeToDevice) {
-                              if (effect.id === 1) {
-                                // Solid one-off: use hwSettings LED count, consistent with applyFixedPattern
-                                // Math.max(12,...) enforces the 0x59 minimum to prevent hardware matrix locking
-                                const localNumLEDs = Math.max(12, hwSettings?.ledPoints || points || 16);
-                                const paddedArray = new Array(localNumLEDs).fill({
-                                  r: Math.round((parseInt((fixedFgColor || '#FF0000').substring(1, 3), 16) || 0) * (brightness / 100)),
-                                  g: Math.round((parseInt((fixedFgColor || '#FF0000').substring(3, 5), 16) || 0) * (brightness / 100)),
-                                  b: Math.round((parseInt((fixedFgColor || '#FF0000').substring(5, 7), 16) || 0) * (brightness / 100))
-                                });
-                                // 0x01 = FREEZE to prevent cascade ghosting
-                                writeToDevice(ZenggeProtocol.setMultiColor(paddedArray, clampSpeed(speed), 1, 0x01));
-                              } else {
-                                const hexToRcb = (hex: string) => {
-                                  const h = hex || '#000000';
-                                  return {
-                                    r: parseInt(h.substring(1, 3), 16) || 0,
-                                    g: parseInt(h.substring(3, 5), 16) || 0,
-                                    b: parseInt(h.substring(5, 7), 16) || 0,
-                                  };
-                                };
-                                writeToDevice(ZenggeProtocol.setCustomMode([
-                                  {
-                                    // UI IDs are 1-34; hardware 0x51 modes are 1-33.
-                                    // ID 1 = Solid (0x59 path above). IDs 2-34 → hw modes 1-33 (subtract 1).
-                                    mode: effect.id - 1,
-                                    speed: Math.floor(speed / 3) + 1, // normalize 1-100 to 1-31 (proven 2AM formula)
-                                    color1: hexToRcb(fixedFgColor || '#FF0000'),
-                                    color2: hexToRcb(fixedBgColor || '#000000')
-                                  }
-                                ]));
-                              }
-                            }
+                {/* UNIFIED PRO EFFECTS & POSITIONAL BUILDER */}
+                {(fixedSubMode === 'PATTERN' || fixedSubMode === 'BUILDER') && (
+                  <View style={{ flex: 1, width: '100%', marginBottom: 4 }}>
 
-                            if (effect.id === 1) {
-                               setFixedColorMode('FOREGROUND');
-                            }
-                          }}
-                          style={{ width: '48%', minHeight: 40, marginBottom: 8, flexDirection: 'column', justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
+                    {/* UNIFIED TOGGLE */}
+                    <View style={{ flexDirection: 'row', marginBottom: 6, marginTop: 2, flexShrink: 0, minHeight: 36 }}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setFixedSubMode('PATTERN');
+                          if (fixedPatternId === 1) setFixedPatternId(2);
+                        }}
+                        style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'PATTERN' ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
+                      >
+                        <Text style={{ color: fixedSubMode === 'PATTERN' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Pro Effects</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => setFixedSubMode('BUILDER')}
+                        style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'BUILDER' ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
+                      >
+                        <Text style={{ color: fixedSubMode === 'BUILDER' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Builder</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* PRO EFFECTS TIER (Formerly Solid Patterns) */}
+                    {fixedSubMode === 'PATTERN' && (
+                      <View style={{ flex: 1, paddingBottom: 6 }}>
+                        <ScrollView
+                          style={{ flex: 1, backgroundColor: Colors.isDark ? '#000000' : 'rgba(0,0,0,0.04)', borderRadius: 8 }}
+                          contentContainerStyle={{ padding: 8, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}
+                          showsVerticalScrollIndicator={false}
                         >
-                          <Text style={{ color: fixedPatternId === effect.id ? Colors.primary : Colors.text, fontWeight: 'bold', fontSize: 11, marginBottom: 4 }} numberOfLines={1}>
-                             {effect.id}. {effect.name}
-                          </Text>
-                          <CustomEffectVisualizer 
-                             effectId={effect.id} 
-                             speed={speed} 
-                             points={devices?.[0]?.points || points || 16} 
-                             segments={devices?.[0]?.segments || 1} 
-                             direction={true} 
-                             fgColorHex={fixedFgColor}
-                             bgColorHex={fixedBgColor}
-                          />
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                  )}
+                          {ZENGGE_EFFECTS.map(effect => (
+                            <TouchableOpacity
+                              key={effect.id}
+                              onPress={() => {
+                                setFixedSubMode('PATTERN');
+                                setFixedPatternId(effect.id);
 
-                  {/* POSITIONAL ARRAY BUILDER TIER */}
-                  {fixedSubMode === 'BUILDER' && (
-                     <PositionalGradientBuilder 
-                         nodes={builderNodes}
-                         onNodesChange={setBuilderNodes}
-                         fillMode={builderFillMode}
-                         onFillModeChange={setBuilderFillMode}
-                         transitionType={builderTransitionType}
-                         onTransitionTypeChange={setBuilderTransitionType}
-                         direction={builderDirection}
-                         onDirectionChange={setBuilderDirection}
-                         speed={speed}
-                         deviceLedCount={hwSettings?.ledPoints || points || 150}
-                         selectedColor={selectedColor}
-                         writeToDevice={writeToDevice}
-                     />
-                  )}
+                                // Immediately push the new 0x51 DIY mode payload
+                                if (writeToDevice) {
+                                  if (effect.id === 1) {
+                                    const localNumLEDs = devices?.[0]?.points || points || 16;
+                                    // Dynamic Solid un-glitch mapping directly inside the picker
+                                    const paddedArray = new Array(localNumLEDs).fill({
+                                      r: Math.round((parseInt((fixedFgColor || '#FF0000').substring(1, 3), 16) || 0) * (brightness / 100)),
+                                      g: Math.round((parseInt((fixedFgColor || '#FF0000').substring(3, 5), 16) || 0) * (brightness / 100)),
+                                      b: Math.round((parseInt((fixedFgColor || '#FF0000').substring(5, 7), 16) || 0) * (brightness / 100))
+                                    });
+                                    // 0x01 = FREEZE to prevent trailing ghosted arrays
+                                    writeToDevice(ZenggeProtocol.setMultiColor(paddedArray, Math.floor(speed / 3) + 1, 1, 0x01));
+                                  } else {
+                                    const hexToRcb = (hex: string) => {
+                                      const h = hex || '#000000';
+                                      return {
+                                        r: parseInt(h.substring(1, 3), 16) || 0,
+                                        g: parseInt(h.substring(3, 5), 16) || 0,
+                                        b: parseInt(h.substring(5, 7), 16) || 0,
+                                      };
+                                    };
+                                    writeToDevice(ZenggeProtocol.setCustomMode([
+                                      {
+                                        // UI IDs are 1-34; hardware 0x51 modes are 1-33.
+                                        // ID 1 = Solid (0x59 path above). IDs 2-34 → hw modes 1-33 (subtract 1).
+                                        mode: effect.id - 1,
+                                        speed: Math.floor(speed / 3) + 1, // normalize 1-100 to 1-31 (proven 2AM formula)
+                                        color1: hexToRcb(fixedFgColor || '#FF0000'),
+                                        color2: hexToRcb(fixedBgColor || '#000000')
+                                      }
+                                    ]));
+                                  }
+                                }
 
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* ── PROGRAMS MODE UI ────────────────────────────────────────────── */}
-          {activeMode === 'PROGRAMS' && (
-            <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 4 }}>
-              <VerticalPatternDrum
-                value={selectedPatternId}
-                onValueChange={(id: number) => {
-                  setSelectedPatternId(id);
-                  if (writeToDevice) {
-                    if (id === 100) {
-                      applyEmergencyPattern(speed, brightness);
-                    } else {
-                      writeToDevice(ZenggeProtocol.setCustomRbm(id, speed, brightness));
-                    }
-                  }
-                }}
-                itemLabel={(id) => getRbmPatternName(id)}
-              />
-            </View>
-          )}
-
-          {/* ── MUSIC MODE UI ────────────────────────────────────────────────── */}
-          {activeMode === 'MUSIC' && (
-            <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 4, overflow: 'hidden' }}>
-              {/* Matrix Style: Light Screen / Light Bar */}
-              <View style={{ flexDirection: 'row', marginBottom: 6, marginTop: 2, flexShrink: 0, minHeight: 36 }}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setMusicMatrixStyle(39);
-                    handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 39);
-                  }}
-                  style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: musicMatrixStyle === 39 ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
-                >
-                  <Text style={{ color: musicMatrixStyle === 39 ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Light Screen</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    setMusicMatrixStyle(38);
-                    handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 38);
-                  }}
-                  style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: musicMatrixStyle === 38 ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
-                >
-                  <Text style={{ color: musicMatrixStyle === 38 ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Light Bar</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={{ flex: 1, justifyContent: 'space-evenly' }}>
-                <View style={[styles.musicToggleHeader, { justifyContent: 'center' }]}>
-                  <View style={[styles.musicModeIndicator, { alignItems: 'center' }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <TouchableOpacity onPress={() => {
-                        const pid = musicPatternId > 1 ? musicPatternId - 1 : MUSIC_PATTERNS.length;
-                        setMusicPatternId(pid);
-                        handleMusicChange(pid);
-                      }} style={{ paddingHorizontal: 10 }}>
-                        <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'<'}</Text>
-                      </TouchableOpacity>
-                      <View style={[styles.musicModeCircle, { width: 32, height: 32, borderRadius: 16 }]}>
-                        <Text style={[styles.musicModeNumber, { fontSize: 14 }]}>{musicPatternId}</Text>
+                                if (effect.id === 1) {
+                                  setFixedColorMode('FOREGROUND');
+                                }
+                              }}
+                              style={{ width: '48%', minHeight: 40, marginBottom: 8, flexDirection: 'column', justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
+                            >
+                              <Text style={{ color: fixedPatternId === effect.id ? Colors.primary : Colors.text, fontWeight: 'bold', fontSize: 11, marginBottom: 4 }} numberOfLines={1}>
+                                {effect.id}. {effect.name}
+                              </Text>
+                              <CustomEffectVisualizer
+                                effectId={effect.id}
+                                speed={speed}
+                                points={devices?.[0]?.points || points || 16}
+                                segments={devices?.[0]?.segments || 1}
+                                direction={true}
+                                fgColorHex={fixedFgColor}
+                                bgColorHex={fixedBgColor}
+                              />
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
                       </View>
-                      <TouchableOpacity onPress={() => {
-                        const pid = musicPatternId < MUSIC_PATTERNS.length ? musicPatternId + 1 : 1;
-                        setMusicPatternId(pid);
-                        handleMusicChange(pid);
-                      }} style={{ paddingHorizontal: 10 }}>
-                        <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'>'}</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <Text style={[Typography.caption, { marginTop: 4, color: Colors.primary, fontWeight: 'bold', fontSize: 13 }]}>
-                      {MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`}
-                    </Text>
+                    )}
+
+                    {/* POSITIONAL ARRAY BUILDER TIER */}
+                    {fixedSubMode === 'BUILDER' && (
+                      <PositionalGradientBuilder
+                        nodes={builderNodes}
+                        onNodesChange={setBuilderNodes}
+                        fillMode={builderFillMode}
+                        onFillModeChange={setBuilderFillMode}
+                        transitionType={builderTransitionType}
+                        onTransitionTypeChange={setBuilderTransitionType}
+                        direction={builderDirection}
+                        onDirectionChange={setBuilderDirection}
+                        speed={speed}
+                        deviceLedCount={hwSettings?.ledPoints || points || 150}
+                        selectedColor={selectedColor}
+                        writeToDevice={writeToDevice}
+                      />
+                    )}
+
                   </View>
+                )}
+              </View>
+            )}
+
+            {/* ── PROGRAMS MODE UI ────────────────────────────────────────────── */}
+            {activeMode === 'PROGRAMS' && (
+              <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 4 }}>
+                <VerticalPatternDrum
+                  value={selectedPatternId}
+                  onValueChange={(id: number) => {
+                    setSelectedPatternId(id);
+                    if (writeToDevice) {
+                      if (id === 100) {
+                        applyEmergencyPattern(speed, brightness);
+                      } else {
+                        writeToDevice(ZenggeProtocol.setCustomRbm(id, speed, brightness));
+                      }
+                    }
+                  }}
+                  itemLabel={(id) => getRbmPatternName(id)}
+                />
+              </View>
+            )}
+
+            {/* ── MUSIC MODE UI ────────────────────────────────────────────────── */}
+            {activeMode === 'MUSIC' && (
+              <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 4, overflow: 'hidden' }}>
+                {/* Matrix Style: Light Screen / Light Bar */}
+                <View style={{ flexDirection: 'row', marginBottom: 6, marginTop: 2, flexShrink: 0, minHeight: 36 }}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setMusicMatrixStyle(39);
+                      handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 39);
+                    }}
+                    style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: musicMatrixStyle === 39 ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
+                  >
+                    <Text style={{ color: musicMatrixStyle === 39 ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Light Screen</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setMusicMatrixStyle(38);
+                      handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 38);
+                    }}
+                    style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: musicMatrixStyle === 38 ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
+                  >
+                    <Text style={{ color: musicMatrixStyle === 38 ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Light Bar</Text>
+                  </TouchableOpacity>
                 </View>
-                <View style={styles.micControlSection}>
-                  <TouchableOpacity
-                    style={[styles.micIconBtn, micSource === 'APP' && styles.micBtnActive]}
-                    onPress={() => {
-                      setMicSource('APP');
-                      handleMusicChange(musicPatternId, micSensitivity, brightness, 'APP');
-                    }}
-                  >
-                    <View style={[styles.micIconCircle, micSource === 'APP' && { backgroundColor: Colors.primary }]}>
-                      <MaterialCommunityIcons name="microphone-outline" size={20} color={micSource === 'APP' ? '#FFF' : Colors.textMuted} />
-                    </View>
-                    <Text style={[styles.micSubText, micSource === 'APP' && { color: Colors.primary, fontWeight: 'bold' }]}>APP MIC</Text>
-                  </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.playButtonMain}
-                    onPress={() => handleMusicChange()}
-                  >
-                    <View style={styles.playIconInner}>
-                      <MaterialCommunityIcons name="play" size={24} color="#FFF" />
+                <View style={{ flex: 1, justifyContent: 'space-evenly' }}>
+                  <View style={[styles.musicToggleHeader, { justifyContent: 'center' }]}>
+                    <View style={[styles.musicModeIndicator, { alignItems: 'center' }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <TouchableOpacity onPress={() => {
+                          const pid = musicPatternId > 1 ? musicPatternId - 1 : MUSIC_PATTERNS.length;
+                          setMusicPatternId(pid);
+                          handleMusicChange(pid);
+                        }} style={{ paddingHorizontal: 10 }}>
+                          <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'<'}</Text>
+                        </TouchableOpacity>
+                        <View style={[styles.musicModeCircle, { width: 32, height: 32, borderRadius: 16 }]}>
+                          <Text style={[styles.musicModeNumber, { fontSize: 14 }]}>{musicPatternId}</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => {
+                          const pid = musicPatternId < MUSIC_PATTERNS.length ? musicPatternId + 1 : 1;
+                          setMusicPatternId(pid);
+                          handleMusicChange(pid);
+                        }} style={{ paddingHorizontal: 10 }}>
+                          <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'>'}</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={[Typography.caption, { marginTop: 4, color: Colors.primary, fontWeight: 'bold', fontSize: 13 }]}>
+                        {MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`}
+                      </Text>
                     </View>
-                  </TouchableOpacity>
+                  </View>
+                  <View style={styles.micControlSection}>
+                    <TouchableOpacity
+                      style={[styles.micIconBtn, micSource === 'APP' && styles.micBtnActive]}
+                      onPress={() => {
+                        setMicSource('APP');
+                        handleMusicChange(musicPatternId, micSensitivity, brightness, 'APP');
+                      }}
+                    >
+                      <View style={[styles.micIconCircle, micSource === 'APP' && { backgroundColor: Colors.primary }]}>
+                        <MaterialCommunityIcons name="microphone-outline" size={20} color={micSource === 'APP' ? '#FFF' : Colors.textMuted} />
+                      </View>
+                      <Text style={[styles.micSubText, micSource === 'APP' && { color: Colors.primary, fontWeight: 'bold' }]}>APP MIC</Text>
+                    </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={[styles.micIconBtn, micSource === 'DEVICE' && styles.micBtnActive]}
-                    onPress={() => {
-                      setMicSource('DEVICE');
-                      handleMusicChange(musicPatternId, micSensitivity, brightness, 'DEVICE');
-                    }}
-                  >
-                    <View style={[styles.micIconCircle, micSource === 'DEVICE' && { backgroundColor: Colors.primary }]}>
-                      <MaterialCommunityIcons name="bluetooth-audio" size={20} color={micSource === 'DEVICE' ? '#FFF' : Colors.textMuted} />
-                    </View>
-                    <Text style={[styles.micSubText, micSource === 'DEVICE' && { color: Colors.primary, fontWeight: 'bold' }]}>DEVICE MIC</Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.playButtonMain}
+                      onPress={() => handleMusicChange()}
+                    >
+                      <View style={styles.playIconInner}>
+                        <MaterialCommunityIcons name="play" size={24} color="#FFF" />
+                      </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.micIconBtn, micSource === 'DEVICE' && styles.micBtnActive]}
+                      onPress={() => {
+                        setMicSource('DEVICE');
+                        handleMusicChange(musicPatternId, micSensitivity, brightness, 'DEVICE');
+                      }}
+                    >
+                      <View style={[styles.micIconCircle, micSource === 'DEVICE' && { backgroundColor: Colors.primary }]}>
+                        <MaterialCommunityIcons name="bluetooth-audio" size={20} color={micSource === 'DEVICE' ? '#FFF' : Colors.textMuted} />
+                      </View>
+                      <Text style={[styles.micSubText, micSource === 'DEVICE' && { color: Colors.primary, fontWeight: 'bold' }]}>DEVICE MIC</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-            </View>
-          )}
+            )}
 
-          {/* ── CAMERA MODE UI ────────────────────────────────────────────────── */}
-          {activeMode === 'CAMERA' && (
-            <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 4 }}>
-              <CameraTracker
-                isActive={activeMode === 'CAMERA'}
-                onColorDetected={(hex: string) => {
-                  setSelectedColor(hex);
-                  const r = parseInt(hex.slice(1, 3), 16);
-                  const g = parseInt(hex.slice(3, 5), 16);
-                  const b = parseInt(hex.slice(5, 7), 16);
-                  sendColor(r, g, b);
-                }}
-              />
-            </View>
-          )}
+            {/* ── CAMERA MODE UI ────────────────────────────────────────────────── */}
+            {activeMode === 'CAMERA' && (
+              <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 4 }}>
+                <CameraTracker
+                  isActive={activeMode === 'CAMERA'}
+                  onColorDetected={(hex: string) => {
+                    setSelectedColor(hex);
+                    const r = parseInt(hex.slice(1, 3), 16);
+                    const g = parseInt(hex.slice(3, 5), 16);
+                    const b = parseInt(hex.slice(5, 7), 16);
+                    sendColor(r, g, b);
+                  }}
+                />
+              </View>
+            )}
 
-          {/* ── STREET MODE UI: FAST & FURIOUS DASHBOARD ─────────────────── */}
-          {activeMode === 'STREET' && (
-            <ScrollView 
-              style={{ flex: 1 }} 
-              contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 4, paddingTop: 6, paddingBottom: 20 }}
-              showsVerticalScrollIndicator={false}
-              bounces={false}
-            >
-              {/* ── Street Visualizer: Car-light zone bar ── */}
-              <View style={{ marginBottom: 10 }}>
-                <View style={{ flexDirection: 'row', height: 26, borderRadius: 13, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-                  {/* Rear zone — red tail lights */}
-                  <View style={{ flex: 3, backgroundColor: isStreetBraking ? '#FF0000' : '#660000', justifyContent: 'center', alignItems: 'center' }}>
-                    <Text allowFontScaling={false} style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>TAIL (30%)</Text>
-                  </View>
-                  {/* Middle zone — cruise color */}
-                  <View style={{ flex: 4, backgroundColor: streetCruiseColor, justifyContent: 'center', alignItems: 'center', opacity: 0.9 }}>
-                    <Text allowFontScaling={false} style={{ color: '#000', fontSize: 9, fontWeight: '800' }}>CRUISE (40%)</Text>
-                  </View>
-                  {/* Front zone — headlights */}
-                  <View style={{ flex: 3, backgroundColor: '#FFF5E0', justifyContent: 'center', alignItems: 'center' }}>
-                    <Text allowFontScaling={false} style={{ color: '#333', fontSize: 9, fontWeight: '800' }}>HEAD (30%)</Text>
+            {/* ── STREET MODE UI: FAST & FURIOUS DASHBOARD ─────────────────── */}
+            {activeMode === 'STREET' && (
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 4, paddingTop: 6, paddingBottom: 20 }}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+              >
+                {/* ── Street Visualizer: Car-light zone bar ── */}
+                <View style={{ marginBottom: 10 }}>
+                  <View style={{ flexDirection: 'row', height: 26, borderRadius: 13, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                    {/* Rear zone — red tail lights */}
+                    <View style={{ flex: 3, backgroundColor: isStreetBraking ? '#FF0000' : '#660000', justifyContent: 'center', alignItems: 'center' }}>
+                      <Text allowFontScaling={false} style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>TAIL (30%)</Text>
+                    </View>
+                    {/* Middle zone — cruise color */}
+                    <View style={{ flex: 4, backgroundColor: streetCruiseColor, justifyContent: 'center', alignItems: 'center', opacity: 0.9 }}>
+                      <Text allowFontScaling={false} style={{ color: '#000', fontSize: 9, fontWeight: '800' }}>CRUISE (40%)</Text>
+                    </View>
+                    {/* Front zone — headlights */}
+                    <View style={{ flex: 3, backgroundColor: '#FFF5E0', justifyContent: 'center', alignItems: 'center' }}>
+                      <Text allowFontScaling={false} style={{ color: '#333', fontSize: 9, fontWeight: '800' }}>HEAD (30%)</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
 
-              {/* Status Bar */}
-              <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent', paddingVertical: 2, marginBottom: 10 }}>
-                  <Text 
+                {/* Status Bar */}
+                <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent', paddingVertical: 2, marginBottom: 10 }}>
+                  <Text
                     allowFontScaling={false}
                     style={{
                       color: (motionState === 'HARD_BRAKING' || motionState === 'STOPPED') ? '#FF4444' : motionState === 'SLOWING_DOWN' ? '#FFD700' : '#00FF00',
@@ -1864,442 +1860,442 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                     {motionState === 'ACCELERATING' && '>> ACCELERATING <<'}
                     {motionState === 'CRUISING' && '>> CRUZING <<'}
                   </Text>
-              </View>
+                </View>
 
-              <View style={{
-                flexGrow: 1,
-                flexDirection: 'row',
-                backgroundColor: 'transparent',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                paddingVertical: 10,
-                marginBottom: 8,
-              }}>
-                {/* LEFT: Stoplight Vertical Graphic */}
                 <View style={{
-                  width: 50,
-                  justifyContent: 'center',
+                  flexGrow: 1,
+                  flexDirection: 'row',
+                  backgroundColor: 'transparent',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
+                  paddingVertical: 10,
+                  marginBottom: 8,
                 }}>
-                  {/* Red Light */}
+                  {/* LEFT: Stoplight Vertical Graphic */}
                   <View style={{
-                    width: 22, height: 22, borderRadius: 11, marginBottom: 8,
-                    backgroundColor: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? '#FF0000' : '#330000',
-                    shadowColor: '#FF0000', shadowOpacity: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? 1 : 0, shadowRadius: 10, elevation: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? 8 : 0,
-                    borderWidth: 1, borderColor: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? '#FFAAAA' : '#000',
-                  }} />
-                  {/* Yellow Light */}
-                  <View style={{
-                    width: 22, height: 22, borderRadius: 11, marginBottom: 8,
-                    backgroundColor: motionState === 'SLOWING_DOWN' ? '#FFFF00' : '#444400',
-                    shadowColor: '#FFFF00', shadowOpacity: motionState === 'SLOWING_DOWN' ? 1 : 0, shadowRadius: 10, elevation: motionState === 'SLOWING_DOWN' ? 8 : 0,
-                    borderWidth: 1, borderColor: motionState === 'SLOWING_DOWN' ? '#FFFFAA' : '#000',
-                  }} />
-                  {/* Green Light */}
-                  <View style={{
-                    width: 22, height: 22, borderRadius: 11,
-                    backgroundColor: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? '#00FF00' : '#003300',
-                    shadowColor: '#00FF00', shadowOpacity: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? 1 : 0, shadowRadius: 10, elevation: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? 8 : 0,
-                    borderWidth: 1, borderColor: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? '#AAFFAA' : '#000',
-                  }} />
-                </View>
-
-                {/* CENTER: Telemetry Gauges */}
-                <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
-                   <AnalogGauge value={gpsSpeed}   min={0}   max={25}  label="SPEED"   unit="MPH" size={120} defaultColor="#00F0FF" dangerVal={15} criticalVal={20} />
-                   <AnalogGauge value={peakGForce} min={0.3} max={2.5} label="G-FORCE" unit="G"   size={120} defaultColor="#FFD700" dangerVal={1.2} criticalVal={1.8} />
-                </View>
-              </View>
-            </ScrollView>
-          )}
-
-        </View>
-
-        {/* UNIVERSAL SLIDERS FOOTER - Hidden in FAVORITES only */}
-        {activeMode !== 'FAVORITES' && (
-          <View style={[styles.sceneSlidersContainer, { marginTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 8, paddingBottom: 0, flexShrink: 0 }]}>
-            {/* Color Grid wrappers */}
-            {!(activeMode === 'PROGRAMS') && (
-              <View style={{ marginBottom: 4 }}>
-                {/* Dynamic Selected Color Bar */}
-                {!(activeMode === 'MUSIC' || (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' && fixedPatternId !== 1)) && (() => {
-                  const dynamicColor = activeMode === 'STREET' ? streetCruiseColor : selectedColor;
-                  
-                  return (
-                    <TouchableOpacity 
-                      activeOpacity={0.9}
-                      onPress={() => {
-                         // Send immediately if pressed just in case
-                         const r = parseInt(dynamicColor.slice(1, 3), 16) || 255;
-                         const g = parseInt(dynamicColor.slice(3, 5), 16) || 255;
-                         const b = parseInt(dynamicColor.slice(5, 7), 16) || 255;
-                         if (activeMode === 'MULTIMODE' && fixedSubMode !== 'PATTERN') sendColor(r, g, b);
-                         else if (activeMode === 'STREET') applyStreetPattern(motionStateRef.current);
-                      }}
-                      style={{
-                        width: '100%',
-                        height: 18,
-                        borderRadius: 9,
-                        backgroundColor: dynamicColor,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        marginBottom: 4,
-                        shadowColor: dynamicColor,
-                        shadowOpacity: 0.8,
-                        shadowRadius: 10,
-                        shadowOffset: { width: 0, height: 0 },
-                        elevation: 6,
-                        borderWidth: 1,
-                        borderColor: 'rgba(255,255,255,0.4)'
-                      }}
-                    >
-                      <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '800', letterSpacing: 2, textShadowColor: '#000', textShadowRadius: 4, textShadowOffset: {width: 0, height: 1} }}>
-                        SELECTED COLOR
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })()}
-
-                {/* Music Mode Split Color Tracker */}
-                {(activeMode === 'MUSIC') && (() => {
-                  const primHex = musicPrimaryColor;
-                  const secHex = musicSecondaryColor;
-                  
-                  return (
+                    width: 50,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}>
+                    {/* Red Light */}
                     <View style={{
+                      width: 22, height: 22, borderRadius: 11, marginBottom: 8,
+                      backgroundColor: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? '#FF0000' : '#330000',
+                      shadowColor: '#FF0000', shadowOpacity: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? 1 : 0, shadowRadius: 10, elevation: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? 8 : 0,
+                      borderWidth: 1, borderColor: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? '#FFAAAA' : '#000',
+                    }} />
+                    {/* Yellow Light */}
+                    <View style={{
+                      width: 22, height: 22, borderRadius: 11, marginBottom: 8,
+                      backgroundColor: motionState === 'SLOWING_DOWN' ? '#FFFF00' : '#444400',
+                      shadowColor: '#FFFF00', shadowOpacity: motionState === 'SLOWING_DOWN' ? 1 : 0, shadowRadius: 10, elevation: motionState === 'SLOWING_DOWN' ? 8 : 0,
+                      borderWidth: 1, borderColor: motionState === 'SLOWING_DOWN' ? '#FFFFAA' : '#000',
+                    }} />
+                    {/* Green Light */}
+                    <View style={{
+                      width: 22, height: 22, borderRadius: 11,
+                      backgroundColor: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? '#00FF00' : '#003300',
+                      shadowColor: '#00FF00', shadowOpacity: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? 1 : 0, shadowRadius: 10, elevation: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? 8 : 0,
+                      borderWidth: 1, borderColor: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? '#AAFFAA' : '#000',
+                    }} />
+                  </View>
+
+                  {/* CENTER: Telemetry Gauges */}
+                  <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
+                    <AnalogGauge value={gpsSpeed} min={0} max={25} label="SPEED" unit="MPH" size={120} defaultColor="#00F0FF" dangerVal={15} criticalVal={20} />
+                    <AnalogGauge value={peakGForce} min={0.3} max={2.5} label="G-FORCE" unit="G" size={120} defaultColor="#FFD700" dangerVal={1.2} criticalVal={1.8} />
+                  </View>
+                </View>
+              </ScrollView>
+            )}
+
+          </View>
+
+          {/* UNIVERSAL SLIDERS FOOTER - Hidden in FAVORITES only */}
+          {activeMode !== 'FAVORITES' && (
+            <View style={[styles.sceneSlidersContainer, { marginTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 8, paddingBottom: 0, flexShrink: 0 }]}>
+              {/* Color Grid wrappers */}
+              {!(activeMode === 'PROGRAMS') && (
+                <View style={{ marginBottom: 4 }}>
+                  {/* Dynamic Selected Color Bar */}
+                  {!(activeMode === 'MUSIC' || (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' && fixedPatternId !== 1)) && (() => {
+                    const dynamicColor = activeMode === 'STREET' ? streetCruiseColor : selectedColor;
+
+                    return (
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        onPress={() => {
+                          // Send immediately if pressed just in case
+                          const r = parseInt(dynamicColor.slice(1, 3), 16) || 255;
+                          const g = parseInt(dynamicColor.slice(3, 5), 16) || 255;
+                          const b = parseInt(dynamicColor.slice(5, 7), 16) || 255;
+                          if (activeMode === 'MULTIMODE' && fixedSubMode !== 'PATTERN') sendColor(r, g, b);
+                          else if (activeMode === 'STREET') applyStreetPattern(motionStateRef.current);
+                        }}
+                        style={{
+                          width: '100%',
+                          height: 18,
+                          borderRadius: 9,
+                          backgroundColor: dynamicColor,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          marginBottom: 4,
+                          shadowColor: dynamicColor,
+                          shadowOpacity: 0.8,
+                          shadowRadius: 10,
+                          shadowOffset: { width: 0, height: 0 },
+                          elevation: 6,
+                          borderWidth: 1,
+                          borderColor: 'rgba(255,255,255,0.4)'
+                        }}
+                      >
+                        <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '800', letterSpacing: 2, textShadowColor: '#000', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } }}>
+                          SELECTED COLOR
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })()}
+
+                  {/* Music Mode Split Color Tracker */}
+                  {(activeMode === 'MUSIC') && (() => {
+                    const primHex = musicPrimaryColor;
+                    const secHex = musicSecondaryColor;
+
+                    return (
+                      <View style={{
                         flexDirection: 'row', width: '100%', height: 18, borderRadius: 9, marginBottom: 4,
                         borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'transparent'
-                    }}>
-                        <TouchableOpacity 
+                      }}>
+                        <TouchableOpacity
                           activeOpacity={0.9}
                           onPress={() => setMusicColorFocus('PRIMARY')}
                           style={{ flex: 1, backgroundColor: primHex, justifyContent: 'center', alignItems: 'center', opacity: musicColorFocus === 'PRIMARY' ? 1.0 : 0.4, borderTopLeftRadius: 8, borderBottomLeftRadius: 8, shadowColor: primHex, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
                         >
                           <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>SOUND COLUMN</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           activeOpacity={0.9}
                           onPress={() => setMusicColorFocus('SECONDARY')}
                           style={{ flex: 1, backgroundColor: secHex, justifyContent: 'center', alignItems: 'center', opacity: musicColorFocus === 'SECONDARY' ? 1.0 : 0.4, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.4)', borderTopRightRadius: 8, borderBottomRightRadius: 8, shadowColor: secHex, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
                         >
                           <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>DROP COLOR</Text>
                         </TouchableOpacity>
-                    </View>
-                  );
-                })()}
-
-                {/* Fixed Pattern Mode Split Color Tracker */}
-                {(activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' && fixedPatternId !== 1) && (
-                    <View style={{
-                        flexDirection: 'row', width: '100%', height: 18, borderRadius: 9, marginBottom: 4,
-                        borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'transparent'
-                    }}>
-                        <TouchableOpacity 
-                          activeOpacity={0.9}
-                          onPress={() => setFixedColorMode('FOREGROUND')}
-                          style={{ flex: 1, backgroundColor: fixedFgColor, justifyContent: 'center', alignItems: 'center', opacity: fixedColorMode === 'FOREGROUND' ? 1.0 : 0.4, borderTopLeftRadius: 8, borderBottomLeftRadius: 8, shadowColor: fixedFgColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
-                        >
-                          <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>FOREGROUND</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          activeOpacity={0.9}
-                          onPress={() => setFixedColorMode('BACKGROUND')}
-                          style={{ flex: 1, backgroundColor: fixedBgColor, justifyContent: 'center', alignItems: 'center', opacity: fixedColorMode === 'BACKGROUND' ? 1.0 : 0.4, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.4)', borderTopRightRadius: 8, borderBottomRightRadius: 8, shadowColor: fixedBgColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
-                        >
-                          <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>BACKGROUND</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-
-                {/* 9 Preset Colors Grid */}
-                {!(activeMode === 'CAMERA') && (
-                <View style={[styles.colorGrid, { paddingHorizontal: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-                  {[
-                    '#FF0000', '#FF8000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#800080', '#FF00FF', '#FFFFFF', '#000000'
-                  ].map((color, index) => {
-                    let dynamicColor = selectedColor;
-                    if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
-                      dynamicColor = fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
-                    } else if (activeMode === 'MUSIC') {
-                      dynamicColor = musicColorFocus === 'PRIMARY' ? musicPrimaryColor : musicSecondaryColor;
-                    }
-                    const isActive = typeof dynamicColor === 'string' && dynamicColor.toUpperCase() === color.toUpperCase();
-                    return (
-                      <TouchableOpacity 
-                        key={index} 
-                        onPress={() => {
-                          const hueMap: {[key: string]: number} = {
-                            '#FF0000': 0, '#FF8000': 30, '#FFFF00': 60, '#00FF00': 120, 
-                            '#00FFFF': 180, '#0000FF': 240, '#800080': 280, '#FF00FF': 300, '#FFFFFF': 0, '#000000': 0
-                          };
-                          if (activeMode === 'MULTIMODE') {
-                            if (fixedSubMode === 'PATTERN') {
-                               let newFg = fixedFgColor;
-                               let newBg = fixedBgColor;
-                               if (fixedColorMode === 'FOREGROUND') {
-                                 newFg = color;
-                                 setFixedFgColor(color);
-                                 setSelectedColor(color);
-                               } else {
-                                 newBg = color;
-                                 setFixedBgColor(color);
-                                 setSelectedColor(color);
-                               }
-                               if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
-                               applyFixedPattern(fixedPatternId, newFg, newBg);
-                            } else {
-                               setSelectedColor(color);
-                               if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
-                            }
-                          } else if (activeMode === 'MUSIC') {
-                               if (musicColorFocus === 'PRIMARY') {
-                                   setMusicPrimaryColor(color);
-                                   if (hueMap[color] !== undefined) setMusicHue(hueMap[color]);
-                                   handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, color, musicSecondaryColor, musicMatrixStyle);
-                               } else {
-                                   setMusicSecondaryColor(color);
-                                   if (hueMap[color] !== undefined) setMusicSecondaryHue(hueMap[color]);
-                                   handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, color, musicMatrixStyle);
-                               }
-                          } else if (activeMode === 'STREET') {
-                             setStreetCruiseColor(color);
-                             if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
-                             applyStreetPattern(motionStateRef.current);
-                          } else {
-                            setSelectedColor(color);
-                            if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
-                            const r = parseInt(color.slice(1, 3), 16);
-                            const g = parseInt(color.slice(3, 5), 16);
-                            const b = parseInt(color.slice(5, 7), 16);
-                            sendColor(r, g, b);
-                          }
-                        }}
-                        style={[
-                          { 
-                            backgroundColor: color, 
-                            width: 20, 
-                            height: 20, 
-                            borderRadius: 10,
-                            shadowColor: color,
-                            shadowOpacity: 1,
-                            shadowRadius: 10,
-                            shadowOffset: { width: 0, height: 0 },
-                            elevation: 8,
-                            margin: 2
-                          },
-                          isActive && { borderWidth: 2, borderColor: '#FFF' }
-                        ]} 
-                      />
+                      </View>
                     );
-                  })}
+                  })()}
+
+                  {/* Fixed Pattern Mode Split Color Tracker */}
+                  {(activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' && fixedPatternId !== 1) && (
+                    <View style={{
+                      flexDirection: 'row', width: '100%', height: 18, borderRadius: 9, marginBottom: 4,
+                      borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'transparent'
+                    }}>
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        onPress={() => setFixedColorMode('FOREGROUND')}
+                        style={{ flex: 1, backgroundColor: fixedFgColor, justifyContent: 'center', alignItems: 'center', opacity: fixedColorMode === 'FOREGROUND' ? 1.0 : 0.4, borderTopLeftRadius: 8, borderBottomLeftRadius: 8, shadowColor: fixedFgColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
+                      >
+                        <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>FOREGROUND</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        onPress={() => setFixedColorMode('BACKGROUND')}
+                        style={{ flex: 1, backgroundColor: fixedBgColor, justifyContent: 'center', alignItems: 'center', opacity: fixedColorMode === 'BACKGROUND' ? 1.0 : 0.4, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.4)', borderTopRightRadius: 8, borderBottomRightRadius: 8, shadowColor: fixedBgColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
+                      >
+                        <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>BACKGROUND</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {/* 9 Preset Colors Grid */}
+                  {!(activeMode === 'CAMERA') && (
+                    <View style={[styles.colorGrid, { paddingHorizontal: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+                      {[
+                        '#FF0000', '#FF8000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#800080', '#FF00FF', '#FFFFFF', '#000000'
+                      ].map((color, index) => {
+                        let dynamicColor = selectedColor;
+                        if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
+                          dynamicColor = fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
+                        } else if (activeMode === 'MUSIC') {
+                          dynamicColor = musicColorFocus === 'PRIMARY' ? musicPrimaryColor : musicSecondaryColor;
+                        }
+                        const isActive = typeof dynamicColor === 'string' && dynamicColor.toUpperCase() === color.toUpperCase();
+                        return (
+                          <TouchableOpacity
+                            key={index}
+                            onPress={() => {
+                              const hueMap: { [key: string]: number } = {
+                                '#FF0000': 0, '#FF8000': 30, '#FFFF00': 60, '#00FF00': 120,
+                                '#00FFFF': 180, '#0000FF': 240, '#800080': 280, '#FF00FF': 300, '#FFFFFF': 0, '#000000': 0
+                              };
+                              if (activeMode === 'MULTIMODE') {
+                                if (fixedSubMode === 'PATTERN') {
+                                  let newFg = fixedFgColor;
+                                  let newBg = fixedBgColor;
+                                  if (fixedColorMode === 'FOREGROUND') {
+                                    newFg = color;
+                                    setFixedFgColor(color);
+                                    setSelectedColor(color);
+                                  } else {
+                                    newBg = color;
+                                    setFixedBgColor(color);
+                                    setSelectedColor(color);
+                                  }
+                                  if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
+                                  applyFixedPattern(fixedPatternId, newFg, newBg);
+                                } else {
+                                  setSelectedColor(color);
+                                  if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
+                                }
+                              } else if (activeMode === 'MUSIC') {
+                                if (musicColorFocus === 'PRIMARY') {
+                                  setMusicPrimaryColor(color);
+                                  if (hueMap[color] !== undefined) setMusicHue(hueMap[color]);
+                                  handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, color, musicSecondaryColor, musicMatrixStyle);
+                                } else {
+                                  setMusicSecondaryColor(color);
+                                  if (hueMap[color] !== undefined) setMusicSecondaryHue(hueMap[color]);
+                                  handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, color, musicMatrixStyle);
+                                }
+                              } else if (activeMode === 'STREET') {
+                                setStreetCruiseColor(color);
+                                if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
+                                applyStreetPattern(motionStateRef.current);
+                              } else {
+                                setSelectedColor(color);
+                                if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
+                                const r = parseInt(color.slice(1, 3), 16);
+                                const g = parseInt(color.slice(3, 5), 16);
+                                const b = parseInt(color.slice(5, 7), 16);
+                                sendColor(r, g, b);
+                              }
+                            }}
+                            style={[
+                              {
+                                backgroundColor: color,
+                                width: 20,
+                                height: 20,
+                                borderRadius: 10,
+                                shadowColor: color,
+                                shadowOpacity: 1,
+                                shadowRadius: 10,
+                                shadowOffset: { width: 0, height: 0 },
+                                elevation: 8,
+                                margin: 2
+                              },
+                              isActive && { borderWidth: 2, borderColor: '#FFF' }
+                            ]}
+                          />
+                        );
+                      })}
+                    </View>
+                  )}
                 </View>
-                )}
-              </View>
-            )}
+              )}
 
-            {/* Old Color Focus Toggle for Music Mode has been moved above the color grid */}
+              {/* Old Color Focus Toggle for Music Mode has been moved above the color grid */}
 
-            {/* Hue Slider */}
-            {!(activeMode === 'PROGRAMS' || activeMode === 'CAMERA') && (
-              <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
-                <CustomSlider 
-                  gradientTrack={true}
-                  value={activeMode === 'MUSIC' ? (musicColorFocus === 'PRIMARY' ? musicHue : musicSecondaryHue) : activeMode === 'MULTIMODE' ? fixedHue : selectedHue}
-                  onValueChange={(hue) => {
-                    if (activeMode === 'MULTIMODE') {
-                      if (fixedSubMode === 'PATTERN') {
-                        setFixedHue(hue);
-                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
-                        const hex = rgb2hex(f(5), f(3), f(1));
-                        if (fixedColorMode === 'FOREGROUND') {
+              {/* Hue Slider */}
+              {!(activeMode === 'PROGRAMS' || activeMode === 'CAMERA') && (
+                <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
+                  <CustomSlider
+                    gradientTrack={true}
+                    value={activeMode === 'MUSIC' ? (musicColorFocus === 'PRIMARY' ? musicHue : musicSecondaryHue) : activeMode === 'MULTIMODE' ? fixedHue : selectedHue}
+                    onValueChange={(hue) => {
+                      if (activeMode === 'MULTIMODE') {
+                        if (fixedSubMode === 'PATTERN') {
+                          setFixedHue(hue);
+                          const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                          const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+                          const hex = rgb2hex(f(5), f(3), f(1));
+                          if (fixedColorMode === 'FOREGROUND') {
                             setFixedFgColor(hex);
                             setSelectedColor(hex);
-                        } else {
+                          } else {
                             setFixedBgColor(hex);
                             setSelectedColor(hex);
-                        }
-                      } else {
-                        setFixedHue(hue);
-                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
-                        const hex = rgb2hex(f(5), f(3), f(1));
-                        setSelectedColor(hex);
-                      }
-                    } else if (activeMode === 'MUSIC') {
-                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                       const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
-                       const hex = rgb2hex(f(5), f(3), f(1));
-                       if (musicColorFocus === 'PRIMARY') { setMusicPrimaryColor(hex); setMusicHue(hue); }
-                       else { setMusicSecondaryColor(hex); setMusicSecondaryHue(hue); }
-                    } else if (activeMode === 'STREET') {
-                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                       const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
-                       const hex = rgb2hex(f(5), f(3), f(1));
-                       setStreetCruiseColor(hex);
-                       setSelectedHue(hue);
-                       applyStreetPattern(motionStateRef.current);
-                    } else {
-                      setSelectedHue(hue);
-                      const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                      const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
-                      setSelectedColor(rgb2hex(f(5), f(3), f(1)));
-                    }
-                  }}
-                  onSlidingComplete={(hue) => {
-                    if (activeMode === 'MULTIMODE') {
-                      if (fixedSubMode === 'PATTERN') {
-                         applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor);
-                      }
-                     } else if (activeMode === 'MUSIC') {
-                         const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                         const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
-                         const hex = rgb2hex(f(5), f(3), f(1));
-                         if (musicColorFocus === 'PRIMARY') {
-                            handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hex, musicSecondaryColor, musicMatrixStyle);
-                         } else {
-                            handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, hex, musicMatrixStyle);
-                         }
-                     } else if (activeMode === 'STREET') {
-                         const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                         const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
-                         const hex = rgb2hex(f(5), f(3), f(1));
-                         applyStreetPattern(motionStateRef.current);
-                     } else {
-                      const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                      const r = Math.round(f(5) * 255);
-                      const g = Math.round(f(3) * 255);
-                      const b = Math.round(f(1) * 255);
-                      sendColor(r, g, b);
-                    }
-                  }}
-                  minimumValue={0}
-                  maximumValue={360}
-                  style={{ flex: 1 }}
-                />
-              </View>
-            )}
-
-            {/* TACTICAL UNIVERSAL SLIDERS SECTIONS (50/50 Split) */}
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, marginBottom: 4, minHeight: 44 }}>
-              
-              {/* === LEFT SLOT COMPUTATION === */}
-              {/* Brightness is standard on left, UNLESS it's Street (Brake Sens) or Music (Mic Sens) or DIY (Nothing) */}
-              
-              {!(activeMode === 'CAMERA') && !(activeMode === 'STREET') && !(activeMode === 'MUSIC') && (
-                  <TacticalSlider 
-                      style={{ flex: 1 }}
-                      iconName="white-balance-sunny"
-                      label="BRIGHTNESS"
-                      fillColor="#00F0FF"
-                      value={brightness}
-                      onValueChange={setBrightness}
-                      minimumValue={0}
-                      maximumValue={100}
-                      onSlidingComplete={(val: number) => {
-                        if (writeToDevice) {
-                           if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
-                             applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
-                           } else if (activeMode === 'PROGRAMS') {
-                             if (selectedPatternId === 100) applyEmergencyPattern(speed, val);
-                             else writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, speed, val));
-                           } else {
-                             const factor = brtFactor(val);
-                             const hex = selectedColor;
-                             const r = Math.round(parseInt(hex.slice(1, 3), 16) * factor);
-                             const g = Math.round(parseInt(hex.slice(3, 5), 16) * factor);
-                             const b = Math.round(parseInt(hex.slice(5, 7), 16) * factor);
-                             sendColor(r, g, b);
-                           }
-                        }
-                      }}
-                  />
-              )}
-
-              {activeMode === 'MUSIC' && (
-                  <TacticalSlider 
-                      style={{ flex: 1 }}
-                      iconName="microphone-outline"
-                      label="MIC SENSITIVITY"
-                      fillColor="#FF0055"
-                      value={micSensitivity}
-                      onValueChange={setMicSensitivity}
-                      minimumValue={0}
-                      maximumValue={100}
-                      onSlidingComplete={(val: number) => handleMusicChange(musicPatternId, val, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle)}
-                  />
-              )}
-
-              {activeMode === 'STREET' && (
-                  <TacticalSlider 
-                      style={{ flex: 1 }}
-                      iconName="octagon-outline"
-                      label="BRAKE SENSITIVITY"
-                      fillColor="#FF3300"
-                      value={streetSensitivity}
-                      onValueChange={setStreetSensitivity}
-                      minimumValue={5}
-                      maximumValue={95}
-                  />
-              )}
-
-              {/* === RIGHT SLOT COMPUTATION === */}
-              {/* Speed is standard on right, but Music puts Brightness here. Camera has nothing. */}
-              
-              {!(activeMode === 'MUSIC' || activeMode === 'CAMERA') && (
-                  <TacticalSlider 
-                      style={{ flex: 1 }}
-                      iconName="engine-outline"
-                      label="SPEED"
-                      fillColor="#FF9900"
-                      value={speed}
-                      onValueChange={setSpeed}
-                      minimumValue={0}
-                      maximumValue={100}
-                      onSlidingComplete={(val: number) => {
-                        if (writeToDevice) {
-                          if (activeMode === 'MULTIMODE') {
-                            if (fixedSubMode === 'PATTERN') {
-                              applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
-                            } else if (fixedSubMode === 'BUILDER') {
-                              const factor = brtFactor(brightness);
-                              const sortIdx = hwSettings?.colorSorting ?? 2;
-                              const rgbColors = multiColors.map(h => {
-                                  const rawR = Math.round((parseInt(h.slice(1,3), 16) || 0) * factor);
-                                  const rawG = Math.round((parseInt(h.slice(3,5), 16) || 0) * factor);
-                                  const rawB = Math.round((parseInt(h.slice(5,7), 16) || 0) * factor);
-                                  return ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
-                              });
-                              writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(val), 1, multiTransition));
-                            }
-                          } else if (activeMode === 'PROGRAMS') {
-                            if (selectedPatternId === 100) applyEmergencyPattern(val, brightness);
-                            else writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
-                          } else if (activeMode === 'STREET') {
-                            applyStreetPattern(motionStateRef.current, brightness, val);
                           }
+                        } else {
+                          setFixedHue(hue);
+                          const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                          const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+                          const hex = rgb2hex(f(5), f(3), f(1));
+                          setSelectedColor(hex);
                         }
-                      }}
+                      } else if (activeMode === 'MUSIC') {
+                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+                        const hex = rgb2hex(f(5), f(3), f(1));
+                        if (musicColorFocus === 'PRIMARY') { setMusicPrimaryColor(hex); setMusicHue(hue); }
+                        else { setMusicSecondaryColor(hex); setMusicSecondaryHue(hue); }
+                      } else if (activeMode === 'STREET') {
+                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+                        const hex = rgb2hex(f(5), f(3), f(1));
+                        setStreetCruiseColor(hex);
+                        setSelectedHue(hue);
+                        applyStreetPattern(motionStateRef.current);
+                      } else {
+                        setSelectedHue(hue);
+                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+                        setSelectedColor(rgb2hex(f(5), f(3), f(1)));
+                      }
+                    }}
+                    onSlidingComplete={(hue) => {
+                      if (activeMode === 'MULTIMODE') {
+                        if (fixedSubMode === 'PATTERN') {
+                          applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor);
+                        }
+                      } else if (activeMode === 'MUSIC') {
+                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+                        const hex = rgb2hex(f(5), f(3), f(1));
+                        if (musicColorFocus === 'PRIMARY') {
+                          handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hex, musicSecondaryColor, musicMatrixStyle);
+                        } else {
+                          handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, hex, musicMatrixStyle);
+                        }
+                      } else if (activeMode === 'STREET') {
+                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+                        const hex = rgb2hex(f(5), f(3), f(1));
+                        applyStreetPattern(motionStateRef.current);
+                      } else {
+                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+                        const r = Math.round(f(5) * 255);
+                        const g = Math.round(f(3) * 255);
+                        const b = Math.round(f(1) * 255);
+                        sendColor(r, g, b);
+                      }
+                    }}
+                    minimumValue={0}
+                    maximumValue={360}
+                    style={{ flex: 1 }}
                   />
+                </View>
               )}
 
-              {activeMode === 'MUSIC' && (
-                  <TacticalSlider 
-                      style={{ flex: 1 }}
-                      iconName="white-balance-sunny"
-                      label="BRIGHTNESS"
-                      fillColor="#00F0FF"
-                      value={brightness}
-                      onValueChange={setBrightness}
-                      minimumValue={0}
-                      maximumValue={100}
-                      onSlidingComplete={(val: number) => handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle)}
+              {/* TACTICAL UNIVERSAL SLIDERS SECTIONS (50/50 Split) */}
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, marginBottom: 4, minHeight: 44 }}>
+
+                {/* === LEFT SLOT COMPUTATION === */}
+                {/* Brightness is standard on left, UNLESS it's Street (Brake Sens) or Music (Mic Sens) or DIY (Nothing) */}
+
+                {!(activeMode === 'CAMERA') && !(activeMode === 'STREET') && !(activeMode === 'MUSIC') && (
+                  <TacticalSlider
+                    style={{ flex: 1 }}
+                    iconName="white-balance-sunny"
+                    label="BRIGHTNESS"
+                    fillColor="#00F0FF"
+                    value={brightness}
+                    onValueChange={setBrightness}
+                    minimumValue={0}
+                    maximumValue={100}
+                    onSlidingComplete={(val: number) => {
+                      if (writeToDevice) {
+                        if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
+                          applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
+                        } else if (activeMode === 'PROGRAMS') {
+                          if (selectedPatternId === 100) applyEmergencyPattern(speed, val);
+                          else writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, speed, val));
+                        } else {
+                          const factor = brtFactor(val);
+                          const hex = selectedColor;
+                          const r = Math.round(parseInt(hex.slice(1, 3), 16) * factor);
+                          const g = Math.round(parseInt(hex.slice(3, 5), 16) * factor);
+                          const b = Math.round(parseInt(hex.slice(5, 7), 16) * factor);
+                          sendColor(r, g, b);
+                        }
+                      }
+                    }}
                   />
-              )}
+                )}
+
+                {activeMode === 'MUSIC' && (
+                  <TacticalSlider
+                    style={{ flex: 1 }}
+                    iconName="microphone-outline"
+                    label="MIC SENSITIVITY"
+                    fillColor="#FF0055"
+                    value={micSensitivity}
+                    onValueChange={setMicSensitivity}
+                    minimumValue={0}
+                    maximumValue={100}
+                    onSlidingComplete={(val: number) => handleMusicChange(musicPatternId, val, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle)}
+                  />
+                )}
+
+                {activeMode === 'STREET' && (
+                  <TacticalSlider
+                    style={{ flex: 1 }}
+                    iconName="octagon-outline"
+                    label="BRAKE SENSITIVITY"
+                    fillColor="#FF3300"
+                    value={streetSensitivity}
+                    onValueChange={setStreetSensitivity}
+                    minimumValue={5}
+                    maximumValue={95}
+                  />
+                )}
+
+                {/* === RIGHT SLOT COMPUTATION === */}
+                {/* Speed is standard on right, but Music puts Brightness here. Camera has nothing. */}
+
+                {!(activeMode === 'MUSIC' || activeMode === 'CAMERA') && (
+                  <TacticalSlider
+                    style={{ flex: 1 }}
+                    iconName="engine-outline"
+                    label="SPEED"
+                    fillColor="#FF9900"
+                    value={speed}
+                    onValueChange={setSpeed}
+                    minimumValue={0}
+                    maximumValue={100}
+                    onSlidingComplete={(val: number) => {
+                      if (writeToDevice) {
+                        if (activeMode === 'MULTIMODE') {
+                          if (fixedSubMode === 'PATTERN') {
+                            applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
+                          } else if (fixedSubMode === 'BUILDER') {
+                            const factor = brtFactor(brightness);
+                            const sortIdx = hwSettings?.colorSorting ?? 2;
+                            const rgbColors = multiColors.map(h => {
+                              const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
+                              const rawG = Math.round((parseInt(h.slice(3, 5), 16) || 0) * factor);
+                              const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
+                              return ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
+                            });
+                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(val), 1, multiTransition));
+                          }
+                        } else if (activeMode === 'PROGRAMS') {
+                          if (selectedPatternId === 100) applyEmergencyPattern(val, brightness);
+                          else writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
+                        } else if (activeMode === 'STREET') {
+                          applyStreetPattern(motionStateRef.current, brightness, val);
+                        }
+                      }
+                    }}
+                  />
+                )}
+
+                {activeMode === 'MUSIC' && (
+                  <TacticalSlider
+                    style={{ flex: 1 }}
+                    iconName="white-balance-sunny"
+                    label="BRIGHTNESS"
+                    fillColor="#00F0FF"
+                    value={brightness}
+                    onValueChange={setBrightness}
+                    minimumValue={0}
+                    maximumValue={100}
+                    onSlidingComplete={(val: number) => handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle)}
+                  />
+                )}
+              </View>
             </View>
-          </View>
-        )}
-      </View>
+          )}
+        </View>
 
         {/* THE FLOATING DOCK */}
         <View style={{ marginBottom: 4 }}>
@@ -2318,35 +2314,35 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                 <TouchableOpacity
                   key={dockItem.id}
                   onPress={() => {
-                     if (dockItem.id === 'HOME') {
-                         if (onDisconnect) onDisconnect();
-                     } else if (dockItem.id === 'FAVORITES') {
-                         setActiveMode('FAVORITES');
-                     } else if (dockItem.id === 'STREET') {
-                         setActiveMode('STREET');
-                         setLastOperatingMode('STREET');
-                     } else if (dockItem.id === 'PROGRAMS') {
-                         setActiveMode('PROGRAMS');
-                         setLastOperatingMode('PROGRAMS');
-                     } else if (dockItem.id === 'MUSIC') {
-                         setActiveMode('MUSIC');
-                         setLastOperatingMode('MUSIC');
-                     } else if (dockItem.id === 'CAMERA') {
-                         setActiveMode('CAMERA');
-                         setLastOperatingMode('CAMERA');
-                     } else {
-                        // MULTI -> MULTIMODE
-                        setActiveMode('MULTIMODE');
-                        setLastOperatingMode('MULTIMODE');
-                        setFixedSubMode('PATTERN');
-                     }
+                    if (dockItem.id === 'HOME') {
+                      if (onDisconnect) onDisconnect();
+                    } else if (dockItem.id === 'FAVORITES') {
+                      setActiveMode('FAVORITES');
+                    } else if (dockItem.id === 'STREET') {
+                      setActiveMode('STREET');
+                      setLastOperatingMode('STREET');
+                    } else if (dockItem.id === 'PROGRAMS') {
+                      setActiveMode('PROGRAMS');
+                      setLastOperatingMode('PROGRAMS');
+                    } else if (dockItem.id === 'MUSIC') {
+                      setActiveMode('MUSIC');
+                      setLastOperatingMode('MUSIC');
+                    } else if (dockItem.id === 'CAMERA') {
+                      setActiveMode('CAMERA');
+                      setLastOperatingMode('CAMERA');
+                    } else {
+                      // MULTI -> MULTIMODE
+                      setActiveMode('MULTIMODE');
+                      setLastOperatingMode('MULTIMODE');
+                      setFixedSubMode('PATTERN');
+                    }
                   }}
                   style={[styles.dockIconCont, isActive && styles.dockIconActive]}
                 >
-                  <MaterialCommunityIcons 
-                    name={dockItem.icon as any} 
-                    size={22} 
-                    color={isActive ? '#000000' : Colors.textMuted} 
+                  <MaterialCommunityIcons
+                    name={dockItem.icon as any}
+                    size={22}
+                    color={isActive ? '#000000' : Colors.textMuted}
                   />
                 </TouchableOpacity>
               );
@@ -2358,10 +2354,10 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
             <View style={{ backgroundColor: Colors.surface, padding: 24, borderRadius: 20, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
               <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>
-                 {quickPromptTargetIndex === -1 ? 'Save Quick Preset' : 'Edit Quick Preset'}
+                {quickPromptTargetIndex === -1 ? 'Save Quick Preset' : 'Edit Quick Preset'}
               </Text>
               <Text style={{ color: Colors.textMuted, fontSize: 14, marginBottom: 20, textAlign: 'center' }}>
-                 {quickPromptTargetIndex === -1 ? 'Name your new preset to store it in the Quick bar.' : 'Rename your preset or delete it from the bar.'}
+                {quickPromptTargetIndex === -1 ? 'Name your new preset to store it in the Quick bar.' : 'Rename your preset or delete it from the bar.'}
               </Text>
               <TextInput
                 style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: 12, borderRadius: 8, fontSize: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
@@ -2391,51 +2387,51 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
               )}
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 {quickPromptTargetIndex !== -1 && (
-                   <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={() => {
-                       const newArr = [...quickPresets];
-                       newArr.splice(quickPromptTargetIndex, 1);
-                       setQuickPresets(newArr);
-                       AsyncStorage.setItem('@Sk8lytz_QuickPresets', JSON.stringify(newArr));
-                       setIsQuickPromptVisible(false);
-                   }}>
-                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Delete</Text>
-                   </TouchableOpacity>
+                  <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={() => {
+                    const newArr = [...quickPresets];
+                    newArr.splice(quickPromptTargetIndex, 1);
+                    setQuickPresets(newArr);
+                    AsyncStorage.setItem('@Sk8lytz_QuickPresets', JSON.stringify(newArr));
+                    setIsQuickPromptVisible(false);
+                  }}>
+                    <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Delete</Text>
+                  </TouchableOpacity>
                 )}
                 {quickPromptTargetIndex === -1 && (
-                   <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => setIsQuickPromptVisible(false)}>
-                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
-                   </TouchableOpacity>
+                  <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => setIsQuickPromptVisible(false)}>
+                    <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
+                  </TouchableOpacity>
                 )}
                 <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#00C853' }} disabled={isPublishingCloud} onPress={async () => {
-                   setIsPublishingCloud(true);
-                   const safeName = quickPromptName.trim() || 'Cloud Scene';
-                   if (containsProfanity(safeName)) {
-                     Alert.alert('Invalid Name', 'Scene names cannot contain inappropriate language. Please choose a different name.');
-                     setIsPublishingCloud(false);
-                     return;
-                   }
-                   const success = await ScenesService.publishScene(safeName, captureEntireState(), cloudPublicToggle);
-                   if (success) {
-                       Alert.alert(cloudPublicToggle ? 'Published!' : 'Saved!', cloudPublicToggle ? 'Your scene is now available to the community.' : 'Scene saved privately to your cloud.');
-                       setIsQuickPromptVisible(false);
-                   } else {
-                       Alert.alert('Error', 'Could not save scene. Are you logged in?');
-                   }
-                   setIsPublishingCloud(false);
+                  setIsPublishingCloud(true);
+                  const safeName = quickPromptName.trim() || 'Cloud Scene';
+                  if (containsProfanity(safeName)) {
+                    Alert.alert('Invalid Name', 'Scene names cannot contain inappropriate language. Please choose a different name.');
+                    setIsPublishingCloud(false);
+                    return;
+                  }
+                  const success = await ScenesService.publishScene(safeName, captureEntireState(), cloudPublicToggle);
+                  if (success) {
+                    Alert.alert(cloudPublicToggle ? 'Published!' : 'Saved!', cloudPublicToggle ? 'Your scene is now available to the community.' : 'Scene saved privately to your cloud.');
+                    setIsQuickPromptVisible(false);
+                  } else {
+                    Alert.alert('Error', 'Could not save scene. Are you logged in?');
+                  }
+                  setIsPublishingCloud(false);
                 }}>
                   <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>{isPublishingCloud ? 'Saving...' : (cloudPublicToggle ? '🌍 Publish' : '🔒 Save Private')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary }} onPress={() => {
-                    const newArr = [...quickPresets];
-                    const safeName = quickPromptName.trim() || 'Preset';
-                    if (quickPromptTargetIndex === -1) {
-                        newArr.push({ name: safeName, colors: multiColors, type: multiTransition });
-                    } else {
-                        newArr[quickPromptTargetIndex].name = safeName;
-                    }
-                    setQuickPresets(newArr);
-                    AsyncStorage.setItem('@Sk8lytz_QuickPresets', JSON.stringify(newArr));
-                    setIsQuickPromptVisible(false);
+                  const newArr = [...quickPresets];
+                  const safeName = quickPromptName.trim() || 'Preset';
+                  if (quickPromptTargetIndex === -1) {
+                    newArr.push({ name: safeName, colors: multiColors, type: multiTransition });
+                  } else {
+                    newArr[quickPromptTargetIndex].name = safeName;
+                  }
+                  setQuickPresets(newArr);
+                  AsyncStorage.setItem('@Sk8lytz_QuickPresets', JSON.stringify(newArr));
+                  setIsQuickPromptVisible(false);
                 }}>
                   <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>Save</Text>
                 </TouchableOpacity>
@@ -2445,10 +2441,10 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
         </Modal>
 
         {/* Community Modal */}
-        <CommunityModal 
-           isVisible={isCommunityModalVisible} 
-           onClose={() => setIsCommunityModalVisible(false)} 
-           onApplyScene={applyCloudScene} 
+        <CommunityModal
+          isVisible={isCommunityModalVisible}
+          onClose={() => setIsCommunityModalVisible(false)}
+          onApplyScene={applyCloudScene}
         />
 
         {/* Favorite Prompt Modal */}
@@ -2456,10 +2452,10 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
             <View style={{ backgroundColor: Colors.surface, padding: 24, borderRadius: 20, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
               <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>
-                 {favPromptTargetId ? 'Edit Favorite' : 'Save Favorite'}
+                {favPromptTargetId ? 'Edit Favorite' : 'Save Favorite'}
               </Text>
               <Text style={{ color: Colors.textMuted, fontSize: 14, marginBottom: 20, textAlign: 'center' }}>
-                 {favPromptTargetId ? 'Rename your preset or delete it.' : 'Name your preset. Leave blank to use the default name.'}
+                {favPromptTargetId ? 'Rename your preset or delete it.' : 'Name your preset. Leave blank to use the default name.'}
               </Text>
               <TextInput
                 style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: 12, borderRadius: 8, fontSize: 16, marginBottom: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
@@ -2471,14 +2467,14 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
               />
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 {favPromptTargetId && (
-                   <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={() => { deleteFavorite(favPromptTargetId); setIsFavPromptVisible(false); setFavPromptTargetId(null); }}>
-                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Delete</Text>
-                   </TouchableOpacity>
+                  <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={() => { deleteFavorite(favPromptTargetId); setIsFavPromptVisible(false); setFavPromptTargetId(null); }}>
+                    <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Delete</Text>
+                  </TouchableOpacity>
                 )}
                 {(!favPromptTargetId) && (
-                   <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => setIsFavPromptVisible(false)}>
-                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
-                   </TouchableOpacity>
+                  <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => setIsFavPromptVisible(false)}>
+                    <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
+                  </TouchableOpacity>
                 )}
                 <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary }} onPress={handleConfirmSaveFavorite}>
                   <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>Save</Text>
@@ -2489,8 +2485,8 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
         </Modal>
 
       </View>
-  );
-}
+    );
+  }
 );
 
 export default DockedController;
@@ -2699,7 +2695,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     borderRadius: 20,
   },
   musicToggleActive: {
-    backgroundColor: Colors.primary, 
+    backgroundColor: Colors.primary,
   },
   musicToggleActiveText: {
     color: Colors.isDark ? '#FFF' : '#000',

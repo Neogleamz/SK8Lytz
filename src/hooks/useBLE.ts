@@ -93,10 +93,17 @@ export default function useBLE(): BluetoothLowEnergyApi {
   // without the stale closure problem — useState captures the value at subscription time
   const dataReceivedCallbackRef = useRef<((deviceId: string, data: number[]) => void) | undefined>(undefined);
   const hardwareProbedCallbackRef = useRef<((deviceId: string, config: any) => void) | undefined>(undefined);
+  // connectedDevicesRef: always tracks current connectedDevices so writeToDevice/disconnectFromDevice
+  // never suffer stale-closure bugs regardless of when they were last recreated.
+  // ROOT CAUSE of all BLE write failures (including Pro Effects): writeToDevice read stale
+  // connectedDevices=[] from mount time and returned early at the length===0 guard.
+  const connectedDevicesRef = useRef<Device[]>([]);
 
   useEffect(() => {
     AppLogger.updateKnownDevices(allDevices);
   }, [allDevices]);
+  // Keep connectedDevicesRef in sync so writeToDevice always reads current list
+  useEffect(() => { connectedDevicesRef.current = connectedDevices; }, [connectedDevices]);
   const handleNotification = (error: any, characteristic: any, deviceId: string) => {
     if (error) {
       console.warn('Notification Error', error);
@@ -630,14 +637,16 @@ export default function useBLE(): BluetoothLowEnergyApi {
     console.log(`[BLE WRITE]${targetDeviceId ? ` [Target: ${targetDeviceId}]` : ''}`, hexString);
     AppLogger.setLastTxPayload(hexString);
     
-    if (connectedDevices.length === 0 || Platform.OS === 'web') return;
+    // Use ref so this always reads the CURRENT connectedDevices — never a stale closure.
+    // This was the root cause: stale writeToDevice saw connectedDevices=[] and returned early.
+    if (connectedDevicesRef.current.length === 0 || Platform.OS === 'web') return;
     try {
       /* Buffer imported at top of file */
       const base64Payload = Buffer.from(payload).toString('base64');
       
       const targets = targetDeviceId 
-        ? connectedDevices.filter(d => d.id === targetDeviceId) 
-        : connectedDevices;
+        ? connectedDevicesRef.current.filter(d => d.id === targetDeviceId) 
+        : connectedDevicesRef.current;
 
       if (targets.length === 0 && targetDeviceId) {
         console.warn(`Target device ${targetDeviceId} not found in connected devices`);
@@ -677,7 +686,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     });
     disconnectListeners.current = {};
 
-    const staleDevices = [...connectedDevices];
+    const staleDevices = [...connectedDevicesRef.current];
     setConnectedDevices([]);
 
     if (staleDevices.length > 0 && Platform.OS !== 'web') {
