@@ -144,9 +144,7 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
   const [stats, setStats] = useState<any>(null);
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
   const [isUploading, setIsUploading] = useState(false);
-  const [simpleScannerMode, setSimpleScannerMode] = useState(false);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
-  const [connectingId, setConnectingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (visible) AppLogger.log('SCREEN_OPENED', { screenName: 'Analytics' });
@@ -388,84 +386,6 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
   };
 
   const renderAdminTab = () => {
-    if (simpleScannerMode) {
-      return (
-        <ScrollView style={styles.tabContent}>
-          <TouchableOpacity style={{ marginBottom: 16 }} onPress={() => setSimpleScannerMode(false)}>
-            <Text style={{ color: '#00f0ff', fontSize: 16, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>← Back to Admin Tools</Text>
-          </TouchableOpacity>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-             <Text style={[styles.statSection, { color: textPrimary, marginTop: 0, marginBottom: 0 }]}>📡 Simple Scanner</Text>
-             <TouchableOpacity 
-               style={{ backgroundColor: isScanning ? '#555' : '#00E676', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }} 
-               onPress={() => { if (handleScan) handleScan(); }}
-               disabled={isScanning}
-             >
-               <Text style={{ color: '#000', fontWeight: 'bold' }}>{isScanning ? 'SCANNING...' : 'START SCAN'}</Text>
-             </TouchableOpacity>
-          </View>
-          
-          {(!allDevices || allDevices.length === 0) && (
-            <Text style={[styles.emptyText, { color: textMuted }]}>No devices found. Tap START SCAN to begin.</Text>
-          )}
-
-          {allDevices?.map((d: any, idx) => {
-             // Merge: live prop (reactive, from DashboardScreen state) > local AsyncStorage cache
-             const cfg = { ...(deviceConfigs[d.id] || {}), ...(liveDeviceConfigs?.[d.id] || {}) };
-             const points   = cfg.points    ?? d.points    ?? null;
-             const segments = cfg.segments  ?? d.segments  ?? null;
-             const sorting  = cfg.sorting   ?? d.sorting   ?? cfg.colorSortingName ?? null;
-             const stripType= cfg.stripType ?? d.stripType ?? cfg.icName           ?? null;
-             const isConn   = connectedDevices?.some(c => c.id === d.id);
-             const isConnecting = connectingId === d.id;
-
-             const handleConnect = async () => {
-               if (!onConnectToDevice || isConnecting || isConn) return;
-               setConnectingId(d.id);
-               try {
-                 await onConnectToDevice(d);
-                 // liveDeviceConfigs prop will auto-update via DashboardScreen state —
-                 // no need to re-read AsyncStorage here
-               } catch (e) { console.warn('Connect failed', e); }
-               finally { setConnectingId(null); }
-             };
-             return (
-             <View key={d.id || idx} style={[styles.statCard, { backgroundColor: cardBg, borderColor }]}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <Text style={{ color: textPrimary, fontWeight: 'bold', fontSize: 15, flex: 1 }} numberOfLines={1}>{cfg.name || d.name || 'Unknown Device'}</Text>
-                  {isConn
-                    ? <Text style={{ color: '#00E676', fontSize: 11, fontWeight: '700', marginLeft: 8 }}>● CONNECTED</Text>
-                    : <TouchableOpacity onPress={handleConnect} disabled={isConnecting} style={{ backgroundColor: isConnecting ? '#555' : '#9D4EFF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 4, marginLeft: 8 }}>
-                        <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '700' }}>{isConnecting ? 'CONNECTING...' : 'CONNECT'}</Text>
-                      </TouchableOpacity>
-                  }
-                </View>
-                <Text style={{ color: textMuted, fontSize: 11, marginBottom: 6, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{d.id}</Text>
-                <StatRow label="Firmware"     value={d.firmware || cfg.firmware || '—'}       color="#00E676" muted={textMuted} />
-                <StatRow label="RSSI"         value={d.rssi ? `${d.rssi} dBm` : '—'}         color="#FF7000" muted={textMuted} />
-                <StatRow label="Points (LEDs)"value={points ? String(points) : '— connect'}   color="#00f0ff" muted={textMuted} />
-                <StatRow label="Segments"     value={segments != null ? String(segments) : '�'}                         color="#00f0ff" muted={textMuted} />
-                <StatRow label="IC / Strip"   value={stripType || '— connect'}                color="#FFD700" muted={textMuted} />
-                <StatRow label="Color Order"  value={sorting   || '— connect'}                color="#FF69B4" muted={textMuted} />
-                 {/* RAW RX debug row — shows last notification bytes from this device */}
-                 {liveRxPayload?.deviceId === d.id && (
-                   <View style={{ marginTop: 6, padding: 6, backgroundColor: '#0a0a0a', borderRadius: 4 }}>
-                     <Text style={{ color: '#555', fontSize: 9, marginBottom: 2 }}>LAST RX BYTES</Text>
-                     <Text selectable style={{ color: '#00f0ff', fontSize: 9, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }} numberOfLines={3}>
-                       {liveRxPayload?.payloadHex}
-                     </Text>
-                   </View>
-                 )}
-              </View>
-             );
-          })}
-
-
-          <View style={{ height: 40 }} />
-        </ScrollView>
-      );
-    }
-
     return (
       <ScrollView style={styles.tabContent}>
         <Text style={[styles.statSection, { color: textPrimary }]}>🛠️ Admin Tools</Text>
@@ -474,13 +394,14 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
             Restricted diagnostics payload for low-level protocol debugging.
           </Text>
 
+          {/* Scanner lives in the Lab → DEVICES tab */}
           <TouchableOpacity 
             style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: '#00f0ff', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
-            onPress={() => setSimpleScannerMode(true)}
+            onPress={() => { if (onOpenLab) onOpenLab(); }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 16, marginRight: 8 }}>📡</Text>
-              <Text style={{ color: '#00f0ff', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch Simple Scanner</Text>
+              <Text style={{ color: '#00f0ff', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Device Scanner (Lab → Devices)</Text>
             </View>
           </TouchableOpacity>
 
