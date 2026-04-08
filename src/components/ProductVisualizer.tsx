@@ -347,9 +347,9 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
              const vizCruiseColor = isSlowing ? '#FFAA00' : streetCruiseColor;
 
              if (fract < 0.3) {
-               // Taillights: 50% dim cruising, 100% full braking
+               // Taillights: ABSOLUTE — 100% braking, 50% cruising (no brightness slider in street mode)
                dotColor = '#FF2200';
-               dotOpacity = isActiveBraking ? (brightness / 100) : (brightness / 100) * 0.5;
+               dotOpacity = isActiveBraking ? 1.0 : 0.5;
              } else if (fract >= 0.7) {
                dotColor = '#FFF5E0';
                dotOpacity = brightness / 100;

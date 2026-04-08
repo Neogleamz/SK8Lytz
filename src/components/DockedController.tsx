@@ -457,9 +457,9 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     const cg = parseInt(cruiseHex.slice(3, 5), 16);
     const cb = parseInt(cruiseHex.slice(5, 7), 16);
 
-    // Tail lights: 50% dim cruising, 100% full red braking (#10)
-    const tailBright = isBraking ? factor : factor * 0.5;
-    const tailR = Math.round(255 * tailBright);
+    // Tail lights: ABSOLUTE brightness — 100% (255) braking, 50% (127) cruising.
+    // Street Mode has no brightness slider — these are fixed car safety values.
+    const tailR = isBraking ? 255 : 127;
     const tail  = { r: tailR, g: 0, b: 0 };
 
     // Headlights: warm white, always steady
