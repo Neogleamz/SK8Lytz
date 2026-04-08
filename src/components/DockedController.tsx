@@ -936,6 +936,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const [fixedHue, setFixedHue] = useState<number>(120);
 
     // --- PRO EFFECTS REACTIVITY LOGIC ---
+    // CRITICAL: parentWriteToDevice MUST be in deps so this effect re-fires when BLE connects.
+    // Without it, applyFixedPattern is a stale closure with parentWriteToDevice=undefined.
     const applyFixedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => {
       if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
@@ -947,7 +949,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       return () => {
         if (applyFixedRef.current) clearTimeout(applyFixedRef.current);
       }
-    }, [fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, activeMode, fixedSubMode]);
+    }, [fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, activeMode, fixedSubMode, parentWriteToDevice]);
 
     // -- Curated Presets (SK8Lytz Picks) -- driven from Supabase DB table
     const [curatedPresets, setCuratedPresets] = useState<IFavoriteState[]>([]);
