@@ -40,9 +40,14 @@ interface LabProps {
     segments?: number;
     detected?: boolean;
   };
+  allDevices?: any[];
+  isScanning?: boolean;
+  handleScan?: () => void;
+  connectToDevice?: (device: any) => Promise<any>;
+  liveDeviceConfigs?: Record<string, any>;
 }
 
-type LabTab = 'COLOR' | 'TRANSITION' | 'BUILDER' | 'SNIFFER';
+type LabTab = 'DEVICES' | 'COLOR' | 'TRANSITION' | 'BUILDER' | 'SNIFFER';
 
 interface BleLog {
   dir: 'TX' | 'RX';
@@ -109,32 +114,84 @@ function build0x59(
 export default function Sk8LytzDiagnosticLab({
   visible, onClose, writeToDevice, liveRxPayload,
   connectedDevices = [], hwSettings,
+  allDevices = [], isScanning = false, handleScan,
+  connectToDevice, liveDeviceConfigs = {},
 }: LabProps) {
 
-  const [tab, setTab] = useState<LabTab>('COLOR');
+  const [tab, setTab] = useState<LabTab>('DEVICES');
   const [logs, setLogs] = useState<BleLog[]>([]);
   const [lastSent, setLastSent] = useState<string>('');
   const [lastNote, setLastNote] = useState<string>('');
 
-  // Builder state
-  const [bldR, setBldR] = useState(255);
-  const [bldG, setBldG] = useState(0);
-  const [bldB, setBldB] = useState(0);
+  // Target device tracking
+  const [targetDeviceId, setTargetDeviceId] = useState<string | null>(null);
+  
+  // Builder general
+  const [bldProtocol, setBldProtocol] = useState<'0x59' | '0x61' | '0x73' | '0x62'>('0x59');
+  
+  // Builder 0x59
+  const [bldColors, setBldColors] = useState([{r:255, g:0, b:0}]);
   const [bldTrans, setBldTrans] = useState(0x01);
   const [bldSpeed, setBldSpeed] = useState(16);
   const [bldPoints, setBldPoints] = useState('16');
   const [bldDir, setBldDir] = useState(1);
+  
+  // Builder 0x61
+  const [bldPatternId, setBldPatternId] = useState('1');
+  const [bldBright, setBldBright] = useState('100');
+
+  // Builder 0x73
+  const [bldMic, setBldMic] = useState(true);
+  const [bldMusicMode, setBldMusicMode] = useState('1');
+  const [bldSens, setBldSens] = useState('100');
+  const [bldC2, setBldC2] = useState({r:0, g:0, b:255});
+
+  // Builder 0x62
+  const [bldIc, setBldIc] = useState('WS2812B');
+  const [bldOrder, setBldOrder] = useState('RGB');
+  const [bldSegs, setBldSegs] = useState('1');
+
+  // Shared
   const [bldHexOverride, setBldHexOverride] = useState('');
-  const [bldResult, setBldResult] = useState<ReturnType<typeof build0x59> | null>(null);
+  const [bldResult, setBldResult] = useState<{raw: number[], wrapped: number[], hex: string, annotations: string[]} | null>(null);
 
   // Rebuild payload when builder params change
   useEffect(() => {
-    const pts = Math.max(1, Math.min(300, parseInt(bldPoints) || 16));
-    const pixels = Array(pts).fill({ r: bldR, g: bldG, b: bldB });
-    const result = build0x59(pixels, bldTrans, bldSpeed, bldDir);
-    setBldResult(result);
-    setBldHexOverride(result.hex);
-  }, [bldR, bldG, bldB, bldTrans, bldSpeed, bldPoints, bldDir]);
+    try {
+      if (bldProtocol === '0x59') {
+        const pts = Math.max(1, Math.min(300, parseInt(bldPoints) || 16));
+        const pixels = Array(pts).fill(0).map((_, i) => bldColors[i % bldColors.length]);
+        const result = build0x59(pixels, bldTrans, bldSpeed, bldDir);
+        setBldResult(result);
+        setBldHexOverride(result.hex);
+      } else if (bldProtocol === '0x61') {
+        const id = parseInt(bldPatternId) || 1;
+        const spd = Math.max(1, Math.min(100, bldSpeed));
+        const br = Math.max(0, Math.min(100, parseInt(bldBright)||100));
+        const wrapped = ZenggeProtocol.setCustomRbm(id, spd, br);
+        const hex = wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+        setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x61] RBM Pattern Payload', `Pattern: ${id}`, `Speed: ${spd}`, `Brightness: ${br}`] });
+        setBldHexOverride(hex);
+      } else if (bldProtocol === '0x73') {
+        const id = parseInt(bldMusicMode) || 1;
+        const c1 = bldColors[0] || {r:255,g:0,b:0};
+        const s = parseInt(bldSens) || 100;
+        const br = parseInt(bldBright) || 100;
+        const wrapped = ZenggeProtocol.setMusicConfig(bldMic, 1, id, c1, bldC2, s, br);
+        const hex = wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+        setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x73] Symphony Config', `Mic: ${bldMic}`, `Pattern: ${id}`, `Sens: ${s} Bright: ${br}`] });
+        setBldHexOverride(hex);
+      } else if (bldProtocol === '0x62') {
+        const pts = parseInt(bldPoints) || 16;
+        const seg = parseInt(bldSegs) || 1;
+        const wrapped = ZenggeProtocol.setHardwareConfig(pts, bldOrder, bldIc, seg);
+        const hex = wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+        setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x62] EEPROM Write', `IC: ${bldIc} Order: ${bldOrder}`, `LEDs: ${pts} Seg: ${seg}`] });
+        setBldHexOverride(hex);
+      }
+    } catch(e) { }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bldProtocol, bldColors, bldTrans, bldSpeed, bldPoints, bldDir, bldPatternId, bldBright, bldMic, bldMusicMode, bldSens, bldC2, bldIc, bldOrder, bldSegs]);
 
   // RX listener
   useEffect(() => {
@@ -159,7 +216,7 @@ export default function Sk8LytzDiagnosticLab({
     const hexStr = bytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
     setLastSent(hexStr);
     setLastNote(note || '');
-    setLogs(prev => [{ dir: 'TX', hex: hexStr, t: Date.now(), note }, ...prev].slice(0, 200));
+    setLogs(prev => [{ dir: 'TX' as const, hex: hexStr, t: Date.now(), note }, ...prev].slice(0, 200));
   }, [writeToDevice]);
 
   const sendRawHex = useCallback(async (hexStr: string, note?: string) => {
@@ -185,21 +242,96 @@ export default function Sk8LytzDiagnosticLab({
     </Text>
   );
 
-  const renderHwBadge = () => (
-    <View style={S.hwBadge}>
-      <Text style={S.hwBadgeLabel}>HW PROBE: </Text>
-      {hwSettings?.detected ? (
-        <>
-          <Text style={[S.hwBadgeVal, { color: '#00CC88' }]}>{hwSettings.ledPoints ?? '?'} LEDs</Text>
-          <Text style={S.hwBadgeLabel}> · </Text>
-          <Text style={[S.hwBadgeVal, { color: '#FF9500' }]}>{hwSettings.colorSortingName ?? '?'}</Text>
-          <Text style={S.hwBadgeLabel}> · </Text>
-          <Text style={[S.hwBadgeVal, { color: '#c084fc' }]}>{hwSettings.icName ?? '?'}</Text>
-        </>
-      ) : (
-        <Text style={[S.hwBadgeVal, { color: '#FF4040' }]}>NOT DETECTED — connect + wait for 0x63</Text>
+  const renderHwBadge = () => {
+    const targetName = targetDeviceId ? connectedDevices.find(d => d.id === targetDeviceId)?.name || targetDeviceId.slice(-6) : null;
+    return (
+      <View style={S.hwBadge}>
+        <Text style={S.hwBadgeLabel}>TARGET: </Text>
+        {targetDeviceId ? (
+          <>
+            <Text style={[S.hwBadgeVal, { color: '#00ccff', paddingRight: 8 }]}>{targetName}</Text>
+            {hwSettings?.detected ? (
+              <>
+                <Text style={[S.hwBadgeVal, { color: '#00CC88' }]}>{hwSettings.ledPoints ?? '?'} LEDs</Text>
+                <Text style={S.hwBadgeLabel}> · </Text>
+                <Text style={[S.hwBadgeVal, { color: '#FF9500' }]}>{hwSettings.colorSortingName ?? '?'}</Text>
+                <Text style={S.hwBadgeLabel}> · </Text>
+                <Text style={[S.hwBadgeVal, { color: '#c084fc' }]}>{hwSettings.icName ?? '?'}</Text>
+              </>
+            ) : (
+             <Text style={[S.hwBadgeVal, { color: '#FF4040' }]}>WAITING 0x63...</Text>
+            )}
+          </>
+        ) : (
+          <Text style={[S.hwBadgeVal, { color: '#FF4040' }]}>NO DEVICE TARGETED (GO TO DEVICES TAB)</Text>
+        )}
+      </View>
+    );
+  };
+
+  // ─── DEVICES TAB ────────────────────────────────────────────────────────────
+  const renderDevicesTab = () => (
+    <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+         <Text style={S.sectionTitle}>HARDWARE SCANNER</Text>
+         <TouchableOpacity 
+           style={{ backgroundColor: isScanning ? '#555' : '#00E676', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }} 
+           onPress={() => { if (handleScan) handleScan(); }}
+           disabled={isScanning}
+         >
+           <Text style={{ color: '#000', fontWeight: 'bold', fontSize: 11 }}>{isScanning ? 'SCANNING...' : 'START SCAN'}</Text>
+         </TouchableOpacity>
+      </View>
+      
+      {(!allDevices || allDevices.length === 0) && (
+        <Text style={S.hint}>No devices found. Tap START SCAN to begin.</Text>
       )}
-    </View>
+
+      {allDevices?.map((d: any, idx) => {
+         const cfg = { ...(liveDeviceConfigs?.[d.id] || {}) };
+         const points   = cfg.points    ?? d.points    ?? null;
+         const segments = cfg.segments  ?? d.segments  ?? null;
+         const sorting  = cfg.sorting   ?? d.sorting   ?? cfg.colorSortingName ?? null;
+         const stripType= cfg.stripType ?? d.stripType ?? cfg.icName           ?? null;
+         const isConn   = connectedDevices?.some((c: any) => c.id === d.id);
+         const isTarget = targetDeviceId === d.id;
+
+         return (
+         <View key={d.id || idx} style={[S.diagBox, isTarget && { borderColor: '#00f0ff', borderWidth: 2 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13, flex: 1 }} numberOfLines={1}>{cfg.name || d.name || 'Unknown Device'}</Text>
+              {isConn
+                ? (
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <Text style={{ color: '#00E676', fontSize: 10, fontWeight: '700', alignSelf: 'center' }}>● CONNECTED</Text>
+                    <TouchableOpacity onPress={() => setTargetDeviceId(d.id)} style={{ backgroundColor: isTarget ? '#00f0ff' : '#333', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}>
+                      <Text style={{ color: isTarget ? '#000' : '#FFF', fontSize: 10, fontWeight: 'bold' }}>{isTarget ? 'TARGETED' : 'TARGET'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                )
+                : <TouchableOpacity onPress={() => connectToDevice && connectToDevice(d)} style={{ backgroundColor: '#9D4EFF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}>
+                    <Text style={{ color: '#FFF', fontSize: 10, fontWeight: 'bold' }}>CONNECT</Text>
+                  </TouchableOpacity>
+              }
+            </View>
+            <Text style={{ color: '#555', fontSize: 10, marginBottom: 8, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{d.id}</Text>
+            
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+               <Text style={{ color: '#888', fontSize: 10 }}>LEDs: <Text style={{ color: '#00ccff' }}>{points ?? '?'}</Text></Text>
+               <Text style={{ color: '#888', fontSize: 10 }}>Seg: <Text style={{ color: '#00ccff' }}>{segments ?? '?'}</Text></Text>
+               <Text style={{ color: '#888', fontSize: 10 }}>Sort: <Text style={{ color: '#FF69B4' }}>{sorting ?? '?'}</Text></Text>
+               <Text style={{ color: '#888', fontSize: 10 }}>IC: <Text style={{ color: '#FFD700' }}>{stripType ?? '?'}</Text></Text>
+            </View>
+
+            {isTarget && hwSettings?.detected && (
+              <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#333' }}>
+                 <Text style={{ color: '#00CC88', fontSize: 10 }}>Hardware settings populated from active probe.</Text>
+              </View>
+            )}
+         </View>
+         );
+      })}
+    </ScrollView>
   );
 
   // ─── COLOR TEST TAB ─────────────────────────────────────────────────────────
@@ -272,15 +404,15 @@ export default function Sk8LytzDiagnosticLab({
 
       <Text style={S.subTitle}>COLOR TO SEND (change in BUILDER tab first)</Text>
       <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16, alignItems: 'center' }}>
-        <View style={{ width: 40, height: 40, backgroundColor: `rgb(${bldR},${bldG},${bldB})`, borderRadius: 8, borderWidth: 1, borderColor: '#444' }} />
-        <Text style={{ color: '#aaa', fontSize: 12 }}>R:{bldR} G:{bldG} B:{bldB} · {hwPts} LEDs · Speed:{bldSpeed}</Text>
+        <View style={{ width: 40, height: 40, backgroundColor: `rgb(${bldColors[0]?.r||0},${bldColors[0]?.g||0},${bldColors[0]?.b||0})`, borderRadius: 8, borderWidth: 1, borderColor: '#444' }} />
+        <Text style={{ color: '#aaa', fontSize: 12 }}>R:{bldColors[0]?.r||0} G:{bldColors[0]?.g||0} B:{bldColors[0]?.b||0} · {hwPts} LEDs · Speed:{bldSpeed}</Text>
       </View>
 
       {TRANSITION_TYPES.map(tt => (
         <TouchableOpacity key={tt.byte}
           style={[S.transBtn, { borderColor: tt.color }]}
           onPress={() => {
-            const pixels = Array(hwPts).fill({ r: bldR, g: bldG, b: bldB });
+            const pixels = Array(hwPts).fill({ r: bldColors[0]?.r||0, g: bldColors[0]?.g||0, b: bldColors[0]?.b||0 });
             const { wrapped } = build0x59(pixels, tt.byte, bldSpeed, 1);
             transmit(wrapped, `transitionType=0x0${tt.byte.toString(16).toUpperCase()} ${tt.label}`);
           }}>
@@ -317,35 +449,47 @@ export default function Sk8LytzDiagnosticLab({
   // ─── BUILDER TAB ────────────────────────────────────────────────────────────
   const renderBuilderTab = () => (
     <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={S.sectionTitle}>0x59 PAYLOAD BUILDER</Text>
-      <Text style={S.hint}>Full byte-level control. Every field shown with its role in the packet.</Text>
+      <Text style={S.sectionTitle}>PROTOCOL BUILDER</Text>
+      <Text style={S.hint}>Select a protocol and build the exact hex packet.</Text>
       {renderHwBadge()}
 
-      <Text style={S.subTitle}>PIXEL COLOR (all LEDs same color)</Text>
-      {[
-        { label: 'R', val: bldR, set: setBldR, color: '#FF4040' },
-        { label: 'G', val: bldG, set: setBldG, color: '#00CC44' },
-        { label: 'B', val: bldB, set: setBldB, color: '#4488FF' },
-      ].map(ch => (
-        <View key={ch.label} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-          <Text style={{ color: ch.color, fontWeight: 'bold', width: 24, fontSize: 13 }}>{ch.label}</Text>
-          <TextInput
-            style={[S.numInput, { borderColor: ch.color + '66' }]}
-            value={ch.val.toString()}
-            keyboardType="numeric"
-            onChangeText={v => { const n = Math.max(0, Math.min(255, parseInt(v)||0)); ch.set(n); }}
-          />
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <View style={{ height: 6, backgroundColor: '#222', borderRadius: 3 }}>
-              <View style={{ height: 6, width: `${(ch.val/255)*100}%`, backgroundColor: ch.color, borderRadius: 3 }} />
-            </View>
-          </View>
-          <View style={{ width: 20, height: 20, backgroundColor: ch.label === 'R' ? `rgb(${ch.val},0,0)` : ch.label === 'G' ? `rgb(0,${ch.val},0)` : `rgb(0,0,${ch.val})`, borderRadius: 4, marginLeft: 8 }} />
-        </View>
-      ))}
-      <View style={{ width: 40, height: 40, backgroundColor: `rgb(${bldR},${bldG},${bldB})`, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#444' }} />
+      <Text style={S.subTitle}>PROTOCOL</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+        {[
+          { id: '0x59', label: '0x59 Segments' },
+          { id: '0x61', label: '0x61 RBM Pattern' },
+          { id: '0x73', label: '0x73 Symphony' },
+          { id: '0x62', label: '0x62 Setup' }
+        ].map(p => (
+           <TouchableOpacity key={p.id}
+             style={[S.chip, bldProtocol === p.id && S.chipActive]}
+             onPress={() => setBldProtocol(p.id as any)}>
+             <Text style={{ color: bldProtocol === p.id ? '#00f0ff' : '#888', fontWeight: 'bold', fontSize: 11 }}>{p.label}</Text>
+           </TouchableOpacity>
+        ))}
+      </View>
 
-      <Text style={S.subTitle}>TRANSITION TYPE</Text>
+      {bldProtocol === '0x59' && (
+        <View style={{ marginBottom: 16 }}>
+          <Text style={S.subTitle}>PIXEL COLORS (0x59)</Text>
+          <Text style={S.hint}>Colors will be repeated to fill the LED count.</Text>
+          
+          {bldColors.map((c, i) => (
+             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                <View style={{ width: 24, height: 24, backgroundColor: `rgb(${c.r},${c.g},${c.b})`, borderRadius: 4, borderWidth: 1, borderColor: '#444' }} />
+                <TextInput style={[{flex:1}, S.numInput]} value={c.r.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].r = parseInt(v)||0; setBldColors(cur); }} placeholder="R" />
+                <TextInput style={[{flex:1}, S.numInput]} value={c.g.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].g = parseInt(v)||0; setBldColors(cur); }} placeholder="G" />
+                <TextInput style={[{flex:1}, S.numInput]} value={c.b.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].b = parseInt(v)||0; setBldColors(cur); }} placeholder="B" />
+                <TouchableOpacity onPress={() => setBldColors(bldColors.filter((_, idx)=>idx!==i))} style={{ padding: 8 }}>
+                  <MaterialCommunityIcons name="delete" color="#ff4040" size={16} />
+                </TouchableOpacity>
+             </View>
+          ))}
+          <TouchableOpacity onPress={() => setBldColors([...bldColors, {r:0,g:0,b:0}])} style={{ alignSelf: 'flex-start', padding: 8, backgroundColor: '#222', borderRadius: 4 }}>
+             <Text style={{ color: '#aaa', fontSize: 10 }}>+ ADD COLOR</Text>
+          </TouchableOpacity>
+
+          <Text style={S.subTitle}>TRANSITION TYPE</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
         {TRANSITION_TYPES.map(tt => (
           <TouchableOpacity key={tt.byte}
@@ -358,30 +502,114 @@ export default function Sk8LytzDiagnosticLab({
         ))}
       </View>
 
-      <Text style={S.subTitle}>PARAMETERS</Text>
-      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>NUM POINTS (LED count)</Text>
-          <TextInput style={S.numInput} value={bldPoints} keyboardType="numeric"
-            onChangeText={v => setBldPoints(v)} placeholder={hwPts.toString()} placeholderTextColor="#444" />
-          <Text style={{ color: '#555', fontSize: 10, marginTop: 2 }}>HW probe: {hwPts}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SPEED (1-255)</Text>
-          <TextInput style={S.numInput} value={bldSpeed.toString()} keyboardType="numeric"
-            onChangeText={v => setBldSpeed(Math.max(1, Math.min(255, parseInt(v)||1)))} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>DIRECTION</Text>
-          <View style={{ flexDirection: 'row', gap: 4 }}>
-            {[0, 1].map(d => (
-              <TouchableOpacity key={d} style={[S.chip, bldDir === d && S.chipActive]} onPress={() => setBldDir(d)}>
-                <Text style={{ color: bldDir === d ? '#00f0ff' : '#888', fontSize: 11 }}>{d === 0 ? 'REV' : 'FWD'}</Text>
-              </TouchableOpacity>
-            ))}
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>NUM POINTS</Text>
+              <TextInput style={S.numInput} value={bldPoints} keyboardType="numeric"
+                onChangeText={v => setBldPoints(v)} placeholder={hwPts.toString()} placeholderTextColor="#444" />
+              <Text style={{ color: '#555', fontSize: 10, marginTop: 2 }}>HW probe: {hwPts}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SPEED</Text>
+              <TextInput style={S.numInput} value={bldSpeed.toString()} keyboardType="numeric"
+                onChangeText={v => setBldSpeed(Math.max(1, Math.min(255, parseInt(v)||1)))} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>DIR</Text>
+              <View style={{ flexDirection: 'row', gap: 4 }}>
+                {[0, 1].map(d => (
+                  <TouchableOpacity key={d} style={[S.chip, bldDir === d && S.chipActive, {flex: 1}]} onPress={() => setBldDir(d)}>
+                    <Text style={{ color: bldDir === d ? '#00f0ff' : '#888', fontSize: 11, textAlign: 'center' }}>{d === 0 ? 'REV' : 'FWD'}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
           </View>
         </View>
-      </View>
+      )}
+
+      {bldProtocol === '0x61' && (
+        <View style={{ marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>PATTERN ID (1-210)</Text>
+              <TextInput style={S.numInput} value={bldPatternId} keyboardType="numeric" onChangeText={setBldPatternId} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SPEED (1-100)</Text>
+              <TextInput style={S.numInput} value={bldSpeed.toString()} keyboardType="numeric" onChangeText={v => setBldSpeed(Math.max(1, Math.min(100, parseInt(v)||1)))} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>BRIGHTNESS (0-100)</Text>
+              <TextInput style={S.numInput} value={bldBright} keyboardType="numeric" onChangeText={setBldBright} />
+            </View>
+          </View>
+        </View>
+      )}
+
+      {bldProtocol === '0x73' && (
+        <View style={{ marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>MUSIC MODE (1-13)</Text>
+              <TextInput style={S.numInput} value={bldMusicMode} keyboardType="numeric" onChangeText={setBldMusicMode} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>MIC SRC</Text>
+              <TouchableOpacity style={[S.chip, bldMic && S.chipActive, {paddingVertical: 10}]} onPress={() => setBldMic(!bldMic)}>
+                 <Text style={{ color: bldMic ? '#00f0ff' : '#888', textAlign: 'center', fontSize: 11, fontWeight: 'bold' }}>{bldMic ? 'DEVICE' : 'APP'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SENSITIVITY (0-100)</Text>
+              <TextInput style={S.numInput} value={bldSens} keyboardType="numeric" onChangeText={setBldSens} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>BRIGHTNESS (0-100)</Text>
+              <TextInput style={S.numInput} value={bldBright} keyboardType="numeric" onChangeText={setBldBright} />
+            </View>
+          </View>
+          <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>COLOR 1 (RGB)</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+            <TextInput style={[S.numInput, {flex: 1}]} value={bldColors[0]?.r?.toString()||'0'} onChangeText={v => setBldColors([{r: parseInt(v)||0, g: bldColors[0]?.g||0, b: bldColors[0]?.b||0}])} />
+            <TextInput style={[S.numInput, {flex: 1}]} value={bldColors[0]?.g?.toString()||'0'} onChangeText={v => setBldColors([{r: bldColors[0]?.r||0, g: parseInt(v)||0, b: bldColors[0]?.b||0}])} />
+            <TextInput style={[S.numInput, {flex: 1}]} value={bldColors[0]?.b?.toString()||'0'} onChangeText={v => setBldColors([{r: bldColors[0]?.r||0, g: bldColors[0]?.g||0, b: parseInt(v)||0}])} />
+          </View>
+          <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>COLOR 2 (RGB)</Text>
+           <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TextInput style={[S.numInput, {flex: 1}]} value={bldC2.r.toString()} onChangeText={v => setBldC2({...bldC2, r: parseInt(v)||0})} />
+            <TextInput style={[S.numInput, {flex: 1}]} value={bldC2.g.toString()} onChangeText={v => setBldC2({...bldC2, g: parseInt(v)||0})} />
+            <TextInput style={[S.numInput, {flex: 1}]} value={bldC2.b.toString()} onChangeText={v => setBldC2({...bldC2, b: parseInt(v)||0})} />
+          </View>
+        </View>
+      )}
+
+      {bldProtocol === '0x62' && (
+        <View style={{ marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+            <View style={{ flex: 1 }}>
+               <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>IC CHIP (e.g. WS2812B)</Text>
+               <TextInput style={S.numInput} value={bldIc} onChangeText={setBldIc} />
+            </View>
+            <View style={{ flex: 1 }}>
+               <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>COLOR ORDER (e.g. RGB)</Text>
+               <TextInput style={S.numInput} value={bldOrder} onChangeText={setBldOrder} />
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+             <View style={{ flex: 1 }}>
+               <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>TOTAL LEDS</Text>
+               <TextInput style={S.numInput} value={bldPoints} keyboardType="numeric" onChangeText={setBldPoints} />
+            </View>
+            <View style={{ flex: 1 }}>
+               <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SEGMENTS</Text>
+               <TextInput style={S.numInput} value={bldSegs} keyboardType="numeric" onChangeText={setBldSegs} />
+            </View>
+          </View>
+        </View>
+      )}
 
       <Text style={S.subTitle}>GENERATED PAYLOAD — BYTE ANNOTATIONS</Text>
       {bldResult && (
@@ -430,8 +658,8 @@ export default function Sk8LytzDiagnosticLab({
               if ('isCmd' in preset && preset.isCmd && preset.cmd) {
                 transmit(ZenggeProtocol.wrapCommand(preset.cmd), preset.note);
               } else if ('r' in preset) {
-                const pts = parseInt(bldPoints) || hwPts;
-                const { wrapped } = build0x59(Array(pts).fill({ r: preset.r, g: preset.g, b: preset.b }), preset.trans, bldSpeed, 1);
+                const pts = parseInt(bldPoints) || hwPts || 16;
+                const { wrapped } = build0x59(Array(pts).fill({ r: preset.r, g: preset.g, b: preset.b }), preset.trans || 0x01, bldSpeed, 1);
                 transmit(wrapped, preset.note);
               }
             }}>
@@ -496,7 +724,7 @@ export default function Sk8LytzDiagnosticLab({
 
         {/* Tabs */}
         <View style={S.tabBar}>
-          {(['COLOR', 'TRANSITION', 'BUILDER', 'SNIFFER'] as LabTab[]).map(t => (
+          {(['DEVICES', 'COLOR', 'TRANSITION', 'BUILDER', 'SNIFFER'] as LabTab[]).map(t => (
             <TouchableOpacity key={t} style={[S.tabBtn, tab === t && S.tabBtnActive]} onPress={() => setTab(t)}>
               <Text style={[S.tabBtnTxt, tab === t && S.tabBtnTxtActive]}>{t}</Text>
             </TouchableOpacity>

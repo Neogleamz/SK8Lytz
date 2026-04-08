@@ -6,10 +6,10 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🔴 High Priority / Needs Testing NOW
 
-- [ ] **Verify LED color swap fix on device** — GRB sort now gated on `detected` flag. Connect HALOZ/SOULZ, confirm red=red, green=green across MULTIMODE, PRESETS, STREET. If still wrong, the 0x63 response `colorSorting` byte is returning wrong value and needs a deeper protocol trace.
-- [ ] **Verify Street Mode on device** — Confirm CRUISING/STOPPED show static car lights (no scrolling). Confirm HARD_BRAKING strobes. Confirm color order is now correct.
-- [ ] **Verify MULTIMODE patterns on device** — Patterns 2–5, 9–10 (RunningWater) should show moving tiled patterns, not slow blinks. Pattern 1 (Solid) should be fully static. Patterns 6–8 (0x51) should breathe/flash/strobe correctly.
-- [ ] **Verify LED count from probed hardware** — Confirm `hwSettings.ledPoints` is being populated from the 0x63 response (check via Admin Hardware Tester or AppLogger logs). All LEDs should be addressed — no dark/unlit LEDs on SOULZ (43) or HALOZ (16).
+- [ ] **Test the Expanded LED Diagnostic Lab** — Launch from Admin Tools. Test the new DEVICES scanner to explicitly TARGET a device. Use the BUILDER tab to manually synthesize and fire `0x59`, `0x61`, `0x73`, and `0x62` packets tracking byte annotations.
+- [ ] **Verify LED color mapping on device** — Software color sorting (`applyColorSorting`) has been removed from 0x59 paths. The app now sends pure RGB. Verify that the hardware's native (`0x81`) GRB fix correctly displays Red for Red and Green for Green during STREET, PRESET, and MULTI modes.
+- [ ] **Verify Transition Types on device** — Solid mode (Preset 1) and Street car lights now use `0x01` (FREEZE). Animated modes use `0x00` (CASCADE). Verify Solid/Street is completely static, and animations scroll smoothly without blinking.
+- [ ] **Verify Supabase `led_diagnostics` table** — Confirm that using the Diagnostic Lab successfully pushes telemetry results into the Supabase database.
 
 ---
 

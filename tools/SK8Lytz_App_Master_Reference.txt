@@ -29,6 +29,8 @@
 | 21-K | **AsyncStorage Key Registry (CANONICAL)** | `DashboardScreen.tsx`, `ThemeContext.tsx` |
 | 21-M | Auth & Cloud Features | `AuthScreen.tsx`, `ScenesService.ts` |
 | 21-N | Hardware Settings Retrieval Flow | `useBLE.ts`, `DashboardScreen.tsx` |
+| 22 | 0x59 Protocol Specifics (Transition/Color) | `PatternEngine.ts`, `DockedController.tsx` |
+| 23 | Testing & Diagnostics (Lab, Supabase) | `Sk8LytzDiagnosticLab.tsx` |
 | — | Mode Architecture — Current State | `DockedController.tsx` |
 | — | **CREW HUB & SESSION SYSTEM** | `CrewModal.tsx`, `CrewService.ts` |
 | — | BLE Critical Findings (FF01/FF02 split) | `useBLE.ts`, `ZenggeProtocol.ts` |
@@ -2280,3 +2282,5 @@ All payload builders call: ZenggeProtocol.applyColorSorting(r, g, b, hwSettings.
 ---
 
 *Last Updated: April 2026 — SK8Lytz Master Reference. DO NOT SHORTEN. Add new entries at the bottom of each section.*
+ 
+ 

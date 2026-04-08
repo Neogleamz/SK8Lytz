@@ -1830,6 +1830,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
         hwSettings={activeHwSettings ?? undefined}
+        allDevices={allDevices}
+        isScanning={isScanning}
+        handleScan={scanForPeripherals}
+        connectToDevice={async (d: any) => { await connectToDevice(d); }}
+        liveDeviceConfigs={deviceConfigs}
       />
       {/* First-Time Setup Wizard — auto-shows on first probe for new accounts */}
       <FirstTimeSetupModal
