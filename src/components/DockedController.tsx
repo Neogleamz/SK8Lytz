@@ -431,6 +431,9 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   // HALOZ (2-segment × 8 ring):
   //   8-LED frame: [RED×2][AMB×4][WHT×2]  →  mirrored to 16-LED array
   //   Result: RED at BACK of ring, WHITE at FRONT, AMBER on both sides  ✅
+  //
+  // #9 — Cruise bounce chase: tick 0.0→1.0 shifts the bright spot through the mid zone
+  const cruiseChaseRef = useRef(0);
   const applyStreetPattern = (
     currMotionState: MotionState,
     brt: number = brightness,
@@ -454,8 +457,8 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     const cg = parseInt(cruiseHex.slice(3, 5), 16);
     const cb = parseInt(cruiseHex.slice(5, 7), 16);
 
-    // Tail lights: dim red cruising, full red braking
-    const tailBright = isBraking ? factor : factor * 0.45;
+    // Tail lights: 50% dim cruising, 100% full red braking (#10)
+    const tailBright = isBraking ? factor : factor * 0.5;
     const tailR = Math.round(255 * tailBright);
     const tail  = { r: tailR, g: 0, b: 0 };
 
@@ -474,11 +477,26 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     // Hardware auto-remaps GRB internally via 0x81 config. Send pure RGB.
     let arr: { r: number; g: number; b: number }[];
 
+    // #9 — Cruise bounce chase animation
+    // Advance tick for chase direction-flip (0→1→0 triangle)
+    const isCruising = currMotionState === 'CRUISING' || currMotionState === 'ACCELERATING';
+    if (isCruising) {
+      cruiseChaseRef.current = (cruiseChaseRef.current + 0.07) % 2; // 0‑2 range for triangle wave
+    } else {
+      cruiseChaseRef.current = 0; // Reset on non-cruise states
+    }
+    const chaseTick = cruiseChaseRef.current <= 1 ? cruiseChaseRef.current : 2 - cruiseChaseRef.current; // Triangle 0→1→0
+
     if (isHalozRing) {
+      // HALOZ: 8-LED ring frame. Chase bright spot through the 4 cruise LEDs (idx 2-5)
+      const chaseSlot = Math.floor(chaseTick * 3); // 0,1,2,3 through 4 cruise positions
       const frame8 = [
-        tail,   tail,
-        cruise, crDim, cruise, crDim,
-        head,   head,
+        tail, tail,
+        chaseSlot === 0 ? cruise : crDim,
+        chaseSlot === 1 ? cruise : crDim,
+        chaseSlot === 2 ? cruise : crDim,
+        chaseSlot === 3 ? cruise : crDim,
+        head, head,
       ];
       const mirror8 = [...frame8].reverse();
       arr = [...frame8, ...mirror8];
@@ -487,9 +505,14 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
       const rearCount  = Math.max(1, Math.round(ledCount * 0.3));
       const frontCount = Math.max(1, Math.round(ledCount * 0.3));
       const midCount   = Math.max(1, ledCount - rearCount - frontCount);
-      const midSection = Array.from({ length: midCount }, (_, i) =>
-        i % 2 === 0 ? cruise : crDim
-      );
+      // Chase bright spot bounces through the mid section
+      const chasePos = Math.round(chaseTick * (midCount - 1));
+      const midSection = Array.from({ length: midCount }, (_, i) => {
+        const dist = Math.abs(i - chasePos);
+        if (dist === 0) return cruise;
+        if (dist === 1) return { r: Math.round(crR * 0.6), g: Math.round(crG * 0.6), b: Math.round(crB * 0.6) };
+        return crDim;
+      });
       arr = [
         ...Array(rearCount).fill(tail),
         ...midSection,
@@ -1371,6 +1394,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
           multiTransition={multiTransition}
           isStreetBraking={isStreetBraking}
           streetCruiseColor={streetCruiseColor}
+          motionState={motionState}
           builderNodes={builderNodes}
           builderFillMode={builderFillMode}
           builderTransitionType={builderTransitionType}

@@ -35,6 +35,7 @@ interface ProductVisualizerProps {
   multiTransition?: number;
   isStreetBraking?: boolean;
   streetCruiseColor?: string;
+  motionState?: string;
   builderNodes?: any[];
   builderFillMode?: 'GRADIENT' | 'SOLID';
   builderTransitionType?: number;
@@ -65,7 +66,7 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload: _rawHexPayload, simMode: _simMode, isStreetBraking = false, streetCruiseColor = '#FF8C00', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1 }: any) => {
+const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload: _rawHexPayload, simMode: _simMode, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1 }: any) => {
   const { isDark } = useTheme();
   const product = String(device.type || fallbackProduct);
   const isHaloz = !product.toLowerCase().includes('soul');
@@ -337,28 +338,40 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
              dotOpacity = isPoweredOn ? (musicFrame.opacities[mSlot] ?? 1.0) * (brightness / 100) : 0;
           } else if (mode === 'STREET') {
              // ── Street Mode: zone-based car-light layout ──
-             // fract 0.0–0.3  → TAIL  (red: dim cruising, bright braking)
-             // fract 0.3–0.7  → CRUISE (user color, animated running water)
+             // fract 0.0–0.3  → TAIL  (red: 50% cruising, 100% braking) [#10]
+             // fract 0.3–0.7  → CRUISE (user color or amber if slowing, animated bounce) [#9,#11]
              // fract 0.7–1.0  → HEAD  (warm white, always steady)
+             const isActiveBraking = motionState === 'HARD_BRAKING' || motionState === 'STOPPED' || isStreetBraking;
+             const isSlowing = motionState === 'SLOWING_DOWN';
+             // Cruise zone color: amber when slowing, user color when cruising/accelerating
+             const vizCruiseColor = isSlowing ? '#FFAA00' : streetCruiseColor;
+
              if (fract < 0.3) {
+               // Taillights: 50% dim cruising, 100% full braking
                dotColor = '#FF2200';
-               dotOpacity = isStreetBraking ? (brightness / 100) : (brightness / 100) * 0.42;
+               dotOpacity = isActiveBraking ? (brightness / 100) : (brightness / 100) * 0.5;
              } else if (fract >= 0.7) {
                dotColor = '#FFF5E0';
                dotOpacity = brightness / 100;
              } else {
-               dotColor = streetCruiseColor;
+               dotColor = vizCruiseColor;
                const cruiseFract = (fract - 0.3) / 0.4;
                
-               // Triangle wave: goes 0 to 1 back to 0, creating a bouncing pulse
-               const bounceT = animTick <= 0.5 ? animTick * 2 : (1 - animTick) * 2;
-               const dist = Math.abs(cruiseFract - bounceT);
-               
-               if (dist < 0.18) {
-                   const glow = 1 - (dist / 0.18); 
-                   dotOpacity = 0.3 + glow * ((brightness / 100) - 0.3);
+               // Only animate bounce during CRUISING/ACCELERATING; freeze dim otherwise
+               const shouldBounce = motionState === 'CRUISING' || motionState === 'ACCELERATING';
+               if (shouldBounce) {
+                 // Triangle wave: goes 0 to 1 back to 0, creating a bouncing pulse [#9]
+                 const bounceT = animTick <= 0.5 ? animTick * 2 : (1 - animTick) * 2;
+                 const dist = Math.abs(cruiseFract - bounceT);
+                 if (dist < 0.18) {
+                     const glow = 1 - (dist / 0.18); 
+                     dotOpacity = 0.3 + glow * ((brightness / 100) - 0.3);
+                 } else {
+                     dotOpacity = 0.3;
+                 }
                } else {
-                   dotOpacity = 0.3;
+                 // Stopped or slowing — steady dim amber/red
+                 dotOpacity = (brightness / 100) * 0.6;
                }
              }
           } else if (mode === 'MULTIMODE') {
@@ -494,7 +507,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
         });
     }
     return list;
-  }, [product, mode, color, numLeds, patternId, isPoweredOn, audioMagnitude, fixedFgColor, fixedBgColor, multiColors, multiTransition, brightness, speed, animTick, isStreetBraking, streetCruiseColor, builderNodes, builderFillMode, builderTransitionType, builderDirection]);
+  }, [product, mode, color, numLeds, patternId, isPoweredOn, audioMagnitude, fixedFgColor, fixedBgColor, multiColors, multiTransition, brightness, speed, animTick, isStreetBraking, motionState, streetCruiseColor, builderNodes, builderFillMode, builderTransitionType, builderDirection]);
 
   return (
     <TouchableOpacity 
@@ -600,7 +613,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
     </TouchableOpacity>
   );
 });
-const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText: _statusText, audioMagnitude = 0, rawHexPayload, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1 }: ProductVisualizerProps) => {
+const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText: _statusText, audioMagnitude = 0, rawHexPayload, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1 }: ProductVisualizerProps) => {
   const { isDark } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
 
@@ -742,6 +755,7 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
              multiTransition={simMultiTransition}
              isStreetBraking={isStreetBraking}
              streetCruiseColor={streetCruiseColor}
+             motionState={motionState}
              builderNodes={builderNodes}
              builderFillMode={builderFillMode}
              builderTransitionType={builderTransitionType}
