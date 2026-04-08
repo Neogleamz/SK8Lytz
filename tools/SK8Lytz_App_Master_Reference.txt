@@ -120,17 +120,23 @@ Modern high-performance pattern selection.
 - **Pattern IDs**: 1 - 100+ (See Master Pattern List).
 - **Default SK8Lytz Values**: Brightness 90% (`0x5A`), Speed 50% (`0x32`).
 
-### Addressable Mode (`0x59`) - Multi-Color Array / DIY Multi-Color
-- **Format**: `[0x59, SegmentLength, TransitionType, Speed, 0x01, R1,G1,B1, R2,G2,B2...]`
-- *Note on DIY Multi-Color Parity*: The Zengge APK's advanced "Multi-Color" tab natively utilizes this exact `0x59` chunked buffer to build DIY animations. The UI labels map strictly to these `TransitionType` bytes:
-  - `0x00`: **Static** (Color blocks sit still)
-  - `0x01`: **Gradual** (Flowing/Breathing transition)
-  - `0x02`: **Strobe** (Flashing segments)
-  - `0x03`: **Running Water** (Hard jumping Marquee)
-- **SegmentLength (Byte 1)** defines the size of the looping chunk. (Must be >=10 points to avoid hardware glitching).
-- **Speed (Byte 3)**: `0x01` (Slowest) to `0x64` (Fastest, usually bounded `0x20`+).
-- **Direction Boolean (Byte 138 - if length padded)**: `0x01` Forward flow, `0x00` Reverse flow.
-- A single 1-pixel padded string to `0x59` `Type 1` safely replicates Solid Mode.
+### Addressable Mode (`0x59`) - Multi-Color Segment Array 
+- **Format**: `[0x59, SegmentLength, TransitionType, Speed, Direction, R1,G1,B1, R2,G2,B2... Checksum]`
+- **Deep Dive Finding (Multi-Color Builder):**
+  - **The hardware does NOT process explicit position indexes (e.g. "Red at index 10").** All "Fill-In" and "Gradient" point positioning is mathematically interpolated **on the CPU of the phone**!
+  - The UI (found in `StaticColorfulMode.java`) lets the user set specific LEDs to a color (`Position %` * `DeviceLEDCount`).
+  - **"Pure / Fill-In"**: The CPU replicates blocks of color for all LED indices between points.
+  - **"Gradual"**: The CPU runs a linear interpolation loop, shifting RGB values smoothly dot-by-dot across the gap.
+  - Finally, the entire computed `RGB[]` array (up to max strip length) is dumped over BLE wrapped in a `0x59` payload.
+- **Transition Types (`StaticColorfulMode` list)**:
+  - `0x01`: **Static** (Color string remains still)
+  - `0x02`: **Running Water** (Shifts the array down the strip - `0x03` on some models)
+  - `0x03`: **Strobe** (Flashes the static array)
+  - `0x04`: **Jump** (Hard jump between two arrays)
+  - `0x05`: **Breathe** (Fade up and down)
+- **SegmentLength** is the number of colors sent.
+- **Speed**: `0x01` (Slowest) to `0x1F` (31 - Fastest).
+- A single 1-pixel padded string to `0x59` `Type 0x01` safely replicates Solid Mode.
 
 #### Custom DIY Step Patterns (`0x51`)
 Unlimited creativity with up to 32 custom sequential steps. 
@@ -149,9 +155,18 @@ Certain effect IDs mathematically ignore the Foreground or Background colors, or
 - **Segmented Toggle (`0x80` flag on speed/id?)**: 17 of 33 effects support segmented rendering.
 *(Note: Flag mapping for Direction and Segment boolean in the payload requires testing, likely bitwise shifts over the speed or transition byte based on old findings).*
 
+## 5. UI Architecture: Custom Pro Effects & Native Positional Builder
+
+As part of the SK8Lytz UI overhaul for ultimate customization parity natively on the React Native stack:
+- **Pro Effects Indexed at 1:** We've hijacked index `1` in the `0x51` subset picker (Pro Effects) so that "Solid" appears visually seamlessly next to the complex 33 symphony patterns. When `1` is selected, the UI dynamically patches the event instantly into a `0x59 Type 0` legacy block fill to ensure stability.
+- **`BUILDER` Submode in Multimode:** A third configuration tab within `DockedController.tsx` tracks custom LED arrays.
+  - The Builder maintains a state of node boundaries: `[{ position: 0% ... 100%, colorHex: '#...' }, ...]`.
+  - Upon dispatch, the UI passes these pins through a mathematically defined interpolation algorithm (`PositionalMathBuffer.ts`) that strictly builds out a full `[R,G,B]` array for exactly the user's targeted device LED count.
+  - The fully rendered float-bound array is wrapped in the standard `0x59` protocol method. This allows true hardware-agnostic point plotting where the user interacts via 0-100% bounds, and the backend handles rendering based on exact hardware capacity.
+
 ---
 
-## 5. Fixed Modes — CORRECTION
+## 6. Fixed Modes — CORRECTION
 
 > [!CAUTION]
 > The original table used `0x61` for patterns 2-10. **This is WRONG.** APK audit proves `0x61` is a timer/schedule command on IC devices. See **Section 13** for the correct `0x59`-based implementation.

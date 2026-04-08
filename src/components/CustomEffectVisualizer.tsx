@@ -75,7 +75,7 @@ export const CustomEffectVisualizer: React.FC<CustomEffectVisualizerProps> = ({
              key={i} 
              style={{ 
                flex: 1,
-               borderRadius: 4, 
+               borderRadius: 1000, 
                backgroundColor: c
              }} 
           />

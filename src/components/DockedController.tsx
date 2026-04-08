@@ -29,7 +29,8 @@ import { getRbmPatternName } from '../constants/RbmPatterns';
 import { ZENGGE_EFFECTS } from '../constants/CustomEffects';
 import CustomEffectVisualizer from './CustomEffectVisualizer';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
-import { buildPatternPayload } from '../protocols/PatternEngine';
+import { PositionalMathBuffer, BuilderNode } from '../protocols/PositionalMathBuffer';
+import PositionalGradientBuilder from './PositionalGradientBuilder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger } from '../services/AppLogger';
@@ -434,7 +435,15 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   const [multiLength, setMultiLength] = useState<number>(16);
 
   // Active Sub-Mode for the Consolidated Fixed Tab
-  const [fixedSubMode, setFixedSubMode] = useState<'PATTERN' | 'DIY'>('PATTERN');
+  const [fixedSubMode, setFixedSubMode] = useState<'PATTERN' | 'DIY' | 'BUILDER'>('PATTERN');
+
+  // Multi-Color Builder State
+  const [builderNodes, setBuilderNodes] = useState<BuilderNode[]>([
+      { id: 'node_1', position: 0, colorHex: '#FF0000' },
+      { id: 'node_2', position: 100, colorHex: '#00F0FF' }
+  ]);
+  const [builderFillMode, setBuilderFillMode] = useState<'GRADIENT' | 'SOLID'>('GRADIENT');
+  const [builderTransitionType, setBuilderTransitionType] = useState<number>(1);
 
   // ── Street Mode (Accelerometer Reactive) ──────────────────────────────────────
   const [streetSensitivity, setStreetSensitivity] = useState<number>(30);
@@ -856,10 +865,18 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     // (segments is a hardware IC layout parameter, not a pixel-count divisor)
     const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
 
-    // Directly map the 1-33 Pattern IDs into the 0x51 Custom Mode packet
+    // Effect #1 is the newly inserted Solid override that uses classic 0x59 fill instead of 0x51 Custom Mode
+    if (patternId === 1) {
+      // 0x00 transition = SOLID
+      const payload = ZenggeProtocol.setMultiColor([fgRgb], 0x00, currentSpeed);
+      if (payload) writeToDevice(payload);
+      return;
+    }
+
+    // Directly map the 2-34 Pattern IDs back into the 1-33 Custom Mode subset
     const s = Math.floor(currentSpeed / 3) + 1; // Normalize 1-100 to 1-31 hardware speed
     const payload = ZenggeProtocol.setCustomMode([{
-      mode: patternId,
+      mode: patternId - 1,
       speed: s,
       color1: fgRgb,
       color2: bgRgb
@@ -1492,8 +1509,8 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
           {activeMode === 'MULTIMODE' && (
             <View style={{ flex: 1, marginBottom: 8, justifyContent: 'flex-start' }}>
               
-              {/* UNIFIED SOLID & MULTI-COLOR PRESETS & DIY BUILDER */}
-              {(fixedSubMode === 'DIY' || fixedSubMode === 'PATTERN') && (
+              {/* UNIFIED SOLID & MULTI-COLOR PRESETS & PRO EFFECTS & POSITIONAL BUILDER */}
+              {(fixedSubMode === 'DIY' || fixedSubMode === 'PATTERN' || fixedSubMode === 'BUILDER') && (
                 <View style={{ flex: 1, width: '100%', marginBottom: 4 }}>
                   
                   {/* UNIFIED TOGGLE */}
@@ -1741,6 +1758,21 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                     );
                     })()}
                   </View>
+                  )}
+
+                  {/* POSITIONAL ARRAY BUILDER TIER */}
+                  {fixedSubMode === 'BUILDER' && (
+                     <PositionalGradientBuilder 
+                         nodes={builderNodes}
+                         onNodesChange={setBuilderNodes}
+                         fillMode={builderFillMode}
+                         onFillModeChange={setBuilderFillMode}
+                         transitionType={builderTransitionType}
+                         onTransitionTypeChange={setBuilderTransitionType}
+                         speed={speed}
+                         deviceLedCount={hwSettings?.ledPoints || points || 150}
+                         writeToDevice={writeToDevice}
+                     />
                   )}
 
                 </View>
@@ -2067,7 +2099,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                 {!(activeMode === 'CAMERA') && (
                 <View style={[styles.colorGrid, { paddingHorizontal: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
                   {[
-                    '#FF0000', '#FF8000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#800080', '#FF00FF', '#FFFFFF'
+                    '#FF0000', '#FF8000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#800080', '#FF00FF', '#FFFFFF', '#000000'
                   ].map((color, index) => {
                     let dynamicColor = selectedColor;
                     if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
@@ -2082,7 +2114,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                         onPress={() => {
                           const hueMap: {[key: string]: number} = {
                             '#FF0000': 0, '#FF8000': 30, '#FFFF00': 60, '#00FF00': 120, 
-                            '#00FFFF': 180, '#0000FF': 240, '#800080': 280, '#FF00FF': 300, '#FFFFFF': 0
+                            '#00FFFF': 180, '#0000FF': 240, '#800080': 280, '#FF00FF': 300, '#FFFFFF': 0, '#000000': 0
                           };
                           if (activeMode === 'MULTIMODE') {
                             if (fixedSubMode === 'PATTERN') {

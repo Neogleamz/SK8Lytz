@@ -378,8 +378,8 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
              const mmSegLeds = isHaloz ? Math.ceil(numLeds / 2) : numLeds;
              
              let framePixels: RGB[];
-             if (pid <= 33) {
-                 // Use the new mathematically accurate 33-effect Visualizer Math
+             if (pid <= 34) {
+                 // Use the new mathematically accurate 34-effect Visualizer Math
                  const base16 = ZenggeVisualizerMath.getVisualizerDots(pid, fgRgb, bgRgb, animTick, true, deviceSegments > 1);
                  
                  // Stretch the 16 native hardware dots into the Visualizer box segment
