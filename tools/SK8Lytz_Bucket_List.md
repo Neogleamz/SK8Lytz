@@ -6,8 +6,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🔴 High Priority / Active
 
-- [/] **#6 — Favorites persistence** — Audit and repair saved favorites so they correctly recall mode, colors, speed, and pattern. Migrate any legacy DIY-mode favorites to Builder-compatible format.
-- [/] **#26 — SK8Lytz Picks Database Migration** — Transition the curated "SK8Lytz Picks" from local JSON files to a dynamic Supabase-driven backend for real-time updates.
+- [x] **#6 — Favorites persistence** — Legacy DIY mode entries migrated to BUILDER on load. RBM → PROGRAMS. One-time write-back to AsyncStorage. (Apr 2026)
+- [x] **#26 — SK8Lytz Picks Database Migration** — Moved from Supabase Storage blob to `sk8lytz_picks` table. Seasonal scheduler columns (`active_from`, `active_until`, `is_active`) ready. (Apr 2026)
 
 ---
 
@@ -16,9 +16,9 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] **#3 — `CrewModal.tsx` refactor** — 14 useEffect hooks, 2,600+ lines. Extract `useCrewHub()` and `useCrewSession()` custom hooks. Highest maintainability debt in the codebase.
 - [ ] **#7 — Admin Hardware Tester audit** — Verify `setMultiColor` path in admin tester applies color sorting correctly (currently does NOT call `applyColorSorting` — review `AdminHardwareTester.tsx` L169).
 - [ ] **#8 — Camera Mode: Touch Precision fix** — Color picker swatch is sampling too large an area. Touch/tap should sample ONLY the pixel directly under the finger and run the existing color enhancement routine on that single pixel.
-- [ ] **#9 — Street Mode: Cruise LED bounce animation** — Mid-section cruise LEDs (between rear RED taillights and front WHITE headlights) should bounce/chase between the two zones.
-- [ ] **#10 — Street Mode: Tail light dimming** — Rear RED taillights should be **50% brightness** while CRUISING or ACCELERATING, ramp to **100%** when BRAKING or STOPPED. Fix `applyStreetPattern()`: `tailBright = isBraking ? factor : factor * 0.5`.
-- [ ] **#11 — Visualizer: Street Mode parity** — `ProductVisualizer.tsx` must reflect tail dimming (50% cruise, 100% brake) and show the bouncing cruise LED animation matching hardware output.
+- [x] **#9 — Street Mode: Cruise LED bounce animation** — Hardware chase ticker advances through mid-zone each `applyStreetPattern()` call. Visualizer mirrors the same triangle-wave bounce.
+- [x] **#10 — Street Mode: Tail light dimming** — Absolute brightness: `tailR = isBraking ? 255 : 127`. Not scaled by user brightness slider. Both hardware and visualizer fixed.
+- [x] **#11 — Visualizer: Street Mode parity** — `motionState` prop added to `ProductVisualizer`. SLOWING_DOWN shows amber cruise zone; bounce only plays during CRUISING/ACCELERATING.
 - [ ] **#13 — Lab 0x73 Music Mode parity** — Lab BUILDER's 0x73 section is missing Light Screen (0x27) vs Light Bar (0x26) matrix style toggle, primary/secondary color pickers, and mic source.
 - [ ] **#14 — Music Mode: Sound column/drop color not applied** — Main app music mode is functioning but color changes for patterns that use "sound column" and "drop" effects are not being accepted/applied.
 - [ ] **#15 — Visualizer Parity: Pro Effects Patterns** — Exhaustively review and tune the interpolation mathematics for all 33 of the 'pro effects' patterns to make them physically accurate within the product visualizer.
@@ -78,4 +78,4 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] Legacy Deprecation: DIY mode fully replaced by Builder workflow (Apr 2026)
 
 ---
-*Last updated: 2026-04-08 | Active: #6 (Favorites migration), #26 (SK8Lytz Picks DB+Scheduler). Added #28 (Picks admin UI - future).*
+*Last updated: 2026-04-08 | Completed: #6, #9, #10, #11, #26. Next: #3 (CrewModal refactor) or #13 (Music Mode parity).*
