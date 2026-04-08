@@ -15,6 +15,7 @@ interface Props {
   onTransitionTypeChange: (type: number) => void;
   speed: number;
   deviceLedCount: number;
+  selectedColor: string; // The universal color passed from DockedController
   writeToDevice?: (payload: number[]) => Promise<void>;
 }
 
@@ -22,11 +23,22 @@ export default function PositionalGradientBuilder({
    nodes, onNodesChange, 
    fillMode, onFillModeChange, 
    transitionType, onTransitionTypeChange,
-   speed, deviceLedCount, writeToDevice
+   speed, deviceLedCount, selectedColor, writeToDevice
 }: Props) {
   const { Colors, isDark } = useTheme();
 
   const [activeNodeId, setActiveNodeId] = useState<string | null>(nodes[0]?.id || null);
+
+  // Auto-sync universal color picker changes to the active pin
+  useEffect(() => {
+     if (activeNodeId) {
+         const current = nodes.find(n => n.id === activeNodeId);
+         if (current && current.colorHex !== selectedColor) {
+             const updated = nodes.map(n => n.id === activeNodeId ? { ...n, colorHex: selectedColor } : n);
+             onNodesChange(updated);
+         }
+     }
+  }, [selectedColor]);
 
   // Dispatch payloads whenever parameters change
   useEffect(() => {
@@ -40,7 +52,6 @@ export default function PositionalGradientBuilder({
   }, [nodes, fillMode, transitionType, speed, deviceLedCount]);
 
   const addNode = () => {
-      // Find a safe spot
       let newPosition = 50;
       if (nodes.length > 0) {
           const last = nodes[nodes.length - 1];
@@ -51,7 +62,7 @@ export default function PositionalGradientBuilder({
       const newNode: BuilderNode = {
           id: `node_${Date.now()}`,
           position: newPosition,
-          colorHex: '#FFFFFF'
+          colorHex: selectedColor // Inherit universal color
       };
       
       const updated = [...nodes, newNode].sort((a,b) => a.position - b.position);
@@ -144,17 +155,6 @@ export default function PositionalGradientBuilder({
                     maximumValue={100}
                     style={{ flex: 1 }}
                 />
-            </View>
-            
-            {/* Embedded Mini Color Swatch Grid for active pin */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
-                {['#FF0000', '#FF8C00', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#FFFFFF', '#000000'].map(c => (
-                   <TouchableOpacity 
-                      key={c} 
-                      onPress={() => updateNode(activeNode.id, { colorHex: c })}
-                      style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: c, borderWidth: 1, borderColor: activeNode.colorHex === c ? '#FFF' : 'transparent' }} 
-                   />
-                ))}
             </View>
          </View>
       )}

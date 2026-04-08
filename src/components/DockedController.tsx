@@ -1777,6 +1777,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                          onTransitionTypeChange={setBuilderTransitionType}
                          speed={speed}
                          deviceLedCount={hwSettings?.ledPoints || points || 150}
+                         selectedColor={selectedColor}
                          writeToDevice={writeToDevice}
                      />
                   )}
