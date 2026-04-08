@@ -23,6 +23,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
+import { Typography } from '../theme/theme';
 import { ZenggeProtocol, IC_TYPES, COLOR_SORTING_RGB } from '../protocols/ZenggeProtocol';
 import CustomEffectVisualizer from './CustomEffectVisualizer';
 
@@ -120,6 +122,14 @@ export default function Sk8LytzDiagnosticLab({
   connectToDevice, liveDeviceConfigs = {},
 }: LabProps) {
 
+  const { Colors, isDark } = useTheme();
+  const bg      = isDark ? '#0a0d18' : '#f0f2f5';
+  const cardBg  = isDark ? '#141829' : '#ffffff';
+  const txtPri  = isDark ? '#ffffff' : '#111827';
+  const txtMuted= isDark ? '#8a96b3' : '#6b7280';
+  const border  = isDark ? '#252c47' : '#e5e7eb';
+  const cyan    = '#00f0ff';
+
   const [tab, setTab] = useState<LabTab>('DEVICES');
   const [logs, setLogs] = useState<BleLog[]>([]);
   const [lastSent, setLastSent] = useState<string>('');
@@ -187,13 +197,14 @@ export default function Sk8LytzDiagnosticLab({
       } else if (bldProtocol === '0x51') {
         const mode = parseInt(bld51Mode) || 1;
         const spd = Math.max(1, Math.min(31, parseInt(bld51Speed) || 16));
+        // Note: ZenggeProtocol.setCustomMode currently only supports color/speed.
+        // dir and seg flags are reserved for future protocol refinement.
         const wrapped = ZenggeProtocol.setCustomMode([{
             mode, speed: spd, 
-            color1: bld51Color1, color2: bld51Color2,
-            dir: bld51Dir, seg: bld51Seg ? 1 : 0
+            color1: bld51Color1, color2: bld51Color2
         }]);
         const hex = wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
-        setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x51] DIY Mode Payload', `Effect ID: ${mode}`, `Speed: ${spd}`, `Dir: ${bld51Dir} | Segs: ${bld51Seg ? 'TRUE' : 'FALSE'}`] });
+        setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x51] DIY Mode Payload', `Effect ID: ${mode}`, `Speed: ${spd}`] });
         setBldHexOverride(hex);
       } else if (bldProtocol === '0x73') {
         const id = parseInt(bldMusicMode) || 1;
@@ -295,18 +306,20 @@ export default function Sk8LytzDiagnosticLab({
     );
   };
 
-  // ─── DEVICES TAB ────────────────────────────────────────────────────────────
+  // ─── DEVICES TAB ───────────────────────────────────────────────────
   const renderDevicesTab = () => (
     <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-         <Text style={S.sectionTitle}>HARDWARE SCANNER</Text>
-         <TouchableOpacity 
-           style={{ backgroundColor: isScanning ? '#555' : '#00E676', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }} 
-           onPress={() => { if (handleScan) handleScan(); }}
-           disabled={isScanning}
-         >
-           <Text style={{ color: '#000', fontWeight: 'bold', fontSize: 11 }}>{isScanning ? 'SCANNING...' : 'START SCAN'}</Text>
-         </TouchableOpacity>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <Text style={[S.sectionTitle, { color: txtPri }]}>HARDWARE SCANNER</Text>
+        <TouchableOpacity 
+          style={{ backgroundColor: isScanning ? border : cyan, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: isScanning ? border : cyan }} 
+          onPress={() => { if (handleScan) handleScan(); }}
+          disabled={isScanning}
+        >
+          <Text style={{ color: isScanning ? txtMuted : '#000', fontWeight: '900', fontSize: 11, letterSpacing: 0.5 }}>
+            {isScanning ? 'SCANNING...' : 'START SCAN'}
+          </Text>
+        </TouchableOpacity>
       </View>
       
       {(!allDevices || allDevices.length === 0) && (
@@ -314,48 +327,76 @@ export default function Sk8LytzDiagnosticLab({
       )}
 
       {allDevices?.map((d: any, idx) => {
-         const cfg = { ...(liveDeviceConfigs?.[d.id] || {}) };
-         const points   = cfg.points    ?? d.points    ?? null;
-         const segments = cfg.segments  ?? d.segments  ?? null;
-         const sorting  = cfg.sorting   ?? d.sorting   ?? cfg.colorSortingName ?? null;
-         const stripType= cfg.stripType ?? d.stripType ?? cfg.icName           ?? null;
-         const isConn   = connectedDevices?.some((c: any) => c.id === d.id);
-         const isTarget = targetDeviceId === d.id;
+        const cfg = { ...(liveDeviceConfigs?.[d.id] || {}) };
+        const points   = cfg.points    ?? d.points    ?? null;
+        const segments = cfg.segments  ?? d.segments  ?? null;
+        const sorting  = cfg.sorting   ?? d.sorting   ?? cfg.colorSortingName ?? null;
+        const stripType= cfg.stripType ?? d.stripType ?? cfg.icName           ?? null;
+        const isConn   = connectedDevices?.some((c: any) => c.id === d.id);
+        const isTarget = targetDeviceId === d.id;
 
-         return (
-         <View key={d.id || idx} style={[S.diagBox, isTarget && { borderColor: '#00f0ff', borderWidth: 2 }]}>
+        return (
+          <View key={d.id || idx} style={[S.diagBox, isTarget && { borderColor: cyan, borderWidth: 1.5 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13, flex: 1 }} numberOfLines={1}>{cfg.name || d.name || 'Unknown Device'}</Text>
+              <Text style={{ color: txtPri, fontWeight: 'bold', fontSize: 13, flex: 1 }} numberOfLines={1}>
+                {cfg.name || d.name || 'Unknown Device'}
+              </Text>
               {isConn
                 ? (
                   <View style={{ flexDirection: 'row', gap: 6 }}>
-                    <Text style={{ color: '#00E676', fontSize: 10, fontWeight: '700', alignSelf: 'center' }}>● CONNECTED</Text>
-                    <TouchableOpacity onPress={() => setTargetDeviceId(d.id)} style={{ backgroundColor: isTarget ? '#00f0ff' : '#333', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}>
-                      <Text style={{ color: isTarget ? '#000' : '#FFF', fontSize: 10, fontWeight: 'bold' }}>{isTarget ? 'TARGETED' : 'TARGET'}</Text>
+                    <Text style={{ color: '#00E676', fontSize: 10, fontWeight: '900', alignSelf: 'center' }}>● LIVE</Text>
+                    <TouchableOpacity 
+                      onPress={() => setTargetDeviceId(d.id)} 
+                      style={{ backgroundColor: isTarget ? cyan : border, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}
+                    >
+                      <Text style={{ color: isTarget ? '#000' : txtPri, fontSize: 10, fontWeight: 'bold' }}>
+                        {isTarget ? 'TARGETED' : 'TARGET'}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 )
-                : <TouchableOpacity onPress={() => connectToDevice && connectToDevice(d)} style={{ backgroundColor: '#9D4EFF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}>
+                : (
+                  <TouchableOpacity 
+                    onPress={() => connectToDevice && connectToDevice(d)} 
+                    style={{ backgroundColor: '#9D4EFF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}
+                  >
                     <Text style={{ color: '#FFF', fontSize: 10, fontWeight: 'bold' }}>CONNECT</Text>
                   </TouchableOpacity>
+                )
               }
             </View>
-            <Text style={{ color: '#555', fontSize: 10, marginBottom: 8, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{d.id}</Text>
+            <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 12, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+              {d.id}
+            </Text>
             
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-               <Text style={{ color: '#888', fontSize: 10 }}>LEDs: <Text style={{ color: '#00ccff' }}>{points ?? '?'}</Text></Text>
-               <Text style={{ color: '#888', fontSize: 10 }}>Seg: <Text style={{ color: '#00ccff' }}>{segments ?? '?'}</Text></Text>
-               <Text style={{ color: '#888', fontSize: 10 }}>Sort: <Text style={{ color: '#FF69B4' }}>{sorting ?? '?'}</Text></Text>
-               <Text style={{ color: '#888', fontSize: 10 }}>IC: <Text style={{ color: '#FFD700' }}>{stripType ?? '?'}</Text></Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ color: txtMuted, fontSize: 10 }}>LEDs </Text>
+                <Text style={{ color: cyan, fontSize: 10, fontWeight: 'bold' }}>{points ?? '?'}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ color: txtMuted, fontSize: 10 }}>SEG </Text>
+                <Text style={{ color: cyan, fontSize: 10, fontWeight: 'bold' }}>{segments ?? '?'}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ color: txtMuted, fontSize: 10 }}>SORT </Text>
+                <Text style={{ color: '#FF69B4', fontSize: 10, fontWeight: 'bold' }}>{sorting ?? '?'}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ color: txtMuted, fontSize: 10 }}>IC </Text>
+                <Text style={{ color: '#FFD700', fontSize: 10, fontWeight: 'bold' }}>{stripType ?? '?'}</Text>
+              </View>
             </View>
 
             {isTarget && hwSettings?.detected && (
-              <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#333' }}>
-                 <Text style={{ color: '#00CC88', fontSize: 10 }}>Hardware settings populated from active probe.</Text>
+              <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: border }}>
+                <Text style={{ color: '#00CC88', fontSize: 10, fontWeight: 'bold' }}>
+                  ✓ Hardware settings populated from active probe.
+                </Text>
               </View>
             )}
-         </View>
-         );
+          </View>
+        );
       })}
     </ScrollView>
   );
@@ -363,123 +404,121 @@ export default function Sk8LytzDiagnosticLab({
   // ─── COLOR TEST TAB ─────────────────────────────────────────────────────────
   const renderColorTab = () => (
     <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={S.sectionTitle}>COLOR ORDER TEST</Text>
-      <Text style={S.hint}>
+      <Text style={[S.sectionTitle, { color: txtPri }]}>COLOR ORDER TEST</Text>
+      <Text style={[S.hint, { color: txtMuted }]}>
         Tap each button — observe what color the hardware actually shows.{'\n'}
         This identifies whether hardware auto-remaps GRB or needs pre-swapped bytes.
       </Text>
 
       {renderHwBadge()}
 
-      <Text style={S.subTitle}>PRIMARY COLORS (Pure RGB bytes)</Text>
+      <Text style={[S.subTitle, { color: txtMuted }]}>PRIMARY COLORS (Pure RGB bytes)</Text>
       <View style={S.colorBtnRow}>
         {[
-          { label: 'SEND RED\n[255,0,0]',   r:255, g:0,   b:0,   bg:'#7A1010', border:'#FF4040', note:'Pure RED [255,0,0] — should show RED if hardware remaps' },
-          { label: 'SEND GREEN\n[0,255,0]', r:0,   g:255, b:0,   bg:'#0A4A0A', border:'#00CC00', note:'Pure GREEN [0,255,0]' },
-          { label: 'SEND BLUE\n[0,0,255]',  r:0,   g:0,   b:255, bg:'#101070', border:'#4040FF', note:'Pure BLUE [0,0,255]' },
+          { label: 'SEND RED\n[255,0,0]',   r:255, g:0,   b:0,   bg: isDark ? '#401010' : '#fee2e2', border:'#FF4040', note:'Pure RED [255,0,0]' },
+          { label: 'SEND GREEN\n[0,255,0]', r:0,   g:255, b:0,   bg: isDark ? '#104010' : '#f0fdf4', border:'#00CC00', note:'Pure GREEN [0,255,0]' },
+          { label: 'SEND BLUE\n[0,0,255]',  r:0,   g:0,   b:255, bg: isDark ? '#101040' : '#eff6ff', border:'#4040FF', note:'Pure BLUE [0,0,255]' },
         ].map(btn => (
           <TouchableOpacity key={btn.label} style={[S.bigColorBtn, { backgroundColor: btn.bg, borderColor: btn.border }]}
             onPress={() => sendSolid(btn.r, btn.g, btn.b, hwPts, 0x01, btn.note)}>
-            <Text style={{ color: btn.border, fontWeight: 'bold', textAlign: 'center', fontSize: 12 }}>{btn.label}</Text>
+            <Text style={{ color: btn.border, fontWeight: '900', textAlign: 'center', fontSize: 11 }}>{btn.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <Text style={S.subTitle}>DIAGNOSIS GUIDE</Text>
-      <View style={S.diagBox}>
-        <Text style={S.diagLine}>🟢 If RED btn → RED light: hardware auto-remaps. Send pure RGB. ✅</Text>
-        <Text style={S.diagLine}>🔴 If RED btn → GREEN light: hardware is GRB-wired, no auto-remap.</Text>
-        <Text style={S.diagLine}>   → Must pre-swap in software (applyColorSorting GRB=2)</Text>
-        <Text style={S.diagLine}>⚠️  If NOTHING lights: LED count wrong or payload format wrong.</Text>
+      <Text style={[S.subTitle, { color: txtMuted }]}>DIAGNOSIS GUIDE</Text>
+      <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
+        <Text style={[S.diagLine, { color: txtPri }]}>🟢 If RED btn → RED light: hardware auto-remaps. ✅</Text>
+        <Text style={[S.diagLine, { color: txtPri, opacity: 0.8 }]}>🔴 If RED btn → GREEN light: hardware is GRB-wired.</Text>
+        <Text style={[S.diagLine, { color: txtMuted, fontSize: 10, fontStyle: 'italic' }]}>   → Must applyColorSorting(sortingIndex=2)</Text>
       </View>
 
-      <Text style={S.subTitle}>GRB PRE-SWAPPED VERSION</Text>
-      <Text style={S.hint}>If pure RGB shows wrong colors, try these (bytes pre-swapped for GRB):</Text>
+      <Text style={[S.subTitle, { color: txtMuted }]}>GRB PRE-SWAPPED VERSION</Text>
       <View style={S.colorBtnRow}>
         {[
-          { label: 'GRB RED\n[0,255,0]',   r:0,   g:255, b:0,   bg:'#7A1010', border:'#FF4040', note:'GRB-swapped RED — send [G=0,R=255,B=0] as [0,255,0]' },
-          { label: 'GRB GREEN\n[255,0,0]', r:255, g:0,   b:0,   bg:'#0A4A0A', border:'#00CC00', note:'GRB-swapped GREEN [255,0,0]' },
-          { label: 'GRB BLUE\n[0,0,255]',  r:0,   g:0,   b:255, bg:'#101070', border:'#4040FF', note:'GRB Blue same [0,0,255]' },
+          { label: 'GRB RED\n[0,255,0]',   r:0,   g:255, b:0,   bg: isDark ? '#401010' : '#fee2e2', border:'#FF4040', note:'GRB-swapped RED' },
+          { label: 'GRB GREEN\n[255,0,0]', r:255, g:0,   b:0,   bg: isDark ? '#104010' : '#f0fdf4', border:'#00CC00', note:'GRB-swapped GREEN' },
+          { label: 'GRB BLUE\n[0,0,255]',  r:0,   g:0,   b:255, bg: isDark ? '#101040' : '#eff6ff', border:'#4040FF', note:'GRB Blue same' },
         ].map(btn => (
           <TouchableOpacity key={btn.label} style={[S.bigColorBtn, { backgroundColor: btn.bg, borderColor: btn.border }]}
             onPress={() => sendSolid(btn.r, btn.g, btn.b, hwPts, 0x01, btn.note)}>
-            <Text style={{ color: btn.border, fontWeight: 'bold', textAlign: 'center', fontSize: 12 }}>{btn.label}</Text>
+            <Text style={{ color: btn.border, fontWeight: '900', textAlign: 'center', fontSize: 11 }}>{btn.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <Text style={S.subTitle}>LAST SENT</Text>
+      <Text style={[S.subTitle, { color: txtMuted }]}>LAST SENT</Text>
       {lastSent ? (
-        <View style={S.sentBox}>
-          <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>{lastNote}</Text>
-          <MonoText>{lastSent}</MonoText>
+        <View style={[S.sentBox, { backgroundColor: isDark ? '#05070a' : '#f9fafb', borderColor: border }]}>
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4 }}>{lastNote}</Text>
+          <MonoText color={cyan}>{lastSent}</MonoText>
         </View>
-      ) : <Text style={{ color: '#555', fontSize: 12 }}>Nothing sent yet.</Text>}
+      ) : <Text style={{ color: txtMuted, fontSize: 12, marginTop: 8 }}>Nothing sent yet.</Text>}
     </ScrollView>
   );
 
   // ─── TRANSITION TYPE TAB ────────────────────────────────────────────────────
   const renderTransitionTab = () => (
     <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={S.sectionTitle}>TRANSITION TYPE PROBE</Text>
-      <Text style={S.hint}>
+      <Text style={[S.sectionTitle, { color: txtPri }]}>TRANSITION TYPE PROBE</Text>
+      <Text style={[S.hint, { color: txtMuted }]}>
         Each button sends the same color with a different transitionType byte.{'\n'}
         Observe what the hardware actually does — we need to confirm 0x00 vs 0x01 behavior.
       </Text>
       {renderHwBadge()}
 
-      <Text style={S.subTitle}>COLOR TO SEND (change in BUILDER tab first)</Text>
+      <Text style={[S.subTitle, { color: txtMuted }]}>COLOR TO SEND (change in BUILDER tab first)</Text>
       <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16, alignItems: 'center' }}>
-        <View style={{ width: 40, height: 40, backgroundColor: `rgb(${bldColors[0]?.r||0},${bldColors[0]?.g||0},${bldColors[0]?.b||0})`, borderRadius: 8, borderWidth: 1, borderColor: '#444' }} />
-        <Text style={{ color: '#aaa', fontSize: 12 }}>R:{bldColors[0]?.r||0} G:{bldColors[0]?.g||0} B:{bldColors[0]?.b||0} · {hwPts} LEDs · Speed:{bldSpeed}</Text>
+        <View style={{ width: 40, height: 40, backgroundColor: `rgb(${bldColors[0]?.r||0},${bldColors[0]?.g||0},${bldColors[0]?.b||0})`, borderRadius: 8, borderWidth: 1, borderColor: border }} />
+        <Text style={{ color: txtMuted, fontSize: 12 }}>R:{bldColors[0]?.r||0} G:{bldColors[0]?.g||0} B:{bldColors[0]?.b||0} · {hwPts} LEDs · Speed:{bldSpeed}</Text>
       </View>
 
       {TRANSITION_TYPES.map(tt => (
         <TouchableOpacity key={tt.byte}
-          style={[S.transBtn, { borderColor: tt.color }]}
+          style={[S.transBtn, { borderColor: tt.color, backgroundColor: cardBg }]}
           onPress={() => {
             const pixels = Array(hwPts).fill({ r: bldColors[0]?.r||0, g: bldColors[0]?.g||0, b: bldColors[0]?.b||0 });
             const { wrapped } = build0x59(pixels, tt.byte, bldSpeed, 1);
             transmit(wrapped, `transitionType=0x0${tt.byte.toString(16).toUpperCase()} ${tt.label}`);
           }}>
-          <View style={[S.transByteBadge, { backgroundColor: tt.color + '33', borderColor: tt.color }]}>
-            <Text style={{ color: tt.color, fontWeight: 'bold', fontSize: 14 }}>0x0{tt.byte.toString(16).toUpperCase()}</Text>
+          <View style={[S.transByteBadge, { backgroundColor: tt.color + '22', borderColor: tt.color }]}>
+            <Text style={{ color: tt.color, fontWeight: '900', fontSize: 14 }}>0x0{tt.byte.toString(16).toUpperCase()}</Text>
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={{ color: tt.color, fontWeight: 'bold', fontSize: 13 }}>{tt.label}</Text>
-            <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }}>{tt.desc}</Text>
+            <Text style={{ color: tt.color, fontWeight: '900', fontSize: 13 }}>{tt.label}</Text>
+            <Text style={{ color: txtMuted, fontSize: 11, marginTop: 2 }}>{tt.desc}</Text>
           </View>
           <MaterialCommunityIcons name="send" size={18} color={tt.color} />
         </TouchableOpacity>
       ))}
 
-      <View style={S.diagBox}>
-        <Text style={S.diagLine}>📝 WHAT WE EXPECT (from Master Reference):</Text>
-        <Text style={S.diagLine}>0x00 = CASCADE — LEDs should scroll/chase</Text>
-        <Text style={S.diagLine}>0x01 = FREEZE — LEDs should sit perfectly still (SOLID)</Text>
-        <Text style={S.diagLine}>0x02 = STROBE — LEDs should flash on/off</Text>
-        <Text style={S.diagLine}>0x03 = UNKNOWN — document what this actually does</Text>
+      <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
+        <Text style={[S.diagLine, { color: txtPri, fontWeight: 'bold' }]}>📝 WHAT WE EXPECT (from Master Reference):</Text>
+        <Text style={[S.diagLine, { color: txtPri }]}>0x00 = CASCADE — LEDs should scroll/chase</Text>
+        <Text style={[S.diagLine, { color: txtPri }]}>0x01 = FREEZE — LEDs should sit perfectly still (SOLID)</Text>
+        <Text style={[S.diagLine, { color: txtPri }]}>0x02 = STROBE — LEDs should flash on/off</Text>
+        <Text style={[S.diagLine, { color: txtPri }]}>0x03 = UNKNOWN — document what this actually does</Text>
         <Text style={[S.diagLine, { color: '#FF9500', marginTop: 8 }]}>👉 If SOLID looks wrong, it's 0x00 vs 0x01 confusion.</Text>
       </View>
 
-      <Text style={S.subTitle}>LAST SENT</Text>
+      <Text style={[S.subTitle, { color: txtMuted }]}>LAST SENT</Text>
       {lastSent ? (
-        <View style={S.sentBox}>
-          <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>{lastNote}</Text>
-          <MonoText>{lastSent}</MonoText>
+        <View style={[S.sentBox, { backgroundColor: isDark ? '#05070a' : '#f9fafb', borderColor: border }]}>
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4 }}>{lastNote}</Text>
+          <MonoText color={cyan}>{lastSent}</MonoText>
         </View>
-      ) : <Text style={{ color: '#555', fontSize: 12 }}>Nothing sent yet.</Text>}
+      ) : <Text style={{ color: txtMuted, fontSize: 12, marginTop: 8 }}>Nothing sent yet.</Text>}
     </ScrollView>
   );
 
   // ─── BUILDER TAB ────────────────────────────────────────────────────────────
   const renderBuilderTab = () => (
     <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={S.sectionTitle}>PROTOCOL BUILDER</Text>
-      <Text style={S.hint}>Select a protocol and build the exact hex packet.</Text>
+      <Text style={[S.sectionTitle, { color: txtPri }]}>PROTOCOL BUILDER</Text>
+      <Text style={[S.hint, { color: txtMuted }]}>Select a protocol and build the exact hex packet.</Text>
       {renderHwBadge()}
 
-      <Text style={S.subTitle}>PROTOCOL</Text>
+      <Text style={[S.subTitle, { color: txtMuted }]}>PROTOCOL</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
         {[
           { id: '0x51', label: '0x51 DIY Mode' },
@@ -489,16 +528,16 @@ export default function Sk8LytzDiagnosticLab({
           { id: '0x62', label: '0x62 Setup' }
         ].map(p => (
            <TouchableOpacity key={p.id}
-             style={[S.chip, bldProtocol === p.id && S.chipActive]}
+             style={[S.chip, bldProtocol === p.id && S.chipActive, { backgroundColor: bldProtocol === p.id ? cyan + '22' : cardBg, borderColor: bldProtocol === p.id ? cyan : border }]}
              onPress={() => setBldProtocol(p.id as any)}>
-             <Text style={{ color: bldProtocol === p.id ? '#00f0ff' : '#888', fontWeight: 'bold', fontSize: 11 }}>{p.label}</Text>
+             <Text style={{ color: bldProtocol === p.id ? cyan : txtMuted, fontWeight: '900', fontSize: 11 }}>{p.label}</Text>
            </TouchableOpacity>
         ))}
       </View>
 
       {bldProtocol === '0x51' && (
-        <View style={{ marginBottom: 16 }}>
-          <Text style={S.subTitle}>DIY MODE MATH SIMULATOR</Text>
+        <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
+          <Text style={[S.subTitle, { color: txtPri, marginTop: 0 }]}>DIY MODE MATH SIMULATOR</Text>
           <View style={{ alignItems: 'center', marginBottom: 16 }}>
             <CustomEffectVisualizer 
               effectId={parseInt(bld51Mode) || 1} 
@@ -512,111 +551,111 @@ export default function Sk8LytzDiagnosticLab({
 
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>EFFECT ID (1–33)</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>EFFECT ID (1–33)</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <TouchableOpacity onPress={() => setBld51Mode(String(Math.max(1, (parseInt(bld51Mode)||1) - 1)))} style={{ backgroundColor: '#222', borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>‒</Text>
+                <TouchableOpacity onPress={() => setBld51Mode(String(Math.max(1, (parseInt(bld51Mode)||1) - 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>‒</Text>
                 </TouchableOpacity>
-                <TextInput style={[S.numInput, { flex: 1, textAlign: 'center' }]} value={bld51Mode} keyboardType="numeric" onChangeText={v => setBld51Mode(String(Math.max(1, Math.min(33, parseInt(v)||1))))} />
-                <TouchableOpacity onPress={() => setBld51Mode(String(Math.min(33, (parseInt(bld51Mode)||1) + 1)))} style={{ backgroundColor: '#222', borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>+</Text>
+                <TextInput style={[S.numInput, { flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri, textAlign: 'center' }]} value={bld51Mode} keyboardType="numeric" onChangeText={v => setBld51Mode(String(Math.max(1, Math.min(33, parseInt(v)||1))))} />
+                <TouchableOpacity onPress={() => setBld51Mode(String(Math.min(33, (parseInt(bld51Mode)||1) + 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>+</Text>
                 </TouchableOpacity>
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SPEED (1–31)</Text>
-              <TextInput style={S.numInput} value={bld51Speed.toString()} keyboardType="numeric" onChangeText={v => setBld51Speed(Math.max(1, Math.min(31, parseInt(v)||1)).toString())} />
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>SPEED (1–31)</Text>
+              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bld51Speed.toString()} keyboardType="numeric" onChangeText={v => setBld51Speed(Math.max(1, Math.min(31, parseInt(v)||1)).toString())} />
             </View>
           </View>
 
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>DIR (Bit 7)</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>DIR (Bit 7)</Text>
               <View style={{ flexDirection: 'row', gap: 4 }}>
                 {[0, 1].map(d => (
-                  <TouchableOpacity key={d} style={[S.chip, bld51Dir === d && S.chipActive, {flex: 1}]} onPress={() => setBld51Dir(d)}>
-                    <Text style={{ color: bld51Dir === d ? '#00f0ff' : '#888', fontSize: 11, textAlign: 'center' }}>{d === 0 ? 'LEFT' : 'RIGHT'}</Text>
+                  <TouchableOpacity key={d} style={[S.chip, bld51Dir === d && { backgroundColor: cyan + '22', borderColor: cyan }, {flex: 1, height: 40}]} onPress={() => setBld51Dir(d)}>
+                    <Text style={{ color: bld51Dir === d ? cyan : txtMuted, fontSize: 11, textAlign: 'center', fontWeight: '900' }}>{d === 0 ? 'LEFT' : 'RIGHT'}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SEGS (Bit 6)</Text>
-              <TouchableOpacity style={[S.chip, bld51Seg && S.chipActive, {paddingVertical: 10}]} onPress={() => setBld51Seg(!bld51Seg)}>
-                <Text style={{ color: bld51Seg ? '#00f0ff' : '#888', textAlign: 'center', fontSize: 11, fontWeight: 'bold' }}>{bld51Seg ? 'SPLIT (1)' : 'FULL (0)'}</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>SEGS (Bit 6)</Text>
+              <TouchableOpacity style={[S.chip, bld51Seg && { backgroundColor: cyan + '22', borderColor: cyan }, {paddingVertical: 10, height: 40}]} onPress={() => setBld51Seg(!bld51Seg)}>
+                <Text style={{ color: bld51Seg ? cyan : txtMuted, textAlign: 'center', fontSize: 11, fontWeight: '900' }}>{bld51Seg ? 'SPLIT (1)' : 'FULL (0)'}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          <Text style={S.subTitle}>FOREGROUND (COLOR 1)</Text>
+          <Text style={[S.subTitle, { color: txtMuted, marginTop: 12 }]}>FOREGROUND (COLOR 1)</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
-            <View style={{ width: 24, height: 24, backgroundColor: `rgb(${bld51Color1.r},${bld51Color1.g},${bld51Color1.b})`, borderRadius: 4, borderWidth: 1, borderColor: '#444' }} />
-            <TextInput style={[{flex:1}, S.numInput]} value={bld51Color1.r.toString()} keyboardType="numeric" onChangeText={v => setBld51Color1(c => ({...c, r: parseInt(v)||0}))} placeholder="R" />
-            <TextInput style={[{flex:1}, S.numInput]} value={bld51Color1.g.toString()} keyboardType="numeric" onChangeText={v => setBld51Color1(c => ({...c, g: parseInt(v)||0}))} placeholder="G" />
-            <TextInput style={[{flex:1}, S.numInput]} value={bld51Color1.b.toString()} keyboardType="numeric" onChangeText={v => setBld51Color1(c => ({...c, b: parseInt(v)||0}))} placeholder="B" />
+            <View style={{ width: 24, height: 24, backgroundColor: `rgb(${bld51Color1.r},${bld51Color1.g},${bld51Color1.b})`, borderRadius: 6, borderWidth: 1, borderColor: border }} />
+            <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={bld51Color1.r.toString()} keyboardType="numeric" onChangeText={v => setBld51Color1(c => ({...c, r: parseInt(v)||0}))} placeholder="R" placeholderTextColor={txtMuted} />
+            <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={bld51Color1.g.toString()} keyboardType="numeric" onChangeText={v => setBld51Color1(c => ({...c, g: parseInt(v)||0}))} placeholder="G" placeholderTextColor={txtMuted} />
+            <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={bld51Color1.b.toString()} keyboardType="numeric" onChangeText={v => setBld51Color1(c => ({...c, b: parseInt(v)||0}))} placeholder="B" placeholderTextColor={txtMuted} />
           </View>
 
-          <Text style={S.subTitle}>BACKGROUND (COLOR 2)</Text>
+          <Text style={[S.subTitle, { color: txtMuted, marginTop: 12 }]}>BACKGROUND (COLOR 2)</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
-            <View style={{ width: 24, height: 24, backgroundColor: `rgb(${bld51Color2.r},${bld51Color2.g},${bld51Color2.b})`, borderRadius: 4, borderWidth: 1, borderColor: '#444' }} />
-            <TextInput style={[{flex:1}, S.numInput]} value={bld51Color2.r.toString()} keyboardType="numeric" onChangeText={v => setBld51Color2(c => ({...c, r: parseInt(v)||0}))} placeholder="R" />
-            <TextInput style={[{flex:1}, S.numInput]} value={bld51Color2.g.toString()} keyboardType="numeric" onChangeText={v => setBld51Color2(c => ({...c, g: parseInt(v)||0}))} placeholder="G" />
-            <TextInput style={[{flex:1}, S.numInput]} value={bld51Color2.b.toString()} keyboardType="numeric" onChangeText={v => setBld51Color2(c => ({...c, b: parseInt(v)||0}))} placeholder="B" />
+            <View style={{ width: 24, height: 24, backgroundColor: `rgb(${bld51Color2.r},${bld51Color2.g},${bld51Color2.b})`, borderRadius: 6, borderWidth: 1, borderColor: border }} />
+            <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={bld51Color2.r.toString()} keyboardType="numeric" onChangeText={v => setBld51Color2(c => ({...c, r: parseInt(v)||0}))} placeholder="R" placeholderTextColor={txtMuted} />
+            <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={bld51Color2.g.toString()} keyboardType="numeric" onChangeText={v => setBld51Color2(c => ({...c, g: parseInt(v)||0}))} placeholder="G" placeholderTextColor={txtMuted} />
+            <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={bld51Color2.b.toString()} keyboardType="numeric" onChangeText={v => setBld51Color2(c => ({...c, b: parseInt(v)||0}))} placeholder="B" placeholderTextColor={txtMuted} />
           </View>
         </View>
       )}
 
       {bldProtocol === '0x59' && (
-        <View style={{ marginBottom: 16 }}>
-          <Text style={S.subTitle}>PIXEL COLORS (0x59)</Text>
-          <Text style={S.hint}>Colors will be repeated to fill the LED count.</Text>
+        <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
+          <Text style={[S.subTitle, { color: txtPri, marginTop: 0 }]}>PIXEL COLORS (0x59)</Text>
+          <Text style={[S.hint, { color: txtMuted }]}>Colors will be repeated to fill the LED count.</Text>
           
           {bldColors.map((c, i) => (
              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
-                <View style={{ width: 24, height: 24, backgroundColor: `rgb(${c.r},${c.g},${c.b})`, borderRadius: 4, borderWidth: 1, borderColor: '#444' }} />
-                <TextInput style={[{flex:1}, S.numInput]} value={c.r.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].r = parseInt(v)||0; setBldColors(cur); }} placeholder="R" />
-                <TextInput style={[{flex:1}, S.numInput]} value={c.g.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].g = parseInt(v)||0; setBldColors(cur); }} placeholder="G" />
-                <TextInput style={[{flex:1}, S.numInput]} value={c.b.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].b = parseInt(v)||0; setBldColors(cur); }} placeholder="B" />
+                <View style={{ width: 24, height: 24, backgroundColor: `rgb(${c.r},${c.g},${c.b})`, borderRadius: 6, borderWidth: 1, borderColor: border }} />
+                <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={c.r.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].r = parseInt(v)||0; setBldColors(cur); }} placeholder="R" placeholderTextColor={txtMuted} />
+                <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={c.g.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].g = parseInt(v)||0; setBldColors(cur); }} placeholder="G" placeholderTextColor={txtMuted} />
+                <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={c.b.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].b = parseInt(v)||0; setBldColors(cur); }} placeholder="B" placeholderTextColor={txtMuted} />
                 <TouchableOpacity onPress={() => setBldColors(bldColors.filter((_, idx)=>idx!==i))} style={{ padding: 8 }}>
-                  <MaterialCommunityIcons name="delete" color="#ff4040" size={16} />
+                  <MaterialCommunityIcons name="delete" color="#ff4040" size={18} />
                 </TouchableOpacity>
              </View>
           ))}
-          <TouchableOpacity onPress={() => setBldColors([...bldColors, {r:0,g:0,b:0}])} style={{ alignSelf: 'flex-start', padding: 8, backgroundColor: '#222', borderRadius: 4 }}>
-             <Text style={{ color: '#aaa', fontSize: 10 }}>+ ADD COLOR</Text>
+          <TouchableOpacity onPress={() => setBldColors([...bldColors, {r:0,g:0,b:0}])} style={{ alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: border, borderRadius: 8, marginTop: 4 }}>
+             <Text style={{ color: txtPri, fontSize: 11, fontWeight: '900' }}>+ ADD COLOR</Text>
           </TouchableOpacity>
 
-          <Text style={S.subTitle}>TRANSITION TYPE</Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-        {TRANSITION_TYPES.map(tt => (
-          <TouchableOpacity key={tt.byte}
-            style={[S.chip, bldTrans === tt.byte && { backgroundColor: tt.color + '33', borderColor: tt.color }]}
-            onPress={() => setBldTrans(tt.byte)}>
-            <Text style={{ color: bldTrans === tt.byte ? tt.color : '#888', fontWeight: 'bold', fontSize: 11 }}>
-              0x0{tt.byte.toString(16).toUpperCase()} {tt.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+          <Text style={[S.subTitle, { color: txtMuted, marginTop: 24 }]}>TRANSITION TYPE</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+            {TRANSITION_TYPES.map(tt => (
+              <TouchableOpacity key={tt.byte}
+                style={[S.chip, bldTrans === tt.byte && { backgroundColor: tt.color + '22', borderColor: tt.color }, { height: 40 }]}
+                onPress={() => setBldTrans(tt.byte)}>
+                <Text style={{ color: bldTrans === tt.byte ? tt.color : txtMuted, fontWeight: '900', fontSize: 11 }}>
+                  0x0{tt.byte.toString(16).toUpperCase()} {tt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 8 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>NUM POINTS</Text>
-              <TextInput style={S.numInput} value={bldPoints} keyboardType="numeric"
-                onChangeText={v => setBldPoints(v)} placeholder={hwPts.toString()} placeholderTextColor="#444" />
-              <Text style={{ color: '#555', fontSize: 10, marginTop: 2 }}>HW probe: {hwPts}</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>NUM POINTS</Text>
+              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldPoints} keyboardType="numeric"
+                onChangeText={v => setBldPoints(v)} placeholder={hwPts.toString()} placeholderTextColor={txtMuted} />
+              <Text style={{ color: cyan, fontSize: 10, marginTop: 4, fontWeight: 'bold' }}>HW probe: {hwPts}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SPEED</Text>
-              <TextInput style={S.numInput} value={bldSpeed.toString()} keyboardType="numeric"
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>SPEED</Text>
+              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldSpeed.toString()} keyboardType="numeric"
                 onChangeText={v => setBldSpeed(Math.max(1, Math.min(255, parseInt(v)||1)))} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>DIR</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>DIR</Text>
               <View style={{ flexDirection: 'row', gap: 4 }}>
                 {[0, 1].map(d => (
-                  <TouchableOpacity key={d} style={[S.chip, bldDir === d && S.chipActive, {flex: 1}]} onPress={() => setBldDir(d)}>
-                    <Text style={{ color: bldDir === d ? '#00f0ff' : '#888', fontSize: 11, textAlign: 'center' }}>{d === 0 ? 'REV' : 'FWD'}</Text>
+                  <TouchableOpacity key={d} style={[S.chip, bldDir === d && { backgroundColor: cyan + '22', borderColor: cyan }, {flex: 1, height: 40}]} onPress={() => setBldDir(d)}>
+                    <Text style={{ color: bldDir === d ? cyan : txtMuted, fontSize: 11, textAlign: 'center', fontWeight: '900' }}>{d === 0 ? 'REV' : 'FWD'}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -626,161 +665,166 @@ export default function Sk8LytzDiagnosticLab({
       )}
 
       {bldProtocol === '0x61' && (
-        <View style={{ marginBottom: 16 }}>
+        <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
+          <Text style={[S.subTitle, { color: txtPri, marginTop: 0 }]}>FIXED PATTERN (0x61)</Text>
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>PATTERN ID (1–210)</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>PATTERN ID (1–210)</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <TouchableOpacity onPress={() => setBldPatternId(String(Math.max(1, (parseInt(bldPatternId)||1) - 1)))} style={{ backgroundColor: '#222', borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>‒</Text>
+                <TouchableOpacity onPress={() => setBldPatternId(String(Math.max(1, (parseInt(bldPatternId)||1) - 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>‒</Text>
                 </TouchableOpacity>
-                <TextInput style={[S.numInput, { flex: 1, textAlign: 'center' }]} value={bldPatternId} keyboardType="numeric" onChangeText={v => setBldPatternId(String(Math.max(1, Math.min(210, parseInt(v)||1))))} />
-                <TouchableOpacity onPress={() => setBldPatternId(String(Math.min(210, (parseInt(bldPatternId)||1) + 1)))} style={{ backgroundColor: '#222', borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>+</Text>
+                <TextInput style={[S.numInput, { flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri, textAlign: 'center' }]} value={bldPatternId} keyboardType="numeric" onChangeText={v => setBldPatternId(String(Math.max(1, Math.min(210, parseInt(v)||1))))} />
+                <TouchableOpacity onPress={() => setBldPatternId(String(Math.min(210, (parseInt(bldPatternId)||1) + 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>+</Text>
                 </TouchableOpacity>
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SPEED (1–100)</Text>
-              <TextInput style={S.numInput} value={bldSpeed.toString()} keyboardType="numeric" onChangeText={v => setBldSpeed(Math.max(1, Math.min(100, parseInt(v)||1)))} />
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>SPEED (1–100)</Text>
+              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldSpeed.toString()} keyboardType="numeric" onChangeText={v => setBldSpeed(Math.max(1, Math.min(100, parseInt(v)||1)))} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>BRIGHTNESS (0–100)</Text>
-              <TextInput style={S.numInput} value={bldBright} keyboardType="numeric" onChangeText={setBldBright} />
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>BRIGHTNESS</Text>
+              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldBright} keyboardType="numeric" onChangeText={setBldBright} />
             </View>
           </View>
         </View>
       )}
 
       {bldProtocol === '0x73' && (
-        <View style={{ marginBottom: 16 }}>
+        <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
+          <Text style={[S.subTitle, { color: txtPri, marginTop: 0 }]}>SYMPHONY MODE (0x73)</Text>
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>MUSIC MODE (1–13)</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>MUSIC MODE (1–13)</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <TouchableOpacity onPress={() => setBldMusicMode(String(Math.max(1, (parseInt(bldMusicMode)||1) - 1)))} style={{ backgroundColor: '#222', borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>‒</Text>
+                <TouchableOpacity onPress={() => setBldMusicMode(String(Math.max(1, (parseInt(bldMusicMode)||1) - 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>‒</Text>
                 </TouchableOpacity>
-                <TextInput style={[S.numInput, { flex: 1, textAlign: 'center' }]} value={bldMusicMode} keyboardType="numeric" onChangeText={v => setBldMusicMode(String(Math.max(1, Math.min(13, parseInt(v)||1))))} />
-                <TouchableOpacity onPress={() => setBldMusicMode(String(Math.min(13, (parseInt(bldMusicMode)||1) + 1)))} style={{ backgroundColor: '#222', borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>+</Text>
+                <TextInput style={[S.numInput, { flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri, textAlign: 'center' }]} value={bldMusicMode} keyboardType="numeric" onChangeText={v => setBldMusicMode(String(Math.max(1, Math.min(13, parseInt(v)||1))))} />
+                <TouchableOpacity onPress={() => setBldMusicMode(String(Math.min(13, (parseInt(bldMusicMode)||1) + 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>+</Text>
                 </TouchableOpacity>
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>MIC SRC</Text>
-              <TouchableOpacity style={[S.chip, bldMic && S.chipActive, {paddingVertical: 10}]} onPress={() => setBldMic(!bldMic)}>
-                 <Text style={{ color: bldMic ? '#00f0ff' : '#888', textAlign: 'center', fontSize: 11, fontWeight: 'bold' }}>{bldMic ? 'DEVICE' : 'APP'}</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>MIC SRC</Text>
+              <TouchableOpacity style={[S.chip, bldMic && { backgroundColor: cyan + '22', borderColor: cyan }, {paddingVertical: 10, height: 40}]} onPress={() => setBldMic(!bldMic)}>
+                 <Text style={{ color: bldMic ? cyan : txtMuted, textAlign: 'center', fontSize: 11, fontWeight: '900' }}>{bldMic ? 'DEVICE' : 'APP'}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Matrix Style — Light Screen vs Light Bar */}
-          <Text style={{ color: '#888', fontSize: 10, marginBottom: 6 }}>MATRIX STYLE</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 6, fontWeight: '900' }}>MATRIX STYLE</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
             <TouchableOpacity
               onPress={() => setBldMatrixStyle(0x27)}
-              style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center',
-                backgroundColor: bldMatrixStyle === 0x27 ? '#00E676' : '#1A1A1A',
-                borderWidth: 1, borderColor: bldMatrixStyle === 0x27 ? '#00E676' : '#333' }}
+              style={{ flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center',
+                backgroundColor: bldMatrixStyle === 0x27 ? '#00E67633' : border,
+                borderWidth: 1.5, borderColor: bldMatrixStyle === 0x27 ? '#00E676' : border }}
             >
-              <Text style={{ color: bldMatrixStyle === 0x27 ? '#000' : '#888', fontWeight: 'bold', fontSize: 11 }}>LIGHT SCREEN</Text>
-              <Text style={{ color: bldMatrixStyle === 0x27 ? '#003300' : '#555', fontSize: 9 }}>0x27</Text>
+              <Text style={{ color: bldMatrixStyle === 0x27 ? '#00E676' : txtMuted, fontWeight: '900', fontSize: 11 }}>LIGHT SCREEN</Text>
+              <Text style={{ color: bldMatrixStyle === 0x27 ? '#00E676' : txtMuted, fontSize: 9, opacity: 0.6 }}>0x27</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setBldMatrixStyle(0x26)}
-              style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center',
-                backgroundColor: bldMatrixStyle === 0x26 ? '#FF9500' : '#1A1A1A',
-                borderWidth: 1, borderColor: bldMatrixStyle === 0x26 ? '#FF9500' : '#333' }}
+              style={{ flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center',
+                backgroundColor: bldMatrixStyle === 0x26 ? '#FF950033' : border,
+                borderWidth: 1.5, borderColor: bldMatrixStyle === 0x26 ? '#FF9500' : border }}
             >
-              <Text style={{ color: bldMatrixStyle === 0x26 ? '#000' : '#888', fontWeight: 'bold', fontSize: 11 }}>LIGHT BAR</Text>
-              <Text style={{ color: bldMatrixStyle === 0x26 ? '#332200' : '#555', fontSize: 9 }}>0x26</Text>
+              <Text style={{ color: bldMatrixStyle === 0x26 ? '#FF9500' : txtMuted, fontWeight: '900', fontSize: 11 }}>LIGHT BAR</Text>
+              <Text style={{ color: bldMatrixStyle === 0x26 ? '#FF9500' : txtMuted, fontSize: 9, opacity: 0.6 }}>0x26</Text>
             </TouchableOpacity>
           </View>
+
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SENSITIVITY (0-100)</Text>
-              <TextInput style={S.numInput} value={bldSens} keyboardType="numeric" onChangeText={setBldSens} />
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>SENSITIVITY</Text>
+              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldSens} keyboardType="numeric" onChangeText={setBldSens} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>BRIGHTNESS (0-100)</Text>
-              <TextInput style={S.numInput} value={bldBright} keyboardType="numeric" onChangeText={setBldBright} />
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>BRIGHTNESS</Text>
+              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldBright} keyboardType="numeric" onChangeText={setBldBright} />
             </View>
           </View>
-          <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>COLOR 1 (RGB)</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-            <TextInput style={[S.numInput, {flex: 1}]} value={bldColors[0]?.r?.toString()||'0'} onChangeText={v => setBldColors([{r: parseInt(v)||0, g: bldColors[0]?.g||0, b: bldColors[0]?.b||0}])} />
-            <TextInput style={[S.numInput, {flex: 1}]} value={bldColors[0]?.g?.toString()||'0'} onChangeText={v => setBldColors([{r: bldColors[0]?.r||0, g: parseInt(v)||0, b: bldColors[0]?.b||0}])} />
-            <TextInput style={[S.numInput, {flex: 1}]} value={bldColors[0]?.b?.toString()||'0'} onChangeText={v => setBldColors([{r: bldColors[0]?.r||0, g: bldColors[0]?.g||0, b: parseInt(v)||0}])} />
+
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>COLOR 1 (RGB)</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+            <TextInput style={[S.numInput, {flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}]} value={bldColors[0]?.r?.toString()||'0'} onChangeText={v => setBldColors([{r: parseInt(v)||0, g: bldColors[0]?.g||0, b: bldColors[0]?.b||0}])} />
+            <TextInput style={[S.numInput, {flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}]} value={bldColors[0]?.g?.toString()||'0'} onChangeText={v => setBldColors([{r: bldColors[0]?.r||0, g: parseInt(v)||0, b: bldColors[0]?.b||0}])} />
+            <TextInput style={[S.numInput, {flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}]} value={bldColors[0]?.b?.toString()||'0'} onChangeText={v => setBldColors([{r: bldColors[0]?.r||0, g: bldColors[0]?.g||0, b: parseInt(v)||0}])} />
           </View>
-          <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>COLOR 2 (RGB)</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>COLOR 2 (RGB)</Text>
            <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TextInput style={[S.numInput, {flex: 1}]} value={bldC2.r.toString()} onChangeText={v => setBldC2({...bldC2, r: parseInt(v)||0})} />
-            <TextInput style={[S.numInput, {flex: 1}]} value={bldC2.g.toString()} onChangeText={v => setBldC2({...bldC2, g: parseInt(v)||0})} />
-            <TextInput style={[S.numInput, {flex: 1}]} value={bldC2.b.toString()} onChangeText={v => setBldC2({...bldC2, b: parseInt(v)||0})} />
+            <TextInput style={[S.numInput, {flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}]} value={bldC2.r.toString()} onChangeText={v => setBldC2({...bldC2, r: parseInt(v)||0})} />
+            <TextInput style={[S.numInput, {flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}]} value={bldC2.g.toString()} onChangeText={v => setBldC2({...bldC2, g: parseInt(v)||0})} />
+            <TextInput style={[S.numInput, {flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}]} value={bldC2.b.toString()} onChangeText={v => setBldC2({...bldC2, b: parseInt(v)||0})} />
           </View>
         </View>
       )}
 
       {bldProtocol === '0x62' && (
-        <View style={{ marginBottom: 16 }}>
+        <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
+          <Text style={[S.subTitle, { color: txtPri, marginTop: 0 }]}>HARDWARE SETUP (0x62)</Text>
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
             <View style={{ flex: 1 }}>
-               <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>IC CHIP (e.g. WS2812B)</Text>
-               <TextInput style={S.numInput} value={bldIc} onChangeText={setBldIc} />
+               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>IC CHIP</Text>
+               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldIc} onChangeText={setBldIc} placeholder="e.g. WS2812B" />
             </View>
             <View style={{ flex: 1 }}>
-               <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>COLOR ORDER (e.g. RGB)</Text>
-               <TextInput style={S.numInput} value={bldOrder} onChangeText={setBldOrder} />
+               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>COLOR ORDER</Text>
+               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldOrder} onChangeText={setBldOrder} placeholder="e.g. RGB" />
             </View>
           </View>
           <View style={{ flexDirection: 'row', gap: 12 }}>
              <View style={{ flex: 1 }}>
-               <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>TOTAL LEDS</Text>
-               <TextInput style={S.numInput} value={bldPoints} keyboardType="numeric" onChangeText={setBldPoints} />
+               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>TOTAL LEDS</Text>
+               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldPoints} keyboardType="numeric" onChangeText={setBldPoints} />
             </View>
             <View style={{ flex: 1 }}>
-               <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SEGMENTS</Text>
-               <TextInput style={S.numInput} value={bldSegs} keyboardType="numeric" onChangeText={setBldSegs} />
+               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>SEGMENTS</Text>
+               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldSegs} keyboardType="numeric" onChangeText={setBldSegs} />
             </View>
           </View>
         </View>
       )}
 
-      <Text style={S.subTitle}>GENERATED PAYLOAD — BYTE ANNOTATIONS</Text>
+      <Text style={[S.subTitle, { color: txtMuted }]}>GENERATED PAYLOAD — BYTE ANNOTATIONS</Text>
       {bldResult && (
-        <View style={S.annotationsBox}>
+        <View style={[S.diagBox, { backgroundColor: isDark ? '#05070a' : '#f9fafb', borderColor: border, padding: 12 }]}>
           {bldResult.annotations.map((a, i) => (
-            <Text key={i} style={{ color: i === 4 ? TRANSITION_TYPES.find(t=>t.byte===bldTrans)?.color ?? '#aaa' : '#aaa', fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginBottom: 2 }}>
+            <Text key={i} style={{ color: i === 4 ? TRANSITION_TYPES.find(t=>t.byte===bldTrans)?.color ?? cyan : txtPri, fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginBottom: 2 }}>
               {a}
             </Text>
           ))}
         </View>
       )}
 
-      <Text style={S.subTitle}>FULL HEX (EDITABLE)</Text>
+      <Text style={[S.subTitle, { color: txtMuted }]}>FULL HEX (EDITABLE)</Text>
       <TextInput
-        style={[S.hexInput]}
+        style={[S.hexInput, { backgroundColor: isDark ? '#05070a' : '#f9fafb', color: cyan, borderColor: border }]}
         value={bldHexOverride}
         onChangeText={setBldHexOverride}
         multiline
         placeholder="Hex bytes..."
-        placeholderTextColor="#444"
+        placeholderTextColor={txtMuted}
       />
 
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-        <TouchableOpacity style={[S.txBtn, { flex: 1 }]}
+        <TouchableOpacity style={[S.txBtn, { flex: 1, backgroundColor: cyan, borderColor: cyan }]}
           onPress={() => sendRawHex(bldHexOverride, `Builder: trans=0x0${bldTrans.toString(16).toUpperCase()} pts=${bldPoints}`)}>
-          <Text style={{ color: '#000', fontWeight: 'bold' }}>TX PAYLOAD</Text>
+          <Text style={{ color: '#000', fontWeight: '900', fontSize: 12 }}>TX PAYLOAD</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[S.txBtn, { flex: 1, backgroundColor: '#333' }]}
+        <TouchableOpacity style={[S.txBtn, { flex: 1, backgroundColor: border, borderColor: border }]}
           onPress={() => bldResult && setBldHexOverride(bldResult.hex)}>
-          <Text style={{ color: '#aaa', fontWeight: 'bold' }}>RESET HEX</Text>
+          <Text style={{ color: txtPri, fontWeight: '900', fontSize: 12 }}>RESET HEX</Text>
         </TouchableOpacity>
       </View>
 
       {/* Quick presets */}
-      <Text style={S.subTitle}>QUICK PRESETS</Text>
+      <Text style={[S.subTitle, { color: txtMuted }]}>QUICK PRESETS</Text>
       <View style={{ gap: 8 }}>
         {[
           { label: 'FULL RED — FREEZE', r:255,g:0,b:0, trans:0x01, note:'Pure red, FREEZE — should be solid red' },
@@ -789,7 +833,7 @@ export default function Sk8LytzDiagnosticLab({
           { label: 'FULL WHITE — FREEZE', r:255,g:255,b:255, trans:0x01, note:'Full white FREEZE — all LEDs max brightness' },
           { label: 'POLL 0x63', note:'Query hardware config', isCmd: true, cmd: ZenggeProtocol.queryHardwareSettings?.() },
         ].map((preset, i) => (
-          <TouchableOpacity key={i} style={[S.presetBtn]}
+          <TouchableOpacity key={i} style={[S.presetBtn, { backgroundColor: cardBg, borderColor: border }]}
             onPress={() => {
               if ('isCmd' in preset && preset.isCmd && preset.cmd) {
                 transmit(ZenggeProtocol.wrapCommand(preset.cmd), preset.note);
@@ -799,8 +843,8 @@ export default function Sk8LytzDiagnosticLab({
                 transmit(wrapped, preset.note);
               }
             }}>
-            <Text style={{ color: '#00f0ff', fontSize: 12, fontWeight: 'bold' }}>{preset.label}</Text>
-            <Text style={{ color: '#555', fontSize: 10 }}>{preset.note}</Text>
+            <Text style={{ color: cyan, fontSize: 12, fontWeight: '900' }}>{preset.label}</Text>
+            <Text style={{ color: txtMuted, fontSize: 10, marginTop: 2 }}>{preset.note}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -811,69 +855,82 @@ export default function Sk8LytzDiagnosticLab({
   const renderSnifferTab = () => (
     <View style={{ flex: 1 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <Text style={S.sectionTitle}>BLE TRACE</Text>
-        <TouchableOpacity style={S.chip} onPress={() => setLogs([])}>
-          <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: 'bold' }}>CLEAR</Text>
+        <Text style={[S.sectionTitle, { color: txtPri }]}>BLE TRACE</Text>
+        <TouchableOpacity style={[S.chip, { borderColor: '#ff404022', backgroundColor: '#ff404011' }]} onPress={() => setLogs([])}>
+          <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: '900' }}>CLEAR</Text>
         </TouchableOpacity>
       </View>
       <FlatList
         data={logs}
         keyExtractor={(_, i) => i.toString()}
-        style={{ flex: 1, backgroundColor: '#000', borderRadius: 8, padding: 8, borderWidth: 1, borderColor: '#222' }}
+        style={{ flex: 1, backgroundColor: isDark ? '#05070a' : '#f9fafb', borderRadius: 12, padding: 8, borderWidth: 1, borderColor: border }}
         renderItem={({ item }) => (
-          <View style={{ marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#111' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-              <View style={{ backgroundColor: item.dir === 'TX' ? '#FF404033' : '#007AFF33', borderWidth: 1, borderColor: item.dir === 'TX' ? '#FF4040' : '#007AFF', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
-                <Text style={{ color: item.dir === 'TX' ? '#FF4040' : '#00f0ff', fontSize: 9, fontWeight: 'bold' }}>{item.dir}</Text>
+          <View style={{ marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: border }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <View style={{ backgroundColor: item.dir === 'TX' ? '#FF404022' : cyan + '22', borderWidth: 1, borderColor: item.dir === 'TX' ? '#FF4040' : cyan, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                <Text style={{ color: item.dir === 'TX' ? '#FF4040' : cyan, fontSize: 9, fontWeight: '900' }}>{item.dir}</Text>
               </View>
-              <Text style={{ color: '#444', fontSize: 9 }}>{new Date(item.t).toLocaleTimeString()}</Text>
-              {item.dev && <Text style={{ color: '#444', fontSize: 9 }}>{item.dev.slice(-6)}</Text>}
+              <Text style={{ color: txtMuted, fontSize: 9 }}>{new Date(item.t).toLocaleTimeString()}</Text>
+              {item.dev && <Text style={{ color: txtMuted, fontSize: 9 }}>{item.dev.slice(-6)}</Text>}
             </View>
-            {item.note && <Text style={{ color: '#FF9500', fontSize: 10, marginBottom: 2 }}>{item.note}</Text>}
-            <Text style={{ color: '#666', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 10 }} numberOfLines={2}>
+            {item.note && <Text style={{ color: '#FF9500', fontSize: 10, marginBottom: 2, fontWeight: 'bold' }}>{item.note}</Text>}
+            <Text style={{ color: txtPri, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 10 }} numberOfLines={2}>
               {item.hex}
             </Text>
           </View>
         )}
-        ListEmptyComponent={<Text style={{ color: '#444', padding: 16 }}>No BLE traffic yet. Connect a device and use the other tabs.</Text>}
+        ListEmptyComponent={<Text style={{ color: txtMuted, padding: 16, textAlign: 'center', fontSize: 12 }}>No BLE traffic yet. Connect a device and use the other tabs.</Text>}
       />
     </View>
   );
 
-  // ─── Root render ─────────────────────────────────────────────────────────────
+  // ─── Root render ───────────────────────────────────────────────────
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
-      <SafeAreaView style={[S.root, { paddingTop: insets.top }]}>
-        {/* Header */}
-        <View style={S.header}>
-          <TouchableOpacity onPress={onClose} style={S.closeBtn}>
-            <MaterialCommunityIcons name="close" size={20} color="#FFF" />
-          </TouchableOpacity>
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={S.title}>LED DIAGNOSTIC LAB</Text>
-            <Text style={{ color: '#555', fontSize: 9 }}>
-              {connectedDevices.length > 0 ? connectedDevices.map(d => d.name || d.id.slice(-5)).join(', ') : 'NO DEVICE'}
+      <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+        {/* Header (Aligned with Programmer) */}
+        <View style={[S.header, { borderBottomColor: border, paddingTop: insets.top }]}>
+          <View>
+            <Text style={[Typography.title, { color: cyan, fontSize: 18 }]}>⚡ LED DIAGNOSTIC LAB</Text>
+            <Text style={{ color: txtMuted, fontSize: 11, marginTop: 2 }}>
+              {connectedDevices.length > 0 
+                ? `Probing: ${connectedDevices.map(d => d.name || d.id.slice(-5)).join(', ')}` 
+                : 'Hardware telemetry & protocol debugger'}
             </Text>
           </View>
-          <View style={S.closeBtn} />
+          <TouchableOpacity
+            style={S.exitBtn}
+            onPress={onClose}
+          >
+            <Text style={{ color: '#FF8888', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>EXIT</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Tabs */}
-        <View style={S.tabBar}>
-          {(['DEVICES', 'COLOR', 'TRANSITION', 'BUILDER', 'SNIFFER'] as LabTab[]).map(t => (
-            <TouchableOpacity key={t} style={[S.tabBtn, tab === t && S.tabBtnActive]} onPress={() => setTab(t)}>
-              <Text style={[S.tabBtnTxt, tab === t && S.tabBtnTxtActive]}>{t}</Text>
-            </TouchableOpacity>
-          ))}
+        {/* Tab Bar */}
+        <View style={[S.tabBar, { borderBottomColor: border, backgroundColor: bg }]}>
+          {(['DEVICES', 'COLOR', 'TRANSITION', 'BUILDER', 'SNIFFER'] as LabTab[]).map(t => {
+            const active = tab === t;
+            return (
+              <TouchableOpacity
+                key={t}
+                style={[S.tabBtn, active && S.tabBtnActive]}
+                onPress={() => setTab(t)}
+              >
+                <Text style={[S.tabBtnTxt, active && S.tabBtnTxtActive, { color: active ? cyan : txtMuted }]}>
+                  {t}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Content */}
-        <View style={S.content}>
-          {tab === 'DEVICES'    && renderDevicesTab()}
-          {tab === 'COLOR'      && renderColorTab()}
+        <View style={[S.content, { backgroundColor: bg }]}>
+          {tab === 'DEVICES' && renderDevicesTab()}
+          {tab === 'COLOR' && renderColorTab()}
           {tab === 'TRANSITION' && renderTransitionTab()}
-          {tab === 'BUILDER'    && renderBuilderTab()}
-          {tab === 'SNIFFER'    && renderSnifferTab()}
+          {tab === 'BUILDER' && renderBuilderTab()}
+          {tab === 'SNIFFER' && renderSnifferTab()}
         </View>
       </SafeAreaView>
     </Modal>
@@ -883,34 +940,150 @@ export default function Sk8LytzDiagnosticLab({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const S = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#080808' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: '#1A1A1A' },
-  closeBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1A1A1A', borderRadius: 18 },
-  title: { color: '#FFF', fontSize: 13, fontWeight: '900', letterSpacing: 1.5 },
-  tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#1A1A1A' },
-  tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  root: { flex: 1 },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    paddingHorizontal: 16, 
+    paddingBottom: 16, 
+    borderBottomWidth: 1 
+  },
+  exitBtn: { 
+    paddingHorizontal: 16, 
+    paddingVertical: 8, 
+    borderRadius: 8, 
+    borderWidth: 1, 
+    backgroundColor: 'rgba(255,60,60,0.1)', 
+    borderColor: 'rgba(255,60,60,0.3)' 
+  },
+  title: { color: '#FFF', fontSize: 18, fontWeight: '900', letterSpacing: 1.5 },
+  tabBar: { flexDirection: 'row', borderBottomWidth: 1 },
+  tabBtn: { 
+    flex: 1, 
+    paddingVertical: 14, 
+    alignItems: 'center', 
+    borderBottomWidth: 2, 
+    borderBottomColor: 'transparent' 
+  },
   tabBtnActive: { borderBottomColor: '#00f0ff' },
-  tabBtnTxt: { color: '#555', fontSize: 10, fontWeight: 'bold', letterSpacing: 0.5 },
+  tabBtnTxt: { fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
   tabBtnTxtActive: { color: '#00f0ff' },
   content: { flex: 1, padding: 16 },
-  sectionTitle: { color: '#FFF', fontSize: 12, fontWeight: '900', letterSpacing: 1, marginBottom: 6 },
-  subTitle: { color: '#666', fontSize: 10, fontWeight: 'bold', letterSpacing: 1, marginBottom: 8, marginTop: 16 },
-  hint: { color: '#555', fontSize: 11, lineHeight: 16, marginBottom: 12 },
-  hwBadge: { flexDirection: 'row', flexWrap: 'wrap', backgroundColor: '#111', padding: 10, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#222', alignItems: 'center' },
-  hwBadgeLabel: { color: '#555', fontSize: 11 },
+  sectionTitle: { fontSize: 12, fontWeight: '900', letterSpacing: 1, marginBottom: 8 },
+  subTitle: { fontSize: 10, fontWeight: 'bold', letterSpacing: 1, marginBottom: 12, marginTop: 24 },
+  hint: { fontSize: 11, lineHeight: 16, marginBottom: 12 },
+  hwBadge: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    backgroundColor: '#141829', 
+    padding: 12, 
+    borderRadius: 12, 
+    marginBottom: 20, 
+    borderWidth: 1, 
+    borderColor: '#252c47', 
+    alignItems: 'center' 
+  },
+  hwBadgeLabel: { color: '#8a96b3', fontSize: 11 },
   hwBadgeVal: { fontSize: 11, fontWeight: 'bold' },
-  colorBtnRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  bigColorBtn: { flex: 1, paddingVertical: 20, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 2 },
-  diagBox: { backgroundColor: '#0D1A0D', borderWidth: 1, borderColor: '#1A3A1A', borderRadius: 8, padding: 12, marginBottom: 8 },
-  diagLine: { color: '#aaa', fontSize: 11, lineHeight: 18 },
-  sentBox: { backgroundColor: '#000', borderWidth: 1, borderColor: '#222', borderRadius: 8, padding: 12 },
-  transBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderWidth: 1, borderRadius: 12, padding: 14, marginBottom: 10 },
-  transByteBadge: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 8, borderWidth: 1 },
-  annotationsBox: { backgroundColor: '#000', borderWidth: 1, borderColor: '#222', borderRadius: 8, padding: 12, marginBottom: 8 },
-  numInput: { backgroundColor: '#111', color: '#FFF', borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 8, fontSize: 13, textAlign: 'center' },
-  hexInput: { backgroundColor: '#000', color: '#00f0ff', borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 12, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11, minHeight: 80 },
-  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#1A1A1A', borderWidth: 1, borderColor: '#333' },
-  chipActive: { backgroundColor: 'rgba(0,240,255,0.1)', borderColor: '#00f0ff' },
-  txBtn: { backgroundColor: '#00ccff', justifyContent: 'center', alignItems: 'center', paddingVertical: 14, borderRadius: 10 },
-  presetBtn: { backgroundColor: '#111', borderWidth: 1, borderColor: '#222', borderRadius: 8, padding: 12 },
+  colorBtnRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  bigColorBtn: { 
+    flex: 1, 
+    paddingVertical: 24, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    borderRadius: 12, 
+    borderWidth: 1.5 
+  },
+  diagBox: { 
+    backgroundColor: '#141829', 
+    borderWidth: 1, 
+    borderColor: '#252c47', 
+    borderRadius: 12, 
+    padding: 16, 
+    marginBottom: 12 
+  },
+  diagLine: { fontSize: 11, lineHeight: 20 },
+  sentBox: { 
+    backgroundColor: '#0a0d18', 
+    borderWidth: 1, 
+    borderColor: '#252c47', 
+    borderRadius: 12, 
+    padding: 14, 
+    marginTop: 8 
+  },
+  transBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#141829', 
+    borderWidth: 1, 
+    borderColor: '#252c47', 
+    borderRadius: 12, 
+    padding: 16, 
+    marginBottom: 10 
+  },
+  transByteBadge: { 
+    width: 52, 
+    height: 52, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    borderRadius: 10, 
+    borderWidth: 1 
+  },
+  annotationsBox: { 
+    backgroundColor: '#0a0d18', 
+    borderWidth: 1, 
+    borderColor: '#252c47', 
+    borderRadius: 12, 
+    padding: 14, 
+    marginBottom: 12 
+  },
+  numInput: { 
+    backgroundColor: '#141829', 
+    color: '#FFF', 
+    borderWidth: 1, 
+    borderColor: '#252c47', 
+    borderRadius: 10, 
+    padding: 10, 
+    fontSize: 14, 
+    textAlign: 'center' 
+  },
+  hexInput: { 
+    backgroundColor: '#0a0d18', 
+    color: '#00f0ff', 
+    borderWidth: 1, 
+    borderColor: '#252c47', 
+    borderRadius: 12, 
+    padding: 16, 
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', 
+    fontSize: 11, 
+    minHeight: 100 
+  },
+  chip: { 
+    paddingHorizontal: 14, 
+    paddingVertical: 8, 
+    borderRadius: 20, 
+    backgroundColor: '#141829', 
+    borderWidth: 1, 
+    borderColor: '#252c47' 
+  },
+  chipActive: { 
+    backgroundColor: 'rgba(0,240,255,0.1)', 
+    borderColor: '#00f0ff' 
+  },
+  txBtn: { 
+    backgroundColor: '#00ccff', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    paddingVertical: 18, 
+    borderRadius: 12, 
+    marginTop: 12 
+  },
+  presetBtn: { 
+    backgroundColor: '#141829', 
+    borderWidth: 1, 
+    borderColor: '#252c47', 
+    borderRadius: 12, 
+    padding: 16 
+  },
 });

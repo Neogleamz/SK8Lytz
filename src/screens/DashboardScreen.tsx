@@ -40,7 +40,6 @@ import { AppLogger } from '../services/AppLogger';
 import LogViewerModal from '../components/LogViewerModal';
 import CrewModal from '../components/CrewModal';
 import { crewService, CrewSession, CrewRole } from '../services/CrewService';
-import AdminHardwareTester from '../components/AdminHardwareTester';
 import Sk8LytzDiagnosticLab from '../components/Sk8LytzDiagnosticLab';
 import FirstTimeSetupModal from '../components/FirstTimeSetupModal';
 import { supabase } from '../services/supabaseClient';
@@ -1799,10 +1798,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             setLogsVisible(false);
             setIsProgrammerVisible(true);
         }}
-        onOpenSniffer={() => {
-            setLogsVisible(false);
-            setIsSnifferVisible(true);
-        }}
         onOpenLab={() => {
             setLogsVisible(false);
             setIsLabVisible(true);
@@ -1839,26 +1834,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         isScanProbing={isScanProbing}
         handleScan={scanForPeripherals}
       />
-      <AdminHardwareTester 
-        visible={isSnifferVisible}
-        onClose={() => {
-            setIsSnifferVisible(false);
-            setLogsVisible(true);
-        }}
-        allDevices={allDevices}
-        connectedDevices={connectedDevices as any[]}
-        isScanning={isScanning}
-        isScanProbing={isScanProbing}
-        handleScan={scanForPeripherals}
-        connectToDevice={async (d: any) => { await connectToDevice(d); }}
-        handleDisconnect={disconnectFromDevice}
-        writeToDevice={writeToDevice}
-        liveRxPayload={lastRawNotification}
-      />
       {/* LED Diagnostic Lab — long-press the SNIFFER button to open */}
       <Sk8LytzDiagnosticLab
         visible={isLabVisible ?? false}
-        onClose={() => setIsLabVisible(false)}
+        onClose={() => { setIsLabVisible(false); setLogsVisible(true); }}
         connectedDevices={connectedDevices as any[]}
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}

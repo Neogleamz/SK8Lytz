@@ -2310,3 +2310,35 @@ All payload builders call: ZenggeProtocol.applyColorSorting(r, g, b, hwSettings.
 *Last Updated: April 2026 — SK8Lytz Master Reference. DO NOT SHORTEN. Add new entries at the bottom of each section.*
  
  
+================================================================================
+SECTION 23: DIAGNOSTIC & LAB NAVIGATION FLOW (April 2026 Update)
+================================================================================
+
+The SK8Lytz diagnostic toolset has been consolidated to reduce administrative
+bloat and ensure visual parity throughout the developer/admin toolset.
+
+### A. TOOL RETIREMENTS
+The following legacy components have been DELETED and their functionality
+centralized into the LED Diagnostic Lab:
+- **Simple Scanner**: Removed from 'LogViewerModal.tsx'. Scanning and discovery
+  are now handled exclusively in the 'DEVICES' tab of the Lab.
+- **Admin Hardware Tester**: Deleted 'AdminHardwareTester.tsx'. The 'BUILDER'
+  and 'SNIFFER' tabs in the Lab provide superior control and monitoring.
+
+### B. VISUAL PARITY (Programmer vs. Lab)
+The LED Diagnostic Lab now matches the 'Sk8LytzProgrammerModal.tsx' design system:
+- **Theme Awareness**: Responds to 'isDark' state from 'ThemeContext'.
+- **Header**: Left-justified cyan title with device subtitle.
+- **Exit Button**: Red 'EXIT' pill button on the top right.
+- **Card Styling**: Consistent 'borderRadius: 12', '#141829' backgrounds, and
+  '#252c47' borders.
+
+### C. NAVIGATION LOGIC (The Lab Exit Flow)
+To ensure a continuous debugging workflow, the entry/exit points for the
+Diagnostic Lab are strictly defined:
+- **Entry Point**: Accessed via the 'DIAGNOSTIC LAB' button in the
+  'LogViewerModal' (Analytics) under the hidden Admin tab.
+- **Exit Logic**: When a user clicks 'EXIT' in the Lab, the modal closes and
+  automatically re-opens/returns the user to the 'LogViewerModal'.
+- **Implementation**: Managed in 'DashboardScreen.tsx' via 'setIsLabVisible(false)'
+  and 'setLogsVisible(true)' within the Lab's 'onClose' callback.

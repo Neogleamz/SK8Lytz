@@ -6,6 +6,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🔴 High Priority / Next Up
 
+- [ ] **Device Registration & Claim Process Review** — Revisiting the user-to-device ownership flow. Need to brainstorm and build a new implementation plan as the previous extensive one was lost.
+- [ ] **Review Lab Discoveries & Payload Integration** — Review the Lab again to integrate all new protocol discoveries and payload changes made recently (especially 0x51 effects and custom segments).
 - [ ] **#3 — `CrewModal.tsx` refactor** — 14 useEffect hooks, 2,600+ lines. Extract `useCrewHub()` and `useCrewSession()` custom hooks. Highest maintainability debt in the codebase.
 - [ ] **#13 — Lab 0x73 Music Mode parity** — Lab BUILDER's 0x73 section is missing Light Screen (0x27) vs Light Bar (0x26) matrix style toggle, primary/secondary color pickers, and mic source.
 - [ ] **#14 — Music Mode: Sound column/drop color not applied** — Main app music mode is functioning but color changes for patterns using "sound column" and "drop" effects are not being accepted/applied.
@@ -22,6 +24,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] **#23 — `setColor()` in ZenggeProtocol** — Does NOT apply color sorting. Should be removed or marked internal-only.
 - [ ] **#24 — `0x81` legacy command audit** — Confirm it's no longer being sent on connect. `0x62` (EEPROM write) is the correct command. Remove any remaining `0x81` calls.
 - [ ] **#28 — SK8Lytz Picks Admin Scheduler** — Build admin UI to manage the `sk8lytz_picks` table scheduling. DB columns (`active_from`, `active_until`, `is_active`) already in place. Goal: seasonal picks (4th of July, Christmas, etc.) auto-show/hide. Needs: admin screen, date pickers, toggle per pick.
+- [ ] **#29 — Modern RGB Hue Slider** — Design and implement a more sophisticated, high-precision RGB hue selection component to replace the standard sliders.
 
 ---
 
@@ -34,6 +37,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] **#20 — Security & Performance Review** — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges.
 - [ ] **#21 — Telemetry ingestion verification** — Confirm AppLogger events (crew, street mode, hardware config) are landing in Supabase `device_logs` table correctly.
 - [ ] **#27 — Community Hub: Builder Preset Integration** — Allow users to submit and pull Custom Builder Presets using the public `shared_scenes` Community Library.
+- [ ] **#30 — AppLogger Coverage Audit** — Comprehensive audit of all features added this session (Street Mode, Picks, Favorites, Builder) to ensure 100% telemetry coverage in Analytics.
+- [ ] **#34 — Card Swipe Navigation** — Add the ability to swipe left and right to navigate back and forth between cards (Favorites, Picks, Presets) for a more fluid mobile UX.
 
 ---
 
@@ -49,6 +54,9 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] **#12 — Dashboard Header Layout** — User pill left-justified, Support & Theme icons right-grouped, matching Auth screen style
 - [x] **#25 — Builder UI Enhancement** — ADD PIN moved into visual map as blank circular pin
 - [x] **#26 — SK8Lytz Picks DB Migration** — Moved to `sk8lytz_picks` Supabase table with seasonal scheduler columns
+- [x] **#31 — Legacy Tool Retirement** — Retired Simple Scanner and Admin Hardware Tester; consolidated discovery and testing into LED Diagnostic Lab.
+- [x] **#32 — Diagnostic Lab UI Modernization** — Restyled Lab header, exit logic, and card styling to achieve 1:1 visual parity with the Programmer modal.
+- [x] **#33 — Lab Navigation Flow** — Standardized "Exit" behavior to return users to the Analytics view, maintaining context during debug sessions.
 
 ## ✅ Completed Previously
 
@@ -76,4 +84,4 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] Builder UI Stabilization: 8-slot Tactical Grid with Marquee names
 
 ---
-*Last updated: 2026-04-08 | This session: #1, #4, #5, #6, #9, #10, #11, #12, #25, #26 complete. Next: #3, #13, #14.*
+*Last updated: 2026-04-08 | This session: #1, #4, #5, #6, #9-#12, #25, #26, #31-#33 complete. Next: #3, #13, #14.*

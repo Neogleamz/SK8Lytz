@@ -124,7 +124,6 @@ interface LogViewerModalProps {
   visible: boolean;
   onClose: () => void;
   onOpenProgrammer?: () => void;
-  onOpenSniffer?: () => void;
   onOpenLab?: () => void;
   writeToDevice?: (data: number[], deviceId?: string) => Promise<void>;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
@@ -137,7 +136,7 @@ interface LogViewerModalProps {
   liveDeviceConfigs?: Record<string, any>;
 }
 
-export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenSniffer, onOpenLab, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll, onConnectToDevice, liveDeviceConfigs }: LogViewerModalProps) {
+export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenLab, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll, onConnectToDevice, liveDeviceConfigs }: LogViewerModalProps) {
   const { isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -394,38 +393,13 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
             Restricted diagnostics payload for low-level protocol debugging.
           </Text>
 
-          {/* Scanner lives in the Lab → DEVICES tab */}
-          <TouchableOpacity 
-            style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: '#00f0ff', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
-            onPress={() => { if (onOpenLab) onOpenLab(); }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 16, marginRight: 8 }}>📡</Text>
-              <Text style={{ color: '#00f0ff', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Device Scanner (Lab → Devices)</Text>
-            </View>
-          </TouchableOpacity>
-
           <TouchableOpacity 
             style={{ backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: '#ff4040', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
-            onPress={() => {
-              if (onOpenProgrammer) onOpenProgrammer();
-            }}
+            onPress={() => { if (onOpenProgrammer) onOpenProgrammer(); }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 16, marginRight: 8 }}>⚡</Text>
-              <Text style={{ color: '#ff4040', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch SK8Lytz Programmer</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={{ backgroundColor: 'rgba(152, 251, 152, 0.1)', borderColor: '#98FB98', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
-            onPress={() => {
-              if (onOpenSniffer) onOpenSniffer();
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 16, marginRight: 8 }}>💉</Text>
-              <Text style={{ color: '#98FB98', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Launch Hardware Tester</Text>
+              <Text style={{ color: '#ff4040', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>SK8Lytz Programmer</Text>
             </View>
           </TouchableOpacity>
 
