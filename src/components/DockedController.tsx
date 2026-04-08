@@ -900,32 +900,60 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   const [fixedBgColor, setFixedBgColor] = useState<string>('#000000');
   const [fixedHue, setFixedHue] = useState<number>(120);
 
-  // -- Curated Presets (SK8Lytz Picks) --
+  // -- Curated Presets (SK8Lytz Picks) -- driven from Supabase DB table
   const [curatedPresets, setCuratedPresets] = useState<IFavoriteState[]>([]);
+  const [picksLoading, setPicksLoading] = useState(true);
 
   useEffect(() => {
     const fetchPicks = async () => {
       try {
         if (!supabase) return;
-        const { data, error } = await supabase.storage.from('sk8lytz-settings').download('sk8lytz-picks.json');
+        // Filter: is_active = true AND (active_from is null OR active_from <= today)
+        //                           AND (active_until is null OR active_until >= today)
+        const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
+        const { data, error } = await supabase
+          .from('sk8lytz_picks')
+          .select('*')
+          .eq('is_active', true)
+          .or(`active_from.is.null,active_from.lte.${today}`)
+          .or(`active_until.is.null,active_until.gte.${today}`)
+          .order('sort_order', { ascending: true });
+
         if (error) {
-          console.warn('[SK8Lytz Picks] No custom picks config found or accessible:', error.message);
-        } else if (data) {
-          const text = await new Promise<string>((resolve, reject) => {
-            const fr = new FileReader();
-            fr.onload = () => resolve(fr.result as string);
-            fr.onerror = reject;
-            fr.readAsText(data);
-          });
-          const json = JSON.parse(text);
-          if (Array.isArray(json)) {
-            setCuratedPresets(json);
-          } else {
-            console.warn('[SK8Lytz Picks] Fetched config is not an array.');
-          }
+          console.warn('[SK8Lytz Picks] Failed to fetch from DB:', error.message);
+          return;
+        }
+
+        if (data && Array.isArray(data)) {
+          // Map snake_case DB columns → IFavoriteState camelCase
+          const mapped: IFavoriteState[] = data.map((row: any) => ({
+            id: row.id,
+            name: row.name,
+            customName: row.custom_name,
+            mode: row.mode,
+            color: row.color,
+            patternId: row.pattern_id,
+            speed: row.speed ?? 50,
+            brightness: row.brightness ?? 90,
+            fixedColorMode: row.fixed_color_mode,
+            fixedFgColor: row.fixed_fg_color,
+            fixedBgColor: row.fixed_bg_color,
+            fixedHue: row.fixed_hue,
+            multiColors: row.multi_colors ?? undefined,
+            multiTransition: row.multi_transition,
+            multiLength: row.multi_length,
+            musicPrimaryColor: row.music_primary_color,
+            musicSecondaryColor: row.music_secondary_color,
+            micSensitivity: row.mic_sensitivity,
+            micSource: row.mic_source,
+            musicMatrixStyle: row.music_matrix_style,
+          }));
+          setCuratedPresets(mapped);
         }
       } catch (e) {
-        console.warn('[SK8Lytz Picks] Exception fetching', e);
+        console.warn('[SK8Lytz Picks] Exception fetching from DB:', e);
+      } finally {
+        setPicksLoading(false);
       }
     };
     fetchPicks();
@@ -1119,9 +1147,27 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     AsyncStorage.getItem('@Sk8lytz_Favorites').then((saved) => {
         if (saved) {
             try {
-                const parsed = JSON.parse(saved);
+                const parsed: IFavoriteState[] = JSON.parse(saved);
                 if (parsed && parsed.length > 0) {
-                   setFavorites(parsed);
+                   // One-time migration: rewrite legacy 'DIY'/'MULTI'/'MULTICOLOR' mode
+                   // entries to 'BUILDER' so stored data stays clean
+                   let needsMigration = false;
+                   const migrated = parsed.map(f => {
+                     if (f.mode === 'DIY' || f.mode === 'MULTI' || f.mode === 'MULTICOLOR') {
+                       needsMigration = true;
+                       return { ...f, mode: 'BUILDER' };
+                     }
+                     if (f.mode === 'RBM') {
+                       needsMigration = true;
+                       return { ...f, mode: 'PROGRAMS' };
+                     }
+                     return f;
+                   });
+                   if (needsMigration) {
+                     console.log('[SK8Lytz Favorites] Migrated legacy mode entries to new taxonomy.');
+                     AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(migrated));
+                   }
+                   setFavorites(migrated);
                 } else {
                    // Fallback to default if somehow parsed as empty
                    const defaultFavorites = [{

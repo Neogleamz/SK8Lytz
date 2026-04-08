@@ -4,10 +4,10 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ---
 
-## 🔴 High Priority / Needs Testing NOW
+## 🔴 High Priority / Active
 
-- [ ] **#2 — Verify Supabase `led_diagnostics` table** — Confirm Diagnostic Lab successfully pushes telemetry to Supabase. Query table after live test.
-- [ ] **#6 — Favorites persistence** — Confirm saved favorites correctly recall mode, colors, speed, pattern after LED payload fixes. Legacy DIY favorites may have stale color/mode data since migrating to Builder workflow.
+- [/] **#6 — Favorites persistence** — Audit and repair saved favorites so they correctly recall mode, colors, speed, and pattern. Migrate any legacy DIY-mode favorites to Builder-compatible format.
+- [/] **#26 — SK8Lytz Picks Database Migration** — Transition the curated "SK8Lytz Picks" from local JSON files to a dynamic Supabase-driven backend for real-time updates.
 
 ---
 
@@ -28,6 +28,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🟡 Backlog
 
+- [ ] **#2 — Verify Supabase `led_diagnostics` table** — Confirm Diagnostic Lab successfully pushes telemetry to Supabase. Query table after live test.
 - [ ] **#16 — Device Grouping Audit & Redesign** — A "ghost group" keeps persisting across installs. Need to Audit all grouping logic in `DashboardScreen.tsx`, `AsyncStorage`, and `registered_groups`.
 - [ ] **#17 — Web E2E Verification** — Map static thumbnails and address autocomplete in browser environment.
 - [ ] **#18 — Native Platform Verification** — MapView bounds on physical Android/iOS devices for coordinate accuracy.
@@ -38,6 +39,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] **#23 — `setColor()` in ZenggeProtocol** — Does NOT apply color sorting. Should be removed or marked internal-only.
 - [ ] **#24 — `0x81` legacy command audit** — Confirm it's no longer being sent on connect. `0x62` (EEPROM write) is the correct command. Remove any remaining `0x81` calls.
 - [ ] **#27 — Community Hub: Builder Preset Integration** — Allow users to submit and pull Custom Builder Presets using the public `shared_scenes` Community Library.
+- [ ] **#28 — SK8Lytz Picks Admin Scheduler** — Build admin UI to manage the `sk8lytz_picks` table scheduling. Picks have `active_from` / `active_until` date windows and `is_active` flag already in DB. Goal: seasonal picks (4th of July, Christmas, etc.) auto-show/hide. Needs: admin screen, date pickers, toggle per pick.
 
 ---
 
@@ -76,4 +78,4 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] Legacy Deprecation: DIY mode fully replaced by Builder workflow (Apr 2026)
 
 ---
-*Last updated: 2026-04-08 | #1, #4, #5, #12, #25 completed this session. Next: #2 (Supabase verify) & #3 (CrewModal refactor).*
+*Last updated: 2026-04-08 | Active: #6 (Favorites migration), #26 (SK8Lytz Picks DB+Scheduler). Added #28 (Picks admin UI - future).*
