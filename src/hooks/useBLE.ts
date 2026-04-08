@@ -633,26 +633,57 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
   const writeToDevice = async (payload: number[], targetDeviceId?: string) => {
     const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
-    // Hex trace for browser/debug purposes
-    console.log(`[BLE WRITE]${targetDeviceId ? ` [Target: ${targetDeviceId}]` : ''}`, hexString);
+    console.log(`[BLE WRITE${payload.length > 20 ? ` CHUNKED(${payload.length}B)` : ''}]${targetDeviceId ? ` [Target: ${targetDeviceId}]` : ''}`, hexString.substring(0, 80));
     AppLogger.setLastTxPayload(hexString);
-    
+
     // Use ref so this always reads the CURRENT connectedDevices — never a stale closure.
-    // This was the root cause: stale writeToDevice saw connectedDevices=[] and returned early.
+    // ROOT CAUSE FIX: stale writeToDevice saw connectedDevices=[] and returned early.
     if (connectedDevicesRef.current.length === 0 || Platform.OS === 'web') return;
     try {
-      /* Buffer imported at top of file */
-      const base64Payload = Buffer.from(payload).toString('base64');
-      
-      const targets = targetDeviceId 
-        ? connectedDevicesRef.current.filter(d => d.id === targetDeviceId) 
+      const targets = targetDeviceId
+        ? connectedDevicesRef.current.filter(d => d.id === targetDeviceId)
         : connectedDevicesRef.current;
 
       if (targets.length === 0 && targetDeviceId) {
         console.warn(`Target device ${targetDeviceId} not found in connected devices`);
+        return;
       }
 
-      const writePromises = targets.map(device => 
+      // ── BLE MTU Chunking ──────────────────────────────────────────────────────
+      // Default BLE 4.0 MTU = 23 bytes, effective payload = 20 bytes.
+      // The 0x51 Pro Effects payload is 299 bytes — must be chunked or it is
+      // silently dropped by the BLE stack (no error returned).
+      // Strategy: split into 20-byte chunks, send sequentially with 10ms gap.
+      // This matches the Zengge app's proven transmission strategy.
+      const CHUNK_SIZE = 20;
+      if (payload.length > CHUNK_SIZE) {
+        for (const device of targets) {
+          for (let offset = 0; offset < payload.length; offset += CHUNK_SIZE) {
+            const chunk = payload.slice(offset, offset + CHUNK_SIZE);
+            const base64Chunk = Buffer.from(chunk).toString('base64');
+            try {
+              await device.writeCharacteristicWithoutResponseForService(
+                ZENGGE_SERVICE_UUID,
+                ZENGGE_CHARACTERISTIC_UUID,
+                base64Chunk
+              );
+            } catch (chunkError: any) {
+              console.warn(`[BLE] Chunk write failed at offset ${offset} for ${device.id}`, chunkError?.message);
+              AppLogger.log('BLE_WRITE_ERROR', { error: chunkError?.message || String(chunkError), target: device.id, offset, payloadLen: payload.length });
+              break; // stop sending further chunks to this device on error
+            }
+            // 10ms gap between chunks — gives BLE stack time to flush the write queue
+            if (offset + CHUNK_SIZE < payload.length) {
+              await new Promise(r => setTimeout(r, 10));
+            }
+          }
+        }
+        return;
+      }
+
+      // Small payload (≤ 20 bytes): single write, no chunking needed
+      const base64Payload = Buffer.from(payload).toString('base64');
+      const writePromises = targets.map(device =>
         device.writeCharacteristicWithoutResponseForService(
           ZENGGE_SERVICE_UUID,
           ZENGGE_CHARACTERISTIC_UUID,
@@ -665,13 +696,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
       );
 
       const results = await Promise.all(writePromises);
-      
-      // If any writes failed while the device is theoretically connected, we log it.
-      // E.g., device moved far away or just lost connection suddenly.
       const failures = results.filter(r => r && (r as any).error);
       if (failures.length > 0) {
         console.warn(`[BLE] Silent write failures on: ${failures.map(f => (f as any).failedId).join(', ')}`);
-        // We could also proactively trigger a disconnect/dropout here if we wanted.
       }
     } catch (e: any) {
       console.warn('Fatal Write catch', e);
