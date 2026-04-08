@@ -354,7 +354,8 @@ export class ZenggeProtocol {
 
   // 0x59 animated pattern speed range (proven from Protocol/n.java: ad.e.a(f, 1, 31))
   static readonly ANIM_SPEED_MIN = 1;
-  static readonly ANIM_SPEED_MAX = 31; // Values >31 may behave erratically on hardware
+  static readonly ANIM_SPEED_MAX = 31; // Hardware confirmed range from APK Protocol/n.java: ad.e.a(f,1,31)
+  // User-facing speed slider is 0–100. Map to hardware 1–31 via: hw = Math.round((userSpeed/100)*30)+1
 
   // ─── EXISTING COMMANDS ─────────────────────────────────────────────────────
 
@@ -435,11 +436,10 @@ export class ZenggeProtocol {
     // No 32-pixel cap — 0x59 is variable length up to hardware max (300 LEDs).
     const numPoints = Math.max(1, colors.length);
 
-    // Cap animated speed to hardware-proven range 1–31 (from Protocol/n.java).
-    // Static mode (0x00) does not use speed, but send 1 to avoid 0 edge cases.
-    const safeSpeed = transitionType === 0x00
-      ? 1
-      : Math.max(this.ANIM_SPEED_MIN, Math.min(this.ANIM_SPEED_MAX, Math.round(speed)));
+    // Speed mapping: user-facing 0–100 → hardware 1–31.
+    // Previously 0x00 (CASCADE) was HARDCODED to speed=1 — that was wrong, made animations look frozen.
+    // Fix: pass speed through for ALL transition types, properly clamped to 1–31.
+    const safeSpeed = Math.max(this.ANIM_SPEED_MIN, Math.min(this.ANIM_SPEED_MAX, Math.round(speed) || 16));
 
     const totalLen = (numPoints * 3) + 9;
     const payload = new Array(totalLen).fill(0);
