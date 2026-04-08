@@ -30,6 +30,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🟡 Backlog
 
+- [ ] **#15 — Community Hub: Builder Preset Integration** — Allow users to submit and pull Custom Builder Presets using the public `shared_scenes` Community Library.
 - [ ] **#16 — Device Grouping Audit & Redesign** — A "ghost group" keeps persisting across installs. Need to Audit all grouping logic in `DashboardScreen.tsx`, `AsyncStorage`, and `registered_groups`.
 - [ ] **#17 — Web E2E Verification** — Map static thumbnails and address autocomplete in browser environment.
 - [ ] **#18 — Native Platform Verification** — MapView bounds on physical Android/iOS devices for coordinate accuracy.

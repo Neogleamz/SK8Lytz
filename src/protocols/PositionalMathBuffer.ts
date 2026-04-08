@@ -4,6 +4,15 @@ export interface BuilderNode {
   colorHex: string; // #RRGGBB format
 }
 
+export interface CustomBuilderPreset {
+  id: string; 
+  name: string;
+  nodes: BuilderNode[];
+  fill_mode: 'GRADIENT' | 'SOLID';
+  transition_type: number;
+  user_id?: string;
+}
+
 export class PositionalMathBuffer {
   static hexToRgb(hex: string) {
     const h = (hex || '#000000').replace('#', '');
