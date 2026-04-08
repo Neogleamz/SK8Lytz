@@ -4,78 +4,76 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ---
 
-## 🔴 High Priority / Active
+## 🔴 High Priority / Next Up
 
-- [x] **#6 — Favorites persistence** — Legacy DIY mode entries migrated to BUILDER on load. RBM → PROGRAMS. One-time write-back to AsyncStorage. (Apr 2026)
-- [x] **#26 — SK8Lytz Picks Database Migration** — Moved from Supabase Storage blob to `sk8lytz_picks` table. Seasonal scheduler columns (`active_from`, `active_until`, `is_active`) ready. (Apr 2026)
+- [ ] **#3 — `CrewModal.tsx` refactor** — 14 useEffect hooks, 2,600+ lines. Extract `useCrewHub()` and `useCrewSession()` custom hooks. Highest maintainability debt in the codebase.
+- [ ] **#13 — Lab 0x73 Music Mode parity** — Lab BUILDER's 0x73 section is missing Light Screen (0x27) vs Light Bar (0x26) matrix style toggle, primary/secondary color pickers, and mic source.
+- [ ] **#14 — Music Mode: Sound column/drop color not applied** — Main app music mode is functioning but color changes for patterns using "sound column" and "drop" effects are not being accepted/applied.
 
 ---
 
 ## 🟠 Medium Priority / Next Sprint
 
-- [ ] **#3 — `CrewModal.tsx` refactor** — 14 useEffect hooks, 2,600+ lines. Extract `useCrewHub()` and `useCrewSession()` custom hooks. Highest maintainability debt in the codebase.
 - [ ] **#7 — Admin Hardware Tester audit** — Verify `setMultiColor` path in admin tester applies color sorting correctly (currently does NOT call `applyColorSorting` — review `AdminHardwareTester.tsx` L169).
 - [ ] **#8 — Camera Mode: Touch Precision fix** — Color picker swatch is sampling too large an area. Touch/tap should sample ONLY the pixel directly under the finger and run the existing color enhancement routine on that single pixel.
-- [x] **#9 — Street Mode: Cruise LED bounce animation** — Hardware chase ticker advances through mid-zone each `applyStreetPattern()` call. Visualizer mirrors the same triangle-wave bounce.
-- [x] **#10 — Street Mode: Tail light dimming** — Absolute brightness: `tailR = isBraking ? 255 : 127`. Not scaled by user brightness slider. Both hardware and visualizer fixed.
-- [x] **#11 — Visualizer: Street Mode parity** — `motionState` prop added to `ProductVisualizer`. SLOWING_DOWN shows amber cruise zone; bounce only plays during CRUISING/ACCELERATING.
-- [ ] **#13 — Lab 0x73 Music Mode parity** — Lab BUILDER's 0x73 section is missing Light Screen (0x27) vs Light Bar (0x26) matrix style toggle, primary/secondary color pickers, and mic source.
-- [ ] **#14 — Music Mode: Sound column/drop color not applied** — Main app music mode is functioning but color changes for patterns that use "sound column" and "drop" effects are not being accepted/applied.
 - [ ] **#15 — Visualizer Parity: Pro Effects Patterns** — Exhaustively review and tune the interpolation mathematics for all 33 of the 'pro effects' patterns to make them physically accurate within the product visualizer.
-- [ ] **#26 — SK8Lytz Picks Database Migration** — Transition the curated "SK8Lytz Picks" from local JSON files to a dynamic Supabase-driven backend for real-time updates. (Supabase already active — unblocked.)
+- [ ] **#16 — Device Grouping Audit & Redesign** — A "ghost group" keeps persisting across installs. Audit all grouping logic in `DashboardScreen.tsx`, `AsyncStorage`, and `registered_groups`.
+- [ ] **#22 — Crew Hub layout refinement** — Spacing, dashboard layout, member count display, and session timer as platform grows.
+- [ ] **#23 — `setColor()` in ZenggeProtocol** — Does NOT apply color sorting. Should be removed or marked internal-only.
+- [ ] **#24 — `0x81` legacy command audit** — Confirm it's no longer being sent on connect. `0x62` (EEPROM write) is the correct command. Remove any remaining `0x81` calls.
+- [ ] **#28 — SK8Lytz Picks Admin Scheduler** — Build admin UI to manage the `sk8lytz_picks` table scheduling. DB columns (`active_from`, `active_until`, `is_active`) already in place. Goal: seasonal picks (4th of July, Christmas, etc.) auto-show/hide. Needs: admin screen, date pickers, toggle per pick.
 
 ---
 
 ## 🟡 Backlog
 
 - [ ] **#2 — Verify Supabase `led_diagnostics` table** — Confirm Diagnostic Lab successfully pushes telemetry to Supabase. Query table after live test.
-- [ ] **#16 — Device Grouping Audit & Redesign** — A "ghost group" keeps persisting across installs. Need to Audit all grouping logic in `DashboardScreen.tsx`, `AsyncStorage`, and `registered_groups`.
 - [ ] **#17 — Web E2E Verification** — Map static thumbnails and address autocomplete in browser environment.
 - [ ] **#18 — Native Platform Verification** — MapView bounds on physical Android/iOS devices for coordinate accuracy.
 - [ ] **#19 — Automated Testing Suite** — Expand E2E tests for Location flows, crew session creation, and LED payload correctness.
 - [ ] **#20 — Security & Performance Review** — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges.
 - [ ] **#21 — Telemetry ingestion verification** — Confirm AppLogger events (crew, street mode, hardware config) are landing in Supabase `device_logs` table correctly.
-- [ ] **#22 — Crew Hub layout refinement** — Spacing, dashboard layout, member count display, and session timer as platform grows.
-- [ ] **#23 — `setColor()` in ZenggeProtocol** — Does NOT apply color sorting. Should be removed or marked internal-only.
-- [ ] **#24 — `0x81` legacy command audit** — Confirm it's no longer being sent on connect. `0x62` (EEPROM write) is the correct command. Remove any remaining `0x81` calls.
 - [ ] **#27 — Community Hub: Builder Preset Integration** — Allow users to submit and pull Custom Builder Presets using the public `shared_scenes` Community Library.
-- [ ] **#28 — SK8Lytz Picks Admin Scheduler** — Build admin UI to manage the `sk8lytz_picks` table scheduling. Picks have `active_from` / `active_until` date windows and `is_active` flag already in DB. Goal: seasonal picks (4th of July, Christmas, etc.) auto-show/hide. Needs: admin screen, date pickers, toggle per pick.
 
 ---
 
-## ✅ Recently Completed
+## ✅ Completed This Session (Apr 2026)
 
-- [x] **#1 — Positional Array Builder UI** — Builder submode fully implemented in MULTIMODE with node-based gradient interface (Apr 2026)
-- [x] **#4 — Crew Hub UI: private crew invite code display** — Private crew cards show invite code under "My Crews" (Apr 2026)
-- [x] **#5 — DIY Array Builder** — Fully replaced by the new Builder workflow; legacy DIY mode deprecated and scrubbed (Apr 2026)
-- [x] **#12 — Dashboard Header Layout** — User pill left-justified, Support & Theme icons grouped far right; matches Auth screen style (Apr 2026)
-- [x] **#25 — Builder UI Enhancement** — '+ ADD PIN' moved into visual layout map as a blank circular pin (Apr 2026)
-- [x] Protocol: Support full 0x51 logic (Apr 2026)
-- [x] Visualizer: 1:1 mathematical parity for 33 Custom Step Effects (Apr 2026)
-- [x] Add Black and White Color Extremes (Apr 2026)
-- [x] Solid Pattern Re-indexing (Custom Mode #1) (Apr 2026)
-- [x] Test the Expanded LED Diagnostic Lab (Apr 2026)
-- [x] Verify LED color mapping on device (Apr 2026)
-- [x] Street Mode UI Bug (Apr 2026)
-- [x] Lab DEVICES tab wired into content render block (Apr 2026)
-- [x] Lab transmit() now targets specific device via targetDeviceId (Apr 2026)
-- [x] Diagnostic Lab safe area padding (notch/nav bar overlap fixed) (Apr 2026)
-- [x] LED Diagnostic Lab fully tested on device — DEVICES scan, TARGET, BUILDER payloads firing (Apr 2026)
-- [x] LED color mapping verified on hardware — pure RGB confirmed, GRB remapping working natively (Apr 2026)
-- [x] PatternEngine: transition byte research — 0x03=TRIGGER, 0x00=CASCADE (Apr 2026)
-- [x] LED color swap fix: pure RGB sent, hardware remaps GRB natively (Apr 2026)
-- [x] Crew Hub: private crew shows invite code on card (Apr 2026)
-- [x] Crew Hub: shows current leader and public/private status on card (Apr 2026)
-- [x] AppLogger telemetry: crew session start/end, create/update/delete/join/leave (Apr 2026)
-- [x] AppLogger telemetry: street mode activated/deactivated, jerk detected, sensitivity changed (Apr 2026)
-- [x] AsyncStorage key migration: `ng_` → `@Sk8lytz_` namespace standardized (Apr 2026)
-- [x] Master Reference cleanup: ~1,200 lines of noise removed, TOC + AI preamble added (Apr 2026)
-- [x] Street mode transition type: HARD_BRAKING → Strobe (0x02), CRUISE → FREEZE (0x01) (Apr 2026)
-- [x] Crew Hub Edit nav trap: Back always returns to hub landing (Apr 2026)
-- [x] Session end flow: End Session button visible and functional in DockedController (Apr 2026)
-- [x] Builder UI Layout Compression: Collapsed elements prevent clipping under docked controller (Apr 2026)
-- [x] Builder UI Stabilization: 8-slot Tactical Grid & Marquee names (Apr 2026)
-- [x] Legacy Deprecation: DIY mode fully replaced by Builder workflow (Apr 2026)
+- [x] **#1 — Positional Array Builder UI** — Builder submode in MULTIMODE with node-based gradient interface
+- [x] **#4 — Crew Hub: private crew invite code display** — Private crew cards show invite code under "My Crews"
+- [x] **#5 — DIY Array Builder retired** — Fully replaced by new Builder workflow; legacy DIY mode scrubbed
+- [x] **#6 — Favorites persistence** — Legacy DIY/RBM mode entries migrated to BUILDER/PROGRAMS on load; write-back to AsyncStorage
+- [x] **#9 — Street Mode: Cruise LED bounce** — Hardware chase ticker bounces bright spot through mid-zone on each dispatch
+- [x] **#10 — Street Mode: Tail light dimming** — Absolute brightness: 100% braking (R=255), 50% cruising (R=127), not slider-scaled
+- [x] **#11 — Visualizer Street Mode parity** — `motionState` prop drives tail opacity and cruise bounce in visualizer
+- [x] **#12 — Dashboard Header Layout** — User pill left-justified, Support & Theme icons right-grouped, matching Auth screen style
+- [x] **#25 — Builder UI Enhancement** — ADD PIN moved into visual map as blank circular pin
+- [x] **#26 — SK8Lytz Picks DB Migration** — Moved to `sk8lytz_picks` Supabase table with seasonal scheduler columns
+
+## ✅ Completed Previously
+
+- [x] Protocol: Support full 0x51 logic
+- [x] Visualizer: 1:1 mathematical parity for 33 Custom Step Effects
+- [x] Add Black and White Color Extremes
+- [x] Solid Pattern Re-indexing (Custom Mode #1)
+- [x] Test the Expanded LED Diagnostic Lab
+- [x] Verify LED color mapping on device
+- [x] Street Mode UI Bug fix
+- [x] Lab DEVICES tab wired into content render block
+- [x] Lab transmit() now targets specific device via targetDeviceId
+- [x] Diagnostic Lab safe area padding (notch/nav bar overlap fixed)
+- [x] LED Diagnostic Lab fully tested on device — DEVICES scan, TARGET, BUILDER payloads firing
+- [x] LED color mapping verified: pure RGB sent, GRB remapped natively by hardware
+- [x] PatternEngine: transition byte research — 0x03=TRIGGER, 0x00=CASCADE
+- [x] Crew Hub: private crew invite code on card; leader and public/private status
+- [x] AppLogger telemetry: crew sessions, street mode, jerk detection, sensitivity
+- [x] AsyncStorage key migration: `ng_` → `@Sk8lytz_` namespace standardized
+- [x] Master Reference cleanup: ~1,200 lines removed, TOC + AI preamble added
+- [x] Street mode transition types: HARD_BRAKING → Strobe (0x02), CRUISE → FREEZE (0x01)
+- [x] Crew Hub Edit nav trap fixed: Back always returns to hub landing
+- [x] Session end flow: End Session button visible and functional in DockedController
+- [x] Builder UI Layout Compression: elements collapse cleanly under docked controller
+- [x] Builder UI Stabilization: 8-slot Tactical Grid with Marquee names
 
 ---
-*Last updated: 2026-04-08 | Completed: #6, #9, #10, #11, #26. Next: #3 (CrewModal refactor) or #13 (Music Mode parity).*
+*Last updated: 2026-04-08 | This session: #1, #4, #5, #6, #9, #10, #11, #12, #25, #26 complete. Next: #3, #13, #14.*
