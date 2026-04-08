@@ -854,8 +854,9 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
 
     // Effect #1 is the newly inserted Solid override that uses classic 0x59 fill instead of 0x51 Custom Mode
     if (patternId === 1) {
-      // 0x00 transition = SOLID
-      const payload = ZenggeProtocol.setMultiColor([fgRgb], 0x00, currentSpeed);
+      // 0x01 transition = FREEZE, sending padded array to ensure solid stability
+      const colors = Array(numLEDs).fill(fgRgb);
+      const payload = ZenggeProtocol.setMultiColor(colors, 1, 1, 0x01);
       if (payload) writeToDevice(payload);
       return;
     }
@@ -922,6 +923,20 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
   const [fixedFgColor, setFixedFgColor] = useState<string>('#00FF00');
   const [fixedBgColor, setFixedBgColor] = useState<string>('#000000');
   const [fixedHue, setFixedHue] = useState<number>(120);
+
+  // --- PRO EFFECTS REACTIVITY LOGIC ---
+  const applyFixedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
+      if (applyFixedRef.current) clearTimeout(applyFixedRef.current);
+      applyFixedRef.current = setTimeout(() => {
+        applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness);
+      }, 50);
+    }
+    return () => {
+       if (applyFixedRef.current) clearTimeout(applyFixedRef.current);
+    }
+  }, [fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, activeMode, fixedSubMode]);
 
   // -- Curated Presets (SK8Lytz Picks) -- driven from Supabase DB table
   const [curatedPresets, setCuratedPresets] = useState<IFavoriteState[]>([]);
@@ -1585,26 +1600,6 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                             setFixedSubMode('PATTERN');
                             setFixedPatternId(effect.id);
                             
-                            // Immediately push the new 0x51 DIY mode payload
-                            if (writeToDevice) {
-                              const hexToRcb = (hex: string) => {
-                                const h = hex || '#000000';
-                                return {
-                                  r: parseInt(h.substring(1, 3), 16) || 0,
-                                  g: parseInt(h.substring(3, 5), 16) || 0,
-                                  b: parseInt(h.substring(5, 7), 16) || 0,
-                                };
-                              };
-                              writeToDevice(ZenggeProtocol.setCustomMode([
-                                {
-                                  mode: effect.id, 
-                                  speed: Math.floor(speed / 3) + 1, // normalize 1-100 to 1-31
-                                  color1: hexToRcb(fixedFgColor || '#FF0000'),
-                                  color2: hexToRcb(fixedBgColor || '#000000')
-                                }
-                              ]));
-                            }
-
                             if (effect.id === 1) {
                                setFixedColorMode('FOREGROUND');
                             }
