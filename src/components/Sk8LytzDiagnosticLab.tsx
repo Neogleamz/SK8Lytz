@@ -179,7 +179,9 @@ export default function Sk8LytzDiagnosticLab({
         const c1 = bldColors[0] || {r:255,g:0,b:0};
         const s = parseInt(bldSens) || 100;
         const br = parseInt(bldBright) || 100;
-        const wrapped = ZenggeProtocol.setMusicConfig(bldMic, 1, id, c1, bldC2, s, br);
+        // modeType = bldMusicMode (the symphony pattern to select, byte 2)
+        // patternId = 0x27 (Light Screen matrix style, same as main app)
+        const wrapped = ZenggeProtocol.setMusicConfig(bldMic, id, 0x27, c1, bldC2, s, br);
         const hex = wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
         setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x73] Symphony Config', `Mic: ${bldMic}`, `Pattern: ${id}`, `Sens: ${s} Bright: ${br}`] });
         setBldHexOverride(hex);
@@ -535,15 +537,23 @@ export default function Sk8LytzDiagnosticLab({
         <View style={{ marginBottom: 16 }}>
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>PATTERN ID (1-210)</Text>
-              <TextInput style={S.numInput} value={bldPatternId} keyboardType="numeric" onChangeText={setBldPatternId} />
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>PATTERN ID (1–210)</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <TouchableOpacity onPress={() => setBldPatternId(String(Math.max(1, (parseInt(bldPatternId)||1) - 1)))} style={{ backgroundColor: '#222', borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>‒</Text>
+                </TouchableOpacity>
+                <TextInput style={[S.numInput, { flex: 1, textAlign: 'center' }]} value={bldPatternId} keyboardType="numeric" onChangeText={v => setBldPatternId(String(Math.max(1, Math.min(210, parseInt(v)||1))))} />
+                <TouchableOpacity onPress={() => setBldPatternId(String(Math.min(210, (parseInt(bldPatternId)||1) + 1)))} style={{ backgroundColor: '#222', borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>+</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SPEED (1-100)</Text>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SPEED (1–100)</Text>
               <TextInput style={S.numInput} value={bldSpeed.toString()} keyboardType="numeric" onChangeText={v => setBldSpeed(Math.max(1, Math.min(100, parseInt(v)||1)))} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>BRIGHTNESS (0-100)</Text>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>BRIGHTNESS (0–100)</Text>
               <TextInput style={S.numInput} value={bldBright} keyboardType="numeric" onChangeText={setBldBright} />
             </View>
           </View>
@@ -554,8 +564,16 @@ export default function Sk8LytzDiagnosticLab({
         <View style={{ marginBottom: 16 }}>
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>MUSIC MODE (1-13)</Text>
-              <TextInput style={S.numInput} value={bldMusicMode} keyboardType="numeric" onChangeText={setBldMusicMode} />
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>MUSIC MODE (1–13)</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <TouchableOpacity onPress={() => setBldMusicMode(String(Math.max(1, (parseInt(bldMusicMode)||1) - 1)))} style={{ backgroundColor: '#222', borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>‒</Text>
+                </TouchableOpacity>
+                <TextInput style={[S.numInput, { flex: 1, textAlign: 'center' }]} value={bldMusicMode} keyboardType="numeric" onChangeText={v => setBldMusicMode(String(Math.max(1, Math.min(13, parseInt(v)||1))))} />
+                <TouchableOpacity onPress={() => setBldMusicMode(String(Math.min(13, (parseInt(bldMusicMode)||1) + 1)))} style={{ backgroundColor: '#222', borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>+</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>MIC SRC</Text>
