@@ -130,13 +130,24 @@ Modern high-performance pattern selection.
 - **SegmentLength (Byte 1)** defines the size of the looping chunk. (Must be >=10 points to avoid hardware glitching).
 - **Speed (Byte 3)**: `0x01` (Slowest) to `0x64` (Fastest, usually bounded `0x20`+).
 - **Direction Boolean (Byte 138 - if length padded)**: `0x01` Forward flow, `0x00` Reverse flow.
-- A single 1-pixel padded string to `0x59` `Type 1` safely replicates Solid Mode without `0x31` flickering glitches.
+- A single 1-pixel padded string to `0x59` `Type 1` safely replicates Solid Mode.
 
-### Custom DIY Patterns (`0x51`)
-Unlimited creativity with up to 32 steps.
-- **Format**: `[0x51, Step1(8), Step2(8)... Step32(8), 0x0F, Checksum]`
-- **Step Payload**: `[Active(0xF0/0x0F), TransitionMode, Speed, R1, G1, B1, R2, G2, B2]`
-- **Transition Modes**: `0x3A` (Jump), `0x3B` (Gradual), `0x3C` (Strobe).
+#### Custom DIY Step Patterns (`0x51`)
+Unlimited creativity with up to 32 custom sequential steps. 
+Provides access to the 33 "SymphonyEffect" custom math engines natively handled by the IC controller firmware.
+- **Format**: `[0x51, Step1(8), Step2(8)... StepN(8), 0x0F, Checksum]`
+- **Step Payload (8 Bytes)**: `[Active, TransitionByte, Speed, R1_FG, G1_FG, B1_FG, R2_BG, G2_BG, B2_BG]`
+- **Active Byte**: `0xF0` (Step is active), `0x0F` (Empty/ignore).
+- **TransitionByte (Effect ID)**: `0x01` through `0x21` (IDs 1 - 33). *Deep APK parsing confirms the exact effect index (1-33) is injected directly as the Transition type here!* 
+- **Speed**: `0x01` - `0x64` (1-100%).
+
+#### The 33 Custom Effect Modifiers
+Certain effect IDs mathematically ignore the Foreground or Background colors, or support extra layout flags (Direction/Segmented). These are strictly enforced by boolean gates (`n, l, m, o` in `ed.c`):
+- **Requires Foreground**: Only IDs `1-7`, `14`, `17-19`, `25`, `31`, `32`.
+- **Requires Background**: Only IDs `1-6`, `17-19`, `25`, `31-34`.
+- **Direction Toggle (`0x80` flag on speed/id?)**: 18 of 33 effects support passing Left vs Right logic.
+- **Segmented Toggle (`0x80` flag on speed/id?)**: 17 of 33 effects support segmented rendering.
+*(Note: Flag mapping for Direction and Segment boolean in the payload requires testing, likely bitwise shifts over the speed or transition byte based on old findings).*
 
 ---
 

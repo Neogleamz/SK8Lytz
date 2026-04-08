@@ -26,6 +26,8 @@ import CustomSlider from './CustomSlider';
 import VerticalPatternDrum from './VerticalPatternDrum';
 import CameraTracker from './CameraTracker';
 import { getRbmPatternName } from '../constants/RbmPatterns';
+import { ZENGGE_EFFECTS } from '../constants/CustomEffects';
+import CustomEffectVisualizer from './CustomEffectVisualizer';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { buildPatternPayload } from '../protocols/PatternEngine';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -854,10 +856,15 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
     // (segments is a hardware IC layout parameter, not a pixel-count divisor)
     const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
 
-    // PatternEngine handles all 10 patterns with correct protocol payloads:
-    //   Patterns 1,2,3,4,5,9,10 → 0x59 (MultiColor, RunningWater for animated)
-    //   Patterns 6,7,8          → 0x51 (DIY 2-step with STEP_GRADUAL/JUMP/STROBE)
-    const payload = buildPatternPayload(patternId, fgRgb, bgRgb, numLEDs, currentSpeed);
+    // Directly map the 1-33 Pattern IDs into the 0x51 Custom Mode packet
+    const s = Math.floor(currentSpeed / 3) + 1; // Normalize 1-100 to 1-31 hardware speed
+    const payload = ZenggeProtocol.setCustomMode([{
+      mode: patternId,
+      speed: s,
+      color1: fgRgb,
+      color2: bgRgb
+    }]);
+
     if (payload) writeToDevice(payload);
   };
 
@@ -1498,7 +1505,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                       }}
                       style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'PATTERN' ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
                     >
-                      <Text style={{ color: fixedSubMode === 'PATTERN' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Solid Patterns</Text>
+                      <Text style={{ color: fixedSubMode === 'PATTERN' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Pro Effects</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                       onPress={() => setFixedSubMode('DIY')}
@@ -1508,7 +1515,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                     </TouchableOpacity>
                   </View>
 
-                  {/* SOLID PATTERNS TIER */}
+                  {/* PRO EFFECTS TIER (Formerly Solid Patterns) */}
                   {fixedSubMode === 'PATTERN' && (
                   <View style={{ flex: 1, paddingBottom: 6 }}>
                     <ScrollView 
@@ -1516,43 +1523,51 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                        contentContainerStyle={{ padding: 8, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}
                        showsVerticalScrollIndicator={false}
                     >
-                      {(() => {
-                        const fgRgb = (hex: string, alpha: number) => {
-                           const h = hex || '#FFFFFF';
-                           const r = parseInt(h.substring(1, 3), 16) || 0;
-                           const g = parseInt(h.substring(3, 5), 16) || 0;
-                           const b = parseInt(h.substring(5, 7), 16) || 0;
-                           return `rgba(${r},${g},${b},${alpha})`;
-                        };
-                        const f = fixedFgColor || '#FFFFFF';
-                        const b = fixedBgColor || 'transparent';
-                        return [
-                          { id: 1, label: 'Solid', dots: [f, f, f, f, f, f, f, f] },
-                          { id: 2, label: 'Single Dot', dots: [f, b, b, b, b, b, b, b] },
-                          { id: 3, label: 'Comet', dots: [f, fgRgb(f, 0.6), fgRgb(f, 0.3), fgRgb(f, 0.1), b, b, b, b] },
-                          { id: 4, label: 'Dashed', dots: [f, f, b, b, f, f, b, b] },
-                          { id: 5, label: 'Alternating', dots: [f, b, f, b, '#FFFFFF', b, '#FFFFFF', b] },
-                          { id: 6, label: 'Breath', dots: [f, fgRgb(f, 0.5), b, fgRgb(f, 0.5), f, fgRgb(f, 0.5), b, fgRgb(f, 0.5)] },
-                          { id: 7, label: 'Flash', dots: [f, b, f, b, f, b, f, b] },
-                          { id: 8, label: 'Strobe', dots: ['#FFFFFF', b, '#FFFFFF', b, '#FFFFFF', b, '#FFFFFF', b] },
-                          { id: 9, label: 'Wave', dots: [b, fgRgb(f, 0.5), f, f, fgRgb(f, 0.5), b, b, b] },
-                          { id: 10, label: 'Pinch', dots: [f, fgRgb(f, 0.5), b, b, b, fgRgb(f, 0.5), f, b] }
-                        ];
-                      })().map(pattern => (
+                      {ZENGGE_EFFECTS.map(effect => (
                         <TouchableOpacity 
-                          key={pattern.id}
+                          key={effect.id}
                           onPress={() => {
                             setFixedSubMode('PATTERN');
-                            setFixedPatternId(pattern.id);
-                            applyFixedPattern(pattern.id);
-                            if (pattern.id === 1) {
+                            setFixedPatternId(effect.id);
+                            
+                            // Immediately push the new 0x51 DIY mode payload
+                            if (writeToDevice) {
+                              const hexToRcb = (hex: string) => {
+                                const h = hex || '#000000';
+                                return {
+                                  r: parseInt(h.substring(1, 3), 16) || 0,
+                                  g: parseInt(h.substring(3, 5), 16) || 0,
+                                  b: parseInt(h.substring(5, 7), 16) || 0,
+                                };
+                              };
+                              writeToDevice(ZenggeProtocol.setCustomMode([
+                                {
+                                  mode: effect.id, 
+                                  speed: Math.floor(speed / 3) + 1, // normalize 1-100 to 1-31
+                                  color1: hexToRcb(fixedFgColor || '#FF0000'),
+                                  color2: hexToRcb(fixedBgColor || '#000000')
+                                }
+                              ]));
+                            }
+
+                            if (effect.id === 1) {
                                setFixedColorMode('FOREGROUND');
                             }
                           }}
-                          style={{ width: '48%', minHeight: 40, marginBottom: 8, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
+                          style={{ width: '48%', minHeight: 40, marginBottom: 8, flexDirection: 'column', justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
                         >
-                          <Text style={{ color: Colors.text, flex: 1, fontWeight: 'bold', fontSize: 13 }} numberOfLines={1}>{pattern.label}</Text>
-                          <FixedPatternPreviewRow baseDots={pattern.dots} patternId={pattern.id} speed={speed} points={devices?.[0]?.points || points || 16} segments={devices?.[0]?.segments || 1} />
+                          <Text style={{ color: fixedPatternId === effect.id ? Colors.primary : Colors.text, fontWeight: 'bold', fontSize: 11, marginBottom: 4 }} numberOfLines={1}>
+                             {effect.id}. {effect.name}
+                          </Text>
+                          <CustomEffectVisualizer 
+                             effectId={effect.id} 
+                             speed={speed} 
+                             points={devices?.[0]?.points || points || 16} 
+                             segments={devices?.[0]?.segments || 1} 
+                             direction={true} // Defaults to true for normal play
+                             fgColorHex={fixedFgColor}
+                             bgColorHex={fixedBgColor}
+                          />
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
@@ -1863,31 +1878,38 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
 
           {/* ── STREET MODE UI: FAST & FURIOUS DASHBOARD ─────────────────── */}
           {activeMode === 'STREET' && (
-            <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 6 }}>
+            <ScrollView 
+              style={{ flex: 1 }} 
+              contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 4, paddingTop: 6, paddingBottom: 20 }}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
               {/* ── Street Visualizer: Car-light zone bar ── */}
               <View style={{ marginBottom: 10 }}>
                 <View style={{ flexDirection: 'row', height: 26, borderRadius: 13, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
                   {/* Rear zone — red tail lights */}
                   <View style={{ flex: 3, backgroundColor: isStreetBraking ? '#FF0000' : '#660000', justifyContent: 'center', alignItems: 'center' }}>
-                    <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>TAIL (30%)</Text>
+                    <Text allowFontScaling={false} style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>TAIL (30%)</Text>
                   </View>
                   {/* Middle zone — cruise color */}
                   <View style={{ flex: 4, backgroundColor: streetCruiseColor, justifyContent: 'center', alignItems: 'center', opacity: 0.9 }}>
-                    <Text style={{ color: '#000', fontSize: 9, fontWeight: '800' }}>CRUISE (40%)</Text>
+                    <Text allowFontScaling={false} style={{ color: '#000', fontSize: 9, fontWeight: '800' }}>CRUISE (40%)</Text>
                   </View>
                   {/* Front zone — headlights */}
                   <View style={{ flex: 3, backgroundColor: '#FFF5E0', justifyContent: 'center', alignItems: 'center' }}>
-                    <Text style={{ color: '#333', fontSize: 9, fontWeight: '800' }}>HEAD (30%)</Text>
+                    <Text allowFontScaling={false} style={{ color: '#333', fontSize: 9, fontWeight: '800' }}>HEAD (30%)</Text>
                   </View>
                 </View>
               </View>
 
               {/* Status Bar */}
               <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent', paddingVertical: 2, marginBottom: 10 }}>
-                  <Text style={{
-                    color: (motionState === 'HARD_BRAKING' || motionState === 'STOPPED') ? '#FF4444' : motionState === 'SLOWING_DOWN' ? '#FFD700' : '#00FF00',
-                    fontSize: 14, fontWeight: '900', letterSpacing: 4
-                  }}>
+                  <Text 
+                    allowFontScaling={false}
+                    style={{
+                      color: (motionState === 'HARD_BRAKING' || motionState === 'STOPPED') ? '#FF4444' : motionState === 'SLOWING_DOWN' ? '#FFD700' : '#00FF00',
+                      fontSize: 14, fontWeight: '900', letterSpacing: 4
+                    }}>
                     {motionState === 'STOPPED' && '>> STOPPED <<'}
                     {motionState === 'HARD_BRAKING' && '>> HARD BRAKING <<'}
                     {motionState === 'SLOWING_DOWN' && '>> DECELERATING <<'}
@@ -1897,7 +1919,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
               </View>
 
               <View style={{
-                flex: 1,
+                flexGrow: 1,
                 flexDirection: 'row',
                 backgroundColor: 'transparent',
                 justifyContent: 'space-between',
@@ -1940,7 +1962,7 @@ function DockedController({ hwSettings, lockedProduct, isPaired, points, devices
                    <AnalogGauge value={peakGForce} min={0.3} max={2.5} label="G-FORCE" unit="G"   size={120} defaultColor="#FFD700" dangerVal={1.2} criticalVal={1.8} />
                 </View>
               </View>
-            </View>
+            </ScrollView>
           )}
 
         </View>

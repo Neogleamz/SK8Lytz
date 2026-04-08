@@ -6,6 +6,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🔴 High Priority / Needs Testing NOW
 
+- [ ] **#26 — Visualizer: 1:1 mathematical parity for 33 Custom Step Effects** — Build `<CustomEffectVisualizer>` component in React Native by mathematically porting all 33 `ge.*` Java math engines directly, as requested by the user.
+- [ ] **#27 — Protocol: Support full 0x51 logic** — Finalize byte mapping rules for all 33 Custom Effects, including logic for Foreground, Background, Direction, and Segment dependencies in `ZenggeProtocol.ts` and `SK8Lytz_App_Master_Reference.txt`.
 - [x] **#1 — Test the Expanded LED Diagnostic Lab** ✅
 - [x] **#2 — Verify LED color mapping on device** ✅
 - [ ] **#3 — Resolve 0x59 Animation: CASCADE deep-dive** — Hardware observation: `0x03` causes one-shot blink+jump (TRIGGER). `0x00` appeared static before. Need to investigate: (a) Is 0x00 CASCADE truly continuous at higher speeds? (b) Does hardware need a prerequisite mode-switch command before 0x59 animates? (c) Dig Zengge APK `Protocol/a.java` for the exact sequence sent by the original app before pixel array payloads. Test the Lab with each transition byte at speed= vs speed=10to isolate speed vs mode issue.
@@ -27,6 +29,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] **#14 — Dashboard Header Layout** — Move Support and Theme icons to the far RIGHT side of the header, grouped next to each other matching Auth card icon style. Username/status pill left-justified. Use the same `MaterialCommunityIcons` set and sizing already in the app.
 - [ ] **#15 — Lab 0x73 Music Mode parity** — Lab BUILDER's 0x73 section is missing Light Screen (0x27) vs Light Bar (0x26) matrix style toggle, primary/secondary color pickers, and mic source. Must match ALL fields from main controller's `handleMusicChange()`: `isDeviceMic`, `matrixStyle (0x26/0x27)`, `patternId (1-13)`, `color1`, `color2`, `sensitivity`, `brightness`.
 - [ ] **#16 — Music Mode: Sound column/drop color not applied** — Main app music mode is functioning but color changes for patterns that use "sound column" and "drop" effects are not being accepted/applied. Investigate `handleMusicChange()` and whether the color bytes in the 0x73 payload are being parsed and acted on correctly by hardware for those specific pattern IDs.
+- [x] **#28 — Street Mode UI Bug**: The "STOPPED/CRUISING/ACCELERATING" status text overlaps the analog gauges on smaller mobile screens. Needs layout refactoring to ensure it stays above the gauges safely without layover.
 
 ---
 

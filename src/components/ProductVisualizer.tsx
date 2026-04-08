@@ -4,6 +4,7 @@ import { getRbmVisualizerFrame, getRbmMusicFrame, rgbToHex } from '../utils/RbmS
 import { useTheme } from '../context/ThemeContext';
 import { getVisualizerFrame } from '../protocols/PatternEngine';
 import type { RGB, PatternId } from '../protocols/PatternEngine';
+import { ZenggeVisualizerMath } from '../protocols/ZenggeVisualizerMath';
 
 interface DeviceConfig {
   id?: string;
@@ -358,7 +359,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           } else if (mode === 'MULTIMODE') {
              const fgHex = fixedFgColor || color;
              const bgHex = fixedBgColor || '#000000';
-             const pid = Math.max(1, Math.min(10, patternId || 1)) as PatternId;
+             const pid = Math.max(1, patternId || 1);
 
              // Parse fg/bg hex strings to RGB objects for PatternEngine
              const fgRgb: RGB = {
@@ -372,10 +373,26 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
                b: parseInt(bgHex.slice(5,7), 16) || 0,
              };
 
-           // Get the full per-LED pixel array from the PatternEngine at the current animation tick
+             // Get the full per-LED pixel array from the pattern engines at the current animation tick
              // HALOZ: generates 8-LED (per-segment) frame; Seg2 slot is mirrored.
              const mmSegLeds = isHaloz ? Math.ceil(numLeds / 2) : numLeds;
-             const framePixels = getVisualizerFrame(pid, fgRgb, bgRgb, mmSegLeds, animTick);
+             
+             let framePixels: RGB[];
+             if (pid <= 33) {
+                 // Use the new mathematically accurate 33-effect Visualizer Math
+                 const base16 = ZenggeVisualizerMath.getVisualizerDots(pid, fgRgb, bgRgb, animTick, true, deviceSegments > 1);
+                 
+                 // Stretch the 16 native hardware dots into the Visualizer box segment
+                 framePixels = [];
+                 const dotsPerSegment = Math.max(1, Math.floor(mmSegLeds / Math.max(1, deviceSegments)));
+                 for (let i = 0; i < mmSegLeds; i++) {
+                    const segmentLocalIndex = i % dotsPerSegment;
+                    framePixels.push(base16[segmentLocalIndex % 16]);
+                 }
+             } else {
+                 // Legacy fallback
+                 framePixels = getVisualizerFrame(pid as PatternId, fgRgb, bgRgb, mmSegLeds, animTick);
+             }
 
              // ── Diffusion blending: blend adjacent LED colors near chip boundaries ──
              const rawLedPos = (segmentI / activeSegmentLeds) * framePixels.length;

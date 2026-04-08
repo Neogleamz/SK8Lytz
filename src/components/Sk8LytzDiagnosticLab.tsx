@@ -24,6 +24,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ZenggeProtocol, IC_TYPES, COLOR_SORTING_RGB } from '../protocols/ZenggeProtocol';
+import CustomEffectVisualizer from './CustomEffectVisualizer';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -129,7 +130,7 @@ export default function Sk8LytzDiagnosticLab({
   const insets = useSafeAreaInsets();
   
   // Builder general
-  const [bldProtocol, setBldProtocol] = useState<'0x59' | '0x61' | '0x73' | '0x62'>('0x59');
+  const [bldProtocol, setBldProtocol] = useState<'0x51' | '0x59' | '0x61' | '0x73' | '0x62'>('0x59');
   
   // Builder 0x59
   const [bldColors, setBldColors] = useState([{r:255, g:0, b:0}]);
@@ -141,6 +142,14 @@ export default function Sk8LytzDiagnosticLab({
   // Builder 0x61
   const [bldPatternId, setBldPatternId] = useState('1');
   const [bldBright, setBldBright] = useState('100');
+
+  // Builder 0x51 Custom Mode
+  const [bld51Mode, setBld51Mode] = useState('1');
+  const [bld51Speed, setBld51Speed] = useState('16');
+  const [bld51Color1, setBld51Color1] = useState({ r:255, g:0, b:0 });
+  const [bld51Color2, setBld51Color2] = useState({ r:0, g:255, b:0 });
+  const [bld51Dir, setBld51Dir] = useState(1);
+  const [bld51Seg, setBld51Seg] = useState(false);
 
   // Builder 0x73
   const [bldMic, setBldMic] = useState(true);
@@ -169,11 +178,22 @@ export default function Sk8LytzDiagnosticLab({
         setBldHexOverride(result.hex);
       } else if (bldProtocol === '0x61') {
         const id = parseInt(bldPatternId) || 1;
-        const spd = Math.max(1, Math.min(100, bldSpeed));
+        const spd = Math.max(1, bldSpeed); // No upper cap — raw value for hardware testing
         const br = Math.max(0, Math.min(100, parseInt(bldBright)||100));
         const wrapped = ZenggeProtocol.setCustomRbm(id, spd, br);
         const hex = wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
         setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x61] RBM Pattern Payload', `Pattern: ${id}`, `Speed: ${spd}`, `Brightness: ${br}`] });
+        setBldHexOverride(hex);
+      } else if (bldProtocol === '0x51') {
+        const mode = parseInt(bld51Mode) || 1;
+        const spd = Math.max(1, Math.min(31, parseInt(bld51Speed) || 16));
+        const wrapped = ZenggeProtocol.setCustomMode([{
+            mode, speed: spd, 
+            color1: bld51Color1, color2: bld51Color2,
+            dir: bld51Dir, seg: bld51Seg ? 1 : 0
+        }]);
+        const hex = wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+        setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x51] DIY Mode Payload', `Effect ID: ${mode}`, `Speed: ${spd}`, `Dir: ${bld51Dir} | Segs: ${bld51Seg ? 'TRUE' : 'FALSE'}`] });
         setBldHexOverride(hex);
       } else if (bldProtocol === '0x73') {
         const id = parseInt(bldMusicMode) || 1;
@@ -462,6 +482,7 @@ export default function Sk8LytzDiagnosticLab({
       <Text style={S.subTitle}>PROTOCOL</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
         {[
+          { id: '0x51', label: '0x51 DIY Mode' },
           { id: '0x59', label: '0x59 Segments' },
           { id: '0x61', label: '0x61 RBM Pattern' },
           { id: '0x73', label: '0x73 Symphony' },
@@ -474,6 +495,76 @@ export default function Sk8LytzDiagnosticLab({
            </TouchableOpacity>
         ))}
       </View>
+
+      {bldProtocol === '0x51' && (
+        <View style={{ marginBottom: 16 }}>
+          <Text style={S.subTitle}>DIY MODE MATH SIMULATOR</Text>
+          <View style={{ alignItems: 'center', marginBottom: 16 }}>
+            <CustomEffectVisualizer 
+              effectId={parseInt(bld51Mode) || 1} 
+              fgColorHex={`#${bld51Color1.r.toString(16).padStart(2,'0')}${bld51Color1.g.toString(16).padStart(2,'0')}${bld51Color1.b.toString(16).padStart(2,'0')}`}
+              bgColorHex={`#${bld51Color2.r.toString(16).padStart(2,'0')}${bld51Color2.g.toString(16).padStart(2,'0')}${bld51Color2.b.toString(16).padStart(2,'0')}`}
+              speed={Math.max(1, Math.min(31, parseInt(bld51Speed) || 16))}
+              direction={bld51Dir === 1}
+              segments={bld51Seg ? 2 : 1}
+            />
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>EFFECT ID (1–33)</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <TouchableOpacity onPress={() => setBld51Mode(String(Math.max(1, (parseInt(bld51Mode)||1) - 1)))} style={{ backgroundColor: '#222', borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>‒</Text>
+                </TouchableOpacity>
+                <TextInput style={[S.numInput, { flex: 1, textAlign: 'center' }]} value={bld51Mode} keyboardType="numeric" onChangeText={v => setBld51Mode(String(Math.max(1, Math.min(33, parseInt(v)||1))))} />
+                <TouchableOpacity onPress={() => setBld51Mode(String(Math.min(33, (parseInt(bld51Mode)||1) + 1)))} style={{ backgroundColor: '#222', borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SPEED (1–31)</Text>
+              <TextInput style={S.numInput} value={bld51Speed.toString()} keyboardType="numeric" onChangeText={v => setBld51Speed(Math.max(1, Math.min(31, parseInt(v)||1)).toString())} />
+            </View>
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>DIR (Bit 7)</Text>
+              <View style={{ flexDirection: 'row', gap: 4 }}>
+                {[0, 1].map(d => (
+                  <TouchableOpacity key={d} style={[S.chip, bld51Dir === d && S.chipActive, {flex: 1}]} onPress={() => setBld51Dir(d)}>
+                    <Text style={{ color: bld51Dir === d ? '#00f0ff' : '#888', fontSize: 11, textAlign: 'center' }}>{d === 0 ? 'LEFT' : 'RIGHT'}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>SEGS (Bit 6)</Text>
+              <TouchableOpacity style={[S.chip, bld51Seg && S.chipActive, {paddingVertical: 10}]} onPress={() => setBld51Seg(!bld51Seg)}>
+                <Text style={{ color: bld51Seg ? '#00f0ff' : '#888', textAlign: 'center', fontSize: 11, fontWeight: 'bold' }}>{bld51Seg ? 'SPLIT (1)' : 'FULL (0)'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <Text style={S.subTitle}>FOREGROUND (COLOR 1)</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+            <View style={{ width: 24, height: 24, backgroundColor: `rgb(${bld51Color1.r},${bld51Color1.g},${bld51Color1.b})`, borderRadius: 4, borderWidth: 1, borderColor: '#444' }} />
+            <TextInput style={[{flex:1}, S.numInput]} value={bld51Color1.r.toString()} keyboardType="numeric" onChangeText={v => setBld51Color1(c => ({...c, r: parseInt(v)||0}))} placeholder="R" />
+            <TextInput style={[{flex:1}, S.numInput]} value={bld51Color1.g.toString()} keyboardType="numeric" onChangeText={v => setBld51Color1(c => ({...c, g: parseInt(v)||0}))} placeholder="G" />
+            <TextInput style={[{flex:1}, S.numInput]} value={bld51Color1.b.toString()} keyboardType="numeric" onChangeText={v => setBld51Color1(c => ({...c, b: parseInt(v)||0}))} placeholder="B" />
+          </View>
+
+          <Text style={S.subTitle}>BACKGROUND (COLOR 2)</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+            <View style={{ width: 24, height: 24, backgroundColor: `rgb(${bld51Color2.r},${bld51Color2.g},${bld51Color2.b})`, borderRadius: 4, borderWidth: 1, borderColor: '#444' }} />
+            <TextInput style={[{flex:1}, S.numInput]} value={bld51Color2.r.toString()} keyboardType="numeric" onChangeText={v => setBld51Color2(c => ({...c, r: parseInt(v)||0}))} placeholder="R" />
+            <TextInput style={[{flex:1}, S.numInput]} value={bld51Color2.g.toString()} keyboardType="numeric" onChangeText={v => setBld51Color2(c => ({...c, g: parseInt(v)||0}))} placeholder="G" />
+            <TextInput style={[{flex:1}, S.numInput]} value={bld51Color2.b.toString()} keyboardType="numeric" onChangeText={v => setBld51Color2(c => ({...c, b: parseInt(v)||0}))} placeholder="B" />
+          </View>
+        </View>
+      )}
 
       {bldProtocol === '0x59' && (
         <View style={{ marginBottom: 16 }}>

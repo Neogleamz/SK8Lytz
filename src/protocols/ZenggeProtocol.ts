@@ -464,22 +464,20 @@ export class ZenggeProtocol {
   /**
    * Build a 0x51 DIY Custom Mode packet (up to 32 steps, 291 bytes total).
    *
-   * APK-proven format (Protocol/x.java v1):
+   * APK-proven format (Protocol/x.java method b):
    *   [0x51, Step0(9 bytes), Step1(9 bytes), ..., Step31(9 bytes), 0x0F, checksum]
    *
-   * Each active step: [0xF0, transMode, speed, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b]
+   * Each active step: [0xF0, effectId, speed, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b]
    * Each inactive step: [0x0F, 0, 0, 0, 0, 0, 0, 0, 0]
    *
-   * IMPORTANT: transMode (step.mode) MUST be one of:
-   *   ZenggeProtocol.STEP_JUMP    = 0x3A  (hard cut)
-   *   ZenggeProtocol.STEP_GRADUAL = 0x3B  (smooth fade)
-   *   ZenggeProtocol.STEP_STROBE  = 0x3C  (rapid flash)
-   * Using mode 1 or 2 sends wrong transition codes to hardware.
+   * IMPORTANT: effectId must be your protocol mapped ID.
+   *   For the 33 Custom Step Effects, this is 0x01 to 0x21 (1-33).
+   *   For the standard 3 modes (Jump, Gradual, Strobe), it is 0x3A, 0x3B, 0x3C.
    *
    * speed per step: 1–100 (full range valid for 0x51, unlike 0x59)
    */
   static setCustomMode(steps: {
-    mode: number;  // use STEP_JUMP (0x3A), STEP_GRADUAL (0x3B), or STEP_STROBE (0x3C)
+    mode: number;  // 1-33 (0x01-0x21) for Custom Effects, or 0x3A, 0x3B, 0x3C for Standard
     speed: number; // 1–100
     color1: {r: number, g: number, b: number}; // foreground
     color2: {r: number, g: number, b: number}; // background
@@ -493,7 +491,7 @@ export class ZenggeProtocol {
         const step = safeSteps[i];
         const safeSpeed = Math.max(1, Math.min(100, Math.round(step.speed)));
         payload[idx++] = 0xF0; // active flag
-        payload[idx++] = step.mode & 0xFF; // must be 0x3A, 0x3B, or 0x3C
+        payload[idx++] = step.mode & 0xFF; // effect ID (1-33 for advanced, 58-60 for classic)
         payload[idx++] = safeSpeed;
         payload[idx++] = Math.max(0, Math.min(255, step.color1.r | 0));
         payload[idx++] = Math.max(0, Math.min(255, step.color1.g | 0));
