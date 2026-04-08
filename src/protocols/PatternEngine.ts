@@ -178,7 +178,7 @@ export function getHardwarePixelArray(
  */
 export function getPatternTransitionType(patternId: PatternId): number {
   if (patternId === 1) return 0x01; // FREEZE — solid, locked, no scrolling
-  return 0x00;                       // CASCADE — hardware scrolls the pixel array
+  return 0x03;                       // RunningWater — hardware scrolls/cascades the pixel array
 }
 
 /**

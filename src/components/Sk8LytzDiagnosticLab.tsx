@@ -21,6 +21,7 @@ import {
   View, Text, StyleSheet, Modal, TouchableOpacity,
   ScrollView, SafeAreaView, TextInput, FlatList, Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ZenggeProtocol, IC_TYPES, COLOR_SORTING_RGB } from '../protocols/ZenggeProtocol';
 
@@ -125,6 +126,7 @@ export default function Sk8LytzDiagnosticLab({
 
   // Target device tracking
   const [targetDeviceId, setTargetDeviceId] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
   
   // Builder general
   const [bldProtocol, setBldProtocol] = useState<'0x59' | '0x61' | '0x73' | '0x62'>('0x59');
@@ -707,7 +709,7 @@ export default function Sk8LytzDiagnosticLab({
   // ─── Root render ─────────────────────────────────────────────────────────────
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
-      <SafeAreaView style={S.root}>
+      <SafeAreaView style={[S.root, { paddingTop: insets.top }]}>
         {/* Header */}
         <View style={S.header}>
           <TouchableOpacity onPress={onClose} style={S.closeBtn}>
