@@ -52,14 +52,14 @@ Before any command hits the wire, `ZenggeProtocol.wrapCommand()` prepends an 8-b
 `totalLen = (numLEDs × 3) + 9`  
 e.g. HALOZ 16 LEDs → 57 bytes. SOULZ 43 LEDs → 138 bytes.
 
-### Transition Type Byte (Hardware-Confirmed)
+### Transition Type Byte (Hardware-Confirmed via Live Device Testing Apr 2026)
 
-| Value | Constant | Behavior |
-|-------|----------|----------|
-| `0x00` | CASCADE | Freezes pattern statically — do NOT use for animations |
-| `0x01` | FREEZE | Locks array in place — static output, no scrolling |
-| `0x02` | STROBE | Hardware strobes entire array on/off |
-| `0x03` | RunningWater | Hardware scrolls/cascades the pixel array ✅ animations |
+| Value | Label | Confirmed Behavior |
+|-------|-------|--------------------|
+| `0x00` | CASCADE | ✅ Continuous scroll — hardware loops pixel array around strip. **Use for all animated patterns.** |
+| `0x01` | FREEZE | ✅ Static lock — array held in place exactly as sent. **Use for solid/static patterns and street headlights/taillights.** |
+| `0x02` | STROBE | ⚠️ Intended flash — behavior similar to FREEZE on some firmware. Use for hard brake emergency. |
+| `0x03` | TRIGGER | 🔴 One-shot trigger — hardware renders array at NEXT internal offset then STOPS. Causes "blink + jump to new position" on every send. **NOT continuous animation. DO NOT use for animated patterns.** |
 
 ### Speed Range
 - Animated types (`0x03`): clamped `1–31` (from APK Protocol/n.java)

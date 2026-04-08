@@ -58,12 +58,12 @@ interface BleLog {
   note?: string;
 }
 
-// ─── Transition type reference (confirmed on device) ─────────────────────────
+// ─── Transition type reference (hardware-confirmed live testing Apr 2026) ────
 const TRANSITION_TYPES = [
-  { byte: 0x00, label: 'CASCADE', color: '#FF9500', desc: 'Hardware scrolls/loops array around strip (Running Water)' },
-  { byte: 0x01, label: 'FREEZE',  color: '#00CC88', desc: 'Hardware locks array in place — required for solid/static output' },
-  { byte: 0x02, label: 'STROBE',  color: '#FF4040', desc: 'Hardware strobes entire array on/off rapidly' },
-  { byte: 0x03, label: 'UNKNOWN', color: '#888888', desc: 'Unknown — may behave like CASCADE or be undefined' },
+  { byte: 0x00, label: 'CASCADE',  color: '#FF9500', desc: '✅ Continuous scroll — hardware loops array around strip. Use for animated patterns.' },
+  { byte: 0x01, label: 'FREEZE',   color: '#00CC88', desc: '✅ Static lock — array is held in place, no movement. Use for solid/street lights.' },
+  { byte: 0x02, label: 'STROBE',   color: '#FF4040', desc: '⚠️ Intended flash — visually similar to FREEZE on some firmware. Use for hard brake alert.' },
+  { byte: 0x03, label: 'TRIGGER',  color: '#FF69B4', desc: '🔴 One-shot trigger — renders array at NEXT offset then stops. Causes blink+new-position on each send. NOT continuous animation.' },
 ];
 
 // ─── Helper: build annotated 0x59 payload manually ───────────────────────────

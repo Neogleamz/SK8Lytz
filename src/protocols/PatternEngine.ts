@@ -9,19 +9,18 @@
  *   - We send ONE command; the hardware loops it autonomously.
  *   - The app visualizer SIMULATES that animation locally using an animTick (0.0–1.0).
  *
- * CONFIRMED 0x59 Transition Type meanings (hardware-tested):
- *   0x00 = CASCADE  — hardware scrolls/loops the pixel array (Running Water effect)
- *   0x01 = FREEZE   — hardware locks the array in place (required for solid/static output)
- *   0x02 = STROBE   — hardware strobes the full array on/off
- *   (0x03 = unknown, not used — originally misidentified as RunningWater)
- *
- * COLOR: Send PURE RGB bytes. Hardware remaps to GRB internally via 0x81 config.
- *        DO NOT apply applyColorSorting() before building any 0x59 payload.
+ * HARDWARE-CONFIRMED transition byte meanings (live device testing Apr 2026):
+ *   0x00 = CASCADE  — continuous scroll/loop (correct for animated patterns)
+ *   0x01 = FREEZE   — locks array in place (use for solid/static)
+ *   0x02 = STROBE   — intended flash, but may not differ visibly from 0x01 on all HW
+ *   0x03 = TRIGGER  — fires once: renders array at NEXT offset then STOPS.
+ *                     Causes "blink + new position" behavior on each command.
+ *                     NOT a continuous animation — DO NOT use for animated patterns.
  *
  * Pattern split:
- *   Pattern  1       → 0x59 with FREEZE (0x01) — pixel array locked, no scroll
- *   Patterns 2–5, 9–10 → 0x59 with CASCADE (0x00) — hardware scrolls pixel array
- *   Patterns 6–8    → 0x51 two-step DIY (hardware fades/jumps between FG and BG)
+ *   Pattern  1         → 0x59 with FREEZE (0x01) — pixel array locked, no scroll
+ *   Patterns 2–5, 9–10 → 0x59 with CASCADE (0x00) — hardware continuous scroll
+ *   Patterns 6–8       → 0x51 two-step DIY (hardware fades/jumps between FG and BG)
  */
 
 import { ZenggeProtocol } from './ZenggeProtocol';
@@ -178,7 +177,9 @@ export function getHardwarePixelArray(
  */
 export function getPatternTransitionType(patternId: PatternId): number {
   if (patternId === 1) return 0x01; // FREEZE — solid, locked, no scrolling
-  return 0x03;                       // RunningWater — hardware scrolls/cascades the pixel array
+  return 0x00;                       // CASCADE — hardware continuously scrolls pixel array
+                                     // NOTE: 0x03 was tested and causes blink+jump-to-new-position
+                                     // (one-shot trigger, not continuous) — DO NOT use for animations
 }
 
 /**
