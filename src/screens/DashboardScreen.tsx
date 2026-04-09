@@ -42,6 +42,7 @@ import CrewModal from '../components/CrewModal';
 import { crewService, CrewSession, CrewRole } from '../services/CrewService';
 import Sk8LytzDiagnosticLab from '../components/Sk8LytzDiagnosticLab';
 import FirstTimeSetupModal from '../components/FirstTimeSetupModal';
+import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
 import { supabase } from '../services/supabaseClient';
 import { useRegistration, RegisteredDevice } from '../hooks/useRegistration';
 import AccountModal from '../components/AccountModal';
@@ -1448,6 +1449,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     </View>
   );
 
+  if (isSetupWizardVisible) {
+    return <HardwareSetupWizardScreen onSetupComplete={() => {
+      // Stub for Phase 1 - dismiss wizard temporarily. Phase 2/3 will route to claims logic.
+      setIsSetupWizardVisible(false);
+    }} />;
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {BluetoothWarningBanner}
@@ -1848,16 +1856,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         connectToDevice={async (d: any) => { await connectToDevice(d); }}
         liveDeviceConfigs={deviceConfigs}
       />
-      {/* First-Time Setup Wizard — auto-shows on first probe for new accounts */}
-      <FirstTimeSetupModal
-        visible={isSetupWizardVisible}
-        pendingRegistrations={pendingRegistrations}
-        onComplete={handleRegistrationComplete}
-        onDismiss={() => {
-          setIsSetupWizardVisible(false);
-          clearPendingRegistrations();
-        }}
-      />
+      {/* HardwareSetupWizardScreen is conditionally returned at the top level instead of here */}
 
       {/* Single-device quick-register — slides up when returning user connects a new unclaimed device */}
       <DeviceRegistrationModal
