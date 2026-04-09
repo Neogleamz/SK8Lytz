@@ -7,7 +7,11 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ## 🔴 High Priority / Next Up
 
 ### Target: `epic/device-registration`
-- [ ] `review-device-reg` : Device Registration & Claim Process Review — Revisiting the user-to-device ownership flow. Need to brainstorm and build a new implementation plan as the previous extensive one was lost.
+- [x] `review-device-reg` : Device Registration & Claim Process Review — Revisiting the user-to-device ownership flow. Need to brainstorm and build a new implementation plan as the previous extensive one was lost.
+- [ ] `ftue-initial-setup` : FTUE Phase 1 - Create HardwareSetupWizardScreen with probe scan logic and instructions.
+- [ ] `ftue-probe-discovery` : FTUE Phase 2 - Build device discovery list, product identification logic (LED count), and Blink test.
+- [ ] `ftue-claim-registration` : FTUE Phase 3 - Wire offline/online claiming via useRegistration.ts and UI portal integration.
+- [ ] `ftue-grouping-config` : FTUE Phase 4 - Add Mini Hardware Config for assigned positioning and auto-grouping generation.
 
 ### Target: `epic/protocol-integration`
 - [ ] `integrate-lab-payloads` : Review Lab Discoveries & Payload Integration — Review the Lab again to integrate all new protocol discoveries and payload changes made recently (especially 0x51 effects and custom segments).
