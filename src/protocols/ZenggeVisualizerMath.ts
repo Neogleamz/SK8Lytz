@@ -59,8 +59,8 @@ export class ZenggeVisualizerMath {
     // Safety clamp
     const safeTick = Math.max(0, Math.min(1, tick));
 
-    // Effect IDs 2-34 map directly to hardware 0x02-0x22 (with an offset of 1)
-    switch (effectId - 1) {
+    // Effect IDs 1-33 map directly to hardware
+    switch (effectId) {
       case 1: // Change Gradually (CROSSFADE) — symphony_SymphonyEffect1
         // Hardware fades the entire array smoothly from FG to BG and back
         const tFade = Math.sin(safeTick * Math.PI); // 0 -> 1 -> 0
