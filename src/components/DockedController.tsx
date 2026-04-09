@@ -29,7 +29,7 @@ import CameraTracker from './CameraTracker';
 import { getRbmPatternName } from '../constants/RbmPatterns';
 import { ZENGGE_EFFECTS } from '../constants/CustomEffects';
 import CustomEffectVisualizer from './CustomEffectVisualizer';
-import EffectsPanel from './EffectsPanel';
+
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { PositionalMathBuffer, BuilderNode } from '../protocols/PositionalMathBuffer';
 import PositionalGradientBuilder from './PositionalGradientBuilder';
@@ -174,7 +174,7 @@ const AnalogGauge = ({
 
 
 type ProductType = 'HALOZ' | 'SOULZ';
-type ModeType = 'FAVORITES' | 'MULTIMODE' | 'PROGRAMS' | 'MUSIC' | 'STREET' | 'CAMERA' | 'EFFECTS';
+type ModeType = 'FAVORITES' | 'MULTIMODE' | 'PROGRAMS' | 'MUSIC' | 'STREET' | 'CAMERA';
 
 const MUSIC_PATTERNS = [
   'Soft',
@@ -337,8 +337,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
     const magnitudeInterval = React.useRef<NodeJS.Timeout | null>(null);
 
-    // Tracks current EffectsPanel state for speed-slider re-dispatch (EFFECTS mode)
-    const effectsStateRef = React.useRef<{ id: number; fg: string; bg: string }>({ id: 1, fg: '#00FFFF', bg: '#000000' });
+
 
     const [quickPresets, setQuickPresets] = useState<IQuickPreset[]>([
       { name: 'Rainbow', colors: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'], type: 3 },
@@ -1325,7 +1324,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         case 'STREET': return isStreetBraking ? '🔴 BRAKING' : '🟠 CRUISING';
         case 'CAMERA': return 'Camera';
         case 'FAVORITES': return 'Styles';
-        case 'EFFECTS': return '⚡ Pro Effects';
+
         default: return activeMode;
       }
     }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, selectedPatternId, musicPatternId, selectedColor, isStreetBraking]);
@@ -1547,17 +1546,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               </View>
             )}
 
-            {/* ── EFFECTS MODE — full standalone panel ───────────────────── */}
-            {activeMode === 'EFFECTS' && (
-              <EffectsPanel
-                writeToDevice={writeToDevice}
-                points={hwSettings?.ledPoints || points || 16}
-                segments={hwSettings?.segments || 1}
-                speed={speed}
-                hwSettings={hwSettings}
-                onStateChange={(id, fg, bg) => { effectsStateRef.current = { id, fg, bg }; }}
-              />
-            )}
+
 
             {activeMode === 'MULTIMODE' && (
               <View style={{ flex: 1, marginBottom: 8, justifyContent: 'flex-start' }}>
@@ -1952,28 +1941,40 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     );
                   })()}
 
-                  {/* Fixed Pattern Mode Split Color Tracker */}
-                  {(activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') && (
-                    <View style={{
-                      flexDirection: 'row', width: '100%', height: 18, borderRadius: 9, marginBottom: 4,
-                      borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'transparent'
-                    }}>
-                      <TouchableOpacity
-                        activeOpacity={0.9}
-                        onPress={() => setFixedColorMode('FOREGROUND')}
-                        style={{ flex: 1, backgroundColor: fixedFgColor, justifyContent: 'center', alignItems: 'center', opacity: fixedColorMode === 'FOREGROUND' ? 1.0 : 0.4, borderTopLeftRadius: 8, borderBottomLeftRadius: 8, shadowColor: fixedFgColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
-                      >
-                        <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>FOREGROUND</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        activeOpacity={0.9}
-                        onPress={() => setFixedColorMode('BACKGROUND')}
-                        style={{ flex: 1, backgroundColor: fixedBgColor, justifyContent: 'center', alignItems: 'center', opacity: fixedColorMode === 'BACKGROUND' ? 1.0 : 0.4, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.4)', borderTopRightRadius: 8, borderBottomRightRadius: 8, shadowColor: fixedBgColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
-                      >
-                        <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>BACKGROUND</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+                  {/* Fixed Pattern Mode Split Color Tracker — respects effect's color requirements */}
+                  {(activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') && (() => {
+                    const selectedEffect = ZENGGE_EFFECTS.find(e => e.id === fixedPatternId);
+                    const showFg = selectedEffect ? selectedEffect.requiresForeground : true;
+                    const showBg = selectedEffect ? selectedEffect.requiresBackground : true;
+                    // 7-color auto effects (27-33): hardware ignores colors — hide both pickers
+                    if (!showFg && !showBg) return null;
+                    return (
+                      <View style={{
+                        flexDirection: 'row', width: '100%', height: 18, borderRadius: 9, marginBottom: 4,
+                        borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'transparent'
+                      }}>
+                        {showFg && (
+                          <TouchableOpacity
+                            activeOpacity={0.9}
+                            onPress={() => setFixedColorMode('FOREGROUND')}
+                            style={{ flex: 1, backgroundColor: fixedFgColor, justifyContent: 'center', alignItems: 'center', opacity: fixedColorMode === 'FOREGROUND' ? 1.0 : 0.4, borderTopLeftRadius: 8, borderBottomLeftRadius: 8, shadowColor: fixedFgColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
+                          >
+                            <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>FOREGROUND</Text>
+                          </TouchableOpacity>
+                        )}
+                        {showBg && (
+                          <TouchableOpacity
+                            activeOpacity={0.9}
+                            onPress={() => setFixedColorMode('BACKGROUND')}
+                            style={{ flex: 1, backgroundColor: fixedBgColor, justifyContent: 'center', alignItems: 'center', opacity: fixedColorMode === 'BACKGROUND' ? 1.0 : 0.4, borderLeftWidth: showFg ? 1 : 0, borderLeftColor: 'rgba(255,255,255,0.4)', borderTopRightRadius: 8, borderBottomRightRadius: 8, borderTopLeftRadius: showFg ? 0 : 8, borderBottomLeftRadius: showFg ? 0 : 8, shadowColor: fixedBgColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
+                          >
+                            <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>BACKGROUND</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    );
+                  })()}
+
 
                   {/* 9 Preset Colors Grid */}
                   {!(activeMode === 'CAMERA') && (
@@ -2241,11 +2242,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                           else writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
                         } else if (activeMode === 'STREET') {
                           applyStreetPattern(motionStateRef.current, brightness, val);
-                        } else if (activeMode === 'EFFECTS') {
-                          const { id, fg, bg } = effectsStateRef.current;
-                          const fgRgb = { r: parseInt(fg.slice(1,3),16)||0, g: parseInt(fg.slice(3,5),16)||0, b: parseInt(fg.slice(5,7),16)||0 };
-                          const bgRgb = { r: parseInt(bg.slice(1,3),16)||0, g: parseInt(bg.slice(3,5),16)||0, b: parseInt(bg.slice(5,7),16)||0 };
-                          writeToDevice(ZenggeProtocol.setCustomMode([{ mode: id, speed: Math.max(1,Math.round(val)), color1: fgRgb, color2: bgRgb }]));
                         }
                       }
                     }}
@@ -2276,7 +2272,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             {[
               { id: 'HOME',      icon: 'home-outline'         },
               { id: 'FAVORITES', icon: 'cards-heart-outline'  },
-              { id: 'EFFECTS',   icon: 'lightning-bolt'       },
+
               { id: 'MULTI',     icon: 'palette'              },
               { id: 'PROGRAMS',  icon: 'animation-play'       },
               { id: 'MUSIC',     icon: 'music'                },
@@ -2285,7 +2281,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             ].map(dockItem => {
               const isActive =
                 dockItem.id === 'MULTI'   ? activeMode === 'MULTIMODE' :
-                dockItem.id === 'EFFECTS' ? activeMode === 'EFFECTS'   :
+
                 activeMode === dockItem.id;
               return (
                 <TouchableOpacity
@@ -2295,9 +2291,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                       if (onDisconnect) onDisconnect();
                     } else if (dockItem.id === 'FAVORITES') {
                       setActiveMode('FAVORITES');
-                    } else if (dockItem.id === 'EFFECTS') {
-                      setActiveMode('EFFECTS');
-                      setLastOperatingMode('EFFECTS');
+
                     } else if (dockItem.id === 'STREET') {
                       setActiveMode('STREET');
                       setLastOperatingMode('STREET');
