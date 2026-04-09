@@ -138,28 +138,47 @@ Modern high-performance pattern selection.
 - **Speed**: `0x01` (Slowest) to `0x1F` (31 - Fastest).
 - A single 1-pixel padded string to `0x59` `Type 0x01` safely replicates Solid Mode.
 
-#### Custom DIY Step Patterns (`0x51`)
-Unlimited creativity with up to 32 custom sequential steps. 
-Provides access to the 33 "SymphonyEffect" custom math engines natively handled by the IC controller firmware.
-- **Format**: `[0x51, Step1(8), Step2(8)... StepN(8), 0x0F, Checksum]`
-- **Step Payload (8 Bytes)**: `[Active, TransitionByte, Speed, R1_FG, G1_FG, B1_FG, R2_BG, G2_BG, B2_BG]`
-- **Active Byte**: `0xF0` (Step is active), `0x0F` (Empty/ignore).
-- **TransitionByte (Effect ID)**: `0x01` through `0x21` (IDs 1 - 33). *Deep APK parsing confirms the exact effect index (1-33) is injected directly as the Transition type here!* 
-- **Speed**: `0x01` - `0x64` (1-100%).
+#### Custom DIY Step Patterns (`0x51`) — Symphony Pro Effects
+Provides access to the hardware's native 33-44 SymphonyEffect math engines. Hardware accepts **variable-length** packets — only active steps need to be sent.
 
-#### The 33 Custom Effect Modifiers
-Certain effect IDs mathematically ignore the Foreground or Background colors, or support extra layout flags (Direction/Segmented). These are strictly enforced by boolean gates (`n, l, m, o` in `ed.c`):
-- **Requires Foreground**: Only IDs `1-7`, `14`, `17-19`, `25`, `31`, `32`.
-- **Requires Background**: Only IDs `1-6`, `17-19`, `25`, `31-34`.
-- **Direction Toggle (`0x80` flag on speed/id?)**: 18 of 33 effects support passing Left vs Right logic.
-- **Segmented Toggle (`0x80` flag on speed/id?)**: 17 of 33 effects support segmented rendering.
-*(Note: Flag mapping for Direction and Segment boolean in the payload requires testing, likely bitwise shifts over the speed or transition byte based on old findings).*
+> [!IMPORTANT]
+> **BREAKTHROUGH (Apr 2026):** The hardware does NOT require the full 32-slot 291-byte fixed format.
+> It accepts **variable-length** compact packets with only the active steps.
+> The old 32-slot fixed format (291 bytes raw / 299 bytes wrapped) **silently failed** because it
+> exceeded Android's default BLE MTU (186 bytes). A single active step = ~20 bytes wrapped, which
+> works on any standard BLE connection. Use `setCustomModeCompact()` in `ZenggeProtocol.ts`.
+
+- **Format**: `[0x51, Step1(9 bytes), Step2(9 bytes)... StepN(9 bytes), 0x0F, Checksum]`
+- **Step Payload (9 Bytes)**: `[0xF0, EffectID, Speed, R1_FG, G1_FG, B1_FG, R2_BG, G2_BG, B2_BG]`
+- **Active Marker**: First byte of each step is `0xF0` (active) or `0x0F` (empty/skip).
+- **Effect ID (2nd byte)**: `0x01` through `0x21` (IDs 1 – 33). IDs map directly to `symphony_SymphonyEffect1–33`.
+  - APK string resources list 44 effects total (IDs 34-44 not yet implemented in SK8Lytz).
+- **Speed**: `0x01` - `0x64` (1-100%). Hardware uses its own native speed curve.
+- **Terminator**: `0x0F` after last active step.
+- **Checksum**: Sum of all raw bytes `& 0xFF`.
+
+#### Compact Format (Implemented — `setCustomModeCompact`)
+```
+Raw: [0xF0, effectId, speed, FG_R, FG_G, FG_B, BG_R, BG_G, BG_B, 0x0F, checksum]
+Wrapped: 8-byte V2 header + raw → ~20 bytes total
+```
+
+#### The 33 Implemented Custom Effects — FG/BG Requirements
+Verified from `src/constants/CustomEffects.ts`. `requiresForeground` and `requiresBackground` control
+whether the color pickers are shown in the MULTIMODE Pro Effects grid.
+
+| Effect IDs | requiresForeground | requiresBackground | Notes |
+|:---|:---|:---|:---|
+| 1–26 | ✅ Yes | ✅ Yes | All 2-color user-controlled effects |
+| 27–33 | ❌ No | ❌ No | 7-color auto-cycle; hardware ignores user colors |
+
+*(Note: APK lists 44 Symphony Effects total; IDs 34-44 are not yet implemented in SK8Lytz — see `_OLD` reference for full list)*
 
 ## 5. UI Architecture: Custom Pro Effects & Native Positional Builder
 
 As part of the SK8Lytz UI overhaul for ultimate customization parity natively on the React Native stack:
-- **Pro Effects Indexed at 1:** We've hijacked index `1` in the `0x51` subset picker (Pro Effects) so that "Solid" appears visually seamlessly next to the complex 33 symphony patterns. When `1` is selected, the UI dynamically patches the event instantly into a `0x59 Type 0` legacy block fill to ensure stability.
-- **`BUILDER` Submode in Multimode:** A third configuration tab within `DockedController.tsx` tracks custom LED arrays.
+- **Pro Effects Grid in `MULTIMODE → PATTERN`:** The 33 Symphony Effects are accessible via the Pro Effects tab inside MULTIMODE. Selecting an effect sends a compact `0x51` payload via `setCustomModeCompact()`. FG/BG color pickers are shown/hidden dynamically based on `requiresForeground`/`requiresBackground` from `CustomEffects.ts`.
+- **`BUILDER` Submode in Multimode:** A configuration tab within `DockedController.tsx` tracks custom LED arrays.
   - The Builder maintains a state of node boundaries: `[{ position: 0% ... 100%, colorHex: '#...' }, ...]`.
   - Upon dispatch, the UI passes these pins through a mathematically defined interpolation algorithm (`PositionalMathBuffer.ts`) that strictly builds out a full `[R,G,B]` array for exactly the user's targeted device LED count.
   - The fully rendered float-bound array is wrapped in the standard `0x59` protocol method. This allows true hardware-agnostic point plotting where the user interacts via 0-100% bounds, and the backend handles rendering based on exact hardware capacity.
