@@ -1,48 +1,6 @@
-# SK8Lytz App — Master Reference
+﻿# SK8Lytz App: System Master Reference (EXHAUSTIVE)
 
-> **AI CODING SESSIONS**: Read this file before making any changes. All protocol byte values, command formats, storage keys, component roles, and Supabase schema are authoritative here. When in doubt, cross-reference the source file listed in each section.
-
----
-
-## TABLE OF CONTENTS
-
-| § | Topic | Key Files |
-|:--|:------|:----------|
-| 1 | System Overview & Architecture | `App.tsx`, `DashboardScreen.tsx` |
-| 2 | Hardware Specifications (HALOZ/SOULZ) | `ZenggeProtocol.ts` |
-| 3 | Zengge V2 Protocol Wrapper | `ZenggeProtocol.ts → wrapCommand()` |
-| 4 | BLE Command Library (0x31 / 0x42 / 0x59 / 0x51 / 0x62 / 0x63 / 0x73) | `ZenggeProtocol.ts` |
-| 5 | Fixed Modes — CORRECTION (use §13) | `DockedController.tsx` |
-| 6 | RBM Patterns Master List (1-103) | `RbmPatterns.ts` |
-| 7 | AsyncStorage Keys (legacy note → see §K) | `DashboardScreen.tsx`, `AppLogger.ts` |
-| 10 | Symphony Music Modes (0x73 / 0x74) | `DockedController.tsx`, `ZenggeProtocol.ts` |
-| 11 | Zengge Native Broadcast Groups (NOT used by SK8Lytz) | — |
-| 12 | BLE Discovery & Identification | `useBLE.ts` |
-| 13 | Fixed Mode Implementation (Patterns 1-10, correct 0x59 format) | `DockedController.tsx` |
-| 14 | UI Iconography Quick Reference | `DeviceItem.tsx`, `DashboardScreen.tsx` |
-| 15 | ZENGGE APK Mode Catalog (reference only) | `RbmPatterns.ts` |
-| 16 | Hardware Settings Protocol (0x62 / 0x63 EEPROM) | `ZenggeProtocol.ts`, `Sk8LytzProgrammerModal.tsx` |
-| 17 | Hardware Settings Integration (implementation status) | `ZenggeProtocol.ts` |
-| 20 | Hardware Sync / Points / Segments | `ZenggeProtocol.ts` |
-| 21 | **Codebase Architecture** (ALL files documented) | All `src/` |
-| 21-J | Supabase DB Schema | `supabaseClient.ts`, `AppLogger.ts` |
-| 21-K | **AsyncStorage Key Registry (CANONICAL)** | `DashboardScreen.tsx`, `ThemeContext.tsx` |
-| 21-M | Auth & Cloud Features | `AuthScreen.tsx`, `ScenesService.ts` |
-| 21-N | Hardware Settings Retrieval Flow | `useBLE.ts`, `DashboardScreen.tsx` |
-| 22 | 0x59 Protocol Specifics (Transition/Color) | `PatternEngine.ts`, `DockedController.tsx` |
-| 23 | Testing & Diagnostics (Lab, Supabase) | `Sk8LytzDiagnosticLab.tsx` |
-| — | Mode Architecture — Current State | `DockedController.tsx` |
-| — | **CREW HUB & SESSION SYSTEM** | `CrewModal.tsx`, `CrewService.ts` |
-| — | BLE Critical Findings (FF01/FF02 split) | `useBLE.ts`, `ZenggeProtocol.ts` |
-| — | Hardware Strip IC & Color Sequencing | `ZenggeProtocol.ts` |
-| — | Hardware Settings Deep Reverse Engineering | `ZenggeProtocol.ts` |
-| — | APK Deep Dive — Protocol Reference | `ZenggeProtocol.ts` |
-| — | **Supabase Architecture & Schema Reference** | `AppLogger.ts`, `supabaseClient.ts` |
-| — | Protocol Corrections (APK-verified overrides) | — |
-
----
-
-# SK8Lytz App: System Master Reference
+This is the definitive technical manual for the SK8Lytz LED control system. It consolidates all protocol specifications, pattern listings, hardware configurations, and implementation details necessary for development. **DO NOT SHORTEN THIS DOCUMENT.**
 
 ---
 
@@ -108,7 +66,19 @@ Applies to almost all raw payloads.
 - **Power ON**: `[0x71, 0x23, 0x0F, 0xA3]`
 - **Power OFF**: `[0x71, 0x24, 0x0F, 0xA4]`
 - **Discovery**: Zengge devices typically broadcast as `LEDnetXXXXXX`.
+-   Direction Boolean: Byte [138] // (0x01 Forward, 0x00 Reverse)
+   Terminator: 0x0F
+   Checksum: sum(payload) & 0xFF
 
+=== ALTERNATIVE NON-ADDRESSABLE RGB PATTERNS (Node.js RAW DISCOVERIES) ===
+When pushing 0x42 packets, certain devices running generic non-IC LED firmware exhibit alternative mappings. Documenting these overrides here per user request for future legacy controller compatibility layers:
+- ID 56: Seven-Color Cross-Fade (Conflicts with our Symphony "Red Marquee")
+- ID 63: White Gradual Change
+- ID 64: Red/Green Cross-Fade
+- ID 67: Seven-Color Strobe Flash
+- ID 69: Green Strobe Flash
+- ID 76: Seven-Color Jumping Change
+* NOTE: The SK8Lytz system primarily targets Haloz / Soulz operating on WS2812B/SM16703 IC arrays, hence why these standard base-emitter mappings do not align mechanically with our SPI hardware.
 
 ### Color & Brightness (`0x31`)
 - **Format**: `[0x31, R, G, B, 0x00, 0x00, 0x0F, Checksum]`
@@ -120,57 +90,42 @@ Modern high-performance pattern selection.
 - **Pattern IDs**: 1 - 100+ (See Master Pattern List).
 - **Default SK8Lytz Values**: Brightness 90% (`0x5A`), Speed 50% (`0x32`).
 
-### Addressable Mode (`0x59`) - Multi-Color Segment Array 
-- **Format**: `[0x59, SegmentLength, TransitionType, Speed, Direction, R1,G1,B1, R2,G2,B2... Checksum]`
-- **Deep Dive Finding (Multi-Color Builder):**
-  - **The hardware does NOT process explicit position indexes (e.g. "Red at index 10").** All "Fill-In" and "Gradient" point positioning is mathematically interpolated **on the CPU of the phone**!
-  - The UI (found in `StaticColorfulMode.java`) lets the user set specific LEDs to a color (`Position %` * `DeviceLEDCount`).
-  - **"Pure / Fill-In"**: The CPU replicates blocks of color for all LED indices between points.
-  - **"Gradual"**: The CPU runs a linear interpolation loop, shifting RGB values smoothly dot-by-dot across the gap.
-  - Finally, the entire computed `RGB[]` array (up to max strip length) is dumped over BLE wrapped in a `0x59` payload.
-- **Transition Types (`StaticColorfulMode` list)**:
-  - `0x01`: **Static** (Color string remains still)
-  - `0x02`: **Running Water** (Shifts the array down the strip - `0x03` on some models)
-  - `0x03`: **Strobe** (Flashes the static array)
-  - `0x04`: **Jump** (Hard jump between two arrays)
-  - `0x05`: **Breathe** (Fade up and down)
-- **SegmentLength** is the number of colors sent.
-- **Speed**: `0x01` (Slowest) to `0x1F` (31 - Fastest).
-- A single 1-pixel padded string to `0x59` `Type 0x01` safely replicates Solid Mode.
+### Addressable Mode (`0x59`) - Multi-Color Array / DIY Multi-Color
+- **Format**: `[0x59, SegmentLength, TransitionType, Speed, 0x01, R1,G1,B1, R2,G2,B2...]`
+- *Note on DIY Multi-Color Parity*: The Zengge APK's advanced "Multi-Color" tab natively utilizes this exact `0x59` chunked buffer to build DIY animations. The UI labels map strictly to these `TransitionType` bytes:
+  - `0x00`: **Static** (Color blocks sit still)
+  - `0x01`: **Gradual** (Flowing/Breathing transition)
+  - `0x02`: **Strobe** (Flashing segments)
+  - `0x03`: **Running Water** (Hard jumping Marquee)
+- **SegmentLength (Byte 1)** defines the size of the looping chunk. (Must be >=10 points to avoid hardware glitching).
+- **Speed (Byte 3)**: `0x01` (Slowest) to `0x64` (Fastest, usually bounded `0x20`+).
+- **Direction Boolean (Byte 138 - if length padded)**: `0x01` Forward flow, `0x00` Reverse flow.
+- A single 1-pixel padded string to `0x59` `Type 1` safely replicates Solid Mode without `0x31` flickering glitches.
 
-#### Custom DIY Step Patterns (`0x51`)
-Unlimited creativity with up to 32 custom sequential steps. 
-Provides access to the 33 "SymphonyEffect" custom math engines natively handled by the IC controller firmware.
-- **Format**: `[0x51, Step1(8), Step2(8)... StepN(8), 0x0F, Checksum]`
-- **Step Payload (8 Bytes)**: `[Active, TransitionByte, Speed, R1_FG, G1_FG, B1_FG, R2_BG, G2_BG, B2_BG]`
-- **Active Byte**: `0xF0` (Step is active), `0x0F` (Empty/ignore).
-- **TransitionByte (Effect ID)**: `0x01` through `0x21` (IDs 1 - 33). *Deep APK parsing confirms the exact effect index (1-33) is injected directly as the Transition type here!* 
-- **Speed**: `0x01` - `0x64` (1-100%).
-
-#### The 33 Custom Effect Modifiers
-Certain effect IDs mathematically ignore the Foreground or Background colors, or support extra layout flags (Direction/Segmented). These are strictly enforced by boolean gates (`n, l, m, o` in `ed.c`):
-- **Requires Foreground**: Only IDs `1-7`, `14`, `17-19`, `25`, `31`, `32`.
-- **Requires Background**: Only IDs `1-6`, `17-19`, `25`, `31-34`.
-- **Direction Toggle (`0x80` flag on speed/id?)**: 18 of 33 effects support passing Left vs Right logic.
-- **Segmented Toggle (`0x80` flag on speed/id?)**: 17 of 33 effects support segmented rendering.
-*(Note: Flag mapping for Direction and Segment boolean in the payload requires testing, likely bitwise shifts over the speed or transition byte based on old findings).*
-
-## 5. UI Architecture: Custom Pro Effects & Native Positional Builder
-
-As part of the SK8Lytz UI overhaul for ultimate customization parity natively on the React Native stack:
-- **Pro Effects Indexed at 1:** We've hijacked index `1` in the `0x51` subset picker (Pro Effects) so that "Solid" appears visually seamlessly next to the complex 33 symphony patterns. When `1` is selected, the UI dynamically patches the event instantly into a `0x59 Type 0` legacy block fill to ensure stability.
-- **`BUILDER` Submode in Multimode:** A third configuration tab within `DockedController.tsx` tracks custom LED arrays.
-  - The Builder maintains a state of node boundaries: `[{ position: 0% ... 100%, colorHex: '#...' }, ...]`.
-  - Upon dispatch, the UI passes these pins through a mathematically defined interpolation algorithm (`PositionalMathBuffer.ts`) that strictly builds out a full `[R,G,B]` array for exactly the user's targeted device LED count.
-  - The fully rendered float-bound array is wrapped in the standard `0x59` protocol method. This allows true hardware-agnostic point plotting where the user interacts via 0-100% bounds, and the backend handles rendering based on exact hardware capacity.
+### Custom DIY Patterns (`0x51`)
+Unlimited creativity with up to 32 steps.
+- **Format**: `[0x51, Step1(8), Step2(8)... Step32(8), 0x0F, Checksum]`
+- **Step Payload**: `[Active(0xF0/0x0F), TransitionMode, Speed, R1, G1, B1, R2, G2, B2]`
+- **Transition Modes**: `0x3A` (Jump), `0x3B` (Gradual), `0x3C` (Strobe).
 
 ---
 
-## 6. Fixed Modes — CORRECTION
+## 5. Fixed Modes Master List
 
-> [!CAUTION]
-> The original table used `0x61` for patterns 2-10. **This is WRONG.** APK audit proves `0x61` is a timer/schedule command on IC devices. See **Section 13** for the correct `0x59`-based implementation.
+| ID | Name | Protocol | Logic / Hex Detail |
+|:---|:---|:---|:---|
+| 1 | **Solid** | `0x59` | Single perfectly-mapped pixel array `NumPoints=1`, `Speed>0` (req). |
+| 2 | **Single Dot** | `0x61` | `[FG, BG, BG, BG, BG, BG, BG, BG]` |
+| 3 | **Comet** | `0x61` | `[FG, 50%FG, 20%FG, BG, BG, BG]` |
+| 4 | **Dashed** | `0x61` | `[FG, FG, FG, FG, BG, BG, BG, BG]` |
+| 5 | **Alternating** | `0x61` | `[FG, FG, BG, BG]` |
+| 6 | **Breath** | `0x51` | 2-step `0x3B` Gradual Fade between FG and BG. |
+| 7 | **Flash** | `0x51` | 2-step `0x3A` Jump between FG and BG. |
+| 8 | **Strobe** | `0x51` | 2-step `0x3A` Jump at Speed 100. |
+| 9 | **Wave** | `0x61` | `[BG, BG, FG, FG, BG, BG]` Expansion. |
+| 10 | **Pinch** | `0x61` | `[FG, BG, BG, BG, BG, FG]` Contraction. |
 
+---
 
 ## 6. RBM Patterns Master List (1 - 100)
 
@@ -209,10 +164,23 @@ As part of the SK8Lytz UI overhaul for ultimate customization parity natively on
 | 31 | 7 Color Beam | 65 | Blue Rain | 99 | Ocean Drift |
 | 32 | 7 Color Sparkle | 66 | Yellow Rain | 100| Emergency |
 
-### Extended RBM (IDs > 103)
+### Extended RBM / Symphony Modes (101-210)
+*These modes are undocumented in standard manuals but supported by the 0x42 protocol for addressable controllers.*
 
-> [!WARNING]
-> IDs 101-210 are **SPECULATIVE**. Zero evidence found in decompiled APK. Do NOT build features around IDs > 103 without physical hardware test. Use `RbmPatterns.ts` (IDs 1-103) as the authoritative set.
+| Range | Theme / Category | Visual Style |
+|:---|:---|:---|
+| `101-110` | **Prism Flow** | High-density multi-segment color flows (RGB, CMY, Pastel). |
+| `111-125` | **Neon Pulse** | Centered expansion and contraction with color shifting. |
+| `126-140` | **Star Field** | Randomized flickering with background color drifts. |
+| `141-160` | **Cyber Sprint** | One-way high-speed trails and "Shadow" effects. |
+| `161-175` | **Aurora Glow** | Soft, overlapping gradients moving at variable speeds. |
+| `176-190` | **Stack Matrix** | Stacking pixels with random colors at either end. |
+| `191-205` | **Festive Cycle** | Specialized loops for Christmas, Halloween, and New Years. |
+| `206-210` | **Zen Mode** | Ultra-slow "Breath" and "Deep Pulse" for sleeping/rest. |
+
+> [!TIP]
+> While SK8Lytz currently implements a curated list of the best 100 patterns, the protocol can trigger any of these 210 modes by sending the corresponding ID in the `0x42` command.
+
 > [!NOTE]
 > Pattern 100 has been redefined as **Emergency** mode.
 > - **Visuals**: Static Red (Heel), Static White (Toe), and **Bouncing** Yellow dots oscillating in the middle.
@@ -220,15 +188,38 @@ As part of the SK8Lytz UI overhaul for ultimate customization parity natively on
 
 ---
 
-## 7. AsyncStorage Keys
+## 7. App State (Storage Keys)
 
-> [!NOTE]
-> `ng_*` keys are **legacy** — migrated to `@Sk8lytz_*` namespace. See **Codebase Architecture § K (AsyncStorage Key Registry)** for the canonical list.
+| Key | Description | Structure |
+|:---|:---|:---|
+| `@Sk8lytz_ControllerState` | Main Mode State | `{ activeMode, selectedColor, selectedPatternId, brightness, speed, ... }` |
+| `ng_custom_groups` | Groupings | `[{ id, name, deviceIds, type, isGroup }]` |
+| `ng_device_configs` | Hardare Override | `{ deviceId: { name, type, points, stripType, sorting } }` |
+| `ng_processed_devices`| Provisioning Log | `[deviceId1, deviceId2, ...]` |
 
 ---
 
+## 8. Development Notes
+- **Web Demo**: Uses an `IS_BROWSER_DEMO = true` flag in `DashboardScreen.tsx` to simulate BLE connections and state.
+- **Visualizer**: Uses the `LedVisualizer` / `ProductVisualizer` component to render patterns locally based on current state.
+- **Themes**: All colors and typography are centralized in `src/theme/theme.ts`.
+
+---
 ---
 
+## 9. UI Components & Iconography
+
+### Icons (MaterialCommunityIcons)
+- **Primary Branding**: `roller-skate`
+- **Main Interaction**: `power`
+- **Settings**: `tune` or `cog`
+
+### Group Visualization
+- **Single Device**: Single `roller-skate` icon (Size 22, `Colors.primary`).
+- **Grouped Devices**: Double `roller-skate` icons. The second icon is offset (`marginLeft: -10`) with reduced opacity (`0.8`) to create a stacked "pair" effect.
+
+---
+---
 
 ## 10. Symphony Music Modes (Addressable)
 
@@ -268,10 +259,23 @@ Used when `IsDeviceMic` is `0x00` in the `0x73` configuration.
 
 ---
 
-## 11. Zengge Native Broadcast Groups
+## 11. Advanced Reverse Engineering Observations
 
-> [!NOTE]
-> Zengge has a native `broadcast_blue_network` BLE grouping protocol. **SK8Lytz does not use this** — multi-device sync is handled via app-level sequential BLE writes in `useBLE.connectToDevices()`. No implementation needed.
+The following details were extracted from `com.zengge.blev2` (Surplife) string resources and reflect advanced system behaviors.
+
+### Broadcast BLE Grouping Protocol
+Surplife uses a specialized "Broadcast" system for synchronized multi-device control.
+- **Data Table**: `broadcast_blue_network` (Columns: `id`, `network_id`).
+- **Logic**: Individual devices are assigned to a `broadcast_blue_network` to receive synchronous commands.
+- **Key Commands identified**:
+  - `createBroadcastBleGroupIfNotExist`
+  - `sendBroadcastDeviceGroupCommand`
+  - `loopSyncBroadcastBleDeviceGroup`
+- **Splicing Logic**: Symphony controllers support a "Splicing" setting to treat multiple physical strips as one continuous virtual strip. If splicing settings are inconsistent within a group, the app triggers a reset.
+
+### Group Leadership
+Large groups utilize a "Group Leader" logic to coordinate timing and pattern synchronization.
+- **Error Condition**: `Detects that the current group does not have a group leader.` (Indicates a failure in mesh/broadcast coordination).
 
 ## 12. BLE Discovery & Identification (SPI/Symphony)
 
@@ -335,25 +339,459 @@ The "Fixed Mode" in the SK8Lytz app utilizes three distinct protocols to provide
 - **Cruising State**: Generates an automotive frame mimicking running headlights and amber marker lights.
 - **Braking State**: Instantly forces a `#FF0000` (Red) high-priority override to emulate vehicle brake lights when physical deceleration thresholds are breached.
 
-## 14. UI Iconography (Quick Reference)
+## 14. App UI Iconography
 
-| Element | Value |
-|:---|:---|
-| Single device | `roller-skate` (MaterialCommunityIcons, size 22) |
-| Group (2+ devices) | Double `roller-skate`, second offset `marginLeft:-10`, opacity 0.8 |
-| Device name fallback | `SK8Lytz-XXXX` using last 4 chars of MAC |
-| RSSI display | `-XX dBm` (no label prefix) |
-| Pattern wheel | Circular looping 1↔103, long-press 500ms auto-scroll |
+To maintain consistent branding and clarity, the app uses specific emojis for device and group identification in the Dashboard list.
 
----
-
-
-## 15. ZENGGE APK Mode Catalog (Reference Only)
-
-> [!NOTE]
-> Full APK strings.xml contains ~400 mode string keys: Classic Java modes (20), SymphonyBuild presets (300), Symphony Effects (44), Christmas/Camera/Mic UI labels. These are Zengge-internal identifiers — SK8Lytz does NOT expose them directly. Authoritative pattern set: `src/constants/RbmPatterns.ts` (IDs 1-103). SymphonyEffect IDs 1-44 (single-color directional flows) may be added to the pattern library in a future sprint.
+| Element | Icon | Logic |
+|:---|:---|:---|
+| **Individual Device** | `roller-skate` | `MaterialCommunityIcons`, 1 icon |
+| **Device Group** | `roller-skate` x2 | `MaterialCommunityIcons`, 2 icons (overlapping) |
+| **Device Name** | `SK8Lytz-****` | Fallback for factory names, using last 4 MAC digits. |
+| **RSSI Display** | `-XX dBm` | Displayed alongside MAC, "RSSI:" label removed. |
+| **Demo MACs** | `00:DE:M0:00:00:0X` | Realistic dummy format for IDs starting with `sim-`. |
+| **Pattern Wheel** | Circular | Looping logic (1 â†” 100). |
+| **Pattern Hold** | 500ms Skip | Long-press auto-scroll triggers after 0.5s. |
 
 ---
+
+## 15. Zengge APK Reverse Engineering Findings (com.zengge.blev2)
+
+### A. App Architecture & Payload Construction
+1. **Hybrid Structure**: The Zengge app uses Flutter for all UI and business logic, while the native Android code acts as a BLE bridge.
+2. **Payload Origin**: The actual hex arrays mapping to commands like `0x42`, `0x51`, `0x59` are constructed inside the compiled AOT Dart code (`flutter_assets`), not native Java.
+3. **Native Bridge (`FlutterBleControl.java`)**: The Flutter layer passes complete byte payloads and configuration targets directly to native BLE write functions, meaning the native app simply transmits what Flutter computes.
+
+### B. Device State Mapping (`DeviceState2SymphonyLamp`)
+The native code tracks the state of connecting hardware using the following byte structure (tracked in a 14-byte `DeviceState` array):
+- **Red/Green/Blue**: Mapped to state positions `j`, `k`, `l`.
+- **HSV Settings (Symphony Lamps)**: 
+  - `Hue`: Stored natively as variable `t`.
+  - `Saturation`: Variable `w` (0-100).
+  - `Brightness/Value`: Variable `x` (0-100).
+- **Mode `0x97` (Static Color)**: Natively mapped from HSV settings to the RGB arrays during dynamic translations. When setting solid Symphony colors, the app defaults to mode `97` (decimal).
+
+### C. Device Controller Types (Native Offsets)
+- `Ctrl_Mini_RGB_Symphony_0xa1.java`: Handles 0xA1 control protocol types.
+- `Ctrl_RGBCW_Both_0x25.java`: RGBCW devices use the identifier `37` (0x25) and map brightness combinations between RGB diodes and White/Warm diodes to emulate exact CCT temperatures and luminosities natively.
+
+### D. Hardware IC Types & Discovery
+- Identified natively supported IC types inside the settings mappings (`SymphonyICTypeItem`):
+  1. `DIM` (1)
+  2. `CCT` (2)
+  3. `RGB` (3)
+  4. `RGB & W` (4)
+  5. `RGB & CCT` (5)
+  6. `RGB / W` (6)
+  7. `RGB / CCT` (7)
+These mappings closely relate to the `setHardwareConfig` (`0x81`) command values utilized in the `ZenggeProtocol.ts`.
+
+---
+*End of Master Reference. KEEP UPDATING ON ALL NEW FEATURES.*
+
+
+## 6. Exhaustive List of ZENGGE App Modes (Extracted from APK strings.xml)
+
+### Classic Java Modes (20+)
+- `java_Mode_01`: Seven color cross fade
+- `java_Mode_01_tsrarey_0x27`: 21 color gradient
+- `java_Mode_02`: Red gradual change
+- `java_Mode_03`: Green gradual change
+- `java_Mode_04`: Blue gradual change
+- `java_Mode_05`: Yellow gradual change
+- `java_Mode_06`: Cyan gradual change
+- `java_Mode_07`: Purple gradual change
+- `java_Mode_08`: White gradual change
+- `java_Mode_09`: Red/green cross fade
+- `java_Mode_10`: Red/blue cross fade
+- `java_Mode_11`: Green/blue cross fade
+- `java_Mode_12`: Seven color strobe flash
+- `java_Mode_13`: Red strobe flash
+- `java_Mode_14`: Green strobe flash
+- `java_Mode_15`: Blue strobe flash
+- `java_Mode_16`: Yellow strobe flash
+- `java_Mode_17`: Cyan strobe flash
+- `java_Mode_18`: Purple strobe flash
+- `java_Mode_19`: White strobe flash
+- `java_Mode_20`: Seven color jumping change
+
+### Symphony Build Modes (300)
+- `symphony_SymphonyBuild_1`: Circulate all modes
+- `symphony_SymphonyBuild_2`: 7 colors change gradually
+- `symphony_SymphonyBuild_3`: 7 colors run in olivary
+- `symphony_SymphonyBuild_4`: 7 colors change quickly
+- `symphony_SymphonyBuild_5`: 7 colors strobe-flash
+- `symphony_SymphonyBuild_6`: 7 colors running, 1 point from start to end and return back
+- `symphony_SymphonyBuild_7`: 7 colors running, multi points from start to end and return back
+- `symphony_SymphonyBuild_8`: 7 colors overlay, multi points from start to end and return back
+- `symphony_SymphonyBuild_9`: 7 colors overlay, multi points from the middle to the both ends and return back
+- `symphony_SymphonyBuild_10`: 7 colors flow gradually, from start to end and return back
+- `symphony_SymphonyBuild_11`: Fading out run, 7 colors from start to end and return back
+- `symphony_SymphonyBuild_12`: Runs in olivary, 7 colors from start to end and return back
+- `symphony_SymphonyBuild_13`: Fading out run, 7 colors start with white color from start to end and return back
+- `symphony_SymphonyBuild_14`: Run circularly, 7 colors with black background, 1point from start to end
+- `symphony_SymphonyBuild_15`: Run circularly, 7 colors with red background, 1point from start to end
+- `symphony_SymphonyBuild_16`: Run circularly, 7 colors with green background, 1point from start to end
+- `symphony_SymphonyBuild_17`: Run circularly, 7 colors with blue background, 1point from start to end
+- `symphony_SymphonyBuild_18`: Run circularly, 7 colors with yellow background, 1point from start to end
+- `symphony_SymphonyBuild_19`: Run circularly, 7 colors with purple background, 1point from start to end
+- `symphony_SymphonyBuild_20`: Run circularly, 7 colors with cyan background, 1point from start to end
+- `symphony_SymphonyBuild_21`: Run circularly, 7 colors with white background, 1point from start to end
+- `symphony_SymphonyBuild_22`: Run circularly, 7 colors with black background, 1point from end to start
+- `symphony_SymphonyBuild_23`: Run circularly, 7 colors with red background, 1point from end to start
+- `symphony_SymphonyBuild_24`: Run circularly, 7 colors with green background, 1point from end to start
+- `symphony_SymphonyBuild_25`: Run circularly, 7 colors with blue background, 1point from end to start
+- `symphony_SymphonyBuild_26`: Run circularly, 7 colors with yellow background, 1point from end to start
+- `symphony_SymphonyBuild_27`: Run circularly, 7 colors with purple background, 1point from end to start
+- `symphony_SymphonyBuild_28`: Run circularly, 7 colors with cyan background, 1point from end to start
+- `symphony_SymphonyBuild_29`: Run circularly, 7 colors with white background, 1point from end to start
+- `symphony_SymphonyBuild_30`: Run circularly, 7 colors with black background, 1point from start to end and return back
+- `symphony_SymphonyBuild_31`: Run circularly, 7 colors with red background, 1point from start to end and return back
+- `symphony_SymphonyBuild_32`: Run circularly, 7 colors with green background, 1point from start to end and return back
+- `symphony_SymphonyBuild_33`: Run circularly, 7 colors with blue background, 1point from start to end and return back
+- `symphony_SymphonyBuild_34`: Run circularly, 7 colors with yellow background, 1point from start to end and return back
+- `symphony_SymphonyBuild_35`: Run circularly, 7 colors with purple background, 1point from start to end and return back
+- `symphony_SymphonyBuild_36`: Run circularly, 7 colors with cyan background, 1point from start to end and return back
+- `symphony_SymphonyBuild_37`: Run circularly, 7 colors with white background, 1point from start to end and return back
+- `symphony_SymphonyBuild_38`: Run circularly, 7 colors with black background, 1point from middle to both ends
+- `symphony_SymphonyBuild_39`: Run circularly, 7 colors with red background, 1point from middle to both ends
+- `symphony_SymphonyBuild_40`: Run circularly, 7 colors with green background, 1point from middle to both ends
+- `symphony_SymphonyBuild_41`: Run circularly, 7 colors with blue background, 1point from middle to both ends
+- `symphony_SymphonyBuild_42`: Run circularly, 7 colors with yellow background, 1point from middle to both ends
+- `symphony_SymphonyBuild_43`: Run circularly, 7 colors with purple background, 1point from middle to both ends
+- `symphony_SymphonyBuild_44`: Run circularly, 7 colors with cyan background, 1point from middle to both ends
+- `symphony_SymphonyBuild_45`: Run circularly, 7 colors with white background, 1point from middle to both ends
+- `symphony_SymphonyBuild_46`: Run circularly, 7 colors with black background, 1point from both ends to middle
+- `symphony_SymphonyBuild_47`: Run circularly, 7 colors with red background, 1point from both ends to middle
+- `symphony_SymphonyBuild_48`: Run circularly, 7 colors with green background, 1point from both ends to middle
+- `symphony_SymphonyBuild_49`: Run circularly, 7 colors with blue background, 1point from both ends to middle
+- `symphony_SymphonyBuild_50`: Run circularly, 7 colors with yellow background, 1point from both ends to middle
+- `symphony_SymphonyBuild_51`: Run circularly, 7 colors with purple background, 1point from both ends to middle
+- `symphony_SymphonyBuild_52`: Run circularly, 7 colors with cyan background, 1point from both ends to middle
+- `symphony_SymphonyBuild_53`: Run circularly, 7 colors with white background, 1point from both ends to middle
+- `symphony_SymphonyBuild_54`: Run circularly, 7 colors with black background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_55`: Run circularly, 7 colors with red background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_56`: Run circularly, 7 colors with green background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_57`: Run circularly, 7 colors with blue background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_58`: Run circularly, 7 colors with yellow background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_59`: Run circularly, 7 colors with purple background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_60`: Run circularly, 7 colors with cyan background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_61`: Run circularly, 7 colors with white background, 1point from middle to both ends and return back
+- `symphony_SymphonyBuild_62`: Overlay circularly, 7 colors with black background from start to end
+- `symphony_SymphonyBuild_63`: Overlay circularly, 7 colors with red background from start to end
+- `symphony_SymphonyBuild_64`: Overlay circularly, 7 colors with green background from start to end
+- `symphony_SymphonyBuild_65`: Overlay circularly, 7 colors with blue background from start to end
+- `symphony_SymphonyBuild_66`: Overlay circularly, 7 colors with yellow background from start to end
+- `symphony_SymphonyBuild_67`: Overlay circularly, 7 colors with purple background from start to end
+- `symphony_SymphonyBuild_68`: Overlay circularly, 7 colors with cyan background from start to end
+- `symphony_SymphonyBuild_69`: Overlay circularly, 7 colors with white background from start to end
+- `symphony_SymphonyBuild_70`: Overlay circularly, 7 colors with black background from end to start
+- `symphony_SymphonyBuild_71`: Overlay circularly, 7 colors with red background from end to start
+- `symphony_SymphonyBuild_72`: Overlay circularly, 7 colors with green background from end to start
+- `symphony_SymphonyBuild_73`: Overlay circularly, 7 colors with blue background from end to start
+- `symphony_SymphonyBuild_74`: Overlay circularly, 7 colors with yellow background from end to start
+- `symphony_SymphonyBuild_75`: Overlay circularly, 7 colors with purple background from end to start
+- `symphony_SymphonyBuild_76`: Overlay circularly, 7 colors with cyan background from end to start
+- `symphony_SymphonyBuild_77`: Overlay circularly, 7 colors with white background from end to start
+- `symphony_SymphonyBuild_78`: Overlay circularly, 7 colors with black background from start to end and return back
+- `symphony_SymphonyBuild_79`: Overlay circularly, 7 colors with red background from start to end and return back
+- `symphony_SymphonyBuild_80`: Overlay circularly, 7 colors with green background from start to end and return back
+- `symphony_SymphonyBuild_81`: Overlay circularly, 7 colors with blue background from start to end and return back
+- `symphony_SymphonyBuild_82`: Overlay circularly, 7 colors with yellow background from start to end and return back
+- `symphony_SymphonyBuild_83`: Overlay circularly, 7 colors with purple background from start to end and return back
+- `symphony_SymphonyBuild_84`: Overlay circularly, 7 colors with cyan background from start to end and return back
+- `symphony_SymphonyBuild_85`: Overlay circularly, 7 colors with white background from start to end and return back
+- `symphony_SymphonyBuild_86`: Overlay circularly, 7 colors with black background from middle to both ends
+- `symphony_SymphonyBuild_87`: Overlay circularly, 7 colors with red background from middle to both ends
+- `symphony_SymphonyBuild_88`: Overlay circularly, 7 colors with green background from middle to both ends
+- `symphony_SymphonyBuild_89`: Overlay circularly, 7 colors with blue background from middle to both ends
+- `symphony_SymphonyBuild_90`: Overlay circularly, 7 colors with yellow background from middle to both ends
+- `symphony_SymphonyBuild_91`: Overlay circularly, 7 colors with purple background from middle to both ends
+- `symphony_SymphonyBuild_92`: Overlay circularly, 7 colors with cyan background from middle to both ends
+- `symphony_SymphonyBuild_93`: Overlay circularly, 7 colors with white background from middle to both ends
+- `symphony_SymphonyBuild_94`: Overlay circularly, 7 colors with black background from both ends to middle
+- `symphony_SymphonyBuild_95`: Overlay circularly, 7 colors with red background from both ends to middle
+- `symphony_SymphonyBuild_96`: Overlay circularly, 7 colors with green background from both ends to middle
+- `symphony_SymphonyBuild_97`: Overlay circularly, 7 colors with blue background from both ends to middle
+- `symphony_SymphonyBuild_98`: Overlay circularly, 7 colors with yellow background from both ends to middle
+- `symphony_SymphonyBuild_99`: Overlay circularly, 7 colors with purple background from both ends to middle
+- `symphony_SymphonyBuild_100`: Overlay circularly, 7 colors with cyan background from both ends to middle
+- `symphony_SymphonyBuild_101`: Overlay circularly, 7 colors with white background from both ends to middle
+- `symphony_SymphonyBuild_102`: Overlay circularly, 7 colors with black background from middle to both sides and return back
+- `symphony_SymphonyBuild_103`: Overlay circularly, 7 colors with red background from middle to both sides and return back
+- `symphony_SymphonyBuild_104`: Overlay circularly, 7 colors with green background from middle to both sides and return back
+- `symphony_SymphonyBuild_105`: Overlay circularly, 7 colors with blue background from middle to both sides and return back
+- `symphony_SymphonyBuild_106`: Overlay circularly, 7 colors with yellow background from middle to both sides and return back
+- `symphony_SymphonyBuild_107`: Overlay circularly, 7 colors with purple background from middle to both sides and return back
+- `symphony_SymphonyBuild_108`: Overlay circularly, 7 colors with cyan background from middle to both sides and return back
+- `symphony_SymphonyBuild_109`: Overlay circularly, 7 colors with white background from middle to both sides and return back
+- `symphony_SymphonyBuild_110`: Fading out run circularly, 1point with black background from start to end
+- `symphony_SymphonyBuild_111`: Fading out run circularly, 1point with red background from start to end
+- `symphony_SymphonyBuild_112`: Fading out run circularly, 1point with green background from start to end
+- `symphony_SymphonyBuild_113`: Fading out run circularly, 1point with blue background from start to end
+- `symphony_SymphonyBuild_114`: Fading out run circularly, 1point with yellow background from start to end
+- `symphony_SymphonyBuild_115`: Fading out run circularly, 1point with purple background from start to end
+- `symphony_SymphonyBuild_116`: Fading out run circularly, 1point with cyan background from start to end
+- `symphony_SymphonyBuild_117`: Fading out run circularly, 1point with white background from start to end
+- `symphony_SymphonyBuild_118`: Fading out run circularly, 1point with black background from end to start
+- `symphony_SymphonyBuild_119`: Fading out run circularly, 1point with red background from end to start
+- `symphony_SymphonyBuild_120`: Fading out run circularly, 1point with green background from end to start
+- `symphony_SymphonyBuild_121`: Fading out run circularly, 1point with blue background from end to start
+- `symphony_SymphonyBuild_122`: Fading out run circularly, 1point with yellow background from end to start
+- `symphony_SymphonyBuild_123`: Fading out run circularly, 1point with purple background from end to start
+- `symphony_SymphonyBuild_124`: Fading out run circularly, 1point with cyan background from end to start
+- `symphony_SymphonyBuild_125`: Fading out run circularly, 1point with white background from end to start
+- `symphony_SymphonyBuild_126`: Fading out run circularly, 1point with black background from start to end and return back
+- `symphony_SymphonyBuild_127`: Fading out run circularly, 1point with red background from start to end and return back
+- `symphony_SymphonyBuild_128`: Fading out run circularly, 1point with green background from start to end and return back
+- `symphony_SymphonyBuild_129`: Fading out run circularly, 1point with blue background from start to end and return back
+- `symphony_SymphonyBuild_130`: Fading out run circularly, 1point with yellow background from start to end and return back
+- `symphony_SymphonyBuild_131`: Fading out run circularly, 1point with purple background from start to end and return back
+- `symphony_SymphonyBuild_132`: Fading out run circularly, 1point with cyan background from start to end and return back
+- `symphony_SymphonyBuild_133`: Fading out run circularly, 1point with white background from start to end and return back
+- `symphony_SymphonyBuild_134`: Flows in olivary circularly, 7 colors with black background from start to end
+- `symphony_SymphonyBuild_135`: Flows in olivary circularly, 7 colors with red background from start to end
+- `symphony_SymphonyBuild_136`: Flows in olivary circularly, 7 colors with green background from start to end
+- `symphony_SymphonyBuild_137`: Flows in olivary circularly, 7 colors with blue background from start to end
+- `symphony_SymphonyBuild_138`: Flows in olivary circularly, 7 colors with yellow background from start to end
+- `symphony_SymphonyBuild_139`: Flows in olivary circularly, 7 colors with purple background from start to end
+- `symphony_SymphonyBuild_140`: Flows in olivary circularly, 7 colors with cyan background from start to end
+- `symphony_SymphonyBuild_141`: Flows in olivary circularly, 7 colors with white background from start to end
+- `symphony_SymphonyBuild_142`: Flows in olivary circularly, 7 colors with black background from end to start
+- `symphony_SymphonyBuild_143`: Flows in olivary circularly, 7 colors with red background from end to start
+- `symphony_SymphonyBuild_144`: Flows in olivary circularly, 7 colors with green background from end to start
+- `symphony_SymphonyBuild_145`: Flows in olivary circularly, 7 colors with blue background from end to start
+- `symphony_SymphonyBuild_146`: Flows in olivary circularly, 7 colors with yellow background from end to start
+- `symphony_SymphonyBuild_147`: Flows in olivary circularly, 7 colors with purple background from end to start
+- `symphony_SymphonyBuild_148`: Flows in olivary circularly, 7 colors with cyan background from end to start
+- `symphony_SymphonyBuild_149`: Flows in olivary circularly, 7 colors with white background from end to start
+- `symphony_SymphonyBuild_150`: Flows in olivary circularly, 7 colors with black background from start to end and return back
+- `symphony_SymphonyBuild_151`: Flows in olivary circularly, 7 colors with red background from start to end and return back
+- `symphony_SymphonyBuild_152`: Flows in olivary circularly, 7 colors with green background from start to end and return back
+- `symphony_SymphonyBuild_153`: Flows in olivary circularly, 7 colors with blue background from start to end and return back
+- `symphony_SymphonyBuild_154`: Flows in olivary circularly, 7 colors with yellow background from start to end and return back
+- `symphony_SymphonyBuild_155`: Flows in olivary circularly, 7 colors with purple background from start to end and return back
+- `symphony_SymphonyBuild_156`: Flows in olivary circularly, 7 colors with cyan background from start to end and return back
+- `symphony_SymphonyBuild_157`: Flows in olivary circularly, 7 colors with white background from start to end and return back
+- `symphony_SymphonyBuild_158`: 7 colors run circularly, each color in every 1 point with black background from start to end
+- `symphony_SymphonyBuild_159`: 7 colors run circularly, each color in every 1 point with red background from start to end
+- `symphony_SymphonyBuild_160`: 7 colors run circularly, each color in every 1 point with green background from start to end
+- `symphony_SymphonyBuild_161`: 7 colors run circularly, each color in every 1 point with blue background from start to end
+- `symphony_SymphonyBuild_162`: 7 colors run circularly, each color in every 1 point with yellow background from start to end
+- `symphony_SymphonyBuild_163`: 7 colors run circularly, each color in every 1 point with purple background from start to end
+- `symphony_SymphonyBuild_164`: 7 colors run circularly, each color in every 1 point with cyan background from start to end
+- `symphony_SymphonyBuild_165`: 7 colors run circularly, each color in every 1 point with white background from start to end
+- `symphony_SymphonyBuild_166`: 7 colors run circularly, each color in every 1 point with black background from end to start
+- `symphony_SymphonyBuild_167`: 7 colors run circularly, each color in every 1 point with red background from end to start
+- `symphony_SymphonyBuild_168`: 7 colors run circularly, each color in every 1 point with green background from end to start
+- `symphony_SymphonyBuild_169`: 7 colors run circularly, each color in every 1 point with blue background from end to start
+- `symphony_SymphonyBuild_170`: 7 colors run circularly, each color in every 1 point with yellow background from end to start
+- `symphony_SymphonyBuild_171`: 7 colors run circularly, each color in every 1 point with purple background from end to start
+- `symphony_SymphonyBuild_172`: 7 colors run circularly, each color in every 1 point with cyan background from end to start
+- `symphony_SymphonyBuild_173`: 7 colors run circularly, each color in every 1 point with white background from end to start
+- `symphony_SymphonyBuild_174`: 7 colors run circularly, each color in every 1 point with black background from start to end and return back
+- `symphony_SymphonyBuild_175`: 7 colors run circularly, each color in every 1 point with red background from start to end and return back
+- `symphony_SymphonyBuild_176`: 7 colors run circularly, each color in every 1 point with green background from start to end and return back
+- `symphony_SymphonyBuild_177`: 7 colors run circularly, each color in every 1 point with blue background from start to end and return back
+- `symphony_SymphonyBuild_178`: 7 colors run circularly, each color in every 1 point with yellow background from start to end and return back
+- `symphony_SymphonyBuild_179`: 7 colors run circularly, each color in every 1 point with purple background from start to end and return back
+- `symphony_SymphonyBuild_180`: 7 colors run circularly, each color in every 1 point with cyan background from start to end and return back
+- `symphony_SymphonyBuild_181`: 7 colors run circularly, each color in every 1 point with white background from start to end and return back
+- `symphony_SymphonyBuild_182`: 7 colors run circularly, each color in multi points with red background from start to end
+- `symphony_SymphonyBuild_183`: 7 colors run circularly, each color in multi points with green background from start to end
+- `symphony_SymphonyBuild_184`: 7 colors run circularly, each color in multi points with blue background from start to end
+- `symphony_SymphonyBuild_185`: 7 colors run circularly, each color in multi points with yellow background from start to end
+- `symphony_SymphonyBuild_186`: 7 colors run circularly, each color in multi points with purple background from start to end
+- `symphony_SymphonyBuild_187`: 7 colors run circularly, each color in multi points with cyan background from start to end
+- `symphony_SymphonyBuild_188`: 7 colors run circularly, each color in multi points with white background from start to end
+- `symphony_SymphonyBuild_189`: 7 colors run circularly, each color in multi points with red background from end to start
+- `symphony_SymphonyBuild_190`: 7 colors run circularly, each color in multi points with green background from end to start
+- `symphony_SymphonyBuild_191`: 7 colors run circularly, each color in multi points with blue background from end to start
+- `symphony_SymphonyBuild_192`: 7 colors run circularly, each color in multi points with yellow background from end to start
+- `symphony_SymphonyBuild_193`: 7 colors run circularly, each color in multi points with purple background from end to start
+- `symphony_SymphonyBuild_194`: 7 colors run circularly, each color in multi points with cyan background from end to start
+- `symphony_SymphonyBuild_195`: 7 colors run circularly, each color in multi points with white background from end to start
+- `symphony_SymphonyBuild_196`: 7 colors run circularly, each color in multi points with red background from start to end and return back
+- `symphony_SymphonyBuild_197`: 7 colors run circularly, each color in multi points with green background from start to end and return back
+- `symphony_SymphonyBuild_198`: 7 colors run circularly, each color in multi points with blue background from start to end and return back
+- `symphony_SymphonyBuild_199`: 7 colors run circularly, each color in multi points with yellow background from start to end and return back
+- `symphony_SymphonyBuild_200`: 7 colors run circularly, each color in multi points with purple background from start to end and return back
+- `symphony_SymphonyBuild_201`: 7 colors run circularly, each color in multi points with cyan background from start to end and return back
+- `symphony_SymphonyBuild_202`: 7 colors run circularly, each color in multi points with white background from start to end and return back
+- `symphony_SymphonyBuild_203`: Fading out run circularly, 7 colors each in red fading from start to end
+- `symphony_SymphonyBuild_204`: Fading out run circularly, 7 colors each in green fading from start to end
+- `symphony_SymphonyBuild_205`: Fading out run circularly, 7 colors each in blue fading from start to end
+- `symphony_SymphonyBuild_206`: Fading out run circularly, 7 colors each in yellow fading from start to end
+- `symphony_SymphonyBuild_207`: Fading out run circularly, 7 colors each in purple fading from start to end
+- `symphony_SymphonyBuild_208`: Fading out run circularly, 7 colors each in cyan fading from start to end
+- `symphony_SymphonyBuild_209`: Fading out run circularly, 7 colors each in white fading from start to end
+- `symphony_SymphonyBuild_210`: Fading out run circularly, 7 colors each in red fading from end to start
+- `symphony_SymphonyBuild_211`: Fading out run circularly, 7 colors each in green fading from end to start
+- `symphony_SymphonyBuild_212`: Fading out run circularly, 7 colors each in blue fading from end to start
+- `symphony_SymphonyBuild_213`: Fading out run circularly, 7 colors each in yellow fading from end to start
+- `symphony_SymphonyBuild_214`: Fading out run circularly, 7 colors each in purple fading from end to start
+- `symphony_SymphonyBuild_215`: Fading out run circularly, 7 colors each in cyan fading from end to start
+- `symphony_SymphonyBuild_216`: Fading out run circularly, 7 colors each in white fading from end to start
+- `symphony_SymphonyBuild_217`: Fading out run circularly, 7 colors each in red fading from start to end and return back
+- `symphony_SymphonyBuild_218`: Fading out run circularly, 7 colors each in green fading from start to end and return back
+- `symphony_SymphonyBuild_219`: Fading out run circularly, 7 colors each in blue fading from start to end and return back
+- `symphony_SymphonyBuild_220`: Fading out run circularly, 7 colors each in yellow fading from start to end and return back
+- `symphony_SymphonyBuild_221`: Fading out run circularly, 7 colors each in purple fading from start to end and return back
+- `symphony_SymphonyBuild_222`: Fading out run circularly, 7 colors each in cyan fading from start to end and return back
+- `symphony_SymphonyBuild_223`: Fading out run circularly, 7 colors each in white fading from start to end and return back
+- `symphony_SymphonyBuild_224`: 7 colors each in red run circularly, multi points from start to end
+- `symphony_SymphonyBuild_225`: 7 colors each in green run circularly, multi points from start to end
+- `symphony_SymphonyBuild_226`: 7 colors each in blue run circularly, multi points from start to end
+- `symphony_SymphonyBuild_227`: 7 colors each in yellow run circularly, multi points from start to end
+- `symphony_SymphonyBuild_228`: 7 colors each in purple run circularly, multi points from start to end
+- `symphony_SymphonyBuild_229`: 7 colors each in cyan run circularly, multi points from start to end
+- `symphony_SymphonyBuild_230`: 7 colors each in white run circularly, multi points from start to end
+- `symphony_SymphonyBuild_231`: 7 colors each in red run circularly, multi points from end to start
+- `symphony_SymphonyBuild_232`: 7 colors each in green run circularly, multi points from end to start
+- `symphony_SymphonyBuild_233`: 7 colors each in blue run circularly, multi points from end to start
+- `symphony_SymphonyBuild_234`: 7 colors each in yellow run circularly, multi points from end to start
+- `symphony_SymphonyBuild_235`: 7 colors each in purple run circularly, multi points from end to start
+- `symphony_SymphonyBuild_236`: 7 colors each in cyan run circularly, multi points from end to start
+- `symphony_SymphonyBuild_237`: 7 colors each in white run circularly, multi points from end to start
+- `symphony_SymphonyBuild_238`: 7 colors each in red run circularly, multi points from start to end and return back
+- `symphony_SymphonyBuild_239`: 7 colors each in green run circularly, multi points from start to end and return back
+- `symphony_SymphonyBuild_240`: and return back7 colors each in blue run circularly, multi points from start to end
+- `symphony_SymphonyBuild_241`: 7 colors each in yellow run circularly, multi points from start to end and return back
+- `symphony_SymphonyBuild_242`: 7 colors each in purple run circularly, multi points from start to end and return back
+- `symphony_SymphonyBuild_243`: 7 colors each in cyan run circularly, multi points from start to end and return back
+- `symphony_SymphonyBuild_244`: 7 colors each in white run circularly, multi points from start to end and return back
+- `symphony_SymphonyBuild_245`: Flows gradually and circularly, 6 colors with red background from start to end
+- `symphony_SymphonyBuild_246`: Flows gradually and circularly, 6 colors with green background from start to end
+- `symphony_SymphonyBuild_247`: Flows gradually and circularly, 6 colors with blue background from start to end
+- `symphony_SymphonyBuild_248`: Flows gradually and circularly, 6 colors with yellow background from start to end
+- `symphony_SymphonyBuild_249`: Flows gradually and circularly, 6 colors with purple background from start to end
+- `symphony_SymphonyBuild_250`: Flows gradually and circularly, 6 colors with cyan background from start to end
+- `symphony_SymphonyBuild_251`: Flows gradually and circularly, 6 colors with white background from start to end
+- `symphony_SymphonyBuild_252`: Flows gradually and circularly, 6 colors with red background from end to start
+- `symphony_SymphonyBuild_253`: Flows gradually and circularly, 6 colors with green background from end to start
+- `symphony_SymphonyBuild_254`: Flows gradually and circularly, 6 colors with blue background from end to start
+- `symphony_SymphonyBuild_255`: Flows gradually and circularly, 6 colors with yellow background from end to start
+- `symphony_SymphonyBuild_256`: Flows gradually and circularly, 6 colors with purple background from end to start
+- `symphony_SymphonyBuild_257`: Flows gradually and circularly, 6 colors with cyan background from end to start
+- `symphony_SymphonyBuild_258`: Flows gradually and circularly, 6 colors with white background from end to start
+- `symphony_SymphonyBuild_259`: Flows gradually and circularly, 6 colors with red background from start to end and return back
+- `symphony_SymphonyBuild_260`: Flows gradually and circularly, 6 colors with green background from start to end and return back
+- `symphony_SymphonyBuild_261`: Flows gradually and circularly, 6 colors with blue background from start to end and return back
+- `symphony_SymphonyBuild_262`: Flows gradually and circularly, 6 colors with yellow background from start to end and return back
+- `symphony_SymphonyBuild_263`: Flows gradually and circularly, 6 colors with purple background from start to end and return back
+- `symphony_SymphonyBuild_264`: Flows gradually and circularly, 6 colors with cyan background from start to end and return back
+- `symphony_SymphonyBuild_265`: Flows gradually and circularly, 6 colors with white background from start to end and return back
+- `symphony_SymphonyBuild_266`: 7 colors run with black background from start to end
+- `symphony_SymphonyBuild_267`: 7 colors run with red background from start to end
+- `symphony_SymphonyBuild_268`: 7 colors run with green background from start to end
+- `symphony_SymphonyBuild_269`: 7 colors run with blue background from start to end
+- `symphony_SymphonyBuild_270`: 7 colors run with yellow background from start to end
+- `symphony_SymphonyBuild_271`: 7 colors run with purple background from start to end
+- `symphony_SymphonyBuild_272`: 7 colors run with cyan background from start to end
+- `symphony_SymphonyBuild_273`: 7 colors run with white background from start to end
+- `symphony_SymphonyBuild_274`: 7 colors run with black background from end to start
+- `symphony_SymphonyBuild_275`: 7 colors run with red background from end to start
+- `symphony_SymphonyBuild_276`: 7 colors run with green background from end to start
+- `symphony_SymphonyBuild_277`: 7 colors run with blue background from end to start
+- `symphony_SymphonyBuild_278`: 7 colors run with yellow background from end to start
+- `symphony_SymphonyBuild_279`: 7 colors run with purple background from end to start
+- `symphony_SymphonyBuild_280`: 7 colors run with cyan background from end to start
+- `symphony_SymphonyBuild_281`: 7 colors run with white background from end to start
+- `symphony_SymphonyBuild_282`: 7 colors run with black background from start to end and return back
+- `symphony_SymphonyBuild_283`: 7 colors run with red background from start to end and return back
+- `symphony_SymphonyBuild_284`: 7 colors run with green background from start to end and return back
+- `symphony_SymphonyBuild_285`: 7 colors run with blue background from start to end and return back
+- `symphony_SymphonyBuild_286`: 7 colors run with yellow background from start to end and return back
+- `symphony_SymphonyBuild_287`: 7 colors run with purple background from start to end and return back
+- `symphony_SymphonyBuild_288`: 7 colors run with cyan background from start to end and return back
+- `symphony_SymphonyBuild_289`: 7 colors run with white background from start to end and return back
+- `symphony_SymphonyBuild_290`: 7 colors run gradually + 7 colors run in olivary
+- `symphony_SymphonyBuild_291`: 7 colors run gradually + 7 colors change quickly
+- `symphony_SymphonyBuild_292`: 7 colors run gradually + 7 colors flash
+- `symphony_SymphonyBuild_293`: 7 colors run in olivary + 7 colors change quickly
+- `symphony_SymphonyBuild_294`: 7 colors run in olivary + 7 colors flash
+- `symphony_SymphonyBuild_295`: 7 colors change quickly + 7 colors flash
+- `symphony_SymphonyBuild_296`: 7 colors run gradually + 7 colors run in olivary + 7 colors change quickly
+- `symphony_SymphonyBuild_297`: 7 colors run gradually + 7 colors run in olivary + 7 colors flash
+- `symphony_SymphonyBuild_298`: 7 colors run gradually + 7 colors change quickly + 7 colors flash
+- `symphony_SymphonyBuild_299`: 7 colors run in olivary + 7 colors change quickly + 7 colors flash
+- `symphony_SymphonyBuild_300`: 7 colors run gradually + 7 colors run in olivary + 7 colors change quickly + 7 color flash
+
+### Symphony Effects (44)
+- `symphony_SymphonyEffect1`: Change gradually
+- `symphony_SymphonyEffect2`: Bright up and Fade gradually
+- `symphony_SymphonyEffect3`: Change quickly
+- `symphony_SymphonyEffect4`: Strobe-flash
+- `symphony_SymphonyEffect5`: Running, 1point from start to end
+- `symphony_SymphonyEffect6`: Running, 1point from end to start
+- `symphony_SymphonyEffect7`: Running, 1point from the middle to the both ends
+- `symphony_SymphonyEffect8`: Running, 1point from the both ends to the middle
+- `symphony_SymphonyEffect9`: Overlay, from start to end
+- `symphony_SymphonyEffect10`: Overlay, from end to start
+- `symphony_SymphonyEffect11`: Overlay, from the middle to the both ends
+- `symphony_SymphonyEffect12`: Overlay, from the both ends to the middle
+- `symphony_SymphonyEffect13`: -Fading and running, 1point from start to end
+- `symphony_SymphonyEffect14`: Fading and running, 1point from end to start
+- `symphony_SymphonyEffect15`: Olivary Flowing, from start to end
+- `symphony_SymphonyEffect16`: Olivary Flowing, from end to start
+- `symphony_SymphonyEffect17`: Running, 1point w/background from start to end
+- `symphony_SymphonyEffect18`: Running, 1point w/background from end to start
+- `symphony_SymphonyEffect19`: 2 colors run, multi points w/black background from start to end
+- `symphony_SymphonyEffect20`: 2 colors run, multi points w/black background from end to start
+- `symphony_SymphonyEffect21`: 2 colors run alternately, fading from start to end
+- `symphony_SymphonyEffect22`: 2 colors run alternately, fading from end to start
+- `symphony_SymphonyEffect23`: 2 colors run alternately, multi points from start to end
+- `symphony_SymphonyEffect24`: 2 colors run alternately, multi points from end to start
+- `symphony_SymphonyEffect25`: Fading out Flows, from start to end
+- `symphony_SymphonyEffect26`: Fading out Flows, from end to start
+- `symphony_SymphonyEffect27`: 7 colors run alternately, 1 point with multi points background, from start to end
+- `symphony_SymphonyEffect28`: 7 colors run alternately, 1 point with multi points background, from end to start
+- `symphony_SymphonyEffect29`: 7 colors run alternately, 1 point from start to end
+- `symphony_SymphonyEffect30`: 7 colors run alternately, 1 point from end to start
+- `symphony_SymphonyEffect31`: 7 colors run alternately, multi points from start to end
+- `symphony_SymphonyEffect32`: 7 colors run alternately, multi points from end to start
+- `symphony_SymphonyEffect33`: 7 colors overlay, multi points from start to end
+- `symphony_SymphonyEffect34`: 7 colors overlay, multi points from end to start
+- `symphony_SymphonyEffect35`: 7 colors overlay, multi points from the middle to the both ends
+- `symphony_SymphonyEffect36`: 7 colors overlay, multi points from the both ends to the middle
+- `symphony_SymphonyEffect37`: 7 colors flow gradually, from start to end
+- `symphony_SymphonyEffect38`: 7 colors flow gradually, from end to start
+- `symphony_SymphonyEffect39`: Fading out run, 7 colors from start to end
+- `symphony_SymphonyEffect40`: Fading out run, 7 colors from end to start
+- `symphony_SymphonyEffect41`: Runs in olivary, 7 colors from start to end
+- `symphony_SymphonyEffect42`: Runs in olivary, 7 colors from end to start
+- `symphony_SymphonyEffect43`: Fading out run, 7 colors start with white color from start to end
+- `symphony_SymphonyEffect44`: Fading out run, 7 colors start with white color from end to start
+
+### Christmas Modes
+- `christmas_mode_name_breathing_sync`: Breathe Sync
+- `christmas_mode_name_fill`: Fill-in
+- `christmas_mode_name_flash`: Flash
+- `christmas_mode_name_flash_sync`: Flash Sync
+- `christmas_mode_name_full_back`: Fill-in and Return
+- `christmas_mode_name_jump`: Jump
+- `christmas_mode_name_jump_sync`: Jump Sync
+- `christmas_mode_name_overlap`: Overlap
+- `christmas_mode_name_random_gradual_ansy`: Random Color Gradient Async
+- `christmas_mode_name_random_jump_ansy`: Random Jump Async
+- `christmas_mode_name_stars_twinkle`: Twinkle
+- `christmas_mode_name_strobe`: Strobe
+- `christmas_mode_name_two_flash`: Alternating Flash
+- `christmas_mode_name_wave`: Wave
+
+### Camera Modes
+- `camera_auto`: Auto
+- `camera_colorPix`: Capture color
+- `camera_manual`: Manual
+- `camera_not_Camera`: Cannot connect to camera.
+- `camera_tips`: Please point the mobile phone camera at the TV screen, refer to the red box, you can zoom in or out, the lamp will change color according to the TV screen
+
+### Microphone Modes
+- `mic_gainlable`: Microphone Sensitivity
+- `mic_note`: Note:You can minimize the app to play music from any source such as \"Pandora\" and \"Spotify\". Your LED device will automatically synchronize and change color to the music.
+- `mic_service_content`: Tab to the function interface
+- `mic_service_mode`: Microphone mode
+- `mic_service_name`: Microphone mode turned on
 
 
 
@@ -366,8 +804,21 @@ The "Fixed Mode" in the SK8Lytz app utilizes three distinct protocols to provide
 
 ---
 
-> [!NOTE]
-> V5/LEDNetWF firmware Candle mode, hardware alarms, and Smear Packet protocol are for a **different IC generation** than HALOZ/SOULZ. Not implemented in SK8Lytz.
+## 6. Advanced V5 Firmware Discoveries (LedNetWF)
+*Discovered via HomeAssistant / LEDNetWF repository analysis against V5 microcontrollers.*
+
+### Candle Mode (Flicker Simulation)
+- The V5 firmware supports a native "Candle" effect that uses internal algorithms to realistically simulate a flickering flame.
+- **Parameters**: It allows specific adjustments for baseline brightness, flicker speed, and base RGB lighting color to establish warm ambient atmospheres completely independently of the static `0x42` pattern bounds.
+
+### Hardware Alarms & Timers
+- **Offline Schedules**: V5 controllers possess dedicated memory banks to store daily and weekly schedule masks (alarms) independently of the mobile app.
+- **Power & Action Triggers**: Hex arguments natively support `alarm-on` (Boot device), `alarm-off` (Kill power), `alarm-rgb` (Boot on specific Static Hex array), and `alarm-effect` (Boot into a specific Pattern ID).
+- **Known Firmware Glitch**: While writing alarms to device memory typically succeeds and populates correctly inside the official Zengge visual interfaces, the execution of "Repeat Day Masks" contains firmware-level race conditions that occasionally prevent the alarms from physically firing at the target time. OFF schedules possess definitively higher reliability than ON/Effect schedules.
+
+### Smear Payload Protocol (Raw Streaming Vectors)
+- The raw pixel-by-pixel color buffer stream utilized by certain V5 apps is classified as a "Smear Packet".
+- **Structure**: These are functionally massive variants of the `0x59` matrix mapped into 144-byte streams (48 pixels * 3 channels), containing dedicated bit flags for directional stream math (`1`=static, `2`=stream, `3`=strobe, `4`=jump).
 
 ========================================================================
              SECTION: HARDWARE STRIP IC & COLOR SEQUENCING
@@ -437,10 +888,13 @@ The Sk8Lytz Dashboard actively measures physical Bluetooth Signal Attenuation (R
 ========================================================================
 
 ## ACTIVE CONTROLLER COMPONENTS
+The application now exclusively relies on `DockedController.tsx` for all unified controller UI overlays, deprecating and permanently removing `ModernController.tsx` to maintain feature parity without conflicting state trees.
 
-> [!NOTE]
-> `DockedController.tsx` is the sole unified controller UI overlay. `ModernController.tsx` has been permanently removed.
+## SCANNER MODULE DIMENSIONS
+The `ScannerAnimation.tsx` projection wrapper inside the DOM natively sits at `380px` height constraints, preventing the sweeping MAX_RADIUS = 280 (560px diameter) sonar rings from vertically clipping, significantly enhancing the visual impact of the BLE pairing screen natively.
 
+## FIXED PATTERN TIER LIST
+The physical array list for "Solid Patterns" is locked at 10 native fixed iterations mapping directly to internal protocol handlers. (1: Solid, 2: Single Dot ... 10: Pinch).
 
 ========================================================================
          SECTION: HARDWARE SETTINGS DEEP REVERSE ENGINEERING
@@ -1132,14 +1586,114 @@ This section documents every source file in the SK8Lytz application: what it is,
 
 ---
 
-### M. AUTH & CLOUD FEATURES (April 2026)
+### L. BUG FIX LOG â€” April 5 2026 Session
 
-Key systems added: `AuthScreen.tsx` (password complexity, HIBP check, magic link, OAuth), `ScenesService.ts` (cloud scenes CRUD), `CommunityModal.tsx` (browse/apply public scenes), `AuthUtils.ts` (profanity guard, HIBP), host device telemetry in `parsed_session_stats`.
+| Bug | Root Cause | Fix Applied |
+|---|---|---|
+| Custom device names never reached Supabase | AppLogger was reading `@device_settings_${MAC}` but DashboardScreen writes to `ng_device_configs` (different key, different format) | Fixed to read `ng_device_configs`, parse nested dict by MAC |
+| Duplicate rows in `parsed_session_devices` | `session_id` was `Date.now()` per upload call, creating a new session on every background push | Moved `sessionId` to singleton constructor; switched INSERT to UPSERT with `onConflict: 'session_id, device_id'` |
+| `device_id` null on non-device-specific events | Telemetry payload used `item.d?.deviceId \|\| null`, leaving global events (app open, scan) with no device | Changed to fallback to `primaryMacRaw` (the first connected device's MAC) |
+| Group events only logged once, not per device | Matrix aggregation and trace log push used single `targetDeviceId`, not the `deviceIds` array | Rewrote both to iterate `targets` array (forEach for maps, flatMap for trace) |
+| `parsed_logs` had `RAW_PAYLOAD` events | Filter was only applied to the local merged log, not enforced before DB push | Confirmed `currentRunLogs` filter `l.e !== 'RAW_PAYLOAD'` is applied before all DB operations |
 
-### N. HARDWARE SETTINGS RETRIEVAL
+---
 
-> [!NOTE]
-> Full 0x63 EEPROM query/response flow documented in **Section 16: Hardware Settings Protocol**. The 0x63 notification is received on FF02, parsed by `ZenggeProtocol.parseHardwareSettingsResponse()`, and stored in `ng_device_configs` AsyncStorage keyed by device MAC.
+*Section 21 last updated: April 5, 2026 â€” Covers all files as of the Enterprise Telemetry Hardening session.*
+
+---
+
+### M. FEATURES ADDED â€” April 5 2026 Cloud-Sync & Security Session
+
+#### M1. Authentication System Overhaul (src/screens/AuthScreen.tsx)
+- Password complexity: min 8 chars, uppercase, number, special char. Live animated strength bar.
+- HaveIBeenPwned: SHA1 via expo-crypto, k-anonymity API â€” only first 5 chars sent. Blocks breached passwords.
+- Top-100 bad password blocklist (embedded Set), checked before HIBP call.
+- Magic Link: signInWithOtp() â€” passwordless email link with confirmation screen.
+- Offline mode button: "Continue Offline" bypasses auth, all BLE works, cloud sync disabled.
+- OAuth: Google / Facebook / Apple via expo-auth-session + signInWithOAuth().
+- Show/Hide password toggle, Forgot password flow, HIBP attribution footer.
+- Username profanity guard via containsProfanity() before signup.
+
+#### M2. Auth Routing (App.tsx)
+- offlineMode state separate from Supabase session; resets on logout.
+- Logout fires supabase.auth.signOut() -> onAuthStateChange -> auto-route to AuthScreen.
+- Props: isOfflineMode + onLogout to DashboardScreen; onOfflineMode to AuthScreen.
+
+#### M3. Scanner/Dashboard UX
+- Username + logout chip moved to top-LEFT, next to ? support icon.
+- Shows: avatar icon + username text + logout icon. Tap = signOut().
+- Offline badge: DashboardScreen accepts isOfflineMode prop, cloud buttons gracefully disabled.
+
+#### M4. Cloud Scenes & CommunityModal (src/components/CommunityModal.tsx, src/services/ScenesService.ts)
+- ScenesService: publishScene, getPublicScenes, getMyScenes, upvoteScene (RPC), downloadScene (RPC), deleteScene.
+- CommunityModal full rewrite: animated LED strip preview (Animated.loop), Community/My Saves tabs, private/public badge, upvote+download stats, Apply + Delete buttons.
+- Public/Private toggle in DockedController cloud save prompt.
+- captureEntireState() serializes full controller state as JSONB.
+
+#### M5. Content Moderation (src/services/AuthUtils.ts)
+- containsProfanity(text): applied to usernames (signup) and scene names (before publish).
+- checkPasswordComplexity(pw): live strength bar + blocking submit.
+- isCommonPassword(pw): top-100 blocklist.
+- checkHIBP(pw): async SHA1 + k-anonymity HIBP API call.
+
+#### M6. Telemetry Fixes (src/services/AppLogger.ts)
+- getHostDeviceInfo(): captures brand, manufacturer, modelName, modelId, deviceType, deviceYearClass, totalMemory, isDevice, osName, osVersion, osBuildId, osInternalBuildId, osBuildFingerprint, platformApiLevel, battery level/state/lowPower.
+- parsed_session_devices fix: DashboardScreen syncs merged connectedDevices+allDevices into AppLogger on every change.
+- parsed_session_stats: upsert now sends all 23+ fields including full host device profile + host_device_info JSONB blob.
+
+#### M7. DB Migrations Applied
+- tools/AddMissingTelemetryColumns.sql: parsed_session_stats (+5), parsed_session_devices (+5)
+- tools/AddHostDeviceTelemetryColumns.sql: parsed_session_stats (+15 device telemetry cols)
+- tools/CloudScenesTable.sql: shared_scenes table + RLS + RPC functions
+
+#### M8. New Files
+- src/services/AuthUtils.ts â€” password validation, HIBP, top-100, profanity filter
+- src/services/ScenesService.ts â€” cloud scenes CRUD
+- src/components/CommunityModal.tsx â€” community browse/apply UI
+- tools/AddMissingTelemetryColumns.sql
+- tools/AddHostDeviceTelemetryColumns.sql
+- tools/CloudScenesTable.sql
+
+*Section M last updated: April 5, 2026*
+
+ â€” Covers all files as of the Enterprise Telemetry Hardening session.*
+
+
+---
+
+### N. HARDWARE SETTINGS RETRIEVAL FLOW (0x63 EEPROM Protocol)
+
+#### How All Hardware Settings Are Retrieved At Once
+
+The Zengge/Triones controller exposes all hardware configuration (LED points, segments, IC type, color order, etc.) via a single **0x63 EEPROM query** â€” a BLE write that triggers a notification response packed with all hardware values.
+
+**Trigger Command (sent by app after BLE connect):**
+Written to the WRITE characteristic during DashboardScreen connection.
+
+**Parsed Response Fields (via ZenggeProtocol.parseHardwareSettings):**
+- `ledPoints` â€” Total LED count (bytes 8-9, 16-bit LE)
+- `segments` â€” Number of independent segments
+- `icType` â€” Internal IC code (e.g. 1 = WS2812B, 2 = SK6812, 3 = APA102)
+- `icName` â€” Human-readable strip type string
+- `colorSorting` â€” Color order index (0=RGB, 1=RBG, 2=GRB, 3=GBR, 4=BRG, 5=BGR)
+- `colorSortingName` â€” Human-readable color order string (e.g. "GRB")
+- `firmware` â€” Firmware version parsed from advertisement on discovery
+
+**Storage After Ping:**
+Results are merged into `ng_device_configs` in AsyncStorage, keyed by device MAC:
+`{ points, segments, icType, icName, sorting, stripType, colorSortingName, firmware }`
+
+**Why Simple Scanner Shows Dashes Before Connect:**
+Simple Scanner reads `allDevices` = raw BLE scan results. Hardware fields only arrive after connecting and receiving the 0x63 notification. The scanner now:
+1. Checks `ng_device_configs[device.id]` for cached values from previous sessions
+2. If cached: shows real values immediately
+3. If no cache: shows "â€” connect" and provides a CONNECT button
+4. After CONNECT: calls `connectToDevice(d)` inline, then re-reads `ng_device_configs` to refresh the card live
+
+**Simple Scanner CONNECT Flow:**
+`CONNECT tap` â†’ `connectToDevice(device)` (useBLE) â†’ BLE GATT connect â†’ char subscribe â†’ 0x63 ping write â†’ 0x63 notification parsed â†’ DashboardScreen writes to `ng_device_configs` â†’ LogViewerModal re-reads `ng_device_configs` â†’ card updates with real values
+
+*Section N last updated: April 5, 2026*
 
 ================================================================================
 *** CRITICAL BLE FINDINGS   VERIFIED 2026-04-05 ***
@@ -1218,24 +1772,178 @@ receives sorting/points/segments on real hardware path (previously missed).
 
 ================================================================================
 
-## MODE ARCHITECTURE — CURRENT STATE
+## SESSION UPDATE: 2026-04-05 - MODE ARCHITECTURE REFACTOR
+Session: 14d7070e-5e5c-4988-ae98-c83c26bdcd8e
 
-| Mode | Dock Icon | Sub-modes / Notes |
-|:---|:---|:---|
-| `MULTIMODE` | `tune` | Fixed patterns 1-10 (`0x59` / `0x51`) |
-| `MUSIC` | `music-note` | 13 symphony patterns via `0x73`/`0x74` |
-| `STREET` | `run-fast` | Accelerometer jerk detection, braking override |
-| `CAMERA` | `camera` | Ambient color extraction → BLE |
-| `PATTERN` | `shuffle-variant` | RBM patterns 1-103 via `0x42` |
-| `CLOUD` | `cloud-upload` | Scene save/share via Supabase |
+### 1. FIXED renamed to MULTIMODE
+- 45 occurrences renamed across DockedController.tsx, ProductVisualizer.tsx, CommunityModal.tsx
+- ModeType union, status text, all string literals updated.
 
-**CANDLE, CUSTOM, MULTICOLOR modes removed** — not supported by Zengge hardware.
-**FIXED renamed to MULTIMODE** across all source files.
+### 2. REMOVED DEAD MODES: CANDLE, CUSTOM, MULTICOLOR
+CANDLE removed from:
+  - ModeType, fixedSubMode union
+  - State vars: candleAmplitude, isCandleExpanded, candleAnim + flicker useEffect
+  - sendColor() BLE dispatch (candle-specific path removed)
+  - Hue slider onChange/onSlidingComplete handler
+  - Brightness slider handler
+  - Speed slider handler
+  - Favorites save payload (candleAmplitude field removed)
+  - Favorites load handler (setCandleAmplitude call removed)
+  - Quick color swatch handler (candle-specific setCandleMode call removed)
+  - IFavoriteState interface (candleAmplitude field removed)
+  Reason: ZenggeProtocol.setCandleMode() not supported by Zengge controller hardware.
 
-## CREW HUB & SESSION SYSTEM
+CUSTOM removed from ModeType (no active UI was using it).
+MULTICOLOR removed from ModeType (functionality lives inside MULTIMODE/MULTI submode).
 
-> [!NOTE]
-> Crew Hub is fully implemented. See `src/components/CrewModal.tsx` and the Supabase Architecture section for the complete schema, RLS policies, and session sync design. The pre-implementation design spec has been removed from this file.
+### 3. NEW MODE: STREET (Accelerometer-Reactive Lighting)
+File: DockedController.tsx
+Import added: import { Accelerometer } from 'expo-sensors';
+activeMode = 'STREET' (standalone, not a MULTIMODE sub-tab)
+Dock position: between MUSIC and CAMERA
+Dock icon: 'run-fast' (MaterialCommunityIcons)
+
+State variables added:
+  const [streetSensitivity, setStreetSensitivity] = useState<number>(30);
+  const [streetCruiseColor, setStreetCruiseColor] = useState<string>('#FF8C00');
+  const [streetBrakeColor, setStreetBrakeColor]   = useState<string>('#FF0000');
+  const [isStreetBraking, setIsStreetBraking]     = useState<boolean>(false);
+  const streetBrakingRef = useRef(false);
+  const lastAccelRef     = useRef({ x: 0, y: 0, z: 0 });
+
+Accelerometer subscription (active only when activeMode === 'STREET'):
+  - Update interval: 80ms (12.5Hz)
+  - Jerk magnitude = sqrt((x-px)^2 + (y-py)^2 + (z-pz)^2) per sample
+  - Threshold = ((100 - sensitivity) / 100) * 2.5 + 0.3  (range: 0.3g to 2.8g)
+  - Brake detected (jerk > threshold):
+      sends streetBrakeColor via ZenggeProtocol.setMultiColor(Array(10).fill({r,g,b}),100,1,1)
+  - Resume cruise (jerk <= threshold):
+      sends streetCruiseColor via same protocol
+  - Subscription removed automatically when leaving STREET mode
+  - isStreetBraking ref used to avoid setState thrashing
+
+Street Mode UI panel (rendered when activeMode === 'STREET'):
+  - Live status badge: orange CRUISING / red BRAKING with pulsing dot
+  - Cruise color swatches: #FF8C00 #FFAA00 #FFFFFF #00AAFF #00FF88 #FF00FF
+  - Brake color swatches:  #FF0000 #FF3300 #FF6600 #FFFFFF #FF00AA #FFFF00
+  - Sensitivity slider: 5% to 95% (higher = triggers brake on lighter decel)
+  - Universal sliders (hue, brightness, speed) hidden when in STREET mode
+
+currentStatusText:
+  case 'STREET': return isStreetBraking ? 'BRAKING' : 'CRUISING';
+
+Scene capture/restore updated:
+  captureEntireState() includes: streetSensitivity, streetCruiseColor, streetBrakeColor
+  applyCloudScene() restores:    streetSensitivity, streetCruiseColor, streetBrakeColor
+
+================================================================================
+
+## CREW SYNC MODE - DESIGN SPECIFICATION (Pending Implementation)
+
+### User Story
+A group of skaters at a rink currently must manually match colors/patterns.
+Crew Sync lets one designated "Crew Leader" control patterns for the entire crew.
+All members' skates update automatically when the leader changes their scene.
+
+### Architecture
+
+Feature lives at: Scanner/Dashboard level (NOT in DockedController)
+NOT a new dock mode Ã¢â‚¬â€ integrated into the device connection flow.
+
+Connection Flow (new):
+  [Old] Scan -> Connect to device/group
+  [New] Scan -> Join/Create Crew -> Connect to leader's device/group
+                                  OR connect own device as member
+
+Leader Role:
+  - Connects their own BLE device/group as normal
+  - DockedController operates in standard mode
+  - Every mode/color/pattern change calls CrewService.broadcast(captureEntireState())
+  - Broadcast goes to Supabase Realtime channel: crew:{sessionId}
+
+Member Role:
+  - Joins crew via invite code or crew list in scanner panel
+  - Connects their own BLE device/group locally
+  - Subscribes to crew channel; receives JSON scene payloads from leader
+  - Calls applyCloudScene(payload) on their DockedController
+  - applyCloudScene() triggers normal BLE write to their local hardware
+
+Key Design Decisions:
+  - BLE stays LOCAL per phone. Only scene JSON syncs via cloud.
+  - Only the leader's actions propagate. Members cannot override.
+  - Offline fallback: members retain last-received state if signal lost.
+  - Leader is assigned at session creation; transferable to any member.
+
+Supabase Schema (pending migration):
+  crew_sessions (
+    id UUID PK,
+    invite_code TEXT UNIQUE,
+    name TEXT,
+    leader_user_id UUID -> auth.users,
+    created_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ  -- defaults 12 hours
+  )
+  crew_members (
+    id UUID PK,
+    session_id UUID -> crew_sessions,
+    user_id UUID -> auth.users,
+    display_name TEXT,
+    joined_at TIMESTAMPTZ
+  )
+
+Files to create/modify (future sprint):
+  src/services/CrewService.ts      -- Supabase Realtime subscribe + broadcast
+  src/components/CrewModal.tsx     -- Create/Join crew UI, member list, leader toggle
+  src/screens/DashboardScreen.tsx  -- Crew panel tab in scanner, invite code UI
+  src/components/DockedController.tsx -- Wire captureEntireState() to CrewService.broadcast()
+                                       -- Wire Realtime received event to applyCloudScene()
+
+Channel format: crew:{sessionId}
+Broadcast payload: JSON from captureEntireState() (activeMode, colors, patterns, etc)
+
+================================================================================
+
+---
+
+## SESSION UPDATE â€” 2026-04-05/06: Crew Sync + Mode Architecture
+
+### Mode Architecture Changes
+- **FIXED â†’ MULTIMODE**: Global rename across all files (45 occurrences)
+- **Removed modes**: CANDLE, CUSTOM, MULTICOLOR â€” fully purged from state, UI, BLE dispatch, favorites
+- **Street Mode**: Accelerometer-based motion-reactive lighting. Jerk detection distinguishes cruising vs braking state. Independent cruise/brake colors + sensitivity slider.
+
+### Crew Sync Feature â€” Full Implementation
+**Architecture**: Scanner/dashboard-level feature. BLE stays local; only scene JSON syncs through Supabase Realtime.
+
+#### Database (Supabase â€” Project ID: qefmeivpjyaukbwadgaz)
+- Table: crew_sessions â€” id, invite_code (6-char auto), name, leader_user_id, created_at, expires_at (12hr TTL), is_active, last_scene (JSONB)
+- Table: crew_members â€” id, session_id, user_id, display_name, joined_at
+- Index: idx_crew_sessions_active on (is_active, expires_at DESC)
+- RLS: enabled on both tables
+- Migration file: 	ools/002_crew_sessions.sql âœ… Applied
+
+#### Files Created/Modified
+- src/services/CrewService.ts â€” Session CRUD, Realtime pub/sub, last_scene persistence (5s throttle), fetchActiveSessions(), fetchLastScene(), joinSessionById(), transferLeadership(), tryAutoRejoin()
+- src/components/CrewModal.tsx â€” 4-step modal: landing / create / join (active sessions browser) / lobby (member list + leader handoff)
+- src/components/DockedController.tsx â€” forwardRef + useImperativeHandle (applyCloudScene), crewRole prop, crew leader broadcast useEffect (200ms debounce)
+- src/screens/DashboardScreen.tsx â€” DEVICES/CREW tab bar, crew status pill, CrewModal wired, auto-rejoin useEffect on mount (2s delay)
+
+#### Key Behaviors
+- **Browse active crews**: JOIN screen shows all live sessions â€” tap to join
+- **Late-arrival sync**: On join, fetches last_scene from DB and immediately applies to skates
+- **Leader handoff**: Visible toggle button in lobby â€” any member can be promoted
+- **Auto-rejoin**: AsyncStorage TTL (12hr) â€” reopening app reconnects to prior session
+- **Leader broadcast**: DockedController fires onCrewSceneChange on every mode/color state change (debounced 200ms) â€” CrewService persists to DB every 5s
+
+### Music Sync â€” Research / Planning Only (not implemented)
+**Problem**: Mic-based reactivity doesn't work when audio routes to headphones/BT speakers.
+**Planned approach (cross-platform iOS + Android)**:
+- Phase 1: Spotify Web API + Apple MusicKit â€” BPM/energy/valence, no native modules
+- Phase 2: ShazamKit (iOS) + ACRCloud (Android) â€” identify any song from mic fingerprint
+- Phase 3: Android MediaSession native module â€” auto-detect any playing app
+- Enables: BPM Choreography Mode (beat-synced LED patterns)
+- Reference: rain/14d7070e.../analysis_results.md
+
 
 ================================================================================
 RESPONSIVE UI REQUIREMENTS (Updated 2026-04-06)
@@ -2032,313 +2740,483 @@ fixedSubMode: useState<'PATTERN' | 'DIY'>('PATTERN')  -- MULTIMODE only
 
 ---
 
+## SESSION LOG — April 7 2026: Street Mode Dashboard Finalization & TS Cleanup
 
----
+### Street Mode Dashboard (DockedController.tsx)
+- Enforced `flexShrink: 0` on universal sliders footer to prevent squishing on tall displays
+- Removed dark background/border from Street Mode telemetry gauges (transparent floating look)
+- Brightness slider hidden in Street Mode; margins synced accordingly
+- Dynamic color bar height aligned to match split trackers across all modes
 
-*Last Updated: April 2026. Supabase schema, crew sessions, street mode, and telemetry documented above.*
+### Audio-Reactive / Music Mode (DockedController.tsx)
+- CRITICAL FIX: Added `isMeteringEnabled: true` to Audio.Recording.createAsync() config
+  - Without this flag, stats.metering is always null - App Mic mode never reacts to sound
+- Device Mic (isDeviceMic: true) confirmed working via ZenggeProtocol.setMusicConfig()
+  - Delegates to hardware internal microphone; no app-side metering needed
 
----
+### Pattern Selector Cleanup
+- Removed numeric index prefixes (e.g. '01.') from RbmPatterns.ts pattern name strings
+- Removed duplicate prefix display logic from VerticalPatternDrum.tsx
 
-## APPLOGGER — COMPLETE EVENT TYPE CATALOG
+### TypeScript Cleanup (April 7 2026)
+- tsconfig.json: Added 'tools' to exclude array
+- .gitignore: Added scratch tool files
+- Fixed ~43 unused variable warnings across 8 source files:
+  - AccountModal.tsx: _currentPwd, _showCurrentPwd, _savingNotifs
+  - ArcPatternWheel.tsx: removed unused Platform import; prefixed _isScrollingRef etc
+  - CameraTracker.tsx: removed unused Camera import
+  - CrewMemberDashboard.tsx: prefixed _SCREEN_W
+  - CrewModal.tsx: prefixed _formatScheduled, _crewActiveSessions, _scheduledDate, _discoverRadius
+  - CustomSlider.tsx: prefixed _containerWidth
+  - DashboardScreen.tsx: aliased syncFromCloud/_hasPendingSync; prefixed _pendingJoinCrewId, _scanStartTime
 
-**File**: `src/services/AppLogger.ts`
-**Pattern**: `AppLogger.log(EventType, payload?, deviceContext?)`
-**DeviceContext shape**: `{ deviceId, deviceName, groupId?, groupName?, deviceIds? }`
 
-| EventType | When to Use | Key Payload Fields |
-|:---|:---|:---|
-| `APP_OPENED` | App cold launch | — |
-| `DEVICE_DISCOVERED` | BLE scan finds compatible device | `deviceId`, `rssi`, `name` |
-| `SCAN_STARTED` | User triggers BLE scan | — |
-| `SCAN_COMPLETED` | Scan finishes | `deviceCount` |
-| `SCAN_FILTER_MATCH` | Device passes filter | `deviceId`, `reason` |
-| `SCAN_FILTER_REJECT` | Device fails filter | `deviceId`, `reason` |
-| `DEVICE_CONNECTED` | GATT connect succeeds | `deviceId`, `latency` |
-| `DEVICE_DISCONNECTED` | GATT disconnect | `deviceId` |
-| `BLE_CONNECTION_ERROR` | GATT error during connect | `deviceId`, `error` |
-| `BLE_WRITE_ERROR` | Write to characteristic failed | `deviceId`, `error` |
-| `PROTOCOL_ERROR` | Payload build error | `message` |
-| `DEVICE_RENAMED` | User saves custom device name | `deviceId`, `newName` |
-| `HARDWARE_CONFIG_CHANGED` | 0x62 write or config saved | `deviceId`, `points`, `icType`, `sorting` |
-| `MODE_CHANGED` | User switches active mode | `from`, `to` |
-| `PATTERN_CHANGED` | Pattern ID selected | `patternId`, `patternName` |
-| `COLOR_CHANGED` | Color picker or swatch picked | `color` (hex) |
-| `BRIGHTNESS_CHANGED` | Brightness slider changed | `brightness` (0-100) |
-| `SPEED_CHANGED` | Speed slider changed | `speed` (0-100) |
-| `RAW_PAYLOAD` | Admin hardware tester TX only | `hex`, `command` |
-| `SCREEN_OPENED` | Modal/screen opened | `screen` |
-| `PERFORMANCE_METRIC` | Latency measurement | `action`, `ms` |
-| `CREW_SESSION_STARTED` | Crew session created/joined | `crewId`, `role` |
-| `CREW_SESSION_ENDED` | Session ended by user | `crewId`, `duration` |
-| `CREW_PERMANENT_CREATED` | New permanent crew saved | `crewId`, `crewName`, `isPublic` |
-| `CREW_PERMANENT_UPDATED` | Crew settings saved | `crewId`, `changes` |
-| `CREW_PERMANENT_DELETED` | Crew deleted | `crewId` |
-| `CREW_PERMANENT_JOINED` | User joined a public crew | `crewId` |
-| `CREW_PERMANENT_LEFT` | User left a crew | `crewId` |
-| `CREW_MEMBERS_ADDED` | Members added to crew | `crewId`, `count` |
-| `STREET_MODE_ACTIVATED` | Street mode turned on | — |
-| `STREET_MODE_DEACTIVATED` | Street mode turned off | — |
-| `STREET_JERK_DETECTED` | Braking event (leading-edge only) | `jerkMagnitude`, `threshold` |
-| `STREET_SENSITIVITY_CHANGED` | Sensitivity slider changed (debounced 800ms) | `sensitivity` |
-
-> [!NOTE]
-> Group events MUST pass `deviceIds: string[]` in the device context. AppLogger unrolls these into per-device rows in Supabase. Single device events use `deviceId: string`.
-
----
-
-## STREET MODE — TECHNICAL SPECIFICATION
-
-**File**: `src/components/DockedController.tsx`
-**Mode Name**: `STREET` (top-level `activeMode`)
-**Dock Icon**: `run-fast` (MaterialCommunityIcons)
-
-### State Variables
-```typescript
-const [streetSensitivity, setStreetSensitivity] = useState<number>(30);
-const [streetCruiseColor, setStreetCruiseColor] = useState<string>('#FF8C00');
-const [streetBrakeColor, setStreetBrakeColor]   = useState<string>('#FF0000');
-const [isStreetBraking, setIsStreetBraking]     = useState<boolean>(false);
-const streetBrakingRef = useRef(false);   // prevents setState thrashing
-const lastAccelRef     = useRef({ x: 0, y: 0, z: 0 });
-```
-
-### Accelerometer Logic
-- **Sensor**: `expo-sensors` `Accelerometer`
-- **Update interval**: 80ms (12.5Hz)
-- **Jerk calc**: `sqrt((x-px)^2 + (y-py)^2 + (z-pz)^2)` per sample
-- **Threshold formula**: `((100 - sensitivity) / 100) * 2.5 + 0.3` → range 0.3g–2.8g
-- **Brake trigger**: jerk > threshold → sends brakeColor via `setMultiColor(Array(10).fill({r,g,b}), 100, 1, 1)`
-- **Resume cruise**: jerk ≤ threshold → sends cruiseColor via same call
-- **Subscription lifecycle**: active ONLY when `activeMode === 'STREET'`, removed on mode change
-
-### UI Panel
-- Live status badge: orange **CRUISING** / red **BRAKING** with pulsing dot
-- Cruise color swatches: `#FF8C00 #FFAA00 #FFFFFF #00AAFF #00FF88 #FF00FF`
-- Brake color swatches:  `#FF0000 #FF3300 #FF6600 #FFFFFF #FF00AA #FFFF00`
-- Sensitivity slider: 5% to 95%
-- Standard hue/brightness/speed sliders hidden in STREET mode
-
----
-
-## CREW HUB — QUICK REFERENCE
-
-**Files**: `src/components/CrewModal.tsx`, `src/services/CrewService.ts`
-**Access**: Via scanner panel "CREW HUB" button in `DashboardScreen`
-
-### Supabase Tables (Crew-Specific)
-
-| Table | Purpose | Key Columns |
-|:---|:---|:---|
-| `crew_sessions` | Active session state | `id`, `invite_code` (UNIQUE), `name`, `leader_user_id`, `is_public`, `city`, `max_members`, `expires_at` |
-| `crew_members` | Who is in each session | `session_id`, `user_id`, `display_name`, `role` ('leader'/'member'), `joined_at` |
-| `crew_permanent` | Persistent user-created crews | `id`, `owner_user_id`, `name`, `description`, `is_public`, `invite_code`, `city`, `created_at` |
-| `crew_permanent_members` | Persistent crew membership | `crew_id`, `user_id`, `role`, `joined_at` |
-
-### RLS Policy Pattern
-- All crew tables: authenticated users can INSERT their own rows.
-- `crew_sessions`: SELECT allowed for public sessions or where user is a member.
-- `crew_permanent`: SELECT allowed for `is_public=true` or owner.
-- DELETE: only crew owner / session leader.
-
-### Navigation State (CrewModal)
-```
-'landing'      → Hub home: My Crews list + active session status
-'detail'       → Viewing a specific crew's details
-'create'       → Create new crew form
-'edit'         → Edit crew settings
-'join'         → Join by invite code
-'session'      → Active session view (map, members, controls)
-```
-> [!IMPORTANT]
-> Back button in `CrewModal` always resets to `'landing'` — never push nested navigation states. This was a deliberate fix to prevent the stacked-card navigation bug.
-
-### Session Sync Architecture
-- **Polling-based** (current): `setInterval` every 5s calls Supabase REST to fetch session member list.
-- **NOT Realtime** (by design): Realtime would reduce latency but adds connection overhead. Polling is stable and predictable for current scale.
-- **Private crews**: `invite_code` displayed on crew card under "My Crews" when `is_public = false`.
-
----
-
-## BUILD & DEPLOY — QUICK REFERENCE
-
-### Local Release APK
-```powershell
-# Build
-powershell -ExecutionPolicy Bypass -File tools\build-apk.ps1
-
-# Verify output
-Get-ChildItem android\app\build\outputs\apk -Recurse -Filter "*.apk" | Select Name, LastWriteTime
-
-# Install to connected device
-& ".local-builder\android-sdk\platform-tools\adb.exe" install -r "android\app\build\outputs\apk\release\SK8Lytz.apk"
-
-# Launch app
-& ".local-builder\android-sdk\platform-tools\adb.exe" shell am start -n com.neogleamz.sk8lytz/.MainActivity
-```
-
-### Dev Server
-```powershell
-npx expo start --web --clear
-```
-
-### Permissions (android/app/src/main/AndroidManifest.xml)
-Required: `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, `ACCESS_FINE_LOCATION`
-
-### Key Build Files
-| File | Purpose |
-|:---|:---|
-| `tools/build-apk.ps1` | One-command release build wrapper |
-| `android/app/build.gradle` | Version code, signing config, ProGuard |
-| `app.json` / `app.config.js` | Expo config, bundle ID, permissions |
-
----
-
-## KNOWN ISSUES & GOTCHAS
-
-| Issue | Root Cause | Status / Fix |
-|:---|:---|:---|
-| GATT 133 errors on multi-device connect | Android BLE stack fails concurrent GATT connects | Fixed: `connectToDevices()` uses sequential `for...of`, NOT `Promise.all` |
-| `0x61` protocol in old docs | Confusion with timer command — wrong for fixed modes | Fixed: Section 5 correction note; use `0x59` per Section 13 |
-| `ng_device_configs` vs `@Sk8lytz_*` key mismatch | Legacy `ng_*` keys never updated | Documented: AppLogger reads `ng_device_configs`, DashboardScreen writes it. Both use this key by design — only theme/controller state uses `@Sk8lytz_*` |
-| LED points swapped in 0x63 response | Little-endian pair: `bArr[8]=Low, bArr[9]=High` | Fixed in `parseHardwareSettingsResponse()` — byte swap applied |
-| 0x59 array < 10 points → glitching | Hardware minimum chunk size | Fixed: Always pad to `>= 10` before transmitting |
-| `setOnDataReceived` required in ProgrammerModal | BLE RX notifications not reaching modal without prop | Documented: pass `setOnDataReceived` from `DashboardScreen` |
-| Duplicate session rows in Supabase | `sessionId` was `Date.now()` per upload | Fixed: `sessionId` set once at singleton constructor, UPSERT on conflict |
-| Device names null in Supabase | Wrong AsyncStorage key read by AppLogger | Fixed: reads `ng_device_configs` dict by MAC address |
-| CrewModal stacked navigation cards | Multiple navigation states accumulated on back press | Fixed: back always resets to `'landing'` state |
-| **R↔G color swap in MULTIMODE, PRESETS, STREET** | `activeHwSettings.colorSorting` used `d?.colorSorting ?? sortingIdx` — `??` does NOT catch `0`, so stale cached `colorSorting=0` (RGB) overrode the correct GRB default | Fixed (Apr 2026): gate on `d?.detected` flag: `d.detected ? d.colorSorting ?? sortingIdx : sortingIdx`. Only trust numeric index from actual 0x63 response. |
-| **`applyStreetPattern` sent pure RGB to GRB strip** | `applyColorSorting` was never called inside `applyStreetPattern` — tail/head/cruise colors went to hardware unsorted | Fixed (Apr 2026): Added `applySort()` helper inside function, applies `hwSettings.colorSorting` to all pixel objects before building the array. |
-| **Street mode LEDs blinking/scrolling instead of static** | `transitionType=3` (RunningWater) caused the car-light pixel array to scroll around the ring, appearing as a slow blinking effect | Fixed (Apr 2026): STOPPED/CRUISING/SLOWING/ACCELERATING now use `0x00` (Static). Only HARD_BRAKING uses `0x02` (Strobe). |
-| **`sendColor` sent pure RGB to GRB strip** | `applyColorSorting` was missing from `sendColor()` — solid color commands ignored hardware sort | Fixed (Apr 2026): Added `applyColorSorting` with probed `hwSettings.colorSorting` before filling the pixel array. |
-
----
-
-## COLOR SORTING — ARCHITECTURE & RULES
-
-> [!CAUTION]
-> The hardware does NOT auto-remap pixel bytes based on 0x62 colorSorting config.
-> The app MUST pre-swap RGB bytes in software before sending any 0x59 payload.
-> Failure to do this causes R↔G channel inversion on GRB-wired strips (HALOZ / SOULZ).
-
-### How colorSorting flows
-```
-[Device 0x63 response] → parseHardwareSettingsResponse() → colorSorting (numeric)
-      ↓
-[DashboardScreen] setAllDevices() / setDeviceConfigs() stores colorSorting per device ID
-      ↓
-[activeHwSettings useMemo] (DashboardScreen L1132) builds hwSettings prop:
-  - detected=true  → use d.colorSorting from probed hardware response
-  - detected=false → use sortingIdx derived from device name string ('GRB' → 2)
-      ↓
-[DockedController] receives hwSettings.colorSorting (numeric)
-      ↓
-All payload builders call: ZenggeProtocol.applyColorSorting(r, g, b, hwSettings.colorSorting ?? 2)
-```
-
-### applyColorSorting Index Map (ZenggeProtocol.ts)
-| Index | Name | Byte order sent to hardware |
-|:---|:---|:---|
-| 0 | RGB | R, G, B |
-| 1 | RBG | R, B, G |
-| 2 | **GRB** ← HALOZ/SOULZ default | G, R, B |
-| 3 | GBR | G, B, R |
-| 4 | BRG | B, R, G |
-| 5 | BGR | B, G, R |
-
-> [!NOTE]
-> HALOZ and SOULZ are both WS2812B strips wired in GRB order → `colorSorting = 2`.
-> If the device hasn't been probed (detected=false), always assume GRB (2) as fallback.
-
-### Functions that MUST call applyColorSorting before setMultiColor
-| Function | File | Status |
-|:---|:---|:---|
-| `applyFixedPattern()` | `DockedController.tsx` | ✅ applied to fgRgb/bgRgb |
-| `sendColor()` | `DockedController.tsx` | ✅ fixed Apr 2026 |
-| `applyStreetPattern()` | `DockedController.tsx` | ✅ fixed Apr 2026 |
-| `generateSortedColors()` | `DockedController.tsx` | ✅ applied |
-| DIY multicolor slice handlers | `DockedController.tsx` L2232/2282 | ✅ applied |
-| `loadFavorite()` DIY path | `DockedController.tsx` L770 | ✅ applied |
-| `setColor()` in ZenggeProtocol | `ZenggeProtocol.ts` L366 | ⚠️ does NOT sort — only use for testing |
-
----
-
-## 0x59 TRANSITION TYPES — COMPLETE REFERENCE
-
-> [!IMPORTANT]
-> There are TWO completely separate transition type systems. Never mix them.
-
-### 0x59 setMultiColor — `transitionType` parameter
-| Byte | Name | Description | Use case |
-|:---|:---|:---|:---|
-| `0x00` | **Static** | Freeze array in place, no animation | Solid colors, car lights, any non-moving pattern |
-| `0x01` | **Gradual** | Smooth crossfade between pixel states | Breathing-style animations on pixel arrays |
-| `0x02` | **Strobe** | Flash entire array on/off rapidly | Emergency braking, alert states |
-| `0x03` | **RunningWater** | Hardware scrolls pixel array around strip | Chasing/marquee patterns (dots, comets, dashes) |
-
-### 0x51 setCustomMode — step `mode` field
-| Byte | Constant | Description | Use case |
-|:---|:---|:---|:---|
-| `0x3A` | `STEP_JUMP` | Hard-cut between step colors | Flash (Pattern 7), Strobe (Pattern 8) |
-| `0x3B` | `STEP_GRADUAL` | Smooth fade between step colors | Breath (Pattern 6) |
-| `0x3C` | `STEP_STROBE` | Rapid flash between step colors | Not currently used |
-
-> [!WARNING]
-> `0x3A/3B/3C` are ONLY valid in `setCustomMode()` (0x51 command).
-> `0x00/01/02/03` are ONLY valid in `setMultiColor()` (0x59 command).
-> Passing 0x3A/3B/3C to setMultiColor sends garbage transitionType bytes to hardware.
-
-### Street Mode Transition Types (fixed Apr 2026)
-| Motion State | transitionType | Rationale |
-|:---|:---|:---|
-| STOPPED | `0x00` Static | Brake lights on, no movement |
-| CRUISING | `0x00` Static | Car light arrangement stays fixed |
-| SLOWING_DOWN | `0x00` Static | Yellow warning lights, no movement |
-| ACCELERATING | `0x00` Static | Normal riding lights, no movement |
-| HARD_BRAKING | `0x02` Strobe | Urgent flashing for safety |
-
-### Pattern Engine Transition Types (PatternEngine.ts)
-| Pattern | transitionType | Rationale |
-|:---|:---|:---|
-| 1 — Solid | `0x00` Static | No movement by definition |
-| 2–5, 9–10 | `0x03` RunningWater | Hardware scrolls the tiled pattern |
-| 6 — Breath | 0x51 `STEP_GRADUAL` | Two-step fade FG↔BG |
-| 7 — Flash | 0x51 `STEP_JUMP` | Two-step hard-cut FG↔BG |
-| 8 — Strobe | 0x51 `STEP_JUMP` @speed=100 | Two-step max-speed flash |
-
----
-
-*Last Updated: April 2026 — SK8Lytz Master Reference. DO NOT SHORTEN. Add new entries at the bottom of each section.*
- 
- 
 ================================================================================
-SECTION 23: DIAGNOSTIC & LAB NAVIGATION FLOW (April 2026 Update)
+SUPABASE ARCHITECTURE & SCHEMA REFERENCE (Updated 2026-04-07)
 ================================================================================
+For AI coding assistants: This section documents every Supabase table, why it
+exists, what fields it contains, and exactly when/how the app reads/writes it.
+Use this as the authoritative source before writing any Supabase-related code.
 
-The SK8Lytz diagnostic toolset has been consolidated to reduce administrative
-bloat and ensure visual parity throughout the developer/admin toolset.
+Supabase Project: SK8Lytz (us-east-1 region)
+Client import:    import { supabase } from '../services/supabaseClient';
+Auth scheme:      Email/password via supabase.auth — all user-scoped tables use
+                  the authenticated user's UUID as the primary identity key.
 
-### A. TOOL RETIREMENTS
-The following legacy components have been DELETED and their functionality
-centralized into the LED Diagnostic Lab:
-- **Simple Scanner**: Removed from 'LogViewerModal.tsx'. Scanning and discovery
-  are now handled exclusively in the 'DEVICES' tab of the Lab.
-- **Admin Hardware Tester**: Deleted 'AdminHardwareTester.tsx'. The 'BUILDER'
-  and 'SNIFFER' tabs in the Lab provide superior control and monitoring.
+────────────────────────────────────────────────────────────────────────────────
+SECTION 1: USER IDENTITY & PROFILE
+────────────────────────────────────────────────────────────────────────────────
 
-### B. VISUAL PARITY (Programmer vs. Lab)
-The LED Diagnostic Lab now matches the 'Sk8LytzProgrammerModal.tsx' design system:
-- **Theme Awareness**: Responds to 'isDark' state from 'ThemeContext'.
-- **Header**: Left-justified cyan title with device subtitle.
-- **Exit Button**: Red 'EXIT' pill button on the top right.
-- **Card Styling**: Consistent 'borderRadius: 12', '#141829' backgrounds, and
-  '#252c47' borders.
+TABLE: user_profiles
+PURPOSE: Extended user profile data beyond what Supabase Auth provides.
+         Used everywhere a human-readable name or avatar is needed.
+WHEN READ:  - On app launch to populate the Profile/Account modal
+            - When loading crew member lists (joined from crew_memberships)
+            - In search results when adding members to crews
+WHEN WRITTEN: - Profile setup (FirstTimeSetupModal)
+              - Account settings changes (AccountModal)
+              - Auto-created on first login via fetchOrCreateProfile()
 
-### C. NAVIGATION LOGIC (The Lab Exit Flow)
-To ensure a continuous debugging workflow, the entry/exit points for the
-Diagnostic Lab are strictly defined:
-- **Entry Point**: Accessed via the 'DIAGNOSTIC LAB' button in the
-  'LogViewerModal' (Analytics) under the hidden Admin tab.
-- **Exit Logic**: When a user clicks 'EXIT' in the Lab, the modal closes and
-  automatically re-opens/returns the user to the 'LogViewerModal'.
-- **Implementation**: Managed in 'DashboardScreen.tsx' via 'setIsLabVisible(false)'
-  and 'setLogsVisible(true)' within the Lab's 'onClose' callback.
+FIELDS:
+  user_id       UUID      PK, FK → auth.users.id
+  display_name  TEXT      Human readable display name (e.g. "RollQueen")
+  username      TEXT      Unique lowercase handle (e.g. "rollqueen") — added migration 006
+  avatar_color  TEXT      Hex string for generated avatar background (e.g. "#FF6B00")
+  avatar_url    TEXT      Optional Supabase Storage URL for profile photo
+  created_at    TIMESTAMPTZ
+  updated_at    TIMESTAMPTZ
+
+RLS: Users can only read/write their own row. Crew member lookups use a
+     service-role-safe SELECT policy that allows reading display_name+avatar_color
+     when user is a member of the same crew.
+
+SERVICE: src/services/ProfileService.ts
+  fetchOrCreateProfile()   → SELECT * WHERE user_id = auth.uid(), auto-INSERT if missing
+  updateProfile(fields)    → UPSERT on user_id conflict
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 2: PERMANENT CREWS (aka "Crew Hub")
+────────────────────────────────────────────────────────────────────────────────
+
+TABLE: crews
+PURPOSE: Persistent crew entities that exist outside of active sessions.
+         Users create or join these crews, and they persist indefinitely.
+         Sessions can be tied to a crew (via crew_sessions.crew_id).
+WHEN READ:  - Crew Hub landing (getMyCrew joins crew_memberships → crews)
+            - Discover tab (getPublicCrews where is_public=true)
+            - Join by code (joinPermanentCrew where invite_code=input)
+WHEN WRITTEN: - createPermanentCrew() → INSERT crews + INSERT crew_memberships
+              - updateCrew() → UPDATE WHERE id=crewId AND owner_id=auth.uid()
+              - deleteCrew() → DELETE WHERE id=crewId (cascades memberships)
+
+FIELDS:
+  id            UUID      PK
+  name          TEXT      Crew display name
+  owner_id      UUID      FK → auth.users.id — the founding owner
+  invite_code   TEXT      6-char alphanumeric code for private joining (e.g. "XY9Z2A")
+  is_public     BOOLEAN   true = discoverable, joinable without code
+  avatar_color  TEXT      Hex for crew avatar background
+  avatar_icon   TEXT      MaterialCommunityIcons name (e.g. "account-group")
+  avatar_url    TEXT      Optional Supabase Storage URL for crew photo
+  city          TEXT      Optional city for discovery filter
+  state         TEXT      Optional state/region for discovery filter
+  description   TEXT      Optional crew bio
+  created_at    TIMESTAMPTZ
+
+NOTE: is_owner is NOT a DB field — it is computed client-side:
+  is_owner = (crew.owner_id === currentUser.id)
+
+TABLE: crew_memberships
+PURPOSE: Many-to-many join between users and permanent crews.
+         Every user who belongs to a crew has one row here.
+WHEN READ:  - getMyCrew() → SELECT crews FROM crew_memberships WHERE user_id=auth.uid()
+            - getCrewMembersForDisplay() → SELECT user_profiles.avatar_color per crew
+            - getCrewMembersWithNames() → full member list with roles for crew detail view
+WHEN WRITTEN: - joinPermanentCrew / joinPublicCrewById → UPSERT (crew_id, user_id)
+              - leavePermanentCrew → DELETE WHERE crew_id AND user_id
+              - addCrewMembers → INSERT batch (crew_id, user_id) per added member
+              - createPermanentCrew → auto-inserts creator + any invited members
+
+FIELDS:
+  id          UUID      PK
+  crew_id     UUID      FK → crews.id (CASCADE DELETE)
+  user_id     UUID      FK → auth.users.id
+  role        TEXT      'owner' | 'member' — supports multi-owner via assignCrewOwner()
+  joined_at   TIMESTAMPTZ
+
+UNIQUE: (crew_id, user_id)
+
+SERVICE: src/services/ProfileService.ts (all crew_ methods)
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 3: LIVE CREW SESSIONS
+────────────────────────────────────────────────────────────────────────────────
+
+TABLE: crew_sessions
+PURPOSE: Active or recently-ended light-show sessions. A session is the
+         real-time synchronization event where one leader broadcasts LED
+         state to all member devices. Tied optionally to a permanent crew.
+WHEN READ:  - On poll/subscribe: app checks for active sessions for the user's crews
+            - Discover tab: public_sessions view fetches live sessions
+            - Session detail card in Crew Hub
+WHEN WRITTEN: - createSession() → INSERT with leader_user_id, expires_at
+              - endSession() → UPDATE set ended_at=now()
+              - updateScene() → UPDATE last_scene JSONB (leader broadcast)
+
+FIELDS:
+  id              UUID        PK
+  name            TEXT        Session display name (e.g. "Friday Night Skate")
+  crew_id         UUID        FK → crews.id (nullable — session can exist without permanent crew)
+  leader_user_id  UUID        FK → auth.users.id — who controls the lights
+  is_public       BOOLEAN     true = visible in Discover feed
+  invite_code     TEXT        6-char join code
+  location_label  TEXT        Human-readable location (e.g. "Millennium Park, Chicago")
+  location_lat    FLOAT       GPS latitude (optional)
+  location_lng    FLOAT       GPS longitude (optional)
+  scheduled_at    TIMESTAMPTZ Future session time (nullable = immediate)
+  started_at      TIMESTAMPTZ When session actually went live
+  ended_at        TIMESTAMPTZ NULL while active; set when leader ends
+  expires_at      TIMESTAMPTZ Hard expiry (typically started_at + 8h)
+  last_scene      JSONB       Last broadcast LED state snapshot (see Scene format below)
+  created_at      TIMESTAMPTZ
+
+SCENE JSONB format (last_scene):
+  {
+    activeMode: 'MULTIMODE' | 'PROGRAMS' | 'MUSIC' | 'STREET' | 'CAMERA' | 'FAVORITES',
+    fixedSubMode: 'PATTERN' | 'DIY',
+    selectedColor: '#RRGGBB',
+    selectedPatternId: number,
+    brightness: number,       // 0-100
+    speed: number,            // 0-100
+    musicPatternId: number,
+    musicPrimaryColor: string,
+    musicSecondaryColor: string,
+    streetSensitivity: number,
+    streetCruiseColor: string,
+    streetBrakeColor: string,
+    musicMatrixStyle: 'BAR' | 'SCREEN',
+    multiColors: string[],
+    multiTransition: number,
+    multiLength: number,
+    fixedColorMode: string,
+    fixedFgColor: string,
+    fixedBgColor: string,
+    fixedHue: number,
+    fixedPatternId: number,
+  }
+
+TABLE: crew_members  (active session participant list)
+PURPOSE: Who is currently in a live session. Separate from crew_memberships.
+         This is the real-time participant roster for an active crew_session.
+WHEN READ:  - loadMembers() in CrewModal → SELECT user_profiles per session member
+            - Used to render "who's in the session" list
+WHEN WRITTEN: - joinSession() → UPSERT (session_id, user_id)
+              - leaveSession() → DELETE WHERE session_id AND user_id
+              - endSession() (cascade) → all members deleted
+
+FIELDS:
+  id          UUID    PK
+  session_id  UUID    FK → crew_sessions.id (CASCADE DELETE)
+  user_id     UUID    FK → auth.users.id
+  joined_at   TIMESTAMPTZ
+
+UNIQUE: (session_id, user_id)
+
+VIEW: public_sessions (read-only)
+PURPOSE: Exposes active public sessions for the Discover tab.
+FIELDS: id, name, crew_id, crew_name (joined), leader_user_id, leader_name (joined),
+        invite_code, location_label, location_lat, location_lng, started_at, expires_at,
+        member_count (aggregated), is_public
+USED BY: LocationService.getNearbyPublicSessions() — filters by is_public=true,
+         then haversine-filters client-side by distance
+
+SERVICE: src/services/CrewService.ts
+  createSession(name, displayName, opts)  → INSERT crew_sessions + UPSERT crew_members
+  joinSessionById(sessionId, displayName) → UPSERT crew_members
+  leaveSession()                          → DELETE crew_members WHERE user_id=auth.uid()
+  endSession(sessionId)                   → UPDATE crew_sessions SET ended_at=now()
+  transferLeadership(targetUserId)        → UPDATE crew_sessions SET leader_user_id
+  updateScene(scene)                      → UPDATE crew_sessions SET last_scene (debounced 500ms)
+  pollSession(sessionId)                  → SELECT crew_sessions + crew_members for refresh
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 4: TELEMETRY & ANALYTICS (AppLogger → Supabase)
+────────────────────────────────────────────────────────────────────────────────
+
+AppLogger (src/services/AppLogger.ts) buffers events locally in AsyncStorage
+(@Sk8lytz_logs) and uploads them on explicit user action (LogViewerModal) or
+background sync. RAW_PAYLOAD events are NEVER uploaded to Supabase (local only).
+
+TABLE: parsed_session_stats
+PURPOSE: One row per telemetry session (app launch). Contains full host device
+         profile + aggregate session metrics.
+UPSERT KEY: session_id
+WRITTEN BY: AppLogger.uploadLogsToSupabase() → Step 1
+
+KEY FIELDS:
+  session_id            TEXT    Unique telemetry session ID ("telemetry_TIMESTAMP")
+  device_id             TEXT    Primary BLE device MAC (or "unpaired-host")
+  host_device_id        TEXT    Phone/tablet model ID from expo-device
+  timestamp_ms          BIGINT  Timestamp of last event in this session
+  devices_discovered    INT     Count of DEVICE_DISCOVERED events
+  total_events          INT     Total log entries in buffer
+  device_brand/model    TEXT    From expo-device (Samsung, Apple, Pixel, etc.)
+  device_manufacturer   TEXT
+  os_name/version       TEXT    Android / iOS + version string
+  platform_api_level    INT     Android API level
+  battery_level         FLOAT   0.0-1.0 at time of upload
+  battery_state         TEXT    UNPLUGGED | CHARGING | FULL | UNKNOWN
+  is_low_power_mode     BOOLEAN
+  host_device_info      JSONB   Full expo-device dump (all fields)
+  mode_usage            JSONB   { STREET: 5, PROGRAMS: 12, ... }
+  color_usage           JSONB   { '#FF0000': 3, '#00FF00': 7, ... }
+
+TABLE: parsed_session_devices
+PURPOSE: One row per BLE device seen in this telemetry session.
+UPSERT KEY: (session_id, device_id)
+WRITTEN BY: AppLogger.uploadLogsToSupabase() → Step 2
+
+KEY FIELDS:
+  session_id    TEXT
+  device_id     TEXT    BLE MAC address
+  name          TEXT    Custom name (from @Sk8lytz_device_configs AsyncStorage key)
+  rssi          INT     Signal strength at connection time
+  ic_type       TEXT    From hardwareSettings (SM16703, WS2812B, etc.)
+  led_points    INT     LED count
+  segments      INT     Physical segment count
+  color_sorting TEXT    RGB | RBG | GRB | etc.
+  firmware_ver  JSONB   { fw, led, ble } version strings
+
+TABLE: parsed_logs
+PURPOSE: Per-event trace log. One row per log entry (after RAW_PAYLOAD exclusion).
+         Supports per-device unrolling: group events fan out to N rows (one per device).
+WRITTEN BY: AppLogger.uploadLogsToSupabase() → Step 4 (batched in 1000-entry chunks)
+
+KEY FIELDS:
+  session_id      TEXT
+  host_device_id  TEXT
+  timestamp_ms    BIGINT
+  event_type      TEXT      EventType string (see EventType union in AppLogger.ts)
+  device_id       TEXT      Individual device MAC (unrolled from group events)
+  device_name     TEXT      Resolved custom name
+  group_id        TEXT      Joined MAC string for group events (nullable)
+  group_name      TEXT      "Group (N Devices)" label (nullable)
+  hex_payload     TEXT      BLE TX payload if correlated within 250ms
+  direction       TEXT      'TX' | 'RX' (nullable)
+  raw_data        JSONB     Full event payload dict
+
+TABLE: parsed_mode_usage
+PURPOSE: Aggregate count of how many times each mode was activated per device per session.
+WRITTEN BY: AppLogger.uploadLogsToSupabase() → Step 3a
+
+KEY FIELDS:
+  session_id, device_id, device_name, mode_name TEXT, usage_count INT,
+  group_id, group_name, timestamp_ms
+
+TABLE: parsed_pattern_usage
+PURPOSE: Aggregate count of pattern selections per device per session.
+WRITTEN BY: AppLogger.uploadLogsToSupabase() → Step 3b
+
+KEY FIELDS:
+  session_id, device_id, device_name, pattern_idx TEXT (name or ID),
+  usage_count INT, group_id, group_name, timestamp_ms
+
+TABLE: parsed_color_usage
+PURPOSE: Aggregate count of color selections per device per session.
+WRITTEN BY: AppLogger.uploadLogsToSupabase() → Step 3c
+
+KEY FIELDS:
+  session_id, device_id, device_name, hex_color TEXT,
+  usage_count INT, group_id, group_name, timestamp_ms
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 5: PUSH NOTIFICATIONS
+────────────────────────────────────────────────────────────────────────────────
+
+TABLE: push_tokens
+PURPOSE: Stores Expo push tokens per user+device so the server (or other users)
+         can trigger remote push notifications. Token is unique per user+device combo.
+WHEN READ:  Not read directly by app — read server-side or by NotificationService
+            when sending cross-user notifications (crew invite, session live alert)
+WHEN WRITTEN: - notificationService.init() → registers token on every app launch
+              - notificationService.unregisterPushToken() → removes on logout/revoke
+
+FIELDS:
+  id          UUID    PK
+  user_id     UUID    FK → auth.users.id
+  token       TEXT    Expo push token ("ExponentPushToken[...]")
+  platform    TEXT    'ios' | 'android' | 'web'
+  updated_at  TIMESTAMPTZ
+
+UNIQUE: (user_id, token)
+SERVICE: src/services/ProfileService.ts (registerPushToken / unregisterPushToken)
+         src/services/NotificationService.ts (uses ^ via profileService)
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 6: SUPABASE STORAGE BUCKETS
+────────────────────────────────────────────────────────────────────────────────
+
+BUCKET: sk8lytz-logs
+PURPOSE: Raw JSON telemetry log files per device. Stores the full merged LogEntry[]
+         array with session metadata. Used for offline diagnostics and log export.
+PATH FORMAT: logs_{bleMac}.json  (bleMac sanitized to [a-zA-Z0-9_-] only)
+READ:  AppLogger.uploadLogsToSupabase() downloads existing file to merge/deduplicate
+WRITE: AppLogger.uploadLogsToSupabase() upserts merged JSON (content-type: application/json)
+NOTE:  After successful DB push (parsed_* tables), the local buffer is CLEARED.
+       The Storage file is the long-term archive; Postgres tables are the analytics sink.
+
+BUCKET: [profile-photos / crew-photos if added]
+PURPOSE: User avatar and crew avatar image uploads. Currently referenced via
+         avatar_url in user_profiles and crews tables.
+NOTE:   Upload not yet fully wired in UI — stored URL written to DB on profile save.
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 7: APPLOGGER EVENT TYPE CATALOG (All Valid EventTypes)
+────────────────────────────────────────────────────────────────────────────────
+
+BLE / Hardware:
+  SCAN_STARTED              User hit Connect button — BLE scan initiated
+  SCAN_COMPLETED            Scan finished (timeout or manual stop)
+  SCAN_FILTER_MATCH         A device passed the Zengge name filter
+  SCAN_FILTER_REJECT        A device was rejected by the name filter
+  DEVICE_DISCOVERED         New BLE device appeared in scan results
+  DEVICE_CONNECTED          BLE GATT connection established
+  DEVICE_DISCONNECTED       BLE connection dropped (user-initiated or error)
+  DEVICE_RENAMED            User renamed a device in settings
+  HARDWARE_CONFIG_CHANGED   IC type, LED count, or wiring changed in settings
+  PROTOCOL_ERROR            A BLE command was malformed or rejected
+  BLE_WRITE_ERROR           BLE characteristic write failed
+  BLE_CONNECTION_ERROR      GATT connection failed to establish
+  RAW_PAYLOAD               Hex dump from AdminHardwareTester sniffer (LOCAL ONLY)
+
+Controller State:
+  MODE_CHANGED              activeMode changed (MULTIMODE, STREET, MUSIC, etc.)
+  PATTERN_CHANGED           Pattern selection changed
+  COLOR_CHANGED             Primary color changed (#RRGGBB)
+  BRIGHTNESS_CHANGED        Brightness slider changed (debounced 600ms)
+  SPEED_CHANGED             Speed slider changed (debounced 600ms)
+
+Street Mode:
+  STREET_MODE_ACTIVATED     User switched to STREET mode — logs sensitivity + colors
+  STREET_MODE_DEACTIVATED   User left STREET mode — logs last motion state + peakG
+  STREET_JERK_DETECTED      Accelerometer threshold crossed (leading edge only)
+                            Payload: { jerkMag, threshold, gpsSpeedMph, deviceId }
+  STREET_SENSITIVITY_CHANGED Sensitivity slider adjusted while in STREET mode (debounced 800ms)
+
+App Lifecycle:
+  APP_OPENED                App came to foreground (logs loadTimeMs)
+  APP_BACKGROUNDED          App went to background
+  APP_FOREGROUNDED          App returned to foreground
+  SCREEN_OPENED             A modal or screen was opened { screen: name }
+  ERROR_CAUGHT              Unhandled error captured in error boundary
+  PERFORMANCE_METRIC        General timing measurement
+
+Crew Session (live sessions):
+  CREW_SESSION_CREATED      Leader created a new live session
+                            Payload: { sessionId, crewName, hasLocation, scheduled, isPublic }
+  CREW_SESSION_JOINED       User joined a live session
+                            Payload: { sessionId, crewName, method: 'browse'|'permanent_code' }
+  CREW_SESSION_LEFT         Member left an active session
+                            Payload: { sessionId, role }
+  CREW_SESSION_ENDED        Leader explicitly ended a session
+                            Payload: { sessionId, crewName, role: 'leader', reason: 'explicit_end' }
+  CREW_SESSION_SHARED       User shared session invite code via OS share sheet
+  CREW_LEADERSHIP_TRANSFERRED Leader handed off control to another member
+  CREW_SCENE_BROADCAST      Leader broadcast a scene update to the crew
+  CREW_SCENE_RECEIVED       Member received a scene update from leader
+  CREW_AUTO_REJOINED        App auto-rejoined a session after being backgrounded
+  CREW_ERROR                Any crew-related error
+                            Payload: { action, error, crewId? }
+
+Permanent Crew Hub:
+  CREW_PERMANENT_CREATED    User created a new permanent crew
+                            Payload: { crewId, crewName, isPublic, city, membersInvited }
+  CREW_PERMANENT_JOINED     User joined an existing crew (by code or public discover)
+                            Payload: { crewId, crewName, method: 'permanent_code'|'public_discover' }
+  CREW_PERMANENT_LEFT       User left a permanent crew
+                            Payload: { crewId, crewName, method: 'leave_btn'|'hub_card' }
+  CREW_PERMANENT_DELETED    Owner deleted a permanent crew
+                            Payload: { crewId, crewName }
+  CREW_PERMANENT_UPDATED    Owner saved changes to crew settings
+                            Payload: { crewId, crewName, isPublic }
+  CREW_MEMBERS_ADDED        Owner added skaters to an existing crew
+                            Payload: { crewId, count }
+
+Profile & Account:
+  PROFILE_UPDATED           User saved profile changes (display name, avatar, etc.)
+
+Push Notifications:
+  PUSH_TOKEN_REGISTERED     Expo push token registered with Supabase
+  PUSH_TOKEN_UNREGISTERED   Push token removed (logout/revoke)
+  PUSH_NOTIFICATION_TAPPED  User tapped a push notification
+  PUSH_NOTIFICATION_SENT    A push notification was sent to a remote user
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 8: ASYNCSTORAGE KEY REGISTRY (@Sk8lytz_* namespace)
+────────────────────────────────────────────────────────────────────────────────
+
+All AsyncStorage keys MUST use the @Sk8lytz_* prefix. Legacy ng_* keys have been
+migrated. Do NOT introduce new keys with any other prefix.
+
+  @Sk8lytz_logs             AppLogger telemetry buffer (LogEntry[] JSON)
+  @Sk8lytz_device_configs   Per-device BLE config: { [mac]: { name, hwSettings } }
+  @Sk8lytz_dashboard        DashboardScreen persistent state (brightness, scene, etc.)
+  @Sk8lytz_hub_display_name User's crew display name (choosen in session create flow)
+  @Sk8lytz_favorites        DockedController saved favorite presets (IFavoriteState[])
+  @Sk8lytz_crew_session     Last known active session (for auto-rejoin on relaunch)
+  @sk8lytz_logs             LEGACY — migrated to @Sk8lytz_logs on first load, then deleted
+  ng_device_configs         LEGACY — migrated to @Sk8lytz_device_configs (FULLY REMOVED)
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 9: HOW SESSION SYNC WORKS (End-to-End Flow)
+────────────────────────────────────────────────────────────────────────────────
+
+LEADER FLOW:
+  1. Leader opens CrewModal, selects a permanent crew, names the session
+  2. crewService.createSession() → INSERT crew_sessions + INSERT crew_members (self)
+  3. AppLogger: CREW_SESSION_CREATED
+  4. CrewModal polls every ~3s: crewService.pollSession() → SELECT session + members
+  5. When leader changes any control (brightness, color, mode, pattern):
+     DockedController fires onCrewSceneChange(captureEntireState())
+  6. CrewModal.handleLeaderSceneChange() → crewService.updateScene(scene) — debounced 500ms
+     → UPDATE crew_sessions SET last_scene = sceneJSON WHERE id = sessionId
+  7. When leader ends: crewService.endSession() → UPDATE crew_sessions SET ended_at=now()
+     AppLogger: CREW_SESSION_ENDED
+
+MEMBER FLOW:
+  1. Member opens CrewModal Discover tab or sees crew session on hub landing
+  2. crewService.joinSessionById() → UPSERT crew_members(session_id, user_id)
+     AppLogger: CREW_SESSION_JOINED
+  3. CrewModal polls every ~3s: pollSession() → fetches last_scene JSONB from crew_sessions
+  4. When last_scene changes: applyCloudScene(scene) → dockedController.ref.current.applyCloudScene()
+     → This sets all state in DockedController to match leader's scene
+     AppLogger: CREW_SCENE_RECEIVED (in CrewService.ts)
+  5. Member leaves: crewService.leaveSession()
+     AppLogger: CREW_SESSION_LEFT
+  6. If leader ends session: poll detects ended_at is set → member auto-disconnects
+     AppLogger: CREW_SESSION_LEFT (reason: leader_ended_session)
+
+POLLING INTERVAL: 3000ms (hardcoded in CrewModal.tsx useEffect)
+NO REALTIME SUBSCRIPTIONS: The current implementation is pure polling, not Supabase
+  Realtime. Realtime would reduce latency but adds connection overhead.
+  Consider Supabase Realtime for scene updates in a future sprint.

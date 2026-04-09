@@ -477,9 +477,10 @@ export default function useBLE(): BluetoothLowEnergyApi {
       // Android negotiates down to hardware max automatically; we just request the ceiling.
       try {
         const negotiated = await deviceConnection.requestMTU(512);
+        negotiatedMtuRef.current = negotiated.mtu;
         console.log(`[BLE] MTU negotiated: ${negotiated.mtu} bytes for ${device.id}`);
       } catch (mtuErr: any) {
-        console.warn('[BLE] MTU negotiation failed (continuing with default):', mtuErr?.message);
+        console.warn('[BLE] MTU negotiation failed (continuing with default 186):', mtuErr?.message);
       }
 
       // Register dropout listener
@@ -582,9 +583,10 @@ export default function useBLE(): BluetoothLowEnergyApi {
           // Request large MTU for large payloads (0x51 Pro Effects = 299 bytes)
           try {
             const negotiated = await conn.requestMTU(512);
+            negotiatedMtuRef.current = negotiated.mtu;
             console.log(`[BLE] MTU negotiated: ${negotiated.mtu} bytes for ${conn.id} (group)`);
           } catch (mtuErr: any) {
-            console.warn('[BLE] MTU negotiation failed for group device (continuing):', mtuErr?.message);
+            console.warn('[BLE] MTU negotiation failed for group device (continuing with default 186):', mtuErr?.message);
           }
 
           // Register dropout listener
@@ -649,50 +651,52 @@ export default function useBLE(): BluetoothLowEnergyApi {
     }
   };
 
+  // Negotiated MTU per device (updated after requestMTU() resolves).
+  // We request MTU=512 on connect. The hardware will negotiate its actual max.
+  // Write Without Response requires payload <= (negotiatedMTU - 3).
+  // For the 0x51 Pro Effects payload (299 bytes), the hardware must accept MTU >= 302.
+  const negotiatedMtuRef = useRef<number>(186);
+
   const writeToDevice = async (payload: number[], targetDeviceId?: string) => {
     const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
-    console.log(`[BLE WRITE ${payload.length}B]${targetDeviceId ? ` [Target: ${targetDeviceId}]` : ''}`, hexString.substring(0, 80));
+    console.log(`[BLE WRITE ${payload.length}B | MTU=${negotiatedMtuRef.current}]${targetDeviceId ? ` [→${targetDeviceId.slice(-4)}]` : ''}`, hexString.substring(0, 80));
     AppLogger.setLastTxPayload(hexString);
 
-    // Use ref so this always reads the CURRENT connectedDevices — never a stale closure.
-    // ROOT CAUSE FIX: stale writeToDevice saw connectedDevices=[] and returned early.
     if (connectedDevicesRef.current.length === 0 || Platform.OS === 'web') return;
-    try {
-      /* Buffer imported at top of file */
-      const base64Payload = Buffer.from(payload).toString('base64');
 
-      const targets = targetDeviceId
-        ? connectedDevicesRef.current.filter(d => d.id === targetDeviceId)
-        : connectedDevicesRef.current;
+    const targets = targetDeviceId
+      ? connectedDevicesRef.current.filter(d => d.id === targetDeviceId)
+      : connectedDevicesRef.current;
 
-      if (targets.length === 0 && targetDeviceId) {
-        console.warn(`Target device ${targetDeviceId} not found in connected devices`);
-        return;
+    if (targets.length === 0 && targetDeviceId) {
+      console.warn(`Target device ${targetDeviceId} not found in connected devices`);
+      return;
+    }
+
+    // Chunk size: MTU - 3 bytes (ATT header overhead)
+    const chunkSize = Math.max(20, negotiatedMtuRef.current - 3);
+
+    for (const device of targets) {
+      try {
+        for (let i = 0; i < payload.length; i += chunkSize) {
+          const chunk = payload.slice(i, i + chunkSize);
+          const base64Chunk = Buffer.from(chunk).toString('base64');
+          
+          await device.writeCharacteristicWithoutResponseForService(
+            ZENGGE_SERVICE_UUID,
+            ZENGGE_CHARACTERISTIC_UUID,
+            base64Chunk
+          );
+          
+          // Small delay to prevent buffer overflow on hardware side
+          if (i + chunkSize < payload.length) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+          }
+        }
+      } catch (writeError: any) {
+        console.warn(`[BLE] Write failed for ${device.id}`, writeError?.message);
+        AppLogger.log('BLE_WRITE_ERROR', { error: writeError?.message || String(writeError), target: device.id, payloadLen: payload.length });
       }
-
-      // Single atomic write — MTU is negotiated to 512 bytes in connectToDevice,
-      // so payloads up to ~509 bytes (including 0x51 Pro Effects at 299 bytes) go
-      // through as one write. Never chunk — the Zengge hardware cannot reassemble fragments.
-      const writePromises = targets.map(device =>
-        device.writeCharacteristicWithoutResponseForService(
-          ZENGGE_SERVICE_UUID,
-          ZENGGE_CHARACTERISTIC_UUID,
-          base64Payload
-        ).catch((writeError: any) => {
-          console.warn(`Write failed for ${device.id}`, writeError?.message);
-          AppLogger.log('BLE_WRITE_ERROR', { error: writeError?.message || String(writeError), target: device.id, payloadLen: payload.length });
-          return { error: writeError, failedId: device.id };
-        })
-      );
-
-      const results = await Promise.all(writePromises);
-      const failures = results.filter(r => r && (r as any).error);
-      if (failures.length > 0) {
-        console.warn(`[BLE] Write failures: ${failures.map(f => (f as any).failedId).join(', ')}`);
-      }
-    } catch (e: any) {
-      console.warn('Fatal Write catch', e);
-      AppLogger.log('BLE_WRITE_ERROR', { error: e?.message || String(e), target: targetDeviceId, payloadLen: payload.length });
     }
   };
 

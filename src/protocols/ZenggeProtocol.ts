@@ -512,6 +512,45 @@ export class ZenggeProtocol {
     return this.wrapCommand(payload);
   }
 
+  /**
+   * Build a COMPACT 0x51 packet with only the provided active steps (no padding to 32 slots).
+   *
+   * Format: [0x51, step0(9), step1(9), ..., 0x0F, checksum]
+   * For 1 step: 12 bytes raw → 20 bytes wrapped — fits ANY BLE MTU.
+   *
+   * This tests whether the hardware accepts variable-length 0x51 payloads vs.
+   * always requiring the full 32-slot 291-byte fixed format.
+   *
+   * If the hardware responds to this but not setCustomMode(), the fix is to always
+   * use the compact format. If it doesn't respond to either, 0x51 is unsupported.
+   */
+  static setCustomModeCompact(steps: {
+    mode: number;
+    speed: number;
+    color1: {r: number, g: number, b: number};
+    color2: {r: number, g: number, b: number};
+  }[]): number[] {
+    const safeSteps = steps.slice(0, 32);
+    // Variable-length: only active steps
+    const raw: number[] = [0x51];
+    for (const step of safeSteps) {
+      const safeSpeed = Math.max(1, Math.min(100, Math.round(step.speed)));
+      raw.push(0xF0); // active
+      raw.push(step.mode & 0xFF);
+      raw.push(safeSpeed);
+      raw.push(Math.max(0, Math.min(255, step.color1.r | 0)));
+      raw.push(Math.max(0, Math.min(255, step.color1.g | 0)));
+      raw.push(Math.max(0, Math.min(255, step.color1.b | 0)));
+      raw.push(Math.max(0, Math.min(255, step.color2.r | 0)));
+      raw.push(Math.max(0, Math.min(255, step.color2.g | 0)));
+      raw.push(Math.max(0, Math.min(255, step.color2.b | 0)));
+    }
+    raw.push(0x0F); // terminator
+    raw.push(this.calculateChecksum(raw.slice(0, raw.length)));
+    console.log(`[0x51 COMPACT] ${raw.length} bytes (${safeSteps.length} step(s))`);
+    return this.wrapCommand(raw);
+  }
+
   static turnOn(): number[] {
     return this.wrapCommand([0x71, 0x23, 0x0f, 0xa3]);
   }

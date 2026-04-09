@@ -29,6 +29,7 @@ import CameraTracker from './CameraTracker';
 import { getRbmPatternName } from '../constants/RbmPatterns';
 import { ZENGGE_EFFECTS } from '../constants/CustomEffects';
 import CustomEffectVisualizer from './CustomEffectVisualizer';
+import EffectsPanel from './EffectsPanel';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { PositionalMathBuffer, BuilderNode } from '../protocols/PositionalMathBuffer';
 import PositionalGradientBuilder from './PositionalGradientBuilder';
@@ -173,7 +174,7 @@ const AnalogGauge = ({
 
 
 type ProductType = 'HALOZ' | 'SOULZ';
-type ModeType = 'FAVORITES' | 'MULTIMODE' | 'PROGRAMS' | 'MUSIC' | 'STREET' | 'CAMERA';
+type ModeType = 'FAVORITES' | 'MULTIMODE' | 'PROGRAMS' | 'MUSIC' | 'STREET' | 'CAMERA' | 'EFFECTS';
 
 const MUSIC_PATTERNS = [
   'Soft',
@@ -210,18 +211,16 @@ const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segme
   }, [baseDots, points, segments]);
 
   React.useEffect(() => {
-    if (patternId === 1) return;
     const intervalTime = Math.max(30, 200 - (speed * 1.7));
     const int = setInterval(() => {
       setOffset(o => (o + 1) % fullArray.length);
     }, intervalTime);
     return () => clearInterval(int);
-  }, [fullArray.length, patternId, speed]);
+  }, [fullArray.length, speed]);
 
   const displayedDots = React.useMemo(() => {
-    if (patternId === 1) return fullArray;
     return [...fullArray.slice(fullArray.length - offset), ...fullArray.slice(0, fullArray.length - offset)];
-  }, [fullArray, offset, patternId]);
+  }, [fullArray, offset]);
 
   return (
     <View style={{ flex: 1, marginRight: 8, height: 8, overflow: 'hidden' }}>
@@ -336,7 +335,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const [musicHue, setMusicHue] = useState(180);
     const [recording, setRecording] = useState<Audio.Recording | null>(null);
     const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
-    const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
+    const magnitudeInterval = React.useRef<NodeJS.Timeout | null>(null);
+
+    // Tracks current EffectsPanel state for speed-slider re-dispatch (EFFECTS mode)
+    const effectsStateRef = React.useRef<{ id: number; fg: string; bg: string }>({ id: 1, fg: '#00FFFF', bg: '#000000' });
 
     const [quickPresets, setQuickPresets] = useState<IQuickPreset[]>([
       { name: 'Rainbow', colors: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'], type: 3 },
@@ -839,24 +841,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       // hwSettings.ledPoints IS the total LED count — do NOT divide by segments
       const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
 
-      // Effect #1 is the newly inserted Solid override that uses classic 0x59 fill instead of 0x51 Custom Mode
-      if (patternId === 1) {
-        // Scale brightness manually for 0x59 since it's an array fill
-        const fgRgbScaled = {
-          r: Math.round((parseInt(fg.substring(1, 3), 16) || 0) * factor),
-          g: Math.round((parseInt(fg.substring(3, 5), 16) || 0) * factor),
-          b: Math.round((parseInt(fg.substring(5, 7), 16) || 0) * factor),
-        };
-
-        // CRITICAL: Pad the array to numLEDs to prevent Hardware Matrix Locking (length < 10 bug).
-        const paddedArray = new Array(numLEDs).fill(fgRgbScaled);
-
-        // Transition must be 0x01 (FREEZE) so the identical pixels do not spin off into missing sections (Cascade ghosting).
-        const payload = ZenggeProtocol.setMultiColor(paddedArray, clampSpeed(currentSpeed), 1, 0x01);
-
-        if (payload) writeToDevice(payload);
-        return;
-      }
 
       // 0x51 Custom Engines expect pure, unmodified hexadecimal parameters.
       // The hardware engines interpret brightness separately natively.
@@ -871,15 +855,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         b: parseInt(bg.substring(5, 7), 16) || 0,
       };
 
-      // Dispatch mapped patternId
-      // UI patternId is 1-34; hardware 0x51 modes are 1-33. ID 1 = Solid (handled above). IDs 2-34 → hw modes 1-33.
-      // Speed: normalize 1-100 to 1-31 — proven working formula from 2AM commit.
-      const payload = ZenggeProtocol.setCustomMode([{
-        mode: patternId - 1,
-        speed: Math.floor(currentSpeed / 3) + 1,
-        color1: fgRaw,
-        color2: bgRaw
-      }]);
+      // Use compact format: only 1 active step (12 bytes raw, 20 bytes wrapped).
+      // Fits in any BLE MTU. Tests if hardware accepts variable-length 0x51.
+      const payload = ZenggeProtocol.setCustomModeCompact([
+        { mode: patternId, speed: currentSpeed, color1: fgRaw, color2: bgRaw },
+      ]);
 
       if (payload) writeToDevice(payload);
     };
@@ -1345,6 +1325,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         case 'STREET': return isStreetBraking ? '🔴 BRAKING' : '🟠 CRUISING';
         case 'CAMERA': return 'Camera';
         case 'FAVORITES': return 'Styles';
+        case 'EFFECTS': return '⚡ Pro Effects';
         default: return activeMode;
       }
     }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, selectedPatternId, musicPatternId, selectedColor, isStreetBraking]);
@@ -1478,10 +1459,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                           <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.name}</MarqueeText>
                         </View>
                         {(() => {
-                          if ((fav.mode === 'PATTERN' && fav.patternId === 1) || (fav.mode === 'MULTIMODE' && fav.patternId === 1)) {
-                            const c = fav.fixedFgColor || Colors.primary;
-                            return <View style={{ width: '60%', height: 6, borderRadius: 3, backgroundColor: c, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }} />;
-                          } else if (fav.mode === 'MUSIC') {
+                          if (fav.mode === 'MUSIC') {
                             return (
                               <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
                                 <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
@@ -1537,10 +1515,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                           <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
                         </View>
                         {(() => {
-                          if ((fav.mode === 'PATTERN' && fav.patternId === 1) || (fav.mode === 'MULTIMODE' && fav.patternId === 1)) {
-                            const c = fav.fixedFgColor || Colors.primary;
-                            return <View style={{ width: '60%', height: 6, borderRadius: 3, backgroundColor: c, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }} />;
-                          } else if (fav.mode === 'MUSIC') {
+                          if (fav.mode === 'MUSIC') {
                             return (
                               <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
                                 <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
@@ -1572,6 +1547,18 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               </View>
             )}
 
+            {/* ── EFFECTS MODE — full standalone panel ───────────────────── */}
+            {activeMode === 'EFFECTS' && (
+              <EffectsPanel
+                writeToDevice={writeToDevice}
+                points={hwSettings?.ledPoints || points || 16}
+                segments={hwSettings?.segments || 1}
+                speed={speed}
+                hwSettings={hwSettings}
+                onStateChange={(id, fg, bg) => { effectsStateRef.current = { id, fg, bg }; }}
+              />
+            )}
+
             {activeMode === 'MULTIMODE' && (
               <View style={{ flex: 1, marginBottom: 8, justifyContent: 'flex-start' }}>
 
@@ -1584,7 +1571,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                       <TouchableOpacity
                         onPress={() => {
                           setFixedSubMode('PATTERN');
-                          if (fixedPatternId === 1) setFixedPatternId(2);
                         }}
                         style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'PATTERN' ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
                       >
@@ -1598,7 +1584,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                       </TouchableOpacity>
                     </View>
 
-                    {/* PRO EFFECTS TIER (Formerly Solid Patterns) */}
+                    {/* PRO EFFECTS TIER */}
                     {fixedSubMode === 'PATTERN' && (
                       <View style={{ flex: 1, paddingBottom: 6 }}>
                         <ScrollView
@@ -1612,43 +1598,23 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                               onPress={() => {
                                 setFixedSubMode('PATTERN');
                                 setFixedPatternId(effect.id);
-
-                                // Immediately push the new 0x51 DIY mode payload
                                 if (writeToDevice) {
-                                  if (effect.id === 1) {
-                                    const localNumLEDs = devices?.[0]?.points || points || 16;
-                                    // Dynamic Solid un-glitch mapping directly inside the picker
-                                    const paddedArray = new Array(localNumLEDs).fill({
-                                      r: Math.round((parseInt((fixedFgColor || '#FF0000').substring(1, 3), 16) || 0) * (brightness / 100)),
-                                      g: Math.round((parseInt((fixedFgColor || '#FF0000').substring(3, 5), 16) || 0) * (brightness / 100)),
-                                      b: Math.round((parseInt((fixedFgColor || '#FF0000').substring(5, 7), 16) || 0) * (brightness / 100))
-                                    });
-                                    // 0x01 = FREEZE to prevent trailing ghosted arrays
-                                    writeToDevice(ZenggeProtocol.setMultiColor(paddedArray, Math.floor(speed / 3) + 1, 1, 0x01));
-                                  } else {
-                                    const hexToRcb = (hex: string) => {
-                                      const h = hex || '#000000';
-                                      return {
-                                        r: parseInt(h.substring(1, 3), 16) || 0,
-                                        g: parseInt(h.substring(3, 5), 16) || 0,
-                                        b: parseInt(h.substring(5, 7), 16) || 0,
-                                      };
+                                  const hexToRgb = (hex: string) => {
+                                    const h = hex || '#000000';
+                                    return {
+                                      r: parseInt(h.substring(1, 3), 16) || 0,
+                                      g: parseInt(h.substring(3, 5), 16) || 0,
+                                      b: parseInt(h.substring(5, 7), 16) || 0,
                                     };
-                                    writeToDevice(ZenggeProtocol.setCustomMode([
-                                      {
-                                        // UI IDs are 1-34; hardware 0x51 modes are 1-33.
-                                        // ID 1 = Solid (0x59 path above). IDs 2-34 → hw modes 1-33 (subtract 1).
-                                        mode: effect.id - 1,
-                                        speed: Math.floor(speed / 3) + 1, // normalize 1-100 to 1-31 (proven 2AM formula)
-                                        color1: hexToRcb(fixedFgColor || '#FF0000'),
-                                        color2: hexToRcb(fixedBgColor || '#000000')
-                                      }
-                                    ]));
-                                  }
-                                }
-
-                                if (effect.id === 1) {
-                                  setFixedColorMode('FOREGROUND');
+                                  };
+                                  writeToDevice(ZenggeProtocol.setCustomModeCompact([
+                                    {
+                                      mode: effect.id,
+                                      speed: speed,
+                                      color1: hexToRgb(fixedFgColor || '#FF0000'),
+                                      color2: hexToRgb(fixedBgColor || '#000000'),
+                                    }
+                                  ]));
                                 }
                               }}
                               style={{ width: '48%', minHeight: 40, marginBottom: 8, flexDirection: 'column', justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
@@ -1987,7 +1953,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                   })()}
 
                   {/* Fixed Pattern Mode Split Color Tracker */}
-                  {(activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' && fixedPatternId !== 1) && (
+                  {(activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') && (
                     <View style={{
                       flexDirection: 'row', width: '100%', height: 18, borderRadius: 9, marginBottom: 4,
                       borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'transparent'
@@ -2275,6 +2241,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                           else writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
                         } else if (activeMode === 'STREET') {
                           applyStreetPattern(motionStateRef.current, brightness, val);
+                        } else if (activeMode === 'EFFECTS') {
+                          const { id, fg, bg } = effectsStateRef.current;
+                          const fgRgb = { r: parseInt(fg.slice(1,3),16)||0, g: parseInt(fg.slice(3,5),16)||0, b: parseInt(fg.slice(5,7),16)||0 };
+                          const bgRgb = { r: parseInt(bg.slice(1,3),16)||0, g: parseInt(bg.slice(3,5),16)||0, b: parseInt(bg.slice(5,7),16)||0 };
+                          writeToDevice(ZenggeProtocol.setCustomMode([{ mode: id, speed: Math.max(1,Math.round(val)), color1: fgRgb, color2: bgRgb }]));
                         }
                       }
                     }}
@@ -2303,15 +2274,19 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         <View style={{ marginBottom: 4 }}>
           <View style={[styles.floatingDock, { marginBottom: 0 }]}>
             {[
-              { id: 'HOME', icon: 'home-outline' },
-              { id: 'FAVORITES', icon: 'cards-heart-outline' },
-              { id: 'MULTI', icon: 'palette' },
-              { id: 'PROGRAMS', icon: 'animation-play' },
-              { id: 'MUSIC', icon: 'music' },
-              { id: 'STREET', icon: 'run-fast' },
-              { id: 'CAMERA', icon: 'camera' }
+              { id: 'HOME',      icon: 'home-outline'         },
+              { id: 'FAVORITES', icon: 'cards-heart-outline'  },
+              { id: 'EFFECTS',   icon: 'lightning-bolt'       },
+              { id: 'MULTI',     icon: 'palette'              },
+              { id: 'PROGRAMS',  icon: 'animation-play'       },
+              { id: 'MUSIC',     icon: 'music'                },
+              { id: 'STREET',    icon: 'run-fast'             },
+              { id: 'CAMERA',    icon: 'camera'               },
             ].map(dockItem => {
-              const isActive = dockItem.id === 'MULTI' ? activeMode === 'MULTIMODE' : activeMode === dockItem.id;
+              const isActive =
+                dockItem.id === 'MULTI'   ? activeMode === 'MULTIMODE' :
+                dockItem.id === 'EFFECTS' ? activeMode === 'EFFECTS'   :
+                activeMode === dockItem.id;
               return (
                 <TouchableOpacity
                   key={dockItem.id}
@@ -2320,6 +2295,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                       if (onDisconnect) onDisconnect();
                     } else if (dockItem.id === 'FAVORITES') {
                       setActiveMode('FAVORITES');
+                    } else if (dockItem.id === 'EFFECTS') {
+                      setActiveMode('EFFECTS');
+                      setLastOperatingMode('EFFECTS');
                     } else if (dockItem.id === 'STREET') {
                       setActiveMode('STREET');
                       setLastOperatingMode('STREET');
@@ -2333,7 +2311,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                       setActiveMode('CAMERA');
                       setLastOperatingMode('CAMERA');
                     } else {
-                      // MULTI -> MULTIMODE
+                      // MULTI -> MULTIMODE (restores to PATTERN submode)
                       setActiveMode('MULTIMODE');
                       setLastOperatingMode('MULTIMODE');
                       setFixedSubMode('PATTERN');

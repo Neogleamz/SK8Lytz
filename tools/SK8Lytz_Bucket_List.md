@@ -6,6 +6,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🔴 High Priority / Next Up
 
+- [/] **#36 — Effects Submode under MultiMode** — Implemented as standalone top-level `EffectsPanel.tsx`. New `EFFECTS` dock icon (lightning-bolt). 33 effect card grid, animated LED strip previews, conditional FG/BG color swatches, speed slider, direct 0x51 dispatch via `ZenggeProtocol.setCustomMode()`. MULTIMODE simplified to Builder-only. Master Reference updated.
+- [x] **#35 — Pro Effects 0x51 regression fixed** — Removed fake "Solid" entry (id:1) that caused all 33 Symphony effects to be off by one. `CustomEffects.ts` IDs now map 1–33 directly to hardware SymphonyEffect IDs. All Solid bypass code scrubbed from `DockedController.tsx`.
 - [ ] **Device Registration & Claim Process Review** — Revisiting the user-to-device ownership flow. Need to brainstorm and build a new implementation plan as the previous extensive one was lost.
 - [ ] **Review Lab Discoveries & Payload Integration** — Review the Lab again to integrate all new protocol discoveries and payload changes made recently (especially 0x51 effects and custom segments).
 - [ ] **#3 — `CrewModal.tsx` refactor** — 14 useEffect hooks, 2,600+ lines. Extract `useCrewHub()` and `useCrewSession()` custom hooks. Highest maintainability debt in the codebase.
@@ -84,4 +86,4 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] Builder UI Stabilization: 8-slot Tactical Grid with Marquee names
 
 ---
-*Last updated: 2026-04-08 | This session: #1, #4, #5, #6, #9-#12, #25, #26, #31-#33 complete. Next: #3, #13, #14.*
+*Last updated: 2026-04-09 | This session: #36 in progress. Next: build APK, test hardware.*
