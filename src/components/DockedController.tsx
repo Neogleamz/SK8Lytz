@@ -854,13 +854,25 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         b: parseInt(bg.substring(5, 7), 16) || 0,
       };
 
-      // Use compact format: only 1 active step (12 bytes raw, 20 bytes wrapped).
-      // Fits in any BLE MTU. Tests if hardware accepts variable-length 0x51.
-      const payload = ZenggeProtocol.setCustomModeCompact([
-        { mode: patternId, speed: currentSpeed, color1: fgRaw, color2: bgRaw },
-      ]);
+      if (patternId === 1) {
+        // Effect #1 is the Solid override that uses classic 0x59 fill instead of 0x51 Custom Mode
+        const hwSpd = Math.max(1, Math.min(31, Math.round((currentSpeed / 100) * 31)));
+        const dimmedFg = {
+          r: Math.round(fgRaw.r * factor),
+          g: Math.round(fgRaw.g * factor),
+          b: Math.round(fgRaw.b * factor)
+        };
+        const arr = new Array(numLEDs).fill(dimmedFg);
+        writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpd, 1, 0x01)); // Type 0x01 = Static
+      } else {
+        // Use compact format: only 1 active step (12 bytes raw, 20 bytes wrapped).
+        // Fits in any BLE MTU. Tests if hardware accepts variable-length 0x51.
+        const payload = ZenggeProtocol.setCustomModeCompact([
+          { mode: patternId, speed: currentSpeed, color1: fgRaw, color2: bgRaw },
+        ]);
 
-      if (payload) writeToDevice(payload);
+        if (payload) writeToDevice(payload);
+      }
     };
 
     const applyEmergencyPattern = (spd: number, bright: number) => {
