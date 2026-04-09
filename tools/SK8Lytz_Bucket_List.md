@@ -11,8 +11,10 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `review-device-reg` : Device Registration & Claim Process Review — Revisiting the user-to-device ownership flow. Need to brainstorm and build a new implementation plan as the previous extensive one was lost.
 - [x] `ftue-initial-setup` : FTUE Phase 1 - Create HardwareSetupWizardScreen with probe scan logic and instructions.
 - [x] `ftue-probe-discovery` : FTUE Phase 2 - Build device discovery list, product identification logic (LED count), and Blink test.
-- [ ] `ftue-claim-registration` : FTUE Phase 3 - Wire offline/online claiming via useRegistration.ts and UI portal integration.
-- [ ] `ftue-grouping-config` : FTUE Phase 4 - Add Mini Hardware Config for assigned positioning and auto-grouping generation.
+- [x] `ftue-claim-registration` : FTUE Phase 3 - Wire offline/online claiming via useRegistration.ts and UI portal integration.
+- [x] `sandbox-testing` : Establish Dev Sandbox — Move Nuke button to Auth, inject Dead-Code eliminated BLE mocks directly into useBLE hook, and clear stale Dashboard mock logic.
+- [x] `ftue-grouping-config` : FTUE Phase 4 - Add Mini Hardware Config for assigned positioning and auto-grouping generation.
+- [x] `fix/hardware-setup-guide-url` : Fix the URL for the 'View Installation Guide' link on the Hardware Setup screen
 
 ### Target: `epic/crew-hub-overhaul`
 
@@ -43,8 +45,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/device-management`
 
 - [ ] `audit-device-grouping` : #16 — Device Grouping Audit & Redesign — A "ghost group" keeps persisting across installs. Audit all grouping logic in `DashboardScreen.tsx`, `AsyncStorage`, and `registered_groups`.
-
-### Target: `epic/crew-hub-overhaul`
+- [ ] `feat/dashboard-collapsible-sections` : Create collapsible sections in Dashboard to separate claimed/registered devices from available devices.
+- [ ] `chore/remove-legacy-grouping` : Restore "edit devices in group" capability and scrub legacy auto-grouping logic (groups must originate solely from Setup or Hardware settings).
 
 - [ ] `refine-crew-hub-layout` : #22 — Crew Hub layout refinement — Spacing, dashboard layout, member count display, and session timer as platform grows.
 
@@ -60,6 +62,10 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ---
 
 ## 🟡 Backlog
+
+### Target: `main`
+
+- [x] `feat/offline-mode-warning-text` : Add descriptive text below the 'Continue Offline' button on the Auth screen detailing horizontal feature lockouts (no crews, sessions, picks, or cloud sync).
 
 ### Target: `epic/telemetry-audit`
 

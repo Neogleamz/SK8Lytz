@@ -48,7 +48,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [hibpChecking, setHibpChecking] = useState(false);
-  const [mode, setMode] = useState<AuthMode>('LOGIN');
+  const [mode, setMode] = useState<AuthMode>('SIGNUP'); // Default FTUE to Sign Up
   const [showPassword, setShowPassword] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<PasswordStrength | null>(null);
@@ -67,6 +67,10 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
       if (raw) {
         try {
           const saved = JSON.parse(raw);
+          if (saved.email) {
+             // If we have any history of this user, default back to Login mode
+             setMode('LOGIN');
+          }
           if (saved.rememberMe) {
             setEmail(saved.email || '');
             setPassword(saved.password || '');
@@ -79,7 +83,10 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
       } else {
         // Fall back to legacy last-email key
         AsyncStorage.getItem(STORAGE_LAST_EMAIL).then(saved => {
-          if (saved) setEmail(saved);
+          if (saved) {
+             setEmail(saved);
+             setMode('LOGIN'); // Same logic, they are returning if they have an email saved
+          }
         });
       }
     });
@@ -288,6 +295,17 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
       {/* FIX 1.1.5: Theme toggle — styles now computed from Colors in render, so toggle re-renders correctly */}
       {/* FIX 1.1.6: Help button uses web-safe showHelp() instead of Alert.alert() */}
       <View style={styles.topButtons}>
+        {__DEV__ && (
+          <TouchableOpacity 
+            style={[styles.topBtn, { borderColor: 'rgba(255,0,0,0.5)', backgroundColor: 'rgba(255,0,0,0.1)' }]} 
+            onPress={async () => {
+               await AsyncStorage.clear();
+               Alert.alert("☢️ Storage Nuked", "All persistent Sandbox/Offline state has been flushed.");
+            }}
+          >
+            <MaterialCommunityIcons name="nuke" size={18} color="red" />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={styles.topBtn} onPress={toggleTheme}>
           <MaterialCommunityIcons
             name={isDark ? 'weather-sunny' : 'weather-night'}
@@ -302,12 +320,15 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
 
-        {/* Logo */}
+        {/* Logo and Welcome */}
         <View style={styles.headerContainer}>
-          <Text style={styles.title}>SK8<Text style={{ color: Colors.primary }}>Lytz</Text></Text>
+          <MaterialCommunityIcons name="roller-skate" size={54} color={Colors.primary || '#00f0ff'} style={{ marginBottom: 16 }} />
+          <Text style={styles.title}>
+            {mode === 'LOGIN' ? 'Welcome Back' : 'Welcome to SK8Lytz'}
+          </Text>
           <Text style={styles.subtitle}>
-            {mode === 'LOGIN' ? 'Welcome back. Sync your fleet.' :
-             mode === 'SIGNUP' ? 'Create an account to backup your setups.' :
+            {mode === 'LOGIN' ? 'Sync your fleet and get rolling.' :
+             mode === 'SIGNUP' ? 'Create an account to backup your setups, or continue offline below.' :
              mode === 'MAGIC_LINK' ? 'Sign in without a password.' :
              'Reset your password'}
           </Text>
@@ -458,7 +479,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         </View>
 
         {/* Offline mode option */}
-        {(mode === 'LOGIN' || mode === 'MAGIC_LINK') && onOfflineMode && (
+        {mode !== 'FORGOT_PASSWORD' && onOfflineMode && (
           <TouchableOpacity
             onPress={async () => {
               if (rememberOffline) {
@@ -470,7 +491,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             activeOpacity={0.7}
           >
             <Text style={styles.offlineButtonText}>📵 Continue Offline</Text>
-            <Text style={styles.offlineButtonSub}>No account needed · Cloud sync disabled</Text>
+            <Text style={styles.offlineButtonSub}>No account needed. Cloud Sync, Crew Hub, Live Sessions, SK8Lytz Picks, and Global Presets will be disabled.</Text>
             
             {/* Remember Checkbox inside button */}
             <TouchableOpacity
@@ -486,6 +507,21 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
               </View>
               <Text style={{ color: Colors.textMuted, fontSize: 13, fontWeight: 'bold' }}>Remember my choice</Text>
             </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+
+        {/* Sandbox mode option */}
+        {__DEV__ && onOfflineMode && (
+          <TouchableOpacity
+            onPress={async () => {
+              await AsyncStorage.setItem('@Sk8lytz_demo_mode', 'true');
+              onOfflineMode();
+            }}
+            style={[styles.offlineButton, { borderColor: 'rgba(255,255,0,0.5)', backgroundColor: 'rgba(255,255,0,0.05)', marginTop: 12 }]}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.offlineButtonText, { color: '#FFE135' }]}>🧪 Dev Sandbox</Text>
+            <Text style={styles.offlineButtonSub}>Injects Virtual Skates & Bypasses Auth</Text>
           </TouchableOpacity>
         )}
 

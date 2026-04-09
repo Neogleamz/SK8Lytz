@@ -23,6 +23,7 @@ import * as ExpoDevice from 'expo-device';
 import { ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, ZENGGE_NOTIFY_UUID, ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 import { Buffer } from 'buffer';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 let BleManager: any;
 let State: any;
@@ -40,6 +41,7 @@ interface BluetoothLowEnergyApi {
   connectToDevices: (devices: Device[]) => Promise<void>;
   disconnectFromDevice: () => void;
   writeToDevice: (payload: number[], targetDeviceId?: string) => Promise<void>;
+  probeDevice: (mac: string) => Promise<void>;
   connectedDevices: Device[];
   allDevices: Device[];
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
@@ -88,6 +90,17 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const [droppedOutDeviceIds, setDroppedOutDeviceIds] = useState<string[]>([]);
   const [isScanProbing, setIsScanProbing] = useState(false);
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
+
+  useEffect(() => {
+    if (__DEV__) {
+      AsyncStorage.getItem('@Sk8lytz_demo_mode').then((isMock) => {
+        if (Platform.OS === 'web' || isMock === 'true') {
+          setIsBluetoothSupported(true);
+          setIsBluetoothEnabled(true);
+        }
+      });
+    }
+  }, []);
   const disconnectListeners = useRef<Record<string, import('react-native-ble-plx').Subscription>>({});
   // Use ref (not state) so handleNotification always reads the CURRENT callback
   // without the stale closure problem — useState captures the value at subscription time
@@ -190,9 +203,64 @@ export default function useBLE(): BluetoothLowEnergyApi {
     setIsScanning(true);
     setAllDevices([]);
     
-    if (!bleManager) {
-      setTimeout(() => setIsScanning(false), 500);
-      return;
+    if (__DEV__) {
+      AsyncStorage.getItem('@Sk8lytz_demo_mode').then((isMock) => {
+        if (Platform.OS === 'web' || isMock === 'true') {
+          console.log('[useBLE] Sandbox Mode Active: Injecting Mock Peripherals');
+          setTimeout(() => {
+            const mockDevices = [
+              { 
+                id: 'sim-DE:M0:HA:L0:00:01', name: 'HALOZ Left Skate', type: 'HALOZ',
+                points: 11, segments: 2, sorting: 'GRB', stripType: 'WS2812B', rssi: -45, serviceUUIDs: [ZENGGE_SERVICE_UUID], manufacturerData: 'AAAAAAAAAAAz'
+              },
+              { 
+                id: 'sim-DE:M0:HA:L0:00:02', name: 'HALOZ Right Skate', type: 'HALOZ',
+                points: 11, segments: 2, sorting: 'GRB', stripType: 'WS2812B', rssi: -55, serviceUUIDs: [ZENGGE_SERVICE_UUID], manufacturerData: 'AAAAAAAAAAAz'
+              },
+              { 
+                id: 'sim-DE:M0:S0:UL:00:01', name: 'SOULZ Left Skate', type: 'SOULZ',
+                points: 43, segments: 1, sorting: 'GRB', stripType: 'WS2812B', rssi: -42, serviceUUIDs: [ZENGGE_SERVICE_UUID], manufacturerData: 'AAAAAAAAAAAz'
+              },
+              { 
+                id: 'sim-DE:M0:S0:UL:00:02', name: 'SOULZ Right Skate', type: 'SOULZ',
+                points: 43, segments: 1, sorting: 'GRB', stripType: 'WS2812B', rssi: -85, serviceUUIDs: [ZENGGE_SERVICE_UUID], manufacturerData: 'AAAAAAAAAAAz'
+              }
+            ] as any[];
+            setAllDevices(mockDevices);
+            
+            // Map the parsed elements so they classify correctly in the FTUE parser hook
+            const pendingMocks = mockDevices.map(device => {
+               AppLogger.log('DEVICE_DISCOVERED', { 
+                 id: device.id, name: device.name, rssi: device.rssi, points: device.points
+               });
+               return {
+                 device_mac: device.id,
+                 device_name: device.name,
+                 product_type: device.type,
+                 position: device.name.includes('Left') ? 'Left' : 'Right',
+                 group_name: '',
+                 led_points: device.points ?? 0,
+                 segments: device.segments ?? 1,
+                 ic_type: device.stripType ?? 'WS2812B',
+                 color_sorting: device.sorting ?? 'GRB',
+                 rssi: device.rssi ?? -50,
+                 firmware_ver: 200,
+                 product_id: 115,
+               } as PendingRegistration;
+            });
+            setPendingRegistrations(pendingMocks);
+            setIsScanning(false);
+          }, 500);
+        } else if (!bleManager) {
+          setTimeout(() => setIsScanning(false), 500);
+        }
+      });
+      if (Platform.OS === 'web') return;
+    } else {
+      if (!bleManager) {
+        setTimeout(() => setIsScanning(false), 500);
+        return;
+      }
     }
 
     bleManager.startDeviceScan(null, null, (error: any, device: any) => {
@@ -342,45 +410,12 @@ export default function useBLE(): BluetoothLowEnergyApi {
         await conn.discoverAllServicesAndCharacteristics();
 
         // Collect the first 0x63 response via a one-shot promise
-        const hwConfig = await new Promise<any>((resolve) => {
-          const timer = setTimeout(() => {
-            sub.remove();
-            resolve(null); // timed out — no response
-          }, 2500);
-
-          const sub = conn.monitorCharacteristicForService(
-            ZENGGE_SERVICE_UUID,
-            ZENGGE_NOTIFY_UUID,
-            (err: any, char: any) => {
-              if (err || !char?.value) return;
-              try {
-                const raw = Array.from(Buffer.from(char.value, 'base64')) as number[];
-                const parsed = ZenggeProtocol.parseHardwareSettingsResponse(raw);
-                if (parsed) {
-                  clearTimeout(timer);
-                  sub.remove();
-                  resolve(parsed);
-                }
-              } catch (e) { /* ignore parse errors */ }
-            }
-          );
-
-          // Send the 0x63 query
-          const qp = ZenggeProtocol.queryHardwareSettings(false);
-          const b64 = Buffer.from(qp).toString('base64');
-          conn.writeCharacteristicWithoutResponseForService(
-            ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
-          ).catch((e: any) => console.warn('[BLE Probe] query write failed', e));
-        });
-
-        // Disconnect probe connection cleanly
-        try {
-          await bleManager.cancelDeviceConnection(device.id);
-        } catch (e) { /* ignore disconnect errors */ }
+        const hwConfig = await probeDevice(device.id);
 
         if (hwConfig && hardwareProbedCallbackRef.current) {
           console.log(`[BLE Probe] Got config for ${device.id}:`, hwConfig);
           hardwareProbedCallbackRef.current(device.id, hwConfig);
+
         }
 
         // Brief pause between probes to let GATT stack recover
@@ -396,11 +431,65 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
     setIsScanProbing(false);
     console.log('[BLE Probe] Background probe complete.');
-
-    // ── Auto-classify after probe ──────────────────────────────────────────────
-    // Builds pendingRegistrations[] for FirstTimeSetupModal.
-    // Only fires when external code sets a callback needing classifications.
     classifyProbeResults();
+  };
+
+  /**
+   * Probes a single device synchronously returning a promise of its hardware config.
+   * Can be used to verify EEPROM saves (such as adjusting LED points).
+   */
+  const probeDevice = async (mac: string): Promise<any> => {
+    if (Platform.OS === 'web' || !bleManager) return null;
+    
+    // Connect locally if not connected. Wait, if it *is* already connected, we don't disconnect.
+    const alreadyConn = await bleManager.isDeviceConnected(mac).catch(() => false);
+    
+    try {
+      if (!alreadyConn) {
+        await bleManager.connectToDevice(mac, { timeout: 5000 });
+        await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
+      }
+      
+      const hwConfig = await new Promise<any>((resolve) => {
+        const timer = setTimeout(() => {
+          sub.remove();
+          resolve(null);
+        }, 2500);
+
+        const sub = bleManager.monitorCharacteristicForDevice(
+          mac,
+          ZENGGE_SERVICE_UUID,
+          ZENGGE_NOTIFY_UUID,
+          (err: any, char: any) => {
+            if (err || !char?.value) return;
+            try {
+              const raw = Array.from(Buffer.from(char.value, 'base64')) as number[];
+              const parsed = ZenggeProtocol.parseHardwareSettingsResponse(raw);
+              if (parsed) {
+                clearTimeout(timer);
+                sub.remove();
+                resolve(parsed);
+              }
+            } catch (e) { /* ignore */ }
+          }
+        );
+
+        const qp = ZenggeProtocol.queryHardwareSettings(false);
+        const b64 = Buffer.from(qp).toString('base64');
+        bleManager.writeCharacteristicWithoutResponseForDevice(
+          mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
+        ).catch((e: any) => console.warn('[BLE Probe Single] query write failed', e));
+      });
+
+      return hwConfig;
+    } catch (err) {
+      console.warn(`[BLE Probe Single] Failed to probe ${mac}:`, err);
+      return null;
+    } finally {
+      if (!alreadyConn) {
+        await bleManager.cancelDeviceConnection(mac).catch(() => {});
+      }
+    }
   };
 
   /**
@@ -462,12 +551,29 @@ export default function useBLE(): BluetoothLowEnergyApi {
     try {
       const connectStartTime = Date.now();
       
-      if (Platform.OS === 'web') {
-        setConnectedDevices([device]);
+      let isMock = 'false';
+      if (__DEV__) {
+         isMock = await AsyncStorage.getItem('@Sk8lytz_demo_mode') || 'false';
+      }
+
+      if (Platform.OS === 'web' || isMock === 'true') {
+        setConnectedDevices(prev => {
+          if (!prev.find(d => d.id === device.id)) return [...prev, device];
+          return prev;
+        });
         AppLogger.log('DEVICE_CONNECTED', { id: device.id, name: device.name, firmware: 'v2.0.1.DEMO' });
+        
+        // Mock hardware trickle data to prove connection is alive
+        if (dataReceivedCallbackRef.current) {
+          setTimeout(() => {
+             // Mock standard hardware parameters notification packet
+             // [0x66, 0x14, 0x22, 0x01, ...]
+             const mockPacket = [0x66, 0x14, 0x22, 0x01, 0x01, 0x33, 0x01, 0x55, 0x66, 0x99];
+             dataReceivedCallbackRef.current!(device.id, mockPacket);
+          }, 1000);
+        }
         return 'v2.0.1.DEMO';
       }
-      
       const deviceConnection = await bleManager.connectToDevice(device.id);
       setConnectedDevices([deviceConnection]);
       await deviceConnection.discoverAllServicesAndCharacteristics();
@@ -562,11 +668,27 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const connectToDevices = async (devices: Device[]) => {
     if (devices.length === 0) return;
     try {
-      if (Platform.OS === 'web') {
+      let isMock = 'false';
+      if (__DEV__) {
+         isMock = await AsyncStorage.getItem('@Sk8lytz_demo_mode') || 'false';
+      }
+
+      if (Platform.OS === 'web' || isMock === 'true') {
         setConnectedDevices(devices);
         devices.forEach(d => {
           AppLogger.log('DEVICE_CONNECTED', { id: d.id, name: d.name, firmware: 'v2.0.1.DEMO' });
         });
+        
+        // Mock hardware trickle data to prove connection is alive
+        if (dataReceivedCallbackRef.current) {
+          setTimeout(() => {
+             devices.forEach(d => {
+               // [0x66, 0x14, 0x22, 0x01, ...]
+               const mockPacket = [0x66, 0x14, 0x22, 0x01, 0x01, 0x33, 0x01, 0x55, 0x66, 0x99];
+               dataReceivedCallbackRef.current!(d.id, mockPacket);
+             });
+          }, 1000);
+        }
         return;
       }
       
@@ -742,6 +864,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     setDroppedOutDeviceIds,
     pendingRegistrations,
     clearPendingRegistrations: () => setPendingRegistrations([]),
+    probeDevice,
   }), [
     allDevices, 
     connectedDevices, 

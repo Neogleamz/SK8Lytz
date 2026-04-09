@@ -8,7 +8,27 @@ This document is the **Canonical Reference** for all architecture, hardware cons
 
 ---
 
-## 1. System Architecture & Local Storage
+## 1. Product Bible (Vision & North Star)
+
+**The Mission:** 
+To power the vibrant culture of roller skating by building the definitive lighting control engine for SK8Lytz HALOZ and SOULZ hardware. SK8Lytz isn't just an app; it's the digital nervous system for your skates—enabling flawless, zero-latency light synchronization that elevates both solo flow sessions and massive Crew Hub rink takeovers.
+
+**Target Audience:**
+Dedicated, active roller skaters. They operate in chaotic, low-light environments like rinks, parks, and night street sessions. They are likely wearing wrist guards, moving fast, and dealing with terrible Wi-Fi/LTE reception inside metallic rink structures. 
+
+**Core Philosophies (The 3 Pillars):**
+1. **Bulletproof BLE Transport:** The connection to Zengge-based ESP hardware MUST be instant and automatic. Features like group pairing and reconnects must handle GATT exceptions and MTU chunking invisibly. "It just works, immediately." 
+2. **Tactile, Glanceable UI:** We use the Neogleamz aesthetic—vibrant, high contrast, and robust. Touch targets are massive (>44px) so a skater can swipe into a Symphony Effect or engage the App Microphone visualizer in under two seconds without squinting or removing protective gear.
+3. **No-Compromise Offline Flow:** The party doesn't stop because of a cell tower deadzone. Users can fully bypass Supabase cloud authentication and control their entire LED rig seamlessly via the native Offline mode.
+
+**Anti-Goals (What we ruthlessly reject):**
+- **Bloated Developer Logic in Prod:** We do not ship "janky" dev toggles to production. We use strict `__DEV__` Sandbox elimination (e.g., AuthScreen Nuke features) to ensure real users never hit testing debris.
+- **Complex UI Micro-Management:** We will not build tedious, timeline-based animation nodes. Skaters want to skate, not edit video timelines. Give them stunning Pro Effects, a quick color wheel, and a speed slider. Done.
+- **Cloud-Dependent Hardware Walls:** We never lock basic hardware lighting configuration (0x63 queries or 0x62 EEPROM writes) behind an internet authentication wall.
+
+---
+
+## 2. System Architecture & Local Storage
 
 ### AsyncStorage Key Registry
 | Key | Owner | Contents |
