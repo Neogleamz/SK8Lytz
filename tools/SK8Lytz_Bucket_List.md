@@ -6,8 +6,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🔴 High Priority / Next Up
 
-- [/] **#36 — Effects Submode under MultiMode** — Implemented as standalone top-level `EffectsPanel.tsx`. New `EFFECTS` dock icon (lightning-bolt). 33 effect card grid, animated LED strip previews, conditional FG/BG color swatches, speed slider, direct 0x51 dispatch via `ZenggeProtocol.setCustomMode()`. MULTIMODE simplified to Builder-only. Master Reference updated.
-- [x] **#35 — Pro Effects 0x51 regression fixed** — Removed fake "Solid" entry (id:1) that caused all 33 Symphony effects to be off by one. `CustomEffects.ts` IDs now map 1–33 directly to hardware SymphonyEffect IDs. All Solid bypass code scrubbed from `DockedController.tsx`.
 - [ ] **Device Registration & Claim Process Review** — Revisiting the user-to-device ownership flow. Need to brainstorm and build a new implementation plan as the previous extensive one was lost.
 - [ ] **Review Lab Discoveries & Payload Integration** — Review the Lab again to integrate all new protocol discoveries and payload changes made recently (especially 0x51 effects and custom segments).
 - [ ] **#3 — `CrewModal.tsx` refactor** — 14 useEffect hooks, 2,600+ lines. Extract `useCrewHub()` and `useCrewSession()` custom hooks. Highest maintainability debt in the codebase.
@@ -46,6 +44,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## ✅ Completed This Session (Apr 2026)
 
+- [x] **#36 — Pro Effects + Effects Mode fully restored** — `EffectsPanel.tsx` standalone mode working. BREAKTHROUGH: hardware accepts variable-length 0x51 packets (compact format: 1 active step = 20 bytes wrapped vs 299 bytes). `setCustomModeCompact()` added to `ZenggeProtocol.ts`. All 33 Pro Effects confirmed working on hardware.
+- [x] **#35 — Pro Effects 0x51 regression diagnosis** — Root cause found: full 32-slot 291-byte payload exceeded BLE MTU (186 bytes default). Variable-length format bypasses MTU completely. useBLE.ts updated with MTU-aware chunked writes for other large payloads.
 - [x] **#1 — Positional Array Builder UI** — Builder submode in MULTIMODE with node-based gradient interface
 - [x] **#4 — Crew Hub: private crew invite code display** — Private crew cards show invite code under "My Crews"
 - [x] **#5 — DIY Array Builder retired** — Fully replaced by new Builder workflow; legacy DIY mode scrubbed
@@ -86,4 +86,4 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] Builder UI Stabilization: 8-slot Tactical Grid with Marquee names
 
 ---
-*Last updated: 2026-04-09 | This session: #36 in progress. Next: build APK, test hardware.*
+*Last updated: 2026-04-09 | This session: Pro Effects (#36) COMPLETE ✅. Next: Device Registration review, Lab integration.*
