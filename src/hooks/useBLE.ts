@@ -22,6 +22,7 @@ import type { Device } from 'react-native-ble-plx';
 import * as ExpoDevice from 'expo-device';
 import { ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, ZENGGE_NOTIFY_UUID, ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
+import { supabase } from '../services/supabaseClient';
 import { Buffer } from 'buffer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -354,6 +355,42 @@ export default function useBLE(): BluetoothLowEnergyApi {
                 productId,
                 serviceUUIDs: device.serviceUUIDs || [],
               });
+              // Push raw telemetry to Supabase unconditionally (if session online) so we have a live map of the environment
+              if (supabase) {
+                // We use an asynchronous fire-and-forget sync wrapper
+                (async () => {
+                   try {
+                     // Check if device already exists to avoid overwriting user_id if claimed
+                     const { data: existing } = await supabase.from('registered_devices').select('user_id').eq('device_mac', device.id).maybeSingle();
+                     
+                     const telemetryPayload: any = {
+                       device_mac: device.id,
+                       device_name: device.name || 'Unknown SK8Lytz',
+                       firmware_ver: firmwareVer || null,
+                       led_version: ledVersion || null,
+                       product_id: productId || null,
+                       rssi_at_register: device.rssi,
+                       updated_at: new Date().toISOString()
+                     };
+                     
+                     // If it's totally new, give it some safe defaults for the NOT NULL columns
+                     if (!existing) {
+                       telemetryPayload.product_type = nameLower.includes('halo') ? 'HALOZ' : 'SOULZ';
+                       telemetryPayload.group_name = 'Unclaimed';
+                       telemetryPayload.position = null;
+                     }
+                     // If existing is present, it maintains its user_id because we omit it in the payload.
+                     
+                     // Use the UPSERT operation matching device_mac
+                     await supabase.from('registered_devices').upsert(telemetryPayload, { onConflict: 'device_mac', ignoreDuplicates: false }).catch(() => {
+                       // Silently drop errors if constraint is purely user_id,device_mac 
+                       // fallback upsert trial using the combined constraint
+                       supabase.from('registered_devices').upsert(telemetryPayload, { onConflict: 'user_id,device_mac', ignoreDuplicates: false }).catch(() => {});
+                     });
+                   } catch(e) {}
+                })();
+              }
+
               return [...prevState, device];
             }
             return prevState;

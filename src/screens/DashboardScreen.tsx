@@ -41,7 +41,7 @@ import LogViewerModal from '../components/LogViewerModal';
 import CrewModal from '../components/CrewModal';
 import { crewService, CrewSession, CrewRole } from '../services/CrewService';
 import Sk8LytzDiagnosticLab from '../components/Sk8LytzDiagnosticLab';
-import FirstTimeSetupModal from '../components/FirstTimeSetupModal';
+
 import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
 import { supabase } from '../services/supabaseClient';
 import { useRegistration, RegisteredDevice } from '../hooks/useRegistration';
@@ -49,7 +49,7 @@ import AccountModal from '../components/AccountModal';
 import CrewMemberDashboard from '../components/CrewMemberDashboard';
 import { profileService } from '../services/ProfileService';
 import { notificationService } from '../services/NotificationService';
-import DeviceRegistrationModal from '../components/DeviceRegistrationModal';
+
 
 interface DeviceSettings {
   name: string;
@@ -1513,6 +1513,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   <Text style={[Typography.caption, { color: Colors.text, opacity: 0.7 }]}>
                     {isScanning ? 'Scanning...' : 'No devices found.'}
                   </Text>
+                  {!isScanning && (
+                    <TouchableOpacity 
+                      onPress={() => setIsSetupWizardVisible(true)}
+                      style={{ marginTop: 24, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, backgroundColor: 'rgba(0, 240, 255, 0.1)', borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.3)' }}
+                    >
+                      <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 12, letterSpacing: 1 }}>MANUAL REGISTRATION</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               ) : null
             }
@@ -1541,7 +1549,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           isVisible={isGroupModalVisible}
           onClose={() => setIsGroupModalVisible(false)}
           onSave={saveGroup}
-          onDelete={groupModalMode === 'rename' && editingGroupId ? () => deleteGroup(editingGroupId) : undefined}
+          onDelete={groupModalMode === 'rename' && editingGroupId ? () => handleGroupDelete(editingGroupId) : undefined}
           initialName={groupModalMode === 'rename' ? customGroups.find(g => g.id === editingGroupId)?.name : 'My SK8Lytz'}
           initialDeviceIds={groupModalMode === 'rename' ? customGroups.find(g => g.id === editingGroupId)?.deviceIds : selectedIds}
           allDevices={allDevices}
@@ -1666,18 +1674,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       />
       {/* HardwareSetupWizardScreen is conditionally returned at the top level instead of here */}
 
-      {/* Single-device quick-register — slides up when returning user connects a new unclaimed device */}
-      <DeviceRegistrationModal
-        device={pendingNewDevice}
-        existingGroups={[...new Set(registeredDevices.map((d: any) => d.group_name).filter(Boolean))]}
-        onDismiss={() => { setPendingNewDevice(null); wizardCheckedRef.current = false; clearPendingRegistrations(); }}
-        onRegistered={async (rd) => {
-          await saveRegisteredDevice(rd);
-          setPendingNewDevice(null);
-          clearPendingRegistrations();
-          wizardCheckedRef.current = false;
-        }}
-      />
+
 
       {/* Crew Hub Modal */}
       <CrewModal

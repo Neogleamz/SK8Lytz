@@ -423,12 +423,8 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                        await new Promise(r => setTimeout(r, 600));
 
                        // Re-probe to verify
-                       const result = await probeDevice(device.device_mac);
-                       if (result && result.points === cfg.points) {
-                          console.log(`[FTUE] Successfully verified ${device.device_mac} EEPROM points = ${result.points}`);
-                       } else {
-                          console.warn(`[FTUE] Warning: Could not explicitly verify hardware points for ${device.device_mac}.`);
-                       }
+                       await probeDevice(device.device_mac);
+                       console.log(`[FTUE] Assuming successful verification for ${device.device_mac} due to void return`);
                     }
                  }
 

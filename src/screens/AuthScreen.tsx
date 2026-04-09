@@ -532,6 +532,26 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           </Text>
         )}
 
+        {/* The Nuke Button */}
+        <TouchableOpacity
+          style={{
+            marginTop: 30,
+            alignSelf: 'center',
+            backgroundColor: 'rgba(255, 0, 0, 0.1)',
+            paddingVertical: 10,
+            paddingHorizontal: 20,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: 'rgba(255, 0, 0, 0.4)'
+          }}
+          onPress={async () => {
+            await AsyncStorage.clear();
+            setErrorMessage('APP RESET: ALL DATA CLEARED. PLEASE RESTART APP.');
+          }}
+        >
+          <Text style={{ color: '#FF4444', fontWeight: 'bold', fontSize: 12 }}>☢️ NUKE APP CACHE</Text>
+        </TouchableOpacity>
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
