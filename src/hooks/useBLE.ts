@@ -387,6 +387,11 @@ export default function useBLE(): BluetoothLowEnergyApi {
                        // fallback upsert trial using the combined constraint
                        supabase.from('registered_devices').upsert(telemetryPayload, { onConflict: 'user_id,device_mac', ignoreDuplicates: false }).catch(() => {});
                      });
+
+                     // Provide the user_id back to local state so LogParser can display exactly who owns it!
+                     if (existing?.user_id) {
+                       setAllDevices(prev => prev.map(d => d.id === device.id ? Object.assign(d, { owner_id: existing.user_id }) : d));
+                     }
                    } catch(e) {}
                 })();
               }
