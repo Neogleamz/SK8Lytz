@@ -1450,10 +1450,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   );
 
   if (isSetupWizardVisible) {
-    return <HardwareSetupWizardScreen onSetupComplete={() => {
-      // Stub for Phase 1 - dismiss wizard temporarily. Phase 2/3 will route to claims logic.
-      setIsSetupWizardVisible(false);
-    }} />;
+    return <HardwareSetupWizardScreen onSetupComplete={(devices) => handleRegistrationComplete(devices)} />;
   }
 
   return (

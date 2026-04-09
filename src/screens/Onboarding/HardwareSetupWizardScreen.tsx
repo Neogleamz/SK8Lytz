@@ -7,7 +7,7 @@ import useBLE from '../../hooks/useBLE';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 
 interface HardwareSetupWizardScreenProps {
-  onSetupComplete: () => void;
+  onSetupComplete: (devices: any[]) => Promise<void> | void;
 }
 
 export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareSetupWizardScreenProps) {
@@ -17,6 +17,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
   const [hasStartedScan, setHasStartedScan] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [isBlinking, setIsBlinking] = useState<string | null>(null);
+  const [isClaiming, setIsClaiming] = useState(false);
 
   useEffect(() => {
     // Transition to step 2 when devices are successfully probed and classified
@@ -54,8 +55,6 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
   const renderStep1 = () => (
     <View style={styles.content}>
       <MaterialCommunityIcons name="roller-skate" size={64} color={Colors.primary || '#00f0ff'} style={{ marginBottom: 20 }} />
@@ -170,14 +169,27 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
           </TouchableOpacity>
         ) : (
           <TouchableOpacity 
-            style={styles.primaryBtn} 
-            onPress={() => {
-               console.log('[FTUE] Phase 2 Complete (Mock). Transitioning to Phase 3/4.');
-               // For now, auto-complete to unblock until Phase 3/4 is merged.
-               onSetupComplete();
+            style={[styles.primaryBtn, isClaiming && styles.primaryBtnDisabled]} 
+            disabled={isClaiming}
+            onPress={async () => {
+               console.log('[FTUE] Phase 2/3 Complete. Transitioning to Phase 4.');
+               setIsClaiming(true);
+               try {
+                 await onSetupComplete(pendingRegistrations);
+               } finally {
+                 // Component might unmount here, but if not, reset spinner
+                 setIsClaiming(false);
+               }
             }}
           >
-            <Text style={styles.primaryBtnText}>CONTINUE TO SETUP →</Text>
+            {isClaiming ? (
+              <View style={styles.scanningRow}>
+                <ActivityIndicator color="#000" size="small" />
+                <Text style={styles.primaryBtnText}>CLAIMING DEVICES...</Text>
+              </View>
+            ) : (
+              <Text style={styles.primaryBtnText}>CLAIM THESE DEVICES →</Text>
+            )}
           </TouchableOpacity>
         )}
       </View>
