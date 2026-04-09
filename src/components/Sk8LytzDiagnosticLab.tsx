@@ -347,8 +347,10 @@ export default function Sk8LytzDiagnosticLab({
                 </Text>
                 {registeredDevices.some(rd => rd.device_mac === d.id) ? (
                   <Text style={{ color: '#FFD700', fontSize: 10, fontWeight: '700', marginTop: 2 }}>★ REGISTERED TO YOU</Text>
-                ) : d.owner_id ? (
-                  <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: '700', marginTop: 2 }}>🔒 CLAIMED BY: {d.owner_id.substring(0,8)}...</Text>
+                ) : (d.owner_ids && d.owner_ids.length > 0) ? (
+                  <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: '700', marginTop: 2 }}>
+                    🔒 CLAIMED BY: {d.owner_ids.length > 1 ? `${d.owner_ids.length} USERS` : `${d.owner_ids[0].substring(0,8)}...`}
+                  </Text>
                 ) : (
                   <Text style={{ color: txtMuted, fontSize: 10, fontStyle: 'italic', marginTop: 2 }}>Unregistered (Telemetry Active)</Text>
                 )}

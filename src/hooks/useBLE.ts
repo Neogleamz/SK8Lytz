@@ -360,9 +360,11 @@ export default function useBLE(): BluetoothLowEnergyApi {
                 // We use an asynchronous fire-and-forget sync wrapper
                 (async () => {
                    try {
-                     // Check if device already exists to avoid overwriting user_id if claimed
-                     const { data: existing } = await supabase.from('registered_devices').select('user_id').eq('device_mac', device.id).maybeSingle();
+                     // Query ALL rows matching this device to support multi-user ownership
+                     const { data: existingRows } = await supabase.from('registered_devices').select('user_id').eq('device_mac', device.id);
                      
+                     const ownerIds = (existingRows || []).map((r: any) => r.user_id).filter(Boolean);
+
                      const telemetryPayload: any = {
                        device_mac: device.id,
                        device_name: device.name || 'Unknown SK8Lytz',
@@ -374,7 +376,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
                      };
                      
                      // If it's totally new, give it some safe defaults for the NOT NULL columns
-                     if (!existing) {
+                     if (ownerIds.length === 0) {
                        telemetryPayload.product_type = nameLower.includes('halo') ? 'HALOZ' : 'SOULZ';
                        telemetryPayload.group_name = 'Unclaimed';
                        telemetryPayload.position = null;
@@ -389,8 +391,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
                      });
 
                      // Provide the user_id back to local state so LogParser can display exactly who owns it!
-                     if (existing?.user_id) {
-                       setAllDevices(prev => prev.map(d => d.id === device.id ? Object.assign(d, { owner_id: existing.user_id }) : d));
+                     if (ownerIds.length > 0) {
+                       setAllDevices(prev => prev.map(d => d.id === device.id ? Object.assign(d, { owner_ids: ownerIds }) : d));
                      }
                    } catch(e) {}
                 })();
