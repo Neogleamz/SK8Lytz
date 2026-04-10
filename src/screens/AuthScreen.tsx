@@ -56,7 +56,14 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
   const [successMessage, setSuccessMessage] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [rememberOffline, setRememberOffline] = useState(false);
+  const [isSandboxEnabled, setIsSandboxEnabled] = useState(false);
   const strengthAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    AsyncStorage.getItem('@Sk8lytz_demo_mode').then(val => {
+      setIsSandboxEnabled(val === 'true');
+    });
+  }, []);
 
   // Derive styles reactively from Colors so theme toggle re-renders instantly
   const styles = createStyles(Colors, insets);
@@ -514,21 +521,24 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         {__DEV__ && (
           <TouchableOpacity
             onPress={async () => {
-              const current = await AsyncStorage.getItem('@Sk8lytz_demo_mode');
-              const nextState = current === 'true' ? 'false' : 'true';
-              await AsyncStorage.setItem('@Sk8lytz_demo_mode', nextState);
+              const nextState = !isSandboxEnabled;
+              setIsSandboxEnabled(nextState);
+              await AsyncStorage.setItem('@Sk8lytz_demo_mode', String(nextState));
               import('react-native').then(rn => {
                 rn.Alert.alert(
                   'Developer Sandbox', 
-                  `Virtual Skates & Demo features are now ${nextState === 'true' ? 'ENABLED' : 'DISABLED'}. Restart Bluetooth or refresh to apply.`
+                  `Virtual Skates & Demo features are now ${nextState ? 'ENABLED' : 'DISABLED'}. Restart Bluetooth or refresh to apply.`
                 );
               });
             }}
-            style={[styles.offlineButton, { borderColor: 'rgba(255,255,0,0.5)', backgroundColor: 'rgba(255,255,0,0.05)', marginTop: 12 }]}
+            style={[styles.offlineButton, { borderColor: isSandboxEnabled ? 'rgba(0,255,0,0.5)' : 'rgba(255,255,0,0.5)', backgroundColor: isSandboxEnabled ? 'rgba(0,255,0,0.05)' : 'rgba(255,255,0,0.05)', marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }]}
             activeOpacity={0.7}
           >
-            <Text style={[styles.offlineButtonText, { color: '#FFE135' }]}>🧪 Toggle Dev Sandbox</Text>
-            <Text style={styles.offlineButtonSub}>Injects Virtual Skates & UI Overrides</Text>
+            <MaterialCommunityIcons name={isSandboxEnabled ? "checkbox-marked" : "checkbox-blank-outline"} size={20} color={isSandboxEnabled ? "#00FF00" : "#FFE135"} />
+            <View style={{ alignItems: 'center' }}>
+              <Text style={[styles.offlineButtonText, { color: isSandboxEnabled ? '#00FF00' : '#FFE135' }]}>Toggle Dev Sandbox</Text>
+              <Text style={styles.offlineButtonSub}>Injects Virtual Skates & UI Overrides</Text>
+            </View>
           </TouchableOpacity>
         )}
 

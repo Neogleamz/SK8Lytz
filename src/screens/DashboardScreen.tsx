@@ -167,6 +167,22 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
   const [isSnifferVisible, setIsSnifferVisible] = useState(false);
   const [isLabVisible, setIsLabVisible] = useState(false);
+  const [logoClickCount, setLogoClickCount] = useState(0);
+  const [logoClickTimer, setLogoClickTimer] = useState<any>(null);
+  const [isPasscodePromptVisible, setIsPasscodeVisible] = useState(false);
+  const [passcodeVal, setPasscodeVal] = useState('');
+
+  const handleLogoClick = () => {
+    setLogoClickCount(prev => prev + 1);
+    if (logoClickTimer) clearTimeout(logoClickTimer);
+    setLogoClickTimer(setTimeout(() => setLogoClickCount(0), 1000));
+    
+    if (logoClickCount + 1 >= 10) {
+      setLogoClickCount(0);
+      setIsPasscodeVisible(true);
+    }
+  };
+
   const [isSetupWizardVisible, setIsSetupWizardVisible] = useState(false);
   const [isCheckingRegistrations, setIsCheckingRegistrations] = useState(true);
   const lastProcessedRef = React.useRef<string>('');
@@ -1274,7 +1290,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           </View>
 
           {/* CENTER: logo + discovered status */}
-          <TouchableOpacity activeOpacity={1} style={{ position: 'relative', alignItems: 'center' }}>
+          <TouchableOpacity activeOpacity={1} style={{ position: 'relative', alignItems: 'center' }} onPress={handleLogoClick}>
             <Image source={require('../../assets/logo.png')} style={{ width: 80, height: 24 }} resizeMode="contain" tintColor={Colors.text} />
             {(() => {
               const connectedCount = displayConnectedDevices.length;
@@ -1366,7 +1382,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
           {/* CENTER: logo */}
           <View style={{ flex: 1, alignItems: 'center' }}>
-            <TouchableOpacity activeOpacity={1} style={{ position: 'relative', alignItems: 'center' }}>
+            <TouchableOpacity activeOpacity={1} style={{ position: 'relative', alignItems: 'center' }} onPress={handleLogoClick}>
               <Image source={require('../../assets/logo.png')} style={{ width: 110, height: 32 }} resizeMode="contain" tintColor={Colors.text} />
             </TouchableOpacity>
           </View>
@@ -1740,6 +1756,35 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         connectToDevice={async (d: any) => { await connectToDevice(d); }}
         liveDeviceConfigs={deviceConfigs}
       />
+      {/* Easter Egg Lab Access */}
+      <Modal visible={isPasscodePromptVisible} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ width: 300, backgroundColor: Colors.surface, padding: 24, borderRadius: 16, borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, alignItems: 'center' }}>
+            <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '800', marginBottom: 12 }}>Diagnostix Auth</Text>
+            <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 20, textAlign: 'center' }}>Enter authorization code to unlock the hardware diagnostic laboratory.</Text>
+            <TextInput
+              style={{ width: '100%', height: 50, backgroundColor: Colors.background, color: Colors.text, borderRadius: 8, paddingHorizontal: 16, fontSize: 24, letterSpacing: 8, textAlign: 'center', fontWeight: '800', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginBottom: 20 }}
+              secureTextEntry
+              keyboardType="number-pad"
+              autoFocus
+              maxLength={4}
+              value={passcodeVal}
+              onChangeText={(t) => {
+                setPasscodeVal(t);
+                if (t === '0000') {
+                  setPasscodeVal('');
+                  setIsPasscodeVisible(false);
+                  setIsLabVisible(true);
+                }
+              }}
+            />
+            <TouchableOpacity onPress={() => { setIsPasscodeVisible(false); setPasscodeVal(''); }} style={{ padding: 12 }}>
+              <Text style={{ color: Colors.secondary, fontWeight: 'bold' }}>CANCEL</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* HardwareSetupWizardScreen is conditionally returned at the top level instead of here */}
 
 
