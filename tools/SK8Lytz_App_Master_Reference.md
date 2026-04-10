@@ -162,17 +162,18 @@ Every inner protocol payload must be wrapped using the standard 8-byte Zengge V2
 
 ---
 
-## 4. UI & Platform Guardrails
+## 5. Agentic PM Protocols & Developer Tooling
 
-All UI components must adhere strictly to these constraints:
+This section documents the custom AI logic engine that manages the codebase. These rules are stored in `.agents/rules/` and are enforced by the AI Agent during development.
 
-### Responsive Layout
-- Avoid fixed pixel values (e.g. `width: 300`) unless mapping an unscalable SVG. Use `flex`, `%`, or viewport metrics.
-- Utilize standard `SafeAreaView` contexts (or `useSafeAreaInsets()`) padding definitions so that the iOS "Dynamic Island" and Android bottom navigation pill do not occlude clickable UI components.
+### Core PM Workflows
+- **Zero-Bypass Intake**: Every request (even casual ones) must be logged in `BUCKET_LIST.md` before execution.
+- **Surgical Strike Protocol**: Forbids monolithic file overwrites. Enforces micro-edits and mandatory `git diff` self-audits.
+- **Midnight Oil Protocol**: Formalized wind-down sequence (State sync, Reference update, SITREP).
 
-### Scalability
-- Touch boundaries for critical interactive zones must be at least `44x44`.
-- Accommodate virtual keyboards correctly through `KeyboardAvoidingView` employing iOS behavior `padding` and Android behavior `height`.
+### Developer Tooling
+- **Agentic PM Starter Kit**: Located at `Agentic_PM_Starter_Kit.zip`. Contains all 38 rules and the `INIT_PM_AGENT.md` bootloader. 
+- **The Genesis Prompt**: A specific prompt that allows any AI agent to ingest these rules and automatically reformat a project's backlog and master reference.
 
-### Diagnostic Interface Architecture
-- The administrative `AdminHardwareTester` and `Simple Scanner` standalone tools have been consolidated directly into the `LogViewerModal` Diagnostic Lab interface to prevent component bloat and standardize safe area handling.
+> [!IMPORTANT]
+> All rule files in `.agents/rules/` must include the `trigger: always_on` YAML frontmatter to ensure they are permanently active in the AI's system prompt context.
