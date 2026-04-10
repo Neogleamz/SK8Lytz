@@ -44,7 +44,6 @@ import { Accelerometer } from 'expo-sensors';
 import * as Location from 'expo-location';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import MarqueeText from './MarqueeText';
-import { AppLogger } from '../services/AppLogger';
 
 type MotionState = 'STOPPED' | 'ACCELERATING' | 'CRUISING' | 'SLOWING_DOWN' | 'HARD_BRAKING';
 
@@ -735,7 +734,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     };
 
     const loadFavorite = (favRaw: IFavoriteState, context: 'FAVORITE' | 'PICK' | 'COMMUNITY' = 'FAVORITE') => {
-      const fav: any = favRaw;
+      const fav = favRaw as IFavoriteState;
       setActiveFavoriteId(fav.id);
       setSpeed(fav.speed);
       setBrightness(fav.brightness);
