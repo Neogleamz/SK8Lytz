@@ -21,7 +21,7 @@
  * Platform: React Native (Android + Web)
  */
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Switch, Platform, Image, Linking, Animated, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Platform, Image, Linking, Animated, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
@@ -1183,28 +1183,20 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       {isActuallyConnected ? (
         /* ── Connected: Unified Header Layout ── */
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {/* LEFT: User pill */}
+          {/* LEFT: Back button */}
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity
-              onPress={() => setIsAccountModalVisible(true)}
+              onPress={handleDisconnect}
               style={{
                 flexDirection: 'row', alignItems: 'center',
-                paddingHorizontal: 8, paddingVertical: 4,
-                borderRadius: 20, borderWidth: 1, gap: 5,
-                borderColor: 'rgba(0,240,255,0.25)',
-                backgroundColor: 'rgba(0,240,255,0.06)',
+                paddingHorizontal: 6, paddingVertical: 4,
+                borderRadius: 20, gap: 2,
               }}
             >
-              <View style={{
-                width: 6, height: 6, borderRadius: 3,
-                backgroundColor: Colors.success,
-                shadowColor: Colors.success,
-                shadowOpacity: 0.8, shadowRadius: 3, elevation: 1,
-              }} />
-              <Text style={{ color: Colors.text, fontSize: 10, fontWeight: '700', maxWidth: 70 }} numberOfLines={1}>
-                {authUsername || 'Skater'}
+              <MaterialCommunityIcons name="chevron-left" size={24} color={Colors.primary} />
+              <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 }}>
+                BACK
               </Text>
-              <MaterialCommunityIcons name="account-cog" size={10} color={Colors.textMuted} style={{ opacity: 0.6 }} />
             </TouchableOpacity>
           </View>
 
