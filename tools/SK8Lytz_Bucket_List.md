@@ -55,6 +55,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 - [x] `modern-rgb-slider` : #29 — Modern RGB Hue Slider — Design and implement a more sophisticated, high-precision RGB hue selection component to replace the standard sliders. Give me 3 choices and let me choose before moving on
 - [ ] `fix/music-buttons-scaling` : #37 — Music Mode: Mic & Play Buttons scaling fix — Fix the scaling of both the microphone footprint and the play buttons in Music Mode to dynamically fill available space without overlapping components.
+- [ ] `feat/speed-slider-turbo-color` : #38 — Dynamic Speed Slider Color — Update the speed slider to dynamically change its track fill color from white at 0% to bright red at 100% (turbo) for enhanced visual feedback.
 
 ---
 
