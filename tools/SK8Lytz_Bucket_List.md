@@ -87,7 +87,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/telemetry-audit`
 
-- [ ] `verify-telemetry-ingestion` : #21 — Telemetry ingestion verification — Confirm AppLogger events (crew, street mode, hardware config) are landing in Supabase `device_logs` table correctly.
+- [x] `verify-telemetry-ingestion` : #21 — Telemetry ingestion verification — Confirm AppLogger events (crew, street mode, hardware config) are landing in Supabase `device_logs` table correctly.
 - [ ] `audit-applogger-coverage` : #30 — AppLogger Coverage Audit — Comprehensive audit of all features added this session (Street Mode, Picks, Favorites, Builder) to ensure 100% telemetry coverage in Analytics.
 
 ### Target: `epic/testing-suite`
