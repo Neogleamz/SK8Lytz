@@ -1,4 +1,5 @@
 # SK8Lytz Master Bucket List
+
 - [x] `review-device-reg` : Device Registration & Claim Process Review — Revisiting the user-to-device ownership flow. Need to brainstorm and build a new implementation plan as the previous extensive one was lost.
 - [x] `ftue-initial-setup` : FTUE Phase 1 - Create HardwareSetupWizardScreen with probe scan logic and instructions.
 - [x] `ftue-probe-discovery` : FTUE Phase 2 - Build device discovery list, product identification logic (LED count), and Blink test.
@@ -47,7 +48,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/device-registration`
 
-
 ### Target: `epic/crew-hub-overhaul`
 
 - [ ] `refactor-crew-modal` : #3 — `CrewModal.tsx` refactor — 14 useEffect hooks, 2,600+ lines. Extract `useCrewHub()` and `useCrewSession()` custom hooks. Highest maintainability debt in the codebase.
@@ -63,10 +63,9 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/admin-tools`
 
-- [ ] `build-picks-scheduler` : #28 — SK8Lytz Picks Admin Scheduler — Build admin UI to manage the `sk8lytz_picks` table scheduling. DB columns (`active_from`, `active_until`, `is_active`) already in place. Goal: seasonal picks (4th of July, Christmas, etc.) auto-show/hide. Needs: admin screen, date pickers, toggle per pick. needs to be under hidden tool section
+- [ ] `build-picks-scheduler` : #28 — SK8Lytz Picks Admin Scheduler — Build admin UI to manage the `sk8lytz_picks` table scheduling. DB columns (`active_from`, `active_until`, `is_active`) already in place. Goal: seasonal picks (4th of July, Christmas, etc.) auto-show/hide. Needs: admin screen, date pickers, toggle per pick. needs to be under hidden tool section. lets talk about this one
 
 ### Target: `epic/camera-mode`
-
 
 ### Target: `epic/visualizer-parity`
 
@@ -74,20 +73,17 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/device-management`
 
-
 ### Target: `epic/protocol-integration`
-
 
 ### Target: `epic/ui-refinement`
 
-- [ ] `fix/color-picker-overflow` : #40 — 11-Color Picker Mobile Overflow Fix — The preset color picker dots (black dot mapping to a second line) are overflowing due to static widths. Refactor to use dynamic flex scaling so all 11 dots stay on one single horizontal row.
+- [x] `fix/color-picker-overflow` : #40 — 11-Color Picker Mobile Overflow Fix — The preset color picker dots (black dot mapping to a second line) are overflowing due to static widths. Refactor to use dynamic flex scaling so all 11 dots stay on one single horizontal row.
 
 ---
 
 ## 🟡 Backlog
 
 ### Target: `main`
-
 
 ### Target: `epic/telemetry-audit`
 
@@ -133,7 +129,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `#33` — Lab Navigation Flow — Standardized "Exit" behavior to return users to the Analytics view.
 
 ## ✅ Completed Previously
-
 
 ---
 *Last updated: 2026-04-09 | This session: IDE Rules configured for auto-branching.*
