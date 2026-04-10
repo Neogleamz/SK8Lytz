@@ -27,6 +27,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Typography } from '../theme/theme';
 import { ZenggeProtocol, IC_TYPES, COLOR_SORTING_RGB } from '../protocols/ZenggeProtocol';
 import CustomEffectVisualizer from './CustomEffectVisualizer';
+import { useRegistration } from '../hooks/useRegistration';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -129,6 +130,8 @@ export default function Sk8LytzDiagnosticLab({
   const txtMuted= isDark ? '#8a96b3' : '#6b7280';
   const border  = isDark ? '#252c47' : '#e5e7eb';
   const cyan    = '#00f0ff';
+
+  const { registeredDevices } = useRegistration();
 
   const [tab, setTab] = useState<LabTab>('DEVICES');
   const [logs, setLogs] = useState<BleLog[]>([]);
@@ -338,9 +341,20 @@ export default function Sk8LytzDiagnosticLab({
         return (
           <View key={d.id || idx} style={[S.diagBox, isTarget && { borderColor: cyan, borderWidth: 1.5 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <Text style={{ color: txtPri, fontWeight: 'bold', fontSize: 13, flex: 1 }} numberOfLines={1}>
-                {cfg.name || d.name || 'Unknown Device'}
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: txtPri, fontWeight: 'bold', fontSize: 13 }} numberOfLines={1}>
+                  {cfg.name || d.name || 'Unknown Device'}
+                </Text>
+                {registeredDevices.some(rd => rd.device_mac === d.id) ? (
+                  <Text style={{ color: '#FFD700', fontSize: 10, fontWeight: '700', marginTop: 2 }}>★ REGISTERED TO YOU</Text>
+                ) : (d.owner_ids && d.owner_ids.length > 0) ? (
+                  <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: '700', marginTop: 2 }}>
+                    🔒 CLAIMED BY: {d.owner_ids.length > 1 ? `${d.owner_ids.length} USERS` : `${d.owner_ids[0].substring(0,8)}...`}
+                  </Text>
+                ) : (
+                  <Text style={{ color: txtMuted, fontSize: 10, fontStyle: 'italic', marginTop: 2 }}>Unregistered (Telemetry Active)</Text>
+                )}
+              </View>
               {isConn
                 ? (
                   <View style={{ flexDirection: 'row', gap: 6 }}>

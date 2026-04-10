@@ -21,7 +21,7 @@
  * Platform: React Native (Android + Web)
  */
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Switch, Platform, Image, Linking, Animated, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Switch, Platform, Image, Linking, Animated, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
@@ -41,14 +41,15 @@ import LogViewerModal from '../components/LogViewerModal';
 import CrewModal from '../components/CrewModal';
 import { crewService, CrewSession, CrewRole } from '../services/CrewService';
 import Sk8LytzDiagnosticLab from '../components/Sk8LytzDiagnosticLab';
-import FirstTimeSetupModal from '../components/FirstTimeSetupModal';
+
+import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
 import { supabase } from '../services/supabaseClient';
 import { useRegistration, RegisteredDevice } from '../hooks/useRegistration';
 import AccountModal from '../components/AccountModal';
 import CrewMemberDashboard from '../components/CrewMemberDashboard';
 import { profileService } from '../services/ProfileService';
 import { notificationService } from '../services/NotificationService';
-import DeviceRegistrationModal from '../components/DeviceRegistrationModal';
+
 
 interface DeviceSettings {
   name: string;
@@ -139,11 +140,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [powerStates, setPowerStates] = useState<Record<string, boolean>>({});
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
-
-  const IS_BROWSER_DEMO = Platform.OS === 'web';
-  const [mockConnected, setMockConnected] = useState(false);
-  const [mockConnectedDevice, setMockConnectedDevice] = useState<string | null>(null);
-  const [mockConnectedGroup, setMockConnectedGroup] = useState<string | null>(null);
   const [updateTrigger, setUpdateTrigger] = useState(0);
   const [isTestModeActive, setIsTestModeActive] = useState(false);
   const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
@@ -152,7 +148,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
-  const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(false);
+  const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(true);
+  const [isRegisteredCollapsed, setIsRegisteredCollapsed] = useState(false);
 
   // ── Crew Hub state ─────────────────────────────────────────────────────
   const [crewSession, setCrewSession] = useState<CrewSession | null>(null);
@@ -171,14 +168,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isSnifferVisible, setIsSnifferVisible] = useState(false);
   const [isLabVisible, setIsLabVisible] = useState(false);
   const [isSetupWizardVisible, setIsSetupWizardVisible] = useState(false);
+  const [isCheckingRegistrations, setIsCheckingRegistrations] = useState(true);
   const lastProcessedRef = React.useRef<string>('');
   const allDevicesRef = React.useRef(allDevices);
   const customGroupsRef = React.useRef(customGroups);
   const isProvisioningTriggered = React.useRef(false);
 
   // Refs are now updated manually  const [isProvisioning, setIsProvisioning] = useState(false);
-  const [demoHaloQueued, setDemoHaloQueued] = useState(false);
-  const [demoSoulQueued, setDemoSoulQueued] = useState(false);
 
   // AppState Telemetry
   useEffect(() => {
@@ -194,30 +190,38 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     };
   }, []);
 
-  // ── Registration trigger: fires after BLE probe finds classifiable devices ──
-  // - No existing registrations → show bulk first-time setup wizard
-  // - Has existing registrations + new device MAC → single quick-register modal
   const wizardCheckedRef = React.useRef(false);
   const [pendingNewDevice, setPendingNewDevice] = React.useState<any | null>(null);
 
+  // 1. Check FTUE state on mount
   useEffect(() => {
-    if (pendingRegistrations.length === 0) return;
-    if (wizardCheckedRef.current) return;
-    wizardCheckedRef.current = true;
-
-    hasCloudRegistrations().then(async hasAny => {
+    hasCloudRegistrations().then(hasAny => {
       if (!hasAny) {
         setIsSetupWizardVisible(true);
+        setIsCheckingRegistrations(false);
       } else {
-        const first = pendingRegistrations[0];
-        if (!first) return;
-        const status = await checkDeviceClaimed(first.device_mac, {
-          firmwareVer: first.firmware_ver,
-          productId:   first.product_id,
-        });
-        if (status === 'unclaimed') setPendingNewDevice(first);
+        setIsCheckingRegistrations(false);
       }
     });
+  }, []);
+
+  // 2. Continuous listener for new devices beyond FTUE
+  useEffect(() => {
+    if (pendingRegistrations.length === 0) return;
+    if (isSetupWizardVisible) return; // Ignore if wizard is already active
+    
+    // Only check if we are in dashboard mode and a new untracked device appears
+    const checkNewDevice = async () => {
+      const first = pendingRegistrations[0];
+      if (!first) return;
+      const status = await checkDeviceClaimed(first.device_mac, {
+        firmwareVer: first.firmware_ver,
+        productId:   first.product_id,
+      });
+      if (status === 'unclaimed') setPendingNewDevice(first);
+    };
+    
+    checkNewDevice();
   }, [pendingRegistrations]);
 
   const handleRegistrationComplete = async (devices: RegisteredDevice[]) => {
@@ -227,6 +231,25 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       ...legacyDevices.filter(l => !devices.find(d => d.device_mac === l.device_mac)),
     ];
     await saveAllRegisteredDevices(allToRegister);
+
+    // Auto-connect and build UI Fleet Group instantly
+    const macs = devices.map(d => d.device_mac);
+    if (macs.length > 0) {
+      console.log('[FTUE] Auto-connecting to newly claimed fleet...', macs);
+      const newGroupId = `fleet_${Date.now()}`;
+      const groupName = devices[0].group_name || 'My Skates';
+      
+      const newGroup = { id: newGroupId, name: groupName, isGroup: true, deviceIds: macs };
+      const updatedGroups = [...customGroupsRef.current, newGroup];
+      
+      setCustomGroups(updatedGroups);
+      AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups)).catch(()=>{});
+      
+      // Auto Connect sequence so they are immediately live
+      const devicesToConnect = allDevices.filter(d => macs.includes((d as any).id || (d as any).device_mac));
+      connectToDevices(devicesToConnect);
+    }
+
     clearPendingRegistrations();
     setIsSetupWizardVisible(false);
     wizardCheckedRef.current = false;
@@ -500,59 +523,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     });
   }, [setOnDataReceived, setAllDevices]);
 
-  // Analytics hidden trigger
-  const [logsVisible, setLogsVisible] = useState(false);
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const tickTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pulseAnimConfig = useRef(new Animated.Value(1)).current;
-  const tapCountRef = useRef(0);
-  const tapTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [isPinPromptVisible, setIsPinPromptVisible] = useState(false);
-  const [pinInput, setPinInput] = useState('');
-
-  const startLogPulse = () => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnimConfig, { toValue: 1.15, duration: 400, useNativeDriver: true }),
-        Animated.timing(pulseAnimConfig, { toValue: 1, duration: 400, useNativeDriver: true }),
-      ])
-    ).start();
-  };
-
-  const stopLogPulse = () => {
-    pulseAnimConfig.stopAnimation();
-    pulseAnimConfig.setValue(1);
-  };
-  const handleLogoPress = () => {
-    if (isActuallyConnected) return;
-    
-    tapCountRef.current += 1;
-    
-    // Reset the count if they stop tapping for 1500ms
-    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
-    tapTimerRef.current = setTimeout(() => {
-      tapCountRef.current = 0;
-      setCountdown(null);
-      stopLogPulse();
-    }, 1500);
-
-    const taps = tapCountRef.current;
-    if (taps === 1) {
-        startLogPulse();
-    }
-    
-    if (taps >= 5 && taps < 10) {
-      setCountdown(10 - taps);
-    } else if (taps >= 10) {
-      if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
-      setCountdown(null);
-      stopLogPulse();
-      setPinInput('');
-      setIsPinPromptVisible(true);
-      tapCountRef.current = 0;
-    }
-  };
+  // Analytics / Dev tools hooks migrated to AuthScreen / removed
 
   const handleScan = () => {
     if (isScanning || isActuallyConnected) return;
@@ -569,86 +540,31 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         
         scanForPeripherals();
         
-        // Manual/Simulator scan behavior
-        setTimeout(() => {
-          setAllDevices((prev: any[]) => {
-            let newDevices = [...prev];
-            const haloIds = ['sim-DE:M0:HA:L0:00:01', 'sim-DE:M0:HA:L0:00:02'];
-            const soulIds = ['sim-DE:M0:S0:UL:00:01', 'sim-DE:M0:S0:UL:00:02'];
-            
-            if (demoHaloQueued) {
-              haloIds.forEach((id, idx) => {
-                if (!newDevices.some(d => d.id === id)) {
-                  const device = { 
-                    id, 
-                    name: `HALOZ ${idx === 0 ? 'Left' : 'Right'} Skate`, 
-                    type: 'HALOZ',
-                    points: 11, 
-                    segments: 2,
-                    sorting: 'GRB',
-                    stripType: 'WS2812B',
-                    rssi: -45 - Math.floor(Math.random() * 20),
-                    serviceUUIDs: [ZENGGE_SERVICE_UUID],
-                    manufacturerData: 'AAAAAAAAAAAz'
-                  } as any;
-                  newDevices.push(device);
-                  AppLogger.log('DEVICE_DISCOVERED', { 
-                    id, 
-                    name: device.name, 
-                    type: device.type, 
-                    rssi: device.rssi,
-                    points: device.points,
-                    segments: device.segments,
-                    sorting: device.sorting,
-                    stripType: device.stripType
-                  });
-                }
-              });
-            }
-            if (demoSoulQueued) {
-              soulIds.forEach((id, idx) => {
-                if (!newDevices.some(d => d.id === id)) {
-                  const device = { 
-                    id, 
-                    name: `SOULZ ${idx === 0 ? 'Left' : 'Right'} Skate`, 
-                    type: 'SOULZ',
-                    points: 43, 
-                    segments: 1,
-                    sorting: 'GRB',
-                    stripType: 'WS2812B',
-                    rssi: idx === 1 ? -85 : -42 - Math.floor(Math.random() * 20),
-                    serviceUUIDs: [ZENGGE_SERVICE_UUID],
-                    manufacturerData: 'AAAAAAAAAAAz'
-                  } as any;
-                  newDevices.push(device);
-                  AppLogger.log('DEVICE_DISCOVERED', { 
-                    id, 
-                    name: device.name, 
-                    type: device.type, 
-                    rssi: device.rssi,
-                    points: device.points,
-                    segments: device.segments,
-                    sorting: device.sorting,
-                    stripType: device.stripType
-                  });
-                }
-              });
-            }
-            allDevicesRef.current = newDevices as any;
-            return newDevices;
-          });
-        }, 150);
+        // Mock simulator logic moved to useBLE.ts
 
         // Ensure we scan for at least 5 seconds for visual impact
         const waitTime = Math.max(5000, Platform.OS === 'web' ? 5000 : 7000);
         setTimeout(() => {
-          setIsDeviceListCollapsed(false);
           runAutoProvisioning();
         }, waitTime);
       }
     });
   };
 
+  // Automatically probe for hardware upon dashboard load to eliminate user friction
+  const hasAutoScanned = React.useRef(false);
+  useEffect(() => {
+    if (!isCheckingRegistrations && !isSetupWizardVisible && !hasAutoScanned.current) {
+      if (connectedDevices.length === 0 && !isScanning) {
+        hasAutoScanned.current = true;
+        // Wait 1 second to let dashboard natively render before hammering BLE stack
+        setTimeout(() => {
+          handleScan();
+        }, 1000);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCheckingRegistrations, isSetupWizardVisible, connectedDevices.length, isScanning]);
 
   useEffect(() => {
     customGroupsRef.current = customGroups;
@@ -662,7 +578,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           try { 
             const parsed = JSON.parse(res) || [];
             // Remove any groups containing simulated devices
-            const cleanedGroups = parsed.filter((g: any) => !g.deviceIds.some((id: string) => id.startsWith('sim-')));
+            const cleanedGroups = parsed.filter((g: any) => !(g.deviceIds || []).some((id: string) => id.startsWith('sim-')));
             if (cleanedGroups.length !== parsed.length) {
               AsyncStorage.setItem('ng_custom_groups', JSON.stringify(cleanedGroups)).catch(()=>{});
             }
@@ -868,42 +784,37 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
 
   const displayConnectedDevices = useMemo(() => {
-    if (!mockConnected) {
-      // Real hardware path — enrich each connected BLE device with its parsed hardware config
-      // (points, segments, sorting, icType, etc.) from deviceConfigs populated by 0x63 BLE response
-      return connectedDevices.map(d => {
-        const cfg = deviceConfigs[(d as any).id] || {};
-        return { ...d, ...cfg };
-      });
-    }
-
-    // In Browser Demo / Mock mode, we pull the actual device objects from allDevices 
-    // to ensure settings like 'points' are reflected after being edited.
-    if (mockConnectedGroup) {
-      const g = customGroups.find(x => x.id === mockConnectedGroup);
-      if (g) {
-        return allDevices
-          .filter(d => g.deviceIds.includes(d.id))
-          .map(d => ({ ...d, grouped: true, groupId: g.id, groupName: g.name, points: (d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16) }));
-      }
-    }
-
-    const singleId = mockConnectedDevice || 'sim-soul-1';
-    const single = allDevices.find(d => d.id === singleId);
-    return single ? [{ ...single, grouped: false, points: (single as any).points || (single.name?.toLowerCase().includes('soul') ? 43 : 16) }] : [];
-  }, [mockConnected, mockConnectedDevice, mockConnectedGroup, allDevices, connectedDevices, updateTrigger, customGroups, deviceConfigs]);
+    return connectedDevices.map(d => {
+      const cfg = deviceConfigs[(d as any).id] || {};
+      return { ...d, ...cfg };
+    });
+  }, [connectedDevices, deviceConfigs]);
 
   const isActuallyConnected = displayConnectedDevices.length > 0;
   const isGrouped = displayConnectedDevices.length > 1 && displayConnectedDevices.every(d => (d as any).grouped);
 
+  const sortedAllDevices = useMemo(() => {
+    return [...allDevices]
+      .sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999))
+      .map(d => {
+        const cfg = deviceConfigs[(d as any).id] || {};
+        return { ...d, ...cfg };
+      });
+  }, [allDevices, deviceConfigs]);
+
+  const registeredDevicesData = useMemo(() => {
+    const macs = new Set(registeredDevices.map((d: any) => d.device_mac.toLowerCase()));
+    return sortedAllDevices.filter((d: any) => macs.has(d.id.toLowerCase()));
+  }, [sortedAllDevices, registeredDevices]);
+
+  const availableDevicesData = useMemo(() => {
+    const macs = new Set(registeredDevices.map((d: any) => d.device_mac.toLowerCase()));
+    return sortedAllDevices.filter((d: any) => !macs.has(d.id.toLowerCase()));
+  }, [sortedAllDevices, registeredDevices]);
+
   const handleDisconnect = useCallback(() => {
-    if (IS_BROWSER_DEMO) {
-      setMockConnected(false);
-      setMockConnectedDevice(null);
-      setMockConnectedGroup(null);
-    }
     disconnectFromDevice();
-  }, [IS_BROWSER_DEMO, disconnectFromDevice]);
+  }, [disconnectFromDevice]);
 
   useEffect(() => {
     const handleBackPress = () => {
@@ -993,15 +904,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     setIsGroupModalVisible(true);
   };
 
-  const deleteGroup = (id: string) => {
+  const handleGroupDelete = (id: string) => {
     const updatedGroups = customGroups.filter(g => g.id !== id);
     setCustomGroups(updatedGroups);
     AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
     
-    if (mockConnectedGroup === id) {
-      setMockConnected(false);
-      setMockConnectedGroup(null);
-    }
     setIsGroupModalVisible(false);
   };
 
@@ -1019,7 +926,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       setSelectedIds([]);
     } else if (groupModalMode === 'rename' && editingGroupId) {
       if (deviceIds.length === 0) {
-        deleteGroup(editingGroupId);
+        handleGroupDelete(editingGroupId);
         return;
       }
       newGroups = customGroups.map(g => g.id === editingGroupId ? { ...g, name, deviceIds } : g);
@@ -1219,20 +1126,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             toggleSelect(item.id);
             return;
           }
-          if (item.id.startsWith('sim-')) {
-            setMockConnected(true);
-            setMockConnectedDevice(item.id);
-            setDeviceConfigs(prev => {
-                const fw = 'v2.0.1.DEMO';
-                const next = { ...prev, [item.id]: { ...(prev?.[item.id] || {}), firmware: fw } };
-                AsyncStorage.setItem('ng_device_configs', JSON.stringify(next)).catch(() => {});
-                return next;
-            });
-            return;
-          }
           const fw = await connectToDevice(item);
           if (fw) {
-            setDeviceConfigs(prev => {
+            setDeviceConfigs((prev: any) => {
                 const next = { ...prev, [item.id]: { ...(prev?.[item.id] || {}), firmware: fw } };
                 AsyncStorage.setItem('ng_device_configs', JSON.stringify(next)).catch(() => {});
                 return next;
@@ -1240,11 +1136,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           }
           
           writeToDevice(ZenggeProtocol.queryHardwareSettings(false), item.id);
-
-          if (IS_BROWSER_DEMO) {
-            setMockConnected(true);
-            setMockConnectedDevice(item.id);
-          }
         }}
         onLongPress={() => {
           openSettings(mergedItem);
@@ -1318,7 +1209,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           </View>
 
           {/* CENTER: logo + discovered status */}
-          <TouchableOpacity activeOpacity={1} onPress={handleLogoPress} style={{ position: 'relative', alignItems: 'center' }}>
+          <TouchableOpacity activeOpacity={1} style={{ position: 'relative', alignItems: 'center' }}>
             <Image source={require('../../assets/logo.png')} style={{ width: 80, height: 24 }} resizeMode="contain" tintColor={Colors.text} />
             {(() => {
               const connectedCount = displayConnectedDevices.length;
@@ -1336,11 +1227,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 </View>
               );
             })()}
-            {countdown !== null && (
-              <Animated.View style={[styles.countdownBadge, { transform: [{ scale: pulseAnimConfig }] }]}>
-                <Text style={styles.countdownText}>{countdown}</Text>
-              </Animated.View>
-            )}
           </TouchableOpacity>
 
           {/* RIGHT: utilities group (matching AuthScreen style) */}
@@ -1415,13 +1301,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
           {/* CENTER: logo */}
           <View style={{ flex: 1, alignItems: 'center' }}>
-            <TouchableOpacity activeOpacity={1} onPress={handleLogoPress} style={{ position: 'relative', alignItems: 'center' }}>
+            <TouchableOpacity activeOpacity={1} style={{ position: 'relative', alignItems: 'center' }}>
               <Image source={require('../../assets/logo.png')} style={{ width: 110, height: 32 }} resizeMode="contain" tintColor={Colors.text} />
-              {countdown !== null && (
-                <Animated.View style={[styles.countdownBadge, { transform: [{ scale: pulseAnimConfig }] }]}>
-                  <Text style={styles.countdownText}>{countdown}</Text>
-                </Animated.View>
-              )}
             </TouchableOpacity>
           </View>
 
@@ -1437,6 +1318,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             <TouchableOpacity onPress={toggleTheme} style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}>
               <MaterialCommunityIcons name={isDark ? 'weather-sunny' : 'weather-night'} size={18} color={Colors.primary} />
             </TouchableOpacity>
+
           </View>
         </View>
       )}
@@ -1448,6 +1330,18 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     </View>
   );
 
+  if (isCheckingRegistrations) {
+    return (
+      <View style={[styles.container, { backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator color={Colors.primary} size="large" />
+      </View>
+    );
+  }
+
+  if (isSetupWizardVisible) {
+    return <HardwareSetupWizardScreen onSetupComplete={(devices) => handleRegistrationComplete(devices)} />;
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {BluetoothWarningBanner}
@@ -1455,7 +1349,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
         {isActuallyConnected ? (
           <View style={{ flex: 1 }}>
-            <View style={{ paddingBottom: 16 }}>
+            <View pointerEvents="box-none" style={{ paddingBottom: 16, zIndex: 100, elevation: 100 }}>
               {renderDashboardHeader()}
             </View>
             <View style={{ flex: 1 }}>
@@ -1466,10 +1360,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           <FlatList
             style={{ flex: 1 }}
             ListHeaderComponent={
-              <View style={{ paddingBottom: 16 }}>
+              <View pointerEvents="box-none" style={{ paddingBottom: 16, zIndex: 100, elevation: 100 }}>
                 {renderDashboardHeader()}
 
-                <View style={{ paddingHorizontal: Layout.padding }}>
+                <View style={{ paddingHorizontal: Layout.padding, zIndex: 1 }}>
                   {!isTestModeActive ? (
                   <View style={{ height: 380, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 5, width: '100%' }}>
                       <ScannerAnimation 
@@ -1541,22 +1435,18 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                               connectedCount: matchedDevices.length,
                               rssiList: groupRssis
                             }}
-                        isConnected={mockConnectedGroup === group.id}
+                        isConnected={group.deviceIds.length > 0 && group.deviceIds.every((id: string) => displayConnectedDevices.some(d => d.id === id))}
                         isSelectionMode={false}
                         isSelected={false}
                         onPress={async () => {
-                          if (IS_BROWSER_DEMO) {
-                            setMockConnected(true);
-                            setMockConnectedGroup(group.id);
-                          }
-                          
+
                           const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id));
                           if (devicesToConnect.length > 0) {
                             await connectToDevices(devicesToConnect);
                             
                             const firstDev = devicesToConnect[0];
                             const cfg = deviceConfigs[(firstDev as any).id] || {};
-                            const configPoints   = cfg.points    || (firstDev as any).points    || (firstDev.name?.toLowerCase().includes('soul') ? 43 : 16);
+                            const configPoints   = cfg.points    || (firstDev as any).points    || (firstDev.name?.toLowerCase()?.includes('soul') ? 43 : 16);
                             const configSegments = cfg.segments  || (firstDev as any).segments  || 1;
                             const configSorting  = cfg.sorting   || (firstDev as any).sorting   || 'GRB';
                             const configStrip    = cfg.stripType || (firstDev as any).stripType || 'WS2812B';
@@ -1578,9 +1468,27 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 )}
 
                 <>
+                  {registeredDevicesData.length > 0 && (
+                    <View style={{ marginTop: 20 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 4 }}>
+                        <Text style={[Typography.title, { color: Colors.primary }]}>My Devices</Text>
+                        <TouchableOpacity onPress={() => setIsRegisteredCollapsed(!isRegisteredCollapsed)}>
+                          <Text style={{ color: Colors.primary, fontWeight: 'bold', fontSize: 12 }}>
+                            {isRegisteredCollapsed ? 'SHOW ALL' : 'HIDE'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                      {!isRegisteredCollapsed && registeredDevicesData.map(d => (
+                         <View key={d.id}>
+                           {renderItem({ item: d } as any)}
+                         </View>
+                      ))}
+                    </View>
+                  )}
+
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, marginBottom: 12, paddingHorizontal: 4 }}>
                     <Text style={[Typography.title, { color: Colors.primary }]}>Available Devices</Text>
-                    {allDevices.length > 0 && (
+                    {availableDevicesData.length > 0 && (
                       <TouchableOpacity onPress={() => setIsDeviceListCollapsed(!isDeviceListCollapsed)}>
                         <Text style={{ color: Colors.primary, fontWeight: 'bold', fontSize: 12 }}>
                           {isDeviceListCollapsed ? 'SHOW ALL' : 'HIDE'}
@@ -1588,40 +1496,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                       </TouchableOpacity>
                     )}
                   </View>
-
-                  {!isDeviceListCollapsed && (
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16, padding: 8, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Text style={{ color: Colors.text, marginRight: 8, fontSize: 12, fontWeight: '600' }}>Demo HALOZ</Text>
-                        <Switch
-                          value={demoHaloQueued}
-                          onValueChange={setDemoHaloQueued}
-                          style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
-                          trackColor={{ false: 'rgba(255,255,255,0.1)', true: Colors.primary }}
-                        />
-                      </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Text style={{ color: Colors.text, marginRight: 8, fontSize: 12, fontWeight: '600' }}>Demo SOULZ</Text>
-                        <Switch
-                          value={demoSoulQueued}
-                          onValueChange={setDemoSoulQueued}
-                          style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
-                          trackColor={{ false: 'rgba(255,255,255,0.1)', true: Colors.secondary }}
-                        />
-                      </View>
-                    </View>
-                  )}
                 </>
                 </View>
               </View>
             }
-            data={!isDeviceListCollapsed ? [...allDevices]
-              .sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999))
-              .map(d => {
-                const cfg = deviceConfigs[(d as any).id] || {};
-                // Prefer user-configured name over raw BLE advertisement name
-                return { ...d, ...cfg };
-              }) : []}
+            data={!isDeviceListCollapsed ? availableDevicesData : []}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             scrollEnabled={true}
@@ -1636,6 +1515,18 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 </View>
               ) : null
             }
+            ListFooterComponent={
+              !isDeviceListCollapsed ? (
+                <View style={{ alignItems: 'center', marginTop: availableDevicesData.length > 0 ? 10 : 24, marginBottom: 20 }}>
+                  <TouchableOpacity 
+                    onPress={() => setIsSetupWizardVisible(true)}
+                    style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, backgroundColor: 'rgba(0, 240, 255, 0.1)', borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.3)' }}
+                  >
+                    <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 12, letterSpacing: 1 }}>REGISTER DEVICES</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null
+            }
         />
         )}
         <DeviceSettingsModal
@@ -1645,9 +1536,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           writeToDevice={writeToDevice}
           initialSettings={{
             name: selectedDeviceForSettings?.name || 'SOULZ',
-            type: (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'),
-            points: deviceConfigs[selectedDeviceForSettings?.id || '']?.points || (selectedDeviceForSettings as any)?.points || (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 43 : 8),
-            segments: deviceConfigs[selectedDeviceForSettings?.id || '']?.segments || (selectedDeviceForSettings as any)?.segments || (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 1 : 2),
+            type: (selectedDeviceForSettings?.name?.toLowerCase()?.includes('soul') ? 'SOULZ' : 'HALOZ'),
+            points: deviceConfigs[selectedDeviceForSettings?.id || '']?.points || (selectedDeviceForSettings as any)?.points || (selectedDeviceForSettings?.name?.toLowerCase()?.includes('soul') ? 43 : 8),
+            segments: deviceConfigs[selectedDeviceForSettings?.id || '']?.segments || (selectedDeviceForSettings as any)?.segments || (selectedDeviceForSettings?.name?.toLowerCase()?.includes('soul') ? 1 : 2),
             stripType: deviceConfigs[selectedDeviceForSettings?.id || '']?.stripType || (selectedDeviceForSettings as any)?.stripType || 'WS2812B',
             sorting: deviceConfigs[selectedDeviceForSettings?.id || '']?.sorting || (selectedDeviceForSettings as any)?.sorting || 'GRB',
             grouped: !!deviceConfigs[selectedDeviceForSettings?.id || '']?.groupId || (selectedDeviceForSettings as any)?.grouped || false,
@@ -1661,7 +1552,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           isVisible={isGroupModalVisible}
           onClose={() => setIsGroupModalVisible(false)}
           onSave={saveGroup}
-          onDelete={groupModalMode === 'rename' && editingGroupId ? () => deleteGroup(editingGroupId) : undefined}
+          onDelete={groupModalMode === 'rename' && editingGroupId ? () => handleGroupDelete(editingGroupId) : undefined}
           initialName={groupModalMode === 'rename' ? customGroups.find(g => g.id === editingGroupId)?.name : 'My SK8Lytz'}
           initialDeviceIds={groupModalMode === 'rename' ? customGroups.find(g => g.id === editingGroupId)?.deviceIds : selectedIds}
           allDevices={allDevices}
@@ -1754,76 +1645,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           </View>
         </Modal>
 
-      {/* Developer PIN Verification Modal */}
-      <Modal visible={isPinPromptVisible} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <View style={{ backgroundColor: Colors.surface, padding: 24, borderRadius: 20, width: '100%', maxWidth: 320, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-            <Text style={{ color: Colors.error, fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>Developer Tools</Text>
-            <Text style={{ color: Colors.textMuted, fontSize: 13, marginBottom: 20, textAlign: 'center' }}>Enter PIN verification to access underlying hardware logging subsystems.</Text>
-            <TextInput
-              style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: '#FFF', padding: 12, borderRadius: 8, fontSize: 24, marginBottom: 24, borderWidth: 1, borderColor: 'rgba(255,100,100,0.3)', textAlign: 'center', letterSpacing: 8 }}
-              placeholder="----"
-              placeholderTextColor="rgba(255,255,255,0.1)"
-              secureTextEntry
-              keyboardType="number-pad"
-              maxLength={4}
-              value={pinInput}
-              onChangeText={setPinInput}
-              autoFocus
-            />
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => setIsPinPromptVisible(false)}>
-                <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: pinInput.length === 4 ? Colors.error : 'rgba(255,61,0,0.2)' }} disabled={pinInput.length !== 4} onPress={() => {
-                 if (pinInput === '0000') {
-                    setIsPinPromptVisible(false);
-                    setLogsVisible(true);
-                 } else {
-                    alert("Invalid PIN. Access denied.");
-                    setPinInput('');
-                 }
-              }}>
-                <Text style={{ color: pinInput.length === 4 ? '#000' : 'rgba(255,255,255,0.3)', textAlign: 'center', fontWeight: 'bold' }}>Unlock</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <LogViewerModal 
-        visible={logsVisible} 
-        onClose={() => setLogsVisible(false)} 
-        onOpenProgrammer={() => {
-            setLogsVisible(false);
-            setIsProgrammerVisible(true);
-        }}
-        onOpenLab={() => {
-            setLogsVisible(false);
-            setIsLabVisible(true);
-        }}
-        writeToDevice={writeToDevice}
-        liveRxPayload={lastRawNotification}
-        connectedDevices={connectedDevices as any[]}
-        allDevices={allDevices}
-        isScanning={isScanning}
-        handleScan={handleScan}
-        onClearAll={() => {
-          setAllDevices([]);
-          if (Platform.OS === 'web') {
-            setMockConnected(false);
-            setMockConnectedDevice(null);
-          }
-        }}
-        onConnectToDevice={async (d: any) => { await connectToDevice(d); }}
-        liveDeviceConfigs={deviceConfigs}
-      />
+      {/* Developer Modals migrated to Sandbox Auth logic */}
       <Sk8LytzProgrammerModal 
         visible={isProgrammerVisible} 
         onClose={() => setIsProgrammerVisible(false)} 
         onExitToLogs={() => {
             setIsProgrammerVisible(false);
-            setLogsVisible(true);
         }}
         allDevices={allDevices}
         deviceConfigs={deviceConfigs}
@@ -1837,7 +1664,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       {/* LED Diagnostic Lab — long-press the SNIFFER button to open */}
       <Sk8LytzDiagnosticLab
         visible={isLabVisible ?? false}
-        onClose={() => { setIsLabVisible(false); setLogsVisible(true); }}
+        onClose={() => { setIsLabVisible(false); }}
         connectedDevices={connectedDevices as any[]}
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
@@ -1848,29 +1675,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         connectToDevice={async (d: any) => { await connectToDevice(d); }}
         liveDeviceConfigs={deviceConfigs}
       />
-      {/* First-Time Setup Wizard — auto-shows on first probe for new accounts */}
-      <FirstTimeSetupModal
-        visible={isSetupWizardVisible}
-        pendingRegistrations={pendingRegistrations}
-        onComplete={handleRegistrationComplete}
-        onDismiss={() => {
-          setIsSetupWizardVisible(false);
-          clearPendingRegistrations();
-        }}
-      />
+      {/* HardwareSetupWizardScreen is conditionally returned at the top level instead of here */}
 
-      {/* Single-device quick-register — slides up when returning user connects a new unclaimed device */}
-      <DeviceRegistrationModal
-        device={pendingNewDevice}
-        existingGroups={[...new Set(registeredDevices.map((d: any) => d.group_name).filter(Boolean))]}
-        onDismiss={() => { setPendingNewDevice(null); wizardCheckedRef.current = false; clearPendingRegistrations(); }}
-        onRegistered={async (rd) => {
-          await saveRegisteredDevice(rd);
-          setPendingNewDevice(null);
-          clearPendingRegistrations();
-          wizardCheckedRef.current = false;
-        }}
-      />
+
 
       {/* Crew Hub Modal */}
       <CrewModal
@@ -1930,12 +1737,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           setIsCrewModalVisible(true);
           setIsAccountModalVisible(false);
         }}
-        registeredDevices={allDevices.map((d: any) => ({
-          id: d.id,
-          name: d.name,
-          customName: d.customName,
-          type: d.type,
-          registeredAt: d.registeredAt,
+        registeredDevices={registeredDevices.map((d) => ({
+          id: d.device_mac,
+          name: d.device_name,
+          customName: d.group_name,
+          type: d.product_type,
+          registeredAt: d.registered_at,
         }))}
         onDeviceRenamed={(deviceId, newName) => {
           setAllDevices((prev: any[]) => prev.map((d: any) =>

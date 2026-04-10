@@ -164,6 +164,13 @@ export function useRegistration() {
     fingerprint?: { firmwareVer?: number; ledVersion?: number; productId?: number }
   ): Promise<ClaimStatus> => {
     try {
+      // 1. FAST PATH: Check local storage first. If we already hold it locally, it's ours.
+      const localDevices = await getLocalDevices();
+      if (localDevices.some(d => d.device_mac.toLowerCase() === deviceMac.toLowerCase())) {
+        return 'claimed_by_self';
+      }
+
+      // 2. NETWORK PATH: Check Supabase to see if someone else owns it
       const { data: { user } } = await supabase.auth.getUser();
 
       // Query DB for this device_mac
