@@ -53,7 +53,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/ui-refinement`
 
-- [ ] `modern-rgb-slider` : #29 — Modern RGB Hue Slider — Design and implement a more sophisticated, high-precision RGB hue selection component to replace the standard sliders. Give me 3 choices and let me choose before moving on
+- [x] `modern-rgb-slider` : #29 — Modern RGB Hue Slider — Design and implement a more sophisticated, high-precision RGB hue selection component to replace the standard sliders. Give me 3 choices and let me choose before moving on
+- [ ] `fix/music-buttons-scaling` : #37 — Music Mode: Mic & Play Buttons scaling fix — Fix the scaling of both the microphone footprint and the play buttons in Music Mode to dynamically fill available space without overlapping components.
 
 ---
 
