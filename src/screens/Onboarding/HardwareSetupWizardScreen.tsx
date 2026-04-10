@@ -65,16 +65,18 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
     });
 
     try {
-      // 0x31 solid color mode: Green, 100% bright, 100% speed
-      const blinkPayload = ZenggeProtocol.setSymphonyColor(0, 255, 0); 
+      // 0x59 static multi-color mode: Green. We send it for 43 points (max soulz default) 
+      // ensuring minimum length is met. Transition 0x00 is instantaneous.
+      const colorArray = Array(43).fill({ r: 0, g: 255, b: 0 });
+      const blinkPayload = ZenggeProtocol.setMultiColor(colorArray, 1, 1, 0x00); 
       await writeToDevice(blinkPayload, deviceMac);
       
-      // Wait half a second, then send Off command
+      // Keep it solid green for 10 seconds based on user request, then send Off command
       setTimeout(async () => {
         const offPayload = ZenggeProtocol.turnOff();
         await writeToDevice(offPayload, deviceMac);
         setIsBlinking(null);
-      }, 500);
+      }, 10000);
     } catch (e) {
       console.warn("Blink test failed", e);
       setIsBlinking(null);
@@ -502,7 +504,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
   );
 }
 
-function createStyles(Colors: any) {
+function createStyles(Colors: Record<string, string>) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.background || '#0D0D0D' },
     content: { flex: 1, padding: 12, justifyContent: 'center', alignItems: 'center' },
