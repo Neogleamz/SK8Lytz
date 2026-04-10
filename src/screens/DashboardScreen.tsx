@@ -105,6 +105,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     migrateLegacyGroups,
     syncFromCloud: _syncFromCloud,
     hasPendingSync: _hasPendingSync,
+    isLoading,
   } = useRegistration();
 
   // Sync connected+discovered devices into AppLogger whenever they change
@@ -198,6 +199,19 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const isProvisioningTriggered = React.useRef(false);
 
   // Refs are now updated manually  const [isProvisioning, setIsProvisioning] = useState(false);
+
+  // ── Load Dev/Demo Flags from AsyncStorage ──
+  useEffect(() => {
+    async function loadDemoFlags() {
+      try {
+        const haloDemo = await AsyncStorage.getItem('@Sk8lytz_demo_halo');
+        const soulDemo = await AsyncStorage.getItem('@Sk8lytz_demo_soul');
+        if (haloDemo === 'true') setDemoHaloQueued(true);
+        if (soulDemo === 'true') setDemoSoulQueued(true);
+      } catch (e) {}
+    }
+    loadDemoFlags();
+  }, []);
 
   // AppState Telemetry
   useEffect(() => {
@@ -1418,6 +1432,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
           {/* RIGHT: grouped icons (matching AuthScreen style) */}
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+            <TouchableOpacity onPress={() => setIsProgrammerVisible(true)} style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name="developer-board" size={18} color={Colors.textMuted} />
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}
               onPress={() => setIsSupportModalVisible(true)}
@@ -1512,6 +1530,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   </View>
                 </View>
 
+<<<<<<< Updated upstream
                 {/* SLAB 3: SKATES (Groups) */}
                 <View style={styles.slabContainer}>
                   <View style={styles.slabHeader}>
@@ -1543,8 +1562,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                       <Text style={styles.slabEmptyText}>Create a group to control both skates at once.</Text>
                     </View>
                   )}
+=======
+                  {/* Cleaned up: Demo Mode switches moved to global Auth bypass layer */}
+                </>
+>>>>>>> Stashed changes
                 </View>
 
+<<<<<<< Updated upstream
                 {/* SLAB 4: REGISTERED FLEET (Devices) */}
                 <View style={styles.slabContainer}>
                   <View style={styles.slabHeader}>
@@ -1576,6 +1600,28 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                         <Text style={styles.scanButtonText}>START SETUP</Text>
                       </TouchableOpacity>
                     </View>
+=======
+            ListEmptyComponent={
+              !isDeviceListCollapsed ? (
+                <View style={styles.emptyStateContainer}>
+                  <Text style={[Typography.caption, { color: Colors.text, opacity: 0.7 }]}>
+                    {isScanning ? 'Scanning...' : 'No devices found.'}
+                  </Text>
+                  {!isScanning && (
+                    <TouchableOpacity 
+                      onPress={() => {
+                        setPendingNewDevice({
+                          id: 'DEMO-' + Date.now().toString().slice(-4),
+                          name: 'Virtual Sk8Lytz',
+                          rssi: -50,
+                          product_id: 0x33,
+                        } as any);
+                      }}
+                      style={{ marginTop: 24, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, backgroundColor: 'rgba(0, 240, 255, 0.1)', borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.3)' }}
+                    >
+                      <Text style={{ color: '#00F0FF', fontWeight: 'bold' }}>MANUAL REGISTRATION</Text>
+                    </TouchableOpacity>
+>>>>>>> Stashed changes
                   )}
                 </View>
              </ScrollView>

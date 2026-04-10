@@ -60,7 +60,11 @@ export type EventType =
   | 'APP_FOREGROUNDED'
   | 'ERROR_CAUGHT'
   | 'PERFORMANCE_METRIC'
-  // ── Crew Sync ─────────────────────────────────────────────
+  | 'MOUNT'
+  | 'UNMOUNT'
+  | 'SYNC'
+  | 'REJOIN'
+  | 'FTUE'
   | 'CREW_SESSION_CREATED'
   | 'CREW_SESSION_JOINED'
   | 'CREW_SESSION_LEFT'
