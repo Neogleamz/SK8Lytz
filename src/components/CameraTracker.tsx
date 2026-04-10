@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator, Linking } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -73,9 +73,9 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
       const x_p = (locationX / layout.width) * photo.width;
       const y_p = (locationY / layout.height) * photo.height;
       
-      const cropSize = 20; // Slightly larger for better averaging
-      const originX = Math.max(0, Math.min(photo.width - cropSize, x_p - cropSize / 2));
-      const originY = Math.max(0, Math.min(photo.height - cropSize, y_p - cropSize / 2));
+      const cropSize = 1; // Strict 1 pixel sample for absolute precision
+      const originX = Math.floor(Math.max(0, Math.min(photo.width - cropSize, x_p)));
+      const originY = Math.floor(Math.max(0, Math.min(photo.height - cropSize, y_p)));
 
       const result = await ImageManipulator.manipulateAsync(
         photo.uri,
