@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, StyleSheet, PanResponder, LayoutChangeEvent, Text } from 'react-native';
+import { View, StyleSheet, PanResponder, LayoutChangeEvent, Text, ViewStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
@@ -9,11 +9,12 @@ interface TacticalSliderProps {
   onSlidingComplete?: (val: number) => void;
   minimumValue?: number;
   maximumValue?: number;
-  style?: any;
-  iconName: any;
+  style?: ViewStyle | ViewStyle[];
+  iconName: keyof typeof MaterialCommunityIcons.glyphMap;
   label?: string;
   fillColor?: string;
   formatValue?: (val: number) => string;
+  dynamicMode?: 'TURBO' | 'BRIGHTNESS';
 }
 
 const TacticalSlider = ({ 
@@ -26,7 +27,8 @@ const TacticalSlider = ({
   iconName,
   label,
   fillColor,
-  formatValue 
+  formatValue,
+  dynamicMode
 }: TacticalSliderProps) => {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
@@ -97,8 +99,16 @@ const TacticalSlider = ({
     })
   ).current;
 
-  const percentage = (localValue - minimumValue) / (maximumValue - minimumValue);
-  const activeColor = fillColor || Colors.primary;
+  const percentage = Math.max(0, Math.min(1, (localValue - minimumValue) / (maximumValue - minimumValue)));
+  let activeColor = fillColor || Colors.primary;
+  
+  if (dynamicMode === 'TURBO') {
+    const gb = Math.round(255 * (1 - percentage));
+    activeColor = `rgb(255, ${gb}, ${gb})`;
+  } else if (dynamicMode === 'BRIGHTNESS') {
+    const opacity = 0.2 + (0.8 * percentage);
+    activeColor = `rgba(255, 255, 255, ${opacity})`;
+  }
   
   const displayValue = formatValue ? formatValue(localValue) : `${Math.round(percentage * 100)}%`;
 
@@ -116,6 +126,23 @@ const TacticalSlider = ({
       
       {/* Fill Block */}
       <View style={[styles.fill, { width: `${percentage * 100}%`, backgroundColor: activeColor }]} pointerEvents="none" />
+      
+      {/* 80% Target Marker */}
+      {dynamicMode === 'BRIGHTNESS' && (
+        <View style={{
+          position: 'absolute',
+          left: '80%',
+          top: 0,
+          bottom: 0,
+          width: 2,
+          backgroundColor: 'rgba(255,255,255,0.8)',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 1,
+          shadowRadius: 2,
+          zIndex: 5
+        }} pointerEvents="none" />
+      )}
       
       {/* Overlay Content */}
       <View style={styles.overlay} pointerEvents="none">

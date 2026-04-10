@@ -1,4 +1,43 @@
 # SK8Lytz Master Bucket List
+- [x] `review-device-reg` : Device Registration & Claim Process Review — Revisiting the user-to-device ownership flow. Need to brainstorm and build a new implementation plan as the previous extensive one was lost.
+- [x] `ftue-initial-setup` : FTUE Phase 1 - Create HardwareSetupWizardScreen with probe scan logic and instructions.
+- [x] `ftue-probe-discovery` : FTUE Phase 2 - Build device discovery list, product identification logic (LED count), and Blink test.
+- [x] `ftue-claim-registration` : FTUE Phase 3 - Wire offline/online claiming via useRegistration.ts and UI portal integration.
+- [x] `sandbox-testing` : Establish Dev Sandbox — Move Nuke button to Auth, inject Dead-Code eliminated BLE mocks directly into useBLE hook, and clear stale Dashboard mock logic.
+- [x] `ftue-grouping-config` : FTUE Phase 4 - Add Mini Hardware Config for assigned positioning and auto-grouping generation.
+- [x] `fix/hardware-setup-guide-url` : Fix the URL for the 'View Installation Guide' link on the Hardware Setup screen
+- [x] `audit-admin-hardware` : #7 — Admin Hardware Tester audit — Verify `setMultiColor` path in admin tester applies color sorting correctly (currently does NOT call `applyColorSorting` — review `AdminHardwareTester.tsx` L169).
+- [x] `fix-camera-touch` : #8 — Camera Mode: Touch Precision fix — Color picker swatch is sampling too large an area. Touch/tap should sample ONLY the pixel directly under the finger and run the existing color enhancement routine on that single pixel.
+- [x] `audit-device-grouping` : #16 — Device Grouping Audit & Redesign — A "ghost group" keeps persisting across installs. Groups are incorrectly maintaining persistence after deleting. Audit all grouping logic in `DashboardScreen.tsx`, `AsyncStorage`, and `registered_groups`.
+- [x] `remove-protocol-setcolor` : #23 — `setColor()` in ZenggeProtocol — Does NOT apply color sorting. Should be removed or marked internal-only.
+- [x] `audit-0x81-command` : #24 — `0x81` legacy command audit — Confirm it's no longer being sent on connect. `0x62` (EEPROM write) is the correct command. Remove any remaining `0x81` calls.
+- [x] `modern-rgb-slider` : #29 — Modern RGB Hue Slider — Design and implement a more sophisticated, high-precision RGB hue selection component to replace the standard sliders. Give me 3 choices and let me choose before moving on
+- [x] `fix/music-buttons-scaling` : #37 — Music Mode: Mic & Play Buttons scaling fix — Fix the scaling of both the microphone footprint and the play buttons in Music Mode to dynamically fill available space without overlapping components.
+- [x] `feat/speed-slider-turbo-color` : #38 — Dynamic Speed Slider Color — Update the speed slider to dynamically change its track fill color from white at 0% to bright red at 100% (turbo) for enhanced visual feedback.
+- [x] `feat/brightness-slider-intensity` : #39 — Dynamic Brightness Slider Intensity — Update the brightness slider to visually scale its brightness representation (dim at 5%, super bright at 100%) and add a visual target line/marker at 80%.
+- [x] `feat/offline-mode-warning-text` : Add descriptive text below the 'Continue Offline' button on the Auth screen detailing horizontal feature lockouts (no crews, sessions, picks, or cloud sync).
+- [x] Protocol: Support full 0x51 logic
+- [x] Visualizer: 1:1 mathematical parity for 33 Custom Step Effects
+- [x] Add Black and White Color Extremes
+- [x] Solid Pattern Re-indexing (Custom Mode #1)
+- [x] Test the Expanded LED Diagnostic Lab
+- [x] Verify LED color mapping on device
+- [x] Street Mode UI Bug fix
+- [x] Lab DEVICES tab wired into content render block
+- [x] Lab transmit() now targets specific device via targetDeviceId
+- [x] Diagnostic Lab safe area padding (notch/nav bar overlap fixed)
+- [x] LED Diagnostic Lab fully tested on device — DEVICES scan, TARGET, BUILDER payloads firing
+- [x] LED color mapping verified: pure RGB sent, GRB remapped natively by hardware
+- [x] PatternEngine: transition byte research — 0x03=TRIGGER, 0x00=CASCADE
+- [x] Crew Hub: private crew invite code on card; leader and public/private status
+- [x] AppLogger telemetry: crew sessions, street mode, jerk detection, sensitivity
+- [x] AsyncStorage key migration: `ng_` → `@Sk8lytz_` namespace standardized
+- [x] Master Reference cleanup: ~1,200 lines removed, TOC + AI preamble added
+- [x] Street mode transition types: HARD_BRAKING → Strobe (0x02), CRUISE → FREEZE (0x01)
+- [x] Crew Hub Edit nav trap fixed: Back always returns to hub landing
+- [x] Session end flow: End Session button visible and functional in DockedController
+- [x] Builder UI Layout Compression: elements collapse cleanly under docked controller
+- [x] Builder UI Stabilization: 8-slot Tactical Grid with Marquee names
 
 All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
@@ -8,13 +47,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/device-registration`
 
-- [x] `review-device-reg` : Device Registration & Claim Process Review — Revisiting the user-to-device ownership flow. Need to brainstorm and build a new implementation plan as the previous extensive one was lost.
-- [x] `ftue-initial-setup` : FTUE Phase 1 - Create HardwareSetupWizardScreen with probe scan logic and instructions.
-- [x] `ftue-probe-discovery` : FTUE Phase 2 - Build device discovery list, product identification logic (LED count), and Blink test.
-- [x] `ftue-claim-registration` : FTUE Phase 3 - Wire offline/online claiming via useRegistration.ts and UI portal integration.
-- [x] `sandbox-testing` : Establish Dev Sandbox — Move Nuke button to Auth, inject Dead-Code eliminated BLE mocks directly into useBLE hook, and clear stale Dashboard mock logic.
-- [x] `ftue-grouping-config` : FTUE Phase 4 - Add Mini Hardware Config for assigned positioning and auto-grouping generation.
-- [x] `fix/hardware-setup-guide-url` : Fix the URL for the 'View Installation Guide' link on the Hardware Setup screen
 
 ### Target: `epic/crew-hub-overhaul`
 
@@ -31,12 +63,10 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/admin-tools`
 
-- [x] `audit-admin-hardware` : #7 — Admin Hardware Tester audit — Verify `setMultiColor` path in admin tester applies color sorting correctly (currently does NOT call `applyColorSorting` — review `AdminHardwareTester.tsx` L169).
 - [ ] `build-picks-scheduler` : #28 — SK8Lytz Picks Admin Scheduler — Build admin UI to manage the `sk8lytz_picks` table scheduling. DB columns (`active_from`, `active_until`, `is_active`) already in place. Goal: seasonal picks (4th of July, Christmas, etc.) auto-show/hide. Needs: admin screen, date pickers, toggle per pick. needs to be under hidden tool section
 
 ### Target: `epic/camera-mode`
 
-- [x] `fix-camera-touch` : #8 — Camera Mode: Touch Precision fix — Color picker swatch is sampling too large an area. Touch/tap should sample ONLY the pixel directly under the finger and run the existing color enhancement routine on that single pixel.
 
 ### Target: `epic/visualizer-parity`
 
@@ -44,19 +74,13 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/device-management`
 
-- [x] `audit-device-grouping` : #16 — Device Grouping Audit & Redesign — A "ghost group" keeps persisting across installs. Groups are incorrectly maintaining persistence after deleting. Audit all grouping logic in `DashboardScreen.tsx`, `AsyncStorage`, and `registered_groups`.
 
 ### Target: `epic/protocol-integration`
 
-- [x] `remove-protocol-setcolor` : #23 — `setColor()` in ZenggeProtocol — Does NOT apply color sorting. Should be removed or marked internal-only.
-- [x] `audit-0x81-command` : #24 — `0x81` legacy command audit — Confirm it's no longer being sent on connect. `0x62` (EEPROM write) is the correct command. Remove any remaining `0x81` calls.
 
 ### Target: `epic/ui-refinement`
 
-- [x] `modern-rgb-slider` : #29 — Modern RGB Hue Slider — Design and implement a more sophisticated, high-precision RGB hue selection component to replace the standard sliders. Give me 3 choices and let me choose before moving on
-- [x] `fix/music-buttons-scaling` : #37 — Music Mode: Mic & Play Buttons scaling fix — Fix the scaling of both the microphone footprint and the play buttons in Music Mode to dynamically fill available space without overlapping components.
-- [ ] `feat/speed-slider-turbo-color` : #38 — Dynamic Speed Slider Color — Update the speed slider to dynamically change its track fill color from white at 0% to bright red at 100% (turbo) for enhanced visual feedback.
-- [ ] `feat/brightness-slider-intensity` : #39 — Dynamic Brightness Slider Intensity — Update the brightness slider to visually scale its brightness representation (dim at 5%, super bright at 100%) and add a visual target line/marker at 80%.
+- [ ] `fix/color-picker-overflow` : #40 — 11-Color Picker Mobile Overflow Fix — The preset color picker dots (black dot mapping to a second line) are overflowing due to static widths. Refactor to use dynamic flex scaling so all 11 dots stay on one single horizontal row.
 
 ---
 
@@ -64,7 +88,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `main`
 
-- [x] `feat/offline-mode-warning-text` : Add descriptive text below the 'Continue Offline' button on the Auth screen detailing horizontal feature lockouts (no crews, sessions, picks, or cloud sync).
 
 ### Target: `epic/telemetry-audit`
 
@@ -111,28 +134,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## ✅ Completed Previously
 
-- [x] Protocol: Support full 0x51 logic
-- [x] Visualizer: 1:1 mathematical parity for 33 Custom Step Effects
-- [x] Add Black and White Color Extremes
-- [x] Solid Pattern Re-indexing (Custom Mode #1)
-- [x] Test the Expanded LED Diagnostic Lab
-- [x] Verify LED color mapping on device
-- [x] Street Mode UI Bug fix
-- [x] Lab DEVICES tab wired into content render block
-- [x] Lab transmit() now targets specific device via targetDeviceId
-- [x] Diagnostic Lab safe area padding (notch/nav bar overlap fixed)
-- [x] LED Diagnostic Lab fully tested on device — DEVICES scan, TARGET, BUILDER payloads firing
-- [x] LED color mapping verified: pure RGB sent, GRB remapped natively by hardware
-- [x] PatternEngine: transition byte research — 0x03=TRIGGER, 0x00=CASCADE
-- [x] Crew Hub: private crew invite code on card; leader and public/private status
-- [x] AppLogger telemetry: crew sessions, street mode, jerk detection, sensitivity
-- [x] AsyncStorage key migration: `ng_` → `@Sk8lytz_` namespace standardized
-- [x] Master Reference cleanup: ~1,200 lines removed, TOC + AI preamble added
-- [x] Street mode transition types: HARD_BRAKING → Strobe (0x02), CRUISE → FREEZE (0x01)
-- [x] Crew Hub Edit nav trap fixed: Back always returns to hub landing
-- [x] Session end flow: End Session button visible and functional in DockedController
-- [x] Builder UI Layout Compression: elements collapse cleanly under docked controller
-- [x] Builder UI Stabilization: 8-slot Tactical Grid with Marquee names
 
 ---
 *Last updated: 2026-04-09 | This session: IDE Rules configured for auto-branching.*
