@@ -50,10 +50,10 @@ export const COLOR_SORTING_RGBW: Record<number, string> = {
 
 // Reverse lookups: name → index
 export function icTypeIndex(name: string): number {
-  return parseInt(Object.keys(IC_TYPES).find(k => IC_TYPES[parseInt(k)] === name) || '1');
+  return parseInt(Object.keys(IC_TYPES).find(k => IC_TYPES[parseInt(k, 10)] === name) || '1', 10);
 }
 export function colorSortingIndex(name: string): number {
-  return parseInt(Object.keys(COLOR_SORTING_RGB).find(k => COLOR_SORTING_RGB[parseInt(k)] === name) || '2');
+  return parseInt(Object.keys(COLOR_SORTING_RGB).find(k => COLOR_SORTING_RGB[parseInt(k, 10)] === name) || '2', 10);
 }
 
 // ─── HARDWARE CONSTRAINTS ─────────────────────────────────────────────────────
@@ -359,14 +359,6 @@ export class ZenggeProtocol {
 
   // ─── EXISTING COMMANDS ─────────────────────────────────────────────────────
 
-  /**
-   * Set all LEDs to a solid color instantly (Static transition, no fade).
-   * Uses 0x59 with transitionType=0 (Static) for immediate hardware snap.
-   * NOTE: numPoints should match actual device LED count via hwSettings.ledPoints.
-   */
-  static setColor(r: number, g: number, b: number, numPoints: number = 10): number[] {
-    return this.setMultiColor(Array(numPoints).fill({ r, g, b }), 1, 1, 0x00);
-  }
 
   static setSymphonyColor(r: number, g: number, b: number): number[] {
     const cmd = [0x41, r, g, b, 0x01, 0x01, 0xf0];
@@ -559,15 +551,6 @@ export class ZenggeProtocol {
     return this.wrapCommand([0x71, 0x24, 0x0f, 0xa4]);
   }
 
-  /**
-   * @deprecated Use writeHardwareSettingsByName() instead — this uses the OLD 0x81 command
-   * which is NOT recognized by newer firmware (LEDnetWF0200 series).
-   * The correct write command is 0x62 via writeHardwareSettings() / writeHardwareSettingsByName().
-   */
-  public static setHardwareConfig(points: number, colorOrder: string, stripType: string, segments: number = 1): number[] {
-    console.warn('[ZenggeProtocol] setHardwareConfig() is deprecated — use writeHardwareSettingsByName()');
-    return this.writeHardwareSettingsByName(points, segments, stripType, colorOrder);
-  }
 
   static queryHardwareConfig(): number[] {
     return this.wrapCommand([0x10, 0x00, 0x00, 0x10]);
@@ -575,7 +558,7 @@ export class ZenggeProtocol {
 
   /**
    * @deprecated Use parseHardwareSettingsResponse() for 0x63 responses.
-   * Legacy parser kept for backward compatibility with 0x81/0x10 responses.
+   * Legacy parser kept for backward compatibility with older command responses.
    */
   static parseHardwareConfig(payload: number[]) {
     if (!payload || payload.length < 13) return null;

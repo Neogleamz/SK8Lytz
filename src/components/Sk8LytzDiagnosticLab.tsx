@@ -223,7 +223,7 @@ export default function Sk8LytzDiagnosticLab({
       } else if (bldProtocol === '0x62') {
         const pts = parseInt(bldPoints) || 16;
         const seg = parseInt(bldSegs) || 1;
-        const wrapped = ZenggeProtocol.setHardwareConfig(pts, bldOrder, bldIc, seg);
+        const wrapped = ZenggeProtocol.writeHardwareSettingsByName(pts, seg, bldIc, bldOrder);
         const hex = wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
         setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x62] EEPROM Write', `IC: ${bldIc} Order: ${bldOrder}`, `LEDs: ${pts} Seg: ${seg}`] });
         setBldHexOverride(hex);
