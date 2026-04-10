@@ -46,12 +46,30 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🔴 High Priority / Next Up
 
+### Target: `epic/telemetry-audit`
+
+- [x] `feat/telemetry-error-logging` : Add comprehensive error handling and logging to Supabase. Implement an intelligent system to persist runtime crashes, unhandled exceptions, and BLE errors to a new DB table for AI review and bucket list generation.
+
+### Target: `epic/protocol-integration`
+
+- [ ] `fix/hardware-connection-drop` : Connection dropouts when using the app, dumping UI to setup on disconnect. Re-evaluate hardware polling and connection state handling.
+- [ ] `audit/connection-polling-logic` : Audit how we are polling and pinging device states on the dashboard and controller. Fix issues with dropping connections and touchy multi-device control.
+- [ ] `fix/controller-navigation-lockup` : Leaving the controller and re-entering is slow and causes lockups. Investigate component unmount/mount lifecycle and connection management.
+
 ### Target: `epic/device-registration`
 
-- [ ] `fix/supabase-auth-redirect` : Supabase Auth Confirmation Email Redirect — Fix the issue where the confirmation email link points to a dead `localhost` site. 
+- [x] `fix/supabase-auth-redirect` : Supabase Auth Confirmation Email Redirect — Fix the issue where the confirmation email link points to a dead `localhost` site. 
+- [ ] `fix/hardware-setup-loop` : Hardware Setup Wizard launches repeatedly on app reopen even after setup and registration. Investigate triggers and fix.
+- [ ] `fix/account-devices-display` : Account Manager / Devices tab is showing groups instead of individual devices. Refactor to display all registered devices with their details only.
 - [ ] `fix/device-setup-blink` : Blink button does not work on device setup; evaluate and implement handling strategy.
-- [ ] `audit/registered-device-naming` : Audit registered device naming logic — devices appear duplicated. Think on a strategy to fix.
+- [ ] `audit/global-device-naming` : Comprehensive Device Naming Audit — The app is displaying raw 'LEDnet' names in the visualizer and dashboard instead of actual named devices (e.g. 'Soulz Right'). Devices also appear duplicated. Trace and audit ALL automatic naming and grouping persistence globally to establish a single source of truth for display names.
 - [ ] `chore/rename-hardware-fleet` : Rename "Hardware Fleet" to "Registered Devices" in UI.
+
+### Target: `epic/ui-refinement`
+
+- [x] `fix/color-picker-overflow` : #40 — 11-Color Picker Mobile Overflow Fix — The preset color picker dots (black dot mapping to a second line) are overflowing due to static widths. Refactor to use dynamic flex scaling so all 11 dots stay on one single horizontal row.
+- [ ] `fix/pro-effects-color-sync` : Pro effects mode color slider sync — The RGB slider does not stay in sync when toggling between Foreground and Background state. Update slider to reflect the currently selected layer's color.
+- [ ] `feat/favorites-layout-modernization` : Fix Favorites layout and scrolling issues. Modernize the tab design (requires presenting multiple design concepts for approval).
 
 ### Target: `epic/crew-hub-overhaul`
 
@@ -59,6 +77,10 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `fix/crew-session-stale-data` : Audit Live Sessions logic - Fix stale data/duplicates in 'Live Near You' after deletion and implement unique session naming (e.g. CrewName_Date)
 - [x] `feat/crew-discovery-refinement` : Refine 'Live Near You' discovery - Show only sessions (not crews), show all public sessions, but only private sessions for crews you belong to.
 - [x] `fix/crew-hub-button-styling` : Fix 'Start' and 'Schedule' buttons — Currently overflow their container and need to be resized/smaller to fit the landing view box.
+
+### Target: `epic/camera-mode`
+
+- [ ] `fix/camera-color-interpreter` : The camera color interpreter is behaving oddly. Discuss options and brainstorm solutions for refining or replacing the color sampling logic.
 
 ### Target: `epic/music-mode-parity`
 
@@ -74,19 +96,9 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] `build-picks-scheduler` : #28 — SK8Lytz Picks Admin Scheduler — Build admin UI to manage the `sk8lytz_picks` table scheduling. DB columns (`active_from`, `active_until`, `is_active`) already in place. Goal: seasonal picks (4th of July, Christmas, etc.) auto-show/hide. Needs: admin screen, date pickers, toggle per pick. needs to be under hidden tool section. lets talk about this one
 - [ ] `feat/admin-proximity-telemetry` : Proximity Logging Hub — Aggregate all nearby BLE devices seen by the scanner in the Admin Tools "Device" tab. Prioritize registered hardware at the top, followed by a historical list of all unique MACs seen to correlate user behavior and rink density.
 
-### Target: `epic/camera-mode`
-
 ### Target: `epic/visualizer-parity`
 
 - [ ] `tune-visualizer-pro-effects` : #15 — Visualizer Parity: Pro Effects Patterns — Exhaustively review and tune the interpolation mathematics for all 33 of the 'pro effects' patterns to make them physically accurate within the product visualizer.
-
-### Target: `epic/device-management`
-
-### Target: `epic/protocol-integration`
-
-### Target: `epic/ui-refinement`
-
-- [x] `fix/color-picker-overflow` : #40 — 11-Color Picker Mobile Overflow Fix — The preset color picker dots (black dot mapping to a second line) are overflowing due to static widths. Refactor to use dynamic flex scaling so all 11 dots stay on one single horizontal row.
 
 ---
 
@@ -96,6 +108,9 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 - [x] `feat/dashboard-redesign` : **[PRIORITY]** Redesign scanner dashboard into a modern interface (Style 3 - Vertical Slabs, No-Scrolling). 4-Slab Hierarchy: [Header] ➔ [Crew Hub Sessions] ➔ [Skates (Hardware Groups)] ➔ [Registered Device List + Add Button]. See `docs/plans/feat-dashboard-redesign.md` for details.
 - [x] `fix/dynamic-username` : Display the actual username from Supabase session/profile instead of hardcoded 'Skater'
+- [ ] `fix/username-case-sensitivity` : Why is the username case-sensitive? Enforce global lowercase normalization on registration, authentication, and display to prevent duplicate/split identities.
+- [ ] `feat/signup-profile-requirements` : Require users to set a Handle and Display Name during initial sign-up. Discuss options for preventing skipped profiling and ensuring identity is established upfront.
+- [ ] `fix/misspelling-back-button` : Fix global spelling error on navigation header buttons. Currently says "Bac" everywhere instead of "Back" or uses a faulty icon label.
 - [x] `fix/setup-finish-destination` : Ensure Hardware Setup Wizard returns to the Dashboard after completion instead of auto-launching the controller
 - [ ] `hw-test/remote-pairing-logic` : Research and verify RF Remote pairing ID discovery and Power ON/OFF parity (APP vs RF Remote)
 - [x] `fix/camera-mode-layout` : Camera mode regression fix — Restore proper permissions prompt system, optimize layout so color bar is minimized at the bottom, maximize camera preview area, and add user instruction tooltip ("Click a color on screen...").
