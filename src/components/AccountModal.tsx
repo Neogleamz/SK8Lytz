@@ -150,20 +150,22 @@ export default function AccountModal({
 
       // ── Fetch cloud-registered devices from DB ─────────────────
       try {
-        const { data: dbDevices } = await supabase
-          .from('registered_devices')
-          .select('device_mac, device_name, product_type, position, group_name, created_at')
-          .eq('user_id', user?.id ?? '')
-          .order('created_at', { ascending: false });
+        if (user) {
+          const { data: dbDevices } = await supabase
+            .from('registered_devices')
+            .select('device_mac, device_name, product_type, position, group_name, created_at')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
 
-        if (dbDevices && dbDevices.length > 0) {
-          setDevices(dbDevices.map((d: any) => ({
-            id: d.device_mac,
-            name: d.device_name ?? d.device_mac,
-            customName: d.group_name ?? undefined,
-            type: d.product_type ?? undefined,
-            registeredAt: d.created_at,
-          })));
+          if (dbDevices && dbDevices.length > 0) {
+            setDevices(dbDevices.map((d: any) => ({
+              id: d.device_mac,
+              name: d.device_name ?? d.device_mac,
+              customName: d.group_name ?? undefined,
+              type: d.product_type ?? undefined,
+              registeredAt: d.created_at,
+            })));
+          }
         }
       } catch (devErr) {
         console.warn('[AccountModal] Could not fetch cloud devices:', devErr);

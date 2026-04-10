@@ -511,17 +511,24 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         )}
 
         {/* Sandbox mode option */}
-        {__DEV__ && onOfflineMode && (
+        {__DEV__ && (
           <TouchableOpacity
             onPress={async () => {
-              await AsyncStorage.setItem('@Sk8lytz_demo_mode', 'true');
-              onOfflineMode();
+              const current = await AsyncStorage.getItem('@Sk8lytz_demo_mode');
+              const nextState = current === 'true' ? 'false' : 'true';
+              await AsyncStorage.setItem('@Sk8lytz_demo_mode', nextState);
+              import('react-native').then(rn => {
+                rn.Alert.alert(
+                  'Developer Sandbox', 
+                  `Virtual Skates & Demo features are now ${nextState === 'true' ? 'ENABLED' : 'DISABLED'}. Restart Bluetooth or refresh to apply.`
+                );
+              });
             }}
             style={[styles.offlineButton, { borderColor: 'rgba(255,255,0,0.5)', backgroundColor: 'rgba(255,255,0,0.05)', marginTop: 12 }]}
             activeOpacity={0.7}
           >
-            <Text style={[styles.offlineButtonText, { color: '#FFE135' }]}>🧪 Dev Sandbox</Text>
-            <Text style={styles.offlineButtonSub}>Injects Virtual Skates & Bypasses Auth</Text>
+            <Text style={[styles.offlineButtonText, { color: '#FFE135' }]}>🧪 Toggle Dev Sandbox</Text>
+            <Text style={styles.offlineButtonSub}>Injects Virtual Skates & UI Overrides</Text>
           </TouchableOpacity>
         )}
 
@@ -531,6 +538,26 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             🔒 Passwords are checked against HaveIBeenPwned's breach database using k-anonymity. Your password is never transmitted.
           </Text>
         )}
+
+        {/* The Nuke Button */}
+        <TouchableOpacity
+          style={{
+            marginTop: 30,
+            alignSelf: 'center',
+            backgroundColor: 'rgba(255, 0, 0, 0.1)',
+            paddingVertical: 10,
+            paddingHorizontal: 20,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: 'rgba(255, 0, 0, 0.4)'
+          }}
+          onPress={async () => {
+            await AsyncStorage.clear();
+            setErrorMessage('APP RESET: ALL DATA CLEARED. PLEASE RESTART APP.');
+          }}
+        >
+          <Text style={{ color: '#FF4444', fontWeight: 'bold', fontSize: 12 }}>☢️ NUKE APP CACHE</Text>
+        </TouchableOpacity>
 
       </ScrollView>
     </KeyboardAvoidingView>

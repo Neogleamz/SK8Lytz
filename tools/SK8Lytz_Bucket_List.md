@@ -36,7 +36,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/camera-mode`
 
-- [ ] `fix-camera-touch` : #8 — Camera Mode: Touch Precision fix — Color picker swatch is sampling too large an area. Touch/tap should sample ONLY the pixel directly under the finger and run the existing color enhancement routine on that single pixel.
+- [x] `fix-camera-touch` : #8 — Camera Mode: Touch Precision fix — Color picker swatch is sampling too large an area. Touch/tap should sample ONLY the pixel directly under the finger and run the existing color enhancement routine on that single pixel.
 
 ### Target: `epic/visualizer-parity`
 
@@ -44,20 +44,16 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/device-management`
 
-- [ ] `audit-device-grouping` : #16 — Device Grouping Audit & Redesign — A "ghost group" keeps persisting across installs. Audit all grouping logic in `DashboardScreen.tsx`, `AsyncStorage`, and `registered_groups`.
-- [ ] `feat/dashboard-collapsible-sections` : Create collapsible sections in Dashboard to separate claimed/registered devices from available devices.
-- [ ] `chore/remove-legacy-grouping` : Restore "edit devices in group" capability and scrub legacy auto-grouping logic (groups must originate solely from Setup or Hardware settings).
-
-- [ ] `refine-crew-hub-layout` : #22 — Crew Hub layout refinement — Spacing, dashboard layout, member count display, and session timer as platform grows.
+- [x] `audit-device-grouping` : #16 — Device Grouping Audit & Redesign — A "ghost group" keeps persisting across installs. Groups are incorrectly maintaining persistence after deleting. Audit all grouping logic in `DashboardScreen.tsx`, `AsyncStorage`, and `registered_groups`.
 
 ### Target: `epic/protocol-integration`
 
-- [ ] `remove-protocol-setcolor` : #23 — `setColor()` in ZenggeProtocol — Does NOT apply color sorting. Should be removed or marked internal-only.
-- [ ] `audit-0x81-command` : #24 — `0x81` legacy command audit — Confirm it's no longer being sent on connect. `0x62` (EEPROM write) is the correct command. Remove any remaining `0x81` calls.
+- [x] `remove-protocol-setcolor` : #23 — `setColor()` in ZenggeProtocol — Does NOT apply color sorting. Should be removed or marked internal-only.
+- [x] `audit-0x81-command` : #24 — `0x81` legacy command audit — Confirm it's no longer being sent on connect. `0x62` (EEPROM write) is the correct command. Remove any remaining `0x81` calls.
 
 ### Target: `epic/ui-refinement`
 
-- [ ] `modern-rgb-slider` : #29 — Modern RGB Hue Slider — Design and implement a more sophisticated, high-precision RGB hue selection component to replace the standard sliders.
+- [ ] `modern-rgb-slider` : #29 — Modern RGB Hue Slider — Design and implement a more sophisticated, high-precision RGB hue selection component to replace the standard sliders. Give me 3 choices and let me choose before moving on
 
 ---
 

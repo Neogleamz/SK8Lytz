@@ -475,7 +475,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       const cruise = { r: crR, g: crG, b: crB };
 
       // DO NOT apply applyColorSorting here.
-      // Hardware auto-remaps GRB internally via 0x81 config. Send pure RGB.
+      // Hardware auto-remaps GRB internally via 0x62 EEPROM config. Send pure RGB.
       let arr: { r: number; g: number; b: number }[];
 
       // #9 — Cruise bounce chase animation
@@ -794,7 +794,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       if (!writeToDevice) return;
       // hwSettings.ledPoints IS the total LED count — do NOT divide by segments
       const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
-      // DO NOT apply applyColorSorting — hardware auto-remaps GRB via 0x81 config
+      // DO NOT apply applyColorSorting — hardware auto-remaps GRB via 0x62 EEPROM config
       // transitionType=0x01 (FREEZE) = immediate hardware lock, no animation
       const colors = Array(numLEDs).fill({ r, g, b });
       await writeToDevice(ZenggeProtocol.setMultiColor(colors, 1, 1, 0x01));

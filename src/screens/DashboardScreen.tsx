@@ -21,7 +21,7 @@
  * Platform: React Native (Android + Web)
  */
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Switch, Platform, Image, Linking, Animated, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Platform, Image, Linking, Animated, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
@@ -41,7 +41,7 @@ import LogViewerModal from '../components/LogViewerModal';
 import CrewModal from '../components/CrewModal';
 import { crewService, CrewSession, CrewRole } from '../services/CrewService';
 import Sk8LytzDiagnosticLab from '../components/Sk8LytzDiagnosticLab';
-import FirstTimeSetupModal from '../components/FirstTimeSetupModal';
+
 import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
 import { supabase } from '../services/supabaseClient';
 import { useRegistration, RegisteredDevice } from '../hooks/useRegistration';
@@ -49,7 +49,7 @@ import AccountModal from '../components/AccountModal';
 import CrewMemberDashboard from '../components/CrewMemberDashboard';
 import { profileService } from '../services/ProfileService';
 import { notificationService } from '../services/NotificationService';
-import DeviceRegistrationModal from '../components/DeviceRegistrationModal';
+
 
 interface DeviceSettings {
   name: string;
@@ -148,7 +148,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
-  const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(false);
+  const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(true);
   const [isRegisteredCollapsed, setIsRegisteredCollapsed] = useState(false);
 
   // ── Crew Hub state ─────────────────────────────────────────────────────
@@ -545,7 +545,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         // Ensure we scan for at least 5 seconds for visual impact
         const waitTime = Math.max(5000, Platform.OS === 'web' ? 5000 : 7000);
         setTimeout(() => {
-          setIsDeviceListCollapsed(false);
           runAutoProvisioning();
         }, waitTime);
       }
@@ -579,7 +578,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           try { 
             const parsed = JSON.parse(res) || [];
             // Remove any groups containing simulated devices
-            const cleanedGroups = parsed.filter((g: any) => !g.deviceIds.some((id: string) => id.startsWith('sim-')));
+            const cleanedGroups = parsed.filter((g: any) => !(g.deviceIds || []).some((id: string) => id.startsWith('sim-')));
             if (cleanedGroups.length !== parsed.length) {
               AsyncStorage.setItem('ng_custom_groups', JSON.stringify(cleanedGroups)).catch(()=>{});
             }
@@ -905,23 +904,59 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     setIsGroupModalVisible(true);
   };
 
-  const handleGroupDelete = (id: string) => {
+  const handleGroupDelete = async (id: string) => {
+    const groupToDelete = customGroups.find(g => g.id === id);
     const updatedGroups = customGroups.filter(g => g.id !== id);
     setCustomGroups(updatedGroups);
-    AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
+    await AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
     
+    if (groupToDelete && groupToDelete.deviceIds) {
+      try {
+        const stored = await AsyncStorage.getItem('ng_device_configs');
+        if (stored) {
+          const configs = JSON.parse(stored);
+          let configsChanged = false;
+          
+          for (const mac of groupToDelete.deviceIds) {
+            if (configs[mac]) {
+              delete configs[mac].groupId;
+              delete configs[mac].groupName;
+              configs[mac].grouped = false;
+              configsChanged = true;
+              
+              const rd = registeredDevices.find(r => r.device_mac === mac);
+              if (rd) {
+                await saveRegisteredDevice({ ...rd, group_name: null, is_pending_sync: true });
+              }
+            }
+          }
+          
+          if (configsChanged) {
+            await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
+            setDeviceConfigs(configs);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to scrub ghost group from components: ' + e);
+      }
+    }
+
     setIsGroupModalVisible(false);
   };
 
   const saveGroup = async (name: string, deviceIds: string[]) => {
     let newGroups = customGroups;
+    let finalGroupId = `group-${Date.now()}`;
+    let previousDeviceIds: string[] = [];
+
     if (groupModalMode === 'create') {
       const existing = customGroups.find(g => g.name.toLowerCase() === name.toLowerCase());
       if (existing) {
+        finalGroupId = existing.id;
+        previousDeviceIds = existing.deviceIds || [];
         newGroups = customGroups.map(g => g.id === existing.id ? { ...g, deviceIds: Array.from(new Set([...g.deviceIds, ...deviceIds])) } : g);
       } else {
-        const newGroupId = `group-${Date.now()}`;
-        newGroups = [...customGroups, { id: newGroupId, name, isGroup: true, deviceIds }];
+        newGroups = [...customGroups, { id: finalGroupId, name, isGroup: true, deviceIds }];
       }
       setIsSelectionMode(false);
       setSelectedIds([]);
@@ -930,17 +965,54 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         handleGroupDelete(editingGroupId);
         return;
       }
+      finalGroupId = editingGroupId;
+      const existing = customGroups.find(g => g.id === editingGroupId);
+      if (existing) previousDeviceIds = existing.deviceIds || [];
       newGroups = customGroups.map(g => g.id === editingGroupId ? { ...g, name, deviceIds } : g);
     }
+    
     setCustomGroups(newGroups);
     await AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups));
+
+    // Deep cache scrub & sync for children configurations
+    try {
+      const stored = await AsyncStorage.getItem('ng_device_configs');
+      const configs = stored ? JSON.parse(stored) : {};
+      let configsChanged = false;
+      
+      // Removed devices: scrub their configs
+      const removedIds = previousDeviceIds.filter(id => !deviceIds.includes(id));
+      for (const mac of removedIds) {
+        if (configs[mac]) {
+          delete configs[mac].groupId;
+          delete configs[mac].groupName;
+          configs[mac].grouped = false;
+          configsChanged = true;
+          const rd = registeredDevices.find(r => r.device_mac === mac);
+          if (rd) await saveRegisteredDevice({ ...rd, group_name: null, is_pending_sync: true });
+        }
+      }
+
+      // Added or preserved devices: enforce group config
+      for (const mac of deviceIds) {
+        configs[mac] = { ...configs[mac], groupId: finalGroupId, groupName: name, grouped: true };
+        configsChanged = true;
+        const rd = registeredDevices.find(r => r.device_mac === mac);
+        if (rd) await saveRegisteredDevice({ ...rd, group_name: name, is_pending_sync: true });
+      }
+
+      if (configsChanged) {
+        await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
+        setDeviceConfigs(configs);
+      }
+    } catch (e) {
+      console.warn('Failed to sync group cache changes', e);
+    }
   };
 
   useEffect(() => {
     requestPermissions();
   }, []);
-
-  // (Removed redundant second setOnDataReceived binding)
 
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [selectedDeviceForSettingsId, setSelectedDeviceForSettingsId] = useState<string | null>(null);
@@ -1184,28 +1256,20 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       {isActuallyConnected ? (
         /* ── Connected: Unified Header Layout ── */
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {/* LEFT: User pill */}
+          {/* LEFT: Back button */}
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity
-              onPress={() => setIsAccountModalVisible(true)}
+              onPress={handleDisconnect}
               style={{
                 flexDirection: 'row', alignItems: 'center',
-                paddingHorizontal: 8, paddingVertical: 4,
-                borderRadius: 20, borderWidth: 1, gap: 5,
-                borderColor: 'rgba(0,240,255,0.25)',
-                backgroundColor: 'rgba(0,240,255,0.06)',
+                paddingHorizontal: 6, paddingVertical: 4,
+                borderRadius: 20, gap: 2,
               }}
             >
-              <View style={{
-                width: 6, height: 6, borderRadius: 3,
-                backgroundColor: Colors.success,
-                shadowColor: Colors.success,
-                shadowOpacity: 0.8, shadowRadius: 3, elevation: 1,
-              }} />
-              <Text style={{ color: Colors.text, fontSize: 10, fontWeight: '700', maxWidth: 70 }} numberOfLines={1}>
-                {authUsername || 'Skater'}
+              <MaterialCommunityIcons name="chevron-left" size={24} color={Colors.primary} />
+              <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 }}>
+                BACK
               </Text>
-              <MaterialCommunityIcons name="account-cog" size={10} color={Colors.textMuted} style={{ opacity: 0.6 }} />
             </TouchableOpacity>
           </View>
 
@@ -1350,7 +1414,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
         {isActuallyConnected ? (
           <View style={{ flex: 1 }}>
-            <View style={{ paddingBottom: 16 }}>
+            <View pointerEvents="box-none" style={{ paddingBottom: 16, zIndex: 100, elevation: 100 }}>
               {renderDashboardHeader()}
             </View>
             <View style={{ flex: 1 }}>
@@ -1361,10 +1425,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           <FlatList
             style={{ flex: 1 }}
             ListHeaderComponent={
-              <View style={{ paddingBottom: 16 }}>
+              <View pointerEvents="box-none" style={{ paddingBottom: 16, zIndex: 100, elevation: 100 }}>
                 {renderDashboardHeader()}
 
-                <View style={{ paddingHorizontal: Layout.padding }}>
+                <View style={{ paddingHorizontal: Layout.padding, zIndex: 1 }}>
                   {!isTestModeActive ? (
                   <View style={{ height: 380, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 5, width: '100%' }}>
                       <ScannerAnimation 
@@ -1447,7 +1511,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                             
                             const firstDev = devicesToConnect[0];
                             const cfg = deviceConfigs[(firstDev as any).id] || {};
-                            const configPoints   = cfg.points    || (firstDev as any).points    || (firstDev.name?.toLowerCase().includes('soul') ? 43 : 16);
+                            const configPoints   = cfg.points    || (firstDev as any).points    || (firstDev.name?.toLowerCase()?.includes('soul') ? 43 : 16);
                             const configSegments = cfg.segments  || (firstDev as any).segments  || 1;
                             const configSorting  = cfg.sorting   || (firstDev as any).sorting   || 'GRB';
                             const configStrip    = cfg.stripType || (firstDev as any).stripType || 'WS2812B';
@@ -1516,6 +1580,18 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 </View>
               ) : null
             }
+            ListFooterComponent={
+              !isDeviceListCollapsed ? (
+                <View style={{ alignItems: 'center', marginTop: availableDevicesData.length > 0 ? 10 : 24, marginBottom: 20 }}>
+                  <TouchableOpacity 
+                    onPress={() => setIsSetupWizardVisible(true)}
+                    style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, backgroundColor: 'rgba(0, 240, 255, 0.1)', borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.3)' }}
+                  >
+                    <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 12, letterSpacing: 1 }}>REGISTER DEVICES</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null
+            }
         />
         )}
         <DeviceSettingsModal
@@ -1525,9 +1601,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           writeToDevice={writeToDevice}
           initialSettings={{
             name: selectedDeviceForSettings?.name || 'SOULZ',
-            type: (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'),
-            points: deviceConfigs[selectedDeviceForSettings?.id || '']?.points || (selectedDeviceForSettings as any)?.points || (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 43 : 8),
-            segments: deviceConfigs[selectedDeviceForSettings?.id || '']?.segments || (selectedDeviceForSettings as any)?.segments || (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 1 : 2),
+            type: (selectedDeviceForSettings?.name?.toLowerCase()?.includes('soul') ? 'SOULZ' : 'HALOZ'),
+            points: deviceConfigs[selectedDeviceForSettings?.id || '']?.points || (selectedDeviceForSettings as any)?.points || (selectedDeviceForSettings?.name?.toLowerCase()?.includes('soul') ? 43 : 8),
+            segments: deviceConfigs[selectedDeviceForSettings?.id || '']?.segments || (selectedDeviceForSettings as any)?.segments || (selectedDeviceForSettings?.name?.toLowerCase()?.includes('soul') ? 1 : 2),
             stripType: deviceConfigs[selectedDeviceForSettings?.id || '']?.stripType || (selectedDeviceForSettings as any)?.stripType || 'WS2812B',
             sorting: deviceConfigs[selectedDeviceForSettings?.id || '']?.sorting || (selectedDeviceForSettings as any)?.sorting || 'GRB',
             grouped: !!deviceConfigs[selectedDeviceForSettings?.id || '']?.groupId || (selectedDeviceForSettings as any)?.grouped || false,
@@ -1541,7 +1617,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           isVisible={isGroupModalVisible}
           onClose={() => setIsGroupModalVisible(false)}
           onSave={saveGroup}
-          onDelete={groupModalMode === 'rename' && editingGroupId ? () => deleteGroup(editingGroupId) : undefined}
+          onDelete={groupModalMode === 'rename' && editingGroupId ? () => handleGroupDelete(editingGroupId) : undefined}
           initialName={groupModalMode === 'rename' ? customGroups.find(g => g.id === editingGroupId)?.name : 'My SK8Lytz'}
           initialDeviceIds={groupModalMode === 'rename' ? customGroups.find(g => g.id === editingGroupId)?.deviceIds : selectedIds}
           allDevices={allDevices}
@@ -1666,18 +1742,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       />
       {/* HardwareSetupWizardScreen is conditionally returned at the top level instead of here */}
 
-      {/* Single-device quick-register — slides up when returning user connects a new unclaimed device */}
-      <DeviceRegistrationModal
-        device={pendingNewDevice}
-        existingGroups={[...new Set(registeredDevices.map((d: any) => d.group_name).filter(Boolean))]}
-        onDismiss={() => { setPendingNewDevice(null); wizardCheckedRef.current = false; clearPendingRegistrations(); }}
-        onRegistered={async (rd) => {
-          await saveRegisteredDevice(rd);
-          setPendingNewDevice(null);
-          clearPendingRegistrations();
-          wizardCheckedRef.current = false;
-        }}
-      />
+
 
       {/* Crew Hub Modal */}
       <CrewModal
