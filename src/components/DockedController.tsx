@@ -23,6 +23,7 @@ import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
 import ProductVisualizer from './ProductVisualizer';
 import CustomSlider from './CustomSlider';
+import NeonHueStrip from './NeonHueStrip';
 import TacticalSlider from './TacticalSlider';
 import VerticalPatternDrum from './VerticalPatternDrum';
 import CameraTracker from './CameraTracker';
@@ -2057,8 +2058,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               {/* Hue Slider */}
               {!(activeMode === 'PROGRAMS' || activeMode === 'CAMERA') && (
                 <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
-                  <CustomSlider
-                    gradientTrack={true}
+                  <NeonHueStrip
                     value={activeMode === 'MUSIC' ? (musicColorFocus === 'PRIMARY' ? musicHue : musicSecondaryHue) : activeMode === 'MULTIMODE' ? fixedHue : selectedHue}
                     onValueChange={(hue) => {
                       if (activeMode === 'MULTIMODE') {
