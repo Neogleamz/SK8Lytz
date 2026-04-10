@@ -154,8 +154,8 @@ The app uses a "Search & Enrich" strategy for First Time User Experience (FTUE).
 * `5`: BGR
 
 > [!IMPORTANT]
-> The hardware does **NOT** autonomously remap RGB channel bytes sent via 0x59 regardless of its EEPROM setting.
-> The application software must pre-swap the RGB bytes via `ZenggeProtocol.applyColorSorting()` BEFORE generating the hex array string for transmission.
+> Modern HALOZ/SOULZ hardware (WS2811/WS2812B) natively handles color remapping internally based on the EEPROM sorting index (set via 0x62).
+> The application software should send **PURE RGB** bytes. Do NOT pre-sort colors using `applyColorSorting()` for 0x59 or 0x73 payloads, as this will result in double-swapped / incorrect colors.
 
 ---
 

@@ -373,12 +373,12 @@ export class ZenggeProtocol {
   }
 
   static setMusicConfig(
-    isDeviceMic: boolean, modeType: number, patternId: number,
+    isDeviceMic: boolean, matrixStyle: number, patternId: number,
     color1: {r: number, g: number, b: number},
     color2: {r: number, g: number, b: number},
     sensitivity: number, brightness: number
   ): number[] {
-    const payload = [0x73, isDeviceMic ? 0x01 : 0x00, modeType, patternId,
+    const payload = [0x73, isDeviceMic ? 0x01 : 0x00, matrixStyle, patternId,
       color1.r, color1.g, color1.b, color2.r, color2.g, color2.b, 0x20, sensitivity, brightness];
     const checksum = this.calculateChecksum(payload);
     return this.wrapCommand([...payload, checksum]);

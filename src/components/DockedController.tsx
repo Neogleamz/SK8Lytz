@@ -47,6 +47,18 @@ import MarqueeText from './MarqueeText';
 
 type MotionState = 'STOPPED' | 'ACCELERATING' | 'CRUISING' | 'SLOWING_DOWN' | 'HARD_BRAKING';
 
+interface IAnalogGaugeProps {
+  value: number;
+  min: number;
+  max: number;
+  label: string;
+  unit?: string;
+  defaultColor?: string;
+  size?: number;
+  dangerVal?: number;
+  criticalVal?: number;
+}
+
 const AnalogGauge = ({
   value,
   min,
@@ -57,7 +69,7 @@ const AnalogGauge = ({
   size = 140,
   dangerVal,
   criticalVal
-}: { value: number, min: number, max: number, label: string, unit?: string, defaultColor?: string, size?: number, dangerVal?: number, criticalVal?: number }) => {
+}: IAnalogGaugeProps) => {
   const radius = size * 0.42;
   const center = size / 2;
   const angleRange = 260;
@@ -1754,6 +1766,38 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                         <MaterialCommunityIcons name="bluetooth-audio" size={20} color={micSource === 'DEVICE' ? '#FFF' : Colors.textMuted} />
                       </View>
                       <Text style={[styles.micSubText, micSource === 'DEVICE' && { color: Colors.primary, fontWeight: 'bold' }]}>DEVICE MIC</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* ── Matrix Style Selector: Light Screen (0x27) vs Light Bar (0x26) ── */}
+                  <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 12, marginBottom: 16 }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setMusicMatrixStyle(0x27);
+                        handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 0x27);
+                      }}
+                      style={{
+                        flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center',
+                        backgroundColor: musicMatrixStyle === 0x27 ? Colors.primary + '33' : 'rgba(255,255,255,0.05)',
+                        borderWidth: 1.5, borderColor: musicMatrixStyle === 0x27 ? Colors.primary : 'rgba(255,255,255,0.1)'
+                      }}
+                    >
+                      <Text style={{ color: musicMatrixStyle === 0x27 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>LIGHT SCREEN</Text>
+                      <Text style={{ color: musicMatrixStyle === 0x27 ? Colors.primary : Colors.textMuted, fontSize: 8, opacity: 0.8 }}>0x27 (DENSE)</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setMusicMatrixStyle(0x26);
+                        handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 0x26);
+                      }}
+                      style={{
+                        flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center',
+                        backgroundColor: musicMatrixStyle === 0x26 ? Colors.accent + '33' : 'rgba(255,255,255,0.05)',
+                        borderWidth: 1.5, borderColor: musicMatrixStyle === 0x26 ? Colors.accent : 'rgba(255,255,255,0.1)'
+                      }}
+                    >
+                      <Text style={{ color: musicMatrixStyle === 0x26 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>LIGHT BAR</Text>
+                      <Text style={{ color: musicMatrixStyle === 0x26 ? Colors.accent : Colors.textMuted, fontSize: 8, opacity: 0.8 }}>0x26 (BAR)</Text>
                     </TouchableOpacity>
                   </View>
                 </View>

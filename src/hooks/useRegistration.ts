@@ -183,7 +183,7 @@ export function useRegistration() {
       setHasPendingSync(true);
       return false; // saved locally, pending cloud
     }
-  }, []);
+  };
 
   // ── Save multiple devices at once (first-time wizard) ───────────────────────
   const saveAllRegisteredDevices = useCallback(async (devices: RegisteredDevice[]): Promise<boolean> => {

@@ -55,8 +55,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/music-mode-parity`
 
-- [ ] `lab-music-mode-parity` : #13 — Lab 0x73 Music Mode parity — Lab BUILDER's 0x73 section is missing Light Screen (0x27) vs Light Bar (0x26) matrix style toggle, primary/secondary color pickers, and mic source.
-- [ ] `fix-music-mode-color` : #14 — Music Mode: Sound column/drop color not applied — Main app music mode is functioning but color changes for patterns using "sound column" and "drop" effects are not being accepted/applied.
+- [x] `lab-music-mode-parity` : #13 — Lab 0x73 Music Mode parity — Lab BUILDER's 0x73 section is missing Light Screen (0x27) vs Light Bar (0x26) matrix style toggle, primary/secondary color pickers, and mic source.
+- [x] `fix-music-mode-color` : #14 — Music Mode: Sound column/drop color not applied — Main app music mode is functioning but color changes for patterns using "sound column" and "drop" effects are not being accepted/applied.
 
 ---
 
@@ -65,6 +65,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/admin-tools`
 
 - [ ] `build-picks-scheduler` : #28 — SK8Lytz Picks Admin Scheduler — Build admin UI to manage the `sk8lytz_picks` table scheduling. DB columns (`active_from`, `active_until`, `is_active`) already in place. Goal: seasonal picks (4th of July, Christmas, etc.) auto-show/hide. Needs: admin screen, date pickers, toggle per pick. needs to be under hidden tool section. lets talk about this one
+- [ ] `feat/admin-tools-reorg` : Admin Tools Overhaul — Rename LogViewerModal to AdminTools, reorganize menu structure (Timeline, Stats, Device, Tools), and set as the default admin modal.
 
 ### Target: `epic/camera-mode`
 
@@ -105,6 +106,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/security-audit`
 
+- [ ] `chore/supabase-auth-reconciliation` : #22 — Supabase Auth Reconciliation — Audit the mixing of standard Supabase Auth with internal application auth logic; identify impacts on session management and RLS security.
 - [ ] `audit-rls-performance` : #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges.
 
 ### Target: `epic/community-hub`
@@ -138,4 +140,4 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ## ✅ Completed Previously
 
 ---
-*Last updated: 2026-04-09 | This session: IDE Rules configured for auto-branching.*
+*Last updated: 2026-04-10 | This session: Music Mode Parity achieved.*
