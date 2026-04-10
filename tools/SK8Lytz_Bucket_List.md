@@ -51,7 +51,9 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/crew-hub-overhaul`
 
 - [ ] `refactor-crew-modal` : #3 — `CrewModal.tsx` refactor — 14 useEffect hooks, 2,600+ lines. Extract `useCrewHub()` and `useCrewSession()` custom hooks. Highest maintainability debt in the codebase.
-- [ ] `fix/crew-session-stale-data` : Audit Live Sessions logic - Fix stale data/duplicates in 'Live Near You' after deletion and implement unique session naming (e.g. CrewName_Date)
+- [x] `fix/crew-session-stale-data` : Audit Live Sessions logic - Fix stale data/duplicates in 'Live Near You' after deletion and implement unique session naming (e.g. CrewName_Date)
+- [ ] `feat/crew-discovery-refinement` : Refine 'Live Near You' discovery - Show only sessions (not crews), show all public sessions, but only private sessions for crews you belong to.
+- [x] `fix/crew-hub-button-styling` : Fix 'Start' and 'Schedule' buttons — Currently overflow their container and need to be resized/smaller to fit the landing view box.
 
 ### Target: `epic/music-mode-parity`
 
@@ -65,7 +67,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/admin-tools`
 
 - [ ] `build-picks-scheduler` : #28 — SK8Lytz Picks Admin Scheduler — Build admin UI to manage the `sk8lytz_picks` table scheduling. DB columns (`active_from`, `active_until`, `is_active`) already in place. Goal: seasonal picks (4th of July, Christmas, etc.) auto-show/hide. Needs: admin screen, date pickers, toggle per pick. needs to be under hidden tool section. lets talk about this one
-- [ ] `feat/admin-tools-reorg` : Admin Tools Overhaul — Rename LogViewerModal to AdminTools, reorganize menu structure (Timeline, Stats, Device, Tools), and set as the default admin modal.
+- [ ] `feat/admin-proximity-telemetry` : Proximity Logging Hub — Aggregate all nearby BLE devices seen by the scanner in the Admin Tools "Device" tab. Prioritize registered hardware at the top, followed by a historical list of all unique MACs seen to correlate user behavior and rink density.
 
 ### Target: `epic/camera-mode`
 
@@ -135,7 +137,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `#26` — SK8Lytz Picks DB Migration — Moved to `sk8lytz_picks` Supabase table
 - [x] `#31` — Legacy Tool Retirement — Retired Simple Scanner and Admin Hardware Tester; consolidated
 - [x] `#32` — Diagnostic Lab UI Modernization — Restyled Lab header, exit logic, and card styling.
-- [x] `#33` — Lab Navigation Flow — Standardized "Exit" behavior to return users to the Analytics view.
+- [x] `feat/admin-tools-reorg` : Admin Tools Overhaul — Renamed LogViewerModal to AdminTools, reorganized hierarchy (Timeline, Stats, Device, Tools), and integrated as primary dashboard diagnostic hub.
 
 ## ✅ Completed Previously
 
