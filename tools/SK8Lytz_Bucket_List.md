@@ -114,6 +114,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `fix/setup-finish-destination` : Ensure Hardware Setup Wizard returns to the Dashboard after completion instead of auto-launching the controller
 - [ ] `hw-test/remote-pairing-logic` : Research and verify RF Remote pairing ID discovery and Power ON/OFF parity (APP vs RF Remote)
 - [x] `fix/camera-mode-layout` : Camera mode regression fix — Restore proper permissions prompt system, optimize layout so color bar is minimized at the bottom, maximize camera preview area, and add user instruction tooltip ("Click a color on screen...").
+- [ ] `fix/dashboard-long-press-tip` : Fix the long press tip button on dashboard.
+- [ ] `feat/speed-tracking-telemetry` : Add average mph and speed tracking to sessions, crews, and street mode. Need to brainstorm and discuss implementation options.
 
 ### Target: `epic/telemetry-audit`
 
