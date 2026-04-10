@@ -1512,14 +1512,18 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   <Text style={[Typography.caption, { color: Colors.text, opacity: 0.7 }]}>
                     {isScanning ? 'Scanning...' : 'No devices found.'}
                   </Text>
-                  {!isScanning && (
-                    <TouchableOpacity 
-                      onPress={() => setIsSetupWizardVisible(true)}
-                      style={{ marginTop: 24, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, backgroundColor: 'rgba(0, 240, 255, 0.1)', borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.3)' }}
-                    >
-                      <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 12, letterSpacing: 1 }}>MANUAL REGISTRATION</Text>
-                    </TouchableOpacity>
-                  )}
+                </View>
+              ) : null
+            }
+            ListFooterComponent={
+              !isDeviceListCollapsed ? (
+                <View style={{ alignItems: 'center', marginTop: availableDevicesData.length > 0 ? 10 : 24, marginBottom: 20 }}>
+                  <TouchableOpacity 
+                    onPress={() => setIsSetupWizardVisible(true)}
+                    style={{ paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, backgroundColor: 'rgba(0, 240, 255, 0.1)', borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.3)' }}
+                  >
+                    <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 12, letterSpacing: 1 }}>REGISTER DEVICES</Text>
+                  </TouchableOpacity>
                 </View>
               ) : null
             }
