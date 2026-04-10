@@ -11,20 +11,21 @@ import * as SplashScreen from 'expo-splash-screen';
 import { AppLogger } from './src/services/AppLogger';
 import { supabase } from './src/services/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Linking from 'expo-linking';
 
 const STORAGE_OFFLINE_SKIP   = '@Sk8lytz_offline_skip';
 const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';
 
 /** ── Global Error Boundary to prevent White Screens ────────────────────────────────── */
-class SafeErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
-  constructor(props: any) {
+class SafeErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children: React.ReactNode }) {
     super(props);
     this.state = { hasError: false, error: null };
   }
-  static getDerivedStateFromError(error: any) {
+  static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
   }
-  componentDidCatch(error: any, errorInfo: any) {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     AppLogger.log('ERROR_CAUGHT', { message: error.message, stack: error.stack, info: errorInfo });
     console.error('FATAL_RECOVERY', error, errorInfo);
   }
@@ -77,6 +78,37 @@ function AppContent() {
       setSessionLoaded(true);
       return;
     }
+
+    const handleDeepLink = async ({ url }: { url: string }) => {
+      if (!url) return;
+      try {
+        if (url.includes('#access_token=')) {
+          const hashString = url.split('#')[1];
+          const params = hashString.split('&').reduce((acc, current) => {
+            const [key, value] = current.split('=');
+            acc[key] = decodeURIComponent(value);
+            return acc;
+          }, {} as Record<string, string>);
+
+          if (params.access_token && params.refresh_token) {
+            const { error } = await supabase.auth.setSession({ 
+              access_token: params.access_token, 
+              refresh_token: params.refresh_token 
+            });
+            if (error) {
+              AppLogger.log('AUTH_ERROR', { context: 'deep_link', message: error.message });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Deep link parsed error', err);
+      }
+    };
+
+    const linkSubscription = Linking.addEventListener('url', handleDeepLink);
+    Linking.getInitialURL().then(url => {
+      if (url) handleDeepLink({ url });
+    });
 
     const init = async () => {
       try {
@@ -137,6 +169,7 @@ function AppContent() {
 
     return () => {
       if (data?.subscription) data.subscription.unsubscribe();
+      linkSubscription.remove();
     };
   }, []);
 
