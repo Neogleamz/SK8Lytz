@@ -16,6 +16,15 @@ import * as Linking from 'expo-linking';
 const STORAGE_OFFLINE_SKIP   = '@Sk8lytz_offline_skip';
 const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';
 
+if (typeof global.ErrorUtils !== 'undefined') {
+  const defaultHandler = (global.ErrorUtils as any).getGlobalHandler();
+  (global.ErrorUtils as any).setGlobalHandler(async (error: any, isFatal: boolean) => {
+    await AppLogger.log('ERROR_CAUGHT', { message: error?.message || 'Unhandled JS Exception', stack: error?.stack, isFatal });
+    await AppLogger.uploadLogsToSupabase();
+    if (defaultHandler) defaultHandler(error, isFatal);
+  });
+}
+
 /** ── Global Error Boundary to prevent White Screens ────────────────────────────────── */
 class SafeErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: React.ReactNode }) {
@@ -26,7 +35,9 @@ class SafeErrorBoundary extends React.Component<{ children: React.ReactNode }, {
     return { hasError: true, error };
   }
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    AppLogger.log('ERROR_CAUGHT', { message: error.message, stack: error.stack, info: errorInfo });
+    AppLogger.log('ERROR_CAUGHT', { message: error.message, stack: error.stack, info: errorInfo }).then(() => {
+        AppLogger.uploadLogsToSupabase();
+    });
     console.error('FATAL_RECOVERY', error, errorInfo);
   }
   render() {

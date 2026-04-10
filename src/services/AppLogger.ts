@@ -522,6 +522,27 @@ class AppLoggerService {
              await supabase.from('parsed_logs').insert(dbLogPayload);
           }
           
+          // 5. Critical Error Telemetry
+          const CRITICAL_EVENTS = ['ERROR_CAUGHT', 'PROTOCOL_ERROR', 'BLE_WRITE_ERROR', 'BLE_CONNECTION_ERROR', 'CREW_ERROR'];
+          const errorLogs = currentRunLogs.filter((item: any) => CRITICAL_EVENTS.includes(item.e));
+          if (errorLogs.length > 0) {
+              const errorPayload = errorLogs.map((item: any) => ({
+                  session_id: sessionId,
+                  event_type: item.e,
+                  error_message: String(item.d?.message || item.d?.error || item.d?.errorMessage || JSON.stringify(item.d) || 'Unknown error').substring(0, 500),
+                  stack_trace: item.d?.stack || item.d?.stackTrace || null,
+                  raw_context: {
+                      ...item.d,
+                      host_device_id: deviceId,
+                      target_device_id: item.d?.deviceId || primaryMacRaw,
+                      os_name: hostInfo.os_name,
+                      os_version: hostInfo.os_version
+                  }
+              }));
+              await supabase.from('telemetry_errors').insert(errorPayload);
+              console.log(`[AppLogger] Pushed ${errorPayload.length} critical errors to telemetry tracker.`);
+          }
+
           console.log('[AppLogger] Postgres Native Insertion Complete!');
 
           // Buffer rotation: clear local log buffer after a confirmed clean push

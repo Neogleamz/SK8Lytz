@@ -48,7 +48,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/telemetry-audit`
 
-- [ ] `feat/telemetry-error-logging` : Add comprehensive error handling and logging to Supabase. Implement an intelligent system to persist runtime crashes, unhandled exceptions, and BLE errors to a new DB table for AI review and bucket list generation.
+- [x] `feat/telemetry-error-logging` : Add comprehensive error handling and logging to Supabase. Implement an intelligent system to persist runtime crashes, unhandled exceptions, and BLE errors to a new DB table for AI review and bucket list generation.
 
 ### Target: `epic/protocol-integration`
 
