@@ -286,20 +286,25 @@ export function useRegistration() {
     await saveRegisteredDevice(d2);
   }, [saveRegisteredDevice]);
 
-  // ── Check if user has ANY cloud-registered devices ───────────────────────────
+  // ── Check if user has ANY registered devices (cloud or local) ────────────────
   const hasCloudRegistrations = useCallback(async (): Promise<boolean> => {
     try {
+      // 1. Always check local first because it reflects the true current state
+      const local = await getLocalDevices();
+      if (local.length > 0) return true;
+
+      // 2. Fallback to Supabase if local is empty (e.g., fresh install with existing cloud data)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
+
       const { count } = await supabase
         .from('registered_devices')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id);
+        
       return (count ?? 0) > 0;
     } catch {
-      // Offline — check local
-      const local = await getLocalDevices();
-      return local.filter(d => !d.is_pending_sync).length > 0;
+      return false;
     }
   }, []);
 
