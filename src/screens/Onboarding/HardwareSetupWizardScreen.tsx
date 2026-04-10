@@ -373,9 +373,16 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                let leftAssigned = false;
                let rightAssigned = false;
                
+               let hCount = 0;
+               let sCount = 0;
+
                selected.forEach(d => {
                   const n = d.device_name || '';
                   let pType = n.toUpperCase().includes('HALO') ? 'HALOZ' : 'SOULZ';
+                  
+                  if (pType === 'HALOZ') hCount++;
+                  if (pType === 'SOULZ') sCount++;
+
                   let pos: 'Left'|'Right'|null = null;
                   if (n.toLowerCase().includes('left')) { pos = 'Left'; leftAssigned = true; }
                   else if (n.toLowerCase().includes('right')) { pos = 'Right'; rightAssigned = true; }
@@ -392,6 +399,14 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                     points: typeof d.led_points === 'number' ? d.led_points : (pType === 'SOULZ' ? 43 : 16)
                   };
                });
+
+               if (!groupName) {
+                 let defaultName = 'My Skates';
+                 if (hCount > 0 && sCount === 0) defaultName = 'My SK8Lytz HALOZ';
+                 if (sCount > 0 && hCount === 0) defaultName = 'My SK8Lytz SOULZ';
+                 setGroupName(defaultName);
+               }
+
                setDeviceConfigsState(configs);
                setStep(3);
             }}
@@ -436,7 +451,10 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                      device_name: cfg?.name.trim() || device.device_name,
                      product_type: cfg?.type || 'SOULZ',
                      position: cfg?.position || null,
-                     led_points: cfg?.points || device.led_points
+                     led_points: cfg?.points || device.led_points,
+                     segments: 1,
+                     ic_type: 'WS2812B',
+                     color_sorting: 'GRB'
                    };
                  });
                  await onSetupComplete(finalizedDevices);

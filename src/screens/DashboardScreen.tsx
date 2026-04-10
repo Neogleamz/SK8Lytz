@@ -148,7 +148,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
-  const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(false);
+  const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(true);
   const [isRegisteredCollapsed, setIsRegisteredCollapsed] = useState(false);
 
   // ── Crew Hub state ─────────────────────────────────────────────────────
@@ -545,7 +545,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         // Ensure we scan for at least 5 seconds for visual impact
         const waitTime = Math.max(5000, Platform.OS === 'web' ? 5000 : 7000);
         setTimeout(() => {
-          setIsDeviceListCollapsed(false);
           runAutoProvisioning();
         }, waitTime);
       }
@@ -579,7 +578,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           try { 
             const parsed = JSON.parse(res) || [];
             // Remove any groups containing simulated devices
-            const cleanedGroups = parsed.filter((g: any) => !g.deviceIds.some((id: string) => id.startsWith('sim-')));
+            const cleanedGroups = parsed.filter((g: any) => !(g.deviceIds || []).some((id: string) => id.startsWith('sim-')));
             if (cleanedGroups.length !== parsed.length) {
               AsyncStorage.setItem('ng_custom_groups', JSON.stringify(cleanedGroups)).catch(()=>{});
             }
@@ -1350,7 +1349,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
         {isActuallyConnected ? (
           <View style={{ flex: 1 }}>
-            <View style={{ paddingBottom: 16 }}>
+            <View pointerEvents="box-none" style={{ paddingBottom: 16, zIndex: 100, elevation: 100 }}>
               {renderDashboardHeader()}
             </View>
             <View style={{ flex: 1 }}>
@@ -1361,10 +1360,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           <FlatList
             style={{ flex: 1 }}
             ListHeaderComponent={
-              <View style={{ paddingBottom: 16 }}>
+              <View pointerEvents="box-none" style={{ paddingBottom: 16, zIndex: 100, elevation: 100 }}>
                 {renderDashboardHeader()}
 
-                <View style={{ paddingHorizontal: Layout.padding }}>
+                <View style={{ paddingHorizontal: Layout.padding, zIndex: 1 }}>
                   {!isTestModeActive ? (
                   <View style={{ height: 380, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 5, width: '100%' }}>
                       <ScannerAnimation 
@@ -1447,7 +1446,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                             
                             const firstDev = devicesToConnect[0];
                             const cfg = deviceConfigs[(firstDev as any).id] || {};
-                            const configPoints   = cfg.points    || (firstDev as any).points    || (firstDev.name?.toLowerCase().includes('soul') ? 43 : 16);
+                            const configPoints   = cfg.points    || (firstDev as any).points    || (firstDev.name?.toLowerCase()?.includes('soul') ? 43 : 16);
                             const configSegments = cfg.segments  || (firstDev as any).segments  || 1;
                             const configSorting  = cfg.sorting   || (firstDev as any).sorting   || 'GRB';
                             const configStrip    = cfg.stripType || (firstDev as any).stripType || 'WS2812B';
@@ -1533,9 +1532,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           writeToDevice={writeToDevice}
           initialSettings={{
             name: selectedDeviceForSettings?.name || 'SOULZ',
-            type: (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'),
-            points: deviceConfigs[selectedDeviceForSettings?.id || '']?.points || (selectedDeviceForSettings as any)?.points || (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 43 : 8),
-            segments: deviceConfigs[selectedDeviceForSettings?.id || '']?.segments || (selectedDeviceForSettings as any)?.segments || (selectedDeviceForSettings?.name?.toLowerCase().includes('soul') ? 1 : 2),
+            type: (selectedDeviceForSettings?.name?.toLowerCase()?.includes('soul') ? 'SOULZ' : 'HALOZ'),
+            points: deviceConfigs[selectedDeviceForSettings?.id || '']?.points || (selectedDeviceForSettings as any)?.points || (selectedDeviceForSettings?.name?.toLowerCase()?.includes('soul') ? 43 : 8),
+            segments: deviceConfigs[selectedDeviceForSettings?.id || '']?.segments || (selectedDeviceForSettings as any)?.segments || (selectedDeviceForSettings?.name?.toLowerCase()?.includes('soul') ? 1 : 2),
             stripType: deviceConfigs[selectedDeviceForSettings?.id || '']?.stripType || (selectedDeviceForSettings as any)?.stripType || 'WS2812B',
             sorting: deviceConfigs[selectedDeviceForSettings?.id || '']?.sorting || (selectedDeviceForSettings as any)?.sorting || 'GRB',
             grouped: !!deviceConfigs[selectedDeviceForSettings?.id || '']?.groupId || (selectedDeviceForSettings as any)?.grouped || false,
