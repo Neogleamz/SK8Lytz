@@ -61,9 +61,40 @@ Sk8Lytz caters to a diverse, family-oriented community of dedicated roller skate
 | `@sk8lytz_theme` | ThemeContext | `dark` or `light` |
 | `@sk8lytz_control_theme`| ThemeContext | Control color theme name |
 
-### Supabase Architecture (Telemetry)
+### Dashboard UI Layout (4-Slab Architecture)
 
-*Project ID: `qefmeivpjyaukbwadgaz`*
+The primary dashboard uses a **Vertical Slab (No-Scroll)** layout to maximize glanceability and touch accuracy.
+
+1. **Slab 1: Dynamic Header**: Logo, user profile, and active polling/telemetry indicator.
+2. **Slab 2: Crew Hub**: Active session discovery and quick-join pills.
+3. **Slab 3: My Skates / Groups**: High-impact cards for grouped hardware with global power controls.
+4. **Slab 4: Hardware Fleet**: List of all registered devices with a "TAP TO ADD" quick-access wizard link.
+
+### Supabase Architecture (Telemetry & Registration)
+
+*Project ID:* `qefmeivpjyaukbwadgaz`
+
+#### **`registered_devices`** (Hardened Schema)
+| Column | Type | Purpose |
+|:---|:---|:---|
+| `device_mac` | TEXT (PK) | Unique hardware address |
+| `user_id` | UUID (PK) | Owner ID |
+| `device_name` | TEXT | Custom alias |
+| `product_type` | TEXT | HALOZ / SOULZ |
+| `position` | TEXT | Left / Right / Front / Back |
+| `group_name` | TEXT | Auto-assignment to hardware groups |
+| `led_points` | INT | Physical pixel count |
+| `segments` | INT | Virtual segments |
+| `ic_type` | INT | 1 (WS2812), etc. |
+| `color_sorting`| INT | 2 (GRB), etc. |
+| `rssi_at_register`| INT | Connection quality at first sync |
+| `firmware_ver` | INT | |
+| `led_version` | INT | |
+| `product_id` | INT | |
+
+> [!WARNING]
+> The app enforces **Strict Column Mapping** in `useRegistration.ts`. Any new database column MUST be added to the explicit mapping in the `dbRow` object to prevent schema cache mismatch errors during cloud sync.
+
 * **`parsed_session_stats`**: One row per app session summary (`session_id` UNIQUE)
 * **`parsed_session_devices`**: All BLE devices seen per session (`session_id + device_id` UNIQUE)
 * **`parsed_logs`**: Full event trace log. Appended continuously.

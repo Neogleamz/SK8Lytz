@@ -126,14 +126,33 @@ export function useRegistration() {
       await AsyncStorage.setItem(LOCAL_KEY, JSON.stringify(current));
       setRegisteredDevices([...current]);
 
-      // 2. Try Supabase upsert
-      if (user) {
-        const { error } = await supabase
-          .from('registered_devices')
-          .upsert({ ...fullDevice, user_id: user.id }, { onConflict: 'user_id,device_mac' });
+        // 2. Try Supabase upsert - Explicitly pick valid columns
+        if (user) {
+          const dbRow = {
+            device_mac:      fullDevice.device_mac,
+            device_name:     fullDevice.device_name,
+            product_type:    fullDevice.product_type,
+            position:        fullDevice.position,
+            group_name:      fullDevice.group_name,
+            led_points:      fullDevice.led_points,
+            segments:        fullDevice.segments,
+            ic_type:         fullDevice.ic_type,
+            color_sorting:   fullDevice.color_sorting,
+            rssi_at_register: fullDevice.rssi_at_register,
+            firmware_ver:    fullDevice.firmware_ver,
+            led_version:     fullDevice.led_version,
+            product_id:      fullDevice.product_id,
+            user_id:         user.id,
+            updated_at:      now,
+            registered_at:   fullDevice.registered_at,
+          };
 
-        if (error) throw error;
-      } else {
+          const { error } = await supabase
+            .from('registered_devices')
+            .upsert(dbRow, { onConflict: 'user_id,device_mac' });
+
+          if (error) throw error;
+        } else {
         // No session — queue for later sync
         await queuePendingSync(fullDevice);
         setHasPendingSync(true);
@@ -335,9 +354,28 @@ export function useRegistration() {
       if (queue.length === 0) return;
 
       for (const device of queue) {
+        const dbRow = {
+          device_mac:      device.device_mac,
+          device_name:     device.device_name,
+          product_type:    device.product_type,
+          position:        device.position,
+          group_name:      device.group_name,
+          led_points:      device.led_points,
+          segments:        device.segments,
+          ic_type:         device.ic_type,
+          color_sorting:   device.color_sorting,
+          rssi_at_register: device.rssi_at_register,
+          firmware_ver:    device.firmware_ver,
+          led_version:     device.led_version,
+          product_id:      device.product_id,
+          user_id:         userId,
+          updated_at:      new Date().toISOString(),
+          registered_at:   device.registered_at,
+        };
+
         const { error } = await supabase
           .from('registered_devices')
-          .upsert({ ...device, user_id: userId, is_pending_sync: false }, { onConflict: 'user_id,device_mac' });
+          .upsert(dbRow, { onConflict: 'user_id,device_mac' });
         if (error) console.warn('[Registration] Flush error for', device.device_mac, error);
       }
 
