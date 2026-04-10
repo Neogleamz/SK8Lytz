@@ -53,6 +53,7 @@ Sk8Lytz caters to a diverse, family-oriented community of dedicated roller skate
 | Key | Owner | Contents |
 |:---|:---|:---|
 | `@sk8lytz_logs` | AppLogger | Compact telemetry event buffer array |
+| `@Sk8lytz_auth_username`| DashboardScreen | Local cache of Supabase display_name for instant UI feedback |
 | `ng_device_configs` | DashboardScreen / AppLogger | Dict keyed by MAC containing `{ name, type, points, segments, sorting, stripType, groupId }` |
 | `ng_custom_groups` | DashboardScreen | Array of `{ id, name, isGroup, deviceIds }` |
 | `ng_processed_devices`| DashboardScreen | Cached array of previously discovered device objects |

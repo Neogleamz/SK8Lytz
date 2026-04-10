@@ -63,6 +63,13 @@ interface DeviceSettings {
   groupName?: string;
 }
 
+interface CustomGroup {
+  id: string;
+  name: string;
+  isGroup: boolean;
+  deviceIds: string[];
+}
+
 export default function DashboardScreen({ isOfflineMode = false, onLogout }: { isOfflineMode?: boolean; onLogout?: () => void } = {}) {
   const { Colors, isDark, toggleTheme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -144,7 +151,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isTestModeActive, setIsTestModeActive] = useState(false);
   const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
 
-  const [customGroups, setCustomGroups] = useState<any[]>([]);
+  const [customGroups, setCustomGroups] = useState<CustomGroup[]>([]);
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
@@ -268,9 +275,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       setCustomGroups(updatedGroups);
       AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups)).catch(()=>{});
       
-      // Auto Connect sequence so they are immediately live
-      const devicesToConnect = allDevices.filter(d => macs.includes((d as any).id || (d as any).device_mac));
-      connectToDevices(devicesToConnect);
+      // Auto-connect to newly registered fleet is now disabled; 
+      // stay on Dashboard so user can see their new hardware list.
+      // const devicesToConnect = allDevices.filter(d => macs.includes((d as any).id || (d as any).device_mac));
+      // connectToDevices(devicesToConnect);
     }
 
     clearPendingRegistrations();
@@ -291,6 +299,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   // User Profile
   const [authUsername, setAuthUsername] = useState<string | null>(null);
+
+  // Load cached username on mount for instant UI feedback
+  useEffect(() => {
+    AsyncStorage.getItem('@Sk8lytz_auth_username').then(val => {
+      if (val && !authUsername) setAuthUsername(val);
+    }).catch(() => {});
+  }, []);
 
   const handleLogout = async () => {
      try {
@@ -319,14 +334,18 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           // Fetch real display name from user_profiles (not user_metadata which may be empty)
           try {
             const profile = await profileService.fetchOrCreateProfile();
-            setAuthUsername(profile?.display_name || profile?.username || session.user.email?.split('@')[0] || 'Skater');
+            const name = profile?.display_name || profile?.username || session.user.email?.split('@')[0] || 'GUEST';
+            setAuthUsername(name);
+            AsyncStorage.setItem('@Sk8lytz_auth_username', name).catch(() => {});
           } catch {
-            setAuthUsername(session.user.email?.split('@')[0] || 'Skater');
+            const fallback = session.user.email?.split('@')[0] || 'GUEST';
+            setAuthUsername(fallback);
+            AsyncStorage.setItem('@Sk8lytz_auth_username', fallback).catch(() => {});
           }
-          let groups: any[] | null = null;
+          let groups: CustomGroup[] | null = null;
           try {
             const result = await supabase.from('registered_groups').select('*').eq('user_id', CloudUserId);
-            groups = result.data;
+            groups = result.data as CustomGroup[];
             isOffline = !!result.error;
           } catch {
             isOffline = true;
@@ -1372,8 +1391,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 shadowColor: isOfflineMode ? '#FFA500' : Colors.success,
                 shadowOpacity: 0.8, shadowRadius: 4, elevation: 2,
               }} />
-              <Text style={{ color: Colors.text, fontSize: 11, fontWeight: '700', maxWidth: 80 }} numberOfLines={1}>
-                {authUsername || 'Skater'}
+              <Text style={{ color: Colors.text, fontSize: 11, fontWeight: '700', maxWidth: 80, fontFamily: 'Righteous' }} numberOfLines={1}>
+                {authUsername || 'GUEST'}
               </Text>
               <View style={{
                 paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5,
