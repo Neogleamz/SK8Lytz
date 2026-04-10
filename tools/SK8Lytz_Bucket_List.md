@@ -85,7 +85,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `main`
 
-- [ ] `feat/dashboard-redesign` : Redesign scanner dashboard into a modern interface, minimizing scan animation, updating Crew Hub and Group cards for larger click-to-connect layout.
+- [ ] `feat/dashboard-redesign` : **[PRIORITY]** Redesign scanner dashboard into a modern interface (Style 3 - Vertical Slabs, No-Scrolling). See `docs/plans/feat-dashboard-redesign.md` for details.
+- [ ] `fix/camera-mode-layout` : Camera mode regression fix — Restore proper permissions prompt system, optimize layout so color bar is minimized at the bottom, maximize camera preview area, and add user instruction tooltip ("Click a color on screen...").
 
 ### Target: `epic/telemetry-audit`
 
