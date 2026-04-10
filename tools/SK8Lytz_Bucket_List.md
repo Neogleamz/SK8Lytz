@@ -46,6 +46,10 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🔴 High Priority / Next Up
 
+### Target: `epic/telemetry-audit`
+
+- [ ] `feat/telemetry-error-logging` : Add comprehensive error handling and logging to Supabase. Implement an intelligent system to persist runtime crashes, unhandled exceptions, and BLE errors to a new DB table for AI review and bucket list generation.
+
 ### Target: `epic/protocol-integration`
 
 - [ ] `fix/hardware-connection-drop` : Connection dropouts when using the app, dumping UI to setup on disconnect. Re-evaluate hardware polling and connection state handling.
@@ -56,6 +60,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 - [x] `fix/supabase-auth-redirect` : Supabase Auth Confirmation Email Redirect — Fix the issue where the confirmation email link points to a dead `localhost` site. 
 - [ ] `fix/hardware-setup-loop` : Hardware Setup Wizard launches repeatedly on app reopen even after setup and registration. Investigate triggers and fix.
+- [ ] `fix/account-devices-display` : Account Manager / Devices tab is showing groups instead of individual devices. Refactor to display all registered devices with their details only.
 - [ ] `fix/device-setup-blink` : Blink button does not work on device setup; evaluate and implement handling strategy.
 - [ ] `audit/global-device-naming` : Comprehensive Device Naming Audit — The app is displaying raw 'LEDnet' names in the visualizer and dashboard instead of actual named devices (e.g. 'Soulz Right'). Devices also appear duplicated. Trace and audit ALL automatic naming and grouping persistence globally to establish a single source of truth for display names.
 - [ ] `chore/rename-hardware-fleet` : Rename "Hardware Fleet" to "Registered Devices" in UI.
@@ -103,6 +108,9 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 - [x] `feat/dashboard-redesign` : **[PRIORITY]** Redesign scanner dashboard into a modern interface (Style 3 - Vertical Slabs, No-Scrolling). 4-Slab Hierarchy: [Header] ➔ [Crew Hub Sessions] ➔ [Skates (Hardware Groups)] ➔ [Registered Device List + Add Button]. See `docs/plans/feat-dashboard-redesign.md` for details.
 - [x] `fix/dynamic-username` : Display the actual username from Supabase session/profile instead of hardcoded 'Skater'
+- [ ] `fix/username-case-sensitivity` : Why is the username case-sensitive? Enforce global lowercase normalization on registration, authentication, and display to prevent duplicate/split identities.
+- [ ] `feat/signup-profile-requirements` : Require users to set a Handle and Display Name during initial sign-up. Discuss options for preventing skipped profiling and ensuring identity is established upfront.
+- [ ] `fix/misspelling-back-button` : Fix global spelling error on navigation header buttons. Currently says "Bac" everywhere instead of "Back" or uses a faulty icon label.
 - [x] `fix/setup-finish-destination` : Ensure Hardware Setup Wizard returns to the Dashboard after completion instead of auto-launching the controller
 - [ ] `hw-test/remote-pairing-logic` : Research and verify RF Remote pairing ID discovery and Power ON/OFF parity (APP vs RF Remote)
 - [x] `fix/camera-mode-layout` : Camera mode regression fix — Restore proper permissions prompt system, optimize layout so color bar is minimized at the bottom, maximize camera preview area, and add user instruction tooltip ("Click a color on screen...").
