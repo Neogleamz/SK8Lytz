@@ -904,23 +904,59 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     setIsGroupModalVisible(true);
   };
 
-  const handleGroupDelete = (id: string) => {
+  const handleGroupDelete = async (id: string) => {
+    const groupToDelete = customGroups.find(g => g.id === id);
     const updatedGroups = customGroups.filter(g => g.id !== id);
     setCustomGroups(updatedGroups);
-    AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
+    await AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
     
+    if (groupToDelete && groupToDelete.deviceIds) {
+      try {
+        const stored = await AsyncStorage.getItem('ng_device_configs');
+        if (stored) {
+          const configs = JSON.parse(stored);
+          let configsChanged = false;
+          
+          for (const mac of groupToDelete.deviceIds) {
+            if (configs[mac]) {
+              delete configs[mac].groupId;
+              delete configs[mac].groupName;
+              configs[mac].grouped = false;
+              configsChanged = true;
+              
+              const rd = registeredDevices.find(r => r.device_mac === mac);
+              if (rd) {
+                await saveRegisteredDevice({ ...rd, group_name: null, is_pending_sync: true });
+              }
+            }
+          }
+          
+          if (configsChanged) {
+            await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
+            setDeviceConfigs(configs);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to scrub ghost group from components: ' + e);
+      }
+    }
+
     setIsGroupModalVisible(false);
   };
 
   const saveGroup = async (name: string, deviceIds: string[]) => {
     let newGroups = customGroups;
+    let finalGroupId = `group-${Date.now()}`;
+    let previousDeviceIds: string[] = [];
+
     if (groupModalMode === 'create') {
       const existing = customGroups.find(g => g.name.toLowerCase() === name.toLowerCase());
       if (existing) {
+        finalGroupId = existing.id;
+        previousDeviceIds = existing.deviceIds || [];
         newGroups = customGroups.map(g => g.id === existing.id ? { ...g, deviceIds: Array.from(new Set([...g.deviceIds, ...deviceIds])) } : g);
       } else {
-        const newGroupId = `group-${Date.now()}`;
-        newGroups = [...customGroups, { id: newGroupId, name, isGroup: true, deviceIds }];
+        newGroups = [...customGroups, { id: finalGroupId, name, isGroup: true, deviceIds }];
       }
       setIsSelectionMode(false);
       setSelectedIds([]);
@@ -929,17 +965,54 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         handleGroupDelete(editingGroupId);
         return;
       }
+      finalGroupId = editingGroupId;
+      const existing = customGroups.find(g => g.id === editingGroupId);
+      if (existing) previousDeviceIds = existing.deviceIds || [];
       newGroups = customGroups.map(g => g.id === editingGroupId ? { ...g, name, deviceIds } : g);
     }
+    
     setCustomGroups(newGroups);
     await AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups));
+
+    // Deep cache scrub & sync for children configurations
+    try {
+      const stored = await AsyncStorage.getItem('ng_device_configs');
+      const configs = stored ? JSON.parse(stored) : {};
+      let configsChanged = false;
+      
+      // Removed devices: scrub their configs
+      const removedIds = previousDeviceIds.filter(id => !deviceIds.includes(id));
+      for (const mac of removedIds) {
+        if (configs[mac]) {
+          delete configs[mac].groupId;
+          delete configs[mac].groupName;
+          configs[mac].grouped = false;
+          configsChanged = true;
+          const rd = registeredDevices.find(r => r.device_mac === mac);
+          if (rd) await saveRegisteredDevice({ ...rd, group_name: null, is_pending_sync: true });
+        }
+      }
+
+      // Added or preserved devices: enforce group config
+      for (const mac of deviceIds) {
+        configs[mac] = { ...configs[mac], groupId: finalGroupId, groupName: name, grouped: true };
+        configsChanged = true;
+        const rd = registeredDevices.find(r => r.device_mac === mac);
+        if (rd) await saveRegisteredDevice({ ...rd, group_name: name, is_pending_sync: true });
+      }
+
+      if (configsChanged) {
+        await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
+        setDeviceConfigs(configs);
+      }
+    } catch (e) {
+      console.warn('Failed to sync group cache changes', e);
+    }
   };
 
   useEffect(() => {
     requestPermissions();
   }, []);
-
-  // (Removed redundant second setOnDataReceived binding)
 
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [selectedDeviceForSettingsId, setSelectedDeviceForSettingsId] = useState<string | null>(null);
