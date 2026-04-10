@@ -777,7 +777,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             const r = parseInt(h.slice(1, 3), 16) || 0;
             const g = parseInt(h.slice(3, 5), 16) || 0;
             const b = parseInt(h.slice(5, 7), 16) || 0;
-            return ZenggeProtocol.applyColorSorting(r, g, b, sortIdx);
+            return { r, g, b };
           });
           writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(fav.speed), 1, fav.multiTransition));
         }
@@ -801,16 +801,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     };
 
 
-    /** Helper to parse a hex string array into GRB-sorted valid hardware RGB array */
-    const generateSortedColors = (hexArray: string[]) => {
-      const sortIdx = hwSettings?.colorSorting ?? 2;
-      return hexArray.map(h => {
-        const r = parseInt(h.slice(1, 3), 16) || 0;
-        const g = parseInt(h.slice(3, 5), 16) || 0;
-        const b = parseInt(h.slice(5, 7), 16) || 0;
-        return ZenggeProtocol.applyColorSorting(r, g, b, sortIdx);
-      });
-    };
+    // (Removed generatePristineColors since it is unused after purging applyColorSorting)
 
     /**
      * Maps UI speed slider (0–100) to Zengge hardware speed range (1–31).
@@ -1275,9 +1266,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         b: parseInt(color2Hex.slice(5, 7), 16) || 0
       };
 
-      const sortIdx = hwSettings?.colorSorting ?? 2;
-      const c1 = ZenggeProtocol.applyColorSorting(c1Raw.r, c1Raw.g, c1Raw.b, sortIdx);
-      const c2 = ZenggeProtocol.applyColorSorting(c2Raw.r, c2Raw.g, c2Raw.b, sortIdx);
+      const c1 = c1Raw;
+      const c2 = c2Raw;
 
       writeToDevice(ZenggeProtocol.setMusicConfig(
         isDeviceMic,
@@ -2228,12 +2218,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                             applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
                           } else if (fixedSubMode === 'BUILDER') {
                             const factor = brtFactor(brightness);
-                            const sortIdx = hwSettings?.colorSorting ?? 2;
                             const rgbColors = multiColors.map(h => {
                               const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
                               const rawG = Math.round((parseInt(h.slice(3, 5), 16) || 0) * factor);
                               const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
-                              return ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
+                              return { r: rawR, g: rawG, b: rawB };
                             });
                             writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(val), 1, multiTransition));
                           }

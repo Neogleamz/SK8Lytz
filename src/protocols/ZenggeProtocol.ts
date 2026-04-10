@@ -89,21 +89,7 @@ export interface HardwareSettings {
 }
 
 export class ZenggeProtocol {
-  // ─── COLOR SORTING UTILITY ────────────────────────────────────────────────────
-  public static applyColorSorting(r: number, g: number, b: number, sortingIndex: number = 2): { r: number; g: number; b: number } {
-    // 0: RGB, 1: RBG, 2: GRB, 3: GBR, 4: BRG, 5: BGR
-    const map = [
-      [r, g, b],
-      [r, b, g],
-      [g, r, b],
-      [g, b, r],
-      [b, r, g],
-      [b, g, r],
-    ];
-    let idx = sortingIndex;
-    if (idx < 0 || idx > 5) idx = 2; // default GRB
-    return { r: map[idx][0], g: map[idx][1], b: map[idx][2] };
-  }
+  // (Removed applyColorSorting)
 
   private static messageCounter = 0;
 
