@@ -22,7 +22,6 @@ import { Typography, Layout } from '../theme/theme';
 import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
 import ProductVisualizer from './ProductVisualizer';
-import CustomSlider from './CustomSlider';
 import NeonHueStrip from './NeonHueStrip';
 import TacticalSlider from './TacticalSlider';
 import VerticalPatternDrum from './VerticalPatternDrum';
@@ -1731,7 +1730,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                       onPress={() => handleMusicChange()}
                     >
                       <View style={styles.playIconInner}>
-                        <MaterialCommunityIcons name="play" size={24} color="#FFF" />
+                        <MaterialCommunityIcons name="play" size={32} color="#FFF" />
                       </View>
                     </TouchableOpacity>
 
@@ -2705,14 +2704,15 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
+    width: '100%',
+    paddingHorizontal: 10,
     marginBottom: 4,
   },
   micIconBtn: {
+    flex: 1,
     alignItems: 'center',
     padding: 8,
     borderRadius: 12,
-    width: 90,
   },
   micBtnActive: {
     backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
@@ -2740,18 +2740,19 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     fontWeight: '600',
   },
   playButtonMain: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     borderWidth: 2,
     borderColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    marginHorizontal: 10,
   },
   playIconInner: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
