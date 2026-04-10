@@ -511,17 +511,24 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         )}
 
         {/* Sandbox mode option */}
-        {__DEV__ && onOfflineMode && (
+        {__DEV__ && (
           <TouchableOpacity
             onPress={async () => {
-              await AsyncStorage.setItem('@Sk8lytz_demo_mode', 'true');
-              onOfflineMode();
+              const current = await AsyncStorage.getItem('@Sk8lytz_demo_mode');
+              const nextState = current === 'true' ? 'false' : 'true';
+              await AsyncStorage.setItem('@Sk8lytz_demo_mode', nextState);
+              import('react-native').then(rn => {
+                rn.Alert.alert(
+                  'Developer Sandbox', 
+                  `Virtual Skates & Demo features are now ${nextState === 'true' ? 'ENABLED' : 'DISABLED'}. Restart Bluetooth or refresh to apply.`
+                );
+              });
             }}
             style={[styles.offlineButton, { borderColor: 'rgba(255,255,0,0.5)', backgroundColor: 'rgba(255,255,0,0.05)', marginTop: 12 }]}
             activeOpacity={0.7}
           >
-            <Text style={[styles.offlineButtonText, { color: '#FFE135' }]}>🧪 Dev Sandbox</Text>
-            <Text style={styles.offlineButtonSub}>Injects Virtual Skates & Bypasses Auth</Text>
+            <Text style={[styles.offlineButtonText, { color: '#FFE135' }]}>🧪 Toggle Dev Sandbox</Text>
+            <Text style={styles.offlineButtonSub}>Injects Virtual Skates & UI Overrides</Text>
           </TouchableOpacity>
         )}
 
