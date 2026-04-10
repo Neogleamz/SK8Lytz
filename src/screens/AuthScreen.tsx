@@ -517,7 +517,6 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           </TouchableOpacity>
         )}
 
-<<<<<<< Updated upstream
         {/* Sandbox mode option */}
         {__DEV__ && (
           <TouchableOpacity
@@ -540,7 +539,9 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
               <Text style={[styles.offlineButtonText, { color: isSandboxEnabled ? '#00FF00' : '#FFE135' }]}>Toggle Dev Sandbox</Text>
               <Text style={styles.offlineButtonSub}>Injects Virtual Skates & UI Overrides</Text>
             </View>
-=======
+          </TouchableOpacity>
+        )}
+
         {/* DEV MODE - Virtual Skates Bypass */}
         {(mode === 'LOGIN') && onOfflineMode && (
           <TouchableOpacity
@@ -560,7 +561,6 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           >
             <MaterialCommunityIcons name="developer-board" size={16} color="#00f0ff" />
             <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 13, letterSpacing: 1 }}>DEV MODE: VIRTUAL SKATES</Text>
->>>>>>> Stashed changes
           </TouchableOpacity>
         )}
 
