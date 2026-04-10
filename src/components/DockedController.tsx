@@ -22,7 +22,7 @@ import { Typography, Layout } from '../theme/theme';
 import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
 import ProductVisualizer from './ProductVisualizer';
-import CustomSlider from './CustomSlider';
+import NeonHueStrip from './NeonHueStrip';
 import TacticalSlider from './TacticalSlider';
 import VerticalPatternDrum from './VerticalPatternDrum';
 import CameraTracker from './CameraTracker';
@@ -47,6 +47,18 @@ import MarqueeText from './MarqueeText';
 
 type MotionState = 'STOPPED' | 'ACCELERATING' | 'CRUISING' | 'SLOWING_DOWN' | 'HARD_BRAKING';
 
+interface IAnalogGaugeProps {
+  value: number;
+  min: number;
+  max: number;
+  label: string;
+  unit?: string;
+  defaultColor?: string;
+  size?: number;
+  dangerVal?: number;
+  criticalVal?: number;
+}
+
 const AnalogGauge = ({
   value,
   min,
@@ -57,7 +69,7 @@ const AnalogGauge = ({
   size = 140,
   dangerVal,
   criticalVal
-}: { value: number, min: number, max: number, label: string, unit?: string, defaultColor?: string, size?: number, dangerVal?: number, criticalVal?: number }) => {
+}: IAnalogGaugeProps) => {
   const radius = size * 0.42;
   const center = size / 2;
   const angleRange = 260;
@@ -475,7 +487,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       const cruise = { r: crR, g: crG, b: crB };
 
       // DO NOT apply applyColorSorting here.
-      // Hardware auto-remaps GRB internally via 0x81 config. Send pure RGB.
+      // Hardware auto-remaps GRB internally via 0x62 EEPROM config. Send pure RGB.
       let arr: { r: number; g: number; b: number }[];
 
       // #9 — Cruise bounce chase animation
@@ -733,8 +745,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
     };
 
-    const loadFavorite = (favRaw: IFavoriteState) => {
-      const fav: any = favRaw;
+    const loadFavorite = (favRaw: IFavoriteState, context: 'FAVORITE' | 'PICK' | 'COMMUNITY' = 'FAVORITE') => {
+      const fav = favRaw as IFavoriteState;
       setActiveFavoriteId(fav.id);
       setSpeed(fav.speed);
       setBrightness(fav.brightness);
@@ -777,7 +789,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             const r = parseInt(h.slice(1, 3), 16) || 0;
             const g = parseInt(h.slice(3, 5), 16) || 0;
             const b = parseInt(h.slice(5, 7), 16) || 0;
-            return ZenggeProtocol.applyColorSorting(r, g, b, sortIdx);
+            return { r, g, b };
           });
           writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(fav.speed), 1, fav.multiTransition));
         }
@@ -787,30 +799,27 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           sendColor(parseInt(fav.color.slice(1, 3), 16) || 0, parseInt(fav.color.slice(3, 5), 16) || 0, parseInt(fav.color.slice(5, 7), 16) || 0);
         }, 100);
       }
-    }
+      
+      if (context === 'PICK') {
+        AppLogger.log('PICK_SELECTED', { id: fav.id, name: fav.name || fav.customName, mode: legacyMode });
+      } else {
+        AppLogger.log('FAVORITE_RENDERED', { id: fav.id, name: fav.name || fav.customName, mode: legacyMode, patternId: fav.patternId });
+      }
+    };
 
     /** Unified color sender — sends solid color instantly using actual LED count */
     const sendColor = async (r: number, g: number, b: number) => {
       if (!writeToDevice) return;
       // hwSettings.ledPoints IS the total LED count — do NOT divide by segments
       const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
-      // DO NOT apply applyColorSorting — hardware auto-remaps GRB via 0x81 config
+      // DO NOT apply applyColorSorting — hardware auto-remaps GRB via 0x62 EEPROM config
       // transitionType=0x01 (FREEZE) = immediate hardware lock, no animation
       const colors = Array(numLEDs).fill({ r, g, b });
       await writeToDevice(ZenggeProtocol.setMultiColor(colors, 1, 1, 0x01));
     };
 
 
-    /** Helper to parse a hex string array into GRB-sorted valid hardware RGB array */
-    const generateSortedColors = (hexArray: string[]) => {
-      const sortIdx = hwSettings?.colorSorting ?? 2;
-      return hexArray.map(h => {
-        const r = parseInt(h.slice(1, 3), 16) || 0;
-        const g = parseInt(h.slice(3, 5), 16) || 0;
-        const b = parseInt(h.slice(5, 7), 16) || 0;
-        return ZenggeProtocol.applyColorSorting(r, g, b, sortIdx);
-      });
-    };
+    // (Removed generatePristineColors since it is unused after purging applyColorSorting)
 
     /**
      * Maps UI speed slider (0–100) to Zengge hardware speed range (1–31).
@@ -1275,9 +1284,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         b: parseInt(color2Hex.slice(5, 7), 16) || 0
       };
 
-      const sortIdx = hwSettings?.colorSorting ?? 2;
-      const c1 = ZenggeProtocol.applyColorSorting(c1Raw.r, c1Raw.g, c1Raw.b, sortIdx);
-      const c2 = ZenggeProtocol.applyColorSorting(c2Raw.r, c2Raw.g, c2Raw.b, sortIdx);
+      const c1 = c1Raw;
+      const c2 = c2Raw;
 
       writeToDevice(ZenggeProtocol.setMusicConfig(
         isDeviceMic,
@@ -1498,7 +1506,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                       <TouchableOpacity
                         key={fav.id}
                         style={[styles.presetCard, { borderColor: Colors.secondary }]}
-                        onPress={() => loadFavorite(fav)}
+                        onPress={() => loadFavorite(fav, 'PICK')}
                       >
                         <View style={{ width: '100%', minHeight: 20, justifyContent: 'center', alignItems: 'center', marginTop: 2 }}>
                           <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.customName || fav.name}</MarqueeText>
@@ -1566,7 +1574,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                         <Text style={{ color: fixedSubMode === 'PATTERN' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Pro Effects</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        onPress={() => setFixedSubMode('BUILDER')}
+                        onPress={() => {
+                          AppLogger.log('BUILDER_UI_TOGGLED');
+                          setFixedSubMode('BUILDER');
+                        }}
                         style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'BUILDER' ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
                       >
                         <Text style={{ color: fixedSubMode === 'BUILDER' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Builder</Text>
@@ -1740,7 +1751,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                       onPress={() => handleMusicChange()}
                     >
                       <View style={styles.playIconInner}>
-                        <MaterialCommunityIcons name="play" size={24} color="#FFF" />
+                        <MaterialCommunityIcons name="play" size={32} color="#FFF" />
                       </View>
                     </TouchableOpacity>
 
@@ -1755,6 +1766,38 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                         <MaterialCommunityIcons name="bluetooth-audio" size={20} color={micSource === 'DEVICE' ? '#FFF' : Colors.textMuted} />
                       </View>
                       <Text style={[styles.micSubText, micSource === 'DEVICE' && { color: Colors.primary, fontWeight: 'bold' }]}>DEVICE MIC</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* ── Matrix Style Selector: Light Screen (0x27) vs Light Bar (0x26) ── */}
+                  <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 12, marginBottom: 16 }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setMusicMatrixStyle(0x27);
+                        handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 0x27);
+                      }}
+                      style={{
+                        flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center',
+                        backgroundColor: musicMatrixStyle === 0x27 ? Colors.primary + '33' : 'rgba(255,255,255,0.05)',
+                        borderWidth: 1.5, borderColor: musicMatrixStyle === 0x27 ? Colors.primary : 'rgba(255,255,255,0.1)'
+                      }}
+                    >
+                      <Text style={{ color: musicMatrixStyle === 0x27 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>LIGHT SCREEN</Text>
+                      <Text style={{ color: musicMatrixStyle === 0x27 ? Colors.primary : Colors.textMuted, fontSize: 8, opacity: 0.8 }}>0x27 (DENSE)</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setMusicMatrixStyle(0x26);
+                        handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 0x26);
+                      }}
+                      style={{
+                        flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center',
+                        backgroundColor: musicMatrixStyle === 0x26 ? Colors.accent + '33' : 'rgba(255,255,255,0.05)',
+                        borderWidth: 1.5, borderColor: musicMatrixStyle === 0x26 ? Colors.accent : 'rgba(255,255,255,0.1)'
+                      }}
+                    >
+                      <Text style={{ color: musicMatrixStyle === 0x26 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>LIGHT BAR</Text>
+                      <Text style={{ color: musicMatrixStyle === 0x26 ? Colors.accent : Colors.textMuted, fontSize: 8, opacity: 0.8 }}>0x26 (BAR)</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -2067,8 +2110,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               {/* Hue Slider */}
               {!(activeMode === 'PROGRAMS' || activeMode === 'CAMERA') && (
                 <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
-                  <CustomSlider
-                    gradientTrack={true}
+                  <NeonHueStrip
                     value={activeMode === 'MUSIC' ? (musicColorFocus === 'PRIMARY' ? musicHue : musicSecondaryHue) : activeMode === 'MULTIMODE' ? fixedHue : selectedHue}
                     onValueChange={(hue) => {
                       if (activeMode === 'MULTIMODE') {
@@ -2157,11 +2199,13 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     iconName="white-balance-sunny"
                     label="BRIGHTNESS"
                     fillColor="#00F0FF"
+                    dynamicMode="BRIGHTNESS"
                     value={brightness}
                     onValueChange={setBrightness}
                     minimumValue={0}
                     maximumValue={100}
                     onSlidingComplete={(val: number) => {
+                      AppLogger.log('BRIGHTNESS_CHANGED', { value: val, mode: activeMode });
                       if (writeToDevice) {
                         if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
                           applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
@@ -2191,7 +2235,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     onValueChange={setMicSensitivity}
                     minimumValue={0}
                     maximumValue={100}
-                    onSlidingComplete={(val: number) => handleMusicChange(musicPatternId, val, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle)}
+                    onSlidingComplete={(val: number) => {
+                      AppLogger.log('MIC_SENSITIVITY_CHANGED', { value: val });
+                      handleMusicChange(musicPatternId, val, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
+                    }}
                   />
                 )}
 
@@ -2205,6 +2252,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     onValueChange={setStreetSensitivity}
                     minimumValue={5}
                     maximumValue={95}
+                    onSlidingComplete={(val: number) => AppLogger.log('STREET_SENSITIVITY_CHANGED', { value: val })}
                   />
                 )}
 
@@ -2217,23 +2265,24 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     iconName="engine-outline"
                     label="SPEED"
                     fillColor="#FF9900"
+                    dynamicMode="TURBO"
                     value={speed}
                     onValueChange={setSpeed}
                     minimumValue={0}
                     maximumValue={100}
                     onSlidingComplete={(val: number) => {
+                      AppLogger.log('SPEED_CHANGED', { value: val, mode: activeMode });
                       if (writeToDevice) {
                         if (activeMode === 'MULTIMODE') {
                           if (fixedSubMode === 'PATTERN') {
                             applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
                           } else if (fixedSubMode === 'BUILDER') {
                             const factor = brtFactor(brightness);
-                            const sortIdx = hwSettings?.colorSorting ?? 2;
                             const rgbColors = multiColors.map(h => {
                               const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
                               const rawG = Math.round((parseInt(h.slice(3, 5), 16) || 0) * factor);
                               const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
-                              return ZenggeProtocol.applyColorSorting(rawR, rawG, rawB, sortIdx);
+                              return { r: rawR, g: rawG, b: rawB };
                             });
                             writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(val), 1, multiTransition));
                           }
@@ -2254,11 +2303,15 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     iconName="white-balance-sunny"
                     label="BRIGHTNESS"
                     fillColor="#00F0FF"
+                    dynamicMode="BRIGHTNESS"
                     value={brightness}
                     onValueChange={setBrightness}
                     minimumValue={0}
                     maximumValue={100}
-                    onSlidingComplete={(val: number) => handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle)}
+                    onSlidingComplete={(val: number) => {
+                      AppLogger.log('BRIGHTNESS_CHANGED', { value: val, mode: activeMode });
+                      handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
+                    }}
                   />
                 )}
               </View>
@@ -2366,6 +2419,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     newArr.splice(quickPromptTargetIndex, 1);
                     setQuickPresets(newArr);
                     AsyncStorage.setItem('@Sk8lytz_QuickPresets', JSON.stringify(newArr));
+                    AppLogger.log('BUILDER_PRESET_DELETED', { index: quickPromptTargetIndex });
                     setIsQuickPromptVisible(false);
                   }}>
                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Delete</Text>
@@ -2405,6 +2459,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                   }
                   setQuickPresets(newArr);
                   AsyncStorage.setItem('@Sk8lytz_QuickPresets', JSON.stringify(newArr));
+                  AppLogger.log('BUILDER_PRESET_SAVED', { name: safeName, isOverwrite: quickPromptTargetIndex !== -1 });
                   setIsQuickPromptVisible(false);
                 }}>
                   <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>Save</Text>
@@ -2566,16 +2621,21 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   },
   colorGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     marginTop: 16,
-    gap: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
   },
   colorButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    flex: 1,
+    aspectRatio: 1,
+    maxWidth: 36,
+    maxHeight: 36,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: Colors.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)',
+    marginHorizontal: 4,
   },
   selectedColorButton: {
     borderWidth: 3,
@@ -2716,14 +2776,15 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
+    width: '100%',
+    paddingHorizontal: 10,
     marginBottom: 4,
   },
   micIconBtn: {
+    flex: 1,
     alignItems: 'center',
     padding: 8,
     borderRadius: 12,
-    width: 90,
   },
   micBtnActive: {
     backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
@@ -2751,18 +2812,19 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     fontWeight: '600',
   },
   playButtonMain: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     borderWidth: 2,
     borderColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    marginHorizontal: 10,
   },
   playIconInner: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',

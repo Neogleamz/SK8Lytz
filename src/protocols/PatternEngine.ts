@@ -146,7 +146,7 @@ export function getVisualizerFrame(
  * Used by applyFixedPattern() to build the 0x59 payload.
  *
  * IMPORTANT: Pass raw RGB values — do NOT pre-sort with applyColorSorting().
- * The hardware controller auto-remaps GRB internally via 0x81 config.
+ * The hardware controller auto-remaps GRB internally via 0x62 EEPROM config.
  *
  * For patterns 6–8: returns null (caller should use buildCustomModePayload instead).
  *

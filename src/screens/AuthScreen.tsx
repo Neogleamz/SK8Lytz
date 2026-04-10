@@ -56,7 +56,14 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
   const [successMessage, setSuccessMessage] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [rememberOffline, setRememberOffline] = useState(false);
+  const [isSandboxEnabled, setIsSandboxEnabled] = useState(false);
   const strengthAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    AsyncStorage.getItem('@Sk8lytz_demo_mode').then(val => {
+      setIsSandboxEnabled(val === 'true');
+    });
+  }, []);
 
   // Derive styles reactively from Colors so theme toggle re-renders instantly
   const styles = createStyles(Colors, insets);
@@ -237,7 +244,10 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
     const { error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { username: username.trim() } },
+      options: { 
+        data: { username: username.trim() },
+        emailRedirectTo: 'sk8lytz://auth'
+      },
     });
     setLoading(false);
     if (error) {
@@ -511,17 +521,49 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         )}
 
         {/* Sandbox mode option */}
-        {__DEV__ && onOfflineMode && (
+        {__DEV__ && (
           <TouchableOpacity
             onPress={async () => {
-              await AsyncStorage.setItem('@Sk8lytz_demo_mode', 'true');
-              onOfflineMode();
+              const nextState = !isSandboxEnabled;
+              setIsSandboxEnabled(nextState);
+              await AsyncStorage.setItem('@Sk8lytz_demo_mode', String(nextState));
+              import('react-native').then(rn => {
+                rn.Alert.alert(
+                  'Developer Sandbox', 
+                  `Virtual Skates & Demo features are now ${nextState ? 'ENABLED' : 'DISABLED'}. Restart Bluetooth or refresh to apply.`
+                );
+              });
             }}
-            style={[styles.offlineButton, { borderColor: 'rgba(255,255,0,0.5)', backgroundColor: 'rgba(255,255,0,0.05)', marginTop: 12 }]}
+            style={[styles.offlineButton, { borderColor: isSandboxEnabled ? 'rgba(0,255,0,0.5)' : 'rgba(255,255,0,0.5)', backgroundColor: isSandboxEnabled ? 'rgba(0,255,0,0.05)' : 'rgba(255,255,0,0.05)', marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }]}
             activeOpacity={0.7}
           >
-            <Text style={[styles.offlineButtonText, { color: '#FFE135' }]}>🧪 Dev Sandbox</Text>
-            <Text style={styles.offlineButtonSub}>Injects Virtual Skates & Bypasses Auth</Text>
+            <MaterialCommunityIcons name={isSandboxEnabled ? "checkbox-marked" : "checkbox-blank-outline"} size={20} color={isSandboxEnabled ? "#00FF00" : "#FFE135"} />
+            <View style={{ alignItems: 'center' }}>
+              <Text style={[styles.offlineButtonText, { color: isSandboxEnabled ? '#00FF00' : '#FFE135' }]}>Toggle Dev Sandbox</Text>
+              <Text style={styles.offlineButtonSub}>Injects Virtual Skates & UI Overrides</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* DEV MODE - Virtual Skates Bypass */}
+        {(mode === 'LOGIN') && onOfflineMode && (
+          <TouchableOpacity
+            style={{ 
+              marginTop: 16, marginHorizontal: 24, paddingVertical: 12, 
+              borderWidth: 1, borderColor: 'rgba(0,240,255,0.4)', borderRadius: 12, 
+              backgroundColor: 'rgba(0,240,255,0.05)', alignItems: 'center',
+              flexDirection: 'row', justifyContent: 'center', gap: 8
+            }}
+            onPress={async () => {
+              // Enable the virtual skates flags in storage so the dashboard picks them up
+              await AsyncStorage.setItem('@Sk8lytz_demo_halo', 'true');
+              await AsyncStorage.setItem('@Sk8lytz_demo_soul', 'true');
+              // Bypass Auth
+              onOfflineMode();
+            }}
+          >
+            <MaterialCommunityIcons name="developer-board" size={16} color="#00f0ff" />
+            <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 13, letterSpacing: 1 }}>DEV MODE: VIRTUAL SKATES</Text>
           </TouchableOpacity>
         )}
 

@@ -75,7 +75,7 @@ class LocationService {
   async getNearbyPublicSessions(radiusMi?: number | null): Promise<NearbySession[]> {
     const { supabase } = await import('./supabaseClient');
 
-    const SESSION_SELECT = 'id, name, invite_code, location_label, location_coords, scheduled_at, created_at, is_public, crew_members(count)';
+    const SESSION_SELECT = 'id, name, invite_code, location_label, location_coords, scheduled_at, created_at, is_public, crew_members(count), crews(name)';
 
     // ── Query 1: All active PUBLIC sessions (visible to everyone in radius) ──
     const { data: publicData } = await supabase
@@ -93,26 +93,37 @@ class LocationService {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: memberships } = await supabase
-          .from('crew_members')
-          .select('session_id')
-          .eq('user_id', user.id);
+        // Fetch sessions where user is a permanent crew member OR an active session participant
+        const [mRes, sRes] = await Promise.all([
+          supabase.from('crew_memberships').select('crew_id').eq('user_id', user.id),
+          supabase.from('crew_members').select('session_id').eq('user_id', user.id)
+        ]);
 
-        const sessionIds = (memberships ?? []).map((m: any) => m.session_id).filter(Boolean);
+        const myCrewIds = (mRes.data ?? []).map(m => m.crew_id).filter(Boolean);
+        const mySessionIds = (sRes.data ?? []).map(s => s.session_id).filter(Boolean);
 
-        if (sessionIds.length > 0) {
-          const { data: memberSessions } = await supabase
+        if (myCrewIds.length > 0 || mySessionIds.length > 0) {
+          let query = supabase
             .from('crew_sessions')
             .select(SESSION_SELECT)
             .eq('is_active', true)
-            .eq('is_public', false)           // only grab private ones (public already covered above)
-            .in('id', sessionIds)
+            .eq('is_public', false);
+
+          // Build OR filter for (belongs to my crew) OR (already in this session)
+          const orParts: string[] = [];
+          if (myCrewIds.length > 0) orParts.push(`crew_id.in.(${myCrewIds.join(',')})`);
+          if (mySessionIds.length > 0) orParts.push(`id.in.(${mySessionIds.join(',')})`);
+          
+          const { data: memberSessions } = await query
+            .or(orParts.join(','))
             .order('created_at', { ascending: false });
 
           privateData = memberSessions ?? [];
         }
       }
-    } catch { /* not logged in or query failed — skip private sessions */ }
+    } catch (err) {
+      console.warn('[LocationService] Private session fetch failed:', err);
+    }
 
     // ── Merge + deduplicate by session id ────────────────────────────────────
     const combined = [...(publicData ?? []), ...privateData];
@@ -157,7 +168,7 @@ class LocationService {
         inviteCode:    s.invite_code,
         locationLabel: s.location_label ?? 'Unknown Location',
         leaderName:    'Unknown',
-        crewName:      null,
+        crewName:      s.crews?.name ?? null,
         memberCount:   s.crew_members?.[0]?.count ?? 0,
         scheduledAt:   s.scheduled_at,
         isPublic:      s.is_public ?? true,

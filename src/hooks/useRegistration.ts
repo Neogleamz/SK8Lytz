@@ -26,6 +26,7 @@ export interface RegisteredDevice {
   product_type: 'HALOZ' | 'SOULZ';
   position: 'Left' | 'Right' | null;
   group_name: string;
+  group_id: string;
   led_points?: number;
   segments?: number;
   ic_type?: string;
@@ -106,12 +107,23 @@ export function useRegistration() {
   };
 
   // ── Save (upsert) a device ───────────────────────────────────────────────────
-  const saveRegisteredDevice = useCallback(async (device: RegisteredDevice): Promise<boolean> => {
+  /**
+   * Persists a device registration to local storage and Supabase.
+   * Uses "Hardened Column Mapping" to ensure only valid database schema fields
+   * are sent to Supabase, protecting against schema mismatch crashes.
+   * Auto-generates mandatory UI-required fields like 'id' and 'group_id'.
+   */
+  const saveRegisteredDevice = async (device: Partial<RegisteredDevice> & { device_mac: string }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const now = new Date().toISOString();
+      const deviceId = device.id || `${device.device_mac.replace(/:/g, '')}-${user?.id?.slice(0, 8) || 'offline'}`;
+      const groupId = device.group_id || device.group_name.toLowerCase().replace(/\s+/g, '-') || 'default-fleet';
+      
       const fullDevice: RegisteredDevice = {
         ...device,
+        id: deviceId,
+        group_id: groupId,
         user_id: user?.id,
         updated_at: now,
         registered_at: device.registered_at || now,
@@ -126,14 +138,39 @@ export function useRegistration() {
       await AsyncStorage.setItem(LOCAL_KEY, JSON.stringify(current));
       setRegisteredDevices([...current]);
 
-      // 2. Try Supabase upsert
-      if (user) {
-        const { error } = await supabase
-          .from('registered_devices')
-          .upsert({ ...fullDevice, user_id: user.id }, { onConflict: 'user_id,device_mac' });
+        // 2. Try Supabase upsert - Explicitly pick valid columns
+        if (user) {
+          const dbRow = {
+            device_mac:      fullDevice.device_mac,
+            device_name:     fullDevice.device_name,
+            product_type:    fullDevice.product_type,
+            position:        fullDevice.position,
+            group_name:      fullDevice.group_name,
+            group_id:        fullDevice.group_id,
+            custom_name:     fullDevice.device_name,
+            points:          fullDevice.led_points || 0,
+            led_points:      fullDevice.led_points,
+            segments:        fullDevice.segments || 1,
+            ic_type:         fullDevice.ic_type,
+            strip_type:      fullDevice.ic_type || 'WS2812B',
+            color_sorting:   fullDevice.color_sorting,
+            sorting:         fullDevice.color_sorting || 'GRB',
+            rssi_at_register: fullDevice.rssi_at_register,
+            firmware_ver:    fullDevice.firmware_ver,
+            led_version:     fullDevice.led_version,
+            product_id:      fullDevice.product_id,
+            user_id:         user.id,
+            id:              fullDevice.id,
+            updated_at:      now,
+            registered_at:   fullDevice.registered_at,
+          };
 
-        if (error) throw error;
-      } else {
+          const { error } = await supabase
+            .from('registered_devices')
+            .upsert(dbRow, { onConflict: 'user_id,device_mac' });
+
+          if (error) throw error;
+        } else {
         // No session — queue for later sync
         await queuePendingSync(fullDevice);
         setHasPendingSync(true);
@@ -146,7 +183,7 @@ export function useRegistration() {
       setHasPendingSync(true);
       return false; // saved locally, pending cloud
     }
-  }, []);
+  };
 
   // ── Save multiple devices at once (first-time wizard) ───────────────────────
   const saveAllRegisteredDevices = useCallback(async (devices: RegisteredDevice[]): Promise<boolean> => {
@@ -335,9 +372,33 @@ export function useRegistration() {
       if (queue.length === 0) return;
 
       for (const device of queue) {
+        const dbRow = {
+          device_mac:      device.device_mac,
+          device_name:     device.device_name,
+          product_type:    device.product_type,
+          position:        device.position,
+          group_id:        device.group_id || device.group_name.toLowerCase().replace(/\s+/g, '-') || 'default-fleet',
+          custom_name:     device.device_name,
+          points:          device.led_points || 0,
+          led_points:      device.led_points,
+          segments:        device.segments || 1,
+          ic_type:         device.ic_type,
+          strip_type:      device.ic_type || 'WS2812B',
+          color_sorting:   device.color_sorting,
+          sorting:         device.color_sorting || 'GRB',
+          rssi_at_register: device.rssi_at_register,
+          firmware_ver:    device.firmware_ver,
+          led_version:     device.led_version,
+          product_id:      device.product_id,
+          user_id:         userId,
+          id:              device.id || `${device.device_mac.replace(/:/g, '')}-${userId.slice(0, 8)}`,
+          updated_at:      new Date().toISOString(),
+          registered_at:   device.registered_at,
+        };
+
         const { error } = await supabase
           .from('registered_devices')
-          .upsert({ ...device, user_id: userId, is_pending_sync: false }, { onConflict: 'user_id,device_mac' });
+          .upsert(dbRow, { onConflict: 'user_id,device_mac' });
         if (error) console.warn('[Registration] Flush error for', device.device_mac, error);
       }
 

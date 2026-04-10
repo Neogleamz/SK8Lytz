@@ -1,35 +1,18 @@
 import React, { useRef, useState } from 'react';
-import { View, StyleSheet, PanResponder, LayoutChangeEvent, Text, ViewStyle } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, StyleSheet, PanResponder, LayoutChangeEvent } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 
-interface TacticalSliderProps {
+interface NeonHueStripProps {
   value: number;
   onValueChange: (val: number) => void;
   onSlidingComplete?: (val: number) => void;
   minimumValue?: number;
   maximumValue?: number;
-  style?: ViewStyle | ViewStyle[];
-  iconName: keyof typeof MaterialCommunityIcons.glyphMap;
-  label?: string;
-  fillColor?: string;
-  formatValue?: (val: number) => string;
-  dynamicMode?: 'TURBO' | 'BRIGHTNESS';
+  style?: any;
 }
 
-const TacticalSlider = ({ 
-  value, 
-  onValueChange, 
-  onSlidingComplete, 
-  minimumValue = 0, 
-  maximumValue = 100, 
-  style, 
-  iconName,
-  label,
-  fillColor,
-  formatValue,
-  dynamicMode
-}: TacticalSliderProps) => {
+const NeonHueStrip = ({ value, onValueChange, onSlidingComplete, minimumValue = 0, maximumValue = 360, style }: NeonHueStripProps) => {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
   const [_containerWidth, setContainerWidth] = useState(0);
@@ -38,6 +21,7 @@ const TacticalSlider = ({
   const [localValue, setLocalValue] = useState(value);
   const isDraggingRef = useRef(false);
 
+  // Sync with parent props only when NOT actively grabbed by user
   React.useEffect(() => {
      if (!isDraggingRef.current) setLocalValue(value);
   }, [value]);
@@ -62,8 +46,10 @@ const TacticalSlider = ({
       onStartShouldSetPanResponderCapture: () => true,
       onMoveShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponderCapture: () => true,
+      onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (evt, gestureState) => {
         isDraggingRef.current = true;
+        // Record starting value
         startValRef.current = valueRef.current;
         if (containerWidthRef.current > 0 && evt.nativeEvent.locationX) {
            const initialPercent = Math.max(0, Math.min(1, evt.nativeEvent.locationX / containerWidthRef.current));
@@ -83,8 +69,10 @@ const TacticalSlider = ({
         let newVal = startValRef.current + deltaVal;
         newVal = Math.max(min, Math.min(max, newVal));
         const cl = Math.round(newVal);
+        // Instant visual local update without waiting for parent
         if (cl !== valueRef.current) {
             setLocalValue(cl);
+            // Optional: debounce or throttle this callback if needed, but since it's an event prop, DockedController can decide.
             onValueChangeRef.current(cl);
         }
       },
@@ -99,18 +87,7 @@ const TacticalSlider = ({
     })
   ).current;
 
-  const percentage = Math.max(0, Math.min(1, (localValue - minimumValue) / (maximumValue - minimumValue)));
-  let activeColor = fillColor || Colors.primary;
-  
-  if (dynamicMode === 'TURBO') {
-    const gb = Math.round(255 * (1 - percentage));
-    activeColor = `rgb(255, ${gb}, ${gb})`;
-  } else if (dynamicMode === 'BRIGHTNESS') {
-    const opacity = 0.2 + (0.8 * percentage);
-    activeColor = `rgba(255, 255, 255, ${opacity})`;
-  }
-  
-  const displayValue = formatValue ? formatValue(localValue) : `${Math.round(percentage * 100)}%`;
+  const percentage = (localValue - minimumValue) / (maximumValue - minimumValue);
 
   return (
     <View 
@@ -121,95 +98,46 @@ const TacticalSlider = ({
       }}
       {...panResponder.panHandlers}
     >
-      {/* Background Track */}
-      <View style={styles.trackBackground} pointerEvents="none" />
-      
-      {/* Fill Block */}
-      <View style={[styles.fill, { width: `${percentage * 100}%`, backgroundColor: activeColor }]} pointerEvents="none" />
-      
-      {/* 80% Target Marker */}
-      {dynamicMode === 'BRIGHTNESS' && (
-        <View style={{
-          position: 'absolute',
-          left: '80%',
-          top: 0,
-          bottom: 0,
-          width: 2,
-          backgroundColor: 'rgba(255,255,255,0.8)',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 1,
-          shadowRadius: 2,
-          zIndex: 5
-        }} pointerEvents="none" />
-      )}
-      
-      {/* Overlay Content */}
-      <View style={styles.overlay} pointerEvents="none">
-         {/* Left Anchored Large Icon */}
-         <MaterialCommunityIcons name={iconName} size={32} color="rgba(255,255,255,0.5)" style={{ position: 'absolute', left: 8, top: 6 }} />
-
-         {/* Centered Label */}
-         <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
-            {label && <Text style={styles.labelText}>{label}</Text>}
-         </View>
-         
-         {/* Value locked to right */}
-         <View style={{ flex: 1 }} />
-         <Text style={[styles.valueText, { zIndex: 10 }]}>{displayValue}</Text>
+      <View style={styles.trackWrap} pointerEvents="none">
+        <LinearGradient 
+          colors={['#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#FF0000']} 
+          start={{x: 0, y: 0}} end={{x: 1, y: 0}}
+          style={StyleSheet.absoluteFill}
+        />
       </View>
+      <View style={[styles.thumb, { left: `${percentage * 100}%`, transform: [{ translateX: -3 }] }]} pointerEvents="none" />
     </View>
   );
 }
 
 const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleSheet.create({
   container: {
-    height: 44,
+    height: 48,
     justifyContent: 'center',
     cursor: 'pointer',
+  },
+  trackWrap: {
+    height: 24, // Thicker DJ style touch strip
     borderRadius: 8,
+    width: '100%',
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
-  trackBackground: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  fill: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.primary,
-    opacity: 0.8,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-  },
-  leftLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  labelText: {
-    color: '#FFF',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  valueText: {
-    color: '#FFF',
-    fontSize: 11,
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+  thumb: {
+    position: 'absolute',
+    width: 8,
+    height: 38,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#FFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.8)',
   }
 });
 
-export default React.memo(TacticalSlider);
+export default React.memo(NeonHueStrip);
