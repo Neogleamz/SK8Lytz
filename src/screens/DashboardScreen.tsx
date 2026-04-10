@@ -37,7 +37,7 @@ import Sk8LytzProgrammerModal from '../components/Sk8LytzProgrammerModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
-import LogViewerModal from '../components/LogViewerModal';
+import AdminToolsModal from '../components/AdminToolsModal';
 import CrewModal from '../components/CrewModal';
 import { crewService, CrewSession, CrewRole } from '../services/CrewService';
 import Sk8LytzDiagnosticLab from '../components/Sk8LytzDiagnosticLab';
@@ -173,7 +173,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [showHintText, setShowHintText] = useState(true);
   const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
-  const [isSnifferVisible, setIsSnifferVisible] = useState(false);
+  const [isAdminToolsVisible, setIsAdminToolsVisible] = useState(false);
   const [isLabVisible, setIsLabVisible] = useState(false);
   const [logoClickCount, setLogoClickCount] = useState(0);
   const [logoClickTimer, setLogoClickTimer] = useState<any>(null);
@@ -1530,7 +1530,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   </View>
                 </View>
 
-<<<<<<< Updated upstream
+
                 {/* SLAB 3: SKATES (Groups) */}
                 <View style={styles.slabContainer}>
                   <View style={styles.slabHeader}>
@@ -1562,13 +1562,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                       <Text style={styles.slabEmptyText}>Create a group to control both skates at once.</Text>
                     </View>
                   )}
-=======
-                  {/* Cleaned up: Demo Mode switches moved to global Auth bypass layer */}
-                </>
->>>>>>> Stashed changes
                 </View>
 
-<<<<<<< Updated upstream
                 {/* SLAB 4: REGISTERED FLEET (Devices) */}
                 <View style={styles.slabContainer}>
                   <View style={styles.slabHeader}>
@@ -1600,28 +1595,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                         <Text style={styles.scanButtonText}>START SETUP</Text>
                       </TouchableOpacity>
                     </View>
-=======
-            ListEmptyComponent={
-              !isDeviceListCollapsed ? (
-                <View style={styles.emptyStateContainer}>
-                  <Text style={[Typography.caption, { color: Colors.text, opacity: 0.7 }]}>
-                    {isScanning ? 'Scanning...' : 'No devices found.'}
-                  </Text>
-                  {!isScanning && (
-                    <TouchableOpacity 
-                      onPress={() => {
-                        setPendingNewDevice({
-                          id: 'DEMO-' + Date.now().toString().slice(-4),
-                          name: 'Virtual Sk8Lytz',
-                          rssi: -50,
-                          product_id: 0x33,
-                        } as any);
-                      }}
-                      style={{ marginTop: 24, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, backgroundColor: 'rgba(0, 240, 255, 0.1)', borderWidth: 1, borderColor: 'rgba(0, 240, 255, 0.3)' }}
-                    >
-                      <Text style={{ color: '#00F0FF', fontWeight: 'bold' }}>MANUAL REGISTRATION</Text>
-                    </TouchableOpacity>
->>>>>>> Stashed changes
                   )}
                 </View>
              </ScrollView>
@@ -1791,7 +1764,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 if (t === '0000') {
                   setPasscodeVal('');
                   setIsPasscodeVisible(false);
-                  setIsLabVisible(true);
+                  setIsAdminToolsVisible(true);
                 }
               }}
             />
@@ -1865,7 +1838,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           setIsAccountModalVisible(false);
         }}
         registeredDevices={registeredDevices.map((d) => ({
-          id: d.device_mac,
+          id: d.id,
           name: d.device_name,
           customName: d.group_name,
           type: d.product_type,
@@ -1879,6 +1852,28 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         onDeviceForgotten={(deviceId) => {
           setAllDevices((prev: any[]) => prev.filter((d: any) => d.id !== deviceId));
         }}
+      />
+      
+      {/* Admin Tools Hub (Replaces LogViewerModal) */}
+      <AdminToolsModal
+        visible={isAdminToolsVisible}
+        onClose={() => setIsAdminToolsVisible(false)}
+        onOpenProgrammer={() => {
+          setIsAdminToolsVisible(false);
+          setIsProgrammerVisible(true);
+        }}
+        onOpenLab={() => {
+          setIsAdminToolsVisible(false);
+          setIsLabVisible(true);
+        }}
+        allDevices={allDevices}
+        connectedDevices={connectedDevices as any[]}
+        isScanning={isScanning}
+        handleScan={scanForPeripherals}
+        writeToDevice={writeToDevice}
+        liveRxPayload={lastRawNotification}
+        liveDeviceConfigs={deviceConfigs}
+        onConnectToDevice={async (d: any) => { await connectToDevice(d); }}
       />
     </SafeAreaView>
   );

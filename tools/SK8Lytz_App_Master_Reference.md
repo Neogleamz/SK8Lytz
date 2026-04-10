@@ -70,6 +70,18 @@ The primary dashboard uses a **Vertical Slab (No-Scroll)** layout to maximize gl
 3. **Slab 3: My Skates / Groups**: High-impact cards for grouped hardware with global power controls.
 4. **Slab 4: Hardware Fleet**: List of all registered devices with a "TAP TO ADD" quick-access wizard link.
 
+### Admin Tools Hub (The Command Center)
+
+The **Admin Tools Hub** (`AdminToolsModal`) is the unified gateway for all system-level diagnostics and hardware maintenance. 
+
+* **Access**: 10-tap the SK8Lytz logo in the dashboard header + Passcode: `0000`.
+* **Tab 1: TIMELINE**: Virtualized system event log (BLE protocol, app lifecycle, errors).
+* **Tab 2: STATS**: Session analytics, mode usage frequency, and hardware performance metrics.
+* **Tab 3: DEVICE**: Deep-dive hardware view showing all discovered peripherals and their cached configs.
+* **Tab 4: TOOLS**: Administrative portal for low-level components:
+    *   **LED Diagnostic Lab**: Atomic protocol validation and DIY payload building.
+    *   **Firmware Programmer**: Low-level hardware updates and serial-over-BLE tools.
+
 ### Supabase Architecture (Telemetry & Registration)
 
 *Project ID:* `qefmeivpjyaukbwadgaz`
