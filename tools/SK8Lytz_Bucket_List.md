@@ -48,11 +48,16 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/device-registration`
 
+- [ ] `fix/supabase-auth-redirect` : Supabase Auth Confirmation Email Redirect — Fix the issue where the confirmation email link points to a dead `localhost` site. 
+- [ ] `fix/device-setup-blink` : Blink button does not work on device setup; evaluate and implement handling strategy.
+- [ ] `audit/registered-device-naming` : Audit registered device naming logic — devices appear duplicated. Think on a strategy to fix.
+- [ ] `chore/rename-hardware-fleet` : Rename "Hardware Fleet" to "Registered Devices" in UI.
+
 ### Target: `epic/crew-hub-overhaul`
 
 - [ ] `refactor-crew-modal` : #3 — `CrewModal.tsx` refactor — 14 useEffect hooks, 2,600+ lines. Extract `useCrewHub()` and `useCrewSession()` custom hooks. Highest maintainability debt in the codebase.
 - [x] `fix/crew-session-stale-data` : Audit Live Sessions logic - Fix stale data/duplicates in 'Live Near You' after deletion and implement unique session naming (e.g. CrewName_Date)
-- [ ] `feat/crew-discovery-refinement` : Refine 'Live Near You' discovery - Show only sessions (not crews), show all public sessions, but only private sessions for crews you belong to.
+- [x] `feat/crew-discovery-refinement` : Refine 'Live Near You' discovery - Show only sessions (not crews), show all public sessions, but only private sessions for crews you belong to.
 - [x] `fix/crew-hub-button-styling` : Fix 'Start' and 'Schedule' buttons — Currently overflow their container and need to be resized/smaller to fit the landing view box.
 
 ### Target: `epic/music-mode-parity`
@@ -138,6 +143,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `#31` — Legacy Tool Retirement — Retired Simple Scanner and Admin Hardware Tester; consolidated
 - [x] `#32` — Diagnostic Lab UI Modernization — Restyled Lab header, exit logic, and card styling.
 - [x] `feat/admin-tools-reorg` : Admin Tools Overhaul — Renamed LogViewerModal to AdminTools, reorganized hierarchy (Timeline, Stats, Device, Tools), and integrated as primary dashboard diagnostic hub.
+- [x] `feat/crew-discovery-refinement` : Refine 'Live Near You' discovery — Integrated membership-based session discovery and removed static crew browsing for a session-first Hub experience.
 
 ## ✅ Completed Previously
 

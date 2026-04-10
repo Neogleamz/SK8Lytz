@@ -244,7 +244,10 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
     const { error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { username: username.trim() } },
+      options: { 
+        data: { username: username.trim() },
+        emailRedirectTo: 'sk8lytz://auth'
+      },
     });
     setLoading(false);
     if (error) {
