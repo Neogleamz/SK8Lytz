@@ -112,6 +112,7 @@ The **Admin Tools Hub** (`AdminToolsModal`) is the unified gateway for all syste
 * **`parsed_session_devices`**: All BLE devices seen per session (`session_id + device_id` UNIQUE)
 * **`parsed_logs`**: Full event trace log. Appended continuously.
 * **`parsed_mode_usage`** / **`parsed_pattern_usage`** / **`parsed_color_usage`**: Frequency metrics.
+* **`telemetry_errors`**: Global crash hounds and unhandled exception tracker. Target for AI bug-hunter triage.
 
 > Group telemetry events MUST pass `deviceIds: string[]` in the `AppLogger` device context so the engine can unroll the event into individual, per-device rows in Postgres.
 
