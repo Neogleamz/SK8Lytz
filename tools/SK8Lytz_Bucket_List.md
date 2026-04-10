@@ -89,6 +89,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] `feat/dashboard-redesign` : **[PRIORITY]** Redesign scanner dashboard into a modern interface (Style 3 - Vertical Slabs, No-Scrolling). 4-Slab Hierarchy: [Header] ➔ [Crew Hub Sessions] ➔ [Skates (Hardware Groups)] ➔ [Registered Device List + Add Button]. See `docs/plans/feat-dashboard-redesign.md` for details.
 - [ ] `fix/dynamic-username` : Display the actual username from Supabase session/profile instead of hardcoded 'Skater'
 - [ ] `fix/setup-finish-destination` : Ensure Hardware Setup Wizard returns to the Dashboard after completion instead of auto-launching the controller
+- [ ] `hw-test/remote-pairing-logic` : Research and verify RF Remote pairing ID discovery and Power ON/OFF parity (APP vs RF Remote)
 - [ ] `fix/camera-mode-layout` : Camera mode regression fix — Restore proper permissions prompt system, optimize layout so color bar is minimized at the bottom, maximize camera preview area, and add user instruction tooltip ("Click a color on screen...").
 
 ### Target: `epic/telemetry-audit`
