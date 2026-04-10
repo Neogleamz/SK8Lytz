@@ -31,7 +31,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/admin-tools`
 
-- [ ] `audit-admin-hardware` : #7 — Admin Hardware Tester audit — Verify `setMultiColor` path in admin tester applies color sorting correctly (currently does NOT call `applyColorSorting` — review `AdminHardwareTester.tsx` L169).
+- [x] `audit-admin-hardware` : #7 — Admin Hardware Tester audit — Verify `setMultiColor` path in admin tester applies color sorting correctly (currently does NOT call `applyColorSorting` — review `AdminHardwareTester.tsx` L169).
 - [ ] `build-picks-scheduler` : #28 — SK8Lytz Picks Admin Scheduler — Build admin UI to manage the `sk8lytz_picks` table scheduling. DB columns (`active_from`, `active_until`, `is_active`) already in place. Goal: seasonal picks (4th of July, Christmas, etc.) auto-show/hide. Needs: admin screen, date pickers, toggle per pick. needs to under hidden tool section
 
 ### Target: `epic/camera-mode`
