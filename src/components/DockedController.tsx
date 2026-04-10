@@ -44,6 +44,7 @@ import { Accelerometer } from 'expo-sensors';
 import * as Location from 'expo-location';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import MarqueeText from './MarqueeText';
+import { AppLogger } from '../services/AppLogger';
 
 type MotionState = 'STOPPED' | 'ACCELERATING' | 'CRUISING' | 'SLOWING_DOWN' | 'HARD_BRAKING';
 
@@ -733,7 +734,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
     };
 
-    const loadFavorite = (favRaw: IFavoriteState) => {
+    const loadFavorite = (favRaw: IFavoriteState, context: 'FAVORITE' | 'PICK' | 'COMMUNITY' = 'FAVORITE') => {
       const fav: any = favRaw;
       setActiveFavoriteId(fav.id);
       setSpeed(fav.speed);
@@ -787,7 +788,13 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           sendColor(parseInt(fav.color.slice(1, 3), 16) || 0, parseInt(fav.color.slice(3, 5), 16) || 0, parseInt(fav.color.slice(5, 7), 16) || 0);
         }, 100);
       }
-    }
+      
+      if (context === 'PICK') {
+        AppLogger.log('PICK_SELECTED', { id: fav.id, name: fav.name || fav.customName, mode: legacyMode });
+      } else {
+        AppLogger.log('FAVORITE_RENDERED', { id: fav.id, name: fav.name || fav.customName, mode: legacyMode, patternId: fav.patternId });
+      }
+    };
 
     /** Unified color sender — sends solid color instantly using actual LED count */
     const sendColor = async (r: number, g: number, b: number) => {
@@ -1488,7 +1495,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                       <TouchableOpacity
                         key={fav.id}
                         style={[styles.presetCard, { borderColor: Colors.secondary }]}
-                        onPress={() => loadFavorite(fav)}
+                        onPress={() => loadFavorite(fav, 'PICK')}
                       >
                         <View style={{ width: '100%', minHeight: 20, justifyContent: 'center', alignItems: 'center', marginTop: 2 }}>
                           <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.customName || fav.name}</MarqueeText>
@@ -1556,7 +1563,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                         <Text style={{ color: fixedSubMode === 'PATTERN' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Pro Effects</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        onPress={() => setFixedSubMode('BUILDER')}
+                        onPress={() => {
+                          AppLogger.log('BUILDER_UI_TOGGLED');
+                          setFixedSubMode('BUILDER');
+                        }}
                         style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'BUILDER' ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
                       >
                         <Text style={{ color: fixedSubMode === 'BUILDER' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Builder</Text>
@@ -2152,6 +2162,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     minimumValue={0}
                     maximumValue={100}
                     onSlidingComplete={(val: number) => {
+                      AppLogger.log('BRIGHTNESS_CHANGED', { value: val, mode: activeMode });
                       if (writeToDevice) {
                         if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
                           applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
@@ -2181,7 +2192,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     onValueChange={setMicSensitivity}
                     minimumValue={0}
                     maximumValue={100}
-                    onSlidingComplete={(val: number) => handleMusicChange(musicPatternId, val, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle)}
+                    onSlidingComplete={(val: number) => {
+                      AppLogger.log('MIC_SENSITIVITY_CHANGED', { value: val });
+                      handleMusicChange(musicPatternId, val, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
+                    }}
                   />
                 )}
 
@@ -2195,6 +2209,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     onValueChange={setStreetSensitivity}
                     minimumValue={5}
                     maximumValue={95}
+                    onSlidingComplete={(val: number) => AppLogger.log('STREET_SENSITIVITY_CHANGED', { value: val })}
                   />
                 )}
 
@@ -2213,6 +2228,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     minimumValue={0}
                     maximumValue={100}
                     onSlidingComplete={(val: number) => {
+                      AppLogger.log('SPEED_CHANGED', { value: val, mode: activeMode });
                       if (writeToDevice) {
                         if (activeMode === 'MULTIMODE') {
                           if (fixedSubMode === 'PATTERN') {
@@ -2249,7 +2265,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     onValueChange={setBrightness}
                     minimumValue={0}
                     maximumValue={100}
-                    onSlidingComplete={(val: number) => handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle)}
+                    onSlidingComplete={(val: number) => {
+                      AppLogger.log('BRIGHTNESS_CHANGED', { value: val, mode: activeMode });
+                      handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
+                    }}
                   />
                 )}
               </View>
@@ -2357,6 +2376,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     newArr.splice(quickPromptTargetIndex, 1);
                     setQuickPresets(newArr);
                     AsyncStorage.setItem('@Sk8lytz_QuickPresets', JSON.stringify(newArr));
+                    AppLogger.log('BUILDER_PRESET_DELETED', { index: quickPromptTargetIndex });
                     setIsQuickPromptVisible(false);
                   }}>
                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Delete</Text>
@@ -2396,6 +2416,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                   }
                   setQuickPresets(newArr);
                   AsyncStorage.setItem('@Sk8lytz_QuickPresets', JSON.stringify(newArr));
+                  AppLogger.log('BUILDER_PRESET_SAVED', { name: safeName, isOverwrite: quickPromptTargetIndex !== -1 });
                   setIsQuickPromptVisible(false);
                 }}>
                   <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>Save</Text>
