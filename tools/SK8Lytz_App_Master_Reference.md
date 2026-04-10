@@ -367,6 +367,17 @@ To ensure high-fidelity discovery and telemetry, the Crew Hub follows strict lif
 ### Session Naming Convention
 To prevent confusion in the "Live Near You" discovery feed, all new sessions automatically append an `_MM/DD` suffix to the crew name (e.g., `O-Town_04/10`). This logic is enforced in `CrewModal.handleCreate`.
 
+### Proximity Discovery & Visibility Rules
+The Hub discovery feed is optimized for active, real-time sessions:
+
+- **Proximity Filter**: Hub `LIVE NEAR YOU` feed strictly filters for **sessions**, not crews.
+- **Visibility Logic**:
+    - **Public Sessions**: Visible to all within radius.
+    - **Private Sessions**: Visible ONLY to:
+        - Members of the parent Private Crew (via `crew_memberships`).
+        - Active session participants who joined via code (via `crew_members`).
+- **Discovery Refinement**: Static public crew browsing is removed from the primary Hub view to prioritize live skating events.
+
 ### The Atomic Cleanup Rule (Single-Session Constraint)
 The `CrewService` enforces a strict one-active-session-per-leader rule.
 1. **Cleanup on Create**: Before inserting a new `crew_sessions` row, `cleanupLegacySessions(userId)` is invoked to set `is_active = false` and `status = 'ended'` for any existing sessions led by that user.

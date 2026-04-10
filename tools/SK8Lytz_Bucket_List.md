@@ -51,8 +51,9 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/crew-hub-overhaul`
 
 - [ ] `refactor-crew-modal` : #3 — `CrewModal.tsx` refactor — 14 useEffect hooks, 2,600+ lines. Extract `useCrewHub()` and `useCrewSession()` custom hooks. Highest maintainability debt in the codebase.
-- [ ] `fix/crew-session-stale-data` : Audit Live Sessions logic - Fix stale data/duplicates in 'Live Near You' after deletion and implement unique session naming (e.g. CrewName_Date)
-- [ ] `fix/crew-hub-button-styling` : Fix 'Start' and 'Schedule' buttons — Currently overflow their container and need to be resized/smaller to fit the landing view box.
+- [x] `fix/crew-session-stale-data` : Audit Live Sessions logic - Fix stale data/duplicates in 'Live Near You' after deletion and implement unique session naming (e.g. CrewName_Date)
+- [ ] `feat/crew-discovery-refinement` : Refine 'Live Near You' discovery - Show only sessions (not crews), show all public sessions, but only private sessions for crews you belong to.
+- [x] `fix/crew-hub-button-styling` : Fix 'Start' and 'Schedule' buttons — Currently overflow their container and need to be resized/smaller to fit the landing view box.
 
 ### Target: `epic/music-mode-parity`
 
