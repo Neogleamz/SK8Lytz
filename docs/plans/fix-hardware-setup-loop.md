@@ -1,24 +1,28 @@
-### Design Decisions & Rationale
+# Goal Description
+Fix the hardware setup logic loop that repeatedly launches the Hardware Setup Wizard on app reopen, trapping offline users and failing cloud syncs.
 
-The root cause of the Hardware Setup loop is that the `hasCloudRegistrations()` function immediately forces a network request and explicitly returns `false` if the user is offline or not signed in—totally ignoring locally cached devices in `AsyncStorage`. We will rename this function to `hasAnyRegistrations()` and adjust its flow to check the local (instant) cache first. If devices exist locally, the setup wizard will be skipped, ensuring seamless offline and persistent logins.
+### Design Decisions & Rationale
+We are refactoring `hasCloudRegistrations` in `useRegistration.ts` to execute a local-first check before demanding network consensus. By aggressively checking `getLocalDevices()` first, any user who possesses registered devices locally (even those pending cloud sync or in offline mode) will immediately bypass the Setup Wizard. This prevents users from getting soft-locked in the onboarding wizard if their Supabase connection drops, if they clicked "Continue Offline", or if their initial cloud sync failed.
 
 ## Proposed Changes
 
-### `src/hooks/useRegistration.ts`
+### Core Registration Hook
 
-- Rename `hasCloudRegistrations` to `hasAnyRegistrations`.
-- Adjust the internal logic to:
-  1. **Fast Path**: Check `getLocalDevices()`. If `length > 0`, return `true` instantly.
-  2. **Network Path**: If local misses, perform the `supabase` count check.
-  3. Ensure it degrades gracefully to `false` without throwing an uncaught error.
+#### [MODIFY] `useRegistration.ts`
+- Refactor `hasCloudRegistrations()` to immediately query `getLocalDevices()`.
+- Return `true` if `local.length > 0` regardless of "pending sync" status.
+- Only fall back to `supabase.from('registered_devices').select()` if the local cache is empty, ensuring cross-device cloud sync properly triggers when a user installs the app on a new phone.
 
-### `src/screens/DashboardScreen.tsx`
+## Open Questions
+None.
 
-- Update the destructured import from `useRegistration` to use `hasAnyRegistrations`.
-- Update the `useEffect` that checks the FTUE state on mount to consume this new function name.
+## Verification Plan
 
-## Verfication Plan
+### Automated Tests
+- Test TypeScript constraints to ensure the Promise correctly returns a boolean without rejecting on missing database tables.
 
-- Log out or log into the app without network. 
-- Force quit and reopen. 
-- Ensure the app directly loads the Dashboard instead of forcing the Hardware Setup Wizard if devices exist in local storage.
+### Manual Verification
+1. Launch app offline or skip login.
+2. Register a device.
+3. Close app completely and reopen.
+4. Verify the Hardware Setup wizard does not forcefully take over the screen.
