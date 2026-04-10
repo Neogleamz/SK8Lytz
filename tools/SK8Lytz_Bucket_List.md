@@ -85,10 +85,12 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `main`
 
+- [ ] `feat/dashboard-redesign` : Redesign scanner dashboard into a modern interface, minimizing scan animation, updating Crew Hub and Group cards for larger click-to-connect layout.
+
 ### Target: `epic/telemetry-audit`
 
 - [x] `verify-telemetry-ingestion` : #21 — Telemetry ingestion verification — Confirm AppLogger events (crew, street mode, hardware config) are landing in Supabase `device_logs` table correctly.
-- [ ] `audit-applogger-coverage` : #30 — AppLogger Coverage Audit — Comprehensive audit of all features added this session (Street Mode, Picks, Favorites, Builder) to ensure 100% telemetry coverage in Analytics.
+- [x] `audit-applogger-coverage` : #30 — AppLogger Coverage Audit — Comprehensive audit of all features added this session (Street Mode, Picks, Favorites, Builder) to ensure 100% telemetry coverage in Analytics.
 
 ### Target: `epic/testing-suite`
 
