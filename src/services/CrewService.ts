@@ -83,6 +83,9 @@ class CrewService {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) throw new Error('Must be signed in to create a crew');
 
+    // Proactively end any previous active sessions by this leader
+    await this.cleanupLegacySessions(user.id);
+
     const insertData: Record<string, any> = {
       name,
       leader_user_id: user.id,
@@ -114,6 +117,24 @@ class CrewService {
     this.currentSessionId = session.id;
     this.currentRole = 'leader';
     return session;
+  }
+
+  /** Proactively deactivate any existing active sessions by this user. */
+  async cleanupLegacySessions(userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('crew_sessions')
+      .update({
+        is_active: false,
+        status: 'ended',
+        ended_at: new Date().toISOString(),
+      })
+      .eq('leader_user_id', userId)
+      .eq('is_active', true);
+
+    if (error) {
+      console.warn('[CrewService] cleanupLegacySessions failed:', error.message);
+      AppLogger.log('CREW_ERROR', { action: 'cleanupLegacySessions', error: error.message });
+    }
   }
 
   /** Join an existing session by 6-char invite code. */
@@ -206,10 +227,10 @@ class CrewService {
 
     if (error || !data) return [];
 
-    return data.map((s: any) => ({
+    return data.map((s: CrewSession & { crew_members: { count: number }[] }) => ({
       ...s,
       member_count: s.crew_members?.[0]?.count ?? 0,
-    })) as CrewSession[];
+    } as CrewSession));
   }
 
   /**
@@ -242,10 +263,10 @@ class CrewService {
       .order('created_at', { ascending: false })
       .limit(20);
 
-    return (data ?? []).map((s: any) => ({
+    return (data ?? []).map((s: CrewSession & { crew_members: { count: number }[] }) => ({
       ...s,
       member_count: s.crew_members?.[0]?.count ?? 0,
-    })) as CrewSession[];
+    } as CrewSession));
   }
 
   /**

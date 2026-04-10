@@ -229,6 +229,14 @@ export default function CrewModal({
     }).catch((e) => { console.warn('[CrewModal] Failed to load my crews:', e); });
   }, [visible, step]);
 
+  const refreshNearby = () => {
+    setIsLoadingNearby(true);
+    locationService.getNearbyPublicSessions(discoverRadiusMi)
+      .then(s => setNearbySessions(s))
+      .catch(() => { })
+      .finally(() => setIsLoadingNearby(false));
+  };
+
   // Load public crews when hub opens
   useEffect(() => {
     if (!visible) return;
@@ -245,11 +253,7 @@ export default function CrewModal({
     if (!visible) return;
     const shouldLoad = step === 'landing';
     if (!shouldLoad) return;
-    setIsLoadingNearby(true);
-    locationService.getNearbyPublicSessions(discoverRadiusMi)
-      .then(sessions => setNearbySessions(sessions))
-      .catch((e) => { console.warn('[CrewModal] Failed to load nearby sessions:', e); })
-      .finally(() => setIsLoadingNearby(false));
+    refreshNearby();
   }, [visible, step, discoverRadiusMi]);
 
   // Search users for invite
@@ -362,8 +366,14 @@ export default function CrewModal({
   // ── Create ─────────────────────────────────────────────────────────────────
 
   const handleCreate = async (scheduled?: Date) => {
-    const sessionName = crewName.trim() || permanentCrews.find(c => c.id === selectedCrewId)?.name || '';
+    let sessionName = crewName.trim() || permanentCrews.find(c => c.id === selectedCrewId)?.name || '';
     if (!sessionName) { setErrorMsg('Pick a crew or enter a session name'); return; }
+
+    // Append Date suffix (MM/DD) to ensure unique, traceable sessions
+    const now = new Date();
+    const dateStr = `${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')}`;
+    sessionName = `${sessionName}_${dateStr}`;
+
     setIsLoading(true); setErrorMsg('');
     try {
       const crewInfo = myCrews.find(c => c.id === selectedCrewId);
@@ -465,9 +475,14 @@ export default function CrewModal({
 
   const executeEndSession = async () => {
     setConfirmAction(null);
+    const currentSessionId = currentSession?.id;
     try {
-      AppLogger.log('CREW_SESSION_ENDED', { sessionId: currentSession?.id, crewName: currentSession?.name, role: 'leader', reason: 'explicit_end' });
-      await crewService.endSession(currentSession?.id);
+      AppLogger.log('CREW_SESSION_ENDED', { sessionId: currentSessionId, crewName: currentSession?.name, role: 'leader', reason: 'explicit_end' });
+      if (currentSessionId) {
+        await crewService.endSession(currentSessionId);
+        // Force refresh nearby sessions browser after ending
+        refreshNearby();
+      }
       setCurrentSession(null); setCurrentRole(null);
       setIsHandoffMode(false);
       onSessionEnded();
@@ -482,6 +497,8 @@ export default function CrewModal({
     setConfirmAction(null);
     AppLogger.log('CREW_SESSION_LEFT', { sessionId: currentSession?.id, role: currentRole });
     await crewService.leaveSession();
+    // Force refresh nearby sessions browser after leaving
+    refreshNearby();
     setCurrentSession(null); setCurrentRole(null);
     setIsHandoffMode(false);
     onSessionLeft();
@@ -2388,9 +2405,9 @@ const createStyles = (Colors: any) => StyleSheet.create({
   hubActionChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     borderWidth: 1.5, borderColor: 'rgba(255,170,0,0.35)',
-    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 20, paddingHorizontal: 8, paddingVertical: 4,
   },
-  hubActionChipText: { color: Colors.primary || '#FFAA00', fontSize: 11, fontWeight: '700' },
+  hubActionChipText: { color: Colors.primary || '#FFAA00', fontSize: 10, fontWeight: '700' },
 
   hubCodeEntry: {
     width: '100%', marginTop: 8, marginBottom: 4,
