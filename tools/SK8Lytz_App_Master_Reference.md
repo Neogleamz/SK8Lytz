@@ -77,8 +77,9 @@ The primary dashboard uses a **Vertical Slab (No-Scroll)** layout to maximize gl
 #### **`registered_devices`** (Hardened Schema)
 | Column | Type | Purpose |
 |:---|:---|:---|
-| `device_mac` | TEXT (PK) | Unique hardware address |
-| `user_id` | UUID (PK) | Owner ID |
+| `id` | TEXT (PK) | Unique system identifier (Client-generated UUID or Hash) |
+| `device_mac` | TEXT | Unique hardware address |
+| `user_id` | UUID | Owner ID |
 | `device_name` | TEXT | Custom alias |
 | `product_type` | TEXT | HALOZ / SOULZ |
 | `position` | TEXT | Left / Right / Front / Back |
