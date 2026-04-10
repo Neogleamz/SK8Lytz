@@ -61,7 +61,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `fix/supabase-auth-redirect` : Supabase Auth Confirmation Email Redirect — Fix the issue where the confirmation email link points to a dead `localhost` site. 
 - [ ] `fix/hardware-setup-loop` : Hardware Setup Wizard launches repeatedly on app reopen even after setup and registration. Investigate triggers and fix.
 - [ ] `fix/account-devices-display` : Account Manager / Devices tab is showing groups instead of individual devices. Refactor to display all registered devices with their details only.
-- [ ] `fix/device-setup-blink` : Blink button does not work on device setup; evaluate and implement handling strategy.
+- [x] `fix/device-setup-blink` : Blink button does not work on device setup; evaluate and implement handling strategy.
 - [ ] `audit/global-device-naming` : Comprehensive Device Naming Audit — The app is displaying raw 'LEDnet' names in the visualizer and dashboard instead of actual named devices (e.g. 'Soulz Right'). Devices also appear duplicated. Trace and audit ALL automatic naming and grouping persistence globally to establish a single source of truth for display names.
 - [ ] `chore/rename-hardware-fleet` : Rename "Hardware Fleet" to "Registered Devices" in UI.
 
@@ -116,6 +116,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `fix/camera-mode-layout` : Camera mode regression fix — Restore proper permissions prompt system, optimize layout so color bar is minimized at the bottom, maximize camera preview area, and add user instruction tooltip ("Click a color on screen...").
 - [ ] `fix/dashboard-long-press-tip` : Fix the long press tip button on dashboard.
 - [ ] `feat/speed-tracking-telemetry` : Add average mph and speed tracking to sessions, crews, and street mode. Need to brainstorm and discuss implementation options.
+- [ ] `chore/wireless-adb-setup` : Investigate and document wireless APK installation via ADB over Wi-Fi so the phone doesn't need to be constantly plugged in via USB.
 
 ### Target: `epic/telemetry-audit`
 
