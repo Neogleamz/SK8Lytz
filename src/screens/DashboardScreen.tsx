@@ -209,6 +209,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const wizardCheckedRef = React.useRef(false);
   const [pendingNewDevice, setPendingNewDevice] = React.useState<any | null>(null);
 
+  // 0. Auto-scan on mount
+  useEffect(() => {
+    if (!isScanning) {
+      scanForPeripherals();
+    }
+  }, []);
+
   // 1. Check FTUE state on mount
   useEffect(() => {
     hasCloudRegistrations().then(hasAny => {
@@ -819,13 +826,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, [allDevices, deviceConfigs]);
 
   const registeredDevicesData = useMemo(() => {
-    const macs = new Set(registeredDevices.map((d: any) => d.device_mac.toLowerCase()));
-    return sortedAllDevices.filter((d: any) => macs.has(d.id.toLowerCase()));
+    const macs = new Set(registeredDevices.map((d: any) => d.device_mac?.toLowerCase() ?? ''));
+    return sortedAllDevices.filter((d: any) => macs.has(d.id?.toLowerCase() ?? ''));
   }, [sortedAllDevices, registeredDevices]);
 
   const availableDevicesData = useMemo(() => {
-    const macs = new Set(registeredDevices.map((d: any) => d.device_mac.toLowerCase()));
-    return sortedAllDevices.filter((d: any) => !macs.has(d.id.toLowerCase()));
+    const macs = new Set(registeredDevices.map((d: any) => d.device_mac?.toLowerCase() ?? ''));
+    return sortedAllDevices.filter((d: any) => !macs.has(d.id?.toLowerCase() ?? ''));
   }, [sortedAllDevices, registeredDevices]);
 
   const handleDisconnect = useCallback(() => {
@@ -1448,10 +1455,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   {!isTestModeActive ? (
                   <View style={{ height: 380, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginTop: 5, width: '100%' }}>
                       <ScannerAnimation 
-                         deviceCount={allDevices.length} 
+                         deviceCount={sortedAllDevices.length} 
                          isScanning={isScanning}
                          isScanProbing={isScanProbing}
-                         onPress={handleScan}
+                         onPress={scanForPeripherals}
                       />
                   </View>
                 ) : null}

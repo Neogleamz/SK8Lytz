@@ -48,8 +48,17 @@ Dedicated, active roller skaters. They operate in chaotic, low-light environment
 - **`parsed_logs`**: Full event trace log. Appended continuously.
 - **`parsed_mode_usage`** / **`parsed_pattern_usage`** / **`parsed_color_usage`**: Frequency metrics.
 
-> [!NOTE]
 > Group telemetry events MUST pass `deviceIds: string[]` in the `AppLogger` device context so the engine can unroll the event into individual, per-device rows in Postgres.
+
+### Hardware Discovery & Identification (The FTUE Logic)
+The app uses a "Search & Enrich" strategy for First Time User Experience (FTUE).
+1. **Instant Enrollment**: All Zengge/Symphony MAC addresses are listed immediately in the Wizard as "SCANNING".
+2. **Round-Robin Probing**: A sequential, persistent background loop connects to each unknown device to retrieve EEPROM data (0x63).
+3. **Threshold Classification**:
+   - **SOULZ**: 28–300 LEDs (Standard 43).
+   - **HALOZ**: 10–27 LEDs (Standard 16 or 11).
+   - **UNKNOWN**: Fallback to safe defaults (16pts) if probing fails after 3 retries.
+4. **Clean Install Enforcement**: The build-apk script strictly aborts on Gradle failure, and install-apk performs a full `adb uninstall` before push.
 
 ---
 

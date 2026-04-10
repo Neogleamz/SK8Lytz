@@ -15,7 +15,7 @@ interface HardwareSetupWizardScreenProps {
 export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareSetupWizardScreenProps) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
-  const { scanForPeripherals, isScanning, requestPermissions, isBluetoothSupported, isBluetoothEnabled, pendingRegistrations, writeToDevice, probeDevice } = useBLE();
+  const { scanForPeripherals, isScanning, isScanProbing, requestPermissions, isBluetoothSupported, isBluetoothEnabled, pendingRegistrations, writeToDevice, probeDevice } = useBLE();
   const [hasStartedScan, setHasStartedScan] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [isBlinking, setIsBlinking] = useState<string | null>(null);
@@ -116,6 +116,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
   const renderStep2 = () => {
     const haloz = pendingRegistrations.filter(r => r.product_type === 'HALOZ');
     const soulz = pendingRegistrations.filter(r => r.product_type === 'SOULZ');
+    const unknown = pendingRegistrations.filter(r => r.product_type === 'UNKNOWN');
 
     const renderDeviceGroup = (title: string, devices: typeof pendingRegistrations, color: string) => {
       if (devices.length === 0) return null;
@@ -139,12 +140,14 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                   />
                 </View>
                 <View style={styles.deviceInfo}>
-                   <Text style={[styles.deviceName, isSelected ? { color } : { opacity: 0.6 }]}>
-                     {device.device_name}
-                   </Text>
-                  <Text style={styles.deviceMeta}>MAC: {device.device_mac} • RSSI: {device.rssi}</Text>
-                  <Text style={styles.deviceMeta}>LEDs: {device.led_points} • IC: {device.ic_type}</Text>
-                </View>
+                    <Text style={[styles.deviceName, isSelected ? { color } : { opacity: 0.6 }]}>
+                      {device.device_name}
+                    </Text>
+                    <Text style={styles.deviceMeta}>MAC: {device.device_mac.slice(-5).toUpperCase()} • RSSI: {device.rssi}</Text>
+                    <Text style={styles.deviceMeta}>
+                      {device.product_type === 'UNKNOWN' ? 'IDENTIFYING HARDWARE...' : `LEDS: ${device.led_points} • IC: ${device.ic_type}`}
+                    </Text>
+                  </View>
                 <TouchableOpacity 
                   style={[styles.blinkBtn, isBlinking === device.device_mac && styles.blinkBtnActive]}
                   onPress={() => handleBlinkDevice(device.device_mac)}
@@ -176,10 +179,17 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
           Tap "BLINK" to physically identify and claim your controllers. Uncheck any devices that aren't yours.
         </Text>
 
-        <View style={styles.scrollViewWrapper}>
-          {renderDeviceGroup('HALOZ', haloz, '#00f0ff')}
-          {renderDeviceGroup('SOULZ', soulz, '#a855f7')}
-        </View>
+        <ScrollView style={styles.deviceScroll} contentContainerStyle={{ paddingBottom: 20 }}>
+          {renderDeviceGroup('HALOZ', haloz, Colors.primary)}
+          {renderDeviceGroup('SOULZ', soulz, '#00F0FF')}
+          {renderDeviceGroup('SCANNING', unknown, '#FFF')}
+          
+          {pendingRegistrations.length === 0 && !isScanning && !isScanProbing && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No devices found. Ensure they are powered on.</Text>
+            </View>
+          )}
+        </ScrollView>
       </View>
     );
   };
@@ -352,10 +362,12 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                 onPress={handleStartScan}
                 disabled={isScanning}
               >
-                {isScanning || !hasStartedScan ? (
+                {isScanning || isScanProbing || !hasStartedScan ? (
                   <View style={styles.scanningRow}>
                     <ActivityIndicator color="#000" size="small" />
-                    <Text style={styles.primaryBtnText}>SEARCHING FOR SKATES...</Text>
+                    <Text style={styles.primaryBtnText}>
+                      {isScanning ? 'SEARCHING FOR SKATES...' : 'IDENTIFYING HARDWARE...'}
+                    </Text>
                   </View>
                 ) : (
                   <Text style={styles.primaryBtnText}>RETRY SCAN</Text>
@@ -570,5 +582,9 @@ function createStyles(Colors: any) {
     segBtn: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 6 },
     segBtnActive: { backgroundColor: Colors.primary || '#00f0ff', shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
     segBtnText: { fontSize: 11, fontWeight: 'bold', color: Colors.textMuted || '#888' },
+    
+    emptyState: { padding: 40, alignItems: 'center', justifyContent: 'center' },
+    emptyText: { color: Colors.textMuted || '#888', textAlign: 'center', fontSize: 14 },
+    deviceScroll: { flex: 1, width: '100%' },
   });
 }

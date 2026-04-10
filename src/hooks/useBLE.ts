@@ -202,7 +202,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const scanForPeripherals = () => {
     if (isScanning) return;
     setIsScanning(true);
-    setAllDevices([]);
+    setPendingRegistrations([]);
     
     if (__DEV__) {
       AsyncStorage.getItem('@Sk8lytz_demo_mode').then((isMock) => {
@@ -398,7 +398,10 @@ export default function useBLE(): BluetoothLowEnergyApi {
                 })();
               }
 
-              return [...prevState, device];
+              const updatedDevices = [...prevState, device];
+              // Trigger immediate classification so they show up in Wizard as "Identifying..."
+              classifyProbeResults(updatedDevices);
+              return updatedDevices;
             }
             return prevState;
           });
@@ -432,50 +435,67 @@ export default function useBLE(): BluetoothLowEnergyApi {
    * notification, parses result, fires onHardwareProbed callback, disconnects.
    * Skips devices that are already connected (user is actively using them).
    */
-  const probeAllDiscoveredDevices = async () => {
+  const probeAllDiscoveredDevices = async (retriesLeft = 3) => {
     if (Platform.OS === 'web' || !bleManager) return;
     const devices = allDevicesRef2.current;
-    if (devices.length === 0) return;
+    
+    // Filter to only those that still need probing (missing hwPoints)
+    const pending = devices.filter(d => (d as any).hwPoints == null);
+    if (pending.length === 0) {
+      setIsScanProbing(false);
+      return;
+    }
 
     setIsScanProbing(true);
-    console.log(`[BLE Probe] Starting background hardware probe of ${devices.length} device(s)`);
+    console.log(`[BLE Probe] Round-Robin Probing ${pending.length} device(s). Retries left: ${retriesLeft}`);
 
-    for (const device of devices) {
+    const failedIds: string[] = [];
+
+    for (const device of pending) {
       try {
-        // Skip if already connected (don't disturb active session)
+        // Skip if already connected AND we already know the hardware (don't disturb active session unnecessarily)
         const alreadyConn = await bleManager.isDeviceConnected(device.id).catch(() => false);
-        if (alreadyConn) {
-          console.log(`[BLE Probe] Skipping ${device.id} — already connected`);
-          continue;
-        }
+        const hasHwInfo = (device as any).hwPoints != null;
+        if (alreadyConn && hasHwInfo) continue;
 
         console.log(`[BLE Probe] Probing ${device.name || device.id}...`);
-        const conn = await bleManager.connectToDevice(device.id, { timeout: 5000 });
+        const conn = await bleManager.connectToDevice(device.id, { timeout: 3500 });
         await conn.discoverAllServicesAndCharacteristics();
 
-        // Collect the first 0x63 response via a one-shot promise
         const hwConfig = await probeDevice(device.id);
+        if (hwConfig) {
+          (device as any).hwPoints = hwConfig.ledPoints;
+          (device as any).hwSegments = hwConfig.segments;
+          (device as any).hwSorting = hwConfig.colorSortingName;
+          (device as any).hwStripType = hwConfig.icName;
 
-        if (hwConfig && hardwareProbedCallbackRef.current) {
-          console.log(`[BLE Probe] Got config for ${device.id}:`, hwConfig);
-          hardwareProbedCallbackRef.current(device.id, hwConfig);
-
+          if (hardwareProbedCallbackRef.current) {
+            hardwareProbedCallbackRef.current(device.id, hwConfig);
+          }
+          // Update list immediately for Wizard
+          setAllDevices([...allDevicesRef2.current]);
+          classifyProbeResults([...allDevicesRef2.current]);
         }
-
-        // Brief pause between probes to let GATT stack recover
-        await new Promise(r => setTimeout(r, 800));
+        
+        await bleManager.cancelDeviceConnection(device.id).catch(() => {});
+        await new Promise(r => setTimeout(r, 600));
 
       } catch (probeErr: any) {
-        console.warn(`[BLE Probe] Failed to probe ${device.id}:`, probeErr?.message);
-        // Attempt cleanup even on error
+        console.warn(`[BLE Probe] Failed ${device.id}:`, probeErr?.message);
+        failedIds.push(device.id);
         try { await bleManager.cancelDeviceConnection(device.id); } catch (e) { }
         await new Promise(r => setTimeout(r, 500));
       }
     }
 
+    if (failedIds.length > 0 && retriesLeft > 0) {
+       console.log(`[BLE Probe] Retrying ${failedIds.length} failed probes in 2s...`);
+       await new Promise(r => setTimeout(r, 2000));
+       return probeAllDiscoveredDevices(retriesLeft - 1);
+    }
+
     setIsScanProbing(false);
-    console.log('[BLE Probe] Background probe complete.');
-    classifyProbeResults();
+    console.log('[BLE Probe] All rounds complete.');
   };
 
   /**
@@ -537,56 +557,68 @@ export default function useBLE(): BluetoothLowEnergyApi {
   };
 
   /**
-   * classifyProbeResults — called after probeAllDiscoveredDevices.
-   * Groups probed devices by product type, sorts by RSSI, assigns L/R.
+   * classifyProbeResults — called after scan finds a device OR probe finishes.
+   * Groups devices by product type, sorts by RSSI, assigns identifiers.
    * Populates pendingRegistrations state.
    */
-  const classifyProbeResults = () => {
-    const probed = allDevicesRef2.current.filter(d => (d as any).hwPoints != null);
-    if (probed.length === 0) return;
+  const classifyProbeResults = (forceList?: Device[]) => {
+    const devices = forceList || allDevicesRef2.current;
+    if (devices.length === 0) return;
 
     const haloz: any[] = [];
     const soulz: any[] = [];
+    const unknown: any[] = [];
 
-    for (const d of probed) {
-      const pts = (d as any).hwPoints as number;
-      if (pts <= 15)       haloz.push(d);
-      else if (pts >= 25)  soulz.push(d);
-      // else: ambiguous — skip
+    for (const d of devices) {
+      const pts = (d as any).hwPoints as number | undefined;
+      const name = d.name?.toUpperCase() || '';
+      
+      // Range-based identification per user directive (April 2026)
+      // SOULZ: 28–45 LEDs (standard 43)
+      // HALOZ: 10–27 LEDs (standard 16 or 11)
+      if (pts != null) {
+        if (pts >= 28)       soulz.push(d);
+        else if (pts >= 10)  haloz.push(d);
+        else                 unknown.push(d);
+      } else {
+        // Name-based fallback (last resort)
+        if (name.includes('HALO')) haloz.push(d);
+        else if (name.includes('SOUL')) soulz.push(d);
+        else unknown.push(d);
+      }
     }
 
-    const assignPositions = (devices: any[], type: 'HALOZ' | 'SOULZ'): PendingRegistration[] => {
-      // Sort strongest RSSI first
-      const sorted = [...devices].sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999));
-      const positions: ('Left' | 'Right')[] = ['Left', 'Right'];
-      return sorted.slice(0, 2).map((d, i) => {
-        const pos = positions[i];
-        const groupName = `My SK8Lytz ${type}`;
-        return {
-          device_mac:   d.id,
-          device_name:  `${type} ${pos}`,
-          product_type: type,
-          position:     pos,
-          group_name:   groupName,
-          led_points:   (d as any).hwPoints,
-          segments:     (d as any).hwSegments ?? 1,
-          ic_type:      (d as any).hwStripType ?? 'WS2812B',
-          color_sorting: (d as any).hwSorting ?? 'GRB',
-          rssi:         d.rssi ?? -99,
-          firmware_ver: (d as any).firmwareVer,
-          led_version:  (d as any).ledVersion,
-          product_id:   (d as any).productId,
-        };
-      });
+    const mapToRegistration = (d: any, i: number, type: 'HALOZ' | 'SOULZ' | 'UNKNOWN'): PendingRegistration => {
+      const isUnknown = type === 'UNKNOWN';
+      const pos = i === 0 ? 'Left' : (i === 1 ? 'Right' : null);
+      return {
+        device_mac:   d.id,
+        device_name:  isUnknown ? `SK8LYTZ (${d.id.slice(-5)})` : `${type} ${i + 1}`,
+        product_type: type as any,
+        position:     pos,
+        group_name:   isUnknown ? 'Identifying...' : `My SK8Lytz ${type}`,
+        led_points:   d.hwPoints || (type === 'SOULZ' ? 43 : 16),
+        segments:     d.hwSegments ?? 1,
+        ic_type:      d.hwStripType ?? 'WS2812B',
+        color_sorting: d.hwSorting ?? 'GRB',
+        rssi:         d.rssi ?? -99,
+        firmware_ver: d.firmwareVer,
+        led_version:  d.ledVersion,
+        product_id:   d.productId,
+      };
     };
 
+    const sortedHaloz = [...haloz].sort((a,b) => (b.rssi ?? -99) - (a.rssi ?? -99));
+    const sortedSoulz = [...soulz].sort((a,b) => (b.rssi ?? -99) - (a.rssi ?? -99));
+    const sortedUnknown = [...unknown].sort((a,b) => (b.rssi ?? -99) - (a.rssi ?? -99));
+
     const results: PendingRegistration[] = [
-      ...assignPositions(haloz, 'HALOZ'),
-      ...assignPositions(soulz, 'SOULZ'),
+      ...sortedHaloz.map((d, i) => mapToRegistration(d, i, 'HALOZ')),
+      ...sortedSoulz.map((d, i) => mapToRegistration(d, i, 'SOULZ')),
+      ...sortedUnknown.map((d, i) => mapToRegistration(d, i, 'UNKNOWN')),
     ];
 
     if (results.length > 0) {
-      console.log(`[BLE Classify] ${results.length} device(s) pending registration`);
       setPendingRegistrations(results);
     }
   };
