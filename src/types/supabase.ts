@@ -112,6 +112,7 @@ export type Database = {
       }
       crew_sessions: {
         Row: {
+          avg_speed_mph: number | null
           created_at: string
           crew_id: string | null
           ended_at: string | null
@@ -127,8 +128,11 @@ export type Database = {
           name: string
           scheduled_at: string | null
           status: string
+          top_speed_mph: number | null
+          total_distance_miles: number | null
         }
         Insert: {
+          avg_speed_mph?: number | null
           created_at?: string
           crew_id?: string | null
           ended_at?: string | null
@@ -144,8 +148,11 @@ export type Database = {
           name?: string
           scheduled_at?: string | null
           status?: string
+          top_speed_mph?: number | null
+          total_distance_miles?: number | null
         }
         Update: {
+          avg_speed_mph?: number | null
           created_at?: string
           crew_id?: string | null
           ended_at?: string | null
@@ -161,6 +168,8 @@ export type Database = {
           name?: string
           scheduled_at?: string | null
           status?: string
+          top_speed_mph?: number | null
+          total_distance_miles?: number | null
         }
         Relationships: [
           {
@@ -1875,6 +1884,8 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           display_name: string | null
+          lifetime_distance_miles: number | null
+          lifetime_top_speed_mph: number | null
           updated_at: string
           user_id: string
           username: string | null
@@ -1884,6 +1895,8 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
+          lifetime_distance_miles?: number | null
+          lifetime_top_speed_mph?: number | null
           updated_at?: string
           user_id: string
           username?: string | null
@@ -1893,6 +1906,8 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
+          lifetime_distance_miles?: number | null
+          lifetime_top_speed_mph?: number | null
           updated_at?: string
           user_id?: string
           username?: string | null

@@ -39,6 +39,7 @@ import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
 import { ScenesService } from '../services/ScenesService';
 import { containsProfanity } from '../services/AuthUtils';
+import { crewService } from '../services/CrewService';
 import CommunityModal from './CommunityModal';
 import { Accelerometer } from 'expo-sensors';
 import * as Location from 'expo-location';
@@ -452,6 +453,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const [peakGForce, setPeakGForce] = useState<number>(1.0);
     const motionStateRef = useRef<MotionState>('STOPPED');
     const lastGpsSpeeds = useRef<number[]>([]);
+    const lastGpsTimeRef = useRef<number | null>(null);
     const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
     // ── Street Mode: Car-Light Pattern helper ─────────────────────────────────
@@ -583,6 +585,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
       // Initialize
       updateMotion('STOPPED');
+      lastGpsTimeRef.current = null;
       AppLogger.log('STREET_MODE_ACTIVATED', { sensitivity: streetSensitivity, cruiseColor: streetCruiseColor, brakeColor: streetBrakeColor, ...deviceContext });
 
       if (Platform.OS === 'web') return;
@@ -598,6 +601,22 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 const spdMpS = pos.coords.speed || 0;
                 const spdMph = Math.max(0, spdMpS * 2.23694);
                 setGpsSpeed(spdMph);
+
+                // Telemetry calculus
+                const now = pos.timestamp;
+                if (lastGpsTimeRef.current) {
+                  const hoursDelta = (now - lastGpsTimeRef.current) / 3600000;
+                  if (hoursDelta > 0 && hoursDelta < 1) { // Ignore crazy jumps
+                    crewService.sessionTelemetry.distanceMiles += spdMph * hoursDelta;
+                  }
+                }
+                lastGpsTimeRef.current = now;
+
+                if (spdMph > crewService.sessionTelemetry.topSpeedMph) {
+                  crewService.sessionTelemetry.topSpeedMph = spdMph;
+                }
+                // Only sample moving speeds for cleaner average, or all? All tracks 'trip average'.
+                crewService.sessionTelemetry.avgSpeedSamples.push(spdMph);
 
                 // Add to rolling history
                 lastGpsSpeeds.current.push(spdMph);

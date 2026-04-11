@@ -56,6 +56,12 @@ export interface CrewScenePayload {
 
 export type CrewRole = 'leader' | 'member' | null;
 
+export interface SessionTelemetryData {
+  distanceMiles: number;
+  topSpeedMph: number;
+  avgSpeedSamples: number[];
+}
+
 // ─── AsyncStorage Keys ───────────────────────────────────────────────────────
 
 const STORAGE_LAST_SESSION_ID  = 'ng_crew_last_session_id';
@@ -71,6 +77,8 @@ class CrewService {
   public currentSessionId: string | null = null;
   /** The role of the signed-in user in the current session. Set by createSession/joinSession. */
   public currentRole: CrewRole = null;
+  /** Temporary in-memory stats aggregated by DockedController */
+  public sessionTelemetry: SessionTelemetryData = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
 
   // ── Session management ────────────────────────────────────────────────────
 
@@ -116,6 +124,7 @@ class CrewService {
     await this._persistSession(session);
     this.currentSessionId = session.id;
     this.currentRole = 'leader';
+    this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
     return session;
   }
 
@@ -176,6 +185,7 @@ class CrewService {
     await this._persistSession(session);
     this.currentSessionId = session.id;
     this.currentRole = user.id === session.leader_user_id ? 'leader' : 'member';
+    this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
     return session as CrewSession;
   }
 
@@ -209,6 +219,7 @@ class CrewService {
     await this._persistSession(session);
     this.currentSessionId = sessionId;
     this.currentRole = user.id === session.leader_user_id ? 'leader' : 'member';
+    this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
     return session as CrewSession;
   }
 
@@ -287,12 +298,19 @@ class CrewService {
     // RLS-safe: Supabase only matches rows the policy allows.
     // If count === 0, this user is not the leader (or session already ended).
     // We try the full update (needs migration 006: status + ended_at columns).
+    const avgSpeed = this.sessionTelemetry.avgSpeedSamples.length
+      ? this.sessionTelemetry.avgSpeedSamples.reduce((a, b) => a + b, 0) / this.sessionTelemetry.avgSpeedSamples.length
+      : 0;
+
     const { error: fullError, data: fullData } = await supabase
       .from('crew_sessions')
       .update({
         status: 'ended',
         is_active: false,
         ended_at: new Date().toISOString(),
+        top_speed_mph: this.sessionTelemetry.topSpeedMph || 0,
+        avg_speed_mph: avgSpeed || 0,
+        total_distance_miles: this.sessionTelemetry.distanceMiles || 0,
       })
       .eq('id', sessionId)
       .eq('leader_user_id', user.id)   // ← RLS-safe leader gate
@@ -466,6 +484,7 @@ class CrewService {
 
       this.currentSessionId = sessionId;
       this.currentRole = user.id === session.leader_user_id ? 'leader' : 'member';
+      this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
       return { session: session as CrewSession, role: this.currentRole };
     } catch {
       return null;

@@ -460,12 +460,31 @@ export default function CrewModal({
     setConfirmAction('end');
   };
 
+  /**
+   * Finalizes the active crew session and synchronizes pending
+   * session telemetry (distance, speed) back to the user's permanent profile.
+   */
   const executeEndSession = async () => {
     setConfirmAction(null);
     const currentSessionId = currentSession?.id;
     try {
       AppLogger.log('CREW_SESSION_ENDED', { sessionId: currentSessionId, crewName: currentSession?.name, role: 'leader', reason: 'explicit_end' });
       if (currentSessionId) {
+        // Pre-fetch auth to update lifetime telemetry
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && (crewService.sessionTelemetry.distanceMiles > 0 || crewService.sessionTelemetry.topSpeedMph > 0)) {
+          const { data: profile } = await supabase.from('user_profiles').select('lifetime_top_speed_mph, lifetime_distance_miles').eq('id', user.id).single();
+          if (profile) {
+            const newDistance = (profile.lifetime_distance_miles || 0) + crewService.sessionTelemetry.distanceMiles;
+            const newTopSpeed = Math.max((profile.lifetime_top_speed_mph || 0), crewService.sessionTelemetry.topSpeedMph);
+            if (newDistance > (profile.lifetime_distance_miles || 0) || newTopSpeed > (profile.lifetime_top_speed_mph || 0)) {
+               await supabase.from('user_profiles').update({
+                 lifetime_distance_miles: newDistance,
+                 lifetime_top_speed_mph: newTopSpeed
+               }).eq('id', user.id);
+            }
+          }
+        }
         await crewService.endSession(currentSessionId);
         // Force refresh nearby sessions browser after ending
         refreshNearby();
@@ -474,9 +493,10 @@ export default function CrewModal({
       setIsHandoffMode(false);
       onSessionEnded();
       setStep('landing');
-    } catch (e: any) {
-      AppLogger.log('CREW_ERROR', { action: 'end_session', error: e.message });
-      setErrorMsg(e.message || 'Could not end session');
+    } catch (e: unknown) {
+      const errorMsg = e instanceof Error ? e.message : 'Could not end session';
+      AppLogger.log('CREW_ERROR', { action: 'end_session', error: errorMsg });
+      setErrorMsg(errorMsg);
     }
   };
 
@@ -1423,6 +1443,23 @@ export default function CrewModal({
                 ? `All members will be notified and the session will close. Their skates keep the current pattern.`
                 : `You'll leave "${currentSession?.name}". Your skates keep the current pattern.`}
             </Text>
+            
+            {confirmAction === 'end' && (
+              <View style={{ marginBottom: 12, padding: 12, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 10 }}>
+                <Text style={{ color: '#00F0FF', fontSize: 11, fontWeight: '800', textAlign: 'center', marginBottom: 8, letterSpacing: 1 }}>📈 SESSION SUMMARY</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={{ color: '#FFF', fontSize: 22, fontWeight: '900' }}>{crewService.sessionTelemetry.distanceMiles.toFixed(1)}</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: '800', letterSpacing: 1 }}>MILES</Text>
+                  </View>
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={{ color: '#FFD700', fontSize: 22, fontWeight: '900' }}>{crewService.sessionTelemetry.topSpeedMph.toFixed(1)}</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: '800', letterSpacing: 1 }}>TOP MPH</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
                 onPress={() => setConfirmAction(null)}
