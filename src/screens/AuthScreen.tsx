@@ -304,7 +304,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
       {/* FIX 1.1.5: Theme toggle — styles now computed from Colors in render, so toggle re-renders correctly */}
       {/* FIX 1.1.6: Help button uses web-safe showHelp() instead of Alert.alert() */}
       <View style={styles.topButtons}>
-        {__DEV__ && (
+        {isSandboxEnabled && (
           <TouchableOpacity 
             style={[styles.topBtn, { borderColor: 'rgba(255,0,0,0.5)', backgroundColor: 'rgba(255,0,0,0.1)' }]} 
             onPress={async () => {
@@ -545,7 +545,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         )}
 
         {/* DEV MODE - Virtual Skates Bypass */}
-        {(mode === 'LOGIN') && onOfflineMode && (
+        {isSandboxEnabled && (mode === 'LOGIN') && onOfflineMode && (
           <TouchableOpacity
             style={{ 
               marginTop: 16, marginHorizontal: 24, paddingVertical: 12, 
@@ -574,24 +574,26 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         )}
 
         {/* The Nuke Button */}
-        <TouchableOpacity
-          style={{
-            marginTop: 30,
-            alignSelf: 'center',
-            backgroundColor: 'rgba(255, 0, 0, 0.1)',
-            paddingVertical: 10,
-            paddingHorizontal: 20,
-            borderRadius: 8,
-            borderWidth: 1,
-            borderColor: 'rgba(255, 0, 0, 0.4)'
-          }}
-          onPress={async () => {
-            await AsyncStorage.clear();
-            setErrorMessage('APP RESET: ALL DATA CLEARED. PLEASE RESTART APP.');
-          }}
-        >
-          <Text style={{ color: '#FF4444', fontWeight: 'bold', fontSize: 12 }}>☢️ NUKE APP CACHE</Text>
-        </TouchableOpacity>
+        {isSandboxEnabled && (
+          <TouchableOpacity
+            style={{
+              marginTop: 30,
+              alignSelf: 'center',
+              backgroundColor: 'rgba(255, 0, 0, 0.1)',
+              paddingVertical: 10,
+              paddingHorizontal: 20,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 0, 0, 0.4)'
+            }}
+            onPress={async () => {
+              await AsyncStorage.clear();
+              setErrorMessage('APP RESET: ALL DATA CLEARED. PLEASE RESTART APP.');
+            }}
+          >
+            <Text style={{ color: '#FF4444', fontWeight: 'bold', fontSize: 12 }}>☢️ NUKE APP CACHE</Text>
+          </TouchableOpacity>
+        )}
 
       </ScrollView>
     </KeyboardAvoidingView>
