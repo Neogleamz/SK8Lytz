@@ -157,7 +157,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(true);
-  const [isRegisteredCollapsed, setIsRegisteredCollapsed] = useState(false);
+  const [isRegisteredCollapsed, setIsRegisteredCollapsed] = useState(true);
 
   // ── Crew Hub state ─────────────────────────────────────────────────────
   const [crewSession, setCrewSession] = useState<CrewSession | null>(null);
@@ -1478,11 +1478,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 {renderDashboardHeader()}
              </View>
 
-             <ScrollView 
-               style={{ flex: 1 }} 
-               contentContainerStyle={{ paddingBottom: 40 }}
-               showsVerticalScrollIndicator={false}
-             >
+             <View style={{ flex: 1, paddingBottom: 40 }}>
                 {/* SLAB 2: CREW HUB (Sessions) */}
                 <View style={[styles.slabContainer, { marginTop: 12 }]}>
                   <View style={[styles.glassSlab, { borderColor: isOfflineMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,170,0,0.2)', paddingVertical: 40 }]}>
@@ -1559,6 +1555,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   )}
                 </View>
 
+                <View style={{ flex: 1 }} />
+
                 {/* SLAB 4: REGISTERED FLEET (Devices) */}
                 <View style={styles.slabContainer}>
                   <TouchableOpacity 
@@ -1602,7 +1600,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     )
                   )}
                 </View>
-             </ScrollView>
+             </View>
           </View>
         )}
         <DeviceSettingsModal
