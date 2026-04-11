@@ -54,11 +54,13 @@ import AccountModal from '../components/AccountModal';
 import CrewMemberDashboard from '../components/CrewMemberDashboard';
 import { profileService, UserProfile } from '../services/ProfileService';
 import { notificationService } from '../services/NotificationService';
+import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 
 
 interface DeviceSettings {
   name: string;
-  type: 'HALOZ' | 'SOULZ';
+  /** Widened from 'HALOZ' | 'SOULZ' to accommodate all catalog product types (e.g. RAILZ). */
+  type: string;
   points: number;
   segments: number;
   stripType: string;
@@ -881,9 +883,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     const currentDevices = allDevicesRef.current;
     if (currentDevices.length === 0) return;
 
-    const soulzDevices = currentDevices.filter(d => ((d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16)) >= 20);
-    const halozDevices = currentDevices.filter(d => ((d as any).points || (d.name?.toLowerCase().includes('soul') ? 43 : 16)) < 20);
-    
     let updatedGroups = [...customGroupsRef.current];
     let didUpdateGroups = false;
     let didUpdateConfigs = false;
@@ -900,7 +899,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     if (resProcessed) { try { processed = JSON.parse(resProcessed); } catch(e) {} }
     let didUpdateProcessed = false;
     
-    const checkAndGroup = (devicesToProcess: any[], targetGroupName: string, typeVal: 'HALOZ' | 'SOULZ', pointsVal: number) => {
+    const checkAndGroup = (devicesToProcess: any[], targetGroupName: string, typeVal: string, pointsVal: number) => {
       const unprocessed = devicesToProcess.filter(d => 
         !processed.includes(d.id) && 
         !updatedGroups.some(g => g.deviceIds.includes(d.id))
@@ -941,8 +940,19 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       }
     };
 
-    checkAndGroup(soulzDevices, 'SOULZ SK8Lytz', 'SOULZ', 43);
-    checkAndGroup(halozDevices, 'HALOZ SK8Lytz', 'HALOZ', 16);
+    // Catalog-driven device classification: group by resolved product type via LED point range.
+    // Replaces legacy binary soulzDevices / halozDevices split — RAILZ and future products auto-bucket.
+    const devicesByType = new Map<string, typeof currentDevices>();
+    for (const d of currentDevices) {
+      const pts = (d as any).points ?? 0;
+      const profile = getLocalProfileByPoints(pts);
+      if (!devicesByType.has(profile.id)) devicesByType.set(profile.id, []);
+      devicesByType.get(profile.id)!.push(d);
+    }
+    for (const [typeKey, devices] of devicesByType.entries()) {
+      const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === typeKey) ?? LOCAL_PRODUCT_CATALOG[0];
+      checkAndGroup(devices, `${profile.displayName} SK8Lytz`, typeKey, profile.defaultLedPoints);
+    }
 
     const storagePromises = [];
     if (didUpdateProcessed) {
@@ -1139,11 +1149,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const openCreateGroup = () => {
     if (selectedIds.length === 0) return;
     const selectedDevices = allDevices.filter(d => selectedIds.includes(d.id));
-    const firstType = selectedDevices[0]?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ';
-    const allSame = selectedDevices.every(d => (d.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ') === firstType);
+    // Catalog-driven type resolution — replaces name.includes('soul') heuristic.
+    const resolveType = (d: any) => getLocalProfileByPoints((d as any).points ?? 0).id;
+    const firstType = resolveType(selectedDevices[0]);
+    const allSame = selectedDevices.every(d => resolveType(d) === firstType);
 
     if (!allSame) {
-      alert("Please only group devices of the same type (e.g. two SOULZ).");
+      alert(`Please only group devices of the same type (e.g. two ${firstType}).`);
       return;
     }
 
@@ -1411,10 +1423,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             ref={dockedControllerRef}
             hwSettings={activeHwSettings}
             lockedProduct={
-              (displayConnectedDevices[0] as any)?.type || 
-              ((displayConnectedDevices[0] as any)?.points 
-                ? ((displayConnectedDevices[0] as any).points < 20 ? 'HALOZ' : 'SOULZ') 
-                : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
+              // Catalog-driven resolution: stored type takes priority, then derive from LED count.
+              (displayConnectedDevices[0] as any)?.type ||
+              getLocalProfileByPoints((displayConnectedDevices[0] as any)?.points ?? 0).id
             }
             isPaired={isGrouped}
             points={(displayConnectedDevices[0] as any).points}
@@ -1838,10 +1849,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           onSave={saveSettings}
           writeToDevice={writeToDevice}
           initialSettings={{
-            name: selectedDeviceForSettings?.name || 'SOULZ',
-            type: (selectedDeviceForSettings?.name?.toLowerCase()?.includes('soul') ? 'SOULZ' : 'HALOZ'),
-            points: deviceConfigs[selectedDeviceForSettings?.id || '']?.points || (selectedDeviceForSettings as any)?.points || (selectedDeviceForSettings?.name?.toLowerCase()?.includes('soul') ? 43 : 8),
-            segments: deviceConfigs[selectedDeviceForSettings?.id || '']?.segments || (selectedDeviceForSettings as any)?.segments || (selectedDeviceForSettings?.name?.toLowerCase()?.includes('soul') ? 1 : 2),
+            name: selectedDeviceForSettings?.name || LOCAL_PRODUCT_CATALOG[0].displayName,
+            // Catalog-driven: resolve from stored points rather than name-string heuristic.
+            // Cast to satisfy DeviceSettingsModal legacy 'HALOZ' | 'SOULZ' union (modal widening is a future task).
+            type: getLocalProfileByPoints((selectedDeviceForSettings as any)?.points ?? 0).id as 'HALOZ' | 'SOULZ',
+            points: deviceConfigs[selectedDeviceForSettings?.id || '']?.points || (selectedDeviceForSettings as any)?.points || getLocalProfileByPoints((selectedDeviceForSettings as any)?.points ?? 0).defaultLedPoints,
+            segments: deviceConfigs[selectedDeviceForSettings?.id || '']?.segments || (selectedDeviceForSettings as any)?.segments || getLocalProfileByPoints((selectedDeviceForSettings as any)?.points ?? 0).defaultSegments,
             stripType: deviceConfigs[selectedDeviceForSettings?.id || '']?.stripType || (selectedDeviceForSettings as any)?.stripType || 'WS2812B',
             sorting: deviceConfigs[selectedDeviceForSettings?.id || '']?.sorting || (selectedDeviceForSettings as any)?.sorting || 'GRB',
             grouped: !!deviceConfigs[selectedDeviceForSettings?.id || '']?.groupId || (selectedDeviceForSettings as any)?.grouped || false,

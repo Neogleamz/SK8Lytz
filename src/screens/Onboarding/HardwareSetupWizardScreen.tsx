@@ -7,7 +7,7 @@ import useBLE from '../../hooks/useBLE';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 
 import { RegisteredDevice } from '../../hooks/useRegistration';
-import { LOCAL_PRODUCT_CATALOG } from '../../constants/ProductCatalog';
+import { LOCAL_PRODUCT_CATALOG, getLocalProfileById } from '../../constants/ProductCatalog';
 
 interface HardwareSetupWizardScreenProps {
   onSetupComplete: (devices: RegisteredDevice[]) => Promise<void> | void;
@@ -312,8 +312,8 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                   </View>
                 </View>
 
-                {/* Adjust Points (only for products that allow it, e.g. SOULZ) */}
-                {config.type === 'SOULZ' && (
+                {/* Adjust Points (only for non-RING products, e.g. SOULZ, RAILZ — not HALOZ) */}
+                {(getLocalProfileById(config.type)?.vizShape !== 'RING') && (
                   <View style={{ marginTop: 12, backgroundColor: Colors.surfaceHighlight, borderRadius: 12, padding: 8 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Text style={[styles.labelSmall, { flex: 1, marginBottom: 0 }]}>LED COUNT (TRIM IF CUT)</Text>
