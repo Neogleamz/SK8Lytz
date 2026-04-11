@@ -63,13 +63,14 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/ui-refinement`
 
 - [ ] `feat/lab-ui-modernization` : Modernize and style the LED Diagnostic Lab layout to match the aesthetics, typography, and input styling of the rest of the app.
-- [ ] `add-swipe-nav` : #34 — Card Swipe Navigation — Add the ability to swipe left and right to navigate back and forth between cards (Favorites, Picks, Presets) for a more fluid mobile UX.
 
 ---
 
 ## ❄️ Icebox / Backburner (Manual Trigger Only)
 
 *Items placed here are explicitly ignored by the automatic queue. They will act as a catalog for future features that require manual authorization to begin work on.*
+
+- [ ] `add-swipe-nav` : #34 — Card Swipe Navigation — Add the ability to swipe left and right to navigate back and forth between cards (Favorites, Picks, Presets) for a more fluid mobile UX.
 
 ---
 
