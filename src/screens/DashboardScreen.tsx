@@ -175,7 +175,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
   const [isAdminToolsVisible, setIsAdminToolsVisible] = useState(false);
   const [isLabVisible, setIsLabVisible] = useState(false);
-  const [isSandboxMode, setIsSandboxMode] = useState(false);
 
   const [isSetupWizardVisible, setIsSetupWizardVisible] = useState(false);
   const [isCheckingRegistrations, setIsCheckingRegistrations] = useState(true);
@@ -192,10 +191,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       try {
         const haloDemo = await AsyncStorage.getItem('@Sk8lytz_demo_halo');
         const soulDemo = await AsyncStorage.getItem('@Sk8lytz_demo_soul');
-        const sandboxMode = await AsyncStorage.getItem('@Sk8lytz_demo_mode');
         if (haloDemo === 'true') setDemoHaloQueued(true);
         if (soulDemo === 'true') setDemoSoulQueued(true);
-        if (sandboxMode === 'true') setIsSandboxMode(true);
       } catch (e) {}
     }
     loadDemoFlags();
@@ -1321,7 +1318,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           </View>
 
           {/* CENTER: logo + discovered status */}
-          <View style={{ position: 'relative', alignItems: 'center' }}>
+          <TouchableOpacity activeOpacity={0.7} style={{ position: 'relative', alignItems: 'center' }} onPress={() => setIsAdminToolsVisible(true)}>
             <Image source={require('../../assets/logo.png')} style={{ width: 80, height: 24 }} resizeMode="contain" tintColor={Colors.text} />
             {(() => {
               const connectedCount = displayConnectedDevices.length;
@@ -1339,7 +1336,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 </View>
               );
             })()}
-          </View>
+          </TouchableOpacity>
 
           {/* RIGHT: utilities group (matching AuthScreen style) */}
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
@@ -1413,9 +1410,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
           {/* CENTER: logo */}
           <View style={{ flex: 1, alignItems: 'center' }}>
-            <View style={{ position: 'relative', alignItems: 'center' }}>
+            <TouchableOpacity activeOpacity={0.7} style={{ position: 'relative', alignItems: 'center' }} onPress={() => setIsAdminToolsVisible(true)}>
               <Image source={require('../../assets/logo.png')} style={{ width: 110, height: 32 }} resizeMode="contain" tintColor={Colors.text} />
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* RIGHT: grouped icons (matching AuthScreen style) */}
@@ -1588,28 +1585,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                         <Text style={styles.scanButtonText}>START SETUP</Text>
                       </TouchableOpacity>
                     </View>
-                  )}
-
-                  {isSandboxMode && (
-                    <TouchableOpacity
-                      onPress={() => setIsAdminToolsVisible(true)}
-                      style={{
-                        marginTop: 24,
-                        marginBottom: 40,
-                        backgroundColor: 'rgba(255, 61, 0, 0.1)',
-                        paddingVertical: 14,
-                        borderRadius: 12,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderWidth: 1,
-                        borderColor: '#ff4040'
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <MaterialCommunityIcons name="tools" size={20} color="#ff4040" style={{ marginRight: 8 }} />
-                        <Text style={{ color: '#ff4040', fontSize: 13, fontWeight: '800', letterSpacing: 1.5 }}>LAUNCH ADMIN HUD</Text>
-                      </View>
-                    </TouchableOpacity>
                   )}
                 </View>
              </ScrollView>
