@@ -175,21 +175,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
   const [isAdminToolsVisible, setIsAdminToolsVisible] = useState(false);
   const [isLabVisible, setIsLabVisible] = useState(false);
-  const [logoClickCount, setLogoClickCount] = useState(0);
-  const [logoClickTimer, setLogoClickTimer] = useState<any>(null);
-  const [isPasscodePromptVisible, setIsPasscodeVisible] = useState(false);
-  const [passcodeVal, setPasscodeVal] = useState('');
-
-  const handleLogoClick = () => {
-    setLogoClickCount(prev => prev + 1);
-    if (logoClickTimer) clearTimeout(logoClickTimer);
-    setLogoClickTimer(setTimeout(() => setLogoClickCount(0), 1000));
-    
-    if (logoClickCount + 1 >= 10) {
-      setLogoClickCount(0);
-      setIsPasscodeVisible(true);
-    }
-  };
+  const [isSandboxMode, setIsSandboxMode] = useState(false);
 
   const [isSetupWizardVisible, setIsSetupWizardVisible] = useState(false);
   const [isCheckingRegistrations, setIsCheckingRegistrations] = useState(true);
@@ -206,8 +192,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       try {
         const haloDemo = await AsyncStorage.getItem('@Sk8lytz_demo_halo');
         const soulDemo = await AsyncStorage.getItem('@Sk8lytz_demo_soul');
+        const sandboxMode = await AsyncStorage.getItem('@Sk8lytz_demo_mode');
         if (haloDemo === 'true') setDemoHaloQueued(true);
         if (soulDemo === 'true') setDemoSoulQueued(true);
+        if (sandboxMode === 'true') setIsSandboxMode(true);
       } catch (e) {}
     }
     loadDemoFlags();
@@ -1333,7 +1321,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           </View>
 
           {/* CENTER: logo + discovered status */}
-          <TouchableOpacity activeOpacity={1} style={{ position: 'relative', alignItems: 'center' }} onPress={handleLogoClick}>
+          <View style={{ position: 'relative', alignItems: 'center' }}>
             <Image source={require('../../assets/logo.png')} style={{ width: 80, height: 24 }} resizeMode="contain" tintColor={Colors.text} />
             {(() => {
               const connectedCount = displayConnectedDevices.length;
@@ -1351,7 +1339,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 </View>
               );
             })()}
-          </TouchableOpacity>
+          </View>
 
           {/* RIGHT: utilities group (matching AuthScreen style) */}
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
@@ -1425,9 +1413,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
           {/* CENTER: logo */}
           <View style={{ flex: 1, alignItems: 'center' }}>
-            <TouchableOpacity activeOpacity={1} style={{ position: 'relative', alignItems: 'center' }} onPress={handleLogoClick}>
+            <View style={{ position: 'relative', alignItems: 'center' }}>
               <Image source={require('../../assets/logo.png')} style={{ width: 110, height: 32 }} resizeMode="contain" tintColor={Colors.text} />
-            </TouchableOpacity>
+            </View>
           </View>
 
           {/* RIGHT: grouped icons (matching AuthScreen style) */}
@@ -1601,6 +1589,28 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                       </TouchableOpacity>
                     </View>
                   )}
+
+                  {isSandboxMode && (
+                    <TouchableOpacity
+                      onPress={() => setIsAdminToolsVisible(true)}
+                      style={{
+                        marginTop: 24,
+                        marginBottom: 40,
+                        backgroundColor: 'rgba(255, 61, 0, 0.1)',
+                        paddingVertical: 14,
+                        borderRadius: 12,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderWidth: 1,
+                        borderColor: '#ff4040'
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <MaterialCommunityIcons name="tools" size={20} color="#ff4040" style={{ marginRight: 8 }} />
+                        <Text style={{ color: '#ff4040', fontSize: 13, fontWeight: '800', letterSpacing: 1.5 }}>LAUNCH ADMIN HUD</Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
                 </View>
              </ScrollView>
           </View>
@@ -1744,34 +1754,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         connectToDevice={async (d: any) => { await connectToDevice(d); }}
         liveDeviceConfigs={deviceConfigs}
       />
-      {/* Easter Egg Lab Access */}
-      <Modal visible={isPasscodePromptVisible} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ width: 300, backgroundColor: Colors.surface, padding: 24, borderRadius: 16, borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, alignItems: 'center' }}>
-            <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '800', marginBottom: 12 }}>Diagnostix Auth</Text>
-            <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 20, textAlign: 'center' }}>Enter authorization code to unlock the hardware diagnostic laboratory.</Text>
-            <TextInput
-              style={{ width: '100%', height: 50, backgroundColor: Colors.background, color: Colors.text, borderRadius: 8, paddingHorizontal: 16, fontSize: 24, letterSpacing: 8, textAlign: 'center', fontWeight: '800', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginBottom: 20 }}
-              secureTextEntry
-              keyboardType="number-pad"
-              autoFocus
-              maxLength={4}
-              value={passcodeVal}
-              onChangeText={(t) => {
-                setPasscodeVal(t);
-                if (t === '0000') {
-                  setPasscodeVal('');
-                  setIsPasscodeVisible(false);
-                  setIsAdminToolsVisible(true);
-                }
-              }}
-            />
-            <TouchableOpacity onPress={() => { setIsPasscodeVisible(false); setPasscodeVal(''); }} style={{ padding: 12 }}>
-              <Text style={{ color: Colors.secondary, fontWeight: 'bold' }}>CANCEL</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
       {/* HardwareSetupWizardScreen is conditionally returned at the top level instead of here */}
 

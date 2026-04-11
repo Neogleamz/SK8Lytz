@@ -22,6 +22,7 @@ import * as Device from 'expo-device';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger, LogEntry, EventType } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
+import AdminPicksScheduler from './AdminPicksScheduler';
 
 type Tab = 'timeline' | 'stats' | 'device' | 'tools';
 
@@ -149,6 +150,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
+  const [isPicksSchedulerVisible, setIsPicksSchedulerVisible] = useState(false);
 
   useEffect(() => {
     if (visible) AppLogger.log('SCREEN_OPENED', { screenName: 'AdminTools' });
@@ -419,7 +421,22 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
               <Text style={{ color: '#FFA500', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>LED Diagnostic Lab</Text>
             </View>
           </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={{ backgroundColor: 'rgba(255, 165, 0, 0.1)', borderColor: '#FFA500', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginTop: 16 }}
+            onPress={() => setIsPicksSchedulerVisible(true)}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>📅</Text>
+              <Text style={{ color: '#FFA500', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>SK8Lytz Picks Scheduler</Text>
+            </View>
+          </TouchableOpacity>
         </View>
+
+        <AdminPicksScheduler
+          visible={isPicksSchedulerVisible}
+          onClose={() => setIsPicksSchedulerVisible(false)}
+        />
       </ScrollView>
     );
   };
