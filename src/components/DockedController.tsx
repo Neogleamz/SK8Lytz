@@ -327,7 +327,15 @@ interface Sk8lytzControllerProps {
   onPatternChanged?: (patternName: string) => void;
 }
 
-export type DockedControllerHandle = { applyCloudScene: (scene: any) => void };
+export type DockedControllerHandle = {
+  applyCloudScene: (scenePayload: any) => void;
+  loadFavorite: (fav: IFavoriteState) => void;
+  setActiveMode: (mode: ModeType) => void;
+  setBrightness: (val: number) => void;
+  setSpeed: (val: number) => void;
+  handleRbmChange: (id: number) => void;
+  applySpatialSegments: (segments: any[]) => void;
+};
 
 // CURATED_PRESETS logic moved to internal component state for Supabase updating
 
@@ -401,29 +409,78 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       };
     };
 
-    const applyCloudScene = (scene: any) => {
-      if (scene.activeMode) setActiveMode(scene.activeMode);
-      if (scene.fixedSubMode) setFixedSubMode(scene.fixedSubMode);
-      if (scene.selectedColor) setSelectedColor(scene.selectedColor);
-      if (scene.selectedPatternId) setSelectedPatternId(scene.selectedPatternId);
-      if (scene.brightness !== undefined) setBrightness(scene.brightness);
-      if (scene.speed !== undefined) setSpeed(scene.speed);
-      if (scene.multiColors) setMultiColors(scene.multiColors);
-      if (scene.multiLength !== undefined) setMultiLength(scene.multiLength);
-      if (scene.multiTransition !== undefined) setMultiTransition(scene.multiTransition);
-      if (scene.musicPatternId !== undefined) setMusicPatternId(scene.musicPatternId);
-      if (scene.musicPrimaryColor) setMusicPrimaryColor(scene.musicPrimaryColor);
-      if (scene.musicSecondaryColor) setMusicSecondaryColor(scene.musicSecondaryColor);
-      if (scene.micSensitivity !== undefined) setMicSensitivity(scene.micSensitivity);
-      if (scene.micSource !== undefined) setMicSource(scene.micSource);
-      if (scene.musicMatrixStyle !== undefined) setMusicMatrixStyle(scene.musicMatrixStyle);
-      if (scene.streetSensitivity !== undefined) setStreetSensitivity(scene.streetSensitivity);
-      if (scene.streetCruiseColor) setStreetCruiseColor(scene.streetCruiseColor);
-      if (scene.streetBrakeColor) setStreetBrakeColor(scene.streetBrakeColor);
+    const applyCloudScene = (scenePayload: any) => {
+      if (scenePayload.activeMode) setActiveMode(scenePayload.activeMode);
+      if (scenePayload.fixedSubMode) setFixedSubMode(scenePayload.fixedSubMode);
+      if (scenePayload.selectedColor) setSelectedColor(scenePayload.selectedColor);
+      if (scenePayload.selectedPatternId) setSelectedPatternId(scenePayload.selectedPatternId);
+      if (scenePayload.brightness !== undefined) setBrightness(scenePayload.brightness);
+      if (scenePayload.speed !== undefined) setSpeed(scenePayload.speed);
+      if (scenePayload.multiColors) setMultiColors(scenePayload.multiColors);
+      if (scenePayload.multiLength !== undefined) setMultiLength(scenePayload.multiLength);
+      if (scenePayload.multiTransition !== undefined) setMultiTransition(scenePayload.multiTransition);
+      if (scenePayload.musicPatternId !== undefined) setMusicPatternId(scenePayload.musicPatternId);
+      if (scenePayload.musicPrimaryColor) setMusicPrimaryColor(scenePayload.musicPrimaryColor);
+      if (scenePayload.musicSecondaryColor) setMusicSecondaryColor(scenePayload.musicSecondaryColor);
+      if (scenePayload.micSensitivity !== undefined) setMicSensitivity(scenePayload.micSensitivity);
+      if (scenePayload.micSource !== undefined) setMicSource(scenePayload.micSource);
+      if (scenePayload.musicMatrixStyle !== undefined) setMusicMatrixStyle(scenePayload.musicMatrixStyle);
+      if (scenePayload.streetSensitivity !== undefined) setStreetSensitivity(scenePayload.streetSensitivity);
+      if (scenePayload.streetCruiseColor) setStreetCruiseColor(scenePayload.streetCruiseColor);
+      if (scenePayload.streetBrakeColor) setStreetBrakeColor(scenePayload.streetBrakeColor);
     };
 
-    // Expose applyCloudScene to parent via ref (for crew member sync)
-    React.useImperativeHandle(ref, () => ({ applyCloudScene }), []);
+    /**
+     * Translates high-level spatial segments (e.g. "red in the back")
+     * into PositionalMathBuffer nodes and applies them instantly.
+     */
+    const applySpatialSegments = (segments: any[]) => {
+      setActiveMode('MULTIMODE');
+      setFixedSubMode('BUILDER');
+
+      const newNodes: BuilderNode[] = segments.map((seg, idx) => {
+        let pos = 50;
+        if (seg.position === 'BACK') pos = 0;
+        if (seg.position === 'FRONT') pos = 100;
+        if (seg.position === 'ALL') {
+          // Flattening "All" segments for voice might require 2 nodes (0 and 100)
+          // but for simplicity we'll just handle 0/100/50 for now.
+          return { id: `voice_${idx}`, position: 0, colorHex: seg.color };
+        }
+
+        return {
+          id: `voice_${idx}_${Date.now()}`,
+          position: pos,
+          colorHex: seg.color || '#FFFFFF'
+        };
+      });
+
+      // If we had an 'ALL' or complex spatial we might need more logic,
+      // but for V1 we'll stick to the core segments.
+      setBuilderNodes(newNodes);
+      AppLogger.log('VOICE_SPATIAL_APPLIED', { segmentCount: segments.length });
+    };
+
+    // Favorites Array — declared BEFORE useImperativeHandle to avoid TDZ
+    const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
+    const [isFavPromptVisible, setIsFavPromptVisible] = useState(false);
+    const [favPromptName, setFavPromptName] = useState('');
+    const [favPromptTargetId, setFavPromptTargetId] = useState<string | null>(null);
+    const [activeFavoriteId, setActiveFavoriteId] = useState<string | null>(null);
+
+    // Expose control methods to parent via ref for Voice and Crew coordination
+    React.useImperativeHandle(ref, () => ({
+      applyCloudScene,
+      loadFavorite,
+      setActiveMode,
+      setBrightness,
+      setSpeed,
+      handleRbmChange: (id: number) => {
+        setSelectedPatternId(id);
+        if (writeToDevice) writeToDevice(ZenggeProtocol.setCustomRbm(id, speed, brightness));
+      },
+      applySpatialSegments
+    }), [speed, brightness, writeToDevice]);
 
     // Multi-Color DIY State
     const [multiColors, setMultiColors] = useState<string[]>(['#FF0000', '#00FF00', '#0000FF']);
@@ -729,13 +786,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       streetSensitivity, streetCruiseColor, streetBrakeColor,
     ]);
 
-    // Favorites Array
-    const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
 
-    const [isFavPromptVisible, setIsFavPromptVisible] = useState(false);
-    const [favPromptName, setFavPromptName] = useState('');
-    const [favPromptTargetId, setFavPromptTargetId] = useState<string | null>(null);
-    const [activeFavoriteId, setActiveFavoriteId] = useState<string | null>(null);
     const [isDiyBuilderExpanded, setIsDiyBuilderExpanded] = useState(false);
 
     const handleSaveFavoriteClick = () => {

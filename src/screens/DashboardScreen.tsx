@@ -32,13 +32,16 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import useBLE from '../hooks/useBLE';
 import { ZenggeProtocol, ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol';
 
-import DockedController from '../components/DockedController';
+import DockedController, { DockedControllerHandle, IFavoriteState } from '../components/DockedController';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import Sk8LytzProgrammerModal from '../components/Sk8LytzProgrammerModal';
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
 import AdminToolsModal from '../components/AdminToolsModal';
+import { useVoiceControl } from '../hooks/useVoiceControl';
+import VoiceFAB from '../components/Voice/VoiceFAB';
+import VoiceCommandModal from '../components/Voice/VoiceCommandModal';
 import CrewModal from '../components/CrewModal';
 import { crewService, CrewSession, CrewRole } from '../services/CrewService';
 import Sk8LytzDiagnosticLab from '../components/Sk8LytzDiagnosticLab';
@@ -296,7 +299,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isCrewModalVisible, setIsCrewModalVisible] = useState(false);
   const [crewModeSummary, setCrewModeSummary] = useState<string | undefined>(undefined);
   const [lastLeaderScene, setLastLeaderScene] = useState<Record<string, any> | null>(null);
-  const dockedControllerRef = React.useRef<{ applyCloudScene: (s: any) => void }>(null);
+  const dockedControllerRef = React.useRef<DockedControllerHandle>(null);
+  const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
+  const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
 
   // ── Profile + Notifications state ────────────────────────────────────────
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
@@ -330,6 +335,17 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     }
     loadPatterns();
   }, []);
+
+  // ── Load Favorites for Voice Command Engine ──
+  useEffect(() => {
+    async function loadFavs() {
+      try {
+        const saved = await AsyncStorage.getItem('@Sk8lytz_Favorites');
+        if (saved) setFavorites(JSON.parse(saved));
+      } catch (e) {}
+    }
+    loadFavs();
+  }, [isVoiceModalVisible]); // Refresh when modal opens to ensure latest names
 
   // AppState Telemetry
   useEffect(() => {
@@ -584,6 +600,51 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     const t = setTimeout(tryRejoin, 2000);
     return () => clearTimeout(t);
   }, []);
+
+  /** ──────── VOICE COMMAND DISPATCH ──────── */
+  const { isListening, transcript, error, startListening, stopListening, isVoiceSupported } = useVoiceControl(
+    favorites,
+    (action: IVoiceAction) => handleVoiceAction(action)
+  );
+
+  // Only auto-start/stop Voice on native platforms — web has no native bridge
+  useEffect(() => {
+    if (!isVoiceSupported) return;
+    if (isVoiceModalVisible) {
+      startListening();
+    } else {
+      stopListening();
+    }
+  }, [isVoiceModalVisible, isVoiceSupported]);
+
+  const handleVoiceAction = (action: IVoiceAction) => {
+    if (!dockedControllerRef.current) return;
+    
+    switch (action.type) {
+      case 'MODE':
+        dockedControllerRef.current.setActiveMode(action.value);
+        break;
+      case 'FAVORITE':
+        if (action.favorite) {
+          dockedControllerRef.current.loadFavorite(action.favorite);
+        }
+        break;
+      case 'FIXED_PATTERN':
+        dockedControllerRef.current.handleRbmChange(action.patternId || 1);
+        break;
+      case 'BRIGHTNESS':
+        dockedControllerRef.current.setBrightness(action.value);
+        break;
+      case 'SPEED':
+        dockedControllerRef.current.setSpeed(action.value);
+        break;
+      case 'SPATIAL_COLORS':
+        if (action.segments) {
+          dockedControllerRef.current.applySpatialSegments(action.segments);
+        }
+        break;
+    }
+  };
 
   // ── Push notification init ────────────────────────────────────────────────
   useEffect(() => {
@@ -1694,7 +1755,19 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     </View>
                   ) : (
                     <View style={[styles.glassSlab, { alignItems: 'center', paddingVertical: 24 }]}>
-                      <Text style={styles.slabEmptyText}>Create a group to control both skates at once.</Text>
+                      <Text style={styles.slabEmptyText}>
+                        {registeredDevices.length === 0 
+                          ? "No skates detected. Time to link your hardware!" 
+                          : "Create a group to control both skates at once."}
+                      </Text>
+                      {registeredDevices.length === 0 && (
+                        <TouchableOpacity 
+                          onPress={() => setIsSetupWizardVisible(true)}
+                          style={[styles.scanButton, { marginTop: 16, width: '70%', backgroundColor: Colors.primary }]}
+                        >
+                          <Text style={styles.scanButtonText}>SET UP YOUR SKATES</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   )}
                 </View>
@@ -1792,7 +1865,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 <Text style={{ ...Typography.title, color: Colors.primary, marginTop: 12 }}>Support Portal</Text>
                 <Text style={{ color: Colors.textMuted, fontSize: 13, textAlign: 'center', marginTop: 8 }}>Need help configuring your hardware? Browse our official guides below.</Text>
               </View>
-              <TouchableOpacity
+               <TouchableOpacity
                 style={[styles.groupButton, { backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: Colors.primary, borderWidth: 1, marginBottom: 16, paddingVertical: 12 }]}
                 onPress={() => Linking.openURL('https://neogleamz.com/pages/getting-started')}
               >
@@ -1803,12 +1876,22 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               </TouchableOpacity>
 
               <TouchableOpacity
+                style={[styles.groupButton, { backgroundColor: 'rgba(255, 170, 0, 0.1)', borderColor: '#FFAA00', borderWidth: 1, marginBottom: 16, paddingVertical: 12 }]}
+                onPress={() => Linking.openURL('https://neogleamz.com')}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <MaterialCommunityIcons name="cart" size={20} color="#FFAA00" style={{ marginRight: 8 }} />
+                  <Text style={[styles.groupButtonText, { color: '#FFAA00', fontSize: 14 }]}>Visit Store</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 style={[styles.groupButton, { backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: Colors.secondary, borderWidth: 1, marginBottom: 16, paddingVertical: 12 }]}
                 onPress={() => Linking.openURL('https://neogleamz.com/pages/contact')}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <MaterialCommunityIcons name="email-fast" size={20} color={Colors.secondary} style={{ marginRight: 8 }} />
-                  <Text style={[styles.groupButtonText, { color: Colors.secondary, fontSize: 14 }]}>Support Form</Text>
+                  <Text style={[styles.groupButtonText, { color: Colors.secondary, fontSize: 14 }]}>Contact Support</Text>
                 </View>
               </TouchableOpacity>
 
@@ -1954,6 +2037,20 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         liveRxPayload={lastRawNotification}
         liveDeviceConfigs={deviceConfigs}
         onConnectToDevice={async (d: any) => { await connectToDevice(d); }}
+      />
+
+      {/* ──── VOICE COMMAND ENGINE UI ──── */}
+      <VoiceFAB 
+        onPress={() => setIsVoiceModalVisible(true)} 
+        isListening={isListening}
+      />
+      
+      <VoiceCommandModal
+        isVisible={isVoiceModalVisible}
+        onClose={() => setIsVoiceModalVisible(false)}
+        isListening={isListening}
+        transcript={transcript}
+        error={error}
       />
     </SafeAreaView>
   );

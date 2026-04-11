@@ -68,9 +68,9 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
     try {
       // Resolve product profile to get accurate blink LED count
       const registration = pendingRegistrations.find(r => r.device_mac === deviceMac);
-      const productType = registration?.product_type || 'HALOZ';
+      const productType = (registration?.product_type && registration.product_type !== 'UNKNOWN') ? registration.product_type : 'HALOZ';
       const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === productType) || LOCAL_PRODUCT_CATALOG[0];
-      const blinkPoints = profile.vizDefaultPoints;
+      const blinkPoints = registration?.led_points || profile.vizDefaultPoints;
 
       // 0x59 static multi-color mode: Green. 
       const colorArray = Array(blinkPoints).fill({ r: 0, g: 255, b: 0 });

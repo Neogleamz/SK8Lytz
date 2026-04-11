@@ -614,6 +614,15 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
       return;
     }
     setProductSaving(true);
+
+    // [MOD] Ensure session is valid to prevent 401 Unauthorized
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setProductSaving(false);
+      Alert.alert('Session Expired', 'You must be logged in as an administrator to save catalog changes.');
+      return;
+    }
+
     const success = await saveProfile(editingProfile);
     setProductSaving(false);
     if (success) {
@@ -646,7 +655,10 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
             return (
               <TouchableOpacity key={p.id} onPress={() => setEditingProfile({ ...p })}
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: isActive ? '#FF5A00' : '#333' }}>
-                <Text style={{ color: '#FFF', fontWeight: isActive ? '800' : '600' }}>{p.displayName || p.id}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {p.brandIcon && <MaterialCommunityIcons name={p.brandIcon as any} size={14} color="#FFF" />}
+                  <Text style={{ color: '#FFF', fontWeight: isActive ? '800' : '600' }}>{p.displayName || p.id}</Text>
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -671,7 +683,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
 
           {/* Live Shape Preview */}
           <Text style={{ color: '#FF5A00', fontWeight: '700', fontSize: 12, marginBottom: 4, letterSpacing: 1 }}>LIVE SHAPE PREVIEW</Text>
-          <ShapePreviewCanvas profile={editingProfile} />
+          <ShapePreviewCanvas profile={activeProfile} />
 
           {/* Viz Shape Selector */}
           <Text style={labelStyle}>SHAPE TYPE</Text>
@@ -682,8 +694,8 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
                 onPress={() => patchEdit({ vizShape: s })}
                 style={{
                   paddingHorizontal: 12, paddingVertical: 7, borderRadius: 6,
-                  backgroundColor: editingProfile.vizShape === s ? '#FF5A00' : '#333',
-                  borderWidth: 1, borderColor: editingProfile.vizShape === s ? '#FF5A00' : '#555',
+                  backgroundColor: activeProfile.vizShape === s ? '#FF5A00' : '#333',
+                  borderWidth: 1, borderColor: activeProfile.vizShape === s ? '#FF5A00' : '#555',
                 }}
               >
                 <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>{s}</Text>
@@ -694,76 +706,87 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
           {/* Product Identity */}
           <Text style={labelStyle}>PRODUCT ID (e.g. RAILZ)</Text>
           <TextInput
-            style={fieldStyle as any} value={editingProfile.id}
+            style={fieldStyle as any} value={activeProfile.id}
             onChangeText={v => patchEdit({ id: v.toUpperCase() })}
             placeholder="RAILZ" placeholderTextColor="#555" autoCapitalize="characters"
           />
-          <Text style={labelStyle}>DISPLAY NAME</Text>
-          <TextInput
-            style={fieldStyle as any} value={editingProfile.displayName}
+           <TextInput
+            style={fieldStyle as any} value={activeProfile.displayName}
             onChangeText={v => patchEdit({ displayName: v })}
             placeholder="RAILZ™" placeholderTextColor="#555"
+          />
+          <Text style={labelStyle}>BRAND ICON (MaterialCommunityIcons)</Text>
+          <TextInput
+            style={fieldStyle as any} value={activeProfile.brandIcon}
+            onChangeText={v => patchEdit({ brandIcon: v })}
+            placeholder="circle-double" placeholderTextColor="#555"
+          />
+          <Text style={labelStyle}>BRAND THEME COLOR (HEX)</Text>
+          <TextInput
+            style={fieldStyle as any} value={activeProfile.vizThemeColor}
+            onChangeText={v => patchEdit({ vizThemeColor: v })}
+            placeholder="#FF5A00" placeholderTextColor="#555"
           />
 
           {/* Hardware Defaults */}
           <Text style={[labelStyle, { color: '#FF5A00', marginTop: 14 }]}>HARDWARE DEFAULTS (0x62 FLASH)</Text>
           <Text style={labelStyle}>DEFAULT LED POINTS</Text>
-          <TextInput style={fieldStyle as any} value={String(editingProfile.defaultLedPoints)}
+          <TextInput style={fieldStyle as any} value={String(activeProfile.defaultLedPoints)}
             onChangeText={v => patchEdit({ defaultLedPoints: parseInt(v) || 0 })} keyboardType="numeric"
           />
           <Text style={labelStyle}>DEFAULT SEGMENTS</Text>
-          <TextInput style={fieldStyle as any} value={String(editingProfile.defaultSegments)}
+          <TextInput style={fieldStyle as any} value={String(activeProfile.defaultSegments)}
             onChangeText={v => patchEdit({ defaultSegments: parseInt(v) || 1 })} keyboardType="numeric"
           />
           <Text style={labelStyle}>IC TYPE (1=WS2812B, 2=SM16703)</Text>
-          <TextInput style={fieldStyle as any} value={String(editingProfile.defaultIcType)}
+          <TextInput style={fieldStyle as any} value={String(activeProfile.defaultIcType)}
             onChangeText={v => patchEdit({ defaultIcType: parseInt(v) || 1 })} keyboardType="numeric"
           />
           <Text style={labelStyle}>COLOR SORTING (2=GRB)</Text>
-          <TextInput style={fieldStyle as any} value={String(editingProfile.defaultColorSorting)}
+          <TextInput style={fieldStyle as any} value={String(activeProfile.defaultColorSorting)}
             onChangeText={v => patchEdit({ defaultColorSorting: parseInt(v) || 2 })} keyboardType="numeric"
           />
 
           {/* FTUE Thresholds */}
           <Text style={[labelStyle, { color: '#FF5A00', marginTop: 14 }]}>AUTO-DETECT THRESHOLDS (FTUE)</Text>
           <Text style={labelStyle}>DETECT MIN POINTS (LED count lower bound)</Text>
-          <TextInput style={fieldStyle as any} value={String(editingProfile.detectMinPoints)}
+          <TextInput style={fieldStyle as any} value={String(activeProfile.detectMinPoints)}
             onChangeText={v => patchEdit({ detectMinPoints: parseInt(v) || 0 })} keyboardType="numeric"
           />
           <Text style={labelStyle}>DETECT MAX POINTS (LED count upper bound)</Text>
-          <TextInput style={fieldStyle as any} value={String(editingProfile.detectMaxPoints)}
+          <TextInput style={fieldStyle as any} value={String(activeProfile.detectMaxPoints)}
             onChangeText={v => patchEdit({ detectMaxPoints: parseInt(v) || 0 })} keyboardType="numeric"
           />
 
           {/* Visualizer Geometry */}
           <Text style={[labelStyle, { color: '#FF5A00', marginTop: 14 }]}>VISUALIZER GEOMETRY</Text>
           <Text style={labelStyle}>DEFAULT POINTS (visualizer fallback)</Text>
-          <TextInput style={fieldStyle as any} value={String(editingProfile.vizDefaultPoints)}
+          <TextInput style={fieldStyle as any} value={String(activeProfile.vizDefaultPoints)}
             onChangeText={v => patchEdit({ vizDefaultPoints: parseInt(v) || 16 })} keyboardType="numeric"
           />
           <Text style={labelStyle}>BLOB DIAMETER MM (LED chip size)</Text>
-          <TextInput style={fieldStyle as any} value={String(editingProfile.vizBlobDiameterMm)}
+          <TextInput style={fieldStyle as any} value={String(activeProfile.vizBlobDiameterMm)}
             onChangeText={v => patchEdit({ vizBlobDiameterMm: parseFloat(v) || 5.7 })} keyboardType="numeric"
           />
           <Text style={labelStyle}>CANVAS WIDTH (scale units)</Text>
-          <TextInput style={fieldStyle as any} value={String(editingProfile.vizBaseWidth)}
+          <TextInput style={fieldStyle as any} value={String(activeProfile.vizBaseWidth)}
             onChangeText={v => patchEdit({ vizBaseWidth: parseInt(v) || 55 })} keyboardType="numeric"
           />
           <Text style={labelStyle}>CANVAS HEIGHT (scale units)</Text>
-          <TextInput style={fieldStyle as any} value={String(editingProfile.vizBaseHeight)}
+          <TextInput style={fieldStyle as any} value={String(activeProfile.vizBaseHeight)}
             onChangeText={v => patchEdit({ vizBaseHeight: parseInt(v) || 115 })} keyboardType="numeric"
           />
 
           {/* DUAL_STRIP only */}
-          {editingProfile.vizShape === 'DUAL_STRIP' && (
+          {activeProfile.vizShape === 'DUAL_STRIP' && (
             <>
               <Text style={[labelStyle, { color: '#FF5A00', marginTop: 14 }]}>DUAL STRIP GEOMETRY (RAILZ)</Text>
               <Text style={labelStyle}>STRIP COUNT</Text>
-              <TextInput style={fieldStyle as any} value={String(editingProfile.vizStripCount ?? 2)}
+              <TextInput style={fieldStyle as any} value={String(activeProfile.vizStripCount ?? 2)}
                 onChangeText={v => patchEdit({ vizStripCount: parseInt(v) || 2 })} keyboardType="numeric"
               />
               <Text style={labelStyle}>STRIP SEPARATION (gap between rails, scale units)</Text>
-              <TextInput style={fieldStyle as any} value={String(editingProfile.vizStripSeparation ?? 32)}
+              <TextInput style={fieldStyle as any} value={String(activeProfile.vizStripSeparation ?? 32)}
                 onChangeText={v => patchEdit({ vizStripSeparation: parseFloat(v) || 32 })} keyboardType="numeric"
               />
               <Text style={labelStyle}>ORIENTATION</Text>
@@ -771,8 +794,8 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
                 {(['VERTICAL', 'HORIZONTAL'] as const).map(o => (
                   <TouchableOpacity key={o} onPress={() => patchEdit({ vizStripOrientation: o })}
                     style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 6,
-                      backgroundColor: editingProfile.vizStripOrientation === o ? '#FF5A00' : '#333',
-                      borderWidth: 1, borderColor: editingProfile.vizStripOrientation === o ? '#FF5A00' : '#555' }}
+                      backgroundColor: activeProfile.vizStripOrientation === o ? '#FF5A00' : '#333',
+                      borderWidth: 1, borderColor: activeProfile.vizStripOrientation === o ? '#FF5A00' : '#555' }}
                   >
                     <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>{o}</Text>
                   </TouchableOpacity>
@@ -783,7 +806,6 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
 
             <TouchableOpacity
               onPress={() => {
-                 setEditingProfile(activeProfile); // commit current form state manually if needed, wait, saveProfile uses editingProfile
                  handleSaveProfile();
               }}
               disabled={productSaving}

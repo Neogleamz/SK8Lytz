@@ -565,42 +565,50 @@ export default function useBLE(): BluetoothLowEnergyApi {
     const devices = forceList || allDevicesRef2.current;
     if (devices.length === 0) return;
 
-    const haloz: any[] = [];
-    const soulz: any[] = [];
-    const unknown: any[] = [];
+    // Use a Record to group devices by their dynamic product_type
+    const groups: Record<string, Device[]> = {};
+    const unknown: Device[] = [];
 
     for (const d of devices) {
       const pts = (d as any).hwPoints as number | undefined;
       const name = d.name?.toUpperCase() || '';
-      
-      // Range-based identification per user directive (April 2026)
-      // SOULZ: 28–45 LEDs (standard 43)
-      // HALOZ: 10–27 LEDs (standard 16 or 11)
+
       if (pts != null) {
-        if (pts >= 28)       soulz.push(d);
-        else if (pts >= 10)  haloz.push(d);
-        else                 unknown.push(d);
+        // [MOD] Use catalog-driven classification instead of hardcoded ranges
+        const profile = getLocalProfileByPoints(pts);
+        const typeId = profile.id;
+        if (!groups[typeId]) groups[typeId] = [];
+        groups[typeId].push(d);
       } else {
         // Name-based fallback (last resort)
-        if (name.includes('HALO')) haloz.push(d);
-        else if (name.includes('SOUL')) soulz.push(d);
-        else unknown.push(d);
+        const matchedProfile = LOCAL_PRODUCT_CATALOG.find(p => name.includes(p.id));
+        if (matchedProfile) {
+          const tid = matchedProfile.id;
+          if (!groups[tid]) groups[tid] = [];
+          groups[tid].push(d);
+        } else {
+          unknown.push(d);
+        }
       }
     }
 
-    const mapToRegistration = (d: any, i: number, type: 'HALOZ' | 'SOULZ' | 'RAILZ' | 'UNKNOWN'): PendingRegistration => {
+    const mapToRegistration = (d: any, i: number, type: string): PendingRegistration => {
       const isUnknown = type === 'UNKNOWN';
       const pos = i === 0 ? 'Left' : (i === 1 ? 'Right' : null);
+      
+      // Get profile for defaults if pts is null
+      const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === type) || LOCAL_PRODUCT_CATALOG[0];
+
       return {
         device_mac:   d.id,
         device_name:  isUnknown ? `SK8LYTZ (${d.id.slice(-5)})` : `${type} ${i + 1}`,
         product_type: type as any,
         position:     pos,
         group_name:   isUnknown ? 'Identifying...' : `My SK8Lytz ${type}`,
-        led_points:   d.hwPoints || (type === 'SOULZ' ? 43 : 16),
-        segments:     d.hwSegments ?? 1,
-        ic_type:      d.hwStripType ?? 'WS2812B',
-        color_sorting: d.hwSorting ?? 'GRB',
+        led_points:   d.hwPoints || profile.vizDefaultPoints,
+        segments:     d.hwSegments ?? profile.defaultSegments,
+        ic_type:      d.hwStripType ?? (profile.defaultIcType === 1 ? 'WS2812B' : 'SM16703'),
+        color_sorting: d.hwSorting ?? (profile.defaultColorSorting === 2 ? 'GRB' : 'RGB'),
         rssi:         d.rssi ?? -99,
         firmware_ver: d.firmwareVer,
         led_version:  d.ledVersion,
@@ -608,15 +616,21 @@ export default function useBLE(): BluetoothLowEnergyApi {
       };
     };
 
-    const sortedHaloz = [...haloz].sort((a,b) => (b.rssi ?? -99) - (a.rssi ?? -99));
-    const sortedSoulz = [...soulz].sort((a,b) => (b.rssi ?? -99) - (a.rssi ?? -99));
-    const sortedUnknown = [...unknown].sort((a,b) => (b.rssi ?? -99) - (a.rssi ?? -99));
+    const results: PendingRegistration[] = [];
+    
+    // Process all profiles from catalog to maintain consistent ordering
+    LOCAL_PRODUCT_CATALOG.forEach(p => {
+      if (groups[p.id]) {
+        const sorted = [...groups[p.id]].sort((a,b) => (b.rssi ?? -99) - (a.rssi ?? -99));
+        sorted.forEach((d, i) => results.push(mapToRegistration(d, i, p.id)));
+      }
+    });
 
-    const results: PendingRegistration[] = [
-      ...sortedHaloz.map((d, i) => mapToRegistration(d, i, 'HALOZ')),
-      ...sortedSoulz.map((d, i) => mapToRegistration(d, i, 'SOULZ')),
-      ...sortedUnknown.map((d, i) => mapToRegistration(d, i, 'UNKNOWN')),
-    ];
+    // Handle leftover unknown devices
+    if (unknown.length > 0) {
+      const sortedUnknown = [...unknown].sort((a,b) => (b.rssi ?? -99) - (a.rssi ?? -99));
+      sortedUnknown.forEach((d, i) => results.push(mapToRegistration(d, i, 'UNKNOWN')));
+    }
 
     if (results.length > 0) {
       setPendingRegistrations(results);
