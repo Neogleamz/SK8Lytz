@@ -78,7 +78,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/security-audit`
 
 - [ ] `audit-rls-performance` : #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges.
-- [ ] `fix/typescript-debt-audit` : Resolve pre-existing TS errors across the codebase: dead state vars (`setDemoHaloQueued/SoulQueued`) in DashboardScreen, `CustomGroup` type drift, `'UNKNOWN'` product type overlap in HardwareSetupWizard, missing `group_id` in useRegistration legacy migration helper, missing EventType entries in PositionalGradientBuilder, and implicit `any` params in LocationService.
+- [ ] `fix/typescript-debt-audit` : Resolve pre-existing TS errors across the codebase: dead state vars (`setDemoHaloQueued/SoulQueued`) in DashboardScreen, `CustomGroup` type drift, `'UNKNOWN'` product type overlap in HardwareSetupWizard, missing `group_id` in useRegistration legacy migration helper, missing EventType entries in PositionalGradientBuilder, implicit `any` params in LocationService, missing `IVoiceAction` type in DashboardScreen, missing `useRegistration` import in `Sk8LytzDiagnosticLab_old`, and narrow `DeviceSettingsModal` type props.
 
 ### Target: `epic/community-hub`
 
