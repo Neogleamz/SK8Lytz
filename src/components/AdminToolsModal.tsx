@@ -671,7 +671,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
 
           {/* Live Shape Preview */}
           <Text style={{ color: '#FF5A00', fontWeight: '700', fontSize: 12, marginBottom: 4, letterSpacing: 1 }}>LIVE SHAPE PREVIEW</Text>
-          <ShapePreviewCanvas profile={editingProfile} />
+          <ShapePreviewCanvas profile={activeProfile} />
 
           {/* Viz Shape Selector */}
           <Text style={labelStyle}>SHAPE TYPE</Text>
@@ -682,8 +682,8 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
                 onPress={() => patchEdit({ vizShape: s })}
                 style={{
                   paddingHorizontal: 12, paddingVertical: 7, borderRadius: 6,
-                  backgroundColor: editingProfile.vizShape === s ? '#FF5A00' : '#333',
-                  borderWidth: 1, borderColor: editingProfile.vizShape === s ? '#FF5A00' : '#555',
+                  backgroundColor: activeProfile.vizShape === s ? '#FF5A00' : '#333',
+                  borderWidth: 1, borderColor: activeProfile.vizShape === s ? '#FF5A00' : '#555',
                 }}
               >
                 <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>{s}</Text>
@@ -755,7 +755,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
           />
 
           {/* DUAL_STRIP only */}
-          {editingProfile.vizShape === 'DUAL_STRIP' && (
+          {activeProfile.vizShape === 'DUAL_STRIP' && (
             <>
               <Text style={[labelStyle, { color: '#FF5A00', marginTop: 14 }]}>DUAL STRIP GEOMETRY (RAILZ)</Text>
               <Text style={labelStyle}>STRIP COUNT</Text>
@@ -783,7 +783,6 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
 
             <TouchableOpacity
               onPress={() => {
-                 setEditingProfile(activeProfile); // commit current form state manually if needed, wait, saveProfile uses editingProfile
                  handleSaveProfile();
               }}
               disabled={productSaving}
