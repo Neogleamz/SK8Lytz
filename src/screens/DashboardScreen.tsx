@@ -2149,7 +2149,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     padding: 2, // Border thickness
   },
   skateCardInner: {
-    backgroundColor: Colors.isDark ? 'rgba(15, 20, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: Colors.isDark ? 'rgba(35, 42, 55, 0.85)' : 'rgba(255, 255, 255, 0.95)',
     borderRadius: 18,
     padding: 16,
     overflow: 'hidden',
