@@ -21,7 +21,7 @@
  * Platform: React Native (Android + Web)
  */
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Platform, Image, Linking, Animated, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Platform, Image, Linking, Animated, Modal, TextInput, PanResponder, AppState, AppStateStatus, Alert, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
@@ -42,6 +42,7 @@ import AdminToolsModal from '../components/AdminToolsModal';
 import { useVoiceControl } from '../hooks/useVoiceControl';
 import VoiceFAB from '../components/Voice/VoiceFAB';
 import VoiceCommandModal from '../components/Voice/VoiceCommandModal';
+import VoiceTutorialModal from '../components/Voice/VoiceTutorialModal';
 import CrewModal from '../components/CrewModal';
 import { crewService, CrewSession, CrewRole } from '../services/CrewService';
 import Sk8LytzDiagnosticLab from '../components/Sk8LytzDiagnosticLab';
@@ -301,6 +302,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [lastLeaderScene, setLastLeaderScene] = useState<Record<string, any> | null>(null);
   const dockedControllerRef = React.useRef<DockedControllerHandle>(null);
   const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
+  const [isVoiceTutorialVisible, setIsVoiceTutorialVisible] = useState(false);
+  const [isVoiceTutorialDismissed, setIsVoiceTutorialDismissed] = useState(false);
   const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
 
   // ── Profile + Notifications state ────────────────────────────────────────
@@ -346,6 +349,15 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     }
     loadFavs();
   }, [isVoiceModalVisible]); // Refresh when modal opens to ensure latest names
+
+  // ── Load Voice Tutorial Dismissal State ──
+  useEffect(() => {
+    async function loadTutorialState() {
+      const val = await AsyncStorage.getItem('@Sk8lytz_voice_tutorial_dismissed');
+      if (val === 'true') setIsVoiceTutorialDismissed(true);
+    }
+    loadTutorialState();
+  }, []);
 
   // AppState Telemetry
   useEffect(() => {
@@ -2041,10 +2053,27 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
       {/* ──── VOICE COMMAND ENGINE UI ──── */}
       <VoiceFAB 
-        onPress={() => setIsVoiceModalVisible(true)} 
+        onPress={() => {
+          if (!isVoiceTutorialDismissed) {
+             setIsVoiceTutorialVisible(true);
+          } else {
+             setIsVoiceModalVisible(true);
+          }
+        }} 
         isListening={isListening}
       />
       
+      <VoiceTutorialModal
+        isVisible={isVoiceTutorialVisible}
+        onDismiss={async () => {
+          setIsVoiceTutorialVisible(false);
+          setIsVoiceTutorialDismissed(true);
+          await AsyncStorage.setItem('@Sk8lytz_voice_tutorial_dismissed', 'true').catch(()=>{});
+          // Smooth transition: open the actual voice modal after tutorial
+          setTimeout(() => setIsVoiceModalVisible(true), 400);
+        }}
+      />
+
       <VoiceCommandModal
         isVisible={isVoiceModalVisible}
         onClose={() => setIsVoiceModalVisible(false)}

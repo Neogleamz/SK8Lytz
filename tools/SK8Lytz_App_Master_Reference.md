@@ -68,6 +68,7 @@ Sk8Lytz caters to a diverse, family-oriented community of dedicated roller skate
 | `@sk8lytz_theme` | ThemeContext | `dark` or `light` |
 | `@sk8lytz_control_theme`| ThemeContext | Control color theme name |
 | `@Sk8lytz_Favorites` | DashboardScreen | Dictionary of user-defined lighting presets (Name, Palette, Mode) |
+| `@Sk8lytz_voice_tutorial_dismissed` | DashboardScreen | Boolean flag to suppress the first-use voice tutorial modal |
 
 ### Dashboard UI Layout (4-Slab Architecture)
 
