@@ -16,7 +16,7 @@
  * Platform: React Native (Android + Web)
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, TextInput, Animated, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, TextInput, Animated, Alert, Dimensions, FlatList } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Typography, Layout } from '../theme/theme';
 import { Audio } from 'expo-av';
@@ -1437,135 +1437,213 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
         {/* Removed Active Mode Header to save vertical space */}
 
-        <View style={[styles.controlsContainer, { padding: 4, overflow: 'hidden' }]}>
+        <View style={[styles.controlsContainer, activeMode === 'CAMERA' ? { flex: 0, height: 240 } : {}, { padding: 4, overflow: 'hidden' }]}>
           <View style={[styles.activeModeContainer, { flex: 1, justifyContent: 'space-evenly' }]}>
             {activeMode === 'FAVORITES' && (
-              <View style={{ flex: 1, paddingHorizontal: Layout.padding, justifyContent: 'space-evenly' }}>
+              <View style={{ flex: 1, paddingVertical: Layout.padding, paddingBottom: 24, justifyContent: 'space-between' }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, paddingHorizontal: Layout.padding, marginBottom: 8 }]}>YOURS</Text>
+                
+                <FlatList
+                  style={{ flex: 1 }}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  data={favorites.length > 0 ? favorites : [null as any]}
+                  keyExtractor={(item, index) => item ? item.id : `empty-yours-${index}`}
+                  contentContainerStyle={{ paddingHorizontal: Layout.padding, flexGrow: 1 }}
+                  renderItem={({ item: fav }) => {
+                    const cardWidth = (Dimensions.get('window').width - (Layout.padding * 2)) / 3.5;
+                    
+                    if (!fav) {
+                      return <View style={[styles.presetCard, { width: cardWidth, marginHorizontal: 4, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
+                    }
 
-                <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13 }]}>YOURS</Text>
+                    const glow = fav.mode === 'MUSIC' ? (fav.musicPrimaryColor || fav.musicSecondaryColor || Colors.primary) :
+                                 (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') ? (fav.fixedFgColor || fav.fixedBgColor || Colors.primary) :
+                                 (fav.mode === 'MULTI' || fav.mode === 'BUILDER') ? (fav.multiColors?.[0] || Colors.primary) : Colors.primary;
 
-                <View style={[styles.presetContainer, { flex: 1 }]}>
-                  {Array.from({ length: 4 }).map((_, idx) => {
-                    const fav = favorites[idx];
-                    if (!fav) return <View key={`empty-yours-${idx}`} style={[styles.presetCard, { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
+                    let gradColors: string[] = [glow, glow];
+                    if (fav.mode === 'MUSIC' && fav.musicPrimaryColor) gradColors = [fav.musicPrimaryColor, fav.musicSecondaryColor || fav.musicPrimaryColor];
+                    else if ((fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') && fav.fixedFgColor) gradColors = [fav.fixedFgColor, fav.fixedBgColor || fav.fixedFgColor];
+                    else if ((fav.mode === 'MULTI' || fav.mode === 'BUILDER') && fav.multiColors && fav.multiColors.length > 0) gradColors = fav.multiColors.length === 1 ? [fav.multiColors[0], fav.multiColors[0]] : fav.multiColors;
+
                     return (
                       <TouchableOpacity
-                        key={fav.id}
-                        style={[styles.presetCard, { borderColor: Colors.primary }]}
+                        style={{ flex: 1, marginHorizontal: 4, shadowColor: glow, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 }}
                         onPress={() => loadFavorite(fav)}
                       >
-                        <TouchableOpacity
-                          style={{ position: 'absolute', right: 4, top: 4, zIndex: 10, padding: 4 }}
-                          onPress={() => {
-                            setFavPromptTargetId(fav.id);
-                            setFavPromptName(fav.name);
-                            setIsFavPromptVisible(true);
-                          }}
+                        <LinearGradient
+                          colors={gradColors}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={{ flex: 1, width: cardWidth, borderRadius: 9, padding: 1.5 }}
                         >
-                          <MaterialCommunityIcons name="pencil-outline" size={12} color={Colors.textMuted} />
-                        </TouchableOpacity>
+                          <View style={[styles.presetCard, { flex: 1, width: '100%', marginHorizontal: 0, borderWidth: 0, borderRadius: 8, justifyContent: 'flex-start', paddingVertical: 12, paddingHorizontal: 6 }]}>
+                            <TouchableOpacity
+                              style={{ position: 'absolute', right: 4, top: 4, zIndex: 10, padding: 4 }}
+                              onPress={() => {
+                                setFavPromptTargetId(fav.id);
+                                setFavPromptName(fav.name);
+                                setIsFavPromptVisible(true);
+                              }}
+                            >
+                              <MaterialCommunityIcons name="pencil-outline" size={12} color={Colors.textMuted} />
+                            </TouchableOpacity>
 
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%', marginTop: 2, marginBottom: 2, gap: 10, opacity: 0.8, paddingHorizontal: 16 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                            {fav.mode === 'MUSIC' ? (
-                              <><MaterialCommunityIcons name="microphone-outline" size={9} color={Colors.primary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.micSensitivity || fav.speed || 50)}%</Text></>
-                            ) : (
-                              <><MaterialCommunityIcons name="speedometer" size={9} color={Colors.primary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.speed || 50)}%</Text></>
-                            )}
+                            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                              <MaterialCommunityIcons 
+                                name={fav.mode === 'MUSIC' ? 'microphone-outline' : (fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'animation-play' : (fav.mode === 'MULTI' || fav.mode === 'BUILDER') ? 'shape-square-plus' : 'speedometer'} 
+                                size={24} 
+                                color={glow} 
+                                style={{ marginBottom: 8 }} 
+                              />
+                              
+                              <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.name}</MarqueeText>
+                            </View>
+                            
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 6, opacity: 0.8, paddingHorizontal: 4 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                {fav.mode === 'MUSIC' ? (
+                                  <><MaterialCommunityIcons name="microphone-outline" size={10} color={glow} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.micSensitivity || fav.speed || 50)}%</Text></>
+                                ) : (
+                                  <><MaterialCommunityIcons name="speedometer" size={10} color={glow} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.speed || 50)}%</Text></>
+                                )}
+                              </View>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                <MaterialCommunityIcons name="brightness-6" size={10} color={glow} />
+                                <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
+                              </View>
+                            </View>
+                            
+                            {(() => {
+                              if (fav.mode === 'MUSIC') {
+                                return (
+                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: 4 }}>
+                                    <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
+                                    <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
+                                  </View>
+                                );
+                              } else if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') {
+                                return (
+                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: 4 }}>
+                                    <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
+                                    <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
+                                  </View>
+                                );
+                              } else if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
+                                const colors = fav.multiColors || ['#FFFFFF'];
+                                return (
+                                  <View style={{ width: '90%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: 4 }}>
+                                    {colors.map((c: string, i: number) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}
+                                  </View>
+                                );
+                              } else {
+                                return <View style={{ height: 6, width: '100%', marginTop: 4 }} />;
+                              }
+                            })()}
                           </View>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                            <MaterialCommunityIcons name="brightness-6" size={9} color={Colors.primary} />
-                            <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
-                          </View>
-                        </View>
-                        <View style={{ width: '100%', minHeight: 20, justifyContent: 'center', alignItems: 'center' }}>
-                          <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.name}</MarqueeText>
-                        </View>
-                        {(() => {
-                          if (fav.mode === 'MUSIC') {
-                            return (
-                              <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
-                                <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
-                                <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
-                              </View>
-                            );
-                          } else if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') {
-                            return (
-                              <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
-                                <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
-                                <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
-                              </View>
-                            );
-                          } else if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
-                            const colors = fav.multiColors || ['#FFFFFF'];
-                            return (
-                              <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
-                                {colors.map((c: string, i: number) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}
-                              </View>
-                            );
-                          } else {
-                            return <MaterialCommunityIcons name={(fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'animation-play' : 'shape-square-plus'} size={14} color={Colors.primary} style={{ marginTop: 4, marginBottom: 2 }} />;
-                          }
-                        })()}
+                        </LinearGradient>
                       </TouchableOpacity>
                     );
-                  })}
+                  }}
+                />
                 </View>
 
-                <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, marginTop: 4 }]}>SK8Lytz Picks</Text>
+                <View style={{ flex: 1, marginTop: 16 }}>
+                  <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, paddingHorizontal: Layout.padding, marginBottom: 8 }]}>SK8Lytz Picks</Text>
 
-                <View style={[styles.presetContainer, { flex: 1 }]}>
-                  {Array.from({ length: Math.max(4, curatedPresets.length) }).map((_, idx) => {
-                    const fav = curatedPresets[idx];
-                    if (!fav) return <View key={`empty-ours-${idx}`} style={[styles.presetCard, { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
+                  <FlatList
+                  style={{ flex: 1 }}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  data={curatedPresets.length > 0 ? curatedPresets : [null as any]}
+                  keyExtractor={(item, index) => item ? item.id : `empty-picks-${index}`}
+                  contentContainerStyle={{ paddingHorizontal: Layout.padding, flexGrow: 1 }}
+                  renderItem={({ item: fav }) => {
+                    const cardWidth = (Dimensions.get('window').width - (Layout.padding * 2)) / 3.5;
+                    
+                    if (!fav) {
+                      return <View style={[styles.presetCard, { width: cardWidth, marginHorizontal: 4, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
+                    }
+
+                    const glow = fav.mode === 'MUSIC' ? (fav.musicPrimaryColor || fav.musicSecondaryColor || Colors.secondary) :
+                                 (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') ? (fav.fixedFgColor || fav.fixedBgColor || Colors.secondary) :
+                                 (fav.mode === 'MULTI' || fav.mode === 'BUILDER') ? (fav.multiColors?.[0] || Colors.secondary) : Colors.secondary;
+
+                    let gradColors: string[] = [glow, glow];
+                    if (fav.mode === 'MUSIC' && fav.musicPrimaryColor) gradColors = [fav.musicPrimaryColor, fav.musicSecondaryColor || fav.musicPrimaryColor];
+                    else if ((fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') && fav.fixedFgColor) gradColors = [fav.fixedFgColor, fav.fixedBgColor || fav.fixedFgColor];
+                    else if ((fav.mode === 'MULTI' || fav.mode === 'BUILDER') && fav.multiColors && fav.multiColors.length > 0) gradColors = fav.multiColors.length === 1 ? [fav.multiColors[0], fav.multiColors[0]] : fav.multiColors;
+
                     return (
                       <TouchableOpacity
-                        key={fav.id}
-                        style={[styles.presetCard, { borderColor: Colors.secondary }]}
+                        style={{ flex: 1, marginHorizontal: 4, shadowColor: glow, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 }}
                         onPress={() => loadFavorite(fav, 'PICK')}
                       >
-                        <View style={{ width: '100%', minHeight: 20, justifyContent: 'center', alignItems: 'center', marginTop: 2 }}>
-                          <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.customName || fav.name}</MarqueeText>
-                        </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 2, marginBottom: 4, gap: 4, opacity: 0.8 }}>
-                          {fav.mode === 'MUSIC' ? (
-                            <><MaterialCommunityIcons name="microphone-outline" size={10} color={Colors.secondary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.micSensitivity || fav.speed || 50)}%</Text></>
-                          ) : (
-                            <><MaterialCommunityIcons name="speedometer" size={10} color={Colors.secondary} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.speed || 50)}%</Text></>
-                          )}
-                          <Text style={{ fontSize: 9, color: Colors.textMuted }}> | </Text>
-                          <MaterialCommunityIcons name="brightness-6" size={10} color={Colors.secondary} />
-                          <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
-                        </View>
-                        {(() => {
-                          if (fav.mode === 'MUSIC') {
-                            return (
-                              <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
-                                <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
-                                <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
+                        <LinearGradient
+                          colors={gradColors}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={{ flex: 1, width: cardWidth, borderRadius: 9, padding: 1.5 }}
+                        >
+                          <View style={[styles.presetCard, { flex: 1, width: '100%', marginHorizontal: 0, borderWidth: 0, borderRadius: 8, justifyContent: 'flex-start', paddingVertical: 12, paddingHorizontal: 6 }]}>
+                            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                              <MaterialCommunityIcons 
+                                name={fav.mode === 'MUSIC' ? 'microphone-outline' : (fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'animation-play' : (fav.mode === 'MULTI' || fav.mode === 'BUILDER') ? 'shape-square-plus' : 'speedometer'} 
+                                size={24} 
+                                color={glow} 
+                                style={{ marginBottom: 8 }} 
+                              />
+                              
+                              <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.customName || fav.name}</MarqueeText>
+                            </View>
+                            
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 6, opacity: 0.8, paddingHorizontal: 4 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                {fav.mode === 'MUSIC' ? (
+                                  <><MaterialCommunityIcons name="microphone-outline" size={10} color={glow} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.micSensitivity || fav.speed || 50)}%</Text></>
+                                ) : (
+                                  <><MaterialCommunityIcons name="speedometer" size={10} color={glow} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.speed || 50)}%</Text></>
+                                )}
                               </View>
-                            );
-                          } else if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') {
-                            return (
-                              <View style={{ width: '60%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
-                                <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
-                                <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                <MaterialCommunityIcons name="brightness-6" size={10} color={glow} />
+                                <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
                               </View>
-                            );
-                          } else if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
-                            const colors = fav.multiColors || ['#FFFFFF'];
-                            return (
-                              <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginTop: 4, marginBottom: 2 }}>
-                                {colors.map((c: string, i: number) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}
-                              </View>
-                            );
-                          } else {
-                            return <MaterialCommunityIcons name={(fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'animation-play' : 'shape-square-plus'} size={14} color={Colors.secondary} style={{ marginTop: 4, marginBottom: 2 }} />;
-                          }
-                        })()}
+                            </View>
+                            
+                            {(() => {
+                              if (fav.mode === 'MUSIC') {
+                                return (
+                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: 4 }}>
+                                    <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
+                                    <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
+                                  </View>
+                                );
+                              } else if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') {
+                                return (
+                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: 4 }}>
+                                    <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
+                                    <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
+                                  </View>
+                                );
+                              } else if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
+                                const colors = fav.multiColors || ['#FFFFFF'];
+                                return (
+                                  <View style={{ width: '90%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: 4 }}>
+                                    {colors.map((c: string, i: number) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}
+                                  </View>
+                                );
+                              } else {
+                                return <View style={{ height: 6, width: '100%', marginTop: 4 }} />;
+                              }
+                            })()}
+                          </View>
+                        </LinearGradient>
                       </TouchableOpacity>
                     );
-                  })}
+                  }}
+                />
                 </View>
               </View>
             )}
