@@ -43,7 +43,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/ui-refinement`
 
 - [x] `feat/dashboard-layout-update` : Move 'Registered Devices' to the bottom of the dashboard and make it collapsible. Make the Crew Hub card twice as tall and the My Skates Card bigger.
-- [ ] `modern-rgb-slider` : #29 — Modern RGB Hue Slider — Design and implement a more sophisticated, high-precision RGB hue selection component to replace the standard sliders. Give me 3 choices and let me choose before moving on
+
 
 ---
 
