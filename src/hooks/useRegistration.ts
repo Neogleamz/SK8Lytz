@@ -23,7 +23,7 @@ export interface RegisteredDevice {
   user_id?: string;
   device_mac: string;
   device_name: string;
-  product_type: 'HALOZ' | 'SOULZ';
+  product_type: 'HALOZ' | 'SOULZ' | 'RAILZ';
   position: 'Left' | 'Right' | null;
   group_name: string;
   group_id: string;
@@ -328,7 +328,7 @@ export function useRegistration() {
           const rd: RegisteredDevice = {
             device_mac:     mac,
             device_name:    config.name || device.name || mac,
-            product_type:   config.type || 'SOULZ',
+            product_type:   config.type || 'SOULZ', // Legacy fallback
             position:       config.name?.includes('Left') ? 'Left' :
                            config.name?.includes('Right') ? 'Right' : null,
             group_name:     group.name,

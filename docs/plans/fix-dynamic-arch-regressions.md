@@ -1,56 +1,58 @@
-# [PLAN] Post-Migration Bug Fix & Sanitization Audit
+# Sanitization Audit: Dynamic Product Architecture
 
-## Goal
-The goal of this task is to:
-1. **Critical Repair**: Resolve the `isHaloz is not defined` ReferenceError in `ProductVisualizer.tsx` that crashed the app.
-2. **Sanitization Audit**: Remove remaining hardcoded "binary" logic (`isHaloz`, `isSoulz`, or hardcoded point counts) in `DockedController`, `ZenggeProtocol`, and `HardwareSetupWizardScreen` to ensure the new catalog-driven architecture is universally applied.
-
-### Design Decisions & Rationale
-We are moving from a "binary" hardware model (Haloz vs. Soulz) to a "catalog" model. To prevent regressions, we must define the `isHaloz` flag as a derived property of the `ProductProfile` instead of a prop. I'm choosing to keep the `isHaloz` naming internally within the visualizer to minimize risk while technically grounding it in the catalog lookup.
+This plan aims to resolve remaining ReferenceErrors and strip out hardcoded "binary" product logic (HALOZ vs SOULZ) that persists after the dynamic architecture migration. We will unify all hardware behavioral logic under the `LOCAL_PRODUCT_CATALOG` definitions.
 
 ## User Review Required
+
 > [!IMPORTANT]
-> This plan includes a minor refactor of the `ZenggeProtocol` constants to remove `SK8_DEFAULTS`. This is a low-risk cleanup that ensures we don't have dual sources of truth for hardware specs.
+> **RAILZ Support**: This audit will officially enable RAILZ as a first-class citizen in the UI, replacing heuristic "is it Haloz?" checks with catalog-driven properties.
 
 ## Proposed Changes
 
-### 1. Product Visualizer (Critical Repair)
-Fix the `ReferenceError` caused by missing variable declarations within the `leds` useMemo.
+### [Core] Product Catalog Enhancements
+
+#### [MODIFY] [ProductCatalog.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/constants/ProductCatalog.ts) (or its type)
+- Add `vizIsMirrored: boolean` to the `ProductProfile` interface. This replaces `isHaloz` for driving the "Seg2 mirrors Seg1" visualizer logic.
+- Ensure RAILZ has correct defaults (2000mAh, 0x51 support).
+
+---
+
+### [UI] Visualizer Sanitization
 
 #### [MODIFY] [ProductVisualizer.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/ProductVisualizer.tsx)
-- Define `const isHaloz = productProfile.id === 'HALOZ'` at the top of the `leds` useMemo block.
-- Define `const isHalozSeg2 = isHaloz && deviceSegments > 1 && i >= (renderLeds / 2)` inside the `renderLeds` loop.
-- **Boy Scout Cleanup**: Remove unused `simMode` and `_simMode` variables/props if they are orphaned.
+- **Fix ReferenceError**: Verify all usages of `isHaloz` are within scope.
+- **Remove isHaloz**: Replace `const isHaloz = productProfile.id === 'HALOZ'` with references to `productProfile.vizIsMirrored` and `productProfile.vizShape`.
+- **RAILZ Geometry**: Ensure `vizShape === 'DUAL_STRIP'` handles 2000mAh/high-density rendering correctly.
 
-### 2. Zengge Protocol (Consistency Audit)
-Remove the redundant `SK8_DEFAULTS` to ensure the `ProductCatalog` is the single source of truth.
+---
 
-#### [MODIFY] [ZenggeProtocol.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/ZenggeProtocol.ts)
-- Delete the `SK8_DEFAULTS` constant.
-- Redirect any protocol-level defaults to use `LOCAL_PRODUCT_CATALOG`.
-
-### 3. Hardware Setup Wizard (Modernization)
-Bring the setup wizard into the dynamic product architecture.
-
-#### [MODIFY] [HardwareSetupWizardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx)
-- Dynamically render discovered device groups based on all entries in `LOCAL_PRODUCT_CATALOG` (removing the hardcoded HALOZ/SOULZ/UNKNOWN filter logic).
-- Replace hardcoded `43` points in `handleBlinkDevice` with a lookup to the catalog for that product's default points.
-
-### 4. Controller Review (Surgical Strike)
-Check for any remaining binary checks in the main controller.
+### [UI] Controller Sanitization
 
 #### [MODIFY] [DockedController.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DockedController.tsx)
-- Ensure all `isHalozRing` checks are properly scoped or derived from the catalog.
+- **Update Types**: Update `ProductType` to include `'RAILZ'`.
+- **Remove Heuristics**: Delete `const isHalozRing = segs === 2 && pts === 16;`.
+- **Dynamic Mirroring**: Replace `if (isHalozRing)` with `if (productProfile.vizIsMirrored)`.
+- **Dynamic Descriptions**: Update comment blocks to reference the catalog rather than specific hardcoded models.
+
+---
+
+### [UI] Setup Wizard Sanitization
+
+#### [MODIFY] [HardwareSetupWizardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx)
+- **Remove Fallbacks**: Replace `|| 'SOULZ'` and hardcoded `43` points with `LOCAL_PRODUCT_CATALOG[0].id` and the corresponding profile defaults.
+- **Dynamic Grouping**: Update naming heuristics to be more generic or catalog-aware.
 
 ## Open Questions
-- **None**. The path forward is clear.
+
+- None at this time. The data requirements for the catalog were confirmed in the previous session (SOULZ/RAILZ 2000mAh, HALOZ 1200mAh).
 
 ## Verification Plan
 
 ### Automated Tests
-- None.
+- `run_command`: `npx tsc` to verify no new type errors were introduced during the refactor.
+- `browser_subagent`: Open the dashboard and verify the `ProductVisualizer` renders without crashing.
 
 ### Manual Verification
-1. **Visualizer Test**: Load the controller. Ensure the `isHaloz is not defined` crash is gone and the visualizer renders correctly for HALOZ, SOULZ, and RAILZ.
-2. **Setup Wizard Test**: Open Setup Wizard. Ensure RAILZ devices (if simulated) appear in the discovery list.
-3. **Blink Test**: Trigger a "Blink" in the wizard and verify (via console logs) that the payload uses the correct points for the selected product.
+- Verify that HALOZ still displays its mirrored ring geometry.
+- Verify that SOULZ still displays its U-shaped oval geometry.
+- Verify that the Setup Wizard correctly pulls default LED counts from the catalog.

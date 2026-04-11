@@ -80,7 +80,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
     return byId ?? LOCAL_PRODUCT_CATALOG.find(p => p.id === 'SOULZ')!;
   }, [product]);
   const vizShape = productProfile.vizShape;
-  const isHaloz = productProfile.id === 'HALOZ';
+  const isMirrored = productProfile.vizIsMirrored;
 
   // Track animValue tick (0.0–1.0) for PatternEngine frame generation
   const [animTick, setAnimTick] = useState(0);
@@ -193,7 +193,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
         ? Math.max(numLeds * 2, 60)
         : Math.max(numLeds * 2, 86);
     for (let i = 0; i < renderLeds; i++) {
-      const isHalozSeg2 = isHaloz && deviceSegments > 1 && i >= (renderLeds / 2);
+      const isMirroredSeg2 = isMirrored && deviceSegments > 1 && i >= (renderLeds / 2);
       let left = 0;
       let top = 0;
       const outerDiam = productProfile.vizBlobDiameterMm > 6 ? 16 : 12;
@@ -337,8 +337,8 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
             }
           } else {
             // ── All other RBM patterns: hardware-accurate pixel simulation ──
-            // HALOZ: generates 8-LED (per-segment) frame; Seg2 mirrors it reversed.
-            const rbmSegLeds = isHaloz ? Math.ceil(numLeds / 2) : numLeds;
+            // Dynamic Mirroring: generates per-segment frame; Seg2 mirrors it reversed if flagged.
+            const rbmSegLeds = isMirrored ? Math.ceil(numLeds / 2) : numLeds;
             const rbmFrame = getRbmVisualizerFrame(pid, rbmSegLeds, animTick);
             const rawLedPos = (segmentI / activeSegmentLeds) * rbmFrame.length;
             const rSlot0Raw = Math.floor(rawLedPos) % Math.max(1, rbmFrame.length);
@@ -349,7 +349,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
             const rBlend = RDIFF * rBoundary;
             const rCurr = rbmFrame[rSlot0] || rbmFrame[0] || { r: 255, g: 0, b: 0 };
             const rAdjIdx = mirrorSlot(
-              isHalozSeg2
+              isMirroredSeg2
                 ? Math.max(0, rSlot0Raw - 1)   // mirrored: adjacent is previous in raw
                 : (rSlot0Raw + 1) % rbmFrame.length,
               rbmFrame.length
@@ -360,8 +360,8 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           }
         } else if (mode === 'MUSIC') {
           // ── Hardware-accurate music mode simulation ──
-          // HALOZ: generates 8-LED (per-segment) frame; Seg2 mirrors it reversed.
-          const musicSegLeds = isHaloz ? Math.ceil(numLeds / 2) : numLeds;
+          // Dynamic Mirroring: generates per-segment frame; Seg2 mirrors it reversed if flagged.
+          const musicSegLeds = isMirrored ? Math.ceil(numLeds / 2) : numLeds;
           const musicFrame = getRbmMusicFrame(patternId || 1, musicSegLeds, animTick, audioMagnitude, color);
           const mRawPos = (segmentI / activeSegmentLeds) * musicFrame.pixels.length;
           const mSlotRaw = Math.floor(mRawPos) % Math.max(1, musicFrame.pixels.length);
@@ -425,8 +425,8 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           };
 
           // Get the full per-LED pixel array from the pattern engines at the current animation tick
-          // HALOZ: generates 8-LED (per-segment) frame; Seg2 slot is mirrored.
-          const mmSegLeds = isHaloz ? Math.ceil(numLeds / 2) : numLeds;
+          // Dynamic Mirroring: generates per-segment frame; Seg2 slot is mirrored if flagged.
+          const mmSegLeds = isMirrored ? Math.ceil(numLeds / 2) : numLeds;
 
           let framePixels: RGB[];
           if (pid <= 33) {
@@ -455,7 +455,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           const blendAmt = DIFF * boundaryProx;
           const pCurr = framePixels[slot0] || fgRgb;
           const adjIdx = mirrorSlot(
-            isHalozSeg2
+            isMirroredSeg2
               ? Math.max(0, slot0Raw - 1)
               : (slot0Raw + 1) % framePixels.length,
             framePixels.length
@@ -499,7 +499,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           const blendAmt = DIFF * boundaryProx;
           const pCurr = builderPixels[slot0] || { r: 0, g: 0, b: 0 };
           const adjIdx = mirrorSlot(
-            isHalozSeg2
+            isMirroredSeg2
               ? Math.max(0, slot0Raw - 1)
               : (slot0Raw + 1) % builderPixels.length,
             builderPixels.length
