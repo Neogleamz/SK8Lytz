@@ -12,7 +12,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `feat/speed-tracking-telemetry` : Add real-time distance (miles), average speed (mph), and peak speed tracking to Street Mode and Crew Sessions, saving to Supabase and displaying in a post-session summary.
 
 ### Target: `epic/connection-reliability`
-- [ ] `epic/connection-reliability` : Execute the multiphase connection reliability plan (see `docs/plans/epic-connection-reliability.md`). Stop dropping connections, fix lockups entering/leaving controller, and fix UI teardown on disconnect (resolves `fix/hardware-connection-drop`, `audit/connection-polling-logic`, and `fix/controller-navigation-lockup`).
+- [x] `epic/connection-reliability` : Execute the multiphase connection reliability plan (see `docs/plans/epic-connection-reliability.md`). Stop dropping connections, fix lockups entering/leaving controller, and fix UI teardown on disconnect (resolves `fix/hardware-connection-drop`, `audit/connection-polling-logic`, and `fix/controller-navigation-lockup`).
 
 - [x] `fix/camera-mode-wipeout` : Restore CAMERA mode UI in DockedController (regression fix) + Web Fallback Simulation.
 - [x] `feat/auth-branding-link` : Add "by neogleamz.com" credited link below logo on AuthScreen.

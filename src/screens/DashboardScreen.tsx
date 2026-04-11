@@ -281,6 +281,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
   const [updateTrigger, setUpdateTrigger] = useState(0);
   const [isTestModeActive, setIsTestModeActive] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
 
   const [customGroups, setCustomGroups] = useState<CustomGroup[]>([]);
@@ -986,15 +987,21 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     return sortedAllDevices.filter((d: any) => !macs.has(d.id?.toLowerCase() ?? ''));
   }, [sortedAllDevices, registeredDevices]);
 
-  const handleDisconnect = useCallback(() => {
-    disconnectFromDevice();
-  }, [disconnectFromDevice]);
+  const handleDisconnect = useCallback(async () => {
+    if (isDisconnecting) return;
+    setIsDisconnecting(true);
+    await disconnectFromDevice();
+    setIsDisconnecting(false);
+  }, [disconnectFromDevice, isDisconnecting]);
 
   useEffect(() => {
     const handleBackPress = () => {
       if (isTestModeActive) {
         setIsTestModeActive(false);
         return true; // intercept
+      }
+      if (isDisconnecting) {
+        return true; // intercept and block multiple back presses
       }
       if (isActuallyConnected) {
         handleDisconnect();
@@ -1005,7 +1012,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
     const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
     return () => backHandler.remove();
-  }, [isTestModeActive, isActuallyConnected, handleDisconnect]);
+  }, [isTestModeActive, isActuallyConnected, handleDisconnect, isDisconnecting]);
 
   // Handle Swipe-to-Back natively for Visualizer screens (IOS & Android edge swipe)
   const edgePanResponder = useRef(
@@ -1021,13 +1028,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       onPanResponderRelease: (evt, gestureState) => {
         if (gestureState.dx > 60) {
           if (isTestModeActive) setIsTestModeActive(false);
-          else if (isActuallyConnected) handleDisconnect();
+          else if (isActuallyConnected && !isDisconnecting) handleDisconnect();
         }
       },
       onPanResponderTerminate: (evt, gestureState) => {
         if (gestureState.dx > 60) {
           if (isTestModeActive) setIsTestModeActive(false);
-          else if (isActuallyConnected) handleDisconnect();
+          else if (isActuallyConnected && !isDisconnecting) handleDisconnect();
         }
       }
     })
@@ -1344,6 +1351,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 : ((displayConnectedDevices[0] as any)?.name?.toLowerCase().includes('soul') ? 'SOULZ' : 'HALOZ'))
             }
             isPaired={isGrouped}
+            isDisconnecting={isDisconnecting}
             points={(displayConnectedDevices[0] as any).points}
             devices={displayConnectedDevices as any}
             onLongPressDevice={openSettings}
@@ -1363,9 +1371,21 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               }
             }}
           />
+          {/* Disconnection Teardown Overlay */}
+          {isDisconnecting && (
+            <Animated.View style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.85)',
+              justifyContent: 'center', alignItems: 'center',
+              zIndex: 9999
+            }}>
+              <ActivityIndicator size="large" color="#00F0FF" />
+              <Typography.Subheader style={{ color: '#00F0FF', marginTop: 12 }}>Disconnecting...</Typography.Subheader>
+            </Animated.View>
+          )}
       </Animated.View>
     );
-  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, activeHwSettings, crewRole, crewSession, lastLeaderScene]);
+  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, activeHwSettings, crewRole, crewSession, lastLeaderScene, isDisconnecting]);
 
   /**
    * Renders a single device item card, merging registration data 

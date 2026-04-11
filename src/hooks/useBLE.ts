@@ -898,7 +898,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     }
   };
 
-  const disconnectFromDevice = () => {
+  const disconnectFromDevice = async () => {
     // Clean up all physical listeners
     Object.values(disconnectListeners.current).forEach(sub => {
       try { sub.remove(); } catch (e) {}
@@ -906,17 +906,22 @@ export default function useBLE(): BluetoothLowEnergyApi {
     disconnectListeners.current = {};
 
     const staleDevices = [...connectedDevicesRef.current];
-    setConnectedDevices([]);
 
     if (staleDevices.length > 0 && Platform.OS !== 'web') {
-      staleDevices.forEach(device => {
+      for (const device of staleDevices) {
         try {
-          bleManager.cancelDeviceConnection(device.id).catch((e: any) => console.warn('Disconnect soft fail', e));
+          await bleManager.cancelDeviceConnection(device.id).catch((e: any) => console.warn(`[BLE] Disconnect soft fail for ${device.id}`, e));
         } catch (e: any) {
-          console.error('Fatal disconnect fault', e);
+          console.error(`[BLE] Fatal disconnect fault for ${device.id}`, e);
         }
-      });
+      }
+      
+      // Provide a buffer for the host OS Bluetooth stack to cleanly complete teardown
+      await new Promise(resolve => setTimeout(resolve, 250));
     }
+    
+    // UI trigger after native cleanup
+    setConnectedDevices([]);
   };
 
   return useMemo(() => ({
