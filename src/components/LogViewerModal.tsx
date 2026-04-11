@@ -30,6 +30,7 @@ import * as Device from 'expo-device';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger, LogEntry, EventType } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
+import AdminPicksScheduler from './AdminPicksScheduler';
 
 type Tab = 'timeline' | 'devices' | 'stats' | 'admin';
 
@@ -144,6 +145,7 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
+  const [isPicksSchedulerVisible, setIsPicksSchedulerVisible] = useState(false);
 
   useEffect(() => {
     if (visible) AppLogger.log('SCREEN_OPENED', { screenName: 'Analytics' });
@@ -404,7 +406,7 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={{ backgroundColor: 'rgba(255, 165, 0, 0.1)', borderColor: '#FFA500', borderWidth: 1, paddingVertical: 14, borderRadius: 8 }}
+            style={{ backgroundColor: 'rgba(255, 165, 0, 0.1)', borderColor: '#FFA500', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
             onPress={() => {
               if (onOpenLab) onOpenLab();
             }}
@@ -412,6 +414,16 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 16, marginRight: 8 }}>🔬</Text>
               <Text style={{ color: '#FFA500', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>LED Diagnostic Lab</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={{ backgroundColor: 'rgba(0, 170, 255, 0.1)', borderColor: '#00AAFF', borderWidth: 1, paddingVertical: 14, borderRadius: 8 }}
+            onPress={() => setIsPicksSchedulerVisible(true)}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>🗓️</Text>
+              <Text style={{ color: '#00AAFF', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>SK8Lytz Picks Scheduler</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -506,6 +518,11 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
           </View>
         </View>
       </Modal>
+
+      <AdminPicksScheduler 
+        visible={isPicksSchedulerVisible} 
+        onClose={() => setIsPicksSchedulerVisible(false)} 
+      />
     </Modal>
   );
 }
