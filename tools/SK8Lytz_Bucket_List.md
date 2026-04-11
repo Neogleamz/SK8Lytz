@@ -17,6 +17,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/crew-hub-overhaul`
 
 - [ ] `refactor-crew-modal` : #3 — `CrewModal.tsx` refactor — 14 useEffect hooks, 2,600+ lines. Extract `useCrewHub()` and `useCrewSession()` custom hooks. Highest maintainability debt in the codebase.
+- [ ] `feat/advanced-map-integration` : Verify and rework map integration in Crew Hub and "Live Near Me" (post-modal rebuild). Add a live map showing the selected radius and a dot for the session location. Also beef up map integration within the scheduler.
 
 ### Target: `epic/music-mode-parity`
 
@@ -52,11 +53,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/telemetry-audit`
 
 
-### Target: `epic/testing-suite`
-
-- [ ] `verify-web-e2e` : #17 — Web E2E Verification — Map static thumbnails and address autocomplete in browser environment.
-- [ ] `verify-native-platform` : #18 — Native Platform Verification — MapView bounds on physical Android/iOS devices for coordinate accuracy.
-- [ ] `expand-e2e-tests` : #19 — Automated Testing Suite — Expand E2E tests for Location flows, crew session creation, and LED payload correctness.
 
 ### Target: `epic/security-audit`
 
@@ -68,6 +64,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/ui-refinement`
 
+- [ ] `feat/lab-ui-modernization` : Modernize and style the LED Diagnostic Lab layout to match the aesthetics, typography, and input styling of the rest of the app.
 - [ ] `add-swipe-nav` : #34 — Card Swipe Navigation — Add the ability to swipe left and right to navigate back and forth between cards (Favorites, Picks, Presets) for a more fluid mobile UX.
 
 ---
