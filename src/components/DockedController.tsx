@@ -39,6 +39,7 @@ import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
 import { ScenesService } from '../services/ScenesService';
 import { containsProfanity } from '../services/AuthUtils';
+import { crewService } from '../services/CrewService';
 import CommunityModal from './CommunityModal';
 import { Accelerometer } from 'expo-sensors';
 import { getLocalProfileById } from '../constants/ProductCatalog';
@@ -455,6 +456,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const [peakGForce, setPeakGForce] = useState<number>(1.0);
     const motionStateRef = useRef<MotionState>('STOPPED');
     const lastGpsSpeeds = useRef<number[]>([]);
+    const lastGpsTimeRef = useRef<number | null>(null);
     const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
     // ── Street Mode: Car-Light Pattern helper ─────────────────────────────────
@@ -597,6 +599,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
       // Initialize
       updateMotion('STOPPED');
+      lastGpsTimeRef.current = null;
       AppLogger.log('STREET_MODE_ACTIVATED', { sensitivity: streetSensitivity, cruiseColor: streetCruiseColor, brakeColor: streetBrakeColor, ...deviceContext });
 
       if (Platform.OS === 'web') return;
@@ -612,6 +615,22 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 const spdMpS = pos.coords.speed || 0;
                 const spdMph = Math.max(0, spdMpS * 2.23694);
                 setGpsSpeed(spdMph);
+
+                // Telemetry calculus
+                const now = pos.timestamp;
+                if (lastGpsTimeRef.current) {
+                  const hoursDelta = (now - lastGpsTimeRef.current) / 3600000;
+                  if (hoursDelta > 0 && hoursDelta < 1) { // Ignore crazy jumps
+                    crewService.sessionTelemetry.distanceMiles += spdMph * hoursDelta;
+                  }
+                }
+                lastGpsTimeRef.current = now;
+
+                if (spdMph > crewService.sessionTelemetry.topSpeedMph) {
+                  crewService.sessionTelemetry.topSpeedMph = spdMph;
+                }
+                // Only sample moving speeds for cleaner average, or all? All tracks 'trip average'.
+                crewService.sessionTelemetry.avgSpeedSamples.push(spdMph);
 
                 // Add to rolling history
                 lastGpsSpeeds.current.push(spdMph);
@@ -2000,6 +2019,16 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                   <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
                     <AnalogGauge value={gpsSpeed} min={0} max={25} label="SPEED" unit="MPH" size={120} defaultColor="#00F0FF" dangerVal={15} criticalVal={20} />
                     <AnalogGauge value={peakGForce} min={0.3} max={2.5} label="G-FORCE" unit="G" size={120} defaultColor="#FFD700" dangerVal={1.2} criticalVal={1.8} />
+                  </View>
+                  
+                  {/* BOTTOM: Global Telemetry */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 30, marginTop: 12, marginBottom: 8 }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 }}>
+                      TOP SPEED: <Text style={{ color: '#00F0FF', fontWeight: '800' }}>{crewService.sessionTelemetry.topSpeedMph.toFixed(1)} MPH</Text>
+                    </Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 }}>
+                      DISTANCE: <Text style={{ color: '#00F0FF', fontWeight: '800' }}>{crewService.sessionTelemetry.distanceMiles.toFixed(2)} MI</Text>
+                    </Text>
                   </View>
                 </View>
               </ScrollView>
