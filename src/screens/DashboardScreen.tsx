@@ -157,7 +157,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(true);
-  const [isRegisteredCollapsed, setIsRegisteredCollapsed] = useState(false);
+  const [isRegisteredCollapsed, setIsRegisteredCollapsed] = useState(true);
 
   // ── Crew Hub state ─────────────────────────────────────────────────────
   const [crewSession, setCrewSession] = useState<CrewSession | null>(null);
