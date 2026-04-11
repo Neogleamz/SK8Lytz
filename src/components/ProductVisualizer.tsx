@@ -69,7 +69,7 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload: _rawHexPayload, simMode: _simMode, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1 }: any) => {
+const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1 }: any) => {
   const { isDark } = useTheme();
   const product = String(device.type || fallbackProduct);
 
@@ -80,6 +80,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
     return byId ?? LOCAL_PRODUCT_CATALOG.find(p => p.id === 'SOULZ')!;
   }, [product]);
   const vizShape = productProfile.vizShape;
+  const isHaloz = productProfile.id === 'HALOZ';
 
   // Track animValue tick (0.0–1.0) for PatternEngine frame generation
   const [animTick, setAnimTick] = useState(0);
@@ -192,6 +193,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
         ? Math.max(numLeds * 2, 60)
         : Math.max(numLeds * 2, 86);
     for (let i = 0; i < renderLeds; i++) {
+      const isHalozSeg2 = isHaloz && deviceSegments > 1 && i >= (renderLeds / 2);
       let left = 0;
       let top = 0;
       const outerDiam = productProfile.vizBlobDiameterMm > 6 ? 16 : 12;

@@ -12,10 +12,10 @@ import { Typography } from '../theme/theme';
 import {
   ZenggeProtocol,
   HardwareSettings,
-  SK8_DEFAULTS,
   IC_TYPES,
   COLOR_SORTING_RGB,
 } from '../protocols/ZenggeProtocol';
+import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -29,9 +29,9 @@ interface Sk8LytzProgrammerModalProps {
   visible: boolean;
   onClose: () => void;
   onExitToLogs?: () => void;
-  allDevices: any[];
-  deviceConfigs?: Record<string, any>;       // pre-populated from scan probe
-  connectToDevice?: (d: any) => Promise<void>;
+  allDevices: ScannedDevice[];
+  deviceConfigs?: Record<string, HardwareSettings>;       // pre-populated from scan probe
+  connectToDevice?: (d: ScannedDevice) => Promise<void>;
   disconnectFromDevice?: (id: string) => Promise<void>;
   writeToDevice: (data: number[], deviceId?: string) => Promise<void>;
   isScanning: boolean;
@@ -44,7 +44,7 @@ const PROFILES_STORAGE_KEY = 'ng_programmer_profiles';
 const IC_LIST = Object.entries(IC_TYPES).map(([k, v]) => ({ index: Number(k), name: v }));
 const SORTING_LIST = Object.entries(COLOR_SORTING_RGB).map(([k, v]) => ({ index: Number(k), name: v }));
 
-type ActiveProfileType = 'HALOZ' | 'SOULZ';
+type ActiveProfileType = string;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -76,25 +76,20 @@ export default function Sk8LytzProgrammerModal({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeProfile, setActiveProfile] = useState<ActiveProfileType>('HALOZ');
   
-  const [profiles, setProfiles] = useState<Record<ActiveProfileType, HardwareSettings>>({
-    HALOZ: {
-      ledPoints: SK8_DEFAULTS.HALOZ.points,
-      segments: SK8_DEFAULTS.HALOZ.segments,
-      icType: SK8_DEFAULTS.HALOZ.icType,
-      icName: SK8_DEFAULTS.HALOZ.icName,
-      colorSorting: SK8_DEFAULTS.HALOZ.sorting,
-      colorSortingName: SK8_DEFAULTS.HALOZ.sortingName,
-      detected: false
-    },
-    SOULZ: {
-      ledPoints: SK8_DEFAULTS.SOULZ.points,
-      segments: SK8_DEFAULTS.SOULZ.segments,
-      icType: SK8_DEFAULTS.SOULZ.icType,
-      icName: SK8_DEFAULTS.SOULZ.icName,
-      colorSorting: SK8_DEFAULTS.SOULZ.sorting,
-      colorSortingName: SK8_DEFAULTS.SOULZ.sortingName,
-      detected: false
-    }
+  const [profiles, setProfiles] = useState<Record<string, HardwareSettings>>(() => {
+    const initial: Record<string, HardwareSettings> = {};
+    LOCAL_PRODUCT_CATALOG.forEach(p => {
+      initial[p.id] = {
+        ledPoints: p.vizDefaultPoints,
+        segments: 1, // Programmer defaults to 1 segment to keep it simple
+        icType: 1, // Default WS2812B
+        icName: 'WS2812B',
+        colorSorting: 2, // Default GRB
+        colorSortingName: 'GRB',
+        detected: false
+      };
+    });
+    return initial;
   });
 
   const [flashStatus, setFlashStatus] = useState<Record<string, 'idle' | 'pending' | 'success' | 'failed'>>({});
@@ -220,6 +215,7 @@ export default function Sk8LytzProgrammerModal({
 
   // ─── UI Helpers ─────────────────────────────────────────────────────────────
   const currentProfile = profiles[activeProfile];
+  const currentProfileColor = LOCAL_PRODUCT_CATALOG.find(p => p.id === activeProfile)?.vizThemeColor || orange;
 
   const cycleProperty = (field: 'points' | 'segments') => {
       if (field === 'points') {
@@ -272,18 +268,18 @@ export default function Sk8LytzProgrammerModal({
           {/* ── Profile Selector & Config ── */}
           <View style={[s.card, { backgroundColor: cardBg, borderColor: border, marginBottom: 16 }]}>
              <View style={{ flexDirection: 'row', marginBottom: 16, borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: border }}>
-                 <TouchableOpacity 
-                    style={{ flex: 1, paddingVertical: 12, alignItems: 'center', backgroundColor: activeProfile === 'HALOZ' ? cyan : 'transparent' }}
-                    onPress={() => setActiveProfile('HALOZ')}
-                 >
-                     <Text style={{ fontWeight: 'bold', color: activeProfile === 'HALOZ' ? '#000' : txtMuted }}>HALOZ PROFILE</Text>
-                 </TouchableOpacity>
-                 <TouchableOpacity 
-                    style={{ flex: 1, paddingVertical: 12, alignItems: 'center', backgroundColor: activeProfile === 'SOULZ' ? amber : 'transparent' }}
-                    onPress={() => setActiveProfile('SOULZ')}
-                 >
-                     <Text style={{ fontWeight: 'bold', color: activeProfile === 'SOULZ' ? '#000' : txtMuted }}>SOULZ PROFILE</Text>
-                 </TouchableOpacity>
+                 {LOCAL_PRODUCT_CATALOG.map(p => {
+                   const isSelected = activeProfile === p.id;
+                   return (
+                     <TouchableOpacity
+                        key={p.id}
+                        style={{ flex: 1, paddingVertical: 12, alignItems: 'center', backgroundColor: isSelected ? p.vizThemeColor : 'transparent' }}
+                        onPress={() => setActiveProfile(p.id)}
+                     >
+                         <Text style={{ fontWeight: 'bold', color: isSelected ? '#000' : txtMuted }}>{p.id} PROFILE</Text>
+                     </TouchableOpacity>
+                   );
+                 })}
              </View>
 
              <Text style={{ color: txtPri, fontWeight: 'bold', marginBottom: 12 }}>Profile Defaults (Tap to cycle payload values)</Text>
@@ -294,10 +290,10 @@ export default function Sk8LytzProgrammerModal({
                     <Text style={{ color: txtMuted, fontSize: 11, marginBottom: 4 }}>POINTS (LEDs)</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <TouchableOpacity onPress={() => cycleProperty('points')}>
-                        <Text style={{ color: activeProfile==='HALOZ'? cyan : amber, fontSize: 20 }}>‹</Text>
+                        <Text style={{ color: currentProfileColor, fontSize: 20 }}>‹</Text>
                       </TouchableOpacity>
                       <TextInput
-                        style={{ color: activeProfile==='HALOZ'? cyan : amber, fontWeight: 'bold', fontSize: 20, minWidth: 48, textAlign: 'center' }}
+                        style={{ color: currentProfileColor, fontWeight: 'bold', fontSize: 20, minWidth: 48, textAlign: 'center' }}
                         value={pointsText}
                         onChangeText={setPointsText}
                         onBlur={commitPoints}

@@ -7,6 +7,7 @@ import useBLE from '../../hooks/useBLE';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 
 import { RegisteredDevice } from '../../hooks/useRegistration';
+import { LOCAL_PRODUCT_CATALOG } from '../../constants/ProductCatalog';
 
 interface HardwareSetupWizardScreenProps {
   onSetupComplete: (devices: RegisteredDevice[]) => Promise<void> | void;
@@ -24,7 +25,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
   
   // Step 3 State
   const [groupName, setGroupName] = useState('');
-  const [deviceConfigsState, setDeviceConfigsState] = useState<Record<string, {name: string, type: 'HALOZ'|'SOULZ', position: 'Left'|'Right'|null, points: number}>>({});
+  const [deviceConfigsState, setDeviceConfigsState] = useState<Record<string, {name: string, type: string, position: 'Left'|'Right'|null, points: number}>>({});
 
   useEffect(() => {
     // Wait for user to hit next. Devices are NOT auto-selected based on user feedback.
@@ -65,9 +66,14 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
     });
 
     try {
-      // 0x59 static multi-color mode: Green. We send it for 43 points (max soulz default) 
-      // ensuring minimum length is met. Transition 0x00 is instantaneous.
-      const colorArray = Array(43).fill({ r: 0, g: 255, b: 0 });
+      // Resolve product profile to get accurate blink LED count
+      const registration = pendingRegistrations.find(r => r.device_mac === deviceMac);
+      const productType = registration?.product_type || 'HALOZ';
+      const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === productType) || LOCAL_PRODUCT_CATALOG[0];
+      const blinkPoints = profile.vizDefaultPoints;
+
+      // 0x59 static multi-color mode: Green. 
+      const colorArray = Array(blinkPoints).fill({ r: 0, g: 255, b: 0 });
       const blinkPayload = ZenggeProtocol.setMultiColor(colorArray, 1, 1, 0x00); 
       await writeToDevice(blinkPayload, deviceMac);
       
@@ -116,9 +122,14 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
   );
 
   const renderStep2 = () => {
-    const haloz = pendingRegistrations.filter(r => r.product_type === 'HALOZ');
-    const soulz = pendingRegistrations.filter(r => r.product_type === 'SOULZ');
-    const unknown = pendingRegistrations.filter(r => r.product_type === 'UNKNOWN');
+    // Dynamically categorize discovered devices based on the product catalog
+    const deviceGroups = LOCAL_PRODUCT_CATALOG.map(p => ({
+      profile: p,
+      devices: pendingRegistrations.filter(r => r.product_type === p.id)
+    }));
+    const unknown = pendingRegistrations.filter(r => 
+      !LOCAL_PRODUCT_CATALOG.some(p => p.id === r.product_type)
+    );
 
     const renderDeviceGroup = (title: string, devices: typeof pendingRegistrations, color: string) => {
       if (devices.length === 0) return null;
@@ -182,9 +193,8 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
         </Text>
 
         <ScrollView style={styles.deviceScroll} contentContainerStyle={{ paddingBottom: 20 }}>
-          {renderDeviceGroup('HALOZ', haloz, Colors.primary)}
-          {renderDeviceGroup('SOULZ', soulz, '#00F0FF')}
-          {renderDeviceGroup('SCANNING', unknown, '#FFF')}
+          {deviceGroups.map((group) => renderDeviceGroup(`${group.profile.id}`, group.devices, group.profile.vizThemeColor))}
+          {renderDeviceGroup('SCANNING / UNKNOWN', unknown, Colors.textMuted)}
           
           {pendingRegistrations.length === 0 && !isScanning && !isScanProbing && (
             <View style={styles.emptyState}>
