@@ -153,7 +153,7 @@ export default function AccountModal({
         if (user) {
           const { data: dbDevices } = await supabase
             .from('registered_devices')
-            .select('device_mac, device_name, product_type, position, group_name, created_at')
+            .select('device_mac, device_name, custom_name, product_type, position, group_name, created_at')
             .eq('user_id', user.id)
             .order('created_at', { ascending: false });
 
@@ -161,7 +161,7 @@ export default function AccountModal({
             setDevices(dbDevices.map((d: any) => ({
               id: d.device_mac,
               name: d.device_name ?? d.device_mac,
-              customName: d.group_name ?? undefined,
+              customName: d.custom_name ?? undefined,
               type: d.product_type ?? undefined,
               registeredAt: d.created_at,
             })));
@@ -374,13 +374,26 @@ export default function AccountModal({
 
   // ── Device handlers ───────────────────────────────────────────────────────
 
-  const handleRenameDevice = (device: StoredDevice) => {
+  const handleRenameDevice = async (device: StoredDevice) => {
     if (!deviceNewName.trim()) return;
-    onDeviceRenamed?.(device.id, deviceNewName.trim());
-    setDevices(prev => prev.map(d => d.id === device.id ? { ...d, customName: deviceNewName.trim() } : d));
+    const newName = deviceNewName.trim();
+    onDeviceRenamed?.(device.id, newName);
+    setDevices(prev => prev.map(d => d.id === device.id ? { ...d, customName: newName } : d));
     setEditingDeviceId(null);
     setDeviceNewName('');
-    AppLogger.log('DEVICE_RENAMED', { deviceId: device.id, oldName: device.name, newName: deviceNewName.trim() });
+    AppLogger.log('DEVICE_RENAMED', { deviceId: device.id, oldName: device.name, newName: newName });
+
+    if (user) {
+      try {
+        await supabase
+          .from('registered_devices')
+          .update({ custom_name: newName })
+          .eq('device_mac', device.id)
+          .eq('user_id', user.id);
+      } catch (err) {
+        console.warn('Failed to persist device rename', err);
+      }
+    }
   };
 
   const handleForgetDevice = (device: StoredDevice) => {
