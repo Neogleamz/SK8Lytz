@@ -27,7 +27,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/ui-refinement`
 
-- [ ] `fix/pro-effects-color-sync` : Pro effects mode color slider sync — The RGB slider does not stay in sync when toggling between Foreground and Background state. Update slider to reflect the currently selected layer's color.
+- [x] `fix/pro-effects-color-sync` : Pro effects mode color slider sync — The RGB slider does not stay in sync when toggling between Foreground and Background state. Update slider to reflect the currently selected layer's color.
 - [ ] `feat/favorites-layout-modernization` : Fix Favorites layout and scrolling issues. Modernize the tab design (requires presenting multiple design concepts for approval).
 
 ### Target: `epic/crew-hub-overhaul`
