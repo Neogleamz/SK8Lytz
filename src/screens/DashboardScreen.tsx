@@ -1417,10 +1417,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
           {/* RIGHT: grouped icons (matching AuthScreen style) */}
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
-            <TouchableOpacity onPress={() => setIsProgrammerVisible(true)} style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}>
-              <MaterialCommunityIcons name="developer-board" size={18} color={Colors.textMuted} />
-            </TouchableOpacity>
-
             <TouchableOpacity
               style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}
               onPress={() => setIsSupportModalVisible(true)}
