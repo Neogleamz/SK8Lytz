@@ -27,7 +27,7 @@ import { useProductCatalog } from '../hooks/useProductCatalog';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import type { ProductProfile, VizShape } from '../types/ProductCatalog';
 
-type Tab = 'timeline' | 'stats' | 'device' | 'tools' | 'products';
+type Tab = 'timeline' | 'stats' | 'device' | 'tools';
 
 const EVENT_META: Record<EventType, { icon: string; color: string; label: string }> = {
   APP_OPENED:         { icon: 'cellphone-check', color: '#00f0ff', label: 'App Opened' },
@@ -148,6 +148,7 @@ interface AdminToolsModalProps {
 export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, onOpenLab, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll, onConnectToDevice, liveDeviceConfigs }: AdminToolsModalProps) {
   const { isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
+  const [isProductManagerVisible, setIsProductManagerVisible] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
@@ -459,12 +460,33 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
               <Text style={{ color: '#FFA500', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>SK8Lytz Picks Scheduler</Text>
             </View>
           </TouchableOpacity>
+          <TouchableOpacity 
+            style={{ backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: '#ff4040', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginTop: 16 }}
+            onPress={() => setIsProductManagerVisible(true)}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>📦</Text>
+              <Text style={{ color: '#ff4040', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Product Manager</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         <AdminPicksScheduler
           visible={isPicksSchedulerVisible}
           onClose={() => setIsPicksSchedulerVisible(false)}
         />
+        
+        <Modal visible={isProductManagerVisible} animationType="slide" presentationStyle="formSheet" onRequestClose={() => setIsProductManagerVisible(false)}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#080808' : '#111' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#222' }}>
+              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900', letterSpacing: 1 }}>PRODUCT MANAGER</Text>
+              <TouchableOpacity onPress={() => setIsProductManagerVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+            {renderProductsTab()}
+          </SafeAreaView>
+        </Modal>
       </ScrollView>
     );
   };
@@ -613,17 +635,39 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
     };
     const labelStyle = { color: '#AAA', fontSize: 11, fontWeight: '600' as const, marginBottom: 2, marginTop: 6 };
 
-    if (editingProfile) {
+    // Auto-select first profile if none is active
+    const activeProfile = editingProfile || allProfiles[0];
+
+    const ProductSelectorSlider = () => (
+      <View style={{ marginBottom: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, gap: 10 }}>
+          {allProfiles.map(p => {
+            const isActive = activeProfile?.id === p.id;
+            return (
+              <TouchableOpacity key={p.id} onPress={() => setEditingProfile({ ...p })}
+                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: isActive ? '#FF5A00' : '#333' }}>
+                <Text style={{ color: '#FFF', fontWeight: isActive ? '800' : '600' }}>{p.displayName || p.id}</Text>
+              </TouchableOpacity>
+            );
+          })}
+          <TouchableOpacity onPress={() => setEditingProfile(blankProfile())}
+            style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#FF5A00', borderStyle: 'dashed' }}>
+            <Text style={{ color: '#FF5A00', fontWeight: '800' }}>+ ADD PRODUCT</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    );
+
+    if (activeProfile) {
       return (
-        <ScrollView style={{ flex: 1, padding: 16 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 17 }}>
-              {editingProfile.id ? `Editing: ${editingProfile.id}` : 'New Product'}
-            </Text>
-            <TouchableOpacity onPress={() => setEditingProfile(null)}>
-              <MaterialCommunityIcons name="close" size={22} color="#888" />
-            </TouchableOpacity>
-          </View>
+        <View style={{ flex: 1 }}>
+          <ProductSelectorSlider />
+          <ScrollView style={{ flex: 1, paddingHorizontal: 16 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 17 }}>
+                {activeProfile.id ? `Catalog Entry: ${activeProfile.id}` : 'New Product'}
+              </Text>
+            </View>
 
           {/* Live Shape Preview */}
           <Text style={{ color: '#FF5A00', fontWeight: '700', fontSize: 12, marginBottom: 4, letterSpacing: 1 }}>LIVE SHAPE PREVIEW</Text>
@@ -737,56 +781,24 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
             </>
           )}
 
-          <TouchableOpacity
-            onPress={handleSaveProfile}
-            disabled={productSaving}
-            style={{ backgroundColor: '#FF5A00', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 16, marginBottom: 40, opacity: productSaving ? 0.6 : 1 }}
-          >
-            <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 15 }}>
-              {productSaving ? 'SAVING...' : '💾  SAVE TO CATALOG'}
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
+            <TouchableOpacity
+              onPress={() => {
+                 setEditingProfile(activeProfile); // commit current form state manually if needed, wait, saveProfile uses editingProfile
+                 handleSaveProfile();
+              }}
+              disabled={productSaving}
+              style={{ backgroundColor: '#FF5A00', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 16, marginBottom: 40, opacity: productSaving ? 0.6 : 1 }}
+            >
+              <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 15 }}>
+                {productSaving ? 'SAVING...' : '💾  SAVE TO CATALOG'}
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
       );
     }
 
-    // ── Product List View ──────────────────────────────────────────────────────
-    return (
-      <ScrollView style={{ flex: 1, padding: 16 }}>
-        <Text style={{ color: '#888', fontSize: 12, marginBottom: 8 }}>
-          {allProfiles.length} products in catalog. Tap to edit. Changes write to Supabase immediately.
-        </Text>
-        {allProfiles.map(profile => (
-          <TouchableOpacity
-            key={profile.id}
-            onPress={() => setEditingProfile({ ...profile })}
-            style={{ backgroundColor: '#1A1A1A', borderRadius: 10, padding: 14, marginBottom: 10,
-              borderWidth: 1, borderColor: 'rgba(255,90,0,0.25)' }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 15 }}>{profile.displayName || profile.id}</Text>
-              <View style={{ backgroundColor: profile.vizShape === 'RING' ? '#1B4279' : profile.vizShape === 'DUAL_STRIP' ? '#7B2D8B' : '#1B4279',
-                paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 }}>
-                <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '700' }}>{profile.vizShape}</Text>
-              </View>
-            </View>
-            <Text style={{ color: '#555', fontSize: 11, marginTop: 4 }}>ID: {profile.id}</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 6 }}>
-              <Text style={{ color: '#888', fontSize: 11 }}>🔵 {profile.defaultLedPoints} LEDs</Text>
-              <Text style={{ color: '#888', fontSize: 11 }}>📡 {profile.detectMinPoints}–{profile.detectMaxPoints} pts detect</Text>
-              <Text style={{ color: '#888', fontSize: 11 }}>🎨 {profile.vizBaseWidth}×{profile.vizBaseHeight} canvas</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-        <TouchableOpacity
-          onPress={() => setEditingProfile(blankProfile())}
-          style={{ borderWidth: 1, borderColor: '#FF5A00', borderStyle: 'dashed', borderRadius: 10,
-            paddingVertical: 16, alignItems: 'center', marginTop: 8, marginBottom: 40 }}
-        >
-          <Text style={{ color: '#FF5A00', fontWeight: '800', fontSize: 15 }}>+ ADD PRODUCT</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    );
+    return null;
   };
 
   const timelineLogs = logs.filter(l => l.e !== 'RAW_PAYLOAD');
@@ -826,14 +838,14 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
 
         {/* Tabs */}
         <View style={[styles.tabs, { borderBottomColor: borderColor }]}>
-          {(['timeline', 'stats', 'device', 'tools', 'products'] as Tab[]).map(t => (
+          {(['timeline', 'stats', 'device', 'tools'] as Tab[]).map(t => (
             <TouchableOpacity
               key={t}
               onPress={() => setTab(t)}
               style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
             >
               <Text style={[styles.tabLabel, { color: tab === t ? '#FF5A00' : textMuted }]}>
-                {t === 'device' ? 'Device' : t === 'tools' ? 'Tools' : t === 'products' ? 'Products' : t.charAt(0).toUpperCase() + t.slice(1)}
+                {t === 'device' ? 'Device' : t === 'tools' ? 'Tools' : t.charAt(0).toUpperCase() + t.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}

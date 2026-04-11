@@ -9,8 +9,9 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 <!-- AUTO_SYNC_ERRORS_START -->
 <!-- AUTO_SYNC_ERRORS_END -->
 
+- [ ] `feat/speed-tracking-telemetry` : Add real-time distance (miles), average speed (mph), and peak speed tracking to Street Mode and Crew Sessions, saving to Supabase and displaying in a post-session summary.
+
 - [x] `fix/camera-mode-wipeout` : Restore CAMERA mode UI in DockedController (regression fix) + Web Fallback Simulation.
-- [ ] `feat/hide-pro-effects-color-bar` : Add a toggle or logic to allow hiding the selected color bar specifically within the Pro Effects (MULTIMODE > PATTERN) view.
 - [x] `feat/auth-branding-link` : Add "by neogleamz.com" credited link below logo on AuthScreen.
 - [ ] `fix/dynamic-arch-regressions` : Resolve 'isHaloz' ReferenceError in ProductVisualizer and perform a sanitization audit (DockedController, ZenggeProtocol, Setup Wizard) to remove remaining hardcoded binary logic.
 - [ ] `feat/battery-health-predict` : Mathematical power modeling to predict battery life based on pattern draw; auto-dims to 20% at critical reserve.
@@ -21,6 +22,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/offline-mode`
 
 - [ ] `gate-offline-mode` : Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning.
+- [ ] `feat/dashboard-offline-crew-card-teaser` : Shrink Crew Card on Dashboard when offline to act as an unavailable teaser instead of fully collapsing it.
 
 ### Target: `epic/device-registration`
 
@@ -65,8 +67,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ## 🟡 Backlog
 
 ### Target: `epic/telemetry-audit`
-
-
 
 ### Target: `epic/security-audit`
 

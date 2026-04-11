@@ -23,6 +23,7 @@ export interface RegisteredDevice {
   user_id?: string;
   device_mac: string;
   device_name: string;
+  custom_name?: string;
   product_type: 'HALOZ' | 'SOULZ' | 'RAILZ';
   position: 'Left' | 'Right' | null;
   group_name: string;
@@ -118,9 +119,13 @@ export function useRegistration() {
       const { data: { user } } = await supabase.auth.getUser();
       const now = new Date().toISOString();
       const deviceId = device.id || `${device.device_mac.replace(/:/g, '')}-${user?.id?.slice(0, 8) || 'offline'}`;
-      const groupId = device.group_id || device.group_name.toLowerCase().replace(/\s+/g, '-') || 'default-fleet';
+      const groupId = device.group_id || device.group_name?.toLowerCase().replace(/\s+/g, '-') || 'default-fleet';
       
       const fullDevice: RegisteredDevice = {
+        device_name: device.device_name || 'Unknown Device',
+        product_type: device.product_type || 'SOULZ',
+        group_name: device.group_name || 'Default Fleet',
+        position: device.position || null,
         ...device,
         id: deviceId,
         group_id: groupId,
@@ -332,6 +337,7 @@ export function useRegistration() {
             position:       config.name?.includes('Left') ? 'Left' :
                            config.name?.includes('Right') ? 'Right' : null,
             group_name:     group.name,
+            group_id:       group.id || group.name,
             led_points:     config.points,
             segments:       config.segments,
             ic_type:        config.stripType,
@@ -356,12 +362,20 @@ export function useRegistration() {
     } catch { return []; }
   };
 
-  const queuePendingSync = async (device: RegisteredDevice) => {
+  const queuePendingSync = async (device: Partial<RegisteredDevice> & { device_mac: string }) => {
     try {
       const raw = await AsyncStorage.getItem(PENDING_SYNC_KEY);
       const queue: RegisteredDevice[] = raw ? JSON.parse(raw) : [];
       const idx = queue.findIndex(d => d.device_mac === device.device_mac);
-      const marked = { ...device, is_pending_sync: true };
+      const marked: RegisteredDevice = { 
+        device_name: device.device_name || 'Unknown Device',
+        product_type: device.product_type || 'SOULZ',
+        group_name: device.group_name || 'Default Fleet',
+        position: device.position || null,
+        group_id: device.group_id || 'default-fleet',
+        ...device, 
+        is_pending_sync: true 
+      };
       if (idx >= 0) queue[idx] = marked; else queue.push(marked);
       await AsyncStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(queue));
     } catch (e) { console.warn('[Registration] Queue failed:', e); }
