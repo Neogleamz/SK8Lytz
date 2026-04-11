@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { supabase } from '../utils/supabase';
+import { supabase } from '../services/supabaseClient';
 
 interface Sk8LytzPick {
   id: string;

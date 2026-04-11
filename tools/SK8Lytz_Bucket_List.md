@@ -6,16 +6,11 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🔴 High Priority / Next Up
 
+### Target: `epic/offline-mode`
+
+- [ ] `gate-offline-mode` : Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning.
+
 ### Target: `epic/device-registration`
-
-- [x] `review-device-reg` : Device Registration & Claim Process Review — Revisiting the user-to-device ownership flow. Need to brainstorm and build a new implementation plan as the previous extensive one was lost.
-- [x] `ftue-initial-setup` : FTUE Phase 1 - Create HardwareSetupWizardScreen with probe scan logic and instructions.
-- [x] `ftue-probe-discovery` : FTUE Phase 2 - Build device discovery list, product identification logic (LED count), and Blink test.
-- [x] `ftue-claim-registration` : FTUE Phase 3 - Wire offline/online claiming via useRegistration.ts and UI portal integration.
-- [x] `sandbox-testing` : Establish Dev Sandbox — Move Nuke button to Auth, inject Dead-Code eliminated BLE mocks directly into useBLE hook, and clear stale Dashboard mock logic.
-- [x] `ftue-grouping-config` : FTUE Phase 4 - Add Mini Hardware Config for assigned positioning and auto-grouping generation.
-- [x] `fix/hardware-setup-guide-url` : Fix the URL for the 'View Installation Guide' link on the Hardware Setup screen
-
 ### Target: `epic/crew-hub-overhaul`
 
 - [ ] `refactor-crew-modal` : #3 — `CrewModal.tsx` refactor — 14 useEffect hooks, 2,600+ lines. Extract `useCrewHub()` and `useCrewSession()` custom hooks. Highest maintainability debt in the codebase.
@@ -31,13 +26,9 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/admin-tools`
 
-- [x] `audit-admin-hardware` : #7 — Admin Hardware Tester audit — Verify `setMultiColor` path in admin tester applies color sorting correctly (currently does NOT call `applyColorSorting` — review `AdminHardwareTester.tsx` L169).
-- [ ] `build-picks-scheduler` : #28 — SK8Lytz Picks Admin Scheduler — Build admin UI to manage the `sk8lytz_picks` table scheduling. DB columns (`active_from`, `active_until`, `is_active`) already in place. Goal: seasonal picks (4th of July, Christmas, etc.) auto-show/hide. Needs: admin screen, date pickers, toggle per pick. needs to under hidden tool section
-- [ ] `feat/admin-button-visibility` : Hide admin LogViewer buttons when Dev Sandbox is off, and remove the redundant button from the header so only the bottom button remains.
 
 ### Target: `epic/camera-mode`
 
-- [x] `fix-camera-touch` : #8 — Camera Mode: Touch Precision fix — Color picker swatch is sampling too large an area. Touch/tap should sample ONLY the pixel directly under the finger and run the existing color enhancement routine on that single pixel.
 
 ### Target: `epic/visualizer-parity`
 
@@ -45,16 +36,14 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/device-management`
 
-- [x] `audit-device-grouping` : #16 — Device Grouping Audit & Redesign — A "ghost group" keeps persisting across installs. Groups are incorrectly maintaining persistence after deleting. Audit all grouping logic in `DashboardScreen.tsx`, `AsyncStorage`, and `registered_groups`.
 
 ### Target: `epic/protocol-integration`
 
-- [x] `remove-protocol-setcolor` : #23 — `setColor()` in ZenggeProtocol — Does NOT apply color sorting. Should be removed or marked internal-only.
-- [x] `audit-0x81-command` : #24 — `0x81` legacy command audit — Confirm it's no longer being sent on connect. `0x62` (EEPROM write) is the correct command. Remove any remaining `0x81` calls.
 
 ### Target: `epic/ui-refinement`
 
-- [ ] `modern-rgb-slider` : #29 — Modern RGB Hue Slider — Design and implement a more sophisticated, high-precision RGB hue selection component to replace the standard sliders. Give me 3 choices and let me choose before moving on
+- [x] `feat/dashboard-layout-update` : Move 'Registered Devices' to the bottom of the dashboard and make it collapsible. Make the Crew Hub card twice as tall and the My Skates Card bigger.
+
 
 ---
 
@@ -62,7 +51,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `main`
 
-- [x] `feat/offline-mode-warning-text` : Add descriptive text below the 'Continue Offline' button on the Auth screen detailing horizontal feature lockouts (no crews, sessions, picks, or cloud sync).
 
 ### Target: `epic/telemetry-audit`
 
@@ -92,24 +80,21 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## ✅ Completed This Session (Apr 2026)
 
-- [x] `#36` — Pro Effects + Effects Mode fully restored — `EffectsPanel.tsx` standalone mode working. BREAKTHROUGH: hardware accepts variable-length 0x51 packets. `setCustomModeCompact()` added to `ZenggeProtocol.ts`.
-- [x] `#35` — Pro Effects 0x51 regression diagnosis — Root cause found: full 32-slot 291-byte payload exceeded BLE MTU (186 bytes default). Variable-length format bypasses MTU completely.
-- [x] `#1` — Positional Array Builder UI — Builder submode in MULTIMODE with node-based gradient interface
-- [x] `#4` — Crew Hub: private crew invite code display — Private crew cards show invite code under "My Crews"
-- [x] `#5` — DIY Array Builder retired — Fully replaced by new Builder workflow; legacy DIY mode scrubbed
-- [x] `#6` — Favorites persistence — Legacy DIY/RBM mode entries migrated to BUILDER/PROGRAMS on load; write-back to AsyncStorage
-- [x] `#9` — Street Mode: Cruise LED bounce — Hardware chase ticker bounces bright spot through mid-zone on each dispatch
-- [x] `#10` — Street Mode: Tail light dimming — Absolute brightness: 100% braking (R=255), 50% cruising (R=127), not slider-scaled
-- [x] `#11` — Visualizer Street Mode parity — `motionState` prop drives tail opacity and cruise bounce in visualizer
-- [x] `#12` — Dashboard Header Layout — User pill left-justified, Support & Theme icons right-grouped, matching Auth screen style
-- [x] `#25` — Builder UI Enhancement — ADD PIN moved into visual map as blank circular pin
-- [x] `#26` — SK8Lytz Picks DB Migration — Moved to `sk8lytz_picks` Supabase table
-- [x] `#31` — Legacy Tool Retirement — Retired Simple Scanner and Admin Hardware Tester; consolidated
-- [x] `#32` — Diagnostic Lab UI Modernization — Restyled Lab header, exit logic, and card styling.
-- [x] `#33` — Lab Navigation Flow — Standardized "Exit" behavior to return users to the Analytics view.
-
-## ✅ Completed Previously
-
+- [x] `review-device-reg` : Device Registration & Claim Process Review — Revisiting the user-to-device ownership flow. Need to brainstorm and build a new implementation plan as the previous extensive one was lost.
+- [x] `ftue-initial-setup` : FTUE Phase 1 - Create HardwareSetupWizardScreen with probe scan logic and instructions.
+- [x] `ftue-probe-discovery` : FTUE Phase 2 - Build device discovery list, product identification logic (LED count), and Blink test.
+- [x] `ftue-claim-registration` : FTUE Phase 3 - Wire offline/online claiming via useRegistration.ts and UI portal integration.
+- [x] `sandbox-testing` : Establish Dev Sandbox — Move Nuke button to Auth, inject Dead-Code eliminated BLE mocks directly into useBLE hook, and clear stale Dashboard mock logic.
+- [x] `ftue-grouping-config` : FTUE Phase 4 - Add Mini Hardware Config for assigned positioning and auto-grouping generation.
+- [x] `fix/hardware-setup-guide-url` : Fix the URL for the 'View Installation Guide' link on the Hardware Setup screen
+- [x] `audit-admin-hardware` : #7 — Admin Hardware Tester audit — Verify `setMultiColor` path in admin tester applies color sorting correctly (currently does NOT call `applyColorSorting` — review `AdminHardwareTester.tsx` L169).
+- [x] `build-picks-scheduler` : #28 — SK8Lytz Picks Admin Scheduler — Build admin UI to manage the `sk8lytz_picks` table scheduling. DB columns (`active_from`, `active_until`, `is_active`) already in place. Goal: seasonal picks (4th of July, Christmas, etc.) auto-show/hide. Needs: admin screen, date pickers, toggle per pick. needs to under hidden tool section
+- [x] `feat/admin-button-visibility` : Hide admin LogViewer buttons when Dev Sandbox is off, and remove the redundant button from the header so only the bottom button remains.
+- [x] `fix-camera-touch` : #8 — Camera Mode: Touch Precision fix — Color picker swatch is sampling too large an area. Touch/tap should sample ONLY the pixel directly under the finger and run the existing color enhancement routine on that single pixel.
+- [x] `audit-device-grouping` : #16 — Device Grouping Audit & Redesign — A "ghost group" keeps persisting across installs. Groups are incorrectly maintaining persistence after deleting. Audit all grouping logic in `DashboardScreen.tsx`, `AsyncStorage`, and `registered_groups`.
+- [x] `remove-protocol-setcolor` : #23 — `setColor()` in ZenggeProtocol — Does NOT apply color sorting. Should be removed or marked internal-only.
+- [x] `audit-0x81-command` : #24 — `0x81` legacy command audit — Confirm it's no longer being sent on connect. `0x62` (EEPROM write) is the correct command. Remove any remaining `0x81` calls.
+- [x] `feat/offline-mode-warning-text` : Add descriptive text below the 'Continue Offline' button on the Auth screen detailing horizontal feature lockouts (no crews, sessions, picks, or cloud sync).
 - [x] Protocol: Support full 0x51 logic
 - [x] Visualizer: 1:1 mathematical parity for 33 Custom Step Effects
 - [x] Add Black and White Color Extremes
@@ -132,6 +117,24 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] Session end flow: End Session button visible and functional in DockedController
 - [x] Builder UI Layout Compression: elements collapse cleanly under docked controller
 - [x] Builder UI Stabilization: 8-slot Tactical Grid with Marquee names
+- [x] `#36` — Pro Effects + Effects Mode fully restored — `EffectsPanel.tsx` standalone mode working. BREAKTHROUGH: hardware accepts variable-length 0x51 packets. `setCustomModeCompact()` added to `ZenggeProtocol.ts`.
+- [x] `#35` — Pro Effects 0x51 regression diagnosis — Root cause found: full 32-slot 291-byte payload exceeded BLE MTU (186 bytes default). Variable-length format bypasses MTU completely.
+- [x] `#1` — Positional Array Builder UI — Builder submode in MULTIMODE with node-based gradient interface
+- [x] `#4` — Crew Hub: private crew invite code display — Private crew cards show invite code under "My Crews"
+- [x] `#5` — DIY Array Builder retired — Fully replaced by new Builder workflow; legacy DIY mode scrubbed
+- [x] `#6` — Favorites persistence — Legacy DIY/RBM mode entries migrated to BUILDER/PROGRAMS on load; write-back to AsyncStorage
+- [x] `#9` — Street Mode: Cruise LED bounce — Hardware chase ticker bounces bright spot through mid-zone on each dispatch
+- [x] `#10` — Street Mode: Tail light dimming — Absolute brightness: 100% braking (R=255), 50% cruising (R=127), not slider-scaled
+- [x] `#11` — Visualizer Street Mode parity — `motionState` prop drives tail opacity and cruise bounce in visualizer
+- [x] `#12` — Dashboard Header Layout — User pill left-justified, Support & Theme icons right-grouped, matching Auth screen style
+- [x] `#25` — Builder UI Enhancement — ADD PIN moved into visual map as blank circular pin
+- [x] `#26` — SK8Lytz Picks DB Migration — Moved to `sk8lytz_picks` Supabase table
+- [x] `#31` — Legacy Tool Retirement — Retired Simple Scanner and Admin Hardware Tester; consolidated
+- [x] `#32` — Diagnostic Lab UI Modernization — Restyled Lab header, exit logic, and card styling.
+- [x] `#33` — Lab Navigation Flow — Standardized "Exit" behavior to return users to the Analytics view.
+
+## ✅ Completed Previously
+
 
 ---
 *Last updated: 2026-04-09 | This session: IDE Rules configured for auto-branching.*
