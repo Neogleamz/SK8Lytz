@@ -416,18 +416,17 @@ To prevent confusion in the "Live Near You" discovery feed, all new sessions aut
 ### Proximity Discovery & Visibility Rules
 The Hub discovery feed is optimized for active, real-time sessions:
 
-- **Proximity Filter**: Hub `LIVE NEAR YOU` feed strictly filters for **sessions**, not crews.
+- **Universal Radius Filter**: Discovery is governed by `LocationService.getNearbyPublicSessions(radiusMi)`. This console fetches both public and private sessions (for crews the user belongs to) with a strict distance constraint.
+- **Location Requirement**: Sessions without valid `location_coords` are suppressed from the "Live Near You" feed to maintain high-signal discovery.
 - **Visibility Logic**:
     - **Public Sessions**: Visible to all within radius.
-    - **Private Sessions**: Visible ONLY to:
-        - Members of the parent Private Crew (via `crew_memberships`).
-        - Active session participants who joined via code (via `crew_members`).
-- **Discovery Refinement**: Static public crew browsing is removed from the primary Hub view to prioritize live skating events.
+    - **Private Sessions**: Visible ONLY to members of the parent Private Crew who are also within the radius.
 
-### The Atomic Cleanup Rule (Single-Session Constraint)
-The `CrewService` enforces a strict one-active-session-per-leader rule.
-1. **Cleanup on Create**: Before inserting a new `crew_sessions` row, `cleanupLegacySessions(userId)` is invoked to set `is_active = false` and `status = 'ended'` for any existing sessions led by that user.
-2. **Proximity Refresh**: Both `executeEndSession` and `executeLeaveSession` in `CrewModal` trigger a forced `refreshNearby()` to ensure the discovery feed reflects state changes instantly.
+### Global Session Lifecycle Cleanup
+To prevent stale "ghost" sessions, the system implements multi-layered cleanup:
+1. **Global Proactive Cleanup**: `CrewService.cleanupExpiredSessions()` is a system-wide method that ends ANY session older than 24 hours or with stale activity. It is invoked automatically during every Discovery refresh.
+2. **Atomic Cleanup (Leader-Based)**: `CrewService.cleanupLegacySessions(userId)` ensures a single user cannot lead multiple concurrent sessions.
+3. **Database Hygiene**: `public.crew_sessions` includes an `expires_at` logic (handled via `cleanupExpiredSessions`) to ensure `is_active: true` remains an accurate flag for joint-ready skating events.
 
 ---
 > [!IMPORTANT]

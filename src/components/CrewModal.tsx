@@ -115,7 +115,7 @@ export default function CrewModal({
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
   // ── Manage Crews Hub state ────────────────────────────────────────────────
-  const [_manageTab, _setManageTab] = useState<'mycrews' | 'discover' | 'create'>('mycrews');
+  // Dead code removed: _manageTab and _setManageTab were unused in the current landing flow
   const [myCrews, setMyCrews] = useState<PermanentCrew[]>([]);
   const [selectedCrewDetail, setSelectedCrewDetail] = useState<PermanentCrew | null>(null);
   const [crewMemberCounts, setCrewMemberCounts] = useState<Record<string, { count: number; avatarColors: string[] }>>({});
@@ -964,8 +964,8 @@ export default function CrewModal({
           <View style={styles.hubEmptyCard}>
             <Text style={styles.hubEmptyText}>
               {discoverRadiusMi != null
-                ? `No public sessions within ${discoverRadiusMi} mi`
-                : 'No public sessions near you right now'}
+                ? `No live sessions within ${discoverRadiusMi} mi`
+                : 'No live sessions near you right now'}
             </Text>
             <Text style={[styles.hubEmptyText, { fontSize: 11, marginTop: 4 }]}>Start one and skaters nearby will see it!</Text>
           </View>
@@ -1591,21 +1591,7 @@ export default function CrewModal({
     }
   };
 
-  // ── Join public crew directly from Discover tab ─────────────────────────────
-  const handleJoinPublicCrew = async (crew: PermanentCrew) => {
-    setJoiningCrewId(crew.id);
-    try {
-      const joined = await profileService.joinPublicCrewById(crew.id);
-      AppLogger.log('CREW_PERMANENT_JOINED', { crewId: joined.id, crewName: joined.name, method: 'public_discover' });
-      setMyCrews(prev => prev.find(c => c.id === joined.id) ? prev : [...prev, joined]);
-      Alert.alert('Joined!', `You joined ${joined.name}. Find it in My Crews.`);
-    } catch (e: any) {
-      AppLogger.log('CREW_ERROR', { action: 'join_public_crew', crewId: crew.id, error: e.message });
-      Alert.alert('Could not join', e.message ?? 'Unknown error');
-    } finally {
-      setJoiningCrewId(null);
-    }
-  };
+  // Dead code removed: handleJoinPublicCrew (previously used for discovery tab)
 
   // ── Start editing a crew (owner only) ────────────────────────────────────────
   const handleStartEdit = (crew: PermanentCrew) => {
@@ -1670,67 +1656,7 @@ export default function CrewModal({
     }
   };
 
-  const renderCrewCard = (crew: PermanentCrew, onTap: () => void, showJoinBtn = false) => {
-    const info = crewMemberCounts[crew.id];
-    const alreadyMember = myCrews.some(c => c.id === crew.id);
-    const isJoining = joiningCrewId === crew.id;
-    return (
-      <TouchableOpacity key={crew.id} style={styles.mgCrewCard} onPress={onTap}>
-        {/* Avatar */}
-        <View style={{ position: 'relative' }}>
-          {crew.avatar_url
-            ? <Image source={{ uri: crew.avatar_url }} style={styles.mgAvatarImg} />
-            : <View style={[styles.mgAvatar, { backgroundColor: crew.avatar_color ?? '#FFAA00' }]}>
-              <MaterialCommunityIcons name={(crew.avatar_icon ?? 'account-group') as any} size={22} color="#000" />
-            </View>}
-          {!crew.is_public && (
-            <MaterialCommunityIcons name="lock" size={14} color="#FFF" style={{ position: 'absolute', top: -4, right: -4, backgroundColor: '#000', borderRadius: 7, overflow: 'hidden' }} />
-          )}
-        </View>
-        {/* Info */}
-        <View style={{ flex: 1 }}>
-          <Text style={styles.mgCrewName} numberOfLines={1}>{crew.name}</Text>
-          {(crew.city || crew.state) && (
-            <Text style={styles.mgCrewSub} numberOfLines={1}>
-              <MaterialCommunityIcons name="map-marker" size={11} color={Colors.textMuted} />
-              {' '}{[crew.city, crew.state].filter(Boolean).join(', ')}
-            </Text>
-          )}
-          {info && (
-            <View style={styles.mgAvatarRow}>
-              {info.avatarColors.slice(0, 5).map((c, i) => (
-                <View key={i} style={[styles.mgMemberDot, { backgroundColor: c, marginLeft: i > 0 ? -6 : 0 }]} />
-              ))}
-              <Text style={styles.mgMemberCount}>{info.count} member{info.count !== 1 ? 's' : ''}</Text>
-            </View>
-          )}
-        </View>
-        {/* Badges + Join */}
-        <View style={{ alignItems: 'flex-end', gap: 4 }}>
-          {crew.is_owner && <View style={styles.mgOwnerBadge}><Text style={styles.mgBadgeText}>Owner</Text></View>}
-          {crew.is_public
-            ? <View style={[styles.mgOwnerBadge, { backgroundColor: 'rgba(0,200,100,0.15)' }]}><Text style={[styles.mgBadgeText, { color: '#00C864' }]}>Public</Text></View>
-            : <View style={[styles.mgOwnerBadge, { backgroundColor: 'rgba(255,255,255,0.06)' }]}><Text style={[styles.mgBadgeText, { color: Colors.textMuted }]}>Private</Text></View>}
-          {showJoinBtn && !alreadyMember && (
-            <TouchableOpacity
-              style={[styles.mgOwnerBadge, { backgroundColor: Colors.primary, paddingHorizontal: 10, paddingVertical: 5 }]}
-              onPress={(e) => { e.stopPropagation?.(); handleJoinPublicCrew(crew); }}
-              disabled={isJoining}
-            >
-              <Text style={[styles.mgBadgeText, { color: '#000', fontWeight: '800' }]}>
-                {isJoining ? '…' : 'Join'}
-              </Text>
-            </TouchableOpacity>
-          )}
-          {showJoinBtn && alreadyMember && (
-            <View style={[styles.mgOwnerBadge, { backgroundColor: 'rgba(0,200,100,0.12)' }]}>
-              <Text style={[styles.mgBadgeText, { color: '#00C864' }]}>✓ Joined</Text>
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  // Dead code removed: renderCrewCard (previously used for discovery tab)
 
   const renderManage = () => {
     return (

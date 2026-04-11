@@ -146,6 +146,26 @@ class CrewService {
     }
   }
 
+  /** Global cleanup for any sessions that are active but past their expiry. */
+  async cleanupExpiredSessions(): Promise<void> {
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from('crew_sessions')
+      .update({
+        is_active: false,
+        status: 'ended',
+        ended_at: now,
+      })
+      .eq('is_active', true)
+      .lt('expires_at', now);
+
+    if (error) {
+      console.warn('[CrewService] cleanupExpiredSessions failed:', error.message);
+    } else {
+      console.log('[CrewService] System-wide session cleanup complete');
+    }
+  }
+
   /** Join an existing session by 6-char invite code. */
   async joinSession(inviteCode: string, displayName: string): Promise<CrewSession> {
     const user = (await supabase.auth.getUser()).data.user;
@@ -228,6 +248,9 @@ class CrewService {
    * Also returns location_label and status with each session.
    */
   async fetchActiveSessions(): Promise<CrewSession[]> {
+    // Proactively clean up expired records first
+    await this.cleanupExpiredSessions();
+
     const { data, error } = await supabase
       .from('crew_sessions')
       .select('*, crew_members(count)')
@@ -362,7 +385,7 @@ class CrewService {
       .delete()
       .eq('session_id', sessionId)
       .then(() => console.log('[CrewService] crew_members cleaned up for session', sessionId))
-      .catch((e: any) => console.warn('[CrewService] crew_members cleanup failed:', e.message));
+      .catch((e: Error) => console.warn('[CrewService] crew_members cleanup failed:', e.message));
 
     // Delay channel teardown so the session_ended broadcast can propagate to members
     const channelRef = this.channel;

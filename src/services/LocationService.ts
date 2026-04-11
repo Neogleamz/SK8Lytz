@@ -9,6 +9,7 @@
  */
 
 import * as Location from 'expo-location';
+import { supabase } from './supabaseClient';
 import { AppLogger } from './AppLogger';
 
 export interface SessionLocation {
@@ -73,7 +74,6 @@ class LocationService {
    * Falls back to creation-date order if location permission denied.
    */
   async getNearbyPublicSessions(radiusMi?: number | null): Promise<NearbySession[]> {
-    const { supabase } = await import('./supabaseClient');
 
     const SESSION_SELECT = 'id, name, invite_code, location_label, location_coords, scheduled_at, created_at, is_public, crew_members(count), crews(name)';
 
@@ -186,8 +186,9 @@ class LocationService {
     });
 
     // Apply radius filter (sessions without coords pass through — user might be at same location)
+    // Apply radius filter (Only show sessions with valid coordinates within the radius)
     if (radiusMi != null) {
-      return sorted.filter(s => s.distanceMi === null || s.distanceMi <= radiusMi);
+      return sorted.filter(s => s.distanceMi !== null && s.distanceMi <= radiusMi);
     }
     return sorted;
   }
