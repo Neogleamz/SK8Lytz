@@ -32,6 +32,7 @@ import { AppLogger } from '../services/AppLogger';
 import { notificationService } from '../services/NotificationService';
 import { LocationPicker } from './LocationPicker';
 import CrewMemberDashboard from './CrewMemberDashboard';
+import NeonHueStrip from './NeonHueStrip';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -1727,19 +1728,15 @@ export default function CrewModal({
 
                 {/* Hue Slider for Icon Color */}
                 <Text style={[styles.label, { marginTop: 16, marginBottom: 8 }]}>ICON COLOR</Text>
-                <View style={[styles.controlRow, { flexShrink: 0, minHeight: 40 }]}>
-                  <CustomSlider
-                    gradientTrack={true}
+                <View style={{ marginBottom: 16 }}>
+                  <NeonHueStrip
                     value={newCrewHue}
-                    onValueChange={(hue) => {
+                    onValueChange={(hue: number) => {
                       setNewCrewHue(hue);
                       const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
                       const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
                       setNewCrewColor(rgb2hex(f(5), f(3), f(1)));
                     }}
-                    minimumValue={0}
-                    maximumValue={360}
-                    style={{ flex: 1 }}
                   />
                 </View>
               </View>

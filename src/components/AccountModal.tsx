@@ -25,6 +25,7 @@ import { profileService, UserProfile, PermanentCrew, SessionHistoryItem } from '
 import { supabase } from '../services/supabaseClient';
 import { AppLogger } from '../services/AppLogger';
 import { SpeedTrackingService, ILifetimeStats, ISkateSession } from '../services/SpeedTrackingService';
+import NeonHueStrip from './NeonHueStrip';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,41 @@ const AVATAR_COLORS = [
 
 const NOTIF_PREF_KEY = '@Sk8lytz_notif_prefs';
 
+function hexToHue(hex?: string | null): number {
+  if (!hex || hex === '#FFAA00' || hex === '#000000') return 40;
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16);
+    g = parseInt(hex[2] + hex[2], 16);
+    b = parseInt(hex[3] + hex[3], 16);
+  } else if (hex.length === 7) {
+    r = parseInt(hex.substring(1, 3), 16);
+    g = parseInt(hex.substring(3, 5), 16);
+    b = parseInt(hex.substring(5, 7), 16);
+  } else {
+    return 40;
+  }
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0;
+  if (max === min) { h = 0; }
+  else {
+    const d = max - min;
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+  }
+  return Math.round(h * 60);
+}
+
+function hueToHex(hue: number): string {
+  const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+  const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+  return rgb2hex(f(5), f(3), f(1));
+}
+
 function initials(name: string | null) {
   if (!name) return '?';
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -90,6 +126,7 @@ export default function AccountModal({
   const [editUsername, setEditUsername] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
+  const [avatarHue, setAvatarHue] = useState(40);
 
   const [userEmail, setUserEmail] = useState('');
 
@@ -149,6 +186,7 @@ export default function AccountModal({
         setProfile(p);
         setEditName(p.display_name ?? '');
         setEditUsername(p.username ?? '');
+        if (p.avatar_color) setAvatarHue(hexToHue(p.avatar_color));
         if (p.avatar_url) setProfilePhotoUri(p.avatar_url); // Restore persisted photo
       }
       setCrews(c);
@@ -546,17 +584,19 @@ export default function AccountModal({
 
       {/* Avatar color */}
       <Text style={styles.label}>AVATAR COLOR</Text>
-      <View style={styles.colorRow}>
-        {AVATAR_COLORS.map(color => (
-          <TouchableOpacity
-            key={color}
-            style={[styles.colorSwatch, { backgroundColor: color }, profile?.avatar_color === color && styles.colorSwatchActive]}
-            onPress={async () => {
-              await profileService.updateProfile({ avatar_color: color });
-              setProfile(p => p ? { ...p, avatar_color: color } : p);
-            }}
-          />
-        ))}
+      <View style={{ marginBottom: 16 }}>
+        <NeonHueStrip
+          value={avatarHue}
+          onValueChange={(hue: number) => {
+            setAvatarHue(hue);
+            const hex = hueToHex(hue);
+            setProfile(p => p ? { ...p, avatar_color: hex } : p);
+          }}
+          onSlidingComplete={async (hue: number) => {
+            const hex = hueToHex(hue);
+            await profileService.updateProfile({ avatar_color: hex });
+          }}
+        />
       </View>
 
       {/* Save */}
