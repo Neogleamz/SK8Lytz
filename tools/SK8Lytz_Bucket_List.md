@@ -9,17 +9,11 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 <!-- AUTO_SYNC_ERRORS_START -->
 <!-- AUTO_SYNC_ERRORS_END -->
 
-- [x] `feat/speed-tracking-telemetry` : Add real-time distance (miles), average speed (mph), average g-force and peak speed tracking to Street Mode and Crew Sessions and User Account Details new Statistics Tab, saving to Supabase and local storage and displaying in a post-session summary.
-
-### Target: `epic/connection-reliability`
-- [x] `epic/connection-reliability` : Execute the multiphase connection reliability plan (see `docs/plans/epic-connection-reliability.md`). Stop dropping connections, fix lockups entering/leaving controller, and fix UI teardown on disconnect (resolves `fix/hardware-connection-drop`, `audit/connection-polling-logic`, and `fix/controller-navigation-lockup`).
 
 - [ ] `fix/dynamic-arch-regressions` : Resolve 'isHaloz' ReferenceError in ProductVisualizer and perform a sanitization audit (DockedController, ZenggeProtocol, Setup Wizard) to remove remaining hardcoded binary logic.
 - [ ] `feat/battery-health-predict` : Mathematical power modeling to predict battery life based on pattern draw; auto-dims to 20% at critical reserve.
 - [ ] `hw-test/protocol-voltage-sniff` : Deep-dive into 0x63 response and other telemetry bytes to identify raw battery voltage / state-of-charge data.
-- [x] `feat/voice-command-engine` : Implement core offline voice resolution and UI bridge natural language to BLE payloads for safe operation while skating.
 - [ ] `feat/siri-google-assistant-integration` : Integrate Siri Shortcuts (iOS) and Google Assistant App Actions (Android) for phone-level voice control. When outside the app, dispatching commands like "Hey Siri, set SK8Lytz to red glow" should deep-link and trigger the BLE command. When inside the app, use the existing in-app voice engine instead.
-- [x] `feat/voice-first-use-tooltip` : On first launch of the VoiceFAB, show a dismissible "What can I say?" tutorial popup listing example commands (modes, favorites by name, brightness, speed, spatial). Persist dismissed state to AsyncStorage.
 - [ ] `feat/geofence-rink-sync` : GPS-based rink detection to auto-trigger Crew Hub discovery and session joining.
 
 ### Target: `epic/ui-refinement`
@@ -28,9 +22,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] `gate-offline-mode` : Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning.
 - [ ] `feat/dashboard-offline-crew-card-teaser` : Shrink Crew Card on Dashboard when offline to act as an unavailable teaser instead of fully collapsing it.
 
-### Target: `epic/device-registration`
-
-- [x] `feat/empty-skates-setup-cta` : On the Dashboard, if no device groups exist (offline or online), render a contextual "Set Up Your Skates →" CTA button beneath the "My Skates" section header. The button should open the Hardware Setup Wizard and be completely hidden once at least one group/device is registered. Condition must work in both offline and authenticated states.
 
 ### Target: `epic/crew-hub-overhaul`
 
@@ -106,7 +97,12 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## ✅ Completed This Session (Apr 2026)
 
+- [x] `epic/connection-reliability` : Execute the multiphase connection reliability plan (see `docs/plans/epic-connection-reliability.md`). Stop dropping connections, fix lockups entering/leaving controller, and fix UI teardown on disconnect (resolves `fix/hardware-connection-drop`, `audit/connection-polling-logic`, and `fix/controller-navigation-lockup`).
 - [x] `feat/speed-tracking-telemetry` : Complete end-to-end session telemetry — SpeedTrackingService, SessionSummaryModal with dynamic speed-zone accent colour, Statistics tab in AccountModal (lifetime grid + recent session history), DockedController RECORD/SAVE button with live GPS accumulation.
+- [x] `feat/voice-command-engine` : Implement core offline voice resolution and UI bridge natural language to BLE payloads for safe operation while skating.
+- [x] `feat/voice-first-use-tooltip` : On first launch of the VoiceFAB, show a dismissible "What can I say?" tutorial popup listing example commands (modes, favorites by name, brightness, speed, spatial). Persist dismissed state to AsyncStorage.
+- [x] `feat/empty-skates-setup-cta` : On the Dashboard, if no device groups exist (offline or online), render a contextual "Set Up Your Skates →" CTA button beneath the "My Skates" section header. The button should open the Hardware Setup Wizard and be completely hidden once at least one group/device is registered. Condition must work in both offline and authenticated states.
+
 
 ## ✅ Completed Previously
 
