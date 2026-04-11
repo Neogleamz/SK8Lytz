@@ -48,8 +48,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🟡 Backlog
 
-### Target: `main`
-
 ### Target: `epic/telemetry-audit`
 
 
@@ -77,6 +75,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## ✅ Completed This Session (Apr 2026)
 
+- [x] `chore/test-user-auth-setup` : Create a real test user and save auth information in master reference to test all online vs offline features.
+- [x] `chore/remove-long-press-tip` : Remove the "long press skate to configure" helper tip from the Dashboard UI.
 - [x] `feat/logo-branding-auth` : Integrate SK8Lytz logo (`assets/logo.png`) onto Welcome/Auth screens with the "Glow your way." slogan. Implement white logo variant for dark mode compatibility.
 - [x] `feat/auth-offline-card-reorder` : Move the 'Continue Offline' card on the Auth page to the bottom, anchoring it similar to the Registered Devices slab on the dashboard.
 - [x] `feat/global-error-telemetry` : Integrate a global error boundary and remote crash reporting solution (e.g., Sentry or Supabase Edge logging) to automatically capture, diagnose, and push unhandled exceptions without user intervention. this should add items to bucket list for us to review and fix.
