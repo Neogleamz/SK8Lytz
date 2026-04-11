@@ -21,7 +21,7 @@
  * Platform: React Native (Android + Web)
  */
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Platform, Image, Linking, Animated, Modal, TextInput, PanResponder, AppState, AppStateStatus, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Platform, Image, Linking, Animated, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
