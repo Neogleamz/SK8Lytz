@@ -92,7 +92,11 @@ export type EventType =
   | 'CREW_PERMANENT_DELETED'
   | 'CREW_PERMANENT_UPDATED'
   | 'CREW_MEMBERS_ADDED'
-  | 'PUSH_TOKEN_UNREGISTERED';
+  | 'PUSH_TOKEN_UNREGISTERED'
+  // ── Speed Tracking ────────────────────────────────────────
+  | 'SESSION_SAVED'
+  | 'SPEED_REACTIVE_ENABLED'
+  | 'SPEED_REACTIVE_DISABLED';
 
 export interface LogEntry {
   t: number;        // timestamp ms

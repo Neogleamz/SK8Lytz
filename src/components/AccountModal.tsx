@@ -24,10 +24,11 @@ import { useTheme } from '../context/ThemeContext';
 import { profileService, UserProfile, PermanentCrew, SessionHistoryItem } from '../services/ProfileService';
 import { supabase } from '../services/supabaseClient';
 import { AppLogger } from '../services/AppLogger';
+import { SpeedTrackingService, ILifetimeStats, ISkateSession } from '../services/SpeedTrackingService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = 'profile' | 'security' | 'crews' | 'devices' | 'settings';
+type Tab = 'profile' | 'security' | 'crews' | 'devices' | 'settings' | 'stats';
 
 type StoredDevice = {
   id: string;
@@ -119,6 +120,11 @@ export default function AccountModal({
   // History state
   const [history, setHistory] = useState<SessionHistoryItem[]>([]);
 
+  // Stats tab state
+  const [lifetimeStats, setLifetimeStats] = useState<ILifetimeStats | null>(null);
+  const [recentSessions, setRecentSessions] = useState<ISkateSession[]>([]);
+  const [statsLoading, setStatsLoading] = useState(false);
+
   // Notifications state
   const [notifCrewInvites, setNotifCrewInvites] = useState(true);
   const [notifSessionReminders, setNotifSessionReminders] = useState(true);
@@ -147,6 +153,16 @@ export default function AccountModal({
       }
       setCrews(c);
       setHistory(h);
+
+      // Preload lifetime skate stats (non-blocking)
+      setStatsLoading(true);
+      Promise.all([
+        SpeedTrackingService.fetchLifetimeStats(),
+        SpeedTrackingService.fetchRecentSessions(10),
+      ]).then(([stats, sessions]) => {
+        setLifetimeStats(stats);
+        setRecentSessions(sessions);
+      }).catch(() => {}).finally(() => setStatsLoading(false));
 
       // ── Fetch cloud-registered devices from DB ─────────────────
       try {
@@ -902,6 +918,112 @@ export default function AccountModal({
   );
 
   // ════════════════════════════════════════════════════════
+  // TAB: STATS
+  // ════════════════════════════════════════════════════════
+
+  const renderStats = () => {
+    /** Formats seconds into e.g. "1h 23m" */
+    const fmtDuration = (sec: number) => {
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    };
+    const fmtDate = (iso: string) =>
+      new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+    if (statsLoading) {
+      return (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 }}>
+          <MaterialCommunityIcons name="lightning-bolt" size={32} color={Colors.primary} />
+          <Text style={{ color: Colors.textMuted, marginTop: 12, fontSize: 13 }}>Loading your stats…</Text>
+        </View>
+      );
+    }
+
+    const noData = !lifetimeStats || lifetimeStats.totalSessions === 0;
+
+    return (
+      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        {noData ? (
+          <View style={{ alignItems: 'center', paddingVertical: 48 }}>
+            <MaterialCommunityIcons name="skate" size={48} color={Colors.textMuted} />
+            <Text style={[styles.hint, { textAlign: 'center', marginTop: 16, fontSize: 14 }]}>
+              No sessions saved yet.{`\n`}Enable Street Mode and skate to record your first session!
+            </Text>
+          </View>
+        ) : (
+          <>
+            {/* ── Lifetime stat grid ── */}
+            <Text style={styles.sectionHeader}>LIFETIME STATS</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              {[
+                { icon: 'flag-checkered',        val: String(lifetimeStats!.totalSessions),                        unit: '',    lbl: 'Sessions' },
+                { icon: 'map-marker-distance',   val: lifetimeStats!.totalDistanceMiles.toFixed(1),               unit: 'mi',  lbl: 'Distance' },
+                { icon: 'speedometer',           val: lifetimeStats!.lifetimePeakSpeedMph.toFixed(1),             unit: 'mph', lbl: 'Record Speed' },
+                { icon: 'gauge',                 val: lifetimeStats!.lifetimeAvgSpeedMph.toFixed(1),              unit: 'mph', lbl: 'Avg Speed' },
+                { icon: 'timer-outline',         val: fmtDuration(lifetimeStats!.totalDurationSec),               unit: '',    lbl: 'Time on Skates' },
+                { icon: 'fire',                  val: String(lifetimeStats!.lifetimeCalories),                    unit: 'kcal',lbl: 'Calories' },
+              ].map(({ icon, val, unit, lbl }) => (
+                <View key={lbl} style={{
+                  width: '47%', backgroundColor: 'rgba(255,255,255,0.05)',
+                  borderRadius: 16, padding: 14, alignItems: 'center',
+                }}>
+                  <MaterialCommunityIcons name={icon as any} size={20} color={Colors.primary} />
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 3, marginTop: 6 }}>
+                    <Text style={{ color: '#FFF', fontSize: 22, fontWeight: '900' }}>{val}</Text>
+                    {unit ? <Text style={{ color: Colors.primary, fontSize: 10, fontWeight: '700', marginBottom: 3 }}>{unit}</Text> : null}
+                  </View>
+                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '600', letterSpacing: 0.8, marginTop: 4 }}>{lbl}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* ── Recent sessions list ── */}
+            {recentSessions.length > 0 && (
+              <>
+                <Text style={[styles.sectionHeader, { marginTop: 8 }]}>RECENT SESSIONS</Text>
+                {recentSessions.map(s => (
+                  <View key={s.id} style={{
+                    backgroundColor: 'rgba(255,255,255,0.04)',
+                    borderRadius: 14, padding: 14, marginBottom: 8,
+                    borderLeftWidth: 3, borderLeftColor: Colors.primary,
+                  }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>{fmtDate(s.sessionDate)}</Text>
+                      <Text style={{ color: Colors.textMuted, fontSize: 12 }}>{fmtDuration(s.durationSec)}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 16 }}>
+                      <View style={{ alignItems: 'center' }}>
+                        <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 16 }}>{s.distanceMiles.toFixed(2)}</Text>
+                        <Text style={{ color: Colors.textMuted, fontSize: 10 }}>mi</Text>
+                      </View>
+                      <View style={{ alignItems: 'center' }}>
+                        <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 16 }}>{s.peakSpeedMph.toFixed(1)}</Text>
+                        <Text style={{ color: Colors.textMuted, fontSize: 10 }}>peak mph</Text>
+                      </View>
+                      <View style={{ alignItems: 'center' }}>
+                        <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 16 }}>{s.avgSpeedMph.toFixed(1)}</Text>
+                        <Text style={{ color: Colors.textMuted, fontSize: 10 }}>avg mph</Text>
+                      </View>
+                      {s.calories != null && (
+                        <View style={{ alignItems: 'center' }}>
+                          <Text style={{ color: '#FF6B35', fontWeight: '800', fontSize: 16 }}>{s.calories}</Text>
+                          <Text style={{ color: Colors.textMuted, fontSize: 10 }}>kcal</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </>
+            )}
+          </>
+        )}
+        <View style={{ height: 30 }} />
+      </ScrollView>
+    );
+  };
+
+  // ════════════════════════════════════════════════════════
   // TABS CONFIG
   // ════════════════════════════════════════════════════════
 
@@ -910,6 +1032,7 @@ export default function AccountModal({
     { id: 'security', icon: 'lock',               label: 'Security' },
     { id: 'crews',    icon: 'account-group',      label: 'Crews' },
     { id: 'devices',  icon: 'bluetooth',          label: 'Devices' },
+    { id: 'stats',    icon: 'lightning-bolt',     label: 'Stats' },
     { id: 'settings', icon: 'cog',                label: 'Settings' },
   ];
 
@@ -955,6 +1078,7 @@ export default function AccountModal({
             : tab === 'security' ? renderSecurity()
             : tab === 'crews'    ? renderCrews()
             : tab === 'devices'  ? renderDevices()
+            : tab === 'stats'    ? renderStats()
             : renderSettings()
           }
         </View>

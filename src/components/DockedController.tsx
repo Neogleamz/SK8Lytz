@@ -40,7 +40,10 @@ import { supabase } from '../services/supabaseClient';
 import { ScenesService } from '../services/ScenesService';
 import { containsProfanity } from '../services/AuthUtils';
 import { crewService } from '../services/CrewService';
+import { SpeedTrackingService } from '../services/SpeedTrackingService';
 import CommunityModal from './CommunityModal';
+import SessionSummaryModal from './SessionSummaryModal';
+import type { ISessionSnapshot } from '../services/SpeedTrackingService';
 import { Accelerometer } from 'expo-sensors';
 import { getLocalProfileById } from '../constants/ProductCatalog';
 import * as Location from 'expo-location';
@@ -516,6 +519,17 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const lastGpsTimeRef = useRef<number | null>(null);
     const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
+    // ── Session Tracking State ─────────────────────────────────
+    const [sessionActive, setSessionActive] = useState<boolean>(false);
+    const [sessionSummary, setSessionSummary] = useState<ISessionSnapshot | null>(null);
+    const [showSessionModal, setShowSessionModal] = useState<boolean>(false);
+    const sessionStartTimeRef = useRef<number | null>(null);
+    const sessionSpeedSamplesRef = useRef<number[]>([]);
+    const sessionDistanceMilesRef = useRef<number>(0);
+    const sessionPeakGForceRef = useRef<number>(1.0);
+    const sessionPeakSpeedRef = useRef<number>(0);
+    const sessionLastLocationRef = useRef<{ lat: number; lon: number } | null>(null);
+
     // ── Street Mode: Car-Light Pattern helper ─────────────────────────────────
     // SOULZ (linear strip, heel→toe):
     //   Rear 30% = red tail lights, Middle 40% = amber cruise, Front 30% = white headlights
@@ -673,12 +687,23 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 const spdMph = Math.max(0, spdMpS * 2.23694);
                 setGpsSpeed(spdMph);
 
+                // ── Session accumulation (if recording) ──────────────
+                if (sessionStartTimeRef.current !== null) {
+                  sessionSpeedSamplesRef.current.push(spdMph);
+                  if (spdMph > sessionPeakSpeedRef.current) {
+                    sessionPeakSpeedRef.current = spdMph;
+                  }
+                }
+
                 // Telemetry calculus
                 const now = pos.timestamp;
                 if (lastGpsTimeRef.current) {
                   const hoursDelta = (now - lastGpsTimeRef.current) / 3600000;
                   if (hoursDelta > 0 && hoursDelta < 1) { // Ignore crazy jumps
                     crewService.sessionTelemetry.distanceMiles += spdMph * hoursDelta;
+                    if (sessionStartTimeRef.current !== null) {
+                      sessionDistanceMilesRef.current += spdMph * hoursDelta;
+                    }
                   }
                 }
                 lastGpsTimeRef.current = now;
@@ -2072,14 +2097,70 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     <AnalogGauge value={peakGForce} min={0.3} max={2.5} label="G-FORCE" unit="G" size={120} defaultColor="#FFD700" dangerVal={1.2} criticalVal={1.8} />
                   </View>
                   
-                  {/* BOTTOM: Global Telemetry */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 30, marginTop: 12, marginBottom: 8 }}>
-                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 }}>
-                      TOP SPEED: <Text style={{ color: '#00F0FF', fontWeight: '800' }}>{crewService.sessionTelemetry.topSpeedMph.toFixed(1)} MPH</Text>
-                    </Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 }}>
-                      DISTANCE: <Text style={{ color: '#00F0FF', fontWeight: '800' }}>{crewService.sessionTelemetry.distanceMiles.toFixed(2)} MI</Text>
-                    </Text>
+                  {/* BOTTOM: Global Telemetry + Session Controls */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, marginTop: 12, marginBottom: 8, alignItems: 'center' }}>
+                    <View>
+                      <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '700', letterSpacing: 0.5 }}>
+                        TOP SPEED: <Text style={{ color: '#00F0FF', fontWeight: '800' }}>{crewService.sessionTelemetry.topSpeedMph.toFixed(1)} MPH</Text>
+                      </Text>
+                      <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '700', letterSpacing: 0.5, marginTop: 3 }}>
+                        DISTANCE: <Text style={{ color: '#00F0FF', fontWeight: '800' }}>{crewService.sessionTelemetry.distanceMiles.toFixed(2)} MI</Text>
+                      </Text>
+                    </View>
+
+                    {/* START / STOP SESSION BUTTON */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (!sessionActive) {
+                          // ▶ START SESSION
+                          sessionStartTimeRef.current = Date.now();
+                          sessionSpeedSamplesRef.current = [];
+                          sessionDistanceMilesRef.current = 0;
+                          sessionPeakGForceRef.current = 1.0;
+                          sessionPeakSpeedRef.current = 0;
+                          sessionLastLocationRef.current = null;
+                          setSessionActive(true);
+                          AppLogger.log('SESSION_SAVED', { action: 'START' });
+                        } else {
+                          // ■ STOP SESSION — Build snapshot & show modal
+                          const durationSec = sessionStartTimeRef.current
+                            ? (Date.now() - sessionStartTimeRef.current) / 1000
+                            : 0;
+                          const samples = sessionSpeedSamplesRef.current;
+                          const avgSpeed = samples.length > 0
+                            ? samples.reduce((a, b) => a + b, 0) / samples.length
+                            : 0;
+                          const snapshot: ISessionSnapshot = {
+                            durationSec,
+                            distanceMiles: sessionDistanceMilesRef.current,
+                            peakSpeedMph: sessionPeakSpeedRef.current,
+                            avgSpeedMph: parseFloat(avgSpeed.toFixed(2)),
+                            peakGForce: sessionPeakGForceRef.current,
+                          };
+                          setSessionActive(false);
+                          setSessionSummary(snapshot);
+                          setShowSessionModal(true);
+                        }
+                      }}
+                      activeOpacity={0.85}
+                      style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 6,
+                        paddingHorizontal: 16, paddingVertical: 9,
+                        borderRadius: 20,
+                        backgroundColor: sessionActive ? '#FF3D00' : '#00C853',
+                        shadowColor: sessionActive ? '#FF3D00' : '#00C853',
+                        shadowOpacity: 0.5, shadowRadius: 8, elevation: 6,
+                      }}
+                    >
+                      <MaterialCommunityIcons
+                        name={sessionActive ? 'stop-circle' : 'play-circle'}
+                        size={18}
+                        color="#FFF"
+                      />
+                      <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 13, letterSpacing: 0.5 }}>
+                        {sessionActive ? 'SAVE' : 'RECORD'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </ScrollView>
@@ -2694,6 +2775,28 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             </View>
           </View>
         </Modal>
+        {/* Session Summary Modal */}
+        <SessionSummaryModal
+          visible={showSessionModal}
+          snapshot={sessionSummary}
+          onSave={async () => {
+            if (sessionSummary) {
+              try {
+                await SpeedTrackingService.saveSession(sessionSummary);
+                AppLogger.log('SESSION_SAVED', { action: 'SAVED_TO_DB', durationSec: sessionSummary.durationSec });
+              } catch (err) {
+                console.warn('[DockedController] Failed to persist session:', err);
+              }
+            }
+            setShowSessionModal(false);
+            setSessionSummary(null);
+          }}
+          onDiscard={() => {
+            AppLogger.log('SESSION_SAVED', { action: 'DISCARDED' });
+            setShowSessionModal(false);
+            setSessionSummary(null);
+          }}
+        />
 
       </View>
     );
