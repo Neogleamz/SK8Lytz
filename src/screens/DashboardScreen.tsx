@@ -1871,8 +1871,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           initialSettings={{
             name: selectedDeviceForSettings?.name || LOCAL_PRODUCT_CATALOG[0].displayName,
             // Catalog-driven: resolve from stored points rather than name-string heuristic.
-            // Cast to satisfy DeviceSettingsModal legacy 'HALOZ' | 'SOULZ' union (modal widening is a future task).
-            type: getLocalProfileByPoints((selectedDeviceForSettings as any)?.points ?? 0).id as 'HALOZ' | 'SOULZ',
+            type: getLocalProfileByPoints((selectedDeviceForSettings as any)?.points ?? 0).id,
             points: deviceConfigs[selectedDeviceForSettings?.id || '']?.points || (selectedDeviceForSettings as any)?.points || getLocalProfileByPoints((selectedDeviceForSettings as any)?.points ?? 0).defaultLedPoints,
             segments: deviceConfigs[selectedDeviceForSettings?.id || '']?.segments || (selectedDeviceForSettings as any)?.segments || getLocalProfileByPoints((selectedDeviceForSettings as any)?.points ?? 0).defaultSegments,
             stripType: deviceConfigs[selectedDeviceForSettings?.id || '']?.stripType || (selectedDeviceForSettings as any)?.stripType || 'WS2812B',

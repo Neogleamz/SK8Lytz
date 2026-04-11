@@ -4,10 +4,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Typography } from '../theme/theme';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
+import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 
 interface DeviceSettings {
   name: string;
-  type: 'HALOZ' | 'SOULZ';
+  type: string;
   points: number;
   segments: number;
   stripType: string;
@@ -28,7 +29,7 @@ interface DeviceSettingsModalProps {
 }
 
 // Derives device name + group name from type + position
-const deriveNames = (type: 'HALOZ' | 'SOULZ', position: 'Left' | 'Right' | null) => {
+const deriveNames = (type: string, position: 'Left' | 'Right' | null) => {
   const deviceName = position ? `${type} ${position}` : type;
   const groupName = `My SK8Lytz ${type}`;
   return { deviceName, groupName };
@@ -36,7 +37,7 @@ const deriveNames = (type: 'HALOZ' | 'SOULZ', position: 'Left' | 'Right' | null)
 
 export default function DeviceSettingsModal({ isVisible, onClose, onSave, initialSettings, groups, writeToDevice }: DeviceSettingsModalProps) {
   const insets = useSafeAreaInsets();
-  const [type, setTypeState] = useState<'HALOZ' | 'SOULZ'>(initialSettings.type || 'SOULZ');
+  const [type, setTypeState] = useState<string>(initialSettings.type || 'SOULZ');
   const [position, setPosition] = useState<'Left' | 'Right' | null>(
     initialSettings.name?.includes('Left') ? 'Left' : initialSettings.name?.includes('Right') ? 'Right' : null
   );
@@ -85,7 +86,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
     }
   }, [isVisible]);
 
-  const handleTypeChange = (t: 'HALOZ' | 'SOULZ') => {
+  const handleTypeChange = (t: string) => {
     setTypeState(t);
     setCustomName(null); // reset to auto-name whenever type changes
   };
@@ -172,13 +173,13 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Product Type</Text>
               <View style={styles.buttonGroup}>
-                {(['HALOZ', 'SOULZ'] as const).map(t => (
+                {LOCAL_PRODUCT_CATALOG.map(t => (
                   <TouchableOpacity
-                    key={t}
-                    style={[styles.groupButton, type === t && styles.groupButtonActive]}
-                    onPress={() => handleTypeChange(t)}
+                    key={t.id}
+                    style={[styles.groupButton, type === t.id && styles.groupButtonActive, {marginHorizontal: 4}]}
+                    onPress={() => handleTypeChange(t.id)}
                   >
-                    <Text style={[styles.groupButtonText, type === t && styles.groupButtonTextActive]}>{t}</Text>
+                    <Text style={[styles.groupButtonText, type === t.id && styles.groupButtonTextActive]}>{t.id}</Text>
                   </TouchableOpacity>
                 ))}
               </View>

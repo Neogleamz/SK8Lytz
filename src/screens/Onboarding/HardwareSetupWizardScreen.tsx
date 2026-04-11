@@ -68,8 +68,8 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
     try {
       // Resolve product profile to get accurate blink LED count
       const registration = pendingRegistrations.find(r => r.device_mac === deviceMac);
-      const productType = (registration?.product_type && registration.product_type !== 'UNKNOWN') ? registration.product_type : 'HALOZ';
-      const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === productType) || LOCAL_PRODUCT_CATALOG[0];
+      const productType = (registration?.product_type && registration.product_type !== 'UNKNOWN') ? registration.product_type : 'SOULZ';
+      const profile = getLocalProfileById(productType) || LOCAL_PRODUCT_CATALOG[0];
       const blinkPoints = registration?.led_points || profile.vizDefaultPoints;
 
       // 0x59 static multi-color mode: Green. 
@@ -396,16 +396,17 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                
                let hCount = 0;
                let sCount = 0;
+               
+               const typeCounts: Record<string, number> = {};
 
                selected.forEach(d => {
                   const n = d.device_name || '';
                   // Heuristic: Check if name includes a catalog product ID
                   const matchedProfile = LOCAL_PRODUCT_CATALOG.find(p => n.toUpperCase().includes(p.id.toUpperCase()));
-                  let pType = (matchedProfile ? matchedProfile.id : (d.product_type !== 'UNKNOWN' ? d.product_type : 'SOULZ')) as 'HALOZ' | 'SOULZ' | 'RAILZ';
+                  const pType = matchedProfile ? matchedProfile.id : (d.product_type !== 'UNKNOWN' ? d.product_type : 'SOULZ');
                   
-                  const pProfile = LOCAL_PRODUCT_CATALOG.find(p => p.id === pType) || LOCAL_PRODUCT_CATALOG[0];
-                  if (pType === 'HALOZ') hCount++;
-                  if (pType === 'SOULZ') sCount++;
+                  const pProfile = getLocalProfileById(pType) || LOCAL_PRODUCT_CATALOG[0];
+                  typeCounts[pProfile.id] = (typeCounts[pProfile.id] || 0) + 1;
 
                   let pos: 'Left'|'Right'|null = null;
                   if (n.toLowerCase().includes('left')) { pos = 'Left'; leftAssigned = true; }
@@ -417,7 +418,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                   }
                   
                   configs[d.device_mac] = {
-                    name: n || `My SK8Lytz ${pType}`,
+                    name: n || `My SK8Lytz ${pProfile.displayName.replace('™', '')}`,
                     type: pType,
                     position: pos,
                     points: typeof d.led_points === 'number' ? d.led_points : pProfile.defaultLedPoints
@@ -426,8 +427,12 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
 
                if (!groupName) {
                  let defaultName = 'My Skates';
-                 if (hCount > 0 && sCount === 0) defaultName = 'My SK8Lytz HALOZ';
-                 if (sCount > 0 && hCount === 0) defaultName = 'My SK8Lytz SOULZ';
+                 const entries = Object.entries(typeCounts);
+                 if (entries.length > 0) {
+                   const maxType = entries.reduce((a, b) => a[1] > b[1] ? a : b)[0];
+                   const pProfile = getLocalProfileById(maxType);
+                   if (pProfile) defaultName = `My SK8Lytz ${pProfile.displayName.replace('™', '')}`;
+                 }
                  setGroupName(defaultName);
                }
 
