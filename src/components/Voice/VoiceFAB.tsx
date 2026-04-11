@@ -1,0 +1,91 @@
+import React from 'react';
+import {
+  TouchableOpacity,
+  StyleSheet,
+  View,
+  Dimensions,
+  Platform
+} from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width } = Dimensions.get('window');
+
+interface Props {
+  onPress: () => void;
+  isListening?: boolean;
+}
+
+export default function VoiceFAB({ onPress, isListening }: Props) {
+  return (
+    <TouchableOpacity
+      style={styles.container}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <LinearGradient
+        colors={isListening ? ['#FF00E5', '#7000FF'] : ['#00F0FF', '#7000FF']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradient}
+      >
+        <View style={styles.inner}>
+          <MaterialCommunityIcons 
+            name={isListening ? "microphone" : "microphone-outline"} 
+            size={36} 
+            color="#000" 
+          />
+        </View>
+      </LinearGradient>
+      
+      {/* Dynamic Pulse Ring (Visual anchor) */}
+      <View style={[styles.pulseRing, isListening && styles.pulseActive]} />
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+    // Shadow for elevation
+    shadowColor: '#00F0FF',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  gradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 42,
+    padding: 3, // Border effect
+  },
+  inner: {
+    flex: 1,
+    borderRadius: 40,
+    backgroundColor: '#00F0FF', // Solid core or translucent? keeping it solid for visibility
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pulseRing: {
+    position: 'absolute',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 2,
+    borderColor: 'rgba(0, 240, 255, 0.4)',
+    zIndex: -1,
+  },
+  pulseActive: {
+    borderColor: '#FF00E5',
+    transform: [{ scale: 1.1 }],
+  }
+});

@@ -32,13 +32,16 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import useBLE from '../hooks/useBLE';
 import { ZenggeProtocol, ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol';
 
-import DockedController from '../components/DockedController';
+import DockedController, { DockedControllerHandle, IFavoriteState } from '../components/DockedController';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import Sk8LytzProgrammerModal from '../components/Sk8LytzProgrammerModal';
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
-import AdminToolsModal from '../components/AdminToolsModal';
+import { AdminToolsModal } from '../components/AdminToolsModal';
+import { VoiceFAB } from '../components/Voice/VoiceFAB';
+import { VoiceCommandModal } from '../components/Voice/VoiceCommandModal';
+import { VoiceService } from '../services/VoiceService';
 import CrewModal from '../components/CrewModal';
 import { crewService, CrewSession, CrewRole } from '../services/CrewService';
 import Sk8LytzDiagnosticLab from '../components/Sk8LytzDiagnosticLab';
@@ -296,7 +299,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isCrewModalVisible, setIsCrewModalVisible] = useState(false);
   const [crewModeSummary, setCrewModeSummary] = useState<string | undefined>(undefined);
   const [lastLeaderScene, setLastLeaderScene] = useState<Record<string, any> | null>(null);
-  const dockedControllerRef = React.useRef<{ applyCloudScene: (s: any) => void }>(null);
+  const dockedControllerRef = React.useRef<DockedControllerHandle>(null);
+  const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
+  const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
 
   // ── Profile + Notifications state ────────────────────────────────────────
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
@@ -330,6 +335,17 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     }
     loadPatterns();
   }, []);
+
+  // ── Load Favorites for Voice Command Engine ──
+  useEffect(() => {
+    async function loadFavs() {
+      try {
+        const saved = await AsyncStorage.getItem('@Sk8lytz_Favorites');
+        if (saved) setFavorites(JSON.parse(saved));
+      } catch (e) {}
+    }
+    loadFavs();
+  }, [isVoiceModalVisible]); // Refresh when modal opens to ensure latest names
 
   // AppState Telemetry
   useEffect(() => {
@@ -584,6 +600,49 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     const t = setTimeout(tryRejoin, 2000);
     return () => clearTimeout(t);
   }, []);
+
+  /** ──────── VOICE COMMAND DISPATCH ──────── */
+  const { isListening, transcript, error, startListening, stopListening } = useVoiceControl(
+    favorites,
+    (action: IVoiceAction) => handleVoiceAction(action)
+  );
+
+  useEffect(() => {
+    if (isVoiceModalVisible) {
+      startListening();
+    } else {
+      stopListening();
+    }
+  }, [isVoiceModalVisible]);
+
+  const handleVoiceAction = (action: IVoiceAction) => {
+    if (!dockedControllerRef.current) return;
+    
+    switch (action.type) {
+      case 'MODE':
+        dockedControllerRef.current.setActiveMode(action.value);
+        break;
+      case 'FAVORITE':
+        if (action.favorite) {
+          dockedControllerRef.current.loadFavorite(action.favorite);
+        }
+        break;
+      case 'FIXED_PATTERN':
+        dockedControllerRef.current.handleRbmChange(action.patternId || 1);
+        break;
+      case 'BRIGHTNESS':
+        dockedControllerRef.current.setBrightness(action.value);
+        break;
+      case 'SPEED':
+        dockedControllerRef.current.setSpeed(action.value);
+        break;
+      case 'SPATIAL_COLORS':
+        if (action.segments) {
+          dockedControllerRef.current.applySpatialSegments(action.segments);
+        }
+        break;
+    }
+  };
 
   // ── Push notification init ────────────────────────────────────────────────
   useEffect(() => {
@@ -1954,6 +2013,21 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         liveRxPayload={lastRawNotification}
         liveDeviceConfigs={deviceConfigs}
         onConnectToDevice={async (d: any) => { await connectToDevice(d); }}
+      />
+
+      {/* ──── VOICE COMMAND ENGINE UI ──── */}
+      <VoiceFAB 
+        onPress={() => setIsVoiceModalVisible(true)} 
+        isListening={false} // Internal hook in component manages this
+      />
+      
+      <VoiceCommandModal
+        visible={isVoiceModalVisible}
+        onClose={() => setIsVoiceModalVisible(false)}
+        onAction={handleVoiceAction}
+        isListening={isListening}
+        transcript={transcript}
+        error={error}
       />
     </SafeAreaView>
   );

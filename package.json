@@ -1,6 +1,6 @@
 {
   "name": "mobileapp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -14,6 +14,7 @@
     "@expo/metro-runtime": "~55.0.6",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/datetimepicker": "^9.1.0",
+    "@react-native-voice/voice": "^3.2.4",
     "@supabase/supabase-js": "^2.100.0",
     "buffer": "^6.0.3",
     "expo": "~55.0.8",
@@ -33,6 +34,7 @@
     "expo-location": "~55.1.6",
     "expo-notifications": "~55.0.16",
     "expo-sensors": "^55.0.11",
+    "expo-speech": "^55.0.13",
     "expo-splash-screen": "^55.0.12",
     "expo-status-bar": "~55.0.4",
     "jpeg-js": "^0.4.4",
@@ -44,10 +46,12 @@
     "react-native-safe-area-context": "^5.7.0",
     "react-native-svg": "15.15.3",
     "react-native-url-polyfill": "^3.0.0",
-    "react-native-web": "^0.21.2"
+    "react-native-web": "^0.21.2",
+    "string-similarity": "^4.0.4"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "@types/string-similarity": "^4.0.2",
     "typescript": "~5.9.2"
   },
   "private": true
