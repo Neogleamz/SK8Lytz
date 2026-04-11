@@ -82,6 +82,13 @@ The **Admin Tools Hub** (`AdminToolsModal`) is the unified gateway for all syste
     *   **LED Diagnostic Lab**: Atomic protocol validation and DIY payload building.
     *   **Firmware Programmer**: Low-level hardware updates and serial-over-BLE tools.
 
+### Test Users & Environments
+
+For testing App Sync behavior vs. Offline mode offline fallbacks, you can authenticate using the primary test user:
+* **Email**: `testuser@sk8lytz.com`
+* **Password**: `Password!2026`
+* **Username**: `TestSkater`
+
 ### Supabase Architecture (Telemetry & Registration)
 
 *Project ID:* `qefmeivpjyaukbwadgaz`

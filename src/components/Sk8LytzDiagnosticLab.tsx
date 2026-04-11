@@ -160,11 +160,11 @@ export default function Sk8LytzDiagnosticLab({
 }: LabProps) {
 
   const { Colors, isDark } = useTheme();
-  const bg      = isDark ? '#0a0d18' : '#f0f2f5';
-  const cardBg  = isDark ? '#141829' : '#ffffff';
-  const txtPri  = isDark ? '#ffffff' : '#111827';
-  const txtMuted= isDark ? '#8a96b3' : '#6b7280';
-  const border  = isDark ? '#252c47' : '#e5e7eb';
+  const bg      = Colors.background;
+  const cardBg  = Colors.surface;
+  const txtPri  = Colors.text;
+  const txtMuted= Colors.textMuted;
+  const border  = Colors.surfaceHighlight;
   const cyan    = '#00f0ff';
 
   const { registeredDevices } = useRegistration();

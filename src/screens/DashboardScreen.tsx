@@ -170,7 +170,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // ── Profile + Notifications state ────────────────────────────────────────
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
   const [_pendingJoinCrewId, setPendingJoinCrewId] = useState<string | null>(null);
-  const [showHintText, setShowHintText] = useState(true);
   const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
   const [isAdminToolsVisible, setIsAdminToolsVisible] = useState(false);
@@ -1629,39 +1628,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         />
       </View>
       
-      {(!isActuallyConnected && showHintText && (allDevices.length > 0 || customGroups.length > 0)) && (
-          <TouchableOpacity
-            onPress={() => setShowHintText(false)}
-            style={{
-              position: 'absolute',
-              bottom: 24,
-              right: 16,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: 0.9,
-              paddingVertical: 10,
-              paddingHorizontal: 14,
-              borderRadius: 30,
-              backgroundColor: 'rgba(21, 25, 40, 0.85)',
-              borderWidth: 1,
-              borderColor: 'rgba(0, 240, 255, 0.2)',
-              elevation: 4,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.3,
-              shadowRadius: 4,
-              zIndex: 100
-            }}
-            activeOpacity={0.7}
-          >
-            <MaterialCommunityIcons name="gesture-tap-hold" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
-            <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: 'bold', marginRight: 6 }}>
-              Long-press skate to configure
-            </Text>
-            <MaterialCommunityIcons name="close" size={16} color={Colors.primary} style={{ opacity: 0.7 }} />
-          </TouchableOpacity>
-        )}
+
 
         <Modal
           visible={isSupportModalVisible}

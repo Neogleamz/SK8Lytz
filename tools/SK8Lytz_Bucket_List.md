@@ -40,15 +40,19 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/device-management`
 
+- [ ] `feat/dynamic-product-architecture` : Prepare app for new products by migrating hardware configurations (LED points, segments, auto-detect thresholds, visualizer mapping) from hardcoded constants to a Supabase-backed catalog with local caching and an admin UI layer.
+
 ### Target: `epic/protocol-integration`
 
+- [ ] `feat/hardware-abstraction-layer` : Architect a hardware controller abstraction layer to decouple the UI from explicit `ZenggeProtocol` functions, preparing the app to support and dynamically map new OEM hardware controllers to the existing UI.
+
 ### Target: `epic/ui-refinement`
+
+- [ ] `audit/offline-profile-settings` : Audit whether all user profile settings (display name, avatar, preferences) are fully cached locally for offline use. Implement offline-safe username rename that queues the update to Supabase on reconnect — same pattern as device registration sync.
 
 ---
 
 ## 🟡 Backlog
-
-### Target: `main`
 
 ### Target: `epic/telemetry-audit`
 
@@ -65,7 +69,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/ui-refinement`
 
 - [ ] `feat/lab-ui-modernization` : Modernize and style the LED Diagnostic Lab layout to match the aesthetics, typography, and input styling of the rest of the app.
-- [ ] `add-swipe-nav` : #34 — Card Swipe Navigation — Add the ability to swipe left and right to navigate back and forth between cards (Favorites, Picks, Presets) for a more fluid mobile UX.
+- [x] `feat/light-mode-rework` : Rework light mode UI theme to use soft grey instead of stark white, dark blue instead of black, and brand orange where possible.
 
 ---
 
@@ -73,10 +77,14 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 *Items placed here are explicitly ignored by the automatic queue. They will act as a catalog for future features that require manual authorization to begin work on.*
 
+- [ ] `add-swipe-nav` : #34 — Card Swipe Navigation — Add the ability to swipe left and right to navigate back and forth between cards (Favorites, Picks, Presets) for a more fluid mobile UX.
+
 ---
 
 ## ✅ Completed This Session (Apr 2026)
 
+- [x] `chore/test-user-auth-setup` : Create a real test user and save auth information in master reference to test all online vs offline features.
+- [x] `chore/remove-long-press-tip` : Remove the "long press skate to configure" helper tip from the Dashboard UI.
 - [x] `feat/logo-branding-auth` : Integrate SK8Lytz logo (`assets/logo.png`) onto Welcome/Auth screens with the "Glow your way." slogan. Implement white logo variant for dark mode compatibility.
 - [x] `feat/auth-offline-card-reorder` : Move the 'Continue Offline' card on the Auth page to the bottom, anchoring it similar to the Registered Devices slab on the dashboard.
 - [x] `feat/global-error-telemetry` : Integrate a global error boundary and remote crash reporting solution (e.g., Sentry or Supabase Edge logging) to automatically capture, diagnose, and push unhandled exceptions without user intervention. this should add items to bucket list for us to review and fix.

@@ -18,16 +18,16 @@ export const DarkColors = {
 };
 
 export const LightColors: ThemePalette = {
-  background: '#F5F7FA',
-  surface: '#FFFFFF',
-  surfaceHighlight: '#E8EEF7',
+  background: '#EAEFF5',
+  surface: '#CBD6E2',
+  surfaceHighlight: '#DDE5EE',
   primary: '#FF5A00',
   secondary: '#FFB800',
   accent: '#1B4279',
-  text: '#1B4279',
-  textMuted: '#5A7A9F',
+  text: '#0A1C38',
+  textMuted: '#5C7491',
   success: '#00C476',
-  error: '#E03260',
+  error: '#FF3D71',
   isDark: false,
 };
 

@@ -307,10 +307,10 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
 
                 {/* Adjust Points for SOULZ */}
                 {config.type === 'SOULZ' && (
-                  <View style={{ marginTop: 12, backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: 12, padding: 8 }}>
+                  <View style={{ marginTop: 12, backgroundColor: Colors.surfaceHighlight, borderRadius: 12, padding: 8 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Text style={[styles.labelSmall, { flex: 1, marginBottom: 0 }]}>LED COUNT (TRIM IF CUT)</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: 8 }}>
                         <TouchableOpacity style={{ padding: 10 }} onPress={() => updateConfig('points', Math.max(1, config.points - 1))}>
                           <MaterialCommunityIcons name="minus" size={18} color={Colors.text} />
                         </TouchableOpacity>
@@ -505,15 +505,15 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
   );
 }
 
-function createStyles(Colors: Record<string, string>) {
+function createStyles(Colors: any) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.background || '#0D0D0D' },
     content: { flex: 1, padding: 12, justifyContent: 'center', alignItems: 'center' },
     title: { color: Colors.text || '#fff', fontSize: 24, textAlign: 'center', marginBottom: 4 },
     subtitle: { color: Colors.textMuted || '#888', fontSize: 13, textAlign: 'center', marginBottom: 12, lineHeight: 18 },
     instructionCard: {
-      backgroundColor: 'rgba(255,255,255,0.03)',
-      borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+      backgroundColor: Colors.surface,
+      borderWidth: 1, borderColor: Colors.surfaceHighlight,
       borderRadius: 12, padding: 16, width: '100%', marginBottom: 12,
     },
     instructionHeader: { color: Colors.primary || '#00f0ff', fontWeight: 'bold', fontSize: 13, marginBottom: 4 },
@@ -538,18 +538,18 @@ function createStyles(Colors: Record<string, string>) {
     groupTitle: { fontSize: 12, fontWeight: '900', letterSpacing: 1.5, marginBottom: 12, marginLeft: 4 },
     deviceRow: { 
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+      backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.surfaceHighlight,
       borderRadius: 12, padding: 14, marginBottom: 10 
     },
-    deviceRowSelected: { backgroundColor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.2)' },
+    deviceRowSelected: { backgroundColor: Colors.surfaceHighlight, borderColor: Colors.primary },
     checkboxContainer: { marginRight: 12 },
     deviceInfo: { flex: 1 },
-    deviceName: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
+    deviceName: { color: Colors.text || '#fff', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
     deviceMeta: { color: Colors.textMuted || '#888', fontSize: 11, marginBottom: 2 },
     blinkBtn: {
       flexDirection: 'row', alignItems: 'center', gap: 6,
-      backgroundColor: 'rgba(255,255,255,0.08)', paddingHorizontal: 12, paddingVertical: 8,
-      borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
+      backgroundColor: Colors.surfaceHighlight, paddingHorizontal: 12, paddingVertical: 8,
+      borderRadius: 8, borderWidth: 1, borderColor: Colors.surfaceHighlight
     },
     blinkBtnActive: { backgroundColor: '#4ade80', borderColor: '#4ade80' },
     blinkBtnText: { color: Colors.text || '#fff', fontSize: 12, fontWeight: '800' },
@@ -558,30 +558,30 @@ function createStyles(Colors: Record<string, string>) {
     label: { color: Colors.textMuted || '#888', fontSize: 11, fontWeight: 'bold', letterSpacing: 1, marginBottom: 8, marginLeft: 4 },
     labelSmall: { color: Colors.textMuted || '#888', fontSize: 10, fontWeight: 'bold', letterSpacing: 1, marginBottom: 6, marginLeft: 2 },
     input: {
-      backgroundColor: 'rgba(255,255,255,0.05)',
+      backgroundColor: Colors.surfaceHighlight,
       color: Colors.text || '#fff',
       padding: 16,
       borderRadius: 12,
       fontSize: 16,
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.1)',
+      borderColor: Colors.surfaceHighlight,
     },
     inputSmall: {
-      backgroundColor: 'rgba(0,0,0,0.2)',
+      backgroundColor: Colors.surfaceHighlight,
       color: Colors.text || '#fff',
       padding: 12,
       borderRadius: 8,
       fontSize: 14,
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.05)',
+      borderColor: Colors.surfaceHighlight,
     },
     deviceConfigCard: {
-      backgroundColor: 'rgba(255,255,255,0.03)',
-      borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+      backgroundColor: Colors.surface,
+      borderWidth: 1, borderColor: Colors.surfaceHighlight,
       borderRadius: 12, padding: 10, width: '100%', marginBottom: 8,
     },
-    deviceConfigTitle: { color: '#fff', fontSize: 14, fontWeight: 'bold', flex: 1 },
-    segRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: 4 },
+    deviceConfigTitle: { color: Colors.text || '#fff', fontSize: 14, fontWeight: 'bold', flex: 1 },
+    segRow: { flexDirection: 'row', backgroundColor: Colors.surfaceHighlight, borderRadius: 8, padding: 4 },
     segBtn: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 6 },
     segBtnActive: { backgroundColor: Colors.primary || '#00f0ff', shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
     segBtnText: { fontSize: 11, fontWeight: 'bold', color: Colors.textMuted || '#888' },
