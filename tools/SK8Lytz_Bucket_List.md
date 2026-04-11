@@ -77,6 +77,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## ✅ Completed This Session (Apr 2026)
 
+- [x] `feat/logo-branding-auth` : Integrate SK8Lytz logo (`assets/logo.png`) onto Welcome/Auth screens with the "Glow your way." slogan. Implement white logo variant for dark mode compatibility.
 - [x] `feat/auth-offline-card-reorder` : Move the 'Continue Offline' card on the Auth page to the bottom, anchoring it similar to the Registered Devices slab on the dashboard.
 - [x] `feat/global-error-telemetry` : Integrate a global error boundary and remote crash reporting solution (e.g., Sentry or Supabase Edge logging) to automatically capture, diagnose, and push unhandled exceptions without user intervention. this should add items to bucket list for us to review and fix.
 - [x] `audit-applogger-coverage` : #30 — AppLogger Coverage Audit — Comprehensive audit of all features added this session (Street Mode, Picks, Favorites, Builder) to ensure 100% telemetry coverage in Analytics.
