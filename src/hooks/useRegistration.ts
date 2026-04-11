@@ -15,6 +15,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../services/supabaseClient';
+import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,7 +25,8 @@ export interface RegisteredDevice {
   device_mac: string;
   device_name: string;
   custom_name?: string;
-  product_type: 'HALOZ' | 'SOULZ' | 'RAILZ';
+  /** Product type — must match a `ProductProfile.id` in LOCAL_PRODUCT_CATALOG. */
+  product_type: 'HALOZ' | 'SOULZ' | 'RAILZ' | string;
   position: 'Left' | 'Right' | null;
   group_name: string;
   group_id: string;
@@ -123,7 +125,7 @@ export function useRegistration() {
       
       const fullDevice: RegisteredDevice = {
         device_name: device.device_name || 'Unknown Device',
-        product_type: device.product_type || 'SOULZ',
+        product_type: device.product_type || LOCAL_PRODUCT_CATALOG[0].id,
         group_name: device.group_name || 'Default Fleet',
         position: device.position || null,
         ...device,
@@ -333,7 +335,7 @@ export function useRegistration() {
           const rd: RegisteredDevice = {
             device_mac:     mac,
             device_name:    config.name || device.name || mac,
-            product_type:   config.type || 'SOULZ', // Legacy fallback
+            product_type:   config.type || LOCAL_PRODUCT_CATALOG[0].id, // Local-first fallback: use first catalog entry
             position:       config.name?.includes('Left') ? 'Left' :
                            config.name?.includes('Right') ? 'Right' : null,
             group_name:     group.name,
@@ -369,7 +371,7 @@ export function useRegistration() {
       const idx = queue.findIndex(d => d.device_mac === device.device_mac);
       const marked: RegisteredDevice = { 
         device_name: device.device_name || 'Unknown Device',
-        product_type: device.product_type || 'SOULZ',
+        product_type: device.product_type || LOCAL_PRODUCT_CATALOG[0].id,
         group_name: device.group_name || 'Default Fleet',
         position: device.position || null,
         group_id: device.group_id || 'default-fleet',
