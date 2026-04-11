@@ -58,7 +58,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `verify-lab-telemetry` : #2 — Verify Supabase `led_diagnostics` table — Confirm Diagnostic Lab successfully pushes telemetry to Supabase. Query table after live test.
 - [x] `verify-telemetry-ingestion` : #21 — Telemetry ingestion verification — Confirm AppLogger events (crew, street mode, hardware config) are landing in Supabase `device_logs` table correctly.
 - [x] `audit-applogger-coverage` : #30 — AppLogger Coverage Audit — Comprehensive audit of all features added this session (Street Mode, Picks, Favorites, Builder) to ensure 100% telemetry coverage in Analytics.
-- [ ] `feat/global-error-telemetry` : Integrate a global error boundary and remote crash reporting solution (e.g., Sentry or Supabase Edge logging) to automatically capture, diagnose, and push unhandled exceptions without user intervention. this should add items to bucket list for us to review and fix.
+- [x] `feat/global-error-telemetry` : Integrate a global error boundary and remote crash reporting solution (e.g., Sentry or Supabase Edge logging) to automatically capture, diagnose, and push unhandled exceptions without user intervention. this should add items to bucket list for us to review and fix.
 
 ### Target: `epic/testing-suite`
 
