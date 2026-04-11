@@ -33,6 +33,13 @@ Sk8Lytz caters to a diverse, family-oriented community of dedicated roller skate
 * **Charging**: 60 min fast-charge (USB-C).
 * **Control**: Integrated Bluetooth/RF + High-sensitivity integrated microphone.
 
+#### **RAILZ** (Integrated Chassis Strips)
+
+* **Concept**: Dual parallel vertical LED strips designed for undercarriage/frame mounting.
+* **Performance**: Integrated 4-6+ hour run time.
+* **Charging**: 90 min (USB-C).
+* **Control**: Integrated Bluetooth/RF + High-sensitivity integrated microphone.
+
 **Core Philosophies (The 3 Pillars):**
 
 1. **Bulletproof BLE Transport:** The connection to Neogleamz hardware MUST be instantaneous and nearly sentient. Reconnects and pairing must handle GATT exceptions and MTU drift invisibly. "It just works, immediately."
@@ -112,6 +119,17 @@ For testing App Sync behavior vs. Offline mode offline fallbacks, you can authen
 | `led_version` | INT | |
 | `product_id` | INT | |
 
+#### **`product_catalog`** (Dynamic Hardware Definitions)
+| Column | Type | Purpose |
+|:---|:---|:---|
+| `id` | TEXT (PK) | Unique product key (e.g., SOULZ, HALOZ, RAILZ) |
+| `display_name` | TEXT | Human-readable name used in UI |
+| `is_active` | BOOLEAN | If false, app ignores this profile |
+| `detect_min_points` / `max` | INT | FTUE Auto-Detection ranges (0x63 query) |
+| `default_led_points` | INT | Factory default written via 0x62 |
+| `viz_shape` | TEXT | Geometry ID for ProductVisualizer (RING / OVAL / DUAL_STRIP) |
+| `viz_blob_diameter_mm` | REAL | Physical pixel diameter for canvas rendering scale |
+
 > [!WARNING]
 > The app enforces **Strict Column Mapping** in `useRegistration.ts`. Any new database column MUST be added to the explicit mapping in the `dbRow` object to prevent schema cache mismatch errors during cloud sync.
 
@@ -129,10 +147,11 @@ The app uses a "Search & Enrich" strategy for First Time User Experience (FTUE).
 
 1. **Instant Enrollment**: All Zengge/Symphony MAC addresses are listed immediately in the Wizard as "SCANNING".
 2. **Round-Robin Probing**: A sequential, persistent background loop connects to each unknown device to retrieve EEPROM data (0x63).
-3. **Threshold Classification**:
+3. **Threshold Classification**: (Dynamic via `ProductCatalog.ts` / `product_catalog` DB table)
    * **SOULZ**: 28–300 LEDs (Standard 43).
-   * **HALOZ**: 10–27 LEDs (Standard 16 or 11).
-   * **UNKNOWN**: Fallback to safe defaults (16pts) if probing fails after 3 retries.
+   * **HALOZ**: 10–27 LEDs (Standard 16).
+   * **RAILZ**: 1–9 LEDs (Standard 10 - *Pending HW confirmation*).
+   * **UNKNOWN**: Fallback to safe defaults (SOULZ @ 43pts) if probing fails after 3 retries.
 4. **Clean Install Enforcement**: The build-apk script strictly aborts on Gradle failure, and install-apk performs a full `adb uninstall` before push.
 
 ---
@@ -141,14 +160,14 @@ The app uses a "Search & Enrich" strategy for First Time User Experience (FTUE).
 
 ### Physical Product Specifications
 
-| Feature | **SOULZ** | **HALOZ** |
-|:---|:---|:---|
-| **Form Factor** | Diffused Silicone Strips (x4) | Compact High-Density Pixel Box |
-| **Length/Size** | 56" Total (14" per strip) | Small form-factor (Wheels/Plates) |
-| **Battery Life**| 2-6+ hours | 2-4+ hours |
-| **Charging** | 90 min (USB-C) | 60 min Fast-Charge (USB-C) |
-| **LED Type** | Diffused Addressable RGB | High-Density RGB Pixels |
-| **Audio** | Integrated Mic (Mic Source 0x01) | Integrated Mic (Mic Source 0x01) |
+| **Feature** | **SOULZ** | **HALOZ** | **RAILZ** |
+|:---|:---|:---|:---|
+| **Form Factor** | Diffused Silicone Strips (x4) | Compact High-Density Box | Parallel Under-Strips (x2) |
+| **Length/Size** | 56" Total (14" per) | 1.5" x 3" Body | Inline Vertical Tracks |
+| **Battery Life**| 2-6+ hours | 2-4+ hours | 4-6+ hours |
+| **Charging** | 90 min (USB-C) | 60 min Fast-Charge | 90 min (USB-C) |
+| **LED Type** | Diffused Addressable RGB | High-Density RGB Pixels | High-Intensity Strips |
+| **Audio** | Integrated Mic | Integrated Mic | Integrated Mic |
 
 ### Hardware Capability Thresholds
 
