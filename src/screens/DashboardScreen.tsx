@@ -1572,7 +1572,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 {/* SLAB 4: REGISTERED FLEET (Devices) */}
                 <View style={styles.slabContainer}>
                   <View style={styles.slabHeader}>
-                     <Text style={styles.slabTitle}>HARDWARE FLEET</Text>
+                     <Text style={styles.slabTitle}>REGISTERED DEVICES</Text>
                      <TouchableOpacity 
                        onPress={() => setIsSetupWizardVisible(true)}
                        style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
