@@ -138,26 +138,7 @@ function AppContent() {
           return;
         }
 
-        // ── 3. Try auto-login with remembered credentials ──
-        const raw = await AsyncStorage.getItem(STORAGE_REMEMBER_CREDS);
-        if (raw) {
-          try {
-            const saved = JSON.parse(raw);
-            if (saved.rememberMe && saved.email && saved.password) {
-              const { data, error } = await supabase.auth.signInWithPassword({
-                email: saved.email,
-                password: saved.password,
-              });
-              if (!error && data.session) {
-                setSession(data.session);
-                return;
-              } else {
-                // Credentials stale — clear password but keep email
-                await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: saved.email, rememberMe: false }));
-              }
-            }
-          } catch {}
-        }
+
       } catch (err) {
         console.error('Initialization error:', err);
         AppLogger.log('ERROR_CAUGHT', { message: 'Initialization failed', info: err, context: 'App.init' });

@@ -78,7 +78,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/security-audit`
 
-- [ ] `chore/supabase-auth-reconciliation` : #22 — Supabase Auth Reconciliation — Audit the mixing of standard Supabase Auth with internal application auth logic; identify impacts on session management and RLS security.
+- [x] `chore/supabase-auth-reconciliation` : #22 — Supabase Auth Reconciliation — Audit the mixing of standard Supabase Auth with internal application auth logic; identify impacts on session management and RLS security.
 - [ ] `audit-rls-performance` : #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges.
 - [ ] `fix/username-case-sensitivity` : Why is the username case-sensitive? Enforce global lowercase normalization on registration, authentication, and display to prevent duplicate/split identities.
 - [ ] `feat/signup-profile-requirements` : Require users to set a Handle and Display Name during initial sign-up. Discuss options for preventing skipped profiling and ensuring identity is established upfront.
@@ -92,11 +92,12 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] `add-swipe-nav` : #34 — Card Swipe Navigation — Add the ability to swipe left and right to navigate back and forth between cards (Favorites, Picks, Presets) for a more fluid mobile UX.
 - [ ] `fix/misspelling-back-button` : Fix global spelling error on navigation header buttons. Currently says "Bac" everywhere instead of "Back" or uses a faulty icon label.
 - [ ] `fix/dashboard-long-press-tip` : Fix the long press tip button on dashboard.
-
+- [ ] `feat/dev-sandbox-nuke-gate` : Make the Nuke app cache and Dev Sandbox buttons conditionally visible only when toggled or under specific dev conditions to avoid accidental clears.
 ---
 
 ## ✅ Completed This Session (Apr 2026)
 
+- [x] `feat/favorites-layout-modernization` : Modernized the Favorites tab with dynamic horizontal FlatLists.
 - [x] `#36` — Pro Effects + Effects Mode fully restored — `EffectsPanel.tsx` standalone mode working. BREAKTHROUGH: hardware accepts variable-length 0x51 packets. `setCustomModeCompact()` added to `ZenggeProtocol.ts`.
 - [x] `#35` — Pro Effects 0x51 regression diagnosis — Root cause found: full 32-slot 291-byte payload exceeded BLE MTU (186 bytes default). Variable-length format bypasses MTU completely.
 - [x] `#1` — Positional Array Builder UI — Builder submode in MULTIMODE with node-based gradient interface

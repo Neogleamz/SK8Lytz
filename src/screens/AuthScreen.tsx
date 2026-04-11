@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabaseClient';
-import { Layout } from '../theme/theme';
+import { Layout, ThemePalette } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -18,7 +18,7 @@ import {
 } from '../services/AuthUtils';
 
 const STORAGE_LAST_EMAIL    = '@Sk8lytz_auth_last_email';
-const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';  // { email, password, rememberMe }
+const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';  // { email, rememberMe }
 const STORAGE_OFFLINE_SKIP  = '@Sk8lytz_offline_skip';     // 'true' if user chose Continue Offline
 
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
@@ -80,7 +80,6 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           }
           if (saved.rememberMe) {
             setEmail(saved.email || '');
-            setPassword(saved.password || '');
             setRememberMe(true);
           } else {
             // Only pre-fill email, not password
@@ -197,7 +196,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
       setErrorMessage('');
       // Save/clear remember-me credentials
       if (rememberMe) {
-        await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: loginEmail, password, rememberMe: true }));
+        await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: loginEmail, rememberMe: true }));
       } else {
         await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: loginEmail, rememberMe: false }));
       }
@@ -423,7 +422,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
                 ]}>
                   {rememberMe && <MaterialCommunityIcons name="check" size={12} color="#000" />}
                 </View>
-                <Text style={{ color: Colors.textMuted, fontSize: 13 }}>Remember me</Text>
+                <Text style={{ color: Colors.textMuted, fontSize: 13 }}>Remember my email</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => resetState('FORGOT_PASSWORD')}>
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
@@ -599,7 +598,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
   );
 }
 
-const createStyles = (Colors: any, insets: { top: number; bottom: number; left: number; right: number }) => StyleSheet.create({
+const createStyles = (Colors: ThemePalette, insets: { top: number; bottom: number; left: number; right: number }) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scrollContent: {
     flexGrow: 1, justifyContent: 'center',
