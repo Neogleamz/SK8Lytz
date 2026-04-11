@@ -78,7 +78,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/security-audit`
 
-- [ ] `chore/supabase-auth-reconciliation` : #22 — Supabase Auth Reconciliation — Audit the mixing of standard Supabase Auth with internal application auth logic; identify impacts on session management and RLS security.
+- [x] `chore/supabase-auth-reconciliation` : #22 — Supabase Auth Reconciliation — Audit the mixing of standard Supabase Auth with internal application auth logic; identify impacts on session management and RLS security.
 - [ ] `audit-rls-performance` : #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges.
 - [ ] `fix/username-case-sensitivity` : Why is the username case-sensitive? Enforce global lowercase normalization on registration, authentication, and display to prevent duplicate/split identities.
 - [ ] `feat/signup-profile-requirements` : Require users to set a Handle and Display Name during initial sign-up. Discuss options for preventing skipped profiling and ensuring identity is established upfront.
