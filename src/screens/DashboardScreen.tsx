@@ -1546,6 +1546,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                             const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id));
                             if (devicesToConnect.length > 0) connectToDevices(devicesToConnect);
                           }}
+                          onLongPress={() => {
+                            setGroupModalMode('rename');
+                            setEditingGroupId(group.id);
+                            setIsGroupModalVisible(true);
+                          }}
                           style={styles.skateCard}
                         >
                            <View style={styles.skateCardGlow} />

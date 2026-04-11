@@ -46,6 +46,16 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🔴 High Priority / Next Up
 
+### Target: `main`
+
+- [x] `fix/dashboard-group-longpress` : Fix regression where long-pressing to edit or delete groups on the dashboard no longer functions as expected.
+- [x] `fix/music-mode-duplicate-toggles` : Fix duplicate Light Bar/Screen mode toggles in Music Mode. Remove the old ones and move the new toggles to the top of the section.
+
+### Target: `epic/device-registration`
+
+- [ ] `audit/global-device-naming` : Comprehensive Device Naming Audit — The app is displaying raw 'LEDnet' names in the visualizer and dashboard instead of actual named devices (e.g. 'Soulz Right'). Devices also appear duplicated. Trace and audit ALL automatic naming and grouping persistence globally to establish a single source of truth for display names.
+- [ ] `feat/global-naming-structure` : Implement a global device naming architecture and UI workflow to ensure consistent, readable names rather than relying on raw hardware strings or overlapping groupings.
+
 ### Target: `epic/telemetry-audit`
 
 - [x] `feat/telemetry-error-logging` : Add comprehensive error handling and logging to Supabase. Implement an intelligent system to persist runtime crashes, unhandled exceptions, and BLE errors to a new DB table for AI review and bucket list generation.
@@ -62,8 +72,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `fix/hardware-setup-loop` : Hardware Setup Wizard launches repeatedly on app reopen even after setup and registration. Investigate triggers and fix.
 - [x] `fix/account-devices-display` : Account Manager / Devices tab is showing groups instead of individual devices. Refactor to display all registered devices with their details only.
 - [x] `fix/device-setup-blink` : Blink button does not work on device setup; evaluate and implement handling strategy.
-- [ ] `audit/global-device-naming` : Comprehensive Device Naming Audit — The app is displaying raw 'LEDnet' names in the visualizer and dashboard instead of actual named devices (e.g. 'Soulz Right'). Devices also appear duplicated. Trace and audit ALL automatic naming and grouping persistence globally to establish a single source of truth for display names.
-- [ ] `feat/global-naming-structure` : Implement a global device naming architecture and UI workflow to ensure consistent, readable names rather than relying on raw hardware strings or overlapping groupings.
 - [ ] `chore/rename-hardware-fleet` : Rename "Hardware Fleet" to "Registered Devices" in UI.
 
 ### Target: `epic/ui-refinement`
@@ -87,7 +95,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 - [x] `lab-music-mode-parity` : #13 — Lab 0x73 Music Mode parity — Lab BUILDER's 0x73 section is missing Light Screen (0x27) vs Light Bar (0x26) matrix style toggle, primary/secondary color pickers, and mic source.
 - [x] `fix-music-mode-color` : #14 — Music Mode: Sound column/drop color not applied — Main app music mode is functioning but color changes for patterns using "sound column" and "drop" effects are not being accepted/applied.
-- [ ] `fix/music-mode-duplicate-toggles` : Fix duplicate Light Bar/Screen mode toggles in Music Mode. Remove the old ones and move the new toggles to the top of the section.
 
 ---
 
@@ -119,7 +126,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] `fix/dashboard-long-press-tip` : Fix the long press tip button on dashboard.
 - [ ] `feat/speed-tracking-telemetry` : Add average mph and speed tracking to sessions, crews, and street mode. Need to brainstorm and discuss implementation options.
 - [ ] `chore/wireless-adb-setup` : Investigate and document wireless APK installation via ADB over Wi-Fi so the phone doesn't need to be constantly plugged in via USB.
-- [ ] `fix/dashboard-group-longpress` : Fix regression where long-pressing to edit or delete groups on the dashboard no longer functions as expected.
 
 ### Target: `epic/telemetry-audit`
 
