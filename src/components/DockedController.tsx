@@ -316,6 +316,7 @@ interface Sk8lytzControllerProps {
   hwSettings?: any;
   lockedProduct?: ProductType;
   isPaired?: boolean;
+  isDisconnecting?: boolean;
   points?: number;
   devices?: IDeviceState[];
   onLongPressDevice?: (device: IDeviceState) => void;
@@ -345,7 +346,7 @@ export type DockedControllerHandle = {
 // MarqueeText moved to standalone component MarqueeText.tsx
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
-  function DockedController({ hwSettings, lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged }: Sk8lytzControllerProps, ref) {
+  function DockedController({ hwSettings, lockedProduct, isPaired, isDisconnecting = false, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged }: Sk8lytzControllerProps, ref) {
     const { Colors, isDark } = useTheme();
     const styles = createStyles(Colors);
 
@@ -360,6 +361,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const [lastSentPayload, setLastSentPayload] = useState<number[]>([]);
 
     const writeToDevice = async (payload: number[]) => {
+      if (isDisconnecting) return; // Short-circuit dead writes during teardown
       setLastSentPayload([...payload]);
       if (parentWriteToDevice) {
         await parentWriteToDevice(payload);

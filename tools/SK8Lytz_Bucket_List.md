@@ -12,8 +12,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `feat/speed-tracking-telemetry` : Add real-time distance (miles), average speed (mph), average g-force and peak speed tracking to Street Mode and Crew Sessions and User Account Details new Statistics Tab, saving to Supabase and local storage and displaying in a post-session summary.
 
 ### Target: `epic/connection-reliability`
-
-- [ ] `epic/connection-reliability` : Execute the multiphase connection reliability plan (see `docs/plans/epic-connection-reliability.md`). Stop dropping connections, fix lockups entering/leaving controller, and fix UI teardown on disconnect (resolves `fix/hardware-connection-drop`, `audit/connection-polling-logic`, and `fix/controller-navigation-lockup`).
+- [x] `epic/connection-reliability` : Execute the multiphase connection reliability plan (see `docs/plans/epic-connection-reliability.md`). Stop dropping connections, fix lockups entering/leaving controller, and fix UI teardown on disconnect (resolves `fix/hardware-connection-drop`, `audit/connection-polling-logic`, and `fix/controller-navigation-lockup`).
 
 - [ ] `fix/dynamic-arch-regressions` : Resolve 'isHaloz' ReferenceError in ProductVisualizer and perform a sanitization audit (DockedController, ZenggeProtocol, Setup Wizard) to remove remaining hardcoded binary logic.
 - [ ] `feat/battery-health-predict` : Mathematical power modeling to predict battery life based on pattern draw; auto-dims to 20% at critical reserve.
