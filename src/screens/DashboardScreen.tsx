@@ -1485,22 +1485,27 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
              >
                 {/* SLAB 2: CREW HUB (Sessions) */}
                 <View style={[styles.slabContainer, { marginTop: 12 }]}>
-                  <View style={[styles.glassSlab, { borderColor: 'rgba(255,170,0,0.2)' }]}>
+                  <View style={[styles.glassSlab, { borderColor: isOfflineMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,170,0,0.2)', paddingVertical: 40 }]}>
                     <View style={styles.slabHeader}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <MaterialCommunityIcons name="account-group" size={18} color="#FFAA00" />
-                        <Text style={[styles.slabTitle, { color: '#FFAA00' }]}>CREW HUB</Text>
+                        <MaterialCommunityIcons name={isOfflineMode ? "cloud-off-outline" : "account-group"} size={18} color={isOfflineMode ? Colors.textMuted : "#FFAA00"} />
+                        <Text style={[styles.slabTitle, { color: isOfflineMode ? Colors.textMuted : '#FFAA00' }]}>CREW HUB</Text>
                       </View>
-                      {!crewSession && (
+                      {!crewSession && !isOfflineMode && (
                         <TouchableOpacity onPress={() => setIsCrewModalVisible(true)} style={styles.slabAction}>
                           <Text style={styles.slabActionText}>OPEN HUB</Text>
                         </TouchableOpacity>
                       )}
                     </View>
 
-                    {crewSession ? (
+                    {isOfflineMode ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' }}>
+                        <MaterialCommunityIcons name="wifi-off" size={16} color="#ff4444" style={{ marginRight: 8 }} />
+                        <Text style={[styles.slabEmptyText, { color: '#ff4444', flex: 1, fontFamily: 'Righteous', fontSize: 11 }]}>NETWORK DISCONNECTED</Text>
+                      </View>
+                    ) : crewSession ? (
                       <TouchableOpacity
-                        style={styles.activeCrewPill}
+                        style={[styles.activeCrewPill, { paddingVertical: 24 }]}
                         onPress={() => setIsCrewModalVisible(true)}
                       >
                         <View style={[styles.statusDot, { backgroundColor: crewRole === 'leader' ? '#FFAA00' : '#00AAFF' }]} />
@@ -1556,8 +1561,15 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
                 {/* SLAB 4: REGISTERED FLEET (Devices) */}
                 <View style={styles.slabContainer}>
-                  <View style={styles.slabHeader}>
-                     <Text style={styles.slabTitle}>REGISTERED DEVICES</Text>
+                  <TouchableOpacity 
+                    style={styles.slabHeader} 
+                    onPress={() => setIsRegisteredCollapsed(!isRegisteredCollapsed)}
+                    activeOpacity={0.7}
+                  >
+                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                       <MaterialCommunityIcons name={isRegisteredCollapsed ? "chevron-down" : "chevron-up"} size={16} color={Colors.textMuted} />
+                       <Text style={styles.slabTitle}>REGISTERED DEVICES</Text>
+                     </View>
                      <TouchableOpacity 
                        onPress={() => setIsSetupWizardVisible(true)}
                        style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
@@ -1565,26 +1577,29 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                        <MaterialCommunityIcons name="plus-circle-outline" size={14} color={Colors.primary} />
                        <Text style={[styles.slabActionText, { color: Colors.primary }]}>ADD DEVICE</Text>
                      </TouchableOpacity>
-                  </View>
-                  {registeredDevices.length > 0 ? (
-                    <View style={styles.deviceListFixed}>
-                      {registeredDevices.map((d: RegisteredDevice) => (
-                        <View key={d.id || d.device_mac} style={{ marginBottom: 8 }}>
-                          {renderItem({ item: d } as any)}
-                        </View>
-                      ))}
-                    </View>
-                  ) : (
-                    <View style={[styles.glassSlab, { alignItems: 'center', paddingVertical: 32 }]}>
-                      <MaterialCommunityIcons name="bluetooth-connect" size={32} color={Colors.textMuted} style={{ marginBottom: 12 }} />
-                      <Text style={styles.slabEmptyText}>No registered skates found.</Text>
-                      <TouchableOpacity 
-                        onPress={() => setIsSetupWizardVisible(true)}
-                        style={[styles.scanButton, { marginTop: 16, width: '60%' }]}
-                      >
-                        <Text style={styles.scanButtonText}>START SETUP</Text>
-                      </TouchableOpacity>
-                    </View>
+                  </TouchableOpacity>
+                  
+                  {!isRegisteredCollapsed && (
+                    registeredDevices.length > 0 ? (
+                      <View style={styles.deviceListFixed}>
+                        {registeredDevices.map((d: RegisteredDevice) => (
+                          <View key={d.id || d.device_mac} style={{ marginBottom: 8 }}>
+                            {renderItem({ item: d } as any)}
+                          </View>
+                        ))}
+                      </View>
+                    ) : (
+                      <View style={[styles.glassSlab, { alignItems: 'center', paddingVertical: 32 }]}>
+                        <MaterialCommunityIcons name="bluetooth-connect" size={32} color={Colors.textMuted} style={{ marginBottom: 12 }} />
+                        <Text style={styles.slabEmptyText}>No registered skates found.</Text>
+                        <TouchableOpacity 
+                          onPress={() => setIsSetupWizardVisible(true)}
+                          style={[styles.scanButton, { marginTop: 16, width: '60%' }]}
+                        >
+                          <Text style={styles.scanButtonText}>START SETUP</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )
                   )}
                 </View>
              </ScrollView>
@@ -2015,7 +2030,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(0,240,255,0.15)',
-    padding: 20,
+    padding: 28,
     flexDirection: 'row',
     alignItems: 'center',
     overflow: 'hidden',
@@ -2030,14 +2045,14 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     backgroundColor: 'rgba(0,240,255,0.02)',
   },
   skateCardName: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: '900',
     color: '#00F0FF',
     fontFamily: 'Righteous',
     letterSpacing: 0.5,
   },
   skateCardMeta: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: 'rgba(0,240,255,0.5)',
     marginTop: 2,

@@ -465,6 +465,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                      device_name: cfg?.name.trim() || device.device_name,
                      product_type: cfg?.type || 'SOULZ',
                      position: cfg?.position || null,
+                     group_id: '',
                      led_points: cfg?.points || device.led_points,
                      segments: 1,
                      ic_type: 'WS2812B',
