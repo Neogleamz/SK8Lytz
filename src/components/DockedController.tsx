@@ -1998,6 +1998,16 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     <AnalogGauge value={gpsSpeed} min={0} max={25} label="SPEED" unit="MPH" size={120} defaultColor="#00F0FF" dangerVal={15} criticalVal={20} />
                     <AnalogGauge value={peakGForce} min={0.3} max={2.5} label="G-FORCE" unit="G" size={120} defaultColor="#FFD700" dangerVal={1.2} criticalVal={1.8} />
                   </View>
+                  
+                  {/* BOTTOM: Global Telemetry */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 30, marginTop: 12, marginBottom: 8 }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 }}>
+                      TOP SPEED: <Text style={{ color: '#00F0FF', fontWeight: '800' }}>{crewService.sessionTelemetry.topSpeedMph.toFixed(1)} MPH</Text>
+                    </Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 }}>
+                      DISTANCE: <Text style={{ color: '#00F0FF', fontWeight: '800' }}>{crewService.sessionTelemetry.distanceMiles.toFixed(2)} MI</Text>
+                    </Text>
+                  </View>
                 </View>
               </ScrollView>
             )}
