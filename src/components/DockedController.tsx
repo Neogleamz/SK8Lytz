@@ -45,6 +45,22 @@ import * as Location from 'expo-location';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import MarqueeText from './MarqueeText';
 
+/**
+ * Convert Hex color #RRGGBB to Hue (0-360)
+ */
+const hexToHue = (hex: string): number => {
+  const r = (parseInt(hex.slice(1, 3), 16) || 0) / 255;
+  const g = (parseInt(hex.slice(3, 5), 16) || 0) / 255;
+  const b = (parseInt(hex.slice(5, 7), 16) || 0) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0;
+  if (max === min) h = 0;
+  else if (max === r) h = (g - b) / (max - min) + (g < b ? 6 : 0);
+  else if (max === g) h = (b - r) / (max - min) + 2;
+  else if (max === b) h = (r - g) / (max - min) + 4;
+  return Math.round(h * 60);
+};
+
 type MotionState = 'STOPPED' | 'ACCELERATING' | 'CRUISING' | 'SLOWING_DOWN' | 'HARD_BRAKING';
 
 interface IAnalogGaugeProps {
@@ -1979,7 +1995,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                         {showFg && (
                           <TouchableOpacity
                             activeOpacity={0.9}
-                            onPress={() => setFixedColorMode('FOREGROUND')}
+                            onPress={() => {
+                              setFixedColorMode('FOREGROUND');
+                              setFixedHue(hexToHue(fixedFgColor));
+                            }}
                             style={{ flex: 1, backgroundColor: fixedFgColor, justifyContent: 'center', alignItems: 'center', opacity: fixedColorMode === 'FOREGROUND' ? 1.0 : 0.4, borderTopLeftRadius: 8, borderBottomLeftRadius: 8, shadowColor: fixedFgColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
                           >
                             <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>FOREGROUND</Text>
@@ -1988,7 +2007,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                         {showBg && (
                           <TouchableOpacity
                             activeOpacity={0.9}
-                            onPress={() => setFixedColorMode('BACKGROUND')}
+                            onPress={() => {
+                              setFixedColorMode('BACKGROUND');
+                              setFixedHue(hexToHue(fixedBgColor));
+                            }}
                             style={{ flex: 1, backgroundColor: fixedBgColor, justifyContent: 'center', alignItems: 'center', opacity: fixedColorMode === 'BACKGROUND' ? 1.0 : 0.4, borderLeftWidth: showFg ? 1 : 0, borderLeftColor: 'rgba(255,255,255,0.4)', borderTopRightRadius: 8, borderBottomRightRadius: 8, borderTopLeftRadius: showFg ? 0 : 8, borderBottomLeftRadius: showFg ? 0 : 8, shadowColor: fixedBgColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
                           >
                             <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>BACKGROUND</Text>

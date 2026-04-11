@@ -7,9 +7,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🔴 High Priority / Next Up
 
-### Target: `main`
-
-
 ### Target: `epic/device-registration`
 
 - [ ] `audit/global-device-naming` : Comprehensive Device Naming Audit — The app is displaying raw 'LEDnet' names in the visualizer and dashboard instead of actual named devices (e.g. 'Soulz Right'). Devices also appear duplicated. Trace and audit ALL automatic naming and grouping persistence globally to establish a single source of truth for display names.
@@ -26,11 +23,11 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/device-registration`
 
-- [ ] `chore/rename-hardware-fleet` : Rename "Hardware Fleet" to "Registered Devices" in UI.
+- [x] `chore/rename-hardware-fleet` : Rename "Hardware Fleet" to "Registered Devices" in UI.
 
 ### Target: `epic/ui-refinement`
 
-- [ ] `fix/pro-effects-color-sync` : Pro effects mode color slider sync — The RGB slider does not stay in sync when toggling between Foreground and Background state. Update slider to reflect the currently selected layer's color.
+- [x] `fix/pro-effects-color-sync` : Pro effects mode color slider sync — The RGB slider does not stay in sync when toggling between Foreground and Background state. Update slider to reflect the currently selected layer's color.
 - [ ] `feat/favorites-layout-modernization` : Fix Favorites layout and scrolling issues. Modernize the tab design (requires presenting multiple design concepts for approval).
 
 ### Target: `epic/crew-hub-overhaul`
@@ -39,7 +36,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/camera-mode`
 
-- [ ] `fix/camera-color-interpreter` : The camera color interpreter is behaving oddly. Discuss options and brainstorm solutions for refining or replacing the color sampling logic.
+- [x] `fix/camera-color-interpreter` : The camera color interpreter is behaving oddly. Discuss options and brainstorm solutions for refining or replacing the color sampling logic.
 
 ### Target: `epic/music-mode-parity`
 
@@ -61,18 +58,17 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🟡 Backlog
 
-### Target: `main`
+### Target: `epic/admin-tools`
 
-- [ ] `fix/username-case-sensitivity` : Why is the username case-sensitive? Enforce global lowercase normalization on registration, authentication, and display to prevent duplicate/split identities.
-- [ ] `feat/signup-profile-requirements` : Require users to set a Handle and Display Name during initial sign-up. Discuss options for preventing skipped profiling and ensuring identity is established upfront.
-- [ ] `fix/misspelling-back-button` : Fix global spelling error on navigation header buttons. Currently says "Bac" everywhere instead of "Back" or uses a faulty icon label.
-- [ ] `hw-test/remote-pairing-logic` : Research and verify RF Remote pairing ID discovery and Power ON/OFF parity (APP vs RF Remote)
-- [ ] `fix/dashboard-long-press-tip` : Fix the long press tip button on dashboard.
-- [ ] `feat/speed-tracking-telemetry` : Add average mph and speed tracking to sessions, crews, and street mode. Need to brainstorm and discuss implementation options.
 - [ ] `chore/wireless-adb-setup` : Investigate and document wireless APK installation via ADB over Wi-Fi so the phone doesn't need to be constantly plugged in via USB.
+
+### Target: `epic/protocol-integration`
+
+- [ ] `hw-test/remote-pairing-logic` : Research and verify RF Remote pairing ID discovery and Power ON/OFF parity (APP vs RF Remote)
 
 ### Target: `epic/telemetry-audit`
 
+- [ ] `feat/speed-tracking-telemetry` : Add average mph and speed tracking to sessions, crews, and street mode. Need to brainstorm and discuss implementation options.
 
 ### Target: `epic/testing-suite`
 
@@ -84,6 +80,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 - [ ] `chore/supabase-auth-reconciliation` : #22 — Supabase Auth Reconciliation — Audit the mixing of standard Supabase Auth with internal application auth logic; identify impacts on session management and RLS security.
 - [ ] `audit-rls-performance` : #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges.
+- [ ] `fix/username-case-sensitivity` : Why is the username case-sensitive? Enforce global lowercase normalization on registration, authentication, and display to prevent duplicate/split identities.
+- [ ] `feat/signup-profile-requirements` : Require users to set a Handle and Display Name during initial sign-up. Discuss options for preventing skipped profiling and ensuring identity is established upfront.
 
 ### Target: `epic/community-hub`
 
@@ -92,6 +90,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/ui-refinement`
 
 - [ ] `add-swipe-nav` : #34 — Card Swipe Navigation — Add the ability to swipe left and right to navigate back and forth between cards (Favorites, Picks, Presets) for a more fluid mobile UX.
+- [ ] `fix/misspelling-back-button` : Fix global spelling error on navigation header buttons. Currently says "Bac" everywhere instead of "Back" or uses a faulty icon label.
+- [ ] `fix/dashboard-long-press-tip` : Fix the long press tip button on dashboard.
 
 ---
 
