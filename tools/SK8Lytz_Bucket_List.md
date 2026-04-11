@@ -6,11 +6,14 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## 🔴 High Priority / Next Up
 
+<!-- AUTO_SYNC_ERRORS_START -->
+<!-- AUTO_SYNC_ERRORS_END -->
 ### Target: `epic/offline-mode`
 
 - [ ] `gate-offline-mode` : Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning.
 
 ### Target: `epic/device-registration`
+
 ### Target: `epic/crew-hub-overhaul`
 
 - [ ] `refactor-crew-modal` : #3 — `CrewModal.tsx` refactor — 14 useEffect hooks, 2,600+ lines. Extract `useCrewHub()` and `useCrewSession()` custom hooks. Highest maintainability debt in the codebase.
@@ -26,9 +29,9 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/admin-tools`
 
+- [ ] `feat/picks-scheduler-builder` : Revise the SK8Lytz picks scheduler algorithms to finalize the assignment mode logic, and integrate an administrative version of the array builder to create custom community picks on the fly. also allow access to patterns in program mode for assignment
 
 ### Target: `epic/camera-mode`
-
 
 ### Target: `epic/visualizer-parity`
 
@@ -36,14 +39,11 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/device-management`
 
-
 ### Target: `epic/protocol-integration`
-
 
 ### Target: `epic/ui-refinement`
 
 - [x] `feat/dashboard-layout-update` : Move 'Registered Devices' to the bottom of the dashboard and make it collapsible. Make the Crew Hub card twice as tall and the My Skates Card bigger.
-
 
 ---
 
@@ -53,12 +53,12 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 - [x] `fix/dashboard-anchor` : Anchor Registered Devices slab permanently to the bottom of the dashboard screen (outside ScrollView).
 
-
 ### Target: `epic/telemetry-audit`
 
-- [ ] `verify-lab-telemetry` : #2 — Verify Supabase `led_diagnostics` table — Confirm Diagnostic Lab successfully pushes telemetry to Supabase. Query table after live test.
-- [ ] `verify-telemetry-ingestion` : #21 — Telemetry ingestion verification — Confirm AppLogger events (crew, street mode, hardware config) are landing in Supabase `device_logs` table correctly.
-- [ ] `audit-applogger-coverage` : #30 — AppLogger Coverage Audit — Comprehensive audit of all features added this session (Street Mode, Picks, Favorites, Builder) to ensure 100% telemetry coverage in Analytics.
+- [x] `verify-lab-telemetry` : #2 — Verify Supabase `led_diagnostics` table — Confirm Diagnostic Lab successfully pushes telemetry to Supabase. Query table after live test.
+- [x] `verify-telemetry-ingestion` : #21 — Telemetry ingestion verification — Confirm AppLogger events (crew, street mode, hardware config) are landing in Supabase `device_logs` table correctly.
+- [x] `audit-applogger-coverage` : #30 — AppLogger Coverage Audit — Comprehensive audit of all features added this session (Street Mode, Picks, Favorites, Builder) to ensure 100% telemetry coverage in Analytics.
+- [x] `feat/global-error-telemetry` : Integrate a global error boundary and remote crash reporting solution (e.g., Sentry or Supabase Edge logging) to automatically capture, diagnose, and push unhandled exceptions without user intervention. this should add items to bucket list for us to review and fix.
 
 ### Target: `epic/testing-suite`
 
@@ -76,6 +76,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/ui-refinement`
 
+- [x] `feat/auth-offline-card-reorder` : Move the 'Continue Offline' card on the Auth page to the bottom, anchoring it similar to the Registered Devices slab on the dashboard.
 - [ ] `add-swipe-nav` : #34 — Card Swipe Navigation — Add the ability to swipe left and right to navigate back and forth between cards (Favorites, Picks, Presets) for a more fluid mobile UX.
 
 ---
@@ -136,7 +137,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `#33` — Lab Navigation Flow — Standardized "Exit" behavior to return users to the Analytics view.
 
 ## ✅ Completed Previously
-
 
 ---
 *Last updated: 2026-04-09 | This session: IDE Rules configured for auto-branching.*
