@@ -201,7 +201,7 @@ const AnalogGauge = React.memo(({
 
 
 
-type ProductType = 'HALOZ' | 'SOULZ';
+type ProductType = 'HALOZ' | 'SOULZ' | 'RAILZ';
 type ModeType = 'FAVORITES' | 'MULTIMODE' | 'PROGRAMS' | 'MUSIC' | 'STREET' | 'CAMERA';
 
 const MUSIC_PATTERNS = [
@@ -472,7 +472,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       const factor = brtFactor(brt);
       const pts = hwSettings?.ledPoints || points || 16;
       const segs = hwSettings?.segments || 1;
-      const isHalozRing = segs === 2 && pts === 16; // HALOZ hardware signature
+      
+      // Resolve product profile to drive mirroring logic (replaces legacy isHalozRing heuristic)
+      const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === activeProduct) || LOCAL_PRODUCT_CATALOG[0];
+      const isMirrored = profile.vizIsMirrored;
+      
       const hwSpeed = clampSpeed(spd);
 
       let cruiseHex = streetCruiseColor; // Use user selected color for ACCELERATING / CRUISING
@@ -516,19 +520,26 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       }
       const chaseTick = cruiseChaseRef.current <= 1 ? cruiseChaseRef.current : 2 - cruiseChaseRef.current; // Triangle 0→1→0
 
-      if (isHalozRing) {
-        // HALOZ: 8-LED ring frame. Chase bright spot through the 4 cruise LEDs (idx 2-5)
-        const chaseSlot = Math.floor(chaseTick * 3); // 0,1,2,3 through 4 cruise positions
-        const frame8 = [
-          tail, tail,
-          chaseSlot === 0 ? cruise : crDim,
-          chaseSlot === 1 ? cruise : crDim,
-          chaseSlot === 2 ? cruise : crDim,
-          chaseSlot === 3 ? cruise : crDim,
-          head, head,
-        ];
-        const mirror8 = [...frame8].reverse();
-        arr = [...frame8, ...mirror8];
+      if (isMirrored) {
+        // Mirrored bilateral symmetry (HALOZ ring or RAILZ parallel strips)
+        // For 2-segment mirrored products, we calculate a frame for half the total LEDs
+        const segLeds = Math.ceil(pts / 2);
+        const chaseSlot = Math.floor(chaseTick * (segLeds / 2)); 
+        
+        const frameHalf = Array.from({ length: segLeds }, (_, i) => {
+          const fract = i / segLeds;
+          if (fract < 0.3) return tail;
+          if (fract > 0.7) return head;
+          // Chase logic in middle zone
+          const midZoneI = i - Math.round(segLeds * 0.3);
+          const midZoneSize = Math.round(segLeds * 0.4);
+          const dist = Math.abs(midZoneI - Math.round(chaseTick * midZoneSize));
+          if (dist === 0) return cruise;
+          return crDim;
+        });
+
+        const mirrorHalf = [...frameHalf].reverse();
+        arr = [...frameHalf, ...mirrorHalf];
       } else {
         const ledCount = Math.max(10, hwSettings?.ledPoints || pts);
         const rearCount = Math.max(1, Math.round(ledCount * 0.3));
@@ -1438,7 +1449,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
         {/* Removed Active Mode Header to save vertical space */}
 
-        <View style={[styles.controlsContainer, activeMode === 'CAMERA' ? { flex: 0, height: 240 } : {}, { padding: 4, overflow: 'hidden' }]}>
+        <View style={[styles.controlsContainer, { padding: 4, overflow: 'hidden' }]}>
           <View style={[styles.activeModeContainer, { flex: 1, justifyContent: 'space-evenly' }]}>
             {activeMode === 'FAVORITES' && (
               <View style={{ flex: 1, paddingVertical: Layout.padding, paddingBottom: 24, justifyContent: 'space-between' }}>
@@ -1933,7 +1944,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     {motionState === 'HARD_BRAKING' && '>> HARD BRAKING <<'}
                     {motionState === 'SLOWING_DOWN' && '>> DECELERATING <<'}
                     {motionState === 'ACCELERATING' && '>> ACCELERATING <<'}
-                    {motionState === 'CRUISING' && '>> CRUZING <<'}
+                    {motionState === 'CRUISING' && '>> CRUISING <<'}
                   </Text>
                 </View>
 

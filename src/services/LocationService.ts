@@ -99,8 +99,8 @@ class LocationService {
           supabase.from('crew_members').select('session_id').eq('user_id', user.id)
         ]);
 
-        const myCrewIds = (mRes.data ?? []).map(m => m.crew_id).filter(Boolean);
-        const mySessionIds = (sRes.data ?? []).map(s => s.session_id).filter(Boolean);
+        const myCrewIds = (mRes.data ?? []).map((m: any) => m.crew_id).filter(Boolean);
+        const mySessionIds = (sRes.data ?? []).map((s: any) => s.session_id).filter(Boolean);
 
         if (myCrewIds.length > 0 || mySessionIds.length > 0) {
           let query = supabase

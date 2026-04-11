@@ -100,7 +100,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
       <View style={styles.instructionCard}>
         <Text style={styles.instructionHeader}>Step 1: Power On</Text>
         <Text style={styles.instructionBody}>
-          Ensure your SK8Lytz (HALOZ or SOULZ) are plugged in and actively powered on.
+          Ensure your SK8Lytz controllers are plugged in and actively powered on.
         </Text>
       </View>
 
@@ -234,7 +234,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
           />
 
           {selected.map((device, idx) => {
-            const config = deviceConfigsState[device.device_mac] || { name: '', type: 'SOULZ', position: null, points: 43 };
+            const config = deviceConfigsState[device.device_mac] || { name: '', type: LOCAL_PRODUCT_CATALOG[0].id, position: null, points: LOCAL_PRODUCT_CATALOG[0].defaultLedPoints };
             
             const updateConfig = (key: string, val: any) => {
                setDeviceConfigsState(prev => ({
@@ -280,18 +280,15 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                   <View style={{ flex: 1 }}>
                     <Text style={styles.labelSmall}>TYPE</Text>
                     <View style={styles.segRow}>
-                      <TouchableOpacity 
-                        style={[styles.segBtn, config.type === 'SOULZ' && styles.segBtnActive]}
-                        onPress={() => updateConfig('type', 'SOULZ')}
-                      >
-                         <Text style={[styles.segBtnText, config.type === 'SOULZ' && { color: '#000' }]}>SOULZ</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={[styles.segBtn, config.type === 'HALOZ' && styles.segBtnActive]}
-                        onPress={() => updateConfig('type', 'HALOZ')}
-                      >
-                         <Text style={[styles.segBtnText, config.type === 'HALOZ' && { color: '#000' }]}>HALOZ</Text>
-                      </TouchableOpacity>
+                      {LOCAL_PRODUCT_CATALOG.map(p => (
+                        <TouchableOpacity 
+                          key={p.id}
+                          style={[styles.segBtn, config.type === p.id && styles.segBtnActive]}
+                          onPress={() => updateConfig('type', p.id)}
+                        >
+                           <Text style={[styles.segBtnText, config.type === p.id && { color: '#000' }]}>{p.id}</Text>
+                        </TouchableOpacity>
+                      ))}
                     </View>
                   </View>
 
@@ -315,7 +312,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                   </View>
                 </View>
 
-                {/* Adjust Points for SOULZ */}
+                {/* Adjust Points (only for products that allow it, e.g. SOULZ) */}
                 {config.type === 'SOULZ' && (
                   <View style={{ marginTop: 12, backgroundColor: Colors.surfaceHighlight, borderRadius: 12, padding: 8 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -402,8 +399,11 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
 
                selected.forEach(d => {
                   const n = d.device_name || '';
-                  let pType = n.toUpperCase().includes('HALO') ? 'HALOZ' : 'SOULZ';
+                  // Heuristic: Check if name includes a catalog product ID
+                  const matchedProfile = LOCAL_PRODUCT_CATALOG.find(p => n.toUpperCase().includes(p.id.toUpperCase()));
+                  let pType = (matchedProfile ? matchedProfile.id : (d.product_type !== 'UNKNOWN' ? d.product_type : 'SOULZ')) as 'HALOZ' | 'SOULZ' | 'RAILZ';
                   
+                  const pProfile = LOCAL_PRODUCT_CATALOG.find(p => p.id === pType) || LOCAL_PRODUCT_CATALOG[0];
                   if (pType === 'HALOZ') hCount++;
                   if (pType === 'SOULZ') sCount++;
 
@@ -420,7 +420,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                     name: n || `My SK8Lytz ${pType}`,
                     type: pType,
                     position: pos,
-                    points: typeof d.led_points === 'number' ? d.led_points : (pType === 'SOULZ' ? 43 : 16)
+                    points: typeof d.led_points === 'number' ? d.led_points : pProfile.defaultLedPoints
                   };
                });
 
@@ -473,7 +473,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                      ...device,
                      group_name: groupName.trim(),
                      device_name: cfg?.name.trim() || device.device_name,
-                     product_type: cfg?.type || 'SOULZ',
+                     product_type: (cfg?.type || LOCAL_PRODUCT_CATALOG[0].id) as any,
                      position: cfg?.position || null,
                      group_id: '',
                      led_points: cfg?.points || device.led_points,

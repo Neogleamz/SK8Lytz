@@ -77,6 +77,11 @@ The primary dashboard uses a **Vertical Slab (No-Scroll)** layout to maximize gl
 3. **Slab 3: My Skates / Groups**: High-impact cards for grouped hardware with global power controls.
 4. **Slab 4: Hardware Fleet**: List of all registered devices with a "TAP TO ADD" quick-access wizard link.
 
+### UI Design Patterns & Branding
+
+*   **Tucked-in Attribution**: Credit links (e.g., "by neogleamz.com") must be placed discreetly within header containers, aligned with the visual boundary of the primary logo (e.g., `marginRight: '16%'` for a 300px logo) and using `fontSize: 9` with `fontWeight: '800'` muted text.
+*   **Fluid Component Scaling**: Components (Builders, Camera Viewers) must NOT use hardcoded heights. They must utilize available `flex` space between the `ProductVisualizer` and the bottom dock to ensure responsiveness across all aspect ratios.
+
 ### Admin Tools Hub (The Command Center)
 
 The **Admin Tools Hub** (`AdminToolsModal`) is the unified gateway for all system-level diagnostics and hardware maintenance. 
@@ -88,6 +93,7 @@ The **Admin Tools Hub** (`AdminToolsModal`) is the unified gateway for all syste
 * **Tab 4: TOOLS**: Administrative portal for low-level components:
     *   **LED Diagnostic Lab**: Atomic protocol validation and DIY payload building.
     *   **Firmware Programmer**: Low-level hardware updates and serial-over-BLE tools.
+    *   **Optical Simulation Mode (Web Fallback)**: A dedicated developer interface for non-native environments (Expo Web). It provides manual telemetry simulation (randomized hex dispatch) to smoke-test visualizer and state-management pipelines without physical hardware.
 
 ### Test Users & Environments
 

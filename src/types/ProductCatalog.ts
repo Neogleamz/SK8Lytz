@@ -74,4 +74,13 @@ export interface ProductProfile {
 
   /** Whether strips run vertically (top-to-bottom) or horizontally (left-to-right). */
   vizStripOrientation?: 'HORIZONTAL' | 'VERTICAL';
+
+  /** 
+   * If true, the visualizer mirrors the second segment of LEDs to the first. 
+   * Used for HALOZ ring hardware where Seg2 = Seg1 in reverse position.
+   */
+  vizIsMirrored?: boolean;
+
+  /** Battery capacity in milliampere-hours (mAh). */
+  batteryCapacityMilliAmpereHour: number;
 }

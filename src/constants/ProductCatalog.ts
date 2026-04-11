@@ -38,6 +38,8 @@ export const LOCAL_PRODUCT_CATALOG: ProductProfile[] = [
     vizBlobDiameterMm: 7.6,
     vizBaseWidth: 60,
     vizBaseHeight: 90,
+    vizIsMirrored: true,
+    batteryCapacityMilliAmpereHour: 1200,
   },
   {
     id: 'SOULZ',
@@ -56,6 +58,8 @@ export const LOCAL_PRODUCT_CATALOG: ProductProfile[] = [
     vizBlobDiameterMm: 5.7,
     vizBaseWidth: 55,
     vizBaseHeight: 115,
+    vizIsMirrored: false,
+    batteryCapacityMilliAmpereHour: 2000,
   },
   {
     id: 'RAILZ',
@@ -79,6 +83,8 @@ export const LOCAL_PRODUCT_CATALOG: ProductProfile[] = [
     vizStripCount: 2,
     vizStripSeparation: 32,
     vizStripOrientation: 'VERTICAL',
+    vizIsMirrored: true,
+    batteryCapacityMilliAmpereHour: 2000,
   },
 ];
 

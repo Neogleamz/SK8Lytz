@@ -47,10 +47,23 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
 
   if (Platform.OS === 'web') {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: Colors.text, textAlign: 'center', fontSize: 16 }}>
-          Camera Tracker Optical Telemetry is only supported on Native Android/iOS builds.
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', padding: 24 }]}>
+        <MaterialCommunityIcons name="camera-iris" size={48} color={Colors.primary} style={{ marginBottom: 16, opacity: 0.8 }} />
+        <Text style={[styles.message, { fontSize: 18, marginBottom: 8 }]}>Optical Simulation Mode</Text>
+        <Text style={{ color: Colors.textMuted, textAlign: 'center', fontSize: 13, lineHeight: 18, marginBottom: 24 }}>
+          Optical telemetry requires native hardware acceleration reserved for Android & iOS builds.
         </Text>
+        
+        <TouchableOpacity 
+          style={[styles.button, { backgroundColor: 'rgba(0,240,255,0.15)', borderWidth: 1, borderColor: Colors.primary }]}
+          onPress={() => {
+            const randomHex = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0').toUpperCase();
+            setDetectedHex(randomHex);
+            onColorDetected(randomHex);
+          }}
+        >
+          <Text style={{ color: Colors.primary, fontWeight: 'bold', letterSpacing: 1 }}>SIMULATE TELEMETRY</Text>
+        </TouchableOpacity>
       </View>
     );
   }

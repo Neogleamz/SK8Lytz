@@ -363,7 +363,15 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             style={{ width: '80%', maxWidth: 300, height: 80, tintColor: isDark ? '#FFFFFF' : undefined }} 
             resizeMode="contain" 
           />
-          <Text style={[styles.subtitle, { marginTop: 8, letterSpacing: 1.5, fontSize: 13, color: Colors.textMuted }]}>
+          <TouchableOpacity 
+            onPress={() => Linking.openURL('https://neogleamz.com')}
+            style={{ alignSelf: 'flex-end', marginTop: -15, marginRight: '16%', padding: 4 }}
+          >
+            <Text style={{ fontSize: 9, fontWeight: '800', color: Colors.textMuted, letterSpacing: 1 }}>
+              by neogleamz.com
+            </Text>
+          </TouchableOpacity>
+          <Text style={[styles.subtitle, { marginTop: 12, letterSpacing: 1.5, fontSize: 13, color: Colors.textMuted }]}>
             Glow your way.
           </Text>
         </View>

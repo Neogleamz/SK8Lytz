@@ -63,7 +63,7 @@ interface BluetoothLowEnergyApi {
 export interface PendingRegistration {
   device_mac: string;
   device_name: string;
-  product_type: 'HALOZ' | 'SOULZ';
+  product_type: 'HALOZ' | 'SOULZ' | 'RAILZ' | 'UNKNOWN';
   position: 'Left' | 'Right';
   group_name: string;
   led_points: number;
@@ -588,7 +588,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
       }
     }
 
-    const mapToRegistration = (d: any, i: number, type: 'HALOZ' | 'SOULZ' | 'UNKNOWN'): PendingRegistration => {
+    const mapToRegistration = (d: any, i: number, type: 'HALOZ' | 'SOULZ' | 'RAILZ' | 'UNKNOWN'): PendingRegistration => {
       const isUnknown = type === 'UNKNOWN';
       const pos = i === 0 ? 'Left' : (i === 1 ? 'Right' : null);
       return {
