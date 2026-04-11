@@ -60,7 +60,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 - [x] `fix/supabase-auth-redirect` : Supabase Auth Confirmation Email Redirect — Fix the issue where the confirmation email link points to a dead `localhost` site. 
 - [x] `fix/hardware-setup-loop` : Hardware Setup Wizard launches repeatedly on app reopen even after setup and registration. Investigate triggers and fix.
-- [ ] `fix/account-devices-display` : Account Manager / Devices tab is showing groups instead of individual devices. Refactor to display all registered devices with their details only.
+- [x] `fix/account-devices-display` : Account Manager / Devices tab is showing groups instead of individual devices. Refactor to display all registered devices with their details only.
 - [x] `fix/device-setup-blink` : Blink button does not work on device setup; evaluate and implement handling strategy.
 - [ ] `audit/global-device-naming` : Comprehensive Device Naming Audit — The app is displaying raw 'LEDnet' names in the visualizer and dashboard instead of actual named devices (e.g. 'Soulz Right'). Devices also appear duplicated. Trace and audit ALL automatic naming and grouping persistence globally to establish a single source of truth for display names.
 - [ ] `feat/global-naming-structure` : Implement a global device naming architecture and UI workflow to ensure consistent, readable names rather than relying on raw hardware strings or overlapping groupings.
