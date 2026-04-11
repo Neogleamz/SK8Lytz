@@ -30,6 +30,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/device-registration`
 
+- [ ] `feat/empty-skates-setup-cta` : On the Dashboard, if no device groups exist (offline or online), render a contextual "Set Up Your Skates →" CTA button beneath the "My Skates" section header. The button should open the Hardware Setup Wizard and be completely hidden once at least one group/device is registered. Condition must work in both offline and authenticated states.
+
 ### Target: `epic/crew-hub-overhaul`
 
 - [ ] `refactor-crew-modal` : #3 — `CrewModal.tsx` refactor — 14 useEffect hooks, 2,600+ lines. Extract `useCrewHub()` and `useCrewSession()` custom hooks. Highest maintainability debt in the codebase.
