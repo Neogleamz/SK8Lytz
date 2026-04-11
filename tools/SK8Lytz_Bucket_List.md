@@ -40,6 +40,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/device-management`
 
+- [ ] `feat/dynamic-product-architecture` : Prepare app for new products by migrating hardware configurations (LED points, segments, auto-detect thresholds, visualizer mapping) from hardcoded constants to a Supabase-backed catalog with local caching and an admin UI layer.
+
 ### Target: `epic/protocol-integration`
 
 ### Target: `epic/ui-refinement`
