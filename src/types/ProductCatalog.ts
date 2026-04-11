@@ -86,4 +86,7 @@ export interface ProductProfile {
 
   /** Primary brand color hex for UI rendering (e.g., #FF5A00 for RAILZ, #00C8FF for HALOZ). */
   vizThemeColor?: string;
+
+  /** MaterialCommunityIcon name for branding (e.g., 'circle-double'). */
+  brandIcon?: string;
 }

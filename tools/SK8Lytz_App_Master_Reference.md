@@ -92,6 +92,7 @@ The **Admin Tools Hub** (`AdminToolsModal`) is the unified gateway for all syste
 * **Tab 2: STATS**: Session analytics, mode usage frequency, and hardware performance metrics.
 * **Tab 3: DEVICE**: Deep-dive hardware view showing all discovered peripherals and their cached configs.
 * **Tab 4: TOOLS**: Administrative portal for low-level components:
+    *   **Catalog Manager**: Unified editor for product profiles. **MANDATORY**: All write operations (`upsert`) are gated by a Supabase Session check to prevent unauthorized database manipulation.
     *   **LED Diagnostic Lab**: Atomic protocol validation and DIY payload building.
     *   **Firmware Programmer**: Low-level hardware updates and serial-over-BLE tools.
     *   **Optical Simulation Mode (Web Fallback)**: A dedicated developer interface for non-native environments (Expo Web). It provides manual telemetry simulation (randomized hex dispatch) to smoke-test visualizer and state-management pipelines without physical hardware.
@@ -136,6 +137,8 @@ For testing App Sync behavior vs. Offline mode offline fallbacks, you can authen
 | `default_led_points` | INT | Factory default written via 0x62 |
 | `viz_shape` | TEXT | Geometry ID for ProductVisualizer (RING / OVAL / DUAL_STRIP) |
 | `viz_blob_diameter_mm` | REAL | Physical pixel diameter for canvas rendering scale |
+| `brand_icon` | TEXT | MaterialCommunityIcons string (e.g., 'circle-double') |
+| `viz_theme_color` | TEXT | HEX branding color (e.g., '#00C8FF') |
 
 > [!WARNING]
 > The app enforces **Strict Column Mapping** in `useRegistration.ts`. Any new database column MUST be added to the explicit mapping in the `dbRow` object to prevent schema cache mismatch errors during cloud sync.

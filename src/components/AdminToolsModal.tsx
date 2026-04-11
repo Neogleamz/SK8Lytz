@@ -614,6 +614,15 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
       return;
     }
     setProductSaving(true);
+
+    // [MOD] Ensure session is valid to prevent 401 Unauthorized
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setProductSaving(false);
+      Alert.alert('Session Expired', 'You must be logged in as an administrator to save catalog changes.');
+      return;
+    }
+
     const success = await saveProfile(editingProfile);
     setProductSaving(false);
     if (success) {
@@ -646,7 +655,10 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
             return (
               <TouchableOpacity key={p.id} onPress={() => setEditingProfile({ ...p })}
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: isActive ? '#FF5A00' : '#333' }}>
-                <Text style={{ color: '#FFF', fontWeight: isActive ? '800' : '600' }}>{p.displayName || p.id}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {p.brandIcon && <MaterialCommunityIcons name={p.brandIcon as any} size={14} color="#FFF" />}
+                  <Text style={{ color: '#FFF', fontWeight: isActive ? '800' : '600' }}>{p.displayName || p.id}</Text>
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -698,11 +710,22 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
             onChangeText={v => patchEdit({ id: v.toUpperCase() })}
             placeholder="RAILZ" placeholderTextColor="#555" autoCapitalize="characters"
           />
-          <Text style={labelStyle}>DISPLAY NAME</Text>
-          <TextInput
+           <TextInput
             style={fieldStyle as any} value={activeProfile.displayName}
             onChangeText={v => patchEdit({ displayName: v })}
             placeholder="RAILZ™" placeholderTextColor="#555"
+          />
+          <Text style={labelStyle}>BRAND ICON (MaterialCommunityIcons)</Text>
+          <TextInput
+            style={fieldStyle as any} value={activeProfile.brandIcon}
+            onChangeText={v => patchEdit({ brandIcon: v })}
+            placeholder="circle-double" placeholderTextColor="#555"
+          />
+          <Text style={labelStyle}>BRAND THEME COLOR (HEX)</Text>
+          <TextInput
+            style={fieldStyle as any} value={activeProfile.vizThemeColor}
+            onChangeText={v => patchEdit({ vizThemeColor: v })}
+            placeholder="#FF5A00" placeholderTextColor="#555"
           />
 
           {/* Hardware Defaults */}

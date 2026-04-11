@@ -40,6 +40,8 @@ export const LOCAL_PRODUCT_CATALOG: ProductProfile[] = [
     vizBaseHeight: 90,
     vizIsMirrored: true,
     batteryCapacityMilliAmpereHour: 1200,
+    vizThemeColor: '#00C8FF',
+    brandIcon: 'circle-double',
   },
   {
     id: 'SOULZ',
@@ -60,6 +62,8 @@ export const LOCAL_PRODUCT_CATALOG: ProductProfile[] = [
     vizBaseHeight: 115,
     vizIsMirrored: false,
     batteryCapacityMilliAmpereHour: 2000,
+    vizThemeColor: '#9D4EFF',
+    brandIcon: 'lightning-bolt',
   },
   {
     id: 'RAILZ',
@@ -85,6 +89,8 @@ export const LOCAL_PRODUCT_CATALOG: ProductProfile[] = [
     vizStripOrientation: 'VERTICAL',
     vizIsMirrored: true,
     batteryCapacityMilliAmpereHour: 2000,
+    vizThemeColor: '#FF5A00',
+    brandIcon: 'reorder-vertical',
   },
 ];
 

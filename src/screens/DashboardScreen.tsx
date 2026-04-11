@@ -1755,7 +1755,19 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     </View>
                   ) : (
                     <View style={[styles.glassSlab, { alignItems: 'center', paddingVertical: 24 }]}>
-                      <Text style={styles.slabEmptyText}>Create a group to control both skates at once.</Text>
+                      <Text style={styles.slabEmptyText}>
+                        {registeredDevices.length === 0 
+                          ? "No skates detected. Time to link your hardware!" 
+                          : "Create a group to control both skates at once."}
+                      </Text>
+                      {registeredDevices.length === 0 && (
+                        <TouchableOpacity 
+                          onPress={() => setIsSetupWizardVisible(true)}
+                          style={[styles.scanButton, { marginTop: 16, width: '70%', backgroundColor: Colors.primary }]}
+                        >
+                          <Text style={styles.scanButtonText}>SET UP YOUR SKATES</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   )}
                 </View>
@@ -1853,7 +1865,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 <Text style={{ ...Typography.title, color: Colors.primary, marginTop: 12 }}>Support Portal</Text>
                 <Text style={{ color: Colors.textMuted, fontSize: 13, textAlign: 'center', marginTop: 8 }}>Need help configuring your hardware? Browse our official guides below.</Text>
               </View>
-              <TouchableOpacity
+               <TouchableOpacity
                 style={[styles.groupButton, { backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: Colors.primary, borderWidth: 1, marginBottom: 16, paddingVertical: 12 }]}
                 onPress={() => Linking.openURL('https://neogleamz.com/pages/getting-started')}
               >
@@ -1864,12 +1876,22 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               </TouchableOpacity>
 
               <TouchableOpacity
+                style={[styles.groupButton, { backgroundColor: 'rgba(255, 170, 0, 0.1)', borderColor: '#FFAA00', borderWidth: 1, marginBottom: 16, paddingVertical: 12 }]}
+                onPress={() => Linking.openURL('https://neogleamz.com')}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <MaterialCommunityIcons name="cart" size={20} color="#FFAA00" style={{ marginRight: 8 }} />
+                  <Text style={[styles.groupButtonText, { color: '#FFAA00', fontSize: 14 }]}>Visit Store</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 style={[styles.groupButton, { backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: Colors.secondary, borderWidth: 1, marginBottom: 16, paddingVertical: 12 }]}
                 onPress={() => Linking.openURL('https://neogleamz.com/pages/contact')}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <MaterialCommunityIcons name="email-fast" size={20} color={Colors.secondary} style={{ marginRight: 8 }} />
-                  <Text style={[styles.groupButtonText, { color: Colors.secondary, fontSize: 14 }]}>Support Form</Text>
+                  <Text style={[styles.groupButtonText, { color: Colors.secondary, fontSize: 14 }]}>Contact Support</Text>
                 </View>
               </TouchableOpacity>
 
