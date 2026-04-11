@@ -1840,7 +1840,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         registeredDevices={registeredDevices.map((d) => ({
           id: d.id,
           name: d.device_name,
-          customName: d.group_name,
+          customName: d.custom_name,
           type: d.product_type,
           registeredAt: d.registered_at,
         }))}
