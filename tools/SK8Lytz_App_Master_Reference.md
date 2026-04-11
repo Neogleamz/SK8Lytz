@@ -447,5 +447,87 @@ To prevent stale "ghost" sessions, the system implements multi-layered cleanup:
 3. **Database Hygiene**: `public.crew_sessions` includes an `expires_at` logic (handled via `cleanupExpiredSessions`) to ensure `is_active: true` remains an accurate flag for joint-ready skating events.
 
 ---
+---
 > [!IMPORTANT]
 > To remain active, every rule file MUST contain the `trigger: always_on` YAML frontmatter. Failure to include this will cause the AI to revert to standard "Lax" coding behavior.
+
+---
+
+## 7. Session Telemetry Architecture
+
+*Added: 2026-04-11 | Branch: feat/speed-tracking-telemetry*
+
+### Supabase Table: `skate_sessions`
+
+The canonical store for all individual user skate sessions. Each row maps to one recorded session from Street Mode.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `uuid` (PK) | Auto-generated |
+| `user_id` | `uuid` | FK → `auth.users` |
+| `session_date` | `timestamptz` | Defaults to `now()` |
+| `duration_sec` | `int4` | Total session length in seconds |
+| `distance_miles` | `float8` | Accumulated via speed × time delta from GPS |
+| `avg_speed_mph` | `float8` | Mean of all GPS speed samples during session |
+| `peak_speed_mph` | `float8` | Maximum GPS speed recorded |
+| `peak_gforce` | `float8` | Peak accelerometer magnitude (G units) |
+| `calories` | `int4` | Estimated via MET formula (see below) |
+| `location_label` | `text` | Optional human-readable location string |
+| `crew_session_id` | `uuid` | Optional FK → `crew_sessions.id` |
+
+### Service: `SpeedTrackingService` (`src/services/SpeedTrackingService.ts`)
+
+Stateless singleton for session persistence. All GPS/Accelerometer state lives in `DockedController.tsx`.
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `saveSession` | `(snapshot: ISessionSnapshot) => Promise<string \| null>` | Inserts one row into `skate_sessions`. Guards against zero-data saves (<0.01 mi AND <10s). Returns inserted `id`. |
+| `fetchRecentSessions` | `(limit?: number) => Promise<ISkateSession[]>` | Returns last N sessions for authenticated user, newest first. |
+| `fetchLifetimeStats` | `() => Promise<ILifetimeStats>` | Aggregates all sessions into a lifetime summary object. |
+
+### Contract: `ISessionSnapshot`
+
+```typescript
+interface ISessionSnapshot {
+  durationSec: number;      // seconds elapsed
+  distanceMiles: number;    // GPS speed × time delta accumulation
+  avgSpeedMph: number;      // mean of all GPS samples
+  peakSpeedMph: number;     // highest GPS sample
+  peakGForce: number;       // highest accelerometer magnitude (G)
+  locationLabel?: string;   // optional reverse-geocoded label
+  crewSessionId?: string;   // optional crew session linkage
+}
+```
+
+### Calorie Estimation Formula
+
+Uses MET (Metabolic Equivalent of Task) scaled by average speed. Base weight: **70 kg** (canonical approximation — no personal data stored).
+
+```
+MET = avgSpeedMph > 12 ? 12 : avgSpeedMph > 8 ? 9 : 7
+calories = Math.round(MET × 70 × (durationSec / 3600))
+```
+
+### DockedController Integration
+
+- **Start/Stop button** lives in the Street Mode dashboard footer row alongside the TOP SPEED / DISTANCE readouts.
+- **Accumulation** happens in `useRef`s (`sessionSpeedSamplesRef`, `sessionDistanceMilesRef`, `sessionPeakSpeedRef`) inside the GPS `watchPositionAsync` callback — **no state updates in the hot path**.
+- On STOP: a snapshot is built, `sessionActive` set to false, and `SessionSummaryModal` is shown.
+- On Save: `SpeedTrackingService.saveSession()` is called from the modal's `onSave` handler.
+
+### SessionSummaryModal (`src/components/SessionSummaryModal.tsx`)
+
+Post-session debrief modal. Dynamic **speed-zone accent colour** based on peak speed:
+
+| Peak Speed | Accent | Theme |
+|-----------|--------|-------|
+| ≥ 18 mph | `#FF3D00` | Inferno — elite |
+| ≥ 12 mph | `#FF8C00` | SK8Lytz Orange — fast |
+| ≥ 6 mph  | `#00E676` | Neon Green — moderate |
+| < 6 mph  | `#00B0FF` | Cool Blue — chill |
+
+### AccountModal — Statistics Tab
+
+Tab ID: `'stats'`, icon: `lightning-bolt`. Loaded non-blocking on modal open via `Promise.all([fetchLifetimeStats(), fetchRecentSessions(10)])`. Shows:
+- 6-tile lifetime grid: Sessions, Distance, Record Speed, Avg Speed, Time on Skates, Calories
+- Scrollable recent session cards with left accent border

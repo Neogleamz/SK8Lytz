@@ -9,7 +9,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 <!-- AUTO_SYNC_ERRORS_START -->
 <!-- AUTO_SYNC_ERRORS_END -->
 
-- [ ] `feat/speed-tracking-telemetry` : Add real-time distance (miles), average speed (mph), average g-force and peak speed tracking to Street Mode and Crew Sessions and User Account Details new Statistics Tab, saving to Supabase and local storage and displaying in a post-session summary.
+- [x] `feat/speed-tracking-telemetry` : Add real-time distance (miles), average speed (mph), average g-force and peak speed tracking to Street Mode and Crew Sessions and User Account Details new Statistics Tab, saving to Supabase and local storage and displaying in a post-session summary.
 
 ### Target: `epic/connection-reliability`
 
@@ -107,7 +107,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## ✅ Completed This Session (Apr 2026)
 
-- (Empty - Refreshing for next session)
+- [x] `feat/speed-tracking-telemetry` : Complete end-to-end session telemetry — SpeedTrackingService, SessionSummaryModal with dynamic speed-zone accent colour, Statistics tab in AccountModal (lifetime grid + recent session history), DockedController RECORD/SAVE button with live GPS accumulation.
 
 ## ✅ Completed Previously
 
