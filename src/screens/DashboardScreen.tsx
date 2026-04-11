@@ -1327,7 +1327,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             >
               <MaterialCommunityIcons name="chevron-left" size={24} color={Colors.primary} />
               <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 }}>
-                BACK
+                Back
               </Text>
             </TouchableOpacity>
           </View>
@@ -1635,9 +1635,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         />
       </View>
       
-      {(!isActuallyConnected && (allDevices.length > 0 || customGroups.length > 0)) && (
+      {(!isActuallyConnected && showHintText && (allDevices.length > 0 || customGroups.length > 0)) && (
           <TouchableOpacity
-            onPress={() => setShowHintText(!showHintText)}
+            onPress={() => setShowHintText(false)}
             style={{
               position: 'absolute',
               bottom: 24,
@@ -1647,7 +1647,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               justifyContent: 'center',
               opacity: 0.9,
               paddingVertical: 10,
-              paddingHorizontal: showHintText ? 14 : 12,
+              paddingHorizontal: 14,
               borderRadius: 30,
               backgroundColor: 'rgba(21, 25, 40, 0.85)',
               borderWidth: 1,
@@ -1661,18 +1661,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             }}
             activeOpacity={0.7}
           >
-            <MaterialCommunityIcons name="gesture-tap-hold" size={20} color={Colors.primary} style={{ marginRight: showHintText ? 8 : 0 }} />
-            {showHintText && (
-              <>
-                <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: 'bold', marginRight: 6 }}>
-                  Long-press to auto-configure
-                </Text>
-                <MaterialCommunityIcons name="chevron-right" size={16} color={Colors.primary} style={{ opacity: 0.7 }} />
-              </>
-            )}
-            {!showHintText && (
-              <MaterialCommunityIcons name="chevron-left" size={16} color={Colors.primary} style={{ opacity: 0.7, marginLeft: 2 }} />
-            )}
+            <MaterialCommunityIcons name="gesture-tap-hold" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
+            <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: 'bold', marginRight: 6 }}>
+              Long-press skate to configure
+            </Text>
+            <MaterialCommunityIcons name="close" size={16} color={Colors.primary} style={{ opacity: 0.7 }} />
           </TouchableOpacity>
         )}
 
