@@ -6,16 +6,19 @@ import { getVisualizerFrame } from '../protocols/PatternEngine';
 import type { RGB, PatternId } from '../protocols/PatternEngine';
 import { ZenggeVisualizerMath } from '../protocols/ZenggeVisualizerMath';
 import { PositionalMathBuffer } from '../protocols/PositionalMathBuffer';
+import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 
 interface DeviceConfig {
   id?: string;
   name?: string;
-  type?: 'HALOZ' | 'SOULZ';
+  /** Product type string. Must match a `ProductProfile.id` in the catalog. */
+  type?: 'HALOZ' | 'SOULZ' | 'RAILZ' | string;
   points?: number;
+  segments?: number;
 }
 
 interface ProductVisualizerProps {
-  product: 'HALOZ' | 'SOULZ';
+  product: 'HALOZ' | 'SOULZ' | 'RAILZ' | string;
   color: string;
   mode: string;
   patternId: number | null;
@@ -69,7 +72,14 @@ function HSLToHex(h: number, s: number, l: number) {
 const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, rawHexPayload: _rawHexPayload, simMode: _simMode, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1 }: any) => {
   const { isDark } = useTheme();
   const product = String(device.type || fallbackProduct);
-  const isHaloz = !product.toLowerCase().includes('soul');
+
+  // Resolve product profile from catalog — drives all geometry decisions.
+  // Falls back to LOCAL_PRODUCT_CATALOG so this works fully offline.
+  const productProfile = useMemo(() => {
+    const byId = LOCAL_PRODUCT_CATALOG.find(p => p.id.toUpperCase() === product.toUpperCase());
+    return byId ?? LOCAL_PRODUCT_CATALOG.find(p => p.id === 'SOULZ')!;
+  }, [product]);
+  const vizShape = productProfile.vizShape;
 
   // Track animValue tick (0.0–1.0) for PatternEngine frame generation
   const [animTick, setAnimTick] = useState(0);
@@ -78,9 +88,9 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
     return () => animValue.removeListener(id);
   }, [animValue]);
 
-  // HALOZ actual hardware is composed of two segments making a ring of 16 LEDs.
-  // SOULZ visualizer uses the pointsPerSide * 2 logic to visually double the strip.
-  const devicePoints = device?.points || fallbackPoints || (isHaloz ? 16 : 43);
+  // Resolve default LED count from catalog profile.
+  // Legacy path: if still binary, catalog provides the same numbers (16 / 43).
+  const devicePoints = device?.points || fallbackPoints || productProfile.vizDefaultPoints;
   const deviceSegments = device?.segments || 1;
   const numLeds = Math.floor(devicePoints / deviceSegments); // 16 or 43
 
@@ -97,35 +107,52 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
       let left = 0;
       let top = 0;
 
-      if (isHaloz) {
+      if (vizShape === 'RING') {
+        // ── HALOZ: Superellipse rounded rectangle ring ─────────────────────
+        // Two segment path: Seg1 = right arc (bottom→top), Seg2 = left arc (top→bottom).
         let angle = 0;
         const half = Math.floor(numSamples / 2);
         if (i < half) {
-          // Segment 1: Bottom Middle (π/2) ascending Right side to Top Middle (-π/2)
           const fraction = i / Math.max(1, half - 1);
           angle = (Math.PI / 2) - fraction * Math.PI;
         } else {
-          // Segment 2: Top Middle (-π/2) descending Left side to Bottom Middle (-3π/2)
           const fraction = (i - half) / Math.max(1, (numSamples - half) - 1);
-          angle = - (Math.PI / 2) - fraction * Math.PI;
+          angle = -(Math.PI / 2) - fraction * Math.PI;
         }
-
-        // Superellipse implementation for a rounded rectangle frame.
-        const n = 4; // Flatness / Boxiness factor
+        const n = 4;
         const power = 2 / n;
         const cosT = Math.cos(angle);
         const sinT = Math.sin(angle);
         const x = 70 * Math.sign(cosT) * Math.pow(Math.abs(cosT), power);
         const y = 110 * Math.sign(sinT) * Math.pow(Math.abs(sinT), power);
-
         left = (80 + x) * S;
         top = (120 + y) * S;
+
+      } else if (vizShape === 'DUAL_STRIP') {
+        // ── RAILZ: Two vertical parallel straight strips ───────────────────
+        // Left strip: indices 0 to numSamples/2 — traces top→bottom on left rail.
+        // Right strip: indices numSamples/2 to numSamples — traces top→bottom on right rail.
+        const sep = productProfile.vizStripSeparation ?? 32;
+        const half = Math.floor(numSamples / 2);
+        const stripHeight = productProfile.vizBaseHeight * S;
+        const centreX = (productProfile.vizBaseWidth / 2) * S;
+        if (i < half) {
+          // Left strip: traces top to bottom
+          const fract = i / Math.max(1, half - 1);
+          left = centreX - (sep / 2) * S;
+          top = fract * stripHeight;
+        } else {
+          // Right strip: traces top to bottom (same direction, mirrors physical LED layout)
+          const fract = (i - half) / Math.max(1, (numSamples - half) - 1);
+          left = centreX + (sep / 2) * S;
+          top = fract * stripHeight;
+        }
+
       } else {
-        // SOULZ: Maintain the exact classic U/oval contour, but mathematically trace the coordinates 
-        // from bottom-to-top on BOTH halves so the physical point array matches the 2 identical upward strips.
+        // ── SOULZ (OVAL): Classic U/oval contour ──────────────────────────
+        // Both halves trace bottom-to-top to match the 2 identical upward physical strips.
         const half = Math.floor(numSamples / 2);
         if (i < half) {
-          // Left side: trace from bottom center (π/2) ascending up the left edge to top center (3π/2)
           const fract = i / Math.max(1, half - 1);
           const angle = (Math.PI / 2) + fract * Math.PI;
           top = (150 + Math.sin(angle) * 150) * S;
@@ -133,7 +160,6 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           const pinch = 1 - 0.3 * Math.exp(-Math.pow(verticalPos - 0.1, 2) * 5);
           left = (70 + (Math.cos(angle) * 70 * pinch)) * S;
         } else {
-          // Right side: trace from bottom center (π/2) ascending up the right edge to top center (-π/2)
           const fract = (i - half) / Math.max(1, (numSamples - half) - 1);
           const angle = (Math.PI / 2) - fract * Math.PI;
           top = (150 + Math.sin(angle) * 150) * S;
@@ -159,11 +185,16 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
     let lastSampleIdx = 0;
     // We strictly use dense rendering (64 points) to draw the perfectly smooth physical silicone casing, 
     // but the `isHotspot` flag ensures ONLY the true 16 LEDs actually fire inside it!
-    const renderLeds = isHaloz ? Math.max(numLeds * 4, 64) : Math.max(numLeds * 2, 86);
+    // DUAL_STRIP uses 2× dense sampling for smooth straight lines; RING uses 4× for arc smoothness.
+    const renderLeds = vizShape === 'RING'
+      ? Math.max(numLeds * 4, 64)
+      : vizShape === 'DUAL_STRIP'
+        ? Math.max(numLeds * 2, 60)
+        : Math.max(numLeds * 2, 86);
     for (let i = 0; i < renderLeds; i++) {
       let left = 0;
       let top = 0;
-      const outerDiam = isHaloz ? 16 : 12; // Reverted to physical 6mm strip dimensions
+      const outerDiam = productProfile.vizBlobDiameterMm > 6 ? 16 : 12;
 
       const offset = outerDiam / 2;
 
@@ -190,10 +221,10 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
       // HALOZ 2-segment mirror: Segment 2 (i >= renderLeds/2) runs the same pattern
       // in REVERSE relative to its own start point (front of box → back of box).
       // This mirrors Segment 1 (back→front) creating bilateral symmetry on the ring.
-      const isHalozSeg2 = isHaloz && (i >= renderLeds / 2);
-      // mirrorFrameSlot: given a frame of segLen, returns the mirrored index for Seg2
+      // RING Seg2 mirrors Seg1 for bilateral symmetry on the ring frame.
+      const isRingSeg2 = vizShape === 'RING' && (i >= renderLeds / 2);
       const mirrorSlot = (slot: number, segLen: number) =>
-        isHalozSeg2 ? Math.max(0, segLen - 1 - slot) : slot;
+        isRingSeg2 ? Math.max(0, segLen - 1 - slot) : slot;
 
       // Raw smooth path interval
       const rawFract = (segmentI / activeSegmentLeds);
@@ -516,16 +547,16 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
       style={{ alignItems: 'center', marginHorizontal: 12, paddingVertical: 4 }}
     >
       <View style={[
-        isHaloz ? styles.haloBase : styles.soulBase,
+        vizShape === 'RING' ? styles.haloBase : vizShape === 'DUAL_STRIP' ? styles.railBase : styles.soulBase,
         { alignSelf: 'center', opacity: isPoweredOn ? (brightness === 0 ? 0 : Math.max(0.06, Math.pow(brightness / 100, 1.8))) : 0.15 }
       ]}>
-        {/* Physical unlit silicone background track simulation */}
-        {isHaloz && (
+        {/* Physical silicone track background — shown only on RING (HALOZ) */}
+        {vizShape === 'RING' && (
           <View style={{
             position: 'absolute',
             width: 50 + 12,
             height: 75 + 12,
-            borderWidth: 8, // Creates a very thin hollow track
+            borderWidth: 8,
             borderColor: 'rgba(255,255,255,0.06)',
             borderRadius: 20,
             alignSelf: 'center',
@@ -535,9 +566,16 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
             marginLeft: -(50 + 12) / 2
           }} />
         )}
+        {/* DUAL_STRIP: subtle channel track behind each rail */}
+        {vizShape === 'DUAL_STRIP' && (
+          <>
+            <View style={{ position: 'absolute', left: '22%', top: 0, width: 6, height: '100%', borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.04)' }} />
+            <View style={{ position: 'absolute', right: '22%', top: 0, width: 6, height: '100%', borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.04)' }} />
+          </>
+        )}
 
         {leds.map(led => {
-          const diam = isHaloz ? 7.6 : 5.7;
+          const diam = productProfile.vizBlobDiameterMm;
 
           return (
             // Outer wrapper applies chipSoften (plain number) — compatible with Animated inner nodes.
@@ -785,6 +823,10 @@ const styles = StyleSheet.create({
   },
   soulBase: {
     width: 55, height: 115,
+  },
+  railBase: {
+    // RAILZ: dual vertical strips — wider canvas to hold two separated rails
+    width: 80, height: 120,
   },
   ledDot: {
     width: 16,

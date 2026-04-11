@@ -12,10 +12,10 @@
  *
  * @param {AdminToolsModalProps} props - Configuration for visibility and tool callbacks
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView,
-  Share, Alert, FlatList, Platform, SafeAreaView
+  Share, Alert, FlatList, Platform, SafeAreaView, TextInput, Switch
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
@@ -23,8 +23,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger, LogEntry, EventType } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
 import AdminPicksScheduler from './AdminPicksScheduler';
+import { useProductCatalog } from '../hooks/useProductCatalog';
+import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
+import type { ProductProfile, VizShape } from '../types/ProductCatalog';
 
-type Tab = 'timeline' | 'stats' | 'device' | 'tools';
+type Tab = 'timeline' | 'stats' | 'device' | 'tools' | 'products';
 
 const EVENT_META: Record<EventType, { icon: string; color: string; label: string }> = {
   APP_OPENED:         { icon: 'cellphone-check', color: '#00f0ff', label: 'App Opened' },
@@ -151,6 +154,31 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
   const [isUploading, setIsUploading] = useState(false);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
   const [isPicksSchedulerVisible, setIsPicksSchedulerVisible] = useState(false);
+
+  // ── Product Catalog ─────────────────────────────────────────────────────────
+  const { allProfiles, saveProfile, syncFromCloud } = useProductCatalog();
+  const [editingProfile, setEditingProfile] = useState<ProductProfile | null>(null);
+  const [productSaving, setProductSaving] = useState(false);
+
+  /** Creates a blank profile template for the Add Product form. */
+  const blankProfile = (): ProductProfile => ({
+    id: '',
+    displayName: '',
+    defaultLedPoints: 16,
+    defaultSegments: 1,
+    defaultIcType: 1,
+    defaultColorSorting: 2,
+    detectMinPoints: 1,
+    detectMaxPoints: 9,
+    vizShape: 'OVAL',
+    vizDefaultPoints: 16,
+    vizBlobDiameterMm: 5.7,
+    vizBaseWidth: 55,
+    vizBaseHeight: 115,
+    vizStripCount: 2,
+    vizStripSeparation: 32,
+    vizStripOrientation: 'VERTICAL',
+  });
 
   useEffect(() => {
     if (visible) AppLogger.log('SCREEN_OPENED', { screenName: 'AdminTools' });
@@ -441,6 +469,326 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
     );
   };
 
+  // ── Products Tab ─────────────────────────────────────────────────────────────
+
+  /**
+   * ShapePreviewCanvas — Renders a static dot-map of LED positions for the given profile.
+   * Uses the same path-sample math as ProductVisualizer. No animations, no color logic.
+   * Used to let admins visually verify geometry before saving to Supabase.
+   */
+  const ShapePreviewCanvas = ({ profile }: { profile: ProductProfile }) => {
+    const S = 0.38;
+    const numSamples = 500;
+    const numLeds = profile.vizDefaultPoints;
+    const pathSamples: { left: number; top: number; length: number }[] = [];
+    let totalLength = 0;
+
+    for (let i = 0; i <= numSamples; i++) {
+      let left = 0;
+      let top = 0;
+
+      if (profile.vizShape === 'RING') {
+        const half = Math.floor(numSamples / 2);
+        const fraction = i < half
+          ? i / Math.max(1, half - 1)
+          : (i - half) / Math.max(1, numSamples - half - 1);
+        const angle = i < half
+          ? (Math.PI / 2) - fraction * Math.PI
+          : -(Math.PI / 2) - fraction * Math.PI;
+        const n = 4; const power = 2 / n;
+        const x = 70 * Math.sign(Math.cos(angle)) * Math.pow(Math.abs(Math.cos(angle)), power);
+        const y = 110 * Math.sign(Math.sin(angle)) * Math.pow(Math.abs(Math.sin(angle)), power);
+        left = (80 + x) * S;
+        top = (120 + y) * S;
+
+      } else if (profile.vizShape === 'DUAL_STRIP') {
+        const sep = profile.vizStripSeparation ?? 32;
+        const half = Math.floor(numSamples / 2);
+        const stripHeight = profile.vizBaseHeight * S;
+        const centreX = (profile.vizBaseWidth / 2) * S;
+        const fract = i < half
+          ? i / Math.max(1, half - 1)
+          : (i - half) / Math.max(1, numSamples - half - 1);
+        left = i < half ? centreX - (sep / 2) * S : centreX + (sep / 2) * S;
+        top = fract * stripHeight;
+
+      } else {
+        const half = Math.floor(numSamples / 2);
+        const fract = i < half
+          ? i / Math.max(1, half - 1)
+          : (i - half) / Math.max(1, numSamples - half - 1);
+        const angle = i < half
+          ? (Math.PI / 2) + fract * Math.PI
+          : (Math.PI / 2) - fract * Math.PI;
+        top = (150 + Math.sin(angle) * 150) * S;
+        const vPos = Math.sin(angle);
+        const pinch = 1 - 0.3 * Math.exp(-Math.pow(vPos - 0.1, 2) * 5);
+        left = (70 + (Math.cos(angle) * 70 * pinch)) * S;
+      }
+
+      if (i > 0) {
+        const prev = pathSamples[i - 1];
+        const dist = Math.sqrt(Math.pow(left - prev.left, 2) + Math.pow(top - prev.top, 2));
+        if (dist < 50 * S) totalLength += dist;
+      }
+      pathSamples.push({ top, left, length: totalLength });
+    }
+
+    const dots: { top: number; left: number }[] = [];
+    let lastIdx = 0;
+    for (let i = 0; i < numLeds; i++) {
+      const targetLen = (i / numLeds) * totalLength;
+      for (let j = lastIdx; j < pathSamples.length - 1; j++) {
+        if (pathSamples[j + 1].length >= targetLen) {
+          const p1 = pathSamples[j], p2 = pathSamples[j + 1];
+          const segLen = p2.length - p1.length;
+          const tt = segLen <= 0.0001 ? 0 : (targetLen - p1.length) / segLen;
+          dots.push({
+            left: p1.left + (p2.left - p1.left) * tt - profile.vizBlobDiameterMm / 2,
+            top: p1.top + (p2.top - p1.top) * tt - profile.vizBlobDiameterMm / 2,
+          });
+          lastIdx = j;
+          break;
+        }
+      }
+    }
+
+    return (
+      <View style={{
+        width: profile.vizBaseWidth * S,
+        height: profile.vizBaseHeight * S,
+        backgroundColor: '#111',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255,90,0,0.4)',
+        position: 'relative',
+        alignSelf: 'center',
+        marginVertical: 12,
+        overflow: 'hidden',
+      }}>
+        {dots.map((dot, i) => (
+          <View key={i} style={{
+            position: 'absolute',
+            left: dot.left,
+            top: dot.top,
+            width: profile.vizBlobDiameterMm,
+            height: profile.vizBlobDiameterMm,
+            borderRadius: profile.vizBlobDiameterMm / 2,
+            backgroundColor: '#FF5A00',
+            opacity: 0.9,
+          }} />
+        ))}
+        <Text style={{ position: 'absolute', bottom: 3, left: 0, right: 0, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 9 }}>
+          {profile.vizShape} · {numLeds} LEDs
+        </Text>
+      </View>
+    );
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editingProfile) return;
+    if (!editingProfile.id.trim()) {
+      Alert.alert('Validation Error', 'Product ID is required (e.g. RAILZ).');
+      return;
+    }
+    setProductSaving(true);
+    const success = await saveProfile(editingProfile);
+    setProductSaving(false);
+    if (success) {
+      Alert.alert('Saved', `${editingProfile.displayName || editingProfile.id} updated in product catalog.`);
+      setEditingProfile(null);
+    } else {
+      Alert.alert('Save Failed', 'Could not write to Supabase. Check your connection.');
+    }
+  };
+
+  const patchEdit = (patch: Partial<ProductProfile>) =>
+    setEditingProfile(prev => prev ? { ...prev, ...patch } : prev);
+
+  const renderProductsTab = () => {
+    const fieldStyle = {
+      backgroundColor: '#222', borderRadius: 6, paddingHorizontal: 10,
+      paddingVertical: 8, color: '#FFF', fontSize: 13, marginBottom: 8,
+      borderWidth: 1, borderColor: 'rgba(255,90,0,0.3)',
+    };
+    const labelStyle = { color: '#AAA', fontSize: 11, fontWeight: '600' as const, marginBottom: 2, marginTop: 6 };
+
+    if (editingProfile) {
+      return (
+        <ScrollView style={{ flex: 1, padding: 16 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 17 }}>
+              {editingProfile.id ? `Editing: ${editingProfile.id}` : 'New Product'}
+            </Text>
+            <TouchableOpacity onPress={() => setEditingProfile(null)}>
+              <MaterialCommunityIcons name="close" size={22} color="#888" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Live Shape Preview */}
+          <Text style={{ color: '#FF5A00', fontWeight: '700', fontSize: 12, marginBottom: 4, letterSpacing: 1 }}>LIVE SHAPE PREVIEW</Text>
+          <ShapePreviewCanvas profile={editingProfile} />
+
+          {/* Viz Shape Selector */}
+          <Text style={labelStyle}>SHAPE TYPE</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+            {(['RING', 'OVAL', 'DUAL_STRIP'] as VizShape[]).map(s => (
+              <TouchableOpacity
+                key={s}
+                onPress={() => patchEdit({ vizShape: s })}
+                style={{
+                  paddingHorizontal: 12, paddingVertical: 7, borderRadius: 6,
+                  backgroundColor: editingProfile.vizShape === s ? '#FF5A00' : '#333',
+                  borderWidth: 1, borderColor: editingProfile.vizShape === s ? '#FF5A00' : '#555',
+                }}
+              >
+                <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>{s}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Product Identity */}
+          <Text style={labelStyle}>PRODUCT ID (e.g. RAILZ)</Text>
+          <TextInput
+            style={fieldStyle as any} value={editingProfile.id}
+            onChangeText={v => patchEdit({ id: v.toUpperCase() })}
+            placeholder="RAILZ" placeholderTextColor="#555" autoCapitalize="characters"
+          />
+          <Text style={labelStyle}>DISPLAY NAME</Text>
+          <TextInput
+            style={fieldStyle as any} value={editingProfile.displayName}
+            onChangeText={v => patchEdit({ displayName: v })}
+            placeholder="RAILZ™" placeholderTextColor="#555"
+          />
+
+          {/* Hardware Defaults */}
+          <Text style={[labelStyle, { color: '#FF5A00', marginTop: 14 }]}>HARDWARE DEFAULTS (0x62 FLASH)</Text>
+          <Text style={labelStyle}>DEFAULT LED POINTS</Text>
+          <TextInput style={fieldStyle as any} value={String(editingProfile.defaultLedPoints)}
+            onChangeText={v => patchEdit({ defaultLedPoints: parseInt(v) || 0 })} keyboardType="numeric"
+          />
+          <Text style={labelStyle}>DEFAULT SEGMENTS</Text>
+          <TextInput style={fieldStyle as any} value={String(editingProfile.defaultSegments)}
+            onChangeText={v => patchEdit({ defaultSegments: parseInt(v) || 1 })} keyboardType="numeric"
+          />
+          <Text style={labelStyle}>IC TYPE (1=WS2812B, 2=SM16703)</Text>
+          <TextInput style={fieldStyle as any} value={String(editingProfile.defaultIcType)}
+            onChangeText={v => patchEdit({ defaultIcType: parseInt(v) || 1 })} keyboardType="numeric"
+          />
+          <Text style={labelStyle}>COLOR SORTING (2=GRB)</Text>
+          <TextInput style={fieldStyle as any} value={String(editingProfile.defaultColorSorting)}
+            onChangeText={v => patchEdit({ defaultColorSorting: parseInt(v) || 2 })} keyboardType="numeric"
+          />
+
+          {/* FTUE Thresholds */}
+          <Text style={[labelStyle, { color: '#FF5A00', marginTop: 14 }]}>AUTO-DETECT THRESHOLDS (FTUE)</Text>
+          <Text style={labelStyle}>DETECT MIN POINTS (LED count lower bound)</Text>
+          <TextInput style={fieldStyle as any} value={String(editingProfile.detectMinPoints)}
+            onChangeText={v => patchEdit({ detectMinPoints: parseInt(v) || 0 })} keyboardType="numeric"
+          />
+          <Text style={labelStyle}>DETECT MAX POINTS (LED count upper bound)</Text>
+          <TextInput style={fieldStyle as any} value={String(editingProfile.detectMaxPoints)}
+            onChangeText={v => patchEdit({ detectMaxPoints: parseInt(v) || 0 })} keyboardType="numeric"
+          />
+
+          {/* Visualizer Geometry */}
+          <Text style={[labelStyle, { color: '#FF5A00', marginTop: 14 }]}>VISUALIZER GEOMETRY</Text>
+          <Text style={labelStyle}>DEFAULT POINTS (visualizer fallback)</Text>
+          <TextInput style={fieldStyle as any} value={String(editingProfile.vizDefaultPoints)}
+            onChangeText={v => patchEdit({ vizDefaultPoints: parseInt(v) || 16 })} keyboardType="numeric"
+          />
+          <Text style={labelStyle}>BLOB DIAMETER MM (LED chip size)</Text>
+          <TextInput style={fieldStyle as any} value={String(editingProfile.vizBlobDiameterMm)}
+            onChangeText={v => patchEdit({ vizBlobDiameterMm: parseFloat(v) || 5.7 })} keyboardType="numeric"
+          />
+          <Text style={labelStyle}>CANVAS WIDTH (scale units)</Text>
+          <TextInput style={fieldStyle as any} value={String(editingProfile.vizBaseWidth)}
+            onChangeText={v => patchEdit({ vizBaseWidth: parseInt(v) || 55 })} keyboardType="numeric"
+          />
+          <Text style={labelStyle}>CANVAS HEIGHT (scale units)</Text>
+          <TextInput style={fieldStyle as any} value={String(editingProfile.vizBaseHeight)}
+            onChangeText={v => patchEdit({ vizBaseHeight: parseInt(v) || 115 })} keyboardType="numeric"
+          />
+
+          {/* DUAL_STRIP only */}
+          {editingProfile.vizShape === 'DUAL_STRIP' && (
+            <>
+              <Text style={[labelStyle, { color: '#FF5A00', marginTop: 14 }]}>DUAL STRIP GEOMETRY (RAILZ)</Text>
+              <Text style={labelStyle}>STRIP COUNT</Text>
+              <TextInput style={fieldStyle as any} value={String(editingProfile.vizStripCount ?? 2)}
+                onChangeText={v => patchEdit({ vizStripCount: parseInt(v) || 2 })} keyboardType="numeric"
+              />
+              <Text style={labelStyle}>STRIP SEPARATION (gap between rails, scale units)</Text>
+              <TextInput style={fieldStyle as any} value={String(editingProfile.vizStripSeparation ?? 32)}
+                onChangeText={v => patchEdit({ vizStripSeparation: parseFloat(v) || 32 })} keyboardType="numeric"
+              />
+              <Text style={labelStyle}>ORIENTATION</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                {(['VERTICAL', 'HORIZONTAL'] as const).map(o => (
+                  <TouchableOpacity key={o} onPress={() => patchEdit({ vizStripOrientation: o })}
+                    style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 6,
+                      backgroundColor: editingProfile.vizStripOrientation === o ? '#FF5A00' : '#333',
+                      borderWidth: 1, borderColor: editingProfile.vizStripOrientation === o ? '#FF5A00' : '#555' }}
+                  >
+                    <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>{o}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
+
+          <TouchableOpacity
+            onPress={handleSaveProfile}
+            disabled={productSaving}
+            style={{ backgroundColor: '#FF5A00', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 16, marginBottom: 40, opacity: productSaving ? 0.6 : 1 }}
+          >
+            <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 15 }}>
+              {productSaving ? 'SAVING...' : '💾  SAVE TO CATALOG'}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      );
+    }
+
+    // ── Product List View ──────────────────────────────────────────────────────
+    return (
+      <ScrollView style={{ flex: 1, padding: 16 }}>
+        <Text style={{ color: '#888', fontSize: 12, marginBottom: 8 }}>
+          {allProfiles.length} products in catalog. Tap to edit. Changes write to Supabase immediately.
+        </Text>
+        {allProfiles.map(profile => (
+          <TouchableOpacity
+            key={profile.id}
+            onPress={() => setEditingProfile({ ...profile })}
+            style={{ backgroundColor: '#1A1A1A', borderRadius: 10, padding: 14, marginBottom: 10,
+              borderWidth: 1, borderColor: 'rgba(255,90,0,0.25)' }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 15 }}>{profile.displayName || profile.id}</Text>
+              <View style={{ backgroundColor: profile.vizShape === 'RING' ? '#1B4279' : profile.vizShape === 'DUAL_STRIP' ? '#7B2D8B' : '#1B4279',
+                paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 }}>
+                <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '700' }}>{profile.vizShape}</Text>
+              </View>
+            </View>
+            <Text style={{ color: '#555', fontSize: 11, marginTop: 4 }}>ID: {profile.id}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 6 }}>
+              <Text style={{ color: '#888', fontSize: 11 }}>🔵 {profile.defaultLedPoints} LEDs</Text>
+              <Text style={{ color: '#888', fontSize: 11 }}>📡 {profile.detectMinPoints}–{profile.detectMaxPoints} pts detect</Text>
+              <Text style={{ color: '#888', fontSize: 11 }}>🎨 {profile.vizBaseWidth}×{profile.vizBaseHeight} canvas</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+        <TouchableOpacity
+          onPress={() => setEditingProfile(blankProfile())}
+          style={{ borderWidth: 1, borderColor: '#FF5A00', borderStyle: 'dashed', borderRadius: 10,
+            paddingVertical: 16, alignItems: 'center', marginTop: 8, marginBottom: 40 }}
+        >
+          <Text style={{ color: '#FF5A00', fontWeight: '800', fontSize: 15 }}>+ ADD PRODUCT</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    );
+  };
+
   const timelineLogs = logs.filter(l => l.e !== 'RAW_PAYLOAD');
 
   return (
@@ -478,14 +826,14 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
 
         {/* Tabs */}
         <View style={[styles.tabs, { borderBottomColor: borderColor }]}>
-          {(['timeline', 'stats', 'device', 'tools'] as Tab[]).map(t => (
+          {(['timeline', 'stats', 'device', 'tools', 'products'] as Tab[]).map(t => (
             <TouchableOpacity
               key={t}
               onPress={() => setTab(t)}
               style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
             >
-              <Text style={[styles.tabLabel, { color: tab === t ? '#00f0ff' : textMuted }]}>
-                {t === 'device' ? 'Device' : t === 'tools' ? 'Tools' : t.charAt(0).toUpperCase() + t.slice(1)}
+              <Text style={[styles.tabLabel, { color: tab === t ? '#FF5A00' : textMuted }]}>
+                {t === 'device' ? 'Device' : t === 'tools' ? 'Tools' : t === 'products' ? 'Products' : t.charAt(0).toUpperCase() + t.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -505,6 +853,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
         {tab === 'device' && renderDeviceTab()}
         {tab === 'stats' && renderStatsTab()}
         {tab === 'tools' && renderAdminTab()}
+        {tab === 'products' && renderProductsTab()}
       </SafeAreaView>
 
       <Modal visible={confirmDeleteVisible} transparent animationType="fade">
