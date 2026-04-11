@@ -69,6 +69,12 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ---
 
+## ❄️ Icebox / Backburner (Manual Trigger Only)
+
+*Items placed here are explicitly ignored by the automatic queue. They will act as a catalog for future features that require manual authorization to begin work on.*
+
+---
+
 ## ✅ Completed This Session (Apr 2026)
 
 - [x] `feat/auth-offline-card-reorder` : Move the 'Continue Offline' card on the Auth page to the bottom, anchoring it similar to the Registered Devices slab on the dashboard.
