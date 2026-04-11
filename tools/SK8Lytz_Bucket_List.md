@@ -51,6 +51,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `main`
 
+- [x] `fix/dashboard-anchor` : Anchor Registered Devices slab permanently to the bottom of the dashboard screen (outside ScrollView).
+
 
 ### Target: `epic/telemetry-audit`
 
