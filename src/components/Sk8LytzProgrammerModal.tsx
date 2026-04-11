@@ -74,7 +74,7 @@ export default function Sk8LytzProgrammerModal({
   // ─── State ──────────────────────────────────────────────────────────────────
   const [scannedDevices, setScannedDevices] = useState<ScannedDevice[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [activeProfile, setActiveProfile] = useState<ActiveProfileType>('HALOZ');
+  const [activeProfile, setActiveProfile] = useState<ActiveProfileType>(LOCAL_PRODUCT_CATALOG[0].id);
   
   const [profiles, setProfiles] = useState<Record<string, HardwareSettings>>(() => {
     const initial: Record<string, HardwareSettings> = {};
@@ -301,7 +301,7 @@ export default function Sk8LytzProgrammerModal({
                         selectTextOnFocus
                       />
                       <TouchableOpacity onPress={() => { const v = Math.min(300, currentProfile.ledPoints + 1); updateActiveProfile({ ledPoints: v }); setPointsText(String(v)); }}>
-                        <Text style={{ color: activeProfile==='HALOZ'? cyan : amber, fontSize: 20 }}>›</Text>
+                        <Text style={{ color: currentProfileColor, fontSize: 20 }}>›</Text>
                       </TouchableOpacity>
                     </View>
                 </View>
@@ -309,10 +309,10 @@ export default function Sk8LytzProgrammerModal({
                     <Text style={{ color: txtMuted, fontSize: 11, marginBottom: 4 }}>SEGMENTS</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <TouchableOpacity onPress={() => cycleProperty('segments')}>
-                        <Text style={{ color: activeProfile==='HALOZ'? cyan : amber, fontSize: 20 }}>‹</Text>
+                        <Text style={{ color: currentProfileColor, fontSize: 20 }}>‹</Text>
                       </TouchableOpacity>
                       <TextInput
-                        style={{ color: activeProfile==='HALOZ'? cyan : amber, fontWeight: 'bold', fontSize: 20, minWidth: 32, textAlign: 'center' }}
+                        style={{ color: currentProfileColor, fontWeight: 'bold', fontSize: 20, minWidth: 32, textAlign: 'center' }}
                         value={segmentsText}
                         onChangeText={setSegmentsText}
                         onBlur={commitSegments}
@@ -320,7 +320,7 @@ export default function Sk8LytzProgrammerModal({
                         selectTextOnFocus
                       />
                       <TouchableOpacity onPress={() => { const maxS = Math.floor(2048/currentProfile.ledPoints); const v = Math.min(maxS, currentProfile.segments + 1); updateActiveProfile({ segments: v }); setSegmentsText(String(v)); }}>
-                        <Text style={{ color: activeProfile==='HALOZ'? cyan : amber, fontSize: 20 }}>›</Text>
+                        <Text style={{ color: currentProfileColor, fontSize: 20 }}>›</Text>
                       </TouchableOpacity>
                     </View>
                 </View>
@@ -329,11 +329,11 @@ export default function Sk8LytzProgrammerModal({
              <View style={{ flexDirection: 'row', gap: 12 }}>
                 <TouchableOpacity style={[s.configBtn, { flex: 1, borderColor: border }]} onPress={cycleIC}>
                     <Text style={{ color: txtMuted, fontSize: 11 }}>STRIP TYPE (IC)</Text>
-                    <Text style={{ color: activeProfile === 'HALOZ'? cyan : amber, fontWeight: 'bold', fontSize: 16 }}>{currentProfile.icName}</Text>
+                    <Text style={{ color: currentProfileColor, fontWeight: 'bold', fontSize: 16 }}>{currentProfile.icName}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[s.configBtn, { flex: 1, borderColor: border }]} onPress={cycleSorting}>
                     <Text style={{ color: txtMuted, fontSize: 11 }}>COLOR SORTING</Text>
-                    <Text style={{ color: activeProfile === 'HALOZ'? cyan : amber, fontWeight: 'bold', fontSize: 16 }}>{currentProfile.colorSortingName}</Text>
+                    <Text style={{ color: currentProfileColor, fontWeight: 'bold', fontSize: 16 }}>{currentProfile.colorSortingName}</Text>
                 </TouchableOpacity>
              </View>
           </View>
@@ -377,7 +377,7 @@ export default function Sk8LytzProgrammerModal({
               return (
                 <TouchableOpacity
                   key={device.id}
-                  style={[s.deviceCard, { backgroundColor: cardBg, borderColor: isSelected ? (activeProfile==='HALOZ'?cyan:amber) : border, opacity: status === 'pending' ? 0.7 : 1 }]}
+                  style={[s.deviceCard, { backgroundColor: cardBg, borderColor: isSelected ? currentProfileColor : border, opacity: status === 'pending' ? 0.7 : 1 }]}
                   onPress={() => toggleDevice(device.id)}
                   activeOpacity={0.75}
                   disabled={isFlashing}
@@ -385,7 +385,7 @@ export default function Sk8LytzProgrammerModal({
                   <View style={s.row}>
                      <View style={{ width: 24, alignItems: 'center' }}>
                          {isSelected ? (
-                             <MaterialCommunityIcons name="checkbox-marked" size={22} color={activeProfile==='HALOZ'?cyan:amber} />
+                             <MaterialCommunityIcons name="checkbox-marked" size={22} color={currentProfileColor} />
                          ) : (
                              <MaterialCommunityIcons name="checkbox-blank-outline" size={22} color={border} />
                          )}
@@ -398,7 +398,7 @@ export default function Sk8LytzProgrammerModal({
                         {/* Show detected hw from scan probe */}
                         {detected && (
                           <Text style={{ color: '#00cc88', fontSize: 10, marginTop: 2 }}>
-                            ✓ {detected.ledPoints ?? detected.points ?? '?'}pts · {detected.segments ?? '?'}seg · {detected.icName ?? detected.stripType ?? '?'} · {detected.colorSortingName ?? detected.sorting ?? '?'}
+                            ✓ {detected.ledPoints ?? (detected as any).points ?? '?'}pts · {detected.segments ?? '?'}seg · {detected.icName ?? (detected as any).stripType ?? '?'} · {detected.colorSortingName ?? (detected as any).sorting ?? '?'}
                           </Text>
                         )}
                      </View>
@@ -419,7 +419,7 @@ export default function Sk8LytzProgrammerModal({
         {/* ── Action Footer ── */}
         <View style={[s.footer, { backgroundColor: cardBg, borderColor: border, paddingBottom: Math.max(insets.bottom, 16) }]}>
             <TouchableOpacity 
-                style={[s.flashBtn, { opacity: (selectedIds.length === 0 || isFlashing) ? 0.5 : 1, backgroundColor: activeProfile === 'HALOZ' ? cyan : amber }]}
+                style={[s.flashBtn, { opacity: (selectedIds.length === 0 || isFlashing) ? 0.5 : 1, backgroundColor: currentProfileColor }]}
                 disabled={selectedIds.length === 0 || isFlashing}
                 onPress={handleFlash}
             >

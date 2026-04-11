@@ -45,7 +45,7 @@ import CommunityModal from './CommunityModal';
 import SessionSummaryModal from './SessionSummaryModal';
 import type { ISessionSnapshot } from '../services/SpeedTrackingService';
 import { Accelerometer } from 'expo-sensors';
-import { getLocalProfileById } from '../constants/ProductCatalog';
+import { getLocalProfileById, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import * as Location from 'expo-location';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import MarqueeText from './MarqueeText';
@@ -1005,7 +1005,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       const factor = bright / 100;
       const pts = hwSettings?.ledPoints || points || 16;
       const profile = getLocalProfileById(hwSettings?.type || '');
-      const isHalozRing = profile?.vizShape === 'RING';
+      const isRingShape = profile?.vizShape === 'RING';
       const hwSpd = Math.min(spd, ZenggeProtocol.ANIM_SPEED_MAX);
 
       const red = { r: Math.round(255 * factor), g: 0, b: 0 };
@@ -1015,7 +1015,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
       let arr: { r: number; g: number; b: number }[];
 
-      if (isHalozRing) {
+      if (isRingShape) {
         // ── HALOZ 2-segment: 8-LED frame mirrored to 16 ──
         // Frame: RED RED YEL off YEL off WHT WHT
         // Mirror: WHT WHT off YEL off YEL RED RED
@@ -1490,28 +1490,25 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         {/* Product Selector - Only show if NO lockedProduct is provided */}
         {!lockedProduct && (
           <View style={styles.tabContainer}>
-            <TouchableOpacity
-              style={[styles.tab, activeProduct === 'HALOZ' && styles.activeTab]}
-              onPress={() => setActiveProduct('HALOZ')}
-            >
-              {activeProduct === 'HALOZ' && (
-                <LinearGradient colors={[Colors.primary, Colors.accent]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-              )}
-              <Text style={[styles.tabText, activeProduct === 'HALOZ' && styles.activeTabText]}>
-                HALOZ
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeProduct === 'SOULZ' && styles.activeTab]}
-              onPress={() => setActiveProduct('SOULZ')}
-            >
-              {activeProduct === 'SOULZ' && (
-                <LinearGradient colors={[Colors.secondary, Colors.accent]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-              )}
-              <Text style={[styles.tabText, activeProduct === 'SOULZ' && styles.activeTabText]}>
-                SOULZ
-              </Text>
-            </TouchableOpacity>
+            {LOCAL_PRODUCT_CATALOG.filter(p => p.isActive !== false).map((profile) => (
+              <TouchableOpacity
+                key={profile.id}
+                style={[styles.tab, activeProduct === profile.id && styles.activeTab]}
+                onPress={() => setActiveProduct(profile.id as any)}
+              >
+                {activeProduct === profile.id && (
+                  <LinearGradient 
+                    colors={[profile.vizThemeColor || Colors.primary, Colors.accent]} 
+                    start={{ x: 0, y: 0 }} 
+                    end={{ x: 1, y: 1 }} 
+                    style={StyleSheet.absoluteFill} 
+                  />
+                )}
+                <Text style={[styles.tabText, activeProduct === profile.id && styles.activeTabText]}>
+                  {profile.displayName.replace('™', '')}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         )}
 

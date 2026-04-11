@@ -22,6 +22,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Typography } from '../theme/theme';
 import type { PendingRegistration } from '../hooks/useBLE';
 import type { RegisteredDevice } from '../hooks/useRegistration';
+import { LOCAL_PRODUCT_CATALOG, getLocalProfileById } from '../constants/ProductCatalog';
 
 interface FirstTimeSetupModalProps {
   visible: boolean;
@@ -92,6 +93,7 @@ export default function FirstTimeSetupModal({
       product_type:  d.product_type,
       position:      d.position,
       group_name:    d.group_name,
+      group_id:      d.group_name.replace(/\s+/g, '-').toLowerCase(),
       led_points:    d.led_points,
       segments:      d.segments,
       ic_type:       d.ic_type,
@@ -114,8 +116,10 @@ export default function FirstTimeSetupModal({
   };
 
   // Group devices by product type for rendering
-  const haloz = devices.filter(d => d.product_type === 'HALOZ');
-  const soulz = devices.filter(d => d.product_type === 'SOULZ');
+  const deviceGroups = LOCAL_PRODUCT_CATALOG.map(profile => ({
+    profile,
+    items: devices.filter(d => d.product_type === profile.id)
+  })).filter(g => g.items.length > 0);
 
   const renderSignalBars = (rssi: number) => {
     const bars = rssiToSignalBars(rssi);
@@ -148,24 +152,14 @@ export default function FirstTimeSetupModal({
       </View>
 
       {/* Device type summary */}
-      {haloz.length > 0 && (
-        <View style={styles.summaryCard}>
-          <Text style={{ fontSize: 24, marginRight: 10 }}>💿</Text>
+      {deviceGroups.map(group => (
+        <View key={group.profile.id} style={styles.summaryCard}>
           <View>
-            <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 14 }}>HALOZ × {haloz.length}</Text>
-            <Text style={{ color: Colors.textMuted, fontSize: 11 }}>Halo ring LED controllers</Text>
+            <Text style={{ color: group.profile.vizThemeColor, fontWeight: 'bold', fontSize: 14 }}>{group.profile.displayName} × {group.items.length}</Text>
+            <Text style={{ color: Colors.textMuted, fontSize: 11 }}>{group.profile.vizShape} controllers</Text>
           </View>
         </View>
-      )}
-      {soulz.length > 0 && (
-        <View style={styles.summaryCard}>
-          <Text style={{ fontSize: 24, marginRight: 10 }}>⚡</Text>
-          <View>
-            <Text style={{ color: '#a855f7', fontWeight: 'bold', fontSize: 14 }}>SOULZ × {soulz.length}</Text>
-            <Text style={{ color: Colors.textMuted, fontSize: 11 }}>Blade LED controllers</Text>
-          </View>
-        </View>
-      )}
+      ))}
 
       {devices.length === 0 && (
         <View style={{ alignItems: 'center', marginVertical: 24 }}>
@@ -190,7 +184,8 @@ export default function FirstTimeSetupModal({
 
   // ── Step 2: Review & Edit ────────────────────────────────────────────────────
   const renderDeviceEditor = (d: PendingRegistration, pairMac?: string) => {
-    const accentColor = d.product_type === 'HALOZ' ? '#00f0ff' : '#a855f7';
+    const pProfile = getLocalProfileById(d.product_type) || LOCAL_PRODUCT_CATALOG[0];
+    const accentColor = pProfile.vizThemeColor || '#00f0ff';
     return (
       <View key={d.device_mac} style={[styles.deviceCard, { borderColor: `${accentColor}40` }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
@@ -250,25 +245,15 @@ export default function FirstTimeSetupModal({
         Tap any field to edit. Update group names to change how devices are grouped.
       </Text>
 
-      {/* HALOZ group */}
-      {haloz.length > 0 && (
-        <View style={{ marginBottom: 16 }}>
-          <Text style={[styles.groupHeader, { color: '#00f0ff' }]}>💿 HALOZ Controllers</Text>
-          {haloz.map((d, i) =>
-            renderDeviceEditor(d, haloz[i === 0 ? 1 : 0]?.device_mac)
+      {/* Device Groups */}
+      {deviceGroups.map(group => (
+        <View key={group.profile.id} style={{ marginBottom: 16 }}>
+          <Text style={[styles.groupHeader, { color: group.profile.vizThemeColor }]}>💿 {group.profile.displayName} Controllers</Text>
+          {group.items.map((d, i) =>
+            renderDeviceEditor(d, group.items[i === 0 ? 1 : 0]?.device_mac)
           )}
         </View>
-      )}
-
-      {/* SOULZ group */}
-      {soulz.length > 0 && (
-        <View style={{ marginBottom: 16 }}>
-          <Text style={[styles.groupHeader, { color: '#a855f7' }]}>⚡ SOULZ Controllers</Text>
-          {soulz.map((d, i) =>
-            renderDeviceEditor(d, soulz[i === 0 ? 1 : 0]?.device_mac)
-          )}
-        </View>
-      )}
+      ))}
 
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 8, paddingBottom: 24 }}>
         <TouchableOpacity style={styles.secondaryBtn} onPress={() => animateStep(1)}>
@@ -290,7 +275,8 @@ export default function FirstTimeSetupModal({
       </Text>
 
       {devices.map(d => {
-        const accent = d.product_type === 'HALOZ' ? '#00f0ff' : '#a855f7';
+        const pProfile = getLocalProfileById(d.product_type) || LOCAL_PRODUCT_CATALOG[0];
+        const accent = pProfile.vizThemeColor || '#00f0ff';
         return (
           <View key={d.device_mac} style={[styles.confirmRow, { borderLeftColor: accent }]}>
             <View style={{ flex: 1 }}>
