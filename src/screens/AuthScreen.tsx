@@ -487,6 +487,10 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           </View>
         </View>
 
+      </ScrollView>
+
+      {/* DOCKED BOTTOM ACTIONS */}
+      <View style={styles.bottomDock}>
         {/* Offline mode option */}
         {mode !== 'FORGOT_PASSWORD' && onOfflineMode && (
           <TouchableOpacity
@@ -577,7 +581,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         {isSandboxEnabled && (
           <TouchableOpacity
             style={{
-              marginTop: 30,
+              marginTop: 12,
               alignSelf: 'center',
               backgroundColor: 'rgba(255, 0, 0, 0.1)',
               paddingVertical: 10,
@@ -594,8 +598,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             <Text style={{ color: '#FF4444', fontWeight: 'bold', fontSize: 12 }}>☢️ NUKE APP CACHE</Text>
           </TouchableOpacity>
         )}
-
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -607,6 +610,15 @@ const createStyles = (Colors: ThemePalette, insets: { top: number; bottom: numbe
     paddingHorizontal: 24,
     paddingTop: Math.max(insets.top + 60, 80),
     paddingBottom: 24,
+  },
+  bottomDock: {
+    width: '100%',
+    backgroundColor: Colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: Colors.surfaceHighlight,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: Math.max(insets.bottom + 16, 24),
   },
   topButtons: {
     position: 'absolute', top: Math.max(insets.top + 10, 20), right: 16,
