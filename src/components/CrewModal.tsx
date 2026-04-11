@@ -117,9 +117,7 @@ export default function CrewModal({
   // ── Manage Crews Hub state ────────────────────────────────────────────────
   const [_manageTab, _setManageTab] = useState<'mycrews' | 'discover' | 'create'>('mycrews');
   const [myCrews, setMyCrews] = useState<PermanentCrew[]>([]);
-  const [publicCrews, setPublicCrews] = useState<PermanentCrew[]>([]);
   const [selectedCrewDetail, setSelectedCrewDetail] = useState<PermanentCrew | null>(null);
-  const [isLoadingCrews, setIsLoadingCrews] = useState(false);
   const [crewMemberCounts, setCrewMemberCounts] = useState<Record<string, { count: number; avatarColors: string[] }>>({});
   const [nearbySessions, setNearbySessions] = useState<NearbySession[]>([]);
   const [isLoadingNearby, setIsLoadingNearby] = useState(false);
@@ -159,7 +157,6 @@ export default function CrewModal({
   const [makingOwnerFor, setMakingOwnerFor] = useState<string | null>(null);
   const [isRemovingUserFor, setIsRemovingUserFor] = useState<string | null>(null);
   const [isAddingMembersTo, setIsAddingMembersTo] = useState<string | null>(null);
-  const [showPublicCrewsOnHub, setShowPublicCrewsOnHub] = useState(false);
 
   // Helper to load full member details into cardMembers
   const loadCrewMembers = (crewId: string) => {
@@ -229,27 +226,21 @@ export default function CrewModal({
     }).catch((e) => { console.warn('[CrewModal] Failed to load my crews:', e); });
   }, [visible, step]);
 
-  // Load public crews when hub opens
-  useEffect(() => {
-    if (!visible) return;
-    const shouldLoad = step === 'landing';
-    if (!shouldLoad) return;
-    setIsLoadingCrews(true);
-    profileService.getPublicCrews().then(crews => {
-      setPublicCrews(crews);
-    }).catch((e) => { console.warn('[CrewModal] Failed to load public crews:', e); }).finally(() => setIsLoadingCrews(false));
-  }, [visible, step]);
+  const refreshNearby = () => {
+    setIsLoadingNearby(true);
+    locationService.getNearbyPublicSessions(discoverRadiusMi)
+      .then(s => setNearbySessions(s))
+      .catch(() => { })
+      .finally(() => setIsLoadingNearby(false));
+  };
+
 
   // Load nearby live sessions when hub opens
   useEffect(() => {
     if (!visible) return;
     const shouldLoad = step === 'landing';
     if (!shouldLoad) return;
-    setIsLoadingNearby(true);
-    locationService.getNearbyPublicSessions(discoverRadiusMi)
-      .then(sessions => setNearbySessions(sessions))
-      .catch((e) => { console.warn('[CrewModal] Failed to load nearby sessions:', e); })
-      .finally(() => setIsLoadingNearby(false));
+    refreshNearby();
   }, [visible, step, discoverRadiusMi]);
 
   // Search users for invite
@@ -362,8 +353,14 @@ export default function CrewModal({
   // ── Create ─────────────────────────────────────────────────────────────────
 
   const handleCreate = async (scheduled?: Date) => {
-    const sessionName = crewName.trim() || permanentCrews.find(c => c.id === selectedCrewId)?.name || '';
+    let sessionName = crewName.trim() || permanentCrews.find(c => c.id === selectedCrewId)?.name || '';
     if (!sessionName) { setErrorMsg('Pick a crew or enter a session name'); return; }
+
+    // Append Date suffix (MM/DD) to ensure unique, traceable sessions
+    const now = new Date();
+    const dateStr = `${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')}`;
+    sessionName = `${sessionName}_${dateStr}`;
+
     setIsLoading(true); setErrorMsg('');
     try {
       const crewInfo = myCrews.find(c => c.id === selectedCrewId);
@@ -465,9 +462,14 @@ export default function CrewModal({
 
   const executeEndSession = async () => {
     setConfirmAction(null);
+    const currentSessionId = currentSession?.id;
     try {
-      AppLogger.log('CREW_SESSION_ENDED', { sessionId: currentSession?.id, crewName: currentSession?.name, role: 'leader', reason: 'explicit_end' });
-      await crewService.endSession(currentSession?.id);
+      AppLogger.log('CREW_SESSION_ENDED', { sessionId: currentSessionId, crewName: currentSession?.name, role: 'leader', reason: 'explicit_end' });
+      if (currentSessionId) {
+        await crewService.endSession(currentSessionId);
+        // Force refresh nearby sessions browser after ending
+        refreshNearby();
+      }
       setCurrentSession(null); setCurrentRole(null);
       setIsHandoffMode(false);
       onSessionEnded();
@@ -482,6 +484,8 @@ export default function CrewModal({
     setConfirmAction(null);
     AppLogger.log('CREW_SESSION_LEFT', { sessionId: currentSession?.id, role: currentRole });
     await crewService.leaveSession();
+    // Force refresh nearby sessions browser after leaving
+    refreshNearby();
     setCurrentSession(null); setCurrentRole(null);
     setIsHandoffMode(false);
     onSessionLeft();
@@ -973,65 +977,6 @@ export default function CrewModal({
           ))
         )}
 
-        {/* ── PUBLIC CREWS ── */}
-        <View style={[styles.hubSectionRow, { marginTop: 16 }]}>
-          <Text style={styles.hubSectionLabel}>🌍 PUBLIC CREWS</Text>
-          <TouchableOpacity
-            onPress={() => setShowPublicCrewsOnHub(v => !v)}
-            style={[styles.hubActionChip, { borderColor: 'rgba(255,255,255,0.15)' }]}
-          >
-            <MaterialCommunityIcons
-              name={showPublicCrewsOnHub ? 'eye-off-outline' : 'eye-outline'}
-              size={12} color={Colors.textMuted}
-            />
-            <Text style={[styles.hubActionChipText, { color: Colors.textMuted }]}>
-              {showPublicCrewsOnHub ? 'Hide' : 'Browse'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {showPublicCrewsOnHub && (
-          isLoadingCrews ? (
-            <ActivityIndicator color={Colors.primary} style={{ marginVertical: 12 }} />
-          ) : publicCrews.length === 0 ? (
-            <View style={styles.hubEmptyCard}>
-              <Text style={styles.hubEmptyText}>No public crews found yet — create one!</Text>
-            </View>
-          ) : (
-            publicCrews.map(crew => {
-              const alreadyMember = myCrews.some(c => c.id === crew.id);
-              const isJoining = joiningCrewId === crew.id;
-              return (
-                <View key={crew.id} style={[styles.hubCrewCard, { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 }]}>
-                  <View style={[styles.hubCrewAvatar, { backgroundColor: crew.avatar_color || '#FFAA00' }]}>
-                    <MaterialCommunityIcons name={(crew.avatar_icon as any) || 'account-group'} size={18} color="#000" />
-                  </View>
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <Text style={styles.hubCrewName} numberOfLines={1}>{crew.name}</Text>
-                    <Text style={styles.hubCrewMeta}>
-                      {crew.city ? `📍 ${crew.city}` : '🌍 Public crew'}
-                    </Text>
-                  </View>
-                  {alreadyMember ? (
-                    <View style={[styles.hubJoinPill, { backgroundColor: 'rgba(0,200,100,0.15)' }]}>
-                      <Text style={[styles.hubJoinPillText, { color: '#00C864' }]}>✓ Member</Text>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.hubJoinPill}
-                      onPress={() => handleJoinPublicCrew(crew)}
-                      disabled={isJoining}
-                    >
-                      {isJoining
-                        ? <ActivityIndicator size="small" color="#000" />
-                        : <Text style={styles.hubJoinPillText}>JOIN</Text>}
-                    </TouchableOpacity>
-                  )}
-                </View>
-              );
-            })
-          )
-        )}
 
         {/* ── Schedule ── */}
         <TouchableOpacity
@@ -2388,9 +2333,9 @@ const createStyles = (Colors: any) => StyleSheet.create({
   hubActionChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     borderWidth: 1.5, borderColor: 'rgba(255,170,0,0.35)',
-    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 20, paddingHorizontal: 8, paddingVertical: 4,
   },
-  hubActionChipText: { color: Colors.primary || '#FFAA00', fontSize: 11, fontWeight: '700' },
+  hubActionChipText: { color: Colors.primary || '#FFAA00', fontSize: 10, fontWeight: '700' },
 
   hubCodeEntry: {
     width: '100%', marginTop: 8, marginBottom: 4,

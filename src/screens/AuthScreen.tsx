@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabaseClient';
-import { Layout } from '../theme/theme';
+import { Layout, ThemePalette } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -18,7 +18,7 @@ import {
 } from '../services/AuthUtils';
 
 const STORAGE_LAST_EMAIL    = '@Sk8lytz_auth_last_email';
-const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';  // { email, password, rememberMe }
+const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';  // { email, rememberMe }
 const STORAGE_OFFLINE_SKIP  = '@Sk8lytz_offline_skip';     // 'true' if user chose Continue Offline
 
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
@@ -80,7 +80,6 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           }
           if (saved.rememberMe) {
             setEmail(saved.email || '');
-            setPassword(saved.password || '');
             setRememberMe(true);
           } else {
             // Only pre-fill email, not password
@@ -197,7 +196,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
       setErrorMessage('');
       // Save/clear remember-me credentials
       if (rememberMe) {
-        await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: loginEmail, password, rememberMe: true }));
+        await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: loginEmail, rememberMe: true }));
       } else {
         await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: loginEmail, rememberMe: false }));
       }
@@ -244,7 +243,10 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
     const { error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { username: username.trim() } },
+      options: { 
+        data: { username: username.trim() },
+        emailRedirectTo: 'sk8lytz://auth'
+      },
     });
     setLoading(false);
     if (error) {
@@ -302,7 +304,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
       {/* FIX 1.1.5: Theme toggle — styles now computed from Colors in render, so toggle re-renders correctly */}
       {/* FIX 1.1.6: Help button uses web-safe showHelp() instead of Alert.alert() */}
       <View style={styles.topButtons}>
-        {__DEV__ && (
+        {isSandboxEnabled && (
           <TouchableOpacity 
             style={[styles.topBtn, { borderColor: 'rgba(255,0,0,0.5)', backgroundColor: 'rgba(255,0,0,0.1)' }]} 
             onPress={async () => {
@@ -420,7 +422,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
                 ]}>
                   {rememberMe && <MaterialCommunityIcons name="check" size={12} color="#000" />}
                 </View>
-                <Text style={{ color: Colors.textMuted, fontSize: 13 }}>Remember me</Text>
+                <Text style={{ color: Colors.textMuted, fontSize: 13 }}>Remember my email</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => resetState('FORGOT_PASSWORD')}>
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
@@ -542,6 +544,28 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           </TouchableOpacity>
         )}
 
+        {/* DEV MODE - Virtual Skates Bypass */}
+        {isSandboxEnabled && (mode === 'LOGIN') && onOfflineMode && (
+          <TouchableOpacity
+            style={{ 
+              marginTop: 16, marginHorizontal: 24, paddingVertical: 12, 
+              borderWidth: 1, borderColor: 'rgba(0,240,255,0.4)', borderRadius: 12, 
+              backgroundColor: 'rgba(0,240,255,0.05)', alignItems: 'center',
+              flexDirection: 'row', justifyContent: 'center', gap: 8
+            }}
+            onPress={async () => {
+              // Enable the virtual skates flags in storage so the dashboard picks them up
+              await AsyncStorage.setItem('@Sk8lytz_demo_halo', 'true');
+              await AsyncStorage.setItem('@Sk8lytz_demo_soul', 'true');
+              // Bypass Auth
+              onOfflineMode();
+            }}
+          >
+            <MaterialCommunityIcons name="developer-board" size={16} color="#00f0ff" />
+            <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 13, letterSpacing: 1 }}>DEV MODE: VIRTUAL SKATES</Text>
+          </TouchableOpacity>
+        )}
+
         {/* HIBP attribution */}
         {mode === 'SIGNUP' && (
           <Text style={{ color: Colors.textMuted, fontSize: 10, textAlign: 'center', marginTop: 8, paddingHorizontal: 24 }}>
@@ -550,31 +574,33 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         )}
 
         {/* The Nuke Button */}
-        <TouchableOpacity
-          style={{
-            marginTop: 30,
-            alignSelf: 'center',
-            backgroundColor: 'rgba(255, 0, 0, 0.1)',
-            paddingVertical: 10,
-            paddingHorizontal: 20,
-            borderRadius: 8,
-            borderWidth: 1,
-            borderColor: 'rgba(255, 0, 0, 0.4)'
-          }}
-          onPress={async () => {
-            await AsyncStorage.clear();
-            setErrorMessage('APP RESET: ALL DATA CLEARED. PLEASE RESTART APP.');
-          }}
-        >
-          <Text style={{ color: '#FF4444', fontWeight: 'bold', fontSize: 12 }}>☢️ NUKE APP CACHE</Text>
-        </TouchableOpacity>
+        {isSandboxEnabled && (
+          <TouchableOpacity
+            style={{
+              marginTop: 30,
+              alignSelf: 'center',
+              backgroundColor: 'rgba(255, 0, 0, 0.1)',
+              paddingVertical: 10,
+              paddingHorizontal: 20,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 0, 0, 0.4)'
+            }}
+            onPress={async () => {
+              await AsyncStorage.clear();
+              setErrorMessage('APP RESET: ALL DATA CLEARED. PLEASE RESTART APP.');
+            }}
+          >
+            <Text style={{ color: '#FF4444', fontWeight: 'bold', fontSize: 12 }}>☢️ NUKE APP CACHE</Text>
+          </TouchableOpacity>
+        )}
 
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const createStyles = (Colors: any, insets: { top: number; bottom: number; left: number; right: number }) => StyleSheet.create({
+const createStyles = (Colors: ThemePalette, insets: { top: number; bottom: number; left: number; right: number }) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scrollContent: {
     flexGrow: 1, justifyContent: 'center',

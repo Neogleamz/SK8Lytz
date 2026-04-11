@@ -62,13 +62,40 @@ interface BleLog {
   note?: string;
 }
 
-// ─── Transition type reference (hardware-confirmed live testing Apr 2026) ────
-const TRANSITION_TYPES = [
-  { byte: 0x00, label: 'CASCADE',  color: '#FF9500', desc: '✅ Continuous scroll — hardware loops array around strip. Use for animated patterns.' },
-  { byte: 0x01, label: 'FREEZE',   color: '#00CC88', desc: '✅ Static lock — array is held in place, no movement. Use for solid/street lights.' },
-  { byte: 0x02, label: 'STROBE',   color: '#FF4040', desc: '⚠️ Intended flash — visually similar to FREEZE on some firmware. Use for hard brake alert.' },
-  { byte: 0x03, label: 'TRIGGER',  color: '#FF69B4', desc: '🔴 One-shot trigger — renders array at NEXT offset then stops. Causes blink+new-position on each send. NOT continuous animation.' },
+// ─── Quick Palette for Lab Builders ────────────────────────────────────────
+const QUICK_PALETTE = [
+  { p: 'Red', hex: '#FF0000', r: 255, g: 0, b: 0 },
+  { p: 'Green', hex: '#00FF00', r: 0, g: 255, b: 0 },
+  { p: 'Blue', hex: '#0000FF', r: 0, g: 0, b: 255 },
+  { p: 'Yellow', hex: '#FFFF00', r: 255, g: 255, b: 0 },
+  { p: 'Cyan', hex: '#00FFFF', r: 0, g: 255, b: 255 },
+  { p: 'Purple', hex: '#8000FF', r: 128, g: 0, b: 255 },
+  { p: 'Orange', hex: '#FF8800', r: 255, g: 136, b: 0 },
+  { p: 'Magenta', hex: '#FF00FF', r: 255, g: 0, b: 255 },
+  { p: 'White', hex: '#FFFFFF', r: 255, g: 255, b: 255 },
+  { p: 'Black', hex: '#000000', r: 0, g: 0, b: 0 },
 ];
+
+const QuickColorGrid = ({ onSelect, activeColor }: { onSelect: (c: {r:number,g:number,b:number}) => void, activeColor?: {r:number,g:number,b:number} }) => {
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+      {QUICK_PALETTE.map((c, i) => {
+        const isActive = activeColor && activeColor.r === c.r && activeColor.g === c.g && activeColor.b === c.b;
+        return (
+          <TouchableOpacity 
+            key={i} 
+            onPress={() => onSelect({ r: c.r, g: c.g, b: c.b })}
+            style={{ 
+              width: 32, height: 32, borderRadius: 16, backgroundColor: c.hex,
+              borderWidth: 2, borderColor: isActive ? '#00f0ff' : 'rgba(255,255,255,0.1)',
+              justifyContent: 'center', alignItems: 'center'
+            }}
+          />
+        );
+      })}
+    </View>
+  );
+};
 
 // ─── Helper: build annotated 0x59 payload manually ───────────────────────────
 function build0x59(
@@ -214,8 +241,8 @@ export default function Sk8LytzDiagnosticLab({
         const c1 = bldColors[0] || {r:255,g:0,b:0};
         const s = parseInt(bldSens) || 100;
         const br = parseInt(bldBright) || 100;
-        // modeType=id (symphony pattern 1-13), matrixStyle=0x27(LightScreen) or 0x26(LightBar)
-        const wrapped = ZenggeProtocol.setMusicConfig(bldMic, id, bldMatrixStyle, c1, bldC2, s, br);
+        // matrixStyle=bldMatrixStyle (0x27 Screen, 0x26 Bar), patternId=id (effects 1-13)
+        const wrapped = ZenggeProtocol.setMusicConfig(bldMic, bldMatrixStyle, id, c1, bldC2, s, br);
         const hex = wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
         const matrixLabel = bldMatrixStyle === 0x27 ? 'Light Screen (0x27)' : 'Light Bar (0x26)';
         setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x73] Symphony/Music Config', `Mode: ${id} | Matrix: ${matrixLabel}`, `Mic: ${bldMic ? 'DEVICE' : 'APP'} | Sens: ${s} | Bright: ${br}`, `C1 RGB(${c1.r},${c1.g},${c1.b}) | C2 RGB(${bldC2.r},${bldC2.g},${bldC2.b})`] });
@@ -602,20 +629,10 @@ export default function Sk8LytzDiagnosticLab({
           </View>
 
           <Text style={[S.subTitle, { color: txtMuted, marginTop: 12 }]}>FOREGROUND (COLOR 1)</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
-            <View style={{ width: 24, height: 24, backgroundColor: `rgb(${bld51Color1.r},${bld51Color1.g},${bld51Color1.b})`, borderRadius: 6, borderWidth: 1, borderColor: border }} />
-            <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={bld51Color1.r.toString()} keyboardType="numeric" onChangeText={v => setBld51Color1(c => ({...c, r: parseInt(v)||0}))} placeholder="R" placeholderTextColor={txtMuted} />
-            <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={bld51Color1.g.toString()} keyboardType="numeric" onChangeText={v => setBld51Color1(c => ({...c, g: parseInt(v)||0}))} placeholder="G" placeholderTextColor={txtMuted} />
-            <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={bld51Color1.b.toString()} keyboardType="numeric" onChangeText={v => setBld51Color1(c => ({...c, b: parseInt(v)||0}))} placeholder="B" placeholderTextColor={txtMuted} />
-          </View>
+          <QuickColorGrid activeColor={bld51Color1} onSelect={setBld51Color1} />
 
           <Text style={[S.subTitle, { color: txtMuted, marginTop: 12 }]}>BACKGROUND (COLOR 2)</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
-            <View style={{ width: 24, height: 24, backgroundColor: `rgb(${bld51Color2.r},${bld51Color2.g},${bld51Color2.b})`, borderRadius: 6, borderWidth: 1, borderColor: border }} />
-            <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={bld51Color2.r.toString()} keyboardType="numeric" onChangeText={v => setBld51Color2(c => ({...c, r: parseInt(v)||0}))} placeholder="R" placeholderTextColor={txtMuted} />
-            <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={bld51Color2.g.toString()} keyboardType="numeric" onChangeText={v => setBld51Color2(c => ({...c, g: parseInt(v)||0}))} placeholder="G" placeholderTextColor={txtMuted} />
-            <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={bld51Color2.b.toString()} keyboardType="numeric" onChangeText={v => setBld51Color2(c => ({...c, b: parseInt(v)||0}))} placeholder="B" placeholderTextColor={txtMuted} />
-          </View>
+          <QuickColorGrid activeColor={bld51Color2} onSelect={setBld51Color2} />
         </View>
       )}
 
@@ -764,18 +781,11 @@ export default function Sk8LytzDiagnosticLab({
             </View>
           </View>
 
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>COLOR 1 (RGB)</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-            <TextInput style={[S.numInput, {flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}]} value={bldColors[0]?.r?.toString()||'0'} onChangeText={v => setBldColors([{r: parseInt(v)||0, g: bldColors[0]?.g||0, b: bldColors[0]?.b||0}])} />
-            <TextInput style={[S.numInput, {flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}]} value={bldColors[0]?.g?.toString()||'0'} onChangeText={v => setBldColors([{r: bldColors[0]?.r||0, g: parseInt(v)||0, b: bldColors[0]?.b||0}])} />
-            <TextInput style={[S.numInput, {flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}]} value={bldColors[0]?.b?.toString()||'0'} onChangeText={v => setBldColors([{r: bldColors[0]?.r||0, g: bldColors[0]?.g||0, b: parseInt(v)||0}])} />
-          </View>
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>COLOR 2 (RGB)</Text>
-           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TextInput style={[S.numInput, {flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}]} value={bldC2.r.toString()} onChangeText={v => setBldC2({...bldC2, r: parseInt(v)||0})} />
-            <TextInput style={[S.numInput, {flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}]} value={bldC2.g.toString()} onChangeText={v => setBldC2({...bldC2, g: parseInt(v)||0})} />
-            <TextInput style={[S.numInput, {flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}]} value={bldC2.b.toString()} onChangeText={v => setBldC2({...bldC2, b: parseInt(v)||0})} />
-          </View>
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 8, fontWeight: '900' }}>COLOR 1 (PRIMARY)</Text>
+          <QuickColorGrid activeColor={bldColors[0]} onSelect={c => setBldColors([c])} />
+          
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 8, fontWeight: '900' }}>COLOR 2 (SECONDARY)</Text>
+          <QuickColorGrid activeColor={bldC2} onSelect={setBldC2} />
         </View>
       )}
 

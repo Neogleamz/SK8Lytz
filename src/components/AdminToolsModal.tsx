@@ -1,24 +1,16 @@
 /**
- * LogViewerModal.tsx — SK8Lytz In-App Analytics Dashboard
+ * AdminToolsModal.tsx — SK8Lytz Unified Administrative Hub
+ * 
+ * A high-fidelity administrative interface for real-time telemetry, 
+ * performance analytics, device management, and hardware diagnostic tools.
  *
- * Full-screen modal that renders the current session's telemetry data
- * sourced from the AppLogger local buffer.
+ * Tab Hierarchy:
+ *  1. TIMELINE - Virtualized event log (low-level protocol & app lifecycle)
+ *  2. STATS    - Aggregated session analytics (mode usage, top patterns, hardware metrics)
+ *  3. DEVICE   - Hardware-centric view of all discovered and configured BLE devices
+ *  4. TOOLS    - Gateway to low-level Diagnostic Lab and Firmware Programmer
  *
- * Four-tab layout:
- *  LOGS     — Virtualized event timeline (newest first), color-coded by event type
- *             Each event type maps to an icon, color, and human-readable summary
- *  STATS    — Aggregated usage: top modes, top patterns, most-used colors
- *  DEVICES  — All BLE devices seen this session with hardware config details
- *  EXPORT   — JSON dump of the full local log buffer (shareable via OS sheet)
- *
- * Event type registry: EVENT_META maps every EventType to { icon, color, label }
- * Custom rendering: payloadSummary() formats each event's data field for display
- *
- * Note: Reads LOCAL AppLogger buffer only. Historical Supabase data requires
- * a separate authenticated query endpoint (not yet implemented).
- *
- * Depends on: AppLogger (singleton), MaterialCommunityIcons
- * Platform: React Native (Android + Web)
+ * @param {AdminToolsModalProps} props - Configuration for visibility and tool callbacks
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -30,8 +22,9 @@ import * as Device from 'expo-device';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger, LogEntry, EventType } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
+import AdminPicksScheduler from './AdminPicksScheduler';
 
-type Tab = 'timeline' | 'devices' | 'stats' | 'admin';
+type Tab = 'timeline' | 'stats' | 'device' | 'tools';
 
 const EVENT_META: Record<EventType, { icon: string; color: string; label: string }> = {
   APP_OPENED:         { icon: 'cellphone-check', color: '#00f0ff', label: 'App Opened' },
@@ -120,23 +113,36 @@ function payloadSummary(entry: LogEntry): string {
   }
 }
 
-interface LogViewerModalProps {
+interface AdminToolsModalProps {
+  /** Whether the modal is currently visible */
   visible: boolean;
+  /** Callback to close the modal */
   onClose: () => void;
+  /** Callback to launch the Firmware Programmer modal */
   onOpenProgrammer?: () => void;
+  /** Callback to launch the LED Diagnostic Lab modal */
   onOpenLab?: () => void;
+  /** Callback to dispatch physical BLE write commands */
   writeToDevice?: (data: number[], deviceId?: string) => Promise<void>;
+  /** Live telemetry feed of incoming hardware notifications */
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
+  /** List of currently connected BLE peripherals */
   connectedDevices?: { id: string, name: string | null }[];
+  /** Master list of all discovered peripherals */
   allDevices?: any[];
+  /** BLE scanning state */
   isScanning?: boolean;
+  /** Trigger to start a fresh BLE discovery cycle */
   handleScan?: () => void;
+  /** Callback to flush the system event timeline */
   onClearAll?: () => void;
+  /** Logic to establish a direct connection to a selected device */
   onConnectToDevice?: (device: any) => Promise<any>;
+  /** Real-time hardware configuration map (strips, points, sorting) */
   liveDeviceConfigs?: Record<string, any>;
 }
 
-export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onOpenLab, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll, onConnectToDevice, liveDeviceConfigs }: LogViewerModalProps) {
+export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, onOpenLab, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll, onConnectToDevice, liveDeviceConfigs }: AdminToolsModalProps) {
   const { isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -144,9 +150,10 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
+  const [isPicksSchedulerVisible, setIsPicksSchedulerVisible] = useState(false);
 
   useEffect(() => {
-    if (visible) AppLogger.log('SCREEN_OPENED', { screenName: 'Analytics' });
+    if (visible) AppLogger.log('SCREEN_OPENED', { screenName: 'AdminTools' });
   }, [visible]);
   
   const load = useCallback(async () => {
@@ -414,7 +421,22 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
               <Text style={{ color: '#FFA500', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>LED Diagnostic Lab</Text>
             </View>
           </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={{ backgroundColor: 'rgba(255, 165, 0, 0.1)', borderColor: '#FFA500', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginTop: 16 }}
+            onPress={() => setIsPicksSchedulerVisible(true)}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>📅</Text>
+              <Text style={{ color: '#FFA500', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>SK8Lytz Picks Scheduler</Text>
+            </View>
+          </TouchableOpacity>
         </View>
+
+        <AdminPicksScheduler
+          visible={isPicksSchedulerVisible}
+          onClose={() => setIsPicksSchedulerVisible(false)}
+        />
       </ScrollView>
     );
   };
@@ -427,7 +449,7 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
         {/* Header */}
         <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
           <View style={{ flexShrink: 1, paddingRight: 8 }}>
-            <Text style={[styles.title, { color: textPrimary }]} numberOfLines={1}>SK8Lytz Analytics</Text>
+            <Text style={[styles.title, { color: textPrimary }]} numberOfLines={1}>Admin Tools</Text>
             <Text style={[styles.subtitle, { color: textMuted }]} numberOfLines={1}>{timelineLogs.length} events stored</Text>
           </View>
           <View style={styles.headerActions}>
@@ -456,14 +478,14 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
 
         {/* Tabs */}
         <View style={[styles.tabs, { borderBottomColor: borderColor }]}>
-          {(['timeline', 'devices', 'stats', 'admin'] as Tab[]).map(t => (
+          {(['timeline', 'stats', 'device', 'tools'] as Tab[]).map(t => (
             <TouchableOpacity
               key={t}
               onPress={() => setTab(t)}
               style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
             >
               <Text style={[styles.tabLabel, { color: tab === t ? '#00f0ff' : textMuted }]}>
-                {t.charAt(0).toUpperCase() + t.slice(1)}
+                {t === 'device' ? 'Device' : t === 'tools' ? 'Tools' : t.charAt(0).toUpperCase() + t.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -480,9 +502,9 @@ export default function LogViewerModal({ visible, onClose, onOpenProgrammer, onO
             }
           />
         )}
-        {tab === 'devices' && renderDeviceTab()}
+        {tab === 'device' && renderDeviceTab()}
         {tab === 'stats' && renderStatsTab()}
-        {tab === 'admin' && renderAdminTab()}
+        {tab === 'tools' && renderAdminTab()}
       </SafeAreaView>
 
       <Modal visible={confirmDeleteVisible} transparent animationType="fade">

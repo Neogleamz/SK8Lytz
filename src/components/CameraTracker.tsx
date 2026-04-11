@@ -63,7 +63,7 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
     
     setIsProcessing(true);
     try {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.2, skipProcessing: true });
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.1, skipProcessing: true });
       if (!photo) {
         setIsProcessing(false);
         return;
@@ -73,7 +73,7 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
       const x_p = (locationX / layout.width) * photo.width;
       const y_p = (locationY / layout.height) * photo.height;
       
-      const cropSize = 1; // Strict 1 pixel sample for absolute precision
+      const cropSize = 10; // 10x10 sample area to average out camera noise
       const originX = Math.floor(Math.max(0, Math.min(photo.width - cropSize, x_p)));
       const originY = Math.floor(Math.max(0, Math.min(photo.height - cropSize, y_p)));
 
@@ -101,18 +101,48 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
         let avgG = Math.round(g / pixelCount);
         let avgB = Math.round(b / pixelCount);
 
-        // VIVIDNESS NORMAILZATION ALGORITHM:
-        // Raw camera feeds are inherently washed out by white light (glare). 
-        // For physical LEDs, any white mixed into the RGB channel degrades the pure hue.
-        // We eliminate the lowest channel (white noise) by pushing it to 0, and pull the highest channel to 255.
-        const max = Math.max(avgR, avgG, avgB);
-        const min = Math.min(avgR, avgG, avgB);
-        
-        if (max > 0 && max !== min) {
-           avgR = Math.round(((avgR - min) / (max - min)) * 255);
-           avgG = Math.round(((avgG - min) / (max - min)) * 255);
-           avgB = Math.round(((avgB - min) / (max - min)) * 255);
+        // VIVIDNESS NORMALIZATION ALGORITHM (HSL BOOST):
+        // Convert averaged RGB to HSL, boost saturation to make colors pop on LEDs,
+        // without destroying underlying whites and greys like a min/max stretch would.
+        const rNorm = avgR / 255;
+        const gNorm = avgG / 255;
+        const bNorm = avgB / 255;
+        const cMax = Math.max(rNorm, gNorm, bNorm);
+        const cMin = Math.min(rNorm, gNorm, bNorm);
+        const delta = cMax - cMin;
+
+        let h = 0, s = 0, l = (cMax + cMin) / 2;
+
+        if (delta !== 0) {
+          s = delta / (1 - Math.abs(2 * l - 1));
+          switch (cMax) {
+            case rNorm: h = ((gNorm - bNorm) / delta) % 6; break;
+            case gNorm: h = (bNorm - rNorm) / delta + 2; break;
+            case bNorm: h = (rNorm - gNorm) / delta + 4; break;
+          }
+          h = Math.round(h * 60);
+          if (h < 0) h += 360;
         }
+
+        // Boost saturation safely by 0.2 (20%)
+        s = Math.min(1, s + 0.2);
+
+        // Convert back to RGB
+        const c = (1 - Math.abs(2 * l - 1)) * s;
+        const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+        const m = l - c / 2;
+        let rPrime = 0, gPrime = 0, bPrime = 0;
+
+        if (h >= 0 && h < 60) { rPrime = c; gPrime = x; bPrime = 0; }
+        else if (h >= 60 && h < 120) { rPrime = x; gPrime = c; bPrime = 0; }
+        else if (h >= 120 && h < 180) { rPrime = 0; gPrime = c; bPrime = x; }
+        else if (h >= 180 && h < 240) { rPrime = 0; gPrime = x; bPrime = c; }
+        else if (h >= 240 && h < 300) { rPrime = x; gPrime = 0; bPrime = c; }
+        else if (h >= 300 && h < 360) { rPrime = c; gPrime = 0; bPrime = x; }
+
+        avgR = Math.round((rPrime + m) * 255);
+        avgG = Math.round((gPrime + m) * 255);
+        avgB = Math.round((bPrime + m) * 255);
         
         const hex = '#' + [avgR, avgG, avgB].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
         setDetectedHex(hex);
@@ -192,38 +222,34 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    minHeight: 180,
-    backgroundColor: '#050505',
-    borderRadius: 24,
-    marginTop: 8,
+    minHeight: 200,
+    backgroundColor: '#000',
+    borderRadius: 16,
+    marginTop: 0,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
     alignItems: 'center',
-    paddingTop: 16,
-    paddingBottom: 16
+    paddingTop: 0,
+    paddingBottom: 0
   },
   message: {
     color: '#FFF',
     textAlign: 'center',
     paddingBottom: 10,
-    marginTop: 100
+    fontFamily: 'Righteous',
   },
   button: {
     backgroundColor: Colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
+    marginTop: 20,
   },
   cameraBox: {
-    width: '90%',
+    width: '100%',
     flex: 1,
-    marginBottom: 8,
-    borderRadius: 16,
-    overflow: 'hidden',
     backgroundColor: '#000',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   camera: {
     flex: 1,
@@ -234,40 +260,44 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
   instructionText: {
     color: '#FFF',
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontFamily: 'Righteous',
     textAlign: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   statusBox: {
+    position: 'absolute',
+    bottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(0,0,0,0.8)',
     borderRadius: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   swatch: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginRight: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginRight: 10,
     borderWidth: 1,
     borderColor: '#FFF',
   },
   hexText: {
     color: '#FFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-    letterSpacing: 2
+    fontSize: 14,
+    fontFamily: 'Righteous',
+    letterSpacing: 1
   }
 });
