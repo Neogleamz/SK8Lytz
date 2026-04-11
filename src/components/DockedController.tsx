@@ -763,6 +763,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
     const loadFavorite = (favRaw: IFavoriteState, context: 'FAVORITE' | 'PICK' | 'COMMUNITY' = 'FAVORITE') => {
       const fav = favRaw as IFavoriteState;
+      AppLogger.log(context === 'PICK' ? 'PICK_LOADED' : 'FAVORITE_LOADED', { name: fav.name, mode: fav.mode });
       setActiveFavoriteId(fav.id);
       setSpeed(fav.speed);
       setBrightness(fav.brightness);

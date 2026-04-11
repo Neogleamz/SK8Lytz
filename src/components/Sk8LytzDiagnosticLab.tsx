@@ -28,6 +28,7 @@ import { Typography } from '../theme/theme';
 import { ZenggeProtocol, IC_TYPES, COLOR_SORTING_RGB } from '../protocols/ZenggeProtocol';
 import CustomEffectVisualizer from './CustomEffectVisualizer';
 import { useRegistration } from '../hooks/useRegistration';
+import { AppLogger } from '../services/AppLogger';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -96,6 +97,14 @@ const QuickColorGrid = ({ onSelect, activeColor }: { onSelect: (c: {r:number,g:n
     </View>
   );
 };
+
+// ─── Transition type reference (hardware-confirmed live testing Apr 2026) ────
+const TRANSITION_TYPES = [
+  { byte: 0x00, label: 'CASCADE',  color: '#FF9500', desc: '✅ Continuous scroll — hardware loops array around strip. Use for animated patterns.' },
+  { byte: 0x01, label: 'FREEZE',   color: '#00CC88', desc: '✅ Static lock — array is held in place, no movement. Use for solid/street lights.' },
+  { byte: 0x02, label: 'STROBE',   color: '#FF4040', desc: '⚠️ Intended flash — visually similar to FREEZE on some firmware. Use for hard brake alert.' },
+  { byte: 0x03, label: 'TRIGGER',  color: '#FF69B4', desc: '🔴 One-shot trigger — renders array at NEXT offset then stops. Causes blink+new-position on each send. NOT continuous animation.' },
+];
 
 // ─── Helper: build annotated 0x59 payload manually ───────────────────────────
 function build0x59(
@@ -284,6 +293,7 @@ export default function Sk8LytzDiagnosticLab({
     setLastSent(hexStr);
     setLastNote(note || '');
     setLogs(prev => [{ dir: 'TX' as const, hex: hexStr, t: Date.now(), note, dev: targetDeviceId ?? undefined }, ...prev].slice(0, 200));
+    AppLogger.log('RAW_PAYLOAD', { dir: 'TX', hex: hexStr, note, deviceId: targetDeviceId ?? undefined });
   }, [writeToDevice, targetDeviceId]);
 
   const sendRawHex = useCallback(async (hexStr: string, note?: string) => {

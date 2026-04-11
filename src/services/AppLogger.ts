@@ -16,12 +16,12 @@
  *    into individual per-device rows in Supabase, enabling per-device diagnostics.
  *  - Custom device names: resolved from 'ng_device_configs' AsyncStorage key
  *    (same key DashboardScreen writes) and injected into all DB payloads.
- *  - RAW_PAYLOAD events are intentionally EXCLUDED from Supabase DB writes
- *    (hardware tester sniffer data only — kept in Storage/local only).
+ *  - RAW_PAYLOAD events (Diagnostic TX Payloads) are explicitly EXCLUDED from general 
+ *    parsed_logs to prevent noise, but are fast-tracked into the `led_diagnostics` table.
  *
  * Supabase tables written:
  *  parsed_session_stats, parsed_session_devices, parsed_logs,
- *  parsed_mode_usage, parsed_pattern_usage, parsed_color_usage
+ *  parsed_mode_usage, parsed_pattern_usage, parsed_color_usage, led_diagnostics
  *
  * Event types: see EventType union below
  * Platform: React Native (Android + Web)
@@ -541,6 +541,20 @@ class AppLoggerService {
               }));
               await supabase.from('telemetry_errors').insert(errorPayload);
               console.log(`[AppLogger] Pushed ${errorPayload.length} critical errors to telemetry tracker.`);
+          }
+
+          // 6. LED Diagnostics Fast-Track
+          const labLogs = [...this.buffer].filter((l: any) => l.e === 'RAW_PAYLOAD' && l.d?.dir === 'TX');
+          if (labLogs.length > 0) {
+              const diagPayload = labLogs.map((item: any) => ({
+                  device_id: item.d?.deviceId || primaryMacRaw,
+                  payload_hex: item.d?.hex,
+                  protocol: item.d?.hex ? '0x' + item.d.hex.substring(0, 2) : 'UNKNOWN',
+                  test_label: item.d?.note || 'Diagnostic Lab TX',
+                  session_notes: sessionId
+              }));
+              await supabase.from('led_diagnostics').insert(diagPayload);
+              console.log(`[AppLogger] Pushed ${diagPayload.length} diagnostic payloads to telemetry track.`);
           }
 
           console.log('[AppLogger] Postgres Native Insertion Complete!');

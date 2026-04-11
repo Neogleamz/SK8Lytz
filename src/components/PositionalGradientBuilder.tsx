@@ -9,6 +9,7 @@ import { supabase } from '../services/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Modal, TextInput, ActivityIndicator, Alert } from 'react-native';
 import MarqueeText from './MarqueeText';
+import { AppLogger } from '../services/AppLogger';
 
 interface Props {
   nodes: BuilderNode[];
@@ -115,6 +116,7 @@ export default function PositionalGradientBuilder({
           setSaveModalVisible(false);
           setPresetNameInput('');
           loadLibrary(); // Reload UI
+          AppLogger.log('BUILDER_PRESET_SAVED', { id: newPreset.id, name: newPreset.name });
       } catch (err) {
           console.error("Save error", err);
           Alert.alert("Save Error", "Failed to save the preset.");
@@ -128,6 +130,7 @@ export default function PositionalGradientBuilder({
       onFillModeChange(p.fill_mode);
       onTransitionTypeChange(p.transition_type);
       if (p.nodes.length > 0) setActiveNodeId(p.nodes[0].id);
+      AppLogger.log('BUILDER_PRESET_LOADED', { id: p.id, name: p.name });
   };
 
   const deletePreset = async (p: CustomBuilderPreset) => {
@@ -145,6 +148,7 @@ export default function PositionalGradientBuilder({
                       // Delete Cloud
                       await supabase.from('custom_builder_presets').delete().eq('id', p.id);
                   }
+                  AppLogger.log('BUILDER_PRESET_DELETED', { id: p.id, name: p.name });
                   loadLibrary();
               } catch(err) {
                   console.error(err);
