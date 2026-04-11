@@ -1725,23 +1725,28 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
              <View style={{ flex: 1, paddingBottom: 40 }}>
                 {/* SLAB 2: CREW HUB (Sessions) */}
                 <View style={[styles.slabContainer, { marginTop: 12 }]}>
-                  <View style={[styles.glassSlab, { borderColor: isOfflineMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,170,0,0.2)', paddingVertical: 40 }]}>
-                    <View style={styles.slabHeader}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <MaterialCommunityIcons name={isOfflineMode ? "cloud-off-outline" : "account-group"} size={18} color={isOfflineMode ? Colors.textMuted : "#FFAA00"} />
-                        <Text style={[styles.slabTitle, { color: isOfflineMode ? Colors.textMuted : '#FFAA00' }]}>CREW HUB</Text>
+                  <View style={[styles.glassSlab, { borderColor: isOfflineMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,170,0,0.2)', paddingVertical: isOfflineMode ? 16 : 40 }]}>
+                    {!isOfflineMode && (
+                      <View style={styles.slabHeader}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <MaterialCommunityIcons name="account-group" size={18} color="#FFAA00" />
+                          <Text style={[styles.slabTitle, { color: '#FFAA00' }]}>CREW HUB</Text>
+                        </View>
+                        {!crewSession && (
+                          <TouchableOpacity onPress={() => setIsCrewModalVisible(true)} style={styles.slabAction}>
+                            <Text style={styles.slabActionText}>OPEN HUB</Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
-                      {!crewSession && !isOfflineMode && (
-                        <TouchableOpacity onPress={() => setIsCrewModalVisible(true)} style={styles.slabAction}>
-                          <Text style={styles.slabActionText}>OPEN HUB</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
+                    )}
 
                     {isOfflineMode ? (
                       <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' }}>
-                        <MaterialCommunityIcons name="wifi-off" size={16} color="#ff4444" style={{ marginRight: 8 }} />
-                        <Text style={[styles.slabEmptyText, { color: '#ff4444', flex: 1, fontFamily: 'Righteous', fontSize: 11 }]}>NETWORK DISCONNECTED</Text>
+                        <MaterialCommunityIcons name="cloud-off-outline" size={16} color={Colors.textMuted} style={{ marginRight: 6 }} />
+                        <Text style={[styles.slabTitle, { color: Colors.textMuted, marginRight: 12, fontSize: 13 }]}>CREW HUB</Text>
+                        <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginRight: 12 }} />
+                        <MaterialCommunityIcons name="wifi-off" size={14} color="#ff4444" style={{ marginRight: 6 }} />
+                        <Text style={[styles.slabEmptyText, { color: '#ff4444', flex: 0, fontFamily: 'Righteous', fontSize: 11 }]}>DISCONNECTED</Text>
                       </View>
                     ) : crewSession ? (
                       <TouchableOpacity
