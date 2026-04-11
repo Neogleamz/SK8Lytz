@@ -44,6 +44,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/protocol-integration`
 
+- [ ] `feat/hardware-abstraction-layer` : Architect a hardware controller abstraction layer to decouple the UI from explicit `ZenggeProtocol` functions, preparing the app to support and dynamically map new OEM hardware controllers to the existing UI.
+
 ### Target: `epic/ui-refinement`
 
 ---
