@@ -43,22 +43,14 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/ui-refinement`
 
-- [x] `feat/dashboard-layout-update` : Move 'Registered Devices' to the bottom of the dashboard and make it collapsible. Make the Crew Hub card twice as tall and the My Skates Card bigger.
-
 ---
 
 ## 🟡 Backlog
 
 ### Target: `main`
 
-- [x] `fix/dashboard-anchor` : Anchor Registered Devices slab permanently to the bottom of the dashboard screen (outside ScrollView).
-
 ### Target: `epic/telemetry-audit`
 
-- [x] `verify-lab-telemetry` : #2 — Verify Supabase `led_diagnostics` table — Confirm Diagnostic Lab successfully pushes telemetry to Supabase. Query table after live test.
-- [x] `verify-telemetry-ingestion` : #21 — Telemetry ingestion verification — Confirm AppLogger events (crew, street mode, hardware config) are landing in Supabase `device_logs` table correctly.
-- [x] `audit-applogger-coverage` : #30 — AppLogger Coverage Audit — Comprehensive audit of all features added this session (Street Mode, Picks, Favorites, Builder) to ensure 100% telemetry coverage in Analytics.
-- [x] `feat/global-error-telemetry` : Integrate a global error boundary and remote crash reporting solution (e.g., Sentry or Supabase Edge logging) to automatically capture, diagnose, and push unhandled exceptions without user intervention. this should add items to bucket list for us to review and fix.
 
 ### Target: `epic/testing-suite`
 
@@ -76,13 +68,19 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/ui-refinement`
 
-- [x] `feat/auth-offline-card-reorder` : Move the 'Continue Offline' card on the Auth page to the bottom, anchoring it similar to the Registered Devices slab on the dashboard.
 - [ ] `add-swipe-nav` : #34 — Card Swipe Navigation — Add the ability to swipe left and right to navigate back and forth between cards (Favorites, Picks, Presets) for a more fluid mobile UX.
 
 ---
 
 ## ✅ Completed This Session (Apr 2026)
 
+- [x] `feat/auth-offline-card-reorder` : Move the 'Continue Offline' card on the Auth page to the bottom, anchoring it similar to the Registered Devices slab on the dashboard.
+- [x] `feat/global-error-telemetry` : Integrate a global error boundary and remote crash reporting solution (e.g., Sentry or Supabase Edge logging) to automatically capture, diagnose, and push unhandled exceptions without user intervention. this should add items to bucket list for us to review and fix.
+- [x] `audit-applogger-coverage` : #30 — AppLogger Coverage Audit — Comprehensive audit of all features added this session (Street Mode, Picks, Favorites, Builder) to ensure 100% telemetry coverage in Analytics.
+- [x] `verify-telemetry-ingestion` : #21 — Telemetry ingestion verification — Confirm AppLogger events (crew, street mode, hardware config) are landing in Supabase `device_logs` table correctly.
+- [x] `verify-lab-telemetry` : #2 — Verify Supabase `led_diagnostics` table — Confirm Diagnostic Lab successfully pushes telemetry to Supabase. Query table after live test.
+- [x] `fix/dashboard-anchor` : Anchor Registered Devices slab permanently to the bottom of the dashboard screen (outside ScrollView).
+- [x] `feat/dashboard-layout-update` : Move 'Registered Devices' to the bottom of the dashboard and make it collapsible. Make the Crew Hub card twice as tall and the My Skates Card bigger.
 - [x] `review-device-reg` : Device Registration & Claim Process Review — Revisiting the user-to-device ownership flow. Need to brainstorm and build a new implementation plan as the previous extensive one was lost.
 - [x] `ftue-initial-setup` : FTUE Phase 1 - Create HardwareSetupWizardScreen with probe scan logic and instructions.
 - [x] `ftue-probe-discovery` : FTUE Phase 2 - Build device discovery list, product identification logic (LED count), and Blink test.
