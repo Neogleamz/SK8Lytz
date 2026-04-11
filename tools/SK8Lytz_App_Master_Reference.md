@@ -68,7 +68,20 @@ Sk8Lytz caters to a diverse, family-oriented community of dedicated roller skate
 | `@sk8lytz_theme` | ThemeContext | `dark` or `light` |
 | `@sk8lytz_control_theme`| ThemeContext | Control color theme name |
 | `@Sk8lytz_Favorites` | DashboardScreen | Dictionary of user-defined lighting presets (Name, Palette, Mode) |
-| `@Sk8lytz_voice_tutorial_dismissed` | DashboardScreen | Boolean flag to suppress the first-use voice tutorial modal |
+| `@Sk8lytz_voice_tutorial_dismissed` | boolean | Gating for the Voice Command onboarding modal |
+
+## Build Config & Troubleshooting 🛠️
+
+### Android Build Requirements
+To resolve dependency conflicts and legacy library issues, the following configurations are required:
+- **Jetifier**: Must be enabled (`android.enableJetifier=true`) to migrate legacy Support libraries to AndroidX.
+- **SDK Versions**: Project currently targets SDK 34 (`compileSdk`, `targetSdk`).
+
+### Third-Party Library Patches
+- **@react-native-voice/voice**:
+  - Requires manual removal of `jcenter()` repository from `node_modules/@react-native-voice/voice/android/build.gradle`.
+  - SDK versions in the library's `build.gradle` must be bumped to 34 to avoid manifest merger conflicts.
+  - Legacy `com.android.support` dependencies must be replaced with `androidx` equivalents (e.g., `androidx.appcompat:appcompat:1.3.1`).
 
 ### Dashboard UI Layout (4-Slab Architecture)
 

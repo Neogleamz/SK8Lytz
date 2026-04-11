@@ -323,7 +323,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const customGroupsRef = React.useRef(customGroups);
   const isProvisioningTriggered = React.useRef(false);
 
-  // Refs are now updated manually  const [isProvisioning, setIsProvisioning] = useState(false);
+  // Refs are updated manually — no isProvisioning state needed here.
 
   // ── Load Dev/Demo Flags from AsyncStorage ──
 
@@ -641,7 +641,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           dockedControllerRef.current.loadFavorite(action.favorite);
         }
         break;
-      case 'FIXED_PATTERN':
+      case 'PATTERN':
         dockedControllerRef.current.handleRbmChange(action.patternId || 1);
         break;
       case 'BRIGHTNESS':
@@ -650,7 +650,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       case 'SPEED':
         dockedControllerRef.current.setSpeed(action.value);
         break;
-      case 'SPATIAL_COLORS':
+      case 'SPATIAL':
         if (action.segments) {
           dockedControllerRef.current.applySpatialSegments(action.segments);
         }

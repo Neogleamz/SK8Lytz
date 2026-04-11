@@ -1,6 +1,16 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Platform } from 'react-native';
-import Voice, { SpeechResultsEvent, SpeechErrorEvent } from '@react-native-voice/voice';
+
+// Safely handle native-only voice import for web compatibility
+let Voice: any;
+try {
+  if (Platform.OS !== 'web') {
+    Voice = require('@react-native-voice/voice').default;
+  }
+} catch (e) {
+  console.warn('Voice recognition native module not found');
+}
+
 import { voiceService, IVoiceAction } from '../services/VoiceService';
 import { IFavoriteState } from '../components/DockedController';
 

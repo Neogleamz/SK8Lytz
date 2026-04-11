@@ -1,4 +1,14 @@
-import Voice, { SpeechResultsEvent, SpeechErrorEvent } from '@react-native-voice/voice';
+import { Platform } from 'react-native';
+import { AppLogger } from './AppLogger';
+let Voice: any;
+try {
+  if (Platform.OS !== 'web') {
+    Voice = require('@react-native-voice/voice').default;
+  }
+} catch (e) {
+  // Native module not linked
+}
+
 import * as Speech from 'expo-speech';
 import * as stringSimilarity from 'string-similarity';
 import { RBM_PATTERNS } from '../utils/RbmDictionary';
@@ -46,33 +56,37 @@ const MODE_MAP: Record<string, string> = {
 
 class VoiceService {
   constructor() {
-    Voice.onSpeechResults = this.onSpeechResults.bind(this);
-    Voice.onSpeechError = this.onSpeechError.bind(this);
+    if (Voice) {
+      Voice.onSpeechResults = this.onSpeechResults.bind(this);
+      Voice.onSpeechError = this.onSpeechError.bind(this);
+    }
   }
 
   private onSpeechResults(e: SpeechResultsEvent) {
     if (e.value) {
-      console.log('[VoiceService] Result:', e.value[0]);
+      AppLogger.log('VOICE_RESULT', { transcript: e.value[0] });
     }
   }
 
   private onSpeechError(e: SpeechErrorEvent) {
-    console.warn('[VoiceService] Error:', e.error);
+    AppLogger.log('VOICE_ERROR', { error: e.error });
   }
 
   async startListening() {
+    if (!Voice) return;
     try {
       await Voice.start('en-US');
     } catch (e) {
-      console.error(e);
+      AppLogger.log('VOICE_ERROR', { error: e });
     }
   }
 
   async stopListening() {
+    if (!Voice) return;
     try {
       await Voice.stop();
     } catch (e) {
-      console.error(e);
+      AppLogger.log('VOICE_ERROR', { error: e });
     }
   }
 

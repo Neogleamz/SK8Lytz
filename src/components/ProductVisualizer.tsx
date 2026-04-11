@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react';
-import { View, StyleSheet, Animated, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Animated, Text, TouchableOpacity, Platform } from 'react-native';
 import { getRbmVisualizerFrame, getRbmMusicFrame, rgbToHex } from '../utils/RbmSimulator';
 import { useTheme } from '../context/ThemeContext';
 import { getVisualizerFrame } from '../protocols/PatternEngine';
@@ -834,19 +834,39 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 24,
-    elevation: 12,
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 24,
+      },
+      android: {
+        elevation: 12,
+      },
+      web: {
+        // @ts-ignore
+        boxShadow: '0 0 24px rgba(255,255,255,0.8)',
+      }
+    })
   },
   ledDotSmall: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 18,
-    elevation: 10,
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 18,
+      },
+      android: {
+        elevation: 10,
+      },
+      web: {
+        // @ts-ignore
+        boxShadow: '0 0 18px rgba(255,255,255,0.8)',
+      }
+    })
   }
 });
 

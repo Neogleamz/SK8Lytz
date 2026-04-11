@@ -1,8 +1,15 @@
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, Platform, TouchableOpacity } from 'react-native';
 import { Colors } from '../theme/theme';
+interface VerticalWheelProps {
+  value: number;
+  onValueChange: (val: number) => void;
+  min?: number;
+  max?: number;
+  itemLabel?: (item: number) => string;
+}
 
-export default function VerticalWheel({ value, onValueChange, min = 1, max = 100, itemLabel }: any) {
+export default function VerticalWheel({ value, onValueChange, min = 1, max = 100, itemLabel }: VerticalWheelProps) {
   const ITEM_HEIGHT = 46;
   const listRef = useRef<FlatList>(null);
   
