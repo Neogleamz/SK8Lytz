@@ -10,7 +10,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 <!-- AUTO_SYNC_ERRORS_END -->
 
 - [x] `fix/camera-mode-wipeout` : Restore CAMERA mode UI in DockedController (regression fix) + Web Fallback Simulation.
-- [ ] `feat/hide-pro-effects-color-bar` : Add a toggle or logic to allow hiding the selected color bar specifically within the Pro Effects (MULTIMODE > PATTERN) view.
 - [x] `feat/auth-branding-link` : Add "by neogleamz.com" credited link below logo on AuthScreen.
 - [ ] `fix/dynamic-arch-regressions` : Resolve 'isHaloz' ReferenceError in ProductVisualizer and perform a sanitization audit (DockedController, ZenggeProtocol, Setup Wizard) to remove remaining hardcoded binary logic.
 - [ ] `feat/battery-health-predict` : Mathematical power modeling to predict battery life based on pattern draw; auto-dims to 20% at critical reserve.
@@ -65,8 +64,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ## 🟡 Backlog
 
 ### Target: `epic/telemetry-audit`
-
-
 
 ### Target: `epic/security-audit`
 

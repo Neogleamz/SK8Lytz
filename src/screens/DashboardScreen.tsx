@@ -26,6 +26,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Typography, Layout } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import DeviceItem from '../components/DeviceItem';
+import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import useBLE from '../hooks/useBLE';
 import { ZenggeProtocol, ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol';
@@ -34,7 +36,6 @@ import DockedController from '../components/DockedController';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import Sk8LytzProgrammerModal from '../components/Sk8LytzProgrammerModal';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
 import AdminToolsModal from '../components/AdminToolsModal';
@@ -47,7 +48,7 @@ import { supabase } from '../services/supabaseClient';
 import { useRegistration, RegisteredDevice } from '../hooks/useRegistration';
 import AccountModal from '../components/AccountModal';
 import CrewMemberDashboard from '../components/CrewMemberDashboard';
-import { profileService } from '../services/ProfileService';
+import { profileService, UserProfile } from '../services/ProfileService';
 import { notificationService } from '../services/NotificationService';
 
 
@@ -68,7 +69,137 @@ interface CustomGroup {
   name: string;
   isGroup: boolean;
   deviceIds: string[];
+  type?: string;
+  lastPatternName?: string; // Standardized persistence field
 }
+
+/**
+ * SkateGroupCard Helper Component
+ * Renders a premium, telemetry-rich group card with morphing gradients.
+ */
+const SkateGroupCard = ({
+  group,
+  onPress,
+  onLongPress,
+  colors,
+  lastPattern,
+  userProfile,
+  powerStates,
+  Colors,
+  styles
+}: {
+  group: CustomGroup;
+  onPress: () => void;
+  onLongPress: () => void;
+  colors: string[];
+  lastPattern?: string;
+  userProfile: any;
+  powerStates: Record<string, boolean>;
+  Colors: any;
+  styles: any;
+}) => {
+  const isPoweredOn = group.deviceIds.every(id => powerStates[id] !== false);
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      onLongPress={onLongPress}
+      activeOpacity={0.85}
+      style={styles.skateCardWrapper}
+    >
+      <LinearGradient
+        colors={isPoweredOn ? (colors as any) : ['#333', '#1a1a1a']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.skateCardGradient}
+      >
+        <View style={styles.skateCardInner}>
+          {/* Glassmorphism Refraction Overlay */}
+          <View style={styles.skateCardRefraction} />
+
+          {/* TOP DECOR: Avatar (Pill) + Telemetry */}
+          <View style={styles.skateCardHeader}>
+            {/* Z Brandmark Pill (Top-Left) */}
+            <View style={styles.avatarPill}>
+      <Image 
+        source={require('../../assets/logo.png')} 
+        style={styles.avatarPillImage} 
+        resizeMode="contain"
+      />
+               <View style={styles.avatarStatusDot} />
+            </View>
+
+            {/* Telemetry (Top-Right) */}
+            <View style={styles.telemetryContainer}>
+               {/* RSSI Signal Strength Bars */}
+               <View style={styles.telemetryItem}>
+                 <MaterialCommunityIcons name="signal-variant" size={14} color={isPoweredOn ? colors[0] : '#666'} />
+                 <View style={styles.rssiBars}>
+                   <View style={[styles.rssiBar, { height: 4, backgroundColor: isPoweredOn ? colors[0] : '#444' }]} />
+                   <View style={[styles.rssiBar, { height: 7, backgroundColor: isPoweredOn ? colors[0] : '#444' }]} />
+                   <View style={[styles.rssiBar, { height: 10, backgroundColor: isPoweredOn ? colors[0] : '#444', opacity: 0.5 }]} />
+                 </View>
+               </View>
+
+               {/* Battery Placeholder */}
+               <View style={styles.telemetryItem}>
+                 <MaterialCommunityIcons name="battery-60" size={16} color={isPoweredOn ? Colors.success : '#666'} />
+               </View>
+            </View>
+          </View>
+
+          {/* CENTER: Group Name & Pattern */}
+          <View style={styles.skateCardContent}>
+            <Text style={styles.skateCardGroupName}>
+              {group.name.toUpperCase()}
+            </Text>
+            
+            <View style={styles.patternPill}>
+              <View style={[styles.patternDot, { backgroundColor: isPoweredOn ? colors[0] : '#555' }]} />
+              <Text style={styles.patternName}>
+                {isPoweredOn ? (lastPattern || 'ACTIVE') : 'POWERED OFF'}
+              </Text>
+            </View>
+          </View>
+
+          {/* BOTTOM DECOR: Device Count */}
+          <View style={styles.skateCardFooter}>
+             <Text style={styles.deviceCountText}>
+               {group.deviceIds.length} {group.deviceIds.length === 1 ? 'DEVICE' : 'DEVICES'} PAIRED
+             </Text>
+             <View style={[styles.powerIconCircle, { backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255,255,255,0.05)' }]}>
+               <MaterialCommunityIcons 
+                 name="power" 
+                 size={16} 
+                 color={isPoweredOn ? Colors.primary : '#666'} 
+               />
+             </View>
+          </View>
+        </View>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+};
+
+/**
+ * Utility to generate premium gradient colors based on pattern name/state
+ */
+const getPatternColors = (patternName?: string, Colors?: any) => {
+  if (!patternName) return [Colors?.primary || '#00F0FF', Colors?.secondary || '#7000FF'];
+  
+  const name = patternName.toLowerCase();
+  if (name.includes('fire') || name.includes('flame')) return ['#FF4D00', '#FF9E00'];
+  if (name.includes('water') || name.includes('ocean')) return ['#00B2FF', '#00FFF0'];
+  if (name.includes('forest') || name.includes('nature')) return ['#00FF85', '#00A3FF'];
+  if (name.includes('sunset') || name.includes('gold')) return ['#FFD600', '#FF00E5'];
+  if (name.includes('nebula') || name.includes('space')) return ['#7000FF', '#00FFFF'];
+  if (name.includes('neon') || name.includes('cyber')) return ['#FF00E5', '#00F0FF'];
+  if (name.includes('police')) return ['#FF0000', '#0000FF'];
+  if (name.includes('matrix')) return ['#00FF00', '#003300'];
+  
+  // Default to branding colors
+  return [Colors?.primary || '#00F0FF', Colors?.secondary || '#7000FF'];
+};
 
 export default function DashboardScreen({ isOfflineMode = false, onLogout }: { isOfflineMode?: boolean; onLogout?: () => void } = {}) {
   const { Colors, isDark, toggleTheme } = useTheme();
@@ -169,6 +300,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   // ── Profile + Notifications state ────────────────────────────────────────
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [lastGroupPatterns, setLastGroupPatterns] = useState<Record<string, string>>({});
   const [_pendingJoinCrewId, setPendingJoinCrewId] = useState<string | null>(null);
   const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
@@ -185,16 +318,17 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // Refs are now updated manually  const [isProvisioning, setIsProvisioning] = useState(false);
 
   // ── Load Dev/Demo Flags from AsyncStorage ──
+
+
+  // ── Load Last Known Group Patterns ──
   useEffect(() => {
-    async function loadDemoFlags() {
+    async function loadPatterns() {
       try {
-        const haloDemo = await AsyncStorage.getItem('@Sk8lytz_demo_halo');
-        const soulDemo = await AsyncStorage.getItem('@Sk8lytz_demo_soul');
-        if (haloDemo === 'true') setDemoHaloQueued(true);
-        if (soulDemo === 'true') setDemoSoulQueued(true);
+        const saved = await AsyncStorage.getItem('@Sk8lytz_last_group_patterns');
+        if (saved) setLastGroupPatterns(JSON.parse(saved));
       } catch (e) {}
     }
-    loadDemoFlags();
+    loadPatterns();
   }, []);
 
   // AppState Telemetry
@@ -332,6 +466,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           // Fetch real display name from user_profiles (not user_metadata which may be empty)
           try {
             const profile = await profileService.fetchOrCreateProfile();
+            setUserProfile(profile);
             const name = profile?.display_name || profile?.username || session.user.email?.split('@')[0] || 'GUEST';
             setAuthUsername(name);
             AsyncStorage.setItem('@Sk8lytz_auth_username', name).catch(() => {});
@@ -965,7 +1100,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               
               const rd = registeredDevices.find(r => r.device_mac === mac);
               if (rd) {
-                await saveRegisteredDevice({ ...rd, group_name: null, is_pending_sync: true });
+                await saveRegisteredDevice({ ...rd, group_name: undefined, is_pending_sync: true });
               }
             }
           }
@@ -1028,7 +1163,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           configs[mac].grouped = false;
           configsChanged = true;
           const rd = registeredDevices.find(r => r.device_mac === mac);
-          if (rd) await saveRegisteredDevice({ ...rd, group_name: null, is_pending_sync: true });
+          if (rd) await saveRegisteredDevice({ ...rd, group_name: undefined, is_pending_sync: true });
         }
       }
 
@@ -1217,6 +1352,16 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             onDisconnect={handleDisconnect}
             crewRole={crewRole}
             onCrewSceneChange={(scene: Record<string, any>) => crewService.broadcastScene(scene)}
+            onPatternChanged={(patternName: string) => {
+              // Ensure we only bind this to a physical hardware controller view, not when
+              // we don't have a specific group/skate selected.
+              const targetGroupId = displayConnectedDevices[0]?.groupId || displayConnectedDevices[0]?.id;
+              if (targetGroupId && patternName !== lastGroupPatterns[targetGroupId]) {
+                const updated = { ...lastGroupPatterns, [targetGroupId]: patternName };
+                setLastGroupPatterns(updated);
+                AsyncStorage.setItem('@Sk8lytz_last_group_patterns', JSON.stringify(updated)).catch(()=>{});
+              }
+            }}
           />
       </Animated.View>
     );
@@ -1520,28 +1665,32 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   </View>
                   {customGroups.length > 0 ? (
                     <View style={{ gap: 12 }}>
-                      {customGroups.map((group) => (
-                        <TouchableOpacity 
-                          key={group.id}
-                          onPress={() => {
-                            const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id));
-                            if (devicesToConnect.length > 0) connectToDevices(devicesToConnect);
-                          }}
-                          onLongPress={() => {
-                            setGroupModalMode('rename');
-                            setEditingGroupId(group.id);
-                            setIsGroupModalVisible(true);
-                          }}
-                          style={styles.skateCard}
-                        >
-                           <View style={styles.skateCardGlow} />
-                           <View style={{ flex: 1 }}>
-                              <Text style={styles.skateCardName}>{group.name.toUpperCase()}</Text>
-                              <Text style={styles.skateCardMeta}>{group.deviceIds.length} DEVICES PAIRED</Text>
-                           </View>
-                           <MaterialCommunityIcons name="power" size={20} color={group.deviceIds.every(id => powerStates[id] ?? true) ? Colors.primary : Colors.textMuted} />
-                        </TouchableOpacity>
-                      ))}
+                      {customGroups.map((group) => {
+                        const lastPattern = lastGroupPatterns[group.id];
+                        const cardColors = getPatternColors(lastPattern, Colors);
+                        
+                        return (
+                          <SkateGroupCard
+                            key={group.id}
+                            group={group}
+                            colors={cardColors}
+                            lastPattern={lastPattern}
+                            userProfile={userProfile}
+                            powerStates={powerStates}
+                            Colors={Colors}
+                            styles={styles}
+                            onPress={() => {
+                              const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id));
+                              if (devicesToConnect.length > 0) connectToDevices(devicesToConnect);
+                            }}
+                            onLongPress={() => {
+                              setGroupModalMode('rename');
+                              setEditingGroupId(group.id);
+                              setIsGroupModalVisible(true);
+                            }}
+                          />
+                        );
+                      })}
                     </View>
                   ) : (
                     <View style={[styles.glassSlab, { alignItems: 'center', paddingVertical: 24 }]}>
@@ -1682,7 +1831,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         onExitToLogs={() => {
             setIsProgrammerVisible(false);
         }}
-        allDevices={allDevices}
+        allDevices={(allDevices as any)}
         deviceConfigs={deviceConfigs}
         connectToDevice={async (d: any) => { await connectToDevice(d); }}
         disconnectFromDevice={async (_id: string) => { disconnectFromDevice(); }}
@@ -1769,10 +1918,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           setIsAccountModalVisible(false);
         }}
         registeredDevices={registeredDevices.map((d) => ({
-          id: d.id,
-          name: d.device_name,
-          customName: d.custom_name,
-          type: d.product_type,
+          id: d.id || '',
+          name: d.device_name || '',
+          customName: d.custom_name || '',
+          type: d.product_type as any,
           registeredAt: d.registered_at,
         }))}
         onDeviceRenamed={(deviceId, newName) => {
@@ -1986,38 +2135,135 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     flex: 1,
     letterSpacing: 0.5,
   },
-  skateCard: {
-    backgroundColor: 'rgba(0,240,255,0.06)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(0,240,255,0.15)',
-    padding: 28,
+  skateCardWrapper: {
+    marginBottom: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 12,
+  },
+  skateCardGradient: {
+    borderRadius: 20,
+    padding: 2, // Border thickness
+  },
+  skateCardInner: {
+    backgroundColor: Colors.isDark ? 'rgba(15, 20, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 18,
+    padding: 16,
+    overflow: 'hidden',
+  },
+  skateCardRefraction: {
+    position: 'absolute',
+    top: -50,
+    left: -50,
+    width: 200,
+    height: 200,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    transform: [{ rotate: '45deg' }],
+  },
+  skateCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  avatarPill: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    overflow: 'hidden',
-    position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  skateCardGlow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,240,255,0.02)',
+  avatarPillImage: {
+    width: 20,
+    height: 20,
   },
-  skateCardName: {
-    fontSize: 24,
+  avatarStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.success,
+    marginLeft: 6,
+    borderWidth: 1,
+    borderColor: Colors.background,
+  },
+  telemetryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  telemetryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  rssiBars: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  rssiBar: {
+    width: 3,
+    borderRadius: 1,
+  },
+  skateCardContent: {
+    marginBottom: 16,
+  },
+  skateCardGroupName: {
+    fontSize: 22,
     fontWeight: '900',
-    color: '#00F0FF',
+    color: Colors.text,
     fontFamily: 'Righteous',
     letterSpacing: 0.5,
   },
-  skateCardMeta: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: 'rgba(0,240,255,0.5)',
-    marginTop: 2,
+  patternPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  patternDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  patternName: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.textMuted,
     letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  skateCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+    paddingTop: 12,
+  },
+  deviceCountText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.textMuted,
+    letterSpacing: 1,
+  },
+  powerIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   deviceListFixed: {
     backgroundColor: 'rgba(255,255,255,0.02)',

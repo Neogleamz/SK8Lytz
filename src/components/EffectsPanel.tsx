@@ -223,6 +223,7 @@ const EffectsPanel: React.FC<EffectsPanelProps> = ({
   const [bgHue, setBgHue] = useState<number>(240);
   const [fgColor, setFgColor] = useState<string>('#00FFFF');
   const [bgColor, setBgColor] = useState<string>(getDefaultBgColor(1));
+  const [showColors, setShowColors] = useState<boolean>(true);
 
   const devicePoints = hwSettings?.ledPoints || points || 16;
   const deviceSegments = hwSettings?.segments || segments || 1;
@@ -300,23 +301,33 @@ const EffectsPanel: React.FC<EffectsPanelProps> = ({
       {/* ── Color controls (conditional per effect capability) ────── */}
       {selectedEffect && (selectedEffect.requiresForeground || selectedEffect.requiresBackground) && (
         <View style={{ paddingHorizontal: 4, paddingBottom: 4 }}>
-          {selectedEffect.requiresForeground && (
-            <ColorSwatchRow
-              label="Foreground"
-              hue={fgHue}
-              color={fgColor}
-              onHueChange={handleFgHueChange}
-              Colors={Colors}
-            />
-          )}
-          {selectedEffect.requiresBackground && (
-            <ColorSwatchRow
-              label="Background"
-              hue={bgHue}
-              color={bgColor}
-              onHueChange={handleBgHueChange}
-              Colors={Colors}
-            />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: '800', letterSpacing: 1.5 }}>COLOR SETTINGS</Text>
+            <TouchableOpacity onPress={() => setShowColors(!showColors)} style={{ paddingHorizontal: 12, paddingVertical: 4, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12 }}>
+              <Text style={{ color: Colors.primary, fontSize: 10, fontWeight: '800' }}>{showColors ? 'HIDE' : 'SHOW'}</Text>
+            </TouchableOpacity>
+          </View>
+          {showColors && (
+            <View>
+              {selectedEffect.requiresForeground && (
+                <ColorSwatchRow
+                  label="Foreground"
+                  hue={fgHue}
+                  color={fgColor}
+                  onHueChange={handleFgHueChange}
+                  Colors={Colors}
+                />
+              )}
+              {selectedEffect.requiresBackground && (
+                <ColorSwatchRow
+                  label="Background"
+                  hue={bgHue}
+                  color={bgColor}
+                  onHueChange={handleBgHueChange}
+                  Colors={Colors}
+                />
+              )}
+            </View>
           )}
         </View>
       )}

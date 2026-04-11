@@ -83,4 +83,7 @@ export interface ProductProfile {
 
   /** Battery capacity in milliampere-hours (mAh). */
   batteryCapacityMilliAmpereHour: number;
+
+  /** Primary brand color hex for UI rendering (e.g., #FF5A00 for RAILZ, #00C8FF for HALOZ). */
+  vizThemeColor?: string;
 }

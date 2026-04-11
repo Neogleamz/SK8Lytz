@@ -81,8 +81,8 @@ export function useProductCatalog() {
 
       // Supabase rows win on id conflict; retain LOCAL-only entries not yet seeded in cloud
       const cloudProfiles = data.map(rowToProfile);
-      const cloudIds = new Set(cloudProfiles.map(p => p.id));
-      const localOnly = LOCAL_PRODUCT_CATALOG.filter(p => !cloudIds.has(p.id));
+      const cloudIds = new Set(cloudProfiles.map((p: ProductProfile) => p.id));
+      const localOnly = LOCAL_PRODUCT_CATALOG.filter((p: ProductProfile) => !cloudIds.has(p.id));
       const merged = [...cloudProfiles, ...localOnly];
 
       setAllProfiles(merged);

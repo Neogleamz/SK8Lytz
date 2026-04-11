@@ -193,7 +193,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
         </Text>
 
         <ScrollView style={styles.deviceScroll} contentContainerStyle={{ paddingBottom: 20 }}>
-          {deviceGroups.map((group) => renderDeviceGroup(`${group.profile.id}`, group.devices, group.profile.vizThemeColor))}
+          {deviceGroups.map((group) => renderDeviceGroup(`${group.profile.id}`, group.devices, group.profile.vizThemeColor || '#00f0ff'))}
           {renderDeviceGroup('SCANNING / UNKNOWN', unknown, Colors.textMuted)}
           
           {pendingRegistrations.length === 0 && !isScanning && !isScanProbing && (

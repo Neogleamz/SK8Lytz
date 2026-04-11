@@ -19,7 +19,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, TextInput, Animated, Alert, Dimensions, FlatList } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Typography, Layout } from '../theme/theme';
-import { Audio } from 'expo-av';
+
 import { useTheme } from '../context/ThemeContext';
 import ProductVisualizer from './ProductVisualizer';
 import NeonHueStrip from './NeonHueStrip';
@@ -41,6 +41,7 @@ import { ScenesService } from '../services/ScenesService';
 import { containsProfanity } from '../services/AuthUtils';
 import CommunityModal from './CommunityModal';
 import { Accelerometer } from 'expo-sensors';
+import { getLocalProfileById } from '../constants/ProductCatalog';
 import * as Location from 'expo-location';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import MarqueeText from './MarqueeText';
@@ -321,6 +322,8 @@ interface Sk8lytzControllerProps {
   crewRole?: 'leader' | 'member' | null;
   /** Called with full scene snapshot whenever any mode/color changes (leader only) */
   onCrewSceneChange?: (scene: Record<string, any>) => void;
+  /** Triggered to persist the active pattern name to dashboard group persistent storage */
+  onPatternChanged?: (patternName: string) => void;
 }
 
 export type DockedControllerHandle = { applyCloudScene: (scene: any) => void };
@@ -330,7 +333,7 @@ export type DockedControllerHandle = { applyCloudScene: (scene: any) => void };
 // MarqueeText moved to standalone component MarqueeText.tsx
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
-  function DockedController({ hwSettings, lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange }: Sk8lytzControllerProps, ref) {
+  function DockedController({ hwSettings, lockedProduct, isPaired, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged }: Sk8lytzControllerProps, ref) {
     const { Colors, isDark } = useTheme();
     const styles = createStyles(Colors);
 
@@ -904,8 +907,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       if (!writeToDevice) return;
       const factor = bright / 100;
       const pts = hwSettings?.ledPoints || points || 16;
-      const segs = hwSettings?.segments || 1;
-      const isHalozRing = segs === 2 && pts === 16;
+      const profile = getLocalProfileById(hwSettings?.type || '');
+      const isHalozRing = profile?.vizShape === 'RING';
       const hwSpd = Math.min(spd, ZenggeProtocol.ANIM_SPEED_MAX);
 
       const red = { r: Math.round(255 * factor), g: 0, b: 0 };
@@ -1376,6 +1379,13 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       }
       return selectedColor;
     }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, musicHue, selectedColor, fixedSubMode]);
+
+    // Relays the dynamically generated pattern name upward to persist dashboard group state
+    React.useEffect(() => {
+      if (onPatternChanged) {
+        onPatternChanged(currentStatusText);
+      }
+    }, [currentStatusText, onPatternChanged]);
 
     return (
       <View style={styles.container}>
@@ -2004,7 +2014,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               {!(activeMode === 'PROGRAMS') && (
                 <View style={{ marginBottom: 4 }}>
                   {/* Dynamic Selected Color Bar */}
-                  {!(activeMode === 'MUSIC' || (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' && fixedPatternId !== 1)) && (() => {
+                  {!(activeMode === 'MUSIC' || (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN')) && (() => {
                     const dynamicColor = activeMode === 'STREET' ? streetCruiseColor : selectedColor;
 
                     return (
