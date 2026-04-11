@@ -21,6 +21,7 @@
     "expo-auth-session": "~55.0.12",
     "expo-av": "^16.0.8",
     "expo-battery": "^55.0.11",
+    "expo-blur": "^55.0.14",
     "expo-build-properties": "^55.0.10",
     "expo-camera": "~55.0.10",
     "expo-clipboard": "~55.0.11",

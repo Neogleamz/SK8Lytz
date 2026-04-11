@@ -1,12 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity,
-  SafeAreaView, Animated, Easing, Dimensions
+  SafeAreaView, Animated, Easing, Dimensions, Platform
 } from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
-import { Typography, Layout } from '../../theme/theme';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { useTheme } from '../../context/ThemeContext';
+import { Typography } from '../../theme/theme';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -18,8 +19,8 @@ interface Props {
   error: string | null;
 }
 
-const WaveformBar = ({ index, isListening }: { index: number, isListening: boolean }) => {
-  const anim = useRef(new Animated.Value(0)).current;
+const WaveformBar = ({ index, isListening }: { index: number; isListening: boolean }) => {
+  const anim = useRef(new Animated.Value(0.1)).current;
 
   useEffect(() => {
     if (isListening) {
@@ -48,10 +49,7 @@ const WaveformBar = ({ index, isListening }: { index: number, isListening: boole
     <Animated.View
       style={{
         width: 6,
-        height: anim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [4, 60],
-        }),
+        height: anim.interpolate({ inputRange: [0, 1], outputRange: [4, 60] }),
         backgroundColor: '#00F0FF',
         borderRadius: 3,
         marginHorizontal: 2,
@@ -68,11 +66,7 @@ export default function VoiceCommandModal({ isVisible, onClose, isListening, tra
 
   useEffect(() => {
     if (isVisible) {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
     } else {
       fadeAnim.setValue(0);
     }
@@ -85,65 +79,77 @@ export default function VoiceCommandModal({ isVisible, onClose, isListening, tra
       <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill}>
         <SafeAreaView style={styles.container}>
           <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+
             {/* Header / Dismiss */}
             <TouchableOpacity onPress={onClose} style={styles.dismissArea}>
               <MaterialCommunityIcons name="chevron-down" size={32} color="rgba(255,255,255,0.3)" />
             </TouchableOpacity>
 
-            {/* Visualizer */}
-            <View style={styles.visualizerContainer}>
-              <View style={styles.waveform}>
-                {[...Array(12)].map((_, i) => (
-                  <WaveformBar key={i} index={i} isListening={isListening} />
-                ))}
-              </View>
-              
-              <View style={[styles.micOuter, isListening && styles.micActive]}>
-                <View style={styles.micInner}>
-                  <MaterialCommunityIcons 
-                    name={isListening ? "microphone" : "microphone-off"} 
-                    size={40} 
-                    color={isListening ? "#00F0FF" : "rgba(255,255,255,0.5)"} 
-                  />
-                </View>
-              </View>
-            </View>
-
-            {/* Text Feedback */}
-            <View style={styles.textContainer}>
-              <Text style={styles.statusText}>
-                {isListening ? 'LISTENING...' : 'RESOLVING...'}
-              </Text>
-              
-              <Text style={styles.transcript} numberOfLines={3}>
-                {transcript || (error ? 'Error captured.' : 'Speak your command...')}
-              </Text>
-              
-              {error && (
-                <View style={styles.errorPill}>
-                  <MaterialCommunityIcons name="alert-circle" size={14} color="#FF4444" />
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              )}
-
-              {!transcript && !error && (
-                <Text style={styles.hintText}>
-                  Try "Red Glow", "Faster", or "Red in the back"
+            {Platform.OS === 'web' ? (
+              /* ── Web fallback — native bridge not available ── */
+              <View style={styles.webFallback}>
+                <MaterialCommunityIcons name="microphone-off" size={64} color="rgba(255,255,255,0.3)" />
+                <Text style={styles.webFallbackTitle}>Voice Control</Text>
+                <Text style={styles.webFallbackBody}>
+                  Voice commands require the SK8Lytz native app on Android or iOS.
                 </Text>
-              )}
-            </View>
+              </View>
+            ) : (
+              /* ── Native UI ── */
+              <>
+                {/* Waveform Visualizer */}
+                <View style={styles.waveform}>
+                  {[...Array(12)].map((_, i) => (
+                    <WaveformBar key={i} index={i} isListening={isListening} />
+                  ))}
+                </View>
 
-            {/* Footer / Stop Button */}
-            <TouchableOpacity style={styles.stopButton} onPress={onClose}>
-              <LinearGradient
-                colors={['#00F0FF', '#7000FF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.stopGradient}
-              >
-                <Text style={styles.stopText}>DONE</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+                {/* Mic Orb */}
+                <View style={[styles.micOuter, isListening && styles.micActive]}>
+                  <View style={styles.micInner}>
+                    <MaterialCommunityIcons
+                      name={isListening ? 'microphone' : 'microphone-off'}
+                      size={40}
+                      color={isListening ? '#00F0FF' : 'rgba(255,255,255,0.5)'}
+                    />
+                  </View>
+                </View>
+
+                {/* Text Feedback */}
+                <View style={styles.textContainer}>
+                  <Text style={styles.statusText}>
+                    {isListening ? 'LISTENING...' : 'RESOLVING...'}
+                  </Text>
+                  <Text style={styles.transcript} numberOfLines={3}>
+                    {transcript || (error ? 'Error captured.' : 'Speak your command...')}
+                  </Text>
+                  {error && (
+                    <View style={styles.errorPill}>
+                      <MaterialCommunityIcons name="alert-circle" size={14} color="#FF4444" />
+                      <Text style={styles.errorText}>{error}</Text>
+                    </View>
+                  )}
+                  {!transcript && !error && (
+                    <Text style={styles.hintText}>
+                      Try "Red Glow", "Faster", or "Red in the back"
+                    </Text>
+                  )}
+                </View>
+
+                {/* Footer / Stop Button */}
+                <TouchableOpacity style={styles.stopButton} onPress={onClose}>
+                  <LinearGradient
+                    colors={['#00F0FF', '#7000FF']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.stopGradient}
+                  >
+                    <Text style={styles.stopText}>DONE</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </>
+            )}
+
           </Animated.View>
         </SafeAreaView>
       </BlurView>
@@ -151,12 +157,9 @@ export default function VoiceCommandModal({ isVisible, onClose, isListening, tra
   );
 }
 
-// Inline LinearGradient import from expo-linear-gradient for the button
-import { LinearGradient } from 'expo-linear-gradient';
-
 const createStyles = (Colors: any) => StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     justifyContent: 'flex-end',
   },
   content: {
@@ -172,10 +175,6 @@ const createStyles = (Colors: any) => StyleSheet.create({
   dismissArea: {
     padding: 10,
     marginBottom: 20,
-  },
-  visualizerContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
   },
   waveform: {
     flexDirection: 'row',
@@ -194,6 +193,7 @@ const createStyles = (Colors: any) => StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.1)',
+    marginBottom: 32,
   },
   micActive: {
     borderColor: '#00F0FF',
@@ -268,5 +268,25 @@ const createStyles = (Colors: any) => StyleSheet.create({
     fontWeight: '900',
     fontSize: 18,
     letterSpacing: 1,
+  },
+  /* ── Web-only fallback styles ── */
+  webFallback: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 48,
+  },
+  webFallbackTitle: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  webFallbackBody: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: 24,
+    lineHeight: 22,
   },
 });

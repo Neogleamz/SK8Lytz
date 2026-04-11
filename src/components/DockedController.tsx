@@ -461,6 +461,13 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       AppLogger.log('VOICE_SPATIAL_APPLIED', { segmentCount: segments.length });
     };
 
+    // Favorites Array — declared BEFORE useImperativeHandle to avoid TDZ
+    const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
+    const [isFavPromptVisible, setIsFavPromptVisible] = useState(false);
+    const [favPromptName, setFavPromptName] = useState('');
+    const [favPromptTargetId, setFavPromptTargetId] = useState<string | null>(null);
+    const [activeFavoriteId, setActiveFavoriteId] = useState<string | null>(null);
+
     // Expose control methods to parent via ref for Voice and Crew coordination
     React.useImperativeHandle(ref, () => ({
       applyCloudScene,
@@ -473,7 +480,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         if (writeToDevice) writeToDevice(ZenggeProtocol.setCustomRbm(id, speed, brightness));
       },
       applySpatialSegments
-    }), [speed, brightness, writeToDevice, favorites]);
+    }), [speed, brightness, writeToDevice]);
 
     // Multi-Color DIY State
     const [multiColors, setMultiColors] = useState<string[]>(['#FF0000', '#00FF00', '#0000FF']);
@@ -779,13 +786,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       streetSensitivity, streetCruiseColor, streetBrakeColor,
     ]);
 
-    // Favorites Array
-    const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
 
-    const [isFavPromptVisible, setIsFavPromptVisible] = useState(false);
-    const [favPromptName, setFavPromptName] = useState('');
-    const [favPromptTargetId, setFavPromptTargetId] = useState<string | null>(null);
-    const [activeFavoriteId, setActiveFavoriteId] = useState<string | null>(null);
     const [isDiyBuilderExpanded, setIsDiyBuilderExpanded] = useState(false);
 
     const handleSaveFavoriteClick = () => {

@@ -1,7 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
+import { Platform } from 'react-native';
 import Voice, { SpeechResultsEvent, SpeechErrorEvent } from '@react-native-voice/voice';
 import { voiceService, IVoiceAction } from '../services/VoiceService';
 import { IFavoriteState } from '../components/DockedController';
+
+/** Voice recognition is only available on native iOS/Android platforms. */
+const isVoiceSupported = Platform.OS !== 'web';
 
 export const useVoiceControl = (favorites: IFavoriteState[], onAction: (action: IVoiceAction) => void) => {
   const [isListening, setIsListening] = useState(false);
@@ -9,6 +13,8 @@ export const useVoiceControl = (favorites: IFavoriteState[], onAction: (action: 
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isVoiceSupported) return;
+
     const onResults = (e: SpeechResultsEvent) => {
       if (e.value) {
         setTranscript(e.value[0]);
@@ -24,11 +30,19 @@ export const useVoiceControl = (favorites: IFavoriteState[], onAction: (action: 
     Voice.onSpeechError = onError;
 
     return () => {
-      Voice.destroy().then(Voice.removeAllListeners);
+      try {
+        Voice.destroy().then(Voice.removeAllListeners);
+      } catch {
+        // Native module may not be available during cleanup
+      }
     };
   }, []);
 
   const startListening = useCallback(async () => {
+    if (!isVoiceSupported) {
+      setError('Voice control requires the native app (Android/iOS)');
+      return;
+    }
     try {
       setTranscript('');
       setError(null);
@@ -41,10 +55,11 @@ export const useVoiceControl = (favorites: IFavoriteState[], onAction: (action: 
   }, []);
 
   const stopListening = useCallback(async () => {
+    if (!isVoiceSupported) return;
     try {
       await Voice.stop();
       setIsListening(false);
-      
+
       // Resolve command immediately after stopping
       if (transcript) {
         const action = voiceService.resolveCommand(transcript, favorites);
@@ -60,6 +75,7 @@ export const useVoiceControl = (favorites: IFavoriteState[], onAction: (action: 
     transcript,
     error,
     startListening,
-    stopListening
+    stopListening,
+    isVoiceSupported,
   };
 };

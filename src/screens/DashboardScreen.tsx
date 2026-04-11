@@ -38,10 +38,10 @@ import GroupSettingsModal from '../components/GroupSettingsModal';
 import Sk8LytzProgrammerModal from '../components/Sk8LytzProgrammerModal';
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
-import { AdminToolsModal } from '../components/AdminToolsModal';
-import { VoiceFAB } from '../components/Voice/VoiceFAB';
-import { VoiceCommandModal } from '../components/Voice/VoiceCommandModal';
-import { VoiceService } from '../services/VoiceService';
+import AdminToolsModal from '../components/AdminToolsModal';
+import { useVoiceControl } from '../hooks/useVoiceControl';
+import VoiceFAB from '../components/Voice/VoiceFAB';
+import VoiceCommandModal from '../components/Voice/VoiceCommandModal';
 import CrewModal from '../components/CrewModal';
 import { crewService, CrewSession, CrewRole } from '../services/CrewService';
 import Sk8LytzDiagnosticLab from '../components/Sk8LytzDiagnosticLab';
@@ -602,18 +602,20 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, []);
 
   /** ──────── VOICE COMMAND DISPATCH ──────── */
-  const { isListening, transcript, error, startListening, stopListening } = useVoiceControl(
+  const { isListening, transcript, error, startListening, stopListening, isVoiceSupported } = useVoiceControl(
     favorites,
     (action: IVoiceAction) => handleVoiceAction(action)
   );
 
+  // Only auto-start/stop Voice on native platforms — web has no native bridge
   useEffect(() => {
+    if (!isVoiceSupported) return;
     if (isVoiceModalVisible) {
       startListening();
     } else {
       stopListening();
     }
-  }, [isVoiceModalVisible]);
+  }, [isVoiceModalVisible, isVoiceSupported]);
 
   const handleVoiceAction = (action: IVoiceAction) => {
     if (!dockedControllerRef.current) return;
@@ -2018,13 +2020,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       {/* ──── VOICE COMMAND ENGINE UI ──── */}
       <VoiceFAB 
         onPress={() => setIsVoiceModalVisible(true)} 
-        isListening={false} // Internal hook in component manages this
+        isListening={isListening}
       />
       
       <VoiceCommandModal
-        visible={isVoiceModalVisible}
+        isVisible={isVoiceModalVisible}
         onClose={() => setIsVoiceModalVisible(false)}
-        onAction={handleVoiceAction}
         isListening={isListening}
         transcript={transcript}
         error={error}

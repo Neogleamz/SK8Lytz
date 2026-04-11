@@ -19,6 +19,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] `feat/battery-health-predict` : Mathematical power modeling to predict battery life based on pattern draw; auto-dims to 20% at critical reserve.
 - [ ] `hw-test/protocol-voltage-sniff` : Deep-dive into 0x63 response and other telemetry bytes to identify raw battery voltage / state-of-charge data.
 - [x] `feat/voice-command-engine` : Implement core offline voice resolution and UI bridge natural language to BLE payloads for safe operation while skating.
+- [ ] `feat/siri-google-assistant-integration` : Integrate Siri Shortcuts (iOS) and Google Assistant App Actions (Android) for phone-level voice control. When outside the app, dispatching commands like "Hey Siri, set SK8Lytz to red glow" should deep-link and trigger the BLE command. When inside the app, use the existing in-app voice engine instead.
+- [ ] `feat/voice-first-use-tooltip` : On first launch of the VoiceFAB, show a dismissible "What can I say?" tutorial popup listing example commands (modes, favorites by name, brightness, speed, spatial). Persist dismissed state to AsyncStorage.
 - [ ] `feat/geofence-rink-sync` : GPS-based rink detection to auto-trigger Crew Hub discovery and session joining.
 
 ### Target: `epic/offline-mode`
@@ -61,6 +63,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/ui-refinement`
 
 - [ ] `audit/offline-profile-settings` : Audit whether all user profile settings (display name, avatar, preferences) are fully cached locally for offline use. Implement offline-safe username rename that queues the update to Supabase on reconnect — same pattern as device registration sync.
+- [ ] `feat/app-wide-ux-tips` : Design and implement a contextual tips system that surfaces short, dismissible tooltips throughout the app at key friction points (e.g. first Bluetooth scan, first controller open, first crew join). Tips should only show once per user (AsyncStorage) and feel native to the SK8Lytz aesthetic.
 
 ---
 
