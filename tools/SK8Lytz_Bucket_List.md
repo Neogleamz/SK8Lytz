@@ -69,7 +69,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/ui-refinement`
 
 - [ ] `feat/lab-ui-modernization` : Modernize and style the LED Diagnostic Lab layout to match the aesthetics, typography, and input styling of the rest of the app.
-- [ ] `feat/light-mode-rework` : Rework light mode UI theme to use soft grey instead of stark white, dark blue instead of black, and brand orange where possible.
+- [x] `feat/light-mode-rework` : Rework light mode UI theme to use soft grey instead of stark white, dark blue instead of black, and brand orange where possible.
 
 ---
 
