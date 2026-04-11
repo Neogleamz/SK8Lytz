@@ -8,6 +8,13 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 <!-- AUTO_SYNC_ERRORS_START -->
 <!-- AUTO_SYNC_ERRORS_END -->
+
+- [ ] `fix/dynamic-arch-regressions` : Resolve 'isHaloz' ReferenceError in ProductVisualizer and perform a sanitization audit (DockedController, ZenggeProtocol, Setup Wizard) to remove remaining hardcoded binary logic.
+- [ ] `feat/battery-health-predict` : Mathematical power modeling to predict battery life based on pattern draw; auto-dims to 20% at critical reserve.
+- [ ] `hw-test/protocol-voltage-sniff` : Deep-dive into 0x63 response and other telemetry bytes to identify raw battery voltage / state-of-charge data.
+- [ ] `feat/voice-command-engine` : Hands-free voice control mapping natural language to BLE payloads for safe operation while skating.
+- [ ] `feat/geofence-rink-sync` : GPS-based rink detection to auto-trigger Crew Hub discovery and session joining.
+
 ### Target: `epic/offline-mode`
 
 - [ ] `gate-offline-mode` : Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning.
@@ -40,7 +47,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/device-management`
 
-- [ ] `feat/dynamic-product-architecture` : Prepare app for new products by migrating hardware configurations (LED points, segments, auto-detect thresholds, visualizer mapping) from hardcoded constants to a Supabase-backed catalog with local caching and an admin UI layer.
+- [x] `feat/dynamic-product-architecture` : Prepare app for new products by migrating hardware configurations (LED points, segments, auto-detect thresholds, visualizer mapping) from hardcoded constants to a Supabase-backed catalog with local caching and an admin UI layer.
 
 ### Target: `epic/protocol-integration`
 

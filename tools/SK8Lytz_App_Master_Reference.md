@@ -1,6 +1,6 @@
 # SK8Lytz App Master Reference
 
-*Last Updated: 2026-04-09 | Source of Truth: `src/protocols/ZenggeProtocol.ts`*
+*Last Updated: 2026-04-11 | Source of Truth: `src/protocols/ZenggeProtocol.ts`*
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
 
@@ -107,7 +107,7 @@ For testing App Sync behavior vs. Offline mode offline fallbacks, you can authen
 | `device_mac` | TEXT | Unique hardware address |
 | `user_id` | UUID | Owner ID |
 | `device_name` | TEXT | Custom alias |
-| `product_type` | TEXT | HALOZ / SOULZ |
+| `product_type` | TEXT | HALOZ / SOULZ / RAILZ (Dynamic from `product_catalog`) |
 | `position` | TEXT | Left / Right / Front / Back |
 | `group_name` | TEXT | Auto-assignment to hardware groups |
 | `led_points` | INT | Physical pixel count |
@@ -164,7 +164,7 @@ The app uses a "Search & Enrich" strategy for First Time User Experience (FTUE).
 |:---|:---|:---|:---|
 | **Form Factor** | Diffused Silicone Strips (x4) | Compact High-Density Box | Parallel Under-Strips (x2) |
 | **Length/Size** | 56" Total (14" per) | 1.5" x 3" Body | Inline Vertical Tracks |
-| **Battery Life**| 2-6+ hours | 2-4+ hours | 4-6+ hours |
+| **Battery Life**| 4-8+ hours (2000mAh) | 3-5+ hours (1200mAh) | 6-10+ hours (2000mAh) |
 | **Charging** | 90 min (USB-C) | 60 min Fast-Charge | 90 min (USB-C) |
 | **LED Type** | Diffused Addressable RGB | High-Density RGB Pixels | High-Intensity Strips |
 | **Audio** | Integrated Mic | Integrated Mic | Integrated Mic |
@@ -199,6 +199,11 @@ The app uses a "Search & Enrich" strategy for First Time User Experience (FTUE).
 ---
 
 ## 3. BLE Protocol Library
+
+> [!IMPORTANT]
+> **Dynamic Catalog Migration (2026-04-11)**: The legacy `SK8_DEFAULTS` constant in `ZenggeProtocol.ts` has been REMOVED.
+> All hardware profile logic—including default LED counts, visualization themes, and discovery categorization—is now handled strictly via `LOCAL_PRODUCT_CATALOG` (`src/constants/ProductCatalog.ts`).
+
 
 All byte definitions below represent the inner payload *before* the V2 BLE packet wrapper is applied.
 
@@ -274,6 +279,14 @@ Every inner protocol payload must be wrapped using the standard 8-byte Zengge V2
 * **Music Config (0x73):** `[0x73, micSource, modeType, patternId, c1.R, c1.G, c1.B, c2.R, c2.G, c2.B, 0x20, sensitivity, brightness, checksum]`
 * **Music Live Data (0x74):** `[0x74, audioMagnitude, checksum]` — Dispatched continually for phone-mic reactivity.
 * **RF Auth Setting (0x2A):** `[0x2A, modeByte, 0xFF,0xFF,0xFF,0xFF,0xFF, clearByte, 0x00...0x0F]` (`modeByte=0x01` Block all, `0x02` Known only, `0x03` Allow all).
+
+### 4. Proactive Battery Management System (Architectural Skill)
+
+Due to the lack of high-fidelity state-of-charge feedback from the hardware, the app implements a **Mathematical Consumption Modeling** system:
+1. **Capacity Presets**: SOULZ (2000mAh), HALOZ (1200mAh), RAILZ (2000mAh).
+2. **Drain Calculation**: Real-time modeling of pixel density, brightness, and pattern intensity.
+3. **Safety "Limp Mode"**: Automatic 0x71 brightness dimming to **20%** when the modeled reserve reaches the 20% critical threshold.
+4. **Telemetry Sniffing**: Ongoing research into secondary 0x63 response bytes to identify raw voltage/SoC data.
 
 ---
 

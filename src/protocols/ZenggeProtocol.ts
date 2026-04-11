@@ -68,11 +68,7 @@ export const HW_CONSTRAINTS = {
 };
 
 
-// ─── SK8LYTZ DEFAULTS ─────────────────────────────────────────────────────────
-export const SK8_DEFAULTS = {
-  HALOZ: { points: 16, segments: 1, icType: 1, icName: 'WS2812B', sorting: 2, sortingName: 'GRB' },
-  SOULZ: { points: 43, segments: 1, icType: 2, icName: 'SM16703', sorting: 2, sortingName: 'GRB' },
-};
+
 
 // ─── HARDWARE SETTINGS TYPES ──────────────────────────────────────────────────
 export interface HardwareSettings {
