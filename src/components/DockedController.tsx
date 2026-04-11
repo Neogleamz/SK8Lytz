@@ -75,7 +75,7 @@ interface IAnalogGaugeProps {
   criticalVal?: number;
 }
 
-const AnalogGauge = ({
+const AnalogGauge = React.memo(({
   value,
   min,
   max,
@@ -197,7 +197,7 @@ const AnalogGauge = ({
       <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '900', letterSpacing: 2, marginTop: -4 }}>{label}</Text>
     </View>
   );
-};
+});
 
 
 
