@@ -71,6 +71,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 - [ ] `feat/lab-ui-modernization` : Modernize and style the LED Diagnostic Lab layout to match the aesthetics, typography, and input styling of the rest of the app.
 - [x] `feat/light-mode-rework` : Rework light mode UI theme to use soft grey instead of stark white, dark blue instead of black, and brand orange where possible.
+- [ ] `feat/neogleamz-brand-presence` : Integrate Neogleamz parent brand identity into the app — e.g. "SK8Lytz by Neogleamz" wordmark, prominent Neogleamz branding on the Auth/Welcome screen, app store identity alignment. Design direction TBD — will brainstorm placement and treatment before executing.
 
 ---
 

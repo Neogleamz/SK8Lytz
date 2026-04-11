@@ -19,6 +19,10 @@ npx expo start --web
 # Run on physical Pixel 7 (primary Android target)
 ```
 
+**Hardware Admin Hub**
+- **Trigger**: Tap the SK8Lytz logo in the dashboard header exactly 10 times.
+- **Passcode**: `0000`
+
 **Browser Agent** — kick off with:
 > "Run the SK8Lytz test plan against the web demo at localhost:8081"
 
@@ -319,8 +323,10 @@ Run at **390px width (iPhone 14)** and **412px width (Pixel 7)**:
 | 9.6 | Schedule form | Date/time pickers visible, location button reachable |
 | 9.7 | Auth top buttons | Not behind notch / status bar |
 | 9.8 | Bottom sheet padding | Home indicator not covered on iPhone |
+| 9.9 | Soft-Grey Palette | Verify contrast in Light Mode (Background #F0F0F0, Text #2A2A2A) |
+| 9.10 | Brand Orange | Highlights/Toggles use #FF8C00 with visible focus states |
 
-**Results:** `[ ][ ][ ][ ][ ][ ][ ][ ]`
+**Results:** `[ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]`
 
 ---
 
@@ -353,6 +359,61 @@ Run at **390px width (iPhone 14)** and **412px width (Pixel 7)**:
 
 ---
 
+## 12. Dynamic Product Identification (FTUE)
+
+| # | Step | Expected |
+|---|---|---|
+| 12.1 | Launch "Add New Skates" wizard | Proximity scan starts automatically |
+| 12.2 | Bring SOULZ device near | Auto-detected as "SOULZ" (43 pts / 1 seg) |
+| 12.3 | Bring HALOZ device near | Auto-detected as "HALOZ" (16 pts / 1 seg) |
+| 12.4 | Tap "Identity Blink" | Hardware flashes white to confirm physical match |
+| 12.5 | Finish Registration | Device synced to Supabase `registered_devices` |
+
+**Results:** `[ ][ ][ ][ ][ ]`
+
+---
+
+## 13. Hardware Admin Tools (The Command Center)
+
+| # | Step | Expected |
+|---|---|---|
+| 13.1 | 10-tap SK8Lytz logo in Header | Modal opens; requests passcode |
+| 13.2 | Enter passcode `0000` | Admin Tools Hub unlocks |
+| 13.3 | TIMELINE Tab | Real-time BLE logs visible; scrolling is performant |
+| 13.4 | DEVICE Tab | Shows hardware EEPROM dump (IC Type, sorting, points) |
+| 13.5 | LAB: DIY Payload | Sending 0x59 manually targets the active device |
+| 13.6 | LAB: Pattern Builder | Modifying pins updates visualizer and hardware in real-time |
+
+**Results:** `[ ][ ][ ][ ][ ][ ]`
+
+---
+
+## 14. Telemetry & Cloud Sync
+
+| # | Step | Expected |
+|---|---|---|
+| 14.1 | Trigger non-fatal error (e.g., failed BLE write) | Local log buffer updates in Admin Timeline |
+| 14.2 | Background app → wait 60s | Background sync fires (if enabled) |
+| 14.3 | Check Admin Stats | "Logs Synced" count increments |
+| 14.4 | Verify Supabase `telemetry_errors` | Error data matches local trace (stack, device info) |
+
+**Results:** `[ ][ ][ ][ ]`
+
+---
+
+## 15. Hardware Reliability (Pro Protocols)
+
+| # | Step | Expected |
+|---|---|---|
+| 15.1 | Select Symphony Effect #31 (Pro) | 0x51 Variable-length payload fires; no device lockup |
+| 15.2 | Rapidly switch effects | No BLE buffer overflow or MTU errors |
+| 15.3 | RF Remote Pairing | Tap "Pair Remote" in Settings → Press RF button → Success |
+| 15.4 | RF Auth Mode: Block All | Hardware ignores RF remote commands |
+
+**Results:** `[ ][ ][ ][ ]`
+
+---
+
 ## Regression Matrix
 <!-- Fill in after each release build. Keep last 5 runs. -->
 
@@ -369,4 +430,4 @@ Run at **390px width (iPhone 14)** and **412px width (Pixel 7)**:
 - BLE scan: only works on physical device, not web/simulator — expected
 
 ---
-_Last updated: 2026-04-06 | Maintained by: AG + Andy_
+_Last updated: 2026-04-11 | Maintained by: AG + Andy_
