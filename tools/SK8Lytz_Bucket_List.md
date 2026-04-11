@@ -23,14 +23,15 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] `feat/voice-first-use-tooltip` : On first launch of the VoiceFAB, show a dismissible "What can I say?" tutorial popup listing example commands (modes, favorites by name, brightness, speed, spatial). Persist dismissed state to AsyncStorage.
 - [ ] `feat/geofence-rink-sync` : GPS-based rink detection to auto-trigger Crew Hub discovery and session joining.
 
-### Target: `epic/offline-mode`
+### Target: `epic/ui-refinement`
 
+- [ ] `feat/modern-avatar-color-picker` : Replace legacy color dots with the new modern RGB slider for avatar color customization in Crew Hub and User Account screens.
 - [ ] `gate-offline-mode` : Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning.
 - [ ] `feat/dashboard-offline-crew-card-teaser` : Shrink Crew Card on Dashboard when offline to act as an unavailable teaser instead of fully collapsing it.
 
 ### Target: `epic/device-registration`
 
-- [ ] `feat/empty-skates-setup-cta` : On the Dashboard, if no device groups exist (offline or online), render a contextual "Set Up Your Skates →" CTA button beneath the "My Skates" section header. The button should open the Hardware Setup Wizard and be completely hidden once at least one group/device is registered. Condition must work in both offline and authenticated states.
+- [x] `feat/empty-skates-setup-cta` : On the Dashboard, if no device groups exist (offline or online), render a contextual "Set Up Your Skates →" CTA button beneath the "My Skates" section header. The button should open the Hardware Setup Wizard and be completely hidden once at least one group/device is registered. Condition must work in both offline and authenticated states.
 
 ### Target: `epic/crew-hub-overhaul`
 
@@ -49,7 +50,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/admin-tools`
 
 - [ ] `feat/picks-scheduler-builder` : Revise the SK8Lytz picks scheduler algorithms to finalize the assignment mode logic, and integrate an administrative version of the array builder to create custom community picks on the fly. also allow access to patterns in program mode for assignment
-- [ ] `feat/product-catalog-icons` : Design unique brand icons/illustrations for HALOZ, SOULZ, and RAILZ products (SVG or PNG assets). Integrate them as selectable icon fields in the Product Manager (Admin Tools) and display them in product selector chips, the Setup Wizard product picker, and the Dashboard device card.
+- [x] `feat/product-catalog-icons` : Design unique brand icons/illustrations for HALOZ, SOULZ, and RAILZ products (SVG or PNG assets). Integrate them as selectable icon fields in the Product Manager (Admin Tools) and display them in product selector chips, the Setup Wizard product picker, and the Dashboard device card.
 
 ### Target: `epic/camera-mode`
 
@@ -91,8 +92,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 - [ ] `feat/lab-ui-modernization` : Modernize and style the LED Diagnostic Lab layout to match the aesthetics, typography, and input styling of the rest of the app.
 - [ ] `feat/neogleamz-brand-presence` : Integrate Neogleamz parent brand identity into the app — e.g. "SK8Lytz by Neogleamz" wordmark, prominent Neogleamz branding on the Auth/Welcome screen, app store identity alignment. Design direction TBD — will brainstorm placement and treatment before executing.
-- [ ] `feat/support-store-link` : Add a "Visit Store" link to the support/help section of the app (e.g. the support icon menu or Account screen). Should open the Neogleamz Shopify store URL via Linking.openURL in the native browser.
-- [ ] `feat/shopify-support-form` : Embed or deep-link to the Neogleamz Shopify contact/support form within the app's support flow. Evaluate whether a WebView embed or a native Linking.openURL to the Shopify contact page is the right approach based on authentication requirements.
+- [x] `feat/support-store-link` : Add a "Visit Store" link to the support/help section of the app (e.g. the support icon menu or Account screen). Should open the Neogleamz Shopify store URL via Linking.openURL in the native browser.
+- [x] `feat/shopify-support-form` : Embed or deep-link to the Neogleamz Shopify contact/support form within the app's support flow. Evaluate whether a WebView embed or a native Linking.openURL to the Shopify contact page is the right approach based on authentication requirements.
 
 ---
 
