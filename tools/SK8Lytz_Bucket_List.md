@@ -1,6 +1,5 @@
 # SK8Lytz Master Bucket List
 
-
 All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ---
@@ -13,7 +12,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] `feat/global-naming-structure` : Implement a global device naming architecture and UI workflow to ensure consistent, readable names rather than relying on raw hardware strings or overlapping groupings.
 
 ### Target: `epic/telemetry-audit`
-
 
 ### Target: `epic/protocol-integration`
 
@@ -40,7 +38,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/music-mode-parity`
 
-
 ---
 
 ## 🟠 Medium Priority / Next Sprint
@@ -59,8 +56,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ## 🟡 Backlog
 
 ### Target: `epic/admin-tools`
-
-- [ ] `chore/wireless-adb-setup` : Investigate and document wireless APK installation via ADB over Wi-Fi so the phone doesn't need to be constantly plugged in via USB.
 
 ### Target: `epic/protocol-integration`
 
@@ -90,9 +85,10 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/ui-refinement`
 
 - [x] `add-swipe-nav` : #34 — Card Swipe Navigation — Add the ability to swipe left and right to navigate back and forth between cards (Favorites, Picks, Presets) for a more fluid mobile UX.
-- [ ] `fix/misspelling-back-button` : Fix global spelling error on navigation header buttons. Currently says "Bac" everywhere instead of "Back" or uses a faulty icon label.
-- [ ] `fix/dashboard-long-press-tip` : Fix the long press tip button on dashboard.
+- [x] `fix/misspelling-back-button` : Fix global spelling error on navigation header buttons. Currently says "Bac" everywhere instead of "Back" or uses a faulty icon label.
+- [x] `fix/dashboard-long-press-tip` : Fix the long press tip button on dashboard.
 - [x] `feat/dev-sandbox-nuke-gate` : Make the Nuke app cache and Dev Sandbox buttons conditionally visible only when toggled or under specific dev conditions to avoid accidental clears.
+
 ---
 
 ## ✅ Completed This Session (Apr 2026)
@@ -157,7 +153,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `fix/dashboard-group-longpress` : Fix regression where long-pressing to edit or delete groups on the dashboard no longer functions as expected.
 - [x] `fix/music-mode-duplicate-toggles` : Fix duplicate Light Bar/Screen mode toggles in Music Mode. Remove the old ones and move the new toggles to the top of the section.
 - [x] `feat/telemetry-error-logging` : Add comprehensive error handling and logging to Supabase. Implement an intelligent system to persist runtime crashes, unhandled exceptions, and BLE errors to a new DB table for AI review and bucket list generation.
-- [x] `fix/supabase-auth-redirect` : Supabase Auth Confirmation Email Redirect — Fix the issue where the confirmation email link points to a dead `localhost` site. 
+- [x] `fix/supabase-auth-redirect` : Supabase Auth Confirmation Email Redirect — Fix the issue where the confirmation email link points to a dead `localhost` site.
 - [x] `fix/hardware-setup-loop` : Hardware Setup Wizard launches repeatedly on app reopen even after setup and registration. Investigate triggers and fix.
 - [x] `fix/account-devices-display` : Account Manager / Devices tab is showing groups instead of individual devices. Refactor to display all registered devices with their details only.
 - [x] `fix/device-setup-blink` : Blink button does not work on device setup; evaluate and implement handling strategy.
