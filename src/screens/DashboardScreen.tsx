@@ -882,10 +882,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               AsyncStorage.setItem('ng_custom_groups', JSON.stringify(cleanedGroups)).catch(()=>{});
             }
             setCustomGroups(cleanedGroups);
-          } catch(e) { AppLogger.warn('JSON parse error groups', e); }
+          } catch(e: any) { AppLogger.warn('JSON parse error groups', { error: String(e) }); }
         }
       })
-      .catch(e => AppLogger.warn('AsyncStorage error custom groups', e));
+      .catch((e: any) => AppLogger.warn('AsyncStorage error custom groups', { error: String(e) }));
 
     // 2. Load and clean device configs
     AsyncStorage.getItem('ng_device_configs')
@@ -904,10 +904,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs)).catch(()=>{});
             }
             setDeviceConfigs(configs);
-          } catch(e) { AppLogger.warn('JSON parse error configs', e); }
+          } catch(e: any) { AppLogger.warn('JSON parse error configs', { error: String(e) }); }
         }
       })
-      .catch(e => AppLogger.warn('AsyncStorage error configs', e));
+      .catch((e: any) => AppLogger.warn('AsyncStorage error configs', { error: String(e) }));
 
     // 3. Load and clean processed devices log
     AsyncStorage.getItem('ng_processed_devices')
@@ -1059,7 +1059,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           }
         }
       } catch (e) {
-        AppLogger.warn('Supabase sync error during provisioning:', e);
+        AppLogger.warn('Supabase sync error during provisioning:', { error: String(e) });
       }
     }
     
@@ -1313,7 +1313,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         setDeviceConfigs(configs);
       }
     } catch (e) {
-      AppLogger.warn('Failed to sync group cache changes', e);
+      AppLogger.warn('Failed to sync group cache changes', { error: String(e) });
     }
   };
 
@@ -1491,7 +1491,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               zIndex: 9999
             }}>
               <ActivityIndicator size="large" color="#00F0FF" />
-              <Text style={[styles.typography.header, { color: '#00F0FF', marginTop: 12 }]}>Disconnecting...</Text>
+              <Text style={[Typography.header, { color: '#00F0FF', marginTop: 12 }]}>Disconnecting...</Text>
             </Animated.View>
           )}
       </Animated.View>

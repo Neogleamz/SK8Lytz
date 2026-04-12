@@ -98,10 +98,6 @@ pie title Feature Velocity
 - [ ] `feat/music-intel-phase-5` : [CLOUD] [H-RISK] [Feast] [Crew Party Sync] — Master BPM Choreography Engine with Realtime crew sync. → [Plan](docs/plans/feat-music-integration-master.md)
 - [ ] `feat/interactive-skate-spot-map` : [CLOUD] [L-RISK] [Feast] Implement a high-density, interactive skate spot map using react-native-maps. → [Plan](docs/plans/feat-interactive-skate-spot-map.md)
 - [ ] `feat/street-mode-telemetry-overhaul` : [CLOUD] [L-RISK] [Meal] Overhaul Street Mode with metrics grid and auto-scaling gauges. → [Plan](docs/plans/feat-street-mode-telemetry-overhaul.md)
-- [ ] `feat/spatial-beat-mapping` : [LAB] [H-RISK] [Meal] [Pillar 11] Sound-to-Light Spatialization (Bass/Mid/Treble mapping). → [Plan](docs/plans/feat-spatial-beat-mapping.md)
-- [ ] `feat/cockpit-dash-dynamic-bg` : [CLOUD] [L-RISK] [Meal] Transform Dashboard into palette-synced dynamic backgrounds. → [Plan](docs/plans/feat-cockpit-dash-dynamic-bg.md)
-- [ ] `feat/fixed-mode-refactor` : [LAB] [L-RISK] [Meal] Pattern selection (Strobe, Blink, Static) + music slider fix. → [Plan](docs/plans/feat-fixed-mode-refactor.md)
-- [ ] `feat/battery-health-predictor` : [LAB] [H-RISK] [Meal] Power modeling to predict battery life and auto-dimming. → [Plan](docs/plans/feat-battery-health-predict.md)
 - [ ] `feat/usa-skate-spots-dataset` : [CLOUD] [BATCH] [L-RISK] [Snack] US-only dataset of rinks and parks for map overlays. → [Plan](docs/plans/feat-usa-skate-spots-dataset.md)
 - [ ] `feat/app-wide-ux-tips` : [CLOUD] [L-RISK] [Meal] Contextual tips system for key friction points. → [Plan](docs/plans/feat-app-wide-ux-tips.md)
 
@@ -109,6 +105,10 @@ pie title Feature Velocity
 
 ## ❄️ Icebox / Backburner (Manual Trigger Only)
 
+- [ ] `feat/spatial-beat-mapping` : [LAB] [H-RISK] [Meal] [Pillar 11] Sound-to-Light Spatialization (Bass/Mid/Treble mapping). → [Plan](docs/plans/feat-spatial-beat-mapping.md)
+- [ ] `feat/cockpit-dash-dynamic-bg` : [CLOUD] [L-RISK] [Meal] Transform Dashboard into palette-synced dynamic backgrounds. → [Plan](docs/plans/feat-cockpit-dash-dynamic-bg.md)
+- [ ] `feat/fixed-mode-refactor` : [LAB] [L-RISK] [Meal] Pattern selection (Strobe, Blink, Static) + music slider fix. → [Plan](docs/plans/feat-fixed-mode-refactor.md)
+- [ ] `feat/battery-health-predictor` : [LAB] [H-RISK] [Meal] Power modeling to predict battery life and auto-dimming. → [Plan](docs/plans/feat-battery-health-predict.md)
 - [ ] `feat/impact-sentinel-safety` : [LAB] [H-RISK] [Meal] [Pillar 6] Fall Detection — triggers white 'Flare' strobe on impact. → [Plan](docs/plans/feat-impact-sentinel-safety.md)
 - [ ] `feat/kinetic-brake-lights` : [LAB] [H-RISK] [Meal] [Pillar 12] Kinetic Safety — phone accelerometer pulse RED for braking. → [Plan](docs/plans/feat-kinetic-brake-lights.md)
 - [ ] `feat/zero-touch-crew-sync` : [CLOUD] [H-RISK] [Feast] Geofence-based 'Hive Mind' synchronization. → [Plan](docs/plans/feat-zero-touch-crew-sync.md)

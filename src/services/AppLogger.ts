@@ -320,8 +320,11 @@ class AppLoggerService {
     this.log('APP_LOG', { level: 'info', message, ...context });
   }
 
-  warn(message: string, context?: Record<string, any>) {
-    this.log('APP_LOG', { level: 'warn', message, ...context });
+  warn(message: string, context?: Record<string, any> | any) {
+    const safeContext = context && typeof context === 'object' && !Array.isArray(context)
+      ? context as Record<string, any>
+      : { value: String(context) };
+    this.log('APP_LOG', { level: 'warn', message, ...safeContext });
   }
 
   error(message: string, errorObj?: any, context?: Record<string, any>) {

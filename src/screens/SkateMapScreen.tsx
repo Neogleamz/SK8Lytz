@@ -55,9 +55,9 @@ export const SkateMapScreen: React.FC<SkateMapScreenProps> = ({ visible, onClose
     }
     
     // Deduplicate on coordinates just in case
-    const merged = [...nativeSpots];
+    const merged: Partial<SkateSpot>[] = [...nativeSpots];
     fallbackSpots.forEach(fs => {
-      const isDup = merged.find(n => Math.abs(n.lat! - fs.lat!) < 0.001 && Math.abs(n.lng! - fs.lng!) < 0.001);
+      const isDup = merged.find(n => Math.abs((n.lat ?? 0) - (fs.lat ?? 0)) < 0.001 && Math.abs((n.lng ?? 0) - (fs.lng ?? 0)) < 0.001);
       if (!isDup) merged.push(fs);
     });
 
@@ -218,7 +218,6 @@ const createStyles = (Colors: any) => StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    backdropFilter: 'blur(10px)',
     justifyContent: 'center',
     alignItems: 'center',
   },

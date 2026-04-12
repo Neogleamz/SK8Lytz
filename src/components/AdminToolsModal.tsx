@@ -31,7 +31,7 @@ import type { ProductProfile, VizShape } from '../types/ProductCatalog';
 
 type Tab = 'timeline' | 'stats' | 'device' | 'tools';
 
-const EVENT_META: Record<EventType, { icon: string; color: string; label: string }> = {
+const EVENT_META: Partial<Record<EventType, { icon: string; color: string; label: string }>> = {
   APP_OPENED:         { icon: 'cellphone-check', color: '#00f0ff', label: 'App Opened' },
   SCAN_STARTED:       { icon: 'radar',           color: '#FF7000', label: 'Scan Started' },
   SCAN_COMPLETED:     { icon: 'check-circle',    color: '#00ff80', label: 'Scan Completed' },
@@ -191,6 +191,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
     vizStripCount: 2,
     vizStripSeparation: 32,
     vizStripOrientation: 'VERTICAL',
+    hardwareAllowsCustomPoints: false,
     batteryCapacityMilliAmpereHour: 3000,
   });
 

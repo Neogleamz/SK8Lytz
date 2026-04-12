@@ -151,7 +151,7 @@ class SpeedTrackingServiceClass {
 
       if (error || !data) return [];
 
-      return data.map(r => ({
+      return data.map((r: Record<string, any>) => ({
         id: r.id,
         sessionDate: r.session_date,
         durationSec: r.duration_sec,
@@ -189,11 +189,11 @@ class SpeedTrackingServiceClass {
       if (error || !data || data.length === 0) return empty;
 
       const totalSessions = data.length;
-      const totalDistanceMiles = data.reduce((s, r) => s + Number(r.distance_miles), 0);
-      const totalDurationSec = data.reduce((s, r) => s + r.duration_sec, 0);
-      const lifetimePeakSpeedMph = Math.max(...data.map(r => Number(r.peak_speed_mph)));
-      const lifetimeAvgSpeedMph = data.reduce((s, r) => s + Number(r.avg_speed_mph), 0) / totalSessions;
-      const lifetimeCalories = data.reduce((s, r) => s + (r.calories ?? 0), 0);
+      const totalDistanceMiles = data.reduce((s: number, r: Record<string, any>) => s + Number(r.distance_miles), 0);
+      const totalDurationSec = data.reduce((s: number, r: Record<string, any>) => s + Number(r.duration_sec), 0);
+      const lifetimePeakSpeedMph = Math.max(...data.map((r: Record<string, any>) => Number(r.peak_speed_mph)));
+      const lifetimeAvgSpeedMph = data.reduce((s: number, r: Record<string, any>) => s + Number(r.avg_speed_mph), 0) / totalSessions;
+      const lifetimeCalories = data.reduce((s: number, r: Record<string, any>) => s + (r.calories ?? 0), 0);
 
       return {
         totalSessions,
