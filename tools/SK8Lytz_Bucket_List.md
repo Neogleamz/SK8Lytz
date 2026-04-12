@@ -42,7 +42,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/admin-tools`
 
-- [ ] `feat/picks-scheduler-builder` : Revise the SK8Lytz picks scheduler algorithms to finalize the assignment mode logic, and integrate an administrative version of the array builder to create custom community picks on the fly. also allow access to patterns in program mode for assignment
+- [x] `feat/picks-scheduler-builder` : Revise the SK8Lytz picks scheduler algorithms to finalize the assignment mode logic, and integrate an administrative version of the array builder to create custom community picks on the fly. also allow access to patterns in program mode for assignment → [Plan](docs/plans/feat-picks-scheduler-builder.md)
 - [x] `feat/product-catalog-icons` : Design unique brand icons/illustrations for HALOZ, SOULZ, and RAILZ products (SVG or PNG assets). Integrate them as selectable icon fields in the Product Manager (Admin Tools) and display them in product selector chips, the Setup Wizard product picker, and the Dashboard device card.
 
 ### Target: `epic/camera-mode`
