@@ -27,7 +27,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/admin-tools`
 
-- [ ] `fix/admin-modal-ts-debt` : Fix 4 pre-existing TS errors in AdminToolsModal.tsx: (1) EVENT_META missing new event types (MOUNT, UNMOUNT, SYNC, REJOIN etc), (2) blankProfile() missing `batteryCapacityMilliAmpereHour` field — schema drift from ProductProfile, (3) `supabase` not imported at module level but used in `handleSaveProfile`, (4) dead `tab === 'products'` condition that will never match the `Tab` type.
+- [x] `fix/admin-modal-ts-debt` : Fix 4 pre-existing TS errors in AdminToolsModal.tsx: (1) EVENT_META missing new event types, (2) blankProfile() schema drift, (3) missing supabase import, (4) dead tab logic.
 
 ### Target: `epic/camera-mode`
 
