@@ -126,6 +126,11 @@ For testing App Sync behavior vs. Offline mode offline fallbacks, you can authen
 
 *Project ID:* `qefmeivpjyaukbwadgaz`
 
+#### **Telemetry Data Ingestion RLS Pattern**
+To ensure 100% telemetry capture without interfering with legitimate authenticated users, tables handling high-volume operational diagnostic data (`device_diagnostics`, `telemetry_errors`) MUST implement permissive ingestion policies:
+- **`public` Role Access**: Grant `INSERT` (and `SELECT` for troubleshooting tools) to the `public` role to cover both `anon` and `authenticated` context flows.
+- *Rationale*: Prevents the "Authenticated Paradox" where logged-in users are blocked from writing telemetry that anonymous users can write, causing 403 Forbidden errors during routine hardware syncs.
+
 #### **`registered_devices`** (Hardened Schema)
 | Column | Type | Purpose |
 |:---|:---|:---|
@@ -161,6 +166,26 @@ For testing App Sync behavior vs. Offline mode offline fallbacks, you can authen
 
 > [!WARNING]
 > The app enforces **Strict Column Mapping** in `useRegistration.ts`. Any new database column MUST be added to the explicit mapping in the `dbRow` object to prevent schema cache mismatch errors during cloud sync.
+
+#### **`app_settings`** (Governance & Registry)
+| Column | Type | Purpose |
+|:---|:---|:---|
+| `setting_key` | TEXT (PK) | Unique key (e.g., `required_eula_version`) |
+| `setting_value` | TEXT | Value (Version num, JSON flags) |
+
+#### **`user_profiles`** (Compliance Tracking)
+- **`accepted_eula_version`** (INT): Tracks the last EULA version signed by the user. Blocking logic triggers if this is less than `required_eula_version`.
+
+### 🏛️ Feature Governance Policy Model
+
+Features are managed via a centralized policy registry in `AppSettingsService`. All module visibility and "Smart Locks" are derived from this state:
+
+| Strategy | Behavior |
+|:---|:---|
+| `GLOBAL_LOCK` | Feature is physically disabled and grayed out across the entire fleet. |
+| `HIDE_OFFLINE` | Feature vanishes from the UI if the device has no internet/Supabase heartbeat. |
+| `GATED_OFFLINE` | Feature is visible but displays a "Connect to Cloud" overlay when tapped. |
+| `ADMIN_ONLY` | Feature only visible to `is_admin: true` profiles. |
 
 * **`parsed_session_stats`**: One row per app session summary (`session_id` UNIQUE)
 * **`parsed_session_devices`**: All BLE devices seen per session (`session_id + device_id` UNIQUE)
@@ -423,6 +448,31 @@ We believe that AI coding shouldn't be a "black box." By enforcing strict intake
 |:---|:---|
 | **Corporate Memory Sync** | Mandatory updates to this Master Reference after every complex fix or discovery. |
 | **Save Point & Abort** | Enables rapid check-pointing of the workspace to allow safe rollbacks. |
+
+---
+
+## 8. Sentinel Engineering Governance (Workflow V6)
+
+*Added: 2026-04-12 | Doctrine: "Stability-First"*
+
+The SK8Lytz development lifecycle is governed by the **Sentinel Engine**, a deterministic framework designed for high-reliability engineering.
+
+### Strategic Priority Hierarchy
+1.  **CRITICAL**: Performance, Stability & Security (Crashes, RLS Blocks).
+2.  **HIGH**: Engineering Excellence & Tech Debt (Refactors, FSMs).
+3.  **MEDIUM**: Compliance & Governance (EULA, Admin).
+4.  **LOW**: New Features & UI Polish.
+
+### Mandatory Safety Governors
+- **Safe-Commit Anchors**: For all `[H-RISK]` tasks, a git restore point is created immediately after branching to ensure 100% rollback reliability.
+- **The Senior Auditor (Step 6.5)**: Every task is blocked from transition until a mandatory "Self-Review & Refactor" pass is completed by the AI persona acting as a Senior Auditor.
+- **Devil's Advocate Gate**: All `[Feast]` items require a formal pre-mortem identifying 3 failure points before planning.
+- **Knowledge Audit Gate**: Merge blocks are enforced until this Master Reference is synced with the session's new architectural truths.
+
+### Velocity Protocols
+- **Turbo Step (`// turbo`)**: Authorized auto-run for terminal commands to reduce user approval friction.
+- **Snack Autopilot**: Zero-bypass execution allowed for tasks meeting the **`[BATCH]` + `[Snack]` + `[L-RISK]`** criteria.
+- **T-Shirt Sizing**: All tasks must be tagged `[Snack]` (<15m), `[Meal]` (1-2h), or `[Feast]` (Multi-day).
 
 ---
 

@@ -474,6 +474,7 @@ export type Database = {
           production_consumed_qty: number | null
           prototype_consumed_qty: number | null
           prototype_produced_qty: number | null
+          rop_lead_time_days: number | null
           scrap_qty: number | null
           sold_qty: number | null
         }
@@ -487,6 +488,7 @@ export type Database = {
           production_consumed_qty?: number | null
           prototype_consumed_qty?: number | null
           prototype_produced_qty?: number | null
+          rop_lead_time_days?: number | null
           scrap_qty?: number | null
           sold_qty?: number | null
         }
@@ -500,6 +502,7 @@ export type Database = {
           production_consumed_qty?: number | null
           prototype_consumed_qty?: number | null
           prototype_produced_qty?: number | null
+          rop_lead_time_days?: number | null
           scrap_qty?: number | null
           sold_qty?: number | null
         }
