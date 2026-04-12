@@ -9,12 +9,14 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 <!-- AUTO_SYNC_ERRORS_START -->
 <!-- AUTO_SYNC_ERRORS_END -->
 
+- [ ] `feat/eula-onboarding` : Implement mandatory EULA acceptance in Auth flow and global version enforcement → [Plan](docs/plans/feat-eula-onboarding.md)
+- [ ] `feat/admin-app-manager` : Finalized Governance Hub with Safety Locks (Consolidated Scope) → [Plan](docs/plans/feat-admin-app-manager.md)
+- [ ] `audit/device-group-persistence` : [TOP PRIORITY] Audit device group state handling to prevent duplicate/ghost groups and ensure seamless offline-to-online persistence. → [Plan](docs/plans/audit-device-group-persistence.md)
 - [ ] `fix/dynamic-arch-regressions` : Resolve 'isHaloz' ReferenceError in ProductVisualizer and perform a sanitization audit (DockedController, ZenggeProtocol, Setup Wizard) to remove remaining hardcoded binary logic.
 - [ ] `fix/tsc-errors-audit` : Fix TypeScript errors remaining from dynamic-arch-regressions (Audio namespace, missing EventType for 'BUILDER_PRESET_SAVED' in DockedController, IVoiceAction/Typography Subheader in DashboardScreen).
 - [ ] `fix/rls-telemetry-block` : [CRITICAL] Resolve 403 Forbidden errors on `parsed_session_stats`, `device_diagnostics`, and `parsed_session_devices`. Likely RLS policy mismatch for authenticated telemetry sinks. → [Plan](docs/plans/fix-rls-telemetry-block.md)
 - [ ] `fix/device-group-fk-integrity` : [CRITICAL] Resolve foreign key constraint violations in `registered_devices` group_id. Upsert logic is referencing non-existent groups. → [Plan](docs/plans/fix-device-group-fk-integrity.md)
-- [ ] `feat/eula-onboarding` : Implement mandatory EULA acceptance in Auth flow and global version enforcement → [Plan](docs/plans/feat-eula-onboarding.md)
-- [ ] `feat/admin-app-manager` : Finalized Governance Hub with Safety Locks (Consolidated Scope) → [Plan](docs/plans/feat-admin-app-manager.md)
+- [ ] `audit/device-group-persistence` : Audit device group state handling to prevent duplicate/ghost groups and ensure seamless offline-to-online persistence. → [Plan](docs/plans/audit-device-group-persistence.md)
 
 ### Target: `epic/ui-refinement`
 
@@ -31,7 +33,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/admin-tools`
 
-- [x] `fix/admin-modal-ts-debt` : Fix 4 pre-existing TS errors in AdminToolsModal.tsx: (1) EVENT_META missing new event types, (2) blankProfile() schema drift, (3) missing supabase import, (4) dead tab logic.
+- [ ] `fix/admin-modal-ts-debt` : Fix 4 pre-existing TS errors in AdminToolsModal.tsx: (1) EVENT_META missing new event types, (2) blankProfile() schema drift, (3) missing supabase import, (4) dead tab logic.
 
 ### Target: `epic/camera-mode`
 
@@ -42,7 +44,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] `tune-visualizer-pro-effects` : #15 — Visualizer Parity: Pro Effects Patterns — Exhaustively review and tune the interpolation mathematics for all 33 of the 'pro effects' patterns to make them physically accurate within the product visualizer.
 
 ### Target: `epic/device-management`
-- [ ] `audit/device-group-persistence` : Audit device group state handling to prevent duplicate/ghost groups and ensure seamless offline-to-online persistence. → [Plan](docs/plans/audit-device-group-persistence.md)
 
 ### Target: `epic/protocol-integration`
 
