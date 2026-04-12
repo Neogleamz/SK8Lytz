@@ -126,6 +126,11 @@ For testing App Sync behavior vs. Offline mode offline fallbacks, you can authen
 
 *Project ID:* `qefmeivpjyaukbwadgaz`
 
+#### **Telemetry Data Ingestion RLS Pattern**
+To ensure 100% telemetry capture without interfering with legitimate authenticated users, tables handling high-volume operational diagnostic data (`device_diagnostics`, `telemetry_errors`) MUST implement permissive ingestion policies:
+- **`public` Role Access**: Grant `INSERT` (and `SELECT` for troubleshooting tools) to the `public` role to cover both `anon` and `authenticated` context flows.
+- *Rationale*: Prevents the "Authenticated Paradox" where logged-in users are blocked from writing telemetry that anonymous users can write, causing 403 Forbidden errors during routine hardware syncs.
+
 #### **`registered_devices`** (Hardened Schema)
 | Column | Type | Purpose |
 |:---|:---|:---|
