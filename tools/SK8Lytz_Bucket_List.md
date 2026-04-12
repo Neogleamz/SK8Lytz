@@ -30,7 +30,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/admin-tools`
 
 - [ ] `fix/admin-modal-ts-debt` : Fix 4 pre-existing TS errors in AdminToolsModal.tsx: (1) EVENT_META missing new event types (MOUNT, UNMOUNT, SYNC, REJOIN etc), (2) blankProfile() missing `batteryCapacityMilliAmpereHour` field — schema drift from ProductProfile, (3) `supabase` not imported at module level but used in `handleSaveProfile`, (4) dead `tab === 'products'` condition that will never match the `Tab` type.
-- [ ] `chore/delete-orphan-backup` : Delete `src/components/Sk8LytzDiagnosticLab_old.tsx` — orphaned backup file causing 11 TS compile errors. It is unreferenced by any import and should be permanently removed.
+- [x] `chore/delete-orphan-backup` : Delete `src/components/Sk8LytzDiagnosticLab_old.tsx` — orphaned backup file causing 11 TS compile errors. It is unreferenced by any import and should be permanently removed.
 
 ### Target: `epic/camera-mode`
 
@@ -90,8 +90,10 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ---
 
-## ✅ Completed This Session (Apr 2026)
+## ✅ Completed Previously
 
+- [x] `feat/admin-hub-design-system` : Standardize all 6 admin sub-tool headers — canonical back arrow (→ AdminTools hub), dark-mode `useTheme()` theming throughout. Extracted App Settings and Product Manager from inline `formSheet` Modals to proper `fullScreen` Modals. Replaced crude button list with glass-morphism `ToolCard` grid on the TOOLS tab. Eliminated all hardcoded `#FFFFFF`/`#CCCCCC` light theme values.
+- [x] `chore/delete-orphan-backup` : Delete `src/components/Sk8LytzDiagnosticLab_old.tsx` — orphaned backup file causing 11 TS compile errors. It is unreferenced by any import and should be permanently removed.
 - [x] `lab-music-mode-parity` : #13 — Lab 0x73 Music Mode parity — Lab BUILDER's 0x73 section is missing Light Screen (0x27) vs Light Bar (0x26) matrix style toggle, primary/secondary color pickers, and mic source.
 - [x] `epic/connection-reliability` : Execute the multiphase connection reliability plan (see `docs/plans/epic-connection-reliability.md`). Stop dropping connections, fix lockups entering/leaving controller, and fix UI teardown on disconnect (resolves `fix/hardware-connection-drop`, `audit/connection-polling-logic`, and `fix/controller-navigation-lockup`).
 - [x] `fix-ble-audit` : Debug and resolve BLE connection regression. Devices not found or connecting slowly.
@@ -107,9 +109,5 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `feat/support-store-link` : Add a "Visit Store" link to the support/help section of the app (e.g. the support icon menu or Account screen). Should open the Neogleamz Shopify store URL via Linking.openURL in the native browser.
 - [x] `feat/shopify-support-form` : Embed or deep-link to the Neogleamz Shopify contact/support form within the app's support flow. Evaluate whether a WebView embed or a native Linking.openURL to the Shopify contact page is the right approach based on authentication requirements.
 
-- [x] `feat/admin-hub-design-system` : Standardize all 6 admin sub-tool headers — canonical back arrow (→ AdminTools hub), dark-mode `useTheme()` theming throughout. Extracted App Settings and Product Manager from inline `formSheet` Modals to proper `fullScreen` Modals. Replaced crude button list with glass-morphism `ToolCard` grid on the TOOLS tab. Eliminated all hardcoded `#FFFFFF`/`#CCCCCC` light theme values.
-
-## ✅ Completed Previously
-
 ---
-*Last updated: 2026-04-12 | This session: Admin hub design system standardization.*
+*Last updated: 2026-04-12 | This session: Core features and admin hub stabilization complete.*
