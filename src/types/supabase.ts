@@ -1188,6 +1188,7 @@ export type Database = {
           alibaba_order: string | null
           di_item_id: string
           item_name: string | null
+          makeup_fee: number | null
           order_date: string | null
           order_no: string | null
           order_total: number | null
@@ -1201,6 +1202,7 @@ export type Database = {
           alibaba_order?: string | null
           di_item_id: string
           item_name?: string | null
+          makeup_fee?: number | null
           order_date?: string | null
           order_no?: string | null
           order_total?: number | null
@@ -1214,6 +1216,7 @@ export type Database = {
           alibaba_order?: string | null
           di_item_id?: string
           item_name?: string | null
+          makeup_fee?: number | null
           order_date?: string | null
           order_no?: string | null
           order_total?: number | null
@@ -1740,6 +1743,112 @@ export type Database = {
         }
         Relationships: []
       }
+      skate_sessions: {
+        Row: {
+          avg_speed_mph: number
+          calories: number | null
+          crew_session_id: string | null
+          distance_miles: number
+          duration_sec: number
+          id: string
+          location_label: string | null
+          peak_gforce: number | null
+          peak_speed_mph: number
+          session_date: string
+          user_id: string
+        }
+        Insert: {
+          avg_speed_mph?: number
+          calories?: number | null
+          crew_session_id?: string | null
+          distance_miles?: number
+          duration_sec?: number
+          id?: string
+          location_label?: string | null
+          peak_gforce?: number | null
+          peak_speed_mph?: number
+          session_date?: string
+          user_id: string
+        }
+        Update: {
+          avg_speed_mph?: number
+          calories?: number | null
+          crew_session_id?: string | null
+          distance_miles?: number
+          duration_sec?: number
+          id?: string
+          location_label?: string | null
+          peak_gforce?: number | null
+          peak_speed_mph?: number
+          session_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skate_sessions_crew_session_id_fkey"
+            columns: ["crew_session_id"]
+            isOneToOne: false
+            referencedRelation: "crew_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skate_sessions_crew_session_id_fkey"
+            columns: ["crew_session_id"]
+            isOneToOne: false
+            referencedRelation: "public_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skate_spots: {
+        Row: {
+          adult_night_details: string | null
+          created_at: string | null
+          id: string
+          is_indoor: boolean | null
+          is_verified: boolean | null
+          lat: number
+          lng: number
+          name: string
+          source: string | null
+          surface_type: Database["public"]["Enums"]["skate_spot_surface"] | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          adult_night_details?: string | null
+          created_at?: string | null
+          id?: string
+          is_indoor?: boolean | null
+          is_verified?: boolean | null
+          lat: number
+          lng: number
+          name: string
+          source?: string | null
+          surface_type?:
+            | Database["public"]["Enums"]["skate_spot_surface"]
+            | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          adult_night_details?: string | null
+          created_at?: string | null
+          id?: string
+          is_indoor?: boolean | null
+          is_verified?: boolean | null
+          lat?: number
+          lng?: number
+          name?: string
+          source?: string | null
+          surface_type?:
+            | Database["public"]["Enums"]["skate_spot_surface"]
+            | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       socialz_audience: {
         Row: {
           collab_status: string | null
@@ -2052,7 +2161,12 @@ export type Database = {
       increment_scene_upvote: { Args: { scene_id: string }; Returns: undefined }
     }
     Enums: {
-      [_ in never]: never
+      skate_spot_surface:
+        | "wood"
+        | "concrete"
+        | "asphalt"
+        | "sport_court"
+        | "unknown"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2179,6 +2293,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      skate_spot_surface: [
+        "wood",
+        "concrete",
+        "asphalt",
+        "sport_court",
+        "unknown",
+      ],
+    },
   },
 } as const

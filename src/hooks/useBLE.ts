@@ -200,11 +200,24 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const isDuplicateDevice = (devices: Device[], nextDevice: Device) =>
     devices.findIndex(device => nextDevice.id === device.id) > -1;
 
-  const scanForPeripherals = () => {
+  const scanForPeripherals = (options?: { keepAlive?: boolean }) => {
     if (isScanning) return;
     setIsScanning(true);
-    setPendingRegistrations([]);
+    if (!options?.keepAlive) {
+      setPendingRegistrations([]);
+    }
     
+    // [BLE-AUDIT Fix] Load known registered MACs to bypass strict scanner names
+    const knownMacs = new Set<string>();
+    AsyncStorage.getItem('ng_registered_devices').then(cached => {
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          parsed.forEach((d: any) => knownMacs.add(d.device_mac));
+        } catch (e) {}
+      }
+    }).catch(() => {});
+
     if (__DEV__) {
       AsyncStorage.getItem('@Sk8lytz_demo_mode').then((isMock) => {
         if (Platform.OS === 'web' || isMock === 'true') {
@@ -301,7 +314,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
                             nameLower.startsWith('halo') ||
                             nameLower.startsWith('soul');
 
-        const isMatch = isSymphony || isKnownPrefix || hasZenggeService;
+        const isMatch = isSymphony || isKnownPrefix || hasZenggeService || knownMacs.has(device.id);
         
         const logData = {
           id: device.id,
@@ -409,6 +422,14 @@ export default function useBLE(): BluetoothLowEnergyApi {
         } else {
           // Only log rejection if it's not a complete ghost (has at least a name or service)
           if (device.name || (device.serviceUUIDs && device.serviceUUIDs.length > 0)) {
+            console.warn('[EMERGENCY-DEBUG] DEVICE REJECTED BY FILTER:', {
+              id: device.id, 
+              name: device.name, 
+              isSymphony, 
+              isKnownPrefix, 
+              hasZenggeService,
+              mfgData: manufacturerData ? 'YES' : 'NO'
+            });
             AppLogger.log('SCAN_FILTER_REJECT', {
               ...logData,
               reason: !isSymphony && !isKnownPrefix && !hasZenggeService ? 'No matching signature' : 'Unknown'
@@ -595,7 +616,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
     const mapToRegistration = (d: any, i: number, type: string): PendingRegistration => {
       const isUnknown = type === 'UNKNOWN';
-      const pos = i === 0 ? 'Left' : (i === 1 ? 'Right' : null);
+      const pos = i % 2 === 0 ? 'Left' : 'Right';
       
       // Get profile for defaults if pts is null
       const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === type) || LOCAL_PRODUCT_CATALOG[0];
@@ -634,6 +655,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     }
 
     if (results.length > 0) {
+      console.warn(`[EMERGENCY-DEBUG] classifyProbeResults pushing ${results.length} devices to pendingRegistrations`, results.map(r => r.device_name));
       setPendingRegistrations(results);
     }
   };

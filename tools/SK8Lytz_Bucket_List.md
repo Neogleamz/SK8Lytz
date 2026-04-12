@@ -10,6 +10,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 <!-- AUTO_SYNC_ERRORS_END -->
 
 
+- [ ] `fix/auth-page-scrolling` : NO vertical scrolling on auth page. Ensure the layout stops overflowing vertically, and shrink the "Continue offline" section to fit.
+- [ ] `feat/pull-to-refresh-scanner` : On scanner dashboard, pulling down should trigger device polling (refresh local state, trigger BLE scan).
 - [ ] `fix/dynamic-arch-regressions` : Resolve 'isHaloz' ReferenceError in ProductVisualizer and perform a sanitization audit (DockedController, ZenggeProtocol, Setup Wizard) to remove remaining hardcoded binary logic.
 - [ ] `fix/tsc-errors-audit` : Fix TypeScript errors remaining from dynamic-arch-regressions (Audio namespace, missing EventType for 'BUILDER_PRESET_SAVED' in DockedController, IVoiceAction/Typography Subheader in DashboardScreen).
 - [ ] `feat/battery-health-predict` : Mathematical power modeling to predict battery life based on pattern draw; auto-dims to 20% at critical reserve.
@@ -78,6 +80,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/skate-spot-discovery`
 
 - [ ] `feat/usa-skate-spots-dataset` : Build a live, US-only dataset of rinks and parks (hours, adult nights, surface types) for map overlays and a new 'Find a Place to Skate' discovery feature integrated into Crew Hub and the Main Dashboard.
+- [ ] `feat/interactive-skate-spot-map` : Implement a high-density, interactive skate spot map using react-native-maps and clustering. Feature verified custom DB rinks vs. unverified Google Places fallbacks, including a 'Claim & Complete' bottom sheet UI to crowdsource specialized metadata (surface types, adult nights).
 
 ### Target: `epic/ui-refinement`
 
