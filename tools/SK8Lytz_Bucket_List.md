@@ -20,11 +20,11 @@ pie title Core Development Progress
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Critical Stability
-  "Completed" : 0
-  "Remaining" : 8
+  "Completed" : 1
+  "Remaining" : 7
 ```
 
-- [ ] `fix/rls-telemetry-block` : [CLOUD] [BATCH] [H-RISK] [Snack] [CRITICAL] Resolve 403 Forbidden errors on `parsed_session_stats`, `device_diagnostics`, and `parsed_session_devices`. Likely RLS policy mismatch for authenticated telemetry sinks. → [Plan](docs/plans/fix-rls-telemetry-block.md)
+- [x] `fix/rls-telemetry-block` : [CLOUD] [BATCH] [H-RISK] [Snack] [CRITICAL] Resolve 403 Forbidden errors on `parsed_session_stats`, `device_diagnostics`, and `parsed_session_devices`. Likely RLS policy mismatch for authenticated telemetry sinks. → [Plan](docs/plans/fix-rls-telemetry-block.md)
 - [ ] `fix/device-group-fk-integrity` : [CLOUD] [BATCH] [H-RISK] [Snack] [CRITICAL] Resolve foreign key constraint violations in `registered_devices` group_id. Upsert logic is referencing non-existent groups. → [Plan](docs/plans/fix-device-group-fk-integrity.md)
 - [ ] `audit/device-group-persistence` : [CLOUD] [H-RISK] [Meal] [TOP PRIORITY] Audit device group state handling to prevent duplicate/ghost groups and ensure seamless offline-to-online persistence. → [Plan](docs/plans/audit-device-group-persistence.md)
 - [ ] `fix/voice-mic-access` : [LAB] [BATCH] [L-RISK] [Snack] [URGENT] Resolve issue where Voice Engine fails to request microphone permissions, causing immediate errors on start. → [Plan](docs/plans/fix-voice-mic-access.md)
