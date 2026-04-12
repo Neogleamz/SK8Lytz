@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Alert,
-  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Animated, Linking, Image
+  ActivityIndicator, KeyboardAvoidingView, Platform, Animated, Linking, Image
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabaseClient';
@@ -354,7 +354,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <View style={styles.scrollContent}>
 
         {/* Logo and Welcome */}
         <View style={styles.headerContainer}>
@@ -520,7 +520,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           </View>
         </View>
 
-      </ScrollView>
+      </View>
 
       {/* DOCKED BOTTOM ACTIONS */}
       <View style={styles.bottomDock}>
@@ -614,7 +614,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
 const createStyles = (Colors: ThemePalette, insets: { top: number; bottom: number; left: number; right: number }) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scrollContent: {
-    flexGrow: 1, justifyContent: 'center',
+    flex: 1, justifyContent: 'center',
     paddingHorizontal: 24,
     paddingTop: Math.max(insets.top + 60, 80),
     paddingBottom: 24,

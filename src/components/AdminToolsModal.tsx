@@ -23,6 +23,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger, LogEntry, EventType } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
 import AdminPicksScheduler from './AdminPicksScheduler';
+import { AppSettingsService, AppSettingsMap } from '../services/AppSettingsService';
 import { useProductCatalog } from '../hooks/useProductCatalog';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import type { ProductProfile, VizShape } from '../types/ProductCatalog';
@@ -155,6 +156,8 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
   const [isUploading, setIsUploading] = useState(false);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
   const [isPicksSchedulerVisible, setIsPicksSchedulerVisible] = useState(false);
+  const [isAppSettingsVisible, setIsAppSettingsVisible] = useState(false);
+  const [appSettings, setAppSettings] = useState<AppSettingsMap>({});
 
   // ── Product Catalog ─────────────────────────────────────────────────────────
   const { allProfiles, saveProfile, syncFromCloud } = useProductCatalog();
@@ -190,6 +193,10 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
     setLogs(l);
     const s = await AppLogger.getStats();
     setStats(s);
+    try {
+      const settings = await AppSettingsService.fetchAllSettings();
+      setAppSettings(settings);
+    } catch(e) {}
     try {
       const storedConfigs = await AsyncStorage.getItem('ng_device_configs');
       if (storedConfigs) setDeviceConfigs(JSON.parse(storedConfigs) || {});
@@ -469,6 +476,16 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
               <Text style={{ color: '#ff4040', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Product Manager</Text>
             </View>
           </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={{ backgroundColor: 'rgba(0, 150, 255, 0.1)', borderColor: '#0096FF', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginTop: 16 }}
+            onPress={() => setIsAppSettingsVisible(true)}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>⚙️</Text>
+              <Text style={{ color: '#0096FF', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>App Settings</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         <AdminPicksScheduler
@@ -476,6 +493,52 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
           onClose={() => setIsPicksSchedulerVisible(false)}
         />
         
+        <Modal visible={isAppSettingsVisible} animationType="slide" presentationStyle="formSheet" onRequestClose={() => setIsAppSettingsVisible(false)}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#080808' : '#111' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#222' }}>
+              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900', letterSpacing: 1 }}>APP SETTINGS</Text>
+              <TouchableOpacity onPress={() => setIsAppSettingsVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ padding: 16 }}>
+              <Text style={{ color: '#888', fontSize: 12, marginBottom: 16 }}>
+                These settings are globally fetched by all app instances on boot.
+              </Text>
+              
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#222', padding: 16, borderRadius: 8, marginBottom: 12 }}>
+                <View style={{ flex: 1, marginRight: 16 }}>
+                  <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '700' }}>Lock Crew Hub</Text>
+                  <Text style={{ color: '#aaa', fontSize: 12, marginTop: 2 }}>Disable Crew Hub features globally. Overrides offline mode.</Text>
+                </View>
+                <Switch 
+                  value={appSettings['global_crew_hub_locked'] === true}
+                  onValueChange={async (v) => {
+                    setAppSettings(prev => ({ ...prev, global_crew_hub_locked: v }));
+                    await AppSettingsService.updateSetting('global_crew_hub_locked', v);
+                  }}
+                  trackColor={{ false: '#444', true: '#FF4444' }}
+                />
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#222', padding: 16, borderRadius: 8, marginBottom: 12 }}>
+                <View style={{ flex: 1, marginRight: 16 }}>
+                  <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '700' }}>Lock Community Hub</Text>
+                  <Text style={{ color: '#aaa', fontSize: 12, marginTop: 2 }}>Disable Community Picks and Favorites globally.</Text>
+                </View>
+                <Switch 
+                  value={appSettings['global_community_hub_locked'] === true}
+                  onValueChange={async (v) => {
+                    setAppSettings(prev => ({ ...prev, global_community_hub_locked: v }));
+                    await AppSettingsService.updateSetting('global_community_hub_locked', v);
+                  }}
+                  trackColor={{ false: '#444', true: '#FF4444' }}
+                />
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
+
         <Modal visible={isProductManagerVisible} animationType="slide" presentationStyle="formSheet" onRequestClose={() => setIsProductManagerVisible(false)}>
           <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#080808' : '#111' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#222' }}>
