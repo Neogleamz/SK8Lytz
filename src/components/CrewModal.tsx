@@ -31,6 +31,9 @@ import { locationService, NearbySession } from '../services/LocationService';
 import { AppLogger } from '../services/AppLogger';
 import { notificationService } from '../services/NotificationService';
 import { LocationPicker } from './LocationPicker';
+import { useCrewHub } from '../hooks/useCrewHub';
+import { useCrewManage } from '../hooks/useCrewManage';
+import { useCrewSession } from '../hooks/useCrewSession';
 import CrewMemberDashboard from './CrewMemberDashboard';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -77,29 +80,69 @@ export default function CrewModal({
   type ModalStep = 'landing' | 'create' | 'schedule' | 'join' | 'controller' | 'manage' | 'crew-detail';
   const [step, setStep] = useState<ModalStep>(activeSession ? 'controller' : 'landing');
   const [showCodeEntry, setShowCodeEntry] = useState(false);
-  // null = show all; number = filter to within that many miles
-  const [discoverRadiusMi, setDiscoverRadiusMi] = useState<number | null>(50);
-  // Maps crewId → its currently live session (populated when hub loads)
   const [_crewActiveSessions, _setCrewActiveSessions] = useState<Record<string, CrewSession | null>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  // Inline confirm action — replaces Alert.alert() for web+native compatibility
   const [confirmAction, setConfirmAction] = useState<'end' | 'leave' | null>(null);
 
-  // ── Create / Schedule form state ───────────────────────────────────────────
+  // ── Hooks ──────────────────────────────────────────────────────────────────
+  const {
+    discoverRadiusMi, setDiscoverRadiusMi,
+    myCrews, setMyCrews,
+    permanentCrews, setPermanentCrews,
+    crewMemberCounts, setCrewMemberCounts,
+    nearbySessions, setNearbySessions,
+    isLoadingNearby, refreshNearby,
+    activeSessions, setActiveSessions,
+    isLoadingSessions, loadActiveSessions,
+    isGettingLocation, setIsGettingLocation,
+    locationLabel, setLocationLabel,
+    locationCoords, setLocationCoords,
+    handleDetectLocation
+  } = useCrewHub(visible, step);
+
+  const {
+    selectedCrewDetail, setSelectedCrewDetail,
+    crewStats, setCrewStats,
+    expandedCrewId, setExpandedCrewId,
+    cardMembers, setCardMembers,
+    loadingCardMembersFor, setLoadingCardMembersFor,
+    loadCrewMembers,
+    userSearchQuery, setUserSearchQuery,
+    userSearchResults, setUserSearchResults,
+    selectedMembers, setSelectedMembers,
+    makingOwnerFor, setMakingOwnerFor,
+    isRemovingUserFor, setIsRemovingUserFor,
+    isAddingMembersTo, setIsAddingMembersTo,
+    newCrewName, setNewCrewName,
+    newCrewIsPublic, setNewCrewIsPublic,
+    newCrewColor, setNewCrewColor,
+    newCrewIcon, setNewCrewIcon,
+    newCrewCity, setNewCrewCity,
+    newCrewState, setNewCrewState,
+    newCrewDescription, setNewCrewDescription,
+    newCrewPhotoUri, setNewCrewPhotoUri,
+    newCrewCode, setNewCrewCode,
+    newCrewHue, setNewCrewHue,
+    isCreatingCrew, setIsCreatingCrew,
+    createCrewError, setCreateCrewError,
+    editingCrewId, setEditingCrewId,
+    editCrewName, setEditCrewName,
+    editCrewIsPublic, setEditCrewIsPublic,
+    editCrewCity, setEditCrewCity,
+    editCrewState, setEditCrewState,
+    editCrewDesc, setEditCrewDesc,
+    isSavingCrew, setIsSavingCrew,
+    confirmingDeleteCrewId, setConfirmingDeleteCrewId,
+    confirmingLeaveCrewId, setConfirmingLeaveCrewId,
+  } = useCrewManage(myCrews);
+
+  // ── Create / Schedule form local state ─────────────────────────────────────
   const [crewName, setCrewName] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
-  const [locationLabel, setLocationLabel] = useState('');
-  const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | undefined>();
   const [_scheduledDate, _setScheduledDate] = useState<Date | null>(null);
-
-  // Crew picker + session visibility
-  const [permanentCrews, setPermanentCrews] = useState<{ id: string; name: string }[]>([]);
-  const [selectedCrewId, setSelectedCrewId] = useState<string | null>(null); // null = new session name
+  const [selectedCrewId, setSelectedCrewId] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(false);
-
-  // Native date/time picker for schedule form
   const [schedDateTime, setSchedDateTime] = useState<Date>(() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -108,83 +151,31 @@ export default function CrewModal({
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-
-  // Join form
   const [inviteCode, setInviteCode] = useState('');
-  const [activeSessions, setActiveSessions] = useState<CrewSession[]>([]);
-  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
-
-  // ── Manage Crews Hub state ────────────────────────────────────────────────
-  // Dead code removed: _manageTab and _setManageTab were unused in the current landing flow
-  const [myCrews, setMyCrews] = useState<PermanentCrew[]>([]);
-  const [selectedCrewDetail, setSelectedCrewDetail] = useState<PermanentCrew | null>(null);
-  const [crewMemberCounts, setCrewMemberCounts] = useState<Record<string, { count: number; avatarColors: string[] }>>({});
-  const [nearbySessions, setNearbySessions] = useState<NearbySession[]>([]);
-  const [isLoadingNearby, setIsLoadingNearby] = useState(false);
   const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
-  // Create crew form
-  const [newCrewName, setNewCrewName] = useState('');
-  const [newCrewIsPublic, setNewCrewIsPublic] = useState(false);
-  const [newCrewColor, setNewCrewColor] = useState('#FFAA00');
-  const [newCrewIcon, setNewCrewIcon] = useState('roller-skate');
-  const [newCrewCity, setNewCrewCity] = useState('');
-  const [newCrewState, setNewCrewState] = useState('');
-  const [newCrewDescription, setNewCrewDescription] = useState('');
-  const [newCrewPhotoUri, setNewCrewPhotoUri] = useState<string | null>(null);
-  const [isCreatingCrew, setIsCreatingCrew] = useState(false);
-  const [createCrewError, setCreateCrewError] = useState('');
-  const [confirmingDeleteCrewId, setConfirmingDeleteCrewId] = useState<string | null>(null);
-  const [confirmingLeaveCrewId, setConfirmingLeaveCrewId] = useState<string | null>(null);
   const [_discoverRadius, setDiscoverRadius] = useState(50);
   const [_discoverSearch, setDiscoverSearch] = useState('');
   const [joiningCrewId, setJoiningCrewId] = useState<string | null>(null);
-  const [editingCrewId, setEditingCrewId] = useState<string | null>(null);
-  const [editCrewName, setEditCrewName] = useState('');
-  const [editCrewIsPublic, setEditCrewIsPublic] = useState(false);
-  const [editCrewCity, setEditCrewCity] = useState('');
-  const [editCrewState, setEditCrewState] = useState('');
-  const [editCrewDesc, setEditCrewDesc] = useState('');
-  const [isSavingCrew, setIsSavingCrew] = useState(false);
-  const [crewStats, setCrewStats] = useState<Record<string, { sessionCount: number; lastActive: string | null; topScene: string | null }>>({});
-  const [expandedCrewId, setExpandedCrewId] = useState<string | null>(null);
-  const [newCrewCode, setNewCrewCode] = useState(() => Math.random().toString(36).substring(2, 8).toUpperCase());
-  const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [userSearchResults, setUserSearchResults] = useState<{ user_id: string, username: string | null, display_name: string | null }[]>([]);
-  const [selectedMembers, setSelectedMembers] = useState<{ user_id: string, username: string | null, display_name: string | null }[]>([]);
-  const [newCrewHue, setNewCrewHue] = useState(40);
-  const [cardMembers, setCardMembers] = useState<Record<string, CrewMemberFull[]>>({});
-  const [loadingCardMembersFor, setLoadingCardMembersFor] = useState<string | null>(null);
-  const [makingOwnerFor, setMakingOwnerFor] = useState<string | null>(null);
-  const [isRemovingUserFor, setIsRemovingUserFor] = useState<string | null>(null);
-  const [isAddingMembersTo, setIsAddingMembersTo] = useState<string | null>(null);
 
-  // Helper to load full member details into cardMembers
-  const loadCrewMembers = (crewId: string) => {
-    if (cardMembers[crewId]) return;
-    setLoadingCardMembersFor(crewId);
-    profileService.getCrewMembersWithNames(crewId)
-      .then(members => setCardMembers(prev => ({ ...prev, [crewId]: members })))
-      .catch(() => { })
-      .finally(() => setLoadingCardMembersFor(null));
-  };
-
-  // Fetch crew stats when detail view opens
-  useEffect(() => {
-    if (!selectedCrewDetail) return;
-    const id = selectedCrewDetail.id;
-    if (crewStats[id]) return; // already loaded
-    profileService.getCrewStats(id).then(stats =>
-      setCrewStats(prev => ({ ...prev, [id]: stats }))
-    );
-  }, [selectedCrewDetail]);
-
-  const [currentSession, setCurrentSession] = useState<CrewSession | null>(activeSession);
-  const [currentRole, setCurrentRole] = useState<CrewRole>(activeRole);
-  const [members, setMembers] = useState<CrewMember[]>([]);
   const [currentUserId, setCurrentUserId] = useState('');
-  const [isHandoffMode, setIsHandoffMode] = useState(false);
 
-  // Pulse animation for LIVE indicator
+  const {
+    currentSession, setCurrentSession,
+    currentRole, setCurrentRole,
+    members, setMembers, loadMembers,
+    isHandoffMode, setIsHandoffMode,
+    handleSessionJoined,
+    executeEndSession,
+    executeLeaveSession,
+    handleHandoffLeadership
+  } = useCrewSession(
+    activeSession, activeRole, currentUserId,
+    onSessionReady, onSessionLeft, onSessionEnded,
+    refreshNearby, 
+    () => setStep('landing'), 
+    setErrorMsg
+  );
+
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -197,8 +188,6 @@ export default function CrewModal({
     pulse.start();
     return () => pulse.stop();
   }, []);
-
-  // ── Load profile display name ───────────────────────────────────────────────
 
   useEffect(() => {
     if (!visible) return;
@@ -216,147 +205,10 @@ export default function CrewModal({
     loadUser();
   }, [visible]);
 
-  // Load permanent crews when hub, create, schedule, or manage opens
-  useEffect(() => {
-    if (!visible) return;
-    if (step !== 'landing' && step !== 'create' && step !== 'schedule' && step !== 'manage') return;
-    profileService.getMyCrew().then((crews: PermanentCrew[]) => {
-      setMyCrews(crews);
-      setPermanentCrews(crews.map(c => ({ id: c.id, name: c.name })));
-    }).catch((e) => { console.warn('[CrewModal] Failed to load my crews:', e); });
-  }, [visible, step]);
-
-  const refreshNearby = () => {
-    setIsLoadingNearby(true);
-    locationService.getNearbyPublicSessions(discoverRadiusMi)
-      .then(s => setNearbySessions(s))
-      .catch(() => { })
-      .finally(() => setIsLoadingNearby(false));
-  };
-
-
-  // Load nearby live sessions when hub opens
-  useEffect(() => {
-    if (!visible) return;
-    const shouldLoad = step === 'landing';
-    if (!shouldLoad) return;
-    refreshNearby();
-  }, [visible, step, discoverRadiusMi]);
-
-  // Search users for invite
-  useEffect(() => {
-    if (!userSearchQuery.trim()) {
-      setUserSearchResults([]);
-      return;
-    }
-    const timer = setTimeout(() => {
-      profileService.searchUsers(userSearchQuery).then(setUserSearchResults);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [userSearchQuery]);
-
-  // Load active sessions for hub → map them to their crew
-  useEffect(() => {
-    if (!visible || step !== 'landing') return;
-    crewService.fetchActiveSessions().then(sessions => {
-      // Build a map from session name → session so crew cards can show inline status
-      const map: Record<string, CrewSession> = {};
-      sessions.forEach(s => { map[s.id] = s; });
-      setActiveSessions(sessions);
-    }).catch((e) => { console.warn('[CrewModal] Failed to load active sessions:', e); });
-  }, [visible, step]);
-
-  // Fetch member counts for My Crews on hub landing
-  useEffect(() => {
-    if (!visible || step !== 'landing' || myCrews.length === 0) return;
-    myCrews.forEach(crew => {
-      if (crewMemberCounts[crew.id]) return;
-      profileService.getCrewMembersForDisplay(crew.id).then(info => {
-        setCrewMemberCounts(prev => ({ ...prev, [crew.id]: info }));
-      }).catch((e) => { console.warn('[CrewModal] Failed to load member counts:', e); });
-    });
-  }, [visible, step, myCrews]);
-
-  // ── Sync props → state ─────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (activeSession) {
-      setCurrentSession(activeSession);
-      setCurrentRole(activeRole);
-      setStep('controller');
-    } else {
-      setStep('landing');
-    }
-  }, [activeSession, activeRole]);
-
-  // ── Members list ───────────────────────────────────────────────────────────
-
-  const loadMembers = useCallback(async () => {
-    if (!currentSession) return;
-    const m = await crewService.fetchMembers(currentSession.id).catch(() => []);
-    setMembers(m);
-  }, [currentSession]);
-
-  useEffect(() => {
-    if (step === 'controller') loadMembers();
-  }, [step, loadMembers]);
-
-  // ── Active sessions browser ────────────────────────────────────────────────
-
-  const loadActiveSessions = useCallback(async () => {
-    setIsLoadingSessions(true);
-    const sessions = await crewService.fetchActiveSessions().catch(() => []);
-    setActiveSessions(sessions);
-    setIsLoadingSessions(false);
-  }, []);
-
-  useEffect(() => {
-    if (step === 'join') loadActiveSessions();
-  }, [step, loadActiveSessions]);
-
-  // ── Location ───────────────────────────────────────────────────────────────
-
-  const handleDetectLocation = async () => {
-    setIsGettingLocation(true);
-    const loc = await locationService.getSessionLocation();
-    setIsGettingLocation(false);
-    if (loc) {
-      setLocationLabel(loc.label);
-      setLocationCoords(loc.coords);
-    } else {
-      Alert.alert('Location Unavailable', 'Could not detect location. You can still create the session without it.');
-    }
-  };
-
-  // ── Session joined helper ──────────────────────────────────────────────────
-
-  const handleSessionJoined = async (session: CrewSession) => {
-    // Use the service's role as source of truth — it was just set by createSession()
-    // or joinSession() and is always correct. Do NOT use currentUserId here because
-    // it loads async and may still be '' when this fires, causing the leader to
-    // incorrectly see themselves as a member (and losing the End button).
-    const role: CrewRole =
-      crewService.currentRole ??                            // set by create/joinSession
-      (session.leader_user_id === currentUserId ? 'leader' : 'member'); // safe fallback
-    setCurrentSession(session);
-    setCurrentRole(role);
-    setStep('controller');
-    loadMembers();
-
-    const lastScene = role === 'member'
-      ? await crewService.fetchLastScene(session.id).catch(() => null)
-      : null;
-
-    onSessionReady(session, role, lastScene);
-  };
-
-  // ── Create ─────────────────────────────────────────────────────────────────
-
   const handleCreate = async (scheduled?: Date) => {
     let sessionName = crewName.trim() || permanentCrews.find(c => c.id === selectedCrewId)?.name || '';
     if (!sessionName) { setErrorMsg('Pick a crew or enter a session name'); return; }
 
-    // Append Date suffix (MM/DD) to ensure unique, traceable sessions
     const now = new Date();
     const dateStr = `${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')}`;
     sessionName = `${sessionName}_${dateStr}`;
@@ -368,7 +220,7 @@ export default function CrewModal({
 
       const opts: Parameters<typeof crewService.createSession>[2] = {
         isPublic: isSessionPublic,
-        crewId:   selectedCrewId ?? undefined,  // links session to permanent crew for reliable hub matching
+        crewId:   selectedCrewId ?? undefined,
       };
       if (locationLabel) opts.locationLabel = locationLabel;
       if (locationCoords) opts.locationCoords = locationCoords;
@@ -380,7 +232,6 @@ export default function CrewModal({
         hasLocation: !!locationLabel, scheduled: !!scheduled, isPublic,
       });
 
-      // Schedule a local push notification 15 min before if this is a future session
       if (scheduled && scheduled > new Date()) {
         const crewLabel = permanentCrews.find(c => c.id === selectedCrewId)?.name ?? sessionName;
         notificationService.sendSessionStartingSoon({
@@ -388,7 +239,7 @@ export default function CrewModal({
           sessionName,
           crewName: crewLabel,
           scheduledAt: scheduled,
-        }).catch(() => { }); // fire-and-forget, non-critical
+        }).catch(() => { }); 
       }
 
       await handleSessionJoined(session);
@@ -398,15 +249,12 @@ export default function CrewModal({
     } finally { setIsLoading(false); }
   };
 
-  // ── Join ───────────────────────────────────────────────────────────────────
-
   const handleJoinByCode = async () => {
     if (inviteCode.trim().length < 6) { setErrorMsg('Enter the 6-character crew invite code'); return; }
     setIsLoading(true); setErrorMsg('');
     try {
       const crew = await profileService.joinPermanentCrew(inviteCode.trim());
       AppLogger.log('CREW_SESSION_JOINED', { crewId: crew.id, crewName: crew.name, method: 'permanent_code' });
-      // Refresh my crews list so the new crew appears immediately
       const updatedCrews = await profileService.getMyCrew();
       setMyCrews(updatedCrews);
       setPermanentCrews(updatedCrews.map(c => ({ id: c.id, name: c.name })));
@@ -435,105 +283,17 @@ export default function CrewModal({
     } finally { setIsLoading(false); }
   };
 
-  // ── Leave ──────────────────────────────────────────────────────────────────
-
   const handleLeave = () => {
-    // If the leaving user IS the leader, ending the session is better than leaving
-    // (avoids a leaderless zombie session). Show the end-session dialog instead.
-    const effectiveIsLeader =
-      currentRole === 'leader' ||
-      currentSession?.leader_user_id === currentUserId;
+    const effectiveIsLeader = currentRole === 'leader' || currentSession?.leader_user_id === currentUserId;
     if (effectiveIsLeader) {
       handleEndSession();
       return;
     }
-    // Use inline confirm instead of Alert.alert (Alert.alert → window.confirm on web,
-    // which is silently blocked by browsers when triggered via synthetic touch events)
     setConfirmAction('leave');
   };
 
-  // ── End Session (leader) ────────────────────────────────────────────────────
-
   const handleEndSession = () => {
-    // Use inline confirm instead of Alert.alert (Alert.alert → window.confirm on web,
-    // which is silently blocked by browsers when triggered via synthetic touch events)
     setConfirmAction('end');
-  };
-
-  /**
-   * Finalizes the active crew session and synchronizes pending
-   * session telemetry (distance, speed) back to the user's permanent profile.
-   */
-  const executeEndSession = async () => {
-    setConfirmAction(null);
-    const currentSessionId = currentSession?.id;
-    try {
-      AppLogger.log('CREW_SESSION_ENDED', { sessionId: currentSessionId, crewName: currentSession?.name, role: 'leader', reason: 'explicit_end' });
-      if (currentSessionId) {
-        // Pre-fetch auth to update lifetime telemetry
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user && (crewService.sessionTelemetry.distanceMiles > 0 || crewService.sessionTelemetry.topSpeedMph > 0)) {
-          const { data: profile } = await supabase.from('user_profiles').select('lifetime_top_speed_mph, lifetime_distance_miles').eq('id', user.id).single();
-          if (profile) {
-            const newDistance = (profile.lifetime_distance_miles || 0) + crewService.sessionTelemetry.distanceMiles;
-            const newTopSpeed = Math.max((profile.lifetime_top_speed_mph || 0), crewService.sessionTelemetry.topSpeedMph);
-            if (newDistance > (profile.lifetime_distance_miles || 0) || newTopSpeed > (profile.lifetime_top_speed_mph || 0)) {
-               await supabase.from('user_profiles').update({
-                 lifetime_distance_miles: newDistance,
-                 lifetime_top_speed_mph: newTopSpeed
-               }).eq('id', user.id);
-            }
-          }
-        }
-        await crewService.endSession(currentSessionId);
-        // Force refresh nearby sessions browser after ending
-        refreshNearby();
-      }
-      setCurrentSession(null); setCurrentRole(null);
-      setIsHandoffMode(false);
-      onSessionEnded();
-      setStep('landing');
-    } catch (e: unknown) {
-      const errorMsg = e instanceof Error ? e.message : 'Could not end session';
-      AppLogger.log('CREW_ERROR', { action: 'end_session', error: errorMsg });
-      setErrorMsg(errorMsg);
-    }
-  };
-
-  const executeLeaveSession = async () => {
-    setConfirmAction(null);
-    AppLogger.log('CREW_SESSION_LEFT', { sessionId: currentSession?.id, role: currentRole });
-    await crewService.leaveSession();
-    // Force refresh nearby sessions browser after leaving
-    refreshNearby();
-    setCurrentSession(null); setCurrentRole(null);
-    setIsHandoffMode(false);
-    onSessionLeft();
-    setStep('landing');
-  };
-
-  // ── Handoff ────────────────────────────────────────────────────────────────
-
-  const handleHandoffLeadership = async (member: CrewMember) => {
-    Alert.alert(
-      'Pass the Leader Hat 👑',
-      `Make ${member.display_name} the new crew leader? They'll control the light show for everyone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Hand Off',
-          onPress: async () => {
-            try {
-              await crewService.transferLeadership(member.user_id);
-              AppLogger.log('CREW_LEADERSHIP_TRANSFERRED', { newLeaderName: member.display_name });
-              setCurrentRole('member');
-              setIsHandoffMode(false);
-              setTimeout(loadMembers, 500);
-            } catch (e: any) { Alert.alert('Error', e.message); }
-          },
-        },
-      ]
-    );
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -928,13 +688,7 @@ export default function CrewModal({
         {/* ── LIVE NEAR YOU ── */}
         <View style={styles.hubSectionRow}>
           <Text style={styles.hubSectionLabel}>🔴 LIVE NEAR YOU</Text>
-          <TouchableOpacity onPress={() => {
-            setIsLoadingNearby(true);
-            locationService.getNearbyPublicSessions(discoverRadiusMi)
-              .then(s => setNearbySessions(s))
-              .catch(() => { })
-              .finally(() => setIsLoadingNearby(false));
-          }}>
+          <TouchableOpacity onPress={() => refreshNearby()}>
             <MaterialCommunityIcons name="refresh" size={15} color={Colors.textMuted} />
           </TouchableOpacity>
         </View>
