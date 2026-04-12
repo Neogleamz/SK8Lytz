@@ -1736,8 +1736,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
              <View style={{ flex: 1, paddingBottom: 40 }}>
                 {/* SLAB 2: CREW HUB (Sessions) */}
                 <View style={[styles.slabContainer, { marginTop: 12 }]}>
-                  <View style={[styles.glassSlab, { borderColor: isOfflineMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,170,0,0.2)', paddingVertical: 40 }]}>
-                    <View style={styles.slabHeader}>
+                  <View style={[styles.glassSlab, { borderColor: isOfflineMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,170,0,0.2)', paddingVertical: isOfflineMode ? 16 : 40 }]}>
+                    <View style={[styles.slabHeader, isOfflineMode && { marginBottom: 8 }]}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <MaterialCommunityIcons name={isOfflineMode ? "cloud-off-outline" : "account-group"} size={18} color={isOfflineMode ? Colors.textMuted : "#FFAA00"} />
                         <Text style={[styles.slabTitle, { color: isOfflineMode ? Colors.textMuted : '#FFAA00' }]}>CREW HUB</Text>

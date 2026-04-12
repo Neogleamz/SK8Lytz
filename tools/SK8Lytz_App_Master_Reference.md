@@ -232,10 +232,18 @@ The app uses a "Search & Enrich" strategy for First Time User Experience (FTUE).
 
 All byte definitions below represent the inner payload *before* the V2 BLE packet wrapper is applied.
 
-### BLE Asynchronous Teardown & GATT 133 Prevention
-> [!WARNING]
-> React Native BLE PLX and the Android native `BluetoothAdapter` suffer from extreme race conditions. If `disconnectFromDevice()` fires overlapping or un-awaited `cancelDeviceConnection()` promises, the Android stack will overflow and throw fatal **GATT 133** exceptions, locking up the adapter and failing future scans.
-> **Rule**: All BLE teardowns MUST be strictly awaited sequentially, with a soft ~250ms buffer added to allow the OS to complete physical teardown before `connectedDevices` state is wiped from the UI. UI components must check an `isDisconnecting` lock to drop all debounced Write promises so they don't fire into a dead stack.
+### BLE Stability Constraints & GATT Error Prevention
+
+> [!CAUTION]
+> React Native BLE PLX and the Android native `BluetoothAdapter` suffer from extreme race conditions. To avoid GATT 133 exceptions, UI freezes, and buffer overflows, all logic must follow these three architectural constraints:
+
+1. **Strict Sequential Teardowns (`GATT 133` Prevention):** If `disconnectFromDevice()` fires overlapping or un-awaited `cancelDeviceConnection()` promises, the Android stack will overflow. 
+   - **Rule:** Teardowns MUST be strictly awaited sequentially using standard `for..of` loops, followed by a soft ~250ms buffer to allow the OS to complete physical teardown before clearing the UI state.
+   - **Latch Requirement:** UI components and the `disconnectFromDevice` function must implement and check an `isDisconnecting` state lock to intercept and drop any debounced Write promises so they don't fire into a dead stack.
+2. **Global Mutex Queue (Parallel Write Crash Prevention):** Calling multiple `writeCharacteristic` commands within milliseconds (e.g. user rapidly dragging a slider) will lock up the adapter.
+   - **Rule:** The `writeToDevice` function must be wrapped in a global Promise Mutex (FIFO queue). No payload chunk can be transmitted until the previous chunk's promise resolves or times out.
+3. **Hard Connection Timeouts (Infinite Freeze Prevention):** BLE promises can silently hang forever.
+   - **Rule:** EVERY connection attempt (`bleManager.connectToDevice()`) MUST include an explicit `{ timeout: 5000 }` parameter. Connect logic should aggressively catch timeout rejects, clear the connection, and reset the state machine.
 
 ### The Transport Wrapper (`wrapCommand`)
 
