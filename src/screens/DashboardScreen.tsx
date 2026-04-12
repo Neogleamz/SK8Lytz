@@ -56,7 +56,7 @@ import CrewMemberDashboard from '../components/CrewMemberDashboard';
 import { profileService, UserProfile } from '../services/ProfileService';
 import { notificationService } from '../services/NotificationService';
 import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
-
+import { AppSettingsService, AppSettingsMap } from '../services/AppSettingsService';
 
 interface DeviceSettings {
   name: string;
@@ -244,6 +244,17 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     migrateLegacyGroups,
     isLoading,
   } = useRegistration();
+
+  const [appSettings, setAppSettings] = useState<AppSettingsMap>({});
+
+  // Fetch app settings on mount — refreshed via AppState if foregrounded
+  useEffect(() => {
+    AppSettingsService.fetchAllSettings().then(setAppSettings);
+    const sub = AppState.addEventListener('change', (s: AppStateStatus) => {
+      if (s === 'active') AppSettingsService.fetchAllSettings().then(setAppSettings);
+    });
+    return () => sub.remove();
+  }, []);
 
   // Sync connected+discovered devices into AppLogger whenever they change
   // so that parsed_session_devices has fresh data at upload time
@@ -1750,10 +1761,15 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                       )}
                     </View>
 
-                    {isOfflineMode ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' }}>
-                        <MaterialCommunityIcons name="wifi-off" size={16} color="#ff4444" style={{ marginRight: 8 }} />
-                        <Text style={[styles.slabEmptyText, { color: '#ff4444', flex: 1, fontFamily: 'Righteous', fontSize: 11 }]}>NETWORK DISCONNECTED</Text>
+                    {appSettings['global_crew_hub_locked'] ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+                        <MaterialCommunityIcons name="lock-outline" size={16} color={Colors.textMuted} style={{ marginRight: 8 }} />
+                        <Text style={[styles.slabEmptyText, { color: Colors.textMuted, flex: 1, fontSize: 11 }]}>FEATURE TEMPORARILY DISABLED BY ADMIN</Text>
+                      </View>
+                    ) : isOfflineMode ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+                        <MaterialCommunityIcons name="cloud-off-outline" size={16} color={Colors.textMuted} style={{ marginRight: 8 }} />
+                        <Text style={[styles.slabEmptyText, { color: Colors.textMuted, flex: 1, fontSize: 11 }]}>Go online to sync lights with nearby skaters.</Text>
                       </View>
                     ) : crewSession ? (
                       <TouchableOpacity
