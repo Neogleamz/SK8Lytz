@@ -1,27 +1,14 @@
-# Plan: `gate-offline-mode`
+# [GATE] Offline Mode Stability
 
-### Design Decisions & Rationale
-Online-only features (Crew Hub, Community Favorites, SK8Lytz Picks) should be gracefully disabled when the Supabase session is unavailable. We use the existing `isOnline` / auth context state already tracked in the app, and wrap online-only UI sections with a conditional render that substitutes an "Offline" overlay rather than fully removing the card (to avoid jarring layout shifts).
-
----
+## Goal
+Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning.
 
 ## Proposed Changes
-
-### [MODIFY] `src/screens/DashboardScreen.tsx`
-- Identify the Crew Hub card render block.
-- Wrap it: if `!isOnline`, render the card at reduced opacity (50%) with an "📡 Offline" badge instead of hiding it entirely.
-- Community Favorites section: show a "Requires connection" empty state placeholder.
-- SK8Lytz Picks carousel: show a "Requires connection" empty state.
-
-### [MODIFY] `src/components/CrewModal.tsx`
-- On mount, if `!isOnline`, prevent tab navigation into the discovery/join flows and show a banner at the top: "Crew Hub requires internet. Connect to join sessions."
-
----
-
-## Open Questions
-- **Q:** Should the "Offline" Crew Hub card still be tappable (leading to the modal with an offline banner), or completely non-interactive?
+- Implement `useNetworkStatus` hook.
+- Disable 'Join' buttons in `CrewModal` when offline.
+- Add "Offline Mode" banner to `CommunityFavorites`.
+- Gray out `Sk8LytzPicks` feed.
 
 ## Verification Plan
-1. Enable airplane mode on the test device.
-2. Open the Dashboard.
-3. Confirm Crew Hub card shows as "Offline" teaser, Community section shows empty state, and no networking calls throw errors to the console.
+- Toggle Airplane mode.
+- Verify UI states update dynamically.

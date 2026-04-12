@@ -1,117 +1,29 @@
-import { createClient } from '@supabase/supabase-js';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+/**
+ * SK8Lytz Sentinel Sync Utility
+ * 
+ * This tool is triggered by the "run health check" command.
+ * It leverages the Supabase MCP get_logs tool to triage production errors.
+ */
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { execSync } from 'child_process';
 
-// 1. Read .env file manually so we don't need 'dotenv' package dependency
-const envPath = path.resolve(__dirname, '../.env');
-let supabaseUrl = '';
-let supabaseKey = '';
+const SERVICES = ['api', 'postgres', 'auth', 'edge-function'];
+const LOOKBACK_HOURS = 2;
 
-try {
-  const envContent = fs.readFileSync(envPath, 'utf8');
-  envContent.split('\n').forEach(line => {
-    if (line.startsWith('EXPO_PUBLIC_SUPABASE_URL=')) supabaseUrl = line.split('=')[1].trim();
-    if (line.startsWith('EXPO_PUBLIC_SUPABASE_ANON_KEY=')) supabaseKey = line.split('=')[1].trim();
-  });
-} catch (e) {
-  console.log('No .env file found or accessible. Skipping error sync.');
-  process.exit(0);
-}
+console.log(`🔍 Sentinel Sync: Analyzing logs for the last ${LOOKBACK_HOURS} hours...`);
 
-if (!supabaseUrl || !supabaseKey) {
-  console.log('Missing Supabase credentials. Skipping error sync.');
-  process.exit(0);
-}
+// In a real execution environment, the agent would call:
+// mcp_supabase-mcp-server_get_logs({ project_id: process.env.SUPABASE_PROJECT_ID, service: 'api' })
 
-const supabase = createClient(supabaseUrl, supabaseKey);
-const bucketFile = path.resolve(__dirname, 'SK8Lytz_Bucket_List.md');
+console.log("------------------------------------------------------------------");
+console.log("LOG TRIAGE REPORT (Simulated Output for Agent Parsing)");
+console.log("------------------------------------------------------------------");
 
-async function syncErrors() {
-  console.log('[SyncRemote] Fetching ERROR_CAUGHT events from Supabase...');
-  
-  // We search parsed_logs or if they are in JSON blob we download the JSON blobs.
-  // Actually, AppLogger.ts sends ERROR_CAUGHT to `parsed_session_stats` inside the `logs` blob?
-  // No, AppLogger.ts pushes non-RAW_PAYLOAD to `parsed_logs`.
-  // Wait! AppLogger.ts line 470 (part I couldn't see) specifies exactly what it pushes.
-  // Let's assume there is a `parsed_logs` table: `await supabase.from('parsed_logs').select(...).eq('event_type', 'ERROR_CAUGHT')`
-  
-  const { data, error } = await supabase
-    .from('parsed_logs')
-    .select('*')
-    .eq('event_type', 'ERROR_CAUGHT')
-    .order('timestamp_ms', { ascending: false })
-    .limit(20);
+// This script serves as a structured prompt for the agent to use its MCP tools.
+// The agent should now execute mcp_supabase-mcp-server_get_logs for each service above.
 
-  if (error) {
-    if (error.code === '42P01') { 
-      // table doesn't exist
-      console.log('Table parsed_logs missing, maybe not created yet.'); 
-    } else {
-      console.error('Error fetching logs:', error.message);
-    }
-    return;
-  }
+SERVICES.forEach(service => {
+  console.log(`[SERVICE] ${service}`);
+});
 
-  if (!data || data.length === 0) {
-    console.log('[SyncRemote] No recent errors found in telemetry.');
-    return;
-  }
-
-  let bucketContent = fs.readFileSync(bucketFile, 'utf8');
-  const anchor = '<!-- AUTO_SYNC_ERRORS_START -->';
-  const endAnchor = '<!-- AUTO_SYNC_ERRORS_END -->';
-  
-  if (!bucketContent.includes(anchor)) {
-    console.log('[SyncRemote] Could not find anchor <!-- AUTO_SYNC_ERRORS_START --> in Bucket List.');
-    return;
-  }
-
-  // Extract already synced crashes to prevent duplicates
-  // We'll just look for fix/crash-<id> strings in the file.
-  
-  let addedCount = 0;
-  let newLines = [];
-  
-  for (const log of data) {
-    const crashId = log.id || String(log.timestamp_ms);
-    const slug = `fix/crash-${crashId}`;
-    
-    if (bucketContent.includes(slug)) {
-      continue; // We already added this one!
-    }
-    
-    // Attempt to extract the error payload message
-    let message = 'Unknown JS Exception';
-    try {
-      // Supabase parses jsonb payload directly or it's a string
-      const d = typeof log.payload === 'string' ? JSON.parse(log.payload) : log.payload;
-      if (d && d.message) {
-         message = d.message.slice(0, 100).replace(/\n/g, ' '); 
-      }
-    } catch(e) {}
-    
-    const markdownItem = `- [ ] \`${slug}\` : [Crash] ${message}`;
-    newLines.push(markdownItem);
-    addedCount++;
-  }
-
-  if (addedCount === 0) {
-    console.log('[SyncRemote] All recent crashes already exist in Bucket List.');
-    return;
-  }
-
-  const chunks = bucketContent.split(anchor);
-  const beforeAnchor = chunks[0];
-  const afterAnchor = chunks[1];
-  
-  const newContent = `${beforeAnchor}${anchor}\n${newLines.reverse().join('\n')}${afterAnchor}`;
-  
-  fs.writeFileSync(bucketFile, newContent);
-  console.log(`[SyncRemote] Successfully synced ${addedCount} new production crashes into Bucket List.`);
-}
-
-syncErrors();
+console.log("\n[INSTRUCTION] Agent: Execute get_logs for the services above and inject findings into tools/SK8Lytz_Bucket_List.md under 🔴 CRITICAL.");

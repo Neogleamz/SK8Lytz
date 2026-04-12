@@ -446,6 +446,31 @@ We believe that AI coding shouldn't be a "black box." By enforcing strict intake
 
 ---
 
+## 8. Sentinel Engineering Governance (Workflow V6)
+
+*Added: 2026-04-12 | Doctrine: "Stability-First"*
+
+The SK8Lytz development lifecycle is governed by the **Sentinel Engine**, a deterministic framework designed for high-reliability engineering.
+
+### Strategic Priority Hierarchy
+1.  **CRITICAL**: Performance, Stability & Security (Crashes, RLS Blocks).
+2.  **HIGH**: Engineering Excellence & Tech Debt (Refactors, FSMs).
+3.  **MEDIUM**: Compliance & Governance (EULA, Admin).
+4.  **LOW**: New Features & UI Polish.
+
+### Mandatory Safety Governors
+- **Safe-Commit Anchors**: For all `[H-RISK]` tasks, a git restore point is created immediately after branching to ensure 100% rollback reliability.
+- **The Senior Auditor (Step 6.5)**: Every task is blocked from transition until a mandatory "Self-Review & Refactor" pass is completed by the AI persona acting as a Senior Auditor.
+- **Devil's Advocate Gate**: All `[Feast]` items require a formal pre-mortem identifying 3 failure points before planning.
+- **Knowledge Audit Gate**: Merge blocks are enforced until this Master Reference is synced with the session's new architectural truths.
+
+### Velocity Protocols
+- **Turbo Step (`// turbo`)**: Authorized auto-run for terminal commands to reduce user approval friction.
+- **Snack Autopilot**: Zero-bypass execution allowed for tasks meeting the **`[BATCH]` + `[Snack]` + `[L-RISK]`** criteria.
+- **T-Shirt Sizing**: All tasks must be tagged `[Snack]` (<15m), `[Meal]` (1-2h), or `[Feast]` (Multi-day).
+
+---
+
 ### Developer Tooling & Distribution
 
 #### **Agentic PM Starter Kit**
