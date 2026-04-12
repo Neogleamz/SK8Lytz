@@ -62,14 +62,14 @@ export default function Sk8LytzProgrammerModal({
   const txtPri   = Colors.text;
   const txtMuted = Colors.textMuted;
   const border   = Colors.surfaceHighlight;
-  const cyan     = '#00f0ff';
+  const cyan     = Colors.primary;
   const orange   = Colors.primary;
   const amber    = Colors.secondary;
 
   useEffect(() => {
     if (visible) AppLogger.log('SCREEN_OPENED', { screenName: 'Device Auto-Programmer' });
   }, [visible]);
-  const green    = '#00e887';
+  const green    = '#00e887'; // Keep green for success
 
   // ─── State ──────────────────────────────────────────────────────────────────
   const [scannedDevices, setScannedDevices] = useState<ScannedDevice[]>([]);
@@ -248,19 +248,16 @@ export default function Sk8LytzProgrammerModal({
       <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
 
         {/* ── Header ── */}
-        <View style={[s.topBar, { borderBottomColor: border }]}>
-          <View>
-            <Text style={[Typography.title, { color: orange, fontSize: 18 }]}>⚡ BATCH PROGRAMMER</Text>
+        <View style={[s.topBar, { borderBottomColor: border, paddingTop: insets.top || 16, paddingBottom: 16 }]}>
+          <TouchableOpacity onPress={onClose} style={s.backBtn}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={[Typography.title, { color: Colors.text, fontSize: 18, textTransform: 'uppercase', letterSpacing: 1.5 }]}>⚡ BATCH PROGRAMMER</Text>
             <Text style={{ color: txtMuted, fontSize: 11, marginTop: 2 }}>
               Configure multiple controllers instantly
             </Text>
           </View>
-          <TouchableOpacity
-            style={[s.exitBtn, { borderColor: 'rgba(255,60,60,0.4)', backgroundColor: 'rgba(255,60,60,0.1)' }]}
-            onPress={() => { if (onExitToLogs) onExitToLogs(); else onClose(); }}
-          >
-            <Text style={{ color: '#FF8888', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>EXIT</Text>
-          </TouchableOpacity>
         </View>
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
@@ -445,13 +442,12 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomWidth: 1,
+    backgroundColor: Colors.surface,
+    borderColor: Colors.surfaceHighlight,
   },
-  exitBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
+  backBtn: {
+    marginRight: 16,
+    padding: 4,
   },
   card: {
     borderRadius: 12,
@@ -465,16 +461,19 @@ const s = StyleSheet.create({
   },
   configBtn: {
       borderWidth: 1,
-      borderRadius: 8,
+      borderRadius: 12,
       padding: 12,
       alignItems: 'center',
-      backgroundColor: 'rgba(255,255,255,0.03)'
+      backgroundColor: Colors.background,
+      borderColor: Colors.surfaceHighlight,
   },
   deviceCard: {
     borderRadius: 12,
     borderWidth: 1,
     padding: 12,
     marginBottom: 8,
+    backgroundColor: Colors.surface,
+    borderColor: Colors.surfaceHighlight,
   },
   footer: {
       position: 'absolute',

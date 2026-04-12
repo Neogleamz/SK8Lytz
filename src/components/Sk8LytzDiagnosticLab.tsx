@@ -165,7 +165,7 @@ export default function Sk8LytzDiagnosticLab({
   const txtPri  = Colors.text;
   const txtMuted= Colors.textMuted;
   const border  = Colors.surfaceHighlight;
-  const cyan    = '#00f0ff';
+  const cyan    = Colors.primary;
 
   const { registeredDevices } = useRegistration();
 
@@ -922,22 +922,19 @@ export default function Sk8LytzDiagnosticLab({
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
-        {/* Header (Aligned with Programmer) */}
-        <View style={[S.header, { borderBottomColor: border, paddingTop: insets.top }]}>
-          <View>
-            <Text style={[Typography.title, { color: cyan, fontSize: 18 }]}>⚡ LED DIAGNOSTIC LAB</Text>
+        {/* Header (Aligned with AdminTools) */}
+        <View style={[S.header, { borderBottomColor: border, paddingTop: insets.top || 16 }]}>
+          <TouchableOpacity onPress={onClose} style={S.backBtn}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={[Typography.title, { color: Colors.text, fontSize: 18, textTransform: 'uppercase', letterSpacing: 1.5 }]}>🔬 LED DIAGNOSTIC LAB</Text>
             <Text style={{ color: txtMuted, fontSize: 11, marginTop: 2 }}>
               {connectedDevices.length > 0 
                 ? `Probing: ${connectedDevices.map(d => d.name || d.id.slice(-5)).join(', ')}` 
                 : 'Hardware telemetry & protocol debugger'}
             </Text>
           </View>
-          <TouchableOpacity
-            style={S.exitBtn}
-            onPress={onClose}
-          >
-            <Text style={{ color: '#FF8888', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>EXIT</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Tab Bar */}
@@ -947,10 +944,10 @@ export default function Sk8LytzDiagnosticLab({
             return (
               <TouchableOpacity
                 key={t}
-                style={[S.tabBtn, active && S.tabBtnActive]}
+                style={[S.tabBtn, active && { borderBottomColor: Colors.primary }]}
                 onPress={() => setTab(t)}
               >
-                <Text style={[S.tabBtnTxt, active && S.tabBtnTxtActive, { color: active ? cyan : txtMuted }]}>
+                <Text style={[S.tabBtnTxt, active && { color: Colors.primary }, { color: active ? Colors.primary : txtMuted }]}>
                   {t}
                 </Text>
               </TouchableOpacity>
@@ -983,13 +980,9 @@ const S = StyleSheet.create({
     paddingBottom: 16, 
     borderBottomWidth: 1 
   },
-  exitBtn: { 
-    paddingHorizontal: 16, 
-    paddingVertical: 8, 
-    borderRadius: 8, 
-    borderWidth: 1, 
-    backgroundColor: 'rgba(255,60,60,0.1)', 
-    borderColor: 'rgba(255,60,60,0.3)' 
+  backBtn: {
+    marginRight: 16,
+    padding: 4,
   },
   title: { color: '#FFF', fontSize: 18, fontWeight: '900', letterSpacing: 1.5 },
   tabBar: { flexDirection: 'row', borderBottomWidth: 1 },
@@ -1010,16 +1003,16 @@ const S = StyleSheet.create({
   hwBadge: { 
     flexDirection: 'row', 
     flexWrap: 'wrap', 
-    backgroundColor: '#141829', 
+    backgroundColor: Colors.surface, 
     padding: 12, 
     borderRadius: 12, 
     marginBottom: 20, 
     borderWidth: 1, 
-    borderColor: '#252c47', 
+    borderColor: Colors.surfaceHighlight, 
     alignItems: 'center' 
   },
-  hwBadgeLabel: { color: '#8a96b3', fontSize: 11 },
-  hwBadgeVal: { fontSize: 11, fontWeight: 'bold' },
+  hwBadgeLabel: { color: Colors.textMuted, fontSize: 11 },
+  hwBadgeVal: { fontSize: 11, fontWeight: 'bold', color: Colors.text },
   colorBtnRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
   bigColorBtn: { 
     flex: 1, 
@@ -1030,18 +1023,18 @@ const S = StyleSheet.create({
     borderWidth: 1.5 
   },
   diagBox: { 
-    backgroundColor: '#141829', 
+    backgroundColor: Colors.surface, 
     borderWidth: 1, 
-    borderColor: '#252c47', 
+    borderColor: Colors.surfaceHighlight, 
     borderRadius: 12, 
     padding: 16, 
     marginBottom: 12 
   },
   diagLine: { fontSize: 11, lineHeight: 20 },
   sentBox: { 
-    backgroundColor: '#0a0d18', 
+    backgroundColor: Colors.background, 
     borderWidth: 1, 
-    borderColor: '#252c47', 
+    borderColor: Colors.surfaceHighlight, 
     borderRadius: 12, 
     padding: 14, 
     marginTop: 8 
@@ -1049,9 +1042,9 @@ const S = StyleSheet.create({
   transBtn: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    backgroundColor: '#141829', 
+    backgroundColor: Colors.background, 
     borderWidth: 1, 
-    borderColor: '#252c47', 
+    borderColor: Colors.surfaceHighlight, 
     borderRadius: 12, 
     padding: 16, 
     marginBottom: 10 
@@ -1073,20 +1066,20 @@ const S = StyleSheet.create({
     marginBottom: 12 
   },
   numInput: { 
-    backgroundColor: '#141829', 
-    color: '#FFF', 
+    backgroundColor: Colors.surface, 
+    color: Colors.text, 
     borderWidth: 1, 
-    borderColor: '#252c47', 
+    borderColor: Colors.surfaceHighlight, 
     borderRadius: 10, 
     padding: 10, 
     fontSize: 14, 
     textAlign: 'center' 
   },
   hexInput: { 
-    backgroundColor: '#0a0d18', 
+    backgroundColor: Colors.background, 
     color: '#00f0ff', 
     borderWidth: 1, 
-    borderColor: '#252c47', 
+    borderColor: Colors.surfaceHighlight, 
     borderRadius: 12, 
     padding: 16, 
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', 
@@ -1097,16 +1090,16 @@ const S = StyleSheet.create({
     paddingHorizontal: 14, 
     paddingVertical: 8, 
     borderRadius: 20, 
-    backgroundColor: '#141829', 
+    backgroundColor: Colors.surface, 
     borderWidth: 1, 
-    borderColor: '#252c47' 
+    borderColor: Colors.surfaceHighlight 
   },
   chipActive: { 
-    backgroundColor: 'rgba(0,240,255,0.1)', 
-    borderColor: '#00f0ff' 
+    backgroundColor: 'rgba(255, 90, 0, 0.1)', 
+    borderColor: Colors.primary 
   },
   txBtn: { 
-    backgroundColor: '#00ccff', 
+    backgroundColor: Colors.primary, 
     justifyContent: 'center', 
     alignItems: 'center', 
     paddingVertical: 18, 
@@ -1114,9 +1107,9 @@ const S = StyleSheet.create({
     marginTop: 12 
   },
   presetBtn: { 
-    backgroundColor: '#141829', 
+    backgroundColor: Colors.surface, 
     borderWidth: 1, 
-    borderColor: '#252c47', 
+    borderColor: Colors.surfaceHighlight, 
     borderRadius: 12, 
     padding: 16 
   },

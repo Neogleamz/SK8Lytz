@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
+import { Typography } from '../theme/theme';
 import { supabase } from '../services/supabaseClient';
 import PositionalGradientBuilder from './PositionalGradientBuilder';
 import { BuilderNode } from '../protocols/PositionalMathBuffer';
@@ -222,25 +224,28 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
     }
   };
 
-  const bg = '#FFFFFF';
-  const textPrimary = '#000000';
-  const textMuted = '#444444';
-  const cardBg = '#F8F8F8';
-  const borderColor = '#CCCCCC';
+  const { Colors, isDark } = useTheme();
+  const bg = Colors.background;
+  const textPrimary = Colors.text;
+  const textMuted = Colors.textMuted;
+  const cardBg = Colors.surface;
+  const borderColor = Colors.surfaceHighlight;
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
-        <View style={[styles.header, { borderBottomColor: borderColor }]}>
-          <Text style={[styles.title, { color: textPrimary }]}>🗓️ SK8Lytz Picks Scheduler</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity onPress={() => setCreateModalVisible(true)} style={{ marginRight: 16, backgroundColor: '#00AAFF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}>
-              <Text style={{ color: '#FFF', fontWeight: 'bold' }}>+ New Pick</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <MaterialCommunityIcons name="close" size={24} color={textPrimary} />
-            </TouchableOpacity>
+        <View style={[styles.header, { borderBottomColor: borderColor, paddingTop: Platform.OS === 'android' ? 16 : 0 }]}>
+          <TouchableOpacity onPress={onClose} style={styles.backBtn}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={[Typography.title, { color: Colors.text, fontSize: 18, textTransform: 'uppercase', letterSpacing: 1.5 }]} numberOfLines={1}>
+              🗓️ PICKS SCHEDULER
+            </Text>
           </View>
+          <TouchableOpacity onPress={() => setCreateModalVisible(true)} style={{ backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}>
+            <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 12 }}>+ NEW</Text>
+          </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.content}>
@@ -339,12 +344,14 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
         )}
          {/* Create New Pick Modal */}
          <Modal visible={createModalVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setCreateModalVisible(false)}>
-           <SafeAreaView style={{ flex: 1, backgroundColor: '#1E1E1E' }}>
-             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' }}>
-               <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>Create New Pick</Text>
-               <TouchableOpacity onPress={() => setCreateModalVisible(false)}>
-                 <MaterialCommunityIcons name="close" size={24} color="#FFF" />
+           <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
+             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: Colors.surfaceHighlight, paddingTop: Platform.OS === 'android' ? 16 : 0 }}>
+               <TouchableOpacity onPress={() => setCreateModalVisible(false)} style={{ padding: 4 }}>
+                 <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.primary} />
                </TouchableOpacity>
+               <View style={{ flex: 1, marginLeft: 16 }}>
+                 <Text style={[Typography.title, { color: Colors.text, fontSize: 18, textTransform: 'uppercase', letterSpacing: 1.5 }]} numberOfLines={1}>CREATE NEW PICK</Text>
+               </View>
              </View>
              
              <ScrollView style={{ flex: 1, padding: 16 }}>
@@ -442,10 +449,9 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1, paddingTop: Platform.OS === 'android' ? 10 : 0
+    paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, paddingTop: Platform.OS === 'android' ? 10 : 0
   },
-  title: { fontSize: 20, fontWeight: '800', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  closeBtn: { padding: 4 },
+  backBtn: { marginRight: 16, padding: 4 },
   content: { flex: 1, padding: 16 },
   instructions: { fontSize: 12, lineHeight: 18, marginBottom: 16, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   card: { padding: 16, borderRadius: 8, borderWidth: 1, marginBottom: 16 },
@@ -453,11 +459,11 @@ const styles = StyleSheet.create({
   pickName: { fontSize: 16, fontWeight: '800', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   pickMode: { fontSize: 12, marginTop: 4, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   dateRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 6 },
-  dateChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.05)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
-  addDateBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#000000', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  dateChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: Colors.surfaceHighlight },
+  addDateBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
   iosDatePickerOverlay: {
     position: 'absolute', bottom: 0, left: 0, right: 0, 
-    backgroundColor: '#FFFFFF', paddingBottom: 30, borderTopWidth: 1, borderTopColor: '#CCC'
+    backgroundColor: Colors.surface, paddingBottom: 30, borderTopWidth: 1, borderTopColor: Colors.surfaceHighlight
   },
-  iosDatePickerActions: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, backgroundColor: '#F8F8F8', borderBottomWidth: 1, borderBottomColor: '#EEE' }
+  iosDatePickerActions: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, backgroundColor: Colors.background, borderBottomWidth: 1, borderBottomColor: Colors.surfaceHighlight }
 });

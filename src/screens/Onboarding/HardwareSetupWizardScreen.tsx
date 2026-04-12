@@ -27,9 +27,6 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
   const [groupName, setGroupName] = useState('');
   const [deviceConfigsState, setDeviceConfigsState] = useState<Record<string, {name: string, type: string, position: 'Left'|'Right'|null, points: number}>>({});
 
-  useEffect(() => {
-    // Wait for user to hit next. Devices are NOT auto-selected based on user feedback.
-  }, [pendingRegistrations, hasStartedScan, isScanning]);
 
   useEffect(() => {
     if (!hasStartedScan && isBluetoothSupported && isBluetoothEnabled) {
@@ -38,7 +35,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
   }, [hasStartedScan, isBluetoothSupported, isBluetoothEnabled]);
 
   useEffect(() => {
-    let timer: any;
+    let timer: NodeJS.Timeout;
     if (hasStartedScan && step < 3 && !isScanning && !isScanProbing) {
       // Keep continuously polling while the user is still looking for hardware (Wait 2s to let radio breathe)
       timer = setTimeout(() => {
@@ -227,23 +224,19 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
             <MaterialCommunityIcons name="skate" size={48} color={Colors.primary} />
           </View>
         )}
-        <Text style={[Typography.title, styles.title, { marginBottom: 4 }]}>Name Your Skates</Text>
-        <Text style={[styles.subtitle, { marginBottom: 12 }]}>
-          Assign them to a Fleet and designate left or right.
-        </Text>
-
-        <ScrollView style={styles.scrollViewWrapper} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-          {/* Group */}
-          <Text style={styles.label}>FLEET / GROUP NAME</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <Text style={[Typography.title, styles.title, { marginBottom: 0, fontSize: 18 }]}>Name Your Skates</Text>
           <TextInput 
-            style={[styles.input, { paddingVertical: 10, paddingHorizontal: 12 }]} 
+            style={[styles.input, { flex: 1, marginLeft: 16, paddingVertical: 8, paddingHorizontal: 12, fontSize: 13, height: 36 }]} 
             value={groupName} 
             onChangeText={setGroupName}
-            placeholder="e.g. My Skates" 
+            placeholder="Fleet Name (e.g. My Skates)" 
             placeholderTextColor={Colors.textMuted} 
             maxLength={32} 
           />
+        </View>
 
+        <ScrollView style={styles.scrollViewWrapper} contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
           {selected.map((device, idx) => {
             const config = deviceConfigsState[device.device_mac] || { name: '', type: LOCAL_PRODUCT_CATALOG[0].id, position: null, points: LOCAL_PRODUCT_CATALOG[0].defaultLedPoints };
             
@@ -256,9 +249,19 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
 
             return (
               <View key={device.device_mac} style={styles.deviceConfigCard}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, justifyContent: 'space-between' }}>
-                  <MaterialCommunityIcons name="bluetooth" size={18} color={Colors.primary} style={{ marginRight: 8 }} />
-                  <Text style={styles.deviceConfigTitle}>Network ID: {device.device_mac.slice(-5)}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                  <MaterialCommunityIcons name="bluetooth" size={16} color={Colors.primary} />
+                  <Text style={[styles.deviceConfigTitle, { fontSize: 11, opacity: 0.6 }]}>ID: {device.device_mac.slice(-5)}</Text>
+                  
+                  <TextInput 
+                    style={[styles.inputSmall, { flex: 1, paddingVertical: 4, height: 32, fontSize: 13 }]} 
+                    value={config.name} 
+                    onChangeText={(t) => updateConfig('name', t)}
+                    placeholder="Device Label (e.g. Left)" 
+                    placeholderTextColor={Colors.textMuted} 
+                    maxLength={20} 
+                  />
+
                   <TouchableOpacity 
                     style={[styles.blinkBtn, isBlinking === device.device_mac && styles.blinkBtnActive, { paddingVertical: 4, paddingHorizontal: 8 }]}
                     onPress={() => handleBlinkDevice(device.device_mac)}
@@ -266,58 +269,42 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                   >
                     <MaterialCommunityIcons 
                       name="shield-sun" 
-                      size={14} 
+                      size={12} 
                       color={isBlinking === device.device_mac ? '#000' : Colors.text} 
                     />
-                    <Text style={[styles.blinkBtnText, isBlinking === device.device_mac && { color: '#000' }]}>
-                      {isBlinking === device.device_mac ? 'BLINKING' : 'BLINK'}
-                    </Text>
                   </TouchableOpacity>
                 </View>
 
-                {/* Name */}
-                <Text style={styles.labelSmall}>DEVICE NAME</Text>
-                <TextInput 
-                  style={[styles.inputSmall, { paddingVertical: 8 }]} 
-                  value={config.name} 
-                  onChangeText={(t) => updateConfig('name', t)}
-                  placeholder="e.g. Left Skate" 
-                  placeholderTextColor={Colors.textMuted} 
-                  maxLength={32} 
-                />
-
-                <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 4, alignItems: 'center' }}>
                   {/* Type */}
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.labelSmall}>TYPE</Text>
-                    <View style={styles.segRow}>
+                    <View style={[styles.segRow, { padding: 2 }]}>
                       {LOCAL_PRODUCT_CATALOG.map(p => (
                         <TouchableOpacity 
                           key={p.id}
-                          style={[styles.segBtn, config.type === p.id && styles.segBtnActive]}
+                          style={[styles.segBtn, { paddingVertical: 6 }, config.type === p.id && styles.segBtnActive]}
                           onPress={() => updateConfig('type', p.id)}
                         >
-                           <Text style={[styles.segBtnText, config.type === p.id && { color: '#000' }]}>{p.id}</Text>
+                           <Text style={[styles.segBtnText, { fontSize: 10 }, config.type === p.id && { color: '#000' }]}>{p.id}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
                   </View>
 
                   {/* Position */}
-                  <View style={{ flex: 1.5 }}>
-                    <Text style={styles.labelSmall}>POSITION</Text>
-                    <View style={styles.segRow}>
+                  <View style={{ flex: 1 }}>
+                    <View style={[styles.segRow, { padding: 2 }]}>
                       <TouchableOpacity 
-                        style={[styles.segBtn, config.position === 'Left' && styles.segBtnActive]}
+                        style={[styles.segBtn, { paddingVertical: 6 }, config.position === 'Left' && styles.segBtnActive]}
                         onPress={() => updateConfig('position', 'Left')}
                       >
-                         <Text style={[styles.segBtnText, config.position === 'Left' && { color: '#000' }]}>Left</Text>
+                         <Text style={[styles.segBtnText, { fontSize: 10 }, config.position === 'Left' && { color: '#000' }]}>Left</Text>
                       </TouchableOpacity>
                       <TouchableOpacity 
-                        style={[styles.segBtn, config.position === 'Right' && styles.segBtnActive]}
+                        style={[styles.segBtn, { paddingVertical: 6 }, config.position === 'Right' && styles.segBtnActive]}
                         onPress={() => updateConfig('position', 'Right')}
                       >
-                         <Text style={[styles.segBtnText, config.position === 'Right' && { color: '#000' }]}>Right</Text>
+                         <Text style={[styles.segBtnText, { fontSize: 10 }, config.position === 'Right' && { color: '#000' }]}>Right</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -325,20 +312,18 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
 
                 {/* Adjust Points (only for non-RING products, e.g. SOULZ, RAILZ — not HALOZ) */}
                 {(getLocalProfileById(config.type)?.vizShape !== 'RING') && (
-                  <View style={{ marginTop: 12, backgroundColor: Colors.surfaceHighlight, borderRadius: 12, padding: 8 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Text style={[styles.labelSmall, { flex: 1, marginBottom: 0 }]}>LED COUNT (TRIM IF CUT)</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: 8 }}>
-                        <TouchableOpacity style={{ padding: 10 }} onPress={() => updateConfig('points', Math.max(1, config.points - 1))}>
-                          <MaterialCommunityIcons name="minus" size={18} color={Colors.text} />
-                        </TouchableOpacity>
-                        <Text style={{ color: Colors.text, fontSize: 15, fontWeight: 'bold', width: 32, textAlign: 'center' }}>
-                          {config.points}
-                        </Text>
-                        <TouchableOpacity style={{ padding: 10 }} onPress={() => updateConfig('points', Math.min(200, config.points + 1))}>
-                          <MaterialCommunityIcons name="plus" size={18} color={Colors.text} />
-                        </TouchableOpacity>
-                      </View>
+                  <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: Colors.surfaceHighlight, borderRadius: 8, padding: 4, paddingHorizontal: 8 }}>
+                    <Text style={[styles.labelSmall, { marginBottom: 0, fontSize: 9 }]}>LED COUNT TRIM</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: 6 }}>
+                      <TouchableOpacity style={{ padding: 6 }} onPress={() => updateConfig('points', Math.max(1, config.points - 1))}>
+                        <MaterialCommunityIcons name="minus" size={14} color={Colors.text} />
+                      </TouchableOpacity>
+                      <Text style={{ color: Colors.text, fontSize: 13, fontWeight: 'bold', width: 28, textAlign: 'center' }}>
+                        {config.points}
+                      </Text>
+                      <TouchableOpacity style={{ padding: 6 }} onPress={() => updateConfig('points', Math.min(200, config.points + 1))}>
+                        <MaterialCommunityIcons name="plus" size={14} color={Colors.text} />
+                      </TouchableOpacity>
                     </View>
                   </View>
                 )}
@@ -534,9 +519,9 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
 function createStyles(Colors: any) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.background || '#0D0D0D' },
-    content: { flex: 1, padding: 12, justifyContent: 'center', alignItems: 'center' },
-    title: { color: Colors.text || '#fff', fontSize: 24, textAlign: 'center', marginBottom: 4 },
-    subtitle: { color: Colors.textMuted || '#888', fontSize: 13, textAlign: 'center', marginBottom: 12, lineHeight: 18 },
+    content: { flex: 1, padding: 8, justifyContent: 'center', alignItems: 'center' },
+    title: { color: Colors.text || '#fff', fontSize: 20, textAlign: 'center', marginBottom: 2 },
+    subtitle: { color: Colors.textMuted || '#888', fontSize: 12, textAlign: 'center', marginBottom: 8, lineHeight: 16 },
     instructionCard: {
       backgroundColor: Colors.surface,
       borderWidth: 1, borderColor: Colors.surfaceHighlight,
@@ -544,9 +529,9 @@ function createStyles(Colors: any) {
     },
     instructionHeader: { color: Colors.primary || '#00f0ff', fontWeight: 'bold', fontSize: 13, marginBottom: 4 },
     instructionBody: { color: Colors.textMuted || '#888', fontSize: 13, lineHeight: 18 },
-    helpLink: { flexDirection: 'row', alignItems: 'center', marginTop: 24, gap: 6 },
-    helpText: { color: Colors.textMuted, fontSize: 13, textDecorationLine: 'underline' },
-    footer: { padding: 12, paddingBottom: Platform.OS === 'ios' ? 0 : 12 },
+    helpLink: { flexDirection: 'row', alignItems: 'center', marginTop: 16, gap: 6 },
+    helpText: { color: Colors.textMuted, fontSize: 12, textDecorationLine: 'underline' },
+    footer: { padding: 12, paddingBottom: Platform.OS === 'ios' ? 8 : 12 },
     primaryBtn: {
       backgroundColor: Colors.primary || '#00f0ff',
       paddingVertical: 16, borderRadius: 14, alignItems: 'center', width: '100%'
@@ -604,7 +589,7 @@ function createStyles(Colors: any) {
     deviceConfigCard: {
       backgroundColor: Colors.surface,
       borderWidth: 1, borderColor: Colors.surfaceHighlight,
-      borderRadius: 12, padding: 10, width: '100%', marginBottom: 8,
+      borderRadius: 12, padding: 8, width: '100%', marginBottom: 6,
     },
     deviceConfigTitle: { color: Colors.text || '#fff', fontSize: 14, fontWeight: 'bold', flex: 1 },
     segRow: { flexDirection: 'row', backgroundColor: Colors.surfaceHighlight, borderRadius: 8, padding: 4 },
