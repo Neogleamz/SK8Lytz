@@ -1,0 +1,97 @@
+﻿App.tsx(19,19): error TS2339: Property 'ErrorUtils' does not exist on type 'typeof globalThis'.
+App.tsx(20,34): error TS2339: Property 'ErrorUtils' does not exist on type 'typeof globalThis'.
+App.tsx(21,11): error TS2339: Property 'ErrorUtils' does not exist on type 'typeof globalThis'.
+App.tsx(110,29): error TS2345: Argument of type '"AUTH_ERROR"' is not assignable to parameter of type 'EventType'.
+src/components/AccountModal.tsx(573,11): error TS2322: Type '{ gradientTrack: true; value: number; onValueChange: (hue: number) => void; onSlidingComplete: (hue: number) => Promise<void>; minimumValue: number; maximumValue: number; step: number; thumbTintColor: string; }' is not assignable to type 'IntrinsicAttributes & CustomSliderProps'.
+  Property 'step' does not exist on type 'IntrinsicAttributes & CustomSliderProps'.
+src/components/AccountModal.tsx(871,84): error TS2339: Property 'textPrimary' does not exist on type '{ background: string; surface: string; surfaceHighlight: string; primary: string; secondary: string; accent: string; text: string; textMuted: string; success: string; error: string; isDark: boolean; }'.
+src/components/DockedController.tsx(381,48): error TS2503: Cannot find namespace 'Audio'.
+src/components/DockedController.tsx(466,21): error TS2345: Argument of type '"VOICE_SPATIAL_APPLIED"' is not assignable to parameter of type 'EventType'.
+src/components/DockedController.tsx(877,21): error TS2345: Argument of type '"PICK_LOADED" | "FAVORITE_LOADED"' is not assignable to parameter of type 'EventType'.
+  Type '"PICK_LOADED"' is not assignable to type 'EventType'.
+src/components/DockedController.tsx(890,30): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'SetStateAction<number>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<number>'.
+src/components/DockedController.tsx(891,70): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/components/DockedController.tsx(894,27): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'SetStateAction<number>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<number>'.
+src/components/DockedController.tsx(903,27): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'SetStateAction<number>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<number>'.
+src/components/DockedController.tsx(904,27): error TS2345: Argument of type '"FOREGROUND" | "BACKGROUND" | undefined' is not assignable to parameter of type 'SetStateAction<"FOREGROUND" | "BACKGROUND">'.
+  Type 'undefined' is not assignable to type 'SetStateAction<"FOREGROUND" | "BACKGROUND">'.
+src/components/DockedController.tsx(905,25): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+src/components/DockedController.tsx(906,25): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+src/components/DockedController.tsx(927,30): error TS18048: 'fav.color' is possibly 'undefined'.
+src/components/DockedController.tsx(927,72): error TS18048: 'fav.color' is possibly 'undefined'.
+src/components/DockedController.tsx(927,114): error TS18048: 'fav.color' is possibly 'undefined'.
+src/components/DockedController.tsx(932,23): error TS2345: Argument of type '"PICK_SELECTED"' is not assignable to parameter of type 'EventType'.
+src/components/DockedController.tsx(934,23): error TS2345: Argument of type '"FAVORITE_RENDERED"' is not assignable to parameter of type 'EventType'.
+src/components/DockedController.tsx(1200,41): error TS2339: Property 'requestPermissionsAsync' does not exist on type 'new (src?: string | undefined) => HTMLAudioElement'.
+src/components/DockedController.tsx(1203,21): error TS2339: Property 'setAudioModeAsync' does not exist on type 'new (src?: string | undefined) => HTMLAudioElement'.
+src/components/DockedController.tsx(1208,57): error TS2339: Property 'Recording' does not exist on type 'new (src?: string | undefined) => HTMLAudioElement'.
+src/components/DockedController.tsx(1210,22): error TS2339: Property 'RecordingOptionsPresets' does not exist on type 'new (src?: string | undefined) => HTMLAudioElement'.
+src/components/DockedController.tsx(1213,24): error TS2339: Property 'RecordingOptionsPresets' does not exist on type 'new (src?: string | undefined) => HTMLAudioElement'.
+src/components/DockedController.tsx(1215,35): error TS2339: Property 'AndroidOutputFormat' does not exist on type 'new (src?: string | undefined) => HTMLAudioElement'.
+src/components/DockedController.tsx(1216,35): error TS2339: Property 'AndroidAudioEncoder' does not exist on type 'new (src?: string | undefined) => HTMLAudioElement'.
+src/components/DockedController.tsx(1222,24): error TS2339: Property 'RecordingOptionsPresets' does not exist on type 'new (src?: string | undefined) => HTMLAudioElement'.
+src/components/DockedController.tsx(1224,35): error TS2339: Property 'IOSOutputFormat' does not exist on type 'new (src?: string | undefined) => HTMLAudioElement'.
+src/components/DockedController.tsx(1225,35): error TS2339: Property 'IOSAudioQuality' does not exist on type 'new (src?: string | undefined) => HTMLAudioElement'.
+src/components/DockedController.tsx(1419,21): error TS2345: Argument of type '"MUSIC_CONFIG_REQUESTED"' is not assignable to parameter of type 'EventType'.
+src/components/DockedController.tsx(1496,50): error TS2339: Property 'isActive' does not exist on type 'ProductProfile'.
+src/components/DockedController.tsx(1595,27): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: LinearGradientProps): LinearGradient', gave the following error.
+    Type 'string[]' is not assignable to type 'readonly [ColorValue, ColorValue, ...ColorValue[]]'.
+      Source provides no match for required element at position 0 in target.
+  Overload 2 of 2, '(props: LinearGradientProps, context: any): LinearGradient', gave the following error.
+    Type 'string[]' is not assignable to type 'readonly [ColorValue, ColorValue, ...ColorValue[]]'.
+      Source provides no match for required element at position 0 in target.
+src/components/DockedController.tsx(1703,27): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: LinearGradientProps): LinearGradient', gave the following error.
+    Type 'string[]' is not assignable to type 'readonly [ColorValue, ColorValue, ...ColorValue[]]'.
+      Source provides no match for required element at position 0 in target.
+  Overload 2 of 2, '(props: LinearGradientProps, context: any): LinearGradient', gave the following error.
+    Type 'string[]' is not assignable to type 'readonly [ColorValue, ColorValue, ...ColorValue[]]'.
+      Source provides no match for required element at position 0 in target.
+src/components/DockedController.tsx(1791,41): error TS2345: Argument of type '"BUILDER_UI_TOGGLED"' is not assignable to parameter of type 'EventType'.
+src/components/DockedController.tsx(2504,37): error TS2345: Argument of type '"MIC_SENSITIVITY_CHANGED"' is not assignable to parameter of type 'EventType'.
+src/components/DockedController.tsx(2687,35): error TS2345: Argument of type '"BUILDER_PRESET_DELETED"' is not assignable to parameter of type 'EventType'.
+src/components/DockedController.tsx(2727,33): error TS2345: Argument of type '"BUILDER_PRESET_SAVED"' is not assignable to parameter of type 'EventType'.
+src/components/PositionalGradientBuilder.tsx(119,25): error TS2345: Argument of type '"BUILDER_PRESET_SAVED"' is not assignable to parameter of type 'EventType'.
+src/components/PositionalGradientBuilder.tsx(133,21): error TS2345: Argument of type '"BUILDER_PRESET_LOADED"' is not assignable to parameter of type 'EventType'.
+src/components/PositionalGradientBuilder.tsx(151,33): error TS2345: Argument of type '"BUILDER_PRESET_DELETED"' is not assignable to parameter of type 'EventType'.
+src/hooks/useProductCatalog.ts(29,3): error TS2741: Property 'batteryCapacityMilliAmpereHour' is missing in type '{ id: any; displayName: any; defaultLedPoints: any; defaultSegments: any; defaultIcType: any; defaultColorSorting: any; detectMinPoints: any; detectMaxPoints: any; vizShape: any; vizDefaultPoints: any; ... 5 more ...; vizStripOrientation: any; }' but required in type 'ProductProfile'.
+src/hooks/useVoiceControl.ts(28,27): error TS2304: Cannot find name 'SpeechResultsEvent'.
+src/hooks/useVoiceControl.ts(34,25): error TS2304: Cannot find name 'SpeechErrorEvent'.
+src/screens/DashboardScreen.tsx(1490,36): error TS2339: Property 'typography' does not exist on type '{ safeArea: { flex: number; backgroundColor: string; }; container: { flex: number; }; card: { backgroundColor: string; borderRadius: number; padding: number; borderWidth: number; borderColor: string; ... 4 more ...; elevation: number; }; ... 41 more ...; deviceListFixed: { ...; }; }'.
+src/screens/Onboarding/HardwareSetupWizardScreen.tsx(45,28): error TS2554: Expected 0 arguments, but got 1.
+src/screens/SkateMapScreen.tsx(61,31): error TS2345: Argument of type 'Partial<{ adult_night_details: string | null; created_at: string | null; id: string; is_indoor: boolean | null; is_verified: boolean | null; lat: number; lng: number; name: string; source: string | null; surface_type: "unknown" | ... 4 more ... | null; updated_at: string | null; updated_by: string | null; }>' is not assignable to parameter of type '{ adult_night_details: string | null; created_at: string | null; id: string; is_indoor: boolean | null; is_verified: boolean | null; lat: number; lng: number; name: string; source: string | null; surface_type: "unknown" | ... 4 more ... | null; updated_at: string | null; updated_by: string | null; }'.
+  Types of property 'adult_night_details' are incompatible.
+    Type 'string | null | undefined' is not assignable to type 'string | null'.
+      Type 'undefined' is not assignable to type 'string | null'.
+src/screens/SkateMapScreen.tsx(221,5): error TS2345: Argument of type '{ container: { flex: number; backgroundColor: string; }; map: { position: "absolute"; left: 0; right: 0; top: 0; bottom: 0; }; header: { position: "absolute"; top: number; left: number; right: number; flexDirection: "row"; alignItems: "center"; gap: number; }; ... 5 more ...; loadingText: { ...; }; }' is not assignable to parameter of type '{ container: { flex: number; backgroundColor: string; }; map: { position: "absolute"; left: 0; right: 0; top: 0; bottom: 0; }; header: { position: "absolute"; top: number; left: number; right: number; flexDirection: "row"; alignItems: "center"; gap: number; }; ... 5 more ...; loadingText: { ...; }; } & NamedStyles<....'.
+  Property 'backButton' is incompatible with index signature.
+    Object literal may only specify known properties, and 'backdropFilter' does not exist in type 'ViewStyle | TextStyle | ImageStyle'.
+src/services/SkateSpotsService.ts(30,23): error TS2345: Argument of type '"ERROR"' is not assignable to parameter of type 'EventType'.
+src/services/SkateSpotsService.ts(35,21): error TS2345: Argument of type '"ERROR"' is not assignable to parameter of type 'EventType'.
+src/services/SkateSpotsService.ts(59,23): error TS2345: Argument of type '"ERROR"' is not assignable to parameter of type 'EventType'.
+src/services/SkateSpotsService.ts(64,21): error TS2345: Argument of type '"ERROR"' is not assignable to parameter of type 'EventType'.
+src/services/SkateSpotsService.ts(102,21): error TS2345: Argument of type '"ERROR"' is not assignable to parameter of type 'EventType'.
+src/services/SpeedTrackingService.ts(154,23): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/services/SpeedTrackingService.ts(192,47): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/services/SpeedTrackingService.ts(192,50): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/services/SpeedTrackingService.ts(193,45): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/services/SpeedTrackingService.ts(193,48): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/services/SpeedTrackingService.ts(194,57): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/services/SpeedTrackingService.ts(195,48): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/services/SpeedTrackingService.ts(195,51): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/services/SpeedTrackingService.ts(196,45): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/services/SpeedTrackingService.ts(196,48): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/services/VoiceService.ts(65,30): error TS2304: Cannot find name 'SpeechResultsEvent'.
+src/services/VoiceService.ts(67,21): error TS2345: Argument of type '"VOICE_RESULT"' is not assignable to parameter of type 'EventType'.
+src/services/VoiceService.ts(71,28): error TS2304: Cannot find name 'SpeechErrorEvent'.
+src/services/VoiceService.ts(72,19): error TS2345: Argument of type '"VOICE_ERROR"' is not assignable to parameter of type 'EventType'.
+src/services/VoiceService.ts(80,21): error TS2345: Argument of type '"VOICE_ERROR"' is not assignable to parameter of type 'EventType'.
+src/services/VoiceService.ts(89,21): error TS2345: Argument of type '"VOICE_ERROR"' is not assignable to parameter of type 'EventType'.
+temp_telemetry_test.ts(2,25): error TS2307: Cannot find module 'dotenv' or its corresponding type declarations.

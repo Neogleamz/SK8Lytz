@@ -96,7 +96,24 @@ export type EventType =
   // ── Speed Tracking ────────────────────────────────────────
   | 'SESSION_SAVED'
   | 'SPEED_REACTIVE_ENABLED'
-  | 'SPEED_REACTIVE_DISABLED';
+  | 'SPEED_REACTIVE_DISABLED'
+  // ── Voice & Audio ─────────────────────────────────────────
+  | 'VOICE_RESULT'
+  | 'VOICE_ERROR'
+  | 'VOICE_SPATIAL_APPLIED'
+  | 'MUSIC_CONFIG_REQUESTED'
+  // ── Builder & Favorites ───────────────────────────────────
+  | 'BUILDER_PRESET_SAVED'
+  | 'BUILDER_PRESET_DELETED'
+  | 'BUILDER_PRESET_LOADED'
+  | 'BUILDER_UI_TOGGLED'
+  | 'FAVORITE_LOADED'
+  | 'FAVORITE_RENDERED'
+  | 'PICK_LOADED'
+  | 'PICK_SELECTED'
+  | 'MIC_SENSITIVITY_CHANGED'
+  // ── Map/Locations ─────────────────────────────────────────
+  | 'ERROR';
 
 export interface LogEntry {
   t: number;        // timestamp ms

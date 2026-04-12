@@ -18,6 +18,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, TextInput, Animated, Alert, Dimensions, FlatList } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Audio } from 'expo-av';
 import { Typography, Layout } from '../theme/theme';
 
 import { useTheme } from '../context/ThemeContext';
