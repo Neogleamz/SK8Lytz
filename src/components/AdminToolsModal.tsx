@@ -240,11 +240,21 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
     }
   };
 
-  const bg = '#FFFFFF';
-  const cardBg = '#F8F8F8';
-  const textPrimary = '#000000';
-  const textMuted = '#444444';
-  const borderColor = '#CCCCCC';
+  const Colors = {
+    background: isDark ? '#0A0C12' : '#F5F5F5',
+    surface: isDark ? '#141829' : '#FFFFFF',
+    surfaceHighlight: isDark ? '#252c47' : '#E0E0E0',
+    text: isDark ? '#FFFFFF' : '#111111',
+    textMuted: isDark ? '#8a96b3' : '#555555',
+    primary: '#00f0ff',
+    secondary: '#FF5A00',
+    error: '#ff4040',
+  };
+  const bg = Colors.background;
+  const cardBg = Colors.surface;
+  const textPrimary = Colors.text;
+  const textMuted = Colors.textMuted;
+  const borderColor = Colors.surfaceHighlight;
 
   const renderLogItem = ({ item }: { item: LogEntry }) => {
     const meta = EVENT_META[item.e] || { icon: 'information', color: '#888', label: item.e };
@@ -428,128 +438,79 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
   };
 
   const renderAdminTab = () => {
-    return (
-      <ScrollView style={styles.tabContent}>
-        <Text style={[styles.statSection, { color: textPrimary }]}>🛠️ Admin Tools</Text>
-        <View style={[styles.statCard, { backgroundColor: cardBg, borderColor, padding: 20 }]}>
-          <Text style={{ color: textMuted, fontSize: 13, marginBottom: 16, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
-            Restricted diagnostics payload for low-level protocol debugging.
-          </Text>
-
-          <TouchableOpacity 
-            style={{ backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: '#ff4040', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginBottom: 16 }}
-            onPress={() => { if (onOpenProgrammer) onOpenProgrammer(); }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 16, marginRight: 8 }}>⚡</Text>
-              <Text style={{ color: '#ff4040', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>SK8Lytz Programmer</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={{ backgroundColor: 'rgba(255, 165, 0, 0.1)', borderColor: '#FFA500', borderWidth: 1, paddingVertical: 14, borderRadius: 8 }}
-            onPress={() => {
-              if (onOpenLab) onOpenLab();
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 16, marginRight: 8 }}>🔬</Text>
-              <Text style={{ color: '#FFA500', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>LED Diagnostic Lab</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={{ backgroundColor: 'rgba(255, 165, 0, 0.1)', borderColor: '#FFA500', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginTop: 16 }}
-            onPress={() => setIsPicksSchedulerVisible(true)}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 16, marginRight: 8 }}>📅</Text>
-              <Text style={{ color: '#FFA500', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>SK8Lytz Picks Scheduler</Text>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={{ backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: '#ff4040', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginTop: 16 }}
-            onPress={() => setIsProductManagerVisible(true)}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 16, marginRight: 8 }}>📦</Text>
-              <Text style={{ color: '#ff4040', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Product Manager</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={{ backgroundColor: 'rgba(0, 150, 255, 0.1)', borderColor: '#0096FF', borderWidth: 1, paddingVertical: 14, borderRadius: 8, marginTop: 16 }}
-            onPress={() => setIsAppSettingsVisible(true)}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 16, marginRight: 8 }}>⚙️</Text>
-              <Text style={{ color: '#0096FF', fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>App Settings</Text>
-            </View>
-          </TouchableOpacity>
+    /** A unified styled card for launching each admin sub-tool */
+    const ToolCard = ({
+      icon, label, subtitle, accentColor, onPress
+    }: { icon: string; label: string; subtitle: string; accentColor: string; onPress: () => void }) => (
+      <TouchableOpacity
+        onPress={onPress}
+        style={{
+          flexDirection: 'row', alignItems: 'center',
+          backgroundColor: Colors.surface,
+          borderWidth: 1, borderColor: Colors.surfaceHighlight,
+          borderRadius: 12, padding: 16, marginBottom: 12,
+        }}
+        activeOpacity={0.7}
+      >
+        <View style={{
+          width: 44, height: 44, borderRadius: 10,
+          backgroundColor: accentColor + '22',
+          borderWidth: 1, borderColor: accentColor + '55',
+          justifyContent: 'center', alignItems: 'center', marginRight: 16,
+        }}>
+          <MaterialCommunityIcons name={icon as any} size={22} color={accentColor} />
         </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: textPrimary, fontWeight: '800', fontSize: 14, letterSpacing: 0.5 }}>{label}</Text>
+          <Text style={{ color: textMuted, fontSize: 11, marginTop: 2 }}>{subtitle}</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={18} color={textMuted} />
+      </TouchableOpacity>
+    );
+
+    return (
+      <ScrollView style={styles.tabContent} contentContainerStyle={{ paddingBottom: 40 }}>
+        <Text style={[styles.statSection, { color: textPrimary, marginTop: 8 }]}>🛠️ ADMIN SUB-TOOLS</Text>
+        <ToolCard
+          icon="lightning-bolt"
+          label="SK8Lytz Programmer"
+          subtitle="Batch configure multiple controllers instantly"
+          accentColor="#ff4040"
+          onPress={() => { if (onOpenProgrammer) onOpenProgrammer(); }}
+        />
+        <ToolCard
+          icon="flask"
+          label="LED Diagnostic Lab"
+          subtitle="Low-level BLE trace, color & protocol debugger"
+          accentColor="#FF9500"
+          onPress={() => { if (onOpenLab) onOpenLab(); }}
+        />
+        <ToolCard
+          icon="calendar-check"
+          label="Picks Scheduler"
+          subtitle="Manage and schedule SK8Lytz spotlight picks"
+          accentColor={Colors.primary}
+          onPress={() => setIsPicksSchedulerVisible(true)}
+        />
+        <ToolCard
+          icon="package-variant"
+          label="Product Manager"
+          subtitle="Edit hardware product catalog entries"
+          accentColor="#FF5A00"
+          onPress={() => setIsProductManagerVisible(true)}
+        />
+        <ToolCard
+          icon="cog"
+          label="App Settings"
+          subtitle="Global feature flags and remote configuration"
+          accentColor="#9D4EFF"
+          onPress={() => setIsAppSettingsVisible(true)}
+        />
 
         <AdminPicksScheduler
           visible={isPicksSchedulerVisible}
           onClose={() => setIsPicksSchedulerVisible(false)}
         />
-        
-        <Modal visible={isAppSettingsVisible} animationType="slide" presentationStyle="formSheet" onRequestClose={() => setIsAppSettingsVisible(false)}>
-          <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#080808' : '#111' }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#222' }}>
-              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900', letterSpacing: 1 }}>APP SETTINGS</Text>
-              <TouchableOpacity onPress={() => setIsAppSettingsVisible(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#FFF" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ padding: 16 }}>
-              <Text style={{ color: '#888', fontSize: 12, marginBottom: 16 }}>
-                These settings are globally fetched by all app instances on boot.
-              </Text>
-              
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#222', padding: 16, borderRadius: 8, marginBottom: 12 }}>
-                <View style={{ flex: 1, marginRight: 16 }}>
-                  <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '700' }}>Lock Crew Hub</Text>
-                  <Text style={{ color: '#aaa', fontSize: 12, marginTop: 2 }}>Disable Crew Hub features globally. Overrides offline mode.</Text>
-                </View>
-                <Switch 
-                  value={appSettings['global_crew_hub_locked'] === true}
-                  onValueChange={async (v) => {
-                    setAppSettings(prev => ({ ...prev, global_crew_hub_locked: v }));
-                    await AppSettingsService.updateSetting('global_crew_hub_locked', v);
-                  }}
-                  trackColor={{ false: '#444', true: '#FF4444' }}
-                />
-              </View>
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#222', padding: 16, borderRadius: 8, marginBottom: 12 }}>
-                <View style={{ flex: 1, marginRight: 16 }}>
-                  <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '700' }}>Lock Community Hub</Text>
-                  <Text style={{ color: '#aaa', fontSize: 12, marginTop: 2 }}>Disable Community Picks and Favorites globally.</Text>
-                </View>
-                <Switch 
-                  value={appSettings['global_community_hub_locked'] === true}
-                  onValueChange={async (v) => {
-                    setAppSettings(prev => ({ ...prev, global_community_hub_locked: v }));
-                    await AppSettingsService.updateSetting('global_community_hub_locked', v);
-                  }}
-                  trackColor={{ false: '#444', true: '#FF4444' }}
-                />
-              </View>
-            </ScrollView>
-          </SafeAreaView>
-        </Modal>
-
-        <Modal visible={isProductManagerVisible} animationType="slide" presentationStyle="formSheet" onRequestClose={() => setIsProductManagerVisible(false)}>
-          <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#080808' : '#111' }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#222' }}>
-              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900', letterSpacing: 1 }}>PRODUCT MANAGER</Text>
-              <TouchableOpacity onPress={() => setIsProductManagerVisible(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#FFF" />
-              </TouchableOpacity>
-            </View>
-            {renderProductsTab()}
-          </SafeAreaView>
-        </Modal>
       </ScrollView>
     );
   };
@@ -927,9 +888,9 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
             <TouchableOpacity
               key={t}
               onPress={() => setTab(t)}
-              style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
+              style={[styles.tabBtn, tab === t && { borderBottomColor: Colors.primary }]}
             >
-              <Text style={[styles.tabLabel, { color: tab === t ? '#FF5A00' : textMuted }]}>
+              <Text style={[styles.tabLabel, { color: tab === t ? Colors.primary : textMuted }]}>
                 {t === 'device' ? 'Device' : t === 'tools' ? 'Tools' : t.charAt(0).toUpperCase() + t.slice(1)}
               </Text>
             </TouchableOpacity>
@@ -953,28 +914,94 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
         {tab === 'products' && renderProductsTab()}
       </SafeAreaView>
 
+      {/* ── Confirm Delete Modal ── */}
       <Modal visible={confirmDeleteVisible} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
           <View style={{ backgroundColor: isDark ? '#1A1A1A' : '#FFF', padding: 24, borderRadius: 12, width: '100%', maxWidth: 400, borderColor: '#ff4040', borderWidth: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <MaterialCommunityIcons name="alert" size={24} color="#ff4040" />
-              <Text style={{ fontSize: 18, fontWeight: '800', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: isDark ? '#FFF' : '#000', marginLeft: 8 }}>Purge Telemetry Logs</Text>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#FFF' : '#000', marginLeft: 8 }}>Purge Telemetry Logs</Text>
             </View>
-            <Text style={{ fontSize: 14, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: isDark ? '#CCC' : '#444', marginBottom: 24, lineHeight: 20 }}>
+            <Text style={{ fontSize: 14, color: isDark ? '#CCC' : '#444', marginBottom: 24, lineHeight: 20 }}>
               Are you sure you want to completely erase all timeline, device, and analytics stats from local memory? This action cannot be reversed.
             </Text>
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
               <TouchableOpacity onPress={() => setConfirmDeleteVisible(false)} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 6, backgroundColor: isDark ? '#333' : '#EEE' }}>
-                <Text style={{ fontWeight: '700', color: isDark ? '#FFF' : '#000', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Cancel</Text>
+                <Text style={{ fontWeight: '700', color: isDark ? '#FFF' : '#000' }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={executeClear} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 6, backgroundColor: '#ff4040' }}>
-                <Text style={{ fontWeight: '700', color: '#FFF', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Erase Everything</Text>
+                <Text style={{ fontWeight: '700', color: '#FFF' }}>Erase Everything</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+
+      {/* ── App Settings Modal (fullscreen, back arrow → AdminTools) ── */}
+      <Modal visible={isAppSettingsVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setIsAppSettingsVisible(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor, backgroundColor: cardBg }}>
+            <TouchableOpacity onPress={() => setIsAppSettingsVisible(false)} style={{ marginRight: 16, padding: 4 }}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color="#9D4EFF" />
+            </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.title, { color: textPrimary }]}>⚙️ APP SETTINGS</Text>
+              <Text style={{ color: textMuted, fontSize: 11, marginTop: 2 }}>Global feature flags and remote configuration</Text>
+            </View>
+          </View>
+          <ScrollView style={{ flex: 1, padding: 16 }}>
+            <Text style={{ color: textMuted, fontSize: 12, marginBottom: 16 }}>
+              These settings are globally fetched by all app instances on boot.
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, padding: 16, borderRadius: 12, marginBottom: 12 }}>
+              <View style={{ flex: 1, marginRight: 16 }}>
+                <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Lock Crew Hub</Text>
+                <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Disable Crew Hub features globally. Overrides offline mode.</Text>
+              </View>
+              <Switch
+                value={appSettings['global_crew_hub_locked'] === true}
+                onValueChange={async (v) => {
+                  setAppSettings(prev => ({ ...prev, global_crew_hub_locked: v }));
+                  await AppSettingsService.updateSetting('global_crew_hub_locked', v);
+                }}
+                trackColor={{ false: '#444', true: '#FF4444' }}
+              />
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, padding: 16, borderRadius: 12, marginBottom: 12 }}>
+              <View style={{ flex: 1, marginRight: 16 }}>
+                <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Lock Community Hub</Text>
+                <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Disable Community Picks and Favorites globally.</Text>
+              </View>
+              <Switch
+                value={appSettings['global_community_hub_locked'] === true}
+                onValueChange={async (v) => {
+                  setAppSettings(prev => ({ ...prev, global_community_hub_locked: v }));
+                  await AppSettingsService.updateSetting('global_community_hub_locked', v);
+                }}
+                trackColor={{ false: '#444', true: '#FF4444' }}
+              />
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* ── Product Manager Modal (fullscreen, back arrow → AdminTools) ── */}
+      <Modal visible={isProductManagerVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setIsProductManagerVisible(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor, backgroundColor: cardBg }}>
+            <TouchableOpacity onPress={() => setIsProductManagerVisible(false)} style={{ marginRight: 16, padding: 4 }}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color="#FF5A00" />
+            </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.title, { color: textPrimary }]}>📦 PRODUCT MANAGER</Text>
+              <Text style={{ color: textMuted, fontSize: 11, marginTop: 2 }}>Edit hardware product catalog entries</Text>
+            </View>
+          </View>
+          {renderProductsTab()}
+        </SafeAreaView>
+      </Modal>
     </Modal>
+
   );
 }
 
@@ -993,14 +1020,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1,
   },
-  title: { fontSize: 20, fontWeight: '800', letterSpacing: 0.5, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  subtitle: { fontSize: 12, marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  title: { fontSize: 18, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase' },
+  subtitle: { fontSize: 11, marginTop: 2 },
   headerActions: { flexDirection: 'row', alignItems: 'center' },
   actionBtn: { padding: 8, marginLeft: 2 },
   tabs: { flexDirection: 'row', borderBottomWidth: 1 },
-  tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  tabBtnActive: { borderBottomWidth: 2, borderBottomColor: '#000000' },
-  tabLabel: { fontSize: 13, fontWeight: '600', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
   tabContent: { flex: 1, padding: 16 },
   logRow: {
     flexDirection: 'row', alignItems: 'flex-start',
@@ -1009,24 +1035,24 @@ const styles = StyleSheet.create({
   logIcon: { marginTop: 2, marginRight: 12, width: 20 },
   logBody: { flex: 1 },
   logHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  logType: { fontSize: 13, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  logTime: { fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  logPayload: { fontSize: 12, marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  logType: { fontSize: 13, fontWeight: '700' },
+  logTime: { fontSize: 10 },
+  logPayload: { fontSize: 12, marginTop: 2 },
   colorSwatch: { width: 16, height: 8, borderRadius: 3, marginTop: 4, borderWidth: 1, borderColor: '#000' },
-  emptyText: { textAlign: 'center', fontSize: 14, marginTop: 16, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  emptyText: { textAlign: 'center', fontSize: 14, marginTop: 16 },
   deviceCard: {
-    flexDirection: 'row', alignItems: 'center', borderRadius: 0,
+    flexDirection: 'row', alignItems: 'center', borderRadius: 12,
     padding: 14, marginBottom: 10, borderWidth: 1,
   },
-  deviceName: { fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  deviceDetail: { fontSize: 12, marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  statSection: { fontSize: 14, fontWeight: '700', marginTop: 16, marginBottom: 8, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  statCard: { borderRadius: 0, padding: 14, marginBottom: 4, borderWidth: 1 },
+  deviceName: { fontSize: 15, fontWeight: '700' },
+  deviceDetail: { fontSize: 12, marginTop: 2 },
+  statSection: { fontSize: 13, fontWeight: '900', marginTop: 16, marginBottom: 8, letterSpacing: 1, textTransform: 'uppercase' },
+  statCard: { borderRadius: 12, padding: 14, marginBottom: 4, borderWidth: 1 },
   statRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
-  statLabel: { fontSize: 13, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
-  statValue: { fontSize: 13, fontWeight: '700', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  statLabel: { fontSize: 13 },
+  statValue: { fontSize: 13, fontWeight: '700' },
   colorRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5 },
-  colorDot: { width: 18, height: 18, borderRadius: 0, marginRight: 10, borderWidth: 1, borderColor: '#000' },
-  colorHex: { flex: 1, fontSize: 12, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  colorDot: { width: 18, height: 18, borderRadius: 4, marginRight: 10, borderWidth: 1 },
+  colorHex: { flex: 1, fontSize: 12 },
 });
 
