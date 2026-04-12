@@ -40,6 +40,7 @@ import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
 import AdminToolsModal from '../components/AdminToolsModal';
 import { useVoiceControl } from '../hooks/useVoiceControl';
+import { IVoiceAction } from '../services/VoiceService';
 import VoiceFAB from '../components/Voice/VoiceFAB';
 import VoiceCommandModal from '../components/Voice/VoiceCommandModal';
 import VoiceTutorialModal from '../components/Voice/VoiceTutorialModal';
@@ -240,8 +241,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     checkDeviceClaimed,
     hasCloudRegistrations,
     migrateLegacyGroups,
-    syncFromCloud: _syncFromCloud,
-    hasPendingSync: _hasPendingSync,
     isLoading,
   } = useRegistration();
 
@@ -318,6 +317,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
   const [isAdminToolsVisible, setIsAdminToolsVisible] = useState(false);
   const [isLabVisible, setIsLabVisible] = useState(false);
+  const [isMapVisible, setIsMapVisible] = useState(false);
 
   const [isSetupWizardVisible, setIsSetupWizardVisible] = useState(false);
   const [isCheckingRegistrations, setIsCheckingRegistrations] = useState(true);
@@ -481,6 +481,26 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   // Cloud Sync & Auto Connect on Launch
   const hasAutoConnectedRef = useRef(false);
+  const autoConnectIdsRef = useRef<string[]>([]);
+  
+  // Continuous Auto-Connect Observer
+  useEffect(() => {
+    if (autoConnectIdsRef.current.length === 0) return;
+    
+    // Find devices that are in our target list, currently scanned, but not yet connected
+    const pendingToConnect = allDevices.filter(d => 
+      autoConnectIdsRef.current.includes(d.id) && 
+      !connectedDevices.some(c => c.id === d.id)
+    );
+
+    if (pendingToConnect.length > 0) {
+      // Remove them from the queue so we don't spam the connection loop
+      autoConnectIdsRef.current = autoConnectIdsRef.current.filter(id => !pendingToConnect.some(p => p.id === id));
+      console.log('[SK8Lytz] Observer connecting to newly discovered devices:', pendingToConnect.map(d => d.name));
+      connectToDevices(pendingToConnect);
+    }
+  }, [allDevices, connectedDevices]);
+
   useEffect(() => {
     async function syncCloudAndAutoConnect() {
       if (hasAutoConnectedRef.current || !isBluetoothSupported || !isBluetoothEnabled) return;
@@ -539,42 +559,33 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
       if (groupsToProcess.length > 0) {
         console.log('[SK8Lytz] Found fleets. Initiating Auto-Connect Sequence...');
-        requestPermissions().then((granted) => {
+        requestPermissions().then(async (granted) => {
           if (granted && !isActuallyConnected) {
             scanForPeripherals();
-            const waitTime = Math.max(5000, Platform.OS === 'web' ? 5000 : 7000);
-            setTimeout(async () => {
-              const currentScannedIds = allDevicesRef.current.map(d => d.id);
-              let presentGroups: any[] = [];
-              let idsToConnect: string[] = [];
+            
+            let presentGroups: any[] = [];
+            let idsToConnect: string[] = [];
 
-              if (!isOffline && supabase && CloudUserId) {
-                 const { data: devices } = await supabase.from('registered_devices').select('*').eq('user_id', CloudUserId);
-                 if (devices) {
-                    presentGroups = groupsToProcess.filter((g: any) => {
-                       const groupDevices = devices.filter((d: any) => d.group_id === g.id);
-                       return groupDevices.length > 0 && groupDevices.every((d: any) => currentScannedIds.includes(d.id));
-                    }).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-                    
-                    if (presentGroups.length > 0) {
-                      idsToConnect = devices.filter((d: any) => d.group_id === presentGroups[0].id).map((d: any) => d.id);
-                    }
-                 }
-              } else {
-                 presentGroups = groupsToProcess.filter((g: any) => {
-                    return g.deviceIds && g.deviceIds.length > 0 && g.deviceIds.every((id: string) => currentScannedIds.includes(id));
-                 });
-                 if (presentGroups.length > 0) {
-                    idsToConnect = presentGroups[0].deviceIds;
-                 }
-              }
+            if (!isOffline && supabase && CloudUserId) {
+               const { data: devices } = await supabase.from('registered_devices').select('*').eq('user_id', CloudUserId);
+               if (devices) {
+                  presentGroups = groupsToProcess.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                  
+                  if (presentGroups.length > 0) {
+                    idsToConnect = devices.filter((d: any) => d.group_id === presentGroups[0].id).map((d: any) => d.device_mac || d.id);
+                  }
+               }
+            } else {
+               presentGroups = groupsToProcess.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+               if (presentGroups.length > 0) {
+                  idsToConnect = presentGroups[0].deviceIds;
+               }
+            }
 
-              if (idsToConnect.length > 0) {
-                console.log('[SK8Lytz] Auto-connecting to fleet:', presentGroups[0].group_name);
-                const devicesToConnect = allDevicesRef.current.filter(d => idsToConnect.includes(d.id));
-                connectToDevices(devicesToConnect);
-              }
-            }, waitTime);
+            if (idsToConnect.length > 0) {
+              console.log('[SK8Lytz] Queuing Auto-connect for fleet:', presentGroups[0].group_name);
+              autoConnectIdsRef.current = idsToConnect;
+            }
           }
         });
       }
@@ -1464,7 +1475,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               zIndex: 9999
             }}>
               <ActivityIndicator size="large" color="#00F0FF" />
-              <Typography.Subheader style={{ color: '#00F0FF', marginTop: 12 }}>Disconnecting...</Typography.Subheader>
+              <Text style={[styles.typography.header, { color: '#00F0FF', marginTop: 12 }]}>Disconnecting...</Text>
             </Animated.View>
           )}
       </Animated.View>
@@ -1755,7 +1766,16 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                         <MaterialCommunityIcons name="chevron-right" size={16} color={crewRole === 'leader' ? '#FFAA00' : '#00AAFF'} />
                       </TouchableOpacity>
                     ) : (
-                      <Text style={styles.slabEmptyText}>No active sessions nearby. Launch a crew to sync lights.</Text>
+                      <View style={{ gap: 16 }}>
+                        <Text style={styles.slabEmptyText}>No active sessions nearby. Launch a crew to sync lights.</Text>
+                        <TouchableOpacity 
+                          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: '#FFAA00', marginTop: 8 }}
+                          onPress={() => Alert.alert("Coming Soon", "The Interactive Skate Spot Map is currently in development!")}
+                        >
+                          <MaterialCommunityIcons name="map-marker-radius" size={18} color="#FFAA00" style={{ marginRight: 8 }} />
+                          <Text style={{ color: '#FFAA00', fontWeight: '800', letterSpacing: 1, fontSize: 13 }}>EXPLORE SKATE MAP</Text>
+                        </TouchableOpacity>
+                      </View>
                     )}
                   </View>
                 </View>

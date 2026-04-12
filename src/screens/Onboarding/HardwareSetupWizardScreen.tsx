@@ -37,6 +37,17 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
     }
   }, [hasStartedScan, isBluetoothSupported, isBluetoothEnabled]);
 
+  useEffect(() => {
+    let timer: any;
+    if (hasStartedScan && step < 3 && !isScanning && !isScanProbing) {
+      // Keep continuously polling while the user is still looking for hardware (Wait 2s to let radio breathe)
+      timer = setTimeout(() => {
+        scanForPeripherals({ keepAlive: true });
+      }, 2000);
+    }
+    return () => clearTimeout(timer);
+  }, [step, isScanning, isScanProbing, hasStartedScan]);
+
   const handleStartScan = async () => {
     const granted = await requestPermissions();
     if (granted && !isScanning) {

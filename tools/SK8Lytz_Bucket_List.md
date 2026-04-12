@@ -10,6 +10,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 <!-- AUTO_SYNC_ERRORS_END -->
 
 
+- [ ] `fix/auth-page-scrolling` : NO vertical scrolling on auth page. Ensure the layout stops overflowing vertically, and shrink the "Continue offline" section to fit.
+- [ ] `feat/pull-to-refresh-scanner` : On scanner dashboard, pulling down should trigger device polling (refresh local state, trigger BLE scan).
 - [ ] `fix/dynamic-arch-regressions` : Resolve 'isHaloz' ReferenceError in ProductVisualizer and perform a sanitization audit (DockedController, ZenggeProtocol, Setup Wizard) to remove remaining hardcoded binary logic.
 - [ ] `fix/tsc-errors-audit` : Fix TypeScript errors remaining from dynamic-arch-regressions (Audio namespace, missing EventType for 'BUILDER_PRESET_SAVED' in DockedController, IVoiceAction/Typography Subheader in DashboardScreen).
 - [ ] `feat/battery-health-predict` : Mathematical power modeling to predict battery life based on pattern draw; auto-dims to 20% at critical reserve.
@@ -51,11 +53,15 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/device-management`
 
+- [ ] `feat/account-devices-management` : Account Manager - Add a 'Registered Device Groups' section in the Devices tab. Allow users to view, edit, and delete device groups. Group deletions must correctly purge the devices from the database (if online) and `AsyncStorage` (whether offline or online) to ensure they actually disappear.
+
 ### Target: `epic/protocol-integration`
 
 - [ ] `feat/hardware-abstraction-layer` : Architect a hardware controller abstraction layer to decouple the UI from explicit `ZenggeProtocol` functions, preparing the app to support and dynamically map new OEM hardware controllers to the existing UI.
 
 ### Target: `epic/ui-refinement`
+
+- [ ] `fix/setup-wizard-button-overlap` : Fix the "Complete Setup" button overlapping the device card on the "Name Your Skates" page so users can change the LED count.
 
 - [ ] `audit/offline-profile-settings` : Audit whether all user profile settings (display name, avatar, preferences) are fully cached locally for offline use. Implement offline-safe username rename that queues the update to Supabase on reconnect — same pattern as device registration sync.
 - [ ] `feat/app-wide-ux-tips` : Design and implement a contextual tips system that surfaces short, dismissible tooltips throughout the app at key friction points (e.g. first Bluetooth scan, first controller open, first crew join). Tips should only show once per user (AsyncStorage) and feel native to the SK8Lytz aesthetic.
@@ -78,6 +84,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/skate-spot-discovery`
 
 - [ ] `feat/usa-skate-spots-dataset` : Build a live, US-only dataset of rinks and parks (hours, adult nights, surface types) for map overlays and a new 'Find a Place to Skate' discovery feature integrated into Crew Hub and the Main Dashboard.
+- [ ] `feat/interactive-skate-spot-map` : Implement a high-density, interactive skate spot map using react-native-maps and clustering. Feature verified custom DB rinks vs. unverified Google Places fallbacks, including a 'Claim & Complete' bottom sheet UI to crowdsource specialized metadata (surface types, adult nights).
 
 ### Target: `epic/ui-refinement`
 
@@ -99,6 +106,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ## ✅ Completed This Session (Apr 2026)
 
 - [x] `epic/connection-reliability` : Execute the multiphase connection reliability plan (see `docs/plans/epic-connection-reliability.md`). Stop dropping connections, fix lockups entering/leaving controller, and fix UI teardown on disconnect (resolves `fix/hardware-connection-drop`, `audit/connection-polling-logic`, and `fix/controller-navigation-lockup`).
+- [x] `fix-ble-audit` : Debug and resolve BLE connection regression. Devices not found or connecting slowly.
 - [x] `feat/speed-tracking-telemetry` : Complete end-to-end session telemetry — SpeedTrackingService, SessionSummaryModal with dynamic speed-zone accent colour, Statistics tab in AccountModal (lifetime grid + recent session history), DockedController RECORD/SAVE button with live GPS accumulation.
 - [x] `feat/voice-command-engine` : Implement core offline voice resolution and UI bridge natural language to BLE payloads for safe operation while skating.
 - [x] `feat/voice-first-use-tooltip` : On first launch of the VoiceFAB, show a dismissible "What can I say?" tutorial popup listing example commands (modes, favorites by name, brightness, speed, spatial). Persist dismissed state to AsyncStorage.
