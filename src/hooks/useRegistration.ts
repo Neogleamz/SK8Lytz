@@ -147,6 +147,18 @@ export function useRegistration() {
 
         // 2. Try Supabase upsert - Explicitly pick valid columns
         if (user) {
+          // PRE-FLIGHT: Ensure the group exists in 'registered_groups' to satisfy the 'registered_devices_group_id_fkey' constraint.
+          try {
+            await supabase.from('registered_groups').upsert({
+              id: fullDevice.group_id,
+              group_name: fullDevice.group_name || 'Default Fleet',
+              type: 'device-fleet',
+              user_id: user.id
+            }, { onConflict: 'id' });
+          } catch (fkError) {
+            console.warn('[Registration] Could not establish group FK pre-flight:', fkError);
+          }
+
           const dbRow = {
             device_mac:      fullDevice.device_mac,
             device_name:     fullDevice.device_name,
@@ -393,6 +405,19 @@ export function useRegistration() {
       if (queue.length === 0) return;
 
       for (const device of queue) {
+        // PRE-FLIGHT: Ensure the group exists in 'registered_groups'
+        const groupId = device.group_id || device.group_name.toLowerCase().replace(/\s+/g, '-') || 'default-fleet';
+        try {
+          await supabase.from('registered_groups').upsert({
+            id: groupId,
+            group_name: device.group_name || 'Default Fleet',
+            type: 'device-fleet',
+            user_id: userId
+          }, { onConflict: 'id' });
+        } catch (fkError) {
+          console.warn('[Registration] Flush pre-flight group FK error:', fkError);
+        }
+
         const dbRow = {
           device_mac:      device.device_mac,
           device_name:     device.device_name,

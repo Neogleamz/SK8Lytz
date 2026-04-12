@@ -1,9 +1,12 @@
 import { Platform } from 'react-native';
 import { AppLogger } from './AppLogger';
 let Voice: any;
+let SpeechResultsEvent: any;
+let SpeechErrorEvent: any;
 try {
   if (Platform.OS !== 'web') {
-    Voice = require('@react-native-voice/voice').default;
+    const rmVoice = require('@react-native-voice/voice');
+    Voice = rmVoice.default;
   }
 } catch (e) {
   // Native module not linked
@@ -62,14 +65,14 @@ class VoiceService {
     }
   }
 
-  private onSpeechResults(e: SpeechResultsEvent) {
+  private onSpeechResults(e: any) {
     if (e.value) {
-      AppLogger.log('VOICE_RESULT', { transcript: e.value[0] });
+      AppLogger.log('VOICE_RESULT' as any, { transcript: e.value[0] });
     }
   }
 
-  private onSpeechError(e: SpeechErrorEvent) {
-    AppLogger.log('VOICE_ERROR', { error: e.error });
+  private onSpeechError(e: any) {
+    AppLogger.log('VOICE_ERROR' as any, { error: e.error });
   }
 
   async startListening() {
@@ -77,7 +80,7 @@ class VoiceService {
     try {
       await Voice.start('en-US');
     } catch (e) {
-      AppLogger.log('VOICE_ERROR', { error: e });
+      AppLogger.log('VOICE_ERROR' as any, { error: e });
     }
   }
 
@@ -86,7 +89,7 @@ class VoiceService {
     try {
       await Voice.stop();
     } catch (e) {
-      AppLogger.log('VOICE_ERROR', { error: e });
+      AppLogger.log('VOICE_ERROR' as any, { error: e });
     }
   }
 

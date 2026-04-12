@@ -25,13 +25,13 @@ export const useVoiceControl = (favorites: IFavoriteState[], onAction: (action: 
   useEffect(() => {
     if (!isVoiceSupported) return;
 
-    const onResults = (e: SpeechResultsEvent) => {
+    const onResults = (e: any) => {
       if (e.value) {
         setTranscript(e.value[0]);
       }
     };
 
-    const onError = (e: SpeechErrorEvent) => {
+    const onError = (e: any) => {
       setError(e.error?.message || 'Speech recognition error');
       setIsListening(false);
     };
@@ -56,6 +56,15 @@ export const useVoiceControl = (favorites: IFavoriteState[], onAction: (action: 
     try {
       setTranscript('');
       setError(null);
+
+      // Check permissions
+      const { Audio } = require('expo-av');
+      const perm = await Audio.requestPermissionsAsync();
+      if (perm.status !== 'granted') {
+        setError('Microphone permission denied');
+        return;
+      }
+
       setIsListening(true);
       await Voice.start('en-US');
     } catch (e: any) {
