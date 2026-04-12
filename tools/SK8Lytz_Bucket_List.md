@@ -9,9 +9,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 <!-- AUTO_SYNC_ERRORS_START -->
 <!-- AUTO_SYNC_ERRORS_END -->
 
-
+- [ ] `fix/ble-queue-and-timeouts` : Implement a global Mutex/Promise queue for all BLE writes to prevent GATT internal crashes. Add hard timeouts (e.g. 5000ms) to all device connection attempts to prevent infinite freeze. Complete the implementation of the `isDisconnecting` latch.
 - [ ] `fix/auth-page-scrolling` : NO vertical scrolling on auth page. Ensure the layout stops overflowing vertically, and shrink the "Continue offline" section to fit.
-- [ ] `feat/pull-to-refresh-scanner` : On scanner dashboard, pulling down should trigger device polling (refresh local state, trigger BLE scan).
 - [ ] `fix/dynamic-arch-regressions` : Resolve 'isHaloz' ReferenceError in ProductVisualizer and perform a sanitization audit (DockedController, ZenggeProtocol, Setup Wizard) to remove remaining hardcoded binary logic.
 - [ ] `fix/tsc-errors-audit` : Fix TypeScript errors remaining from dynamic-arch-regressions (Audio namespace, missing EventType for 'BUILDER_PRESET_SAVED' in DockedController, IVoiceAction/Typography Subheader in DashboardScreen).
 - [ ] `feat/battery-health-predict` : Mathematical power modeling to predict battery life based on pattern draw; auto-dims to 20% at critical reserve.
@@ -21,10 +20,9 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/ui-refinement`
 
-- [ ] `feat/modern-avatar-color-picker` : Replace legacy color dots with the new modern RGB slider for avatar color customization in Crew Hub and User Account screens.
+- [x] `feat/modern-avatar-color-picker` : Replace legacy color dots with the new modern RGB slider for avatar color customization in Crew Hub and User Account screens.
 - [ ] `gate-offline-mode` : Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning.
-- [ ] `feat/dashboard-offline-crew-card-teaser` : Shrink Crew Card on Dashboard when offline to act as an unavailable teaser instead of fully collapsing it.
-
+- [x] `feat/dashboard-offline-crew-card-teaser` : Shrink Crew Card on Dashboard when offline to act as an unavailable teaser instead of fully collapsing it.
 
 ### Target: `epic/crew-hub-overhaul`
 
@@ -111,7 +109,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [x] `feat/voice-command-engine` : Implement core offline voice resolution and UI bridge natural language to BLE payloads for safe operation while skating.
 - [x] `feat/voice-first-use-tooltip` : On first launch of the VoiceFAB, show a dismissible "What can I say?" tutorial popup listing example commands (modes, favorites by name, brightness, speed, spatial). Persist dismissed state to AsyncStorage.
 - [x] `feat/empty-skates-setup-cta` : On the Dashboard, if no device groups exist (offline or online), render a contextual "Set Up Your Skates →" CTA button beneath the "My Skates" section header. The button should open the Hardware Setup Wizard and be completely hidden once at least one group/device is registered. Condition must work in both offline and authenticated states.
-
 
 ## ✅ Completed Previously
 
