@@ -923,21 +923,18 @@ export default function Sk8LytzDiagnosticLab({
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
         {/* Header (Aligned with Programmer) */}
-        <View style={[S.header, { borderBottomColor: border, paddingTop: insets.top }]}>
-          <View>
-            <Text style={[Typography.title, { color: cyan, fontSize: 18 }]}>⚡ LED DIAGNOSTIC LAB</Text>
+        <View style={[S.header, { borderBottomColor: border, paddingTop: insets.top || 16, paddingBottom: 16 }]}>
+          <TouchableOpacity onPress={onClose} style={S.backBtn}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={cyan} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={[Typography.title, { color: cyan, fontSize: 18, textTransform: 'uppercase', letterSpacing: 1.5 }]}>🔬 LED DIAGNOSTIC LAB</Text>
             <Text style={{ color: txtMuted, fontSize: 11, marginTop: 2 }}>
               {connectedDevices.length > 0 
                 ? `Probing: ${connectedDevices.map(d => d.name || d.id.slice(-5)).join(', ')}` 
                 : 'Hardware telemetry & protocol debugger'}
             </Text>
           </View>
-          <TouchableOpacity
-            style={S.exitBtn}
-            onPress={onClose}
-          >
-            <Text style={{ color: '#FF8888', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>EXIT</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Tab Bar */}
@@ -983,13 +980,9 @@ const S = StyleSheet.create({
     paddingBottom: 16, 
     borderBottomWidth: 1 
   },
-  exitBtn: { 
-    paddingHorizontal: 16, 
-    paddingVertical: 8, 
-    borderRadius: 8, 
-    borderWidth: 1, 
-    backgroundColor: 'rgba(255,60,60,0.1)', 
-    borderColor: 'rgba(255,60,60,0.3)' 
+  backBtn: { 
+    marginRight: 16,
+    padding: 4,
   },
   title: { color: '#FFF', fontSize: 18, fontWeight: '900', letterSpacing: 1.5 },
   tabBar: { flexDirection: 'row', borderBottomWidth: 1 },

@@ -248,19 +248,16 @@ export default function Sk8LytzProgrammerModal({
       <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
 
         {/* ── Header ── */}
-        <View style={[s.topBar, { borderBottomColor: border }]}>
-          <View>
-            <Text style={[Typography.title, { color: orange, fontSize: 18 }]}>⚡ BATCH PROGRAMMER</Text>
+        <View style={[s.topBar, { borderBottomColor: border, paddingTop: insets.top || 16, paddingBottom: 16 }]}>
+          <TouchableOpacity onPress={onClose} style={s.backBtn}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={[Typography.title, { color: Colors.text, fontSize: 18, textTransform: 'uppercase', letterSpacing: 1.5 }]}>⚡ BATCH PROGRAMMER</Text>
             <Text style={{ color: txtMuted, fontSize: 11, marginTop: 2 }}>
               Configure multiple controllers instantly
             </Text>
           </View>
-          <TouchableOpacity
-            style={[s.exitBtn, { borderColor: 'rgba(255,60,60,0.4)', backgroundColor: 'rgba(255,60,60,0.1)' }]}
-            onPress={() => { if (onExitToLogs) onExitToLogs(); else onClose(); }}
-          >
-            <Text style={{ color: '#FF8888', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>EXIT</Text>
-          </TouchableOpacity>
         </View>
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
@@ -447,11 +444,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 1,
   },
-  exitBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
+  backBtn: {
+    marginRight: 16,
+    padding: 4,
   },
   card: {
     borderRadius: 12,
