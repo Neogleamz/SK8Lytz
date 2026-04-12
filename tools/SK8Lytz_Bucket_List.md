@@ -11,12 +11,14 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 - [ ] `fix/dynamic-arch-regressions` : Resolve 'isHaloz' ReferenceError in ProductVisualizer and perform a sanitization audit (DockedController, ZenggeProtocol, Setup Wizard) to remove remaining hardcoded binary logic.
 - [ ] `fix/tsc-errors-audit` : Fix TypeScript errors remaining from dynamic-arch-regressions (Audio namespace, missing EventType for 'BUILDER_PRESET_SAVED' in DockedController, IVoiceAction/Typography Subheader in DashboardScreen).
-- [ ] `fix/rls-telemetry-block` : [CRITICAL] Resolve 403 Forbidden errors on `parsed_session_stats` and `device_diagnostics`. Likely RLS policy mismatch for authenticated telemetry sinks. → [Plan](docs/plans/fix-rls-telemetry-block.md)
+- [ ] `fix/rls-telemetry-block` : [CRITICAL] Resolve 403 Forbidden errors on `parsed_session_stats`, `device_diagnostics`, and `parsed_session_devices`. Likely RLS policy mismatch for authenticated telemetry sinks. → [Plan](docs/plans/fix-rls-telemetry-block.md)
 - [ ] `fix/device-group-fk-integrity` : [CRITICAL] Resolve foreign key constraint violations in `registered_devices` group_id. Upsert logic is referencing non-existent groups. → [Plan](docs/plans/fix-device-group-fk-integrity.md)
+- [ ] `feat/eula-onboarding` : Implement mandatory EULA acceptance in Auth flow and global version enforcement → [Plan](docs/plans/feat-eula-onboarding.md)
+- [ ] `feat/admin-app-manager` : Finalized Governance Hub with Safety Locks (Consolidated Scope) → [Plan](docs/plans/feat-admin-app-manager.md)
 
 ### Target: `epic/ui-refinement`
 
-- [ ] `gate-offline-mode` : Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning.
+- [ ] `gate-offline-mode` : Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. we need to reall talk about this!!!! and build a great plan.
 
 ### Target: `epic/crew-hub-overhaul`
 
@@ -40,6 +42,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] `tune-visualizer-pro-effects` : #15 — Visualizer Parity: Pro Effects Patterns — Exhaustively review and tune the interpolation mathematics for all 33 of the 'pro effects' patterns to make them physically accurate within the product visualizer.
 
 ### Target: `epic/device-management`
+- [ ] `audit/device-group-persistence` : Audit device group state handling to prevent duplicate/ghost groups and ensure seamless offline-to-online persistence. → [Plan](docs/plans/audit-device-group-persistence.md)
 
 ### Target: `epic/protocol-integration`
 
@@ -69,8 +72,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/skate-spot-discovery`
 
-- [ ] `feat/usa-skate-spots-dataset` : Build a live, US-only dataset of rinks and parks (hours, adult nights, surface types) for map overlays and a new 'Find a Place to Skate' discovery feature integrated into Crew Hub and the Main Dashboard.
-- [ ] `feat/interactive-skate-spot-map` : Implement a high-density, interactive skate spot map using react-native-maps and clustering. Feature verified custom DB rinks vs. unverified Google Places fallbacks, including a 'Claim & Complete' bottom sheet UI to crowdsource specialized metadata (surface types, adult nights).
+- [ ] `feat/usa-skate-spots-dataset` : Build a live, US-only dataset of rinks and parks (hours, adult nights, surface types) for map overlays and a new 'Find a Place to Skate' discovery feature integrated into Crew Hub and the Main Dashboard. [Governance Gated]
+- [ ] `feat/interactive-skate-spot-map` : Implement a high-density, interactive skate spot map using react-native-maps and clustering. Feature verified custom DB rinks vs. unverified Google Places fallbacks, including a 'Claim & Complete' bottom sheet UI to crowdsource specialized metadata (surface types, adult nights). [Governance Gated] → [Plan](docs/plans/feat-interactive-skate-spot-map.md)
 
 ### Target: `epic/ui-refinement`
 
