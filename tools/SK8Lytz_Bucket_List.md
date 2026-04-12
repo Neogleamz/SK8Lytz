@@ -54,6 +54,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/telemetry-audit`
 
+- [ ] `feat/street-mode-telemetry-overhaul` : Overhaul Street Mode with always-on car-dashboard telemetry, data-dense metrics grid, and auto-scaling gauges. → [Plan](docs/plans/feat-street-mode-telemetry-overhaul.md)
+
 ### Target: `epic/security-audit`
 
 - [ ] `audit-rls-performance` : #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges.

@@ -20,6 +20,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { supabase } from '../services/supabaseClient';
 import { AppLogger, LogEntry, EventType } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
 import AdminPicksScheduler from './AdminPicksScheduler';
@@ -80,6 +81,14 @@ const EVENT_META: Record<EventType, { icon: string; color: string; label: string
   CREW_PERMANENT_DELETED:  { icon: 'star-off',      color: '#FF4040', label: 'Perm Crew Deleted' },
   CREW_PERMANENT_UPDATED:  { icon: 'star-settings', color: '#FFD700', label: 'Perm Crew Updated' },
   CREW_MEMBERS_ADDED:      { icon: 'account-multiple-plus', color: '#00AAFF', label: 'Members Added' },
+  MOUNT:                   { icon: 'check-network', color: '#00f0ff', label: 'Component Mounted' },
+  UNMOUNT:                 { icon: 'close-network',  color: '#888888', label: 'Component Unmounted' },
+  SYNC:                    { icon: 'sync',           color: '#00E676', label: 'Cloud Sync' },
+  REJOIN:                  { icon: 'refresh',        color: '#FFAA00', label: 'Session Rejoined' },
+  FTUE:                    { icon: 'wizard-hat',     color: '#9D4EFF', label: 'FTUE Step' },
+  SESSION_SAVED:           { icon: 'content-save',   color: '#00AAFF', label: 'Session Saved' },
+  SPEED_REACTIVE_ENABLED:  { icon: 'brightness-auto', color: '#00f0ff', label: 'Speed Sync ON' },
+  SPEED_REACTIVE_DISABLED: { icon: 'brightness-off',  color: '#888888', label: 'Speed Sync OFF' },
 };
 
 function formatTime(ms: number): string {
@@ -182,6 +191,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
     vizStripCount: 2,
     vizStripSeparation: 32,
     vizStripOrientation: 'VERTICAL',
+    batteryCapacityMilliAmpereHour: 3000,
   });
 
   useEffect(() => {
@@ -800,6 +810,10 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
           <TextInput style={fieldStyle as any} value={String(activeProfile.vizBaseHeight)}
             onChangeText={v => patchEdit({ vizBaseHeight: parseInt(v) || 115 })} keyboardType="numeric"
           />
+          <Text style={labelStyle}>BATTERY CAPACITY (mAh)</Text>
+          <TextInput style={fieldStyle as any} value={String(activeProfile.batteryCapacityMilliAmpereHour)}
+            onChangeText={v => patchEdit({ batteryCapacityMilliAmpereHour: parseInt(v) || 0 })} keyboardType="numeric"
+          />
 
           {/* DUAL_STRIP only */}
           {activeProfile.vizShape === 'DUAL_STRIP' && (
@@ -911,7 +925,6 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
         {tab === 'device' && renderDeviceTab()}
         {tab === 'stats' && renderStatsTab()}
         {tab === 'tools' && renderAdminTab()}
-        {tab === 'products' && renderProductsTab()}
       </SafeAreaView>
 
       {/* ── Confirm Delete Modal ── */}
