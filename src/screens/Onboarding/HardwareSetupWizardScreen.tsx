@@ -232,7 +232,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
           Assign them to a Fleet and designate left or right.
         </Text>
 
-        <View style={styles.scrollViewWrapper}>
+        <ScrollView style={styles.scrollViewWrapper} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
           {/* Group */}
           <Text style={styles.label}>FLEET / GROUP NAME</Text>
           <TextInput 
@@ -247,7 +247,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
           {selected.map((device, idx) => {
             const config = deviceConfigsState[device.device_mac] || { name: '', type: LOCAL_PRODUCT_CATALOG[0].id, position: null, points: LOCAL_PRODUCT_CATALOG[0].defaultLedPoints };
             
-            const updateConfig = (key: string, val: any) => {
+            const updateConfig = (key: 'name' | 'type' | 'position' | 'points', val: string | number | null) => {
                setDeviceConfigsState(prev => ({
                  ...prev,
                  [device.device_mac]: { ...prev[device.device_mac], [key]: val }
@@ -345,7 +345,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
               </View>
             );
           })}
-          </View>
+          </ScrollView>
       </View>
     );
   };
