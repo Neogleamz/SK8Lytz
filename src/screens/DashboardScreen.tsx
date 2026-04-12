@@ -302,6 +302,22 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
 
   const [customGroups, setCustomGroups] = useState<CustomGroup[]>([]);
+
+  // ── Enforce UI Group SSOT via useRegistration ────────────────────────────────
+  useEffect(() => {
+    const groupMap: Record<string, CustomGroup> = {};
+    registeredDevices.forEach(rd => {
+      if (rd.group_id && rd.group_name && rd.group_id !== 'default-fleet') {
+        if (!groupMap[rd.group_id]) {
+          groupMap[rd.group_id] = { id: rd.group_id, name: rd.group_name, isGroup: true, deviceIds: [] };
+        }
+        if (!groupMap[rd.group_id].deviceIds.includes(rd.device_mac)) {
+          groupMap[rd.group_id].deviceIds.push(rd.device_mac);
+        }
+      }
+    });
+    setCustomGroups(Object.values(groupMap));
+  }, [registeredDevices]);
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
@@ -555,16 +571,25 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       if (isOffline || groupsToProcess.length === 0) {
         // Fallback to local storage
         console.log('[SK8Lytz] Cloud unreachable. Using local AsyncStorage for Auto-Connect...');
-        const localGroupsStr = await AsyncStorage.getItem('ng_custom_groups');
-        if (localGroupsStr) {
+        const localDevicesStr = await AsyncStorage.getItem('@Sk8lytz_registered_devices');
+        if (localDevicesStr) {
           try {
-            const parsed = JSON.parse(localGroupsStr);
-            groupsToProcess = parsed.map((g: any) => ({
-              id: g.id,
-              group_name: g.name,
-              created_at: new Date().toISOString(),
-              deviceIds: g.deviceIds
-            }));
+            const parsed = JSON.parse(localDevicesStr);
+            const offlineGroupMap = new Map();
+            parsed.forEach((d: any) => {
+              if (d.group_id && d.group_id !== 'default-fleet') {
+                if (!offlineGroupMap.has(d.group_id)) {
+                  offlineGroupMap.set(d.group_id, {
+                    id: d.group_id,
+                    group_name: d.group_name || d.group_id,
+                    created_at: new Date().toISOString(), // Fallback
+                    deviceIds: []
+                  });
+                }
+                offlineGroupMap.get(d.group_id).deviceIds.push(d.device_mac);
+              }
+            });
+            groupsToProcess = Array.from(offlineGroupMap.values());
           } catch (e) {}
         }
       }
@@ -1195,10 +1220,16 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   const handleGroupDelete = async (id: string) => {
     const groupToDelete = customGroups.find(g => g.id === id);
-    const updatedGroups = customGroups.filter(g => g.id !== id);
-    setCustomGroups(updatedGroups);
-    await AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
-    
+    if (!groupToDelete) {
+      setIsGroupModalVisible(false);
+      return;
+    }
+
+    const devsToDelete = registeredDevices.filter(d => d.group_id === id);
+    for (const d of devsToDelete) {
+      await saveRegisteredDevice({ ...d, group_id: 'default-fleet', group_name: undefined, is_pending_sync: true });
+    }
+
     if (groupToDelete && groupToDelete.deviceIds) {
       try {
         const stored = await AsyncStorage.getItem('ng_device_configs');
@@ -1212,11 +1243,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               delete configs[mac].groupName;
               configs[mac].grouped = false;
               configsChanged = true;
-              
-              const rd = registeredDevices.find(r => r.device_mac === mac);
-              if (rd) {
-                await saveRegisteredDevice({ ...rd, group_name: undefined, is_pending_sync: true });
-              }
             }
           }
           
@@ -1234,7 +1260,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   };
 
   const saveGroup = async (name: string, deviceIds: string[]) => {
-    let newGroups = customGroups;
     let finalGroupId = `group-${Date.now()}`;
     let previousDeviceIds: string[] = [];
 
@@ -1243,9 +1268,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       if (existing) {
         finalGroupId = existing.id;
         previousDeviceIds = existing.deviceIds || [];
-        newGroups = customGroups.map(g => g.id === existing.id ? { ...g, deviceIds: Array.from(new Set([...g.deviceIds, ...deviceIds])) } : g);
-      } else {
-        newGroups = [...customGroups, { id: finalGroupId, name, isGroup: true, deviceIds }];
       }
       setIsSelectionMode(false);
       setSelectedIds([]);
@@ -1257,13 +1279,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       finalGroupId = editingGroupId;
       const existing = customGroups.find(g => g.id === editingGroupId);
       if (existing) previousDeviceIds = existing.deviceIds || [];
-      newGroups = customGroups.map(g => g.id === editingGroupId ? { ...g, name, deviceIds } : g);
     }
-    
-    setCustomGroups(newGroups);
-    await AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups));
 
-    // Deep cache scrub & sync for children configurations
     try {
       const stored = await AsyncStorage.getItem('ng_device_configs');
       const configs = stored ? JSON.parse(stored) : {};
@@ -1277,17 +1294,18 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           delete configs[mac].groupName;
           configs[mac].grouped = false;
           configsChanged = true;
-          const rd = registeredDevices.find(r => r.device_mac === mac);
-          if (rd) await saveRegisteredDevice({ ...rd, group_name: undefined, is_pending_sync: true });
         }
+        const rd = registeredDevices.find(r => r.device_mac === mac);
+        if (rd) await saveRegisteredDevice({ ...rd, group_id: 'default-fleet', group_name: undefined, is_pending_sync: true });
       }
 
       // Added or preserved devices: enforce group config
       for (const mac of deviceIds) {
+        if (!configs[mac]) configs[mac] = {};
         configs[mac] = { ...configs[mac], groupId: finalGroupId, groupName: name, grouped: true };
         configsChanged = true;
         const rd = registeredDevices.find(r => r.device_mac === mac);
-        if (rd) await saveRegisteredDevice({ ...rd, group_name: name, is_pending_sync: true });
+        if (rd) await saveRegisteredDevice({ ...rd, group_id: finalGroupId, group_name: name, is_pending_sync: true });
       }
 
       if (configsChanged) {
@@ -1331,30 +1349,16 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       if (settings.grouped && settings.groupName && !settings.groupId) {
         // Find existing group by name or create a fresh one natively
         const existingGroup = customGroups.find(g => g.name.toLowerCase() === settings.groupName?.toLowerCase());
-        if (existingGroup) {
-          finalGroupId = existingGroup.id;
-          if (!existingGroup.deviceIds.includes(selectedDeviceForSettings.id)) {
-             const newGroups = customGroups.map(g => g.id === existingGroup.id ? {...g, deviceIds: [...g.deviceIds, selectedDeviceForSettings.id]} : g);
-             setCustomGroups(newGroups);
-             AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups)).catch(() => {});
-          }
-        } else {
-          finalGroupId = `group-${Date.now()}`;
-          const newGroups = [...customGroups, { id: finalGroupId, name: settings.groupName, isGroup: true, deviceIds: [selectedDeviceForSettings.id] }];
-          setCustomGroups(newGroups);
-          AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups)).catch(() => {});
-        }
-      } else if (settings.grouped && settings.groupId) {
-          const existingGroup = customGroups.find(g => g.id === settings.groupId);
-          if (existingGroup && !existingGroup.deviceIds.includes(selectedDeviceForSettings.id)) {
-             const newGroups = customGroups.map(g => g.id === existingGroup.id ? {...g, deviceIds: [...g.deviceIds, selectedDeviceForSettings.id]} : g);
-             setCustomGroups(newGroups);
-             AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups)).catch(() => {});
-          }
+        finalGroupId = existingGroup ? existingGroup.id : `group-${Date.now()}`;
       } else if (!settings.grouped) {
-          const newGroups = customGroups.map(g => ({...g, deviceIds: g.deviceIds.filter((id: string) => id !== selectedDeviceForSettings.id)}));
-          setCustomGroups(newGroups);
-          AsyncStorage.setItem('ng_custom_groups', JSON.stringify(newGroups)).catch(() => {});
+        finalGroupId = 'default-fleet';
+      }
+
+      // Sync via useRegistration SSOT
+      const rd = registeredDevices.find(r => r.device_mac === selectedDeviceForSettings.id);
+      if (rd) {
+        const targetGroupName = settings.grouped ? (settings.groupName || rd.group_name) : undefined;
+        saveRegisteredDevice({ ...rd, group_id: finalGroupId, group_name: targetGroupName, is_pending_sync: true }).catch(console.warn);
       }
 
       setAllDevices((prev: any[]) => {
