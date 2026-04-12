@@ -11,6 +11,8 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 - [ ] `fix/dynamic-arch-regressions` : Resolve 'isHaloz' ReferenceError in ProductVisualizer and perform a sanitization audit (DockedController, ZenggeProtocol, Setup Wizard) to remove remaining hardcoded binary logic.
 - [ ] `fix/tsc-errors-audit` : Fix TypeScript errors remaining from dynamic-arch-regressions (Audio namespace, missing EventType for 'BUILDER_PRESET_SAVED' in DockedController, IVoiceAction/Typography Subheader in DashboardScreen).
+- [ ] `fix/rls-telemetry-block` : [CRITICAL] Resolve 403 Forbidden errors on `parsed_session_stats` and `device_diagnostics`. Likely RLS policy mismatch for authenticated telemetry sinks. → [Plan](docs/plans/fix-rls-telemetry-block.md)
+- [ ] `fix/device-group-fk-integrity` : [CRITICAL] Resolve foreign key constraint violations in `registered_devices` group_id. Upsert logic is referencing non-existent groups. → [Plan](docs/plans/fix-device-group-fk-integrity.md)
 
 ### Target: `epic/ui-refinement`
 
