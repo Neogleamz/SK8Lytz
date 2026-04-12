@@ -30,9 +30,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] `refactor-crew-modal` : #3 — `CrewModal.tsx` refactor — 14 useEffect hooks, 2,600+ lines. Extract `useCrewHub()` and `useCrewSession()` custom hooks. Highest maintainability debt in the codebase.
 - [ ] `feat/advanced-map-integration` : Verify and rework map integration in Crew Hub and "Live Near Me" (post-modal rebuild). Add a live map showing the selected radius and a dot for the session location. Also beef up map integration within the scheduler.
 
-### Target: `epic/music-mode-parity`
-
-- [ ] `lab-music-mode-parity` : #13 — Lab 0x73 Music Mode parity — Lab BUILDER's 0x73 section is missing Light Screen (0x27) vs Light Bar (0x26) matrix style toggle, primary/secondary color pickers, and mic source.
 
 ---
 
@@ -98,6 +95,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ## ✅ Completed This Session (Apr 2026)
 
+- [x] `lab-music-mode-parity` : #13 — Lab 0x73 Music Mode parity — Lab BUILDER's 0x73 section is missing Light Screen (0x27) vs Light Bar (0x26) matrix style toggle, primary/secondary color pickers, and mic source.
 - [x] `epic/connection-reliability` : Execute the multiphase connection reliability plan (see `docs/plans/epic-connection-reliability.md`). Stop dropping connections, fix lockups entering/leaving controller, and fix UI teardown on disconnect (resolves `fix/hardware-connection-drop`, `audit/connection-polling-logic`, and `fix/controller-navigation-lockup`).
 - [x] `fix-ble-audit` : Debug and resolve BLE connection regression. Devices not found or connecting slowly.
 - [x] `feat/speed-tracking-telemetry` : Complete end-to-end session telemetry — SpeedTrackingService, SessionSummaryModal with dynamic speed-zone accent colour, Statistics tab in AccountModal (lifetime grid + recent session history), DockedController RECORD/SAVE button with live GPS accumulation.
