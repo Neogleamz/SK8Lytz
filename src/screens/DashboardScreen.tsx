@@ -238,6 +238,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     registeredDevices,
     saveRegisteredDevice,
     saveAllRegisteredDevices,
+    deregisterDevice,
     checkDeviceClaimed,
     hasCloudRegistrations,
     migrateLegacyGroups,
@@ -2066,18 +2067,37 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         }}
         registeredDevices={registeredDevices.map((d) => ({
           id: d.id || '',
+          mac: d.device_mac || '',
           name: d.device_name || '',
           customName: d.custom_name || '',
+          groupName: d.group_name || '',
           type: d.product_type as any,
           registeredAt: d.registered_at,
         }))}
-        onDeviceRenamed={(deviceId, newName) => {
+        onDeviceRenamed={async (deviceId, newName) => {
           setAllDevices((prev: any[]) => prev.map((d: any) =>
             d.id === deviceId ? { ...d, customName: newName } : d
           ));
+          const rd = registeredDevices.find(r => r.device_mac === deviceId);
+          if (rd) {
+            await saveRegisteredDevice({ ...rd, custom_name: newName, is_pending_sync: true });
+          }
         }}
-        onDeviceForgotten={(deviceId) => {
+        onDeviceForgotten={async (deviceId) => {
           setAllDevices((prev: any[]) => prev.filter((d: any) => d.id !== deviceId));
+          await deregisterDevice(deviceId);
+        }}
+        onGroupRenamed={async (oldGroupName, newGroupName) => {
+          const devs = registeredDevices.filter(d => d.group_name === oldGroupName);
+          for (const d of devs) {
+            await saveRegisteredDevice({ ...d, group_name: newGroupName, is_pending_sync: true });
+          }
+        }}
+        onGroupForgotten={async (groupName) => {
+          const devs = registeredDevices.filter(d => d.group_name === groupName);
+          for (const d of devs) {
+            await deregisterDevice(d.device_mac);
+          }
         }}
       />
       
