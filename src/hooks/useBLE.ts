@@ -25,6 +25,7 @@ import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
 import { Buffer } from 'buffer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LOCAL_PRODUCT_CATALOG, getLocalProfileByPoints } from '../constants/ProductCatalog';
 
 let BleManager: any;
 let State: any;
