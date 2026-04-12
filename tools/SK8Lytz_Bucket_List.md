@@ -21,7 +21,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/ui-refinement`
 
-- [ ] `feat/modern-avatar-color-picker` : Replace legacy color dots with the new modern RGB slider for avatar color customization in Crew Hub and User Account screens.
+- [x] `feat/modern-avatar-color-picker` : Replace legacy color dots with the new modern RGB slider for avatar color customization in Crew Hub and User Account screens.
 - [ ] `gate-offline-mode` : Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning.
 - [ ] `feat/dashboard-offline-crew-card-teaser` : Shrink Crew Card on Dashboard when offline to act as an unavailable teaser instead of fully collapsing it.
 
@@ -34,7 +34,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/music-mode-parity`
 
 - [ ] `lab-music-mode-parity` : #13 — Lab 0x73 Music Mode parity — Lab BUILDER's 0x73 section is missing Light Screen (0x27) vs Light Bar (0x26) matrix style toggle, primary/secondary color pickers, and mic source.
-- [ ] `fix-music-mode-color` : #14 — Music Mode: Sound column/drop color not applied — Main app music mode is functioning but color changes for patterns using "sound column" and "drop" effects are not being accepted/applied.
+- [x] `fix-music-mode-color` : #14 — Music Mode: Sound column/drop color not applied — Main app music mode is functioning but color changes for patterns using "sound column" and "drop" effects are not being accepted/applied.
 
 ---
 
