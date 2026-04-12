@@ -32,8 +32,10 @@ type Tab = 'profile' | 'security' | 'crews' | 'devices' | 'settings' | 'stats';
 
 type StoredDevice = {
   id: string;
+  mac?: string;
   name: string;
   customName?: string;
+  groupName?: string;
   type?: string;
   registeredAt?: string;
 };
@@ -47,6 +49,8 @@ interface AccountModalProps {
   registeredDevices?: StoredDevice[];
   onDeviceRenamed?: (deviceId: string, newName: string) => void;
   onDeviceForgotten?: (deviceId: string) => void;
+  onGroupRenamed?: (oldGroupName: string, newGroupName: string) => void;
+  onGroupForgotten?: (groupName: string) => void;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -95,6 +99,8 @@ export default function AccountModal({
   registeredDevices = [],
   onDeviceRenamed,
   onDeviceForgotten,
+  onGroupRenamed,
+  onGroupForgotten,
 }: AccountModalProps) {
   const { Colors, isDark, toggleTheme } = useTheme();
   const styles = createStyles(Colors);
@@ -418,18 +424,6 @@ export default function AccountModal({
     setEditingDeviceId(null);
     setDeviceNewName('');
     AppLogger.log('DEVICE_RENAMED', { deviceId: device.id, oldName: device.name, newName: newName });
-
-    if (user) {
-      try {
-        await supabase
-          .from('registered_devices')
-          .update({ custom_name: newName })
-          .eq('device_mac', device.id)
-          .eq('user_id', user.id);
-      } catch (err) {
-        console.warn('Failed to persist device rename', err);
-      }
-    }
   };
 
   const handleForgetDevice = (device: StoredDevice) => {
@@ -443,15 +437,6 @@ export default function AccountModal({
           onPress: async () => {
             onDeviceForgotten?.(device.id);
             setDevices(prev => prev.filter(d => d.id !== device.id));
-            // Also remove from Supabase registered_devices
-            try {
-              await supabase
-                .from('registered_devices')
-                .delete()
-                .eq('device_mac', device.id);
-            } catch (e) {
-              console.warn('[AccountModal] Could not remove device from cloud:', e);
-            }
           },
         },
       ]
@@ -814,6 +799,49 @@ export default function AccountModal({
   // TAB: DEVICES
   // ════════════════════════════════════════════════════════
 
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [groupNewName, setGroupNewName] = useState('');
+
+  const groupedDevices = React.useMemo(() => {
+    const groups: { [key: string]: StoredDevice[] } = { "_Ungrouped": [] };
+    devices.forEach(d => {
+      const gName = d.groupName || '';
+      if (gName) {
+        if (!groups[gName]) groups[gName] = [];
+        groups[gName].push(d);
+      } else {
+        groups["_Ungrouped"].push(d);
+      }
+    });
+    return groups;
+  }, [devices]);
+
+  const handleRenameGroup = (oldName: string) => {
+    if (!groupNewName.trim()) return;
+    const newName = groupNewName.trim();
+    onGroupRenamed?.(oldName, newName);
+    setDevices(prev => prev.map(d => d.groupName === oldName ? { ...d, groupName: newName } : d));
+    setEditingGroupId(null);
+    setGroupNewName('');
+  };
+
+  const handleForgetGroup = (groupName: string) => {
+    Alert.alert(
+      `Forget Group "${groupName}"?`,
+      'This removes all devices within this group from your registered devices.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Forget All', style: 'destructive',
+          onPress: async () => {
+            onGroupForgotten?.(groupName);
+            setDevices(prev => prev.filter(d => d.groupName !== groupName));
+          },
+        },
+      ]
+    );
+  };
+
   const renderDevices = () => (
     <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
       {devices.length === 0 ? (
@@ -823,56 +851,105 @@ export default function AccountModal({
           <Text style={styles.emptySubtitle}>Pair your SK8Lytz skates from the main screen to see them here.</Text>
         </View>
       ) : (
-        devices.map(device => (
-          <View key={device.id} style={styles.deviceCard}>
-            <MaterialCommunityIcons
-              name={device.type === 'SOULZ' ? 'skate' : 'lightning-bolt-circle'}
-              size={22} color={Colors.primary} style={{ marginRight: 12 }} />
-            <View style={{ flex: 1 }}>
-              {editingDeviceId === device.id ? (
-                <TextInput
-                  style={[styles.input, { marginBottom: 0, paddingVertical: 6, paddingHorizontal: 10 }]}
-                  value={deviceNewName} onChangeText={setDeviceNewName}
-                  placeholder={device.customName || device.name}
-                  placeholderTextColor={Colors.textMuted}
-                  autoFocus maxLength={32}
-                  returnKeyType="done"
-                  onSubmitEditing={() => handleRenameDevice(device)}
-                />
-              ) : (
-                <>
-                  <Text style={styles.deviceName}>{device.customName || device.name}</Text>
-                  {device.type && <Text style={styles.deviceMeta}>{device.type} · {device.id.slice(-8)}</Text>}
-                  {device.registeredAt && <Text style={styles.deviceMeta}>Paired {formatDate(device.registeredAt)}</Text>}
-                </>
+        Object.entries(groupedDevices).map(([groupName, groupDevs]) => {
+          if (groupDevs.length === 0) return null;
+          const isUngrouped = groupName === "_Ungrouped";
+
+          return (
+            <View key={groupName} style={{ marginBottom: 16 }}>
+              {!isUngrouped && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 16 }}>
+                  {editingGroupId === groupName ? (
+                    <TextInput
+                      style={[styles.input, { flex: 1, marginBottom: 0, paddingVertical: 6, paddingHorizontal: 10, marginRight: 8 }]}
+                      value={groupNewName} onChangeText={setGroupNewName}
+                      placeholder={groupName} placeholderTextColor={Colors.textMuted}
+                      autoFocus maxLength={32} returnKeyType="done"
+                      onSubmitEditing={() => handleRenameGroup(groupName)}
+                    />
+                  ) : (
+                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: Colors.textPrimary, textTransform: 'uppercase' }}>
+                      {groupName}
+                    </Text>
+                  )}
+                  
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {editingGroupId === groupName ? (
+                      <>
+                        <TouchableOpacity style={styles.deviceSaveBtn} onPress={() => handleRenameGroup(groupName)}>
+                          <MaterialCommunityIcons name="check" size={16} color="#000" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => { setEditingGroupId(null); setGroupNewName(''); }}>
+                          <MaterialCommunityIcons name="close" size={18} color={Colors.textMuted} />
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <>
+                        <TouchableOpacity onPress={() => { setEditingGroupId(groupName); setGroupNewName(groupName); }}>
+                          <MaterialCommunityIcons name="pencil" size={18} color={Colors.textMuted} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleForgetGroup(groupName)}>
+                          <MaterialCommunityIcons name="trash-can-outline" size={18} color="#FF4444" />
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
+                </View>
               )}
+
+              {groupDevs.map(device => (
+                <View key={device.id} style={styles.deviceCard}>
+                  <MaterialCommunityIcons
+                    name={device.type === 'SOULZ' ? 'skate' : 'lightning-bolt-circle'}
+                    size={22} color={Colors.primary} style={{ marginRight: 12 }} />
+                  <View style={{ flex: 1 }}>
+                    {editingDeviceId === device.id ? (
+                      <TextInput
+                        style={[styles.input, { marginBottom: 0, paddingVertical: 6, paddingHorizontal: 10 }]}
+                        value={deviceNewName} onChangeText={setDeviceNewName}
+                        placeholder={device.customName || device.name}
+                        placeholderTextColor={Colors.textMuted}
+                        autoFocus maxLength={32}
+                        returnKeyType="done"
+                        onSubmitEditing={() => handleRenameDevice(device)}
+                      />
+                    ) : (
+                      <>
+                        <Text style={styles.deviceName}>{device.customName || device.name}</Text>
+                        {device.type && <Text style={styles.deviceMeta}>{device.type} · {device.id.slice(-8)}</Text>}
+                        {device.registeredAt && <Text style={styles.deviceMeta}>Paired {formatDate(device.registeredAt)}</Text>}
+                      </>
+                    )}
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                    {editingDeviceId === device.id ? (
+                      <>
+                        <TouchableOpacity style={styles.deviceSaveBtn} onPress={() => handleRenameDevice(device)}>
+                          <MaterialCommunityIcons name="check" size={16} color="#000" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => { setEditingDeviceId(null); setDeviceNewName(''); }}>
+                          <MaterialCommunityIcons name="close" size={18} color={Colors.textMuted} />
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <>
+                        <TouchableOpacity style={styles.deviceIconBtn} onPress={() => {
+                          setEditingDeviceId(device.id);
+                          setDeviceNewName(device.customName || device.name);
+                        }}>
+                          <MaterialCommunityIcons name="pencil" size={16} color={Colors.textMuted} />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.deviceIconBtn} onPress={() => handleForgetDevice(device)}>
+                          <MaterialCommunityIcons name="trash-can-outline" size={16} color="#FF4444" />
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
+                </View>
+              ))}
             </View>
-            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-              {editingDeviceId === device.id ? (
-                <>
-                  <TouchableOpacity style={styles.deviceSaveBtn} onPress={() => handleRenameDevice(device)}>
-                    <MaterialCommunityIcons name="check" size={16} color="#000" />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => { setEditingDeviceId(null); setDeviceNewName(''); }}>
-                    <MaterialCommunityIcons name="close" size={18} color={Colors.textMuted} />
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <>
-                  <TouchableOpacity style={styles.deviceIconBtn} onPress={() => {
-                    setEditingDeviceId(device.id);
-                    setDeviceNewName(device.customName || device.name);
-                  }}>
-                    <MaterialCommunityIcons name="pencil" size={16} color={Colors.textMuted} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.deviceIconBtn} onPress={() => handleForgetDevice(device)}>
-                    <MaterialCommunityIcons name="trash-can-outline" size={16} color="#FF4444" />
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
-          </View>
-        ))
+          );
+        })
       )}
 
       <Text style={[styles.hint, { marginTop: 16 }]}>
