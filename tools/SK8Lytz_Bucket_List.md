@@ -53,7 +53,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/device-management`
 
-- [ ] `feat/account-devices-management` : Account Manager - Add a 'Registered Device Groups' section in the Devices tab. Allow users to view, edit, and delete device groups. Group deletions must correctly purge the devices from the database (if online) and `AsyncStorage` (whether offline or online) to ensure they actually disappear.
+- [x] `feat/account-devices-management` : Account Manager - Add a 'Registered Device Groups' section in the Devices tab. Allow users to view, edit, and delete device groups. Group deletions must correctly purge the devices from the database (if online) and `AsyncStorage` (whether offline or online) to ensure they actually disappear.
 
 ### Target: `epic/protocol-integration`
 
