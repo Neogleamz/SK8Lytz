@@ -29,6 +29,7 @@ export const LOCAL_PRODUCT_CATALOG: ProductProfile[] = [
     defaultSegments: 1,
     defaultIcType: 1,      // WS2812B
     defaultColorSorting: 2, // GRB
+    hardwareAllowsCustomPoints: false,
 
     detectMinPoints: 10,
     detectMaxPoints: 27,
@@ -51,6 +52,7 @@ export const LOCAL_PRODUCT_CATALOG: ProductProfile[] = [
     defaultSegments: 1,
     defaultIcType: 2,      // SM16703
     defaultColorSorting: 2, // GRB
+    hardwareAllowsCustomPoints: true,
 
     detectMinPoints: 28,
     detectMaxPoints: 300,
@@ -73,6 +75,7 @@ export const LOCAL_PRODUCT_CATALOG: ProductProfile[] = [
     defaultSegments: 2,
     defaultIcType: 1,      // WS2812B
     defaultColorSorting: 2, // GRB
+    hardwareAllowsCustomPoints: true,
 
     // WARNING: Placeholder thresholds — update when RAILZ hardware LED count is confirmed
     detectMinPoints: 1,

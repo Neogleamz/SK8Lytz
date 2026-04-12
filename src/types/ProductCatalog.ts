@@ -34,6 +34,9 @@ export interface ProductProfile {
   /** Default color sorting index (see COLOR_SORTING_RGB in ZenggeProtocol). 2 = GRB. */
   defaultColorSorting: number;
 
+  /** True if the user can physically cut this product and adjust its LED length. (e.g., SOULZ, RAILZ) */
+  hardwareAllowsCustomPoints: boolean;
+
   // ─── FTUE Auto-Detection Thresholds ──────────────────────────────────────
 
   /**

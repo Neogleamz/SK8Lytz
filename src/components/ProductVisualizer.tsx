@@ -12,13 +12,13 @@ interface DeviceConfig {
   id?: string;
   name?: string;
   /** Product type string. Must match a `ProductProfile.id` in the catalog. */
-  type?: 'HALOZ' | 'SOULZ' | 'RAILZ' | string;
+  type?: string;
   points?: number;
   segments?: number;
 }
 
 interface ProductVisualizerProps {
-  product: 'HALOZ' | 'SOULZ' | 'RAILZ' | string;
+  product: string;
   color: string;
   mode: string;
   patternId: number | null;
@@ -267,7 +267,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
             dotColor = multiColors[safeIdx];
             dotOpacity = 1.0;
           } else if (multiTransition === 1) { // Gradual crossfade
-            const inputR = multiColors.map((_: any, i: number) => i / Math.max(1, multiColors.length - 1));
+            const inputR = multiColors.map((_: string, i: number) => i / Math.max(1, multiColors.length - 1));
             if (multiColors.length === 1) {
               dotColor = multiColors[0];
             } else {

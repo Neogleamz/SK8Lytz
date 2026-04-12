@@ -207,7 +207,7 @@ const AnalogGauge = React.memo(({
 
 
 
-type ProductType = 'HALOZ' | 'SOULZ' | 'RAILZ';
+type ProductType = string;
 type ModeType = 'FAVORITES' | 'MULTIMODE' | 'PROGRAMS' | 'MUSIC' | 'STREET' | 'CAMERA';
 
 const MUSIC_PATTERNS = [
