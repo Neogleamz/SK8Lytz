@@ -376,6 +376,10 @@ export class ZenggeProtocol {
   ): number[] {
     const payload = [0x73, isDeviceMic ? 0x01 : 0x00, matrixStyle, patternId,
       color1.r, color1.g, color1.b, color2.r, color2.g, color2.b, 0x20, sensitivity, brightness];
+      
+    // [DEBUG LOGGING] - Added for fix-music-mode-color investigation
+    console.log(`[ZenggeProtocol] setMusicConfig 0x73 -> patternId: ${patternId}, matrixStyle: ${matrixStyle}, C1: ${color1.r},${color1.g},${color1.b}, C2: ${color2.r},${color2.g},${color2.b}`);
+    
     const checksum = this.calculateChecksum(payload);
     return this.wrapCommand([...payload, checksum]);
   }
