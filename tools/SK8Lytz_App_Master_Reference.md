@@ -162,6 +162,26 @@ For testing App Sync behavior vs. Offline mode offline fallbacks, you can authen
 > [!WARNING]
 > The app enforces **Strict Column Mapping** in `useRegistration.ts`. Any new database column MUST be added to the explicit mapping in the `dbRow` object to prevent schema cache mismatch errors during cloud sync.
 
+#### **`app_settings`** (Governance & Registry)
+| Column | Type | Purpose |
+|:---|:---|:---|
+| `setting_key` | TEXT (PK) | Unique key (e.g., `required_eula_version`) |
+| `setting_value` | TEXT | Value (Version num, JSON flags) |
+
+#### **`user_profiles`** (Compliance Tracking)
+- **`accepted_eula_version`** (INT): Tracks the last EULA version signed by the user. Blocking logic triggers if this is less than `required_eula_version`.
+
+### 🏛️ Feature Governance Policy Model
+
+Features are managed via a centralized policy registry in `AppSettingsService`. All module visibility and "Smart Locks" are derived from this state:
+
+| Strategy | Behavior |
+|:---|:---|
+| `GLOBAL_LOCK` | Feature is physically disabled and grayed out across the entire fleet. |
+| `HIDE_OFFLINE` | Feature vanishes from the UI if the device has no internet/Supabase heartbeat. |
+| `GATED_OFFLINE` | Feature is visible but displays a "Connect to Cloud" overlay when tapped. |
+| `ADMIN_ONLY` | Feature only visible to `is_admin: true` profiles. |
+
 * **`parsed_session_stats`**: One row per app session summary (`session_id` UNIQUE)
 * **`parsed_session_devices`**: All BLE devices seen per session (`session_id + device_id` UNIQUE)
 * **`parsed_logs`**: Full event trace log. Appended continuously.
