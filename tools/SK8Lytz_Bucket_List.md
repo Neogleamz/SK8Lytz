@@ -49,7 +49,7 @@ pie title Engineering Health
 ```
 
 - [ ] `chore/sentient-tech-debt-sweep` : [CLOUD] [BATCH] [L-RISK] [Feast] [TOP PRIORITY] Standardize AsyncStorage keys (@Sk8lytz_ prefix), normalize UI speed → Hardware (1-31), and eliminate redundant buffer requires. → [Plan](docs/plans/chore-sentient-tech-debt-sweep.md)
-- [ ] `refactor/micro-app-crew-modal` : [CLOUD] [H-RISK] [Feast] [Pillar 13] Extract the 2,200-line CrewModal monolith into decoupled domain hooks (useCrewHub, useCrewSession) and purified sub-components. → [Plan](docs/plans/refactor-micro-app-crew-modal.md)
+- [x] `refactor/micro-app-crew-modal` : [CLOUD] [H-RISK] [Feast] [Pillar 13] Extract the 2,200-line CrewModal monolith into decoupled domain hooks (useCrewHub, useCrewSession) and purified sub-components. → [Plan](docs/plans/refactor-micro-app-crew-modal.md)
 - [ ] `refactor/state-machine-standard` : [CLOUD] [H-RISK] [Feast] [Pillar 8] Deterministic UI — transition from boolean flags to explicit Enum-based Finite State Machines. → [Plan](docs/plans/refactor-state-machine-standard.md)
 - [ ] `feat/ble-hardware-watchdog` : [LAB] [H-RISK] [Feast] [Pillar 7] Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks and silent-relatches connections. → [Plan](docs/plans/feat-ble-hardware-watchdog.md)
 - [ ] `perf/optimistic-ble-updates` : [LAB] [H-RISK] [Meal] [Pillar 2] Mask hardware latency using 'Ghost' optimistic UI updates and state reconciliation. → [Plan](docs/plans/perf-optimistic-ble-updates.md)
