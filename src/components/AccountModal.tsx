@@ -51,13 +51,31 @@ interface AccountModalProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const AVATAR_COLORS = [
-  '#FFAA00','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4',
-  '#DDA0DD','#98D8C8','#F7DC6F','#BB8FCE','#85C1E9',
-  '#FF8C00','#00E676','#00B0FF','#FF4081','#EA80FC',
-];
+import CustomSlider from './CustomSlider';
 
 const NOTIF_PREF_KEY = '@Sk8lytz_notif_prefs';
+
+function hexToHue(hex: string | null | undefined): number {
+  if (!hex) return 30; // default orange
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16);
+    g = parseInt(hex[2] + hex[2], 16);
+    b = parseInt(hex[3] + hex[3], 16);
+  } else if (hex.length === 7) {
+    r = parseInt(hex.substring(1, 3), 16);
+    g = parseInt(hex.substring(3, 5), 16);
+    b = parseInt(hex.substring(5, 7), 16);
+  }
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  if (max === min) return 0;
+  let h = 0;
+  if (max === r) { h = (60 * ((g - b) / (max - min)) + 360) % 360; }
+  else if (max === g) { h = (60 * ((b - r) / (max - min)) + 120) % 360; }
+  else if (max === b) { h = (60 * ((r - g) / (max - min)) + 240) % 360; }
+  return h;
+}
 
 function initials(name: string | null) {
   if (!name) return '?';
@@ -90,6 +108,7 @@ export default function AccountModal({
   const [editUsername, setEditUsername] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
+  const [avatarHue, setAvatarHue] = useState<number>(30);
 
   const [userEmail, setUserEmail] = useState('');
 
@@ -150,6 +169,7 @@ export default function AccountModal({
         setEditName(p.display_name ?? '');
         setEditUsername(p.username ?? '');
         if (p.avatar_url) setProfilePhotoUri(p.avatar_url); // Restore persisted photo
+        if (p.avatar_color) setAvatarHue(hexToHue(p.avatar_color));
       }
       setCrews(c);
       setHistory(h);
@@ -545,18 +565,29 @@ export default function AccountModal({
       <Text style={styles.hint}>Lowercase letters, numbers, underscores. Used for login.</Text>
 
       {/* Avatar color */}
-      <Text style={styles.label}>AVATAR COLOR</Text>
-      <View style={styles.colorRow}>
-        {AVATAR_COLORS.map(color => (
-          <TouchableOpacity
-            key={color}
-            style={[styles.colorSwatch, { backgroundColor: color }, profile?.avatar_color === color && styles.colorSwatchActive]}
-            onPress={async () => {
-              await profileService.updateProfile({ avatar_color: color });
-              setProfile(p => p ? { ...p, avatar_color: color } : p);
-            }}
-          />
-        ))}
+      <Text style={[styles.label, { marginBottom: 16 }]}>AVATAR COLOR</Text>
+      <View style={{ flexShrink: 0, minHeight: 40, marginBottom: 24 }}>
+        <CustomSlider
+          gradientTrack={true}
+          value={avatarHue}
+          onValueChange={(hue) => {
+            setAvatarHue(hue);
+            const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+            const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+            const newHex = rgb2hex(f(5), f(3), f(1));
+            setProfile(p => p ? { ...p, avatar_color: newHex } : p);
+          }}
+          onSlidingComplete={async (hue) => {
+            const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+            const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+            const newHex = rgb2hex(f(5), f(3), f(1));
+            await profileService.updateProfile({ avatar_color: newHex });
+          }}
+          minimumValue={0}
+          maximumValue={360}
+          step={1}
+          thumbTintColor="#FFF"
+        />
       </View>
 
       {/* Save */}

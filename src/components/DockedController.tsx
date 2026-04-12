@@ -1415,6 +1415,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       const c1 = c1Raw;
       const c2 = c2Raw;
 
+      // [DEBUG LOGGING]
+      AppLogger.log("MUSIC_CONFIG_REQUESTED", { patternId, c1Hex: color1Hex, c2Hex: color2Hex, matrix });
+
       writeToDevice(ZenggeProtocol.setMusicConfig(
         isDeviceMic,
         matrix,
