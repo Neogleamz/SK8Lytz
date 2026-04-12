@@ -79,7 +79,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
     try {
       // Resolve product profile to get accurate blink LED count
       const registration = pendingRegistrations.find(r => r.device_mac === deviceMac);
-      const productType = (registration?.product_type && registration.product_type !== 'UNKNOWN') ? registration.product_type : 'SOULZ';
+      const productType = (registration?.product_type && registration.product_type !== 'UNKNOWN') ? registration.product_type : LOCAL_PRODUCT_CATALOG[0].id;
       const profile = getLocalProfileById(productType) || LOCAL_PRODUCT_CATALOG[0];
       const blinkPoints = registration?.led_points || profile.vizDefaultPoints;
 
@@ -323,8 +323,8 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                   </View>
                 </View>
 
-                {/* Adjust Points (only for non-RING products, e.g. SOULZ, RAILZ — not HALOZ) */}
-                {(getLocalProfileById(config.type)?.vizShape !== 'RING') && (
+                {/* Adjust Points */}
+                {(getLocalProfileById(config.type)?.hardwareAllowsCustomPoints) && (
                   <View style={{ marginTop: 12, backgroundColor: Colors.surfaceHighlight, borderRadius: 12, padding: 8 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Text style={[styles.labelSmall, { flex: 1, marginBottom: 0 }]}>LED COUNT (TRIM IF CUT)</Text>
@@ -414,7 +414,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                   const n = d.device_name || '';
                   // Heuristic: Check if name includes a catalog product ID
                   const matchedProfile = LOCAL_PRODUCT_CATALOG.find(p => n.toUpperCase().includes(p.id.toUpperCase()));
-                  const pType = matchedProfile ? matchedProfile.id : (d.product_type !== 'UNKNOWN' ? d.product_type : 'SOULZ');
+                  const pType = matchedProfile ? matchedProfile.id : (d.product_type !== 'UNKNOWN' ? d.product_type : LOCAL_PRODUCT_CATALOG[0].id);
                   
                   const pProfile = getLocalProfileById(pType) || LOCAL_PRODUCT_CATALOG[0];
                   typeCounts[pProfile.id] = (typeCounts[pProfile.id] || 0) + 1;
@@ -468,8 +468,8 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                     const cfg = deviceConfigsState[device.device_mac];
                     if (!cfg) continue;
 
-                    // If it's SOULZ and points were adjusted, we must push the EEPROM update and verify
-                    if (cfg.type === 'SOULZ' && cfg.points !== device.led_points) {
+                    // If points were adjusted, we must push the EEPROM update and verify
+                    if (getLocalProfileById(cfg.type)?.hardwareAllowsCustomPoints && cfg.points !== device.led_points) {
                        console.log(`[FTUE] Writing hardware settings ${cfg.points} to ${device.device_mac}`);
                        const payload = ZenggeProtocol.writeHardwareSettingsByName(cfg.points, 1, 'WS2812B', 'GRB');
                        await writeToDevice(payload, device.device_mac);
