@@ -43,7 +43,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 ### Target: `epic/ui-refinement`
 
-- [ ] `fix/setup-wizard-button-overlap` : Fix the "Complete Setup" button overlapping the device card on the "Name Your Skates" page so users can change the LED count.
+- [x] `fix/setup-wizard-button-overlap` : Compact Step 3 of the hardware setup wizard (Name Your Skates) to prevent button overlap and eliminate vertical scrolling. → [Walkthrough](file:///c:/Users/Magma/.gemini/antigravity/brain/206e904d-e0ff-4a1f-ab45-c74c74b82974/walkthrough.md)
 
 - [ ] `audit/offline-profile-settings` : Audit whether all user profile settings (display name, avatar, preferences) are fully cached locally for offline use. Implement offline-safe username rename that queues the update to Supabase on reconnect — same pattern as device registration sync.
 - [ ] `feat/app-wide-ux-tips` : Design and implement a contextual tips system that surfaces short, dismissible tooltips throughout the app at key friction points (e.g. first Bluetooth scan, first controller open, first crew join). Tips should only show once per user (AsyncStorage) and feel native to the SK8Lytz aesthetic.
@@ -71,7 +71,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/ui-refinement`
 
 - [x] `feat/lab-ui-modernization` : Modernize and style the LED Diagnostic Lab layout to match the aesthetics, typography, and input styling of the rest of the app. → [Plan](docs/plans/feat-lab-ui-modernization.md)
-- [ ] `feat/neogleamz-brand-presence` : Integrate Neogleamz parent brand identity into the app — e.g. "SK8Lytz by Neogleamz" wordmark, prominent Neogleamz branding on the Auth/Welcome screen, app store identity alignment. Design direction TBD — will brainstorm placement and treatment before executing.
 
 ---
 
@@ -79,6 +78,7 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 
 *Items placed here are explicitly ignored by the automatic queue. They will act as a catalog for future features that require manual authorization to begin work on.*
 
+- [ ] `feat/neogleamz-brand-presence` : Integrate Neogleamz parent brand identity into the app — e.g. "SK8Lytz by Neogleamz" wordmark, prominent Neogleamz branding on the Auth/Welcome screen, app store identity alignment. Design direction TBD — will brainstorm placement and treatment before executing.
 - [ ] `feat/battery-health-predict` : Mathematical power modeling to predict battery life based on pattern draw; auto-dims to 20% at critical reserve.
 - [ ] `hw-test/protocol-voltage-sniff` : Deep-dive into 0x63 response and other telemetry bytes to identify raw battery voltage / state-of-charge data.
 - [ ] `feat/siri-google-assistant-integration` : Integrate Siri Shortcuts (iOS) and Google Assistant App Actions (Android) for phone-level voice control. When outside the app, dispatching commands like "Hey Siri, set SK8Lytz to red glow" should deep-link and trigger the BLE command. When inside the app, use the existing in-app voice engine instead.
