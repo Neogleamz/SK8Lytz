@@ -1644,7 +1644,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         </View>
       ) : (
         /* ── Not connected: 3-column layout — user pill left, icons right ── */
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
 
           {/* LEFT: user pill left-justified */}
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
@@ -1652,51 +1652,51 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               onPress={() => setIsAccountModalVisible(true)}
               style={{
                 flexDirection: 'row', alignItems: 'center',
-                paddingHorizontal: 8, paddingVertical: 5,
-                borderRadius: 20, borderWidth: 1, gap: 5,
+                paddingHorizontal: 6, paddingVertical: 4,
+                borderRadius: 16, borderWidth: 1, gap: 4,
                 borderColor: isOfflineMode ? 'rgba(255,170,0,0.35)' : 'rgba(0,240,255,0.25)',
                 backgroundColor: isOfflineMode ? 'rgba(255,170,0,0.08)' : 'rgba(0,240,255,0.06)',
               }}
             >
               <View style={{
-                width: 7, height: 7, borderRadius: 4,
+                width: 6, height: 6, borderRadius: 3,
                 backgroundColor: isOfflineMode ? '#FFA500' : Colors.success,
                 shadowColor: isOfflineMode ? '#FFA500' : Colors.success,
                 shadowOpacity: 0.8, shadowRadius: 4, elevation: 2,
               }} />
-              <Text style={{ color: Colors.text, fontSize: 11, fontWeight: '700', maxWidth: 80, fontFamily: 'Righteous' }} numberOfLines={1}>
+              <Text style={{ color: Colors.text, fontSize: 10, fontWeight: '700', maxWidth: 55, fontFamily: 'Righteous' }} numberOfLines={1}>
                 {authUsername || 'GUEST'}
               </Text>
               <View style={{
-                paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5,
+                paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4,
                 backgroundColor: isOfflineMode ? 'rgba(255,170,0,0.2)' : 'rgba(0,200,100,0.2)',
               }}>
-                <Text style={{ fontSize: 8, fontWeight: '900', letterSpacing: 0.5, color: isOfflineMode ? '#FFA500' : Colors.success }}>
-                  {isOfflineMode ? 'OFFLINE' : 'ONLINE'}
+                <Text style={{ fontSize: 7, fontWeight: '900', letterSpacing: 0.5, color: isOfflineMode ? '#FFA500' : Colors.success }}>
+                  {isOfflineMode ? 'OFF' : 'ON'}
                 </Text>
               </View>
               <MaterialCommunityIcons name="account-cog" size={12} color={Colors.textMuted} style={{ opacity: 0.8 }} />
             </TouchableOpacity>
           </View>
 
-          {/* CENTER: logo */}
-          <View style={{ flex: 1, alignItems: 'center' }}>
+          {/* CENTER: logo perfectly absolute centered */}
+          <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: -1 }}>
             <TouchableOpacity activeOpacity={0.7} style={{ position: 'relative', alignItems: 'center' }} onPress={() => setIsAdminToolsVisible(true)}>
-              <Image source={require('../../assets/logo.png')} style={{ width: 110, height: 32 }} resizeMode="contain" tintColor={Colors.text} />
+              <Image source={require('../../assets/logo.png')} style={{ width: 85, height: 26 }} resizeMode="contain" tintColor={Colors.text} />
             </TouchableOpacity>
           </View>
 
-          {/* RIGHT: grouped icons (matching AuthScreen style) */}
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+          {/* RIGHT: grouped icons */}
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
             <TouchableOpacity
-              style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}
+              style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}
               onPress={() => setIsSupportModalVisible(true)}
             >
-              <MaterialCommunityIcons name="help-circle-outline" size={18} color={Colors.textMuted} />
+              <MaterialCommunityIcons name="help-circle-outline" size={16} color={Colors.textMuted} />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={toggleTheme} style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}>
-              <MaterialCommunityIcons name={isDark ? 'weather-sunny' : 'weather-night'} size={18} color={Colors.primary} />
+            <TouchableOpacity onPress={toggleTheme} style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialCommunityIcons name={isDark ? 'weather-sunny' : 'weather-night'} size={16} color={Colors.primary} />
             </TouchableOpacity>
 
           </View>
