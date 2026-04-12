@@ -25,12 +25,12 @@ pie title Critical Stability
 ```
 
 - [x] `fix/rls-telemetry-block` : [CLOUD] [BATCH] [H-RISK] [Snack] [CRITICAL] Resolve 403 Forbidden errors on `parsed_session_stats`, `device_diagnostics`, and `parsed_session_devices`. Likely RLS policy mismatch for authenticated telemetry sinks. → [Plan](docs/plans/fix-rls-telemetry-block.md)
-- [ ] `fix/device-group-fk-integrity` : [CLOUD] [BATCH] [H-RISK] [Snack] [CRITICAL] Resolve foreign key constraint violations in `registered_devices` group_id. Upsert logic is referencing non-existent groups. → [Plan](docs/plans/fix-device-group-fk-integrity.md)
+- [x] `fix/device-group-fk-integrity` : [CLOUD] [BATCH] [H-RISK] [Snack] [CRITICAL] Resolve foreign key constraint violations in `registered_devices` group_id. Upsert logic is referencing non-existent groups. → [Plan](docs/plans/fix-device-group-fk-integrity.md)
 - [ ] `audit/device-group-persistence` : [CLOUD] [H-RISK] [Meal] [TOP PRIORITY] Audit device group state handling to prevent duplicate/ghost groups and ensure seamless offline-to-online persistence. → [Plan](docs/plans/audit-device-group-persistence.md)
-- [ ] `fix/voice-mic-access` : [LAB] [BATCH] [L-RISK] [Snack] [URGENT] Resolve issue where Voice Engine fails to request microphone permissions, causing immediate errors on start. → [Plan](docs/plans/fix-voice-mic-access.md)
+- [x] `fix/voice-mic-access` : [LAB] [BATCH] [L-RISK] [Snack] [URGENT] Resolve issue where Voice Engine fails to request microphone permissions, causing immediate errors on start. → [Plan](docs/plans/fix-voice-mic-access.md)
 - [ ] `fix/crew-hub-stability-patch` : [CLOUD] [H-RISK] [Meal] [URGENT] Address critical April 7th audit findings: fix malformed JSX stacking in CrewModal, patch privacy leak in nearby session discovery, and fix the crew-matching logic gap. → [Plan](docs/plans/fix-crew-hub-stability-patch.md)
 - [ ] `fix/dynamic-arch-regressions` : [LAB] [H-RISK] [Meal] Resolve 'isHaloz' ReferenceError in ProductVisualizer and perform a sanitization audit (DockedController, ZenggeProtocol, Setup Wizard) to remove remaining hardcoded binary logic. → [Plan](docs/plans/fix-dynamic-arch-regressions.md)
-- [ ] `fix/tsc-errors-audit` : [CLOUD] [BATCH] [L-RISK] [Meal] Fix TypeScript errors remaining from dynamic-arch-regressions (Audio namespace, missing EventType for 'BUILDER_PRESET_SAVED' in DockedController, IVoiceAction/Typography Subheader in DashboardScreen). → [Plan](docs/plans/fix-tsc-errors-audit.md)
+- [x] `fix/tsc-errors-audit` : [CLOUD] [BATCH] [L-RISK] [Meal] Fix TypeScript errors remaining from dynamic-arch-regressions (Audio namespace, missing EventType for 'BUILDER_PRESET_SAVED' in DockedController, IVoiceAction/Typography Subheader in DashboardScreen). → [Plan](docs/plans/fix-tsc-errors-audit.md)
 - [ ] `gate-offline-mode` : [CLOUD] [H-RISK] [Feast] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
 
 ---
