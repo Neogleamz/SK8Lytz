@@ -44,8 +44,8 @@ pie title Critical Stability
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
-  "Completed" : 0
-  "Remaining" : 12
+  "Completed" : 1
+  "Remaining" : 11
 ```
 
 - [ ] `chore/sentient-tech-debt-sweep` : [CLOUD] [BATCH] [L-RISK] [Feast] [TOP PRIORITY] Standardize AsyncStorage keys (@Sk8lytz_ prefix), normalize UI speed → Hardware (1-31), and eliminate redundant buffer requires. → [Plan](docs/plans/chore-sentient-tech-debt-sweep.md)
@@ -59,7 +59,7 @@ pie title Engineering Health
 - [ ] `fix/remote-id-audit` : [LAB] [H-RISK] [Meal] [Security] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
 - [ ] `audit-rls-performance` : [CLOUD] [H-RISK] [Meal] #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges. → [Plan](docs/plans/audit-rls-performance.md)
 - [ ] `style/tokenized-spacing-standard` : [CLOUD] [L-RISK] [Meal] [Pillar 9] The 8pt Grid — enforce 8pt spacing tokens app-wide to eliminate magic numbers. → [Plan](docs/plans/style-tokenized-spacing-standard.md)
-- [ ] `fix/typescript-debt-audit` : [CLOUD] [BATCH] [L-RISK] [Feast] Resolve pre-existing TS errors across the codebase (dead state vars, type drift, missing imports). → [Plan](docs/plans/fix-typescript-debt-audit.md)
+- [x] `fix/typescript-debt-audit` : [CLOUD] [BATCH] [L-RISK] [Feast] Resolve pre-existing TS errors across the codebase (dead state vars, type drift, missing imports). → [Plan](docs/plans/fix-typescript-debt-audit.md)
 
 ---
 
