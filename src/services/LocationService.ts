@@ -35,7 +35,7 @@ class LocationService {
       }
 
       if (!granted) {
-        console.log('[LocationService] Permission denied — proceeding without location');
+        AppLogger.log('ERROR_CAUGHT', { service: 'LocationService', reason: 'foreground_location_denied' });
         return null;
       }
 
@@ -64,7 +64,7 @@ class LocationService {
 
       return location;
     } catch (err) {
-      console.warn('[LocationService] Error acquiring location:', err);
+      AppLogger.warn('[LocationService] Error acquiring location', err);
       return null;
     }
   }
@@ -122,7 +122,7 @@ class LocationService {
         }
       }
     } catch (err) {
-      console.warn('[LocationService] Private session fetch failed:', err);
+      AppLogger.warn('[LocationService] Private session fetch failed', err);
     }
 
     // ── Merge + deduplicate by session id ────────────────────────────────────
@@ -240,6 +240,7 @@ export interface NearbySession {
   crewName:      string | null;
   memberCount:   number;
   scheduledAt:   string | null;
+  isPublic:      boolean;  // whether this session is publicly discoverable
   distanceMi:    number | null;
   distanceLabel: string;
 }

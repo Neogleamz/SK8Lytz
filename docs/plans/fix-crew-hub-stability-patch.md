@@ -1,40 +1,47 @@
-# Implementation Plan: Crew Hub Stability Patch
+# Implementation Plan: Crew Hub Stability Patch (Revised)
 
-This plan addresses the critical bugs and logic gaps identified in the April 7th Crew Hub audit, focusing on JSX malformation, privacy leaks, and session matching failures.
+> **Audit Date:** 2026-04-12 | Re-audited against live codebase before execution.
 
-## User Review Required
+## Background
 
-> [!CAUTION]
-> **Privacy Leak**: The current `getNearbyPublicSessions()` query fetches ALL active sessions regardless of public/private status if RLS is not configured correctly. We must add the `.eq('is_public', true)` filter immediately to prevent private session discovery.
+The original April 7th audit identified 3 concerns: JSX stacking, a privacy leak in
+`getNearbyPublicSessions`, and a session-matching logic gap. A re-audit of the live
+codebase on 2026-04-12 confirms that **all three original items were already resolved**
+in a prior commit. One new type-gap was discovered during the audit.
 
 ## Proposed Changes
 
-### [UI Components]
-Fixing the malformed JSX in the detail view.
+### [MODIFY] LocationService.ts — NearbySession Interface Gap
 
-#### [MODIFY] [CrewModal.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App\SK8Lytz/src/components/CrewModal.tsx)
-- **Fix JSX Stacking**: Move the closing Action `</View>` tag before the fragment `</>` close at line 1888.
-- **Text Cleanup**: Fix "Invite & Add Sktaters" typo.
-- **Session Matching**: Update `getLiveSessionForCrew` to match by `crewId` instead of `crew.name`.
+The `getNearbyPublicSessions()` mapper at line 174 correctly sets `isPublic: s.is_public ?? true`
+on each result, but the `NearbySession` export interface does not declare the `isPublic` field.
+This means any consumer using `NearbySession` with strict typing cannot safely access `.isPublic`.
+
+**Fix:** Add `isPublic: boolean` to the `NearbySession` interface.
+
+### [MODIFY] LocationService.ts — Boy Scout: raw console calls
+
+Lines 38, 67, and 125 use raw `console.log`/`console.warn` instead of structured `AppLogger`.
+Replacing these brings the file in line with the telemetry standards established by `chore/telemetry-standards`.
 
 ---
 
-### [Services & Database]
-Hardening the session query logic.
-
-#### [MODIFY] [LocationService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App\SK8Lytz/src/services/LocationService.ts)
-- Update `getNearbyPublicSessions()` to include `.eq('is_public', true)`.
-
-#### [MODIFY] [CrewService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App\SK8Lytz/src/services/CrewService.ts)
-- Ensure `createSession()` takes a `crewId` argument and stores it in the `crew_sessions` table.
-
 ## Verification Plan
 
-### Automated Tests
-- `scratch/test-session-privacy.ts`: Query the nearby session endpoint with a mock private session in the DB and verify it is NOT returned.
+### Automated
+- `npx tsc --noEmit` — zero errors expected (the new field is already mapped, adding it to the interface is additive-only).
 
-### Manual Verification
-1. Create a Private Crew.
-2. Start a Session.
-3. Open "Live Near You" on a second device (not a member).
-4. Verify the session is NOT visible.
+### Manual
+1. Open Crew Hub → Live Near You section.
+2. Confirm public sessions show "🌍 Public" label.
+3. Confirm private sessions (user is member) show "🔒 Private" label.
+
+## Status of Original Items (Resolved Prior)
+
+| Original Item | Resolution |
+|---------------|-----------|
+| JSX stacking in CrewModal ~line 1888 | Resolved — `<>` fragment wraps all detail-view elements intentionally; tsc passes |
+| Privacy leak in `getNearbyPublicSessions` | Resolved — dual-query: public filter + member-gated private filter |
+| Session matching by `crew_id` in `getLiveSessionForCrew` | Resolved — `crew_id` match first, name fallback for legacy sessions |
+| "Invite & Add Sktaters" typo | Resolved — reads "Add Skaters" in current code |
+| `createSession` crewId parameter | Resolved — `opts.crewId` flows through to DB insert |
