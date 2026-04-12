@@ -1999,7 +1999,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
             {/* ── CAMERA MODE UI ────────────────────────────────────────────────── */}
             {activeMode === 'CAMERA' && (
-              <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 4 }}>
+              <View style={{ flex: 1 }}>
                 <CameraTracker
                   isActive={activeMode === 'CAMERA'}
                   onColorDetected={(hex: string) => {
