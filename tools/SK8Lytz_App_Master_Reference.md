@@ -112,6 +112,7 @@ The **Admin Tools Hub** (`AdminToolsModal`) is the unified gateway for all syste
     *   **LED Diagnostic Lab**: Atomic protocol validation and DIY payload building.
     *   **Firmware Programmer**: Low-level hardware updates and serial-over-BLE tools.
     *   **Optical Simulation Mode (Web Fallback)**: A dedicated developer interface for non-native environments (Expo Web). It provides manual telemetry simulation (randomized hex dispatch) to smoke-test visualizer and state-management pipelines without physical hardware.
+* **Schema Reliability**: Product Manager upserts are strictly typed to enforce the `batteryCapacityMilliAmpereHour` field, preventing database record drift for new HALOZ/SOULZ revisions.
 * **Navigation Orchestration**: Closing any administrative sub-tool (Lab, Programmer) must explicitly re-trigger the visibility of the `AdminToolsModal` in the parent `DashboardScreen` to ensure a consistent "nested" navigation experience.
 
 ### Test Users & Environments
@@ -156,6 +157,7 @@ For testing App Sync behavior vs. Offline mode offline fallbacks, you can authen
 | `viz_blob_diameter_mm` | REAL | Physical pixel diameter for canvas rendering scale |
 | `brand_icon` | TEXT | MaterialCommunityIcons string (e.g., 'circle-double') |
 | `viz_theme_color` | TEXT | HEX branding color (e.g., '#00C8FF') |
+| `battery_capacity_mah`| INT | Rated capacity for power modeling (e.g. 3000) |
 
 > [!WARNING]
 > The app enforces **Strict Column Mapping** in `useRegistration.ts`. Any new database column MUST be added to the explicit mapping in the `dbRow` object to prevent schema cache mismatch errors during cloud sync.
