@@ -9,14 +9,12 @@ import { locationService } from '../../services/LocationService';
 import { AppLogger } from '../../services/AppLogger';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import { LocationPicker } from '../LocationPicker';
 
 import { createStyles } from './CrewStyles';
 import { useCrewContext } from '../../context/CrewContext';
-import { profileService } from '../../services/profileService';
 // TODO: any other specific imports check manually
-import { Picker } from '@react-native-picker/picker';
 
-const styles = createStyles(Colors);
 
 
 function timeAgo(iso: string): string {
@@ -31,10 +29,51 @@ export function CrewCreateScreen() {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
   const context = useCrewContext();
-  const { hub, manage, session, setStep, step, confirmAction, setConfirmAction, currentUserId, displayName, errorMsg, setErrorMsg, isLoading, setIsLoading, showCodeEntry, setShowCodeEntry, formState } = context;
-  const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, handleDetectLocation, isGettingLocation } = hub;
-  const { selectedCrewDetail, setSelectedCrewDetail, expandedCrewId, setExpandedCrewId, cardMembers, setCardMembers, loadingCardMembersFor, makingOwnerFor, setMakingOwnerFor, confirmingDeleteCrewId, setConfirmingDeleteCrewId, confirmingLeaveCrewId, setConfirmingLeaveCrewId, createCrewError, setCreateCrewError, isCreatingCrew, newCrewName, setNewCrewName, newCrewDesc, newCrewIsPublic, setNewCrewIsPublic, newCrewCity, setNewCrewCity, newCrewState, setNewCrewState } = manage;
+  const { hub, manage, session, setStep, step, confirmAction, setConfirmAction, currentUserId, displayName, setDisplayName, errorMsg, setErrorMsg, isLoading, setIsLoading, showCodeEntry, setShowCodeEntry, formState } = context;
+  const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, setLocationLabel, locationCoords, setLocationCoords, handleDetectLocation, isGettingLocation } = hub;
   const { currentSession, isHandoffMode, executeLeaveSession, executeEndSession, handleHandoffLeadership } = session;
+  const { selectedCrewId, setSelectedCrewId, crewName, setCrewName } = formState;
+
+  const handleCreate = async (scheduled?: Date) => {
+    let sessionName = crewName.trim() || permanentCrews.find(c => c.id === selectedCrewId)?.name || '';
+    if (!sessionName) { setErrorMsg('Pick a crew or enter a session name'); return; }
+
+    const now = new Date();
+    const dateStr = `${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')}`;
+    sessionName = `${sessionName}_${dateStr}`;
+
+    setIsLoading(true); setErrorMsg('');
+    try {
+      const crewInfo = myCrews.find(c => c.id === selectedCrewId);
+      const isSessionPublic = crewInfo ? crewInfo.is_public : false;
+
+      const opts: Parameters<typeof crewService.createSession>[2] = {
+        isPublic: isSessionPublic,
+        crewId:   selectedCrewId || undefined,
+      };
+      if (locationLabel) opts.locationLabel = locationLabel;
+      if (locationCoords) opts.locationCoords = locationCoords;
+      if (scheduled) opts.scheduledAt = scheduled.toISOString();
+
+      const newSession = await crewService.createSession(sessionName, displayName.trim(), opts);
+      AppLogger.log('CREW_SESSION_CREATED', {
+        sessionId: newSession.id, crewName: sessionName,
+        hasLocation: !!locationLabel, scheduled: !!scheduled, isPublic: isSessionPublic,
+      });
+
+      if (scheduled && scheduled > new Date()) {
+        // Optional notifications logic can be added later
+      } else {
+        session.setCurrentSession(newSession);
+        session.setCurrentRole('leader');
+        setStep('controller');
+      }
+    } catch (e: any) {
+      setErrorMsg(e.message || 'Failed to create session');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   // NOTE: You will need to bring in local state that wasn't context-ified
   // or convert them. For now, the structure guarantees safe parsing context injection.

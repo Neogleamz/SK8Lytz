@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import * as Clipboard from 'expo-clipboard';
 import { profileService, PermanentCrew } from '../../services/ProfileService';
-import { crewService, CrewSession } from '../../services/CrewService';
+import { crewService, CrewSession, CrewMember } from '../../services/CrewService';
 import { locationService } from '../../services/LocationService';
 import { AppLogger } from '../../services/AppLogger';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -12,12 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { createStyles } from './CrewStyles';
 import { useCrewContext } from '../../context/CrewContext';
-import { profileService } from '../../services/profileService';
-// TODO: any other specific imports check manually
-import { Picker } from '@react-native-picker/picker';
-
-const styles = createStyles(Colors);
-
+import CrewMemberDashboard from '../CrewMemberDashboard';
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -27,17 +22,52 @@ function timeAgo(iso: string): string {
   return `${Math.floor(m / 60)}h ago`;
 }
 
-export function CrewControllerScreen() {
+export interface CrewControllerScreenProps {
+  onClose: () => void;
+  currentModeSummary?: string;
+  lastLeaderScene?: Record<string, any> | null;
+}
+
+export function CrewControllerScreen({ onClose, currentModeSummary, lastLeaderScene }: CrewControllerScreenProps) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
   const context = useCrewContext();
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
   const { hub, manage, session, setStep, step, confirmAction, setConfirmAction, currentUserId, displayName, errorMsg, setErrorMsg, isLoading, setIsLoading, showCodeEntry, setShowCodeEntry, formState } = context;
   const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, handleDetectLocation, isGettingLocation } = hub;
-  const { selectedCrewDetail, setSelectedCrewDetail, expandedCrewId, setExpandedCrewId, cardMembers, setCardMembers, loadingCardMembersFor, makingOwnerFor, setMakingOwnerFor, confirmingDeleteCrewId, setConfirmingDeleteCrewId, confirmingLeaveCrewId, setConfirmingLeaveCrewId, createCrewError, setCreateCrewError, isCreatingCrew, newCrewName, setNewCrewName, newCrewDesc, newCrewIsPublic, setNewCrewIsPublic, newCrewCity, setNewCrewCity, newCrewState, setNewCrewState } = manage;
-  const { currentSession, isHandoffMode, executeLeaveSession, executeEndSession, handleHandoffLeadership } = session;
+  const { selectedCrewDetail, setSelectedCrewDetail, expandedCrewId, setExpandedCrewId, cardMembers, setCardMembers, loadingCardMembersFor, makingOwnerFor, setMakingOwnerFor, confirmingDeleteCrewId, setConfirmingDeleteCrewId, confirmingLeaveCrewId, setConfirmingLeaveCrewId, createCrewError, setCreateCrewError, isCreatingCrew, newCrewName, setNewCrewName, newCrewDescription, setNewCrewDescription, newCrewIsPublic, setNewCrewIsPublic, newCrewCity, setNewCrewCity, newCrewState, setNewCrewState } = manage;
+  const { currentSession, isHandoffMode, setIsHandoffMode, currentRole, members, executeLeaveSession, executeEndSession, handleHandoffLeadership } = session;
   
-  // NOTE: You will need to bring in local state that wasn't context-ified
-  // or convert them. For now, the structure guarantees safe parsing context injection.
+  const handleLeave = async () => {
+    try { await executeLeaveSession(); } catch (e) { console.warn(e); }
+  };
+  
+  const handleEndSession = async () => {
+    try { await executeEndSession(); } catch (e) { console.warn(e); }
+  };
+
+  const renderMemberRow = ({ item }: { item: CrewMember }) => {
+    const isLeader = item.user_id === currentSession?.leader_user_id;
+    const isMe = item.user_id === currentUserId;
+    const canHandoff = currentRole === 'leader' && !isLeader && isHandoffMode;
+    return (
+      <View style={styles.memberRow}>
+        <View style={[styles.memberAvatar, isLeader && { borderColor: '#FFD700', borderWidth: 2 }]}>
+          <Text style={styles.memberAvatarText}>{(item.display_name?.[0] ?? '?').toUpperCase()}</Text>
+        </View>
+        <View style={{ flex: 1, marginLeft: 10 }}>
+          <Text style={styles.memberName}>{item.display_name}{isMe ? ' (you)' : ''}</Text>
+          {isLeader && <Text style={styles.memberLeaderBadge}>👑 Leader</Text>}
+        </View>
+        {canHandoff && !isMe && (
+          <TouchableOpacity style={styles.handoffBtn} onPress={() => handleHandoffLeadership(item)}>
+            <MaterialCommunityIcons name="crown" size={12} color="#000" />
+            <Text style={styles.handoffBtnText}>Make Leader</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
 
   if (!currentSession) return null;
     // Triple-check to be resilient against async/singleton state desync:

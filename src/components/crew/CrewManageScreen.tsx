@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert, Share, TextInput, Image, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert, Share, TextInput, Image, RefreshControl, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import * as Clipboard from 'expo-clipboard';
@@ -9,15 +9,13 @@ import { locationService } from '../../services/LocationService';
 import { AppLogger } from '../../services/AppLogger';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import CustomSlider from '../CustomSlider';
 
 import { createStyles } from './CrewStyles';
 import { useCrewContext } from '../../context/CrewContext';
-import { profileService } from '../../services/profileService';
 // TODO: any other specific imports check manually
-import { Picker } from '@react-native-picker/picker';
 
-const styles = createStyles(Colors);
-
+const AVATAR_ICONS = ['account-group', 'star', 'fire', 'lightning-bolt', 'skull', 'heart', 'basketball', 'music-note', 'rocket', 'ghost', 'robot', 'alien'];
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -33,11 +31,52 @@ export function CrewManageScreen() {
   const context = useCrewContext();
   const { hub, manage, session, setStep, step, confirmAction, setConfirmAction, currentUserId, displayName, errorMsg, setErrorMsg, isLoading, setIsLoading, showCodeEntry, setShowCodeEntry, formState } = context;
   const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, handleDetectLocation, isGettingLocation } = hub;
-  const { selectedCrewDetail, setSelectedCrewDetail, expandedCrewId, setExpandedCrewId, cardMembers, setCardMembers, loadingCardMembersFor, makingOwnerFor, setMakingOwnerFor, confirmingDeleteCrewId, setConfirmingDeleteCrewId, confirmingLeaveCrewId, setConfirmingLeaveCrewId, createCrewError, setCreateCrewError, isCreatingCrew, newCrewName, setNewCrewName, newCrewDesc, newCrewIsPublic, setNewCrewIsPublic, newCrewCity, setNewCrewCity, newCrewState, setNewCrewState } = manage;
+  const { selectedCrewDetail, setSelectedCrewDetail, expandedCrewId, setExpandedCrewId, cardMembers, setCardMembers, loadingCardMembersFor, makingOwnerFor, setMakingOwnerFor, confirmingDeleteCrewId, setConfirmingDeleteCrewId, confirmingLeaveCrewId, setConfirmingLeaveCrewId, createCrewError, setCreateCrewError, isCreatingCrew, setIsCreatingCrew, newCrewName, setNewCrewName, newCrewDescription, setNewCrewDescription, newCrewIsPublic, setNewCrewIsPublic, newCrewCity, setNewCrewCity, newCrewState, setNewCrewState, newCrewPhotoUri, setNewCrewPhotoUri, newCrewIcon, setNewCrewIcon, newCrewColor, setNewCrewColor, newCrewHue, setNewCrewHue, newCrewCode, setNewCrewCode, selectedMembers, setSelectedMembers, userSearchQuery, setUserSearchQuery, userSearchResults, setUserSearchResults } = manage;
   const { currentSession, isHandoffMode, executeLeaveSession, executeEndSession, handleHandoffLeadership } = session;
   
-  // NOTE: You will need to bring in local state that wasn't context-ified
-  // or convert them. For now, the structure guarantees safe parsing context injection.
+  const handlePickCrewPhoto = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setNewCrewPhotoUri(result.assets[0].uri);
+    }
+  };
+
+  const handleCreateCrew = async () => {
+    if (!newCrewName.trim()) { setCreateCrewError('Enter a crew name'); return; }
+    setIsCreatingCrew(true); setCreateCrewError('');
+    try {
+      const crew = await profileService.createPermanentCrew(newCrewName.trim(), {
+        isPublic: newCrewIsPublic,
+        avatarColor: newCrewColor,
+        avatarIcon: newCrewIcon,
+        city: newCrewCity || undefined,
+        state: newCrewState || undefined,
+        description: newCrewDescription || undefined,
+        inviteCode: !newCrewIsPublic ? newCrewCode : undefined,
+        members: selectedMembers.map((m: any) => m.user_id)
+      });
+      AppLogger.log('CREW_PERMANENT_CREATED', {
+        crewId: crew.id, crewName: crew.name, isPublic: newCrewIsPublic,
+        city: newCrewCity || null
+      });
+      const updated = await profileService.getMyCrew();
+      hub.setMyCrews(updated);
+      hub.setPermanentCrews(updated.map((c: any) => ({ id: c.id, name: c.name })));
+      
+      formState.setSelectedCrewId(crew.id);
+      formState.setCrewName(crew.name);
+      setStep('landing');
+    } catch (e: any) {
+      setCreateCrewError(e.message || 'Failed to create crew');
+    } finally {
+      setIsCreatingCrew(false);
+    }
+  };
 
   return (
       <View style={{ flex: 1 }}>

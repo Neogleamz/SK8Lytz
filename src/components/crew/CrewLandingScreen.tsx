@@ -63,7 +63,7 @@ export function CrewLandingScreen() {
   const handleStartEdit = (crew: PermanentCrew) => {
     manage.setEditingCrewId(crew.id);
     manage.setEditCrewName(crew.name);
-    manage.setEditCrewIsPublic(crew.is_public);
+    manage.setEditCrewIsPublic(crew.is_public ?? false);
     manage.setEditCrewCity(crew.city || '');
     manage.setEditCrewState(crew.state || '');
     manage.setEditCrewDesc(crew.description || '');

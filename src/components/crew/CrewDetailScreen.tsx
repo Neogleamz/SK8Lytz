@@ -12,11 +12,8 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { createStyles } from './CrewStyles';
 import { useCrewContext } from '../../context/CrewContext';
-import { profileService } from '../../services/profileService';
 // TODO: any other specific imports check manually
-import { Picker } from '@react-native-picker/picker';
 
-const styles = createStyles(Colors);
 
 
 function timeAgo(iso: string): string {
@@ -32,12 +29,101 @@ export function CrewDetailScreen() {
   const styles = createStyles(Colors);
   const context = useCrewContext();
   const { hub, manage, session, setStep, step, confirmAction, setConfirmAction, currentUserId, displayName, errorMsg, setErrorMsg, isLoading, setIsLoading, showCodeEntry, setShowCodeEntry, formState } = context;
-  const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, handleDetectLocation, isGettingLocation } = hub;
-  const { selectedCrewDetail, setSelectedCrewDetail, expandedCrewId, setExpandedCrewId, cardMembers, setCardMembers, loadingCardMembersFor, makingOwnerFor, setMakingOwnerFor, confirmingDeleteCrewId, setConfirmingDeleteCrewId, confirmingLeaveCrewId, setConfirmingLeaveCrewId, createCrewError, setCreateCrewError, isCreatingCrew, newCrewName, setNewCrewName, newCrewDesc, newCrewIsPublic, setNewCrewIsPublic, newCrewCity, setNewCrewCity, newCrewState, setNewCrewState } = manage;
+  const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, handleDetectLocation, isGettingLocation, crewMemberCounts, setCrewMemberCounts } = hub;
+  const { 
+    selectedCrewDetail, setSelectedCrewDetail, expandedCrewId, setExpandedCrewId, 
+    cardMembers, setCardMembers, loadingCardMembersFor, makingOwnerFor, setMakingOwnerFor, 
+    confirmingDeleteCrewId, setConfirmingDeleteCrewId, confirmingLeaveCrewId, setConfirmingLeaveCrewId, 
+    crewStats, setCrewStats, loadCrewMembers,
+    userSearchQuery, setUserSearchQuery, userSearchResults, setUserSearchResults, selectedMembers, setSelectedMembers,
+    isRemovingUserFor, setIsRemovingUserFor, isAddingMembersTo, setIsAddingMembersTo,
+    editingCrewId, setEditingCrewId, editCrewName, setEditCrewName, editCrewIsPublic, setEditCrewIsPublic, 
+    editCrewCity, setEditCrewCity, editCrewState, setEditCrewState, editCrewDesc, setEditCrewDesc, isSavingCrew, setIsSavingCrew 
+  } = manage;
   const { currentSession, isHandoffMode, executeLeaveSession, executeEndSession, handleHandoffLeadership } = session;
   
   // NOTE: You will need to bring in local state that wasn't context-ified
   // or convert them. For now, the structure guarantees safe parsing context injection.
+
+  const executeLeaveCrew = async (crew: PermanentCrew) => {
+    try {
+      await profileService.leavePermanentCrew(crew.id);
+      AppLogger.log('CREW_PERMANENT_LEFT', { crewId: crew.id, crewName: crew.name, method: 'leave_btn' });
+      hub.setMyCrews(prev => prev.filter(c => c.id !== crew.id));
+      hub.setPermanentCrews(prev => prev.filter((c: any) => c.id !== crew.id));
+      setSelectedCrewDetail(null);
+      setConfirmingLeaveCrewId(null);
+    } catch (e: any) { Alert.alert('Error', e.message); }
+  };
+
+  const executeDeleteCrew = async (crew: PermanentCrew) => {
+    try {
+      await profileService.deleteCrew(crew.id);
+      AppLogger.log('CREW_PERMANENT_DELETED', { crewId: crew.id, crewName: crew.name });
+      hub.setMyCrews(prev => prev.filter(c => c.id !== crew.id));
+      hub.setPermanentCrews(prev => prev.filter((c: any) => c.id !== crew.id));
+      setSelectedCrewDetail(null);
+      setConfirmingDeleteCrewId(null);
+    } catch (e: any) { Alert.alert('Error', e.message); }
+  };
+
+  const handleStartEdit = (crew: PermanentCrew) => {
+    setEditCrewName(crew.name);
+    setEditCrewIsPublic(crew.is_public ?? false);
+    setEditCrewCity(crew.city ?? '');
+    setEditCrewState(crew.state ?? '');
+    setEditCrewDesc(crew.description ?? '');
+    setEditingCrewId(crew.id);
+    setSelectedMembers([]);
+    setUserSearchQuery('');
+  };
+
+  const handleAddMembersToCrew = async (crewId: string) => {
+    if (selectedMembers.length === 0) return;
+    setIsAddingMembersTo(crewId);
+    try {
+      const userIdsToAdd = selectedMembers.map(m => m.user_id);
+      await profileService.addCrewMembers(crewId, userIdsToAdd);
+      AppLogger.log('CREW_MEMBERS_ADDED', { crewId, count: userIdsToAdd.length });
+      Alert.alert('Success', `Added ${selectedMembers.length} skater(s) to the crew!`);
+      setSelectedMembers([]);
+      setUserSearchQuery('');
+      setCardMembers(prev => ({ ...prev, [crewId]: undefined as any }));
+      loadCrewMembers(crewId);
+    } catch (e: any) {
+      Alert.alert('Error', e.message ?? 'Could not add members to crew.');
+    } finally {
+      setIsAddingMembersTo(null);
+    }
+  };
+
+  const handleSaveCrew = async (crew: PermanentCrew) => {
+    if (!editCrewName.trim()) return;
+    setIsSavingCrew(true);
+    try {
+      await profileService.updateCrew(crew.id, {
+        name: editCrewName.trim(),
+        isPublic: editCrewIsPublic,
+        city: editCrewCity.trim() || undefined,
+        state: editCrewState.trim() || undefined,
+        description: editCrewDesc.trim() || undefined,
+      });
+      const updated = {
+        ...crew, name: editCrewName.trim(), is_public: editCrewIsPublic,
+        city: editCrewCity.trim() || undefined, state: editCrewState.trim() || undefined,
+        description: editCrewDesc.trim() || undefined
+      };
+      hub.setMyCrews(prev => prev.map(c => c.id === crew.id ? updated : c));
+      setSelectedCrewDetail(updated);
+      setEditingCrewId(null);
+      AppLogger.log('CREW_PERMANENT_UPDATED', { crewId: crew.id, crewName: editCrewName.trim(), isPublic: editCrewIsPublic });
+    } catch (e: any) {
+      AppLogger.log('CREW_ERROR', { action: 'save_crew', crewId: crew.id, error: e.message });
+      Alert.alert('Save failed', e.message ?? 'Unknown error');
+    } finally {
+      setIsSavingCrew(false);
+    }
+  };
 
   const crew = selectedCrewDetail;
     if (!crew) return null;

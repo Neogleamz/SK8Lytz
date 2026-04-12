@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert, Share, TextInput, Image, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert, Share, TextInput, Image, RefreshControl, FlatList } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import * as Clipboard from 'expo-clipboard';
@@ -12,32 +12,81 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { createStyles } from './CrewStyles';
 import { useCrewContext } from '../../context/CrewContext';
-import { profileService } from '../../services/profileService';
-// TODO: any other specific imports check manually
-import { Picker } from '@react-native-picker/picker';
-
-const styles = createStyles(Colors);
-
-
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return `${m}m ago`;
-  return `${Math.floor(m / 60)}h ago`;
-}
 
 export function CrewJoinScreen() {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
   const context = useCrewContext();
-  const { hub, manage, session, setStep, step, confirmAction, setConfirmAction, currentUserId, displayName, errorMsg, setErrorMsg, isLoading, setIsLoading, showCodeEntry, setShowCodeEntry, formState } = context;
-  const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, handleDetectLocation, isGettingLocation } = hub;
-  const { selectedCrewDetail, setSelectedCrewDetail, expandedCrewId, setExpandedCrewId, cardMembers, setCardMembers, loadingCardMembersFor, makingOwnerFor, setMakingOwnerFor, confirmingDeleteCrewId, setConfirmingDeleteCrewId, confirmingLeaveCrewId, setConfirmingLeaveCrewId, createCrewError, setCreateCrewError, isCreatingCrew, newCrewName, setNewCrewName, newCrewDesc, newCrewIsPublic, setNewCrewIsPublic, newCrewCity, setNewCrewCity, newCrewState, setNewCrewState } = manage;
-  const { currentSession, isHandoffMode, executeLeaveSession, executeEndSession, handleHandoffLeadership } = session;
+  const { hub, manage, session, setStep, step, confirmAction, setConfirmAction, currentUserId, displayName, setDisplayName, errorMsg, setErrorMsg, isLoading, setIsLoading, showCodeEntry, setShowCodeEntry, formState } = context;
+  const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, handleDetectLocation, isGettingLocation, loadActiveSessions, isLoadingSessions } = hub;
+  const { selectedCrewDetail, setSelectedCrewDetail, expandedCrewId, setExpandedCrewId, cardMembers, setCardMembers, loadingCardMembersFor, makingOwnerFor, setMakingOwnerFor, confirmingDeleteCrewId, setConfirmingDeleteCrewId, confirmingLeaveCrewId, setConfirmingLeaveCrewId, createCrewError, setCreateCrewError, isCreatingCrew, newCrewName, setNewCrewName, newCrewDescription, setNewCrewDescription, newCrewIsPublic, setNewCrewIsPublic, newCrewCity, setNewCrewCity, newCrewState, setNewCrewState } = manage;
+  const { currentSession, isHandoffMode, executeLeaveSession, executeEndSession, handleHandoffLeadership, handleSessionJoined } = session;
   
-  // NOTE: You will need to bring in local state that wasn't context-ified
-  // or convert them. For now, the structure guarantees safe parsing context injection.
+  const [inviteCode, setInviteCode] = React.useState('');
+
+  const handleJoinByCode = async () => {
+    if (inviteCode.trim().length < 6) { setErrorMsg('Enter the 6-character crew invite code'); return; }
+    setIsLoading(true); setErrorMsg('');
+    try {
+      const crew = await profileService.joinPermanentCrew(inviteCode.trim());
+      AppLogger.log('CREW_SESSION_JOINED', { crewId: crew.id, crewName: crew.name, method: 'permanent_code' });
+      const updatedCrews = await profileService.getMyCrew();
+      hub.setMyCrews(updatedCrews);
+      hub.setPermanentCrews(updatedCrews.map((c: any) => ({ id: c.id, name: c.name })));
+      setShowCodeEntry(false);
+      setInviteCode('');
+      Alert.alert(
+        '🛹 Joined!',
+        `You're now a member of "${crew.name}". When they start a session you'll see it under My Crews.`,
+        [{ text: 'Nice!' }]
+      );
+    } catch (e: any) {
+      AppLogger.log('CREW_ERROR', { action: 'join_crew_by_code', error: e.message });
+      setErrorMsg(e.message || 'Crew not found — check the code and try again.');
+    } finally { setIsLoading(false); }
+  };
+
+  const handleJoinById = async (sessionId: string) => {
+    setIsLoading(true); setErrorMsg('');
+    try {
+      const sess = await crewService.joinSessionById(sessionId, displayName.trim());
+      AppLogger.log('CREW_SESSION_JOINED', { sessionId: sess.id, crewName: sess.name, method: 'browse' });
+      await handleSessionJoined(sess);
+      setStep('controller');
+    } catch (e: any) {
+      AppLogger.log('CREW_ERROR', { action: 'join_id', error: e.message });
+      setErrorMsg(e.message || 'Failed to join session');
+    } finally { setIsLoading(false); }
+  };
+
+  const renderActiveSessionCard = ({ item }: { item: CrewSession }) => {
+    const isOwn = item.leader_user_id === currentUserId;
+    return (
+      <TouchableOpacity style={styles.sessionCard} onPress={() => handleJoinById(item.id)}
+        disabled={isLoading} activeOpacity={0.75}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.sessionCardName}>{item.name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
+            {item.location_label && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <MaterialCommunityIcons name="map-marker" size={12} color={Colors.textMuted} />
+                <Text style={styles.sessionCardMeta} numberOfLines={1}>{item.location_label}</Text>
+              </View>
+            )}
+            <Text style={styles.sessionCardMeta}>
+              {item.member_count ?? 0} {(item.member_count ?? 0) === 1 ? 'skater' : 'skaters'}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.sessionCardRight}>
+          {isOwn && <Text style={{ fontSize: 14 }}>👑</Text>}
+          <View style={styles.joinPill}>
+            <Text style={styles.joinPillText}>{isOwn ? 'Rejoin' : 'Join'}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
 <View style={{ flex: 1 }}>

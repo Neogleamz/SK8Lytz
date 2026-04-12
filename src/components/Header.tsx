@@ -1,4 +1,5 @@
-import { View, StyleSheet, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Colors, Layout } from '../theme/theme';
 
 interface HeaderProps {

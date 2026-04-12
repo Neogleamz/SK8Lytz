@@ -18,6 +18,27 @@ interface CrewContextValue {
   confirmAction: 'end' | 'leave' | null;
   setConfirmAction: (action: 'end' | 'leave' | null) => void;
 
+  currentUserId: string;
+  displayName: string;
+  setDisplayName: (name: string) => void;
+
+  formState: {
+    crewName: string;
+    setCrewName: (name: string) => void;
+    selectedCrewId: string | null;
+    setSelectedCrewId: (id: string | null) => void;
+    isPublic: boolean;
+    setIsPublic: (isPub: boolean) => void;
+    schedDateTime: Date;
+    setSchedDateTime: (date: Date) => void;
+    showDatePicker: boolean;
+    setShowDatePicker: (show: boolean) => void;
+    showTimePicker: boolean;
+    setShowTimePicker: (show: boolean) => void;
+    joiningCrewId: string | null;
+    setJoiningCrewId: (id: string | null) => void;
+  };
+
   hub: ReturnType<typeof useCrewHub>;
   manage: ReturnType<typeof useCrewManage>;
   session: ReturnType<typeof useCrewSession>;
