@@ -34,6 +34,7 @@ import { LocationPicker } from './LocationPicker';
 import { useCrewHub } from '../hooks/useCrewHub';
 import { useCrewManage } from '../hooks/useCrewManage';
 import { useCrewSession } from '../hooks/useCrewSession';
+import { CrewProvider } from '../context/CrewContext';
 import CrewMemberDashboard from './CrewMemberDashboard';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -86,6 +87,7 @@ export default function CrewModal({
   const [confirmAction, setConfirmAction] = useState<'end' | 'leave' | null>(null);
 
   // ── Hooks ──────────────────────────────────────────────────────────────────
+  const hub = useCrewHub(visible, step);
   const {
     discoverRadiusMi, setDiscoverRadiusMi,
     myCrews, setMyCrews,
@@ -99,8 +101,9 @@ export default function CrewModal({
     locationLabel, setLocationLabel,
     locationCoords, setLocationCoords,
     handleDetectLocation
-  } = useCrewHub(visible, step);
+  } = hub;
 
+  const manage = useCrewManage(hub.myCrews);
   const {
     selectedCrewDetail, setSelectedCrewDetail,
     crewStats, setCrewStats,
@@ -135,7 +138,7 @@ export default function CrewModal({
     isSavingCrew, setIsSavingCrew,
     confirmingDeleteCrewId, setConfirmingDeleteCrewId,
     confirmingLeaveCrewId, setConfirmingLeaveCrewId,
-  } = useCrewManage(myCrews);
+  } = manage;
 
   // ── Create / Schedule form local state ─────────────────────────────────────
   const [crewName, setCrewName] = useState('');
@@ -159,6 +162,13 @@ export default function CrewModal({
 
   const [currentUserId, setCurrentUserId] = useState('');
 
+  const session = useCrewSession(
+    activeSession, activeRole, currentUserId,
+    onSessionReady, onSessionLeft, onSessionEnded,
+    refreshNearby, 
+    () => setStep('landing'), 
+    setErrorMsg
+  );
   const {
     currentSession, setCurrentSession,
     currentRole, setCurrentRole,
@@ -168,13 +178,16 @@ export default function CrewModal({
     executeEndSession,
     executeLeaveSession,
     handleHandoffLeadership
-  } = useCrewSession(
-    activeSession, activeRole, currentUserId,
-    onSessionReady, onSessionLeft, onSessionEnded,
-    refreshNearby, 
-    () => setStep('landing'), 
-    setErrorMsg
-  );
+  } = session;
+
+  const contextValue = {
+    step, setStep,
+    showCodeEntry, setShowCodeEntry,
+    isLoading, setIsLoading,
+    errorMsg, setErrorMsg,
+    confirmAction, setConfirmAction,
+    hub, manage, session
+  };
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -1928,6 +1941,7 @@ export default function CrewModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent statusBarTranslucent>
+      <CrewProvider value={contextValue}>
       <KeyboardAvoidingView
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -1946,6 +1960,7 @@ export default function CrewModal({
           {step === 'manage' && !!selectedCrewDetail && renderCrewDetail()}
         </View>
       </KeyboardAvoidingView>
+      </CrewProvider>
     </Modal>
   );
 }
