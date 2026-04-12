@@ -240,8 +240,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     checkDeviceClaimed,
     hasCloudRegistrations,
     migrateLegacyGroups,
-    syncFromCloud: _syncFromCloud,
-    hasPendingSync: _hasPendingSync,
     isLoading,
   } = useRegistration();
 
@@ -318,6 +316,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
   const [isAdminToolsVisible, setIsAdminToolsVisible] = useState(false);
   const [isLabVisible, setIsLabVisible] = useState(false);
+  const [isMapVisible, setIsMapVisible] = useState(false);
 
   const [isSetupWizardVisible, setIsSetupWizardVisible] = useState(false);
   const [isCheckingRegistrations, setIsCheckingRegistrations] = useState(true);
@@ -1755,7 +1754,16 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                         <MaterialCommunityIcons name="chevron-right" size={16} color={crewRole === 'leader' ? '#FFAA00' : '#00AAFF'} />
                       </TouchableOpacity>
                     ) : (
-                      <Text style={styles.slabEmptyText}>No active sessions nearby. Launch a crew to sync lights.</Text>
+                      <View style={{ gap: 16 }}>
+                        <Text style={styles.slabEmptyText}>No active sessions nearby. Launch a crew to sync lights.</Text>
+                        <TouchableOpacity 
+                          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: '#FFAA00', marginTop: 8 }}
+                          onPress={() => Alert.alert("Coming Soon", "The Interactive Skate Spot Map is currently in development!")}
+                        >
+                          <MaterialCommunityIcons name="map-marker-radius" size={18} color="#FFAA00" style={{ marginRight: 8 }} />
+                          <Text style={{ color: '#FFAA00', fontWeight: '800', letterSpacing: 1, fontSize: 13 }}>EXPLORE SKATE MAP</Text>
+                        </TouchableOpacity>
+                      </View>
                     )}
                   </View>
                 </View>
