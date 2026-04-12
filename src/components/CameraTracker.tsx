@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator, Linking } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -44,6 +44,13 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
   const [isProcessing, setIsProcessing] = useState(false);
   const [layout, setLayout] = useState({ width: 0, height: 0 });
   const cameraRef = useRef<CameraView>(null);
+
+  // Aggressive prompt for undetermined permissions on mount
+  useEffect(() => {
+    if (permission && permission.status === 'undetermined') {
+      requestPermission();
+    }
+  }, [permission, requestPermission]);
 
   if (Platform.OS === 'web') {
     return (
@@ -161,8 +168,8 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
         setDetectedHex(hex);
         onColorDetected(hex);
       }
-    } catch (e) {
-      console.log('Camera capture failed', e);
+    } catch (e: any) {
+      console.error('Camera capture failed', e);
     } finally {
       setIsProcessing(false);
     }
@@ -179,18 +186,19 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
   }
 
   if (!permission.granted) {
-    const canAsk = permission.canAskAgain !== false;
+    // If we've explicitly been denied and the OS says we can't ask again, then we fallback to open settings
+    const requiresSettings = permission.status === 'denied' && !permission.canAskAgain;
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }]}>
         <MaterialCommunityIcons name="camera-off" size={40} color={Colors.textMuted} style={{ marginBottom: 12 }} />
         <Text style={styles.message}>
-          {canAsk
-            ? 'Camera access is needed to detect colors from your environment.'
-            : 'Camera access was denied. Please enable it in your device Settings → Apps → SK8Lytz → Permissions.'}
+          {requiresSettings
+            ? 'Camera access was denied permanently. Please enable it in your device Settings.'
+            : 'Camera access is needed to detect colors from your environment.'}
         </Text>
-        <TouchableOpacity style={styles.button} onPress={canAsk ? requestPermission : () => Linking.openSettings()}>
+        <TouchableOpacity style={styles.button} onPress={requiresSettings ? () => Linking.openSettings() : requestPermission}>
           <Text style={{ color: Colors.isDark ? '#FFF' : '#000', fontWeight: 'bold' }}>
-            {canAsk ? 'GRANT PERMISSION' : 'OPEN SETTINGS'}
+            {requiresSettings ? 'OPEN SETTINGS' : 'GRANT PERMISSION'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -237,10 +245,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 200,
     backgroundColor: '#000',
-    borderRadius: 16,
+    borderRadius: 0,
     marginTop: 0,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 0,
     overflow: 'hidden',
     alignItems: 'center',
     paddingTop: 0,
@@ -289,15 +296,17 @@ const styles = StyleSheet.create({
   },
   statusBox: {
     position: 'absolute',
-    bottom: 16,
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    paddingVertical: 12,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.15)',
   },
   swatch: {
     width: 20,

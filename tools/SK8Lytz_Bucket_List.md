@@ -9,14 +9,12 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 <!-- AUTO_SYNC_ERRORS_START -->
 <!-- AUTO_SYNC_ERRORS_END -->
 
-- [ ] `fix/auth-page-scrolling` : NO vertical scrolling on auth page. Ensure the layout stops overflowing vertically, and shrink the "Continue offline" section to fit.
 - [ ] `fix/dynamic-arch-regressions` : Resolve 'isHaloz' ReferenceError in ProductVisualizer and perform a sanitization audit (DockedController, ZenggeProtocol, Setup Wizard) to remove remaining hardcoded binary logic.
 - [ ] `fix/tsc-errors-audit` : Fix TypeScript errors remaining from dynamic-arch-regressions (Audio namespace, missing EventType for 'BUILDER_PRESET_SAVED' in DockedController, IVoiceAction/Typography Subheader in DashboardScreen).
 
 ### Target: `epic/ui-refinement`
 
 - [ ] `gate-offline-mode` : Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning.
-- [x] `feat/dashboard-offline-crew-card-teaser` : Shrink Crew Card on Dashboard when offline to act as an unavailable teaser instead of fully collapsing it.
 
 ### Target: `epic/crew-hub-overhaul`
 
@@ -30,9 +28,10 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 ### Target: `epic/admin-tools`
 
 - [ ] `fix/admin-modal-ts-debt` : Fix 4 pre-existing TS errors in AdminToolsModal.tsx: (1) EVENT_META missing new event types (MOUNT, UNMOUNT, SYNC, REJOIN etc), (2) blankProfile() missing `batteryCapacityMilliAmpereHour` field — schema drift from ProductProfile, (3) `supabase` not imported at module level but used in `handleSaveProfile`, (4) dead `tab === 'products'` condition that will never match the `Tab` type.
-- [x] `chore/delete-orphan-backup` : Delete `src/components/Sk8LytzDiagnosticLab_old.tsx` — orphaned backup file causing 11 TS compile errors. It is unreferenced by any import and should be permanently removed.
 
 ### Target: `epic/camera-mode`
+
+- [x] `fix/camera-mode-ux-permissions` : Fix camera mode permission flow and expand camera viewport layout → [Plan](docs/plans/fix-camera-mode-ux-permissions.md)
 
 ### Target: `epic/visualizer-parity`
 
@@ -45,8 +44,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] `feat/hardware-abstraction-layer` : Architect a hardware controller abstraction layer to decouple the UI from explicit `ZenggeProtocol` functions, preparing the app to support and dynamically map new OEM hardware controllers to the existing UI.
 
 ### Target: `epic/ui-refinement`
-
-- [x] `fix/setup-wizard-button-overlap` : Compact Step 3 of the hardware setup wizard (Name Your Skates) to prevent button overlap and eliminate vertical scrolling. → [Walkthrough](file:///c:/Users/Magma/.gemini/antigravity/brain/206e904d-e0ff-4a1f-ab45-c74c74b82974/walkthrough.md)
 
 - [ ] `audit/offline-profile-settings` : Audit whether all user profile settings (display name, avatar, preferences) are fully cached locally for offline use. Implement offline-safe username rename that queues the update to Supabase on reconnect — same pattern as device registration sync.
 - [ ] `feat/app-wide-ux-tips` : Design and implement a contextual tips system that surfaces short, dismissible tooltips throughout the app at key friction points (e.g. first Bluetooth scan, first controller open, first crew join). Tips should only show once per user (AsyncStorage) and feel native to the SK8Lytz aesthetic.
@@ -72,8 +69,6 @@ All active tasks, bugs, and feature work. Prioritized. Updated every session.
 - [ ] `feat/interactive-skate-spot-map` : Implement a high-density, interactive skate spot map using react-native-maps and clustering. Feature verified custom DB rinks vs. unverified Google Places fallbacks, including a 'Claim & Complete' bottom sheet UI to crowdsource specialized metadata (surface types, adult nights).
 
 ### Target: `epic/ui-refinement`
-
-- [x] `feat/lab-ui-modernization` : Modernize and style the LED Diagnostic Lab layout to match the aesthetics, typography, and input styling of the rest of the app. → [Plan](docs/plans/feat-lab-ui-modernization.md)
 
 ---
 

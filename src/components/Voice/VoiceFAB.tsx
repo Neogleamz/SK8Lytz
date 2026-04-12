@@ -32,7 +32,7 @@ export default function VoiceFAB({ onPress, isListening }: Props) {
         <View style={styles.inner}>
           <MaterialCommunityIcons 
             name={isListening ? "microphone" : "microphone-outline"} 
-            size={36} 
+            size={28} 
             color="#000" 
           />
         </View>
@@ -48,10 +48,10 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     bottom: 30,
-    right: 20,
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    left: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 9999,
@@ -60,26 +60,26 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 15,
-    elevation: 10,
+    elevation: 8,
   },
   gradient: {
     width: '100%',
     height: '100%',
-    borderRadius: 42,
-    padding: 3, // Border effect
+    borderRadius: 30,
+    padding: 2, // Border effect
   },
   inner: {
     flex: 1,
-    borderRadius: 40,
+    borderRadius: 28,
     backgroundColor: '#00F0FF', // Solid core or translucent? keeping it solid for visibility
     justifyContent: 'center',
     alignItems: 'center',
   },
   pulseRing: {
     position: 'absolute',
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 66,
+    height: 66,
+    borderRadius: 33,
     borderWidth: 2,
     borderColor: 'rgba(0, 240, 255, 0.4)',
     zIndex: -1,
