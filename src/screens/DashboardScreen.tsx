@@ -44,7 +44,7 @@ import { IVoiceAction } from '../services/VoiceService';
 import VoiceFAB from '../components/Voice/VoiceFAB';
 import VoiceCommandModal from '../components/Voice/VoiceCommandModal';
 import VoiceTutorialModal from '../components/Voice/VoiceTutorialModal';
-import CrewModal from '../components/CrewModal';
+import { CrewModal } from '../components/CrewModal';
 import { crewService, CrewSession, CrewRole } from '../services/CrewService';
 import Sk8LytzDiagnosticLab from '../components/Sk8LytzDiagnosticLab';
 
@@ -2042,7 +2042,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         activeRole={crewRole}
         currentModeSummary={crewModeSummary}
         lastLeaderScene={lastLeaderScene}
-        onSessionReady={(session, role, lastScene) => {
+        onSessionReady={(session: CrewSession, role: CrewRole, lastScene: Record<string, any> | null) => {
           setCrewSession(session);
           setCrewRole(role);
           if (role === 'leader') {
