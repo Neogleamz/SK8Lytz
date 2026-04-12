@@ -74,7 +74,7 @@ export function useRegistration() {
         setRegisteredDevices(JSON.parse(raw));
       }
     } catch (e) {
-      console.warn('[Registration] Local load failed:', e);
+      AppLogger.warn('[Registration] Local load failed:', e);
     } finally {
       setIsLoading(false);
     }
@@ -105,7 +105,7 @@ export function useRegistration() {
       // Flush any offline-queued registrations
       await flushPendingSync(user.id);
     } catch (e) {
-      console.warn('[Registration] Cloud sync failed (offline?):', e);
+      AppLogger.warn('[Registration] Cloud sync failed (offline?):', e);
     }
   };
 
@@ -156,7 +156,7 @@ export function useRegistration() {
               user_id: user.id
             }, { onConflict: 'id' });
           } catch (fkError) {
-            console.warn('[Registration] Could not establish group FK pre-flight:', fkError);
+            AppLogger.warn('[Registration] Could not establish group FK pre-flight:', fkError);
           }
 
           const dbRow = {
@@ -197,7 +197,7 @@ export function useRegistration() {
 
       return true;
     } catch (e) {
-      console.warn('[Registration] Save failed, queuing offline:', e);
+      AppLogger.warn('[Registration] Save failed, queuing offline:', e);
       await queuePendingSync(device);
       setHasPendingSync(true);
       return false; // saved locally, pending cloud
@@ -256,7 +256,7 @@ export function useRegistration() {
 
       return data.user_id === user?.id ? 'claimed_by_self' : 'claimed_by_other';
     } catch (e) {
-      console.warn('[Registration] Claim check failed (offline?):', e);
+      AppLogger.warn('[Registration] Claim check failed (offline?):', e);
       return 'offline_unknown';
     }
   }, []);
@@ -281,7 +281,7 @@ export function useRegistration() {
           .eq('device_mac', deviceMac);
       }
     } catch (e) {
-      console.warn('[Registration] Deregister failed:', e);
+      AppLogger.warn('[Registration] Deregister failed:', e);
     }
   }, []);
 
@@ -362,7 +362,7 @@ export function useRegistration() {
         }
       }
     } catch (e) {
-      console.warn('[Registration] Legacy migration failed:', e);
+      AppLogger.warn('[Registration] Legacy migration failed:', e);
     }
     return migrated;
   }, []);
@@ -392,7 +392,7 @@ export function useRegistration() {
       };
       if (idx >= 0) queue[idx] = marked; else queue.push(marked);
       await AsyncStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(queue));
-    } catch (e) { console.warn('[Registration] Queue failed:', e); }
+    } catch (e) { AppLogger.warn('[Registration] Queue failed:', e); }
   };
 
   const flushPendingSync = async (userId: string) => {
@@ -415,7 +415,7 @@ export function useRegistration() {
             user_id: userId
           }, { onConflict: 'id' });
         } catch (fkError) {
-          console.warn('[Registration] Flush pre-flight group FK error:', fkError);
+          AppLogger.warn('[Registration] Flush pre-flight group FK error:', fkError);
         }
 
         const dbRow = {
@@ -445,13 +445,13 @@ export function useRegistration() {
         const { error } = await supabase
           .from('registered_devices')
           .upsert(dbRow, { onConflict: 'user_id,device_mac' });
-        if (error) console.warn('[Registration] Flush error for', device.device_mac, error);
+        if (error) AppLogger.warn('[Registration] Flush error for', device.device_mac, error);
       }
 
       await AsyncStorage.removeItem(PENDING_SYNC_KEY);
       setHasPendingSync(false);
     } catch (e) {
-      console.warn('[Registration] Flush failed:', e);
+      AppLogger.warn('[Registration] Flush failed:', e);
     } finally {
       isSyncing.current = false;
     }

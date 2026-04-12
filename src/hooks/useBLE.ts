@@ -121,7 +121,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
   useEffect(() => { connectedDevicesRef.current = connectedDevices; }, [connectedDevices]);
   const handleNotification = (error: any, characteristic: any, deviceId: string) => {
     if (error) {
-      console.warn('Notification Error', error);
+      AppLogger.warn('Notification Error', error);
       AppLogger.log('PROTOCOL_ERROR', { error: error?.message || String(error), deviceId, context: 'notification' });
       return;
     }
@@ -134,7 +134,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
             dataReceivedCallbackRef.current(deviceId, data);
         }
       } catch (e: any) {
-        console.error('Failed to parse notification', e);
+        AppLogger.error('Failed to parse notification', e);
         AppLogger.log('PROTOCOL_ERROR', { error: e?.message || String(e), deviceId, context: 'parse' });
       }
     }
@@ -280,7 +280,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
     bleManager.startDeviceScan(null, null, (error: any, device: any) => {
       if (error) {
-        console.error(error);
+        AppLogger.error(error);
         setIsScanning(false);
         return;
       }
@@ -422,7 +422,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
         } else {
           // Only log rejection if it's not a complete ghost (has at least a name or service)
           if (device.name || (device.serviceUUIDs && device.serviceUUIDs.length > 0)) {
-            console.warn('[EMERGENCY-DEBUG] DEVICE REJECTED BY FILTER:', {
+            AppLogger.warn('[EMERGENCY-DEBUG] DEVICE REJECTED BY FILTER:', {
               id: device.id, 
               name: device.name, 
               isSymphony, 
@@ -503,7 +503,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
         await new Promise(r => setTimeout(r, 600));
 
       } catch (probeErr: any) {
-        console.warn(`[BLE Probe] Failed ${device.id}:`, probeErr?.message);
+        AppLogger.warn(`[BLE Probe] Failed ${device.id}:`, probeErr?.message);
         failedIds.push(device.id);
         try { await bleManager.cancelDeviceConnection(device.id); } catch (e) { }
         await new Promise(r => setTimeout(r, 500));
@@ -564,12 +564,12 @@ export default function useBLE(): BluetoothLowEnergyApi {
         const b64 = Buffer.from(qp).toString('base64');
         bleManager.writeCharacteristicWithoutResponseForDevice(
           mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
-        ).catch((e: any) => console.warn('[BLE Probe Single] query write failed', e));
+        ).catch((e: any) => AppLogger.warn('[BLE Probe Single] query write failed', e));
       });
 
       return hwConfig;
     } catch (err) {
-      console.warn(`[BLE Probe Single] Failed to probe ${mac}:`, err);
+      AppLogger.warn(`[BLE Probe Single] Failed to probe ${mac}:`, err);
       return null;
     } finally {
       if (!alreadyConn) {
@@ -655,7 +655,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     }
 
     if (results.length > 0) {
-      console.warn(`[EMERGENCY-DEBUG] classifyProbeResults pushing ${results.length} devices to pendingRegistrations`, results.map(r => r.device_name));
+      AppLogger.warn(`[EMERGENCY-DEBUG] classifyProbeResults pushing ${results.length} devices to pendingRegistrations`, results.map(r => r.device_name));
       setPendingRegistrations(results);
     }
   };
@@ -699,13 +699,13 @@ export default function useBLE(): BluetoothLowEnergyApi {
         negotiatedMtuRef.current = negotiated.mtu;
         console.log(`[BLE] MTU negotiated: ${negotiated.mtu} bytes for ${device.id}`);
       } catch (mtuErr: any) {
-        console.warn('[BLE] MTU negotiation failed (continuing with default 186):', mtuErr?.message);
+        AppLogger.warn('[BLE] MTU negotiation failed (continuing with default 186):', mtuErr?.message);
       }
 
       // Register dropout listener
       if (disconnectListeners.current[device.id]) disconnectListeners.current[device.id].remove();
       disconnectListeners.current[device.id] = bleManager.onDeviceDisconnected(device.id, (error: any, _d: any) => {
-        console.warn(`[BLE] Device dropout detected for ${device.id}`);
+        AppLogger.warn(`[BLE] Device dropout detected for ${device.id}`);
         AppLogger.log('DEVICE_DISCONNECTED', { id: device.id, reason: 'dropout', error: error?.message });
         setDroppedOutDeviceIds(prev => [...prev, device.id]);
         setConnectedDevices(prev => prev.filter(c => c.id !== device.id));
@@ -762,7 +762,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
           );
           console.log(`[BLE] 0x63 hw query sent to ${device.id}`);
         } catch (e) {
-          console.warn('[BLE] hw query write failed', e);
+          AppLogger.warn('[BLE] hw query write failed', e);
         }
       }, 600);
 
@@ -773,7 +773,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
       
       return firmware;
     } catch (e: any) {
-      console.error('FAILED TO CONNECT', e);
+      AppLogger.error('FAILED TO CONNECT', e);
       AppLogger.log('BLE_CONNECTION_ERROR', { error: e?.message || String(e), deviceId: device.id });
     }
   };
@@ -821,13 +821,13 @@ export default function useBLE(): BluetoothLowEnergyApi {
             negotiatedMtuRef.current = negotiated.mtu;
             console.log(`[BLE] MTU negotiated: ${negotiated.mtu} bytes for ${conn.id} (group)`);
           } catch (mtuErr: any) {
-            console.warn('[BLE] MTU negotiation failed for group device (continuing with default 186):', mtuErr?.message);
+            AppLogger.warn('[BLE] MTU negotiation failed for group device (continuing with default 186):', mtuErr?.message);
           }
 
           // Register dropout listener
           if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
           disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any, _d: any) => {
-            console.warn(`[BLE] Device dropout detected for ${conn.id} in group`);
+            AppLogger.warn(`[BLE] Device dropout detected for ${conn.id} in group`);
             AppLogger.log('DEVICE_DISCONNECTED', { id: conn.id, reason: 'dropout', context: 'group', error: error?.message });
             setDroppedOutDeviceIds(prev => [...prev, conn.id]);
             setConnectedDevices(prev => prev.filter(c => c.id !== conn.id));
@@ -868,10 +868,10 @@ export default function useBLE(): BluetoothLowEnergyApi {
                 ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
               );
               console.log(`[BLE] 0x63 hw query sent to ${connCapture.id} (group)`);
-            } catch (e) { console.warn('[BLE] group hw query write failed', e); }
+            } catch (e) { AppLogger.warn('[BLE] group hw query write failed', e); }
           }, 600);
         } catch (deviceError: any) {
-          console.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${device.id}`, deviceError);
+          AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${device.id}`, deviceError);
           AppLogger.log('BLE_CONNECTION_ERROR', { error: deviceError?.message || String(deviceError), deviceId: device.id, context: 'group_sync_fail' });
         }
       }
@@ -881,7 +881,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
       bleManager.stopDeviceScan();
       setIsScanning(false);
     } catch (e: any) {
-      console.error('FAILED TO CONNECT TO GROUP', e);
+      AppLogger.error('FAILED TO CONNECT TO GROUP', e);
       AppLogger.log('BLE_CONNECTION_ERROR', { error: e?.message || String(e), context: 'group' });
     }
   };
@@ -904,7 +904,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
       : connectedDevicesRef.current;
 
     if (targets.length === 0 && targetDeviceId) {
-      console.warn(`Target device ${targetDeviceId} not found in connected devices`);
+      AppLogger.warn(`Target device ${targetDeviceId} not found in connected devices`);
       return;
     }
 
@@ -929,7 +929,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
           }
         }
       } catch (writeError: any) {
-        console.warn(`[BLE] Write failed for ${device.id}`, writeError?.message);
+        AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError?.message);
         AppLogger.log('BLE_WRITE_ERROR', { error: writeError?.message || String(writeError), target: device.id, payloadLen: payload.length });
       }
     }
@@ -947,9 +947,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
     if (staleDevices.length > 0 && Platform.OS !== 'web') {
       for (const device of staleDevices) {
         try {
-          await bleManager.cancelDeviceConnection(device.id).catch((e: any) => console.warn(`[BLE] Disconnect soft fail for ${device.id}`, e));
+          await bleManager.cancelDeviceConnection(device.id).catch((e: any) => AppLogger.warn(`[BLE] Disconnect soft fail for ${device.id}`, e));
         } catch (e: any) {
-          console.error(`[BLE] Fatal disconnect fault for ${device.id}`, e);
+          AppLogger.error(`[BLE] Fatal disconnect fault for ${device.id}`, e);
         }
       }
       

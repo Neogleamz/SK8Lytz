@@ -33,7 +33,7 @@ import * as Battery from 'expo-battery';
 
 const STORAGE_KEY = '@Sk8lytz_logs';         // canonical casing — matches @Sk8lytz_ convention
 const LEGACY_KEY  = '@sk8lytz_logs';          // old lowercase key — migrated on first load
-const MAX_ENTRIES = 10000; // ~1MB of compact log data before rotation
+const MAX_ENTRIES = 500; // ~1MB of compact log data before rotation
 
 export type EventType =
   | 'APP_OPENED'
@@ -113,7 +113,10 @@ export type EventType =
   | 'PICK_SELECTED'
   | 'MIC_SENSITIVITY_CHANGED'
   // ── Map/Locations ─────────────────────────────────────────
-  | 'ERROR';
+  | 'ERROR'
+  // ── Telemetry & System ────────────────────────────────────
+  | 'APP_LOG';
+
 
 export interface LogEntry {
   t: number;        // timestamp ms
@@ -242,11 +245,51 @@ class AppLoggerService {
     }
   }
 
-  async log(event: EventType, payload: Record<string, any> = {}) {
+  // ── Black Box Standard: Structured Payload Formatting ──
+  private formatPayload(payload: Record<string, any>): Record<string, any> {
+    // 1. JSON enforcement - strip non-serializable objects (functions, symbols)
+    let clean = {};
+    try {
+      clean = JSON.parse(JSON.stringify(payload || {}));
+    } catch {
+      clean = { _unparseable: true };
+    }
+
+    // 2. Hardware Injection
+    if (this.activeDevices && this.activeDevices.length > 0) {
+      const primary = this.activeDevices.find(d => d.id === (clean as any).deviceId || d.id === (clean as any).device_id) || this.activeDevices[0];
+      if (primary) {
+        if (!(clean as any).rssi && primary.rssi !== undefined) (clean as any).rssi = primary.rssi;
+        if (!(clean as any).mtu && primary.mtu !== undefined) (clean as any).mtu = primary.mtu;
+        if (!(clean as any).battery_level && primary.batteryLevel !== undefined) (clean as any).battery_level = primary.batteryLevel;
+      }
+    }
+
+    // 3. PII Scrubbing
+    const piiKeys = ['email', 'name', 'password', 'token', 'phone', 'address', 'fullname'];
+    const obfuscate = (obj: any) => {
+      if (typeof obj !== 'object' || obj === null) return;
+      for (const key in obj) {
+        if (piiKeys.includes(key.toLowerCase()) && typeof obj[key] === 'string') {
+          obj[key] = '[REDACTED]';
+        } else if (typeof obj[key] === 'object') {
+          obfuscate(obj[key]);
+        }
+      }
+    };
+    obfuscate(clean);
+
+    return clean;
+  }
+
+  async log(event: EventType, rawPayload: Record<string, any> = {}) {
     await this.ensureLoaded();
     
+    // Apply Black Box Standardization early
+    const payload = this.formatPayload(rawPayload);
+
     // Non-hardware events bypass correlation
-    if (['APP_OPENED', 'SCAN_STARTED', 'SCAN_COMPLETED', 'DEVICE_DISCOVERED', 'DEVICE_CONNECTED', 'DEVICE_DISCONNECTED', 'PROTOCOL_ERROR'].includes(event)) {
+    if (['APP_LOG', 'APP_OPENED', 'SCAN_STARTED', 'SCAN_COMPLETED', 'DEVICE_DISCOVERED', 'DEVICE_CONNECTED', 'DEVICE_DISCONNECTED', 'PROTOCOL_ERROR'].includes(event)) {
       const entry: LogEntry = { t: Date.now(), e: event, d: payload };
       this.buffer.push(entry);
       this.persist();
@@ -264,6 +307,29 @@ class AppLoggerService {
           this.flushQueues();
         }
       }, 100);
+    });
+  }
+
+  // ── Black Box Standard: Semantic Log Levels ──
+  
+  debug(message: string, context?: Record<string, any>) {
+    if (__DEV__) this.log('APP_LOG', { level: 'debug', message, ...context });
+  }
+
+  info(message: string, context?: Record<string, any>) {
+    this.log('APP_LOG', { level: 'info', message, ...context });
+  }
+
+  warn(message: string, context?: Record<string, any>) {
+    this.log('APP_LOG', { level: 'warn', message, ...context });
+  }
+
+  error(message: string, errorObj?: any, context?: Record<string, any>) {
+    this.log('ERROR_CAUGHT', { 
+      level: 'error', 
+      message, 
+      error: errorObj?.message || String(errorObj),
+      ...context 
     });
   }
 
