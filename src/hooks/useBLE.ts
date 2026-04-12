@@ -38,7 +38,7 @@ if (Platform.OS !== 'web') {
 
 interface BluetoothLowEnergyApi {
   requestPermissions(): Promise<boolean>;
-  scanForPeripherals(): void;
+  scanForPeripherals(options?: { keepAlive?: boolean }): void;
   connectToDevice: (device: Device) => Promise<string | undefined>;
   connectToDevices: (devices: Device[]) => Promise<void>;
   disconnectFromDevice: () => void;
@@ -564,12 +564,12 @@ export default function useBLE(): BluetoothLowEnergyApi {
         const b64 = Buffer.from(qp).toString('base64');
         bleManager.writeCharacteristicWithoutResponseForDevice(
           mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
-        ).catch((e: any) => AppLogger.warn('[BLE Probe Single] query write failed', e));
+        ).catch((e: any) => AppLogger.warn('[BLE Probe Single] query write failed', { error: String(e) }));
       });
 
       return hwConfig;
-    } catch (err) {
-      AppLogger.warn(`[BLE Probe Single] Failed to probe ${mac}:`, err);
+    } catch (err: any) {
+      AppLogger.warn(`[BLE Probe Single] Failed to probe ${mac}:`, { error: String(err) });
       return null;
     } finally {
       if (!alreadyConn) {
@@ -761,8 +761,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
             ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
           );
           console.log(`[BLE] 0x63 hw query sent to ${device.id}`);
-        } catch (e) {
-          AppLogger.warn('[BLE] hw query write failed', e);
+        } catch (e: any) {
+          AppLogger.warn('[BLE] hw query write failed', { error: String(e) });
         }
       }, 600);
 
@@ -868,7 +868,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
                 ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
               );
               console.log(`[BLE] 0x63 hw query sent to ${connCapture.id} (group)`);
-            } catch (e) { AppLogger.warn('[BLE] group hw query write failed', e); }
+            } catch (e: any) { AppLogger.warn('[BLE] group hw query write failed', { error: String(e) }); }
           }, 600);
         } catch (deviceError: any) {
           AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${device.id}`, deviceError);

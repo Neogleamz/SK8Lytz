@@ -33,6 +33,7 @@ function rowToProfile(row: Record<string, any>): ProductProfile {
     defaultSegments:      row.default_segments,
     defaultIcType:        row.default_ic_type,
     defaultColorSorting:  row.default_color_sorting,
+    hardwareAllowsCustomPoints: row.hardware_allows_custom_points ?? false,
     detectMinPoints:      row.detect_min_points,
     detectMaxPoints:      row.detect_max_points,
     vizShape:             row.viz_shape,
@@ -43,6 +44,10 @@ function rowToProfile(row: Record<string, any>): ProductProfile {
     vizStripCount:        row.viz_strip_count ?? undefined,
     vizStripSeparation:   row.viz_strip_separation ?? undefined,
     vizStripOrientation:  row.viz_strip_orientation ?? undefined,
+    vizIsMirrored:        row.viz_is_mirrored ?? undefined,
+    batteryCapacityMilliAmpereHour: row.battery_capacity_milli_ampere_hour ?? 0,
+    vizThemeColor:        row.viz_theme_color ?? undefined,
+    brandIcon:            row.brand_icon ?? undefined,
   };
 }
 

@@ -868,7 +868,7 @@ export default function AccountModal({
                       onSubmitEditing={() => handleRenameGroup(groupName)}
                     />
                   ) : (
-                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: Colors.textPrimary, textTransform: 'uppercase' }}>
+                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: Colors.text, textTransform: 'uppercase' }}>
                       {groupName}
                     </Text>
                   )}

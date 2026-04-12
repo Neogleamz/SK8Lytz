@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { AppLogger } from '../services/AppLogger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../services/supabaseClient';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
@@ -445,7 +446,7 @@ export function useRegistration() {
         const { error } = await supabase
           .from('registered_devices')
           .upsert(dbRow, { onConflict: 'user_id,device_mac' });
-        if (error) AppLogger.warn('[Registration] Flush error for', device.device_mac, error);
+        if (error) AppLogger.warn('[Registration] Flush error for ' + device.device_mac, { error: error.message });
       }
 
       await AsyncStorage.removeItem(PENDING_SYNC_KEY);

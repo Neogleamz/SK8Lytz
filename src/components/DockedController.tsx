@@ -888,12 +888,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
       if (legacyMode === 'PROGRAMS') {
         setActiveMode('PROGRAMS');
-        setSelectedPatternId(fav.patternId);
-        if (writeToDevice) writeToDevice(ZenggeProtocol.setCustomRbm(fav.patternId, fav.speed, fav.brightness));
+        setSelectedPatternId(fav.patternId ?? 0);
+        if (writeToDevice) writeToDevice(ZenggeProtocol.setCustomRbm(fav.patternId ?? 0, fav.speed, fav.brightness));
       } else if (legacyMode === 'MUSIC') {
         setActiveMode('MUSIC');
-        setMusicPatternId(fav.patternId);
-        handleMusicChange(fav.patternId, micSensitivity, fav.brightness, micSource);
+        setMusicPatternId(fav.patternId ?? 0);
+        handleMusicChange(fav.patternId ?? 0, micSensitivity, fav.brightness, micSource);
       } else if (legacyMode === 'CAMERA') {
         setActiveMode('CAMERA');
       } else if (legacyMode === 'FAVORITES') {
@@ -901,11 +901,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       } else if (legacyMode === 'MULTIMODE' || legacyMode === 'PATTERN') {
         setActiveMode('MULTIMODE');
         setFixedSubMode('PATTERN');
-        setFixedPatternId(fav.patternId);
-        setFixedColorMode(fav.fixedColorMode);
-        setFixedFgColor(fav.fixedFgColor);
-        setFixedBgColor(fav.fixedBgColor);
-        applyFixedPattern(fav.patternId, fav.fixedFgColor, fav.fixedBgColor, fav.speed, fav.brightness);
+        setFixedPatternId(fav.patternId ?? 0);
+        setFixedColorMode(fav.fixedColorMode ?? 'FOREGROUND');
+        setFixedFgColor(fav.fixedFgColor ?? '#FFFFFF');
+        setFixedBgColor(fav.fixedBgColor ?? '#000000');
+        applyFixedPattern(fav.patternId ?? 0, fav.fixedFgColor ?? '#FFFFFF', fav.fixedBgColor ?? '#000000', fav.speed, fav.brightness);
       } else if (legacyMode === 'MULTI' || legacyMode === 'DIY' || legacyMode === 'MULTICOLOR') {
         setActiveMode('MULTIMODE');
         setFixedSubMode('BUILDER');
@@ -924,9 +924,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         }
       } else {
         // Unknown/legacy mode - best-effort color dispatch
-        if (fav.color) setTimeout(() => {
-          sendColor(parseInt(fav.color.slice(1, 3), 16) || 0, parseInt(fav.color.slice(3, 5), 16) || 0, parseInt(fav.color.slice(5, 7), 16) || 0);
-        }, 100);
+        if (fav.color) {
+          const fallbackColor = fav.color;
+          setTimeout(() => {
+            sendColor(parseInt(fallbackColor.slice(1, 3), 16) || 0, parseInt(fallbackColor.slice(3, 5), 16) || 0, parseInt(fallbackColor.slice(5, 7), 16) || 0);
+          }, 100);
+        }
       }
       
       if (context === 'PICK') {
@@ -1494,7 +1497,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         {/* Product Selector - Only show if NO lockedProduct is provided */}
         {!lockedProduct && (
           <View style={styles.tabContainer}>
-            {LOCAL_PRODUCT_CATALOG.filter(p => p.isActive !== false).map((profile) => (
+            {LOCAL_PRODUCT_CATALOG.filter(p => (p as any).isActive !== false).map((profile) => (
               <TouchableOpacity
                 key={profile.id}
                 style={[styles.tab, activeProduct === profile.id && styles.activeTab]}
@@ -1502,7 +1505,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               >
                 {activeProduct === profile.id && (
                   <LinearGradient 
-                    colors={[profile.vizThemeColor || Colors.primary, Colors.accent]} 
+                    colors={[profile.vizThemeColor || Colors.primary, Colors.accent] as any} 
                     start={{ x: 0, y: 0 }} 
                     end={{ x: 1, y: 1 }} 
                     style={StyleSheet.absoluteFill} 
@@ -1593,7 +1596,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                         onPress={() => loadFavorite(fav)}
                       >
                         <LinearGradient
-                          colors={gradColors}
+                          colors={gradColors as any}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 1 }}
                           style={{ flex: 1, width: cardWidth, borderRadius: 9, padding: 1.5 }}
@@ -1701,7 +1704,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                         onPress={() => loadFavorite(fav, 'PICK')}
                       >
                         <LinearGradient
-                          colors={gradColors}
+                          colors={gradColors as any}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 1 }}
                           style={{ flex: 1, width: cardWidth, borderRadius: 9, padding: 1.5 }}

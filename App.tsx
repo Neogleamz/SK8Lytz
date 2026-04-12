@@ -16,9 +16,9 @@ import * as Linking from 'expo-linking';
 const STORAGE_OFFLINE_SKIP   = '@Sk8lytz_offline_skip';
 const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';
 
-if (typeof global.ErrorUtils !== 'undefined') {
-  const defaultHandler = (global.ErrorUtils as any).getGlobalHandler();
-  (global.ErrorUtils as any).setGlobalHandler(async (error: any, isFatal: boolean) => {
+if (typeof (global as any).ErrorUtils !== 'undefined') {
+  const defaultHandler = (global as any).ErrorUtils.getGlobalHandler();
+  (global as any).ErrorUtils.setGlobalHandler(async (error: any, isFatal: boolean) => {
     await AppLogger.log('ERROR_CAUGHT', { message: error?.message || 'Unhandled JS Exception', stack: error?.stack, isFatal });
     await AppLogger.uploadLogsToSupabase();
     if (defaultHandler) defaultHandler(error, isFatal);
@@ -107,7 +107,7 @@ function AppContent() {
               refresh_token: params.refresh_token 
             });
             if (error) {
-              AppLogger.log('AUTH_ERROR', { context: 'deep_link', message: error.message });
+              AppLogger.log('ERROR_CAUGHT', { context: 'deep_link', message: error.message });
             }
           }
         }
