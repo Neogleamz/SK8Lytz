@@ -22,7 +22,6 @@ import * as Device from 'expo-device';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger, LogEntry, EventType } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
-import { Typography } from '../theme/theme';
 import AdminPicksScheduler from './AdminPicksScheduler';
 import { AppSettingsService, AppSettingsMap } from '../services/AppSettingsService';
 import { useProductCatalog } from '../hooks/useProductCatalog';
@@ -148,7 +147,7 @@ interface AdminToolsModalProps {
 }
 
 export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, onOpenLab, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll, onConnectToDevice, liveDeviceConfigs }: AdminToolsModalProps) {
-  const { isDark, Colors } = useTheme();
+  const { isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [isProductManagerVisible, setIsProductManagerVisible] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -241,11 +240,11 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
     }
   };
 
-  const bg = Colors.background;
-  const cardBg = Colors.surface;
-  const textPrimary = Colors.text;
-  const textMuted = Colors.textMuted;
-  const borderColor = Colors.surfaceHighlight;
+  const bg = '#FFFFFF';
+  const cardBg = '#F8F8F8';
+  const textPrimary = '#000000';
+  const textMuted = '#444444';
+  const borderColor = '#CCCCCC';
 
   const renderLogItem = ({ item }: { item: LogEntry }) => {
     const meta = EVENT_META[item.e] || { icon: 'information', color: '#888', label: item.e };
@@ -495,24 +494,22 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
         />
         
         <Modal visible={isAppSettingsVisible} animationType="slide" presentationStyle="formSheet" onRequestClose={() => setIsAppSettingsVisible(false)}>
-          <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: Colors.surfaceHighlight, paddingTop: Platform.OS === 'android' ? 16 : 0 }}>
-              <TouchableOpacity onPress={() => setIsAppSettingsVisible(false)} style={{ padding: 4 }}>
-                <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.primary} />
+          <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#080808' : '#111' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#222' }}>
+              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900', letterSpacing: 1 }}>APP SETTINGS</Text>
+              <TouchableOpacity onPress={() => setIsAppSettingsVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#FFF" />
               </TouchableOpacity>
-              <View style={{ flex: 1, marginLeft: 16 }}>
-                <Text style={[Typography.title, { color: Colors.text, fontSize: 18, textTransform: 'uppercase', letterSpacing: 1.5 }]} numberOfLines={1}>APP SETTINGS</Text>
-              </View>
             </View>
             <ScrollView style={{ padding: 16 }}>
               <Text style={{ color: '#888', fontSize: 12, marginBottom: 16 }}>
                 These settings are globally fetched by all app instances on boot.
               </Text>
               
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: Colors.surface, padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: Colors.surfaceHighlight }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#222', padding: 16, borderRadius: 8, marginBottom: 12 }}>
                 <View style={{ flex: 1, marginRight: 16 }}>
-                  <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '700' }}>Lock Crew Hub</Text>
-                  <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 2 }}>Disable Crew Hub features globally. Overrides offline mode.</Text>
+                  <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '700' }}>Lock Crew Hub</Text>
+                  <Text style={{ color: '#aaa', fontSize: 12, marginTop: 2 }}>Disable Crew Hub features globally. Overrides offline mode.</Text>
                 </View>
                 <Switch 
                   value={appSettings['global_crew_hub_locked'] === true}
@@ -520,15 +517,14 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
                     setAppSettings(prev => ({ ...prev, global_crew_hub_locked: v }));
                     await AppSettingsService.updateSetting('global_crew_hub_locked', v);
                   }}
-                  trackColor={{ false: Colors.surfaceHighlight, true: Colors.primary }}
-                  thumbColor="#FFF"
+                  trackColor={{ false: '#444', true: '#FF4444' }}
                 />
               </View>
 
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: Colors.surface, padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: Colors.surfaceHighlight }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#222', padding: 16, borderRadius: 8, marginBottom: 12 }}>
                 <View style={{ flex: 1, marginRight: 16 }}>
-                  <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '700' }}>Lock Community Hub</Text>
-                  <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 2 }}>Disable Community Picks and Favorites globally.</Text>
+                  <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '700' }}>Lock Community Hub</Text>
+                  <Text style={{ color: '#aaa', fontSize: 12, marginTop: 2 }}>Disable Community Picks and Favorites globally.</Text>
                 </View>
                 <Switch 
                   value={appSettings['global_community_hub_locked'] === true}
@@ -536,8 +532,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
                     setAppSettings(prev => ({ ...prev, global_community_hub_locked: v }));
                     await AppSettingsService.updateSetting('global_community_hub_locked', v);
                   }}
-                  trackColor={{ false: Colors.surfaceHighlight, true: Colors.primary }}
-                  thumbColor="#FFF"
+                  trackColor={{ false: '#444', true: '#FF4444' }}
                 />
               </View>
             </ScrollView>
@@ -545,14 +540,12 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
         </Modal>
 
         <Modal visible={isProductManagerVisible} animationType="slide" presentationStyle="formSheet" onRequestClose={() => setIsProductManagerVisible(false)}>
-          <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: Colors.surfaceHighlight, paddingTop: Platform.OS === 'android' ? 16 : 0 }}>
-              <TouchableOpacity onPress={() => setIsProductManagerVisible(false)} style={{ padding: 4 }}>
-                <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.primary} />
+          <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#080808' : '#111' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#222' }}>
+              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900', letterSpacing: 1 }}>PRODUCT MANAGER</Text>
+              <TouchableOpacity onPress={() => setIsProductManagerVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#FFF" />
               </TouchableOpacity>
-              <View style={{ flex: 1, marginLeft: 16 }}>
-                <Text style={[Typography.title, { color: Colors.text, fontSize: 18, textTransform: 'uppercase', letterSpacing: 1.5 }]} numberOfLines={1}>PRODUCT MANAGER</Text>
-              </View>
             </View>
             {renderProductsTab()}
           </SafeAreaView>
@@ -708,11 +701,11 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
 
   const renderProductsTab = () => {
     const fieldStyle = {
-      backgroundColor: Colors.surface, borderRadius: 8, paddingHorizontal: 12,
-      paddingVertical: 10, color: Colors.text, fontSize: 13, marginBottom: 8,
-      borderWidth: 1, borderColor: Colors.surfaceHighlight,
+      backgroundColor: '#222', borderRadius: 6, paddingHorizontal: 10,
+      paddingVertical: 8, color: '#FFF', fontSize: 13, marginBottom: 8,
+      borderWidth: 1, borderColor: 'rgba(255,90,0,0.3)',
     };
-    const labelStyle = { color: Colors.textMuted, fontSize: 11, fontWeight: '600' as const, marginBottom: 2, marginTop: 6 };
+    const labelStyle = { color: '#AAA', fontSize: 11, fontWeight: '600' as const, marginBottom: 2, marginTop: 6 };
 
     // Auto-select first profile if none is active
     const activeProfile = editingProfile || allProfiles[0];
@@ -724,7 +717,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
             const isActive = activeProfile?.id === p.id;
             return (
               <TouchableOpacity key={p.id} onPress={() => setEditingProfile({ ...p })}
-                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: isActive ? Colors.primary : Colors.surface, borderWidth: 1, borderColor: isActive ? Colors.primary : Colors.surfaceHighlight }}>
+                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: isActive ? '#FF5A00' : '#333' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   {p.brandIcon && <MaterialCommunityIcons name={p.brandIcon as any} size={14} color="#FFF" />}
                   <Text style={{ color: '#FFF', fontWeight: isActive ? '800' : '600' }}>{p.displayName || p.id}</Text>
@@ -733,8 +726,8 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
             );
           })}
           <TouchableOpacity onPress={() => setEditingProfile(blankProfile())}
-            style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: Colors.primary, borderStyle: 'dashed' }}>
-            <Text style={{ color: Colors.primary, fontWeight: '800' }}>+ ADD PRODUCT</Text>
+            style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#FF5A00', borderStyle: 'dashed' }}>
+            <Text style={{ color: '#FF5A00', fontWeight: '800' }}>+ ADD PRODUCT</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -746,13 +739,13 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
           <ProductSelectorSlider />
           <ScrollView style={{ flex: 1, paddingHorizontal: 16 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ color: Colors.text, fontWeight: '800', fontSize: 17 }}>
+              <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 17 }}>
                 {activeProfile.id ? `Catalog Entry: ${activeProfile.id}` : 'New Product'}
               </Text>
             </View>
 
           {/* Live Shape Preview */}
-          <Text style={{ color: Colors.primary, fontWeight: '700', fontSize: 12, marginBottom: 4, letterSpacing: 1 }}>LIVE SHAPE PREVIEW</Text>
+          <Text style={{ color: '#FF5A00', fontWeight: '700', fontSize: 12, marginBottom: 4, letterSpacing: 1 }}>LIVE SHAPE PREVIEW</Text>
           <ShapePreviewCanvas profile={activeProfile} />
 
           {/* Viz Shape Selector */}
@@ -764,8 +757,8 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
                 onPress={() => patchEdit({ vizShape: s })}
                 style={{
                   paddingHorizontal: 12, paddingVertical: 7, borderRadius: 6,
-                  backgroundColor: activeProfile.vizShape === s ? Colors.primary : Colors.surface,
-                  borderWidth: 1, borderColor: activeProfile.vizShape === s ? Colors.primary : Colors.surfaceHighlight,
+                  backgroundColor: activeProfile.vizShape === s ? '#FF5A00' : '#333',
+                  borderWidth: 1, borderColor: activeProfile.vizShape === s ? '#FF5A00' : '#555',
                 }}
               >
                 <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>{s}</Text>
@@ -778,7 +771,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
           <TextInput
             style={fieldStyle as any} value={activeProfile.id}
             onChangeText={v => patchEdit({ id: v.toUpperCase() })}
-            placeholder="RAILZ" placeholderTextColor={Colors.textMuted} autoCapitalize="characters"
+            placeholder="RAILZ" placeholderTextColor="#555" autoCapitalize="characters"
           />
            <TextInput
             style={fieldStyle as any} value={activeProfile.displayName}
@@ -799,7 +792,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
           />
 
           {/* Hardware Defaults */}
-          <Text style={[labelStyle, { color: Colors.primary, marginTop: 14 }]}>HARDWARE DEFAULTS (0x62 FLASH)</Text>
+          <Text style={[labelStyle, { color: '#FF5A00', marginTop: 14 }]}>HARDWARE DEFAULTS (0x62 FLASH)</Text>
           <Text style={labelStyle}>DEFAULT LED POINTS</Text>
           <TextInput style={fieldStyle as any} value={String(activeProfile.defaultLedPoints)}
             onChangeText={v => patchEdit({ defaultLedPoints: parseInt(v) || 0 })} keyboardType="numeric"
@@ -818,7 +811,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
           />
 
           {/* FTUE Thresholds */}
-          <Text style={[labelStyle, { color: Colors.primary, marginTop: 14 }]}>AUTO-DETECT THRESHOLDS (FTUE)</Text>
+          <Text style={[labelStyle, { color: '#FF5A00', marginTop: 14 }]}>AUTO-DETECT THRESHOLDS (FTUE)</Text>
           <Text style={labelStyle}>DETECT MIN POINTS (LED count lower bound)</Text>
           <TextInput style={fieldStyle as any} value={String(activeProfile.detectMinPoints)}
             onChangeText={v => patchEdit({ detectMinPoints: parseInt(v) || 0 })} keyboardType="numeric"
@@ -829,7 +822,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
           />
 
           {/* Visualizer Geometry */}
-          <Text style={[labelStyle, { color: Colors.primary, marginTop: 14 }]}>VISUALIZER GEOMETRY</Text>
+          <Text style={[labelStyle, { color: '#FF5A00', marginTop: 14 }]}>VISUALIZER GEOMETRY</Text>
           <Text style={labelStyle}>DEFAULT POINTS (visualizer fallback)</Text>
           <TextInput style={fieldStyle as any} value={String(activeProfile.vizDefaultPoints)}
             onChangeText={v => patchEdit({ vizDefaultPoints: parseInt(v) || 16 })} keyboardType="numeric"
@@ -850,7 +843,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
           {/* DUAL_STRIP only */}
           {activeProfile.vizShape === 'DUAL_STRIP' && (
             <>
-              <Text style={[labelStyle, { color: Colors.primary, marginTop: 14 }]}>DUAL STRIP GEOMETRY (RAILZ)</Text>
+              <Text style={[labelStyle, { color: '#FF5A00', marginTop: 14 }]}>DUAL STRIP GEOMETRY (RAILZ)</Text>
               <Text style={labelStyle}>STRIP COUNT</Text>
               <TextInput style={fieldStyle as any} value={String(activeProfile.vizStripCount ?? 2)}
                 onChangeText={v => patchEdit({ vizStripCount: parseInt(v) || 2 })} keyboardType="numeric"
@@ -864,8 +857,8 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
                 {(['VERTICAL', 'HORIZONTAL'] as const).map(o => (
                   <TouchableOpacity key={o} onPress={() => patchEdit({ vizStripOrientation: o })}
                     style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 6,
-                      backgroundColor: activeProfile.vizStripOrientation === o ? Colors.primary : Colors.surface,
-                      borderWidth: 1, borderColor: activeProfile.vizStripOrientation === o ? Colors.primary : Colors.surfaceHighlight }}
+                      backgroundColor: activeProfile.vizStripOrientation === o ? '#FF5A00' : '#333',
+                      borderWidth: 1, borderColor: activeProfile.vizStripOrientation === o ? '#FF5A00' : '#555' }}
                   >
                     <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>{o}</Text>
                   </TouchableOpacity>
@@ -879,7 +872,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
                  handleSaveProfile();
               }}
               disabled={productSaving}
-              style={{ backgroundColor: Colors.primary, paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 16, marginBottom: 40, opacity: productSaving ? 0.6 : 1 }}
+              style={{ backgroundColor: '#FF5A00', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 16, marginBottom: 40, opacity: productSaving ? 0.6 : 1 }}
             >
               <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 15 }}>
                 {productSaving ? 'SAVING...' : '💾  SAVE TO CATALOG'}
@@ -899,17 +892,14 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
         {/* Header */}
-        <View style={[styles.modalHeader, { borderBottomColor: borderColor, paddingTop: Platform.OS === 'android' ? 16 : 0, paddingHorizontal: 16, paddingBottom: 16 }]}>
-          <TouchableOpacity onPress={onClose} style={{ padding: 4 }}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.primary} />
-          </TouchableOpacity>
-          <View style={{ flex: 1, marginLeft: 16 }}>
-            <Text style={[Typography.title, { color: textPrimary, fontSize: 18, textTransform: 'uppercase', letterSpacing: 1.5 }]} numberOfLines={1}>ADMIN TOOLS</Text>
-            <Text style={{ color: textMuted, fontSize: 11, marginTop: 2 }} numberOfLines={1}>{timelineLogs.length} events stored</Text>
+        <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
+          <View style={{ flexShrink: 1, paddingRight: 8 }}>
+            <Text style={[styles.title, { color: textPrimary }]} numberOfLines={1}>Admin Tools</Text>
+            <Text style={[styles.subtitle, { color: textMuted }]} numberOfLines={1}>{timelineLogs.length} events stored</Text>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity onPress={handleExport} style={styles.actionBtn}>
-              <MaterialCommunityIcons name="download" size={22} color={Colors.primary} />
+              <MaterialCommunityIcons name="download" size={22} color="#00f0ff" />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleUpload}
@@ -939,7 +929,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
               onPress={() => setTab(t)}
               style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
             >
-              <Text style={[styles.tabLabel, { color: tab === t ? Colors.primary : textMuted }]}>
+              <Text style={[styles.tabLabel, { color: tab === t ? '#FF5A00' : textMuted }]}>
                 {t === 'device' ? 'Device' : t === 'tools' ? 'Tools' : t.charAt(0).toUpperCase() + t.slice(1)}
               </Text>
             </TouchableOpacity>
@@ -965,17 +955,17 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
 
       <Modal visible={confirmDeleteVisible} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <View style={{ backgroundColor: Colors.surface, padding: 24, borderRadius: 12, width: '100%', maxWidth: 400, borderColor: '#ff4040', borderWidth: 1 }}>
+          <View style={{ backgroundColor: isDark ? '#1A1A1A' : '#FFF', padding: 24, borderRadius: 12, width: '100%', maxWidth: 400, borderColor: '#ff4040', borderWidth: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <MaterialCommunityIcons name="alert" size={24} color="#ff4040" />
-              <Text style={{ fontSize: 18, fontWeight: '800', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: Colors.text, marginLeft: 8 }}>Purge Telemetry Logs</Text>
+              <Text style={{ fontSize: 18, fontWeight: '800', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: isDark ? '#FFF' : '#000', marginLeft: 8 }}>Purge Telemetry Logs</Text>
             </View>
-            <Text style={{ fontSize: 14, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: Colors.textMuted, marginBottom: 24, lineHeight: 20 }}>
+            <Text style={{ fontSize: 14, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: isDark ? '#CCC' : '#444', marginBottom: 24, lineHeight: 20 }}>
               Are you sure you want to completely erase all timeline, device, and analytics stats from local memory? This action cannot be reversed.
             </Text>
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
-              <TouchableOpacity onPress={() => setConfirmDeleteVisible(false)} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 6, backgroundColor: Colors.surfaceHighlight }}>
-                <Text style={{ fontWeight: '700', color: Colors.text, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Cancel</Text>
+              <TouchableOpacity onPress={() => setConfirmDeleteVisible(false)} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 6, backgroundColor: isDark ? '#333' : '#EEE' }}>
+                <Text style={{ fontWeight: '700', color: isDark ? '#FFF' : '#000', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={executeClear} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 6, backgroundColor: '#ff4040' }}>
                 <Text style={{ fontWeight: '700', color: '#FFF', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>Erase Everything</Text>

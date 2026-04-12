@@ -1991,13 +1991,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       {/* Developer Modals migrated to Sandbox Auth logic */}
       <Sk8LytzProgrammerModal 
         visible={isProgrammerVisible} 
-        onClose={() => {
-            setIsProgrammerVisible(false);
-            setIsAdminToolsVisible(true);
-        }} 
+        onClose={() => setIsProgrammerVisible(false)} 
         onExitToLogs={() => {
             setIsProgrammerVisible(false);
-            setIsAdminToolsVisible(true);
         }}
         allDevices={(allDevices as any)}
         deviceConfigs={deviceConfigs}
@@ -2011,10 +2007,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       {/* LED Diagnostic Lab — long-press the SNIFFER button to open */}
       <Sk8LytzDiagnosticLab
         visible={isLabVisible ?? false}
-        onClose={() => { 
-            setIsLabVisible(false); 
-            setIsAdminToolsVisible(true);
-        }}
+        onClose={() => { setIsLabVisible(false); }}
         connectedDevices={connectedDevices as any[]}
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
