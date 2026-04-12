@@ -503,7 +503,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
        await supabase.auth.signOut();
        // App.tsx onAuthStateChange will detect session=null and redirect to AuthScreen automatically
      } catch (e) {
-       console.error('Logout error:', e);
+       AppLogger.error('Logout error:', e);
      }
   };
 
@@ -757,7 +757,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         color_sorting: cs ?? null,
         color_order:   co ?? null,
       }).then(({ error }: any) => {
-        if (error) console.warn('[Diagnostics] upload failed:', error.message);
+        if (error) AppLogger.warn('[Diagnostics] upload failed:', error.message);
         else console.log('[Diagnostics] uploaded', payload.length, 'bytes for', deviceId);
       });
       // ────────────────────────────────────────────────────────────────────────
@@ -882,10 +882,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               AsyncStorage.setItem('ng_custom_groups', JSON.stringify(cleanedGroups)).catch(()=>{});
             }
             setCustomGroups(cleanedGroups);
-          } catch(e) { console.warn('JSON parse error groups', e); }
+          } catch(e) { AppLogger.warn('JSON parse error groups', e); }
         }
       })
-      .catch(e => console.warn('AsyncStorage error custom groups', e));
+      .catch(e => AppLogger.warn('AsyncStorage error custom groups', e));
 
     // 2. Load and clean device configs
     AsyncStorage.getItem('ng_device_configs')
@@ -904,10 +904,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs)).catch(()=>{});
             }
             setDeviceConfigs(configs);
-          } catch(e) { console.warn('JSON parse error configs', e); }
+          } catch(e) { AppLogger.warn('JSON parse error configs', e); }
         }
       })
-      .catch(e => console.warn('AsyncStorage error configs', e));
+      .catch(e => AppLogger.warn('AsyncStorage error configs', e));
 
     // 3. Load and clean processed devices log
     AsyncStorage.getItem('ng_processed_devices')
@@ -1059,7 +1059,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           }
         }
       } catch (e) {
-        console.warn('Supabase sync error during provisioning:', e);
+        AppLogger.warn('Supabase sync error during provisioning:', e);
       }
     }
     
@@ -1252,7 +1252,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           }
         }
       } catch (e) {
-        console.warn('Failed to scrub ghost group from components: ' + e);
+        AppLogger.warn('Failed to scrub ghost group from components: ' + e);
       }
     }
 
@@ -1313,7 +1313,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         setDeviceConfigs(configs);
       }
     } catch (e) {
-      console.warn('Failed to sync group cache changes', e);
+      AppLogger.warn('Failed to sync group cache changes', e);
     }
   };
 
@@ -1358,7 +1358,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       const rd = registeredDevices.find(r => r.device_mac === selectedDeviceForSettings.id);
       if (rd) {
         const targetGroupName = settings.grouped ? (settings.groupName || rd.group_name) : undefined;
-        saveRegisteredDevice({ ...rd, group_id: finalGroupId, group_name: targetGroupName, is_pending_sync: true }).catch(console.warn);
+        saveRegisteredDevice({ ...rd, group_id: finalGroupId, group_name: targetGroupName, is_pending_sync: true }).catch(AppLogger.warn);
       }
 
       setAllDevices((prev: any[]) => {
@@ -1398,7 +1398,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
              newName: settings.name,
            });
          }
-      } catch (e) { console.error('Failed to persist settings', e); }
+      } catch (e) { AppLogger.error('Failed to persist settings', e); }
     }
     setIsSettingsVisible(false);
   };
