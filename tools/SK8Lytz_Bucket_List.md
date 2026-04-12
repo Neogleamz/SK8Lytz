@@ -9,8 +9,8 @@ All active tasks, bugs, and feature work. Prioritized by **App Performance, Stab
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Core Development Progress
-  "Completed" : 9
-  "Remaining" : 41
+  "Completed" : 18
+  "Remaining" : 34
 ```
 
 ---
@@ -26,13 +26,13 @@ pie title Critical Stability
   "Remaining" : 4
 ```
 
-- [x] `fix/rls-telemetry-block` : [CLOUD] [BATCH] [H-RISK] [Snack] [CRITICAL] Resolve 403 Forbidden errors on `parsed_session_stats`, `device_diagnostics`, and `parsed_session_devices`. Likely RLS policy mismatch for authenticated telemetry sinks. → [Plan](docs/plans/fix-rls-telemetry-block.md)
-- [x] `fix/device-group-fk-integrity` : [CLOUD] [BATCH] [H-RISK] [Snack] [CRITICAL] Resolve foreign key constraint violations in `registered_devices` group_id. Upsert logic is referencing non-existent groups. → [Plan](docs/plans/fix-device-group-fk-integrity.md)
-- [x] `audit/device-group-persistence` : [CLOUD] [H-RISK] [Meal] [TOP PRIORITY] Audit device group state handling to prevent duplicate/ghost groups and ensure seamless offline-to-online persistence. → [Plan](docs/plans/audit-device-group-persistence.md)
-- [x] `fix/voice-mic-access` : [LAB] [BATCH] [L-RISK] [Snack] [URGENT] Resolve issue where Voice Engine fails to request microphone permissions, causing immediate errors on start. → [Plan](docs/plans/fix-voice-mic-access.md)
-- [x] `fix/crew-hub-stability-patch` : [CLOUD] [H-RISK] [Meal] [URGENT] Address critical April 7th audit findings: fix malformed JSX stacking in CrewModal, patch privacy leak in nearby session discovery, and fix the crew-matching logic gap. → [Plan](docs/plans/fix-crew-hub-stability-patch.md)
-- [x] `fix/dynamic-arch-regressions` : [LAB] [H-RISK] [Meal] Resolve 'isHaloz' ReferenceError in ProductVisualizer and perform a sanitization audit (DockedController, ZenggeProtocol, Setup Wizard) to remove remaining hardcoded binary logic. → [Plan](docs/plans/fix-dynamic-arch-regressions.md)
-- [x] `fix/tsc-errors-audit` : [CLOUD] [BATCH] [L-RISK] [Meal] Fix TypeScript errors remaining from dynamic-arch-regressions (Audio namespace, missing EventType for 'BUILDER_PRESET_SAVED' in DockedController, IVoiceAction/Typography Subheader in DashboardScreen). → [Plan](docs/plans/fix-tsc-errors-audit.md)
+
+
+
+
+
+
+
 - [ ] `gate-offline-mode` : [CLOUD] [H-RISK] [Feast] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
 
 ---
@@ -49,17 +49,17 @@ pie title Engineering Health
 ```
 
 - [ ] `chore/sentient-tech-debt-sweep` : [CLOUD] [BATCH] [L-RISK] [Feast] [TOP PRIORITY] Standardize AsyncStorage keys (@Sk8lytz_ prefix), normalize UI speed → Hardware (1-31), and eliminate redundant buffer requires. → [Plan](docs/plans/chore-sentient-tech-debt-sweep.md)
-- [x] `refactor/micro-app-crew-modal` : [CLOUD] [H-RISK] [Feast] [Pillar 13] Extract the 2,200-line CrewModal monolith into decoupled domain hooks (useCrewHub, useCrewSession) and purified sub-components. → [Plan](docs/plans/refactor-micro-app-crew-modal.md)
+
 - [ ] `refactor/state-machine-standard` : [CLOUD] [H-RISK] [Feast] [Pillar 8] Deterministic UI — transition from boolean flags to explicit Enum-based Finite State Machines. → [Plan](docs/plans/refactor-state-machine-standard.md)
 - [ ] `feat/ble-hardware-watchdog` : [LAB] [H-RISK] [Feast] [Pillar 7] Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks and silent-relatches connections. → [Plan](docs/plans/feat-ble-hardware-watchdog.md)
 - [ ] `perf/optimistic-ble-updates` : [LAB] [H-RISK] [Meal] [Pillar 2] Mask hardware latency using 'Ghost' optimistic UI updates and state reconciliation. → [Plan](docs/plans/perf-optimistic-ble-updates.md)
 - [ ] `perf/delta-sync-protocol` : [CLOUD] [L-RISK] [Meal] [Pillar 4] Implement differential data fetching to reduce bandwidth and battery consumption. → [Plan](docs/plans/perf-delta-sync-protocol.md)
 - [ ] `audit/domain-driven-architecture` : [CLOUD] [H-RISK] [Feast] [Future Deep Dive] Decouple Hardware, Community, and Session logic into isolated, testable containers. → [Plan](docs/plans/audit-domain-driven-architecture.md)
-- [x] `chore/telemetry-standards` : [CLOUD] [L-RISK] [Meal] Implement the 5-point 'Black Box' logging standard (JSON, HW Context, PII Masking, Levels, FIFO Buffer). → [Plan](docs/plans/chore-telemetry-standards.md)
+
 - [ ] `fix/remote-id-audit` : [LAB] [H-RISK] [Meal] [Security] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
 - [ ] `audit-rls-performance` : [CLOUD] [H-RISK] [Meal] #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges. → [Plan](docs/plans/audit-rls-performance.md)
 - [ ] `style/tokenized-spacing-standard` : [CLOUD] [L-RISK] [Meal] [Pillar 9] The 8pt Grid — enforce 8pt spacing tokens app-wide to eliminate magic numbers. → [Plan](docs/plans/style-tokenized-spacing-standard.md)
-- [x] `fix/typescript-debt-audit` : [CLOUD] [BATCH] [L-RISK] [Feast] Resolve pre-existing TS errors across the codebase (dead state vars, type drift, missing imports). → [Plan](docs/plans/fix-typescript-debt-audit.md)
+
 
 ---
 
