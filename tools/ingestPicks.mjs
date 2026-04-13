@@ -1,13 +1,38 @@
 import fs from 'fs';
 
-const SUPABASE_URL = 'https://qefmeivpjyaukbwadgaz.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZm1laXZwanlhdWtid2FkZ2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MzUyMjAsImV4cCI6MjA4OTAxMTIyMH0.TtBAAL7RPk-w8Q_IGbhPouBjcdjyCRXKy_D5YS4FQss';
+
+
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+    console.error("Missing process.env.SUPABASE_URL or SUPABASE_KEY.");
+    process.exit(1);
+}
 
 async function ingestParsedLog(parsed, fileName) {
     console.log(`Processing payload from bucket file: ${fileName}...`);
 
-    // Create a unique session ID for this bulk upload
-    const sessionId = `import_${Date.now()}`;
+    // Create a unique session ID based on file name for idempotency
+    const sessionId = fileName.replace('.json', '');
+
+    // Check if session has already been ingested
+    try {
+        const existingRes = await fetch(`${SUPABASE_URL}/rest/v1/parsed_session_stats?session_id=eq.${sessionId}`, {
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`
+            }
+        });
+        const existing = await existingRes.json();
+        if (existing && existing.length > 0) {
+            console.log(`  ⏭️ Skipping ${fileName}: Already ingested`);
+            return;
+        }
+    } catch (e) {
+        console.warn(`Idempotency check failed for ${fileName}:`, e.message);
+    }
+
     // Extract universal tracking keys
     const hostDeviceId = parsed.hostDeviceId || 'unknown-host';
     const bleMac = parsed.bleMac || 'unpaired-host';
@@ -36,7 +61,6 @@ async function ingestParsedLog(parsed, fileName) {
             battery_level: stats.batteryLevel || -1,
             is_low_power_mode: stats.isLowPowerMode || false,
             mode_usage: stats.modeUsage || {},
-            pattern_usage: stats.finalPatternUsage || stats.patternUsage || {},
             color_usage: stats.colorUsage || {}
         }];
 
@@ -108,16 +132,24 @@ async function ingestParsedLog(parsed, fileName) {
     // 3. Process and Upload Logs
     console.log(`Mapping ${logs.length} logs for database insertion...`);
 
-    const dbPayload = logs.map(item => ({
-        session_id: sessionId,
-        host_device_id: hostDeviceId,
-        timestamp_ms: item.t,
-        event_type: item.e,
-        direction: item.d?.dir || null,
-        hex_payload: item.d?.hex || null,
-        device_id: item.d?.deviceId || null,
-        raw_data: item.d || {} 
-    }));
+    const dbPayload = logs.map(item => {
+        // Strip duplicate properties out of the raw_data JSON to save storage
+        const cleanRaw = { ...item.d };
+        delete cleanRaw.dir;
+        delete cleanRaw.hex;
+        delete cleanRaw.deviceId;
+
+        return {
+            session_id: sessionId,
+            host_device_id: hostDeviceId,
+            timestamp_ms: item.t,
+            event_type: item.e,
+            direction: item.d?.dir || null,
+            hex_payload: item.d?.hex || null,
+            device_id: item.d?.deviceId || null,
+            raw_data: cleanRaw
+        };
+    });
 
     const CHUNK_SIZE = 1000;
     console.log(`Starting log ingest in chunks of ${CHUNK_SIZE}...`);
