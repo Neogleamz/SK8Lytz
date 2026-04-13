@@ -8,6 +8,11 @@ import { AppLogger } from './AppLogger';
 export type AppSettingKey = 
   | 'global_crew_hub_locked'
   | 'global_community_hub_locked'
+  | 'global_maps_locked'
+  | 'global_telemetry_enabled'
+  | 'offline_crew_hub_hidden'
+  | 'offline_community_hub_hidden'
+  | 'offline_maps_hidden'
   | 'required_eula_version'
   | string;
 

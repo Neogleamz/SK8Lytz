@@ -378,6 +378,16 @@ The SK8Lytz lifecycle is governed by the **Sentinel Engine**.
 - **The Senior Auditor**: Mandatory self-review pass before commit.
 - **Devil's Advocate Gate**: Pre-mortem required for `[Feast]` items.
 
+## 10. Environment & Build Ops
+
+### Android Build Pipeline
+* **JAVA_HOME**: Must be set to `C:\Program Files\Android\Android Studio\jbr` (standard JBR included with Android Studio) to resolve Gradle/JDK compatibility issues for Android builds.
+* **Build Type**: `release` (assembleRelease).
+* **Output Artifact**: `android\app\build\outputs\apk\release\SK8Lytz.apk`
+
+### Known Dev Environment Limitations
+* **Supabase Auth (SignUp)**: Signup operations via `auth/v1/signup` may return `400 Bad Request` in local web/emulator environments due to strict redirect URI validation or rate limiting on development shards. Use "Continue Offline" or existing test credentials for UI/UX validation.
+
 ---
 > [!IMPORTANT]
 > To remain active, every rule file MUST contain the `trigger: always_on` YAML frontmatter.
