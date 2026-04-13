@@ -1,3 +1,4 @@
+import { Spacing } from '../theme/theme';
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
@@ -223,11 +224,11 @@ export default function PositionalGradientBuilder({
   const previewLeds = PositionalMathBuffer.generateArray(nodes, 100, fillMode === 'GRADIENT');
 
   return (
-    <View style={{ flex: 1, backgroundColor: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.03)', borderRadius: 12, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'transparent', padding: 8 }}>
+    <View style={{ flex: 1, backgroundColor: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.03)', borderRadius: 12, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'transparent', padding: Spacing.sm }}>
       
       {/* 0. STABILIZED LIBRARY SHELF (SAVED PRESETS) */}
-      <View style={{ height: 68, marginBottom: 4, paddingBottom: 4, borderBottomWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
-         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 4 }}>
+      <View style={{ height: 68, marginBottom: Spacing.xs, paddingBottom: Spacing.xs, borderBottomWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
+         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: Spacing.sm, paddingHorizontal: Spacing.xs }}>
             {Array.from({ length: 8 }).map((_, idx) => {
                const p = presets[idx];
                if (isLoadingLibrary) {
@@ -267,7 +268,7 @@ export default function PositionalGradientBuilder({
                      </View>
                      
                      {/* Overlay Content */}
-                     <View style={{ flex: 1, padding: 6, justifyContent: 'space-between' }}>
+                     <View style={{ flex: 1, padding: Spacing.sm, justifyContent: 'space-between' }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                            <MaterialCommunityIcons name={p.id.startsWith('local_') ? 'cellphone' : 'cloud-check'} size={12} color="#FFF" style={{ opacity: 0.8 }} />
                            <View style={{ flexDirection: 'row' }}>
@@ -288,27 +289,27 @@ export default function PositionalGradientBuilder({
       </View>
 
       {/* 1. TOP HEADER - LAYOUT & SAVE */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xxs }}>
          <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold' }}>LAYOUT (MAX 16)</Text>
          <TouchableOpacity 
             onPress={() => setSaveModalVisible(true)}
-            style={{ paddingHorizontal: 6, paddingVertical: 2, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, flexDirection: 'row', alignItems: 'center' }}
+            style={{ paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xxs, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, flexDirection: 'row', alignItems: 'center' }}
          >
-            <MaterialCommunityIcons name="content-save" size={10} color={Colors.textMuted} style={{ marginRight: 2 }} />
+            <MaterialCommunityIcons name="content-save" size={10} color={Colors.textMuted} style={{ marginRight: Spacing.xxs }} />
             <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold' }}>SAVE</Text>
          </TouchableOpacity>
       </View>
 
       {/* 2. VISUAL MAP PREVIEW */}
-      <View style={{ width: '100%', height: 10, borderRadius: 5, flexDirection: 'row', overflow: 'hidden', marginBottom: 4 }}>
+      <View style={{ width: '100%', height: 10, borderRadius: 5, flexDirection: 'row', overflow: 'hidden', marginBottom: Spacing.xs }}>
          {previewLeds.map((c, i) => (
              <View key={i} style={{ flex: 1, backgroundColor: `rgb(${c.r}, ${c.g}, ${c.b})` }} />
          ))}
       </View>
 
       {/* 3. PIN SELECTOR ROW */}
-      <View style={{ marginBottom: 4 }}>
-         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, alignItems: 'center' }}>
+      <View style={{ marginBottom: Spacing.xs }}>
+         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: Spacing.sm, alignItems: 'center' }}>
             {nodes.map(n => (
                 <TouchableOpacity 
                    key={n.id}
@@ -342,7 +343,7 @@ export default function PositionalGradientBuilder({
 
       {/* 4. ACTIVE PIN EDITOR */}
       {activeNode && (
-         <View style={{ backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 4, flexDirection: 'row', alignItems: 'center' }}>
+         <View style={{ backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 6, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xxs, marginBottom: Spacing.xs, flexDirection: 'row', alignItems: 'center' }}>
             <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 10, width: 36 }}>@{activeNode.position}%</Text>
             <CustomSlider 
                 value={activeNode.position}
@@ -351,26 +352,26 @@ export default function PositionalGradientBuilder({
                 maximumValue={100}
                 style={{ flex: 1, transform: [{ scale: 0.95 }], height: 30 }}
             />
-            <TouchableOpacity onPress={() => removeNode(activeNode.id)} disabled={nodes.length <= 1} style={{ marginLeft: 8 }}>
+            <TouchableOpacity onPress={() => removeNode(activeNode.id)} disabled={nodes.length <= 1} style={{ marginLeft: Spacing.sm }}>
                 <MaterialCommunityIcons name="trash-can-outline" size={16} color={nodes.length <= 1 ? 'rgba(255,255,255,0.2)' : '#FF4444'} />
             </TouchableOpacity>
          </View>
       )}
 
       {/* 5. BEHAVIOR TIER */}
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
+      <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.xs }}>
           <View style={{ flex: 1 }}>
-              <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold', marginBottom: 2 }}>FILLING</Text>
-              <View style={{ flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: 2 }}>
+              <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold', marginBottom: Spacing.xxs }}>FILLING</Text>
+              <View style={{ flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: Spacing.xxs }}>
                   <TouchableOpacity 
                       onPress={() => onFillModeChange('GRADIENT')}
-                      style={{ flex: 1, paddingVertical: 2, alignItems: 'center', backgroundColor: fillMode === 'GRADIENT' ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
+                      style={{ flex: 1, paddingVertical: Spacing.xxs, alignItems: 'center', backgroundColor: fillMode === 'GRADIENT' ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
                   >
                       <Text style={{ color: fillMode === 'GRADIENT' ? Colors.primary : Colors.textMuted, fontWeight: 'bold', fontSize: 9 }}>GRADIENT</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                       onPress={() => onFillModeChange('SOLID')}
-                      style={{ flex: 1, paddingVertical: 2, alignItems: 'center', backgroundColor: fillMode === 'SOLID' ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
+                      style={{ flex: 1, paddingVertical: Spacing.xxs, alignItems: 'center', backgroundColor: fillMode === 'SOLID' ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
                   >
                       <Text style={{ color: fillMode === 'SOLID' ? Colors.primary : Colors.textMuted, fontWeight: 'bold', fontSize: 9 }}>SOLID</Text>
                   </TouchableOpacity>
@@ -378,17 +379,17 @@ export default function PositionalGradientBuilder({
           </View>
 
           <View style={{ flex: 1 }}>
-              <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold', marginBottom: 2 }}>DIRECTION</Text>
-              <View style={{ flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: 2 }}>
+              <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold', marginBottom: Spacing.xxs }}>DIRECTION</Text>
+              <View style={{ flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: Spacing.xxs }}>
                   <TouchableOpacity 
                       onPress={() => onDirectionChange(1)}
-                      style={{ flex: 1, paddingVertical: 2, alignItems: 'center', backgroundColor: direction === 1 ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
+                      style={{ flex: 1, paddingVertical: Spacing.xxs, alignItems: 'center', backgroundColor: direction === 1 ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
                   >
                       <Text style={{ color: direction === 1 ? Colors.primary : Colors.textMuted, fontWeight: 'bold', fontSize: 9 }}>FORWARD</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                       onPress={() => onDirectionChange(0)}
-                      style={{ flex: 1, paddingVertical: 2, alignItems: 'center', backgroundColor: direction === 0 ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
+                      style={{ flex: 1, paddingVertical: Spacing.xxs, alignItems: 'center', backgroundColor: direction === 0 ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
                   >
                       <Text style={{ color: direction === 0 ? Colors.primary : Colors.textMuted, fontWeight: 'bold', fontSize: 9 }}>REVERSE</Text>
                   </TouchableOpacity>
@@ -396,8 +397,8 @@ export default function PositionalGradientBuilder({
           </View>
       </View>
 
-      <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold', marginBottom: 2 }}>ANIMATION</Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+      <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold', marginBottom: Spacing.xxs }}>ANIMATION</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
           {[
               { id: 1, label: 'STATIC' },
               { id: 2, label: 'GRADUAL' },
@@ -408,7 +409,7 @@ export default function PositionalGradientBuilder({
               <TouchableOpacity 
                   key={t.id}
                   onPress={() => onTransitionTypeChange(t.id)}
-                  style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: transitionType === t.id ? Colors.primary : 'rgba(255,255,255,0.1)', backgroundColor: transitionType === t.id ? 'rgba(0,240,255,0.1)' : 'transparent' }}
+                  style={{ paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xxs, borderRadius: 6, borderWidth: 1, borderColor: transitionType === t.id ? Colors.primary : 'rgba(255,255,255,0.1)', backgroundColor: transitionType === t.id ? 'rgba(0,240,255,0.1)' : 'transparent' }}
               >
                   <Text style={{ color: transitionType === t.id ? Colors.primary : Colors.textMuted, fontSize: 9, fontWeight: 'bold' }}>{t.label}</Text>
               </TouchableOpacity>
@@ -417,29 +418,29 @@ export default function PositionalGradientBuilder({
 
       {/* 6. SAVE MODAL */}
       <Modal visible={saveModalVisible} transparent animationType="fade">
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-             <View style={{ width: '100%', maxWidth: 340, backgroundColor: isDark ? '#111' : '#FFF', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-                 <Text style={{ color: isDark ? '#FFF' : '#000', fontSize: 16, fontWeight: 'bold', marginBottom: 12 }}>Save Custom Preset</Text>
-                 <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 16 }}>Give your sequence a name. It will be saved securely to the cloud if you are logged in, otherwise it will save locally to this device.</Text>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }}>
+             <View style={{ width: '100%', maxWidth: 340, backgroundColor: isDark ? '#111' : '#FFF', borderRadius: 16, padding: Spacing.xl, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                 <Text style={{ color: isDark ? '#FFF' : '#000', fontSize: 16, fontWeight: 'bold', marginBottom: Spacing.md }}>Save Custom Preset</Text>
+                 <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: Spacing.lg }}>Give your sequence a name. It will be saved securely to the cloud if you are logged in, otherwise it will save locally to this device.</Text>
                  
                  <TextInput 
                     value={presetNameInput}
                     onChangeText={setPresetNameInput}
                     placeholder="e.g. Neon Fire Trail"
                     placeholderTextColor="rgba(255,255,255,0.3)"
-                    style={{ backgroundColor: 'rgba(0,0,0,0.2)', color: '#FFF', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginBottom: 20 }}
+                    style={{ backgroundColor: 'rgba(0,0,0,0.2)', color: '#FFF', padding: Spacing.md, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginBottom: Spacing.xl }}
                  />
                  
-                 <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'flex-end' }}>
-                     <TouchableOpacity onPress={() => !isSaving && setSaveModalVisible(false)} style={{ padding: 12 }}>
+                 <View style={{ flexDirection: 'row', gap: Spacing.md, justifyContent: 'flex-end' }}>
+                     <TouchableOpacity onPress={() => !isSaving && setSaveModalVisible(false)} style={{ padding: Spacing.md }}>
                          <Text style={{ color: Colors.textMuted, fontWeight: 'bold' }}>CANCEL</Text>
                      </TouchableOpacity>
                      <TouchableOpacity 
                         onPress={handleSavePreset}
                         disabled={isSaving || !presetNameInput.trim()}
-                        style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor: Colors.primary, borderRadius: 8, opacity: (!presetNameInput.trim() || isSaving) ? 0.5 : 1, flexDirection: 'row', alignItems: 'center' }}
+                        style={{ paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, backgroundColor: Colors.primary, borderRadius: 8, opacity: (!presetNameInput.trim() || isSaving) ? 0.5 : 1, flexDirection: 'row', alignItems: 'center' }}
                      >
-                         {isSaving && <ActivityIndicator size="small" color="#000" style={{ marginRight: 8 }} />}
+                         {isSaving && <ActivityIndicator size="small" color="#000" style={{ marginRight: Spacing.sm }} />}
                          <Text style={{ color: '#000', fontWeight: 'bold' }}>SAVE</Text>
                      </TouchableOpacity>
                  </View>

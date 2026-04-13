@@ -1,3 +1,4 @@
+import { Spacing } from '../../theme/theme';
 import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert, Share, TextInput, Image, RefreshControl, FlatList } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -66,9 +67,9 @@ export function CrewJoinScreen() {
         disabled={isLoading} activeOpacity={0.75}>
         <View style={{ flex: 1 }}>
           <Text style={styles.sessionCardName}>{item.name}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.xxs }}>
             {item.location_label && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xxs }}>
                 <MaterialCommunityIcons name="map-marker" size={12} color={Colors.textMuted} />
                 <Text style={styles.sessionCardMeta} numberOfLines={1}>{item.location_label}</Text>
               </View>
@@ -102,15 +103,15 @@ export function CrewJoinScreen() {
           placeholder="Display name" placeholderTextColor={Colors.textMuted} maxLength={24} />
 
         {/* Live sessions browser */}
-        <View style={{ width: '100%', marginTop: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <View style={{ width: '100%', marginTop: Spacing.lg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
             <Text style={styles.label}>🟢 CREWS SKATING NOW</Text>
             <TouchableOpacity onPress={loadActiveSessions}>
               <MaterialCommunityIcons name="refresh" size={15} color={Colors.textMuted} />
             </TouchableOpacity>
           </View>
           {isLoadingSessions ? (
-            <ActivityIndicator color={Colors.primary} style={{ marginVertical: 14 }} />
+            <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.lg }} />
           ) : activeSessions.length === 0 ? (
             <Text style={[styles.subtitle, { marginTop: 0, fontSize: 12 }]}>No active crews right now. Be the first!</Text>
           ) : (

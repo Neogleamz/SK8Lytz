@@ -24,7 +24,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { Typography } from '../theme/theme';
+import { Typography, Spacing } from '../theme/theme';
 import { ZenggeProtocol, IC_TYPES, COLOR_SORTING_RGB } from '../protocols/ZenggeProtocol';
 import CustomEffectVisualizer from './CustomEffectVisualizer';
 import { useRegistration } from '../hooks/useRegistration';
@@ -75,7 +75,7 @@ const QUICK_PALETTE = [
 
 const QuickColorGrid = ({ onSelect, activeColor }: { onSelect: (c: {r:number,g:number,b:number}) => void, activeColor?: {r:number,g:number,b:number} }) => {
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.md }}>
       {QUICK_PALETTE.map((c, i) => {
         const isActive = activeColor && activeColor.r === c.r && activeColor.g === c.g && activeColor.b === c.b;
         return (
@@ -202,7 +202,7 @@ export default function Sk8LytzDiagnosticLab({
         <Text style={S.hwBadgeLabel}>TARGET: </Text>
         {targetDeviceId ? (
           <>
-            <Text style={[S.hwBadgeVal, { color: '#00ccff', paddingRight: 8 }]}>{targetName}</Text>
+            <Text style={[S.hwBadgeVal, { color: '#00ccff', paddingRight: Spacing.sm }]}>{targetName}</Text>
             {hwSettings?.detected ? (
               <>
                 <Text style={[S.hwBadgeVal, { color: '#00CC88' }]}>{hwSettings.ledPoints ?? '?'} LEDs</Text>
@@ -224,11 +224,11 @@ export default function Sk8LytzDiagnosticLab({
 
   // ─── DEVICES TAB ───────────────────────────────────────────────────
   const renderDevicesTab = () => (
-    <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+    <ScrollView contentContainerStyle={{ paddingBottom: Spacing.xxxl }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xl }}>
         <Text style={[S.sectionTitle, { color: txtPri }]}>HARDWARE SCANNER</Text>
         <TouchableOpacity 
-          style={{ backgroundColor: bleState === 'SCANNING' ? border : cyan, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: bleState === 'SCANNING' ? border : cyan }} 
+          style={{ backgroundColor: bleState === 'SCANNING' ? border : cyan, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderRadius: 8, borderWidth: 1, borderColor: bleState === 'SCANNING' ? border : cyan }} 
           onPress={() => { if (handleScan) handleScan(); }}
           disabled={bleState === 'SCANNING' || bleState === 'PROBING'}
         >
@@ -253,28 +253,28 @@ export default function Sk8LytzDiagnosticLab({
 
         return (
           <View key={d.id || idx} style={[S.diagBox, isTarget && { borderColor: cyan, borderWidth: 1.5 }]}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: txtPri, fontWeight: 'bold', fontSize: 13 }} numberOfLines={1}>
                   {cfg.name || d.name || 'Unknown Device'}
                 </Text>
                 {registeredDevices.some(rd => rd.device_mac === d.id) ? (
-                  <Text style={{ color: '#FFD700', fontSize: 10, fontWeight: '700', marginTop: 2 }}>★ REGISTERED TO YOU</Text>
+                  <Text style={{ color: '#FFD700', fontSize: 10, fontWeight: '700', marginTop: Spacing.xxs }}>★ REGISTERED TO YOU</Text>
                 ) : (d.owner_ids && d.owner_ids.length > 0) ? (
-                  <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: '700', marginTop: 2 }}>
+                  <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: '700', marginTop: Spacing.xxs }}>
                     🔒 CLAIMED BY: {d.owner_ids.length > 1 ? `${d.owner_ids.length} USERS` : `${d.owner_ids[0].substring(0,8)}...`}
                   </Text>
                 ) : (
-                  <Text style={{ color: txtMuted, fontSize: 10, fontStyle: 'italic', marginTop: 2 }}>Unregistered (Telemetry Active)</Text>
+                  <Text style={{ color: txtMuted, fontSize: 10, fontStyle: 'italic', marginTop: Spacing.xxs }}>Unregistered (Telemetry Active)</Text>
                 )}
               </View>
               {isConn
                 ? (
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                  <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
                     <Text style={{ color: '#00E676', fontSize: 10, fontWeight: '900', alignSelf: 'center' }}>● LIVE</Text>
                     <TouchableOpacity 
                       onPress={() => setTargetDeviceId(d.id)} 
-                      style={{ backgroundColor: isTarget ? cyan : border, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}
+                      style={{ backgroundColor: isTarget ? cyan : border, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: 6 }}
                     >
                       <Text style={{ color: isTarget ? '#000' : txtPri, fontSize: 10, fontWeight: 'bold' }}>
                         {isTarget ? 'TARGETED' : 'TARGET'}
@@ -285,18 +285,18 @@ export default function Sk8LytzDiagnosticLab({
                 : (
                   <TouchableOpacity 
                     onPress={() => connectToDevice && connectToDevice(d)} 
-                    style={{ backgroundColor: '#9D4EFF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}
+                    style={{ backgroundColor: '#9D4EFF', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: 6 }}
                   >
                     <Text style={{ color: '#FFF', fontSize: 10, fontWeight: 'bold' }}>CONNECT</Text>
                   </TouchableOpacity>
                 )
               }
             </View>
-            <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 12, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+            <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.md, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
               {d.id}
             </Text>
             
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Text style={{ color: txtMuted, fontSize: 10 }}>LEDs </Text>
                 <Text style={{ color: cyan, fontSize: 10, fontWeight: 'bold' }}>{points ?? '?'}</Text>
@@ -316,7 +316,7 @@ export default function Sk8LytzDiagnosticLab({
             </View>
 
             {isTarget && hwSettings?.detected && (
-              <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: border }}>
+              <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: border }}>
                 <Text style={{ color: '#00CC88', fontSize: 10, fontWeight: 'bold' }}>
                   ✓ Hardware settings populated from active probe.
                 </Text>
@@ -330,7 +330,7 @@ export default function Sk8LytzDiagnosticLab({
 
   // ─── COLOR TEST TAB ─────────────────────────────────────────────────────────
   const renderColorTab = () => (
-    <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView contentContainerStyle={{ paddingBottom: Spacing.xxxl }}>
       <Text style={[S.sectionTitle, { color: txtPri }]}>COLOR ORDER TEST</Text>
       <Text style={[S.hint, { color: txtMuted }]}>
         Tap each button — observe what color the hardware actually shows.{'\n'}
@@ -377,16 +377,16 @@ export default function Sk8LytzDiagnosticLab({
       <Text style={[S.subTitle, { color: txtMuted }]}>LAST SENT</Text>
       {lastSent ? (
         <View style={[S.sentBox, { backgroundColor: isDark ? '#05070a' : '#f9fafb', borderColor: border }]}>
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4 }}>{lastNote}</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs }}>{lastNote}</Text>
           <MonoText color={cyan}>{lastSent}</MonoText>
         </View>
-      ) : <Text style={{ color: txtMuted, fontSize: 12, marginTop: 8 }}>Nothing sent yet.</Text>}
+      ) : <Text style={{ color: txtMuted, fontSize: 12, marginTop: Spacing.sm }}>Nothing sent yet.</Text>}
     </ScrollView>
   );
 
   // ─── TRANSITION TYPE TAB ────────────────────────────────────────────────────
   const renderTransitionTab = () => (
-    <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView contentContainerStyle={{ paddingBottom: Spacing.xxxl }}>
       <Text style={[S.sectionTitle, { color: txtPri }]}>TRANSITION TYPE PROBE</Text>
       <Text style={[S.hint, { color: txtMuted }]}>
         Each button sends the same color with a different transitionType byte.{'\n'}
@@ -395,7 +395,7 @@ export default function Sk8LytzDiagnosticLab({
       {renderHwBadge()}
 
       <Text style={[S.subTitle, { color: txtMuted }]}>COLOR TO SEND (change in BUILDER tab first)</Text>
-      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16, alignItems: 'center' }}>
+      <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.lg, alignItems: 'center' }}>
         <View style={{ width: 40, height: 40, backgroundColor: `rgb(${bldColors[0]?.r||0},${bldColors[0]?.g||0},${bldColors[0]?.b||0})`, borderRadius: 8, borderWidth: 1, borderColor: border }} />
         <Text style={{ color: txtMuted, fontSize: 12 }}>R:{bldColors[0]?.r||0} G:{bldColors[0]?.g||0} B:{bldColors[0]?.b||0} · {hwPts} LEDs · Speed:{bldSpeed}</Text>
       </View>
@@ -418,9 +418,9 @@ export default function Sk8LytzDiagnosticLab({
           <View style={[S.transByteBadge, { backgroundColor: tt.color + '22', borderColor: tt.color }]}>
             <Text style={{ color: tt.color, fontWeight: '900', fontSize: 14 }}>0x0{tt.byte.toString(16).toUpperCase()}</Text>
           </View>
-          <View style={{ flex: 1, marginLeft: 12 }}>
+          <View style={{ flex: 1, marginLeft: Spacing.md }}>
             <Text style={{ color: tt.color, fontWeight: '900', fontSize: 13 }}>{tt.label}</Text>
-            <Text style={{ color: txtMuted, fontSize: 11, marginTop: 2 }}>{tt.desc}</Text>
+            <Text style={{ color: txtMuted, fontSize: 11, marginTop: Spacing.xxs }}>{tt.desc}</Text>
           </View>
           <MaterialCommunityIcons name="send" size={18} color={tt.color} />
         </TouchableOpacity>
@@ -432,28 +432,28 @@ export default function Sk8LytzDiagnosticLab({
         <Text style={[S.diagLine, { color: txtPri }]}>0x01 = FREEZE — LEDs should sit perfectly still (SOLID)</Text>
         <Text style={[S.diagLine, { color: txtPri }]}>0x02 = STROBE — LEDs should flash on/off</Text>
         <Text style={[S.diagLine, { color: txtPri }]}>0x03 = UNKNOWN — document what this actually does</Text>
-        <Text style={[S.diagLine, { color: '#FF9500', marginTop: 8 }]}>👉 If SOLID looks wrong, it's 0x00 vs 0x01 confusion.</Text>
+        <Text style={[S.diagLine, { color: '#FF9500', marginTop: Spacing.sm }]}>👉 If SOLID looks wrong, it's 0x00 vs 0x01 confusion.</Text>
       </View>
 
       <Text style={[S.subTitle, { color: txtMuted }]}>LAST SENT</Text>
       {lastSent ? (
         <View style={[S.sentBox, { backgroundColor: isDark ? '#05070a' : '#f9fafb', borderColor: border }]}>
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4 }}>{lastNote}</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs }}>{lastNote}</Text>
           <MonoText color={cyan}>{lastSent}</MonoText>
         </View>
-      ) : <Text style={{ color: txtMuted, fontSize: 12, marginTop: 8 }}>Nothing sent yet.</Text>}
+      ) : <Text style={{ color: txtMuted, fontSize: 12, marginTop: Spacing.sm }}>Nothing sent yet.</Text>}
     </ScrollView>
   );
 
   // ─── BUILDER TAB ────────────────────────────────────────────────────────────
   const renderBuilderTab = () => (
-    <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView contentContainerStyle={{ paddingBottom: Spacing.xxxl }}>
       <Text style={[S.sectionTitle, { color: txtPri }]}>PROTOCOL BUILDER</Text>
       <Text style={[S.hint, { color: txtMuted }]}>Select a protocol and build the exact hex packet.</Text>
       {renderHwBadge()}
 
       <Text style={[S.subTitle, { color: txtMuted }]}>PROTOCOL</Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.lg }}>
         {[
           { id: '0x51', label: '0x51 DIY Mode' },
           { id: '0x59', label: '0x59 Segments' },
@@ -472,7 +472,7 @@ export default function Sk8LytzDiagnosticLab({
       {bldProtocol === '0x51' && (
         <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
           <Text style={[S.subTitle, { color: txtPri, marginTop: 0 }]}>DIY MODE MATH SIMULATOR</Text>
-          <View style={{ alignItems: 'center', marginBottom: 16 }}>
+          <View style={{ alignItems: 'center', marginBottom: Spacing.lg }}>
             <CustomEffectVisualizer 
               effectId={parseInt(bld51Mode) || 1} 
               fgColorHex={`#${bld51Color1.r.toString(16).padStart(2,'0')}${bld51Color1.g.toString(16).padStart(2,'0')}${bld51Color1.b.toString(16).padStart(2,'0')}`}
@@ -483,10 +483,10 @@ export default function Sk8LytzDiagnosticLab({
             />
           </View>
 
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>EFFECT ID (1–33)</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>EFFECT ID (1–33)</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                 <TouchableOpacity onPress={() => setBld51Mode(String(Math.max(1, (parseInt(bld51Mode)||1) - 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
                   <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>‒</Text>
                 </TouchableOpacity>
@@ -497,15 +497,15 @@ export default function Sk8LytzDiagnosticLab({
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>SPEED (1–31)</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>SPEED (1–31)</Text>
               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bld51Speed.toString()} keyboardType="numeric" onChangeText={v => setBld51Speed(Math.max(1, Math.min(31, parseInt(v)||1)).toString())} />
             </View>
           </View>
 
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.lg }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>DIR (Bit 7)</Text>
-              <View style={{ flexDirection: 'row', gap: 4 }}>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>DIR (Bit 7)</Text>
+              <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
                 {[0, 1].map(d => (
                   <TouchableOpacity key={d} style={[S.chip, bld51Dir === d && { backgroundColor: cyan + '22', borderColor: cyan }, {flex: 1, height: 40}]} onPress={() => setBld51Dir(d)}>
                     <Text style={{ color: bld51Dir === d ? cyan : txtMuted, fontSize: 11, textAlign: 'center', fontWeight: '900' }}>{d === 0 ? 'LEFT' : 'RIGHT'}</Text>
@@ -514,17 +514,17 @@ export default function Sk8LytzDiagnosticLab({
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>SEGS (Bit 6)</Text>
-              <TouchableOpacity style={[S.chip, bld51Seg && { backgroundColor: cyan + '22', borderColor: cyan }, {paddingVertical: 10, height: 40}]} onPress={() => setBld51Seg(!bld51Seg)}>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>SEGS (Bit 6)</Text>
+              <TouchableOpacity style={[S.chip, bld51Seg && { backgroundColor: cyan + '22', borderColor: cyan }, {paddingVertical: Spacing.md, height: 40}]} onPress={() => setBld51Seg(!bld51Seg)}>
                 <Text style={{ color: bld51Seg ? cyan : txtMuted, textAlign: 'center', fontSize: 11, fontWeight: '900' }}>{bld51Seg ? 'SPLIT (1)' : 'FULL (0)'}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          <Text style={[S.subTitle, { color: txtMuted, marginTop: 12 }]}>FOREGROUND (COLOR 1)</Text>
+          <Text style={[S.subTitle, { color: txtMuted, marginTop: Spacing.md }]}>FOREGROUND (COLOR 1)</Text>
           <QuickColorGrid activeColor={bld51Color1} onSelect={setBld51Color1} />
 
-          <Text style={[S.subTitle, { color: txtMuted, marginTop: 12 }]}>BACKGROUND (COLOR 2)</Text>
+          <Text style={[S.subTitle, { color: txtMuted, marginTop: Spacing.md }]}>BACKGROUND (COLOR 2)</Text>
           <QuickColorGrid activeColor={bld51Color2} onSelect={setBld51Color2} />
         </View>
       )}
@@ -535,22 +535,22 @@ export default function Sk8LytzDiagnosticLab({
           <Text style={[S.hint, { color: txtMuted }]}>Colors will be repeated to fill the LED count.</Text>
           
           {bldColors.map((c, i) => (
-             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm, gap: Spacing.sm }}>
                 <View style={{ width: 24, height: 24, backgroundColor: `rgb(${c.r},${c.g},${c.b})`, borderRadius: 6, borderWidth: 1, borderColor: border }} />
                 <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={c.r.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].r = parseInt(v)||0; setBldColors(cur); }} placeholder="R" placeholderTextColor={txtMuted} />
                 <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={c.g.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].g = parseInt(v)||0; setBldColors(cur); }} placeholder="G" placeholderTextColor={txtMuted} />
                 <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={c.b.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].b = parseInt(v)||0; setBldColors(cur); }} placeholder="B" placeholderTextColor={txtMuted} />
-                <TouchableOpacity onPress={() => setBldColors(bldColors.filter((_, idx)=>idx!==i))} style={{ padding: 8 }}>
+                <TouchableOpacity onPress={() => setBldColors(bldColors.filter((_, idx)=>idx!==i))} style={{ padding: Spacing.sm }}>
                   <MaterialCommunityIcons name="delete" color="#ff4040" size={18} />
                 </TouchableOpacity>
              </View>
           ))}
-          <TouchableOpacity onPress={() => setBldColors([...bldColors, {r:0,g:0,b:0}])} style={{ alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: border, borderRadius: 8, marginTop: 4 }}>
+          <TouchableOpacity onPress={() => setBldColors([...bldColors, {r:0,g:0,b:0}])} style={{ alignSelf: 'flex-start', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, backgroundColor: border, borderRadius: 8, marginTop: Spacing.xs }}>
              <Text style={{ color: txtPri, fontSize: 11, fontWeight: '900' }}>+ ADD COLOR</Text>
           </TouchableOpacity>
 
-          <Text style={[S.subTitle, { color: txtMuted, marginTop: 24 }]}>TRANSITION TYPE</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+          <Text style={[S.subTitle, { color: txtMuted, marginTop: Spacing.xl }]}>TRANSITION TYPE</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.lg }}>
             {TRANSITION_TYPES.map(tt => (
               <TouchableOpacity key={tt.byte}
                 style={[S.chip, bldTrans === tt.byte && { backgroundColor: tt.color + '22', borderColor: tt.color }, { height: 40 }]}
@@ -562,21 +562,21 @@ export default function Sk8LytzDiagnosticLab({
             ))}
           </View>
 
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 8 }}>
+          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.sm }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>NUM POINTS</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>NUM POINTS</Text>
               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldPoints} keyboardType="numeric"
                 onChangeText={v => setBldPoints(v)} placeholder={hwPts.toString()} placeholderTextColor={txtMuted} />
-              <Text style={{ color: cyan, fontSize: 10, marginTop: 4, fontWeight: 'bold' }}>HW probe: {hwPts}</Text>
+              <Text style={{ color: cyan, fontSize: 10, marginTop: Spacing.xs, fontWeight: 'bold' }}>HW probe: {hwPts}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>SPEED</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>SPEED</Text>
               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldSpeed.toString()} keyboardType="numeric"
                 onChangeText={v => setBldSpeed(Math.max(1, Math.min(255, parseInt(v)||1)))} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>DIR</Text>
-              <View style={{ flexDirection: 'row', gap: 4 }}>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>DIR</Text>
+              <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
                 {[0, 1].map(d => (
                   <TouchableOpacity key={d} style={[S.chip, bldDir === d && { backgroundColor: cyan + '22', borderColor: cyan }, {flex: 1, height: 40}]} onPress={() => setBldDir(d)}>
                     <Text style={{ color: bldDir === d ? cyan : txtMuted, fontSize: 11, textAlign: 'center', fontWeight: '900' }}>{d === 0 ? 'REV' : 'FWD'}</Text>
@@ -591,10 +591,10 @@ export default function Sk8LytzDiagnosticLab({
       {bldProtocol === '0x61' && (
         <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
           <Text style={[S.subTitle, { color: txtPri, marginTop: 0 }]}>FIXED PATTERN (0x61)</Text>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>PATTERN ID (1–210)</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>PATTERN ID (1–210)</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                 <TouchableOpacity onPress={() => setBldPatternId(String(Math.max(1, (parseInt(bldPatternId)||1) - 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
                   <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>‒</Text>
                 </TouchableOpacity>
@@ -605,11 +605,11 @@ export default function Sk8LytzDiagnosticLab({
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>SPEED (1–100)</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>SPEED (1–100)</Text>
               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldSpeed.toString()} keyboardType="numeric" onChangeText={v => setBldSpeed(Math.max(1, Math.min(100, parseInt(v)||1)))} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>BRIGHTNESS</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>BRIGHTNESS</Text>
               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldBright} keyboardType="numeric" onChangeText={setBldBright} />
             </View>
           </View>
@@ -619,10 +619,10 @@ export default function Sk8LytzDiagnosticLab({
       {bldProtocol === '0x73' && (
         <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
           <Text style={[S.subTitle, { color: txtPri, marginTop: 0 }]}>SYMPHONY MODE (0x73)</Text>
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>MUSIC MODE (1–13)</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>MUSIC MODE (1–13)</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                 <TouchableOpacity onPress={() => setBldMusicMode(String(Math.max(1, (parseInt(bldMusicMode)||1) - 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
                   <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>‒</Text>
                 </TouchableOpacity>
@@ -633,19 +633,19 @@ export default function Sk8LytzDiagnosticLab({
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>MIC SRC</Text>
-              <TouchableOpacity style={[S.chip, bldMic && { backgroundColor: cyan + '22', borderColor: cyan }, {paddingVertical: 10, height: 40}]} onPress={() => setBldMic(!bldMic)}>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>MIC SRC</Text>
+              <TouchableOpacity style={[S.chip, bldMic && { backgroundColor: cyan + '22', borderColor: cyan }, {paddingVertical: Spacing.md, height: 40}]} onPress={() => setBldMic(!bldMic)}>
                  <Text style={{ color: bldMic ? cyan : txtMuted, textAlign: 'center', fontSize: 11, fontWeight: '900' }}>{bldMic ? 'DEVICE' : 'APP'}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Matrix Style — Light Screen vs Light Bar */}
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 6, fontWeight: '900' }}>MATRIX STYLE</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, fontWeight: '900' }}>MATRIX STYLE</Text>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
             <TouchableOpacity
               onPress={() => setBldMatrixStyle(0x27)}
-              style={{ flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center',
+              style={{ flex: 1, paddingVertical: Spacing.md, borderRadius: 8, alignItems: 'center',
                 backgroundColor: bldMatrixStyle === 0x27 ? '#00E67633' : border,
                 borderWidth: 1.5, borderColor: bldMatrixStyle === 0x27 ? '#00E676' : border }}
             >
@@ -654,7 +654,7 @@ export default function Sk8LytzDiagnosticLab({
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setBldMatrixStyle(0x26)}
-              style={{ flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center',
+              style={{ flex: 1, paddingVertical: Spacing.md, borderRadius: 8, alignItems: 'center',
                 backgroundColor: bldMatrixStyle === 0x26 ? '#FF950033' : border,
                 borderWidth: 1.5, borderColor: bldMatrixStyle === 0x26 ? '#FF9500' : border }}
             >
@@ -663,21 +663,21 @@ export default function Sk8LytzDiagnosticLab({
             </TouchableOpacity>
           </View>
 
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>SENSITIVITY</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>SENSITIVITY</Text>
               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldSens} keyboardType="numeric" onChangeText={setBldSens} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>BRIGHTNESS</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>BRIGHTNESS</Text>
               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldBright} keyboardType="numeric" onChangeText={setBldBright} />
             </View>
           </View>
 
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 8, fontWeight: '900' }}>COLOR 1 (PRIMARY)</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, fontWeight: '900' }}>COLOR 1 (PRIMARY)</Text>
           <QuickColorGrid activeColor={bldColors[0]} onSelect={c => setBldColors([c])} />
           
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 8, fontWeight: '900' }}>COLOR 2 (SECONDARY)</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, fontWeight: '900' }}>COLOR 2 (SECONDARY)</Text>
           <QuickColorGrid activeColor={bldC2} onSelect={setBldC2} />
         </View>
       )}
@@ -685,23 +685,23 @@ export default function Sk8LytzDiagnosticLab({
       {bldProtocol === '0x62' && (
         <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
           <Text style={[S.subTitle, { color: txtPri, marginTop: 0 }]}>HARDWARE SETUP (0x62)</Text>
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
             <View style={{ flex: 1 }}>
-               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>IC CHIP</Text>
+               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>IC CHIP</Text>
                <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldIc} onChangeText={setBldIc} placeholder="e.g. WS2812B" />
             </View>
             <View style={{ flex: 1 }}>
-               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>COLOR ORDER</Text>
+               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>COLOR ORDER</Text>
                <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldOrder} onChangeText={setBldOrder} placeholder="e.g. RGB" />
             </View>
           </View>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
              <View style={{ flex: 1 }}>
-               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>TOTAL LEDS</Text>
+               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>TOTAL LEDS</Text>
                <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldPoints} keyboardType="numeric" onChangeText={setBldPoints} />
             </View>
             <View style={{ flex: 1 }}>
-               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: 4, fontWeight: '900' }}>SEGMENTS</Text>
+               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>SEGMENTS</Text>
                <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldSegs} keyboardType="numeric" onChangeText={setBldSegs} />
             </View>
           </View>
@@ -710,9 +710,9 @@ export default function Sk8LytzDiagnosticLab({
 
       <Text style={[S.subTitle, { color: txtMuted }]}>GENERATED PAYLOAD — BYTE ANNOTATIONS</Text>
       {bldResult && (
-        <View style={[S.diagBox, { backgroundColor: isDark ? '#05070a' : '#f9fafb', borderColor: border, padding: 12 }]}>
+        <View style={[S.diagBox, { backgroundColor: isDark ? '#05070a' : '#f9fafb', borderColor: border, padding: Spacing.md }]}>
           {bldResult.annotations.map((a, i) => (
-            <Text key={i} style={{ color: i === 4 ? TRANSITION_TYPES.find(t=>t.byte===bldTrans)?.color ?? cyan : txtPri, fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginBottom: 2 }}>
+            <Text key={i} style={{ color: i === 4 ? TRANSITION_TYPES.find(t=>t.byte===bldTrans)?.color ?? cyan : txtPri, fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginBottom: Spacing.xxs }}>
               {a}
             </Text>
           ))}
@@ -728,7 +728,7 @@ export default function Sk8LytzDiagnosticLab({
             placeholderTextColor={txtMuted}
             multiline
           />
-<View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+<View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md }}>
         <TouchableOpacity style={[S.txBtn, { flex: 1, backgroundColor: cyan, borderColor: cyan }]}
           onPress={() => sendRawHex(bldHexOverride, `Builder: trans=0x0${bldTrans.toString(16).toUpperCase()} pts=${bldPoints}`)}>
           <Text style={{ color: '#000', fontWeight: '900', fontSize: 12 }}>TX PAYLOAD</Text>
@@ -741,7 +741,7 @@ export default function Sk8LytzDiagnosticLab({
 
       {/* Quick presets */}
       <Text style={[S.subTitle, { color: txtMuted }]}>QUICK PRESETS</Text>
-      <View style={{ gap: 8 }}>
+      <View style={{ gap: Spacing.sm }}>
         {[
           { label: 'FULL RED — FREEZE', r:255,g:0,b:0, trans:0x01, note:'Pure red, FREEZE — should be solid red' },
           { label: 'FULL GREEN — FREEZE', r:0,g:255,b:0, trans:0x01, note:'Pure green, FREEZE — should be solid green' },
@@ -760,7 +760,7 @@ export default function Sk8LytzDiagnosticLab({
               }
             }}>
             <Text style={{ color: cyan, fontSize: 12, fontWeight: '900' }}>{preset.label}</Text>
-            <Text style={{ color: txtMuted, fontSize: 10, marginTop: 2 }}>{preset.note}</Text>
+            <Text style={{ color: txtMuted, fontSize: 10, marginTop: Spacing.xxs }}>{preset.note}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -770,7 +770,7 @@ export default function Sk8LytzDiagnosticLab({
   // ─── SNIFFER TAB ────────────────────────────────────────────────────────────
   const renderSnifferTab = () => (
     <View style={{ flex: 1 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }}>
         <Text style={[S.sectionTitle, { color: txtPri }]}>BLE TRACE</Text>
         <TouchableOpacity style={[S.chip, { borderColor: '#ff404022', backgroundColor: '#ff404011' }]} onPress={() => clearLogs()}>
           <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: '900' }}>CLEAR</Text>
@@ -779,23 +779,23 @@ export default function Sk8LytzDiagnosticLab({
       <FlatList
         data={logs}
         keyExtractor={(_, i) => i.toString()}
-        style={{ flex: 1, backgroundColor: isDark ? '#05070a' : '#f9fafb', borderRadius: 12, padding: 8, borderWidth: 1, borderColor: border }}
+        style={{ flex: 1, backgroundColor: isDark ? '#05070a' : '#f9fafb', borderRadius: 12, padding: Spacing.sm, borderWidth: 1, borderColor: border }}
         renderItem={({ item }) => (
-          <View style={{ marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: border }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <View style={{ backgroundColor: item.dir === 'TX' ? '#FF404022' : cyan + '22', borderWidth: 1, borderColor: item.dir === 'TX' ? '#FF4040' : cyan, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+          <View style={{ marginBottom: Spacing.sm, paddingBottom: Spacing.sm, borderBottomWidth: 1, borderBottomColor: border }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xs }}>
+              <View style={{ backgroundColor: item.dir === 'TX' ? '#FF404022' : cyan + '22', borderWidth: 1, borderColor: item.dir === 'TX' ? '#FF4040' : cyan, paddingHorizontal: Spacing.sm, paddingVertical: 1, borderRadius: 4 }}>
                 <Text style={{ color: item.dir === 'TX' ? '#FF4040' : cyan, fontSize: 9, fontWeight: '900' }}>{item.dir}</Text>
               </View>
               <Text style={{ color: txtMuted, fontSize: 9 }}>{new Date(item.t).toLocaleTimeString()}</Text>
               {item.dev && <Text style={{ color: txtMuted, fontSize: 9 }}>{item.dev.slice(-6)}</Text>}
             </View>
-            {item.note && <Text style={{ color: '#FF9500', fontSize: 10, marginBottom: 2, fontWeight: 'bold' }}>{item.note}</Text>}
+            {item.note && <Text style={{ color: '#FF9500', fontSize: 10, marginBottom: Spacing.xxs, fontWeight: 'bold' }}>{item.note}</Text>}
             <Text style={{ color: txtPri, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 10 }} numberOfLines={2}>
               {item.hex}
             </Text>
           </View>
         )}
-        ListEmptyComponent={<Text style={{ color: txtMuted, padding: 16, textAlign: 'center', fontSize: 12 }}>No BLE traffic yet. Connect a device and use the other tabs.</Text>}
+        ListEmptyComponent={<Text style={{ color: txtMuted, padding: Spacing.lg, textAlign: 'center', fontSize: 12 }}>No BLE traffic yet. Connect a device and use the other tabs.</Text>}
       />
     </View>
   );
@@ -805,13 +805,13 @@ export default function Sk8LytzDiagnosticLab({
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
         {/* Header (Aligned with Programmer) */}
-        <View style={[S.header, { borderBottomColor: border, paddingTop: insets.top || 16, paddingBottom: 16 }]}>
+        <View style={[S.header, { borderBottomColor: border, paddingTop: insets.top || 16, paddingBottom: Spacing.lg }]}>
           <TouchableOpacity onPress={onClose} style={S.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={cyan} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={[Typography.title, { color: cyan, fontSize: 18, textTransform: 'uppercase', letterSpacing: 1.5 }]}>🔬 LED DIAGNOSTIC LAB</Text>
-            <Text style={{ color: txtMuted, fontSize: 11, marginTop: 2 }}>
+            <Text style={{ color: txtMuted, fontSize: 11, marginTop: Spacing.xxs }}>
               {connectedDevices.length > 0 
                 ? `Probing: ${connectedDevices.map(d => d.name || d.id.slice(-5)).join(', ')}` 
                 : 'Hardware telemetry & protocol debugger'}
@@ -858,19 +858,19 @@ const S = StyleSheet.create({
     flexDirection: 'row', 
     alignItems: 'center', 
     justifyContent: 'space-between', 
-    paddingHorizontal: 16, 
-    paddingBottom: 16, 
+    paddingHorizontal: Spacing.lg, 
+    paddingBottom: Spacing.lg, 
     borderBottomWidth: 1 
   },
   backBtn: { 
-    marginRight: 16,
-    padding: 4,
+    marginRight: Spacing.lg,
+    padding: Spacing.xs,
   },
   title: { color: '#FFF', fontSize: 18, fontWeight: '900', letterSpacing: 1.5 },
   tabBar: { flexDirection: 'row', borderBottomWidth: 1 },
   tabBtn: { 
     flex: 1, 
-    paddingVertical: 14, 
+    paddingVertical: Spacing.lg, 
     alignItems: 'center', 
     borderBottomWidth: 2, 
     borderBottomColor: 'transparent' 
@@ -878,27 +878,27 @@ const S = StyleSheet.create({
   tabBtnActive: { borderBottomColor: '#00f0ff' },
   tabBtnTxt: { fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
   tabBtnTxtActive: { color: '#00f0ff' },
-  content: { flex: 1, padding: 16 },
-  sectionTitle: { fontSize: 12, fontWeight: '900', letterSpacing: 1, marginBottom: 8 },
-  subTitle: { fontSize: 10, fontWeight: 'bold', letterSpacing: 1, marginBottom: 12, marginTop: 24 },
-  hint: { fontSize: 11, lineHeight: 16, marginBottom: 12 },
+  content: { flex: 1, padding: Spacing.lg },
+  sectionTitle: { fontSize: 12, fontWeight: '900', letterSpacing: 1, marginBottom: Spacing.sm },
+  subTitle: { fontSize: 10, fontWeight: 'bold', letterSpacing: 1, marginBottom: Spacing.md, marginTop: Spacing.xl },
+  hint: { fontSize: 11, lineHeight: 16, marginBottom: Spacing.md },
   hwBadge: { 
     flexDirection: 'row', 
     flexWrap: 'wrap', 
     backgroundColor: '#141829', 
-    padding: 12, 
+    padding: Spacing.md, 
     borderRadius: 12, 
-    marginBottom: 20, 
+    marginBottom: Spacing.xl, 
     borderWidth: 1, 
     borderColor: '#252c47', 
     alignItems: 'center' 
   },
   hwBadgeLabel: { color: '#8a96b3', fontSize: 11 },
   hwBadgeVal: { fontSize: 11, fontWeight: 'bold' },
-  colorBtnRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  colorBtnRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.xl },
   bigColorBtn: { 
     flex: 1, 
-    paddingVertical: 24, 
+    paddingVertical: Spacing.xl, 
     alignItems: 'center', 
     justifyContent: 'center', 
     borderRadius: 12, 
@@ -909,8 +909,8 @@ const S = StyleSheet.create({
     borderWidth: 1, 
     borderColor: '#252c47', 
     borderRadius: 12, 
-    padding: 16, 
-    marginBottom: 12 
+    padding: Spacing.lg, 
+    marginBottom: Spacing.md 
   },
   diagLine: { fontSize: 11, lineHeight: 20 },
   sentBox: { 
@@ -918,8 +918,8 @@ const S = StyleSheet.create({
     borderWidth: 1, 
     borderColor: '#252c47', 
     borderRadius: 12, 
-    padding: 14, 
-    marginTop: 8 
+    padding: Spacing.lg, 
+    marginTop: Spacing.sm 
   },
   transBtn: { 
     flexDirection: 'row', 
@@ -928,8 +928,8 @@ const S = StyleSheet.create({
     borderWidth: 1, 
     borderColor: '#252c47', 
     borderRadius: 12, 
-    padding: 16, 
-    marginBottom: 10 
+    padding: Spacing.lg, 
+    marginBottom: Spacing.md 
   },
   transByteBadge: { 
     width: 52, 
@@ -944,8 +944,8 @@ const S = StyleSheet.create({
     borderWidth: 1, 
     borderColor: '#252c47', 
     borderRadius: 12, 
-    padding: 14, 
-    marginBottom: 12 
+    padding: Spacing.lg, 
+    marginBottom: Spacing.md 
   },
   numInput: { 
     backgroundColor: '#141829', 
@@ -953,7 +953,7 @@ const S = StyleSheet.create({
     borderWidth: 1, 
     borderColor: '#252c47', 
     borderRadius: 10, 
-    padding: 10, 
+    padding: Spacing.md, 
     fontSize: 14, 
     textAlign: 'center' 
   },
@@ -963,14 +963,14 @@ const S = StyleSheet.create({
     borderWidth: 1, 
     borderColor: '#252c47', 
     borderRadius: 12, 
-    padding: 16, 
+    padding: Spacing.lg, 
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', 
     fontSize: 11, 
     minHeight: 100 
   },
   chip: { 
-    paddingHorizontal: 14, 
-    paddingVertical: 8, 
+    paddingHorizontal: Spacing.lg, 
+    paddingVertical: Spacing.sm, 
     borderRadius: 20, 
     backgroundColor: '#141829', 
     borderWidth: 1, 
@@ -984,15 +984,15 @@ const S = StyleSheet.create({
     backgroundColor: '#00ccff', 
     justifyContent: 'center', 
     alignItems: 'center', 
-    paddingVertical: 18, 
+    paddingVertical: Spacing.lg, 
     borderRadius: 12, 
-    marginTop: 12 
+    marginTop: Spacing.md 
   },
   presetBtn: { 
     backgroundColor: '#141829', 
     borderWidth: 1, 
     borderColor: '#252c47', 
     borderRadius: 12, 
-    padding: 16 
+    padding: Spacing.lg 
   },
 });

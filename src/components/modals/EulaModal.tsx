@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Modal, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Layout } from '../../theme/theme';
+import { Layout, Spacing } from '../../theme/theme';
 
 interface EulaModalProps {
   visible: boolean;
@@ -29,7 +29,7 @@ export default function EulaModal({ visible, onAccept, onDecline, isViewOnly = f
         <View style={[styles.header, { borderBottomColor: Colors.surfaceHighlight }]}>
           <Text style={[styles.title, { color: Colors.text }]}>End User License Agreement</Text>
           {isViewOnly && onDecline && (
-            <TouchableOpacity onPress={onDecline} style={{ padding: 4 }}>
+            <TouchableOpacity onPress={onDecline} style={{ padding: Spacing.xs }}>
               <MaterialCommunityIcons name="close" size={24} color={Colors.textMuted} />
             </TouchableOpacity>
           )}
@@ -68,10 +68,10 @@ export default function EulaModal({ visible, onAccept, onDecline, isViewOnly = f
           <Text style={[styles.paragraph, { color: Colors.textMuted }]}>
             <Text style={{ fontWeight: 'bold' }}>WARNING: EPILEPSY AND SEIZURES.</Text> The App permits the operation of high-frequency flashing, strobing, and pulsating lighting effects (including, but not limited to, "Symphony" modes). A small percentage of individuals may experience epileptic seizures or blackouts when exposed to certain light patterns or flashing lights.
           </Text>
-          <Text style={[styles.paragraph, { color: Colors.textMuted, marginTop: 10 }]}>
+          <Text style={[styles.paragraph, { color: Colors.textMuted, marginTop: Spacing.md }]}>
             If You, or anyone in Your family, have an epileptic condition or history of seizures, You must consult a physician prior to utilizing this App and its associated hardware.
           </Text>
-          <Text style={[styles.paragraph, { color: Colors.textMuted, marginTop: 10 }]}>
+          <Text style={[styles.paragraph, { color: Colors.textMuted, marginTop: Spacing.md }]}>
             DISCONTINUE USE IMMEDIATELY and consult a physician if You experience any symptoms such as dizziness, altered vision, eye or muscle twitches, loss of awareness, disorientation, or any involuntary movement or convulsion.
           </Text>
 
@@ -111,7 +111,7 @@ export default function EulaModal({ visible, onAccept, onDecline, isViewOnly = f
           <Text style={[styles.paragraph, { color: Colors.textMuted }]}>
             TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL NEOGLEAMZ, ITS AFFILIATES, DIRECTORS, EMPLOYEES, OR LICENSORS BE LIABLE FOR ANY DIRECT, INDIRECT, PUNITIVE, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR EXEMPLARY DAMAGES, INCLUDING WITHOUT LIMITATION DAMAGES FOR LOSS OF PROFITS, GOODWILL, USE, DATA, OR OTHER INTANGIBLE LOSSES, THAT RESULT FROM THE USE OF, OR INABILITY TO USE, THIS APP.
           </Text>
-          <Text style={[styles.paragraph, { color: Colors.textMuted, marginTop: 10 }]}>
+          <Text style={[styles.paragraph, { color: Colors.textMuted, marginTop: Spacing.md }]}>
             THIS LIMITATION OF LIABILITY FULLY APPLIES TO ANY PERSONAL INJURY, PROPERTY DAMAGE, HARDWARE DISCONNECTS, OR FAILURE OF LIGHTS DURING NAVIGATION. UNDER NO CIRCUMSTANCES WILL NEOGLEAMZ BE RESPONSIBLE FOR ANY DAMAGE, LOSS, OR INJURY RESULTING FROM HACKING, TAMPERING, OR OTHER UNAUTHORIZED ACCESS OR USE OF THE APP OR YOUR ACCOUNT.
           </Text>
 
@@ -136,7 +136,7 @@ export default function EulaModal({ visible, onAccept, onDecline, isViewOnly = f
         {!isViewOnly && (
           <View style={[styles.footer, { backgroundColor: Colors.surface, borderTopColor: Colors.surfaceHighlight }]}>
             {!scrolledToBottom ? (
-              <Text style={{ color: Colors.textMuted, fontSize: 13, marginBottom: 16, textAlign: 'center' }}>
+              <Text style={{ color: Colors.textMuted, fontSize: 13, marginBottom: Spacing.lg, textAlign: 'center' }}>
                 Please scroll to the bottom to accept.
               </Text>
             ) : null}
@@ -156,7 +156,7 @@ export default function EulaModal({ visible, onAccept, onDecline, isViewOnly = f
               </Text>
             </TouchableOpacity>
             {onDecline && (
-              <TouchableOpacity onPress={onDecline} style={{ marginTop: 16 }}>
+              <TouchableOpacity onPress={onDecline} style={{ marginTop: Spacing.lg }}>
                 <Text style={{ color: Colors.textMuted, textAlign: 'center', fontSize: 13 }}>DECLINE & EXIT</Text>
               </TouchableOpacity>
             )}
@@ -173,19 +173,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.lg,
     borderBottomWidth: 1,
   },
   title: { fontSize: 18, fontWeight: 'bold' },
-  scrollContent: { flex: 1, padding: 24 },
-  sectionTitle: { fontSize: 20, fontWeight: '900', marginBottom: 24 },
-  heading: { fontSize: 15, fontWeight: 'bold', marginBottom: 8, marginTop: 16 },
-  subHeading: { fontSize: 13, fontWeight: '800', marginBottom: 4, marginTop: 12, opacity: 0.9 },
+  scrollContent: { flex: 1, padding: Spacing.xl },
+  sectionTitle: { fontSize: 20, fontWeight: '900', marginBottom: Spacing.xl },
+  heading: { fontSize: 15, fontWeight: 'bold', marginBottom: Spacing.sm, marginTop: Spacing.lg },
+  subHeading: { fontSize: 13, fontWeight: '800', marginBottom: Spacing.xs, marginTop: Spacing.md, opacity: 0.9 },
   paragraph: { fontSize: 14, lineHeight: 22, opacity: 0.9 },
-  footer: { padding: 24, borderTopWidth: 1 },
+  footer: { padding: Spacing.xl, borderTopWidth: 1 },
   acceptButton: {
-    paddingVertical: 16,
+    paddingVertical: Spacing.lg,
     borderRadius: Layout.borderRadius,
     alignItems: 'center',
   },

@@ -4,7 +4,7 @@ import {
   ActivityIndicator, Alert, SafeAreaView, Animated, Easing
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { Typography, Layout } from '../theme/theme';
+import { Typography, Layout, Spacing } from '../theme/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ScenesService, ICloudScene } from '../services/ScenesService';
 
@@ -139,7 +139,7 @@ export default function CommunityModal({ isVisible, onClose, onApplyScene }: Pro
               name={item.is_public ? 'earth' : 'lock-outline'}
               size={10}
               color={item.is_public ? '#00C853' : '#888'}
-              style={{ marginRight: 4 }}
+              style={{ marginRight: Spacing.xs }}
             />
             <Text style={[styles.badgeText, { color: item.is_public ? '#00C853' : '#888' }]}>{modeLabel}</Text>
           </View>
@@ -218,7 +218,7 @@ export default function CommunityModal({ isVisible, onClose, onApplyScene }: Pro
                 name={tab === 'COMMUNITY' ? 'earth' : 'account-circle'}
                 size={16}
                 color={activeTab === tab ? Colors.primary : '#666'}
-                style={{ marginRight: 6 }}
+                style={{ marginRight: Spacing.sm }}
               />
               <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
                 {tab === 'COMMUNITY' ? 'Community' : 'My Saves'}
@@ -230,7 +230,7 @@ export default function CommunityModal({ isVisible, onClose, onApplyScene }: Pro
         {loading ? (
           <View style={styles.centerLoading}>
             <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={{ color: Colors.textMuted, marginTop: 12, fontSize: 13 }}>Loading scenes...</Text>
+            <Text style={{ color: Colors.textMuted, marginTop: Spacing.md, fontSize: 13 }}>Loading scenes...</Text>
           </View>
         ) : (
           <FlatList
@@ -262,25 +262,25 @@ const createStyles = (Colors: any) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: Colors.surfaceHighlight,
   },
-  closeBtn: { marginRight: 14 },
-  refreshBtn: { padding: 4 },
+  closeBtn: { marginRight: Spacing.lg },
+  refreshBtn: { padding: Spacing.xs },
   headerTitle: { ...Typography.header, fontSize: 22, color: Colors.text },
   headerSub: { fontSize: 11, color: Colors.textMuted, marginTop: 1 },
   tabsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    gap: Spacing.md,
   },
   tab: {
     flex: 1,
     flexDirection: 'row',
-    paddingVertical: 10,
+    paddingVertical: Spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: Layout.borderRadius,
@@ -294,11 +294,11 @@ const createStyles = (Colors: any) => StyleSheet.create({
   },
   tabText: { fontWeight: 'bold', color: '#666', fontSize: 13 },
   activeTabText: { color: Colors.primary },
-  listContainer: { padding: 14, paddingBottom: 50, gap: 14 },
+  listContainer: { padding: Spacing.lg, paddingBottom: Spacing.huge, gap: Spacing.lg },
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Layout.borderRadius,
-    padding: 14,
+    padding: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.surfaceHighlight,
   },
@@ -306,26 +306,26 @@ const createStyles = (Colors: any) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 3,
+    marginBottom: Spacing.xxs,
   },
   sceneName: {
     ...Typography.title,
     color: Colors.text,
     fontSize: 16,
     flex: 1,
-    marginRight: 8,
+    marginRight: Spacing.sm,
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xxs,
     borderRadius: 10,
   },
   badgeText: { fontSize: 10, fontWeight: 'bold' },
-  authorText: { fontSize: 11, color: Colors.textMuted, marginBottom: 12 },
+  authorText: { fontSize: 11, color: Colors.textMuted, marginBottom: Spacing.md },
   stripContainer: {
-    marginBottom: 12,
+    marginBottom: Spacing.md,
     borderRadius: 9,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -338,10 +338,10 @@ const createStyles = (Colors: any) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  statsRow: { flexDirection: 'row', gap: 14 },
-  statItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  statsRow: { flexDirection: 'row', gap: Spacing.lg },
+  statItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   statText: { color: '#666', fontSize: 13, fontWeight: 'bold' },
-  actionButtons: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  actionButtons: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
   iconButton: {
     width: 34,
     height: 34,
@@ -355,14 +355,14 @@ const createStyles = (Colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
     borderRadius: 18,
-    gap: 5,
+    gap: Spacing.xs,
   },
   applyButtonText: { color: '#000', fontWeight: 'bold', fontSize: 13 },
   centerLoading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyContainer: { marginTop: 70, alignItems: 'center', paddingHorizontal: 30 },
-  emptyTitle: { ...Typography.title, color: Colors.text, marginTop: 16, fontSize: 18 },
-  emptyText: { color: Colors.textMuted, textAlign: 'center', marginTop: 8, fontSize: 13, lineHeight: 20 },
+  emptyContainer: { marginTop: Spacing.giant, alignItems: 'center', paddingHorizontal: Spacing.xxl },
+  emptyTitle: { ...Typography.title, color: Colors.text, marginTop: Spacing.lg, fontSize: 18 },
+  emptyText: { color: Colors.textMuted, textAlign: 'center', marginTop: Spacing.sm, fontSize: 13, lineHeight: 20 },
 });

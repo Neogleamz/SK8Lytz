@@ -26,7 +26,7 @@ import type { ModeType, BleConnectionState } from '../types/dashboard.types';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio } from 'expo-av';
-import { Typography, Layout } from '../theme/theme';
+import { Typography, Layout, Spacing } from '../theme/theme';
 
 import { useTheme } from '../context/ThemeContext';
 import ProductVisualizer from './ProductVisualizer';
@@ -160,7 +160,7 @@ const AnalogGauge = React.memo(({
   });
 
   return (
-    <View style={{ alignItems: 'center', marginHorizontal: 2 }}>
+    <View style={{ alignItems: 'center', marginHorizontal: Spacing.xxs }}>
       <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
         <Svg width={size} height={size}>
           <Defs>
@@ -266,8 +266,8 @@ const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segme
   }, [fullArray, offset]);
 
   return (
-    <View style={{ flex: 1, marginRight: 8, height: 8, overflow: 'hidden' }}>
-      <View style={{ flex: 1, flexDirection: 'row', gap: 2 }}>
+    <View style={{ flex: 1, marginRight: Spacing.sm, height: 8, overflow: 'hidden' }}>
+      <View style={{ flex: 1, flexDirection: 'row', gap: Spacing.xxs }}>
         {displayedDots.slice(0, 10).map((c, i) => (
           <View
             key={i}
@@ -1192,9 +1192,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           {writeStatus === 'RECONCILED' && (
             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF4444', position: 'absolute', right: 8, top: 8, zIndex: 10 }} />
           )}
-          <View style={{ marginBottom: 8, width: '100%' }}>
+          <View style={{ marginBottom: Spacing.sm, width: '100%' }}>
             <TouchableOpacity
-              style={{ position: 'absolute', top: 12, right: 16, zIndex: 100, backgroundColor: 'rgba(255,255,255,0.1)', padding: 6, borderRadius: 20 }}
+              style={{ position: 'absolute', top: 12, right: 16, zIndex: 100, backgroundColor: 'rgba(255,255,255,0.1)', padding: Spacing.sm, borderRadius: 20 }}
               onPress={handleSaveFavoriteClick}
             >
               <MaterialCommunityIcons name="heart-plus-outline" size={22} color={Colors.primary} />
@@ -1231,12 +1231,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
         {/* Removed Active Mode Header to save vertical space */}
 
-        <View style={[styles.controlsContainer, { padding: 4, overflow: 'hidden' }]}>
+        <View style={[styles.controlsContainer, { padding: Spacing.xs, overflow: 'hidden' }]}>
           <View style={[styles.activeModeContainer, { flex: 1, justifyContent: 'space-evenly' }]}>
             {activeMode === 'FAVORITES' && (
-              <View style={{ flex: 1, paddingVertical: Layout.padding, paddingBottom: 24, justifyContent: 'space-between' }}>
+              <View style={{ flex: 1, paddingVertical: Layout.padding, paddingBottom: Spacing.xl, justifyContent: 'space-between' }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, paddingHorizontal: Layout.padding, marginBottom: 8 }]}>YOURS</Text>
+                  <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, paddingHorizontal: Layout.padding, marginBottom: Spacing.sm }]}>YOURS</Text>
                 
                 <FlatList
                   style={{ flex: 1 }}
@@ -1249,7 +1249,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     const cardWidth = (Dimensions.get('window').width - (Layout.padding * 2)) / 3.5;
                     
                     if (!fav) {
-                      return <View style={[styles.presetCard, { width: cardWidth, marginHorizontal: 4, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
+                      return <View style={[styles.presetCard, { width: cardWidth, marginHorizontal: Spacing.xs, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
                     }
 
                     const glow = fav.mode === 'MUSIC' ? (fav.musicPrimaryColor || fav.musicSecondaryColor || Colors.primary) :
@@ -1263,7 +1263,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
                     return (
                       <TouchableOpacity
-                        style={{ flex: 1, marginHorizontal: 4, shadowColor: glow, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 }}
+                        style={{ flex: 1, marginHorizontal: Spacing.xs, shadowColor: glow, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 }}
                         onPress={() => loadFavorite(fav)}
                       >
                         <LinearGradient
@@ -1272,9 +1272,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                           end={{ x: 1, y: 1 }}
                           style={{ flex: 1, width: cardWidth, borderRadius: 9, padding: 1.5 }}
                         >
-                          <View style={[styles.presetCard, { flex: 1, width: '100%', marginHorizontal: 0, borderWidth: 0, borderRadius: 8, justifyContent: 'flex-start', paddingVertical: 12, paddingHorizontal: 6 }]}>
+                          <View style={[styles.presetCard, { flex: 1, width: '100%', marginHorizontal: 0, borderWidth: 0, borderRadius: 8, justifyContent: 'flex-start', paddingVertical: Spacing.md, paddingHorizontal: Spacing.sm }]}>
                             <TouchableOpacity
-                              style={{ position: 'absolute', right: 4, top: 4, zIndex: 10, padding: 4 }}
+                              style={{ position: 'absolute', right: 4, top: 4, zIndex: 10, padding: Spacing.xs }}
                               onPress={() => {
                                 openFavoritePrompt(fav.id, fav.name);
                               }}
@@ -1287,21 +1287,21 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                                 name={fav.mode === 'MUSIC' ? 'microphone-outline' : (fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'animation-play' : (fav.mode === 'MULTI' || fav.mode === 'BUILDER') ? 'shape-square-plus' : 'speedometer'} 
                                 size={24} 
                                 color={glow} 
-                                style={{ marginBottom: 8 }} 
+                                style={{ marginBottom: Spacing.sm }} 
                               />
                               
                               <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.name}</MarqueeText>
                             </View>
                             
-                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 6, opacity: 0.8, paddingHorizontal: 4 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: Spacing.sm, opacity: 0.8, paddingHorizontal: Spacing.xs }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xxs }}>
                                 {fav.mode === 'MUSIC' ? (
                                   <><MaterialCommunityIcons name="microphone-outline" size={10} color={glow} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.micSensitivity || fav.speed || 50)}%</Text></>
                                 ) : (
                                   <><MaterialCommunityIcons name="speedometer" size={10} color={glow} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.speed || 50)}%</Text></>
                                 )}
                               </View>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xxs }}>
                                 <MaterialCommunityIcons name="brightness-6" size={10} color={glow} />
                                 <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
                               </View>
@@ -1310,14 +1310,14 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                             {(() => {
                               if (fav.mode === 'MUSIC') {
                                 return (
-                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: 4 }}>
+                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: Spacing.xs }}>
                                     <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
                                     <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
                                   </View>
                                 );
                               } else if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') {
                                 return (
-                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: 4 }}>
+                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: Spacing.xs }}>
                                     <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
                                     <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
                                   </View>
@@ -1325,12 +1325,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                               } else if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
                                 const colors = fav.multiColors || ['#FFFFFF'];
                                 return (
-                                  <View style={{ width: '90%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: 4 }}>
+                                  <View style={{ width: '90%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: Spacing.xs }}>
                                     {colors.map((c: string, i: number) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}
                                   </View>
                                 );
                               } else {
-                                return <View style={{ height: 6, width: '100%', marginTop: 4 }} />;
+                                return <View style={{ height: 6, width: '100%', marginTop: Spacing.xs }} />;
                               }
                             })()}
                           </View>
@@ -1341,8 +1341,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 />
                 </View>
 
-                <View style={{ flex: 1, marginTop: 16 }}>
-                  <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, paddingHorizontal: Layout.padding, marginBottom: 8 }]}>SK8Lytz Picks</Text>
+                <View style={{ flex: 1, marginTop: Spacing.lg }}>
+                  <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, paddingHorizontal: Layout.padding, marginBottom: Spacing.sm }]}>SK8Lytz Picks</Text>
 
                   <FlatList
                   style={{ flex: 1 }}
@@ -1355,7 +1355,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     const cardWidth = (Dimensions.get('window').width - (Layout.padding * 2)) / 3.5;
                     
                     if (!fav) {
-                      return <View style={[styles.presetCard, { width: cardWidth, marginHorizontal: 4, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
+                      return <View style={[styles.presetCard, { width: cardWidth, marginHorizontal: Spacing.xs, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
                     }
 
                     const glow = fav.mode === 'MUSIC' ? (fav.musicPrimaryColor || fav.musicSecondaryColor || Colors.secondary) :
@@ -1369,7 +1369,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
                     return (
                       <TouchableOpacity
-                        style={{ flex: 1, marginHorizontal: 4, shadowColor: glow, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 }}
+                        style={{ flex: 1, marginHorizontal: Spacing.xs, shadowColor: glow, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 }}
                         onPress={() => loadFavorite(fav, 'PICK')}
                       >
                         <LinearGradient
@@ -1378,27 +1378,27 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                           end={{ x: 1, y: 1 }}
                           style={{ flex: 1, width: cardWidth, borderRadius: 9, padding: 1.5 }}
                         >
-                          <View style={[styles.presetCard, { flex: 1, width: '100%', marginHorizontal: 0, borderWidth: 0, borderRadius: 8, justifyContent: 'flex-start', paddingVertical: 12, paddingHorizontal: 6 }]}>
+                          <View style={[styles.presetCard, { flex: 1, width: '100%', marginHorizontal: 0, borderWidth: 0, borderRadius: 8, justifyContent: 'flex-start', paddingVertical: Spacing.md, paddingHorizontal: Spacing.sm }]}>
                             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
                               <MaterialCommunityIcons 
                                 name={fav.mode === 'MUSIC' ? 'microphone-outline' : (fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'animation-play' : (fav.mode === 'MULTI' || fav.mode === 'BUILDER') ? 'shape-square-plus' : 'speedometer'} 
                                 size={24} 
                                 color={glow} 
-                                style={{ marginBottom: 8 }} 
+                                style={{ marginBottom: Spacing.sm }} 
                               />
                               
                               <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.customName || fav.name}</MarqueeText>
                             </View>
                             
-                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 6, opacity: 0.8, paddingHorizontal: 4 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: Spacing.sm, opacity: 0.8, paddingHorizontal: Spacing.xs }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xxs }}>
                                 {fav.mode === 'MUSIC' ? (
                                   <><MaterialCommunityIcons name="microphone-outline" size={10} color={glow} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.micSensitivity || fav.speed || 50)}%</Text></>
                                 ) : (
                                   <><MaterialCommunityIcons name="speedometer" size={10} color={glow} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.speed || 50)}%</Text></>
                                 )}
                               </View>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xxs }}>
                                 <MaterialCommunityIcons name="brightness-6" size={10} color={glow} />
                                 <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
                               </View>
@@ -1407,14 +1407,14 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                             {(() => {
                               if (fav.mode === 'MUSIC') {
                                 return (
-                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: 4 }}>
+                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: Spacing.xs }}>
                                     <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
                                     <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
                                   </View>
                                 );
                               } else if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') {
                                 return (
-                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: 4 }}>
+                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: Spacing.xs }}>
                                     <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
                                     <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
                                   </View>
@@ -1422,12 +1422,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                               } else if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
                                 const colors = fav.multiColors || ['#FFFFFF'];
                                 return (
-                                  <View style={{ width: '90%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: 4 }}>
+                                  <View style={{ width: '90%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: Spacing.xs }}>
                                     {colors.map((c: string, i: number) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}
                                   </View>
                                 );
                               } else {
-                                return <View style={{ height: 6, width: '100%', marginTop: 4 }} />;
+                                return <View style={{ height: 6, width: '100%', marginTop: Spacing.xs }} />;
                               }
                             })()}
                           </View>
@@ -1443,19 +1443,19 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
 
             {activeMode === 'MULTIMODE' && (
-              <View style={{ flex: 1, marginBottom: 8, justifyContent: 'flex-start' }}>
+              <View style={{ flex: 1, marginBottom: Spacing.sm, justifyContent: 'flex-start' }}>
 
                 {/* UNIFIED PRO EFFECTS & POSITIONAL BUILDER */}
                 {(fixedSubMode === 'PATTERN' || fixedSubMode === 'BUILDER') && (
-                  <View style={{ flex: 1, width: '100%', marginBottom: 4 }}>
+                  <View style={{ flex: 1, width: '100%', marginBottom: Spacing.xs }}>
 
                     {/* UNIFIED TOGGLE */}
-                    <View style={{ flexDirection: 'row', marginBottom: 6, marginTop: 2, flexShrink: 0, minHeight: 36 }}>
+                    <View style={{ flexDirection: 'row', marginBottom: Spacing.sm, marginTop: Spacing.xxs, flexShrink: 0, minHeight: 36 }}>
                       <TouchableOpacity
                         onPress={() => {
                           setFixedSubMode('PATTERN');
                         }}
-                        style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'PATTERN' ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
+                        style={{ flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', backgroundColor: fixedSubMode === 'PATTERN' ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
                       >
                         <Text style={{ color: fixedSubMode === 'PATTERN' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Pro Effects</Text>
                       </TouchableOpacity>
@@ -1464,7 +1464,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                           AppLogger.log('BUILDER_UI_TOGGLED');
                           setFixedSubMode('BUILDER');
                         }}
-                        style={{ flex: 1, paddingVertical: 6, alignItems: 'center', backgroundColor: fixedSubMode === 'BUILDER' ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
+                        style={{ flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', backgroundColor: fixedSubMode === 'BUILDER' ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
                       >
                         <Text style={{ color: fixedSubMode === 'BUILDER' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Builder</Text>
                       </TouchableOpacity>
@@ -1472,10 +1472,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
                     {/* PRO EFFECTS TIER */}
                     {fixedSubMode === 'PATTERN' && (
-                      <View style={{ flex: 1, paddingBottom: 6 }}>
+                      <View style={{ flex: 1, paddingBottom: Spacing.sm }}>
                         <ScrollView
                           style={{ flex: 1, backgroundColor: Colors.isDark ? '#000000' : 'rgba(0,0,0,0.04)', borderRadius: 8 }}
-                          contentContainerStyle={{ padding: 8, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}
+                          contentContainerStyle={{ padding: Spacing.sm, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}
                           showsVerticalScrollIndicator={false}
                         >
                           {ZENGGE_EFFECTS.map(effect => (
@@ -1503,9 +1503,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                                   ]));
                                 }
                               }}
-                              style={{ width: '48%', minHeight: 40, marginBottom: 8, flexDirection: 'column', justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
+                              style={{ width: '48%', minHeight: 40, marginBottom: Spacing.sm, flexDirection: 'column', justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
                             >
-                              <Text style={{ color: fixedPatternId === effect.id ? Colors.primary : Colors.text, fontWeight: 'bold', fontSize: 11, marginBottom: 4 }} numberOfLines={1}>
+                              <Text style={{ color: fixedPatternId === effect.id ? Colors.primary : Colors.text, fontWeight: 'bold', fontSize: 11, marginBottom: Spacing.xs }} numberOfLines={1}>
                                 {effect.id}. {effect.name}
                               </Text>
                               <CustomEffectVisualizer
@@ -1548,7 +1548,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
             {/* ── PROGRAMS MODE UI ────────────────────────────────────────────── */}
             {activeMode === 'PROGRAMS' && (
-              <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 4 }}>
+              <View style={{ flex: 1, paddingHorizontal: Spacing.xs, paddingTop: Spacing.xs }}>
                 <VerticalPatternDrum
                   value={selectedPatternId}
                   onValueChange={(id: number) => {
@@ -1568,16 +1568,16 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
             {/* ── MUSIC MODE UI ────────────────────────────────────────────────── */}
             {activeMode === 'MUSIC' && (
-              <View style={{ flex: 1, paddingHorizontal: 4, paddingTop: 4, overflow: 'hidden' }}>
+              <View style={{ flex: 1, paddingHorizontal: Spacing.xs, paddingTop: Spacing.xs, overflow: 'hidden' }}>
                 {/* ── Matrix Style Selector: Light Screen (0x27) vs Light Bar (0x26) ── */}
-                <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 4, marginTop: 2, marginBottom: 12, flexShrink: 0 }}>
+                <View style={{ flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.xs, marginTop: Spacing.xxs, marginBottom: Spacing.md, flexShrink: 0 }}>
                   <TouchableOpacity
                     onPress={() => {
                       setMusicMatrixStyle(0x27);
                       handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 0x27);
                     }}
                     style={{
-                      flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center',
+                      flex: 1, paddingVertical: Spacing.md, borderRadius: 10, alignItems: 'center',
                       backgroundColor: musicMatrixStyle === 0x27 ? Colors.primary + '33' : 'rgba(255,255,255,0.05)',
                       borderWidth: 1.5, borderColor: musicMatrixStyle === 0x27 ? Colors.primary : 'rgba(255,255,255,0.1)'
                     }}
@@ -1591,7 +1591,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                       handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 0x26);
                     }}
                     style={{
-                      flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center',
+                      flex: 1, paddingVertical: Spacing.md, borderRadius: 10, alignItems: 'center',
                       backgroundColor: musicMatrixStyle === 0x26 ? Colors.accent + '33' : 'rgba(255,255,255,0.05)',
                       borderWidth: 1.5, borderColor: musicMatrixStyle === 0x26 ? Colors.accent : 'rgba(255,255,255,0.1)'
                     }}
@@ -1609,7 +1609,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                           const pid = musicPatternId > 1 ? musicPatternId - 1 : MUSIC_PATTERNS.length;
                           setMusicPatternId(pid);
                           handleMusicChange(pid);
-                        }} style={{ paddingHorizontal: 10 }}>
+                        }} style={{ paddingHorizontal: Spacing.md }}>
                           <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'<'}</Text>
                         </TouchableOpacity>
                         <View style={[styles.musicModeCircle, { width: 32, height: 32, borderRadius: 16 }]}>
@@ -1619,11 +1619,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                           const pid = musicPatternId < MUSIC_PATTERNS.length ? musicPatternId + 1 : 1;
                           setMusicPatternId(pid);
                           handleMusicChange(pid);
-                        }} style={{ paddingHorizontal: 10 }}>
+                        }} style={{ paddingHorizontal: Spacing.md }}>
                           <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'>'}</Text>
                         </TouchableOpacity>
                       </View>
-                      <Text style={[Typography.caption, { marginTop: 4, color: Colors.primary, fontWeight: 'bold', fontSize: 13 }]}>
+                      <Text style={[Typography.caption, { marginTop: Spacing.xs, color: Colors.primary, fontWeight: 'bold', fontSize: 13 }]}>
                         {MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`}
                       </Text>
                     </View>
@@ -1690,12 +1690,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             {activeMode === 'STREET' && (
               <ScrollView
                 style={{ flex: 1 }}
-                contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 4, paddingTop: 6, paddingBottom: 20 }}
+                contentContainerStyle={{ flexGrow: 1, paddingHorizontal: Spacing.xs, paddingTop: Spacing.sm, paddingBottom: Spacing.xl }}
                 showsVerticalScrollIndicator={false}
                 bounces={false}
               >
                 {/* ── Street Visualizer: Car-light zone bar ── */}
-                <View style={{ marginBottom: 10 }}>
+                <View style={{ marginBottom: Spacing.md }}>
                   <View style={{ flexDirection: 'row', height: 26, borderRadius: 13, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
                     {/* Rear zone — red tail lights */}
                     <View style={{ flex: 3, backgroundColor: isStreetBraking ? '#FF0000' : '#660000', justifyContent: 'center', alignItems: 'center' }}>
@@ -1713,7 +1713,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 </View>
 
                 {/* Status Bar */}
-                <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent', paddingVertical: 2, marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent', paddingVertical: Spacing.xxs, marginBottom: Spacing.md }}>
                   <Text
                     allowFontScaling={false}
                     style={{
@@ -1734,8 +1734,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                   backgroundColor: 'transparent',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  paddingVertical: 10,
-                  marginBottom: 8,
+                  paddingVertical: Spacing.md,
+                  marginBottom: Spacing.sm,
                 }}>
                   {/* LEFT: Stoplight Vertical Graphic */}
                   <View style={{
@@ -1745,14 +1745,14 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                   }}>
                     {/* Red Light */}
                     <View style={{
-                      width: 22, height: 22, borderRadius: 11, marginBottom: 8,
+                      width: 22, height: 22, borderRadius: 11, marginBottom: Spacing.sm,
                       backgroundColor: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? '#FF0000' : '#330000',
                       shadowColor: '#FF0000', shadowOpacity: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? 1 : 0, shadowRadius: 10, elevation: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? 8 : 0,
                       borderWidth: 1, borderColor: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? '#FFAAAA' : '#000',
                     }} />
                     {/* Yellow Light */}
                     <View style={{
-                      width: 22, height: 22, borderRadius: 11, marginBottom: 8,
+                      width: 22, height: 22, borderRadius: 11, marginBottom: Spacing.sm,
                       backgroundColor: motionState === 'SLOWING_DOWN' ? '#FFFF00' : '#444400',
                       shadowColor: '#FFFF00', shadowOpacity: motionState === 'SLOWING_DOWN' ? 1 : 0, shadowRadius: 10, elevation: motionState === 'SLOWING_DOWN' ? 8 : 0,
                       borderWidth: 1, borderColor: motionState === 'SLOWING_DOWN' ? '#FFFFAA' : '#000',
@@ -1773,12 +1773,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                   </View>
                   
                   {/* BOTTOM: Global Telemetry + Session Controls */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, marginTop: 12, marginBottom: 8, alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, marginTop: Spacing.md, marginBottom: Spacing.sm, alignItems: 'center' }}>
                     <View>
                       <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '700', letterSpacing: 0.5 }}>
                         TOP SPEED: <Text style={{ color: '#00F0FF', fontWeight: '800' }}>{crewService.sessionTelemetry.topSpeedMph.toFixed(1)} MPH</Text>
                       </Text>
-                      <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '700', letterSpacing: 0.5, marginTop: 3 }}>
+                      <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '700', letterSpacing: 0.5, marginTop: Spacing.xxs }}>
                         DISTANCE: <Text style={{ color: '#00F0FF', fontWeight: '800' }}>{crewService.sessionTelemetry.distanceMiles.toFixed(2)} MI</Text>
                       </Text>
                     </View>
@@ -1794,8 +1794,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                       }}
                       activeOpacity={0.85}
                       style={{
-                        flexDirection: 'row', alignItems: 'center', gap: 6,
-                        paddingHorizontal: 16, paddingVertical: 9,
+                        flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+                        paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
                         borderRadius: 20,
                         backgroundColor: sessionActive ? '#FF3D00' : '#00C853',
                         shadowColor: sessionActive ? '#FF3D00' : '#00C853',
@@ -1820,10 +1820,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
           {/* UNIVERSAL SLIDERS FOOTER - Hidden in FAVORITES only */}
           {activeMode !== 'FAVORITES' && (
-            <View style={[styles.sceneSlidersContainer, { marginTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 8, paddingBottom: 0, flexShrink: 0 }]}>
+            <View style={[styles.sceneSlidersContainer, { marginTop: Spacing.sm, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: Spacing.sm, paddingBottom: 0, flexShrink: 0 }]}>
               {/* Color Grid wrappers */}
               {!(activeMode === 'PROGRAMS') && (
-                <View style={{ marginBottom: 4 }}>
+                <View style={{ marginBottom: Spacing.xs }}>
                   {/* Dynamic Selected Color Bar */}
                   {!(activeMode === 'MUSIC' || (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN')) && (() => {
                     const dynamicColor = activeMode === 'STREET' ? streetCruiseColor : selectedColor;
@@ -1846,7 +1846,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                           backgroundColor: dynamicColor,
                           justifyContent: 'center',
                           alignItems: 'center',
-                          marginBottom: 4,
+                          marginBottom: Spacing.xs,
                           shadowColor: dynamicColor,
                           shadowOpacity: 0.8,
                           shadowRadius: 10,
@@ -1870,7 +1870,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
                     return (
                       <View style={{
-                        flexDirection: 'row', width: '100%', height: 18, borderRadius: 9, marginBottom: 4,
+                        flexDirection: 'row', width: '100%', height: 18, borderRadius: 9, marginBottom: Spacing.xs,
                         borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'transparent'
                       }}>
                         <TouchableOpacity
@@ -1900,7 +1900,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     if (!showFg && !showBg) return null;
                     return (
                       <View style={{
-                        flexDirection: 'row', width: '100%', height: 18, borderRadius: 9, marginBottom: 4,
+                        flexDirection: 'row', width: '100%', height: 18, borderRadius: 9, marginBottom: Spacing.xs,
                         borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'transparent'
                       }}>
                         {showFg && (
@@ -2006,7 +2006,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                                 shadowRadius: 10,
                                 shadowOffset: { width: 0, height: 0 },
                                 elevation: 8,
-                                margin: 2
+                                margin: Spacing.xxs
                               },
                               isActive && { borderWidth: 2, borderColor: '#FFF' }
                             ]}
@@ -2022,7 +2022,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
               {/* Hue Slider */}
               {!(activeMode === 'PROGRAMS' || activeMode === 'CAMERA') && (
-                <View style={[styles.controlRow, { marginTop: 4, marginBottom: 4, flexShrink: 0, minHeight: 40 }]}>
+                <View style={[styles.controlRow, { marginTop: Spacing.xs, marginBottom: Spacing.xs, flexShrink: 0, minHeight: 40 }]}>
                   <NeonHueStrip
                     value={activeMode === 'MUSIC' ? (musicColorFocus === 'PRIMARY' ? musicHue : musicSecondaryHue) : activeMode === 'MULTIMODE' ? fixedHue : selectedHue}
                     onValueChange={(hue) => {
@@ -2101,7 +2101,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               )}
 
               {/* TACTICAL UNIVERSAL SLIDERS SECTIONS (50/50 Split) */}
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, marginBottom: 4, minHeight: 44 }}>
+              <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, marginBottom: Spacing.xs, minHeight: 44 }}>
 
                 {/* === LEFT SLOT COMPUTATION === */}
                 {/* Brightness is standard on left, UNLESS it's Street (Brake Sens) or Music (Mic Sens) or DIY (Nothing) */}
@@ -2233,7 +2233,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         </View>
 
         {/* THE FLOATING DOCK */}
-        <View style={{ marginBottom: 4 }}>
+        <View style={{ marginBottom: Spacing.xs }}>
           <View style={[styles.floatingDock, { marginBottom: 0 }]}>
             {[
               { id: 'HOME',      icon: 'home-outline'         },
@@ -2291,16 +2291,16 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         </View>
         {/* Quick Preset Prompt Modal */}
         <Modal visible={promptState === 'NAMING_PRESET'} transparent animationType="fade">
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-            <View style={{ backgroundColor: Colors.surface, padding: 24, borderRadius: 20, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }}>
+            <View style={{ backgroundColor: Colors.surface, padding: Spacing.xl, borderRadius: 20, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: Spacing.md, textAlign: 'center' }}>
                 {quickPromptTargetIndex === -1 ? 'Save Quick Preset' : 'Edit Quick Preset'}
               </Text>
-              <Text style={{ color: Colors.textMuted, fontSize: 14, marginBottom: 20, textAlign: 'center' }}>
+              <Text style={{ color: Colors.textMuted, fontSize: 14, marginBottom: Spacing.xl, textAlign: 'center' }}>
                 {quickPromptTargetIndex === -1 ? 'Name your new preset to store it in the Quick bar.' : 'Rename your preset or delete it from the bar.'}
               </Text>
               <TextInput
-                style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: 12, borderRadius: 8, fontSize: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
+                style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: Spacing.md, borderRadius: 8, fontSize: 16, marginBottom: Spacing.lg, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
                 placeholder="Preset Name..."
                 placeholderTextColor="rgba(255,255,255,0.3)"
                 value={promptName}
@@ -2311,23 +2311,23 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               {quickPromptTargetIndex === -1 && (
                 <TouchableOpacity
                   onPress={() => setCloudPublicToggle(p => !p)}
-                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 10, marginBottom: 20, borderWidth: 1, borderColor: cloudPublicToggle ? '#00C853' : 'rgba(255,255,255,0.1)' }}
+                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: Spacing.md, marginBottom: Spacing.xl, borderWidth: 1, borderColor: cloudPublicToggle ? '#00C853' : 'rgba(255,255,255,0.1)' }}
                 >
                   <MaterialCommunityIcons
                     name={cloudPublicToggle ? 'earth' : 'lock-outline'}
                     size={18}
                     color={cloudPublicToggle ? '#00C853' : Colors.textMuted}
-                    style={{ marginRight: 10 }}
+                    style={{ marginRight: Spacing.md }}
                   />
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>{cloudPublicToggle ? 'Public — visible to community' : 'Private — only you can see it'}</Text>
-                    <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>Tap to toggle visibility</Text>
+                    <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: Spacing.xxs }}>Tap to toggle visibility</Text>
                   </View>
                 </TouchableOpacity>
               )}
-              <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ flexDirection: 'row', gap: Spacing.md }}>
                 {quickPromptTargetIndex !== -1 && (
-                  <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={() => {
+                  <TouchableOpacity style={{ flex: 1, padding: Spacing.lg, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={() => {
                     const newArr = [...quickPresets];
                     newArr.splice(quickPromptTargetIndex, 1);
                     setQuickPresets(newArr);
@@ -2339,11 +2339,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                   </TouchableOpacity>
                 )}
                 {quickPromptTargetIndex === -1 && (
-                  <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => closePrompt()}>
+                  <TouchableOpacity style={{ flex: 1, padding: Spacing.lg, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => closePrompt()}>
                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#00C853' }} disabled={isPublishingCloud} onPress={async () => {
+                <TouchableOpacity style={{ flex: 1, padding: Spacing.lg, borderRadius: 10, backgroundColor: '#00C853' }} disabled={isPublishingCloud} onPress={async () => {
                   setIsPublishingCloud(true);
                   const safeName = promptName.trim() || 'Cloud Scene';
                   if (containsProfanity(safeName)) {
@@ -2362,7 +2362,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 }}>
                   <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>{isPublishingCloud ? 'Saving...' : (cloudPublicToggle ? '🌍 Publish' : '🔒 Save Private')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary }} onPress={() => {
+                <TouchableOpacity style={{ flex: 1, padding: Spacing.lg, borderRadius: 10, backgroundColor: Colors.primary }} onPress={() => {
                   const newArr = [...quickPresets];
                   const safeName = promptName.trim() || 'Preset';
                   if (quickPromptTargetIndex === -1) {
@@ -2391,34 +2391,34 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
         {/* Favorite Prompt Modal */}
         <Modal visible={promptState === 'NAMING_FAVORITE'} transparent animationType="fade">
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-            <View style={{ backgroundColor: Colors.surface, padding: 24, borderRadius: 20, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }}>
+            <View style={{ backgroundColor: Colors.surface, padding: Spacing.xl, borderRadius: 20, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: Spacing.md, textAlign: 'center' }}>
                 {favPromptTargetId ? 'Edit Favorite' : 'Save Favorite'}
               </Text>
-              <Text style={{ color: Colors.textMuted, fontSize: 14, marginBottom: 20, textAlign: 'center' }}>
+              <Text style={{ color: Colors.textMuted, fontSize: 14, marginBottom: Spacing.xl, textAlign: 'center' }}>
                 {favPromptTargetId ? 'Rename your preset or delete it.' : 'Name your preset. Leave blank to use the default name.'}
               </Text>
               <TextInput
-                style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: 12, borderRadius: 8, fontSize: 16, marginBottom: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
+                style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: Spacing.md, borderRadius: 8, fontSize: 16, marginBottom: Spacing.xl, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
                 placeholder="Custom Preset Name..."
                 placeholderTextColor="rgba(255,255,255,0.3)"
                 value={promptName}
                 onChangeText={setPromptName}
                 autoFocus
               />
-              <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ flexDirection: 'row', gap: Spacing.md }}>
                 {favPromptTargetId && (
-                  <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={() => { deleteFavorite(favPromptTargetId); closePrompt(); }}>
+                  <TouchableOpacity style={{ flex: 1, padding: Spacing.lg, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={() => { deleteFavorite(favPromptTargetId); closePrompt(); }}>
                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Delete</Text>
                   </TouchableOpacity>
                 )}
                 {(!favPromptTargetId) && (
-                  <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => closePrompt()}>
+                  <TouchableOpacity style={{ flex: 1, padding: Spacing.lg, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => closePrompt()}>
                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary }} onPress={handleConfirmSaveFavorite}>
+                <TouchableOpacity style={{ flex: 1, padding: Spacing.lg, borderRadius: 10, backgroundColor: Colors.primary }} onPress={handleConfirmSaveFavorite}>
                   <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>Save</Text>
                 </TouchableOpacity>
               </View>
@@ -2457,20 +2457,20 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   visualizerWrapper: {
     width: '100%',
     alignItems: 'stretch',
-    marginVertical: 2,
+    marginVertical: Spacing.xxs,
   },
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: Colors.surfaceHighlight,
     borderRadius: Layout.borderRadius,
-    padding: 6,
-    marginBottom: 8,
+    padding: Spacing.sm,
+    marginBottom: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
   },
   tab: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
     alignItems: 'center',
     borderRadius: Layout.borderRadius - 6,
     overflow: 'hidden',
@@ -2491,7 +2491,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   },
   controlsContainer: {
     flex: 1,
-    padding: 10,
+    padding: Spacing.md,
     backgroundColor: Colors.isDark ? 'rgba(21, 25, 40, 0.7)' : Colors.surface,
     borderRadius: Layout.borderRadius + 4,
     borderWidth: 1,
@@ -2500,15 +2500,15 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   modesContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 6,
-    marginBottom: 12,
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   modePill: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
     borderRadius: Layout.borderRadius,
     backgroundColor: Colors.background,
-    marginRight: 12,
+    marginRight: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0,0,0,0.08)',
     overflow: 'hidden',
@@ -2531,13 +2531,13 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     overflow: 'hidden',
   },
   controlRow: {
-    marginTop: 6,
+    marginTop: Spacing.sm,
   },
   placeholderSlider: {
     height: 8,
     backgroundColor: Colors.surfaceHighlight,
     borderRadius: 4,
-    marginTop: 8,
+    marginTop: Spacing.sm,
     overflow: 'hidden',
   },
   sliderFill: {
@@ -2548,7 +2548,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   colorGrid: {
     flexDirection: 'row',
     flexWrap: 'nowrap',
-    marginTop: 16,
+    marginTop: Spacing.lg,
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
@@ -2561,7 +2561,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     borderRadius: 999,
     borderWidth: 1,
     borderColor: Colors.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)',
-    marginHorizontal: 4,
+    marginHorizontal: Spacing.xs,
   },
   selectedColorButton: {
     borderWidth: 3,
@@ -2573,12 +2573,12 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignContent: 'flex-start',
-    gap: 6
+    gap: Spacing.sm
   },
   presetCard: {
     width: '48%',
     minHeight: 80,
-    padding: 6,
+    padding: Spacing.sm,
     backgroundColor: Colors.isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.04)',
     borderRadius: 16,
     borderWidth: 1.5,
@@ -2596,20 +2596,20 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   },
   presetDesc: {
     ...Typography.caption,
-    marginTop: 4,
+    marginTop: Spacing.xs,
     color: Colors.textMuted,
   },
   sceneContainer: {
     backgroundColor: Colors.isDark ? '#050505' : Colors.surfaceHighlight,
     borderRadius: 24,
-    padding: 2,
-    marginTop: 8,
+    padding: Spacing.xxs,
+    marginTop: Spacing.sm,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
   },
   sceneHeader: {
-    padding: 16,
+    padding: Spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
     alignItems: 'center',
@@ -2626,7 +2626,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     alignItems: 'center',
   },
   sceneSlidersContainer: {
-    padding: 16,
+    padding: Spacing.lg,
     backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
   },
   sceneLabel: {
@@ -2641,16 +2641,16 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     flexDirection: 'row',
     backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : Colors.surfaceHighlight,
     borderRadius: 25,
-    padding: 4,
+    padding: Spacing.xs,
     alignItems: 'center',
-    marginVertical: 4,
-    marginHorizontal: 4,
+    marginVertical: Spacing.xs,
+    marginHorizontal: Spacing.xs,
     borderWidth: 1,
     borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
   },
   musicToggleOption: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: Spacing.md,
     alignItems: 'center',
     borderRadius: 20,
   },
@@ -2703,13 +2703,13 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    paddingHorizontal: 10,
-    marginBottom: 4,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.xs,
   },
   micIconBtn: {
     flex: 1,
     alignItems: 'center',
-    padding: 8,
+    padding: Spacing.sm,
     borderRadius: 12,
   },
   micBtnActive: {
@@ -2722,7 +2722,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
   },
@@ -2745,7 +2745,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     borderColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 10,
+    marginHorizontal: Spacing.md,
   },
   playIconInner: {
     width: 42,
@@ -2758,8 +2758,8 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   musicOptionsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingHorizontal: 10,
-    marginBottom: 4,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.xs,
   },
   radioItem: {
     flexDirection: 'row',
@@ -2771,7 +2771,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     borderRadius: 10,
     borderWidth: 2,
     borderColor: Colors.textMuted,
-    marginRight: 8,
+    marginRight: Spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2798,8 +2798,8 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   musicSettingsToggleRow: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
-    gap: 30,
-    marginBottom: 4,
+    gap: Spacing.xxl,
+    marginBottom: Spacing.xs,
   },
   floatingDock: {
     flexDirection: 'row',
@@ -2809,11 +2809,11 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     borderWidth: 1,
     borderColor: Colors.isDark ? 'rgba(0, 240, 255, 0.35)' : 'rgba(0, 200, 255, 0.4)',
     borderRadius: 30,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    marginTop: 8,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+    marginTop: Spacing.sm,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.6,
@@ -2851,6 +2851,6 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 24,
     opacity: 1.0,
-    marginTop: 4,
+    marginTop: Spacing.xs,
   }
 });

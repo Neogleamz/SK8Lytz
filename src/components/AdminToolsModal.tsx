@@ -1,3 +1,4 @@
+import { Spacing } from '../theme/theme';
 /**
  * AdminToolsModal.tsx — SK8Lytz Unified Administrative Hub
  * 
@@ -207,7 +208,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
       <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
         {/* Header */}
         <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
-          <View style={{ flexShrink: 1, paddingRight: 8 }}>
+          <View style={{ flexShrink: 1, paddingRight: Spacing.sm }}>
             <Text style={[styles.title, { color: textPrimary }]} numberOfLines={1}>Admin Tools</Text>
             <Text style={[styles.subtitle, { color: textMuted }]} numberOfLines={1}>{memoizedTimelineLogs.length} events stored</Text>
           </View>
@@ -258,20 +259,20 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
 
       {/* ── Confirm Delete Modal ── */}
       <Modal visible={confirmDeleteVisible} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <View style={{ backgroundColor: isDark ? '#1A1A1A' : '#FFF', padding: 24, borderRadius: 12, width: '100%', maxWidth: 400, borderColor: '#ff4040', borderWidth: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }}>
+          <View style={{ backgroundColor: isDark ? '#1A1A1A' : '#FFF', padding: Spacing.xl, borderRadius: 12, width: '100%', maxWidth: 400, borderColor: '#ff4040', borderWidth: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg }}>
               <MaterialCommunityIcons name="alert" size={24} color="#ff4040" />
-              <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#FFF' : '#000', marginLeft: 8 }}>Purge Telemetry Logs</Text>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#FFF' : '#000', marginLeft: Spacing.sm }}>Purge Telemetry Logs</Text>
             </View>
-            <Text style={{ fontSize: 14, color: isDark ? '#CCC' : '#444', marginBottom: 24, lineHeight: 20 }}>
+            <Text style={{ fontSize: 14, color: isDark ? '#CCC' : '#444', marginBottom: Spacing.xl, lineHeight: 20 }}>
               Are you sure you want to completely erase all timeline, device, and analytics stats from local memory? This action cannot be reversed.
             </Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
-              <TouchableOpacity onPress={() => setConfirmDeleteVisible(false)} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 6, backgroundColor: isDark ? '#333' : '#EEE' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.md }}>
+              <TouchableOpacity onPress={() => setConfirmDeleteVisible(false)} style={{ paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, borderRadius: 6, backgroundColor: isDark ? '#333' : '#EEE' }}>
                 <Text style={{ fontWeight: '700', color: isDark ? '#FFF' : '#000' }}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={executeClear} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 6, backgroundColor: '#ff4040' }}>
+              <TouchableOpacity onPress={executeClear} style={{ paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, borderRadius: 6, backgroundColor: '#ff4040' }}>
                 <Text style={{ fontWeight: '700', color: '#FFF' }}>Erase Everything</Text>
               </TouchableOpacity>
             </View>
@@ -282,26 +283,26 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
       {/* ── App Manager Modal ── */}
       <Modal visible={isAppManagerVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setIsAppManagerVisible(false)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor, backgroundColor: cardBg }}>
-            <TouchableOpacity onPress={() => setIsAppManagerVisible(false)} style={{ marginRight: 16, padding: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: borderColor, backgroundColor: cardBg }}>
+            <TouchableOpacity onPress={() => setIsAppManagerVisible(false)} style={{ marginRight: Spacing.lg, padding: Spacing.xs }}>
               <MaterialCommunityIcons name="arrow-left" size={24} color="#9D4EFF" />
             </TouchableOpacity>
             <View style={{ flex: 1 }}>
               <Text style={[styles.title, { color: textPrimary }]}>🛡️ APP MANAGER</Text>
-              <Text style={{ color: textMuted, fontSize: 11, marginTop: 2 }}>Master governance engine & policy overrides</Text>
+              <Text style={{ color: textMuted, fontSize: 11, marginTop: Spacing.xxs }}>Master governance engine & policy overrides</Text>
             </View>
           </View>
-          <ScrollView style={{ flex: 1, padding: 16 }}>
-            <Text style={{ color: textMuted, fontSize: 12, marginBottom: 16 }}>
+          <ScrollView style={{ flex: 1, padding: Spacing.lg }}>
+            <Text style={{ color: textMuted, fontSize: 12, marginBottom: Spacing.lg }}>
               These policies are globally enforced. Safety locks are required for critical changes.
             </Text>
 
-            <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: 8, marginTop: 8 }}>Crew Hub Governance</Text>
-            <View style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }}>
-                <View style={{ flex: 1, marginRight: 16 }}>
+            <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: Spacing.sm, marginTop: Spacing.sm }}>Crew Hub Governance</Text>
+            <View style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, borderRadius: 12, marginBottom: Spacing.lg, overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+                <View style={{ flex: 1, marginRight: Spacing.lg }}>
                   <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Global Lock</Text>
-                  <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Completely disable the Crew Hub for everyone.</Text>
+                  <Text style={{ color: textMuted, fontSize: 12, marginTop: Spacing.xxs }}>Completely disable the Crew Hub for everyone.</Text>
                 </View>
                 <Switch
                   value={appSettings['global_crew_hub_locked'] === true}
@@ -309,10 +310,10 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
                   trackColor={{ false: '#444', true: '#FF4444' }}
                 />
               </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 }}>
-                <View style={{ flex: 1, marginRight: 16 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg }}>
+                <View style={{ flex: 1, marginRight: Spacing.lg }}>
                   <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Hide When Offline</Text>
-                  <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Hide the tab completely if the device drops connection.</Text>
+                  <Text style={{ color: textMuted, fontSize: 12, marginTop: Spacing.xxs }}>Hide the tab completely if the device drops connection.</Text>
                 </View>
                 <Switch
                   value={appSettings['offline_crew_hub_hidden'] === true}
@@ -322,12 +323,12 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
               </View>
             </View>
 
-            <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: 8 }}>Community Hub Governance</Text>
-            <View style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }}>
-                <View style={{ flex: 1, marginRight: 16 }}>
+            <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: Spacing.sm }}>Community Hub Governance</Text>
+            <View style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, borderRadius: 12, marginBottom: Spacing.lg, overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+                <View style={{ flex: 1, marginRight: Spacing.lg }}>
                   <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Global Lock</Text>
-                  <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Disable Community Picks and Favorites.</Text>
+                  <Text style={{ color: textMuted, fontSize: 12, marginTop: Spacing.xxs }}>Disable Community Picks and Favorites.</Text>
                 </View>
                 <Switch
                   value={appSettings['global_community_hub_locked'] === true}
@@ -335,10 +336,10 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
                   trackColor={{ false: '#444', true: '#FF4444' }}
                 />
               </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 }}>
-                <View style={{ flex: 1, marginRight: 16 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg }}>
+                <View style={{ flex: 1, marginRight: Spacing.lg }}>
                   <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Hide When Offline</Text>
-                  <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Remove access to cached Community picks.</Text>
+                  <Text style={{ color: textMuted, fontSize: 12, marginTop: Spacing.xxs }}>Remove access to cached Community picks.</Text>
                 </View>
                 <Switch
                   value={appSettings['offline_community_hub_hidden'] === true}
@@ -348,12 +349,12 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
               </View>
             </View>
 
-            <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: 8 }}>Maps & Infrastructure</Text>
-            <View style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }}>
-                <View style={{ flex: 1, marginRight: 16 }}>
+            <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: Spacing.sm }}>Maps & Infrastructure</Text>
+            <View style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, borderRadius: 12, marginBottom: Spacing.lg, overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+                <View style={{ flex: 1, marginRight: Spacing.lg }}>
                   <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Lock Skate Maps</Text>
-                  <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Disable all mapping functionality.</Text>
+                  <Text style={{ color: textMuted, fontSize: 12, marginTop: Spacing.xxs }}>Disable all mapping functionality.</Text>
                 </View>
                 <Switch
                   value={appSettings['global_maps_locked'] === true}
@@ -361,10 +362,10 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
                   trackColor={{ false: '#444', true: '#FF4444' }}
                 />
               </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }}>
-                <View style={{ flex: 1, marginRight: 16 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+                <View style={{ flex: 1, marginRight: Spacing.lg }}>
                   <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Hide When Offline</Text>
-                  <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Remove Maps access when offline.</Text>
+                  <Text style={{ color: textMuted, fontSize: 12, marginTop: Spacing.xxs }}>Remove Maps access when offline.</Text>
                 </View>
                 <Switch
                   value={appSettings['offline_maps_hidden'] === true}
@@ -372,10 +373,10 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
                   trackColor={{ false: '#444', true: '#00f0ff' }}
                 />
               </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 }}>
-                <View style={{ flex: 1, marginRight: 16 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg }}>
+                <View style={{ flex: 1, marginRight: Spacing.lg }}>
                   <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Telemetry Uploads</Text>
-                  <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Enable or disable crash telemetry ingest.</Text>
+                  <Text style={{ color: textMuted, fontSize: 12, marginTop: Spacing.xxs }}>Enable or disable crash telemetry ingest.</Text>
                 </View>
                 <Switch
                   value={appSettings['global_telemetry_enabled'] === true}
@@ -385,14 +386,14 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
               </View>
             </View>
 
-            <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: 8 }}>Legal Compliance</Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, padding: 16, borderRadius: 12, marginBottom: 32 }}>
-              <View style={{ flex: 1, marginRight: 16 }}>
+            <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: Spacing.sm }}>Legal Compliance</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, padding: Spacing.lg, borderRadius: 12, marginBottom: Spacing.xxl }}>
+              <View style={{ flex: 1, marginRight: Spacing.lg }}>
                 <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Required EULA Version</Text>
-                <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Current required target: v{appSettings['required_eula_version'] || '1'}. Users with lower versions will be gated.</Text>
+                <Text style={{ color: textMuted, fontSize: 12, marginTop: Spacing.xxs }}>Current required target: v{appSettings['required_eula_version'] || '1'}. Users with lower versions will be gated.</Text>
               </View>
               <TouchableOpacity 
-                style={{ backgroundColor: '#FF4444', paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, alignItems: 'center' }}
+                style={{ backgroundColor: '#FF4444', paddingVertical: Spacing.md, paddingHorizontal: Spacing.md, borderRadius: 8, alignItems: 'center' }}
                 onPress={() => {
                   const current = parseInt(appSettings['required_eula_version'] || '1', 10);
                   const next = current + 1;
@@ -419,13 +420,13 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
       {/* ── Product Manager Modal ── */}
       <Modal visible={isProductManagerVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setIsProductManagerVisible(false)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor, backgroundColor: cardBg }}>
-            <TouchableOpacity onPress={() => setIsProductManagerVisible(false)} style={{ marginRight: 16, padding: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: borderColor, backgroundColor: cardBg }}>
+            <TouchableOpacity onPress={() => setIsProductManagerVisible(false)} style={{ marginRight: Spacing.lg, padding: Spacing.xs }}>
               <MaterialCommunityIcons name="arrow-left" size={24} color="#FF5A00" />
             </TouchableOpacity>
             <View style={{ flex: 1 }}>
               <Text style={[styles.title, { color: textPrimary }]}>📦 PRODUCT MANAGER</Text>
-              <Text style={{ color: textMuted, fontSize: 11, marginTop: 2 }}>Edit hardware product catalog entries</Text>
+              <Text style={{ color: textMuted, fontSize: 11, marginTop: Spacing.xxs }}>Edit hardware product catalog entries</Text>
             </View>
           </View>
           <ProductsTab 
@@ -495,15 +496,15 @@ const DeviceTab = React.memo(({ logs, deviceConfigs, textMuted, textPrimary, car
         return (
           <View key={i} style={[styles.deviceCard, { backgroundColor: cardBg, borderColor }]}>
             <MaterialCommunityIcons name="bluetooth-connect" size={24} color="#9D4EFF" />
-            <View style={{ marginLeft: 12, flex: 1 }}>
+            <View style={{ marginLeft: Spacing.md, flex: 1 }}>
               <Text style={[styles.deviceName, { color: textPrimary }]}>{config.name || meta.name || 'Unknown'}</Text>
               <Text style={[styles.deviceDetail, { color: textMuted }]}>MAC Address: {id}</Text>
               {firmwares.has(id) && <Text style={[styles.deviceDetail, { color: textMuted }]}>Firmware: {firmwares.get(id)}</Text>}
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginTop: Spacing.xs }}>
                 <Text style={[styles.deviceDetail, { color: textMuted }]}>Type: {config.type || meta?.type || '?'}</Text>
                 {meta?.rssi && <Text style={[styles.deviceDetail, { color: textMuted }]}>\u00b7 RSSI: {meta.rssi}</Text>}
               </View>
-              <View style={{ borderTopWidth: 1, borderTopColor: borderColor, marginTop: 6, paddingTop: 4 }}>
+              <View style={{ borderTopWidth: 1, borderTopColor: borderColor, marginTop: Spacing.sm, paddingTop: Spacing.xs }}>
                 <Text style={[styles.deviceDetail, { color: textMuted }]}>First seen: {formatLogTime(earliest.get(id)!)}</Text>
                 <Text style={[styles.deviceDetail, { color: textMuted }]}>Last seen: {formatLogTime(latest.get(id)!)}</Text>
               </View>
@@ -575,39 +576,39 @@ const AdminTab = React.memo(({
       <Text style={[styles.statSection, { color: textPrimary }]}>\ud83d\udee0\ufe0f Engineering Tools</Text>
       <TouchableOpacity onPress={onOpenLab} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center' }]}>
         <MaterialCommunityIcons name="flask" size={24} color="#FF7000" />
-        <View style={{ marginLeft: 12 }}>
+        <View style={{ marginLeft: Spacing.md }}>
           <Text style={{ color: textPrimary, fontWeight: '700' }}>Diagnostic Lab</Text>
           <Text style={{ color: textMuted, fontSize: 12 }}>Low-level GATT explorer & payload builder</Text>
         </View>
       </TouchableOpacity>
-      <TouchableOpacity onPress={onOpenProgrammer} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center', marginTop: 12 }]}>
+      <TouchableOpacity onPress={onOpenProgrammer} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center', marginTop: Spacing.md }]}>
         <MaterialCommunityIcons name="chip" size={24} color="#00f0ff" />
-        <View style={{ marginLeft: 12 }}>
+        <View style={{ marginLeft: Spacing.md }}>
           <Text style={{ color: textPrimary, fontWeight: '700' }}>Firmware Over-The-Air</Text>
           <Text style={{ color: textMuted, fontSize: 12 }}>Register-level EEPROM flash (0x62)</Text>
         </View>
       </TouchableOpacity>
 
-      <Text style={[styles.statSection, { color: textPrimary, marginTop: 24 }]}>⚙️ Remote Configuration</Text>
+      <Text style={[styles.statSection, { color: textPrimary, marginTop: Spacing.xl }]}>⚙️ Remote Configuration</Text>
       <TouchableOpacity onPress={() => setIsAppManagerVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center' }]}>
         <MaterialCommunityIcons name="shield-lock-outline" size={24} color="#9D4EFF" />
-        <View style={{ marginLeft: 12 }}>
+        <View style={{ marginLeft: Spacing.md }}>
           <Text style={{ color: textPrimary, fontWeight: '700' }}>App Manager</Text>
           <Text style={{ color: textMuted, fontSize: 12 }}>Master governance and policy compliance</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => setIsProductManagerVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center', marginTop: 12 }]}>
+      <TouchableOpacity onPress={() => setIsProductManagerVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center', marginTop: Spacing.md }]}>
         <MaterialCommunityIcons name="package-variant-closed" size={24} color="#FF7000" />
-        <View style={{ marginLeft: 12 }}>
+        <View style={{ marginLeft: Spacing.md }}>
           <Text style={{ color: textPrimary, fontWeight: '700' }}>Product Manager</Text>
           <Text style={{ color: textMuted, fontSize: 12 }}>Hardware profile catalog editor</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => setIsPicksSchedulerVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center', marginTop: 12 }]}>
+      <TouchableOpacity onPress={() => setIsPicksSchedulerVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center', marginTop: Spacing.md }]}>
         <MaterialCommunityIcons name="calendar-clock" size={24} color="#00D4AA" />
-        <View style={{ marginLeft: 12 }}>
+        <View style={{ marginLeft: Spacing.md }}>
           <Text style={{ color: textPrimary, fontWeight: '700' }}>Picks Scheduler</Text>
           <Text style={{ color: textMuted, fontSize: 12 }}>Schedule and manage community picks</Text>
         </View>
@@ -645,8 +646,8 @@ const ProductsTab = React.memo(({
   textMuted, textPrimary, cardBg, borderColor 
 }: ProductsTabProps) => {
 
-  const fieldWrapperStyle: ViewStyle = { marginBottom: 16, backgroundColor: cardBg, padding: 12, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#9D4EFF' };
-  const fieldLabelStyle: TextStyle = { color: textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 };
+  const fieldWrapperStyle: ViewStyle = { marginBottom: Spacing.lg, backgroundColor: cardBg, padding: Spacing.md, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#9D4EFF' };
+  const fieldLabelStyle: TextStyle = { color: textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', marginBottom: Spacing.sm, letterSpacing: 0.5 };
   const fieldInputStyle: TextStyle = { color: textPrimary, fontSize: 16, padding: 0, fontWeight: '600' };
 
   const renderField = (label: string, key: string, placeholder: string, keyboardType: any = 'default') => (
@@ -672,7 +673,7 @@ const ProductsTab = React.memo(({
 
   const renderToggle = (label: string, key: string, desc: string) => (
     <View style={[fieldWrapperStyle, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-      <View style={{ flex: 1, paddingRight: 12 }}>
+      <View style={{ flex: 1, paddingRight: Spacing.md }}>
         <Text style={fieldLabelStyle}>{label}</Text>
         <Text style={{ color: textMuted, fontSize: 11 }}>{desc}</Text>
       </View>
@@ -688,13 +689,13 @@ const ProductsTab = React.memo(({
     <View style={{ flex: 1 }}>
       {/* ── PILL SELECTOR ── */}
       <View style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, gap: 10 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, gap: Spacing.md }}>
           {allProfiles.map((p: any) => {
             const isActive = editingProfile?.id === p.id;
             return (
               <TouchableOpacity key={p.id} onPress={() => startEditing(p)}
-                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: isActive ? '#9D4EFF' : '#333' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                style={{ paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: 20, backgroundColor: isActive ? '#9D4EFF' : '#333' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                   {p.brandIcon && <MaterialCommunityIcons name={p.brandIcon as any} size={14} color="#FFF" />}
                   <Text style={{ color: '#FFF', fontWeight: '600' }}>{p.displayName || p.id}</Text>
                 </View>
@@ -702,7 +703,7 @@ const ProductsTab = React.memo(({
             )
           })}
           <TouchableOpacity onPress={createNew}
-            style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#FF5A00', borderStyle: 'dashed', backgroundColor: (editingProfile && !editingProfile.id) ? 'rgba(255,90,0,0.2)' : 'transparent' }}>
+            style={{ paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: 20, borderWidth: 1, borderColor: '#FF5A00', borderStyle: 'dashed', backgroundColor: (editingProfile && !editingProfile.id) ? 'rgba(255,90,0,0.2)' : 'transparent' }}>
             <Text style={{ color: '#FF5A00', fontWeight: '800' }}>+ ADD NEW</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -710,8 +711,8 @@ const ProductsTab = React.memo(({
 
       {/* ── EDITOR ── */}
       {editingProfile ? (
-        <ScrollView style={{ flex: 1, padding: 16 }}>
-          <Text style={{ color: textPrimary, fontSize: 18, fontWeight: '800', marginBottom: 16 }}>
+        <ScrollView style={{ flex: 1, padding: Spacing.lg }}>
+          <Text style={{ color: textPrimary, fontSize: 18, fontWeight: '800', marginBottom: Spacing.lg }}>
             {editingProfile.id ? 'EDIT PROFILE' : 'NEW HARDWARE PROFILE'}
           </Text>
 
@@ -720,7 +721,7 @@ const ProductsTab = React.memo(({
           {renderField('Brand Icon', 'brandIcon', 'e.g. circle-double')}
           {renderField('Brand Color Hex', 'vizThemeColor', 'e.g. #FF5A00')}
 
-          <Text style={{ color: textMuted, fontWeight: '800', marginTop: 12, marginBottom: 8 }}>HARDWARE DEFAULTS</Text>
+          <Text style={{ color: textMuted, fontWeight: '800', marginTop: Spacing.md, marginBottom: Spacing.sm }}>HARDWARE DEFAULTS</Text>
           {renderField('Default LEDs', 'defaultLedPoints', '16', 'numeric')}
           {renderField('Virtual Segments', 'defaultSegments', '1', 'numeric')}
           {renderField('IC Type (1=WS2812B)', 'defaultIcType', '1', 'numeric')}
@@ -728,11 +729,11 @@ const ProductsTab = React.memo(({
           {renderField('Battery Capacity (mAh)', 'batteryCapacityMilliAmpereHour', '3000', 'numeric')}
           {renderToggle('Customizable Profile', 'hardwareAllowsCustomPoints', 'Allow user to cut and set custom length')}
 
-          <Text style={{ color: textMuted, fontWeight: '800', marginTop: 12, marginBottom: 8 }}>AUTODETECT THRESHOLDS</Text>
+          <Text style={{ color: textMuted, fontWeight: '800', marginTop: Spacing.md, marginBottom: Spacing.sm }}>AUTODETECT THRESHOLDS</Text>
           {renderField('Min HW Points', 'detectMinPoints', '1', 'numeric')}
           {renderField('Max HW Points', 'detectMaxPoints', '99', 'numeric')}
 
-          <Text style={{ color: textMuted, fontWeight: '800', marginTop: 12, marginBottom: 8 }}>VISUALIZER GEOMETRY</Text>
+          <Text style={{ color: textMuted, fontWeight: '800', marginTop: Spacing.md, marginBottom: Spacing.sm }}>VISUALIZER GEOMETRY</Text>
           {renderField('Canvas Shape', 'vizShape', 'OVAL | RING | DUAL_STRIP')}
           {renderField('Base Width', 'vizBaseWidth', '55', 'numeric')}
           {renderField('Base Height', 'vizBaseHeight', '115', 'numeric')}
@@ -746,7 +747,7 @@ const ProductsTab = React.memo(({
           <TouchableOpacity 
             onPress={saveProduct} 
             disabled={productSaving}
-            style={{ backgroundColor: '#9D4EFF', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 20, marginBottom: 40 }}
+            style={{ backgroundColor: '#9D4EFF', padding: Spacing.lg, borderRadius: 12, alignItems: 'center', marginTop: Spacing.xl, marginBottom: Spacing.xxxl }}
           >
             <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 15 }}>
               {productSaving ? 'SAVING...' : '\ud83d\udcbe  SAVE TO CATALOG'}
@@ -754,8 +755,8 @@ const ProductsTab = React.memo(({
           </TouchableOpacity>
         </ScrollView>
       ) : (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-          <MaterialCommunityIcons name="cube-outline" size={48} color={borderColor} style={{ marginBottom: 16 }} />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xxl }}>
+          <MaterialCommunityIcons name="cube-outline" size={48} color={borderColor} style={{ marginBottom: Spacing.lg }} />
           <Text style={{ color: textMuted, textAlign: 'center', fontWeight: '600' }}>
             Select a hardware profile from the top menu to view or edit its settings.
           </Text>
@@ -769,37 +770,37 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   modalHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1,
+    paddingHorizontal: Spacing.xl, paddingBottom: Spacing.md, borderBottomWidth: 1,
   },
   title: { fontSize: 18, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase' },
-  subtitle: { fontSize: 11, marginTop: 2 },
+  subtitle: { fontSize: 11, marginTop: Spacing.xxs },
   headerActions: { flexDirection: 'row', alignItems: 'center' },
-  actionBtn: { padding: 8, marginLeft: 2 },
+  actionBtn: { padding: Spacing.sm, marginLeft: Spacing.xxs },
   tabs: { flexDirection: 'row', borderBottomWidth: 1 },
-  tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabBtn: { flex: 1, paddingVertical: Spacing.md, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
-  tabContent: { flex: 1, padding: 16 },
+  tabContent: { flex: 1, padding: Spacing.lg },
   logRow: {
     flexDirection: 'row', alignItems: 'flex-start',
-    paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  logIcon: { marginTop: 2, marginRight: 12, width: 20 },
+  logIcon: { marginTop: Spacing.xxs, marginRight: Spacing.md, width: 20 },
   logBody: { flex: 1 },
   logHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   logType: { fontSize: 13, fontWeight: '700' },
   logTime: { fontSize: 10 },
-  logPayload: { fontSize: 12, marginTop: 2 },
-  colorSwatch: { width: 16, height: 8, borderRadius: 3, marginTop: 4, borderWidth: 1, borderColor: '#000' },
-  emptyText: { textAlign: 'center', fontSize: 14, marginTop: 16 },
+  logPayload: { fontSize: 12, marginTop: Spacing.xxs },
+  colorSwatch: { width: 16, height: 8, borderRadius: 3, marginTop: Spacing.xs, borderWidth: 1, borderColor: '#000' },
+  emptyText: { textAlign: 'center', fontSize: 14, marginTop: Spacing.lg },
   deviceCard: {
     flexDirection: 'row', alignItems: 'center', borderRadius: 12,
-    padding: 14, marginBottom: 10, borderWidth: 1,
+    padding: Spacing.lg, marginBottom: Spacing.md, borderWidth: 1,
   },
   deviceName: { fontSize: 15, fontWeight: '700' },
-  deviceDetail: { fontSize: 12, marginTop: 2 },
-  statSection: { fontSize: 13, fontWeight: '900', marginTop: 16, marginBottom: 8, letterSpacing: 1, textTransform: 'uppercase' },
-  statCard: { borderRadius: 12, padding: 14, marginBottom: 4, borderWidth: 1 },
-  statRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
+  deviceDetail: { fontSize: 12, marginTop: Spacing.xxs },
+  statSection: { fontSize: 13, fontWeight: '900', marginTop: Spacing.lg, marginBottom: Spacing.sm, letterSpacing: 1, textTransform: 'uppercase' },
+  statCard: { borderRadius: 12, padding: Spacing.lg, marginBottom: Spacing.xs, borderWidth: 1 },
+  statRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.xs },
   statLabel: { fontSize: 13 },
   statValue: { fontSize: 13, fontWeight: '700' },
 });

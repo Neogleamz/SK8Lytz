@@ -17,7 +17,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Platform, Image, Linking, Animated, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Typography, Layout } from '../theme/theme';
+import { Typography, Layout, Spacing } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import DeviceItem from '../components/DeviceItem';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -1330,7 +1330,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               zIndex: 9999
             }}>
               <ActivityIndicator size="large" color="#00F0FF" />
-              <Text style={[Typography.header, { color: '#00F0FF', marginTop: 12 }]}>Disconnecting...</Text>
+              <Text style={[Typography.header, { color: '#00F0FF', marginTop: Spacing.md }]}>Disconnecting...</Text>
             </Animated.View>
           )}
       </Animated.View>
@@ -1386,11 +1386,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         onPress={() => Linking.openSettings()}
         style={{ 
           backgroundColor: Colors.error, 
-          padding: 16, 
+          padding: Spacing.lg, 
           alignItems: 'center', 
           justifyContent: 'center', 
           flexDirection: 'row', 
-          gap: 12,
+          gap: Spacing.md,
           borderBottomWidth: 1,
           borderBottomColor: 'rgba(255,255,255,0.2)'
         }}
@@ -1420,8 +1420,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               onPress={handleDisconnect}
               style={{
                 flexDirection: 'row', alignItems: 'center',
-                paddingHorizontal: 6, paddingVertical: 4,
-                borderRadius: 20, gap: 2,
+                paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
+                borderRadius: 20, gap: Spacing.xxs,
               }}
             >
               <MaterialCommunityIcons name="chevron-left" size={24} color={Colors.primary} />
@@ -1444,8 +1444,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               }
               let statusColor = connectedCount === 0 ? Colors.error : connectedCount < expectedCount ? '#FFA500' : Colors.success;
               return (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                  <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: statusColor, marginRight: 4 }} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.xxs }}>
+                  <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: statusColor, marginRight: Spacing.xs }} />
                   <Text style={{ color: statusColor, fontSize: 8, fontWeight: 'bold', letterSpacing: 0.5 }}>CONNECTED ({connectedCount})</Text>
                 </View>
               );
@@ -1453,7 +1453,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           </TouchableOpacity>
 
           {/* RIGHT: utilities group (matching AuthScreen style) */}
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: Spacing.sm }}>
             {!isTestModeActive && (
               <TouchableOpacity
                 style={{ 
@@ -1495,8 +1495,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               onPress={() => setIsAccountModalVisible(true)}
               style={{
                 flexDirection: 'row', alignItems: 'center',
-                paddingHorizontal: 6, paddingVertical: 4,
-                borderRadius: 16, borderWidth: 1, gap: 4,
+                paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
+                borderRadius: 16, borderWidth: 1, gap: Spacing.xs,
                 borderColor: isOfflineMode ? 'rgba(255,170,0,0.35)' : 'rgba(0,240,255,0.25)',
                 backgroundColor: isOfflineMode ? 'rgba(255,170,0,0.08)' : 'rgba(0,240,255,0.06)',
               }}
@@ -1523,7 +1523,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           </View>
 
           {/* RIGHT: grouped icons */}
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: Spacing.sm }}>
             <TouchableOpacity
               style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}
               onPress={() => setIsSupportModalVisible(true)}
@@ -1541,7 +1541,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
       {/* Accent line under logo when not connected */}
       {!isActuallyConnected && (
-        <View style={{ height: 2, width: 30, backgroundColor: Colors.secondary, marginTop: 6, borderRadius: 1, alignSelf: 'center' }} />
+        <View style={{ height: 2, width: 30, backgroundColor: Colors.secondary, marginTop: Spacing.sm, borderRadius: 1, alignSelf: 'center' }} />
       )}
     </View>
   );
@@ -1565,7 +1565,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
         {isActuallyConnected && (
           <View style={{ flex: 1 }}>
-            <View pointerEvents="box-none" style={{ paddingBottom: 16, zIndex: 100, elevation: 100 }}>
+            <View pointerEvents="box-none" style={{ paddingBottom: Spacing.lg, zIndex: 100, elevation: 100 }}>
               {renderDashboardHeader()}
             </View>
             <View style={{ flex: 1 }}>
@@ -1581,12 +1581,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 {renderDashboardHeader()}
              </View>
 
-             <View style={{ flex: 1, paddingBottom: 40 }}>
+             <View style={{ flex: 1, paddingBottom: Spacing.xxxl }}>
                 {/* SLAB 2: CREW HUB (Sessions) */}
-                <View style={[styles.slabContainer, { marginTop: 12 }]}>
+                <View style={[styles.slabContainer, { marginTop: Spacing.md }]}>
                   <View style={[styles.glassSlab, { borderColor: isOfflineMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,170,0,0.2)', paddingVertical: isOfflineMode ? 16 : 40 }]}>
-                    <View style={[styles.slabHeader, isOfflineMode && { marginBottom: 8 }]}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={[styles.slabHeader, isOfflineMode && { marginBottom: Spacing.sm }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                         <MaterialCommunityIcons name={isOfflineMode ? "cloud-off-outline" : "account-group"} size={18} color={isOfflineMode ? Colors.textMuted : "#FFAA00"} />
                         <Text style={[styles.slabTitle, { color: isOfflineMode ? Colors.textMuted : '#FFAA00' }]}>CREW HUB</Text>
                       </View>
@@ -1598,18 +1598,18 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     </View>
 
                     {appSettings['global_crew_hub_locked'] ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
-                        <MaterialCommunityIcons name="lock-outline" size={16} color={Colors.textMuted} style={{ marginRight: 8 }} />
+                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: Spacing.md, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+                        <MaterialCommunityIcons name="lock-outline" size={16} color={Colors.textMuted} style={{ marginRight: Spacing.sm }} />
                         <Text style={[styles.slabEmptyText, { color: Colors.textMuted, flex: 1, fontSize: 11 }]}>FEATURE TEMPORARILY DISABLED BY ADMIN</Text>
                       </View>
                     ) : isOfflineMode ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
-                        <MaterialCommunityIcons name="cloud-off-outline" size={16} color={Colors.textMuted} style={{ marginRight: 8 }} />
+                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: Spacing.md, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+                        <MaterialCommunityIcons name="cloud-off-outline" size={16} color={Colors.textMuted} style={{ marginRight: Spacing.sm }} />
                         <Text style={[styles.slabEmptyText, { color: Colors.textMuted, flex: 1, fontSize: 11 }]}>Go online to sync lights with nearby skaters.</Text>
                       </View>
                     ) : crewSession ? (
                       <TouchableOpacity
-                        style={[styles.activeCrewPill, { paddingVertical: 24 }]}
+                        style={[styles.activeCrewPill, { paddingVertical: Spacing.xl }]}
                         onPress={() => setIsCrewModalVisible(true)}
                       >
                         <View style={[styles.statusDot, { backgroundColor: crewRole === 'leader' ? '#FFAA00' : '#00AAFF' }]} />
@@ -1619,13 +1619,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                         <MaterialCommunityIcons name="chevron-right" size={16} color={crewRole === 'leader' ? '#FFAA00' : '#00AAFF'} />
                       </TouchableOpacity>
                     ) : (
-                      <View style={{ gap: 16 }}>
+                      <View style={{ gap: Spacing.lg }}>
                         <Text style={styles.slabEmptyText}>No active sessions nearby. Launch a crew to sync lights.</Text>
                         <TouchableOpacity 
-                          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: '#FFAA00', marginTop: 8 }}
+                          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingVertical: Spacing.md, borderRadius: 8, borderWidth: 1, borderColor: '#FFAA00', marginTop: Spacing.sm }}
                           onPress={() => Alert.alert("Coming Soon", "The Interactive Skate Spot Map is currently in development!")}
                         >
-                          <MaterialCommunityIcons name="map-marker-radius" size={18} color="#FFAA00" style={{ marginRight: 8 }} />
+                          <MaterialCommunityIcons name="map-marker-radius" size={18} color="#FFAA00" style={{ marginRight: Spacing.sm }} />
                           <Text style={{ color: '#FFAA00', fontWeight: '800', letterSpacing: 1, fontSize: 13 }}>EXPLORE SKATE MAP</Text>
                         </TouchableOpacity>
                       </View>
@@ -1641,7 +1641,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                      <MaterialCommunityIcons name="lightning-bolt" size={14} color={Colors.primary} />
                   </View>
                   {customGroups.length > 0 ? (
-                    <View style={{ gap: 12 }}>
+                    <View style={{ gap: Spacing.md }}>
                       {customGroups.map((group) => {
                         const lastPattern = lastGroupPatterns[group.id];
                         const cardColors = getPatternColors(lastPattern, Colors);
@@ -1668,7 +1668,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                       })}
                     </View>
                   ) : (
-                    <View style={[styles.glassSlab, { alignItems: 'center', paddingVertical: 24 }]}>
+                    <View style={[styles.glassSlab, { alignItems: 'center', paddingVertical: Spacing.xl }]}>
                       <Text style={styles.slabEmptyText}>
                         {registeredDevices.length === 0 
                           ? "No skates detected. Time to link your hardware!" 
@@ -1677,7 +1677,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                       {registeredDevices.length === 0 && (
                         <TouchableOpacity 
                           onPress={() => setViewState('SETUP_WIZARD')}
-                          style={[styles.scanButton, { marginTop: 16, width: '70%', backgroundColor: Colors.primary }]}
+                          style={[styles.scanButton, { marginTop: Spacing.lg, width: '70%', backgroundColor: Colors.primary }]}
                         >
                           <Text style={styles.scanButtonText}>SET UP YOUR SKATES</Text>
                         </TouchableOpacity>
@@ -1695,13 +1695,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     onPress={() => setIsRegisteredCollapsed(!isRegisteredCollapsed)}
                     activeOpacity={0.7}
                   >
-                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                        <MaterialCommunityIcons name={isRegisteredCollapsed ? "chevron-down" : "chevron-up"} size={16} color={Colors.textMuted} />
                        <Text style={styles.slabTitle}>REGISTERED DEVICES</Text>
                      </View>
                      <TouchableOpacity 
                        onPress={() => setViewState('SETUP_WIZARD')}
-                       style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                       style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
                      >
                        <MaterialCommunityIcons name="plus-circle-outline" size={14} color={Colors.primary} />
                        <Text style={[styles.slabActionText, { color: Colors.primary }]}>ADD DEVICE</Text>
@@ -1712,18 +1712,18 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     registeredDevices.length > 0 ? (
                       <View style={styles.deviceListFixed}>
                         {registeredDevices.map((d: RegisteredDevice) => (
-                          <View key={d.id || d.device_mac} style={{ marginBottom: 8 }}>
+                          <View key={d.id || d.device_mac} style={{ marginBottom: Spacing.sm }}>
                             {renderItem({ item: d } as any)}
                           </View>
                         ))}
                       </View>
                     ) : (
-                      <View style={[styles.glassSlab, { alignItems: 'center', paddingVertical: 32 }]}>
-                        <MaterialCommunityIcons name="bluetooth-connect" size={32} color={Colors.textMuted} style={{ marginBottom: 12 }} />
+                      <View style={[styles.glassSlab, { alignItems: 'center', paddingVertical: Spacing.xxl }]}>
+                        <MaterialCommunityIcons name="bluetooth-connect" size={32} color={Colors.textMuted} style={{ marginBottom: Spacing.md }} />
                         <Text style={styles.slabEmptyText}>No registered skates found.</Text>
                         <TouchableOpacity 
                           onPress={() => setViewState('SETUP_WIZARD')}
-                          style={[styles.scanButton, { marginTop: 16, width: '60%' }]}
+                          style={[styles.scanButton, { marginTop: Spacing.lg, width: '60%' }]}
                         >
                           <Text style={styles.scanButtonText}>START SETUP</Text>
                         </TouchableOpacity>
@@ -1774,38 +1774,38 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           onRequestClose={() => setIsSupportModalVisible(false)}
         >
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}>
-            <View style={{ backgroundColor: Colors.surface, padding: 24, borderRadius: 16, width: '85%', borderWidth: 1, borderColor: Colors.surfaceHighlight }}>
-              <View style={{ alignItems: 'center', marginBottom: 20 }}>
+            <View style={{ backgroundColor: Colors.surface, padding: Spacing.xl, borderRadius: 16, width: '85%', borderWidth: 1, borderColor: Colors.surfaceHighlight }}>
+              <View style={{ alignItems: 'center', marginBottom: Spacing.xl }}>
                 <MaterialCommunityIcons name="lifebuoy" size={48} color={Colors.primary} />
-                <Text style={{ ...Typography.title, color: Colors.primary, marginTop: 12 }}>Support Portal</Text>
-                <Text style={{ color: Colors.textMuted, fontSize: 13, textAlign: 'center', marginTop: 8 }}>Need help configuring your hardware? Browse our official guides below.</Text>
+                <Text style={{ ...Typography.title, color: Colors.primary, marginTop: Spacing.md }}>Support Portal</Text>
+                <Text style={{ color: Colors.textMuted, fontSize: 13, textAlign: 'center', marginTop: Spacing.sm }}>Need help configuring your hardware? Browse our official guides below.</Text>
               </View>
                <TouchableOpacity
-                style={[styles.groupButton, { backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: Colors.primary, borderWidth: 1, marginBottom: 16, paddingVertical: 12 }]}
+                style={[styles.groupButton, { backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: Colors.primary, borderWidth: 1, marginBottom: Spacing.lg, paddingVertical: Spacing.md }]}
                 onPress={() => Linking.openURL('https://neogleamz.com/pages/getting-started')}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialCommunityIcons name="book-open-page-variant" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
+                  <MaterialCommunityIcons name="book-open-page-variant" size={20} color={Colors.primary} style={{ marginRight: Spacing.sm }} />
                   <Text style={[styles.groupButtonText, { color: Colors.primary, fontSize: 14 }]}>Installation Guides</Text>
                 </View>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.groupButton, { backgroundColor: 'rgba(255, 170, 0, 0.1)', borderColor: '#FFAA00', borderWidth: 1, marginBottom: 16, paddingVertical: 12 }]}
+                style={[styles.groupButton, { backgroundColor: 'rgba(255, 170, 0, 0.1)', borderColor: '#FFAA00', borderWidth: 1, marginBottom: Spacing.lg, paddingVertical: Spacing.md }]}
                 onPress={() => Linking.openURL('https://neogleamz.com')}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialCommunityIcons name="cart" size={20} color="#FFAA00" style={{ marginRight: 8 }} />
+                  <MaterialCommunityIcons name="cart" size={20} color="#FFAA00" style={{ marginRight: Spacing.sm }} />
                   <Text style={[styles.groupButtonText, { color: '#FFAA00', fontSize: 14 }]}>Visit Store</Text>
                 </View>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.groupButton, { backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: Colors.secondary, borderWidth: 1, marginBottom: 16, paddingVertical: 12 }]}
+                style={[styles.groupButton, { backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: Colors.secondary, borderWidth: 1, marginBottom: Spacing.lg, paddingVertical: Spacing.md }]}
                 onPress={() => Linking.openURL('https://neogleamz.com/pages/contact')}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialCommunityIcons name="email-fast" size={20} color={Colors.secondary} style={{ marginRight: 8 }} />
+                  <MaterialCommunityIcons name="email-fast" size={20} color={Colors.secondary} style={{ marginRight: Spacing.sm }} />
                   <Text style={[styles.groupButtonText, { color: Colors.secondary, fontSize: 14 }]}>Contact Support</Text>
                 </View>
               </TouchableOpacity>
@@ -1813,7 +1813,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
 
               <TouchableOpacity
-                style={{ paddingVertical: 12, alignItems: 'center' }}
+                style={{ paddingVertical: Spacing.md, alignItems: 'center' }}
                 onPress={() => setIsSupportModalVisible(false)}
               >
                 <Text style={{ color: Colors.textMuted, fontWeight: 'bold' }}>CLOSE</Text>
@@ -2025,7 +2025,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Layout.borderRadius,
-    padding: 16,
+    padding: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.surfaceHighlight,
     shadowColor: Colors.primary,
@@ -2035,9 +2035,9 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     elevation: 10,
   },
   scanButton: {
-    marginTop: 24,
+    marginTop: Spacing.xl,
     backgroundColor: Colors.primary,
-    paddingVertical: 14,
+    paddingVertical: Spacing.lg,
     borderRadius: Layout.borderRadius,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2054,13 +2054,13 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     letterSpacing: 1,
   },
   emptyStateContainer: {
-    marginTop: 40,
+    marginTop: Spacing.xxxl,
     alignItems: 'center',
   },
   disconnectButtonSmall: {
     backgroundColor: Colors.surfaceHighlight,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.error + '44',
@@ -2072,7 +2072,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   },
   groupButton: {
     backgroundColor: Colors.secondary,
-    paddingVertical: 14,
+    paddingVertical: Spacing.lg,
     borderRadius: Layout.borderRadius,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2109,8 +2109,8 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     fontWeight: '900',
   },
   errorContainer: {
-    marginTop: 16,
-    padding: 12,
+    marginTop: Spacing.lg,
+    padding: Spacing.md,
     backgroundColor: 'rgba(255, 61, 0, 0.1)',
     borderRadius: 8,
     borderWidth: 1,
@@ -2118,21 +2118,21 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   },
   /* ──── 4-SLAB DASHBOARD STYLES ──── */
   headerSlab: {
-    paddingBottom: 4,
+    paddingBottom: Spacing.xs,
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,240,255,0.1)',
   },
   slabContainer: {
     paddingHorizontal: Layout.padding,
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
   },
   slabHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 4,
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.xs,
   },
   slabTitle: {
     fontSize: 13,
@@ -2142,8 +2142,8 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     fontFamily: 'Righteous',
   },
   slabAction: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
     borderRadius: 4,
     backgroundColor: 'rgba(255,170,0,0.1)',
     borderWidth: 1,
@@ -2160,7 +2160,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    padding: 16,
+    padding: Spacing.lg,
   },
   slabEmptyText: {
     fontSize: 12,
@@ -2173,8 +2173,8 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 12,
-    padding: 12,
-    gap: 10,
+    padding: Spacing.md,
+    gap: Spacing.md,
   },
   statusDot: {
     width: 8,
@@ -2191,7 +2191,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     letterSpacing: 0.5,
   },
   skateCardWrapper: {
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
     borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -2201,12 +2201,12 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   },
   skateCardGradient: {
     borderRadius: 20,
-    padding: 2, // Border thickness
+    padding: Spacing.xxs, // Border thickness
   },
   skateCardInner: {
     backgroundColor: Colors.isDark ? 'rgba(35, 42, 55, 0.85)' : 'rgba(255, 255, 255, 0.95)',
     borderRadius: 18,
-    padding: 16,
+    padding: Spacing.lg,
     overflow: 'hidden',
   },
   skateCardRefraction: {
@@ -2222,12 +2222,12 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   avatarPill: {
     backgroundColor: 'rgba(255,255,255,0.05)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
     borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -2243,31 +2243,31 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     height: 6,
     borderRadius: 3,
     backgroundColor: Colors.success,
-    marginLeft: 6,
+    marginLeft: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.background,
   },
   telemetryContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
   },
   telemetryItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: Spacing.xs,
   },
   rssiBars: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 2,
+    gap: Spacing.xxs,
   },
   rssiBar: {
     width: 3,
     borderRadius: 1,
   },
   skateCardContent: {
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   skateCardGroupName: {
     fontSize: 22,
@@ -2279,18 +2279,18 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   patternPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: Spacing.xs,
     backgroundColor: 'rgba(255,255,255,0.03)',
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xxs,
     borderRadius: 10,
   },
   patternDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    marginRight: 6,
+    marginRight: Spacing.sm,
   },
   patternName: {
     fontSize: 10,
@@ -2305,7 +2305,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.05)',
-    paddingTop: 12,
+    paddingTop: Spacing.md,
   },
   deviceCountText: {
     fontSize: 10,
@@ -2323,7 +2323,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   deviceListFixed: {
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderRadius: 16,
-    padding: 8,
+    padding: Spacing.sm,
   }
 });
 

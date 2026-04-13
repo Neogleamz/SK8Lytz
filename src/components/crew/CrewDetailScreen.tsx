@@ -1,3 +1,4 @@
+import { Spacing } from '../../theme/theme';
 import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert, Share, TextInput, Image, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -128,7 +129,7 @@ export function CrewDetailScreen() {
     if (!crew) return null;
     const info = crewMemberCounts[crew.id];
     return (
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ padding: Spacing.xl, paddingBottom: Spacing.giant }} showsVerticalScrollIndicator={false}>
         <TouchableOpacity
           onPress={() => { setSelectedCrewDetail(null); setEditingCrewId(null); setStep('landing'); }}
           style={styles.backBtn}
@@ -140,7 +141,7 @@ export function CrewDetailScreen() {
         {/* Crew avatar */}
         {editingCrewId !== crew.id && (
           <>
-            <View style={{ alignItems: 'center', marginVertical: 16 }}>
+            <View style={{ alignItems: 'center', marginVertical: Spacing.lg }}>
           <View style={{ position: 'relative' }}>
             {crew.avatar_url
               ? <Image source={{ uri: crew.avatar_url }} style={[styles.mgAvatarImg, { width: 72, height: 72, borderRadius: 36 }]} />
@@ -148,17 +149,17 @@ export function CrewDetailScreen() {
                 <MaterialCommunityIcons name={(crew.avatar_icon ?? 'account-group') as any} size={32} color="#000" />
               </View>}
             {!crew.is_public && (
-              <MaterialCommunityIcons name="lock" size={18} color="#FFF" style={{ position: 'absolute', top: -2, right: -2, backgroundColor: '#000', borderRadius: 10, padding: 2, overflow: 'hidden', borderWidth: 2, borderColor: '#1C1C1E' }} />
+              <MaterialCommunityIcons name="lock" size={18} color="#FFF" style={{ position: 'absolute', top: -2, right: -2, backgroundColor: '#000', borderRadius: 10, padding: Spacing.xxs, overflow: 'hidden', borderWidth: 2, borderColor: '#1C1C1E' }} />
             )}
           </View>
-          <Text style={[styles.titleLarge, { marginTop: 10, marginBottom: 2 }]}>{crew.name}</Text>
+          <Text style={[styles.titleLarge, { marginTop: Spacing.md, marginBottom: Spacing.xxs }]}>{crew.name}</Text>
           {(crew.city || crew.state) && (
             <Text style={styles.mgCrewSub}>
               <MaterialCommunityIcons name="map-marker" size={12} color={Colors.textMuted} />
               {' '}{[crew.city, crew.state].filter(Boolean).join(', ')}
             </Text>
           )}
-          {crew.description && <Text style={[styles.mgHint, { textAlign: 'center', marginTop: 8 }]}>{crew.description}</Text>}
+          {crew.description && <Text style={[styles.mgHint, { textAlign: 'center', marginTop: Spacing.sm }]}>{crew.description}</Text>}
         </View>
 
         {/* Members */}
@@ -169,7 +170,7 @@ export function CrewDetailScreen() {
               {(info?.avatarColors ?? []).slice(0, 8).map((c, i) => (
                 <View key={i} style={[styles.mgMemberDot, { width: 32, height: 32, borderRadius: 16, backgroundColor: c, marginLeft: i > 0 ? -10 : 0, borderWidth: 2, borderColor: '#111' }]} />
               ))}
-              <Text style={[styles.mgMemberCount, { marginLeft: 8 }]}>{info?.count ?? '?'} member{(info?.count ?? 0) !== 1 ? 's' : ''}</Text>
+              <Text style={[styles.mgMemberCount, { marginLeft: Spacing.sm }]}>{info?.count ?? '?'} member{(info?.count ?? 0) !== 1 ? 's' : ''}</Text>
             </View>
           </>
         )}
@@ -222,7 +223,7 @@ export function CrewDetailScreen() {
         </TouchableOpacity>
 
         {/* Status */}
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+        <View style={{ flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.lg }}>
           {crew.is_owner && <View style={styles.mgOwnerBadge}><Text style={styles.mgBadgeText}>👑 Owner</Text></View>}
           {crew.is_public
             ? <View style={[styles.mgOwnerBadge, { backgroundColor: 'rgba(0,200,100,0.15)' }]}><Text style={[styles.mgBadgeText, { color: '#00C864' }]}>🌍 Public</Text></View>
@@ -230,7 +231,7 @@ export function CrewDetailScreen() {
         </View>
 
         {/* Actions */}
-        <View style={{ marginTop: 24, gap: 12 }}>
+        <View style={{ marginTop: Spacing.xl, gap: Spacing.md }}>
           {crew.is_owner && editingCrewId !== crew.id && (
             <TouchableOpacity style={styles.editBtn} onPress={() => handleStartEdit(crew)}>
               <MaterialCommunityIcons name="pencil" size={17} color={Colors.primary} />
@@ -243,8 +244,8 @@ export function CrewDetailScreen() {
 
         {/* Inline edit form */}
         {crew.is_owner && editingCrewId === crew.id && (
-          <View style={{ gap: 10, marginTop: 12 }}>
-            <Text style={[styles.titleLarge, { marginBottom: 12 }]}>Edit Crew Settings</Text>
+          <View style={{ gap: Spacing.md, marginTop: Spacing.md }}>
+            <Text style={[styles.titleLarge, { marginBottom: Spacing.md }]}>Edit Crew Settings</Text>
             <Text style={styles.label}>CREW NAME</Text>
             <TextInput style={styles.input} value={editCrewName} onChangeText={setEditCrewName}
               placeholder="Crew name" placeholderTextColor={Colors.textMuted} maxLength={40} />
@@ -255,7 +256,7 @@ export function CrewDetailScreen() {
                 placeholder="What's this crew about?" placeholderTextColor={Colors.textMuted} maxLength={120} />
 
               <Text style={styles.label}>LOCATION</Text>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
                 <TextInput style={[styles.input, { flex: 2 }]} value={editCrewCity} onChangeText={setEditCrewCity}
                   placeholder="City" placeholderTextColor={Colors.textMuted} />
                 <TextInput style={[styles.input, { flex: 1 }]} value={editCrewState} onChangeText={setEditCrewState}
@@ -277,19 +278,19 @@ export function CrewDetailScreen() {
               </View>
 
               {/* Edit Current Members List */}
-              <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)', paddingTop: 16 }}>
+              <View style={{ marginTop: Spacing.md, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)', paddingTop: Spacing.lg }}>
                 <Text style={styles.label}>MANAGE MEMBERS</Text>
                 {loadingCardMembersFor === crew.id ? (
-                  <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 10 }} />
+                  <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: Spacing.md }} />
                 ) : (cardMembers[crew.id] ?? []).length === 0 ? (
-                  <Text style={[styles.mgHint, { marginBottom: 12 }]}>No members loaded.</Text>
+                  <Text style={[styles.mgHint, { marginBottom: Spacing.md }]}>No members loaded.</Text>
                 ) : (
                   (cardMembers[crew.id] ?? []).map(member => {
                     const memberIsOwner = member.role === 'owner';
                     const isMakingThisOwner = makingOwnerFor === member.user_id;
                     const isRemovingThis = isRemovingUserFor === member.user_id;
                     return (
-                      <View key={member.user_id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' }}>
+                      <View key={member.user_id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, gap: Spacing.md, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' }}>
                         <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: member.avatar_color, alignItems: 'center', justifyContent: 'center' }}>
                           <Text style={{ color: '#000', fontWeight: '800', fontSize: 13 }}>{(member.display_name?.[0] ?? '?').toUpperCase()}</Text>
                         </View>
@@ -304,7 +305,7 @@ export function CrewDetailScreen() {
                         </View>
                         {/* Owner actions */}
                         {crew.is_owner && member.user_id !== currentUserId && (
-                          <View style={{ flexDirection: 'row', gap: 6 }}>
+                          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
                             {/* Make/Revoke Owner */}
                             <TouchableOpacity
                               disabled={isMakingThisOwner}
@@ -321,7 +322,7 @@ export function CrewDetailScreen() {
                                   setMakingOwnerFor(null);
                                 }
                               }}
-                              style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: memberIsOwner ? 'rgba(255,68,68,0.12)' : 'rgba(255,208,0,0.12)', borderWidth: 1, borderColor: memberIsOwner ? 'rgba(255,68,68,0.3)' : 'rgba(255,208,0,0.3)' }}
+                              style={{ paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: 8, backgroundColor: memberIsOwner ? 'rgba(255,68,68,0.12)' : 'rgba(255,208,0,0.12)', borderWidth: 1, borderColor: memberIsOwner ? 'rgba(255,68,68,0.3)' : 'rgba(255,208,0,0.3)' }}
                             >
                               {isMakingThisOwner ? <ActivityIndicator size="small" color={memberIsOwner ? '#FF4444' : '#FFD700'} /> : <Text style={{ fontSize: 11, fontWeight: '800', color: memberIsOwner ? '#FF4444' : '#FFD700' }}>{memberIsOwner ? 'Revoke' : '+ Owner'}</Text>}
                             </TouchableOpacity>
@@ -353,7 +354,7 @@ export function CrewDetailScreen() {
                                   }
                                 ]);
                               }}
-                              style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: 'rgba(255,68,68,0.12)', borderWidth: 1, borderColor: 'rgba(255,68,68,0.3)' }}
+                              style={{ paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: 8, backgroundColor: 'rgba(255,68,68,0.12)', borderWidth: 1, borderColor: 'rgba(255,68,68,0.3)' }}
                             >
                               {isRemovingThis ? <ActivityIndicator size="small" color="#FF4444" /> : <MaterialCommunityIcons name="account-remove" size={14} color="#FF4444" />}
                             </TouchableOpacity>
@@ -366,12 +367,12 @@ export function CrewDetailScreen() {
               </View>
 
               {/* Add Members Section */}
-              <View style={{ marginTop: 12 }}>
+              <View style={{ marginTop: Spacing.md }}>
                 <Text style={styles.label}>ADD NEW SKATERS</Text>
-                <View style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginBottom: 8 }}>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: selectedMembers.length > 0 ? 8 : 0 }}>
+                <View style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: Spacing.md, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginBottom: Spacing.sm }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: selectedMembers.length > 0 ? 8 : 0 }}>
                     {selectedMembers.map(member => (
-                      <View key={member.user_id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primary || '#FFAA00', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 4, gap: 4 }}>
+                      <View key={member.user_id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primary || '#FFAA00', borderRadius: 16, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, gap: Spacing.xs }}>
                         <Text style={{ fontSize: 12, fontWeight: '700', color: '#000' }}>@{member.username || member.display_name}</Text>
                         <TouchableOpacity onPress={() => setSelectedMembers(prev => prev.filter(m => m.user_id !== member.user_id))}>
                           <MaterialCommunityIcons name="close-circle" size={16} color="rgba(0,0,0,0.6)" />
@@ -379,9 +380,9 @@ export function CrewDetailScreen() {
                       </View>
                     ))}
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
                     <MaterialCommunityIcons name="magnify" size={18} color={Colors.textMuted} />
-                    <TextInput style={{ flex: 1, color: '#fff', fontSize: 13, marginLeft: 8 }} value={userSearchQuery} onChangeText={setUserSearchQuery} placeholder="Search exact username..." placeholderTextColor={Colors.textMuted} autoCapitalize="none" autoCorrect={false} />
+                    <TextInput style={{ flex: 1, color: '#fff', fontSize: 13, marginLeft: Spacing.sm }} value={userSearchQuery} onChangeText={setUserSearchQuery} placeholder="Search exact username..." placeholderTextColor={Colors.textMuted} autoCapitalize="none" autoCorrect={false} />
                     {userSearchQuery.length > 0 && (
                       <TouchableOpacity onPress={() => setUserSearchQuery('')}>
                         <MaterialCommunityIcons name="close-circle" size={16} color={Colors.textMuted} />
@@ -389,12 +390,12 @@ export function CrewDetailScreen() {
                     )}
                   </View>
                   {userSearchResults.length > 0 && userSearchQuery.trim().length > 0 && (
-                    <View style={{ marginTop: 8, gap: 4 }}>
+                    <View style={{ marginTop: Spacing.sm, gap: Spacing.xs }}>
                       {userSearchResults.map(u =>
                         !cardMembers[crew.id]?.some(mem => mem.user_id === u.user_id) &&
                         !selectedMembers.some(sm => sm.user_id === u.user_id) && (
-                          <TouchableOpacity key={u.user_id} onPress={() => { setSelectedMembers(prev => [...prev, u]); setUserSearchQuery(''); }} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', padding: 8, borderRadius: 8 }}>
-                            <MaterialCommunityIcons name="account" size={16} color={Colors.textMuted} style={{ marginRight: 6 }} />
+                          <TouchableOpacity key={u.user_id} onPress={() => { setSelectedMembers(prev => [...prev, u]); setUserSearchQuery(''); }} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', padding: Spacing.sm, borderRadius: 8 }}>
+                            <MaterialCommunityIcons name="account" size={16} color={Colors.textMuted} style={{ marginRight: Spacing.sm }} />
                             <Text style={{ color: '#FFF', fontSize: 13, flex: 1 }}>{u.display_name} <Text style={{ color: Colors.textMuted }}>@{u.username}</Text></Text>
                             <MaterialCommunityIcons name="plus" size={18} color={Colors.primary} />
                           </TouchableOpacity>
@@ -403,7 +404,7 @@ export function CrewDetailScreen() {
                   )}
                   {selectedMembers.length > 0 && (
                     <TouchableOpacity
-                      style={[styles.primaryBtn, { marginTop: 12 }]}
+                      style={[styles.primaryBtn, { marginTop: Spacing.md }]}
                       onPress={() => handleAddMembersToCrew(crew.id)}
                       disabled={isAddingMembersTo === crew.id}
                     >
@@ -414,7 +415,7 @@ export function CrewDetailScreen() {
                 </View>
               </View>
 
-              <View style={{ flexDirection: 'row', gap: 10, marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)' }}>
+              <View style={{ flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.lg, paddingTop: Spacing.lg, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)' }}>
                 <TouchableOpacity style={[styles.primaryBtn, { flex: 1, marginTop: 0 }]} onPress={() => handleSaveCrew(crew)} disabled={isSavingCrew}>
                   {isSavingCrew ? <ActivityIndicator size="small" color="#000" /> : <MaterialCommunityIcons name="check" size={17} color="#000" />}
                   <Text style={styles.primaryBtnText}>Save Changes</Text>
@@ -428,7 +429,7 @@ export function CrewDetailScreen() {
 
           {crew.is_owner
             ? confirmingDeleteCrewId === crew.id ? (
-              <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flexDirection: 'row', gap: Spacing.md }}>
                 <TouchableOpacity style={[styles.dangerBtn, { flex: 1, backgroundColor: 'rgba(255,68,68,0.3)' }]} onPress={() => executeDeleteCrew(crew)}>
                   <MaterialCommunityIcons name="check" size={17} color="#FFF" />
                   <Text style={[styles.dangerBtnText, { color: '#FFF' }]}>Confirm Delete</Text>
@@ -444,7 +445,7 @@ export function CrewDetailScreen() {
               </TouchableOpacity>
             )
             : confirmingLeaveCrewId === crew.id ? (
-              <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flexDirection: 'row', gap: Spacing.md }}>
                 <TouchableOpacity style={[styles.dangerBtn, { flex: 1, backgroundColor: 'rgba(255,107,0,0.3)' }]} onPress={() => executeLeaveCrew(crew)}>
                   <MaterialCommunityIcons name="check" size={17} color="#FFF" />
                   <Text style={[styles.dangerBtnText, { color: '#FFF' }]}>Confirm Leave</Text>

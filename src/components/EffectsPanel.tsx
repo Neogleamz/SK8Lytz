@@ -1,3 +1,4 @@
+import { Spacing } from '../theme/theme';
 /**
  * EffectsPanel.tsx — SK8Lytz Pro Effects Panel
  *
@@ -88,7 +89,7 @@ const EffectCard: React.FC<EffectCardProps> = React.memo(({
   }, [isSelected, pulseAnim]);
 
   return (
-    <Animated.View style={{ transform: [{ scale: pulseAnim }], width: '48%', marginBottom: 8 }}>
+    <Animated.View style={{ transform: [{ scale: pulseAnim }], width: '48%', marginBottom: Spacing.sm }}>
       <TouchableOpacity
         id={`fx-card-${effect.id}`}
         activeOpacity={0.75}
@@ -110,7 +111,7 @@ const EffectCard: React.FC<EffectCardProps> = React.memo(({
           <View style={[styles.idBadge, isSelected && { backgroundColor: '#00F0FF' }]}>
             <Text style={[styles.idText, isSelected && { color: '#000' }]}>{effect.id}</Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 3 }}>
+          <View style={{ flexDirection: 'row', gap: Spacing.xxs }}>
             {effect.requiresForeground && (
               <View style={[styles.capDot, { backgroundColor: fgColor, borderColor: 'rgba(255,255,255,0.3)' }]} />
             )}
@@ -172,12 +173,12 @@ const HUE_SWATCHES = [
 ];
 
 const ColorSwatchRow: React.FC<HueBarProps> = ({ label, hue, color, onHueChange, Colors }) => (
-  <View style={{ marginBottom: 8 }}>
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
-      <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: color, marginRight: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }} />
+  <View style={{ marginBottom: Spacing.sm }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.xs }}>
+      <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: color, marginRight: Spacing.sm, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }} />
       <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' }}>{label}</Text>
     </View>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: Spacing.sm, paddingVertical: Spacing.xxs }}>
       {HUE_SWATCHES.map((s) => {
         const isSelected = (s.h === -1 && color === '#FFFFFF') || (s.h === -2 && color === '#000000') || (s.h >= 0 && Math.abs(hue - s.h) < 20);
         return (
@@ -300,10 +301,10 @@ const EffectsPanel: React.FC<EffectsPanelProps> = ({
     <View style={{ flex: 1 }}>
       {/* ── Color controls (conditional per effect capability) ────── */}
       {selectedEffect && (selectedEffect.requiresForeground || selectedEffect.requiresBackground) && (
-        <View style={{ paddingHorizontal: 4, paddingBottom: 4 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <View style={{ paddingHorizontal: Spacing.xs, paddingBottom: Spacing.xs }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm }}>
             <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: '800', letterSpacing: 1.5 }}>COLOR SETTINGS</Text>
-            <TouchableOpacity onPress={() => setShowColors(!showColors)} style={{ paddingHorizontal: 12, paddingVertical: 4, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12 }}>
+            <TouchableOpacity onPress={() => setShowColors(!showColors)} style={{ paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12 }}>
               <Text style={{ color: Colors.primary, fontSize: 10, fontWeight: '800' }}>{showColors ? 'HIDE' : 'SHOW'}</Text>
             </TouchableOpacity>
           </View>
@@ -339,8 +340,8 @@ const EffectsPanel: React.FC<EffectsPanelProps> = ({
           flexDirection: 'row',
           flexWrap: 'wrap',
           justifyContent: 'space-between',
-          paddingHorizontal: 4,
-          paddingBottom: 12,
+          paddingHorizontal: Spacing.xs,
+          paddingBottom: Spacing.md,
         }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -371,19 +372,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.08)',
-    padding: 8,
+    padding: Spacing.sm,
     overflow: 'hidden',
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
   idBadge: {
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 6,
-    paddingHorizontal: 5,
+    paddingHorizontal: Spacing.xs,
     paddingVertical: 1,
     minWidth: 22,
     alignItems: 'center',
@@ -404,7 +405,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     lineHeight: 13,
-    marginBottom: 5,
+    marginBottom: Spacing.xs,
     minHeight: 26,
   },
   stripWrapper: {

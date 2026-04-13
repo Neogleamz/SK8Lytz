@@ -1,3 +1,4 @@
+import { Spacing } from '../theme/theme';
 /**
  * SessionSummaryModal.tsx — SK8Lytz Post-Session Debrief
  *
@@ -82,13 +83,13 @@ const tileStyles = StyleSheet.create({
   container: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 16, padding: 12, margin: 4, minHeight: 88,
+    borderRadius: 16, padding: Spacing.md, margin: Spacing.xs, minHeight: 88,
   },
-  valueRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, marginTop: 4 },
+  valueRow: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.xxs, marginTop: Spacing.xs },
   value:    { color: '#FFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 },
-  unit:     { fontSize: 11, fontWeight: '700', marginBottom: 3 },
+  unit:     { fontSize: 11, fontWeight: '700', marginBottom: Spacing.xxs },
   label:    { color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '600',
-              letterSpacing: 0.8, marginTop: 4, textAlign: 'center' },
+              letterSpacing: 0.8, marginTop: Spacing.xs, textAlign: 'center' },
 });
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -193,43 +194,43 @@ export default function SessionSummaryModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.85)',
-    justifyContent: 'center', alignItems: 'center', padding: 20,
+    justifyContent: 'center', alignItems: 'center', padding: Spacing.xl,
   },
   card: {
     width: '100%', maxWidth: 400,
     backgroundColor: '#111',
     borderRadius: 24, borderWidth: 1.5,
-    padding: 24,
+    padding: Spacing.xl,
     shadowColor: '#000', shadowOpacity: 0.8, shadowRadius: 30, elevation: 20,
   },
   headerRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 12,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.md, marginBottom: Spacing.md,
   },
   title: {
     color: '#FFF', fontSize: 22, fontWeight: '900', letterSpacing: 0.5,
   },
   durationPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    alignSelf: 'center', paddingHorizontal: 16, paddingVertical: 6,
-    borderRadius: 999, marginBottom: 16,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    alignSelf: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
+    borderRadius: 999, marginBottom: Spacing.lg,
   },
   durationText: { fontSize: 15, fontWeight: '800', letterSpacing: 1 },
   grid:   { flexDirection: 'row', marginBottom: 0 },
   calorieRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    marginTop: 16, marginBottom: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    marginTop: Spacing.lg, marginBottom: Spacing.sm,
   },
   calorieText: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '600' },
-  ctaRow: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  ctaRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xl },
   discardBtn: {
-    flex: 1, paddingVertical: 14, borderRadius: 14,
+    flex: 1, paddingVertical: Spacing.lg, borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.07)',
     alignItems: 'center', justifyContent: 'center',
   },
   discardText: { color: 'rgba(255,255,255,0.5)', fontSize: 15, fontWeight: '700' },
   saveBtn: {
-    flex: 2, paddingVertical: 14, borderRadius: 14,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    flex: 2, paddingVertical: Spacing.lg, borderRadius: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
   },
   saveText: { color: '#000', fontSize: 15, fontWeight: '900' },
 });

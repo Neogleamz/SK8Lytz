@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useTheme } from '../context/ThemeContext';
 import { LocationPickerMap, LocationMarker } from './LocationPickerMap';
+import { Spacing } from '../theme/theme';
 
 interface LocationPickerProps {
   locationLabel: string;
@@ -115,7 +116,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         <View style={styles.suggestionsContainer}>
           {suggestions.map((item, idx) => (
             <TouchableOpacity key={item.place_id || idx} style={styles.suggestionItem} onPress={() => selectSuggestion(item)}>
-              <MaterialCommunityIcons name="map-marker-outline" size={16} color={Colors.textMuted} style={{ marginRight: 8 }} />
+              <MaterialCommunityIcons name="map-marker-outline" size={16} color={Colors.textMuted} style={{ marginRight: Spacing.sm }} />
               <Text style={styles.suggestionText} numberOfLines={2}>
                 {item.display_name}
               </Text>
@@ -162,27 +163,27 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
 
 const createStyles = (Colors: any) => StyleSheet.create({
   container: {
-    marginBottom: 20,
+    marginBottom: Spacing.xl,
     width: '100%',
   },
   label: {
     color: '#8A8A8E',
     fontSize: 10,
     fontWeight: '800',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
     letterSpacing: 1.2,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
   },
   input: {
     flex: 1,
     height: 48,
     backgroundColor: '#1C1C1E',
     borderRadius: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
     color: '#FFF',
     fontSize: 15,
     borderWidth: 1,
@@ -199,7 +200,7 @@ const createStyles = (Colors: any) => StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
   },
   suggestionsContainer: {
-    marginTop: 8,
+    marginTop: Spacing.sm,
     backgroundColor: '#1C1C1E',
     borderRadius: 12,
     borderColor: '#2C2C2E',
@@ -209,8 +210,8 @@ const createStyles = (Colors: any) => StyleSheet.create({
   suggestionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: '#2C2C2E',
   },
@@ -220,7 +221,7 @@ const createStyles = (Colors: any) => StyleSheet.create({
     flex: 1,
   },
   mapContainer: {
-    marginTop: 12,
+    marginTop: Spacing.md,
     height: 120,
     borderRadius: 12,
     overflow: 'hidden',
@@ -236,8 +237,8 @@ const createStyles = (Colors: any) => StyleSheet.create({
     bottom: 8,
     left: 8,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
     borderRadius: 8,
   },
   mapOverlayText: {

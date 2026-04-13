@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
+import { Spacing } from '../theme/theme';
 
 const BARS_COUNT = 30;
 const BAR_MIN_H = 6;   // Minimum visible height even at silence
@@ -98,8 +99,8 @@ export default function SpectrumVisualizer({ magnitude }: { magnitude?: number }
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
     backgroundColor: 'rgba(0,0,0,0.4)',
     borderRadius: 12,
     alignItems: 'center',
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
     height: BAR_MAX_H,
     width: '100%',
     justifyContent: 'center',
-    gap: 2,
+    gap: Spacing.xxs,
   },
   barContainer: {
     width: BAR_WIDTH,

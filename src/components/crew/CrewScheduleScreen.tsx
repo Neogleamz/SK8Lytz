@@ -1,3 +1,4 @@
+import { Spacing } from '../../theme/theme';
 import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert, Share, TextInput, Image, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -77,7 +78,7 @@ export function CrewScheduleScreen() {
       </TouchableOpacity>
 
       <Text style={styles.titleLarge}>Schedule a Session</Text>
-      <Text style={[styles.subtitle, { marginBottom: 16 }]}>
+      <Text style={[styles.subtitle, { marginBottom: Spacing.lg }]}>
         Your crew gets a push notification immediately and a 15-min reminder.
       </Text>
 
@@ -92,9 +93,9 @@ export function CrewScheduleScreen() {
               onPress={() => { setSelectedCrewId(crew.id); setCrewName(''); }}>
               <View style={{ position: 'relative' }}>
                 {crew.avatar_url ? (
-                  <Image source={{ uri: crew.avatar_url }} style={{ width: 16, height: 16, borderRadius: 8, marginRight: 2 }} />
+                  <Image source={{ uri: crew.avatar_url }} style={{ width: 16, height: 16, borderRadius: 8, marginRight: Spacing.xxs }} />
                 ) : (
-                  <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: crew.avatar_color || '#FFAA00', alignItems: 'center', justifyContent: 'center', marginRight: 2 }}>
+                  <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: crew.avatar_color || '#FFAA00', alignItems: 'center', justifyContent: 'center', marginRight: Spacing.xxs }}>
                     <MaterialCommunityIcons name={(crew.avatar_icon as any) || 'account-group'} size={10} color="#000" />
                   </View>
                 )}
@@ -113,7 +114,7 @@ export function CrewScheduleScreen() {
       <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName}
         placeholder="Display name" placeholderTextColor={Colors.textMuted} maxLength={24} />
 
-      <Text style={[styles.label, { marginTop: 16 }]}>DATE &amp; TIME</Text>
+      <Text style={[styles.label, { marginTop: Spacing.lg }]}>DATE &amp; TIME</Text>
       <TouchableOpacity style={styles.datePickerBtn} onPress={() => setShowDatePicker(true)}>
         <MaterialCommunityIcons name="calendar" size={18} color={Colors.primary} />
         <Text style={styles.datePickerBtnText}>

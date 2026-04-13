@@ -1,3 +1,4 @@
+import { Spacing } from '../../theme/theme';
 import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert, Share, TextInput, Image, RefreshControl, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -144,7 +145,7 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
     };
 
     return (
-      <ScrollView contentContainerStyle={[styles.body, { paddingTop: 4 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.body, { paddingTop: Spacing.xs }]} showsVerticalScrollIndicator={false}>
         {/* ── Header ── */}
         <View style={[styles.hubHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
           <View>
@@ -152,19 +153,19 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
             <Text style={styles.hubSub}>Skate together · sync your light show</Text>
           </View>
           {onClose && (
-            <TouchableOpacity onPress={onClose} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20 }}>
+            <TouchableOpacity onPress={onClose} style={{ padding: Spacing.sm, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20 }}>
               <MaterialCommunityIcons name="close" size={20} color={Colors.textMuted} />
             </TouchableOpacity>
           )}
         </View>
 
         {/* ── MY CREWS ── */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, marginTop: 4, width: '100%' }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm, marginTop: Spacing.xs, width: '100%' }}>
           <Text style={[styles.hubSectionLabel, { marginBottom: 0, marginTop: 0 }]}>MY CREWS</Text>
           {myCrews.length > 0 && (
-            <TouchableOpacity onPress={() => setStep('manage')} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+            <TouchableOpacity onPress={() => setStep('manage')} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: 12 }}>
               <MaterialCommunityIcons name="plus" size={14} color={Colors.primary} />
-              <Text style={{ color: Colors.primary, fontSize: 11, fontWeight: '700', marginLeft: 4 }}>New Crew</Text>
+              <Text style={{ color: Colors.primary, fontSize: 11, fontWeight: '700', marginLeft: Spacing.xs }}>New Crew</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -174,7 +175,7 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
             <MaterialCommunityIcons name="account-group-outline" size={32} color={Colors.textMuted} />
             <Text style={styles.hubEmptyText}>You haven't joined any crews yet</Text>
             <TouchableOpacity
-              style={[styles.hubActionChip, { marginTop: 10 }]}
+              style={[styles.hubActionChip, { marginTop: Spacing.md }]}
               onPress={() => setStep('manage')}
             >
               <MaterialCommunityIcons name="plus" size={14} color={Colors.primary} />
@@ -202,8 +203,8 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
                       <MaterialCommunityIcons name="lock" size={12} color="#FFF" style={{ position: 'absolute', top: -3, right: -3, backgroundColor: '#000', borderRadius: 6, overflow: 'hidden' }} />
                     )}
                   </View>
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ flex: 1, marginLeft: Spacing.md }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                       <Text style={styles.hubCrewName} numberOfLines={1}>{crew.name}</Text>
                       {isOwner && (
                         <View style={styles.hubOwnerBadge}>
@@ -213,15 +214,15 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
                     </View>
 
                     {/* Row 2: Member count + Public/Private badge */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.xxs, flexWrap: 'wrap' }}>
                       <Text style={styles.hubCrewMeta}>
                         {memberInfo ? `${memberInfo.count} member${memberInfo.count !== 1 ? 's' : ''}` : 'Loading...'}
                         {crew.city ? ` · ${crew.city}` : ''}
                       </Text>
                       <View style={{
-                        flexDirection: 'row', alignItems: 'center', gap: 3,
+                        flexDirection: 'row', alignItems: 'center', gap: Spacing.xxs,
                         backgroundColor: crew.is_public ? 'rgba(0,200,100,0.12)' : 'rgba(255,255,255,0.07)',
-                        paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8,
+                        paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xxs, borderRadius: 8,
                       }}>
                         <MaterialCommunityIcons
                           name={crew.is_public ? 'earth' : 'lock'}
@@ -252,9 +253,9 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
                       <TouchableOpacity
                         onPress={() => Clipboard.setStringAsync(crew.invite_code)}
                         style={{
-                          flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5,
+                          flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.xs,
                           backgroundColor: 'rgba(255,255,255,0.05)',
-                          paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+                          paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, borderRadius: 8,
                           borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
                           alignSelf: 'flex-start',
                         }}
@@ -312,7 +313,7 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
                 ) : (
                   <View style={styles.hubNoSessionRow}>
                     <Text style={styles.hubNoSessionText}>No active session</Text>
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
                       <TouchableOpacity
                         style={[styles.hubActionChip, { backgroundColor: Colors.primary }]}
                         onPress={() => {
@@ -342,22 +343,22 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
 
                 {/* ── Expandable: member list + actions ── */}
                 {expandedCrewId === crew.id && (
-                  <View style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)', marginTop: 10, paddingTop: 12 }}>
+                  <View style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)', marginTop: Spacing.md, paddingTop: Spacing.md }}>
 
                     {/* Member list */}
-                    <Text style={[styles.hubCrewMeta, { fontWeight: '700', marginBottom: 8, letterSpacing: 0.5, color: Colors.textMuted }]}>
+                    <Text style={[styles.hubCrewMeta, { fontWeight: '700', marginBottom: Spacing.sm, letterSpacing: 0.5, color: Colors.textMuted }]}>
                       MEMBERS
                     </Text>
                     {loadingCardMembersFor === crew.id ? (
-                      <ActivityIndicator size="small" color={Colors.primary} style={{ marginBottom: 10 }} />
+                      <ActivityIndicator size="small" color={Colors.primary} style={{ marginBottom: Spacing.md }} />
                     ) : (cardMembers[crew.id] ?? []).length === 0 ? (
-                      <Text style={[styles.hubCrewMeta, { marginBottom: 8 }]}>No members loaded yet.</Text>
+                      <Text style={[styles.hubCrewMeta, { marginBottom: Spacing.sm }]}>No members loaded yet.</Text>
                     ) : (
                       (cardMembers[crew.id] ?? []).map(member => {
                         const memberIsOwner = member.role === 'owner';
                         const isMakingThisOwner = makingOwnerFor === member.user_id;
                         return (
-                          <View key={member.user_id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 5, gap: 10 }}>
+                          <View key={member.user_id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.xs, gap: Spacing.md }}>
                             {/* Avatar dot */}
                             <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: member.avatar_color, alignItems: 'center', justifyContent: 'center' }}>
                               <Text style={{ color: '#000', fontWeight: '800', fontSize: 12 }}>
@@ -395,7 +396,7 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
                                   }
                                 }}
                                 style={{
-                                  paddingHorizontal: 10, paddingVertical: 4,
+                                  paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs,
                                   borderRadius: 8,
                                   backgroundColor: memberIsOwner ? 'rgba(255,68,68,0.12)' : 'rgba(255,208,0,0.12)',
                                   borderWidth: 1,
@@ -416,7 +417,7 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
                     )}
 
                     {/* Inline actions: Edit / Share Code / Leave / Delete */}
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginTop: Spacing.lg }}>
                       {isOwner && (
                         <TouchableOpacity
                           style={[styles.hubActionChip]}
@@ -449,7 +450,7 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
                       )}
                       {isOwner && (
                         confirmingDeleteCrewId === crew.id ? (
-                          <View style={{ flexDirection: 'row', gap: 4 }}>
+                          <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
                             <TouchableOpacity style={[styles.hubActionChip, { borderColor: '#FF4444', backgroundColor: 'rgba(255,68,68,0.2)' }]} onPress={() => executeDeleteCrew(crew)}>
                               <Text style={[styles.hubActionChipText, { color: '#FFF' }]}>Confirm?</Text>
                             </TouchableOpacity>
@@ -477,7 +478,7 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
 
         {/* Single full-width private code join button */}
         <TouchableOpacity
-          style={[styles.hubCrewActionBtn, { width: '100%', marginTop: 4 }]}
+          style={[styles.hubCrewActionBtn, { width: '100%', marginTop: Spacing.xs }]}
           onPress={() => setShowCodeEntry(!showCodeEntry)}
           activeOpacity={0.75}
         >
@@ -495,11 +496,11 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
         {/* Inline private code entry — join a private crew by invite code */}
         {showCodeEntry && (
           <View style={styles.hubCodeEntry}>
-            <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: 6 }}>
+            <Text style={{ color: Colors.textMuted, fontSize: 11, marginBottom: Spacing.sm }}>
               🔒 Enter the 6-character invite code for the private crew
             </Text>
             <TextInput
-              style={[styles.input, styles.codeInput, { marginBottom: 8 }]}
+              style={[styles.input, styles.codeInput, { marginBottom: Spacing.sm }]}
               value={inviteCode}
               onChangeText={t => setInviteCode(t.toUpperCase())}
               placeholder="ABC123"
@@ -510,7 +511,7 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
             />
             {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
             <TouchableOpacity
-              style={[styles.primaryBtn, isLoading && { opacity: 0.5 }, { marginTop: 4 }]}
+              style={[styles.primaryBtn, isLoading && { opacity: 0.5 }, { marginTop: Spacing.xs }]}
               onPress={handleJoinByCode}
               disabled={isLoading}
             >
@@ -532,7 +533,7 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
 
         {/* Radius pills */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
-          style={{ width: '100%', marginBottom: 10 }}
+          style={{ width: '100%', marginBottom: Spacing.md }}
           contentContainerStyle={styles.radiusPillRow}>
           {([20, 50, 100, 250, null] as (number | null)[]).map(r => {
             const label = r === null ? 'Show All' : `${r} mi`;
@@ -550,7 +551,7 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
         </ScrollView>
 
         {isLoadingNearby ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginVertical: 16 }} />
+          <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.lg }} />
         ) : nearbySessions.length === 0 ? (
           <View style={styles.hubEmptyCard}>
             <Text style={styles.hubEmptyText}>
@@ -558,7 +559,7 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
                 ? `No live sessions within ${discoverRadiusMi} mi`
                 : 'No live sessions near you right now'}
             </Text>
-            <Text style={[styles.hubEmptyText, { fontSize: 11, marginTop: 4 }]}>Start one and skaters nearby will see it!</Text>
+            <Text style={[styles.hubEmptyText, { fontSize: 11, marginTop: Spacing.xs }]}>Start one and skaters nearby will see it!</Text>
           </View>
         ) : (
           nearbySessions.map(s => (
@@ -591,7 +592,7 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
 
         {/* ── Schedule ── */}
         <TouchableOpacity
-          style={[styles.secondaryBtn, { marginTop: 20 }]}
+          style={[styles.secondaryBtn, { marginTop: Spacing.xl }]}
           onPress={() => { setStep('schedule'); setErrorMsg(''); }}
         >
           <MaterialCommunityIcons name="calendar-clock" size={18} color={Colors.primary} />

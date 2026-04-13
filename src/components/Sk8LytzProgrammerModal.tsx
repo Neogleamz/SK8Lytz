@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from '../services/AppLogger';
 import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Typography } from '../theme/theme';
+import { Typography, Spacing } from '../theme/theme';
 import {
   ZenggeProtocol,
   HardwareSettings,
@@ -247,29 +247,29 @@ export default function Sk8LytzProgrammerModal({
       <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
 
         {/* ── Header ── */}
-        <View style={[s.topBar, { borderBottomColor: border, paddingTop: insets.top || 16, paddingBottom: 16 }]}>
+        <View style={[s.topBar, { borderBottomColor: border, paddingTop: insets.top || 16, paddingBottom: Spacing.lg }]}>
           <TouchableOpacity onPress={onClose} style={s.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.primary} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={[Typography.title, { color: Colors.text, fontSize: 18, textTransform: 'uppercase', letterSpacing: 1.5 }]}>⚡ BATCH PROGRAMMER</Text>
-            <Text style={{ color: txtMuted, fontSize: 11, marginTop: 2 }}>
+            <Text style={{ color: txtMuted, fontSize: 11, marginTop: Spacing.xxs }}>
               Configure multiple controllers instantly
             </Text>
           </View>
         </View>
 
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: Spacing.lg }}>
 
           {/* ── Profile Selector & Config ── */}
-          <View style={[s.card, { backgroundColor: cardBg, borderColor: border, marginBottom: 16 }]}>
-             <View style={{ flexDirection: 'row', marginBottom: 16, borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: border }}>
+          <View style={[s.card, { backgroundColor: cardBg, borderColor: border, marginBottom: Spacing.lg }]}>
+             <View style={{ flexDirection: 'row', marginBottom: Spacing.lg, borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: border }}>
                  {LOCAL_PRODUCT_CATALOG.map(p => {
                    const isSelected = activeProfile === p.id;
                    return (
                      <TouchableOpacity
                         key={p.id}
-                        style={{ flex: 1, paddingVertical: 12, alignItems: 'center', backgroundColor: isSelected ? p.vizThemeColor : 'transparent' }}
+                        style={{ flex: 1, paddingVertical: Spacing.md, alignItems: 'center', backgroundColor: isSelected ? p.vizThemeColor : 'transparent' }}
                         onPress={() => setActiveProfile(p.id)}
                      >
                          <Text style={{ fontWeight: 'bold', color: isSelected ? '#000' : txtMuted }}>{p.id} PROFILE</Text>
@@ -278,13 +278,13 @@ export default function Sk8LytzProgrammerModal({
                  })}
              </View>
 
-             <Text style={{ color: txtPri, fontWeight: 'bold', marginBottom: 12 }}>Profile Defaults (Tap to cycle payload values)</Text>
+             <Text style={{ color: txtPri, fontWeight: 'bold', marginBottom: Spacing.md }}>Profile Defaults (Tap to cycle payload values)</Text>
              
              {/* Points + Segments: tap to cycle OR type directly */}
-             <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+             <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
                 <View style={[s.configBtn, { flex: 1, borderColor: border }]}>
-                    <Text style={{ color: txtMuted, fontSize: 11, marginBottom: 4 }}>POINTS (LEDs)</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={{ color: txtMuted, fontSize: 11, marginBottom: Spacing.xs }}>POINTS (LEDs)</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                       <TouchableOpacity onPress={() => cycleProperty('points')}>
                         <Text style={{ color: currentProfileColor, fontSize: 20 }}>‹</Text>
                       </TouchableOpacity>
@@ -302,8 +302,8 @@ export default function Sk8LytzProgrammerModal({
                     </View>
                 </View>
                 <View style={[s.configBtn, { flex: 1, borderColor: border }]}>
-                    <Text style={{ color: txtMuted, fontSize: 11, marginBottom: 4 }}>SEGMENTS</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={{ color: txtMuted, fontSize: 11, marginBottom: Spacing.xs }}>SEGMENTS</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                       <TouchableOpacity onPress={() => cycleProperty('segments')}>
                         <Text style={{ color: currentProfileColor, fontSize: 20 }}>‹</Text>
                       </TouchableOpacity>
@@ -322,7 +322,7 @@ export default function Sk8LytzProgrammerModal({
                 </View>
              </View>
 
-             <View style={{ flexDirection: 'row', gap: 12 }}>
+             <View style={{ flexDirection: 'row', gap: Spacing.md }}>
                 <TouchableOpacity style={[s.configBtn, { flex: 1, borderColor: border }]} onPress={cycleIC}>
                     <Text style={{ color: txtMuted, fontSize: 11 }}>STRIP TYPE (IC)</Text>
                     <Text style={{ color: currentProfileColor, fontWeight: 'bold', fontSize: 16 }}>{currentProfile.icName}</Text>
@@ -335,10 +335,10 @@ export default function Sk8LytzProgrammerModal({
           </View>
 
           {/* ── Device List Header ── */}
-          <View style={[s.row, { marginBottom: 12, paddingHorizontal: 4 }]}>
+          <View style={[s.row, { marginBottom: Spacing.md, paddingHorizontal: Spacing.xs }]}>
              <Text style={{ color: txtPri, fontWeight: 'bold', fontSize: 16 }}>Broadcast Targets</Text>
              <View style={s.row}>
-                <TouchableOpacity onPress={handleScan} disabled={bleState === 'SCANNING' || bleState === 'PROBING'} style={{ marginRight: 16 }}>
+                <TouchableOpacity onPress={handleScan} disabled={bleState === 'SCANNING' || bleState === 'PROBING'} style={{ marginRight: Spacing.lg }}>
                     <Text style={{ color: bleState === 'SCANNING' ? cyan : bleState === 'PROBING' ? '#a855f7' : cyan, fontSize: 12, fontWeight: 'bold' }}>
                       {bleState === 'SCANNING' ? 'SCANNING...' : bleState === 'PROBING' ? 'PROBING...' : 'SCAN'}
                     </Text>
@@ -355,12 +355,12 @@ export default function Sk8LytzProgrammerModal({
 
           {/* ── Device List ── */}
           {scannedDevices.length === 0 ? (
-            <View style={{ alignItems: 'center', paddingVertical: 48 }}>
+            <View style={{ alignItems: 'center', paddingVertical: Spacing.huge }}>
               <MaterialCommunityIcons name="bluetooth-off" size={48} color={border} />
-              <Text style={{ color: txtMuted, marginTop: 12, fontSize: 14 }}>
+              <Text style={{ color: txtMuted, marginTop: Spacing.md, fontSize: 14 }}>
                 No SK8Lytz hardware detected.
               </Text>
-              <Text style={{ color: txtMuted, fontSize: 12, marginTop: 4 }}>
+              <Text style={{ color: txtMuted, fontSize: 12, marginTop: Spacing.xs }}>
                 Ensure units are powered on and tap SCAN.
               </Text>
             </View>
@@ -386,14 +386,14 @@ export default function Sk8LytzProgrammerModal({
                              <MaterialCommunityIcons name="checkbox-blank-outline" size={22} color={border} />
                          )}
                      </View>
-                     <View style={{ flex: 1, marginLeft: 12 }}>
+                     <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <Text style={{ color: txtPri, fontWeight: '800', fontSize: 14 }}>{device.name}</Text>
-                        <Text style={{ color: txtMuted, fontSize: 11, marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+                        <Text style={{ color: txtMuted, fontSize: 11, marginTop: Spacing.xxs, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
                           {device.id} ({device.rssi} dBm)
                         </Text>
                         {/* Show detected hw from scan probe */}
                         {detected && (
-                          <Text style={{ color: '#00cc88', fontSize: 10, marginTop: 2 }}>
+                          <Text style={{ color: '#00cc88', fontSize: 10, marginTop: Spacing.xxs }}>
                             ✓ {detected.ledPoints ?? (detected as any).points ?? '?'}pts · {detected.segments ?? '?'}seg · {detected.icName ?? (detected as any).stripType ?? '?'} · {detected.colorSortingName ?? (detected as any).sorting ?? '?'}
                           </Text>
                         )}
@@ -436,21 +436,21 @@ export default function Sk8LytzProgrammerModal({
 const s = StyleSheet.create({
   root: { flex: 1 },
   topBar: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
   },
   backBtn: {
-    marginRight: 16,
-    padding: 4,
+    marginRight: Spacing.lg,
+    padding: Spacing.xs,
   },
   card: {
     borderRadius: 12,
     borderWidth: 1,
-    padding: 16,
+    padding: Spacing.lg,
   },
   row: {
     flexDirection: 'row',
@@ -460,27 +460,27 @@ const s = StyleSheet.create({
   configBtn: {
       borderWidth: 1,
       borderRadius: 8,
-      padding: 12,
+      padding: Spacing.md,
       alignItems: 'center',
       backgroundColor: 'rgba(255,255,255,0.03)'
   },
   deviceCard: {
     borderRadius: 12,
     borderWidth: 1,
-    padding: 12,
-    marginBottom: 8,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   footer: {
       position: 'absolute',
       bottom: 0,
       left: 0,
       right: 0,
-      padding: 16,
-      paddingBottom: 16, // insets.bottom applied inline via s.footerDynamic
+      padding: Spacing.lg,
+      paddingBottom: Spacing.lg, // insets.bottom applied inline via s.footerDynamic
       borderTopWidth: 1,
   },
   flashBtn: {
-      paddingVertical: 16,
+      paddingVertical: Spacing.lg,
       borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',

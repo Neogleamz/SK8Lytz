@@ -19,7 +19,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { Typography } from '../theme/theme';
+import { Typography, Spacing } from '../theme/theme';
 import type { PendingRegistration } from '../hooks/useBLE';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import { LOCAL_PRODUCT_CATALOG, getLocalProfileById } from '../constants/ProductCatalog';
@@ -124,7 +124,7 @@ export default function FirstTimeSetupModal({
   const renderSignalBars = (rssi: number) => {
     const bars = rssiToSignalBars(rssi);
     return (
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, marginLeft: 6 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.xxs, marginLeft: Spacing.sm }}>
         {[1, 2, 3, 4].map(i => (
           <View key={i} style={{
             width: 4,
@@ -133,7 +133,7 @@ export default function FirstTimeSetupModal({
             backgroundColor: i <= bars ? '#00e887' : 'rgba(255,255,255,0.15)',
           }} />
         ))}
-        <Text style={{ color: Colors.textMuted, fontSize: 9, marginLeft: 4 }}>{rssi}dBm</Text>
+        <Text style={{ color: Colors.textMuted, fontSize: 9, marginLeft: Spacing.xs }}>{rssi}dBm</Text>
       </View>
     );
   };
@@ -141,12 +141,12 @@ export default function FirstTimeSetupModal({
   // ── Step 1: Welcome ──────────────────────────────────────────────────────────
   const renderStep1 = () => (
     <View style={styles.stepContainer}>
-      <View style={{ alignItems: 'center', marginBottom: 24 }}>
-        <Text style={{ fontSize: 48, marginBottom: 8 }}>🛼</Text>
+      <View style={{ alignItems: 'center', marginBottom: Spacing.xl }}>
+        <Text style={{ fontSize: 48, marginBottom: Spacing.sm }}>🛼</Text>
         <Text style={[Typography.title, { color: '#00f0ff', fontSize: 22, textAlign: 'center' }]}>
           SK8Lytz Detected!
         </Text>
-        <Text style={{ color: Colors.textMuted, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>
+        <Text style={{ color: Colors.textMuted, textAlign: 'center', marginTop: Spacing.sm, lineHeight: 20 }}>
           {devices.length === 0 ? "Ensure your skates are powered on!" : `We found ${devices.length} controller${devices.length !== 1 ? 's' : ''} nearby.\nLet's register them to your account.`}
         </Text>
       </View>
@@ -162,15 +162,15 @@ export default function FirstTimeSetupModal({
       ))}
 
       {devices.length === 0 && (
-        <View style={{ alignItems: 'center', marginVertical: 24 }}>
+        <View style={{ alignItems: 'center', marginVertical: Spacing.xl }}>
           <ActivityIndicator size="large" color="#00f0ff" />
-          <Text style={{ color: Colors.textMuted, fontSize: 13, textAlign: 'center', marginTop: 16 }}>
+          <Text style={{ color: Colors.textMuted, fontSize: 13, textAlign: 'center', marginTop: Spacing.lg }}>
             Searching aggressively...
           </Text>
         </View>
       )}
 
-      <Text style={{ color: Colors.textMuted, fontSize: 11, textAlign: 'center', marginTop: 16 }}>
+      <Text style={{ color: Colors.textMuted, fontSize: 11, textAlign: 'center', marginTop: Spacing.lg }}>
         Pro tip: make sure only YOUR skates are powered on nearby for best auto-assignment accuracy.
       </Text>
 
@@ -188,12 +188,12 @@ export default function FirstTimeSetupModal({
     const accentColor = pProfile.vizThemeColor || '#00f0ff';
     return (
       <View key={d.device_mac} style={[styles.deviceCard, { borderColor: `${accentColor}40` }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md }}>
           <View style={[styles.typeBadge, { backgroundColor: `${accentColor}20`, borderColor: accentColor }]}>
             <Text style={{ color: accentColor, fontWeight: 'bold', fontSize: 11 }}>{d.product_type}</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ color: Colors.textMuted, fontSize: 11, marginLeft: 8 }}>
+            <Text style={{ color: Colors.textMuted, fontSize: 11, marginLeft: Spacing.sm }}>
               {d.led_points}pts · {d.segments}seg · {d.ic_type}
             </Text>
             {renderSignalBars(d.rssi)}
@@ -204,7 +204,7 @@ export default function FirstTimeSetupModal({
               style={styles.swapBtn}
             >
               <MaterialCommunityIcons name="swap-horizontal" size={14} color={accentColor} />
-              <Text style={{ color: accentColor, fontSize: 10, fontWeight: 'bold', marginLeft: 3 }}>SWAP L/R</Text>
+              <Text style={{ color: accentColor, fontSize: 10, fontWeight: 'bold', marginLeft: Spacing.xxs }}>SWAP L/R</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -240,14 +240,14 @@ export default function FirstTimeSetupModal({
 
   const renderStep2 = () => (
     <ScrollView showsVerticalScrollIndicator={false}>
-      <Text style={[Typography.title, { color: '#fff', marginBottom: 4 }]}>Review & Customize</Text>
-      <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 20 }}>
+      <Text style={[Typography.title, { color: '#fff', marginBottom: Spacing.xs }]}>Review & Customize</Text>
+      <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: Spacing.xl }}>
         Tap any field to edit. Update group names to change how devices are grouped.
       </Text>
 
       {/* Device Groups */}
       {deviceGroups.map(group => (
-        <View key={group.profile.id} style={{ marginBottom: 16 }}>
+        <View key={group.profile.id} style={{ marginBottom: Spacing.lg }}>
           <Text style={[styles.groupHeader, { color: group.profile.vizThemeColor }]}>💿 {group.profile.displayName} Controllers</Text>
           {group.items.map((d, i) =>
             renderDeviceEditor(d, group.items[i === 0 ? 1 : 0]?.device_mac)
@@ -255,7 +255,7 @@ export default function FirstTimeSetupModal({
         </View>
       ))}
 
-      <View style={{ flexDirection: 'row', gap: 10, marginTop: 8, paddingBottom: 24 }}>
+      <View style={{ flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm, paddingBottom: Spacing.xl }}>
         <TouchableOpacity style={styles.secondaryBtn} onPress={() => animateStep(1)}>
           <Text style={styles.secondaryBtnText}>← BACK</Text>
         </TouchableOpacity>
@@ -269,8 +269,8 @@ export default function FirstTimeSetupModal({
   // ── Step 3: Confirm ──────────────────────────────────────────────────────────
   const renderStep3 = () => (
     <View style={styles.stepContainer}>
-      <Text style={[Typography.title, { color: '#fff', marginBottom: 4 }]}>Confirm Registration</Text>
-      <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 20 }}>
+      <Text style={[Typography.title, { color: '#fff', marginBottom: Spacing.xs }]}>Confirm Registration</Text>
+      <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: Spacing.xl }}>
         These devices will be registered to your account.
       </Text>
 
@@ -290,12 +290,12 @@ export default function FirstTimeSetupModal({
         );
       })}
 
-      <Text style={{ color: Colors.textMuted, fontSize: 10, textAlign: 'center', marginTop: 12, marginBottom: 20 }}>
+      <Text style={{ color: Colors.textMuted, fontSize: 10, textAlign: 'center', marginTop: Spacing.md, marginBottom: Spacing.xl }}>
         Registration links these controllers to your SK8Lytz account for cloud sync.
         {'\n'}You can unregister at any time in Hardware Settings.
       </Text>
 
-      <View style={{ flexDirection: 'row', gap: 10 }}>
+      <View style={{ flexDirection: 'row', gap: Spacing.md }}>
         <TouchableOpacity style={styles.secondaryBtn} onPress={() => animateStep(2)}>
           <Text style={styles.secondaryBtnText}>← EDIT</Text>
         </TouchableOpacity>
@@ -311,7 +311,7 @@ export default function FirstTimeSetupModal({
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity onPress={onDismiss} style={{ marginTop: 16, alignItems: 'center' }}>
+      <TouchableOpacity onPress={onDismiss} style={{ marginTop: Spacing.lg, alignItems: 'center' }}>
         <Text style={{ color: Colors.textMuted, fontSize: 12 }}>Skip for now</Text>
       </TouchableOpacity>
     </View>
@@ -347,67 +347,67 @@ const styles = StyleSheet.create({
   sheet: {
     backgroundColor: '#0D0D0D',
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 24, maxHeight: '90%',
+    padding: Spacing.xl, maxHeight: '90%',
     borderWidth: 1, borderColor: 'rgba(0,240,255,0.12)',
   },
-  progressDots: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 20 },
+  progressDots: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm, marginBottom: Spacing.xl },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.15)' },
   dotActive: { backgroundColor: '#00f0ff', width: 20 },
-  stepContainer: { paddingBottom: 8 },
+  stepContainer: { paddingBottom: Spacing.sm },
   summaryCard: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 12, padding: 14, marginBottom: 10,
+    borderRadius: 12, padding: Spacing.lg, marginBottom: Spacing.md,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
   deviceCard: {
     backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 14, padding: 16, marginBottom: 12,
+    borderRadius: 14, padding: Spacing.lg, marginBottom: Spacing.md,
     borderWidth: 1,
   },
   typeBadge: {
-    paddingHorizontal: 8, paddingVertical: 3,
+    paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xxs,
     borderRadius: 6, borderWidth: 1,
   },
   positionBadge: {
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 8, alignSelf: 'flex-start', marginTop: 10,
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+    borderRadius: 8, alignSelf: 'flex-start', marginTop: Spacing.md,
   },
   swapBtn: {
     flexDirection: 'row', alignItems: 'center',
-    marginLeft: 'auto', paddingHorizontal: 10, paddingVertical: 4,
+    marginLeft: 'auto', paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs,
     borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
   fieldLabel: {
     color: 'rgba(255,255,255,0.35)',
     fontSize: 9, fontWeight: 'bold', letterSpacing: 1.2,
-    textTransform: 'uppercase', marginBottom: 4, marginTop: 10,
+    textTransform: 'uppercase', marginBottom: Spacing.xs, marginTop: Spacing.md,
   },
   input: {
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 8, borderWidth: 1,
-    padding: 10, color: '#fff', fontSize: 14,
+    padding: Spacing.md, color: '#fff', fontSize: 14,
   },
   groupHeader: {
     fontWeight: 'bold', fontSize: 13,
-    letterSpacing: 0.5, marginBottom: 10,
+    letterSpacing: 0.5, marginBottom: Spacing.md,
   },
   confirmRow: {
     flexDirection: 'row', alignItems: 'center',
-    padding: 12, marginBottom: 8,
+    padding: Spacing.md, marginBottom: Spacing.sm,
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 10, borderLeftWidth: 3,
   },
   primaryBtn: {
     backgroundColor: '#00f0ff',
-    borderRadius: 12, paddingVertical: 14,
+    borderRadius: 12, paddingVertical: Spacing.lg,
     alignItems: 'center', justifyContent: 'center',
-    marginTop: 4,
+    marginTop: Spacing.xs,
   },
   primaryBtnText: { color: '#000', fontWeight: 'bold', fontSize: 14 },
   secondaryBtn: {
-    paddingVertical: 14, paddingHorizontal: 16,
+    paddingVertical: Spacing.lg, paddingHorizontal: Spacing.lg,
     borderRadius: 12, alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',

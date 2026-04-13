@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import { Layout, ThemePalette } from '../../theme/theme';
+import { Layout, ThemePalette, Spacing } from '../../theme/theme';
 import { requestPermission, checkPermission, PermissionType } from '../../services/PermissionService';
 
 interface PermissionsOnboardingScreenProps {
@@ -107,7 +107,7 @@ export default function PermissionsOnboardingScreen({ onComplete }: PermissionsO
         
         {/* Header */}
         <View style={styles.header}>
-          <MaterialCommunityIcons name="shield-check" size={48} color={Colors.primary} style={{ marginBottom: 16 }} />
+          <MaterialCommunityIcons name="shield-check" size={48} color={Colors.primary} style={{ marginBottom: Spacing.lg }} />
           <Text style={styles.title}>Power Up SK8Lytz</Text>
           <Text style={styles.subtitle}>
             We just make cool skate apps. You have full control over what this app can access.
@@ -137,7 +137,7 @@ export default function PermissionsOnboardingScreen({ onComplete }: PermissionsO
                       <MaterialCommunityIcons name={item.icon} size={24} color={granted ? Colors.primary : Colors.text} />
                     </View>
                     <View style={styles.cardInfo}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                         <Text style={styles.cardTitle}>{item.title}</Text>
                         {item.required && <Text style={styles.badgeRequired}>REQUIRED</Text>}
                       </View>
@@ -193,37 +193,37 @@ const createStyles = (Colors: ThemePalette, insets: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scrollContent: {
     paddingTop: Math.max(insets.top + 24, 48),
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing.xxxl,
   },
-  header: { marginBottom: 32 },
-  title: { fontSize: 32, fontWeight: '900', color: Colors.text, marginBottom: 8, letterSpacing: -0.5 },
-  subtitle: { fontSize: 16, color: Colors.textMuted, lineHeight: 24, marginBottom: 24 },
+  header: { marginBottom: Spacing.xxl },
+  title: { fontSize: 32, fontWeight: '900', color: Colors.text, marginBottom: Spacing.sm, letterSpacing: -0.5 },
+  subtitle: { fontSize: 16, color: Colors.textMuted, lineHeight: 24, marginBottom: Spacing.xl },
   privacyHero: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
     borderColor: Colors.surfaceHighlight,
-    padding: 16,
+    padding: Spacing.lg,
     borderRadius: Layout.borderRadius,
-    gap: 12,
+    gap: Spacing.md,
   },
   privacyText: { flex: 1, fontSize: 13, color: Colors.textMuted, lineHeight: 20 },
-  listContainer: { gap: 16 },
+  listContainer: { gap: Spacing.lg },
   loadingContainer: { height: 200, justifyContent: 'center', alignItems: 'center' },
   card: {
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.surfaceHighlight,
     borderRadius: Layout.borderRadius,
-    padding: 16,
+    padding: Spacing.lg,
   },
   cardGranted: {
     borderColor: 'rgba(74, 222, 128, 0.3)',
     backgroundColor: 'rgba(74, 222, 128, 0.03)',
   },
-  cardHeader: { flexDirection: 'row', gap: 16, marginBottom: 16 },
+  cardHeader: { flexDirection: 'row', gap: Spacing.lg, marginBottom: Spacing.lg },
   iconBox: {
     width: 48, height: 48,
     borderRadius: 24,
@@ -231,18 +231,18 @@ const createStyles = (Colors: ThemePalette, insets: any) => StyleSheet.create({
     justifyContent: 'center', alignItems: 'center'
   },
   cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 16, fontWeight: 'bold', color: Colors.text, marginBottom: 4 },
-  cardDesc: { fontSize: 13, color: Colors.textMuted, lineHeight: 18, marginBottom: 8 },
+  cardTitle: { fontSize: 16, fontWeight: 'bold', color: Colors.text, marginBottom: Spacing.xs },
+  cardDesc: { fontSize: 13, color: Colors.textMuted, lineHeight: 18, marginBottom: Spacing.sm },
   badgeRequired: {
     fontSize: 10, fontWeight: '800',
     backgroundColor: 'rgba(255, 107, 107, 0.2)', color: '#FF6B6B',
-    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: 'hidden'
+    paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xxs, borderRadius: 4, overflow: 'hidden'
   },
   disabledWarning: {
     fontSize: 11, color: '#FFB86C', fontStyle: 'italic',
   },
   toggleBtn: {
-    width: '100%', paddingVertical: 12, borderRadius: 8, alignItems: 'center', borderWidth: 1,
+    width: '100%', paddingVertical: Spacing.md, borderRadius: 8, alignItems: 'center', borderWidth: 1,
   },
   toggleBtnPending: {
     backgroundColor: 'rgba(255,255,255,0.05)',
@@ -257,17 +257,17 @@ const createStyles = (Colors: ThemePalette, insets: any) => StyleSheet.create({
   footer: {
     backgroundColor: Colors.background,
     borderTopWidth: 1, borderTopColor: Colors.surfaceHighlight,
-    paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
     paddingBottom: Math.max(insets.bottom + 16, 24),
   },
   footerWarning: {
-    fontSize: 12, color: '#FF6B6B', textAlign: 'center', marginBottom: 16,
+    fontSize: 12, color: '#FF6B6B', textAlign: 'center', marginBottom: Spacing.lg,
   },
   continueButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.md,
     backgroundColor: Colors.primary,
-    paddingVertical: 16,
+    paddingVertical: Spacing.lg,
     borderRadius: Layout.borderRadius,
   },
   continueButtonDisabled: {

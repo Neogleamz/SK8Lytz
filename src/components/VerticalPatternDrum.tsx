@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, NativeSyntheticEvent, NativeScrollEvent, TouchableOpacity, FlatList } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { Spacing } from '../theme/theme';
 
 const ITEM_HEIGHT = 44;
 
@@ -173,7 +174,7 @@ const VerticalPatternDrum = ({
        width: '100%',
        justifyContent: 'center',
        alignItems: 'center',
-       paddingHorizontal: 16,
+       paddingHorizontal: Spacing.lg,
      },
      itemTextWrapper: {
        width: '100%',
@@ -217,7 +218,7 @@ const VerticalPatternDrum = ({
       zIndex: 0,
       justifyContent: 'center',
       alignItems: 'center',
-      paddingHorizontal: 12,
+      paddingHorizontal: Spacing.md,
     },
      reticleGlassBox: {
        width: '100%',

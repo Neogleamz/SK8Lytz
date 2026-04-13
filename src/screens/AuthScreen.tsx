@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabaseClient';
-import { Layout, ThemePalette } from '../theme/theme';
+import { Layout, ThemePalette, Spacing } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -288,10 +288,10 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
   // ─── MAGIC LINK SENT STATE ───────────────────────────────────────────────────
   if (mode === 'MAGIC_LINK' && magicSent) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 32 }]}>
-        <Text style={{ fontSize: 60, marginBottom: 20 }}>📬</Text>
-        <Text style={[styles.title, { marginBottom: 12 }]}>Check Your Email</Text>
-        <Text style={{ color: Colors.textMuted, textAlign: 'center', fontSize: 15, lineHeight: 22, marginBottom: 32 }}>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: Spacing.xxl }]}>
+        <Text style={{ fontSize: 60, marginBottom: Spacing.xl }}>📬</Text>
+        <Text style={[styles.title, { marginBottom: Spacing.md }]}>Check Your Email</Text>
+        <Text style={{ color: Colors.textMuted, textAlign: 'center', fontSize: 15, lineHeight: 22, marginBottom: Spacing.xxl }}>
           We sent a magic link to{'\n'}<Text style={{ color: Colors.primary, fontWeight: 'bold' }}>{email}</Text>{'\n\n'}Tap the link in your email to sign in — no password needed.
         </Text>
         <TouchableOpacity style={styles.secondaryButton} onPress={() => resetState('LOGIN')}>
@@ -369,13 +369,13 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           />
           <TouchableOpacity 
             onPress={() => Linking.openURL('https://neogleamz.com')}
-            style={{ alignSelf: 'flex-end', marginTop: -15, marginRight: '16%', padding: 4 }}
+            style={{ alignSelf: 'flex-end', marginTop: -15, marginRight: '16%', padding: Spacing.xs }}
           >
             <Text style={{ fontSize: 9, fontWeight: '800', color: Colors.textMuted, letterSpacing: 1 }}>
               by neogleamz.com
             </Text>
           </TouchableOpacity>
-          <Text style={[styles.subtitle, { marginTop: 12, letterSpacing: 1.5, fontSize: 13, color: Colors.textMuted }]}>
+          <Text style={[styles.subtitle, { marginTop: Spacing.md, letterSpacing: 1.5, fontSize: 13, color: Colors.textMuted }]}>
             Glow your way.
           </Text>
         </View>
@@ -411,7 +411,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             <View>
               <View style={{ position: 'relative' }}>
                 <TextInput
-                  style={[styles.input, { paddingRight: 50 }]}
+                  style={[styles.input, { paddingRight: Spacing.huge }]}
                   placeholder="Password"
                   placeholderTextColor={Colors.textMuted}
                   value={password}
@@ -429,8 +429,8 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
 
               {/* Strength bar (signup only) */}
               {mode === 'SIGNUP' && passwordStrength && (
-                <View style={{ marginBottom: 12 }}>
-                  <View style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden', marginBottom: 6 }}>
+                <View style={{ marginBottom: Spacing.md }}>
+                  <View style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden', marginBottom: Spacing.sm }}>
                     <Animated.View style={{ height: '100%', width: strengthBarWidth, backgroundColor: passwordStrength.color, borderRadius: 2 }} />
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -446,11 +446,11 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
 
           {/* Forgot password link (login only) */}
           {mode === 'LOGIN' && (
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, marginTop: -4 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg, marginTop: -4 }}>
               {/* Remember me checkbox */}
               <TouchableOpacity
                 onPress={() => setRememberMe(v => !v)}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}
                 activeOpacity={0.7}
               >
                 <View style={[
@@ -470,7 +470,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           {/* ── Inline error message (replaces Alert.alert for all modes) ── */}
           {!!errorMessage && (
             <View style={styles.errorBanner}>
-              <MaterialCommunityIcons name="alert-circle-outline" size={15} color="#FF6B6B" style={{ marginRight: 6 }} />
+              <MaterialCommunityIcons name="alert-circle-outline" size={15} color="#FF6B6B" style={{ marginRight: Spacing.sm }} />
               <Text style={styles.errorBannerText}>{errorMessage}</Text>
             </View>
           )}
@@ -478,17 +478,17 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           {/* ── Inline success message ── */}
           {!!successMessage && (
             <View style={styles.successBanner}>
-              <MaterialCommunityIcons name="check-circle-outline" size={15} color="#4ADE80" style={{ marginRight: 6 }} />
+              <MaterialCommunityIcons name="check-circle-outline" size={15} color="#4ADE80" style={{ marginRight: Spacing.sm }} />
               <Text style={styles.successBannerText}>{successMessage}</Text>
             </View>
           )}
 
           {/* EULA Checkbox (signup only) */}
           {mode === 'SIGNUP' && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, marginTop: 4, paddingHorizontal: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg, marginTop: Spacing.xs, paddingHorizontal: Spacing.xs }}>
               <TouchableOpacity
                 onPress={() => setEulaAccepted(v => !v)}
-                style={[styles.checkbox, eulaAccepted && { backgroundColor: Colors.primary, borderColor: Colors.primary }, { marginRight: 10 } ]}
+                style={[styles.checkbox, eulaAccepted && { backgroundColor: Colors.primary, borderColor: Colors.primary }, { marginRight: Spacing.md } ]}
               >
                 {eulaAccepted && <MaterialCommunityIcons name="check" size={12} color="#000" />}
               </TouchableOpacity>
@@ -513,7 +513,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             }
           >
             {loading || hibpChecking ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
                 <ActivityIndicator color="#000" size="small" />
                 <Text style={styles.primaryButtonText}>{hibpChecking ? 'Checking Security...' : 'Loading...'}</Text>
               </View>
@@ -564,7 +564,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             {/* Remember Checkbox inside button */}
             <TouchableOpacity
               onPress={() => setRememberOffline(v => !v)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, paddingVertical: 4 }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.md, paddingVertical: Spacing.xs }}
               activeOpacity={0.7}
             >
               <View style={[
@@ -582,10 +582,10 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         {isSandboxEnabled && (mode === 'LOGIN') && onOfflineMode && (
           <TouchableOpacity
             style={{ 
-              marginTop: 16, marginHorizontal: 24, paddingVertical: 12, 
+              marginTop: Spacing.lg, marginHorizontal: Spacing.xl, paddingVertical: Spacing.md, 
               borderWidth: 1, borderColor: 'rgba(0,240,255,0.4)', borderRadius: 12, 
               backgroundColor: 'rgba(0,240,255,0.05)', alignItems: 'center',
-              flexDirection: 'row', justifyContent: 'center', gap: 8
+              flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm
             }}
             onPress={async () => {
               // Enable the virtual skates flags in storage so the dashboard picks them up
@@ -602,7 +602,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
 
         {/* HIBP attribution */}
         {mode === 'SIGNUP' && (
-          <Text style={{ color: Colors.textMuted, fontSize: 10, textAlign: 'center', marginTop: 8, paddingHorizontal: 24 }}>
+          <Text style={{ color: Colors.textMuted, fontSize: 10, textAlign: 'center', marginTop: Spacing.sm, paddingHorizontal: Spacing.xl }}>
             🔒 Passwords are checked against HaveIBeenPwned's breach database using k-anonymity. Your password is never transmitted.
           </Text>
         )}
@@ -611,11 +611,11 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         {isSandboxEnabled && (
           <TouchableOpacity
             style={{
-              marginTop: 12,
+              marginTop: Spacing.md,
               alignSelf: 'center',
               backgroundColor: 'rgba(255, 0, 0, 0.1)',
-              paddingVertical: 10,
-              paddingHorizontal: 20,
+              paddingVertical: Spacing.md,
+              paddingHorizontal: Spacing.xl,
               borderRadius: 8,
               borderWidth: 1,
               borderColor: 'rgba(255, 0, 0, 0.4)'
@@ -648,30 +648,30 @@ const createStyles = (Colors: ThemePalette, insets: { top: number; bottom: numbe
   container: { flex: 1, backgroundColor: Colors.background },
   scrollContent: {
     flex: 1, justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.xl,
     paddingTop: Math.max(insets.top + 60, 80),
-    paddingBottom: 24,
+    paddingBottom: Spacing.xl,
   },
   bottomDock: {
     width: '100%',
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.surfaceHighlight,
-    paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
     paddingBottom: Math.max(insets.bottom + 16, 24),
   },
   topButtons: {
     position: 'absolute', top: Math.max(insets.top + 10, 20), right: 16,
-    flexDirection: 'row', gap: 8, zIndex: 10,
+    flexDirection: 'row', gap: Spacing.sm, zIndex: 10,
   },
   topLeftButtons: {
     position: 'absolute', top: Math.max(insets.top + 10, 20), left: 16,
-    flexDirection: 'row', gap: 8, zIndex: 10,
+    flexDirection: 'row', gap: Spacing.sm, zIndex: 10,
   },
   topLeftBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, borderRadius: 20, borderWidth: 1,
   },
   topBtn: {
     width: 34, height: 34, borderRadius: 17,
@@ -679,21 +679,21 @@ const createStyles = (Colors: ThemePalette, insets: { top: number; bottom: numbe
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
-  headerContainer: { alignItems: 'center', marginBottom: 40 },
-  title: { fontSize: 42, fontWeight: '900', color: Colors.text, letterSpacing: -1, marginBottom: 8 },
+  headerContainer: { alignItems: 'center', marginBottom: Spacing.xxxl },
+  title: { fontSize: 42, fontWeight: '900', color: Colors.text, letterSpacing: -1, marginBottom: Spacing.sm },
   subtitle: { color: Colors.textMuted, fontSize: 14, textAlign: 'center' },
-  formContainer: { marginBottom: 24 },
+  formContainer: { marginBottom: Spacing.xl },
   input: {
     backgroundColor: Colors.surface,
     color: Colors.text,
-    padding: 14,
+    padding: Spacing.lg,
     borderRadius: Layout.borderRadius,
     fontSize: 15,
-    marginBottom: 12,
+    marginBottom: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.surfaceHighlight,
   },
-  forgotPasswordContainer: { alignItems: 'flex-end', marginBottom: 16, marginTop: -4 },
+  forgotPasswordContainer: { alignItems: 'flex-end', marginBottom: Spacing.lg, marginTop: -4 },
   forgotPasswordText: { color: Colors.primary, fontSize: 13 },
   checkbox: {
     width: 18, height: 18, borderRadius: 4,
@@ -708,9 +708,9 @@ const createStyles = (Colors: ThemePalette, insets: { top: number; bottom: numbe
     borderWidth: 1,
     borderColor: 'rgba(255, 107, 107, 0.3)',
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 12,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.md,
   },
   errorBannerText: {
     color: '#FF6B6B',
@@ -725,9 +725,9 @@ const createStyles = (Colors: ThemePalette, insets: { top: number; bottom: numbe
     borderWidth: 1,
     borderColor: 'rgba(74, 222, 128, 0.3)',
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 12,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.md,
   },
   successBannerText: {
     color: '#4ADE80',
@@ -737,38 +737,38 @@ const createStyles = (Colors: ThemePalette, insets: { top: number; bottom: numbe
   },
   primaryButton: {
     backgroundColor: Colors.primary,
-    padding: 16,
+    padding: Spacing.lg,
     borderRadius: Layout.borderRadius,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   primaryButtonText: { color: '#000', fontWeight: 'bold', fontSize: 16 },
   secondaryButton: {
     borderWidth: 1,
     borderColor: Colors.surfaceHighlight,
-    padding: 14,
+    padding: Spacing.lg,
     borderRadius: Layout.borderRadius,
     alignItems: 'center',
   },
   secondaryButtonText: { color: Colors.text, fontWeight: 'bold', fontSize: 15 },
   magicLinkButton: {
     alignItems: 'center',
-    paddingVertical: 12,
-    marginBottom: 4,
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.xs,
   },
   magicLinkText: { color: Colors.primary, fontSize: 13, fontWeight: '600' },
-  toggleContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
+  toggleContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: Spacing.sm },
   toggleText: { color: Colors.textMuted, fontSize: 14 },
   toggleLink: { color: Colors.primary, fontSize: 14, fontWeight: 'bold' },
   offlineButton: {
     alignItems: 'center',
     width: '100%',
-    paddingVertical: 14,
+    paddingVertical: Spacing.lg,
     borderRadius: Layout.borderRadius,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
-  offlineButtonText: { color: Colors.textMuted, fontSize: 14, fontWeight: '600', marginBottom: 3 },
+  offlineButtonText: { color: Colors.textMuted, fontSize: 14, fontWeight: '600', marginBottom: Spacing.xxs },
   offlineButtonSub: { color: Colors.textMuted, fontSize: 11, opacity: 0.7 },
 });
