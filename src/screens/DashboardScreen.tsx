@@ -365,13 +365,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // Voice command dispatch + notification init are now handled
   // by useDashboardVoice and useDashboardProfile hooks respectively.
 
-  // ── BLE hardware callbacks — setOnDataReceived + setOnHardwareProbed ────────
   useHardwareNotifications({
+    isDiagnosticsMode: isLabVisible,
     setOnDataReceived,
     setOnHardwareProbed,
     allDevices,
     setAllDevices,
     setDeviceConfigs,
+    deviceConfigs,
     setLastRawNotification,
   });
 
