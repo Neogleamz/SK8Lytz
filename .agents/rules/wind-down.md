@@ -25,11 +25,12 @@ When my prompt includes "good night", "wrapping up", "wind down", "done for the 
    - Identify any new architectural patterns, hardware protocol discoveries, or database schema changes.
    - Update `tools/SK8Lytz_App_Master_Reference.md` strictly following the **Corporate Memory Synchronization Rule**.
 
-3. **Bucket List Grooming**:
+3. **Bucket List Grooming & Archiving**:
    - Parse `tools/SK8Lytz_Bucket_List.md`.
    - Ensure every task completed during the session is marked with `[x]`.
-   - Identify the next logical Task/Epic.
-   - Ask: "What is the absolute #1 priority for our next session?" and move that item to the top of the active list.
+   - **Cleanup & Archiving**: Physically move all `[x]` items from their active Epic sections into the `## ✅ Completed Previously` archive at the bottom of the file to maintain a lean active backlog.
+   - **Progress Sync**: Update the Mermaid `pie` charts in the `## 📊 Global System Readiness` and category headers to reflect the new completion counts.
+   - **Prioritization**: Identify the next logical Task/Epic. Ask: "What is the absolute #1 priority for our next session?" and move that item to the top of the active list.
 
 4. **The State of the Union (Final SITREP)**:
    - Generate a concise summary of today's achievements.
