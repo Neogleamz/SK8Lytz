@@ -36,29 +36,50 @@ export function useDeviceFleet({
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [groupNewName, setGroupNewName] = useState('');
 
-  const loadDevices = useCallback(async () => {
+  const loadDevices = useCallback(async (updatedSince?: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: dbDevices, error } = await supabase
+      let query = supabase
         .from('registered_devices')
-        .select('device_mac, device_name, custom_name, product_type, position, group_name, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .select('device_mac, device_name, custom_name, product_type, position, group_name, created_at, updated_at')
+        .eq('user_id', user.id);
+        
+      if (updatedSince) {
+        query = query.gt('updated_at', updatedSince);
+      }
+
+      const { data: dbDevices, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
       if (dbDevices && dbDevices.length > 0) {
-        setDevices(dbDevices.map((d: any) => ({
-          id: d.device_mac,
-          name: d.device_name ?? d.device_mac,
-          customName: d.custom_name ?? undefined,
-          groupName: d.group_name ?? undefined,
-          type: d.product_type ?? undefined,
-          registeredAt: d.created_at,
-        })));
-      } else if (initialDevices.length > 0) {
+        setDevices(prev => {
+           // For Delta Sync, we need to merge the new devices into the prev state if updatedSince is provided
+           const patched: StoredDevice[] = updatedSince ? [...prev] : [];
+           
+           dbDevices.forEach((d: any) => {
+             const newDev = {
+               id: d.device_mac,
+               name: d.device_name ?? d.device_mac,
+               customName: d.custom_name ?? undefined,
+               groupName: d.group_name ?? undefined,
+               type: d.product_type ?? undefined,
+               registeredAt: d.created_at,
+             };
+             
+             if (updatedSince) {
+               const existIdx = patched.findIndex(p => p.id === newDev.id);
+               if (existIdx >= 0) patched[existIdx] = newDev;
+               else patched.push(newDev);
+             } else {
+               patched.push(newDev);
+             }
+           });
+           return patched;
+        });
+      } else if (initialDevices.length > 0 && !updatedSince) {
         setDevices(initialDevices);
       }
     } catch (err) {

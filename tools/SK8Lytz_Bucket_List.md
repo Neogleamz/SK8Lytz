@@ -23,7 +23,7 @@ pie title Core Development Progress
 %%{init: {'theme': 'dark'}}%%
 pie title Critical Stability
   "Completed" : 4
-  "Remaining" : 4
+  "Remaining" : 5
 ```
 
 - [ ] `fix/hardware-default-propagation` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] [📝️ NEEDS-PLAN] [⏱️ 15m] Hardware configurations (e.g. HALOZ defaulting to 2 segments) from the Product Manager are not feeding properly into the BLE initialization payload. Connect catalog logic to controller. → [Plan](docs/plans/fix-hardware-default-propagation.md)
@@ -33,6 +33,7 @@ pie title Critical Stability
 - [ ] `perf/optimistic-ble-updates` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [Pillar 2] [🧠 THINK] [⏱️ 30m] Mask hardware latency using 'Ghost' optimistic UI updates and state reconciliation. → [Plan](docs/plans/perf-optimistic-ble-updates.md)
 - [ ] `fix/db-schema-type-parity` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] [⏱️ 15m] Resolve remaining 'type' column and schema mismatches in `registered_groups` and other mutations as revealed by hardening. → [Plan](docs/plans/fix-db-schema-type-parity.md)
 - [x] `fix/display-name-persistence` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🤖 PRO-HIGH] [⏱️ 10m] Resolve user profile persistence issue where 'display_name' is not being propagated from auth metadata to the user_profiles table. → [Plan](docs/plans/fix-display-name-persistence.md)
+- [ ] `fix/voice-button-null-reference` : [🧪 LAB] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] [⏱️ 15m] Fix null reference error on voice button (missing native module bridge gracefully catching instead of crashing). → [Plan](docs/plans/fix-voice-button-null-reference.md)
 
 ---
 
@@ -73,7 +74,7 @@ pie title Governance Shield
 ```
 
 - [x] `feat/admin-app-manager` : [☁️ CLOUD] [✅ L-RISK] [🥩 Feast] [🤖 PRO-HIGH] Finalized Governance Hub with Safety Locks (Consolidated Scope) → [Plan](docs/plans/feat-admin-app-manager.md)
-
+- [ ] `feat/rbac-role-system` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [⏱️ 2h] Implement RBAC (Role-Based Access Control) with User, Moderator, Crew Leader, and Admin roles. → [Plan](docs/plans/feat-rbac-role-system.md)
 ---
 
 ## 🔵 LOW: ✨ New Features & UI Enhancements

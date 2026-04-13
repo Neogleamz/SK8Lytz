@@ -248,16 +248,23 @@ class CrewService {
   /**
    * Fetch all currently active crew sessions (for browse UI).
    * Also returns location_label and status with each session.
+   * Delta Sync: Supply updatedSince to only fetch modified sessions.
    */
-  async fetchActiveSessions(): Promise<CrewSession[]> {
+  async fetchActiveSessions(updatedSince?: string): Promise<CrewSession[]> {
     // Proactively clean up expired records first
     await this.cleanupExpiredSessions();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('crew_sessions')
       .select('*, crew_members(count)')
       .eq('is_active', true)
-      .gt('expires_at', new Date().toISOString())
+      .gt('expires_at', new Date().toISOString());
+
+    if (updatedSince) {
+      query = query.gt('updated_at', updatedSince);
+    }
+
+    const { data, error } = await query
       .order('created_at', { ascending: false })
       .limit(20);
 
@@ -272,14 +279,20 @@ class CrewService {
   /**
    * Fetch PUBLIC sessions only (open to anyone, no invite code needed).
    * Used for location-based discovery browse. Requires migration 007.
+   * Delta Sync: Supply updatedSince to only fetch modified sessions.
    */
-  async fetchPublicSessions(): Promise<CrewSession[]> {
+  async fetchPublicSessions(updatedSince?: string): Promise<CrewSession[]> {
     try {
       // Try the public_sessions view first (migration 007)
-      const { data, error } = await supabase
+      let pubQuery = supabase
         .from('public_sessions')
-        .select('*')
-        .limit(30);
+        .select('*');
+        
+      if (updatedSince) {
+        pubQuery = pubQuery.gt('updated_at', updatedSince);
+      }
+      
+      const { data, error } = await pubQuery.limit(30);
 
       if (!error && data) {
         return data.map((s) => ({
@@ -290,12 +303,18 @@ class CrewService {
     } catch {}
 
     // Fallback: filter from crew_sessions directly
-    const { data } = await supabase
+    let query = supabase
       .from('crew_sessions')
       .select('*, crew_members(count)')
       .eq('is_active', true)
       .eq('is_public', true)
-      .gt('expires_at', new Date().toISOString())
+      .gt('expires_at', new Date().toISOString());
+
+    if (updatedSince) {
+      query = query.gt('updated_at', updatedSince);
+    }
+
+    const { data } = await query
       .order('created_at', { ascending: false })
       .limit(20);
 
