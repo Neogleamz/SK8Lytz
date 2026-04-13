@@ -51,6 +51,7 @@ pie title Engineering Health
 
 - [ ] `chore/decompose-docked-controller-jsx` : [CLOUD] [H-RISK] [Feast] [P2 — DDA Audit] [🤖 PRO-HIGH] Extract DockedController's per-mode JSX panels (MultiMode, Music, Street, Camera, Programs, Favorites) into memoized sub-components. Target: reduce from 2,835 → ~1,800 lines. → [Audit Report](brain/206e904d-e0ff-4a1f-ab45-c74c74b82974/domain_architecture_audit.md)
 - [ ] `chore/refactor-dashboard-monolith` : [CLOUD] [H-RISK] [Feast] [Pillar 1] [🤖 THINK] Decompose `DashboardScreen.tsx` (2,342 lines / 95.9KB) — device-config mutation logic and group-save callbacks still inline; target ~1,400 lines.
+- [ ] `fix/dashboard-display-name-fallback` : [CLOUD] [L-RISK] [Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] Fix React state race condition preventing `userProfile` from setting Dashboard username correctly. → [Plan](docs/plans/fix/dashboard-display-name-fallback.md)
 
 - [ ] `chore/refactor-diagnostic-lab` : [LAB] [L-RISK] [Meal] [🤖 FLASH] [📝️ NEEDS-PLAN] cleanup and modularize `Sk8LytzDiagnosticLab.tsx` (61KB) for better maintainability.
 - [ ] `chore/refactor-admin-tools` : [CLOUD] [L-RISK] [Meal] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] break down `AdminToolsModal.tsx` (637 lines) into feature-specific admin modules.

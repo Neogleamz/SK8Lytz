@@ -433,6 +433,22 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     }).catch(() => {});
   }, []);
 
+  // Derive username reactively from userProfile context
+  useEffect(() => {
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }: { data: { session: any } }) => {
+        const dbDisplay = userProfile?.display_name?.trim();
+        const dbUser = userProfile?.username?.trim();
+        
+        const sessionEmailPrefix = session?.user?.email?.split('@')[0];
+        const fallback = dbDisplay || dbUser || sessionEmailPrefix || 'GUEST';
+        
+        setAuthUsername(fallback);
+        AsyncStorage.setItem('@Sk8lytz_auth_username', fallback).catch(() => {});
+      }).catch(() => {});
+    }
+  }, [userProfile, supabase]);
+
   const handleLogout = async () => {
      try {
        await supabase.auth.signOut();
@@ -477,16 +493,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           CloudUserId = session.user.id;
-          // Fetch profile and set auth display name
+          // Fetch profile asynchronously; UI updating is handled by userProfile useEffect
           try {
             await refreshProfile();
-            const name = userProfile?.display_name || userProfile?.username || session.user.email?.split('@')[0] || 'GUEST';
-            setAuthUsername(name);
-            AsyncStorage.setItem('@Sk8lytz_auth_username', name).catch(() => {});
-          } catch {
-            const fallback = session.user.email?.split('@')[0] || 'GUEST';
-            setAuthUsername(fallback);
-            AsyncStorage.setItem('@Sk8lytz_auth_username', fallback).catch(() => {});
+          } catch (e) {
+            AppLogger.warn('Failed to refresh profile on dashboard load', { error: String(e) });
           }
           let groups: CustomGroup[] | null = null;
           try {
@@ -1502,14 +1513,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               <Text style={{ color: Colors.text, fontSize: 10, fontWeight: '700', maxWidth: 55, fontFamily: 'Righteous' }} numberOfLines={1}>
                 {authUsername || 'GUEST'}
               </Text>
-              <View style={{
-                paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4,
-                backgroundColor: isOfflineMode ? 'rgba(255,170,0,0.2)' : 'rgba(0,200,100,0.2)',
-              }}>
-                <Text style={{ fontSize: 7, fontWeight: '900', letterSpacing: 0.5, color: isOfflineMode ? '#FFA500' : Colors.success }}>
-                  {isOfflineMode ? 'OFF' : 'ON'}
-                </Text>
-              </View>
               <MaterialCommunityIcons name="account-cog" size={12} color={Colors.textMuted} style={{ opacity: 0.8 }} />
             </TouchableOpacity>
           </View>
