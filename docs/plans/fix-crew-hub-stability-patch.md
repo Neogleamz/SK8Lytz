@@ -29,19 +29,21 @@ Replacing these brings the file in line with the telemetry standards established
 ## Verification Plan
 
 ### Automated
+
 - `npx tsc --noEmit` — zero errors expected (the new field is already mapped, adding it to the interface is additive-only).
 
 ### Manual
+
 1. Open Crew Hub → Live Near You section.
 2. Confirm public sessions show "🌍 Public" label.
 3. Confirm private sessions (user is member) show "🔒 Private" label.
 
 ## Status of Original Items (Resolved Prior)
 
-| Original Item | Resolution |
-|---------------|-----------|
-| JSX stacking in CrewModal ~line 1888 | Resolved — `<>` fragment wraps all detail-view elements intentionally; tsc passes |
-| Privacy leak in `getNearbyPublicSessions` | Resolved — dual-query: public filter + member-gated private filter |
-| Session matching by `crew_id` in `getLiveSessionForCrew` | Resolved — `crew_id` match first, name fallback for legacy sessions |
-| "Invite & Add Sktaters" typo | Resolved — reads "Add Skaters" in current code |
-| `createSession` crewId parameter | Resolved — `opts.crewId` flows through to DB insert |
+| Original Item                                            | Resolution                                                                        |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| JSX stacking in CrewModal ~line 1888                     | Resolved — `<>` fragment wraps all detail-view elements intentionally; tsc passes |
+| Privacy leak in `getNearbyPublicSessions`                | Resolved — dual-query: public filter + member-gated private filter                |
+| Session matching by `crew_id` in `getLiveSessionForCrew` | Resolved — `crew_id` match first, name fallback for legacy sessions               |
+| "Invite & Add Sktaters" typo                             | Resolved — reads "Add Skaters" in current code                                    |
+| `createSession` crewId parameter                         | Resolved — `opts.crewId` flows through to DB insert                               |

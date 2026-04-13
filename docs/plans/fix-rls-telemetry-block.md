@@ -16,14 +16,14 @@ Resolve 403 Forbidden errors preventing telemetry ingestion into Supabase tables
 
 We will apply a migration to fix the following tables:
 
-1.  **`device_diagnostics`**:
+1. **`device_diagnostics`**:
     - Update `allow_anon_insert` to include `{anon, authenticated}` roles.
     - Update `allow_anon_select` to include `{anon, authenticated}` roles (for local verification).
-2.  **`telemetry_errors`**:
+2. **`telemetry_errors`**:
     - Add `anon` support to the insert policy (currently only `authenticated`).
-3.  **`parsed_session_stats` / `parsed_session_devices`**:
+3. **`parsed_session_stats` / `parsed_session_devices`**:
     - Ensure both `anon` and `authenticated` roles have `INSERT` and `UPDATE` permissions.
-4.  **`parsed_logs`**, **`parsed_mode_usage`**, **`parsed_pattern_usage`**, **`parsed_color_usage`**, **`led_diagnostics`**:
+4. **`parsed_logs`**, **`parsed_mode_usage`**, **`parsed_pattern_usage`**, **`parsed_color_usage`**, **`led_diagnostics`**:
     - Explicitly allow both roles for `INSERT`.
 
 ### [Documentation]
@@ -35,10 +35,12 @@ We will apply a migration to fix the following tables:
 ## Verification Plan
 
 ### Automated Tests
+
 - Execute a test script that attempts to insert dummy telemetry data into `device_diagnostics` and `telemetry_errors` using both an unauthenticated and (simulated) authenticated Supabase client.
 - Monitor `get_logs('api')` to verify 201 Created and 204 No Content responses instead of 403 Forbidden.
 
 ### Manual Verification
+
 - Launch the app locally.
 - Trigger a hardware sync (e.g. by starting a scan or connecting to a device).
 - Observe the console log for: `[Diagnostics] uploaded ... bytes for ...` successfully.

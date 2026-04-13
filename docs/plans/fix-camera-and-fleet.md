@@ -19,9 +19,11 @@ We are increasing the sampled crop from 1 pixel to a 10x10 area to average out c
 ## Verification Plan
 
 ### Automated Tests
+
 - N/A
 
 ### Manual Verification
+
 1. Navigate to Camera Mode in the app.
 2. Tap a pure white object or light gray object and verify the color returned is white/gray, not a random neon hue.
 3. Tap a colorful object (e.g., green apple) and verify a robust, highly saturated green is returned.

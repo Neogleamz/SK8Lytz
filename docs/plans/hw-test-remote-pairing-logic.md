@@ -3,6 +3,7 @@
 This plan addresses the missing Power control in the main UI and the discovery of paired RF Remote IDs to match Zengge app parity.
 
 ### Design Decisions & Rationale
+
 We are implementing a full-stack parity check for Power and RF Remote IDs. By adding a dedicated Power Toggle to the main controller, we provide the user with absolute control over hardware standby. By extending the 0x2B parser, we surface "hidden" hardware metadata (Remote IDs) that ensures the user can verify their RF ecosystem.
 
 ## User Review Required
@@ -13,9 +14,11 @@ We are implementing a full-stack parity check for Power and RF Remote IDs. By ad
 ## Proposed Changes
 
 ### [DockedController]
+
 Implementation of the primary Power Toggle and reactive UI dimming.
 
 #### [MODIFY] [DockedController.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App\SK8Lytz/src/components/DockedController.tsx)
+
 - Add `powerState` local state (or use prop).
 - Add a large Power Icon button in the top header.
 - Implement an `isPoweredOff` overlay that dims the control surface.
@@ -24,9 +27,11 @@ Implementation of the primary Power Toggle and reactive UI dimming.
 ---
 
 ### [Zengge Protocol]
+
 Hardware command expansion for Power and Remote Identification.
 
 #### [MODIFY] [ZenggeProtocol.ts](file:///c:/Neogleamz/AG_SK8Lytz_App\SK8Lytz/src/protocols/ZenggeProtocol.ts)
+
 - Add `powerOn()` and `powerOff()` static methods.
 - Update `parseRfRemoteState` to extract 4-byte Hex IDs from the `0x2B` response buffer.
 - Map `pairedRemoteIds: string[]` in the return object.
@@ -34,9 +39,11 @@ Hardware command expansion for Power and Remote Identification.
 ---
 
 ### [Device Settings]
+
 UI update to display discovered Remote IDs.
 
 #### [MODIFY] [DeviceSettingsModal.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App\SK8Lytz/src/components/DeviceSettingsModal.tsx)
+
 - Add a new "Paired Remotes" list in the RF section.
 - Display IDs in a "tag" format (e.g., `⚡ ID: AF23`).
 
@@ -48,9 +55,11 @@ UI update to display discovered Remote IDs.
 ## Verification Plan
 
 ### Automated Tests
+
 - `scratch/rf-state-dump.ts`: A script to simulate/capture 0x2B responses and verify the ID parser returns correct HEX formatting.
 
 ### Manual Verification
+
 1. Open Dashboard -> Connect Skates.
 2. Open Controller -> Tap Power Button (Verify Skates go black).
 3. Open Device Settings -> Tap 'QUERY STATE' (Verify Paired IDs appear).

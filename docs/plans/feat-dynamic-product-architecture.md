@@ -13,6 +13,7 @@ We are **NOT** changing the BLE protocol (0x62/0x63). We are only changing **whe
 ## Scope of Changes
 
 ### ⛔ What We Are NOT Touching
+
 - `ZenggeProtocol.ts` BLE payload functions — zero changes to packet structure
 - `useBLE.ts` — only the classification thresholds will move out
 - `ProductVisualizer.tsx` rendering math — the geometric path calculations stay identical; we just replace the hardcoded `isHaloz ? 16 : 43` fallbacks with catalog lookups
@@ -25,58 +26,60 @@ We are **NOT** changing the BLE protocol (0x62/0x63). We are only changing **whe
 ### Phase 1: Define the Product Catalog Type
 
 #### [NEW] `src/types/ProductCatalog.ts`
+
 ```typescript
 export interface ProductProfile {
-  id: string;            // e.g. 'HALOZ', 'SOULZ', 'FUTURE_PRODUCT'
-  displayName: string;   // e.g. 'HALOZ™ Wheel Box'
-  defaultLedPoints: number;     // e.g. 16
-  defaultSegments: number;      // e.g. 1
-  defaultIcType: number;        // e.g. 1 (WS2812B)
-  defaultColorSorting: number;  // e.g. 2 (GRB)
+  id: string; // e.g. 'HALOZ', 'SOULZ', 'FUTURE_PRODUCT'
+  displayName: string; // e.g. 'HALOZ™ Wheel Box'
+  defaultLedPoints: number; // e.g. 16
+  defaultSegments: number; // e.g. 1
+  defaultIcType: number; // e.g. 1 (WS2812B)
+  defaultColorSorting: number; // e.g. 2 (GRB)
   // Auto-detect thresholds (from Master Reference §2 FTUE Logic)
-  detectMinPoints: number;      // Lower bound of LED count to classify as this product
-  detectMaxPoints: number;      // Upper bound
+  detectMinPoints: number; // Lower bound of LED count to classify as this product
+  detectMaxPoints: number; // Upper bound
   // Visualizer geometry hints
-  vizShape: 'RING' | 'OVAL';   // Controls which path math is used in ProductVisualizer
-  vizDefaultPoints: number;     // Fallback LED count for visualizer when device.points is unknown
-  vizBlobDiameterMm: number;   // Physical LED chip size in mm (used for dot sizing)
-  vizBaseWidth: number;         // Canvas width in scale units (S=0.38)
-  vizBaseHeight: number;        // Canvas height in scale units
+  vizShape: "RING" | "OVAL"; // Controls which path math is used in ProductVisualizer
+  vizDefaultPoints: number; // Fallback LED count for visualizer when device.points is unknown
+  vizBlobDiameterMm: number; // Physical LED chip size in mm (used for dot sizing)
+  vizBaseWidth: number; // Canvas width in scale units (S=0.38)
+  vizBaseHeight: number; // Canvas height in scale units
 }
 ```
 
 #### [NEW] `src/constants/ProductCatalog.ts`
+
 The local fallback catalog — ships with the app as a TypeScript constant. This is the Source of Truth when offline or when Supabase hasn't responded yet.
 
 ```typescript
-import { ProductProfile } from '../types/ProductCatalog';
+import { ProductProfile } from "../types/ProductCatalog";
 
 export const LOCAL_PRODUCT_CATALOG: ProductProfile[] = [
   {
-    id: 'HALOZ',
-    displayName: 'HALOZ™',
+    id: "HALOZ",
+    displayName: "HALOZ™",
     defaultLedPoints: 16,
     defaultSegments: 1,
     defaultIcType: 1,
     defaultColorSorting: 2,
     detectMinPoints: 10,
     detectMaxPoints: 27,
-    vizShape: 'RING',
+    vizShape: "RING",
     vizDefaultPoints: 16,
     vizBlobDiameterMm: 7.6,
     vizBaseWidth: 60,
     vizBaseHeight: 90,
   },
   {
-    id: 'SOULZ',
-    displayName: 'SOULZ™',
+    id: "SOULZ",
+    displayName: "SOULZ™",
     defaultLedPoints: 43,
     defaultSegments: 1,
     defaultIcType: 2,
     defaultColorSorting: 2,
     detectMinPoints: 28,
     detectMaxPoints: 300,
-    vizShape: 'OVAL',
+    vizShape: "OVAL",
     vizDefaultPoints: 43,
     vizBlobDiameterMm: 5.7,
     vizBaseWidth: 55,
@@ -90,13 +93,16 @@ export const LOCAL_PRODUCT_CATALOG: ProductProfile[] = [
 ### Phase 2: Product Catalog Hook
 
 #### [NEW] `src/hooks/useProductCatalog.ts`
+
 A lightweight hook that:
+
 1. Returns the local catalog immediately (no loading flash)
 2. Syncs from `product_catalog` Supabase table in the background
 3. Caches result to `AsyncStorage` key `ng_product_catalog`
 4. Exposes a `getProfileById(id)` and `getProfileByPoints(ledPoints)` helper
 
 This replaces ALL current uses of:
+
 - `SK8_DEFAULTS.HALOZ` / `SK8_DEFAULTS.SOULZ` in `Sk8LytzProgrammerModal`
 - The hardcoded `isHaloz ? 16 : 43` fallback in `ProductVisualizer.tsx` (line 83)
 - The hardcoded `10–27` / `28–300` threshold ranges in `useBLE.ts`
@@ -106,6 +112,7 @@ This replaces ALL current uses of:
 ### Phase 3: Supabase Schema
 
 #### [NEW] Supabase table: `product_catalog`
+
 ```sql
 CREATE TABLE product_catalog (
   id TEXT PRIMARY KEY,
@@ -137,6 +144,7 @@ RLS: Read-only for anon/authenticated. Write only for `service_role`.
 ### Phase 4: Admin Tool Tile (Product Defaults Editor)
 
 #### [MODIFY] `src/components/AdminToolsModal.tsx`
+
 Add a new **"PRODUCTS"** tab to the existing admin hub (Tab 5). Displays the live `product_catalog` rows with editable fields for default LED points, min/max thresholds. Changes write directly to Supabase via `service_role` (or at a minimum flag for admin review).
 
 > This will be a **read-only display in Phase 1** — showing the current catalog. Editing comes in Phase 2 of this epic.
@@ -146,13 +154,16 @@ Add a new **"PRODUCTS"** tab to the existing admin hub (Tab 5). Displays the liv
 ### Phase 5: Wire Up Consumers
 
 #### [MODIFY] `src/components/Sk8LytzProgrammerModal.tsx`
+
 Replace `SK8_DEFAULTS.HALOZ` / `SK8_DEFAULTS.SOULZ` references with `useProductCatalog().getProfileById(activeProfile)`.
 
 #### [MODIFY] `src/components/ProductVisualizer.tsx`
+
 Replace the hardcoded `isHaloz ? 16 : 43` fallback (line 83) with `catalog.getProfileByPoints(device.points)?.vizDefaultPoints`.
 Replace hardcoded `haloBase` / `soulBase` dimensions with `vizBaseWidth` / `vizBaseHeight` from catalog entry.
 
 #### [MODIFY] `src/protocols/ZenggeProtocol.ts`
+
 Update `SK8_DEFAULTS` to import from `LOCAL_PRODUCT_CATALOG` to keep backward compatibility while removing the duplication.
 
 ---
@@ -168,10 +179,12 @@ Update `SK8_DEFAULTS` to import from `LOCAL_PRODUCT_CATALOG` to keep backward co
 ## Verification Plan
 
 ### Automated
+
 - `npx tsc --noEmit` confirms zero new errors
 - Confirm `useProductCatalog` returns `HALOZ` and `SOULZ` profiles from local catalog with no network
 
 ### Manual Verification
+
 1. Switch app to airplane mode — confirm hardware wizard FTUE still classifies 16-LED device as HALOZ
 2. Confirm `Sk8LytzProgrammerModal` shows correct default points for both profiles
 3. Confirm `ProductVisualizer` renders HALOZ ring and SOULZ oval shapes identically to before

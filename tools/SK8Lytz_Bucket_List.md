@@ -13,11 +13,11 @@ pie title Core Development Progress
   "Remaining" : 32
 ```
 
-------
+---
 
 ## 🔴 CRITICAL: 🛡️ Performance, Stability & Security
 
-*These items address crashes, data corruption, and security blocks that impact the core experience.*
+_These items address crashes, data corruption, and security blocks that impact the core experience._
 
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
@@ -34,7 +34,7 @@ pie title Critical Stability
 
 ## 🟠 HIGH: 🛠️ Engineering Excellence & Tech Debt
 
-*System-wide health improvements, refactors, and performance optimizations.*
+_System-wide health improvements, refactors, and performance optimizations._
 
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
@@ -50,7 +50,7 @@ pie title Engineering Health
 - [ ] `chore/refactor-god-object-docked-controller` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [God Object] Refactor `DockedController.tsx` — 83 hooks and 134KB detected; critical modularity risk.
 - [ ] `chore/refactor-god-object-dashboard` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [God Object] Refactor `DashboardScreen.tsx` — 48 hooks and 95KB detected; decompose state management.
 - [ ] `chore/refactor-use-ble-overheat` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] [God Object] Refactor `useBLE.ts` — 39 hooks and 42KB detected; decouple scanning from characteristic logic.
-- [ ] `chore/telemetry-efficiency-audit` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🤖 PRO-HIGH] Re-evaluate the parsed_* telemetry tables and ingestion logic to eliminate data duplication and optimize storage efficiency. → [Plan](docs/plans/chore-telemetry-efficiency-audit.md)
+- [ ] `chore/telemetry-efficiency-audit` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🤖 PRO-HIGH] Re-evaluate the parsed\_\* telemetry tables and ingestion logic to eliminate data duplication and optimize storage efficiency. → [Plan](docs/plans/chore-telemetry-efficiency-audit.md)
 
 - [ ] `feat/discord-agent-bridge` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] Implement a local Discord bridge that streams agent logs to a channel and pipes user replies back into the agent's context via a sanitized command buffer file. → [Plan](docs/plans/feat-discord-agent-bridge.md)
 
@@ -60,7 +60,7 @@ pie title Engineering Health
 
 ## 🟡 MEDIUM: ⚖️ Compliance & Governance
 
-*Legal requirements and administrative control systems.*
+_Legal requirements and administrative control systems._
 
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
@@ -69,12 +69,11 @@ pie title Governance Shield
   "Remaining" : 1
 ```
 
-
 ---
 
 ## 🔵 LOW: ✨ New Features & UI Enhancements
 
-*User-facing product value and UI refinements.*
+_User-facing product value and UI refinements._
 
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
@@ -115,8 +114,6 @@ pie title Feature Velocity
 
 - [x] `chore/refactor-admin-tools` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] break down `AdminToolsModal.tsx` (637 lines) into feature-specific admin modules.
 
-
 ---
-*Last updated: 2026-04-13 | Active tasks moved to Completed Archive.*
 
-
+_Last updated: 2026-04-13 | Active tasks moved to Completed Archive._

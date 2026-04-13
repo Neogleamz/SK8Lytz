@@ -1,5 +1,7 @@
 # Domain-Driven Architecture Refactor
+
 ### Branch: `refactor/domain-driven-architecture`
+
 ### Task Tag: `[H-RISK] [Feast] [CLOUD]`
 
 ---
@@ -19,13 +21,13 @@ achieving full modularity.
 
 ### God-Object Inventory
 
-| File | Lines | Size | Primary Violations |
-|:---|:---|:---|:---|
-| `DockedController.tsx` | **3,255** | 157 KB | 8+ domains: Street Mode (GPS+Accel), Session Tracking, Music, Favorites, Presets, Builder, Crew Scenes, Community — all co-mingled |
-| `DashboardScreen.tsx` | **2,500** | 103 KB | 6+ domains: BLE orchestration, Auth/Profile, Group fleet, Voice, Notifications, Persistence |
-| `AccountModal.tsx` | ~1,400 | 65 KB | [x] COMPLETE |
-| `Sk8LytzDiagnosticLab.tsx` | **1,117** | 63 KB | Protocol builders (0x51-0x73), BLE Sniffer/Log, Transition probes |
-| `AdminToolsModal.tsx` | **1,073** | 56 KB | Telemetry timeline, Analytics, Product Catalog CRUD, App Settings |
+| File                       | Lines     | Size   | Primary Violations                                                                                                                 |
+| :------------------------- | :-------- | :----- | :--------------------------------------------------------------------------------------------------------------------------------- |
+| `DockedController.tsx`     | **3,255** | 157 KB | 8+ domains: Street Mode (GPS+Accel), Session Tracking, Music, Favorites, Presets, Builder, Crew Scenes, Community — all co-mingled |
+| `DashboardScreen.tsx`      | **2,500** | 103 KB | 6+ domains: BLE orchestration, Auth/Profile, Group fleet, Voice, Notifications, Persistence                                        |
+| `AccountModal.tsx`         | ~1,400    | 65 KB  | [x] COMPLETE                                                                                                                       |
+| `Sk8LytzDiagnosticLab.tsx` | **1,117** | 63 KB  | Protocol builders (0x51-0x73), BLE Sniffer/Log, Transition probes                                                                  |
+| `AdminToolsModal.tsx`      | **1,073** | 56 KB  | Telemetry timeline, Analytics, Product Catalog CRUD, App Settings                                                                  |
 
 ### Anti-Pattern Violations (per `clean-code.md` + `modern-ui-ux.md`)
 
@@ -47,7 +49,7 @@ achieving full modularity.
 ## Safety Constraints (NON-NEGOTIABLE)
 
 > **BLE state MUST remain co-located with DashboardScreen.** Per the Master Reference:
-> *"This is intentionally monolithic — all BLE state must be co-located to prevent race conditions."*
+> _"This is intentionally monolithic — all BLE state must be co-located to prevent race conditions."_
 > We will NOT move `useBLE` out of DashboardScreen. We extract only non-BLE responsibilities.
 
 > **DockedController is 3,255 lines.** The Surgical Strike Protocol strictly applies. We extract ONE domain
@@ -79,6 +81,7 @@ After this phase, `DashboardScreen` becomes a **BLE orchestrator + layout provid
 Owns everything related to the authenticated user in the Dashboard context.
 
 **Migrated from DashboardScreen:**
+
 - `userProfile` state + `profileService.getProfile()` fetch
 - `isAccountModalVisible` toggle
 - `notificationService` initialization
@@ -87,6 +90,7 @@ Owns everything related to the authenticated user in the Dashboard context.
 - `isSupportModalVisible` toggle
 
 **Exported Interface:**
+
 ```typescript
 interface UseDashboardProfileResult {
   userProfile: UserProfile | null;
@@ -107,6 +111,7 @@ interface UseDashboardProfileResult {
 Owns all group/device fleet management logic.
 
 **Migrated from DashboardScreen:**
+
 - `customGroups` state + derivation from `registeredDevices`
 - `deviceConfigs` state + `ng_device_configs` AsyncStorage persistence
 - `powerStates` map + `setPowerState()`
@@ -117,11 +122,13 @@ Owns all group/device fleet management logic.
 - `handleRegistrationComplete()` full logic
 
 **FSM to replace scattered booleans:**
+
 ```typescript
-type GroupModalState = 'HIDDEN' | 'CREATE' | 'RENAME';
+type GroupModalState = "HIDDEN" | "CREATE" | "RENAME";
 ```
 
 **Exported Interface:**
+
 ```typescript
 interface UseDashboardGroupsResult {
   customGroups: CustomGroup[];
@@ -154,12 +161,14 @@ interface UseDashboardGroupsResult {
 Owns voice command feature lifecycle in the dashboard.
 
 **Migrated from DashboardScreen:**
+
 - `isVoiceModalVisible`, `isVoiceTutorialVisible`, `isVoiceTutorialDismissed`
 - `favorites` state + `@Sk8lytz_Favorites` AsyncStorage load (refreshed when voice modal opens)
 - `useVoiceControl()` hook delegation
 - Tutorial dismissal AsyncStorage write
 
 **Exported Interface:**
+
 ```typescript
 interface UseDashboardVoiceResult {
   isVoiceModalVisible: boolean;
@@ -178,6 +187,7 @@ interface UseDashboardVoiceResult {
 ### [MODIFY] `src/screens/DashboardScreen.tsx`
 
 **After Phase 1, DashboardScreen owns ONLY:**
+
 - `useBLE()` (non-negotiable per Master Reference)
 - `useRegistration()` (device cloud sync)
 - `useDashboardProfile()` (consumption)
@@ -208,6 +218,7 @@ a time, run `npx tsc --noEmit` + `git diff` check, then proceed to the next.
 GPS + Accelerometer session recording, fully decoupled from LED control.
 
 **Migrated from DockedController:**
+
 - All `session*` state refs (`sessionActive`, `sessionStartTimeRef`, `sessionSpeedSamplesRef`,
   `sessionDistanceMilesRef`, `sessionPeakGForceRef`, `sessionPeakSpeedRef`, `sessionLastLocationRef`)
 - `showSessionModal`, `sessionSummary`
@@ -216,11 +227,13 @@ GPS + Accelerometer session recording, fully decoupled from LED control.
 - `peakGForce` tracking from `Accelerometer.addListener`
 
 **FSM replaces `sessionActive: boolean`:**
+
 ```typescript
-type SessionState = 'IDLE' | 'RECORDING' | 'COMPLETE';
+type SessionState = "IDLE" | "RECORDING" | "COMPLETE";
 ```
 
 **Exported Interface:**
+
 ```typescript
 interface UseSessionTrackingResult {
   sessionState: SessionState;
@@ -229,8 +242,8 @@ interface UseSessionTrackingResult {
   sessionSummary: ISessionSnapshot | null;
   showSessionModal: boolean;
   setShowSessionModal: (v: boolean) => void;
-  gpsSpeed: number;           // live read for HUD display
-  peakGForce: number;         // live read for HUD display
+  gpsSpeed: number; // live read for HUD display
+  peakGForce: number; // live read for HUD display
 }
 ```
 
@@ -241,6 +254,7 @@ interface UseSessionTrackingResult {
 Accelerometer-reactive car-light LED logic — pure hardware dispatch.
 
 **Migrated from DockedController:**
+
 - `streetSensitivity`, `streetCruiseColor`, `streetBrakeColor`
 - `motionState` + `motionStateRef`
 - `isStreetBraking` + `streetBrakingRef`
@@ -251,11 +265,18 @@ Accelerometer-reactive car-light LED logic — pure hardware dispatch.
 - `Location.watchPositionAsync` subscription (when `activeMode === 'STREET'`)
 
 **FSM (already partially present, now formalized):**
+
 ```typescript
-type MotionState = 'STOPPED' | 'ACCELERATING' | 'CRUISING' | 'SLOWING_DOWN' | 'HARD_BRAKING';
+type MotionState =
+  | "STOPPED"
+  | "ACCELERATING"
+  | "CRUISING"
+  | "SLOWING_DOWN"
+  | "HARD_BRAKING";
 ```
 
 **Exported Interface:**
+
 ```typescript
 interface UseStreetModeResult {
   streetSensitivity: number;
@@ -284,6 +305,7 @@ interface UseStreetModeResult {
 Persistent favorites + cloud quick presets management.
 
 **Migrated from DockedController:**
+
 - `favorites` state + `@Sk8lytz_Favorites` AsyncStorage read/write
 - `isFavPromptVisible`, `favPromptName`, `favPromptTargetId`, `activeFavoriteId`
 - `quickPresets` state + Supabase cloud sync fetch
@@ -292,15 +314,20 @@ Persistent favorites + cloud quick presets management.
 - `saveFavorite()` + `deleteFavorite()` functions
 
 **FSM replaces 6 scattered `isFavPromptVisible` + `isQuickPromptVisible` booleans:**
+
 ```typescript
-type FavoritesPromptState = 'HIDDEN' | 'NAMING_FAVORITE' | 'NAMING_PRESET';
+type FavoritesPromptState = "HIDDEN" | "NAMING_FAVORITE" | "NAMING_PRESET";
 ```
 
 **Exported Interface:**
+
 ```typescript
 interface UseFavoritesResult {
   favorites: IFavoriteState[];
-  saveFavorite: (capturedState: Partial<IFavoriteState>, name: string) => Promise<void>;
+  saveFavorite: (
+    capturedState: Partial<IFavoriteState>,
+    name: string,
+  ) => Promise<void>;
   deleteFavorite: (id: string) => Promise<void>;
   loadFavorite: (fav: IFavoriteState) => void;
   activeFavoriteId: string | null;
@@ -323,6 +350,7 @@ The core LED control state — active mode, color, pattern, brightness, speed.
 This is the central FSM for the entire DockedController.
 
 **Migrated from DockedController:**
+
 - `activeMode` (ModeType)
 - `lastOperatingMode`
 - `selectedColor`, `selectedHue`
@@ -337,8 +365,15 @@ This is the central FSM for the entire DockedController.
 - `applySpatialSegments()` voice command integration
 
 **Mode FSM (formalized):**
+
 ```typescript
-type ModeType = 'FAVORITES' | 'MULTIMODE' | 'PROGRAMS' | 'MUSIC' | 'STREET' | 'CAMERA';
+type ModeType =
+  | "FAVORITES"
+  | "MULTIMODE"
+  | "PROGRAMS"
+  | "MUSIC"
+  | "STREET"
+  | "CAMERA";
 ```
 
 **Exported Interface:** Full LED control state + all setters + `captureEntireState()` + `applyCloudScene()` +
@@ -349,6 +384,7 @@ type ModeType = 'FAVORITES' | 'MULTIMODE' | 'PROGRAMS' | 'MUSIC' | 'STREET' | 'C
 ### [MODIFY] `src/components/DockedController.tsx`
 
 **After Phase 2, DockedController owns ONLY:**
+
 - Receiving `writeToDevice` prop (no change)
 - Consuming `useDockedControllerState()`, `useStreetMode()`, `useSessionTracking()`, `useFavorites()`
 - Wiring hook outputs to `ZenggeProtocol.*` dispatch calls (the actual BLE commands stay here)
@@ -371,20 +407,24 @@ the data-flow explicit and traceable.
 AccountModal's 4 tabs are logically independent but share co-mingled data fetching.
 
 ### [NEW] `src/hooks/useAccountOverview.ts`
+
 - Profile display: `displayName`, avatar, `userProfile`
 - Theme toggle bridge to `ThemeContext`
 - EULA version check + `acceptedEulaVersion` gating logic
 
 ### [NEW] `src/hooks/useSkateStats.ts`
+
 - `SpeedTrackingService.fetchLifetimeStats()` + `fetchRecentSessions(10)`
 - State FSM: `'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'` (replaces raw `isLoading: boolean`)
 
 ### [NEW] `src/hooks/useDeviceFleet.ts`
+
 - `registeredDevices` display list (read from `useRegistration`)
 - `deregisterDevice()` action with confirmation
 - Device sync status indicator
 
 ### [MODIFY] `src/components/AccountModal.tsx`
+
 After Phase 3, AccountModal becomes a pure tab-router that passes hook results down to stateless tab
 sub-components. **Target size: ~700 lines** (down from ~1,400).
 
@@ -397,16 +437,19 @@ sub-components. **Target size: ~700 lines** (down from ~1,400).
 Decompose the hardware testing monolith `Sk8LytzDiagnosticLab.tsx`.
 
 ### [NEW] `src/hooks/useDiagnosticLog.ts`
+
 - RX/TX Buffer: Stores the last 200 packets.
 - RX Listener: Listens to `liveRxPayload` and applies `0x63` parsing for hardware settings.
 - Transmit Bridge: Helper that wraps `writeToDevice` with logging and hex formatting.
 
 ### [NEW] `src/hooks/useProtocolBuilder.ts`
+
 - Protocol FSM: `0x51 | 0x59 | 0x61 | 0x73 | 0x62`.
 - Param States: All inputs for builders (colors, points, speed, IC types, etc).
 - Generator logic: Rebuilds the payload whenever params change.
 
 ### [MODIFY] `src/components/Sk8LytzDiagnosticLab.tsx`
+
 - Consume `useDiagnosticLog` and `useProtocolBuilder`.
 - Target size: **~500 lines** (down from 1,117).
 
@@ -419,19 +462,23 @@ Decompose the hardware testing monolith `Sk8LytzDiagnosticLab.tsx`.
 Decompose the administrative hub `AdminToolsModal.tsx`.
 
 ### [NEW] `src/hooks/useAdminTelemetry.ts`
+
 - Log/Stats Fetching: Pulls from `AppLogger` on mount.
 - Export/Upload logic: Handles sharing and Supabase bucket uploads.
 - Clear/Flush: Logic for wiping logs.
 
 ### [NEW] `src/hooks/useProductManager.ts`
+
 - Catalog CRUD: Owns `editingProfile` state and `saveProfile` calls.
 - Derivation: Logic for `blankProfile()` and `patchEdit()`.
 - Bridge to `useProductCatalog`.
 
 ### [NEW] `src/hooks/useAdminSettings.ts`
+
 - App Settings: Owns `appSettings` map and `AppSettingsService` persistence.
 
 ### [MODIFY] `src/components/AdminToolsModal.tsx`
+
 - Consume admin hooks.
 - Target size: **~400 lines** (down from 1,073).
 
@@ -469,18 +516,34 @@ export interface CustomGroup {
   lastPatternName?: string;
 }
 
-export type GroupModalState = 'HIDDEN' | 'CREATE' | 'RENAME';
-export type FavoritesPromptState = 'HIDDEN' | 'NAMING_FAVORITE' | 'NAMING_PRESET';
-export type SessionState = 'IDLE' | 'RECORDING' | 'COMPLETE';
-export type MotionState = 'STOPPED' | 'ACCELERATING' | 'CRUISING' | 'SLOWING_DOWN' | 'HARD_BRAKING';
-export type ModeType = 'FAVORITES' | 'MULTIMODE' | 'PROGRAMS' | 'MUSIC' | 'STREET' | 'CAMERA';
+export type GroupModalState = "HIDDEN" | "CREATE" | "RENAME";
+export type FavoritesPromptState =
+  | "HIDDEN"
+  | "NAMING_FAVORITE"
+  | "NAMING_PRESET";
+export type SessionState = "IDLE" | "RECORDING" | "COMPLETE";
+export type MotionState =
+  | "STOPPED"
+  | "ACCELERATING"
+  | "CRUISING"
+  | "SLOWING_DOWN"
+  | "HARD_BRAKING";
+export type ModeType =
+  | "FAVORITES"
+  | "MULTIMODE"
+  | "PROGRAMS"
+  | "MUSIC"
+  | "STREET"
+  | "CAMERA";
 ```
 
 ### [MODIFY] `src/components/DockedController.tsx`
+
 - Replace `hwSettings?: any` → typed `IHardwareSettings` interface
 - Replace `userProfile: any` on `SkateGroupCard` → `UserProfile` from `ProfileService`
 
 ### [MODIFY] `src/hooks/useDashboardGroups.ts`
+
 - Replace `Record<string, any>` → `Record<string, DeviceSettings>` (imported from `dashboard.types.ts`)
 
 ---
@@ -561,12 +624,14 @@ src/
 ## Verification Plan
 
 ### After Each Hook Extraction
+
 ```bash
 npx tsc --noEmit          # Zero TypeScript errors required
 git diff HEAD             # Verify no unintended deletions outside target
 ```
 
 ### Test Stubs (TDD — written BEFORE each hook)
+
 ```
 src/__tests__/hooks/useDashboardGroups.test.ts
 src/__tests__/hooks/useFavorites.test.ts
@@ -576,6 +641,7 @@ src/__tests__/hooks/useDockedControllerState.test.ts
 ```
 
 ### Manual QA Checklist (After Phase 2)
+
 1. ✅ Connect to real hardware → BLE commands fire correctly
 2. ✅ Cycle all 6 DockedController modes → no regression
 3. ✅ Street Mode → motion state changes → LED patterns respond
@@ -588,11 +654,11 @@ src/__tests__/hooks/useDockedControllerState.test.ts
 
 ## Risk Matrix
 
-| Phase | Risk | Primary Mitigation |
-|:---|:---|:---|
-| 0: Branch | None | N/A |
-| 1: Dashboard Hooks | Low | `tsc --noEmit` after each hook |
+| Phase                     | Risk     | Primary Mitigation                                                |
+| :------------------------ | :------- | :---------------------------------------------------------------- |
+| 0: Branch                 | None     | N/A                                                               |
+| 1: Dashboard Hooks        | Low      | `tsc --noEmit` after each hook                                    |
 | 2: DockedController Hooks | **High** | Surgical 10-line edits, immediate diff checks, one hook at a time |
-| 3: AccountModal | Medium | Tab-by-tab extraction |
-| 4: Type Safety | Low | Pure annotation, no logic changes |
-| 5: Docs | None | N/A |
+| 3: AccountModal           | Medium   | Tab-by-tab extraction                                             |
+| 4: Type Safety            | Low      | Pure annotation, no logic changes                                 |
+| 5: Docs                   | None     | N/A                                                               |

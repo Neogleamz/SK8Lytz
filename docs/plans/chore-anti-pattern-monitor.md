@@ -3,6 +3,7 @@
 This plan implements a formal protocol for identifying, logging, and removing "bad practices" artifacts (monoliths, anti-patterns, etc.) as requested by the user.
 
 ## Design Decisions & Rationale
+
 - **Proactive Detection**: Integrating automated size/complexity checks into the `tech-debt-janitor` workflow ensures regular visibility into architectural drift.
 - **Immediate Logging**: Updating `clean-code.md` to mandate bucket list injection ensures that discovered debt is never forgotten, even if it cannot be addressed immediately (due to the [Surgical Strike Protocol](RULE[surgical-edits.md])).
 - **Baseline Sweep**: A manual initial sweep identifies existing "monolithic" components that have grown beyond safe maintainability limits.
@@ -17,12 +18,14 @@ This plan implements a formal protocol for identifying, logging, and removing "b
 ### [Agent Rules](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.agents/rules/)
 
 #### [MODIFY] [tech-debt-janitor.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.agents/rules/tech-debt-janitor.md)
+
 - Add Step 4: **Architectural Smell Scan**.
   - Scan for files exceeding 30KB or 500 lines.
   - Scan for "God Objects" (files with $> 10$ hooks or imports).
   - List these findings in the report and pipe them to the Bucket List.
 
 #### [MODIFY] [clean-code.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.agents/rules/clean-code.md)
+
 - Amend Section 4 (**Self-Correction Mandate**) to include "Discovery Logging":
   - If a file violates modularity standards (a Monolith) and cannot be fixed under the "Boy Scout" rule (too high risk/large), it **MUST** be added to the `tools/SK8Lytz_Bucket_List.md` as a `chore/refactor` task immediately.
 
@@ -31,6 +34,7 @@ This plan implements a formal protocol for identifying, logging, and removing "b
 ### [Bucket List](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SK8Lytz_Bucket_List.md)
 
 #### [MODIFY] [SK8Lytz_Bucket_List.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SK8Lytz_Bucket_List.md)
+
 - Inject discovered baseline monoliths under `### 🟠 HIGH: Engineering Excellence`:
   - `chore/refactor-docked-controller` (156KB monolith)
   - `chore/refactor-dashboard-monolith` (102KB monolith)
@@ -46,7 +50,9 @@ This plan implements a formal protocol for identifying, logging, and removing "b
 ## Verification Plan
 
 ### Automated Tests
+
 - Run the updated `tech-debt-janitor` workflow ("clean the house") and verify it detects and logs a known large file.
 
 ### Manual Verification
+
 - Verify the Bucket List has been updated with the baseline findings.

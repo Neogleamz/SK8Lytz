@@ -14,6 +14,7 @@ Implement 'Stale-While-Revalidate' (SWR) caching for SK8Lytz Picks and optimize 
 ### [DockedController](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DockedController.tsx)
 
 #### [MODIFY] [DockedController.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DockedController.tsx)
+
 - Implement `AsyncStorage` reading for Picks during the initialization `useEffect`.
 - Modify `fetchPicks` to compare remote data with the cached version before updating state (to prevent unnecessary re-renders).
 - Persist successfully fetched Picks to `@Sk8lytz_Picks_Cache`.
@@ -22,9 +23,11 @@ Implement 'Stale-While-Revalidate' (SWR) caching for SK8Lytz Picks and optimize 
 ## Verification Plan
 
 ### Automated Tests
+
 - N/A (UI-centric behavior)
 
 ### Manual Verification
+
 1. Open the app (first run): Verify Picks load from Supabase and show the loading state.
 2. Close and re-open the app: Verify Picks appear **instantly** without a visible loading spinner.
 3. Modify a Pick in the Admin Dashboard: Open the app and verify it shows the "old" Pick briefly before "silently" updating to the new one once the network request completes.

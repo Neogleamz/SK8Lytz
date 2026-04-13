@@ -81,7 +81,8 @@ theme.js
 .vscode/
 
 # AI agent config (local only)
-.agents/
+.agents/*
+!.agents/rules/
 
 # Scratch tool / analysis files (local only)
 diff.txt

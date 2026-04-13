@@ -12,25 +12,31 @@ This plan formalizes the steps required to achieve 100% TypeScript parity with t
 ### [Component] Database Hardening
 
 #### [MODIFY] [DashboardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx)
+
 - [ ] Inject `type: 'device-fleet'` into the `registered_groups` upsert at line 899.
 - [ ] Audit surrounding mutations for similar type-safety gaps.
 
 #### [MODIFY] [useCrewManage.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useCrewManage.ts)
+
 - [ ] Fix `Parameter of type...` mismatch in `registered_groups` mutations.
 - [ ] Ensure all crew sessions are typed correctly before DB insertion.
 
 #### [MODIFY] [useDiagnosticLog.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDiagnosticLog.ts)
+
 - [ ] Update `device_diagnostics` or `led_diagnostics` mutations to include mandatory columns.
 
 #### [MODIFY] [DiagnosticsScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DiagnosticsScreen.tsx)
+
 - [ ] Resolve inline query type errors.
 
 ## Verification Plan
 
 ### Automated Tests
+
 - [ ] Run `npx tsc --noEmit --skipLibCheck` and ensure 0 errors.
 - [ ] Verify Supabase client `Database` generic is properly propagated.
 
 ### Manual Verification
+
 - [ ] Test device registration flow on Web/Android.
 - [ ] Verify Crew Hub session creation and persistence.

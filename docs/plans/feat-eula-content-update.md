@@ -12,6 +12,7 @@ This plan outlines the steps to update the SK8Lytz End User License Agreement (E
 ### [Component] Legal & Compliance
 
 #### [MODIFY] [EulaModal.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/modals/EulaModal.tsx)
+
 - Replace the current hardcoded legal sections (lines 44-79) with the new structured content.
 - Update the version number and company details in the header.
 - Ensure the `Section` points (1, 2, 3...) use the `heading` style and sub-points (2.1, 2.2...) are clearly legible within the paragraph blocks or as smaller headings.
@@ -25,8 +26,10 @@ This plan outlines the steps to update the SK8Lytz End User License Agreement (E
 ## Verification Plan
 
 ### Automated Tests
+
 - None applicable for static text changes.
 
 ### Manual Verification
+
 - Open the "Review EULA" link in the Account Manager to verify the new text renders correctly and is fully scrollable.
 - Verify that the "I ACCEPT" button remains disabled until the end of the long text is reached.

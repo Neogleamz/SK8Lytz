@@ -11,9 +11,11 @@ The hardware setup wizard's `BLINK` button is currently failing to illuminate th
 ## Proposed Changes
 
 ### `src/screens/Onboarding/HardwareSetupWizardScreen.tsx`
+
 - Replace `ZenggeProtocol.setSymphonyColor(0, 255, 0)` with `ZenggeProtocol.setMultiColor(Array(43).fill({r: 0, g: 255, b: 0}), 1, 1, 0x00)`.
 
 ## Verification Plan
+
 1. Launch the app and clear setup state if necessary to trigger Hardware Setup.
 2. Complete Step 1 (Hardware Setup).
 3. On Step 2, tap `BLINK` on a discovered controller.

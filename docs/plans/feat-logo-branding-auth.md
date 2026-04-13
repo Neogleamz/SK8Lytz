@@ -19,6 +19,7 @@ This plan implements the requested branding update to integrate the SK8Lytz logo
 ### UI Component Updates
 
 #### [MODIFY] [AuthScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/AuthScreen.tsx)
+
 - Import `Image` from `react-native`.
 - Remove the `MaterialCommunityIcons` `roller-skate` component in the `headerContainer`.
 - Inject the local asset `<Image source={require('../../assets/logo.png')} />`.
@@ -28,6 +29,7 @@ This plan implements the requested branding update to integrate the SK8Lytz logo
 ## Verification Plan
 
 ### Manual Verification
+
 1. I will boot the Dev Server locally.
 2. I will open the app in Web Mode and visually verify that `logo.png` renders at the correct dimensions.
 3. I will test the Dark Mode / Light Mode toggle in the top-right corner to ensure the `tintColor` successfully flips the logo from original blue to pure white.

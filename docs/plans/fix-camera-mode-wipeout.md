@@ -12,12 +12,14 @@ The goal is to normalize the Camera Mode layout to match the application's stand
 ### [UI Layout]
 
 #### [MODIFY] [DockedController.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DockedController.tsx)
+
 - **Controls Layout**:
   - Remove line 1452 override: `<View style={[styles.controlsContainer, { padding: 4, overflow: 'hidden' }]}>`.
 - **Camera Block Render**:
   - Ensure the Camera render block uses `flex: 1` without hardcoded heights or min-heights.
 
 #### [MODIFY] [AuthScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/AuthScreen.tsx)
+
 - **Branding Link**:
   - Add a small `TouchableOpacity` below the logo.
   - Logic: `Linking.openURL('https://neogleamz.com')`.
@@ -26,8 +28,10 @@ The goal is to normalize the Camera Mode layout to match the application's stand
 ## Verification Plan
 
 ### Automated/Subagent Tests
+
 - `browser_subagent`: Verify Camera Mode container renders with same flex footprint as Favorites or Street mode.
 - `browser_subagent`: Verify "by neogleamz.com" link is visible on Auth screen.
 
 ### Manual Verification
+
 - Confirm the Camera view is correctly positioned between the visualizer and the sliders.

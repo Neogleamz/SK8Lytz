@@ -12,6 +12,7 @@ Stabilize the recent domain-driven refactor by fixing performance bottlenecks in
 ### [Admin UI] Performance Optimization
 
 #### [MODIFY] [AdminToolsModal.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/AdminToolsModal.tsx)
+
 - Move `renderLogItem` outside the component or wrap in `useMemo`.
 - Move sub-tabs (`Stats`, `Device`, `Tools`) to dedicated internal sub-components to isolate their state/re-renders.
 - Use `useMemo` for filtering `timelineLogs` to avoid array slicing/filtering on every render.
@@ -22,13 +23,16 @@ Stabilize the recent domain-driven refactor by fixing performance bottlenecks in
 ### [Domain Hooks] Hardening & Completion
 
 #### [MODIFY] [useAdminTelemetry.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useAdminTelemetry.ts)
+
 - Replace `as any` in `setStats` with proper typing.
 - Tighten error handling in `uploadLogs`.
 
 #### [MODIFY] [useAdminSettings.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useAdminSettings.ts)
+
 - Implement the actual persistence call in `updateSetting` (calling `AppSettingsService.saveSettingToServer`).
 
 #### [MODIFY] [useProtocolBuilder.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useProtocolBuilder.ts)
+
 - Add guard logic for `parseInt` to ensure zero-value fallbacks instead of `NaN`.
 
 ## Open Questions
@@ -38,10 +42,12 @@ Stabilize the recent domain-driven refactor by fixing performance bottlenecks in
 ## Verification Plan
 
 ### Automated Tests
+
 - `npx tsc --noEmit` to verify type safety across the new hook signatures.
 
 ### Manual Verification
-1.  Open Admin Tools → Verify Timeline scrolls smoothly.
-2.  Open Stats → Verify device/OS info displays correctly.
-3.  Modify an Product Category → Save → Verify it persists to Supabase.
-4.  Check app logs for any `NaN` payload warnings in the protocol builder.
+
+1. Open Admin Tools → Verify Timeline scrolls smoothly.
+2. Open Stats → Verify device/OS info displays correctly.
+3. Modify an Product Category → Save → Verify it persists to Supabase.
+4. Check app logs for any `NaN` payload warnings in the protocol builder.

@@ -12,20 +12,22 @@ Relocating the 'Products' tab to the 'Tools' sub-tab, renaming it to 'Product Ma
 ### [Admin Tools UI]
 
 #### [MODIFY] [AdminToolsModal.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/AdminToolsModal.tsx)
-- **Tab Hierarchy**: 
-    - Remove `'products'` from the `Tab` type union.
-    - Remove the 'Products' button from the `View style={[styles.tabs, ... ]}` render block.
+
+- **Tab Hierarchy**:
+  - Remove `'products'` from the `Tab` type union.
+  - Remove the 'Products' button from the `View style={[styles.tabs, ... ]}` render block.
 - **Product Manager Trigger**:
-    - Add a `Product Manager` button in `renderAdminTab`.
+  - Add a `Product Manager` button in `renderAdminTab`.
 - **Product Manager View**:
-    - Replace the current list-based `renderProductsTab` with a **Dropdown-First Editor**.
-    - Top section: A horizontal scroll selector (pills) for all loaded profiles + a "+" icon for new.
-    - Mid section: The active profile editor (already implemented, but now driven by selector).
-    - Back button: To return to the main Tools menu.
+  - Replace the current list-based `renderProductsTab` with a **Dropdown-First Editor**.
+  - Top section: A horizontal scroll selector (pills) for all loaded profiles + a "+" icon for new.
+  - Mid section: The active profile editor (already implemented, but now driven by selector).
+  - Back button: To return to the main Tools menu.
 
 ### [Data Handling]
 
 #### [STAY] [useProductCatalog.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useProductCatalog.ts)
+
 - Existing logic correctly fetches all profiles; the UI reorganization will leverage the existing `allProfiles` array more effectively.
 
 ## Open Questions
@@ -36,6 +38,7 @@ Relocating the 'Products' tab to the 'Tools' sub-tab, renaming it to 'Product Ma
 ## Verification Plan
 
 ### Manual Verification
+
 1. Open Admin Tools (10-tap logo + 0000).
 2. Tap **Tools** tab.
 3. Tap **Product Manager**.
