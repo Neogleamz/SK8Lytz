@@ -32,7 +32,7 @@ import GroupSettingsModal from '../components/GroupSettingsModal';
 import Sk8LytzProgrammerModal from '../components/Sk8LytzProgrammerModal';
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
-import AdminToolsModal from '../components/AdminToolsModal';
+import AdminToolsModal from '../components/admin/AdminToolsModal';
 import VoiceFAB from '../components/Voice/VoiceFAB';
 import VoiceCommandModal from '../components/Voice/VoiceCommandModal';
 import VoiceTutorialModal from '../components/Voice/VoiceTutorialModal';
@@ -51,6 +51,7 @@ import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/Pro
 import { useDashboardProfile } from '../hooks/useDashboardProfile';
 import { useDashboardGroups } from '../hooks/useDashboardGroups';
 import { useDashboardVoice } from '../hooks/useDashboardVoice';
+import { useDashboardAutoConnect } from '../hooks/useDashboardAutoConnect';
 import type { DeviceSettings, CustomGroup } from '../types/dashboard.types';
 
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
@@ -287,6 +288,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
 
   // ── Phase 1: Fleet Groups, Device Configs, Power States → useDashboardGroups ───────
+  // Declare refs before domain hooks that consume them
+  const allDevicesRef = React.useRef(allDevices);
+  const lastProcessedRef = React.useRef<string>('');
+
   const [isSetupWizardVisible, setIsSetupWizardVisible] = useState(false);
   const {
     customGroups,
@@ -311,11 +316,19 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     isRegisteredCollapsed,
     setIsRegisteredCollapsed,
     handleRegistrationComplete,
+    runAutoProvisioning,
+    isProvisioningTriggered,
+    saveGroup,
+    handleGroupDelete,
   } = useDashboardGroups({
     registeredDevices,
     saveAllRegisteredDevices,
+    saveRegisteredDevice,
     migrateLegacyGroups,
     clearPendingRegistrations,
+    getAllScannedDevices: () => allDevicesRef.current,
+    setAllDevices,
+    allDevicesRef,
     onRegistrationComplete: () => {
       setIsSetupWizardVisible(false);
       wizardCheckedRef.current = false;
@@ -349,10 +362,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   } = useDashboardVoice({ dockedControllerRef });
 
   const [isCheckingRegistrations, setIsCheckingRegistrations] = useState(true);
-  const lastProcessedRef = React.useRef<string>('');
-  const allDevicesRef = React.useRef(allDevices);
-  const isProvisioningTriggered = React.useRef(false);
-  // customGroupsRef is now provided by useDashboardGroups hook
 
   // AppState Telemetry
   useEffect(() => {
@@ -458,125 +467,19 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
      }
   };
 
-  // Cloud Sync & Auto Connect on Launch
-  const hasAutoConnectedRef = useRef(false);
-  const autoConnectIdsRef = useRef<string[]>([]);
-  
-  // Continuous Auto-Connect Observer
-  useEffect(() => {
-    if (autoConnectIdsRef.current.length === 0) return;
-    
-    // Find devices that are in our target list, currently scanned, but not yet connected
-    const pendingToConnect = allDevices.filter(d => 
-      autoConnectIdsRef.current.includes(d.id) && 
-      !connectedDevices.some(c => c.id === d.id)
-    );
-
-    if (pendingToConnect.length > 0) {
-      // Remove them from the queue so we don't spam the connection loop
-      autoConnectIdsRef.current = autoConnectIdsRef.current.filter(id => !pendingToConnect.some(p => p.id === id));
-      console.log('[SK8Lytz] Observer connecting to newly discovered devices:', pendingToConnect.map(d => d.name));
-      connectToDevices(pendingToConnect);
-    }
-  }, [allDevices, connectedDevices]);
-
-  useEffect(() => {
-    async function syncCloudAndAutoConnect() {
-      if (hasAutoConnectedRef.current || !isBluetoothSupported || !isBluetoothEnabled) return;
-      hasAutoConnectedRef.current = true; // Prevent looping
-
-      let groupsToProcess: any[] = [];
-      let isOffline = true;
-      let CloudUserId: string | null = null;
-
-      if (supabase) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          CloudUserId = session.user.id;
-          // Fetch profile asynchronously; UI updating is handled by userProfile useEffect
-          try {
-            await refreshProfile();
-          } catch (e) {
-            AppLogger.warn('Failed to refresh profile on dashboard load', { error: String(e) });
-          }
-          let groups: CustomGroup[] | null = null;
-          try {
-            const result = await supabase.from('registered_groups').select('*').eq('user_id', CloudUserId);
-            groups = result.data as any[] as CustomGroup[];
-            isOffline = !!result.error;
-          } catch {
-            isOffline = true;
-          }
-          if (!isOffline && groups && groups.length > 0) {
-            groupsToProcess = groups;
-          }
-        }
-      }
-
-      if (isOffline || groupsToProcess.length === 0) {
-        // Fallback to local storage
-        console.log('[SK8Lytz] Cloud unreachable. Using local AsyncStorage for Auto-Connect...');
-        const localDevicesStr = await AsyncStorage.getItem('@Sk8lytz_registered_devices');
-        if (localDevicesStr) {
-          try {
-            const parsed = JSON.parse(localDevicesStr);
-            const offlineGroupMap = new Map();
-            parsed.forEach((d: any) => {
-              if (d.group_id && d.group_id !== 'default-fleet') {
-                if (!offlineGroupMap.has(d.group_id)) {
-                  offlineGroupMap.set(d.group_id, {
-                    id: d.group_id,
-                    group_name: d.group_name || d.group_id,
-                    created_at: new Date().toISOString(), // Fallback
-                    deviceIds: []
-                  });
-                }
-                offlineGroupMap.get(d.group_id).deviceIds.push(d.device_mac);
-              }
-            });
-            groupsToProcess = Array.from(offlineGroupMap.values());
-          } catch (e) {}
-        }
-      }
-
-      if (groupsToProcess.length > 0) {
-        console.log('[SK8Lytz] Found fleets. Initiating Auto-Connect Sequence...');
-        requestPermissions().then(async (granted) => {
-          if (granted && !isActuallyConnected) {
-            scanForPeripherals();
-            
-            let presentGroups: any[] = [];
-            let idsToConnect: string[] = [];
-
-            if (!isOffline && supabase && CloudUserId) {
-               const { data: devices } = await supabase.from('registered_devices').select('*').eq('user_id', CloudUserId);
-               if (devices) {
-                  presentGroups = groupsToProcess.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-                  
-                  if (presentGroups.length > 0) {
-                    idsToConnect = devices.filter((d: any) => d.group_id === presentGroups[0].id).map((d: any) => d.device_mac || d.id);
-                  }
-               }
-            } else {
-               presentGroups = groupsToProcess.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-               if (presentGroups.length > 0) {
-                  idsToConnect = presentGroups[0].deviceIds;
-               }
-            }
-
-            if (idsToConnect.length > 0) {
-              console.log('[SK8Lytz] Queuing Auto-connect for fleet:', presentGroups[0].group_name);
-              autoConnectIdsRef.current = idsToConnect;
-            }
-          }
-        });
-      }
-    }
-    
-    // Slight delay to allow Bluetooth stack to fully initialize (1.5s)
-    const timerId = setTimeout(syncCloudAndAutoConnect, 1500);
-    return () => clearTimeout(timerId);
-  }, [isBluetoothSupported, isBluetoothEnabled]);
+  // ── Cloud Sync & BLE Auto-Connect (extracted to useDashboardAutoConnect) ──
+  useDashboardAutoConnect({
+    isBluetoothSupported,
+    isBluetoothEnabled,
+    isActuallyConnected: connectedDevices.length > 0, // computed early before displayConnectedDevices useMemo
+    allDevices,
+    connectedDevices,
+    connectToDevices,
+    scanForPeripherals,
+    requestPermissions,
+    refreshProfile,
+    registeredDevices,
+  });
 
   // ── Crew auto-rejoin on launch ────────────────────────────────────────────
   useEffect(() => {
@@ -790,170 +693,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, []);
 
 
-  const runAutoProvisioning = useCallback(async () => {
-    if (!isProvisioningTriggered.current) return;
-    isProvisioningTriggered.current = false;
-
-    console.log('[SK8Lytz] Provisioning...');
-    const currentDevices = allDevicesRef.current;
-    if (currentDevices.length === 0) return;
-
-    let updatedGroups = [...customGroupsRef.current];
-    let didUpdateGroups = false;
-    let didUpdateConfigs = false;
-    
-    const [resConfigs, resProcessed] = await Promise.all([
-      AsyncStorage.getItem('@Sk8lytz_device_configs'),
-      AsyncStorage.getItem('@Sk8lytz_processed_devices')
-    ]);
-
-    let configs: any = {};
-    if (resConfigs) { try { configs = JSON.parse(resConfigs); } catch(e) {} }
-
-    let processed: string[] = [];
-    if (resProcessed) { try { processed = JSON.parse(resProcessed); } catch(e) {} }
-    let didUpdateProcessed = false;
-    
-    const checkAndGroup = (devicesToProcess: any[], targetGroupName: string, typeVal: string, pointsVal: number) => {
-      const unprocessed = devicesToProcess.filter(d => 
-        !processed.includes(d.id) && 
-        !updatedGroups.some(g => g.deviceIds.includes(d.id))
-      );
-
-      if (unprocessed.length >= 2) {
-        const leftId = unprocessed[0].id;
-        const rightId = unprocessed[1].id;
-        processed.push(leftId, rightId);
-        didUpdateProcessed = true;
-
-        const existingGroupIndex = updatedGroups.findIndex(g => g.name === targetGroupName);
-        if (existingGroupIndex > -1) {
-          let target = updatedGroups[existingGroupIndex];
-          if (!target.deviceIds.includes(leftId) || !target.deviceIds.includes(rightId)) {
-            const newIds = Array.from(new Set([...target.deviceIds, leftId, rightId]));
-            updatedGroups[existingGroupIndex] = { ...target, deviceIds: newIds };
-            didUpdateGroups = true;
-          }
-        } else {
-          updatedGroups.push({
-            id: `group-${Date.now()}-${typeVal}-${Math.floor(Math.random() * 1000)}`,
-            name: targetGroupName,
-            deviceIds: [leftId, rightId],
-            type: typeVal,
-            isGroup: true
-          });
-          didUpdateGroups = true;
-        }
-        
-        const names = [`${typeVal} Left Skate`, `${typeVal} Right Skate`];
-        [leftId, rightId].forEach((id, idx) => {
-          if (!configs[id] || configs[id].name !== names[idx]) {
-            configs[id] = { ...configs[id], name: names[idx], type: typeVal, points: pointsVal };
-            didUpdateConfigs = true;
-          }
-        });
-      }
-    };
-
-    // Catalog-driven device classification: group by resolved product type via LED point range.
-    // Replaces legacy binary soulzDevices / halozDevices split — RAILZ and future products auto-bucket.
-    const devicesByType = new Map<string, typeof currentDevices>();
-    for (const d of currentDevices) {
-      const pts = (d as any).points ?? 0;
-      const profile = getLocalProfileByPoints(pts);
-      if (!devicesByType.has(profile.id)) devicesByType.set(profile.id, []);
-      devicesByType.get(profile.id)!.push(d);
-    }
-    for (const [typeKey, devices] of devicesByType.entries()) {
-      const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === typeKey) ?? LOCAL_PRODUCT_CATALOG[0];
-      checkAndGroup(devices, `${profile.displayName} SK8Lytz`, typeKey, profile.defaultLedPoints);
-    }
-
-    const storagePromises = [];
-    if (didUpdateProcessed) {
-      storagePromises.push(AsyncStorage.setItem('@Sk8lytz_processed_devices', JSON.stringify(processed)));
-    }
-    if (didUpdateGroups) {
-      storagePromises.push(AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(updatedGroups)));
-    }
-    if (didUpdateConfigs) {
-      storagePromises.push(AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs)));
-    }
-    if (storagePromises.length > 0) await Promise.all(storagePromises);
-
-    if (didUpdateGroups) {
-      customGroupsRef.current = updatedGroups;
-      // Note: customGroups UI state is derived from registeredDevices via useDashboardGroups
-    }
-    
-    // Sync to Supabase if authenticated
-    if ((didUpdateGroups || didUpdateConfigs) && supabase) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session && session.user) {
-          const userId = session.user.id;
-          
-          for (const group of updatedGroups) {
-            // Upsert Group
-            try {
-              await supabase.from('registered_groups').upsert({
-                id: group.id,
-                user_id: userId,
-                group_name: group.name,
-                type: group.type || 'device-fleet',
-                created_at: new Date().toISOString()
-              }, { onConflict: 'id' });
-            } catch (_ge) { /* best-effort sync */ }
-            
-            // Upsert Devices in Group
-            for (const deviceId of group.deviceIds) {
-              const c = configs[deviceId];
-              if (c) {
-                try {
-                  await supabase.from('registered_devices').upsert({
-                    id: deviceId,
-                    user_id: userId,
-                    group_id: group.id,
-                    custom_name: c.name || 'Unknown',
-                    points: c.points || 0,
-                    segments: c.segments || 0,
-                    sorting: c.sorting || 'GRB',
-                    strip_type: c.stripType || 'UNKNOWN'
-                  }, { onConflict: 'id' });
-                } catch (_de) { /* best-effort sync */ }
-              }
-            }
-          }
-        }
-      } catch (e) {
-        AppLogger.warn('Supabase sync error during provisioning:', { error: String(e) });
-      }
-    }
-    
-    if (didUpdateConfigs) {
-      setAllDevices(prev => {
-        let morphed = false;
-        const next = prev.map(d => {
-          const c = configs[d.id];
-          if (c && (d.name !== c.name || (d as any).sorting !== c.sorting || (d as any).stripType !== c.stripType)) {
-            morphed = true;
-            return { ...d, name: c.name, points: c.points, sorting: c.sorting, stripType: c.stripType } as any;
-          }
-          return d;
-        });
-        if (morphed) allDevicesRef.current = next;
-        return morphed ? next : prev;
-      });
-    }
-    
-    // Explicitly collapse to focus on grouped controls
-    setIsDeviceListCollapsed(true);
-    console.log('[SK8Lytz] Provisioning Complete.');
-  }, []);
-
-
-
-
 
 
   const displayConnectedDevices = useMemo(() => {
@@ -1064,103 +803,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     openGroupCreate();
   };
 
-  const handleGroupDelete = async (id: string) => {
-    const groupToDelete = customGroups.find(g => g.id === id);
-    if (!groupToDelete) {
-      closeGroupModal();
-      return;
-    }
+  // ── handleGroupDelete and saveGroup now live in useDashboardGroups ────────────
 
-    const devsToDelete = registeredDevices.filter(d => d.group_id === id);
-    for (const d of devsToDelete) {
-      await saveRegisteredDevice({ ...d, group_id: 'default-fleet', group_name: undefined, is_pending_sync: true });
-    }
-
-    if (groupToDelete && groupToDelete.deviceIds) {
-      try {
-        const stored = await AsyncStorage.getItem('ng_device_configs');
-        if (stored) {
-          const configs = JSON.parse(stored);
-          let configsChanged = false;
-          
-          for (const mac of groupToDelete.deviceIds) {
-            if (configs[mac]) {
-              delete configs[mac].groupId;
-              delete configs[mac].groupName;
-              configs[mac].grouped = false;
-              configsChanged = true;
-            }
-          }
-          
-          if (configsChanged) {
-            await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
-            setDeviceConfigs(configs);
-          }
-        }
-      } catch (e) {
-        AppLogger.warn('Failed to scrub ghost group from components: ' + e);
-      }
-    }
-
-    closeGroupModal();
-  };
-
-  const saveGroup = async (name: string, deviceIds: string[]) => {
-    let finalGroupId = `group-${Date.now()}`;
-    let previousDeviceIds: string[] = [];
-
-    if (groupModalState === 'CREATE') {
-      const existing = customGroups.find(g => g.name.toLowerCase() === name.toLowerCase());
-      if (existing) {
-        finalGroupId = existing.id;
-        previousDeviceIds = existing.deviceIds || [];
-      }
-      clearSelection();
-    } else if (groupModalState === 'RENAME' && editingGroupId) {
-      if (deviceIds.length === 0) {
-        handleGroupDelete(editingGroupId);
-        return;
-      }
-      finalGroupId = editingGroupId;
-      const existing = customGroups.find(g => g.id === editingGroupId);
-      if (existing) previousDeviceIds = existing.deviceIds || [];
-    }
-
-    try {
-      const stored = await AsyncStorage.getItem('ng_device_configs');
-      const configs = stored ? JSON.parse(stored) : {};
-      let configsChanged = false;
-      
-      // Removed devices: scrub their configs
-      const removedIds = previousDeviceIds.filter(id => !deviceIds.includes(id));
-      for (const mac of removedIds) {
-        if (configs[mac]) {
-          delete configs[mac].groupId;
-          delete configs[mac].groupName;
-          configs[mac].grouped = false;
-          configsChanged = true;
-        }
-        const rd = registeredDevices.find(r => r.device_mac === mac);
-        if (rd) await saveRegisteredDevice({ ...rd, group_id: 'default-fleet', group_name: undefined, is_pending_sync: true });
-      }
-
-      // Added or preserved devices: enforce group config
-      for (const mac of deviceIds) {
-        if (!configs[mac]) configs[mac] = {};
-        configs[mac] = { ...configs[mac], groupId: finalGroupId, groupName: name, grouped: true };
-        configsChanged = true;
-        const rd = registeredDevices.find(r => r.device_mac === mac);
-        if (rd) await saveRegisteredDevice({ ...rd, group_id: finalGroupId, group_name: name, is_pending_sync: true });
-      }
-
-      if (configsChanged) {
-        await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
-        setDeviceConfigs(configs);
-      }
-    } catch (e) {
-      AppLogger.warn('Failed to sync group cache changes', { error: String(e) });
-    }
-  };
 
   useEffect(() => {
     requestPermissions();
@@ -1307,7 +951,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               getLocalProfileByPoints((displayConnectedDevices[0] as any)?.points ?? 0).id
             }
             isPaired={isGrouped}
-            isDisconnecting={isDisconnecting}
             points={(displayConnectedDevices[0] as any).points}
             devices={displayConnectedDevices as any}
             onLongPressDevice={openSettings}
@@ -1842,8 +1485,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         connectToDevice={async (d: any) => { await connectToDevice(d); }}
         disconnectFromDevice={async (_id: string) => { disconnectFromDevice(); }}
         writeToDevice={writeToDevice}
-        isScanning={isScanning}
-        isScanProbing={isScanProbing}
+        bleState={isScanProbing ? 'PROBING' : isScanning ? 'SCANNING' : 'IDLE'}
         handleScan={scanForPeripherals}
       />
       {/* LED Diagnostic Lab — long-press the SNIFFER button to open */}
@@ -1858,7 +1500,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         liveRxPayload={lastRawNotification}
         hwSettings={activeHwSettings ?? undefined}
         allDevices={allDevices}
-        isScanning={isScanning}
+        bleState={isScanning ? 'SCANNING' : 'IDLE'}
         handleScan={scanForPeripherals}
         connectToDevice={async (d: any) => { await connectToDevice(d); }}
         liveDeviceConfigs={deviceConfigs}
@@ -1976,8 +1618,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         }}
         allDevices={allDevices}
         connectedDevices={connectedDevices as any[]}
-        isScanning={isScanning}
-        handleScan={scanForPeripherals}
+        bleState={isScanning ? 'SCANNING' : 'IDLE'}
+        handleScan={() => scanForPeripherals()}
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
         liveDeviceConfigs={deviceConfigs}
