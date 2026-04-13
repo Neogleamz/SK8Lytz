@@ -58,7 +58,11 @@ export function useCrewSession(
         // Telemetry
         const { data: { user } } = await supabase.auth.getUser();
         if (user && (crewService.sessionTelemetry.distanceMiles > 0 || crewService.sessionTelemetry.topSpeedMph > 0)) {
-          const { data: profile } = await supabase.from('user_profiles').select('lifetime_top_speed_mph, lifetime_distance_miles').eq('id', user.id).single();
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('lifetime_top_speed_mph, lifetime_distance_miles')
+            .eq('user_id', user.id)
+            .single();
           if (profile) {
             const newDistance = (profile.lifetime_distance_miles || 0) + crewService.sessionTelemetry.distanceMiles;
             const newTopSpeed = Math.max((profile.lifetime_top_speed_mph || 0), crewService.sessionTelemetry.topSpeedMph);
@@ -66,7 +70,7 @@ export function useCrewSession(
                await supabase.from('user_profiles').update({
                  lifetime_distance_miles: newDistance,
                  lifetime_top_speed_mph: newTopSpeed
-               }).eq('id', user.id);
+               }).eq('user_id', user.id);
             }
           }
         }

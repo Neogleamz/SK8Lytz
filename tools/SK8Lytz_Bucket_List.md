@@ -9,8 +9,8 @@ All active tasks, bugs, and feature work. Prioritized by **App Performance, Stab
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Core Development Progress
-  "Completed" : 34
-  "Remaining" : 22
+  "Completed" : 20
+  "Remaining" : 36
 ```
 
 ------
@@ -30,6 +30,7 @@ pie title Critical Stability
 - [ ] `refactor/state-machine-standard` : [CLOUD] [H-RISK] [Feast] [Pillar 8] [🤖 THINK] Deterministic UI — transition from boolean flags to explicit Enum-based Finite State Machines. → [Plan](docs/plans/refactor-state-machine-standard.md)
 - [ ] `feat/ble-hardware-watchdog` : [LAB] [H-RISK] [Feast] [Pillar 7] [🤖 THINK] Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks and silent-relatches connections. → [Plan](docs/plans/feat-ble-hardware-watchdog.md)
 - [ ] `perf/optimistic-ble-updates` : [LAB] [H-RISK] [Meal] [Pillar 2] [🤖 THINK] Mask hardware latency using 'Ghost' optimistic UI updates and state reconciliation. → [Plan](docs/plans/perf-optimistic-ble-updates.md)
+- [ ] `fix/db-schema-type-parity` : [CLOUD] [H-RISK] [Meal] [🤖 THINK] [📝️ NEEDS-PLAN] Resolve remaining 'type' column and schema mismatches in `registered_groups` and other mutations as revealed by hardening. → [Plan](docs/plans/fix-db-schema-type-parity.md)
 
 ---
 
@@ -41,16 +42,18 @@ pie title Critical Stability
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
   "Completed" : 3
-  "Remaining" : 7
+  "Remaining" : 12
 ```
 
 - [ ] `perf/delta-sync-protocol` : [CLOUD] [L-RISK] [Meal] [Pillar 4] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] Implement differential data fetching to reduce bandwidth and battery consumption. → [Plan](docs/plans/perf-delta-sync-protocol.md)
 - [ ] `fix/remote-id-audit` : [LAB] [H-RISK] [Meal] [Security] [🤖 THINK] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
 - [ ] `audit-rls-performance` : [CLOUD] [H-RISK] [Meal] [🤖 THINK] #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges. → [Plan](docs/plans/audit-rls-performance.md)
 - [ ] `style/tokenized-spacing-standard` : [CLOUD] [L-RISK] [Meal] [Pillar 9] [🤖 FLASH] [📝️ NEEDS-PLAN] The 8pt Grid — enforce 8pt spacing tokens app-wide to eliminate magic numbers. → [Plan](docs/plans/style-tokenized-spacing-standard.md)
-- [ ] `chore/decompose-docked-controller-jsx` : [CLOUD] [H-RISK] [Feast] [P2 — DDA Audit] [🤖 PRO-HIGH] Extract DockedController's per-mode JSX panels (MultiMode, Music, Street, Camera, Programs, Favorites) into memoized sub-components. Target: reduce from 2,835 ➔ ~1,800 lines. → [Audit Report](brain/206e904d-e0ff-4a1f-ab45-c74c74b82974/domain_architecture_audit.md)
-- [ ] `chore/refactor-dashboard-monolith` : [CLOUD] [H-RISK] [Feast] [Pillar 1] [🤖 THINK] Decompose `DashboardScreen.tsx` (2,342 lines / 95.9KB) — device-config mutation logic and group-save callbacks still inline; target ~1,400 lines.
-- [ ] `chore/refactor-diagnostic-lab` : [LAB] [L-RISK] [Meal] [🤖 FLASH] [📝️ NEEDS-PLAN] cleanup and modularize `Sk8LytzDiagnosticLab.tsx` (61KB) for better maintainability.
+- [ ] `fix/critical-dependency-vulnerabilities` : [CLOUD] [H-RISK] [Meal] [Security] Fix 10 vulnerabilities (1 critical xmldom injection, 3 high) via audited dependency updates.
+- [ ] `chore/refactor-god-object-docked-controller` : [CLOUD] [H-RISK] [Feast] [God Object] Refactor `DockedController.tsx` — 83 hooks and 134KB detected; critical modularity risk.
+- [ ] `chore/refactor-god-object-dashboard` : [CLOUD] [H-RISK] [Feast] [God Object] Refactor `DashboardScreen.tsx` — 48 hooks and 95KB detected; decompose state management.
+- [ ] `chore/refactor-use-ble-overheat` : [LAB] [H-RISK] [Meal] [God Object] Refactor `useBLE.ts` — 39 hooks and 42KB detected; decouple scanning from characteristic logic.
+- [ ] `chore/cleanup-crew-screen-todos` : [CLOUD] [L-RISK] [Snack] [🤖 FLASH] [⚡ FLASH-READY] Cleanup legacy import TODOs in CrewCreate, CrewDetail, and CrewManage screens.
 - [ ] `chore/refactor-admin-tools` : [CLOUD] [L-RISK] [Meal] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] break down `AdminToolsModal.tsx` (637 lines) into feature-specific admin modules.
 
 ---
@@ -89,7 +92,9 @@ pie title Feature Velocity
 - [ ] `feat/interactive-skate-spot-map` : [CLOUD] [L-RISK] [Feast] [🤖 PRO-HIGH] Implement a high-density, interactive skate spot map using react-native-maps. → [Plan](docs/plans/feat-interactive-skate-spot-map.md)
 - [ ] `feat/street-mode-telemetry-overhaul` : [CLOUD] [L-RISK] [Meal] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] Overhaul Street Mode with metrics grid and auto-scaling gauges. → [Plan](docs/plans/feat-street-mode-telemetry-overhaul.md)
 - [ ] `feat/usa-skate-spots-dataset` : [CLOUD] [BATCH] [L-RISK] [Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] US-only dataset of rinks and parks for map overlays. → [Plan](docs/plans/feat-usa-skate-spots-dataset.md)
-- [ ] `feat/app-wide-ux-tips` : [CLOUD] [L-RISK] [Meal] [🤖 FLASH] [📝️ NEEDS-PLAN] Contextual tips system for key friction points. → [Plan](docs/plans/feat-app-wide-ux-tips.md)
+- [ ] `feat/app-wide-ux-tips` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🤖 FLASH] [📝️ NEEDS-PLAN] Contextual tips system for key friction points. → [Plan](docs/plans/feat-app-wide-ux-tips.md)
+- [ ] `chore/beautify-backlog` : [☁️ CLOUD] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] Prettify bucket list tags with icons and update intake rules for aesthetic consistency. → [Plan](docs/plans/chore-beautify-backlog.md)
+
 
 ---
 
