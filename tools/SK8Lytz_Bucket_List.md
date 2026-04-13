@@ -27,10 +27,7 @@ pie title Critical Stability
 ```
 
 - [ ] `feat/gate-offline-mode` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
-- [x] `refactor/state-machine-standard` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [Pillar 8] [🧠 THINK] Deterministic UI — transition from boolean flags to explicit Enum-based Finite State Machines. → [Plan](docs/plans/refactor-state-machine-standard.md)
 - [ ] `feat/ble-hardware-watchdog` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [Pillar 7] [🧠 THINK] Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks and silent-relatches connections. → [Plan](docs/plans/feat-ble-hardware-watchdog.md)
-- [x] `perf/optimistic-ble-updates` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [Pillar 2] [🧠 THINK] Mask hardware latency using 'Ghost' optimistic UI updates and state reconciliation. → [Plan](docs/plans/perf-optimistic-ble-updates.md)
-- [x] `fix/db-schema-type-parity` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] Resolve remaining 'type' column and schema mismatches in `registered_groups` and other mutations as revealed by hardening. → [Plan](docs/plans/fix-db-schema-type-parity.md)
 - [ ] `fix/display-name-persistence` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🤖 PRO-HIGH] Resolve user profile persistence issue where 'display_name' is not being propagated from auth metadata to the user_profiles table. → [Plan](docs/plans/fix-display-name-persistence.md)
 
 ---
@@ -71,7 +68,6 @@ pie title Governance Shield
   "Remaining" : 1
 ```
 
-- [x] `feat/admin-app-manager` : [☁️ CLOUD] [✅ L-RISK] [🥩 Feast] [🤖 PRO-HIGH] Finalized Governance Hub with Safety Locks (Consolidated Scope) → [Plan](docs/plans/feat-admin-app-manager.md)
 
 ---
 
@@ -116,33 +112,6 @@ pie title Feature Velocity
 
 ## ✅ Completed Previously
 
-- [x] `chore/build-and-deploy-final-hardware` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] Final production build 6600713 and deployment to Pixel 7.
-- [x] `feat/usa-skate-spots-dataset` : [☁️ CLOUD] [📦 BATCH] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] US-only dataset of rinks and parks for map overlays. → [Plan](docs/plans/feat-usa-skate-spots-dataset.md)
-- [x] `fix/voice-button-null-reference` : [🧪 LAB] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] [⏱️ 15m] Fix null reference error on voice button (missing native module bridge gracefully catching instead of crashing). → [Plan](docs/plans/fix-voice-button-null-reference.md)
-- [x] `chore/beautify-backlog` : [☁️ CLOUD] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] Prettify bucket list tags with icons and update intake rules for aesthetic consistency. → [Plan](docs/plans/chore-beautify-backlog.md)
-- [x] `feat/eula-content-update` : [☁️ CLOUD] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [⚡ FLASH-READY] Update EulaModal with the new formal legal text provided by Neogleamz. → [Plan](docs/plans/feat-eula-content-update.md)
-- [x] `chore/cleanup-crew-screen-todos` : [☁️ CLOUD] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [⚡ FLASH-READY] Cleanup legacy import TODOs in CrewCreate, CrewDetail, and CrewManage screens.
-- [x] `feat/telemetry-onboarding-ux` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] Implement a casual 'Permissions Hub' onboarding screen after EULA to enable Camera, Mic, GPS, and Bluetooth.
-- [x] `feat/eula-onboarding` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] Implement the **Legal Shield** — a mandatory, scroll-to-accept EULA flow.
-- [x] `feat/eula-in-account-manager` : [☁️ CLOUD] [✅ L-RISK] [🍪 Snack] Add EULA review link to User Account Manager Settings.
-- [x] `feat/onboarding-text-tweak` : Update "Eyes in the Dark" ➔ "Match your Fit" across all onboarding screens.
-- [x] `feat/clean-username-pill` : Removed redundant ON/OFF text badge from the dashboard header pill.
-- [x] `fix/dashboard-username-fallback` : Implemented reactive useEffect to resolve the Username/Display Name race condition.
-- [x] `fix/dashboard-group-duplication` : Resolved race condition in group processing and onboarding state checks.
-- [x] `chore/sentient-tech-debt-sweep` : Standardized AsyncStorage keys (@Sk8lytz_ prefix) and normalized speed logic.
-- [x] `audit/domain-driven-architecture` : Audited domain hooks and resolved P0/P1 state/race condition bugs.
-- [x] `feat/optimistic-picks-cache` : Implemented SWR caching for Favorites and SK8Lytz Picks.
-- [x] `refactor/micro-app-crew-modal` : Extracted CrewModal monolith into decoupled domain hooks.
-- [x] `refactor/micro-app-account-modal` : Extracted settings, profile, and device management into modular sub-views.
-- [x] `feat/admin-hub-design-system` : Standardized admin headers and ToolCard grid.
-- [x] `chore/delete-orphan-backup` : Removed Sk8LytzDiagnosticLab_old.tsx.
-- [x] `lab-music-mode-parity` : Lab 0x73 Music Mode parity.
-- [x] `epic/connection-reliability` : Multiphase BLE connection overhaul.
-- [x] `fix-ble-audit` : BLE discovery speed fixes.
-- [x] `feat/speed-tracking-telemetry` : Statistics, Session Metadata, and GPS accumulation.
-- [x] `feat/voice-command-engine` : Offline voice command resolution.
-- [x] `feat/empty-skates-setup-cta` : Setup Wizard dashboard CTA.
-- [x] `fix/db-schema-type-parity` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] Resolved remaining 'type' column and schema mismatches in `registered_groups` and other mutations.
 
 ---
 *Last updated: 2026-04-13 | Active tasks moved to Completed Archive.*
