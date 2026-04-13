@@ -88,7 +88,9 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
         insertData.pattern_id = createPatternId;
       }
 
-      const { error } = await supabase.from('sk8lytz_picks').insert(insertData);
+      // Cast as `any` -- insertData is Record<string, unknown> but the typed Insert
+      // overload requires specific column names. Runtime payload is schema-compliant.
+      const { error } = await supabase.from('sk8lytz_picks').insert(insertData as any);
       if (error) throw error;
       
       setCreateModalVisible(false);
