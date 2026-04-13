@@ -130,6 +130,7 @@ export type Database = {
           status: string
           top_speed_mph: number | null
           total_distance_miles: number | null
+          updated_at: string | null
         }
         Insert: {
           avg_speed_mph?: number | null
@@ -150,6 +151,7 @@ export type Database = {
           status?: string
           top_speed_mph?: number | null
           total_distance_miles?: number | null
+          updated_at?: string | null
         }
         Update: {
           avg_speed_mph?: number | null
@@ -170,6 +172,7 @@ export type Database = {
           status?: string
           top_speed_mph?: number | null
           total_distance_miles?: number | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -195,6 +198,7 @@ export type Database = {
           name: string
           owner_id: string | null
           state: string | null
+          updated_at: string | null
         }
         Insert: {
           avatar_color?: string | null
@@ -209,6 +213,7 @@ export type Database = {
           name: string
           owner_id?: string | null
           state?: string | null
+          updated_at?: string | null
         }
         Update: {
           avatar_color?: string | null
@@ -223,6 +228,7 @@ export type Database = {
           name?: string
           owner_id?: string | null
           state?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -302,7 +308,7 @@ export type Database = {
           color_order?: string | null
           color_sorting?: number | null
           created_at?: string
-          device_id?: string | null
+          device_id?: string
           device_name?: string | null
           ic_name?: string | null
           ic_type?: number | null
@@ -1758,6 +1764,7 @@ export type Database = {
           peak_gforce: number | null
           peak_speed_mph: number
           session_date: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
@@ -1771,6 +1778,7 @@ export type Database = {
           peak_gforce?: number | null
           peak_speed_mph?: number
           session_date?: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
@@ -1784,6 +1792,7 @@ export type Database = {
           peak_gforce?: number | null
           peak_speed_mph?: number
           session_date?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [

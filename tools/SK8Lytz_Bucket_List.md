@@ -9,8 +9,8 @@ All active tasks, bugs, and feature work. Prioritized by **App Performance, Stab
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Core Development Progress
-  "Completed" : 25
-  "Remaining" : 32
+  "Completed" : 31
+  "Remaining" : 26
 ```
 
 ------
@@ -22,17 +22,13 @@ pie title Core Development Progress
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Critical Stability
-  "Completed" : 4
-  "Remaining" : 5
+  "Completed" : 8
+  "Remaining" : 4
 ```
 
-- [ ] `fix/hardware-default-propagation` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] [📝️ NEEDS-PLAN] [⏱️ 15m] Hardware configurations (e.g. HALOZ defaulting to 2 segments) from the Product Manager are not feeding properly into the BLE initialization payload. Connect catalog logic to controller. → [Plan](docs/plans/fix-hardware-default-propagation.md)
 - [ ] `feat/gate-offline-mode` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [⏱️ 1h] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
-- [ ] `refactor/state-machine-standard` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [Pillar 8] [🧠 THINK] [⏱️ 2h] Deterministic UI — transition from boolean flags to explicit Enum-based Finite State Machines. → [Plan](docs/plans/refactor-state-machine-standard.md)
 - [ ] `feat/ble-hardware-watchdog` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [Pillar 7] [🧠 THINK] [⏱️ 1.5h] Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks and silent-relatches connections. → [Plan](docs/plans/feat-ble-hardware-watchdog.md)
 - [ ] `perf/optimistic-ble-updates` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [Pillar 2] [🧠 THINK] [⏱️ 30m] Mask hardware latency using 'Ghost' optimistic UI updates and state reconciliation. → [Plan](docs/plans/perf-optimistic-ble-updates.md)
-- [ ] `fix/db-schema-type-parity` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] [⏱️ 15m] Resolve remaining 'type' column and schema mismatches in `registered_groups` and other mutations as revealed by hardening. → [Plan](docs/plans/fix-db-schema-type-parity.md)
-- [x] `fix/display-name-persistence` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🤖 PRO-HIGH] [⏱️ 10m] Resolve user profile persistence issue where 'display_name' is not being propagated from auth metadata to the user_profiles table. → [Plan](docs/plans/fix-display-name-persistence.md)
 - [ ] `fix/voice-button-null-reference` : [🧪 LAB] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] [⏱️ 15m] Fix null reference error on voice button (missing native module bridge gracefully catching instead of crashing). → [Plan](docs/plans/fix-voice-button-null-reference.md)
 
 ---
@@ -44,11 +40,10 @@ pie title Critical Stability
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
-  "Completed" : 4
-  "Remaining" : 11
+  "Completed" : 7
+  "Remaining" : 8
 ```
 
-- [ ] `perf/delta-sync-protocol` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [Pillar 4] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] [⏱️ 30m] Implement differential data fetching to reduce bandwidth and battery consumption. → [Plan](docs/plans/perf-delta-sync-protocol.md)
 - [ ] `fix/remote-id-audit` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [Security] [🧠 THINK] [⏱️ 15m] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
 - [ ] `chore/audit-rls-performance` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] [⏱️ 15m] #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges. → [Plan](docs/plans/audit-rls-performance.md)
 - [ ] `style/tokenized-spacing-standard` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [Pillar 9] [🤖 FLASH] [📝️ NEEDS-PLAN] [⏱️ 30m] The 8pt Grid — enforce 8pt spacing tokens app-wide to eliminate magic numbers. → [Plan](docs/plans/style-tokenized-spacing-standard.md)
@@ -56,8 +51,6 @@ pie title Engineering Health
 - [ ] `chore/refactor-god-object-docked-controller` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [God Object] [⏱️ 1.5h] Refactor `DockedController.tsx` — 83 hooks and 134KB detected; critical modularity risk.
 - [ ] `chore/refactor-god-object-dashboard` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [God Object] [⏱️ 1h] Refactor `DashboardScreen.tsx` — 48 hooks and 95KB detected; decompose state management.
 - [ ] `chore/refactor-use-ble-overheat` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] [God Object] [⏱️ 30m] Refactor `useBLE.ts` — 39 hooks and 42KB detected; decouple scanning from characteristic logic.
-- [ ] `chore/telemetry-efficiency-audit` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🤖 PRO-HIGH] [⏱️ 1h] Re-evaluate the parsed_* telemetry tables and ingestion logic to eliminate data duplication and optimize storage efficiency. → [Plan](docs/plans/chore-telemetry-efficiency-audit.md)
-- [ ] `chore/refactor-admin-tools` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] [⏱️ 30m] break down `AdminToolsModal.tsx` (637 lines) into feature-specific admin modules.
 - [ ] `feat/discord-agent-bridge` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [⏱️ 2h] Implement a local Discord bridge that streams agent logs to a channel and pipes user replies back into the agent's context via a sanitized command buffer file. → [Plan](docs/plans/feat-discord-agent-bridge.md)
 
 ---
@@ -69,7 +62,7 @@ pie title Engineering Health
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Governance Shield
-  "Completed" : 4
+  "Completed" : 7
   "Remaining" : 1
 ```
 
@@ -147,3 +140,4 @@ pie title Feature Velocity
 
 ---
 *Last updated: 2026-04-13 | Active tasks moved to Completed Archive.*
+

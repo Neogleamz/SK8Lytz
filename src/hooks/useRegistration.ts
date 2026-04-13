@@ -98,7 +98,7 @@ export function useRegistration() {
       const devices: RegisteredDevice[] = data.map((row: Record<string, any>) => ({
         ...row,
         is_pending_sync: false,
-      }));
+      } as RegisteredDevice));
 
       setRegisteredDevices(devices);
       await AsyncStorage.setItem(LOCAL_KEY, JSON.stringify(devices));
@@ -180,7 +180,7 @@ export function useRegistration() {
             led_version:     fullDevice.led_version,
             product_id:      fullDevice.product_id,
             user_id:         user.id,
-            id:              fullDevice.id,
+            id:              fullDevice.id || deviceId,
             updated_at:      now,
             registered_at:   fullDevice.registered_at,
           };

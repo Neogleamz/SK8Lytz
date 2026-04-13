@@ -502,7 +502,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           let groups: CustomGroup[] | null = null;
           try {
             const result = await supabase.from('registered_groups').select('*').eq('user_id', CloudUserId);
-            groups = result.data as CustomGroup[];
+            groups = result.data as any[] as CustomGroup[];
             isOffline = !!result.error;
           } catch {
             isOffline = true;
@@ -900,6 +900,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 id: group.id,
                 user_id: userId,
                 group_name: group.name,
+                type: group.type || 'device-fleet',
                 created_at: new Date().toISOString()
               }, { onConflict: 'id' });
             } catch (_ge) { /* best-effort sync */ }

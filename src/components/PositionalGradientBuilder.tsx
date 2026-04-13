@@ -69,7 +69,7 @@ export default function PositionalGradientBuilder({
                   .eq('user_id', userAuth.user.id);
                   
               if (!error && data) {
-                  cloudPresets = data as CustomBuilderPreset[];
+                  cloudPresets = data as any as CustomBuilderPreset[];
               }
           }
           
@@ -103,7 +103,7 @@ export default function PositionalGradientBuilder({
               newPreset.id = crypto.randomUUID ? crypto.randomUUID() : `cloud_${Date.now()}`;
               newPreset.user_id = userAuth.user.id;
               
-              const { error } = await supabase.from('custom_builder_presets').insert(newPreset);
+              const { error } = await supabase.from('custom_builder_presets').insert(newPreset as any);
               if (error) throw error;
           } else {
               // Save to Local Only

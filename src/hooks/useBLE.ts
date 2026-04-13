@@ -397,12 +397,13 @@ export default function useBLE(): BluetoothLowEnergyApi {
                      }
                      // If existing is present, it maintains its user_id because we omit it in the payload.
                      
-                     // Use the UPSERT operation matching device_mac
-                     await supabase.from('registered_devices').upsert(telemetryPayload, { onConflict: 'device_mac', ignoreDuplicates: false }).catch(() => {
-                       // Silently drop errors if constraint is purely user_id,device_mac 
-                       // fallback upsert trial using the combined constraint
-                       supabase.from('registered_devices').upsert(telemetryPayload, { onConflict: 'user_id,device_mac', ignoreDuplicates: false }).catch(() => {});
-                     });
+                     try {
+                       await supabase.from('registered_devices').upsert(telemetryPayload, { onConflict: 'device_mac', ignoreDuplicates: false });
+                     } catch {
+                       try {
+                         await supabase.from('registered_devices').upsert(telemetryPayload, { onConflict: 'user_id,device_mac', ignoreDuplicates: false });
+                       } catch {}
+                     }
 
                      // Provide the user_id back to local state so LogParser can display exactly who owns it!
                      if (ownerIds.length > 0) {
