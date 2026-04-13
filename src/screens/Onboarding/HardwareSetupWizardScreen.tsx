@@ -16,7 +16,7 @@ interface HardwareSetupWizardScreenProps {
 export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareSetupWizardScreenProps) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
-  const { scanForPeripherals, isScanning, isScanProbing, requestPermissions, isBluetoothSupported, isBluetoothEnabled, pendingRegistrations, writeToDevice, probeDevice } = useBLE();
+  const { scanForPeripherals, bleState, requestPermissions, isBluetoothSupported, isBluetoothEnabled, pendingRegistrations, writeToDevice, probeDevice } = useBLE();
   const [hasStartedScan, setHasStartedScan] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [isBlinking, setIsBlinking] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
 
   useEffect(() => {
     // Wait for user to hit next. Devices are NOT auto-selected based on user feedback.
-  }, [pendingRegistrations, hasStartedScan, isScanning]);
+  }, [pendingRegistrations, hasStartedScan, bleState]);
 
   useEffect(() => {
     if (!hasStartedScan && isBluetoothSupported && isBluetoothEnabled) {
@@ -39,18 +39,18 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
 
   useEffect(() => {
     let timer: any;
-    if (hasStartedScan && step < 3 && !isScanning && !isScanProbing) {
+    if (hasStartedScan && step < 3 && bleState !== 'SCANNING' && bleState !== 'PROBING') {
       // Keep continuously polling while the user is still looking for hardware (Wait 2s to let radio breathe)
       timer = setTimeout(() => {
         scanForPeripherals({ keepAlive: true });
       }, 2000);
     }
     return () => clearTimeout(timer);
-  }, [step, isScanning, isScanProbing, hasStartedScan]);
+  }, [step, bleState, hasStartedScan]);
 
   const handleStartScan = async () => {
     const granted = await requestPermissions();
-    if (granted && !isScanning) {
+    if (granted && bleState !== 'SCANNING') {
       setHasStartedScan(true);
       scanForPeripherals();
     }
@@ -207,7 +207,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
           {deviceGroups.map((group) => renderDeviceGroup(`${group.profile.id}`, group.devices, group.profile.vizThemeColor || '#00f0ff'))}
           {renderDeviceGroup('SCANNING / UNKNOWN', unknown, Colors.textMuted)}
           
-          {pendingRegistrations.length === 0 && !isScanning && !isScanProbing && (
+          {pendingRegistrations.length === 0 && bleState !== 'SCANNING' && bleState !== 'PROBING' && (
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>No devices found. Ensure they are powered on.</Text>
             </View>
@@ -366,7 +366,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
           </View>
         ) : step === 1 ? (
           <>
-            {pendingRegistrations.length > 0 && !isScanning ? (
+            {pendingRegistrations.length > 0 && bleState !== 'SCANNING' ? (
               <TouchableOpacity 
                 style={styles.primaryBtn} 
                 onPress={() => setStep(2)}
@@ -378,15 +378,15 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
               </TouchableOpacity>
             ) : (
               <TouchableOpacity 
-                style={[styles.primaryBtn, isScanning && styles.primaryBtnDisabled]} 
+                style={[styles.primaryBtn, bleState === 'SCANNING' && styles.primaryBtnDisabled]} 
                 onPress={handleStartScan}
-                disabled={isScanning}
+                disabled={bleState === 'SCANNING'}
               >
-                {isScanning || isScanProbing || !hasStartedScan ? (
+                {bleState === 'SCANNING' || bleState === 'PROBING' || !hasStartedScan ? (
                   <View style={styles.scanningRow}>
                     <ActivityIndicator color="#000" size="small" />
                     <Text style={styles.primaryBtnText}>
-                      {isScanning ? 'SEARCHING FOR SKATES...' : 'IDENTIFYING HARDWARE...'}
+                      {bleState === 'SCANNING' ? 'SEARCHING FOR SKATES...' : 'IDENTIFYING HARDWARE...'}
                     </Text>
                   </View>
                 ) : (

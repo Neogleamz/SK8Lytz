@@ -198,7 +198,7 @@ const ColorSwatchRow: React.FC<HueBarProps> = ({ label, hue, color, onHueChange,
 
 // ─── Main EffectsPanel ────────────────────────────────────────────────────────
 interface EffectsPanelProps {
-  writeToDevice?: (payload: number[]) => Promise<void>;
+  writeToDevice?: (payload: number[]) => Promise<void | boolean>;
   points?: number;
   segments?: number;
   speed: number;

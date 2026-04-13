@@ -54,6 +54,24 @@ export type MotionState =
   | 'SLOWING_DOWN'
   | 'HARD_BRAKING';
 
+/** FSM for the BLE connection lifecycle, replacing isScanning / isConnecting booleans. */
+export type BleConnectionState =
+  | 'IDLE'
+  | 'SCANNING'
+  | 'CONNECTING'
+  | 'PROBING'
+  | 'READY'
+  | 'DISCONNECTING'
+  | 'ERROR';
+
+/** FSM for the primary Dashboard view router. */
+export type DashboardViewState =
+  | 'LOADING_REGS'
+  | 'SETUP_WIZARD'
+  | 'DASHBOARD'
+  | 'CREW_HUB'
+  | 'OFFLINE';
+
 /** FSM for the DockedController primary mode selector. */
 export type ModeType =
   | 'FAVORITES'

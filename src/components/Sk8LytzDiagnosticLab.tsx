@@ -37,7 +37,7 @@ import { useProtocolBuilder } from '../hooks/useProtocolBuilder';
 interface LabProps {
   visible: boolean;
   onClose: () => void;
-  writeToDevice?: (data: number[], deviceId?: string) => Promise<void>;
+  writeToDevice?: (data: number[], deviceId?: string) => Promise<void | boolean>;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
   connectedDevices?: { id: string; name: string | null }[];
   hwSettings?: {
@@ -49,7 +49,7 @@ interface LabProps {
     detected?: boolean;
   };
   allDevices?: any[];
-  isScanning?: boolean;
+  bleState?: string;
   handleScan?: () => void;
   connectToDevice?: (device: any) => Promise<any>;
   liveDeviceConfigs?: Record<string, any>;
@@ -109,7 +109,7 @@ const TRANSITION_TYPES = [
 export default function Sk8LytzDiagnosticLab({
   visible, onClose, writeToDevice, liveRxPayload,
   connectedDevices = [], hwSettings,
-  allDevices = [], isScanning = false, handleScan,
+  allDevices = [], bleState = 'IDLE', handleScan,
   connectToDevice, liveDeviceConfigs = {},
 }: LabProps) {
 
@@ -228,12 +228,12 @@ export default function Sk8LytzDiagnosticLab({
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <Text style={[S.sectionTitle, { color: txtPri }]}>HARDWARE SCANNER</Text>
         <TouchableOpacity 
-          style={{ backgroundColor: isScanning ? border : cyan, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: isScanning ? border : cyan }} 
+          style={{ backgroundColor: bleState === 'SCANNING' ? border : cyan, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: bleState === 'SCANNING' ? border : cyan }} 
           onPress={() => { if (handleScan) handleScan(); }}
-          disabled={isScanning}
+          disabled={bleState === 'SCANNING' || bleState === 'PROBING'}
         >
-          <Text style={{ color: isScanning ? txtMuted : '#000', fontWeight: '900', fontSize: 11, letterSpacing: 0.5 }}>
-            {isScanning ? 'SCANNING...' : 'START SCAN'}
+          <Text style={{ color: bleState === 'SCANNING' ? txtMuted : '#000', fontWeight: '900', fontSize: 11, letterSpacing: 0.5 }}>
+            {bleState === 'SCANNING' ? 'SCANNING...' : bleState === 'PROBING' ? 'PROBING...' : 'START SCAN'}
           </Text>
         </TouchableOpacity>
       </View>

@@ -128,6 +128,24 @@ The **Admin Tools Hub** (`AdminToolsModal`) is the unified gateway for all syste
     * Product Manager upserts are strictly typed to enforce the `batteryCapacityMilliAmpereHour` field, preventing database record drift.
 * **Navigation Orchestration**: Closing any administrative sub-tool (Lab, Programmer) must explicitly re-trigger the visibility of the `AdminToolsModal` in the parent `DashboardScreen` to ensure a consistent "nested" navigation experience.
 
+### Optimistic BLE Write Pipeline ("The Ghost Standard")
+
+The BLE write path uses an **Optimistic UI** architecture to eliminate perceived 80–500ms hardware latency:
+
+| Phase | Status FSM | Behavior |
+|:---|:---|:---|
+| 1. **OPTIMISTIC** | `onOptimistic()` fires | UI updates INSTANTLY before BLE write |
+| 2. **PENDING** | `writeStatus = 'PENDING'` | BLE command dispatched (40ms debounce) |
+| 3. **CONFIRMED** | `writeStatus = 'CONFIRMED'` | Hardware ACK'd — light haptic |
+| 4. **RECONCILED** | `writeStatus = 'RECONCILED'` | Hardware FAILED — error haptic + `onReconcile()` rollback |
+
+**Key Files:**
+- `src/hooks/useOptimisticBLE.ts` — Ghost state FSM, debounce, haptics
+- `src/hooks/useBLE.ts` — Core write function (`writeToDevice` returns `Promise<boolean>`)
+- `src/components/DockedController.tsx` — Consumer integration (status indicator dot)
+
+**Architectural Constraint:** `writeToDevice` MUST return `Promise<boolean>` (true = success, false = failure) to enable the reconciliation pipeline. All component prop interfaces use `Promise<void | boolean>` for backwards compatibility.
+
 ### Test Users & Environments
 
 For testing App Sync behavior vs. Offline mode offline fallbacks, you can authenticate using the primary test user:

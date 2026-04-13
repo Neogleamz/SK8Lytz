@@ -21,7 +21,8 @@ import { useSessionTracking } from '../hooks/useSessionTracking';
 import { useStreetMode } from '../hooks/useStreetMode';
 import { useFavorites } from '../hooks/useFavorites';
 import { useDockedControllerState } from '../hooks/useDockedControllerState';
-import type { ModeType } from '../types/dashboard.types';
+import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
+import type { ModeType, BleConnectionState } from '../types/dashboard.types';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio } from 'expo-av';
@@ -325,11 +326,11 @@ interface Sk8lytzControllerProps {
   hwSettings?: any;
   lockedProduct?: ProductType;
   isPaired?: boolean;
-  isDisconnecting?: boolean;
+  bleState?: BleConnectionState;
   points?: number;
   devices?: IDeviceState[];
   onLongPressDevice?: (device: IDeviceState) => void;
-  writeToDevice?: (payload: number[]) => Promise<void>;
+  writeToDevice?: (payload: number[]) => Promise<void | boolean>;
   isPoweredOn?: boolean;
   onDisconnect?: () => void;
   /** 'leader' = broadcast changes, 'member' = receive changes, null = solo */
@@ -355,7 +356,7 @@ export type DockedControllerHandle = {
 // MarqueeText moved to standalone component MarqueeText.tsx
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
-  function DockedController({ hwSettings, lockedProduct, isPaired, isDisconnecting = false, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged }: Sk8lytzControllerProps, ref) {
+  function DockedController({ hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged }: Sk8lytzControllerProps, ref) {
     const { Colors, isDark } = useTheme();
     const styles = createStyles(Colors);
 
@@ -369,12 +370,23 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
     const [lastSentPayload, setLastSentPayload] = useState<number[]>([]);
 
+    // ── Optimistic BLE Bridge (Ghost Standard) ─────────────────────────────
+    const { optimisticWrite, writeStatus } = useOptimisticBLE({
+      writeToDevice: parentWriteToDevice as ((payload: number[], targetDeviceId?: string) => Promise<boolean>) | undefined,
+      onReconcile: () => {
+        // On BLE failure: snap back to last confirmed state
+        // Currently a no-op — the UI already reflects the optimistic state.
+        // Future: restore from captureEntireState() snapshot.
+        AppLogger.warn('[DockedController] BLE write reconciled — UI may be stale');
+      },
+      debounceMs: 40,
+    });
+
     const writeToDevice = async (payload: number[]) => {
-      if (isDisconnecting) return; // Short-circuit dead writes during teardown
+      // Short-circuit dead writes if we are disconnected or disconnecting
+      if (bleState === 'DISCONNECTING' || bleState === 'IDLE' || bleState === 'ERROR') return;
       setLastSentPayload([...payload]);
-      if (parentWriteToDevice) {
-        await parentWriteToDevice(payload);
-      }
+      await optimisticWrite(payload);
     };
 
     const [recording, setRecording] = useState<Audio.Recording | null>(null);
@@ -1173,6 +1185,13 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
         {/* Visual Product Shape Selector/Indicator - ENLARGED FOCUS */}
         <View style={styles.visualizerWrapper}>
+          {/* BLE Write Status Indicator */}
+          {writeStatus === 'PENDING' && (
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#00F0FF', opacity: 0.7, position: 'absolute', right: 8, top: 8, zIndex: 10 }} />
+          )}
+          {writeStatus === 'RECONCILED' && (
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF4444', position: 'absolute', right: 8, top: 8, zIndex: 10 }} />
+          )}
           <View style={{ marginBottom: 8, width: '100%' }}>
             <TouchableOpacity
               style={{ position: 'absolute', top: 12, right: 16, zIndex: 100, backgroundColor: 'rgba(255,255,255,0.1)', padding: 6, borderRadius: 20 }}

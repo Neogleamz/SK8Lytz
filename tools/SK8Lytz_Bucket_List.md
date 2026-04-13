@@ -27,10 +27,10 @@ pie title Critical Stability
 ```
 
 - [ ] `feat/gate-offline-mode` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
-- [ ] `refactor/state-machine-standard` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [Pillar 8] [🧠 THINK] Deterministic UI — transition from boolean flags to explicit Enum-based Finite State Machines. → [Plan](docs/plans/refactor-state-machine-standard.md)
+- [x] `refactor/state-machine-standard` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [Pillar 8] [🧠 THINK] Deterministic UI — transition from boolean flags to explicit Enum-based Finite State Machines. → [Plan](docs/plans/refactor-state-machine-standard.md)
 - [ ] `feat/ble-hardware-watchdog` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [Pillar 7] [🧠 THINK] Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks and silent-relatches connections. → [Plan](docs/plans/feat-ble-hardware-watchdog.md)
-- [ ] `perf/optimistic-ble-updates` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [Pillar 2] [🧠 THINK] Mask hardware latency using 'Ghost' optimistic UI updates and state reconciliation. → [Plan](docs/plans/perf-optimistic-ble-updates.md)
-- [ ] `fix/db-schema-type-parity` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] Resolve remaining 'type' column and schema mismatches in `registered_groups` and other mutations as revealed by hardening. → [Plan](docs/plans/fix-db-schema-type-parity.md)
+- [x] `perf/optimistic-ble-updates` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [Pillar 2] [🧠 THINK] Mask hardware latency using 'Ghost' optimistic UI updates and state reconciliation. → [Plan](docs/plans/perf-optimistic-ble-updates.md)
+- [x] `fix/db-schema-type-parity` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] Resolve remaining 'type' column and schema mismatches in `registered_groups` and other mutations as revealed by hardening. → [Plan](docs/plans/fix-db-schema-type-parity.md)
 - [ ] `fix/display-name-persistence` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🤖 PRO-HIGH] Resolve user profile persistence issue where 'display_name' is not being propagated from auth metadata to the user_profiles table. → [Plan](docs/plans/fix-display-name-persistence.md)
 
 ---
