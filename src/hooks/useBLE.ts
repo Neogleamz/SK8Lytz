@@ -58,6 +58,8 @@ interface BluetoothLowEnergyApi {
   setDroppedOutDeviceIds: React.Dispatch<React.SetStateAction<string[]>>;
   pendingRegistrations: PendingRegistration[];
   clearPendingRegistrations: () => void;
+  isWatchdogActive: boolean;
+  bleState: 'IDLE' | 'SCANNING' | 'PROBING' | 'CONNECTED';
 }
 
 // Auto-classify result — fed into FirstTimeSetupModal
@@ -114,6 +116,14 @@ export default function useBLE(): BluetoothLowEnergyApi {
   // connectedDevices=[] from mount time and returned early at the length===0 guard.
   const connectedDevicesRef = useRef<Device[]>([]);
 
+  // ─── Watchdog Refs ─────────────────────────────────────────────────────────
+  // Prevents overlapping recovery cycles from spawning under concurrent miss events.
+  const isWatchdogRecovering = useRef<boolean>(false);
+  // Tracks consecutive missed heartbeat pings per device { [deviceId]: number }.
+  const watchdogMissCountRef = useRef<Record<string, number>>({});
+  // setInterval handle — stored in ref so startWatchdog/stopWatchdog share the same handle.
+  const watchdogIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
     AppLogger.updateKnownDevices(allDevices);
   }, [allDevices]);
@@ -143,7 +153,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
   useEffect(() => {
     if (!bleManager || Platform.OS === 'web') return;
     const subscription = bleManager.onStateChange((state: any) => {
-      console.log('BLE State Change:', state);
+      AppLogger.log('BLE_STATE_CHANGE', { state });
       if (state === State.Unsupported) {
         setIsBluetoothSupported(false);
       }
@@ -661,6 +671,159 @@ export default function useBLE(): BluetoothLowEnergyApi {
     }
   };
 
+  // ─── Watchdog Engine ────────────────────────────────────────────────────────
+
+  /**
+   * pingDeviceForLiveness — lightweight heartbeat check via 0x63 hardware query.
+   * Writes to the existing open GATT connection and waits ≤2500ms for a FF02 response.
+   * Returns true if hardware is alive, false if it has soft-locked (silent failure).
+   * According to Master Reference §3, the 0x63 response arrives on ZENGGE_NOTIFY_UUID (FF02).
+   */
+  const pingDeviceForLiveness = async (deviceId: string): Promise<boolean> => {
+    if (Platform.OS === 'web' || !bleManager) return true; // web is always "alive"
+    try {
+      const result = await new Promise<boolean>((resolve) => {
+        const timeout = setTimeout(() => { sub.remove(); resolve(false); }, 2500);
+        const sub = bleManager.monitorCharacteristicForDevice(
+          deviceId, ZENGGE_SERVICE_UUID, ZENGGE_NOTIFY_UUID,
+          (err: any, char: any) => {
+            if (err || !char?.value) return;
+            try {
+              const raw = Array.from(Buffer.from(char.value, 'base64')) as number[];
+              // 0x63 response: inner payload byte at index 0 or wrapped at index 8
+              if (raw[0] === 0x63 || raw[8] === 0x63) {
+                clearTimeout(timeout);
+                sub.remove();
+                resolve(true);
+              }
+            } catch { /* silently ignore parse errors */ }
+          }
+        );
+        // Fire the 0x63 hw query on the existing open connection
+        const qp = ZenggeProtocol.queryHardwareSettings(false);
+        bleManager.writeCharacteristicWithoutResponseForDevice(
+          deviceId, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID,
+          Buffer.from(qp).toString('base64')
+        ).catch(() => {});
+      });
+      return result;
+    } catch {
+      return false;
+    }
+  };
+
+  /**
+   * silentRelatch — gracefully cycle a soft-locked device's GATT connection.
+   * Sequence: cancel → 250ms OS buffer → reconnect → re-discover → re-monitor FF02 → 0x63 query.
+   * Mirrors connectToDevice exactly to ensure characteristic subscriptions and dropout listeners
+   * are properly re-established. Must remain strictly sequential (GATT 133 prevention).
+   */
+  const silentRelatch = async (device: Device): Promise<boolean> => {
+    try {
+      AppLogger.log('WATCHDOG_RELATCH', { deviceId: device.id, name: device.name, action: 'begin' });
+
+      // Step 1: Clean teardown — remove dropout listener before cancel to prevent ghost events
+      if (disconnectListeners.current[device.id]) {
+        disconnectListeners.current[device.id].remove();
+        delete disconnectListeners.current[device.id];
+      }
+      await bleManager.cancelDeviceConnection(device.id).catch(() => {});
+      // Per Master Reference §3: strict sequential teardown + 250ms OS buffer
+      await new Promise(r => setTimeout(r, 250));
+
+      // Step 2: Fresh connect with 5000ms hard timeout (infinite freeze prevention)
+      const conn = await bleManager.connectToDevice(device.id, { timeout: 5000 });
+      await conn.discoverAllServicesAndCharacteristics();
+
+      // Step 3: Re-register dropout listener
+      disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {
+        AppLogger.log('DEVICE_DISCONNECTED', { id: conn.id, reason: 'dropout_post_relatch', error: error?.message });
+        setDroppedOutDeviceIds(prev => [...prev, conn.id]);
+        setConnectedDevices(prev => prev.filter(c => c.id !== conn.id));
+        if (disconnectListeners.current[conn.id]) {
+          disconnectListeners.current[conn.id].remove();
+          delete disconnectListeners.current[conn.id];
+        }
+      });
+
+      // Step 4: Re-subscribe to FF02 notifications
+      conn.monitorCharacteristicForService(
+        ZENGGE_SERVICE_UUID, ZENGGE_NOTIFY_UUID,
+        (error: any, characteristic: any) => handleNotification(error, characteristic, conn.id)
+      );
+
+      // Step 5: 600ms settling time, then restore hardware awareness
+      await new Promise(r => setTimeout(r, 600));
+      const qp = ZenggeProtocol.queryHardwareSettings(false);
+      await conn.writeCharacteristicWithoutResponseForService(
+        ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, Buffer.from(qp).toString('base64')
+      ).catch(() => {});
+
+      // Update connectedDevices so writeToDevice's ref sees the fresh connection object
+      setConnectedDevices(prev => prev.map(d => d.id === device.id ? conn : d));
+      AppLogger.log('WATCHDOG_RELATCH', { deviceId: device.id, action: 'success' });
+      return true;
+    } catch (e: any) {
+      AppLogger.warn(`[Watchdog] Relatch failed for ${device.id}`, e?.message);
+      AppLogger.log('WATCHDOG_RELATCH', { deviceId: device.id, action: 'failed', error: e?.message });
+      return false;
+    }
+  };
+
+  /**
+   * startWatchdog — begins the 30s heartbeat polling cycle.
+   * Uses a FIFO serial queue (one device at a time, 600ms cooldown) to prevent
+   * concurrent GATT operations that trigger Android GATT error 133.
+   * Guards with isWatchdogRecovering to prevent overlapping recovery cycles.
+   */
+  const startWatchdog = () => {
+    if (watchdogIntervalRef.current) clearInterval(watchdogIntervalRef.current); // prevent double-start
+    watchdogMissCountRef.current = {};
+    watchdogIntervalRef.current = setInterval(async () => {
+      if (isWatchdogRecovering.current) return; // guard: skip tick if recovery is in-flight
+      const devices = connectedDevicesRef.current;
+      if (devices.length === 0 || Platform.OS === 'web') return;
+
+      isWatchdogRecovering.current = true;
+      try {
+        for (const device of devices) {
+          const isAlive = await pingDeviceForLiveness(device.id);
+          if (isAlive) {
+            watchdogMissCountRef.current[device.id] = 0; // reset on success
+          } else {
+            const misses = (watchdogMissCountRef.current[device.id] ?? 0) + 1;
+            watchdogMissCountRef.current[device.id] = misses;
+            AppLogger.warn(`[Watchdog] Device ${device.id} missed heartbeat (${misses}/2)`);
+            AppLogger.log('WATCHDOG_MISS', { deviceId: device.id, name: device.name, misses });
+
+            if (misses >= 2) {
+              // Confirmed soft-lock — two consecutive misses → initiate relatch
+              watchdogMissCountRef.current[device.id] = 0; // reset before attempt
+              await silentRelatch(device);
+              // Mandatory 600ms cooldown between devices per GATT 133 prevention mandate
+              await new Promise(r => setTimeout(r, 600));
+            }
+          }
+        }
+      } finally {
+        isWatchdogRecovering.current = false;
+      }
+    }, 30_000); // 30-second heartbeat interval
+  };
+
+  /**
+   * stopWatchdog — clears the polling interval and resets all counters.
+   * Called on explicit disconnection and on hook unmount.
+   */
+  const stopWatchdog = () => {
+    if (watchdogIntervalRef.current) {
+      clearInterval(watchdogIntervalRef.current);
+      watchdogIntervalRef.current = null;
+    }
+    watchdogMissCountRef.current = {};
+    isWatchdogRecovering.current = false;
+  };
+
   const connectToDevice = async (device: Device): Promise<string | undefined> => {
     try {
       const connectStartTime = Date.now();
@@ -771,7 +934,10 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
       bleManager.stopDeviceScan();
       setIsScanning(false);
-      
+
+      // Start the autonomous Hardware Watchdog to monitor this connection's liveness
+      startWatchdog();
+
       return firmware;
     } catch (e: any) {
       AppLogger.error('FAILED TO CONNECT', e);
@@ -879,6 +1045,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
       setConnectedDevices(connections);
 
+      // Start the autonomous Hardware Watchdog to monitor all group connections
+      startWatchdog();
+
       bleManager.stopDeviceScan();
       setIsScanning(false);
     } catch (e: any) {
@@ -937,6 +1106,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
   };
 
   const disconnectFromDevice = async () => {
+    // Stop the Hardware Watchdog before tearing down connections to prevent recovery races
+    stopWatchdog();
+
     // Clean up all physical listeners
     Object.values(disconnectListeners.current).forEach(sub => {
       try { sub.remove(); } catch (e) {}
@@ -962,6 +1134,11 @@ export default function useBLE(): BluetoothLowEnergyApi {
     setConnectedDevices([]);
   };
 
+  // Cleanup watchdog on hook unmount to prevent memory leaks
+  useEffect(() => {
+    return () => stopWatchdog();
+  }, []);
+
   return useMemo(() => ({
     scanForPeripherals,
     requestPermissions,
@@ -984,14 +1161,17 @@ export default function useBLE(): BluetoothLowEnergyApi {
     pendingRegistrations,
     clearPendingRegistrations: () => setPendingRegistrations([]),
     probeDevice,
+    isWatchdogActive: watchdogIntervalRef.current !== null,
+    // Derived scan state string consumed by HardwareSetupWizardScreen and Diagnostic Lab
+    bleState: isScanning ? 'SCANNING' : isScanProbing ? 'PROBING' : connectedDevices.length > 0 ? 'CONNECTED' : 'IDLE',
   }), [
-    allDevices, 
-    connectedDevices, 
+    allDevices,
+    connectedDevices,
     isScanning,
     isScanProbing,
     pendingRegistrations,
-    isBluetoothSupported, 
-    isBluetoothEnabled, 
+    isBluetoothSupported,
+    isBluetoothEnabled,
     dataReceivedCallback,
     setDataReceivedCallback,
     droppedOutDeviceIds,

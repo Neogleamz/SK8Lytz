@@ -27,7 +27,7 @@ pie title Critical Stability
 ```
 
 - [ ] `feat/gate-offline-mode` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
-- [ ] `feat/ble-hardware-watchdog` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [Pillar 7] [🧠 THINK] Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks and silent-relatches connections. → [Plan](docs/plans/feat-ble-hardware-watchdog.md)
+- [x] `feat/ble-hardware-watchdog` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [Pillar 7] [🧠 THINK] Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks and silent-relatches connections. → [Plan](docs/plans/feat-ble-hardware-watchdog.md)
 
 ---
 
