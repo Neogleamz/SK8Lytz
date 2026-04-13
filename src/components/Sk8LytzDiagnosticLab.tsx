@@ -53,6 +53,8 @@ interface LabProps {
   handleScan?: () => void;
   connectToDevice?: (device: any) => Promise<any>;
   liveDeviceConfigs?: Record<string, any>;
+  isDiagnosticsMode?: boolean;
+  onToggleDiagnostics?: () => void;
 }
 
 type LabTab = 'DEVICES' | 'COLOR' | 'TRANSITION' | 'BUILDER' | 'SNIFFER';
@@ -111,6 +113,7 @@ export default function Sk8LytzDiagnosticLab({
   connectedDevices = [], hwSettings,
   allDevices = [], bleState = 'IDLE', handleScan,
   connectToDevice, liveDeviceConfigs = {},
+  isDiagnosticsMode, onToggleDiagnostics,
 }: LabProps) {
 
   const { Colors, isDark } = useTheme();
@@ -817,6 +820,26 @@ export default function Sk8LytzDiagnosticLab({
                 : 'Hardware telemetry & protocol debugger'}
             </Text>
           </View>
+          {onToggleDiagnostics && (
+            <TouchableOpacity 
+              onPress={onToggleDiagnostics}
+              style={{
+                marginLeft: Spacing.sm,
+                paddingHorizontal: Spacing.md,
+                paddingVertical: Spacing.sm,
+                borderRadius: 20,
+                backgroundColor: isDiagnosticsMode ? '#ff404022' : 'rgba(255,255,255,0.05)',
+                borderWidth: 1,
+                borderColor: isDiagnosticsMode ? '#ff4040' : border,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: isDiagnosticsMode ? '#ff4040' : txtMuted, fontSize: 10, fontWeight: '900' }}>
+                {isDiagnosticsMode ? 'TELEMETRY: ON' : 'TELEMETRY: OFF'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Tab Bar */}

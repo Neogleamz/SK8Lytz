@@ -40,7 +40,7 @@ _System-wide health improvements, refactors, and performance optimizations._
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
   "Completed" : 4
-  "Remaining" : 10
+  "Remaining" : 11
 ```
 
 - [x] `refactor/ble-notification-mailroom` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] [📝️ NEEDS-PLAN] [⏱️ 2h] Decompose the monolithic BLE notification callback into 4 single-responsibility handlers: (1) raw hex stamp → lastRawNotification, (2) fire-and-forget Supabase diagnostics upload, (3) pure LED config parser, (4) state writer → allDevices + deviceConfigs + AsyncStorage. **Requires architectural discussion before execution.** → [Plan](docs/plans/refactor-ble-notification-mailroom.md)
@@ -56,6 +56,8 @@ pie title Engineering Health
 - [ ] `chore/refactor-use-ble-overheat` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] [God Object] Refactor `useBLE.ts` — 39 hooks and 42KB detected; decouple scanning from characteristic logic.
 
 - [ ] `chore/telemetry-efficiency-audit` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🤖 PRO-HIGH] Re-evaluate the parsed\_\* telemetry tables and ingestion logic to eliminate data duplication and optimize storage efficiency. → [Plan](docs/plans/chore-telemetry-efficiency-audit.md)
+
+- [ ] `chore/redesign-parsed-data-storage` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [📝️ NEEDS-PLAN] [⏱️ 3h] Redesign device telemetry ingestion from an un-gated firehose into a Constraint-Based Auditing model. Implements local telemetry spooling/batching (TelemetryBatcher), and consolidates fragmented tables into a single JSONB telemetry_snapshots table to minimize cloud cost overhead. → [Plan](docs/plans/chore-redesign-parsed-data-storage.md)
 
 - [ ] `feat/discord-agent-bridge` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] Implement a local Discord bridge that streams agent logs to a channel and pipes user replies back into the agent's context via a sanitized command buffer file. → [Plan](docs/plans/feat-discord-agent-bridge.md)
 

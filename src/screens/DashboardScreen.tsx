@@ -136,6 +136,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isTestModeActive, setIsTestModeActive] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
+  const [isDiagnosticsMode, setIsDiagnosticsMode] = useState(false);
 
   // ── Phase 1: Fleet Groups, Device Configs, Power States → useDashboardGroups ───────
   // Declare refs before domain hooks that consume them
@@ -366,7 +367,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // by useDashboardVoice and useDashboardProfile hooks respectively.
 
   useHardwareNotifications({
-    isDiagnosticsMode: isLabVisible,
+    isDiagnosticsMode,
     setOnDataReceived,
     setOnHardwareProbed,
     allDevices,
@@ -1257,6 +1258,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       {/* LED Diagnostic Lab — long-press the SNIFFER button to open */}
       <Sk8LytzDiagnosticLab
         visible={isLabVisible ?? false}
+        isDiagnosticsMode={isDiagnosticsMode}
+        onToggleDiagnostics={() => setIsDiagnosticsMode(!isDiagnosticsMode)}
         onClose={() => { 
             setIsLabVisible(false); 
             setIsAdminToolsVisible(true);
