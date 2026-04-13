@@ -69,7 +69,10 @@ export default function PositionalGradientBuilder({
                   .eq('user_id', userAuth.user.id);
                   
               if (!error && data) {
-                  cloudPresets = data as CustomBuilderPreset[];
+                  // Cast via `unknown` -- Supabase returns nodes as Json (opaque),
+                  // but at runtime the data is BuilderNode[]. TS2352 requires the
+                  // unknown bridge because the types don't share structural overlap.
+                  cloudPresets = data as unknown as CustomBuilderPreset[];
               }
           }
           
@@ -77,7 +80,7 @@ export default function PositionalGradientBuilder({
           const merged = [...cloudPresets, ...localPresets.filter(lp => !cloudPresets.find(cp => cp.id === lp.id))];
           setPresets(merged.sort((a,b) => (b.name > a.name ? -1 : 1))); // Alphabetical
       } catch (err) {
-          console.error("Error loading builder presets", err);
+          AppLogger.warn('[Builder] Error loading presets', err);
       } finally {
           setIsLoadingLibrary(false);
       }
@@ -103,7 +106,9 @@ export default function PositionalGradientBuilder({
               newPreset.id = crypto.randomUUID ? crypto.randomUUID() : `cloud_${Date.now()}`;
               newPreset.user_id = userAuth.user.id;
               
-              const { error } = await supabase.from('custom_builder_presets').insert(newPreset);
+              // Cast as `any` -- newPreset.nodes is BuilderNode[] but the Insert type
+              // expects nodes: Json. The data is valid; the type gap is a generator artifact.
+              const { error } = await supabase.from('custom_builder_presets').insert(newPreset as any);
               if (error) throw error;
           } else {
               // Save to Local Only

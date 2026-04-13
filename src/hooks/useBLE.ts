@@ -1,4 +1,4 @@
-/**
+﻿/**
  * useBLE.ts — SK8Lytz Bluetooth Low Energy Engine
  *
  * Custom React hook that wraps react-native-ble-plx to provide all
@@ -397,12 +397,21 @@ export default function useBLE(): BluetoothLowEnergyApi {
                      }
                      // If existing is present, it maintains its user_id because we omit it in the payload.
                      
-                     // Use the UPSERT operation matching device_mac
-                     await supabase.from('registered_devices').upsert(telemetryPayload, { onConflict: 'device_mac', ignoreDuplicates: false }).catch(() => {
-                       // Silently drop errors if constraint is purely user_id,device_mac 
-                       // fallback upsert trial using the combined constraint
-                       supabase.from('registered_devices').upsert(telemetryPayload, { onConflict: 'user_id,device_mac', ignoreDuplicates: false }).catch(() => {});
-                     });
+                      // Use try/catch -- PostgrestFilterBuilder is not a Promise and has no .catch() method.
+                      try {
+                        // Primary: upsert matching device_mac conflict key
+                        const { error: upsertErr } = await supabase
+                          .from('registered_devices')
+                          .upsert(telemetryPayload, { onConflict: 'device_mac', ignoreDuplicates: false });
+                        if (upsertErr) {
+                          // Fallback: combined user_id+device_mac key
+                          await supabase
+                            .from('registered_devices')
+                            .upsert(telemetryPayload, { onConflict: 'user_id,device_mac', ignoreDuplicates: false });
+                        }
+                      } catch (_upsertEx) {
+                        // Silently drop -- best-effort telemetry, never blocks BLE pipeline
+                      }
 
                      // Provide the user_id back to local state so LogParser can display exactly who owns it!
                      if (ownerIds.length > 0) {

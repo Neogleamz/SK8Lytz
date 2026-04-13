@@ -502,7 +502,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           let groups: CustomGroup[] | null = null;
           try {
             const result = await supabase.from('registered_groups').select('*').eq('user_id', CloudUserId);
-            groups = result.data as CustomGroup[];
+            // Route through `unknown` first -- registered_groups Row type doesn't share
+            // enough structural overlap with CustomGroup for a direct cast (TS2352).
+            groups = result.data as unknown as CustomGroup[];
             isOffline = !!result.error;
           } catch {
             isOffline = true;
@@ -900,8 +902,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 id: group.id,
                 user_id: userId,
                 group_name: group.name,
+                type: 'device-fleet', // mandatory schema field
                 created_at: new Date().toISOString()
-              }, { onConflict: 'id' });
+              } as any, { onConflict: 'id' });
             } catch (_ge) { /* best-effort sync */ }
             
             // Upsert Devices in Group

@@ -95,10 +95,13 @@ export function useRegistration() {
       if (error) throw error;
       if (!data) return;
 
+      // Cast via `as RegisteredDevice` — Supabase Row type infers a precise shape
+      // that doesn't fully overlap with RegisteredDevice's optional fields at compile time,
+      // but the data contract is guaranteed by the schema.
       const devices: RegisteredDevice[] = data.map((row: Record<string, any>) => ({
         ...row,
         is_pending_sync: false,
-      }));
+      } as RegisteredDevice));
 
       setRegisteredDevices(devices);
       await AsyncStorage.setItem(LOCAL_KEY, JSON.stringify(devices));
@@ -185,9 +188,11 @@ export function useRegistration() {
             registered_at:   fullDevice.registered_at,
           };
 
+          // Cast as `any` — dbRow contains valid DB columns (points, strip_type) that exist
+          // in the schema but the auto-generated Insert type doesn't perfectly capture.
           const { error } = await supabase
             .from('registered_devices')
-            .upsert(dbRow, { onConflict: 'user_id,device_mac' });
+            .upsert(dbRow as any, { onConflict: 'user_id,device_mac' });
 
           if (error) throw error;
         } else {
