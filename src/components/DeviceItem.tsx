@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
-import { Typography, Layout } from '../theme/theme';
+import { Typography, Layout, Spacing } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -51,12 +51,12 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
       <View style={styles.info}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {isSelectionMode && (
-             <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: isSelected ? Colors.primary : Colors.textMuted, marginRight: 12, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+             <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: isSelected ? Colors.primary : Colors.textMuted, marginRight: Spacing.md, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                {isSelected && <LinearGradient colors={[Colors.primary, Colors.accent]} style={StyleSheet.absoluteFill} />}
                {isSelected && <Text style={{color: 'white', fontSize: 12, fontWeight: 'bold', zIndex: 1}}>✓</Text>}
              </View>
           )}
-          <View style={{ flexDirection: 'row', marginRight: 8, alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', marginRight: Spacing.sm, alignItems: 'center' }}>
             <MaterialCommunityIcons 
               name="roller-skate" 
               size={22} 
@@ -72,7 +72,7 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
             )}
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, flexWrap: 'wrap' }}>
-            <Text style={[Typography.title, { color: Colors.primary, marginRight: 8 }]} numberOfLines={0}>{displayName}</Text>
+            <Text style={[Typography.title, { color: Colors.primary, marginRight: Spacing.sm }]} numberOfLines={0}>{displayName}</Text>
             
             {(device.rssiList && device.rssiList.length > 0) ? (
               <View style={{ flexDirection: 'row' }}>
@@ -98,7 +98,7 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
         </View>
         
         {!device.isGroup && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.xs }}>
             {isSelectionMode && <View style={{ width: 34 }} />}
             <Text style={[Typography.caption, { color: Colors.textMuted, flex: 1 }]} numberOfLines={0}>
                 {(() => {
@@ -123,7 +123,7 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
       <View style={{ flexDirection: 'row', alignItems: 'center', zIndex: 2 }}>
         {onPowerToggle && (
           <TouchableOpacity 
-            style={{ marginRight: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isPoweredOn ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255,255,255,0.2)' }}
+            style={{ marginRight: Spacing.md, width: 36, height: 36, borderRadius: 18, backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isPoweredOn ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255,255,255,0.2)' }}
             onPress={(e) => { e.stopPropagation(); onPowerToggle(); }}
             activeOpacity={0.6}
           >
@@ -148,10 +148,10 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 18,
+    padding: Spacing.lg,
     backgroundColor: Colors.isDark ? 'rgba(15, 19, 29, 0.7)' : Colors.surface,
     borderRadius: Layout.borderRadius,
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
     overflow: 'hidden',
@@ -168,7 +168,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     zIndex: 2,
   },
   status: {
-    marginLeft: 16,
+    marginLeft: Spacing.lg,
     zIndex: 2,
   }
 });

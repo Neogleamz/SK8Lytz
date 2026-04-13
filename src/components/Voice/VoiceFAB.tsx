@@ -1,3 +1,4 @@
+import { Spacing } from '../../theme/theme';
 import React from 'react';
 import {
   TouchableOpacity,
@@ -66,7 +67,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 30,
-    padding: 2, // Border effect
+    padding: Spacing.xxs, // Border effect
   },
   inner: {
     flex: 1,

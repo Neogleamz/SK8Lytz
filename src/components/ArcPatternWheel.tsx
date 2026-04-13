@@ -1,3 +1,4 @@
+import { Spacing } from '../theme/theme';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, NativeSyntheticEvent, NativeScrollEvent, TouchableOpacity, LayoutChangeEvent } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
@@ -244,7 +245,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.isDark ? '#050505' : Colors.surfaceHighlight,
-    paddingVertical: 5,
+    paddingVertical: Spacing.xs,
   },
   wheelWrapper: {
     width: '100%',
@@ -281,10 +282,10 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 5,
+    marginTop: Spacing.xs,
     width: '100%',
     justifyContent: 'center',
-    gap: 10,
+    gap: Spacing.md,
   },
   navBtn: {
     width: 36,
@@ -298,7 +299,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   labelWrapper: {
     minWidth: 140,
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 110, 0, 0.2)',
   },

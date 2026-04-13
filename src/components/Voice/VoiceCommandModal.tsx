@@ -6,7 +6,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../../context/ThemeContext';
-import { Typography } from '../../theme/theme';
+import { Typography, Spacing } from '../../theme/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -52,7 +52,7 @@ const WaveformBar = ({ index, isListening }: { index: number; isListening: boole
         height: anim.interpolate({ inputRange: [0, 1], outputRange: [4, 60] }),
         backgroundColor: '#00F0FF',
         borderRadius: 3,
-        marginHorizontal: 2,
+        marginHorizontal: Spacing.xxs,
         opacity: isListening ? 1 : 0.3,
       }}
     />
@@ -166,22 +166,22 @@ const createStyles = (Colors: any) => StyleSheet.create({
     backgroundColor: 'rgba(10, 10, 10, 0.9)',
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
-    padding: 24,
-    paddingBottom: 40,
+    padding: Spacing.xl,
+    paddingBottom: Spacing.xxxl,
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: 'rgba(0, 240, 255, 0.2)',
   },
   dismissArea: {
-    padding: 10,
-    marginBottom: 20,
+    padding: Spacing.md,
+    marginBottom: Spacing.xl,
   },
   waveform: {
     flexDirection: 'row',
     height: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 30,
+    marginBottom: Spacing.xxl,
     width: '100%',
   },
   micOuter: {
@@ -193,7 +193,7 @@ const createStyles = (Colors: any) => StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.1)',
-    marginBottom: 32,
+    marginBottom: Spacing.xxl,
   },
   micActive: {
     borderColor: '#00F0FF',
@@ -212,7 +212,7 @@ const createStyles = (Colors: any) => StyleSheet.create({
   },
   textContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: Spacing.xxxl,
     width: '100%',
   },
   statusText: {
@@ -220,7 +220,7 @@ const createStyles = (Colors: any) => StyleSheet.create({
     fontSize: 12,
     letterSpacing: 2,
     fontWeight: 'bold',
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
     opacity: 0.8,
   },
   transcript: {
@@ -234,18 +234,18 @@ const createStyles = (Colors: any) => StyleSheet.create({
   hintText: {
     color: 'rgba(255,255,255,0.4)',
     fontSize: 14,
-    marginTop: 10,
+    marginTop: Spacing.md,
     fontStyle: 'italic',
   },
   errorPill: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,68,68,0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
     borderRadius: 20,
-    marginTop: 10,
-    gap: 6,
+    marginTop: Spacing.md,
+    gap: Spacing.sm,
   },
   errorText: {
     color: '#FF4444',
@@ -274,8 +274,8 @@ const createStyles = (Colors: any) => StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 16,
-    paddingVertical: 48,
+    gap: Spacing.lg,
+    paddingVertical: Spacing.huge,
   },
   webFallbackTitle: {
     color: 'rgba(255,255,255,0.8)',
@@ -286,7 +286,7 @@ const createStyles = (Colors: any) => StyleSheet.create({
     color: 'rgba(255,255,255,0.4)',
     fontSize: 14,
     textAlign: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.xl,
     lineHeight: 22,
   },
 });

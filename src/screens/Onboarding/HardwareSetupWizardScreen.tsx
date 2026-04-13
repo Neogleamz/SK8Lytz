@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, SafeAreaView, Linking, Platform, ScrollView, KeyboardAvoidingView, TextInput } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import { Typography } from '../../theme/theme';
+import { Typography, Spacing } from '../../theme/theme';
 import useBLE from '../../hooks/useBLE';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 
@@ -203,7 +203,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
           Tap "BLINK" to physically identify and claim your controllers. Uncheck any devices that aren't yours.
         </Text>
 
-        <ScrollView style={styles.deviceScroll} contentContainerStyle={{ paddingBottom: 20 }}>
+        <ScrollView style={styles.deviceScroll} contentContainerStyle={{ paddingBottom: Spacing.xl }}>
           {deviceGroups.map((group) => renderDeviceGroup(`${group.profile.id}`, group.devices, group.profile.vizThemeColor || '#00f0ff'))}
           {renderDeviceGroup('SCANNING / UNKNOWN', unknown, Colors.textMuted)}
           
@@ -227,16 +227,16 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
             <MaterialCommunityIcons name="skate" size={48} color={Colors.primary} />
           </View>
         )}
-        <Text style={[Typography.title, styles.title, { marginBottom: 4 }]}>Name Your Skates</Text>
-        <Text style={[styles.subtitle, { marginBottom: 12 }]}>
+        <Text style={[Typography.title, styles.title, { marginBottom: Spacing.xs }]}>Name Your Skates</Text>
+        <Text style={[styles.subtitle, { marginBottom: Spacing.md }]}>
           Assign them to a Fleet and designate left or right.
         </Text>
 
-        <ScrollView style={styles.scrollViewWrapper} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.scrollViewWrapper} contentContainerStyle={{ paddingBottom: Spacing.xxxl }} showsVerticalScrollIndicator={false}>
           {/* Group */}
           <Text style={styles.label}>FLEET / GROUP NAME</Text>
           <TextInput 
-            style={[styles.input, { paddingVertical: 10, paddingHorizontal: 12 }]} 
+            style={[styles.input, { paddingVertical: Spacing.md, paddingHorizontal: Spacing.md }]} 
             value={groupName} 
             onChangeText={setGroupName}
             placeholder="e.g. My Skates" 
@@ -256,11 +256,11 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
 
             return (
               <View key={device.device_mac} style={styles.deviceConfigCard}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, justifyContent: 'space-between' }}>
-                  <MaterialCommunityIcons name="bluetooth" size={18} color={Colors.primary} style={{ marginRight: 8 }} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm, justifyContent: 'space-between' }}>
+                  <MaterialCommunityIcons name="bluetooth" size={18} color={Colors.primary} style={{ marginRight: Spacing.sm }} />
                   <Text style={styles.deviceConfigTitle}>Network ID: {device.device_mac.slice(-5)}</Text>
                   <TouchableOpacity 
-                    style={[styles.blinkBtn, isBlinking === device.device_mac && styles.blinkBtnActive, { paddingVertical: 4, paddingHorizontal: 8 }]}
+                    style={[styles.blinkBtn, isBlinking === device.device_mac && styles.blinkBtnActive, { paddingVertical: Spacing.xs, paddingHorizontal: Spacing.sm }]}
                     onPress={() => handleBlinkDevice(device.device_mac)}
                     disabled={isBlinking !== null}
                   >
@@ -278,7 +278,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                 {/* Name */}
                 <Text style={styles.labelSmall}>DEVICE NAME</Text>
                 <TextInput 
-                  style={[styles.inputSmall, { paddingVertical: 8 }]} 
+                  style={[styles.inputSmall, { paddingVertical: Spacing.sm }]} 
                   value={config.name} 
                   onChangeText={(t) => updateConfig('name', t)}
                   placeholder="e.g. Left Skate" 
@@ -286,7 +286,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                   maxLength={32} 
                 />
 
-                <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                <View style={{ flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm }}>
                   {/* Type */}
                   <View style={{ flex: 1 }}>
                     <Text style={styles.labelSmall}>TYPE</Text>
@@ -325,17 +325,17 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
 
                 {/* Adjust Points */}
                 {(getLocalProfileById(config.type)?.hardwareAllowsCustomPoints) && (
-                  <View style={{ marginTop: 12, backgroundColor: Colors.surfaceHighlight, borderRadius: 12, padding: 8 }}>
+                  <View style={{ marginTop: Spacing.md, backgroundColor: Colors.surfaceHighlight, borderRadius: 12, padding: Spacing.sm }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Text style={[styles.labelSmall, { flex: 1, marginBottom: 0 }]}>LED COUNT (TRIM IF CUT)</Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: 8 }}>
-                        <TouchableOpacity style={{ padding: 10 }} onPress={() => updateConfig('points', Math.max(1, config.points - 1))}>
+                        <TouchableOpacity style={{ padding: Spacing.md }} onPress={() => updateConfig('points', Math.max(1, config.points - 1))}>
                           <MaterialCommunityIcons name="minus" size={18} color={Colors.text} />
                         </TouchableOpacity>
                         <Text style={{ color: Colors.text, fontSize: 15, fontWeight: 'bold', width: 32, textAlign: 'center' }}>
                           {config.points}
                         </Text>
-                        <TouchableOpacity style={{ padding: 10 }} onPress={() => updateConfig('points', Math.min(200, config.points + 1))}>
+                        <TouchableOpacity style={{ padding: Spacing.md }} onPress={() => updateConfig('points', Math.min(200, config.points + 1))}>
                           <MaterialCommunityIcons name="plus" size={18} color={Colors.text} />
                         </TouchableOpacity>
                       </View>
@@ -515,13 +515,13 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
           </TouchableOpacity>
         )}
         
-        <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 16, gap: 24 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: Spacing.lg, gap: Spacing.xl }}>
           {step > 1 && (
-            <TouchableOpacity onPress={() => setStep(step === 3 ? 2 : 1)} style={{ padding: 8 }}>
+            <TouchableOpacity onPress={() => setStep(step === 3 ? 2 : 1)} style={{ padding: Spacing.sm }}>
               <Text style={{ color: Colors.textMuted, fontSize: 13, fontWeight: 'bold' }}>← Back</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={() => onSetupComplete([])} style={{ padding: 8 }}>
+          <TouchableOpacity onPress={() => onSetupComplete([])} style={{ padding: Spacing.sm }}>
             <Text style={{ color: Colors.textMuted, fontSize: 13, fontWeight: 'bold' }}>Skip setup for now</Text>
           </TouchableOpacity>
         </View>
@@ -534,59 +534,59 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
 function createStyles(Colors: any) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.background || '#0D0D0D' },
-    content: { flex: 1, padding: 12, justifyContent: 'center', alignItems: 'center' },
-    title: { color: Colors.text || '#fff', fontSize: 24, textAlign: 'center', marginBottom: 4 },
-    subtitle: { color: Colors.textMuted || '#888', fontSize: 13, textAlign: 'center', marginBottom: 12, lineHeight: 18 },
+    content: { flex: 1, padding: Spacing.md, justifyContent: 'center', alignItems: 'center' },
+    title: { color: Colors.text || '#fff', fontSize: 24, textAlign: 'center', marginBottom: Spacing.xs },
+    subtitle: { color: Colors.textMuted || '#888', fontSize: 13, textAlign: 'center', marginBottom: Spacing.md, lineHeight: 18 },
     instructionCard: {
       backgroundColor: Colors.surface,
       borderWidth: 1, borderColor: Colors.surfaceHighlight,
-      borderRadius: 12, padding: 16, width: '100%', marginBottom: 12,
+      borderRadius: 12, padding: Spacing.lg, width: '100%', marginBottom: Spacing.md,
     },
-    instructionHeader: { color: Colors.primary || '#00f0ff', fontWeight: 'bold', fontSize: 13, marginBottom: 4 },
+    instructionHeader: { color: Colors.primary || '#00f0ff', fontWeight: 'bold', fontSize: 13, marginBottom: Spacing.xs },
     instructionBody: { color: Colors.textMuted || '#888', fontSize: 13, lineHeight: 18 },
-    helpLink: { flexDirection: 'row', alignItems: 'center', marginTop: 24, gap: 6 },
+    helpLink: { flexDirection: 'row', alignItems: 'center', marginTop: Spacing.xl, gap: Spacing.sm },
     helpText: { color: Colors.textMuted, fontSize: 13, textDecorationLine: 'underline' },
-    footer: { padding: 12, paddingBottom: Platform.OS === 'ios' ? 0 : 12 },
+    footer: { padding: Spacing.md, paddingBottom: Platform.OS === 'ios' ? 0 : 12 },
     primaryBtn: {
       backgroundColor: Colors.primary || '#00f0ff',
-      paddingVertical: 16, borderRadius: 14, alignItems: 'center', width: '100%'
+      paddingVertical: Spacing.lg, borderRadius: 14, alignItems: 'center', width: '100%'
     },
     primaryBtnDisabled: { opacity: 0.7 },
     primaryBtnText: { color: '#000', fontWeight: '900', fontSize: 15, letterSpacing: 1 },
-    scanningRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    errorBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16, backgroundColor: 'rgba(255,68,68,0.1)', borderRadius: 12 },
+    scanningRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+    errorBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, padding: Spacing.lg, backgroundColor: 'rgba(255,68,68,0.1)', borderRadius: 12 },
     errorText: { color: '#ff4444', fontSize: 13, fontWeight: 'bold' },
     
     // Step 2 Styles
-    successIconHeader: { marginBottom: 16, alignItems: 'center' },
-    scrollViewWrapper: { flex: 1, width: '100%', marginTop: 8 },
-    groupContainer: { marginBottom: 24, width: '100%' },
-    groupTitle: { fontSize: 12, fontWeight: '900', letterSpacing: 1.5, marginBottom: 12, marginLeft: 4 },
+    successIconHeader: { marginBottom: Spacing.lg, alignItems: 'center' },
+    scrollViewWrapper: { flex: 1, width: '100%', marginTop: Spacing.sm },
+    groupContainer: { marginBottom: Spacing.xl, width: '100%' },
+    groupTitle: { fontSize: 12, fontWeight: '900', letterSpacing: 1.5, marginBottom: Spacing.md, marginLeft: Spacing.xs },
     deviceRow: { 
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.surfaceHighlight,
-      borderRadius: 12, padding: 14, marginBottom: 10 
+      borderRadius: 12, padding: Spacing.lg, marginBottom: Spacing.md 
     },
     deviceRowSelected: { backgroundColor: Colors.surfaceHighlight, borderColor: Colors.primary },
-    checkboxContainer: { marginRight: 12 },
+    checkboxContainer: { marginRight: Spacing.md },
     deviceInfo: { flex: 1 },
-    deviceName: { color: Colors.text || '#fff', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-    deviceMeta: { color: Colors.textMuted || '#888', fontSize: 11, marginBottom: 2 },
+    deviceName: { color: Colors.text || '#fff', fontSize: 16, fontWeight: 'bold', marginBottom: Spacing.xs },
+    deviceMeta: { color: Colors.textMuted || '#888', fontSize: 11, marginBottom: Spacing.xxs },
     blinkBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-      backgroundColor: Colors.surfaceHighlight, paddingHorizontal: 12, paddingVertical: 8,
+      flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+      backgroundColor: Colors.surfaceHighlight, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
       borderRadius: 8, borderWidth: 1, borderColor: Colors.surfaceHighlight
     },
     blinkBtnActive: { backgroundColor: '#4ade80', borderColor: '#4ade80' },
     blinkBtnText: { color: Colors.text || '#fff', fontSize: 12, fontWeight: '800' },
     
     // Step 3 Styles
-    label: { color: Colors.textMuted || '#888', fontSize: 11, fontWeight: 'bold', letterSpacing: 1, marginBottom: 8, marginLeft: 4 },
-    labelSmall: { color: Colors.textMuted || '#888', fontSize: 10, fontWeight: 'bold', letterSpacing: 1, marginBottom: 6, marginLeft: 2 },
+    label: { color: Colors.textMuted || '#888', fontSize: 11, fontWeight: 'bold', letterSpacing: 1, marginBottom: Spacing.sm, marginLeft: Spacing.xs },
+    labelSmall: { color: Colors.textMuted || '#888', fontSize: 10, fontWeight: 'bold', letterSpacing: 1, marginBottom: Spacing.sm, marginLeft: Spacing.xxs },
     input: {
       backgroundColor: Colors.surfaceHighlight,
       color: Colors.text || '#fff',
-      padding: 16,
+      padding: Spacing.lg,
       borderRadius: 12,
       fontSize: 16,
       borderWidth: 1,
@@ -595,7 +595,7 @@ function createStyles(Colors: any) {
     inputSmall: {
       backgroundColor: Colors.surfaceHighlight,
       color: Colors.text || '#fff',
-      padding: 12,
+      padding: Spacing.md,
       borderRadius: 8,
       fontSize: 14,
       borderWidth: 1,
@@ -604,15 +604,15 @@ function createStyles(Colors: any) {
     deviceConfigCard: {
       backgroundColor: Colors.surface,
       borderWidth: 1, borderColor: Colors.surfaceHighlight,
-      borderRadius: 12, padding: 10, width: '100%', marginBottom: 8,
+      borderRadius: 12, padding: Spacing.md, width: '100%', marginBottom: Spacing.sm,
     },
     deviceConfigTitle: { color: Colors.text || '#fff', fontSize: 14, fontWeight: 'bold', flex: 1 },
-    segRow: { flexDirection: 'row', backgroundColor: Colors.surfaceHighlight, borderRadius: 8, padding: 4 },
-    segBtn: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 6 },
+    segRow: { flexDirection: 'row', backgroundColor: Colors.surfaceHighlight, borderRadius: 8, padding: Spacing.xs },
+    segBtn: { flex: 1, alignItems: 'center', paddingVertical: Spacing.sm, borderRadius: 6 },
     segBtnActive: { backgroundColor: Colors.primary || '#00f0ff', shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
     segBtnText: { fontSize: 11, fontWeight: 'bold', color: Colors.textMuted || '#888' },
     
-    emptyState: { padding: 40, alignItems: 'center', justifyContent: 'center' },
+    emptyState: { padding: Spacing.xxxl, alignItems: 'center', justifyContent: 'center' },
     emptyText: { color: Colors.textMuted || '#888', textAlign: 'center', fontSize: 14 },
     deviceScroll: { flex: 1, width: '100%' },
   });

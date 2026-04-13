@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Typography, Colors } from '../../theme/theme';
+import { Typography, Colors, Spacing } from '../../theme/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
   },
   headerGradient: {
-    padding: 32,
+    padding: Spacing.xxl,
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   title: {
     ...Typography.title,
     color: '#00F0FF',
-    marginTop: 16,
+    marginTop: Spacing.lg,
     fontSize: 24,
     fontWeight: '900',
     fontFamily: 'Righteous',
@@ -139,21 +139,21 @@ const styles = StyleSheet.create({
     color: '#FFF',
     opacity: 0.6,
     fontSize: 14,
-    marginTop: 4,
+    marginTop: Spacing.xs,
     fontWeight: '600',
     letterSpacing: 0.5,
   },
   content: {
-    padding: 24,
+    padding: Spacing.xl,
   },
   commandGroup: {
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
   },
   groupHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-    gap: 8,
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
   },
   groupTitle: {
     fontSize: 12,
@@ -162,8 +162,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   commandsList: {
-    paddingLeft: 26,
-    gap: 6,
+    paddingLeft: Spacing.xl,
+    gap: Spacing.sm,
   },
   commandText: {
     fontSize: 16,
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   footer: {
-    padding: 24,
+    padding: Spacing.xl,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.05)',
   },

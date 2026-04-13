@@ -1,3 +1,4 @@
+import { Spacing } from '../theme/theme';
 import React, { useRef, useState } from 'react';
 import { View, StyleSheet, PanResponder, LayoutChangeEvent, Text, ViewStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -186,7 +187,7 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
+    paddingHorizontal: Spacing.md,
   },
   leftLabel: {
     flexDirection: 'row',

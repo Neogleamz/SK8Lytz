@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { Colors, Layout } from '../theme/theme';
+import { Colors, Layout, Spacing } from '../theme/theme';
 
 interface HeaderProps {
   title?: string;
@@ -23,8 +23,8 @@ export default function Header({}: HeaderProps) {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: Layout.padding,
-    paddingTop: 24,
-    paddingBottom: 8,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.sm,
     backgroundColor: Colors.background,
     alignItems: 'center',
   },
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
     height: 3,
     width: 40,
     backgroundColor: Colors.secondary,
-    marginTop: 8,
+    marginTop: Spacing.sm,
     borderRadius: 2,
     shadowColor: Colors.secondary,
     shadowOffset: { width: 0, height: 0 },

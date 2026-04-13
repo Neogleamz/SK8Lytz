@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView } from 'react-native';
-import { Colors, Typography, Layout } from '../theme/theme';
+import { Colors, Typography, Layout, Spacing } from '../theme/theme';
 import { AppLogger } from '../services/AppLogger';
 
 interface GroupSettingsModalProps {
@@ -36,7 +36,7 @@ export default function GroupSettingsModal({ isVisible, onClose, onSave, onDelet
       <View style={styles.overlay}>
         <View style={styles.card}>
           <Text style={Typography.title}>{initialName ? 'Rename Group' : 'Create Group'}</Text>
-          <Text style={[Typography.body, { marginTop: 8, color: Colors.textMuted }]}>
+          <Text style={[Typography.body, { marginTop: Spacing.sm, color: Colors.textMuted }]}>
             Enter a unique name for this device group.
           </Text>
           <TextInput
@@ -47,7 +47,7 @@ export default function GroupSettingsModal({ isVisible, onClose, onSave, onDelet
             placeholderTextColor={Colors.textMuted}
             autoFocus
           />
-          <Text style={[Typography.caption, { color: Colors.textMuted, marginBottom: 8 }]}>Devices in Group ({selectedIds.length})</Text>
+          <Text style={[Typography.caption, { color: Colors.textMuted, marginBottom: Spacing.sm }]}>Devices in Group ({selectedIds.length})</Text>
           <ScrollView style={styles.deviceList}>
             {allDevices.map(d => {
                const isSelected = selectedIds.includes(d.id);
@@ -93,11 +93,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
-    padding: 24,
+    padding: Spacing.xl,
   },
   card: {
     backgroundColor: Colors.surface,
-    padding: 24,
+    padding: Spacing.xl,
     borderRadius: Layout.borderRadius,
     borderWidth: 1,
     borderColor: Colors.surfaceHighlight,
@@ -107,20 +107,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.surfaceHighlight,
     borderRadius: 8,
-    padding: 12,
+    padding: Spacing.md,
     color: Colors.text,
     fontSize: 16,
-    marginTop: 16,
-    marginBottom: 24,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   actions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 12,
+    gap: Spacing.md,
   },
   cancelBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     borderRadius: 8,
     backgroundColor: Colors.surfaceHighlight,
   },
@@ -129,8 +129,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   saveBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     borderRadius: 8,
     backgroundColor: Colors.primary,
   },
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   },
   deviceList: {
     maxHeight: 150,
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.surfaceHighlight,
     borderRadius: 8,
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   deviceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 12,
+    padding: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.surfaceHighlight,
   },
@@ -171,10 +171,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.error + '22',
     borderWidth: 1,
     borderColor: Colors.error + '44',
-    padding: 12,
+    padding: Spacing.md,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   deleteText: {
     color: Colors.error,

@@ -1,3 +1,4 @@
+import { Spacing } from '../../theme/theme';
 import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert, Share, TextInput, Image, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -55,7 +56,7 @@ export function CrewControllerScreen({ onClose, currentModeSummary, lastLeaderSc
         <View style={[styles.memberAvatar, isLeader && { borderColor: '#FFD700', borderWidth: 2 }]}>
           <Text style={styles.memberAvatarText}>{(item.display_name?.[0] ?? '?').toUpperCase()}</Text>
         </View>
-        <View style={{ flex: 1, marginLeft: 10 }}>
+        <View style={{ flex: 1, marginLeft: Spacing.md }}>
           <Text style={styles.memberName}>{item.display_name}{isMe ? ' (you)' : ''}</Text>
           {isLeader && <Text style={styles.memberLeaderBadge}>👑 Leader</Text>}
         </View>
@@ -86,7 +87,7 @@ export function CrewControllerScreen({ onClose, currentModeSummary, lastLeaderSc
         {/* ─── Session Card Header ─── */}
         <View style={styles.controllerCard}>
           {/* Crew name + live pill */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
             <Text style={styles.controllerCrewName} numberOfLines={1}>{currentSession.name}</Text>
             <View style={styles.livePill}>
               <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
@@ -160,7 +161,7 @@ export function CrewControllerScreen({ onClose, currentModeSummary, lastLeaderSc
         {isLeader && (
           <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
             {/* Leader handoff toggle */}
-            <View style={{ marginHorizontal: 16, marginTop: 12 }}>
+            <View style={{ marginHorizontal: Spacing.lg, marginTop: Spacing.md }}>
               <TouchableOpacity
                 style={[styles.handoffToggle, isHandoffMode && styles.handoffToggleActive]}
                 onPress={() => setIsHandoffMode(!isHandoffMode)}>
@@ -172,13 +173,13 @@ export function CrewControllerScreen({ onClose, currentModeSummary, lastLeaderSc
               </TouchableOpacity>
             </View>
 
-            <Text style={[styles.label, { marginHorizontal: 20, marginTop: 14 }]}>
+            <Text style={[styles.label, { marginHorizontal: Spacing.xl, marginTop: Spacing.lg }]}>
               CREW MEMBERS ({members.length})
             </Text>
             {members.length === 0
-              ? <Text style={[styles.subtitle, { margin: 16, marginTop: 4, fontSize: 13 }]}>Waiting for skaters…</Text>
+              ? <Text style={[styles.subtitle, { margin: Spacing.lg, marginTop: Spacing.xs, fontSize: 13 }]}>Waiting for skaters…</Text>
               : members.map(m => (
-                <View key={m.id} style={{ paddingHorizontal: 16 }}>
+                <View key={m.id} style={{ paddingHorizontal: Spacing.lg }}>
                   {renderMemberRow({ item: m })}
                 </View>
               ))
@@ -190,23 +191,23 @@ export function CrewControllerScreen({ onClose, currentModeSummary, lastLeaderSc
         {/* ─── Inline Confirm Banner (replaces Alert.alert for web+native compat) ─── */}
         {confirmAction !== null && (
           <View style={{
-            marginHorizontal: 16, marginBottom: 8,
+            marginHorizontal: Spacing.lg, marginBottom: Spacing.sm,
             backgroundColor: 'rgba(255,40,40,0.12)',
             borderWidth: 1.5, borderColor: '#FF4444',
-            borderRadius: 14, padding: 14,
+            borderRadius: 14, padding: Spacing.lg,
           }}>
-            <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '700', textAlign: 'center', marginBottom: 4 }}>
+            <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '700', textAlign: 'center', marginBottom: Spacing.xs }}>
               {confirmAction === 'end' ? '⚠️ End Session?' : '⚠️ Leave Session?'}
             </Text>
-            <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, textAlign: 'center', marginBottom: 12 }}>
+            <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, textAlign: 'center', marginBottom: Spacing.md }}>
               {confirmAction === 'end'
                 ? `All members will be notified and the session will close. Their skates keep the current pattern.`
                 : `You'll leave "${currentSession?.name}". Your skates keep the current pattern.`}
             </Text>
             
             {confirmAction === 'end' && (
-              <View style={{ marginBottom: 12, padding: 12, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 10 }}>
-                <Text style={{ color: '#00F0FF', fontSize: 11, fontWeight: '800', textAlign: 'center', marginBottom: 8, letterSpacing: 1 }}>📈 SESSION SUMMARY</Text>
+              <View style={{ marginBottom: Spacing.md, padding: Spacing.md, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 10 }}>
+                <Text style={{ color: '#00F0FF', fontSize: 11, fontWeight: '800', textAlign: 'center', marginBottom: Spacing.sm, letterSpacing: 1 }}>📈 SESSION SUMMARY</Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
                   <View style={{ alignItems: 'center' }}>
                     <Text style={{ color: '#FFF', fontSize: 22, fontWeight: '900' }}>{crewService.sessionTelemetry.distanceMiles.toFixed(1)}</Text>
@@ -220,16 +221,16 @@ export function CrewControllerScreen({ onClose, currentModeSummary, lastLeaderSc
               </View>
             )}
 
-            <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flexDirection: 'row', gap: Spacing.md }}>
               <TouchableOpacity
                 onPress={() => setConfirmAction(null)}
-                style={{ flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center' }}
+                style={{ flex: 1, paddingVertical: Spacing.md, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center' }}
               >
                 <Text style={{ color: '#aaa', fontWeight: '700' }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={confirmAction === 'end' ? executeEndSession : executeLeaveSession}
-                style={{ flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: '#FF4444', alignItems: 'center' }}
+                style={{ flex: 1, paddingVertical: Spacing.md, borderRadius: 10, backgroundColor: '#FF4444', alignItems: 'center' }}
               >
                 <Text style={{ color: '#FFF', fontWeight: '800' }}>
                   {confirmAction === 'end' ? 'End Session' : 'Leave'}
@@ -243,7 +244,7 @@ export function CrewControllerScreen({ onClose, currentModeSummary, lastLeaderSc
         <View style={styles.controllerFooter}>
           {/* ← Hub: return to hub landing without closing the modal or ending the session */}
           <TouchableOpacity
-            style={[styles.endBtn, { borderColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10 }]}
+            style={[styles.endBtn, { borderColor: 'rgba(255,255,255,0.2)', paddingHorizontal: Spacing.md }]}
             onPress={() => setStep('landing')}
           >
             <MaterialCommunityIcons name="arrow-left" size={15} color="#aaa" />

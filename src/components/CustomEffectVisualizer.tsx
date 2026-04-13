@@ -1,3 +1,4 @@
+import { Spacing } from '../theme/theme';
 import React, { useMemo, useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { ZenggeVisualizerMath } from '../protocols/ZenggeVisualizerMath';
@@ -68,8 +69,8 @@ export const CustomEffectVisualizer: React.FC<CustomEffectVisualizerProps> = ({
   }, [effectId, fgColorHex, bgColorHex, tick, points, segments, direction]);
 
   return (
-    <View style={{ flex: 1, marginRight: 8, height: 8, overflow: 'hidden' }}>
-      <View style={{ flex: 1, flexDirection: 'row', gap: 2 }}>
+    <View style={{ flex: 1, marginRight: Spacing.sm, height: 8, overflow: 'hidden' }}>
+      <View style={{ flex: 1, flexDirection: 'row', gap: Spacing.xxs }}>
         {displayedDots.slice(0, 10).map((c, i) => (
           <View 
              key={i} 

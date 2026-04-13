@@ -25,6 +25,7 @@ import { useTheme } from '../context/ThemeContext';
 import { CrewSession, CrewRole } from '../services/CrewService';
 import { supabase } from '../services/supabaseClient';
 import { shareSessionInvite } from '../services/SessionShareService';
+import { Spacing } from '../theme/theme';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -124,7 +125,7 @@ function MiniVisualizer({ scene }: { scene: Record<string, any> | null }) {
 }
 
 const viStyles = StyleSheet.create({
-  container: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 60, justifyContent: 'center', paddingVertical: 8 },
+  container: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.sm, height: 60, justifyContent: 'center', paddingVertical: Spacing.sm },
   bar: { width: 18, borderRadius: 4 },
 });
 
@@ -212,7 +213,7 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
           <View style={styles.card}>
             <View style={styles.cardRow}>
               <MaterialCommunityIcons name="map-marker" size={18} color="#FFAA00" />
-              <View style={{ flex: 1, marginLeft: 10 }}>
+              <View style={{ flex: 1, marginLeft: Spacing.md }}>
                 <Text style={styles.cardLabel}>SESSION LOCATION</Text>
                 <Text style={styles.cardValue}>
                   {session.location_label ?? 'Location detected'}
@@ -232,7 +233,7 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
           <Text style={styles.cardLabel}>CURRENT MODE</Text>
           <View style={styles.modeRow}>
             <View style={[styles.modeColorSwatch, { backgroundColor: primaryColor, shadowColor: primaryColor }]} />
-            <View style={{ flex: 1, marginLeft: 12 }}>
+            <View style={{ flex: 1, marginLeft: Spacing.md }}>
               <Text style={[styles.modeTitle, { color: primaryColor }]}>
                 {sceneModeName(currentScene)}
               </Text>
@@ -249,7 +250,7 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
           <MiniVisualizer scene={currentScene} />
 
           {!currentScene && (
-            <Text style={[styles.cardSub, { textAlign: 'center', marginTop: 4 }]}>
+            <Text style={[styles.cardSub, { textAlign: 'center', marginTop: Spacing.xs }]}>
               Waiting for leader to send a pattern…
             </Text>
           )}
@@ -260,11 +261,11 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
           <View style={styles.card}>
             <View style={styles.cardRow}>
               <MaterialCommunityIcons name="calendar-clock" size={18} color={Colors.primary} />
-              <View style={{ marginLeft: 10 }}>
+              <View style={{ marginLeft: Spacing.md }}>
                 <Text style={styles.cardLabel}>STARTED</Text>
                 <Text style={styles.cardValue}>{formatTime(session.created_at)}</Text>
               </View>
-              <View style={{ marginLeft: 24 }}>
+              <View style={{ marginLeft: Spacing.xl }}>
                 <Text style={styles.cardLabel}>SCHEDULED FOR</Text>
                 <Text style={styles.cardValue}>{formatTime(session.scheduled_at)}</Text>
               </View>
@@ -297,7 +298,7 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
                 <View style={[styles.memberAvatar, { backgroundColor: m.avatar_color ?? '#FF8C00' }]}>
                   <Text style={styles.memberAvatarText}>{initials(m.display_name)}</Text>
                 </View>
-                <View style={{ flex: 1, marginLeft: 10 }}>
+                <View style={{ flex: 1, marginLeft: Spacing.md }}>
                   <Text style={styles.memberName}>
                     {m.display_name ?? 'Skater'}
                     {m.role === 'leader' && ' 👑'}
@@ -313,7 +314,7 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
         )}
 
         {/* ── Action buttons ── */}
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+        <View style={{ flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xs }}>
           <TouchableOpacity
             style={styles.shareBtn}
             onPress={() => shareSessionInvite({
@@ -348,8 +349,8 @@ const createStyles = (Colors: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background ?? '#0D0D0D' },
 
   header: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 18, paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.lg,
     borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
     backgroundColor: 'rgba(255,255,255,0.02)',
   },
@@ -360,44 +361,44 @@ const createStyles = (Colors: any) => StyleSheet.create({
   },
   sessionName:   { color: Colors.text ?? '#FFF', fontSize: 16, fontWeight: '800' },
   sessionSub:    { color: Colors.textMuted ?? '#888', fontSize: 11, marginTop: 1 },
-  statusBadge:   { borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3 },
+  statusBadge:   { borderRadius: 8, borderWidth: 1, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xxs },
   statusBadgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
 
-  body: { padding: 16, gap: 12 },
+  body: { padding: Spacing.lg, gap: Spacing.md },
 
   card: {
     backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 16,
-    padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+    padding: Spacing.lg, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
   },
   cardRow:    { flexDirection: 'row', alignItems: 'flex-start' },
-  cardLabel:  { color: Colors.textMuted ?? '#888', fontSize: 10, fontWeight: '700', letterSpacing: 1.2, marginBottom: 4 },
+  cardLabel:  { color: Colors.textMuted ?? '#888', fontSize: 10, fontWeight: '700', letterSpacing: 1.2, marginBottom: Spacing.xs },
   cardValue:  { color: Colors.text ?? '#FFF', fontSize: 15, fontWeight: '700' },
-  cardSub:    { color: Colors.textMuted ?? '#888', fontSize: 11, marginTop: 2 },
+  cardSub:    { color: Colors.textMuted ?? '#888', fontSize: 11, marginTop: Spacing.xxs },
 
-  modeRow:   { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  modeRow:   { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm },
   modeColorSwatch: {
     width: 36, height: 36, borderRadius: 18,
     shadowOpacity: 0.8, shadowRadius: 8, elevation: 4,
   },
   modeTitle: { fontSize: 18, fontWeight: '800' },
-  modeSub:   { color: Colors.textMuted ?? '#888', fontSize: 12, marginTop: 2 },
+  modeSub:   { color: Colors.textMuted ?? '#888', fontSize: 12, marginTop: Spacing.xxs },
   leaderTag: {
     backgroundColor: 'rgba(255,170,0,0.12)', borderRadius: 6,
-    paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(255,170,0,0.25)',
+    paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xxs, borderWidth: 1, borderColor: 'rgba(255,170,0,0.25)',
   },
   leaderTagText: { fontSize: 9, fontWeight: '800', color: '#FFAA00', letterSpacing: 0.5 },
 
-  statsRow: { flexDirection: 'row', gap: 10 },
+  statsRow: { flexDirection: 'row', gap: Spacing.md },
   statCard: {
     flex: 1, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14,
-    padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    padding: Spacing.md, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
   statNum:   { color: Colors.text ?? '#FFF', fontSize: 16, fontWeight: '900' },
-  statLabel: { color: Colors.textMuted ?? '#888', fontSize: 10, marginTop: 2 },
+  statLabel: { color: Colors.textMuted ?? '#888', fontSize: 10, marginTop: Spacing.xxs },
 
   memberRow: {
     flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
+    paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
   },
   memberAvatar:     { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   memberAvatarText: { color: '#000', fontSize: 13, fontWeight: '900' },
@@ -406,16 +407,16 @@ const createStyles = (Colors: any) => StyleSheet.create({
   onlineDot:   { width: 8, height: 8, borderRadius: 4, backgroundColor: '#00E676', shadowColor: '#00E676', shadowOpacity: 0.9, shadowRadius: 4, elevation: 2 },
 
   leaveBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
     borderWidth: 1.5, borderColor: '#FF4444', borderRadius: 14,
-    paddingVertical: 12,
+    paddingVertical: Spacing.md,
   },
   leaveBtnText: { color: '#FF4444', fontSize: 14, fontWeight: '800' },
 
-  shareHeaderBtn: { padding: 8, borderRadius: 20 },
+  shareHeaderBtn: { padding: Spacing.sm, borderRadius: 20 },
   shareBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderWidth: 1.5, borderColor: 'rgba(255,170,0,0.4)', borderRadius: 14, paddingVertical: 12,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    borderWidth: 1.5, borderColor: 'rgba(255,170,0,0.4)', borderRadius: 14, paddingVertical: Spacing.md,
   },
   shareBtnText: { color: '#FFAA00', fontSize: 14, fontWeight: '700' },
 });

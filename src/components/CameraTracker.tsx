@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator, 
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Buffer } from 'buffer';
-import { Colors } from '../theme/theme';
+import { Colors, Spacing } from '../theme/theme';
 
 // Types for dynamically loaded native-only libraries
 type ImageManipulatorModule = {
@@ -54,10 +54,10 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
 
   if (Platform.OS === 'web') {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', padding: 24 }]}>
-        <MaterialCommunityIcons name="camera-iris" size={48} color={Colors.primary} style={{ marginBottom: 16, opacity: 0.8 }} />
-        <Text style={[styles.message, { fontSize: 18, marginBottom: 8 }]}>Optical Simulation Mode</Text>
-        <Text style={{ color: Colors.textMuted, textAlign: 'center', fontSize: 13, lineHeight: 18, marginBottom: 24 }}>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', padding: Spacing.xl }]}>
+        <MaterialCommunityIcons name="camera-iris" size={48} color={Colors.primary} style={{ marginBottom: Spacing.lg, opacity: 0.8 }} />
+        <Text style={[styles.message, { fontSize: 18, marginBottom: Spacing.sm }]}>Optical Simulation Mode</Text>
+        <Text style={{ color: Colors.textMuted, textAlign: 'center', fontSize: 13, lineHeight: 18, marginBottom: Spacing.xl }}>
           Optical telemetry requires native hardware acceleration reserved for Android & iOS builds.
         </Text>
         
@@ -180,7 +180,7 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={[styles.message, { marginTop: 12 }]}>Checking camera access…</Text>
+        <Text style={[styles.message, { marginTop: Spacing.md }]}>Checking camera access…</Text>
       </View>
     );
   }
@@ -189,8 +189,8 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
     // If we've explicitly been denied and the OS says we can't ask again, then we fallback to open settings
     const requiresSettings = permission.status === 'denied' && !permission.canAskAgain;
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }]}>
-        <MaterialCommunityIcons name="camera-off" size={40} color={Colors.textMuted} style={{ marginBottom: 12 }} />
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xl }]}>
+        <MaterialCommunityIcons name="camera-off" size={40} color={Colors.textMuted} style={{ marginBottom: Spacing.md }} />
         <Text style={styles.message}>
           {requiresSettings
             ? 'Camera access was denied permanently. Please enable it in your device Settings.'
@@ -256,15 +256,15 @@ const styles = StyleSheet.create({
   message: {
     color: '#FFF',
     textAlign: 'center',
-    paddingBottom: 10,
+    paddingBottom: Spacing.md,
     fontFamily: 'Righteous',
   },
   button: {
     backgroundColor: Colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
     borderRadius: 12,
-    marginTop: 20,
+    marginTop: Spacing.xl,
   },
   cameraBox: {
     width: '100%',
@@ -288,8 +288,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Righteous',
     textAlign: 'center',
     backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
@@ -302,8 +302,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     backgroundColor: 'rgba(0,0,0,0.85)',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.15)',
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    marginRight: 10,
+    marginRight: Spacing.md,
     borderWidth: 1,
     borderColor: '#FFF',
   },

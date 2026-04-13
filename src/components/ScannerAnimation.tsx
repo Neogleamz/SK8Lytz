@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, TouchableOpacity, Image } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { Typography } from '../theme/theme';
+import { Typography, Spacing } from '../theme/theme';
 
 interface ScannerAnimationProps {
   deviceCount: number;
@@ -332,12 +332,12 @@ export default function ScannerAnimation({ deviceCount, isScanning, isScanProbin
                 : 'TAP TO DISCOVER'}
           </Text>
           {isScanning && (
-            <Text style={[Typography.caption, { color: Colors.textMuted, marginTop: 2, letterSpacing: 1.5, fontSize: 10 }]}>
+            <Text style={[Typography.caption, { color: Colors.textMuted, marginTop: Spacing.xxs, letterSpacing: 1.5, fontSize: 10 }]}>
               DETECTING SK8LYTZ STRIPS
             </Text>
           )}
           {isScanProbing && !isScanning && (
-            <Text style={[Typography.caption, { color: '#a855f7', marginTop: 2, letterSpacing: 1.5, fontSize: 10 }]}>
+            <Text style={[Typography.caption, { color: '#a855f7', marginTop: Spacing.xxs, letterSpacing: 1.5, fontSize: 10 }]}>
               PROBING HARDWARE...
             </Text>
           )}
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: Spacing.md,
   },
   radarContainer: {
     width: 180,

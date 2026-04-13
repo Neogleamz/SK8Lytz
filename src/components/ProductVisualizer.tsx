@@ -1,3 +1,4 @@
+import { Spacing } from '../theme/theme';
 import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { View, StyleSheet, Animated, Text, TouchableOpacity, Platform } from 'react-native';
 import { getRbmVisualizerFrame, getRbmMusicFrame, rgbToHex } from '../utils/RbmSimulator';
@@ -546,7 +547,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
     <TouchableOpacity
       activeOpacity={onLongPress ? 0.8 : 1}
       onLongPress={onLongPress ? () => onLongPress(device) : undefined}
-      style={{ alignItems: 'center', marginHorizontal: 12, paddingVertical: 4 }}
+      style={{ alignItems: 'center', marginHorizontal: Spacing.md, paddingVertical: Spacing.xs }}
     >
       <View style={[
         vizShape === 'RING' ? styles.haloBase : vizShape === 'DUAL_STRIP' ? styles.railBase : styles.soulBase,
@@ -642,7 +643,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           );
         })}
       </View>
-      <View style={{ marginTop: 16, alignItems: 'center', zIndex: 10, width: 100 }}>
+      <View style={{ marginTop: Spacing.lg, alignItems: 'center', zIndex: 10, width: 100 }}>
         <Text
           style={{ color: isPoweredOn ? (isDark ? 'white' : 'black') : (isDark ? '#888' : '#666'), fontWeight: 'bold', fontSize: 11, textAlign: 'center', opacity: isPoweredOn ? 1.0 : 0.4 }}
           numberOfLines={2}
@@ -774,7 +775,7 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
 
   return (
     <View style={[styles.container, { backgroundColor: isDark ? '#000000' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)' }]}>
-      <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', paddingTop: 24 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', paddingTop: Spacing.xl }}>
         {renderDevices.map((dev, index) => (
           <VisualizerUnit
             key={dev.id || index.toString()}
@@ -809,7 +810,7 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
 
 const styles = StyleSheet.create({
   container: {
-    padding: 6,
+    padding: Spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#000000',

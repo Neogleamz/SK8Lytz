@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { View, StyleSheet, PanResponder, LayoutChangeEvent, Text } from 'react-native';
-import { Colors, Typography } from '../theme/theme';
+import { Colors, Typography, Spacing } from '../theme/theme';
 
 export default function CircularKnob({ value, onValueChange, min = 1, max = 100 }: any) {
   const [center, setCenter] = useState({ x: 0, y: 0 });
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 16,
+    marginVertical: Spacing.lg,
     cursor: 'pointer', // Note: For web support
   },
   knobBase: {

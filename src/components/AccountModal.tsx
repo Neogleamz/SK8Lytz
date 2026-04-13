@@ -1,3 +1,4 @@
+import { Spacing } from '../theme/theme';
 /**
  * AccountModal.tsx — SK8Lytz Account Management
  *
@@ -301,14 +302,14 @@ export default function AccountModal({
   const renderProfile = () => (
     <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
       {/* Avatar — tappable to pick photo */}
-      <TouchableOpacity onPress={handlePickProfilePhoto} style={{ alignSelf: 'center', marginBottom: 4 }}>
+      <TouchableOpacity onPress={handlePickProfilePhoto} style={{ alignSelf: 'center', marginBottom: Spacing.xs }}>
         {(profilePhotoUri || profile?.avatar_url)
           ? <Image source={{ uri: profilePhotoUri ?? profile?.avatar_url! }}
               style={[styles.avatarCircle, { overflow: 'hidden' }]} />
           : <View style={[styles.avatarCircle, { backgroundColor: profile?.avatar_color ?? '#FF8C00' }]}>
               <Text style={styles.avatarText}>{initials(profile?.display_name ?? null)}</Text>
             </View>}
-        <View style={{ position: 'absolute', bottom: 2, right: 2, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, padding: 3 }}>
+        <View style={{ position: 'absolute', bottom: 2, right: 2, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, padding: Spacing.xxs }}>
           <MaterialCommunityIcons name="camera" size={12} color="#FFF" />
         </View>
       </TouchableOpacity>
@@ -334,8 +335,8 @@ export default function AccountModal({
       <Text style={styles.hint}>Lowercase letters, numbers, underscores. Used for login.</Text>
 
       {/* Avatar color */}
-      <Text style={[styles.label, { marginBottom: 16 }]}>AVATAR COLOR</Text>
-      <View style={{ flexShrink: 0, minHeight: 40, marginBottom: 24 }}>
+      <Text style={[styles.label, { marginBottom: Spacing.lg }]}>AVATAR COLOR</Text>
+      <View style={{ flexShrink: 0, minHeight: 40, marginBottom: Spacing.xl }}>
         <CustomSlider
           gradientTrack={true}
           value={avatarHue}
@@ -448,7 +449,7 @@ export default function AccountModal({
       </TouchableOpacity>
 
       {/* Change Email */}
-      <Text style={[styles.sectionHeader, { marginTop: 28 }]}>CHANGE EMAIL</Text>
+      <Text style={[styles.sectionHeader, { marginTop: Spacing.xxl }]}>CHANGE EMAIL</Text>
       <Text style={styles.currentEmail}>Current: {userEmail}</Text>
 
       <Text style={styles.label}>NEW EMAIL ADDRESS</Text>
@@ -502,7 +503,7 @@ export default function AccountModal({
           <Text style={styles.backText}>My Crews</Text>
         </TouchableOpacity>
         <Text style={styles.sectionHeader}>JOIN PRIVATE CREW</Text>
-        <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: 12, lineHeight: 17 }}>
+        <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: Spacing.md, lineHeight: 17 }}>
           Enter the 6-character invite code from a private crew. Public crews don't need a code — browse them from the Crew Hub.
         </Text>
         <Text style={styles.label}>PRIVATE INVITE CODE</Text>
@@ -534,9 +535,9 @@ export default function AccountModal({
                   name={crew.is_owner ? 'crown' : 'account-group'}
                   size={20} color={crew.is_owner ? '#FFD700' : Colors.primary} />
               </View>
-              <View style={{ flex: 1, marginLeft: 12 }}>
+              <View style={{ flex: 1, marginLeft: Spacing.md }}>
                 <Text style={styles.crewCardName}>{crew.name}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.xxs }}>
                   {crew.is_public ? (
                     // Public crew — no code needed, show badge instead
                     <Text style={[styles.crewCardCode, { color: '#00C853' }]}>🌍 Public</Text>
@@ -593,12 +594,12 @@ export default function AccountModal({
           const isUngrouped = groupName === "_Ungrouped";
 
           return (
-            <View key={groupName} style={{ marginBottom: 16 }}>
+            <View key={groupName} style={{ marginBottom: Spacing.lg }}>
               {!isUngrouped && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm, paddingHorizontal: Spacing.lg }}>
                   {editingGroupId === groupName ? (
                     <TextInput
-                      style={[styles.input, { flex: 1, marginBottom: 0, paddingVertical: 6, paddingHorizontal: 10, marginRight: 8 }]}
+                      style={[styles.input, { flex: 1, marginBottom: 0, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, marginRight: Spacing.sm }]}
                       value={groupNewName} onChangeText={setGroupNewName}
                       placeholder={groupName} placeholderTextColor={Colors.textMuted}
                       autoFocus maxLength={32} returnKeyType="done"
@@ -610,7 +611,7 @@ export default function AccountModal({
                     </Text>
                   )}
                   
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
                     {editingGroupId === groupName ? (
                       <>
                         <TouchableOpacity style={styles.deviceSaveBtn} onPress={() => handleRenameGroup(groupName)}>
@@ -638,11 +639,11 @@ export default function AccountModal({
                 <View key={device.id} style={styles.deviceCard}>
                   <MaterialCommunityIcons
                     name={device.type === 'SOULZ' ? 'skate' : 'lightning-bolt-circle'}
-                    size={22} color={Colors.primary} style={{ marginRight: 12 }} />
+                    size={22} color={Colors.primary} style={{ marginRight: Spacing.md }} />
                   <View style={{ flex: 1 }}>
                     {editingDeviceId === device.id ? (
                       <TextInput
-                        style={[styles.input, { marginBottom: 0, paddingVertical: 6, paddingHorizontal: 10 }]}
+                        style={[styles.input, { marginBottom: 0, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md }]}
                         value={deviceNewName} onChangeText={setDeviceNewName}
                         placeholder={device.customName || device.name}
                         placeholderTextColor={Colors.textMuted}
@@ -658,7 +659,7 @@ export default function AccountModal({
                       </>
                     )}
                   </View>
-                  <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' }}>
                     {editingDeviceId === device.id ? (
                       <>
                         <TouchableOpacity style={styles.deviceSaveBtn} onPress={() => handleRenameDevice(device)}>
@@ -689,7 +690,7 @@ export default function AccountModal({
         })
       )}
 
-      <Text style={[styles.hint, { marginTop: 16 }]}>
+      <Text style={[styles.hint, { marginTop: Spacing.lg }]}>
         Devices are paired from the scanner. Remove them here if you no longer use them.
       </Text>
       <View style={{ height: 20 }} />
@@ -725,7 +726,7 @@ export default function AccountModal({
       ))}
 
       {/* App preferences */}
-      <Text style={[styles.sectionHeader, { marginTop: 24 }]}>APP</Text>
+      <Text style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>APP</Text>
 
       <View style={styles.settingRow}>
         <View style={{ flex: 1 }}>
@@ -741,7 +742,7 @@ export default function AccountModal({
       </View>
 
       {/* Legal & Compliance */}
-      <Text style={[styles.sectionHeader, { marginTop: 24 }]}>LEGAL</Text>
+      <Text style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>LEGAL</Text>
 
       <TouchableOpacity style={styles.signOutBtn} onPress={() => setShowEula(true)}>
         <MaterialCommunityIcons name="file-document-outline" size={18} color={Colors.textMuted} />
@@ -749,7 +750,7 @@ export default function AccountModal({
       </TouchableOpacity>
 
       {/* Sign out */}
-      <Text style={[styles.sectionHeader, { marginTop: 24 }]}>ACCOUNT</Text>
+      <Text style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>ACCOUNT</Text>
 
       <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
         <MaterialCommunityIcons name="logout" size={18} color="#FF4444" />
@@ -786,9 +787,9 @@ export default function AccountModal({
 
     if (statsLoading) {
       return (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: Spacing.giant }}>
           <MaterialCommunityIcons name="lightning-bolt" size={32} color={Colors.primary} />
-          <Text style={{ color: Colors.textMuted, marginTop: 12, fontSize: 13 }}>Loading your stats…</Text>
+          <Text style={{ color: Colors.textMuted, marginTop: Spacing.md, fontSize: 13 }}>Loading your stats…</Text>
         </View>
       );
     }
@@ -798,9 +799,9 @@ export default function AccountModal({
     return (
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         {noData ? (
-          <View style={{ alignItems: 'center', paddingVertical: 48 }}>
+          <View style={{ alignItems: 'center', paddingVertical: Spacing.huge }}>
             <MaterialCommunityIcons name="skate" size={48} color={Colors.textMuted} />
-            <Text style={[styles.hint, { textAlign: 'center', marginTop: 16, fontSize: 14 }]}>
+            <Text style={[styles.hint, { textAlign: 'center', marginTop: Spacing.lg, fontSize: 14 }]}>
               No sessions saved yet.{`\n`}Enable Street Mode and skate to record your first session!
             </Text>
           </View>
@@ -808,7 +809,7 @@ export default function AccountModal({
           <>
             {/* ── Lifetime stat grid ── */}
             <Text style={styles.sectionHeader}>LIFETIME STATS</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.lg }}>
               {[
                 { icon: 'flag-checkered',        val: String(lifetimeStats!.totalSessions),                        unit: '',    lbl: 'Sessions' },
                 { icon: 'map-marker-distance',   val: lifetimeStats!.totalDistanceMiles.toFixed(1),               unit: 'mi',  lbl: 'Distance' },
@@ -819,14 +820,14 @@ export default function AccountModal({
               ].map(({ icon, val, unit, lbl }) => (
                 <View key={lbl} style={{
                   width: '47%', backgroundColor: 'rgba(255,255,255,0.05)',
-                  borderRadius: 16, padding: 14, alignItems: 'center',
+                  borderRadius: 16, padding: Spacing.lg, alignItems: 'center',
                 }}>
                   <MaterialCommunityIcons name={icon as any} size={20} color={Colors.primary} />
-                  <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 3, marginTop: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.xxs, marginTop: Spacing.sm }}>
                     <Text style={{ color: '#FFF', fontSize: 22, fontWeight: '900' }}>{val}</Text>
-                    {unit ? <Text style={{ color: Colors.primary, fontSize: 10, fontWeight: '700', marginBottom: 3 }}>{unit}</Text> : null}
+                    {unit ? <Text style={{ color: Colors.primary, fontSize: 10, fontWeight: '700', marginBottom: Spacing.xxs }}>{unit}</Text> : null}
                   </View>
-                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '600', letterSpacing: 0.8, marginTop: 4 }}>{lbl}</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '600', letterSpacing: 0.8, marginTop: Spacing.xs }}>{lbl}</Text>
                 </View>
               ))}
             </View>
@@ -834,18 +835,18 @@ export default function AccountModal({
             {/* ── Recent sessions list ── */}
             {recentSessions.length > 0 && (
               <>
-                <Text style={[styles.sectionHeader, { marginTop: 8 }]}>RECENT SESSIONS</Text>
+                <Text style={[styles.sectionHeader, { marginTop: Spacing.sm }]}>RECENT SESSIONS</Text>
                 {recentSessions.map(s => (
                   <View key={s.id} style={{
                     backgroundColor: 'rgba(255,255,255,0.04)',
-                    borderRadius: 14, padding: 14, marginBottom: 8,
+                    borderRadius: 14, padding: Spacing.lg, marginBottom: Spacing.sm,
                     borderLeftWidth: 3, borderLeftColor: Colors.primary,
                   }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
                       <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>{fmtDate(s.sessionDate)}</Text>
                       <Text style={{ color: Colors.textMuted, fontSize: 12 }}>{fmtDuration(s.durationSec)}</Text>
                     </View>
-                    <View style={{ flexDirection: 'row', gap: 16 }}>
+                    <View style={{ flexDirection: 'row', gap: Spacing.lg }}>
                       <View style={{ alignItems: 'center' }}>
                         <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 16 }}>{s.distanceMiles.toFixed(2)}</Text>
                         <Text style={{ color: Colors.textMuted, fontSize: 10 }}>mi</Text>
@@ -934,7 +935,7 @@ export default function AccountModal({
           </View>
 
           {loading
-            ? <ActivityIndicator style={{ marginTop: 50 }} size="large" color={Colors.primary} />
+            ? <ActivityIndicator style={{ marginTop: Spacing.huge }} size="large" color={Colors.primary} />
             : tab === 'profile'  ? renderProfile()
             : tab === 'security' ? renderSecurity()
             : tab === 'crews'    ? renderCrews()
@@ -955,19 +956,19 @@ const createStyles = (Colors: any) => StyleSheet.create({
   sheet: {
     backgroundColor: Colors.background ?? '#0D0D0D',
     borderTopLeftRadius: 26, borderTopRightRadius: 26,
-    maxHeight: '93%', minHeight: '70%', paddingTop: 22,
+    maxHeight: '93%', minHeight: '70%', paddingTop: Spacing.xl,
   },
-  closeBtn:   { position: 'absolute', top: 16, right: 16, zIndex: 10, padding: 8 },
-  sheetTitle: { color: Colors.text ?? '#FFF', fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 14 },
+  closeBtn:   { position: 'absolute', top: 16, right: 16, zIndex: 10, padding: Spacing.sm },
+  sheetTitle: { color: Colors.text ?? '#FFF', fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: Spacing.lg },
 
   // Tabs
   tabBar: {
-    flexDirection: 'row', paddingHorizontal: 10, gap: 6,
-    marginBottom: 4, paddingBottom: 2,
+    flexDirection: 'row', paddingHorizontal: Spacing.md, gap: Spacing.sm,
+    marginBottom: Spacing.xs, paddingBottom: Spacing.xxs,
   },
   tabBtn: {
-    flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-    paddingVertical: 8, paddingHorizontal: 4,
+    flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: Spacing.xxs,
+    paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs,
     borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)',
   },
   tabBtnActive:     { backgroundColor: Colors.primary ?? '#FFAA00' },
@@ -975,18 +976,18 @@ const createStyles = (Colors: any) => StyleSheet.create({
   tabBtnTextActive: { color: '#000' },
 
   // Body
-  body:          { padding: 20, paddingBottom: 20 },
-  label:         { color: Colors.textMuted ?? '#888', fontSize: 10, fontWeight: '700', letterSpacing: 1.2, marginTop: 16, marginBottom: 6 },
-  sectionHeader: { color: Colors.textMuted ?? '#888', fontSize: 11, fontWeight: '800', letterSpacing: 1.5, marginTop: 8, marginBottom: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)', paddingBottom: 8 },
+  body:          { padding: Spacing.xl, paddingBottom: Spacing.xl },
+  label:         { color: Colors.textMuted ?? '#888', fontSize: 10, fontWeight: '700', letterSpacing: 1.2, marginTop: Spacing.lg, marginBottom: Spacing.sm },
+  sectionHeader: { color: Colors.textMuted ?? '#888', fontSize: 11, fontWeight: '800', letterSpacing: 1.5, marginTop: Spacing.sm, marginBottom: Spacing.md, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)', paddingBottom: Spacing.sm },
   hint:          { color: 'rgba(255,255,255,0.3)', fontSize: 11, lineHeight: 16 },
-  errorText:     { color: '#FF4444', fontSize: 13, marginTop: 6 },
+  errorText:     { color: '#FF4444', fontSize: 13, marginTop: Spacing.sm },
 
   // Inputs
   input: {
     backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
     color: Colors.text ?? '#FFF', fontSize: 15,
-    paddingHorizontal: 14, paddingVertical: 11, width: '100%', marginBottom: 4,
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, width: '100%', marginBottom: Spacing.xs,
   },
   codeInput: {
     fontSize: 28, fontWeight: '900', letterSpacing: 8, textAlign: 'center',
@@ -994,82 +995,82 @@ const createStyles = (Colors: any) => StyleSheet.create({
   },
 
   // Profile
-  avatarCircle: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 4 },
+  avatarCircle: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: Spacing.xs },
   avatarText:   { color: '#000', fontSize: 28, fontWeight: '900' },
-  emailDisplay: { color: Colors.textMuted ?? '#888', fontSize: 12, textAlign: 'center', marginBottom: 4 },
-  usernameRow:  { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  atSign:       { color: Colors.textMuted ?? '#888', fontSize: 18, fontWeight: '700', paddingBottom: 4 },
-  colorRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 4 },
+  emailDisplay: { color: Colors.textMuted ?? '#888', fontSize: 12, textAlign: 'center', marginBottom: Spacing.xs },
+  usernameRow:  { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  atSign:       { color: Colors.textMuted ?? '#888', fontSize: 18, fontWeight: '700', paddingBottom: Spacing.xs },
+  colorRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md, marginBottom: Spacing.xs },
   colorSwatch:  { width: 30, height: 30, borderRadius: 15 },
   colorSwatchActive: { borderWidth: 3, borderColor: '#FFF' },
-  statsRow:     { flexDirection: 'row', gap: 10, marginTop: 20 },
-  statCard:     { flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: 14, alignItems: 'center' },
+  statsRow:     { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xl },
+  statCard:     { flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: Spacing.lg, alignItems: 'center' },
   statNum:      { color: Colors.text ?? '#FFF', fontSize: 26, fontWeight: '900' },
-  statLabel:    { color: Colors.textMuted ?? '#888', fontSize: 11, marginTop: 2 },
+  statLabel:    { color: Colors.textMuted ?? '#888', fontSize: 11, marginTop: Spacing.xxs },
 
   // History preview
-  historyRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+  historyRow:   { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
   historyDot:   { width: 8, height: 8, borderRadius: 4 },
   historyName:  { color: Colors.text ?? '#FFF', fontSize: 13, fontWeight: '600' },
   historyDate:  { color: Colors.textMuted ?? '#888', fontSize: 11, marginTop: 1 },
 
   // Security
-  msgBanner:    { borderRadius: 10, borderWidth: 1, padding: 12, marginBottom: 12 },
+  msgBanner:    { borderRadius: 10, borderWidth: 1, padding: Spacing.md, marginBottom: Spacing.md },
   msgText:      { fontSize: 13, fontWeight: '600', lineHeight: 18 },
-  pwdRow:       { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  eyeBtn:       { padding: 10 },
-  currentEmail: { color: Colors.textMuted ?? '#888', fontSize: 12, marginBottom: 4 },
+  pwdRow:       { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  eyeBtn:       { padding: Spacing.md },
+  currentEmail: { color: Colors.textMuted ?? '#888', fontSize: 12, marginBottom: Spacing.xs },
 
   // Crews
   crewCard: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14,
-    padding: 14, marginBottom: 10,
+    padding: Spacing.lg, marginBottom: Spacing.md,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
   crewCardIcon:   { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' },
   crewCardName:   { color: Colors.text ?? '#FFF', fontSize: 15, fontWeight: '700' },
-  crewCardCode:   { color: Colors.textMuted ?? '#888', fontSize: 12, marginTop: 2 },
-  ownerBadge:     { fontSize: 9, fontWeight: '800', letterSpacing: 1, color: '#FFD700', borderWidth: 1, borderColor: '#FFD700', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
-  crewActionBtn:  { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
+  crewCardCode:   { color: Colors.textMuted ?? '#888', fontSize: 12, marginTop: Spacing.xxs },
+  ownerBadge:     { fontSize: 9, fontWeight: '800', letterSpacing: 1, color: '#FFD700', borderWidth: 1, borderColor: '#FFD700', borderRadius: 4, paddingHorizontal: Spacing.xs, paddingVertical: 1 },
+  crewActionBtn:  { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
   crewActionText: { color: Colors.textMuted ?? '#888', fontSize: 12, fontWeight: '700' },
 
   // Devices
   deviceCard: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14,
-    padding: 14, marginBottom: 10,
+    padding: Spacing.lg, marginBottom: Spacing.md,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
   deviceName:     { color: Colors.text ?? '#FFF', fontSize: 15, fontWeight: '700' },
-  deviceMeta:     { color: Colors.textMuted ?? '#888', fontSize: 11, marginTop: 2 },
-  deviceIconBtn:  { padding: 8, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.06)' },
-  deviceSaveBtn:  { padding: 8, borderRadius: 8, backgroundColor: Colors.primary ?? '#FFAA00' },
+  deviceMeta:     { color: Colors.textMuted ?? '#888', fontSize: 11, marginTop: Spacing.xxs },
+  deviceIconBtn:  { padding: Spacing.sm, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.06)' },
+  deviceSaveBtn:  { padding: Spacing.sm, borderRadius: 8, backgroundColor: Colors.primary ?? '#FFAA00' },
 
   // Settings
-  settingRow:     { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+  settingRow:     { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.lg, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
   settingLabel:   { color: Colors.text ?? '#FFF', fontSize: 14, fontWeight: '600' },
-  settingSubLabel:{ color: Colors.textMuted ?? '#888', fontSize: 11, marginTop: 2 },
-  signOutBtn:     { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+  settingSubLabel:{ color: Colors.textMuted ?? '#888', fontSize: 11, marginTop: Spacing.xxs },
+  signOutBtn:     { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.lg, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
   signOutText:    { color: '#FF4444', fontSize: 15, fontWeight: '700' },
 
   // Danger zone
-  dangerZone:     { marginTop: 20, borderWidth: 1, borderColor: 'rgba(255,68,68,0.25)', borderRadius: 14, padding: 16 },
-  dangerHeader:   { color: '#FF4444', fontSize: 13, fontWeight: '800', letterSpacing: 1, marginBottom: 6 },
-  dangerSub:      { color: Colors.textMuted ?? '#888', fontSize: 12, marginBottom: 14, lineHeight: 17 },
-  deleteAccountBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#FF4444', borderRadius: 10, paddingVertical: 11, paddingHorizontal: 14, alignSelf: 'flex-start' },
+  dangerZone:     { marginTop: Spacing.xl, borderWidth: 1, borderColor: 'rgba(255,68,68,0.25)', borderRadius: 14, padding: Spacing.lg },
+  dangerHeader:   { color: '#FF4444', fontSize: 13, fontWeight: '800', letterSpacing: 1, marginBottom: Spacing.sm },
+  dangerSub:      { color: Colors.textMuted ?? '#888', fontSize: 12, marginBottom: Spacing.lg, lineHeight: 17 },
+  deleteAccountBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, borderWidth: 1, borderColor: '#FF4444', borderRadius: 10, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, alignSelf: 'flex-start' },
   deleteAccountText: { color: '#FF4444', fontSize: 13, fontWeight: '700' },
 
   // Buttons
-  primaryBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.primary ?? '#FFAA00', borderRadius: 14, paddingVertical: 14, width: '100%', marginTop: 16 },
+  primaryBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, backgroundColor: Colors.primary ?? '#FFAA00', borderRadius: 14, paddingVertical: Spacing.lg, width: '100%', marginTop: Spacing.lg },
   primaryBtnText: { color: '#000', fontSize: 15, fontWeight: '800' },
-  secondaryBtn:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderColor: Colors.primary ?? '#FFAA00', borderRadius: 14, paddingVertical: 13, width: '100%', marginTop: 12 },
+  secondaryBtn:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, borderWidth: 1.5, borderColor: Colors.primary ?? '#FFAA00', borderRadius: 14, paddingVertical: Spacing.md, width: '100%', marginTop: Spacing.md },
   secondaryBtnText: { color: Colors.primary ?? '#FFAA00', fontSize: 15, fontWeight: '700' },
-  backBtn:        { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
+  backBtn:        { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: Spacing.lg },
   backText:       { color: Colors.textMuted ?? '#888', fontSize: 14 },
 
   // Empty states
-  emptyState:     { alignItems: 'center', paddingVertical: 36 },
-  emptyTitle:     { color: Colors.text ?? '#FFF', fontSize: 18, fontWeight: '700', marginTop: 14 },
-  emptySubtitle:  { color: Colors.textMuted ?? '#888', fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 20 },
+  emptyState:     { alignItems: 'center', paddingVertical: Spacing.xxxl },
+  emptyTitle:     { color: Colors.text ?? '#FFF', fontSize: 18, fontWeight: '700', marginTop: Spacing.lg },
+  emptySubtitle:  { color: Colors.textMuted ?? '#888', fontSize: 13, textAlign: 'center', marginTop: Spacing.sm, lineHeight: 20 },
 });

@@ -1,3 +1,4 @@
+import { Spacing } from '../theme/theme';
 import React from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -22,7 +23,7 @@ export const SkateMapScreen: React.FC<SkateMapScreenProps> = ({ visible, onClose
         </View>
 
         <View style={styles.center}>
-          <MaterialCommunityIcons name="map-marker-off" size={48} color="#555" style={{ marginBottom: 16 }} />
+          <MaterialCommunityIcons name="map-marker-off" size={48} color="#555" style={{ marginBottom: Spacing.lg }} />
           <Text style={styles.title}>Map Unavailable on Web</Text>
           <Text style={styles.subtitle}>
             The interactive SK8Lytz Skate Map relies on native components. 
@@ -46,7 +47,7 @@ const styles = StyleSheet.create({
     right: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
     zIndex: 10,
   },
   backButton: {
@@ -64,8 +65,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.sm,
   },
   searchText: {
     color: '#888',
@@ -75,13 +76,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
+    padding: Spacing.xxl,
   },
   title: {
     color: '#FFF',
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   subtitle: {
     color: '#888',

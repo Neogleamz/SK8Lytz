@@ -1,3 +1,4 @@
+import { Spacing } from '../theme/theme';
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Dimensions, ActivityIndicator, Modal } from 'react-native';
 import MapView from 'react-native-map-clustering';
@@ -211,7 +212,7 @@ const createStyles = (Colors: any) => StyleSheet.create({
     right: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
   },
   backButton: {
     width: 44,
@@ -228,8 +229,8 @@ const createStyles = (Colors: any) => StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.6)',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.sm,
   },
   searchText: {
     color: Colors.textMuted,
@@ -257,11 +258,11 @@ const createStyles = (Colors: any) => StyleSheet.create({
     alignSelf: 'center',
     backgroundColor: '#FFAA00',
     borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,

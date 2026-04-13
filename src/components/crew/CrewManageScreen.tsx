@@ -1,3 +1,4 @@
+import { Spacing } from '../../theme/theme';
 import React, { useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert, Share, TextInput, Image, RefreshControl, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -88,7 +89,7 @@ export function CrewManageScreen() {
         <Text style={styles.titleLarge}>Create a Crew</Text>
 
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ padding: 16, paddingBottom: 60 }}>
+          contentContainerStyle={{ padding: Spacing.lg, paddingBottom: Spacing.giant }}>
 
           <Text style={styles.label}>CREW NAME</Text>
           <TextInput style={styles.input} value={newCrewName} onChangeText={setNewCrewName}
@@ -100,22 +101,22 @@ export function CrewManageScreen() {
             placeholder="What's this crew about?" placeholderTextColor={Colors.textMuted} maxLength={120} />
 
           {/* Unified Avatar Selection */}
-          <View style={{ marginBottom: 16 }}>
+          <View style={{ marginBottom: Spacing.lg }}>
             <Text style={styles.label}>CREW AVATAR</Text>
 
             {newCrewPhotoUri ? (
-              <View style={{ alignItems: 'center', marginBottom: 8, padding: 16, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
-                <TouchableOpacity style={[styles.mgPhotoBtn, { height: 120, width: 120, borderRadius: 60, marginBottom: 12 }]} onPress={handlePickCrewPhoto}>
+              <View style={{ alignItems: 'center', marginBottom: Spacing.sm, padding: Spacing.lg, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+                <TouchableOpacity style={[styles.mgPhotoBtn, { height: 120, width: 120, borderRadius: 60, marginBottom: Spacing.md }]} onPress={handlePickCrewPhoto}>
                   <Image source={{ uri: newCrewPhotoUri }} style={styles.mgPhotoBtnImg} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setNewCrewPhotoUri(null)} style={{ paddingVertical: 8, paddingHorizontal: 16, backgroundColor: 'rgba(255,68,68,0.1)', borderRadius: 20 }}>
+                <TouchableOpacity onPress={() => setNewCrewPhotoUri(null)} style={{ paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg, backgroundColor: 'rgba(255,68,68,0.1)', borderRadius: 20 }}>
                   <Text style={{ color: '#FF4444', fontWeight: 'bold' }}>Remove Photo</Text>
                 </TouchableOpacity>
               </View>
             ) : (
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: Spacing.lg, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
 
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.lg }}>
                   {/* Live Avatar Preview */}
                   <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: newCrewColor, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)' }}>
                     <MaterialCommunityIcons name={newCrewIcon as any} size={38} color="#000" />
@@ -128,9 +129,9 @@ export function CrewManageScreen() {
                   </TouchableOpacity>
                 </View>
 
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg }}>
                   <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
-                  <Text style={[styles.label, { marginHorizontal: 10, marginTop: 0, color: 'rgba(255,255,255,0.3)' }]}>OR PICK AN ICON</Text>
+                  <Text style={[styles.label, { marginHorizontal: Spacing.md, marginTop: 0, color: 'rgba(255,255,255,0.3)' }]}>OR PICK AN ICON</Text>
                   <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
                 </View>
 
@@ -145,7 +146,7 @@ export function CrewManageScreen() {
                 </View>
 
                 {/* Hue Slider for Icon Color */}
-                <Text style={[styles.label, { marginTop: 16, marginBottom: 8 }]}>ICON COLOR</Text>
+                <Text style={[styles.label, { marginTop: Spacing.lg, marginBottom: Spacing.sm }]}>ICON COLOR</Text>
                 <View style={[styles.controlRow, { flexShrink: 0, minHeight: 40 }]}>
                   <CustomSlider
                     gradientTrack={true}
@@ -179,13 +180,13 @@ export function CrewManageScreen() {
               <Text style={[styles.visibilityBtnText, newCrewIsPublic && styles.visibilityBtnTextActive]}>Public</Text>
             </TouchableOpacity>
           </View>
-          <Text style={[styles.hintText, { marginBottom: 16 }]}>
+          <Text style={[styles.hintText, { marginBottom: Spacing.lg }]}>
             {newCrewIsPublic ? '🌍 Anyone can find & join via Discover.' : '🔒 Invite code required to join.'}
           </Text>
 
           {/* Home City */}
           <Text style={styles.label}>HOME CITY (OPTIONAL)</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
             <TextInput style={[styles.input, { flex: 2 }]} value={newCrewCity} onChangeText={setNewCrewCity}
               placeholder="City" placeholderTextColor={Colors.textMuted} />
             <TextInput style={[styles.input, { flex: 1 }]} value={newCrewState} onChangeText={setNewCrewState}
@@ -194,10 +195,10 @@ export function CrewManageScreen() {
 
           {/* Add Members Section */}
           <Text style={styles.label}>ADD MEMBERS</Text>
-          <View style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginBottom: 12 }}>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: selectedMembers.length > 0 ? 8 : 0 }}>
+          <View style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: Spacing.md, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', marginBottom: Spacing.md }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: selectedMembers.length > 0 ? 8 : 0 }}>
               {selectedMembers.map(member => (
-                <View key={member.user_id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primary || '#FFAA00', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 4, gap: 4 }}>
+                <View key={member.user_id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primary || '#FFAA00', borderRadius: 16, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, gap: Spacing.xs }}>
                   <Text style={{ fontSize: 12, fontWeight: '700', color: '#000' }}>@{member.username || member.display_name}</Text>
                   <TouchableOpacity onPress={() => setSelectedMembers(prev => prev.filter(m => m.user_id !== member.user_id))}>
                     <MaterialCommunityIcons name="close-circle" size={16} color="rgba(0,0,0,0.6)" />
@@ -207,11 +208,11 @@ export function CrewManageScreen() {
             </View>
             <TextInput style={[styles.input, { marginBottom: 0 }]} value={userSearchQuery} onChangeText={setUserSearchQuery} placeholder="Search username..." placeholderTextColor={Colors.textMuted} />
             {userSearchResults.length > 0 && (
-              <View style={{ marginTop: 8, gap: 4 }}>
+              <View style={{ marginTop: Spacing.sm, gap: Spacing.xs }}>
                 {userSearchResults.map(u => (
                   !selectedMembers.find(m => m.user_id === u.user_id) && (
-                    <TouchableOpacity key={u.user_id} onPress={() => { setSelectedMembers(prev => [...prev, u]); setUserSearchQuery(''); }} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', padding: 8, borderRadius: 8 }}>
-                      <MaterialCommunityIcons name="account" size={16} color={Colors.textMuted} style={{ marginRight: 6 }} />
+                    <TouchableOpacity key={u.user_id} onPress={() => { setSelectedMembers(prev => [...prev, u]); setUserSearchQuery(''); }} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', padding: Spacing.sm, borderRadius: 8 }}>
+                      <MaterialCommunityIcons name="account" size={16} color={Colors.textMuted} style={{ marginRight: Spacing.sm }} />
                       <Text style={{ color: '#FFF', fontSize: 13, flex: 1 }}>{u.display_name} <Text style={{ color: Colors.textMuted }}>@{u.username}</Text></Text>
                       <MaterialCommunityIcons name="plus" size={18} color={Colors.primary} />
                     </TouchableOpacity>
@@ -223,20 +224,20 @@ export function CrewManageScreen() {
 
           {/* Render private code preview if private */}
           {!newCrewIsPublic && (
-            <View style={{ backgroundColor: 'rgba(255,170,0,0.05)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,170,0,0.2)', padding: 16, alignItems: 'center', marginTop: 12, marginBottom: 8 }}>
-              <Text style={{ color: 'rgba(255,170,0,0.8)', fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 6 }}>PRIVATE INVITE CODE</Text>
+            <View style={{ backgroundColor: 'rgba(255,170,0,0.05)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,170,0,0.2)', padding: Spacing.lg, alignItems: 'center', marginTop: Spacing.md, marginBottom: Spacing.sm }}>
+              <Text style={{ color: 'rgba(255,170,0,0.8)', fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: Spacing.sm }}>PRIVATE INVITE CODE</Text>
               <Text style={{ color: Colors.primary || '#FFAA00', fontSize: 26, fontWeight: '900', letterSpacing: 6, fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace' }}>
                 {newCrewCode}
               </Text>
-              <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 6, textAlign: 'center' }}>
+              <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: Spacing.sm, textAlign: 'center' }}>
                 Share this code with friends so they can join your crew.
               </Text>
             </View>
           )}
 
-          {createCrewError ? <Text style={{ color: '#FF4444', marginVertical: 8 }}>{createCrewError}</Text> : null}
+          {createCrewError ? <Text style={{ color: '#FF4444', marginVertical: Spacing.sm }}>{createCrewError}</Text> : null}
 
-          <TouchableOpacity style={[styles.primaryBtn, { marginTop: 20 }]} onPress={handleCreateCrew} disabled={isCreatingCrew}>
+          <TouchableOpacity style={[styles.primaryBtn, { marginTop: Spacing.xl }]} onPress={handleCreateCrew} disabled={isCreatingCrew}>
             {isCreatingCrew ? <ActivityIndicator size="small" color="#000" /> : <MaterialCommunityIcons name="check" size={18} color="#000" />}
             <Text style={styles.primaryBtnText}>Create Crew</Text>
           </TouchableOpacity>

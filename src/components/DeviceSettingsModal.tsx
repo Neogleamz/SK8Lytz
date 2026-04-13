@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Typography } from '../theme/theme';
+import { Colors, Typography, Spacing } from '../theme/theme';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
@@ -176,7 +176,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
                 {LOCAL_PRODUCT_CATALOG.map(t => (
                   <TouchableOpacity
                     key={t.id}
-                    style={[styles.groupButton, type === t.id && styles.groupButtonActive, {marginHorizontal: 4}]}
+                    style={[styles.groupButton, type === t.id && styles.groupButtonActive, {marginHorizontal: Spacing.xs}]}
                     onPress={() => handleTypeChange(t.id)}
                   >
                     <Text style={[styles.groupButtonText, type === t.id && styles.groupButtonTextActive]}>{t.id}</Text>
@@ -204,18 +204,18 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
             </View>
 
             {/* AUTO-GENERATED NAME + GROUP PREVIEW */}
-            <View style={[styles.inputGroup, { backgroundColor: 'rgba(0,240,255,0.04)', borderRadius: 10, padding: 12 }]}>
+            <View style={[styles.inputGroup, { backgroundColor: 'rgba(0,240,255,0.04)', borderRadius: 10, padding: Spacing.md }]}>
               <Text style={styles.label}>Device Name</Text>
-              <Text style={{ color: Colors.primary, fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>
+              <Text style={{ color: Colors.primary, fontWeight: 'bold', fontSize: 16, marginBottom: Spacing.xs }}>
                 {finalName}
               </Text>
               <Text style={styles.label}>Auto Group</Text>
-              <Text style={{ color: Colors.secondary, fontWeight: 'bold', fontSize: 14, marginBottom: 8 }}>
+              <Text style={{ color: Colors.secondary, fontWeight: 'bold', fontSize: 14, marginBottom: Spacing.sm }}>
                 {autoGroupName}
               </Text>
               {/* Optional manual override */}
               <TextInput
-                style={[styles.input, { marginTop: 4, fontSize: 13 }]}
+                style={[styles.input, { marginTop: Spacing.xs, fontSize: 13 }]}
                 value={customName ?? ''}
                 onChangeText={t => setCustomName(t.length > 0 ? t : null)}
                 placeholder={`Override name (default: ${autoName})`}
@@ -227,11 +227,11 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
 
             {/* POINTS + SEGMENTS */}
             <View style={styles.row}>
-              <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+              <View style={[styles.inputGroup, { flex: 1, marginRight: Spacing.sm }]}>
                 <Text style={styles.label}>LED Points</Text>
                 <TextInput style={styles.input} value={pointsText} onChangeText={setPointsText} keyboardType="numeric" placeholder="43" placeholderTextColor="#444" />
               </View>
-              <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+              <View style={[styles.inputGroup, { flex: 1, marginLeft: Spacing.sm }]}>
                 <Text style={styles.label}>Segments</Text>
                 <TextInput style={styles.input} value={segmentsText} onChangeText={setSegmentsText} keyboardType="numeric" placeholder="1" placeholderTextColor="#444" />
               </View>
@@ -240,7 +240,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
             {/* STRIP TYPE */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>LED Strip Type</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: Spacing.sm }}>
                 {['WS2812B', 'WS2811', 'SM16703', 'SK6812'].map(st => (
                   <TouchableOpacity
                     key={st}
@@ -270,19 +270,19 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
             </View>
 
             {/* RF REMOTE CONTROL */}
-            <View style={[styles.inputGroup, { marginTop: 8 }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <View style={[styles.inputGroup, { marginTop: Spacing.sm }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }}>
                 <Text style={styles.label}>RF Remote Control</Text>
                 <TouchableOpacity
                   onPress={handleQueryRfState}
-                  style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(0,240,255,0.3)', backgroundColor: 'rgba(0,240,255,0.06)' }}
+                  style={{ paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(0,240,255,0.3)', backgroundColor: 'rgba(0,240,255,0.06)' }}
                 >
                   <Text style={{ color: '#00f0ff', fontSize: 10, fontWeight: 'bold' }}>QUERY STATE</Text>
                 </TouchableOpacity>
               </View>
 
               {/* Auth mode selector */}
-              <View style={{ gap: 8, marginBottom: 12 }}>
+              <View style={{ gap: Spacing.sm, marginBottom: Spacing.md }}>
                 {([
                   { key: 'ALLOW_PAIRED', label: '🔒 Paired Remote Only', desc: 'Only the exclusively paired remote works', color: '#00e887' },
                   { key: 'ALLOW_ALL',    label: '🌐 Allow All Remotes',   desc: 'Any RF remote in range can control device', color: '#FFA500' },
@@ -297,14 +297,14 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
                     ]}
                     activeOpacity={0.75}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                       {rfMode === key && (
                         <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color,
                           shadowColor: color, shadowOpacity: 1, shadowRadius: 6, elevation: 4 }} />
                       )}
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: rfMode === key ? color : Colors.textMuted, fontWeight: '800', fontSize: 13 }}>{label}</Text>
-                        <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>{desc}</Text>
+                        <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: Spacing.xxs }}>{desc}</Text>
                       </View>
                       {rfMode === key && <Text style={{ color: color, fontSize: 11, fontWeight: 'bold' }}>ACTIVE ✓</Text>}
                     </View>
@@ -319,12 +319,12 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
                 activeOpacity={0.75}
               >
                 <Text style={{ color: '#FF3D71', fontWeight: '800', fontSize: 13 }}>⚡ Clear Paired Remotes</Text>
-                <Text style={{ color: Colors.textMuted, fontSize: 10, marginTop: 2 }}>Unlinks all paired RF remotes. Re-pair via power-cycle.</Text>
+                <Text style={{ color: Colors.textMuted, fontSize: 10, marginTop: Spacing.xxs }}>Unlinks all paired RF remotes. Re-pair via power-cycle.</Text>
               </TouchableOpacity>
             </View>
 
             {/* FIRMWARE (read-only) */}
-            <View style={[styles.inputGroup, { marginTop: 4 }]}>
+            <View style={[styles.inputGroup, { marginTop: Spacing.xs }]}>
               <Text style={styles.label}>Firmware Version</Text>
               <TextInput
                 style={[styles.input, { color: Colors.textMuted, backgroundColor: 'rgba(255,255,255,0.02)' }]}
@@ -351,38 +351,38 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
-  content: { backgroundColor: Colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '88%', borderWidth: 1, borderColor: Colors.surfaceHighlight },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  form: { marginBottom: 16 },
-  inputGroup: { marginBottom: 18 },
-  label: { ...Typography.caption, color: Colors.textMuted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 },
-  input: { backgroundColor: Colors.background, borderRadius: 8, padding: 12, color: Colors.text, borderWidth: 1, borderColor: Colors.surfaceHighlight, fontSize: 15 },
+  content: { backgroundColor: Colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: Spacing.xl, maxHeight: '88%', borderWidth: 1, borderColor: Colors.surfaceHighlight },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xl },
+  form: { marginBottom: Spacing.lg },
+  inputGroup: { marginBottom: Spacing.lg },
+  label: { ...Typography.caption, color: Colors.textMuted, marginBottom: Spacing.sm, textTransform: 'uppercase', letterSpacing: 1 },
+  input: { backgroundColor: Colors.background, borderRadius: 8, padding: Spacing.md, color: Colors.text, borderWidth: 1, borderColor: Colors.surfaceHighlight, fontSize: 15 },
   row: { flexDirection: 'row' },
-  buttonGroup: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  groupButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.surfaceHighlight },
+  buttonGroup: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
+  groupButton: { flex: 1, paddingVertical: Spacing.md, alignItems: 'center', borderRadius: 8, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.surfaceHighlight },
   groupButtonActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   groupButtonText: { color: Colors.textMuted, fontWeight: 'bold' },
   groupButtonTextActive: { color: '#000' },
-  pill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: Colors.background, marginRight: 8, borderWidth: 1, borderColor: Colors.surfaceHighlight },
+  pill: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: 20, backgroundColor: Colors.background, marginRight: Spacing.sm, borderWidth: 1, borderColor: Colors.surfaceHighlight },
   pillActive: { backgroundColor: Colors.secondary, borderColor: Colors.secondary },
   pillText: { color: Colors.textMuted, fontSize: 12, fontWeight: '600' },
   pillTextActive: { color: Colors.background, fontWeight: 'bold' },
-  miniPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.surfaceHighlight },
+  miniPill: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: 4, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.surfaceHighlight },
   miniPillActive: { backgroundColor: Colors.secondary, borderColor: Colors.secondary },
   miniPillText: { color: Colors.textMuted, fontSize: 11, fontWeight: 'bold' },
   miniPillTextActive: { color: Colors.background },
-  footer: { flexDirection: 'row', gap: 12, marginBottom: 0, paddingBottom: 0 },
-  cancelButton: { flex: 1, paddingVertical: 14, alignItems: 'center', borderRadius: 12, backgroundColor: Colors.surfaceHighlight },
+  footer: { flexDirection: 'row', gap: Spacing.md, marginBottom: 0, paddingBottom: 0 },
+  cancelButton: { flex: 1, paddingVertical: Spacing.lg, alignItems: 'center', borderRadius: 12, backgroundColor: Colors.surfaceHighlight },
   cancelButtonText: { color: Colors.textMuted, fontWeight: 'bold' },
-  saveButton: { flex: 2, paddingVertical: 14, alignItems: 'center', borderRadius: 12, backgroundColor: Colors.primary },
+  saveButton: { flex: 2, paddingVertical: Spacing.lg, alignItems: 'center', borderRadius: 12, backgroundColor: Colors.primary },
   saveButtonText: { color: '#000', fontWeight: 'bold' },
   rfModeBtn: {
-    padding: 12, borderRadius: 10, borderWidth: 1,
+    padding: Spacing.md, borderRadius: 10, borderWidth: 1,
     borderColor: Colors.surfaceHighlight,
     backgroundColor: 'rgba(255,255,255,0.02)',
   },
   clearRemotesBtn: {
-    padding: 12, borderRadius: 10, borderWidth: 1,
+    padding: Spacing.md, borderRadius: 10, borderWidth: 1,
     borderColor: 'rgba(255,61,113,0.35)',
     backgroundColor: 'rgba(255,61,113,0.06)',
   },

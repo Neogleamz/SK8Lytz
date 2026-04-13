@@ -1,3 +1,4 @@
+import { Spacing } from '../theme/theme';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Dimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -117,8 +118,8 @@ const createStyles = (Colors: any) => StyleSheet.create({
     backgroundColor: '#1C1C1E',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: 40,
+    padding: Spacing.xl,
+    paddingBottom: Spacing.xxxl,
     minHeight: 350,
   },
   dragHandle: {
@@ -127,13 +128,13 @@ const createStyles = (Colors: any) => StyleSheet.create({
     backgroundColor: '#3C3C3E',
     borderRadius: 2,
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: Spacing.xl,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
+    gap: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   title: {
     color: '#FFF',
@@ -144,26 +145,26 @@ const createStyles = (Colors: any) => StyleSheet.create({
   subtitle: {
     color: Colors.textMuted,
     fontSize: 13,
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
   },
   sectionTitle: {
     color: Colors.textMuted,
     fontSize: 12,
     fontWeight: '800',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
     letterSpacing: 1,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: Spacing.sm,
   },
   chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
@@ -187,7 +188,7 @@ const createStyles = (Colors: any) => StyleSheet.create({
     height: 56,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: Spacing.md,
   },
   actionText: {
     color: '#000',
