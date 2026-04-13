@@ -16,7 +16,8 @@
  * Platform: React Native (Android + Web)
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, TextInput, Animated, Alert, Dimensions, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, TextInput, Alert, Dimensions, FlatList } from 'react-native';
+import { useSessionTracking } from '../hooks/useSessionTracking';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio } from 'expo-av';
 import { Typography, Layout } from '../theme/theme';
@@ -524,16 +525,24 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const lastGpsTimeRef = useRef<number | null>(null);
     const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
-    // ── Session Tracking State ─────────────────────────────────
-    const [sessionActive, setSessionActive] = useState<boolean>(false);
-    const [sessionSummary, setSessionSummary] = useState<ISessionSnapshot | null>(null);
-    const [showSessionModal, setShowSessionModal] = useState<boolean>(false);
-    const sessionStartTimeRef = useRef<number | null>(null);
-    const sessionSpeedSamplesRef = useRef<number[]>([]);
-    const sessionDistanceMilesRef = useRef<number>(0);
-    const sessionPeakGForceRef = useRef<number>(1.0);
-    const sessionPeakSpeedRef = useRef<number>(0);
-    const sessionLastLocationRef = useRef<{ lat: number; lon: number } | null>(null);
+    // ── Session Tracking (domain hook) ───────────────────────────────────────
+    const {
+      sessionState,
+      startSession,
+      stopSession: stopSessionRecording,
+      dismissModal: dismissSessionModal,
+      sessionSummary,
+      showSessionModal,
+      setShowSessionModal,
+      saveSession,
+      sessionStartTimeRef,
+      sessionSpeedSamplesRef,
+      sessionDistanceMilesRef,
+      sessionPeakGForceRef,
+      sessionPeakSpeedRef,
+    } = useSessionTracking();
+    /** Convenience alias for JSX readability */
+    const sessionActive = sessionState === 'RECORDING';
 
     // ── Street Mode: Car-Light Pattern helper ─────────────────────────────────
     // SOULZ (linear strip, heel→toe):
@@ -2151,34 +2160,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     <TouchableOpacity
                       onPress={() => {
                         if (!sessionActive) {
-                          // ▶ START SESSION
-                          sessionStartTimeRef.current = Date.now();
-                          sessionSpeedSamplesRef.current = [];
-                          sessionDistanceMilesRef.current = 0;
-                          sessionPeakGForceRef.current = 1.0;
-                          sessionPeakSpeedRef.current = 0;
-                          sessionLastLocationRef.current = null;
-                          setSessionActive(true);
-                          AppLogger.log('SESSION_SAVED', { action: 'START' });
+                          startSession();
                         } else {
-                          // ■ STOP SESSION — Build snapshot & show modal
-                          const durationSec = sessionStartTimeRef.current
-                            ? (Date.now() - sessionStartTimeRef.current) / 1000
-                            : 0;
-                          const samples = sessionSpeedSamplesRef.current;
-                          const avgSpeed = samples.length > 0
-                            ? samples.reduce((a, b) => a + b, 0) / samples.length
-                            : 0;
-                          const snapshot: ISessionSnapshot = {
-                            durationSec,
-                            distanceMiles: sessionDistanceMilesRef.current,
-                            peakSpeedMph: sessionPeakSpeedRef.current,
-                            avgSpeedMph: parseFloat(avgSpeed.toFixed(2)),
-                            peakGForce: sessionPeakGForceRef.current,
-                          };
-                          setSessionActive(false);
-                          setSessionSummary(snapshot);
-                          setShowSessionModal(true);
+                          stopSessionRecording();
                         }
                       }}
                       activeOpacity={0.85}
@@ -2819,21 +2803,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           visible={showSessionModal}
           snapshot={sessionSummary}
           onSave={async () => {
-            if (sessionSummary) {
-              try {
-                await SpeedTrackingService.saveSession(sessionSummary);
-                AppLogger.log('SESSION_SAVED', { action: 'SAVED_TO_DB', durationSec: sessionSummary.durationSec });
-              } catch (err) {
-                console.warn('[DockedController] Failed to persist session:', err);
-              }
-            }
-            setShowSessionModal(false);
-            setSessionSummary(null);
+            await saveSession();
+            dismissSessionModal();
           }}
           onDiscard={() => {
             AppLogger.log('SESSION_SAVED', { action: 'DISCARDED' });
-            setShowSessionModal(false);
-            setSessionSummary(null);
+            dismissSessionModal();
           }}
         />
 
