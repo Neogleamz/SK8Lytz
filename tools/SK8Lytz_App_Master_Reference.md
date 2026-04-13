@@ -182,6 +182,28 @@ All byte definitions below represent the inner payload _before_ the V2 BLE packe
 Every inner protocol payload must be wrapped using the standard 8-byte Zengge V2 framing:
 `[0x00, SequenceNum, 0x80, 0x00, LenHi, LenLo, Len+1, 0x0B, ...innerPayload]`
 
+### Autonomous Hardware Watchdog (Self-Healing Standard)
+
+_Shipped: 2026-04-13 | Lives in: `src/hooks/useBLE.ts` (co-located per BLE Co-location Constraint)_
+
+The **Hardware Watchdog** monitors GATT-connected devices for silent soft-locks — a failure mode where `bleManager.isDeviceConnected()` returns `true` but the Zengge microcontroller has frozen and stopped responding to writes. It performs autonomous `silentRelatch` recovery without any user interaction.
+
+| Property | Value |
+| :--- | :--- |
+| **Heartbeat interval** | `30 seconds` |
+| **Heartbeat mechanism** | `0x63` hardware query → wait for FF02 (ZENGGE_NOTIFY_UUID) response ≤ 2500ms |
+| **Miss threshold** | `2 consecutive misses` before relatch is triggered |
+| **Relatch sequence** | 1. Remove dropout listener → 2. `cancelDeviceConnection` → 3. 250ms OS buffer → 4. Fresh `connectToDevice` (5000ms timeout) → 5. Re-discover services → 6. Re-register FF02 monitor → 7. 600ms settle → 8. Send 0x63 hw query |
+| **Device cooldown** | `600ms` between devices in a multi-device relatch (GATT 133 prevention) |
+| **Overlap protection** | `isWatchdogRecovering` ref blocks new ticks while recovery is in-flight |
+| **Lifecycle** | `startWatchdog()` called after `connectToDevice`/`connectToDevices`; `stopWatchdog()` called at top of `disconnectFromDevice` and on hook unmount |
+
+**Telemetry Events (visible in Admin Hub → TIMELINE):**
+- `WATCHDOG_MISS` — emitted each time a device fails the ping; includes `misses` count (1 or 2)
+- `WATCHDOG_RELATCH` — emitted at `begin`, `success`, or `failed` stages of relatch
+
+**Key Constraint:** The watchdog intentionally does NOT use a mutex on writes because the heartbeat ping (`0x63`) goes through `bleManager.writeCharacteristicWithoutResponseForDevice` directly, which bypasses the main `writeToDevice` pipeline to avoid reentrant locking during recovery cycles.
+
 ---
 
 ### Command: Hardware Config Query (0x63)

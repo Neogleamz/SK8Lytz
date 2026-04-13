@@ -120,7 +120,11 @@ export type EventType =
   // ── Map/Locations ─────────────────────────────────────────
   | 'ERROR'
   // ── Telemetry & System ────────────────────────────────────
-  | 'APP_LOG';
+  | 'APP_LOG'
+  // ── Hardware Watchdog ──────────────────────────────────────
+  | 'BLE_STATE_CHANGE'
+  | 'WATCHDOG_MISS'
+  | 'WATCHDOG_RELATCH';
 
 
 export interface LogEntry {
