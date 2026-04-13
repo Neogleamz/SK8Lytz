@@ -15,7 +15,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView,
-  Share, Alert, FlatList, Platform, SafeAreaView, TextInput, Switch, TextStyle, ViewStyle
+  Alert, FlatList, Platform, SafeAreaView, Switch, TextStyle, ViewStyle, TextInput
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
@@ -63,7 +63,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
   const [tab, setTab] = useState<Tab>('timeline');
   const [isProductManagerVisible, setIsProductManagerVisible] = useState(false);
   const [isPicksSchedulerVisible, setIsPicksSchedulerVisible] = useState(false);
-  const [isAppSettingsVisible, setIsAppSettingsVisible] = useState(false);
+  const [isAppManagerVisible, setIsAppManagerVisible] = useState(false);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
 
   // ── Domain Hooks ────────────────────────────────────────────────────────────
@@ -78,7 +78,18 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
 
   const { 
     appSettings, updateSetting 
-  } = useAdminSettings(isAppSettingsVisible);
+  } = useAdminSettings(isAppManagerVisible);
+
+  const handlePolicyToggle = (key: string, nextValue: boolean, title: string, message: string) => {
+    if (nextValue) {
+      Alert.alert(title, message, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Enforce", style: "destructive", onPress: () => updateSetting(key, nextValue) }
+      ]);
+    } else {
+      updateSetting(key, nextValue);
+    }
+  };
 
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
 
@@ -180,7 +191,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
             onOpenLab={onOpenLab} 
             setIsPicksSchedulerVisible={setIsPicksSchedulerVisible}
             setIsProductManagerVisible={setIsProductManagerVisible}
-            setIsAppSettingsVisible={setIsAppSettingsVisible}
+            setIsAppManagerVisible={setIsAppManagerVisible}
             textMuted={textMuted} 
             textPrimary={textPrimary} 
             cardBg={cardBg} 
@@ -269,48 +280,117 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
         </View>
       </Modal>
 
-      {/* ── App Settings Modal ── */}
-      <Modal visible={isAppSettingsVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setIsAppSettingsVisible(false)}>
+      {/* ── App Manager Modal ── */}
+      <Modal visible={isAppManagerVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setIsAppManagerVisible(false)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor, backgroundColor: cardBg }}>
-            <TouchableOpacity onPress={() => setIsAppSettingsVisible(false)} style={{ marginRight: 16, padding: 4 }}>
+            <TouchableOpacity onPress={() => setIsAppManagerVisible(false)} style={{ marginRight: 16, padding: 4 }}>
               <MaterialCommunityIcons name="arrow-left" size={24} color="#9D4EFF" />
             </TouchableOpacity>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.title, { color: textPrimary }]}>⚙️ APP SETTINGS</Text>
-              <Text style={{ color: textMuted, fontSize: 11, marginTop: 2 }}>Global feature flags and remote configuration</Text>
+              <Text style={[styles.title, { color: textPrimary }]}>🛡️ APP MANAGER</Text>
+              <Text style={{ color: textMuted, fontSize: 11, marginTop: 2 }}>Master governance engine & policy overrides</Text>
             </View>
           </View>
           <ScrollView style={{ flex: 1, padding: 16 }}>
             <Text style={{ color: textMuted, fontSize: 12, marginBottom: 16 }}>
-              These settings are globally fetched by all app instances on boot.
+              These policies are globally enforced. Safety locks are required for critical changes.
             </Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, padding: 16, borderRadius: 12, marginBottom: 12 }}>
-              <View style={{ flex: 1, marginRight: 16 }}>
-                <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Lock Crew Hub</Text>
-                <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Disable Crew Hub features globally. Overrides offline mode.</Text>
+
+            <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: 8, marginTop: 8 }}>Crew Hub Governance</Text>
+            <View style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+                <View style={{ flex: 1, marginRight: 16 }}>
+                  <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Global Lock</Text>
+                  <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Completely disable the Crew Hub for everyone.</Text>
+                </View>
+                <Switch
+                  value={appSettings['global_crew_hub_locked'] === true}
+                  onValueChange={(v) => handlePolicyToggle('global_crew_hub_locked', v, 'Lock Crew Hub?', 'This disables the entire social network. Proceed?')}
+                  trackColor={{ false: '#444', true: '#FF4444' }}
+                />
               </View>
-              <Switch
-                value={appSettings['global_crew_hub_locked'] === true}
-                onValueChange={(v) => updateSetting('global_crew_hub_locked', v)}
-                trackColor={{ false: '#444', true: '#FF4444' }}
-              />
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, padding: 16, borderRadius: 12, marginBottom: 12 }}>
-              <View style={{ flex: 1, marginRight: 16 }}>
-                <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Lock Community Hub</Text>
-                <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Disable Community Picks and Favorites globally.</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 }}>
+                <View style={{ flex: 1, marginRight: 16 }}>
+                  <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Hide When Offline</Text>
+                  <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Hide the tab completely if the device drops connection.</Text>
+                </View>
+                <Switch
+                  value={appSettings['offline_crew_hub_hidden'] === true}
+                  onValueChange={(v) => updateSetting('offline_crew_hub_hidden', v)}
+                  trackColor={{ false: '#444', true: '#00f0ff' }}
+                />
               </View>
-              <Switch
-                value={appSettings['global_community_hub_locked'] === true}
-                onValueChange={(v) => updateSetting('global_community_hub_locked', v)}
-                trackColor={{ false: '#444', true: '#FF4444' }}
-              />
             </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, padding: 16, borderRadius: 12, marginBottom: 12 }}>
+
+            <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: 8 }}>Community Hub Governance</Text>
+            <View style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+                <View style={{ flex: 1, marginRight: 16 }}>
+                  <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Global Lock</Text>
+                  <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Disable Community Picks and Favorites.</Text>
+                </View>
+                <Switch
+                  value={appSettings['global_community_hub_locked'] === true}
+                  onValueChange={(v) => handlePolicyToggle('global_community_hub_locked', v, 'Lock Community?', 'This disables global community picks. Proceed?')}
+                  trackColor={{ false: '#444', true: '#FF4444' }}
+                />
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 }}>
+                <View style={{ flex: 1, marginRight: 16 }}>
+                  <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Hide When Offline</Text>
+                  <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Remove access to cached Community picks.</Text>
+                </View>
+                <Switch
+                  value={appSettings['offline_community_hub_hidden'] === true}
+                  onValueChange={(v) => updateSetting('offline_community_hub_hidden', v)}
+                  trackColor={{ false: '#444', true: '#00f0ff' }}
+                />
+              </View>
+            </View>
+
+            <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: 8 }}>Maps & Infrastructure</Text>
+            <View style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+                <View style={{ flex: 1, marginRight: 16 }}>
+                  <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Lock Skate Maps</Text>
+                  <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Disable all mapping functionality.</Text>
+                </View>
+                <Switch
+                  value={appSettings['global_maps_locked'] === true}
+                  onValueChange={(v) => handlePolicyToggle('global_maps_locked', v, 'Lock Skate Maps?', 'This disables location and map features. Proceed?')}
+                  trackColor={{ false: '#444', true: '#FF4444' }}
+                />
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+                <View style={{ flex: 1, marginRight: 16 }}>
+                  <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Hide When Offline</Text>
+                  <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Remove Maps access when offline.</Text>
+                </View>
+                <Switch
+                  value={appSettings['offline_maps_hidden'] === true}
+                  onValueChange={(v) => updateSetting('offline_maps_hidden', v)}
+                  trackColor={{ false: '#444', true: '#00f0ff' }}
+                />
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 }}>
+                <View style={{ flex: 1, marginRight: 16 }}>
+                  <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Telemetry Uploads</Text>
+                  <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Enable or disable crash telemetry ingest.</Text>
+                </View>
+                <Switch
+                  value={appSettings['global_telemetry_enabled'] === true}
+                  onValueChange={(v) => updateSetting('global_telemetry_enabled', v)}
+                  trackColor={{ false: '#444', true: '#00f0ff' }}
+                />
+              </View>
+            </View>
+
+            <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: 8 }}>Legal Compliance</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, padding: 16, borderRadius: 12, marginBottom: 32 }}>
               <View style={{ flex: 1, marginRight: 16 }}>
-                <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Global EULA Version</Text>
-                <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Current required target: v{appSettings['required_eula_version'] || '1'}. Users with lower versions will be gated on next load.</Text>
+                <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Required EULA Version</Text>
+                <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Current required target: v{appSettings['required_eula_version'] || '1'}. Users with lower versions will be gated.</Text>
               </View>
               <TouchableOpacity 
                 style={{ backgroundColor: '#FF4444', paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, alignItems: 'center' }}
@@ -319,7 +399,7 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
                   const next = current + 1;
                   Alert.alert(
                     "Bump EULA Version?",
-                    `Are you sure you want to increase the required EULA version to v${next}? This will force all active users to re-accept the new terms.`,
+                    `Are you sure you want to enforce v${next}? All active users must re-accept the terms.`,
                     [
                       { text: "Cancel", style: "cancel" },
                       { text: "Enforce Version", style: "destructive", onPress: () => updateSetting('required_eula_version', next.toString()) }
@@ -483,12 +563,12 @@ interface AdminTabProps extends TabProps {
   onOpenLab?: () => void;
   setIsPicksSchedulerVisible: (v: boolean) => void;
   setIsProductManagerVisible: (v: boolean) => void;
-  setIsAppSettingsVisible: (v: boolean) => void;
+  setIsAppManagerVisible: (v: boolean) => void;
 }
 
 const AdminTab = React.memo(({ 
   onOpenProgrammer, onOpenLab, setIsPicksSchedulerVisible, 
-  setIsProductManagerVisible, setIsAppSettingsVisible, 
+  setIsProductManagerVisible, setIsAppManagerVisible, 
   textMuted, textPrimary, cardBg, borderColor 
 }: AdminTabProps) => {
   return (
@@ -510,11 +590,11 @@ const AdminTab = React.memo(({
       </TouchableOpacity>
 
       <Text style={[styles.statSection, { color: textPrimary, marginTop: 24 }]}>⚙️ Remote Configuration</Text>
-      <TouchableOpacity onPress={() => setIsAppSettingsVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center' }]}>
-        <MaterialCommunityIcons name="tune-vertical" size={24} color="#9D4EFF" />
+      <TouchableOpacity onPress={() => setIsAppManagerVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center' }]}>
+        <MaterialCommunityIcons name="shield-lock-outline" size={24} color="#9D4EFF" />
         <View style={{ marginLeft: 12 }}>
-          <Text style={{ color: textPrimary, fontWeight: '700' }}>App Settings</Text>
-          <Text style={{ color: textMuted, fontSize: 12 }}>Global feature flags and EULA version control</Text>
+          <Text style={{ color: textPrimary, fontWeight: '700' }}>App Manager</Text>
+          <Text style={{ color: textMuted, fontSize: 12 }}>Master governance and policy compliance</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
       </TouchableOpacity>
@@ -565,51 +645,105 @@ const ProductsTab = React.memo(({
   allProfiles, editingProfile, startEditing, createNew, patchEdit, saveProduct, productSaving,
   textMuted, textPrimary, cardBg, borderColor 
 }: ProductsTabProps) => {
-  const activeProfile = editingProfile || allProfiles[0];
 
   const fieldWrapperStyle: ViewStyle = { marginBottom: 16, backgroundColor: cardBg, padding: 12, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#9D4EFF' };
   const fieldLabelStyle: TextStyle = { color: textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 };
   const fieldInputStyle: TextStyle = { color: textPrimary, fontSize: 16, padding: 0, fontWeight: '600' };
 
-  if (!activeProfile) return <Text style={{ color: textMuted, textAlign: 'center', marginTop: 32 }}>No profiles loaded.</Text>;
+  const renderField = (label: string, key: string, placeholder: string, keyboardType: any = 'default') => (
+    <View style={fieldWrapperStyle}>
+      <Text style={fieldLabelStyle}>{label}</Text>
+      <TextInput
+        style={fieldInputStyle}
+        value={editingProfile?.[key]?.toString() || ''}
+        onChangeText={v => {
+          if (keyboardType === 'numeric') {
+            patchEdit({ [key]: v ? Number(v.replace(/[^0-9.-]/g, '')) : 0 });
+          } else {
+            patchEdit({ [key]: v });
+          }
+        }}
+        placeholder={placeholder}
+        placeholderTextColor={textMuted}
+        keyboardType={keyboardType}
+        autoCapitalize={keyboardType === 'default' ? 'characters' : 'none'}
+      />
+    </View>
+  );
 
-  if (editingProfile) {
-    return (
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }}>
-          <View>
-            <Text style={{ color: textPrimary, fontWeight: '800', fontSize: 18 }}>
-              {editingProfile.id ? 'EDIT PRODUCT' : 'ADD NEW PRODUCT'}
-            </Text>
-            <Text style={{ color: textMuted, fontSize: 12 }}>Catalog Override Mode</Text>
-          </View>
-          <TouchableOpacity onPress={() => patchEdit({ id: '' })} style={{ backgroundColor: borderColor, padding: 8, borderRadius: 8 }}>
-            <MaterialCommunityIcons name="close" size={20} color={textPrimary} />
+  const renderToggle = (label: string, key: string, desc: string) => (
+    <View style={[fieldWrapperStyle, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+      <View style={{ flex: 1, paddingRight: 12 }}>
+        <Text style={fieldLabelStyle}>{label}</Text>
+        <Text style={{ color: textMuted, fontSize: 11 }}>{desc}</Text>
+      </View>
+      <Switch 
+        value={!!editingProfile?.[key]} 
+        onValueChange={v => patchEdit({ [key]: v })}
+        trackColor={{ false: '#333', true: '#FF5A00' }}
+      />
+    </View>
+  );
+
+  return (
+    <View style={{ flex: 1 }}>
+      {/* ── PILL SELECTOR ── */}
+      <View style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, gap: 10 }}>
+          {allProfiles.map((p: any) => {
+            const isActive = editingProfile?.id === p.id;
+            return (
+              <TouchableOpacity key={p.id} onPress={() => startEditing(p)}
+                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: isActive ? '#9D4EFF' : '#333' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {p.brandIcon && <MaterialCommunityIcons name={p.brandIcon as any} size={14} color="#FFF" />}
+                  <Text style={{ color: '#FFF', fontWeight: '600' }}>{p.displayName || p.id}</Text>
+                </View>
+              </TouchableOpacity>
+            )
+          })}
+          <TouchableOpacity onPress={createNew}
+            style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#FF5A00', borderStyle: 'dashed', backgroundColor: (editingProfile && !editingProfile.id) ? 'rgba(255,90,0,0.2)' : 'transparent' }}>
+            <Text style={{ color: '#FF5A00', fontWeight: '800' }}>+ ADD NEW</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
+      </View>
 
+      {/* ── EDITOR ── */}
+      {editingProfile ? (
         <ScrollView style={{ flex: 1, padding: 16 }}>
-          <View style={fieldWrapperStyle}>
-            <Text style={fieldLabelStyle}>Unique Product ID (Hardware Ref)</Text>
-            <TextInput
-              style={fieldInputStyle}
-              value={editingProfile?.id?.toString() || ''}
-              onChangeText={v => patchEdit({ id: v })}
-              placeholder="e.g. SK8LYTZ_V2_PRO"
-              placeholderTextColor={textMuted}
-              autoCapitalize="characters"
-            />
-          </View>
-          <View style={fieldWrapperStyle}>
-            <Text style={fieldLabelStyle}>Display Name (User Visible)</Text>
-            <TextInput
-              style={fieldInputStyle}
-              value={editingProfile?.displayName?.toString() || ''}
-              onChangeText={v => patchEdit({ displayName: v })}
-              placeholder="e.g. SK8Lytz Pro Edition"
-              placeholderTextColor={textMuted}
-            />
-          </View>
+          <Text style={{ color: textPrimary, fontSize: 18, fontWeight: '800', marginBottom: 16 }}>
+            {editingProfile.id ? 'EDIT PROFILE' : 'NEW HARDWARE PROFILE'}
+          </Text>
+
+          {renderField('Product ID (Hardware Ref)', 'id', 'e.g. SK8LYTZ_V2')}
+          {renderField('Display Name', 'displayName', 'e.g. SK8Lytz Pro')}
+          {renderField('Brand Icon', 'brandIcon', 'e.g. circle-double')}
+          {renderField('Brand Color Hex', 'vizThemeColor', 'e.g. #FF5A00')}
+
+          <Text style={{ color: textMuted, fontWeight: '800', marginTop: 12, marginBottom: 8 }}>HARDWARE DEFAULTS</Text>
+          {renderField('Default LEDs', 'defaultLedPoints', '16', 'numeric')}
+          {renderField('Virtual Segments', 'defaultSegments', '1', 'numeric')}
+          {renderField('IC Type (1=WS2812B)', 'defaultIcType', '1', 'numeric')}
+          {renderField('Color Sorting (2=GRB)', 'defaultColorSorting', '2', 'numeric')}
+          {renderField('Battery Capacity (mAh)', 'batteryCapacityMilliAmpereHour', '3000', 'numeric')}
+          {renderToggle('Customizable Profile', 'hardwareAllowsCustomPoints', 'Allow user to cut and set custom length')}
+
+          <Text style={{ color: textMuted, fontWeight: '800', marginTop: 12, marginBottom: 8 }}>AUTODETECT THRESHOLDS</Text>
+          {renderField('Min HW Points', 'detectMinPoints', '1', 'numeric')}
+          {renderField('Max HW Points', 'detectMaxPoints', '99', 'numeric')}
+
+          <Text style={{ color: textMuted, fontWeight: '800', marginTop: 12, marginBottom: 8 }}>VISUALIZER GEOMETRY</Text>
+          {renderField('Canvas Shape', 'vizShape', 'OVAL | RING | DUAL_STRIP')}
+          {renderField('Base Width', 'vizBaseWidth', '55', 'numeric')}
+          {renderField('Base Height', 'vizBaseHeight', '115', 'numeric')}
+          {renderField('Blob Diameter (mm)', 'vizBlobDiameterMm', '5.7', 'numeric')}
+          {renderField('Visualizer Default Points', 'vizDefaultPoints', '16', 'numeric')}
+          {renderField('Strip Count (Railz)', 'vizStripCount', '2', 'numeric')}
+          {renderField('Strip Separation (Railz)', 'vizStripSeparation', '32', 'numeric')}
+          {renderField('Strip Orientation', 'vizStripOrientation', 'VERTICAL | HORIZONTAL')}
+          {renderToggle('Mirrored Render', 'vizIsMirrored', 'Mirror Seg2 over Seg1')}
+
           <TouchableOpacity 
             onPress={saveProduct} 
             disabled={productSaving}
@@ -620,27 +754,14 @@ const ProductsTab = React.memo(({
             </Text>
           </TouchableOpacity>
         </ScrollView>
-      </View>
-    );
-  }
-
-  return (
-    <View style={{ flex: 1 }}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, gap: 10 }}>
-        {allProfiles.map((p: any) => (
-          <TouchableOpacity key={p.id} onPress={() => startEditing(p)}
-            style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#333' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              {p.brandIcon && <MaterialCommunityIcons name={p.brandIcon as any} size={14} color="#FFF" />}
-              <Text style={{ color: '#FFF', fontWeight: '600' }}>{p.displayName || p.id}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-        <TouchableOpacity onPress={createNew}
-          style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#FF5A00', borderStyle: 'dashed' }}>
-          <Text style={{ color: '#FF5A00', fontWeight: '800' }}>+ ADD PRODUCT</Text>
-        </TouchableOpacity>
-      </ScrollView>
+      ) : (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+          <MaterialCommunityIcons name="cube-outline" size={48} color={borderColor} style={{ marginBottom: 16 }} />
+          <Text style={{ color: textMuted, textAlign: 'center', fontWeight: '600' }}>
+            Select a hardware profile from the top menu to view or edit its settings.
+          </Text>
+        </View>
+      )}
     </View>
   );
 });
