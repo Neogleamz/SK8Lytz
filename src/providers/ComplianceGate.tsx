@@ -50,7 +50,7 @@ export function ComplianceGate({ children, isOfflineMode }: ComplianceGateProps)
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('accepted_eula_version')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
         .single();
       
       const userVersion = profile?.accepted_eula_version || 0;
@@ -78,7 +78,7 @@ export function ComplianceGate({ children, isOfflineMode }: ComplianceGateProps)
       await supabase
         .from('user_profiles')
         .update({ accepted_eula_version: requiredVersion })
-        .eq('id', user.id);
+        .eq('user_id', user.id);
         
       setRequiresEula(false);
     } catch (e) {

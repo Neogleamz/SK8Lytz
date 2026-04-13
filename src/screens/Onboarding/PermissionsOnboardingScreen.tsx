@@ -46,7 +46,7 @@ const PERMISSIONS_LIST: PermissionItem[] = [
   },
   {
     id: 'CAMERA',
-    title: 'Eyes in the Dark',
+    title: 'Match your Fit',
     icon: 'camera-outline',
     description: 'Unlock Camera Mode to apply real-world colors to your skates.',
     required: false,

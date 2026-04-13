@@ -13,6 +13,7 @@ This plan outlines the updates to the `SK8Lytz_Bucket_List.md` and the associate
 > - `[Snack]` -> `[🍪 Snack]`
 > - `[Meal]` -> `[🍱 Meal]`
 > - `[Feast]` -> `[🥩 Feast]`
+> - `[BATCH]` -> `[📦 BATCH]`
 
 ## Proposed Changes
 
@@ -21,7 +22,7 @@ This plan outlines the updates to the `SK8Lytz_Bucket_List.md` and the associate
 #### [MODIFY] [SK8Lytz_Bucket_List.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SK8Lytz_Bucket_List.md)
 - Batch update all existing tags to include their respective icons.
 - Update section headers with enhanced iconography (e.g., `## 🟠 HIGH: 🛠️ Engineering Excellence`).
-- Refine Mermaid diagram themes for higher contrast.
+- Refine Mermaid diagram themes for higher contrast and matching the new palette.
 
 #### [MODIFY] [idea-intake.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.agents/rules/idea-intake.md)
 - Update the "Determine Classification" and "Format the Item" sections to mandate the use of icons in all future bucket list additions.
@@ -29,12 +30,16 @@ This plan outlines the updates to the `SK8Lytz_Bucket_List.md` and the associate
 
 ## Visual Enhancement Proposals (Feedback Requested)
 
-1. **Model Color Tokens**: Mandate specific bullet points or formatting for different models ([🤖 THINK], [🤖 FLASH], etc.) to make the 'who' of a task glanceable.
-2. **Thematic Dividers**: Use custom ASCII or Unicode dividers to separate Epics more distinctly.
-3. **Pillar Iconography**: Map the "Pillars" (1-12) to specific icons (e.g., `[🏛️ Pillar 8]`).
+1. **Model Color Tokens**: Mandate specific icons for models:
+   - `[🤖 FLASH]`
+   - `[🤖 PRO-LOW]`
+   - `[🤖 PRO-HIGH]`
+   - `[🧠 THINK]` (Changing from 🤖 to 🧠 for Thinking models)
+2. **Pillar Iconography**: Map the "Pillars" (1-12) to specific icons (e.g., `[🏛️ Pillar X]`).
+3. **Status Intensity**: Use colored dots or squares (🔴, 🟠, 🟡, 🔵, ⚪) next to task slugs to indicate priority at a glance.
 
 ## Verification Plan
 
 ### Manual Verification
 1. Open `SK8Lytz_Bucket_List.md` and verify all existing tasks have the correct icons.
-2. Simulate an `add to:` command to verify the updated rule correctly generates an icon-rich task item.
+2. Simulate a new task entry to verify the updated rule correctly generates an icon-rich item.

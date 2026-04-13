@@ -22,7 +22,7 @@ export interface CrewSession {
   id: string;
   invite_code: string;
   name: string;
-  leader_user_id: string;
+  leader_user_id: string | null;
   created_at: string;
   expires_at: string;
   is_active: boolean;
@@ -112,7 +112,7 @@ class CrewService {
       .single();
 
     if (error) throw error;
-    const session = data as CrewSession;
+    const session = data as unknown as CrewSession;
 
     // Auto-join as leader member
     await supabase.from('crew_members').insert({
@@ -173,13 +173,14 @@ class CrewService {
 
     const code = inviteCode.trim().toUpperCase();
 
-    const { data: session, error: sessionErr } = await supabase
+    const { data: _sessionData, error: sessionErr } = await supabase
       .from('crew_sessions')
       .select('*')
       .eq('invite_code', code)
       .eq('is_active', true)
       .gt('expires_at', new Date().toISOString())
       .single();
+    const session = _sessionData as unknown as CrewSession;
 
     if (sessionErr || !session) throw new Error('Crew not found or session expired');
 
@@ -206,7 +207,7 @@ class CrewService {
     this.currentSessionId = session.id;
     this.currentRole = user.id === session.leader_user_id ? 'leader' : 'member';
     this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
-    return session as CrewSession;
+    return session as unknown as CrewSession;
   }
 
   /** Join a session directly by ID (from the active sessions browser). */
@@ -214,13 +215,14 @@ class CrewService {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) throw new Error('Must be signed in to join a crew');
 
-    const { data: session, error } = await supabase
+    const { data: _sessionDataById, error } = await supabase
       .from('crew_sessions')
       .select('*')
       .eq('id', sessionId)
       .eq('is_active', true)
       .gt('expires_at', new Date().toISOString())
       .single();
+    const session = _sessionDataById as unknown as CrewSession;
 
     if (error || !session) throw new Error('Session not found or expired');
 
@@ -240,7 +242,7 @@ class CrewService {
     this.currentSessionId = sessionId;
     this.currentRole = user.id === session.leader_user_id ? 'leader' : 'member';
     this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
-    return session as CrewSession;
+    return session as unknown as CrewSession;
   }
 
   /**
@@ -261,7 +263,7 @@ class CrewService {
 
     if (error || !data) return [];
 
-    return data.map((s: CrewSession & { crew_members: { count: number }[] }) => ({
+    return data.map((s: any) => ({
       ...s,
       member_count: s.crew_members?.[0]?.count ?? 0,
     } as CrewSession));
@@ -280,10 +282,10 @@ class CrewService {
         .limit(30);
 
       if (!error && data) {
-        return data.map((s: any) => ({
+        return data.map((s) => ({
           ...s,
           is_public: true,
-        })) as CrewSession[];
+        })) as unknown as CrewSession[];
       }
     } catch {}
 
@@ -297,7 +299,7 @@ class CrewService {
       .order('created_at', { ascending: false })
       .limit(20);
 
-    return (data ?? []).map((s: CrewSession & { crew_members: { count: number }[] }) => ({
+    return (data ?? []).map((s: any) => ({
       ...s,
       member_count: s.crew_members?.[0]?.count ?? 0,
     } as CrewSession));
@@ -384,8 +386,7 @@ class CrewService {
       .from('crew_members')
       .delete()
       .eq('session_id', sessionId)
-      .then(() => console.log('[CrewService] crew_members cleaned up for session', sessionId))
-      .catch((e: Error) => console.warn('[CrewService] crew_members cleanup failed:', e.message));
+      .then(() => console.log('[CrewService] crew_members cleaned up for session', sessionId));
 
     // Delay channel teardown so the session_ended broadcast can propagate to members
     const channelRef = this.channel;
@@ -410,7 +411,7 @@ class CrewService {
       .select('last_scene')
       .eq('id', sessionId)
       .single();
-    return data?.last_scene ?? null;
+    return (data?.last_scene as Record<string, any>) ?? null;
   }
 
   /** Leave current session and unsubscribe. */
@@ -487,6 +488,7 @@ class CrewService {
         .single();
 
       if (!session) return null;
+      const typedSession = session as unknown as CrewSession;
 
       // Ensure membership still exists
       const { data: membership } = await supabase
@@ -506,9 +508,9 @@ class CrewService {
       }
 
       this.currentSessionId = sessionId;
-      this.currentRole = user.id === session.leader_user_id ? 'leader' : 'member';
+      this.currentRole = user.id === typedSession.leader_user_id ? 'leader' : 'member';
       this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
-      return { session: session as CrewSession, role: this.currentRole };
+      return { session: typedSession, role: this.currentRole };
     } catch {
       return null;
     }

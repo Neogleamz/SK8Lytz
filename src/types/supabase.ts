@@ -302,7 +302,7 @@ export type Database = {
           color_order?: string | null
           color_sorting?: number | null
           created_at?: string
-          device_id?: string
+          device_id?: string | null
           device_name?: string | null
           ic_name?: string | null
           ic_type?: number | null
