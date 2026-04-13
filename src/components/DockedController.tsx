@@ -18,6 +18,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, TextInput, Alert, Dimensions, FlatList } from 'react-native';
 import { useSessionTracking } from '../hooks/useSessionTracking';
+import { useStreetMode } from '../hooks/useStreetMode';
+import { useFavorites } from '../hooks/useFavorites';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio } from 'expo-av';
 import { Typography, Layout } from '../theme/theme';
@@ -70,7 +72,7 @@ const hexToHue = (hex: string): number => {
   return Math.round(h * 60);
 };
 
-type MotionState = 'STOPPED' | 'ACCELERATING' | 'CRUISING' | 'SLOWING_DOWN' | 'HARD_BRAKING';
+import type { MotionState } from '../hooks/useStreetMode';
 
 interface IAnalogGaugeProps {
   value: number;
@@ -388,20 +390,27 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
 
 
-    const [quickPresets, setQuickPresets] = useState<IQuickPreset[]>([
-      { name: 'Rainbow', colors: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'], type: 3 },
-      { name: 'America', colors: ['#FF0000', '#FFFFFF', '#0000FF'], type: 3 },
-      { name: 'Cyberpunk', colors: ['#00FFFF', '#FF00FF', '#FFFF00'], type: 3 },
-      { name: 'Forest', colors: ['#00FF00', '#008000', '#228B22', '#32CD32'], type: 1 },
-      { name: 'Sunset', colors: ['#FF0000', '#FF4500', '#FF8C00', '#FFA500'], type: 1 },
-      { name: 'Ice', colors: ['#FFFFFF', '#E0FFFF', '#00FFFF', '#0000FF'], type: 1 },
-      { name: 'Custom 1', colors: ['#000000', '#FFFFFF', '#000000'], type: 3 },
-      { name: 'Custom 2', colors: ['#000000', '#FFFFFF', '#000000'], type: 3 }
-    ]);
-    const [isQuickPromptVisible, setIsQuickPromptVisible] = useState(false);
-    const [quickPromptName, setQuickPromptName] = useState('');
-    const [quickPromptTargetIndex, setQuickPromptTargetIndex] = useState(-1);
-    const [activeQuickPresetIndex, setActiveQuickPresetIndex] = useState<number | null>(null);
+    // Favorites & Quick Presets Domain Hook
+    const {
+      favorites,
+      activeFavoriteId,
+      setActiveFavoriteId,
+      quickPresets,
+      setQuickPresets,
+      activeQuickPresetIndex,
+      setActiveQuickPresetIndex,
+      promptState,
+      promptName,
+      setPromptName,
+      favPromptTargetId,
+      quickPromptTargetIndex,
+      openFavoritePrompt,
+      openPresetPrompt,
+      closePrompt,
+      saveFavorite,
+      deleteFavorite,
+      saveQuickPreset
+    } = useFavorites();
 
     // Cloud Scene State
     const [isCommunityModalVisible, setIsCommunityModalVisible] = useState<boolean>(false);
@@ -470,12 +479,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       AppLogger.log('VOICE_SPATIAL_APPLIED', { segmentCount: segments.length });
     };
 
-    // Favorites Array — declared BEFORE useImperativeHandle to avoid TDZ
-    const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
-    const [isFavPromptVisible, setIsFavPromptVisible] = useState(false);
-    const [favPromptName, setFavPromptName] = useState('');
-    const [favPromptTargetId, setFavPromptTargetId] = useState<string | null>(null);
-    const [activeFavoriteId, setActiveFavoriteId] = useState<string | null>(null);
+    // Favorites Array — now managed by useFavorites hook above
 
     // Expose control methods to parent via ref for Voice and Crew coordination
     React.useImperativeHandle(ref, () => ({
@@ -508,22 +512,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const [builderTransitionType, setBuilderTransitionType] = useState<number>(1);
     const [builderDirection, setBuilderDirection] = useState<number>(1);
 
-    // ── Street Mode (Accelerometer Reactive) ──────────────────────────────────────
-    const [streetSensitivity, setStreetSensitivity] = useState<number>(30);
-    const [streetCruiseColor, setStreetCruiseColor] = useState<string>('#FF8C00');
-    const [streetBrakeColor, setStreetBrakeColor] = useState<string>('#FF0000');
-    const [isStreetBraking, setIsStreetBraking] = useState<boolean>(false);
-    const streetBrakingRef = useRef(false);
-    const lastAccelRef = useRef({ x: 0, y: 0, z: 0 });
-
-    // Dashboard Telemetry Tracking State
-    const [motionState, setMotionState] = useState<MotionState>('STOPPED');
-    const [gpsSpeed, setGpsSpeed] = useState<number>(0);
-    const [peakGForce, setPeakGForce] = useState<number>(1.0);
-    const motionStateRef = useRef<MotionState>('STOPPED');
-    const lastGpsSpeeds = useRef<number[]>([]);
-    const lastGpsTimeRef = useRef<number | null>(null);
-    const locationSubRef = useRef<Location.LocationSubscription | null>(null);
+    // ── Global Device Context for Analytics ────────────────────────────────────
+    const deviceContext = React.useMemo(() => {
+      if (!devices || devices.length === 0) return { target: 'none' };
+      if (devices.length === 1) return { target: 'device', deviceId: devices[0].id };
+      return { target: 'group', deviceIds: devices.map(d => d.id), groupSize: devices.length };
+    }, [devices]);
 
     // ── Session Tracking (domain hook) ───────────────────────────────────────
     const {
@@ -541,271 +535,40 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       sessionPeakGForceRef,
       sessionPeakSpeedRef,
     } = useSessionTracking();
+    
+    // ── Street Mode Domain Hook ────────────────────────────────────────────────
+    // Owns GPS/Accel subscriptions, the car-light pattern engine, and the motionState FSM.
+    // Session accumulator refs are bridged in from useSessionTracking for a single GPS sub.
+    const {
+      streetSensitivity,
+      setStreetSensitivity,
+      streetCruiseColor,
+      setStreetCruiseColor,
+      streetBrakeColor,
+      setStreetBrakeColor,
+      isStreetBraking,
+      motionState,
+      motionStateRef,
+      gpsSpeed,
+      peakGForce,
+      applyStreetPattern,
+    } = useStreetMode({
+      activeMode,
+      writeToDevice: parentWriteToDevice,
+      hwSettings,
+      points,
+      activeProduct,
+      brightness,
+      speed,
+      deviceContext,
+      sessionStartTimeRef,
+      sessionSpeedSamplesRef,
+      sessionDistanceMilesRef,
+      sessionPeakSpeedRef,
+    });
     /** Convenience alias for JSX readability */
     const sessionActive = sessionState === 'RECORDING';
 
-    // ── Street Mode: Car-Light Pattern helper ─────────────────────────────────
-    // SOULZ (linear strip, heel→toe):
-    //   Rear 30% = red tail lights, Middle 40% = amber cruise, Front 30% = white headlights
-    // HALOZ (2-segment × 8 ring):
-    //   8-LED frame: [RED×2][AMB×4][WHT×2]  →  mirrored to 16-LED array
-    //   Result: RED at BACK of ring, WHITE at FRONT, AMBER on both sides  ✅
-    //
-    // #9 — Cruise bounce chase: tick 0.0→1.0 shifts the bright spot through the mid zone
-    const cruiseChaseRef = useRef(0);
-    const applyStreetPattern = (
-      currMotionState: MotionState,
-      brt: number = brightness,
-      spd: number = speed
-    ) => {
-      if (!writeToDevice) return;
-      const factor = brtFactor(brt);
-      const pts = hwSettings?.ledPoints || points || 16;
-      const segs = hwSettings?.segments || 1;
-      
-      // Resolve product profile to drive mirroring logic (replaces legacy isHalozRing heuristic)
-      const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === activeProduct) || LOCAL_PRODUCT_CATALOG[0];
-      const isMirrored = profile.vizIsMirrored;
-      
-      const hwSpeed = clampSpeed(spd);
-
-      let cruiseHex = streetCruiseColor; // Use user selected color for ACCELERATING / CRUISING
-      if (currMotionState === 'STOPPED') cruiseHex = '#FF0000';
-      else if (currMotionState === 'SLOWING_DOWN') cruiseHex = '#FFFF00';
-      else if (currMotionState === 'HARD_BRAKING') cruiseHex = '#FF0000';
-
-      const isBraking = currMotionState === 'HARD_BRAKING' || currMotionState === 'STOPPED';
-
-      const cr = parseInt(cruiseHex.slice(1, 3), 16);
-      const cg = parseInt(cruiseHex.slice(3, 5), 16);
-      const cb = parseInt(cruiseHex.slice(5, 7), 16);
-
-      // Tail lights: ABSOLUTE brightness — 100% (255) braking, 50% (127) cruising.
-      // Street Mode has no brightness slider — these are fixed car safety values.
-      const tailR = isBraking ? 255 : 127;
-      const tail = { r: tailR, g: 0, b: 0 };
-
-      // Headlights: warm white, always steady
-      const headVal = Math.round(255 * factor);
-      const head = { r: headVal, g: Math.round(headVal * 0.95), b: Math.round(headVal * 0.85) };
-
-      // Dashboard Cruise Color
-      const crR = Math.round(cr * factor);
-      const crG = Math.round(cg * factor);
-      const crB = Math.round(cb * factor);
-      const crDim = { r: Math.round(crR * 0.3), g: Math.round(crG * 0.3), b: Math.round(crB * 0.3) };
-      const cruise = { r: crR, g: crG, b: crB };
-
-      // DO NOT apply applyColorSorting here.
-      // Hardware auto-remaps GRB internally via 0x62 EEPROM config. Send pure RGB.
-      let arr: { r: number; g: number; b: number }[];
-
-      // #9 — Cruise bounce chase animation
-      // Advance tick for chase direction-flip (0→1→0 triangle)
-      const isCruising = currMotionState === 'CRUISING' || currMotionState === 'ACCELERATING';
-      if (isCruising) {
-        cruiseChaseRef.current = (cruiseChaseRef.current + 0.07) % 2; // 0‑2 range for triangle wave
-      } else {
-        cruiseChaseRef.current = 0; // Reset on non-cruise states
-      }
-      const chaseTick = cruiseChaseRef.current <= 1 ? cruiseChaseRef.current : 2 - cruiseChaseRef.current; // Triangle 0→1→0
-
-      if (isMirrored) {
-        // Mirrored bilateral symmetry (HALOZ ring or RAILZ parallel strips)
-        // For 2-segment mirrored products, we calculate a frame for half the total LEDs
-        const segLeds = Math.ceil(pts / 2);
-        const chaseSlot = Math.floor(chaseTick * (segLeds / 2)); 
-        
-        const frameHalf = Array.from({ length: segLeds }, (_, i) => {
-          const fract = i / segLeds;
-          if (fract < 0.3) return tail;
-          if (fract > 0.7) return head;
-          // Chase logic in middle zone
-          const midZoneI = i - Math.round(segLeds * 0.3);
-          const midZoneSize = Math.round(segLeds * 0.4);
-          const dist = Math.abs(midZoneI - Math.round(chaseTick * midZoneSize));
-          if (dist === 0) return cruise;
-          return crDim;
-        });
-
-        const mirrorHalf = [...frameHalf].reverse();
-        arr = [...frameHalf, ...mirrorHalf];
-      } else {
-        const ledCount = Math.max(10, hwSettings?.ledPoints || pts);
-        const rearCount = Math.max(1, Math.round(ledCount * 0.3));
-        const frontCount = Math.max(1, Math.round(ledCount * 0.3));
-        const midCount = Math.max(1, ledCount - rearCount - frontCount);
-        // Chase bright spot bounces through the mid section
-        const chasePos = Math.round(chaseTick * (midCount - 1));
-        const midSection = Array.from({ length: midCount }, (_, i) => {
-          const dist = Math.abs(i - chasePos);
-          if (dist === 0) return cruise;
-          if (dist === 1) return { r: Math.round(crR * 0.6), g: Math.round(crG * 0.6), b: Math.round(crB * 0.6) };
-          return crDim;
-        });
-        arr = [
-          ...Array(rearCount).fill(tail),
-          ...midSection,
-          ...Array(frontCount).fill(head),
-        ];
-      }
-
-      // 0x01 = FREEZE (hardware locks array in place — static car lights, no scrolling)
-      // 0x02 = STROBE (urgent flashing for hard braking)
-      // NOTE: 0x00 is CASCADE (scrolling) — NOT static. Never use 0x00 for car lights.
-      const transType = currMotionState === 'HARD_BRAKING' ? 0x02 : 0x01;
-      writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpeed, 1, transType));
-    };
-
-
-    // Update motion state helper
-    const updateMotion = (newState: MotionState) => {
-      if (newState !== motionStateRef.current) {
-        motionStateRef.current = newState;
-        setMotionState(newState);
-        applyStreetPattern(newState);
-      }
-    };
-
-    useEffect(() => {
-      if (activeMode !== 'STREET') {
-        if (Platform.OS !== 'web') Accelerometer.removeAllListeners();
-        if (locationSubRef.current) {
-          locationSubRef.current.remove();
-          locationSubRef.current = null;
-        }
-        if (streetBrakingRef.current) {
-          streetBrakingRef.current = false;
-          setIsStreetBraking(false);
-        }
-        AppLogger.log('STREET_MODE_DEACTIVATED', { lastMotionState: motionStateRef.current, peakGForce, ...deviceContext });
-        return;
-      }
-
-      // Initialize
-      updateMotion('STOPPED');
-      lastGpsTimeRef.current = null;
-      AppLogger.log('STREET_MODE_ACTIVATED', { sensitivity: streetSensitivity, cruiseColor: streetCruiseColor, brakeColor: streetBrakeColor, ...deviceContext });
-
-      if (Platform.OS === 'web') return;
-
-      // Start Location tracking
-      (async () => {
-        try {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status === 'granted') {
-            locationSubRef.current = await Location.watchPositionAsync(
-              { accuracy: Location.Accuracy.Balanced, timeInterval: 1000, distanceInterval: 1 },
-              (pos) => {
-                const spdMpS = pos.coords.speed || 0;
-                const spdMph = Math.max(0, spdMpS * 2.23694);
-                setGpsSpeed(spdMph);
-
-                // ── Session accumulation (if recording) ──────────────
-                if (sessionStartTimeRef.current !== null) {
-                  sessionSpeedSamplesRef.current.push(spdMph);
-                  if (spdMph > sessionPeakSpeedRef.current) {
-                    sessionPeakSpeedRef.current = spdMph;
-                  }
-                }
-
-                // Telemetry calculus
-                const now = pos.timestamp;
-                if (lastGpsTimeRef.current) {
-                  const hoursDelta = (now - lastGpsTimeRef.current) / 3600000;
-                  if (hoursDelta > 0 && hoursDelta < 1) { // Ignore crazy jumps
-                    crewService.sessionTelemetry.distanceMiles += spdMph * hoursDelta;
-                    if (sessionStartTimeRef.current !== null) {
-                      sessionDistanceMilesRef.current += spdMph * hoursDelta;
-                    }
-                  }
-                }
-                lastGpsTimeRef.current = now;
-
-                if (spdMph > crewService.sessionTelemetry.topSpeedMph) {
-                  crewService.sessionTelemetry.topSpeedMph = spdMph;
-                }
-                // Only sample moving speeds for cleaner average, or all? All tracks 'trip average'.
-                crewService.sessionTelemetry.avgSpeedSamples.push(spdMph);
-
-                // Add to rolling history
-                lastGpsSpeeds.current.push(spdMph);
-                if (lastGpsSpeeds.current.length > 3) lastGpsSpeeds.current.shift();
-
-                // If not hard braking, evaluate soft states
-                if (motionStateRef.current !== 'HARD_BRAKING') {
-                  if (spdMph < 1.0 && peakGForce < 1.1) {
-                    updateMotion('STOPPED');
-                  } else if (lastGpsSpeeds.current.length >= 2) {
-                    const oldSpd = lastGpsSpeeds.current[0];
-                    // If speed dropped by > 1.0mph in recent samples
-                    if (oldSpd - spdMph > 1.0) {
-                      updateMotion('SLOWING_DOWN');
-                    } else if (spdMph >= 1.0) {
-                      updateMotion('CRUISING');
-                    }
-                  } else if (spdMph >= 1.0) {
-                    updateMotion('CRUISING');
-                  }
-                }
-              }
-            );
-          }
-        } catch (e) {
-          console.warn("Location permission denied or unavailable", e);
-        }
-      })();
-
-      // Accelerometer tracking
-      Accelerometer.setUpdateInterval(80);
-      const sub = Accelerometer.addListener(({ x, y, z }) => {
-        const prev = lastAccelRef.current;
-        const gMag = Math.sqrt(x * x + y * y + z * z);
-
-        // Update peak G-Force display smoothing (decay back to 1.0)
-        setPeakGForce(prevG => {
-          if (gMag > prevG) return parseFloat(gMag.toFixed(2));
-          return parseFloat((prevG * 0.95 + 1.0 * 0.05).toFixed(2));
-        });
-
-        const jerkMag = Math.sqrt(
-          Math.pow(x - prev.x, 2) + Math.pow(y - prev.y, 2) + Math.pow(z - prev.z, 2)
-        );
-        lastAccelRef.current = { x, y, z };
-        const threshold = ((100 - streetSensitivity) / 100) * 2.5 + 0.3;
-
-        const isBraking = jerkMag > threshold;
-        const isActivePush = jerkMag > 0.4 && !isBraking;
-
-        if (isBraking) {
-          if (!streetBrakingRef.current) {
-            // Only log on the leading edge of a brake event, not every accelerometer tick
-            AppLogger.log('STREET_JERK_DETECTED', { jerkMag: parseFloat(jerkMag.toFixed(3)), threshold: parseFloat(threshold.toFixed(3)), gpsSpeedMph: gpsSpeed, ...deviceContext });
-          }
-          streetBrakingRef.current = true;
-          setIsStreetBraking(true);
-          updateMotion('HARD_BRAKING');
-        } else {
-          if (streetBrakingRef.current) {
-            streetBrakingRef.current = false;
-            setIsStreetBraking(false);
-            // Re-evaluate state gracefully
-            if (lastGpsSpeeds.current[lastGpsSpeeds.current.length - 1] < 1.0) updateMotion('STOPPED');
-            else updateMotion('CRUISING');
-          } else if (isActivePush && motionStateRef.current !== 'SLOWING_DOWN') {
-            updateMotion('ACCELERATING');
-          }
-        }
-      });
-
-      return () => {
-        sub.remove();
-        if (locationSubRef.current) {
-          locationSubRef.current.remove();
-          locationSubRef.current = null;
-        }
-      };
-    }, [activeMode, streetSensitivity, brightness, speed]);
 
     // ── Crew Leader Broadcast ────────────────────────────────────────────────
     // When acting as leader, broadcast scene to crew on every meaningful change.
@@ -832,27 +595,21 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       if (activeFavoriteId) {
         const activeFav = favorites.find(f => f.id === activeFavoriteId);
         if (activeFav) {
-          setFavPromptTargetId(activeFav.id);
-          setFavPromptName(activeFav.name);
-          setIsFavPromptVisible(true);
+          openFavoritePrompt(activeFav.id, activeFav.name);
           return;
         }
       }
       let defaultName = '';
       try { defaultName = currentStatusText || `${activeMode} Preset`; } catch (e) { defaultName = `${activeMode} Preset`; }
-      setFavPromptTargetId(null);
-      setFavPromptName(defaultName);
-      setIsFavPromptVisible(true);
+      openFavoritePrompt(undefined, defaultName);
     };
 
     const handleConfirmSaveFavorite = () => {
       let defaultName = '';
       try { defaultName = currentStatusText || `${activeMode} Preset`; } catch (e) { defaultName = `${activeMode} Preset`; }
-      const name = favPromptName.trim() || defaultName;
+      const name = promptName.trim() || defaultName;
 
-      const newFav = {
-        id: favPromptTargetId || Date.now().toString(),
-        name,
+      const capturedState = {
         mode: activeMode === 'MULTIMODE' ? fixedSubMode : activeMode,
         color: selectedColor,
         patternId: activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'MULTIMODE' ? fixedPatternId : selectedPatternId),
@@ -863,25 +620,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         musicPrimaryColor, musicSecondaryColor, micSensitivity, micSource, musicMatrixStyle
       };
 
-      if (favPromptTargetId) {
-        const newFavorites = favorites.map(f => f.id === favPromptTargetId ? newFav : f);
-        setFavorites(newFavorites);
-        AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(newFavorites));
-        setIsFavPromptVisible(false);
-        setFavPromptTargetId(null);
-        return;
-      }
-
-      const newFavorites = [...favorites, newFav];
-      setFavorites(newFavorites);
-      AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(newFavorites));
-      setIsFavPromptVisible(false);
-    };
-
-    const deleteFavorite = (id: string) => {
-      const newFavorites = favorites.filter(f => f.id !== id);
-      setFavorites(newFavorites);
-      AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(newFavorites));
+      saveFavorite(capturedState, name);
     };
 
     const loadFavorite = (favRaw: IFavoriteState, context: 'FAVORITE' | 'PICK' | 'COMMUNITY' = 'FAVORITE') => {
@@ -1189,11 +928,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     // -- Analytics Logging --
     const logTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-    const deviceContext = React.useMemo(() => {
-      if (!devices || devices.length === 0) return { target: 'none' };
-      if (devices.length === 1) return { target: 'device', deviceId: devices[0].id };
-      return { target: 'group', deviceIds: devices.map(d => d.id), groupSize: devices.length };
-    }, [devices]);
+
 
     // Mode change logger
     useEffect(() => {
@@ -1357,67 +1092,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         }
       });
 
-      AsyncStorage.getItem(`${STORAGE_PREFIX}Favorites`).then((saved) => {
-        if (saved) {
-          try {
-            const parsed: IFavoriteState[] = JSON.parse(saved);
-            if (parsed && parsed.length > 0) {
-              // One-time migration: rewrite legacy 'DIY'/'MULTI'/'MULTICOLOR' mode
-              // entries to 'BUILDER' so stored data stays clean
-              let needsMigration = false;
-              const migrated = parsed.map(f => {
-                if (f.mode === 'DIY' || f.mode === 'MULTI' || f.mode === 'MULTICOLOR') {
-                  needsMigration = true;
-                  return { ...f, mode: 'BUILDER' };
-                }
-                if (f.mode === 'RBM') {
-                  needsMigration = true;
-                  return { ...f, mode: 'PROGRAMS' };
-                }
-                return f;
-              });
-              if (needsMigration) {
-                console.log('[SK8Lytz Favorites] Migrated legacy mode entries to new taxonomy.');
-                AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(migrated));
-              }
-              setFavorites(migrated);
-            } else {
-              // Fallback to default if somehow parsed as empty
-              const defaultFavorites = [{
-                id: 'default-1',
-                name: 'Programs - ' + getRbmPatternName(3),
-                mode: 'PROGRAMS',
-                patternId: 3,
-                speed: 50,
-                brightness: 90
-              }];
-              setFavorites(defaultFavorites);
-              AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(defaultFavorites));
-            }
-          } catch (e) { }
-        } else {
-          // First time load, inject default Program mode pattern 3
-          const defaultFavorites = [{
-            id: 'default-1',
-            name: 'Programs - ' + getRbmPatternName(3),
-            mode: 'PROGRAMS',
-            patternId: 3,
-            speed: 50,
-            brightness: 90
-          }];
-          setFavorites(defaultFavorites);
-          AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(defaultFavorites));
-        }
-      });
 
-      AsyncStorage.getItem(`${STORAGE_PREFIX}QuickPresets`).then((saved) => {
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            if (parsed && parsed.length > 0) setQuickPresets(parsed);
-          } catch (e) { }
-        }
-      });
     }, []);
 
     React.useEffect(() => {
@@ -1647,9 +1322,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                             <TouchableOpacity
                               style={{ position: 'absolute', right: 4, top: 4, zIndex: 10, padding: 4 }}
                               onPress={() => {
-                                setFavPromptTargetId(fav.id);
-                                setFavPromptName(fav.name);
-                                setIsFavPromptVisible(true);
+                                openFavoritePrompt(fav.id, fav.name);
                               }}
                             >
                               <MaterialCommunityIcons name="pencil-outline" size={12} color={Colors.textMuted} />
@@ -2663,7 +2336,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           </View>
         </View>
         {/* Quick Preset Prompt Modal */}
-        <Modal visible={isQuickPromptVisible} transparent animationType="fade">
+        <Modal visible={promptState === 'NAMING_PRESET'} transparent animationType="fade">
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
             <View style={{ backgroundColor: Colors.surface, padding: 24, borderRadius: 20, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
               <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>
@@ -2676,8 +2349,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: 12, borderRadius: 8, fontSize: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
                 placeholder="Preset Name..."
                 placeholderTextColor="rgba(255,255,255,0.3)"
-                value={quickPromptName}
-                onChangeText={setQuickPromptName}
+                value={promptName}
+                onChangeText={setPromptName}
                 autoFocus
               />
               {/* Cloud visibility toggle */}
@@ -2706,19 +2379,19 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     setQuickPresets(newArr);
                     AsyncStorage.setItem(`${STORAGE_PREFIX}QuickPresets`, JSON.stringify(newArr));
                     AppLogger.log('BUILDER_PRESET_DELETED', { index: quickPromptTargetIndex });
-                    setIsQuickPromptVisible(false);
+                    closePrompt();
                   }}>
                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Delete</Text>
                   </TouchableOpacity>
                 )}
                 {quickPromptTargetIndex === -1 && (
-                  <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => setIsQuickPromptVisible(false)}>
+                  <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => closePrompt()}>
                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#00C853' }} disabled={isPublishingCloud} onPress={async () => {
                   setIsPublishingCloud(true);
-                  const safeName = quickPromptName.trim() || 'Cloud Scene';
+                  const safeName = promptName.trim() || 'Cloud Scene';
                   if (containsProfanity(safeName)) {
                     Alert.alert('Invalid Name', 'Scene names cannot contain inappropriate language. Please choose a different name.');
                     setIsPublishingCloud(false);
@@ -2727,7 +2400,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                   const success = await ScenesService.publishScene(safeName, captureEntireState(), cloudPublicToggle);
                   if (success) {
                     Alert.alert(cloudPublicToggle ? 'Published!' : 'Saved!', cloudPublicToggle ? 'Your scene is now available to the community.' : 'Scene saved privately to your cloud.');
-                    setIsQuickPromptVisible(false);
+                    closePrompt();
                   } else {
                     Alert.alert('Error', 'Could not save scene. Are you logged in?');
                   }
@@ -2737,7 +2410,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 </TouchableOpacity>
                 <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary }} onPress={() => {
                   const newArr = [...quickPresets];
-                  const safeName = quickPromptName.trim() || 'Preset';
+                  const safeName = promptName.trim() || 'Preset';
                   if (quickPromptTargetIndex === -1) {
                     newArr.push({ name: safeName, colors: multiColors, type: multiTransition });
                   } else {
@@ -2746,7 +2419,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                   setQuickPresets(newArr);
                   AsyncStorage.setItem(`${STORAGE_PREFIX}QuickPresets`, JSON.stringify(newArr));
                   AppLogger.log('BUILDER_PRESET_SAVED', { name: safeName, isOverwrite: quickPromptTargetIndex !== -1 });
-                  setIsQuickPromptVisible(false);
+                  closePrompt();
                 }}>
                   <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>Save</Text>
                 </TouchableOpacity>
@@ -2763,7 +2436,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         />
 
         {/* Favorite Prompt Modal */}
-        <Modal visible={isFavPromptVisible} transparent animationType="fade">
+        <Modal visible={promptState === 'NAMING_FAVORITE'} transparent animationType="fade">
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
             <View style={{ backgroundColor: Colors.surface, padding: 24, borderRadius: 20, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
               <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>
@@ -2776,18 +2449,18 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: 12, borderRadius: 8, fontSize: 16, marginBottom: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
                 placeholder="Custom Preset Name..."
                 placeholderTextColor="rgba(255,255,255,0.3)"
-                value={favPromptName}
-                onChangeText={setFavPromptName}
+                value={promptName}
+                onChangeText={setPromptName}
                 autoFocus
               />
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 {favPromptTargetId && (
-                  <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={() => { deleteFavorite(favPromptTargetId); setIsFavPromptVisible(false); setFavPromptTargetId(null); }}>
+                  <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={() => { deleteFavorite(favPromptTargetId); closePrompt(); }}>
                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Delete</Text>
                   </TouchableOpacity>
                 )}
                 {(!favPromptTargetId) && (
-                  <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => setIsFavPromptVisible(false)}>
+                  <TouchableOpacity style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => closePrompt()}>
                     <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
                   </TouchableOpacity>
                 )}
