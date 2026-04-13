@@ -72,7 +72,7 @@ pie title Governance Shield
 - [ ] `feat/telemetry-onboarding-ux` : [CLOUD] [L-RISK] [Meal] [🤖 FLASH] [📝️ NEEDS-PLAN] Implement a casual 'Permissions Hub' onboarding screen after EULA to enable Camera, Mic, GPS, and Bluetooth. → [Plan](docs/plans/feat-telemetry-onboarding-ux.md)
 - [ ] `feat/admin-app-manager` : [CLOUD] [L-RISK] [Feast] [🤖 PRO-HIGH] Finalized Governance Hub with Safety Locks (Consolidated Scope) → [Plan](docs/plans/feat-admin-app-manager.md)
 - [ ] `gate-offline-mode` : [CLOUD] [H-RISK] [Feast] [🤖 THINK] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
-- [ ] `feat/eula-in-account-manager` : [CLOUD] [L-RISK] [Snack] [🤖 FLASH] [⚡ FLASH-READY] Add EULA review link to User Account Manager Settings. → [Plan](docs/plans/feat-eula-in-account-manager.md)
+- [x] `feat/eula-in-account-manager` : [CLOUD] [L-RISK] [Snack] [🤖 FLASH] [⚡ FLASH-READY] Add EULA review link to User Account Manager Settings. → [Plan](docs/plans/feat-eula-in-account-manager.md)
 
 ---
 
