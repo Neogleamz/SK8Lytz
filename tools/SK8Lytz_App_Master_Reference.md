@@ -375,7 +375,6 @@ System-wide `cleanupExpiredSessions()` ends sessions older than 24h.
 ## 7. Session Telemetry Architecture
 
 ### Supabase Table: `skate_sessions`
-
 | Column           | Type     | Notes                     |
 | ---------------- | -------- | ------------------------- |
 | `duration_sec`   | `int4`   | Total session length      |
@@ -383,6 +382,12 @@ System-wide `cleanupExpiredSessions()` ends sessions older than 24h.
 | `avg_speed_mph`  | `float8` | Mean speed                |
 | `peak_speed_mph` | `float8` | Maximum speed             |
 | `calories`       | `int4`   | Estimated via MET formula |
+
+### Telemetry Storage Optimization (Group Deduplication)
+To prevent database bloat, the telemetry ingestion pipelines (`AppLogger.ts`, `syncTelemetryBuckets.mjs`) enforce strict deduplication:
+- **Single-Row Mappings**: Multi-device commands (like changing mode on a group of 4 skates) MUST NOT be expanded into 4 individual database rows via `.flatMap()`. 
+- **The `group_id` Standard**: Instead, a single row is inserted, assigning `device_id` as `null` while mapping the devices into `group_id`. Future dashboard queries searching for single device interactions must utilize `WHERE device_id = 'A' OR group_id LIKE '%A%'`.
+- **JSONB Optimization**: The `raw_data` JSON structure strips redundant keys (`deviceId`, `hex`, `dir`) before Postgres insertion since they are already stored explicitly in native SQL columns in `parsed_logs`.
 
 ---
 
