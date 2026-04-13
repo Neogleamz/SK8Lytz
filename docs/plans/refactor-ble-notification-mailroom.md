@@ -1,87 +1,59 @@
 # [PLAN] refactor/ble-notification-mailroom
 
 ## Design Decisions & Rationale
+The BLE notification handler is currently an un-gated firehose that processes raw bytes inline causing severe performance degradation. Every BLE notification currently triggers redundant parsing, `O(N)` array searches, identical state overrides, and unfiltered Supabase telemetry ingestion. 
 
-The BLE notification handler is currently a monolithic callback that does too many things at once: raw logging, Supabase upload, payload parsing, and state writes are all inlined in a single "God Callback." This creates tight coupling that makes it impossible to test, debug, or extend individual concerns in isolation. The goal is to decompose it into four distinct, single-responsibility handlers that the notification hook orchestrates linearly — a "mailroom" pattern where each clerk has exactly one job.
+To resolve this, we will decompose it into a "Mailroom" pattern with a strict gatekeeper. 
 
-**Key question before execution:** Should the diagnostics upload to Supabase be fire-and-forget (current assumption) or should parse failures gate the upload? This needs to be settled in the discussion phase.
+1. **The Diag-Gate**: Sniffer UI state and Supabase diagnostics upload will be gated behind a new toggle (e.g., `isDiagnosticsMode` from Context or Zustand). Under normal operation, these heavy telemetry drops will be bypassed.
+2. **Delta Check (De-Duplication)**: The State/AsyncStorage writer will only execute if the hardware configuration (points, sorting) actually changed, eliminating excessive disk writes.
+3. **Pure Utility Parser**: The duplicate parsing logic will be extracted out of the hook into `src/utils/BlePayloadParser.ts`, returning typed payloads that the hook simply routes.
+4. **Debouncer**: Rapid-fire identical packets will be dropped at the top of the function to prevent UI thread freezing.
 
 ---
 
 ## Scope
 
-**Target file(s):** `src/hooks/useBLE.ts` (primary), possibly `src/services/DiagnosticsService.ts`
+**Target file(s):** 
+- `src/hooks/useHardwareNotifications.ts`
+- `src/utils/BlePayloadParser.ts` (NEW)
 
-**Problem Statement:**
+### Proposed Architecture
 
-When a BLE characteristic notification arrives, a single inline callback currently handles all four of these responsibilities:
-
-1. 📬 **Raw Stamp** — stores the hex bytes in `lastRawNotification` (for the Protocol Sniffer UI)
-2. 📤 **Diagnostics Upload** — fire-and-forget to Supabase device diagnostics table
-3. 🔍 **LED Config Parser** — interprets payload to extract `points`, `sortOrder`, `icType`
-4. 🗂️ **State Writer** — commits parsed config into `allDevices`, `deviceConfigs`, and `AsyncStorage`
-
-The question is whether these 4 intercepts all need to live inline, or whether they can be decomposed into isolated, testable units.
-
----
-
-## Discussion Topics (Requires Human Input)
-
-Before writing any code, the following architectural questions must be resolved:
-
-| # | Question | Options |
-|---|----------|---------|
-| 1 | Should the raw stamp happen **before** or **after** error validation? | Before (always log), After (only log valid packets) |
-| 2 | Should Supabase upload be **blocked by** parse failure? | Fire-and-forget regardless, or gate on parse success |
-| 3 | Should the parser be **extracted** into a pure utility function? | Inline in hook vs. `src/utils/BlePayloadParser.ts` |
-| 4 | Should state writes use **React state, Zustand, or just AsyncStorage**? | Clarify the canonical state authority for device configs |
-| 5 | Is there a risk of **notification flooding** (too many events)? | Consider debounce/throttle at the mailroom entry point |
-
----
-
-## Proposed Architecture (Pending Discussion)
-
-```
+```typescript
 onBLENotification(rawBytes)
   │
-  ├─ 1. stampRawNotification(rawBytes)          // Pure, sync — no side effects, just state
+  ├─ [Gatekeeper] Throttle identical back-to-back packets
   │
-  ├─ 2. uploadDiagnosticsTelemetry(rawBytes)    // Fire-and-forget async — does NOT block
+  ├─ if (isDiagnosticsMode)
+  │   ├─ 1. stampRawNotification(rawBytes)
+  │   └─ 2. uploadDiagnosticsTelemetry(rawBytes)
   │
-  ├─ 3. ledConfig = parseLedPayload(rawBytes)   // Pure utility fn — returns typed result or null
+  ├─ 3. ledConfig = parseLedPayload(rawBytes) // pure function call
   │
-  └─ 4. if (ledConfig) writeLedConfigToState(ledConfig)  // Async — allDevices + AsyncStorage
+  └─ if (ledConfig && hasConfigChanged(ledConfig, prevConfig))
+      └─ 4. writeLedConfigToState(ledConfig) 
 ```
 
 ---
 
-## Proposed File Changes
+## Proposed Changes
 
-### [MODIFY] `src/hooks/useBLE.ts`
-- Extract the notification callback body into 4 named sub-functions
-- Orchestrate them sequentially in the main `onCharacteristicValueChanged` handler
+### [MODIFY] `src/hooks/useHardwareNotifications.ts`
+- Inject a diagnostics-mode flag check to `useHardwareNotifications`.
+- Replace duplicate parsing logic with a single call to `BlePayloadParser`.
+- Pass a cached name/ID map down to avoid `O(N)` `allDevices.find()` lookups on every ping.
+- Add a strict Delta Check comparing incoming parsed `points` and `colorSorting` against `deviceConfigs[deviceId]` before initiating React State `setDeviceConfigs` and `AsyncStorage` rewrites.
 
 ### [NEW] `src/utils/BlePayloadParser.ts`
-- Pure, stateless function: `parseLedPayload(rawBytes: Uint8Array): LedConfig | null`
-- Fully unit-testable with no BLE or React dependencies
-
-### [MODIFY] `src/services/DiagnosticsService.ts` (if it exists)
-- Ensure the upload function has a proper try/catch and never throws — callers should not need to guard it
+- Extract hardware parsing logic into a stateless `parseLedPayload(rawBytes: Uint8Array): LedConfig | null` function.
+- Add robust error handling so it never throws if the packet is malformed.
 
 ---
 
 ## Verification Plan
 
-### Automated Tests
-- `npx jest BlePayloadParser.test.ts` — verify pure parser with known hex fixtures
-- `npx tsc --noEmit` — confirm no TypeScript regressions
-
 ### Manual Verification
-- Protocol Sniffer UI: confirm `lastRawNotification` updates immediately on receipt
-- Supabase dashboard: verify telemetry rows are created after a successful connect
-- LED config: confirm `allDevices` and `deviceConfigs` update correctly after reconnect
-- AsyncStorage: verify device config persists across app restart
-
----
-
-*Status: NEEDS DISCUSSION — Do not execute until architectural questions are resolved.*
+- **During normal usage:** Connect skates. Ensure sniffer array does not increase, and Supabase does not record a flood of diagnostics.
+- **Enable Diagnostics:** Toggle diagnostic mode on to ensure Sniffer and Supabase receive telemetry.
+- **Delta Check:** Ensure `AsyncStorage.setItem` is only called ONCE upon connection rather than 5+ times.

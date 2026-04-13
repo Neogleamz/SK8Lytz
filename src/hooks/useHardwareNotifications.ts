@@ -1,29 +1,19 @@
 /**
  * useHardwareNotifications.ts — BLE Hardware Data Callback Orchestrator
+ * (Refactored to Mailroom Architecture)
  *
- * Owns both BLE data-received and hardware-probed callback registrations:
- *
- *  1. `setOnDataReceived` — fires on every BLE RX notification from a connected device:
- *     - Stamps raw hex into `lastRawNotification` (feeds the Sniffer UI in DiagnosticLab)
- *     - Fire-and-forget Supabase diagnostics upload
- *     - Parses v2/v1 hardware config from the payload
- *     - Merges config into `allDevices` state + `deviceConfigs` state + AsyncStorage
- *
- *  2. `setOnHardwareProbed` — fires once per device after a scan probe response:
- *     - Merges parsed hardware config into `deviceConfigs` + AsyncStorage
- *     - Updates `allDevices` so the device list shows hardware info before connecting
- *
- * BLE callback registration primitives (`setOnDataReceived`, `setOnHardwareProbed`)
- * are passed in as parameters — they remain co-located in DashboardScreen per the
- * "Stability-First BLE Lifecycle" constraint from the Master Reference.
- *
- * Extracted from DashboardScreen.tsx (Phase 5 — God Object Surgery).
+ * Owns both BLE data-received and hardware-probed callback registrations.
+ * Gated and throttled:
+ * 1. Debounces duplicate packets.
+ * 2. Diagnostics (Sniffer + Supabase) are locked behind isDiagnosticsMode.
+ * 3. Uses pure stateless parser (BlePayloadParser).
+ * 4. Checks Delta before mutating State/AsyncStorage.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../services/supabaseClient';
 import { AppLogger } from '../services/AppLogger';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { BlePayloadParser } from '../utils/BlePayloadParser';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,6 +24,8 @@ interface BLEDeviceMinimal {
 }
 
 interface UseHardwareNotificationsOptions {
+  /** Enables heavy diagnostic features (Sniffer UI logging, Supabase upload) */
+  isDiagnosticsMode?: boolean;
   /** Registers the BLE data-received callback. From useBLE(). */
   setOnDataReceived: (cb: (deviceId: string, payload: number[]) => void) => void;
   /** Registers the scan-probe-completed callback. From useBLE(). */
@@ -44,125 +36,125 @@ interface UseHardwareNotificationsOptions {
   setAllDevices: (updater: (prev: any[]) => any[]) => void;
   /** State updater for deviceConfigs — persists hw settings per device. */
   setDeviceConfigs: (updater: (prev: Record<string, any>) => Record<string, any>) => void;
+  /** Current device configurations for delta checks */
+  deviceConfigs: Record<string, any>;
   /** State setter for the raw BLE payload — feeds the Sniffer UI. */
   setLastRawNotification: (val: { deviceId: string; payloadHex: string } | null) => void;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-/**
- * Registers both BLE hardware callbacks once per mount.
- * Returns nothing — all managed via side-effects internally.
- */
 export function useHardwareNotifications({
+  isDiagnosticsMode = false,
   setOnDataReceived,
   setOnHardwareProbed,
   allDevices,
   setAllDevices,
   setDeviceConfigs,
+  deviceConfigs,
   setLastRawNotification,
 }: UseHardwareNotificationsOptions): void {
 
-  // ── 1. BLE data-received: sniffer stamp + diagnostics upload + config merge ─
+  // Maintain refs to prevent dependency cycles in useEffect closures
+  const deviceConfigsRef = useRef(deviceConfigs);
+  useEffect(() => {
+    deviceConfigsRef.current = deviceConfigs;
+  }, [deviceConfigs]);
+
+  const allDevicesRef = useRef(allDevices);
+  useEffect(() => {
+    allDevicesRef.current = allDevices;
+  }, [allDevices]);
+
+  // Maintain a throttle cache of the last packet seen to drop duplicates
+  const lastPacketCacheRef = useRef<Record<string, string>>({});
+
+  // ── 1. BLE data-received: Mailroom Handler ──────────────────────────────────
   useEffect(() => {
     setOnDataReceived((deviceId: string, payload: number[]) => {
       const payloadHex = payload
         .map(b => b.toString(16).padStart(2, '0').toUpperCase())
         .join(' ');
-      // Feed raw hex to the Sniffer UI
-      setLastRawNotification({ deviceId, payloadHex });
+        
+      // ── [Gatekeeper] Throttle identical back-to-back packets (Debouncer) ────
+      if (lastPacketCacheRef.current[deviceId] === payloadHex) {
+        return; // Drop identical repetitive packets to save UI thread
+      }
+      lastPacketCacheRef.current[deviceId] = payloadHex;
 
-      // ── Fire-and-forget diagnostics upload ──────────────────────────────────
-      // Never blocks the UI or BLE pipeline.
-      const v2ConfigForUpload = ZenggeProtocol.parseHardwareSettingsResponse(payload);
-      const v1ConfigForUpload = ZenggeProtocol.parseHardwareConfig(payload);
-      const parsedOk = !!(v2ConfigForUpload || v1ConfigForUpload);
-      const pts      = v2ConfigForUpload?.ledPoints ?? v1ConfigForUpload?.points;
-      const ict      = v2ConfigForUpload?.icType;
-      const icn      = v2ConfigForUpload?.icName ?? v1ConfigForUpload?.stripType;
-      const cs       = v2ConfigForUpload?.colorSorting ?? undefined;
-      const co       = v2ConfigForUpload?.colorSortingName ?? v1ConfigForUpload?.sorting;
-      const deviceName = allDevices.find((d: BLEDeviceMinimal) => d.id === deviceId)?.name ?? null;
+      // ── [Diag-Gate] Diagnostics upload & Sniffer UI update ─────────────────
+      if (isDiagnosticsMode) {
+        setLastRawNotification({ deviceId, payloadHex });
+        
+        // Pure parser call
+        const parsed = BlePayloadParser.parseLedPayload(payload);
+        const deviceName = allDevicesRef.current.find((d: BLEDeviceMinimal) => d.id === deviceId)?.name ?? null;
 
-      supabase.from('device_diagnostics').insert({
-        device_id:     deviceId,
-        device_name:   deviceName,
-        payload_hex:   payloadHex,
-        payload_bytes: payload.length,
-        byte_0:        payload[0] ?? null,
-        byte_2:        payload[2] ?? null,
-        parsed_ok:     parsedOk,
-        points:        pts ?? null,
-        ic_type:       ict ?? null,
-        ic_name:       icn ?? null,
-        color_sorting: cs ?? null,
-        color_order:   co ?? null,
-      }).then(({ error }: any) => {
-        if (error) AppLogger.warn('[Diagnostics] upload failed:', error.message);
-      });
-      // ────────────────────────────────────────────────────────────────────────
-
-      // ── Parse hardware config from the notification payload ──────────────────
-      const v2Config = ZenggeProtocol.parseHardwareSettingsResponse(payload);
-      const v1Config = ZenggeProtocol.parseHardwareConfig(payload);
-
-      let configPoints: number | undefined;
-      let configSegments: number | undefined;
-      let configStripType: string | undefined;
-      let configSorting: string | undefined;
-      let configSortingIdx: number | undefined;
-      let configIcType: number | undefined;
-
-      if (v2Config) {
-        configPoints     = v2Config.ledPoints;
-        configSegments   = v2Config.segments;
-        configStripType  = v2Config.icName;
-        configSorting    = v2Config.colorSortingName;
-        configSortingIdx = v2Config.colorSorting;   // numeric index — critical for hwSettings
-        configIcType     = v2Config.icType;
-      } else if (v1Config) {
-        configPoints    = v1Config.points;
-        configSegments  = v1Config.segments;
-        configStripType = v1Config.stripType;
-        configSorting   = v1Config.sorting;
-        // Derive numeric index from string for v1 (defaults to GRB=2 if unknown)
-        configSortingIdx = ['RGB', 'RBG', 'GRB', 'GBR', 'BRG', 'BGR'].indexOf(configSorting ?? 'GRB');
-        if (configSortingIdx < 0) configSortingIdx = 2;
+        supabase.from('device_diagnostics').insert({
+          device_id:     deviceId,
+          device_name:   deviceName,
+          payload_hex:   payloadHex,
+          payload_bytes: payload.length,
+          byte_0:        payload[0] ?? null,
+          byte_2:        payload[2] ?? null,
+          parsed_ok:     parsed?.parsedOk ?? false,
+          points:        parsed?.rawUploadData.points ?? null,
+          ic_type:       parsed?.rawUploadData.icType ?? null,
+          ic_name:       parsed?.rawUploadData.icName ?? null,
+          color_sorting: parsed?.rawUploadData.colorSorting ?? null,
+          color_order:   parsed?.rawUploadData.colorOrder ?? null,
+        }).then(({ error }: any) => {
+          if (error) AppLogger.warn('[Diagnostics] upload failed:', error.message);
+        });
       }
 
-      if (configPoints !== undefined && configSorting !== undefined) {
-        // Prevent telemetry flooding — only update on actual hardware config packets
-        setAllDevices(prev => prev.map(d => {
-          if (d.id !== deviceId) return d;
-          const newD = {
-            ...d,
-            points:           configPoints,
-            sorting:          configSorting,
-            colorSorting:     configSortingIdx,  // numeric index propagated
-            colorSortingName: configSorting,
-            stripType:        configStripType,
-            icType:           configIcType,
-            segments:         configSegments,
-            detected:         true,              // flag that this came from real hardware
-          } as any as typeof d;
+      // ── [Pure Utility] Parse hardware config ────────────────────────────────
+      const ledConfig = BlePayloadParser.parseLedPayload(payload);
+      if (!ledConfig || !ledConfig.parsedOk || ledConfig.points === undefined || ledConfig.sorting === undefined) {
+        return;
+      }
 
-          // Mirror securely to persistent memory
-          AsyncStorage.getItem('ng_device_configs').then(str => {
-            const p = JSON.parse(str || '{}');
-            p[deviceId] = { ...p[deviceId], ...newD };
-            AsyncStorage.setItem('ng_device_configs', JSON.stringify(p));
-          }).catch(() => {});
+      // ── [Delta Check] Only update state/disk if data fundamentally changed ──
+      const existingCfg = deviceConfigsRef.current[deviceId] || {};
+      const isDirty = 
+        existingCfg.points !== ledConfig.points || 
+        existingCfg.colorSorting !== ledConfig.colorSortingIdx ||
+        existingCfg.segments !== ledConfig.segments ||
+        existingCfg.detected !== true; // Ensure fallback 'detected' flag triggers 1st write
 
-          setDeviceConfigs(prevConfigs => ({
-            ...prevConfigs,
-            [deviceId]: { ...(prevConfigs[deviceId] || {}), ...newD },
-          }));
+      if (!isDirty) return; // Deduplicated — prevents 5+ disk writes per connect!
+      
+      // Update state
+      setAllDevices((prev: any[]) => prev.map(d => {
+        if (d.id !== deviceId) return d;
+        const newD = {
+          ...d,
+          points:           ledConfig.points,
+          sorting:          ledConfig.sorting,
+          colorSorting:     ledConfig.colorSortingIdx,
+          colorSortingName: ledConfig.sorting,
+          stripType:        ledConfig.stripType,
+          icType:           ledConfig.icType,
+          segments:         ledConfig.segments,
+          detected:         true,
+        };
 
-          return newD;
+        // Mirror securely to persistent memory
+        AsyncStorage.getItem('ng_device_configs').then(str => {
+          const p = JSON.parse(str || '{}');
+          p[deviceId] = { ...p[deviceId], ...newD };
+          AsyncStorage.setItem('ng_device_configs', JSON.stringify(p));
+        }).catch(() => {});
+
+        setDeviceConfigs(prevConfigs => ({
+          ...prevConfigs,
+          [deviceId]: { ...(prevConfigs[deviceId] || {}), ...newD },
         }));
-      }
+
+        return newD;
+      }));
     });
-  }, [setOnDataReceived, setAllDevices]);
+  }, [setOnDataReceived, setAllDevices, setDeviceConfigs, isDiagnosticsMode]);
 
   // ── 2. Hardware probe callback: merge scanned config before first connect ───
   useEffect(() => {
@@ -170,11 +162,9 @@ export function useHardwareNotifications({
       setDeviceConfigs(prev => {
         const merged = { ...(prev[deviceId] || {}), ...cfg };
         const next = { ...prev, [deviceId]: merged };
-        // Persist immediately so the next app launch has the config ready
         AsyncStorage.setItem('ng_device_configs', JSON.stringify(next)).catch(() => {});
         return next;
       });
-      // Update allDevices so the list shows detected config before user connects
       setAllDevices(prev => prev.map(d =>
         (d as any).id === deviceId
           ? {
@@ -190,5 +180,5 @@ export function useHardwareNotifications({
           : d
       ));
     });
-  }, [setOnHardwareProbed]);
+  }, [setOnHardwareProbed, setDeviceConfigs, setAllDevices]);
 }
