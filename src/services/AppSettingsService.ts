@@ -8,6 +8,7 @@ import { AppLogger } from './AppLogger';
 export type AppSettingKey = 
   | 'global_crew_hub_locked'
   | 'global_community_hub_locked'
+  | 'required_eula_version'
   | string;
 
 export interface AppSettingsMap {
@@ -43,12 +44,14 @@ export const AppSettingsService = {
       AppLogger.log('ERROR_CAUGHT', { message: 'Failed to fetch app settings', error: err.message });
       
       // Fallback to cache if offline
-      try {
+        try {
         const cached = await AsyncStorage.getItem(CACHE_KEY);
         if (cached) {
           return JSON.parse(cached) as AppSettingsMap;
         }
-      } catch (e) {}
+      } catch (e) {
+        AppLogger.log('ERROR_CAUGHT', { message: 'Failed to access cached app settings' });
+      }
 
       return {}; // return empty if completely failed and no cache
     }

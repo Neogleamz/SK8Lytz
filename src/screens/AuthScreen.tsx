@@ -16,6 +16,7 @@ import {
   containsProfanity,
   PasswordStrength
 } from '../services/AuthUtils';
+import EulaModal from '../components/modals/EulaModal';
 
 const STORAGE_LAST_EMAIL    = '@Sk8lytz_auth_last_email';
 const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';  // { email, rememberMe }
@@ -57,6 +58,8 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
   const [rememberMe, setRememberMe] = useState(false);
   const [rememberOffline, setRememberOffline] = useState(false);
   const [isSandboxEnabled, setIsSandboxEnabled] = useState(false);
+  const [eulaAccepted, setEulaAccepted] = useState(false);
+  const [showEulaModal, setShowEulaModal] = useState(false);
   const strengthAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -213,6 +216,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
     if (!email.trim()) { showError('Please enter your email.'); return; }
     if (!isValidEmail(email)) { showError('Please enter a valid email address.'); return; }
     if (!password) { showError('Please enter a password.'); return; }
+    if (!eulaAccepted) { showError('You must accept the End User License Agreement to sign up.'); return; }
 
     if (containsProfanity(username)) {
       showError('Your username contains inappropriate language. Please choose a different name.');
@@ -244,7 +248,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
       email: email.trim(),
       password,
       options: { 
-        data: { username: username.trim() },
+        data: { username: username.trim(), accepted_eula_version: 1 },
         emailRedirectTo: 'sk8lytz://auth'
       },
     });
@@ -479,6 +483,24 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             </View>
           )}
 
+          {/* EULA Checkbox (signup only) */}
+          {mode === 'SIGNUP' && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, marginTop: 4, paddingHorizontal: 4 }}>
+              <TouchableOpacity
+                onPress={() => setEulaAccepted(v => !v)}
+                style={[styles.checkbox, eulaAccepted && { backgroundColor: Colors.primary, borderColor: Colors.primary }, { marginRight: 10 } ]}
+              >
+                {eulaAccepted && <MaterialCommunityIcons name="check" size={12} color="#000" />}
+              </TouchableOpacity>
+              <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
+                <Text style={{ color: Colors.textMuted, fontSize: 13 }}>By creating an account, you agree to the </Text>
+                <TouchableOpacity onPress={() => setShowEulaModal(true)}>
+                  <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: 'bold' }}>SK8Lytz EULA</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           {/* Primary action button */}
           <TouchableOpacity
             style={styles.primaryButton}
@@ -607,6 +629,17 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           </TouchableOpacity>
         )}
       </View>
+
+      {showEulaModal && (
+        <EulaModal 
+          visible={showEulaModal}
+          onAccept={() => {
+            setEulaAccepted(true);
+            setShowEulaModal(false);
+          }}
+          onDecline={() => setShowEulaModal(false)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

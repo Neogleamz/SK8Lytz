@@ -307,6 +307,29 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
                 trackColor={{ false: '#444', true: '#FF4444' }}
               />
             </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, padding: 16, borderRadius: 12, marginBottom: 12 }}>
+              <View style={{ flex: 1, marginRight: 16 }}>
+                <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Global EULA Version</Text>
+                <Text style={{ color: textMuted, fontSize: 12, marginTop: 2 }}>Current required target: v{appSettings['required_eula_version'] || '1'}. Users with lower versions will be gated on next load.</Text>
+              </View>
+              <TouchableOpacity 
+                style={{ backgroundColor: '#FF4444', paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, alignItems: 'center' }}
+                onPress={() => {
+                  const current = parseInt(appSettings['required_eula_version'] || '1', 10);
+                  const next = current + 1;
+                  Alert.alert(
+                    "Bump EULA Version?",
+                    `Are you sure you want to increase the required EULA version to v${next}? This will force all active users to re-accept the new terms.`,
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      { text: "Enforce Version", style: "destructive", onPress: () => updateSetting('required_eula_version', next.toString()) }
+                    ]
+                  );
+                }}
+              >
+                <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>BUMP v{parseInt(appSettings['required_eula_version'] || '1', 10) + 1}</Text>
+              </TouchableOpacity>
+            </View>
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -484,6 +507,32 @@ const AdminTab = React.memo(({
           <Text style={{ color: textPrimary, fontWeight: '700' }}>Firmware Over-The-Air</Text>
           <Text style={{ color: textMuted, fontSize: 12 }}>Register-level EEPROM flash (0x62)</Text>
         </View>
+      </TouchableOpacity>
+
+      <Text style={[styles.statSection, { color: textPrimary, marginTop: 24 }]}>⚙️ Remote Configuration</Text>
+      <TouchableOpacity onPress={() => setIsAppSettingsVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center' }]}>
+        <MaterialCommunityIcons name="tune-vertical" size={24} color="#9D4EFF" />
+        <View style={{ marginLeft: 12 }}>
+          <Text style={{ color: textPrimary, fontWeight: '700' }}>App Settings</Text>
+          <Text style={{ color: textMuted, fontSize: 12 }}>Global feature flags and EULA version control</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => setIsProductManagerVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center', marginTop: 12 }]}>
+        <MaterialCommunityIcons name="package-variant-closed" size={24} color="#FF7000" />
+        <View style={{ marginLeft: 12 }}>
+          <Text style={{ color: textPrimary, fontWeight: '700' }}>Product Manager</Text>
+          <Text style={{ color: textMuted, fontSize: 12 }}>Hardware profile catalog editor</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => setIsPicksSchedulerVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center', marginTop: 12 }]}>
+        <MaterialCommunityIcons name="calendar-clock" size={24} color="#00D4AA" />
+        <View style={{ marginLeft: 12 }}>
+          <Text style={{ color: textPrimary, fontWeight: '700' }}>Picks Scheduler</Text>
+          <Text style={{ color: textMuted, fontSize: 12 }}>Schedule and manage community picks</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
       </TouchableOpacity>
     </ScrollView>
   );
