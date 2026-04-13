@@ -9,7 +9,7 @@ All active tasks, bugs, and feature work. Prioritized by **App Performance, Stab
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Core Development Progress
-  "Completed" : 18
+  "Completed" : 19
   "Remaining" : 34
 ```
 
@@ -26,13 +26,6 @@ pie title Critical Stability
   "Remaining" : 4
 ```
 
-
-
-
-
-
-
-
 - [ ] `gate-offline-mode` : [CLOUD] [H-RISK] [Feast] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
 
 ---
@@ -44,8 +37,8 @@ pie title Critical Stability
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
-  "Completed" : 1
-  "Remaining" : 11
+  "Completed" : 2
+  "Remaining" : 14
 ```
 
 - [ ] `chore/sentient-tech-debt-sweep` : [CLOUD] [BATCH] [L-RISK] [Feast] [TOP PRIORITY] Standardize AsyncStorage keys (@Sk8lytz_ prefix), normalize UI speed → Hardware (1-31), and eliminate redundant buffer requires. → [Plan](docs/plans/chore-sentient-tech-debt-sweep.md)
@@ -55,11 +48,16 @@ pie title Engineering Health
 - [ ] `perf/optimistic-ble-updates` : [LAB] [H-RISK] [Meal] [Pillar 2] Mask hardware latency using 'Ghost' optimistic UI updates and state reconciliation. → [Plan](docs/plans/perf-optimistic-ble-updates.md)
 - [ ] `perf/delta-sync-protocol` : [CLOUD] [L-RISK] [Meal] [Pillar 4] Implement differential data fetching to reduce bandwidth and battery consumption. → [Plan](docs/plans/perf-delta-sync-protocol.md)
 - [ ] `audit/domain-driven-architecture` : [CLOUD] [H-RISK] [Feast] [Future Deep Dive] Decouple Hardware, Community, and Session logic into isolated, testable containers. → [Plan](docs/plans/audit-domain-driven-architecture.md)
+- [x] `feat/optimistic-picks-cache` : [CLOUD] [H-RISK] [Meal] [Performance] Implement 'Stale-While-Revalidate' caching for Favorites and SK8Lytz Picks to eliminate load stutters. → [Plan](docs/plans/feat-optimistic-picks-cache.md)
 
 - [ ] `fix/remote-id-audit` : [LAB] [H-RISK] [Meal] [Security] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
 - [ ] `audit-rls-performance` : [CLOUD] [H-RISK] [Meal] #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges. → [Plan](docs/plans/audit-rls-performance.md)
 - [ ] `style/tokenized-spacing-standard` : [CLOUD] [L-RISK] [Meal] [Pillar 9] The 8pt Grid — enforce 8pt spacing tokens app-wide to eliminate magic numbers. → [Plan](docs/plans/style-tokenized-spacing-standard.md)
-
+- [ ] `chore/refactor-docked-controller` : [CLOUD] [H-RISK] [Feast] [Pillar 1] Extract lighting logic and tab sub-containers from the massive 156KB `DockedController.tsx` monolith.
+- [ ] `chore/refactor-dashboard-monolith` : [CLOUD] [H-RISK] [Feast] [Pillar 1] Decompose `DashboardScreen.tsx` (102KB) into smaller, domain-specific sub-screens and modular hooks.
+- [ ] `chore/refactor-account-modal` : [CLOUD] [L-RISK] [Meal] refactor `AccountModal.tsx` (63KB) to separate settings, profiles, and device management views.
+- [ ] `chore/refactor-diagnostic-lab` : [LAB] [L-RISK] [Meal] cleanup and modularize `Sk8LytzDiagnosticLab.tsx` (61KB) for better maintainability.
+- [ ] `chore/refactor-admin-tools` : [CLOUD] [L-RISK] [Meal] break down `AdminToolsModal.tsx` (55KB) into feature-specific admin modules.
 
 ---
 
