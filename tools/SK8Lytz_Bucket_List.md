@@ -9,8 +9,8 @@ All active tasks, bugs, and feature work. Prioritized by **App Performance, Stab
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Core Development Progress
-  "Completed" : 25
-  "Remaining" : 32
+  "Completed" : 26
+  "Remaining" : 22
 ```
 
 ---
@@ -23,7 +23,7 @@ _These items address crashes, data corruption, and security blocks that impact t
 %%{init: {'theme': 'dark'}}%%
 pie title Critical Stability
   "Completed" : 4
-  "Remaining" : 4
+  "Remaining" : 3
 ```
 
 - [ ] `feat/gate-offline-mode` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
@@ -39,8 +39,8 @@ _System-wide health improvements, refactors, and performance optimizations._
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
-  "Completed" : 4
-  "Remaining" : 11
+  "Completed" : 5
+  "Remaining" : 9
 ```
 
 - [ ] `perf/delta-sync-protocol` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [Pillar 4] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] Implement differential data fetching to reduce bandwidth and battery consumption. → [Plan](docs/plans/perf-delta-sync-protocol.md)
@@ -66,7 +66,7 @@ _Legal requirements and administrative control systems._
 %%{init: {'theme': 'dark'}}%%
 pie title Governance Shield
   "Completed" : 4
-  "Remaining" : 1
+  "Remaining" : 0
 ```
 
 ---
@@ -116,4 +116,4 @@ pie title Feature Velocity
 
 ---
 
-_Last updated: 2026-04-13 | Active tasks moved to Completed Archive._
+_Last updated: 2026-04-13 | Active tasks synchronized with Pie Charts._

@@ -8,37 +8,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.0] - 2026-04-13
 
 ### Changed
+
 - **Admin Tools Refactor**: Broken down the monolithic 800-line `AdminToolsModal.tsx` God Object into feature-specific admin modules (`DeviceTab`, `StatsTab`, `AdminTab`, `AppManagerModal`, `ProductManagerModal`, `ConfirmDeleteModal`) leveraging a clean Controller architectural pattern.
 
 ## [1.2.2] - 2026-04-13
 
 ### Changed
+
 - **Tokenized Spacing Standard**: Enforced an 8pt spacing grid (`Spacing` tokens) app-wide via aggressive codemod to eliminate thousands of hardcoded layout magic numbers, establishing perfect visual rhythm.
 
 ### Fixed
+
 - **Profile Persistence Data Loss**: Hardened self-healing profile logic and injected `display_name` into the Supabase auth signup metadata payload to guarantee profile name persistence.
 
 ## [1.2.1] - 2026-04-13
 
 ### Changed
+
 - **UI Degradation**: Temporarily hid the Voice Command FAB from the Dashboard until the native engine module is repaired.
 
 ### Fixed
+
 - **Security**: Mitigated 10 severe dependencies (including critical `xmldom` injection) by forcibly overriding the resolving config-plugins within the Voice library dependency tree, keeping voice dependencies from downgrading violently.
 
 ## [1.2.0] - 2026-04-13
 
 ### Added
+
 - **EULA Shield & Permissions Hub**: Mandatory scroll-to-accept EULA flow and casual onboarding screen for hardware capabilities (Bluetooth, GPS, Camera, Mic) with updated Neogleamz legal text.
 - **Admin App Manager**: Finalized Governance Hub featuring system safety locks.
 - **Optimistic BLE Updates**: Masked hardware latency using 'Ghost' optimistic UI updates and state reconciliation for immediate visual feedback.
 - **USA Skate Spots Dataset**: Implemented comprehensive US-only dataset of rinks and parks for interactive map overlays.
 
 ### Changed
+
 - **State Machine Standard**: Deterministic UI refactor transitioning from scattered boolean flags to explicit Enum-based Finite State Machines (FSMs).
 - **Bucket List Beautification**: Prettified internal backlog with tags, icons, and updated intake rules for better task predictability.
 
 ### Fixed
+
 - **Database Schema Parity**: Resolved critical 'type' column anomalies and structural mismatches across mutations to perfectly align TypeScript models with hardened Supabase Postgres schemas.
 - **Voice Button Null Ref**: Handled missing native module bridge gracefully without crashing.
 - **Tech Debt Cleanup**: Resolved legacy import TODOs in CrewCreate, CrewDetail, and CrewManage screens.
@@ -46,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2026-04-11
 
 ### Added
+
 - **FTUE (First Time User Experience)**: Multiphase hardware setup wizard (`HardwareSetupWizardScreen`) with probe scans, product identification, and automated device claiming/grouping.
 - **Dynamic Product Architecture**: Migrated hardware configurations to a Supabase-backed catalog with local caching for RAILZ and future product support.
 - **Crew Hub Overhaul**: Optimized discovery engine with universal radius filtering and automated global session cleanup.
@@ -57,17 +66,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Auth Branding**: Added Neogleamz branding and "Glow your way" slogan to the authentication flow.
 
 ### Fixed
+
 - **Camera Mode Regression**: Restored CAMERA mode UI in DockedController and improved touch sampling precision.
 - **BLE Transport Reliability**: Resolved 0x51 payload MTU overflows using a variable-length chunking strategy.
 - **UI Navigation**: Fixed "nav traps" in Crew Hub Edit and stabilized dashboard slab anchoring.
 - **Grouping Logic**: Audited and fixed "ghost group" persistence issues in registered devices.
 
 ### Changed
+
 - **AsyncStorage Standard**: Migrated all local storage keys to the `@Sk8lytz_` namespace.
 - **Dashboard Layout**: Optimized 4-Slab architecture with collapsible device registries and taller Crew Hub cards.
 - **Service Refactor**: Consolidated `LocationService` and `CrewService` for better radius-aware operation.
 
 ### Removed
+
 - **Legacy Tools**: Retired the Simple Scanner, legacy DIY Builder, and Admin Hardware Tester in favor of consolidated modern modules.
 - **Stale Data**: Purged legacy 0x81 protocol commands and hardcoded product heuristics.
-

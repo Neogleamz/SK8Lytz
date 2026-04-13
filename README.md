@@ -33,14 +33,14 @@ Supports individual device control, synchronized multi-device groups, music-reac
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | React Native (Expo) |
-| Language | TypeScript |
-| Bluetooth | `react-native-ble-plx` |
-| Backend / Telemetry | Supabase (Postgres + Storage) |
-| Build | Gradle (local) / EAS Build (cloud) |
-| Platform | Android (API 31+) |
+| Layer               | Technology                         |
+| ------------------- | ---------------------------------- |
+| Framework           | React Native (Expo)                |
+| Language            | TypeScript                         |
+| Bluetooth           | `react-native-ble-plx`             |
+| Backend / Telemetry | Supabase (Postgres + Storage)      |
+| Build               | Gradle (local) / EAS Build (cloud) |
+| Platform            | Android (API 31+)                  |
 
 ---
 
@@ -131,17 +131,17 @@ SK8Lytz includes a built-in enterprise telemetry pipeline powered by **Supabase*
 
 ## Key Files at a Glance
 
-| File | Purpose |
-|---|---|
-| `src/screens/DashboardScreen.tsx` | Root screen — owns all BLE + device state |
-| `src/hooks/useBLE.ts` | BLE engine — scan, connect, write |
-| `src/protocols/ZenggeProtocol.ts` | All hardware command generation |
-| `src/services/AppLogger.ts` | Telemetry, analytics, Supabase upload |
-| `src/components/DockedController.tsx` | Main LED control UI panel |
-| `src/components/AdminHardwareTester.tsx` | Admin BLE sniffer + EEPROM tool |
-| `src/components/LogViewerModal.tsx` | In-app analytics viewer |
-| `tools/SK8Lytz_App_Master_Reference.txt` | Complete protocol & hardware reference |
+| File                                     | Purpose                                   |
+| ---------------------------------------- | ----------------------------------------- |
+| `src/screens/DashboardScreen.tsx`        | Root screen — owns all BLE + device state |
+| `src/hooks/useBLE.ts`                    | BLE engine — scan, connect, write         |
+| `src/protocols/ZenggeProtocol.ts`        | All hardware command generation           |
+| `src/services/AppLogger.ts`              | Telemetry, analytics, Supabase upload     |
+| `src/components/DockedController.tsx`    | Main LED control UI panel                 |
+| `src/components/AdminHardwareTester.tsx` | Admin BLE sniffer + EEPROM tool           |
+| `src/components/LogViewerModal.tsx`      | In-app analytics viewer                   |
+| `tools/SK8Lytz_App_Master_Reference.txt` | Complete protocol & hardware reference    |
 
 ---
 
-*© Neogleamz. All rights reserved.*
+_© Neogleamz. All rights reserved._
