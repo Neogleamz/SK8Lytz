@@ -68,7 +68,7 @@ pie title Governance Shield
   "Remaining" : 3
 ```
 
-- [ ] `feat/eula-onboarding` : [CLOUD] [H-RISK] [Meal] [🤖 PRO-HIGH] [📝 NEEDS-PLAN] Implement the **Legal Shield** — a mandatory, scroll-to-accept EULA flow (Kinetic Safety, Photosensitivity, Data Privacy) in the Auth registration and global version enforcement for active sessions. → [Plan](docs/plans/feat-eula-onboarding.md)
+- [x] `feat/eula-onboarding` : [CLOUD] [H-RISK] [Meal] [🤖 PRO-HIGH] [📝 NEEDS-PLAN] Implement the **Legal Shield** — a mandatory, scroll-to-accept EULA flow (Kinetic Safety, Photosensitivity, Data Privacy) in the Auth registration and global version enforcement for active sessions. → [Plan](docs/plans/feat-eula-onboarding.md)
 - [ ] `feat/telemetry-onboarding-ux` : [CLOUD] [L-RISK] [Meal] [🤖 FLASH] [📝 NEEDS-PLAN] Implement a casual 'Permissions Hub' onboarding screen after EULA to enable Camera, Mic, GPS, and Bluetooth. → [Plan](docs/plans/feat-telemetry-onboarding-ux.md)
 - [ ] `feat/admin-app-manager` : [CLOUD] [L-RISK] [Feast] [🤖 PRO-HIGH] [📝 NEEDS-PLAN] Finalized Governance Hub with Safety Locks (Consolidated Scope) → [Plan](docs/plans/feat-admin-app-manager.md)
 - [ ] `gate-offline-mode` : [CLOUD] [H-RISK] [Feast] [🤖 THINK] [📝 NEEDS-PLAN] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
