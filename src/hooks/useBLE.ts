@@ -26,6 +26,7 @@ import { supabase } from '../services/supabaseClient';
 import { Buffer } from 'buffer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LOCAL_PRODUCT_CATALOG, getLocalProfileByPoints } from '../constants/ProductCatalog';
+import type { BleConnectionState } from '../types/dashboard.types';
 
 let BleManager: any;
 let State: any;
@@ -47,8 +48,7 @@ interface BluetoothLowEnergyApi {
   connectedDevices: Device[];
   allDevices: Device[];
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
-  isScanning: boolean;
-  isScanProbing: boolean;
+  bleState: BleConnectionState;
   isBluetoothSupported: boolean;
   isBluetoothEnabled: boolean;
   onDataReceived?: (deviceId: string, data: number[]) => void;
@@ -85,13 +85,23 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
   const [allDevices, setAllDevices] = useState<Device[]>([]);
   const [connectedDevices, setConnectedDevices] = useState<Device[]>([]);
-  const [isScanning, setIsScanning] = useState(false);
+  const [bleState, setBleState] = useState<BleConnectionState>('IDLE');
   const [isBluetoothSupported, setIsBluetoothSupported] = useState(Platform.OS !== 'web');
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState(Platform.OS === 'web');
   const [dataReceivedCallback, setDataReceivedCallback] = useState<((deviceId: string, data: number[]) => void) | undefined>();
   const [droppedOutDeviceIds, setDroppedOutDeviceIds] = useState<string[]>([]);
-  const [isScanProbing, setIsScanProbing] = useState(false);
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
+
+  // Strict FSM state transition helper
+  const transitionBleState = (newState: BleConnectionState) => {
+    // Prevent scanning if already checking connections
+    if (newState === 'SCANNING' && (bleState === 'CONNECTING' || bleState === 'PROBING')) {
+      AppLogger.warn(`[BLE FSM] Blocked illegal transition: ${bleState} -> ${newState}`);
+      return;
+    }
+    setBleState(newState);
+  };
+
 
   useEffect(() => {
     if (__DEV__) {
@@ -201,8 +211,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
     devices.findIndex(device => nextDevice.id === device.id) > -1;
 
   const scanForPeripherals = (options?: { keepAlive?: boolean }) => {
-    if (isScanning) return;
-    setIsScanning(true);
+    if (bleState === 'SCANNING') return;
+    transitionBleState('SCANNING');
     if (!options?.keepAlive) {
       setPendingRegistrations([]);
     }
@@ -264,16 +274,16 @@ export default function useBLE(): BluetoothLowEnergyApi {
                } as PendingRegistration;
             });
             setPendingRegistrations(pendingMocks);
-            setIsScanning(false);
+            transitionBleState('IDLE');
           }, 500);
         } else if (!bleManager) {
-          setTimeout(() => setIsScanning(false), 500);
+          setTimeout(() => transitionBleState('IDLE'), 500);
         }
       });
       if (Platform.OS === 'web') return;
     } else {
       if (!bleManager) {
-        setTimeout(() => setIsScanning(false), 500);
+        setTimeout(() => transitionBleState('IDLE'), 500);
         return;
       }
     }
@@ -281,7 +291,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     bleManager.startDeviceScan(null, null, (error: any, device: any) => {
       if (error) {
         AppLogger.error(error);
-        setIsScanning(false);
+        transitionBleState('IDLE');
         return;
       }
       if (device) {
@@ -397,12 +407,12 @@ export default function useBLE(): BluetoothLowEnergyApi {
                      }
                      // If existing is present, it maintains its user_id because we omit it in the payload.
                      
-                     // Use the UPSERT operation matching device_mac
-                     await supabase.from('registered_devices').upsert(telemetryPayload, { onConflict: 'device_mac', ignoreDuplicates: false }).catch(() => {
-                       // Silently drop errors if constraint is purely user_id,device_mac 
-                       // fallback upsert trial using the combined constraint
-                       supabase.from('registered_devices').upsert(telemetryPayload, { onConflict: 'user_id,device_mac', ignoreDuplicates: false }).catch(() => {});
-                     });
+                     try {
+                       const { error: dbErr1 } = await supabase.from('registered_devices').upsert(telemetryPayload as any, { onConflict: 'device_mac', ignoreDuplicates: false } as any);
+                       if (dbErr1) {
+                         const { error: dbErr2 } = await supabase.from('registered_devices').upsert(telemetryPayload as any, { onConflict: 'user_id,device_mac', ignoreDuplicates: false } as any);
+                       }
+                     } catch (_err) { }
 
                      // Provide the user_id back to local state so LogParser can display exactly who owns it!
                      if (ownerIds.length > 0) {
@@ -441,7 +451,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
     setTimeout(() => {
       bleManager.stopDeviceScan();
-      setIsScanning(false);
+      transitionBleState('IDLE');
       // After scan ends, background-probe each discovered device for hardware settings
       probeAllDiscoveredDevices();
     }, 5000);
@@ -464,11 +474,11 @@ export default function useBLE(): BluetoothLowEnergyApi {
     // Filter to only those that still need probing (missing hwPoints)
     const pending = devices.filter(d => (d as any).hwPoints == null);
     if (pending.length === 0) {
-      setIsScanProbing(false);
+      transitionBleState('IDLE');
       return;
     }
 
-    setIsScanProbing(true);
+    transitionBleState('PROBING');
     console.log(`[BLE Probe] Round-Robin Probing ${pending.length} device(s). Retries left: ${retriesLeft}`);
 
     const failedIds: string[] = [];
@@ -516,7 +526,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
        return probeAllDiscoveredDevices(retriesLeft - 1);
     }
 
-    setIsScanProbing(false);
+    transitionBleState('IDLE');
     console.log('[BLE Probe] All rounds complete.');
   };
 
@@ -662,6 +672,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
   const connectToDevice = async (device: Device): Promise<string | undefined> => {
     try {
+      transitionBleState('CONNECTING');
       const connectStartTime = Date.now();
       
       let isMock = 'false';
@@ -769,10 +780,11 @@ export default function useBLE(): BluetoothLowEnergyApi {
       AppLogger.log('DEVICE_CONNECTED', { id: device.id, name: device.name, firmware });
 
       bleManager.stopDeviceScan();
-      setIsScanning(false);
+      transitionBleState('READY');
       
       return firmware;
     } catch (e: any) {
+      transitionBleState('ERROR');
       AppLogger.error('FAILED TO CONNECT', e);
       AppLogger.log('BLE_CONNECTION_ERROR', { error: e?.message || String(e), deviceId: device.id });
     }
@@ -781,6 +793,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const connectToDevices = async (devices: Device[]) => {
     if (devices.length === 0) return;
     try {
+      transitionBleState('CONNECTING');
       let isMock = 'false';
       if (__DEV__) {
          isMock = await AsyncStorage.getItem('@Sk8lytz_demo_mode') || 'false';
@@ -879,8 +892,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
       setConnectedDevices(connections);
 
       bleManager.stopDeviceScan();
-      setIsScanning(false);
+      transitionBleState('READY');
     } catch (e: any) {
+      transitionBleState('ERROR');
       AppLogger.error('FAILED TO CONNECT TO GROUP', e);
       AppLogger.log('BLE_CONNECTION_ERROR', { error: e?.message || String(e), context: 'group' });
     }
@@ -938,6 +952,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
   };
 
   const disconnectFromDevice = async () => {
+    transitionBleState('DISCONNECTING');
     // Clean up all physical listeners
     Object.values(disconnectListeners.current).forEach(sub => {
       try { sub.remove(); } catch (e) {}
@@ -961,6 +976,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     
     // UI trigger after native cleanup
     setConnectedDevices([]);
+    transitionBleState('IDLE');
   };
 
   return useMemo(() => ({
@@ -973,8 +989,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     setAllDevices,
     connectedDevices,
     disconnectFromDevice,
-    isScanning,
-    isScanProbing,
+    bleState,
     isBluetoothSupported,
     isBluetoothEnabled,
     onDataReceived: dataReceivedCallback,
@@ -988,8 +1003,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
   }), [
     allDevices, 
     connectedDevices, 
-    isScanning,
-    isScanProbing,
+    bleState,
     pendingRegistrations,
     isBluetoothSupported, 
     isBluetoothEnabled, 

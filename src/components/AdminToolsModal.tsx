@@ -46,8 +46,7 @@ interface AdminToolsModalProps {
   connectedDevices?: { id: string, name: string | null }[];
   /** Master list of all discovered peripherals */
   allDevices?: any[];
-  /** BLE scanning state */
-  isScanning?: boolean;
+  bleState?: string;
   /** Trigger to start a fresh BLE discovery cycle */
   handleScan?: () => void;
   /** Callback to flush the system event timeline */
@@ -58,7 +57,7 @@ interface AdminToolsModalProps {
   liveDeviceConfigs?: Record<string, any>;
 }
 
-export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, onOpenLab, liveRxPayload, connectedDevices, allDevices, isScanning, handleScan, onClearAll, onConnectToDevice, liveDeviceConfigs }: AdminToolsModalProps) {
+export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, onOpenLab, liveRxPayload, connectedDevices, allDevices, bleState, handleScan, onClearAll, onConnectToDevice, liveDeviceConfigs }: AdminToolsModalProps) {
   const { isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [isProductManagerVisible, setIsProductManagerVisible] = useState(false);

@@ -98,7 +98,7 @@ export function useRegistration() {
       const devices: RegisteredDevice[] = data.map((row: Record<string, any>) => ({
         ...row,
         is_pending_sync: false,
-      }));
+      })) as RegisteredDevice[];
 
       setRegisteredDevices(devices);
       await AsyncStorage.setItem(LOCAL_KEY, JSON.stringify(devices));
@@ -155,7 +155,7 @@ export function useRegistration() {
               group_name: fullDevice.group_name || 'Default Fleet',
               type: 'device-fleet',
               user_id: user.id
-            }, { onConflict: 'id' });
+            } as any, { onConflict: 'id' } as any);
           } catch (fkError) {
             AppLogger.warn('[Registration] Could not establish group FK pre-flight:', fkError);
           }
@@ -187,7 +187,7 @@ export function useRegistration() {
 
           const { error } = await supabase
             .from('registered_devices')
-            .upsert(dbRow, { onConflict: 'user_id,device_mac' });
+            .upsert(dbRow as any, { onConflict: 'user_id,device_mac' } as any);
 
           if (error) throw error;
         } else {
@@ -414,7 +414,7 @@ export function useRegistration() {
             group_name: device.group_name || 'Default Fleet',
             type: 'device-fleet',
             user_id: userId
-          }, { onConflict: 'id' });
+          } as any, { onConflict: 'id' } as any);
         } catch (fkError) {
           AppLogger.warn('[Registration] Flush pre-flight group FK error:', fkError);
         }
@@ -445,7 +445,7 @@ export function useRegistration() {
 
         const { error } = await supabase
           .from('registered_devices')
-          .upsert(dbRow, { onConflict: 'user_id,device_mac' });
+          .upsert(dbRow as any, { onConflict: 'user_id,device_mac' } as any);
         if (error) AppLogger.warn('[Registration] Flush error for ' + device.device_mac, { error: error.message });
       }
 

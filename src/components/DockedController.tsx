@@ -22,7 +22,7 @@ import { useStreetMode } from '../hooks/useStreetMode';
 import { useFavorites } from '../hooks/useFavorites';
 import { useDockedControllerState } from '../hooks/useDockedControllerState';
 import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
-import type { ModeType } from '../types/dashboard.types';
+import type { ModeType, BleConnectionState } from '../types/dashboard.types';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio } from 'expo-av';
@@ -326,7 +326,7 @@ interface Sk8lytzControllerProps {
   hwSettings?: any;
   lockedProduct?: ProductType;
   isPaired?: boolean;
-  isDisconnecting?: boolean;
+  bleState?: BleConnectionState;
   points?: number;
   devices?: IDeviceState[];
   onLongPressDevice?: (device: IDeviceState) => void;
@@ -356,7 +356,7 @@ export type DockedControllerHandle = {
 // MarqueeText moved to standalone component MarqueeText.tsx
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
-  function DockedController({ hwSettings, lockedProduct, isPaired, isDisconnecting = false, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged }: Sk8lytzControllerProps, ref) {
+  function DockedController({ hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged }: Sk8lytzControllerProps, ref) {
     const { Colors, isDark } = useTheme();
     const styles = createStyles(Colors);
 
@@ -383,7 +383,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     });
 
     const writeToDevice = async (payload: number[]) => {
-      if (isDisconnecting) return; // Short-circuit dead writes during teardown
+      // Short-circuit dead writes if we are disconnected or disconnecting
+      if (bleState === 'DISCONNECTING' || bleState === 'IDLE' || bleState === 'ERROR') return;
       setLastSentPayload([...payload]);
       await optimisticWrite(payload);
     };
