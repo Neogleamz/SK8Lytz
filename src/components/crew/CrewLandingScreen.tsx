@@ -18,7 +18,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(m / 60)}h ago`;
 }
 
-export function CrewLandingScreen() {
+export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
   
@@ -146,11 +146,16 @@ export function CrewLandingScreen() {
     return (
       <ScrollView contentContainerStyle={[styles.body, { paddingTop: 4 }]} showsVerticalScrollIndicator={false}>
         {/* ── Header ── */}
-        <View style={styles.hubHeader}>
+        <View style={[styles.hubHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
           <View>
             <Text style={styles.hubTitle}>Crew Hub</Text>
             <Text style={styles.hubSub}>Skate together · sync your light show</Text>
           </View>
+          {onClose && (
+            <TouchableOpacity onPress={onClose} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20 }}>
+              <MaterialCommunityIcons name="close" size={20} color={Colors.textMuted} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ── MY CREWS ── */}

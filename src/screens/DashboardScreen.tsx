@@ -1683,8 +1683,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             </TouchableOpacity>
           </View>
 
+          {/* [BUG FIX]: Replaced zIndex: -1 with pointerEvents="box-none" so logo TouchableOpacity catches touches */}
           {/* CENTER: logo perfectly absolute centered */}
-          <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: -1 }}>
+          <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, top: 0, justifyContent: 'center', alignItems: 'center' }}>
             <TouchableOpacity activeOpacity={0.7} style={{ position: 'relative', alignItems: 'center' }} onPress={() => setIsAdminToolsVisible(true)}>
               <Image source={require('../../assets/logo.png')} style={{ width: 85, height: 26 }} resizeMode="contain" tintColor={Colors.text} />
             </TouchableOpacity>

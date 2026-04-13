@@ -39,7 +39,7 @@ function CrewModalRouter({ onClose, currentModeSummary, lastLeaderScene }: { onC
 
   const renderComponent = () => {
     switch (step) {
-      case 'landing': return <CrewLandingScreen />;
+      case 'landing': return <CrewLandingScreen onClose={onClose} />;
       case 'create': return <CrewCreateScreen />;
       case 'schedule': return <CrewScheduleScreen />;
       case 'join': return <CrewJoinScreen />;
