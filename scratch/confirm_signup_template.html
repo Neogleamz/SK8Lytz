@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Your SK8Lytz Account</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0A0A0B;
+            font-family: 'Outfit', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #FFFFFF;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #121214;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid #222226;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+
+        .header {
+            padding: 40px 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #1A1A1D 0%, #0A0A0B 100%);
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 28px;
+            letter-spacing: -1px;
+            color: #FF5A00; /* RAILZ Orange */
+            text-transform: uppercase;
+        }
+
+        .content {
+            padding: 40px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 16px;
+            color: #FFFFFF;
+        }
+
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #A0A0AB;
+            margin-bottom: 32px;
+        }
+
+        .button-wrapper {
+            margin: 32px 0;
+        }
+
+        .button {
+            background-color: #FF5A00;
+            color: #FFFFFF !important;
+            padding: 16px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 16px;
+            display: inline-block;
+            transition: transform 0.2s ease;
+        }
+
+        .footer {
+            padding: 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #52525B;
+            border-top: 1px solid #1E1E21;
+        }
+
+        .footer a {
+            color: #71717A;
+            text-decoration: underline;
+        }
+
+        @media screen and (max-width: 600px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">SK8LYTZ</div>
+        </div>
+        <div class="content">
+            <h1>Welcome to the Grid</h1>
+            <p>You're one step away from professional grade lighting control. Tap the button below to confirm your email and sync your skates.</p>
+            
+            <div class="button-wrapper">
+                <a href="{{ .ConfirmationURL }}" class="button">CONFIRM ACCOUNT</a>
+            </div>
+            
+            <p style="font-size: 14px; margin-top: 20px;">
+                Link expires in 24 hours. If you didn't request this, you can safely ignore this email.
+            </p>
+        </div>
+        <div class="footer">
+            &copy; 2026 Neogleamz. Designed for the street.<br>
+            <a href="https://github.com/Neogleamz">View GitHub</a>
+        </div>
+    </div>
+</body>
+</html>
