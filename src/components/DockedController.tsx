@@ -1076,6 +1076,23 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const [picksLoading, setPicksLoading] = useState(true);
 
     useEffect(() => {
+      const CACHE_KEY = '@Sk8lytz_PicksCache';
+
+      const loadFromCache = async () => {
+        try {
+          const cached = await AsyncStorage.getItem(CACHE_KEY);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+              setCuratedPresets(parsed);
+              setPicksLoading(false);
+            }
+          }
+        } catch (e) {
+          console.warn('[SK8Lytz Picks] Cache read error:', e);
+        }
+      };
+
       const fetchPicks = async () => {
         try {
           if (!supabase) return;
@@ -1119,7 +1136,17 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               micSource: row.mic_source,
               musicMatrixStyle: row.music_matrix_style,
             }));
-            setCuratedPresets(mapped);
+            
+            // Only update and re-render if the fetched data differs to prevent flicker
+            setCuratedPresets((prev) => {
+               if (JSON.stringify(prev) !== JSON.stringify(mapped)) {
+                 return mapped;
+               }
+               return prev;
+            });
+            
+            // Update cache asynchronously
+            AsyncStorage.setItem(CACHE_KEY, JSON.stringify(mapped)).catch(() => {});
           }
         } catch (e) {
           console.warn('[SK8Lytz Picks] Exception fetching from DB:', e);
@@ -1127,7 +1154,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           setPicksLoading(false);
         }
       };
-      fetchPicks();
+
+      // 1. Instantly load from cache to populate UI
+      loadFromCache().then(() => {
+        // 2. Perform background revalidation
+        fetchPicks();
+      });
     }, []);
 
     // -- App Microphone Logic --
