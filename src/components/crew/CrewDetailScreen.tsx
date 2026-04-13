@@ -12,7 +12,6 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { createStyles } from './CrewStyles';
 import { useCrewContext } from '../../context/CrewContext';
-// TODO: any other specific imports check manually
 
 
 

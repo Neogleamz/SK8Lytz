@@ -13,7 +13,6 @@ import CustomSlider from '../CustomSlider';
 
 import { createStyles } from './CrewStyles';
 import { useCrewContext } from '../../context/CrewContext';
-// TODO: any other specific imports check manually
 
 const AVATAR_ICONS = ['account-group', 'star', 'fire', 'lightning-bolt', 'skull', 'heart', 'basketball', 'music-note', 'rocket', 'ghost', 'robot', 'alien'];
 
@@ -58,7 +57,7 @@ export function CrewManageScreen() {
         state: newCrewState || undefined,
         description: newCrewDescription || undefined,
         inviteCode: !newCrewIsPublic ? newCrewCode : undefined,
-        members: selectedMembers.map((m: any) => m.user_id)
+        members: selectedMembers.map(m => m.user_id)
       });
       AppLogger.log('CREW_PERMANENT_CREATED', {
         crewId: crew.id, crewName: crew.name, isPublic: newCrewIsPublic,
@@ -66,13 +65,14 @@ export function CrewManageScreen() {
       });
       const updated = await profileService.getMyCrew();
       hub.setMyCrews(updated);
-      hub.setPermanentCrews(updated.map((c: any) => ({ id: c.id, name: c.name })));
+      hub.setPermanentCrews(updated.map(c => ({ id: c.id, name: c.name })));
       
       formState.setSelectedCrewId(crew.id);
       formState.setCrewName(crew.name);
       setStep('landing');
-    } catch (e: any) {
-      setCreateCrewError(e.message || 'Failed to create crew');
+    } catch (e: unknown) {
+      const err = e as Error;
+      setCreateCrewError(err.message || 'Failed to create crew');
     } finally {
       setIsCreatingCrew(false);
     }
