@@ -39,7 +39,7 @@ interface AdminToolsModalProps {
   /** Callback to launch the LED Diagnostic Lab modal */
   onOpenLab?: () => void;
   /** Callback to dispatch physical BLE write commands */
-  writeToDevice?: (data: number[], deviceId?: string) => Promise<void>;
+  writeToDevice?: (data: number[], deviceId?: string) => Promise<void | boolean>;
   /** Live telemetry feed of incoming hardware notifications */
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
   /** List of currently connected BLE peripherals */

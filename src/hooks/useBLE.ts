@@ -42,7 +42,7 @@ interface BluetoothLowEnergyApi {
   connectToDevice: (device: Device) => Promise<string | undefined>;
   connectToDevices: (devices: Device[]) => Promise<void>;
   disconnectFromDevice: () => void;
-  writeToDevice: (payload: number[], targetDeviceId?: string) => Promise<void>;
+  writeToDevice: (payload: number[], targetDeviceId?: string) => Promise<boolean>;
   probeDevice: (mac: string) => Promise<void>;
   connectedDevices: Device[];
   allDevices: Device[];
@@ -892,12 +892,12 @@ export default function useBLE(): BluetoothLowEnergyApi {
   // For the 0x51 Pro Effects payload (299 bytes), the hardware must accept MTU >= 302.
   const negotiatedMtuRef = useRef<number>(186);
 
-  const writeToDevice = async (payload: number[], targetDeviceId?: string) => {
+  const writeToDevice = async (payload: number[], targetDeviceId?: string): Promise<boolean> => {
     const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
     console.log(`[BLE WRITE ${payload.length}B | MTU=${negotiatedMtuRef.current}]${targetDeviceId ? ` [→${targetDeviceId.slice(-4)}]` : ''}`, hexString.substring(0, 80));
     AppLogger.setLastTxPayload(hexString);
 
-    if (connectedDevicesRef.current.length === 0 || Platform.OS === 'web') return;
+    if (connectedDevicesRef.current.length === 0 || Platform.OS === 'web') return true;
 
     const targets = targetDeviceId
       ? connectedDevicesRef.current.filter(d => d.id === targetDeviceId)
@@ -905,7 +905,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
     if (targets.length === 0 && targetDeviceId) {
       AppLogger.warn(`Target device ${targetDeviceId} not found in connected devices`);
-      return;
+      return false;
     }
 
     // Chunk size: MTU - 3 bytes (ATT header overhead)
@@ -931,8 +931,10 @@ export default function useBLE(): BluetoothLowEnergyApi {
       } catch (writeError: any) {
         AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError?.message);
         AppLogger.log('BLE_WRITE_ERROR', { error: writeError?.message || String(writeError), target: device.id, payloadLen: payload.length });
+        return false;
       }
     }
+    return true;
   };
 
   const disconnectFromDevice = async () => {

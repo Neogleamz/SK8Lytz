@@ -33,7 +33,7 @@ interface Sk8LytzProgrammerModalProps {
   deviceConfigs?: Record<string, HardwareSettings>;       // pre-populated from scan probe
   connectToDevice?: (d: ScannedDevice) => Promise<void>;
   disconnectFromDevice?: (id: string) => Promise<void>;
-  writeToDevice: (data: number[], deviceId?: string) => Promise<void>;
+  writeToDevice: (data: number[], deviceId?: string) => Promise<void | boolean>;
   isScanning: boolean;
   isScanProbing?: boolean;
   handleScan: () => void;

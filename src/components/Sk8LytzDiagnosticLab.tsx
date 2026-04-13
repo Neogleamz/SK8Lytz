@@ -37,7 +37,7 @@ import { useProtocolBuilder } from '../hooks/useProtocolBuilder';
 interface LabProps {
   visible: boolean;
   onClose: () => void;
-  writeToDevice?: (data: number[], deviceId?: string) => Promise<void>;
+  writeToDevice?: (data: number[], deviceId?: string) => Promise<void | boolean>;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
   connectedDevices?: { id: string; name: string | null }[];
   hwSettings?: {
