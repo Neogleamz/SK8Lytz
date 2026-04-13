@@ -12,8 +12,11 @@
  *
  * Depends on: AsyncStorage, useRegistration (via options), custom types
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../services/supabaseClient';
+import { AppLogger } from '../services/AppLogger';
+import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import type { CustomGroup, GroupModalState, DeviceSettings } from '../types/dashboard.types';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 
@@ -24,10 +27,19 @@ interface UseDashboardGroupsOptions {
    * Return value (boolean | void) is intentionally discarded.
    */
   saveAllRegisteredDevices: (devices: RegisteredDevice[]) => Promise<boolean | void>;
+  /** Saves a single registered device to cloud + local. Used by group CRUD. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  saveRegisteredDevice: (device: any) => Promise<any>;
   migrateLegacyGroups: (allDevices: any[], deviceConfigs: Record<string, DeviceSettings>) => Promise<RegisteredDevice[]>;
   clearPendingRegistrations: () => void;
   /** Called after FTUE setup completes to hide the SetupWizard. */
   onRegistrationComplete: () => void;
+  /** Provides real-time access to BLE-scanned devices for provisioning. */
+  getAllScannedDevices: () => any[];
+  /** Mirror config-back into useBLE's allDevices state after provisioning. */
+  setAllDevices: (updater: (prev: any[]) => any[]) => void;
+  /** Ref that mirrors allDevices for stale-closure-safe access inside callbacks. */
+  allDevicesRef: React.MutableRefObject<any[]>;
 }
 
 export interface UseDashboardGroupsResult {
@@ -57,14 +69,23 @@ export interface UseDashboardGroupsResult {
   setIsRegisteredCollapsed: (v: boolean) => void;
   // ─── FTUE registration handler ────────────────────────────────────────────
   handleRegistrationComplete: (devices: RegisteredDevice[], allBleDevices: any[]) => Promise<void>;
+  // ─── Provisioning & CRUD (Phase 2–3 migration) ────────────────────────────
+  runAutoProvisioning: () => Promise<void>;
+  isProvisioningTriggered: React.MutableRefObject<boolean>;
+  saveGroup: (name: string, deviceIds: string[]) => Promise<void>;
+  handleGroupDelete: (id: string) => Promise<void>;
 }
 
 export function useDashboardGroups({
   registeredDevices,
   saveAllRegisteredDevices,
+  saveRegisteredDevice,
   migrateLegacyGroups,
   clearPendingRegistrations,
   onRegistrationComplete,
+  getAllScannedDevices,
+  setAllDevices,
+  allDevicesRef,
 }: UseDashboardGroupsOptions): UseDashboardGroupsResult {
 
   // ─── Group state (derived from useRegistration, kept as display SSOT) ─────
@@ -204,6 +225,277 @@ export function useDashboardGroups({
     onRegistrationComplete();
   };
 
+  // ─── Auto-provisioning: catalog-driven group inference after scan ─────────
+  /**
+   * Trigger flag set by handleScan() in DashboardScreen.
+   * `runAutoProvisioning` reads and clears it to ensure single-execution.
+   */
+  const isProvisioningTriggered = useRef(false);
+
+  /**
+   * Classifies all scanned BLE devices by product type, auto-groups pairs,
+   * persists to AsyncStorage, and syncs to Supabase.
+   * Called by DashboardScreen's handleScan after the scan timer completes.
+   */
+  const runAutoProvisioning = useCallback(async () => {
+    if (!isProvisioningTriggered.current) return;
+    isProvisioningTriggered.current = false;
+
+    AppLogger.log('BLE_STATE_CHANGE', { event: 'provisioning_started' });
+    const currentDevices = getAllScannedDevices();
+    if (currentDevices.length === 0) return;
+
+    let updatedGroups = [...customGroupsRef.current];
+    let didUpdateGroups = false;
+    let didUpdateConfigs = false;
+
+    const [resConfigs, resProcessed] = await Promise.all([
+      AsyncStorage.getItem('@Sk8lytz_device_configs'),
+      AsyncStorage.getItem('@Sk8lytz_processed_devices'),
+    ]);
+
+    let configs: any = {};
+    if (resConfigs) { try { configs = JSON.parse(resConfigs); } catch (e) {} }
+
+    let processed: string[] = [];
+    if (resProcessed) { try { processed = JSON.parse(resProcessed); } catch (e) {} }
+    let didUpdateProcessed = false;
+
+    const checkAndGroup = (
+      devicesToProcess: any[],
+      targetGroupName: string,
+      typeVal: string,
+      pointsVal: number,
+    ) => {
+      const unprocessed = devicesToProcess.filter(d =>
+        !processed.includes(d.id) &&
+        !updatedGroups.some(g => g.deviceIds.includes(d.id))
+      );
+      if (unprocessed.length >= 2) {
+        const leftId = unprocessed[0].id;
+        const rightId = unprocessed[1].id;
+        processed.push(leftId, rightId);
+        didUpdateProcessed = true;
+
+        const existingIdx = updatedGroups.findIndex(g => g.name === targetGroupName);
+        if (existingIdx > -1) {
+          const target = updatedGroups[existingIdx];
+          if (!target.deviceIds.includes(leftId) || !target.deviceIds.includes(rightId)) {
+            updatedGroups[existingIdx] = {
+              ...target,
+              deviceIds: Array.from(new Set([...target.deviceIds, leftId, rightId])),
+            };
+            didUpdateGroups = true;
+          }
+        } else {
+          updatedGroups.push({
+            id: `group-${Date.now()}-${typeVal}-${Math.floor(Math.random() * 1000)}`,
+            name: targetGroupName,
+            deviceIds: [leftId, rightId],
+            type: typeVal,
+            isGroup: true,
+          });
+          didUpdateGroups = true;
+        }
+
+        const names = [`${typeVal} Left Skate`, `${typeVal} Right Skate`];
+        [leftId, rightId].forEach((id, idx) => {
+          if (!configs[id] || configs[id].name !== names[idx]) {
+            configs[id] = { ...configs[id], name: names[idx], type: typeVal, points: pointsVal };
+            didUpdateConfigs = true;
+          }
+        });
+      }
+    };
+
+    // Catalog-driven classification — groups by resolved product type
+    const devicesByType = new Map<string, typeof currentDevices>();
+    for (const d of currentDevices) {
+      const pts = (d as any).points ?? 0;
+      const profile = getLocalProfileByPoints(pts);
+      if (!devicesByType.has(profile.id)) devicesByType.set(profile.id, []);
+      devicesByType.get(profile.id)!.push(d);
+    }
+    for (const [typeKey, devices] of devicesByType.entries()) {
+      const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === typeKey) ?? LOCAL_PRODUCT_CATALOG[0];
+      checkAndGroup(devices, `${profile.displayName} SK8Lytz`, typeKey, profile.defaultLedPoints);
+    }
+
+    const storagePromises: Promise<void>[] = [];
+    if (didUpdateProcessed)
+      storagePromises.push(AsyncStorage.setItem('@Sk8lytz_processed_devices', JSON.stringify(processed)));
+    if (didUpdateGroups)
+      storagePromises.push(AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(updatedGroups)));
+    if (didUpdateConfigs)
+      storagePromises.push(AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs)));
+    if (storagePromises.length > 0) await Promise.all(storagePromises);
+
+    if (didUpdateGroups) {
+      customGroupsRef.current = updatedGroups;
+    }
+
+    // Sync to Supabase if authenticated
+    if ((didUpdateGroups || didUpdateConfigs) && supabase) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const userId = session.user.id;
+          for (const group of updatedGroups) {
+            try {
+              await supabase.from('registered_groups').upsert({
+                id: group.id, user_id: userId, group_name: group.name,
+                type: (group as any).type || 'device-fleet',
+                created_at: new Date().toISOString(),
+              }, { onConflict: 'id' });
+            } catch (_ge) { /* best-effort */ }
+
+            for (const deviceId of group.deviceIds) {
+              const c = configs[deviceId];
+              if (c) {
+                try {
+                  await supabase.from('registered_devices').upsert({
+                    id: deviceId, user_id: userId, group_id: group.id,
+                    custom_name: c.name || 'Unknown', points: c.points || 0,
+                    segments: c.segments || 0, sorting: c.sorting || 'GRB',
+                    strip_type: c.stripType || 'UNKNOWN',
+                  }, { onConflict: 'id' });
+                } catch (_de) { /* best-effort */ }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        AppLogger.warn('Supabase sync error during provisioning', { error: String(e) });
+      }
+    }
+
+    if (didUpdateConfigs) {
+      setAllDevices(prev => {
+        let morphed = false;
+        const next = prev.map(d => {
+          const c = configs[d.id];
+          if (c && (d.name !== c.name || (d as any).sorting !== c.sorting || (d as any).stripType !== c.stripType)) {
+            morphed = true;
+            return { ...d, name: c.name, points: c.points, sorting: c.sorting, stripType: c.stripType } as any;
+          }
+          return d;
+        });
+        if (morphed) allDevicesRef.current = next;
+        return morphed ? next : prev;
+      });
+    }
+
+    // Collapse device list after provisioning to surface grouped controls
+    setIsDeviceListCollapsed(true);
+    AppLogger.log('BLE_STATE_CHANGE', { event: 'provisioning_complete' });
+  }, [getAllScannedDevices, setAllDevices, allDevicesRef]);
+
+  // ─── Group CRUD: save and delete handlers ───────────────────────────────────
+
+  /**
+   * Deletes a custom group: moves all its registered devices back to the
+   * default fleet and scrubs their group config from AsyncStorage.
+   */
+  const handleGroupDelete = async (id: string): Promise<void> => {
+    const groupToDelete = customGroups.find(g => g.id === id);
+    if (!groupToDelete) { closeGroupModal(); return; }
+
+    const devsToDelete = registeredDevices.filter(d => d.group_id === id);
+    for (const d of devsToDelete) {
+      await saveRegisteredDevice({
+        ...d, group_id: 'default-fleet', group_name: d.group_name ?? '', is_pending_sync: true,
+      });
+    }
+
+    if (groupToDelete.deviceIds) {
+      try {
+        const stored = await AsyncStorage.getItem('ng_device_configs');
+        if (stored) {
+          const configs = JSON.parse(stored);
+          let configsChanged = false;
+          for (const mac of groupToDelete.deviceIds) {
+            if (configs[mac]) {
+              delete configs[mac].groupId;
+              delete configs[mac].groupName;
+              configs[mac].grouped = false;
+              configsChanged = true;
+            }
+          }
+          if (configsChanged) {
+            await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
+            setDeviceConfigs(configs);
+          }
+        }
+      } catch (e) {
+        AppLogger.warn('Failed to scrub ghost group from device configs', { error: String(e) });
+      }
+    }
+
+    closeGroupModal();
+  };
+
+  /**
+   * Creates or renames a custom group. If renaming with zero devices, deletes
+   * the group. Persists group membership changes to AsyncStorage and Supabase
+   * via saveRegisteredDevice.
+   */
+  const saveGroup = async (name: string, deviceIds: string[]): Promise<void> => {
+    let finalGroupId = `group-${Date.now()}`;
+    let previousDeviceIds: string[] = [];
+
+    if (groupModalState === 'CREATE') {
+      const existing = customGroups.find(g => g.name.toLowerCase() === name.toLowerCase());
+      if (existing) {
+        finalGroupId = existing.id;
+        previousDeviceIds = existing.deviceIds || [];
+      }
+      clearSelection();
+    } else if (groupModalState === 'RENAME' && editingGroupId) {
+      if (deviceIds.length === 0) {
+        await handleGroupDelete(editingGroupId);
+        return;
+      }
+      finalGroupId = editingGroupId;
+      const existing = customGroups.find(g => g.id === editingGroupId);
+      if (existing) previousDeviceIds = existing.deviceIds || [];
+    }
+
+    try {
+      const stored = await AsyncStorage.getItem('ng_device_configs');
+      const configs = stored ? JSON.parse(stored) : {};
+      let configsChanged = false;
+
+      // Removed devices: scrub their configs
+      const removedIds = previousDeviceIds.filter(id => !deviceIds.includes(id));
+      for (const mac of removedIds) {
+        if (configs[mac]) {
+          delete configs[mac].groupId;
+          delete configs[mac].groupName;
+          configs[mac].grouped = false;
+          configsChanged = true;
+        }
+        const rd = registeredDevices.find(r => r.device_mac === mac);
+        if (rd) await saveRegisteredDevice({ ...rd, group_id: 'default-fleet', group_name: rd.group_name ?? '', is_pending_sync: true });
+      }
+
+      // Added/preserved devices: enforce group membership
+      for (const mac of deviceIds) {
+        if (!configs[mac]) configs[mac] = {};
+        configs[mac] = { ...configs[mac], groupId: finalGroupId, groupName: name, grouped: true };
+        configsChanged = true;
+        const rd = registeredDevices.find(r => r.device_mac === mac);
+        if (rd) await saveRegisteredDevice({ ...rd, group_id: finalGroupId, group_name: name, is_pending_sync: true });
+      }
+
+      if (configsChanged) {
+        await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
+        setDeviceConfigs(configs);
+      }
+    } catch (e) {
+      AppLogger.warn('Failed to sync group cache changes', { error: String(e) });
+    }
+  };
+
   return {
     customGroups,
     customGroupsRef,
@@ -227,5 +519,9 @@ export function useDashboardGroups({
     isRegisteredCollapsed,
     setIsRegisteredCollapsed,
     handleRegistrationComplete,
+    runAutoProvisioning,
+    isProvisioningTriggered,
+    saveGroup,
+    handleGroupDelete,
   };
 }

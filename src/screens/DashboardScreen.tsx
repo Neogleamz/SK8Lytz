@@ -32,7 +32,7 @@ import GroupSettingsModal from '../components/GroupSettingsModal';
 import Sk8LytzProgrammerModal from '../components/Sk8LytzProgrammerModal';
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
-import AdminToolsModal from '../components/AdminToolsModal';
+import AdminToolsModal from '../components/admin/AdminToolsModal';
 import VoiceFAB from '../components/Voice/VoiceFAB';
 import VoiceCommandModal from '../components/Voice/VoiceCommandModal';
 import VoiceTutorialModal from '../components/Voice/VoiceTutorialModal';
@@ -51,143 +51,20 @@ import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/Pro
 import { useDashboardProfile } from '../hooks/useDashboardProfile';
 import { useDashboardGroups } from '../hooks/useDashboardGroups';
 import { useDashboardVoice } from '../hooks/useDashboardVoice';
+import { useDashboardAutoConnect } from '../hooks/useDashboardAutoConnect';
+import { useHardwareNotifications } from '../hooks/useHardwareNotifications';
 import type { DeviceSettings, CustomGroup } from '../types/dashboard.types';
 
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
 // — migrated as part of Phase 1 Domain-Driven Refactor
 
-/**
- * SkateGroupCard Helper Component
- * Renders a premium, telemetry-rich group card with morphing gradients.
- */
-const SkateGroupCard = ({
-  group,
-  onPress,
-  onLongPress,
-  colors,
-  lastPattern,
-  userProfile,
-  powerStates,
-  Colors,
-  styles
-}: {
-  group: CustomGroup;
-  onPress: () => void;
-  onLongPress: () => void;
-  colors: string[];
-  lastPattern?: string;
-  userProfile: any;
-  powerStates: Record<string, boolean>;
-  Colors: any;
-  styles: any;
-}) => {
-  const isPoweredOn = group.deviceIds.every(id => powerStates[id] !== false);
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      onLongPress={onLongPress}
-      activeOpacity={0.85}
-      style={styles.skateCardWrapper}
-    >
-      <LinearGradient
-        colors={isPoweredOn ? (colors as any) : ['#333', '#1a1a1a']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.skateCardGradient}
-      >
-        <View style={styles.skateCardInner}>
-          {/* Glassmorphism Refraction Overlay */}
-          <View style={styles.skateCardRefraction} />
-
-          {/* TOP DECOR: Avatar (Pill) + Telemetry */}
-          <View style={styles.skateCardHeader}>
-            {/* Z Brandmark Pill (Top-Left) */}
-            <View style={styles.avatarPill}>
-      <Image 
-        source={require('../../assets/logo.png')} 
-        style={styles.avatarPillImage} 
-        resizeMode="contain"
-      />
-               <View style={styles.avatarStatusDot} />
-            </View>
-
-            {/* Telemetry (Top-Right) */}
-            <View style={styles.telemetryContainer}>
-               {/* RSSI Signal Strength Bars */}
-               <View style={styles.telemetryItem}>
-                 <MaterialCommunityIcons name="signal-variant" size={14} color={isPoweredOn ? colors[0] : '#666'} />
-                 <View style={styles.rssiBars}>
-                   <View style={[styles.rssiBar, { height: 4, backgroundColor: isPoweredOn ? colors[0] : '#444' }]} />
-                   <View style={[styles.rssiBar, { height: 7, backgroundColor: isPoweredOn ? colors[0] : '#444' }]} />
-                   <View style={[styles.rssiBar, { height: 10, backgroundColor: isPoweredOn ? colors[0] : '#444', opacity: 0.5 }]} />
-                 </View>
-               </View>
-
-               {/* Battery Placeholder */}
-               <View style={styles.telemetryItem}>
-                 <MaterialCommunityIcons name="battery-60" size={16} color={isPoweredOn ? Colors.success : '#666'} />
-               </View>
-            </View>
-          </View>
-
-          {/* CENTER: Group Name & Pattern */}
-          <View style={styles.skateCardContent}>
-            <Text style={styles.skateCardGroupName}>
-              {group.name.toUpperCase()}
-            </Text>
-            
-            <View style={styles.patternPill}>
-              <View style={[styles.patternDot, { backgroundColor: isPoweredOn ? colors[0] : '#555' }]} />
-              <Text style={styles.patternName}>
-                {isPoweredOn ? (lastPattern || 'ACTIVE') : 'POWERED OFF'}
-              </Text>
-            </View>
-          </View>
-
-          {/* BOTTOM DECOR: Device Count */}
-          <View style={styles.skateCardFooter}>
-             <Text style={styles.deviceCountText}>
-               {group.deviceIds.length} {group.deviceIds.length === 1 ? 'DEVICE' : 'DEVICES'} PAIRED
-             </Text>
-             <View style={[styles.powerIconCircle, { backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255,255,255,0.05)' }]}>
-               <MaterialCommunityIcons 
-                 name="power" 
-                 size={16} 
-                 color={isPoweredOn ? Colors.primary : '#666'} 
-               />
-             </View>
-          </View>
-        </View>
-      </LinearGradient>
-    </TouchableOpacity>
-  );
-};
-
-/**
- * Utility to generate premium gradient colors based on pattern name/state
- */
-const getPatternColors = (patternName?: string, Colors?: any) => {
-  if (!patternName) return [Colors?.primary || '#00F0FF', Colors?.secondary || '#7000FF'];
-  
-  const name = patternName.toLowerCase();
-  if (name.includes('fire') || name.includes('flame')) return ['#FF4D00', '#FF9E00'];
-  if (name.includes('water') || name.includes('ocean')) return ['#00B2FF', '#00FFF0'];
-  if (name.includes('forest') || name.includes('nature')) return ['#00FF85', '#00A3FF'];
-  if (name.includes('sunset') || name.includes('gold')) return ['#FFD600', '#FF00E5'];
-  if (name.includes('nebula') || name.includes('space')) return ['#7000FF', '#00FFFF'];
-  if (name.includes('neon') || name.includes('cyber')) return ['#FF00E5', '#00F0FF'];
-  if (name.includes('police')) return ['#FF0000', '#0000FF'];
-  if (name.includes('matrix')) return ['#00FF00', '#003300'];
-  
-  // Default to branding colors
-  return [Colors?.primary || '#00F0FF', Colors?.secondary || '#7000FF'];
-};
+import { SkateGroupCard } from '../components/dashboard/SkateGroupCard';
+import { createDashboardStyles, getPatternColors } from '../styles/DashboardStyles';
 
 export default function DashboardScreen({ isOfflineMode = false, onLogout }: { isOfflineMode?: boolean; onLogout?: () => void } = {}) {
   const { Colors, isDark, toggleTheme } = useTheme();
   const insets = useSafeAreaInsets();
-  const styles = createStyles(Colors);
+  const styles = createDashboardStyles(Colors);
   const {
     scanForPeripherals,
     allDevices,
@@ -253,33 +130,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     AppLogger.updateKnownDevices(merged);
   }, [connectedDevices, allDevices]);
 
-  // Register background probe callback — fires for each device after scan probe
-  useEffect(() => {
-    setOnHardwareProbed((deviceId: string, cfg: any) => {
-      // Merge parsed hardware config into deviceConfigs (persisted store)
-      setDeviceConfigs(prev => {
-        const merged = { ...(prev[deviceId] || {}), ...cfg };
-        const next = { ...prev, [deviceId]: merged };
-        // Persist immediately
-        AsyncStorage.setItem('ng_device_configs', JSON.stringify(next)).catch(() => {});
-        return next;
-      });
-      // Also update allDevices so the list shows config before user connects
-      setAllDevices(prev => prev.map(d =>
-        (d as any).id === deviceId
-          ? { ...d,
-              points: cfg.ledPoints,
-              segments: cfg.segments,
-              stripType: cfg.icName,
-              sorting: cfg.colorSortingName,
-              colorSorting: cfg.colorSorting,
-              icType: cfg.icType,
-              detected: true
-            } as any
-          : d
-      ));
-    });
-  }, [setOnHardwareProbed]);
+  // ── Hardware BLE callbacks (extracted to useHardwareNotifications) ───────────
 
   const [updateTrigger, setUpdateTrigger] = useState(0);
   const [isTestModeActive, setIsTestModeActive] = useState(false);
@@ -287,6 +138,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
 
   // ── Phase 1: Fleet Groups, Device Configs, Power States → useDashboardGroups ───────
+  // Declare refs before domain hooks that consume them
+  const allDevicesRef = React.useRef(allDevices);
+  const lastProcessedRef = React.useRef<string>('');
+
   const [isSetupWizardVisible, setIsSetupWizardVisible] = useState(false);
   const {
     customGroups,
@@ -311,11 +166,19 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     isRegisteredCollapsed,
     setIsRegisteredCollapsed,
     handleRegistrationComplete,
+    runAutoProvisioning,
+    isProvisioningTriggered,
+    saveGroup,
+    handleGroupDelete,
   } = useDashboardGroups({
     registeredDevices,
     saveAllRegisteredDevices,
+    saveRegisteredDevice,
     migrateLegacyGroups,
     clearPendingRegistrations,
+    getAllScannedDevices: () => allDevicesRef.current,
+    setAllDevices,
+    allDevicesRef,
     onRegistrationComplete: () => {
       setIsSetupWizardVisible(false);
       wizardCheckedRef.current = false;
@@ -349,10 +212,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   } = useDashboardVoice({ dockedControllerRef });
 
   const [isCheckingRegistrations, setIsCheckingRegistrations] = useState(true);
-  const lastProcessedRef = React.useRef<string>('');
-  const allDevicesRef = React.useRef(allDevices);
-  const isProvisioningTriggered = React.useRef(false);
-  // customGroupsRef is now provided by useDashboardGroups hook
 
   // AppState Telemetry
   useEffect(() => {
@@ -458,125 +317,19 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
      }
   };
 
-  // Cloud Sync & Auto Connect on Launch
-  const hasAutoConnectedRef = useRef(false);
-  const autoConnectIdsRef = useRef<string[]>([]);
-  
-  // Continuous Auto-Connect Observer
-  useEffect(() => {
-    if (autoConnectIdsRef.current.length === 0) return;
-    
-    // Find devices that are in our target list, currently scanned, but not yet connected
-    const pendingToConnect = allDevices.filter(d => 
-      autoConnectIdsRef.current.includes(d.id) && 
-      !connectedDevices.some(c => c.id === d.id)
-    );
-
-    if (pendingToConnect.length > 0) {
-      // Remove them from the queue so we don't spam the connection loop
-      autoConnectIdsRef.current = autoConnectIdsRef.current.filter(id => !pendingToConnect.some(p => p.id === id));
-      console.log('[SK8Lytz] Observer connecting to newly discovered devices:', pendingToConnect.map(d => d.name));
-      connectToDevices(pendingToConnect);
-    }
-  }, [allDevices, connectedDevices]);
-
-  useEffect(() => {
-    async function syncCloudAndAutoConnect() {
-      if (hasAutoConnectedRef.current || !isBluetoothSupported || !isBluetoothEnabled) return;
-      hasAutoConnectedRef.current = true; // Prevent looping
-
-      let groupsToProcess: any[] = [];
-      let isOffline = true;
-      let CloudUserId: string | null = null;
-
-      if (supabase) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          CloudUserId = session.user.id;
-          // Fetch profile asynchronously; UI updating is handled by userProfile useEffect
-          try {
-            await refreshProfile();
-          } catch (e) {
-            AppLogger.warn('Failed to refresh profile on dashboard load', { error: String(e) });
-          }
-          let groups: CustomGroup[] | null = null;
-          try {
-            const result = await supabase.from('registered_groups').select('*').eq('user_id', CloudUserId);
-            groups = result.data as any[] as CustomGroup[];
-            isOffline = !!result.error;
-          } catch {
-            isOffline = true;
-          }
-          if (!isOffline && groups && groups.length > 0) {
-            groupsToProcess = groups;
-          }
-        }
-      }
-
-      if (isOffline || groupsToProcess.length === 0) {
-        // Fallback to local storage
-        console.log('[SK8Lytz] Cloud unreachable. Using local AsyncStorage for Auto-Connect...');
-        const localDevicesStr = await AsyncStorage.getItem('@Sk8lytz_registered_devices');
-        if (localDevicesStr) {
-          try {
-            const parsed = JSON.parse(localDevicesStr);
-            const offlineGroupMap = new Map();
-            parsed.forEach((d: any) => {
-              if (d.group_id && d.group_id !== 'default-fleet') {
-                if (!offlineGroupMap.has(d.group_id)) {
-                  offlineGroupMap.set(d.group_id, {
-                    id: d.group_id,
-                    group_name: d.group_name || d.group_id,
-                    created_at: new Date().toISOString(), // Fallback
-                    deviceIds: []
-                  });
-                }
-                offlineGroupMap.get(d.group_id).deviceIds.push(d.device_mac);
-              }
-            });
-            groupsToProcess = Array.from(offlineGroupMap.values());
-          } catch (e) {}
-        }
-      }
-
-      if (groupsToProcess.length > 0) {
-        console.log('[SK8Lytz] Found fleets. Initiating Auto-Connect Sequence...');
-        requestPermissions().then(async (granted) => {
-          if (granted && !isActuallyConnected) {
-            scanForPeripherals();
-            
-            let presentGroups: any[] = [];
-            let idsToConnect: string[] = [];
-
-            if (!isOffline && supabase && CloudUserId) {
-               const { data: devices } = await supabase.from('registered_devices').select('*').eq('user_id', CloudUserId);
-               if (devices) {
-                  presentGroups = groupsToProcess.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-                  
-                  if (presentGroups.length > 0) {
-                    idsToConnect = devices.filter((d: any) => d.group_id === presentGroups[0].id).map((d: any) => d.device_mac || d.id);
-                  }
-               }
-            } else {
-               presentGroups = groupsToProcess.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-               if (presentGroups.length > 0) {
-                  idsToConnect = presentGroups[0].deviceIds;
-               }
-            }
-
-            if (idsToConnect.length > 0) {
-              console.log('[SK8Lytz] Queuing Auto-connect for fleet:', presentGroups[0].group_name);
-              autoConnectIdsRef.current = idsToConnect;
-            }
-          }
-        });
-      }
-    }
-    
-    // Slight delay to allow Bluetooth stack to fully initialize (1.5s)
-    const timerId = setTimeout(syncCloudAndAutoConnect, 1500);
-    return () => clearTimeout(timerId);
-  }, [isBluetoothSupported, isBluetoothEnabled]);
+  // ── Cloud Sync & BLE Auto-Connect (extracted to useDashboardAutoConnect) ──
+  useDashboardAutoConnect({
+    isBluetoothSupported,
+    isBluetoothEnabled,
+    isActuallyConnected: connectedDevices.length > 0, // computed early before displayConnectedDevices useMemo
+    allDevices,
+    connectedDevices,
+    connectToDevices,
+    scanForPeripherals,
+    requestPermissions,
+    refreshProfile,
+    registeredDevices,
+  });
 
   // ── Crew auto-rejoin on launch ────────────────────────────────────────────
   useEffect(() => {
@@ -612,101 +365,16 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // Voice command dispatch + notification init are now handled
   // by useDashboardVoice and useDashboardProfile hooks respectively.
 
-  // Bind BLE Notification Hardware Sync Hook
-  useEffect(() => {
-    setOnDataReceived((deviceId: string, payload: number[]) => {
-      const payloadHex = payload.map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
-      setLastRawNotification({ deviceId, payloadHex });
+  // ── BLE hardware callbacks — setOnDataReceived + setOnHardwareProbed ────────
+  useHardwareNotifications({
+    setOnDataReceived,
+    setOnHardwareProbed,
+    allDevices,
+    setAllDevices,
+    setDeviceConfigs,
+    setLastRawNotification,
+  });
 
-      // ── Diagnostics: upload every raw notification to Supabase ──────────────
-      // Fire-and-forget: never blocks the UI or BLE pipeline
-      const v2ConfigForUpload = ZenggeProtocol.parseHardwareSettingsResponse(payload);
-      const v1ConfigForUpload = ZenggeProtocol.parseHardwareConfig(payload);
-      const parsedOk = !!(v2ConfigForUpload || v1ConfigForUpload);
-      const pts = v2ConfigForUpload?.ledPoints ?? v1ConfigForUpload?.points;
-      const ict = v2ConfigForUpload?.icType;
-      const icn = v2ConfigForUpload?.icName ?? v1ConfigForUpload?.stripType;
-      const cs  = v2ConfigForUpload?.colorSorting ?? undefined;
-      const co  = v2ConfigForUpload?.colorSortingName ?? v1ConfigForUpload?.sorting;
-      const deviceName = allDevices.find((d: any) => d.id === deviceId)?.name ?? null;
-      supabase.from('device_diagnostics').insert({
-        device_id:     deviceId,
-        device_name:   deviceName,
-        payload_hex:   payloadHex,
-        payload_bytes: payload.length,
-        byte_0:        payload[0] ?? null,
-        byte_2:        payload[2] ?? null,
-        parsed_ok:     parsedOk,
-        points:        pts ?? null,
-        ic_type:       ict ?? null,
-        ic_name:       icn ?? null,
-        color_sorting: cs ?? null,
-        color_order:   co ?? null,
-      }).then(({ error }: any) => {
-        if (error) AppLogger.warn('[Diagnostics] upload failed:', error.message);
-        else console.log('[Diagnostics] uploaded', payload.length, 'bytes for', deviceId);
-      });
-      // ────────────────────────────────────────────────────────────────────────
-      
-      const v2Config = ZenggeProtocol.parseHardwareSettingsResponse(payload);
-      const v1Config = ZenggeProtocol.parseHardwareConfig(payload);
-      
-      let configPoints: number | undefined;
-      let configSegments: number | undefined;
-      let configStripType: string | undefined;
-      let configSorting: string | undefined;
-      let configSortingIdx: number | undefined;
-      let configIcType: number | undefined;
-
-      if (v2Config) {
-        configPoints = v2Config.ledPoints;
-        configSegments = v2Config.segments;
-        configStripType = v2Config.icName;
-        configSorting = v2Config.colorSortingName;
-        configSortingIdx = v2Config.colorSorting;   // numeric index — critical for hwSettings
-        configIcType = v2Config.icType;
-      } else if (v1Config) {
-        configPoints = v1Config.points;
-        configSegments = v1Config.segments;
-        configStripType = v1Config.stripType;
-        configSorting = v1Config.sorting;
-        // Derive idx from string for v1
-        configSortingIdx = ['RGB','RBG','GRB','GBR','BRG','BGR'].indexOf(configSorting ?? 'GRB');
-        if (configSortingIdx < 0) configSortingIdx = 2; // default GRB
-      }
-
-      if (configPoints !== undefined && configSorting !== undefined) {
-        // Prevent telemetry flooding by NOT emitting an event for passive continuous Sync packets
-        setAllDevices(prev => prev.map(d => {
-          if (d.id === deviceId) {
-            const newD = { 
-              ...d, 
-              points: configPoints, 
-              sorting: configSorting,
-              colorSorting: configSortingIdx,   // numeric index propagated
-              colorSortingName: configSorting,
-              stripType: configStripType, 
-              icType: configIcType,
-              segments: configSegments,
-              detected: true,                    // flag that this came from real hardware
-            } as any as typeof d;
-            // Mirror securely directly to persistent memory
-            AsyncStorage.getItem('ng_device_configs').then(str => {
-               const p = JSON.parse(str || '{}');
-               p[deviceId] = { ...p[deviceId], ...newD };
-               AsyncStorage.setItem('ng_device_configs', JSON.stringify(p));
-            }).catch(()=>{});
-            setDeviceConfigs((prevConfigs: any) => ({
-              ...prevConfigs,
-              [deviceId]: { ...(prevConfigs[deviceId] || {}), ...newD }
-            }));
-            return newD;
-          }
-          return d;
-        }));
-      }
-    });
-  }, [setOnDataReceived, setAllDevices]);
 
   // Analytics / Dev tools hooks migrated to AuthScreen / removed
 
@@ -788,170 +456,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         } catch (e) {}
       });
   }, []);
-
-
-  const runAutoProvisioning = useCallback(async () => {
-    if (!isProvisioningTriggered.current) return;
-    isProvisioningTriggered.current = false;
-
-    console.log('[SK8Lytz] Provisioning...');
-    const currentDevices = allDevicesRef.current;
-    if (currentDevices.length === 0) return;
-
-    let updatedGroups = [...customGroupsRef.current];
-    let didUpdateGroups = false;
-    let didUpdateConfigs = false;
-    
-    const [resConfigs, resProcessed] = await Promise.all([
-      AsyncStorage.getItem('@Sk8lytz_device_configs'),
-      AsyncStorage.getItem('@Sk8lytz_processed_devices')
-    ]);
-
-    let configs: any = {};
-    if (resConfigs) { try { configs = JSON.parse(resConfigs); } catch(e) {} }
-
-    let processed: string[] = [];
-    if (resProcessed) { try { processed = JSON.parse(resProcessed); } catch(e) {} }
-    let didUpdateProcessed = false;
-    
-    const checkAndGroup = (devicesToProcess: any[], targetGroupName: string, typeVal: string, pointsVal: number) => {
-      const unprocessed = devicesToProcess.filter(d => 
-        !processed.includes(d.id) && 
-        !updatedGroups.some(g => g.deviceIds.includes(d.id))
-      );
-
-      if (unprocessed.length >= 2) {
-        const leftId = unprocessed[0].id;
-        const rightId = unprocessed[1].id;
-        processed.push(leftId, rightId);
-        didUpdateProcessed = true;
-
-        const existingGroupIndex = updatedGroups.findIndex(g => g.name === targetGroupName);
-        if (existingGroupIndex > -1) {
-          let target = updatedGroups[existingGroupIndex];
-          if (!target.deviceIds.includes(leftId) || !target.deviceIds.includes(rightId)) {
-            const newIds = Array.from(new Set([...target.deviceIds, leftId, rightId]));
-            updatedGroups[existingGroupIndex] = { ...target, deviceIds: newIds };
-            didUpdateGroups = true;
-          }
-        } else {
-          updatedGroups.push({
-            id: `group-${Date.now()}-${typeVal}-${Math.floor(Math.random() * 1000)}`,
-            name: targetGroupName,
-            deviceIds: [leftId, rightId],
-            type: typeVal,
-            isGroup: true
-          });
-          didUpdateGroups = true;
-        }
-        
-        const names = [`${typeVal} Left Skate`, `${typeVal} Right Skate`];
-        [leftId, rightId].forEach((id, idx) => {
-          if (!configs[id] || configs[id].name !== names[idx]) {
-            configs[id] = { ...configs[id], name: names[idx], type: typeVal, points: pointsVal };
-            didUpdateConfigs = true;
-          }
-        });
-      }
-    };
-
-    // Catalog-driven device classification: group by resolved product type via LED point range.
-    // Replaces legacy binary soulzDevices / halozDevices split — RAILZ and future products auto-bucket.
-    const devicesByType = new Map<string, typeof currentDevices>();
-    for (const d of currentDevices) {
-      const pts = (d as any).points ?? 0;
-      const profile = getLocalProfileByPoints(pts);
-      if (!devicesByType.has(profile.id)) devicesByType.set(profile.id, []);
-      devicesByType.get(profile.id)!.push(d);
-    }
-    for (const [typeKey, devices] of devicesByType.entries()) {
-      const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === typeKey) ?? LOCAL_PRODUCT_CATALOG[0];
-      checkAndGroup(devices, `${profile.displayName} SK8Lytz`, typeKey, profile.defaultLedPoints);
-    }
-
-    const storagePromises = [];
-    if (didUpdateProcessed) {
-      storagePromises.push(AsyncStorage.setItem('@Sk8lytz_processed_devices', JSON.stringify(processed)));
-    }
-    if (didUpdateGroups) {
-      storagePromises.push(AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(updatedGroups)));
-    }
-    if (didUpdateConfigs) {
-      storagePromises.push(AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs)));
-    }
-    if (storagePromises.length > 0) await Promise.all(storagePromises);
-
-    if (didUpdateGroups) {
-      customGroupsRef.current = updatedGroups;
-      // Note: customGroups UI state is derived from registeredDevices via useDashboardGroups
-    }
-    
-    // Sync to Supabase if authenticated
-    if ((didUpdateGroups || didUpdateConfigs) && supabase) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session && session.user) {
-          const userId = session.user.id;
-          
-          for (const group of updatedGroups) {
-            // Upsert Group
-            try {
-              await supabase.from('registered_groups').upsert({
-                id: group.id,
-                user_id: userId,
-                group_name: group.name,
-                type: group.type || 'device-fleet',
-                created_at: new Date().toISOString()
-              }, { onConflict: 'id' });
-            } catch (_ge) { /* best-effort sync */ }
-            
-            // Upsert Devices in Group
-            for (const deviceId of group.deviceIds) {
-              const c = configs[deviceId];
-              if (c) {
-                try {
-                  await supabase.from('registered_devices').upsert({
-                    id: deviceId,
-                    user_id: userId,
-                    group_id: group.id,
-                    custom_name: c.name || 'Unknown',
-                    points: c.points || 0,
-                    segments: c.segments || 0,
-                    sorting: c.sorting || 'GRB',
-                    strip_type: c.stripType || 'UNKNOWN'
-                  }, { onConflict: 'id' });
-                } catch (_de) { /* best-effort sync */ }
-              }
-            }
-          }
-        }
-      } catch (e) {
-        AppLogger.warn('Supabase sync error during provisioning:', { error: String(e) });
-      }
-    }
-    
-    if (didUpdateConfigs) {
-      setAllDevices(prev => {
-        let morphed = false;
-        const next = prev.map(d => {
-          const c = configs[d.id];
-          if (c && (d.name !== c.name || (d as any).sorting !== c.sorting || (d as any).stripType !== c.stripType)) {
-            morphed = true;
-            return { ...d, name: c.name, points: c.points, sorting: c.sorting, stripType: c.stripType } as any;
-          }
-          return d;
-        });
-        if (morphed) allDevicesRef.current = next;
-        return morphed ? next : prev;
-      });
-    }
-    
-    // Explicitly collapse to focus on grouped controls
-    setIsDeviceListCollapsed(true);
-    console.log('[SK8Lytz] Provisioning Complete.');
-  }, []);
-
-
 
 
 
@@ -1064,103 +568,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     openGroupCreate();
   };
 
-  const handleGroupDelete = async (id: string) => {
-    const groupToDelete = customGroups.find(g => g.id === id);
-    if (!groupToDelete) {
-      closeGroupModal();
-      return;
-    }
+  // ── handleGroupDelete and saveGroup now live in useDashboardGroups ────────────
 
-    const devsToDelete = registeredDevices.filter(d => d.group_id === id);
-    for (const d of devsToDelete) {
-      await saveRegisteredDevice({ ...d, group_id: 'default-fleet', group_name: undefined, is_pending_sync: true });
-    }
-
-    if (groupToDelete && groupToDelete.deviceIds) {
-      try {
-        const stored = await AsyncStorage.getItem('ng_device_configs');
-        if (stored) {
-          const configs = JSON.parse(stored);
-          let configsChanged = false;
-          
-          for (const mac of groupToDelete.deviceIds) {
-            if (configs[mac]) {
-              delete configs[mac].groupId;
-              delete configs[mac].groupName;
-              configs[mac].grouped = false;
-              configsChanged = true;
-            }
-          }
-          
-          if (configsChanged) {
-            await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
-            setDeviceConfigs(configs);
-          }
-        }
-      } catch (e) {
-        AppLogger.warn('Failed to scrub ghost group from components: ' + e);
-      }
-    }
-
-    closeGroupModal();
-  };
-
-  const saveGroup = async (name: string, deviceIds: string[]) => {
-    let finalGroupId = `group-${Date.now()}`;
-    let previousDeviceIds: string[] = [];
-
-    if (groupModalState === 'CREATE') {
-      const existing = customGroups.find(g => g.name.toLowerCase() === name.toLowerCase());
-      if (existing) {
-        finalGroupId = existing.id;
-        previousDeviceIds = existing.deviceIds || [];
-      }
-      clearSelection();
-    } else if (groupModalState === 'RENAME' && editingGroupId) {
-      if (deviceIds.length === 0) {
-        handleGroupDelete(editingGroupId);
-        return;
-      }
-      finalGroupId = editingGroupId;
-      const existing = customGroups.find(g => g.id === editingGroupId);
-      if (existing) previousDeviceIds = existing.deviceIds || [];
-    }
-
-    try {
-      const stored = await AsyncStorage.getItem('ng_device_configs');
-      const configs = stored ? JSON.parse(stored) : {};
-      let configsChanged = false;
-      
-      // Removed devices: scrub their configs
-      const removedIds = previousDeviceIds.filter(id => !deviceIds.includes(id));
-      for (const mac of removedIds) {
-        if (configs[mac]) {
-          delete configs[mac].groupId;
-          delete configs[mac].groupName;
-          configs[mac].grouped = false;
-          configsChanged = true;
-        }
-        const rd = registeredDevices.find(r => r.device_mac === mac);
-        if (rd) await saveRegisteredDevice({ ...rd, group_id: 'default-fleet', group_name: undefined, is_pending_sync: true });
-      }
-
-      // Added or preserved devices: enforce group config
-      for (const mac of deviceIds) {
-        if (!configs[mac]) configs[mac] = {};
-        configs[mac] = { ...configs[mac], groupId: finalGroupId, groupName: name, grouped: true };
-        configsChanged = true;
-        const rd = registeredDevices.find(r => r.device_mac === mac);
-        if (rd) await saveRegisteredDevice({ ...rd, group_id: finalGroupId, group_name: name, is_pending_sync: true });
-      }
-
-      if (configsChanged) {
-        await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
-        setDeviceConfigs(configs);
-      }
-    } catch (e) {
-      AppLogger.warn('Failed to sync group cache changes', { error: String(e) });
-    }
-  };
 
   useEffect(() => {
     requestPermissions();
@@ -1307,7 +716,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               getLocalProfileByPoints((displayConnectedDevices[0] as any)?.points ?? 0).id
             }
             isPaired={isGrouped}
-            isDisconnecting={isDisconnecting}
             points={(displayConnectedDevices[0] as any).points}
             devices={displayConnectedDevices as any}
             onLongPressDevice={openSettings}
@@ -1842,8 +1250,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         connectToDevice={async (d: any) => { await connectToDevice(d); }}
         disconnectFromDevice={async (_id: string) => { disconnectFromDevice(); }}
         writeToDevice={writeToDevice}
-        isScanning={isScanning}
-        isScanProbing={isScanProbing}
+        bleState={isScanProbing ? 'PROBING' : isScanning ? 'SCANNING' : 'IDLE'}
         handleScan={scanForPeripherals}
       />
       {/* LED Diagnostic Lab — long-press the SNIFFER button to open */}
@@ -1858,7 +1265,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         liveRxPayload={lastRawNotification}
         hwSettings={activeHwSettings ?? undefined}
         allDevices={allDevices}
-        isScanning={isScanning}
+        bleState={isScanning ? 'SCANNING' : 'IDLE'}
         handleScan={scanForPeripherals}
         connectToDevice={async (d: any) => { await connectToDevice(d); }}
         liveDeviceConfigs={deviceConfigs}
@@ -1976,8 +1383,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         }}
         allDevices={allDevices}
         connectedDevices={connectedDevices as any[]}
-        isScanning={isScanning}
-        handleScan={scanForPeripherals}
+        bleState={isScanning ? 'SCANNING' : 'IDLE'}
+        handleScan={() => scanForPeripherals()}
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
         liveDeviceConfigs={deviceConfigs}
@@ -2017,315 +1424,4 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   );
 }
 
-const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  container: {
-    flex: 1,
-  },
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: Layout.borderRadius,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.surfaceHighlight,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 10,
-  },
-  scanButton: {
-    marginTop: 24,
-    backgroundColor: Colors.primary,
-    paddingVertical: 14,
-    borderRadius: Layout.borderRadius,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  scanButtonText: {
-    color: Colors.isDark ? Colors.text : '#FFF',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  emptyStateContainer: {
-    marginTop: 40,
-    alignItems: 'center',
-  },
-  disconnectButtonSmall: {
-    backgroundColor: Colors.surfaceHighlight,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.error + '44',
-  },
-  disconnectButtonTextSmall: {
-    color: Colors.error,
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  groupButton: {
-    backgroundColor: Colors.secondary,
-    paddingVertical: 14,
-    borderRadius: Layout.borderRadius,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.secondary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  groupButtonText: {
-    color: Colors.isDark ? '#FFF' : Colors.background,
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  countdownBadge: {
-    position: 'absolute',
-    right: -10,
-    top: -10,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#FF7000',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#FF7000',
-    shadowRadius: 8,
-    shadowOpacity: 1,
-    zIndex: 50,
-  },
-  countdownText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  errorContainer: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: 'rgba(255, 61, 0, 0.1)',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.error
-  },
-  /* ──── 4-SLAB DASHBOARD STYLES ──── */
-  headerSlab: {
-    paddingBottom: 4,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,240,255,0.1)',
-  },
-  slabContainer: {
-    paddingHorizontal: Layout.padding,
-    marginBottom: 24,
-  },
-  slabHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  slabTitle: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.6)',
-    letterSpacing: 1.5,
-    fontFamily: 'Righteous',
-  },
-  slabAction: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255,170,0,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,170,0,0.3)',
-  },
-  slabActionText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#FFAA00',
-    letterSpacing: 0.5,
-  },
-  glassSlab: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    padding: 16,
-  },
-  slabEmptyText: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  activeCrewPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 12,
-    padding: 12,
-    gap: 10,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    shadowOpacity: 1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  activeCrewText: {
-    fontSize: 13,
-    fontWeight: '800',
-    flex: 1,
-    letterSpacing: 0.5,
-  },
-  skateCardWrapper: {
-    marginBottom: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 12,
-  },
-  skateCardGradient: {
-    borderRadius: 20,
-    padding: 2, // Border thickness
-  },
-  skateCardInner: {
-    backgroundColor: Colors.isDark ? 'rgba(35, 42, 55, 0.85)' : 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 18,
-    padding: 16,
-    overflow: 'hidden',
-  },
-  skateCardRefraction: {
-    position: 'absolute',
-    top: -50,
-    left: -50,
-    width: 200,
-    height: 200,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    transform: [{ rotate: '45deg' }],
-  },
-  skateCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  avatarPill: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  avatarPillImage: {
-    width: 20,
-    height: 20,
-  },
-  avatarStatusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.success,
-    marginLeft: 6,
-    borderWidth: 1,
-    borderColor: Colors.background,
-  },
-  telemetryContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  telemetryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  rssiBars: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  rssiBar: {
-    width: 3,
-    borderRadius: 1,
-  },
-  skateCardContent: {
-    marginBottom: 16,
-  },
-  skateCardGroupName: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: Colors.text,
-    fontFamily: 'Righteous',
-    letterSpacing: 0.5,
-  },
-  patternPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  patternDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 6,
-  },
-  patternName: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: Colors.textMuted,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  skateCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.05)',
-    paddingTop: 12,
-  },
-  deviceCountText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.textMuted,
-    letterSpacing: 1,
-  },
-  powerIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deviceListFixed: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderRadius: 16,
-    padding: 8,
-  }
-});
+
