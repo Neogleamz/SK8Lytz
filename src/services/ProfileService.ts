@@ -95,25 +95,35 @@ class ProfileService {
       // Self-heal: If display_name or username is missing, patch from auth metadata
       const profile = existing as UserProfile;
       const metaUsername = user.user_metadata?.username;
+      const metaDisplayName = user.user_metadata?.display_name;
       
-      if (metaUsername && (!profile.display_name || !profile.username)) {
+      if ((metaUsername || metaDisplayName) && (!profile.display_name || !profile.username)) {
         const updateData: Partial<UserProfile> = {};
-        if (!profile.display_name) updateData.display_name = metaUsername;
-        if (!profile.username) updateData.username = metaUsername.toLowerCase();
         
-        await supabase
-          .from('user_profiles')
-          .update(updateData)
-          .eq('user_id', user.id);
-          
-        return { ...profile, ...updateData };
+        if (!profile.display_name && (metaDisplayName || metaUsername)) {
+          updateData.display_name = metaDisplayName || metaUsername;
+        }
+        
+        if (!profile.username && metaUsername) {
+          updateData.username = metaUsername.toLowerCase();
+        }
+        
+        if (Object.keys(updateData).length > 0) {
+          await supabase
+            .from('user_profiles')
+            .update(updateData)
+            .eq('user_id', user.id);
+            
+          return { ...profile, ...updateData };
+        }
       }
       return profile;
     }
 
     // Auto-create using auth metadata username, falling back to email prefix
     const metaUsername = user.user_metadata?.username;
-    const defaultName = metaUsername ?? user.email?.split('@')[0] ?? 'Sk8r';
+    const metaDisplayName = user.user_metadata?.display_name;
+    const defaultName = metaDisplayName ?? metaUsername ?? user.email?.split('@')[0] ?? 'Sk8r';
     
     const { data: created } = await supabase
       .from('user_profiles')

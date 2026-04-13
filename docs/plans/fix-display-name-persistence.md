@@ -1,22 +1,30 @@
+# Fix Display Name Persistence
+
+Fix the `display_name` persistence issue where new users signing up are not having their display name properly propagated from Supabase Auth metadata into the `user_profiles` table.
+
 ### Design Decisions & Rationale
-We are implementing a client-side database reconciliation strategy in `ProfileService.ts` to actively synchronize the Supabase Auth `user_metadata.username` field into the `user_profiles` table upon session initialization. This provides immediate resilience against database trigger delays/failures and features a self-healing patch that checks existing rows with a `null` display name, patching them on the fly. 
+We currently capture `username` on the signup screen but only pass `{ username }` in the Auth metadata. The Postgres database trigger relies heavily on `display_name` to populate the `user_profiles.display_name` column securely. This fix injects `display_name` into the `supabase.auth.signUp()` payload directly and hardens the `ProfileService` self-healing logic to pull from both `meta.username` and `meta.display_name`.
+
+## User Review Required
+No major architectural changes or breaking risks are introduced. This only patches metadata flow on signup and enhances the profile fetch healing process.
 
 ## Proposed Changes
 
-### `src/services/ProfileService.ts`
-- **[MODIFY]** `fetchOrCreateProfile`
-  - Modify the `existing` profile return branch to inspect for a missing `display_name` or `username`. If `user_metadata.username` exists in the auth session payload, autonomously execute a targeted SQL `update` to inject the missing fields into `user_profiles`.
-  - Update the fallback insertion logic for brand new users to pull directly from `user.user_metadata?.username` rather than immediately falling back to stripping the email suffix, and properly save the normalized `username` to the database payload.
+### Frontend / Auth Components
+#### [MODIFY] [AuthScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/AuthScreen.tsx)
+- Update the `handleSignUp` method's `supabase.auth.signUp` payload.
+- Inject `display_name: username.trim()` into `options.data` alongside the `username` field to ensure triggers properly pick it up upon insertion.
 
-## Open Questions
-> [!WARNING]
-> Is it acceptable to automatically lowercase the `username` field as a standard form of canonicalization for database storage while simultaneously passing the raw `username` value string into the `display_name` column to preserve case-sensitivity?
+### Service Layer
+#### [MODIFY] [ProfileService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ProfileService.ts)
+- Update the `fetchOrCreateProfile` auto-healing block.
+- Read `user.user_metadata?.display_name` in addition to `username`.
+- Apply robust fallback defaulting if either is missing in the `user_profiles` database, ensuring we attempt to pull `display_name` first before defaulting to `username`.
 
 ## Verification Plan
 
 ### Automated Tests
-- Run `npx tsc --noEmit` to verify type safety when accessing `user_metadata` and updating `user_profiles`.
+- Run `npx tsc --noEmit` to ensure no typing breaking changes.
 
 ### Manual Verification
-1. Sign up a new user and ensure they hit the dashboard. Validate via `console.log` (or Supabase remote inspection) that their `display_name` matches the authored text, rather than extracting their email address suffix.
-2. Sign in as an affected user that currently has `null` display data. Verify the dashboard safely initializes and self-heals their session data without a secondary modal prompt.
+- The user can run standard signup in Sandbox vs Local testing, ensuring that `display_name` does not appear as `null` and propagates immediately to the User Profile view dashboard.
