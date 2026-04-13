@@ -28,6 +28,7 @@ import { SpeedTrackingService, ILifetimeStats, ISkateSession } from '../services
 import { useAccountOverview } from '../hooks/useAccountOverview';
 import { useSkateStats } from '../hooks/useSkateStats';
 import { useDeviceFleet, StoredDevice } from '../hooks/useDeviceFleet';
+import EulaModal from './modals/EulaModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -82,6 +83,7 @@ export default function AccountModal({
   const styles = createStyles(Colors);
 
   const [tab, setTab] = useState<Tab>('profile');
+  const [showEula, setShowEula] = useState(false);
 
   // --- Domain Hooks ---
   const {
@@ -738,6 +740,14 @@ export default function AccountModal({
         />
       </View>
 
+      {/* Legal & Compliance */}
+      <Text style={[styles.sectionHeader, { marginTop: 24 }]}>LEGAL</Text>
+
+      <TouchableOpacity style={styles.signOutBtn} onPress={() => setShowEula(true)}>
+        <MaterialCommunityIcons name="file-document-outline" size={18} color={Colors.textMuted} />
+        <Text style={[styles.signOutText, { color: Colors.text }]}>Review EULA</Text>
+      </TouchableOpacity>
+
       {/* Sign out */}
       <Text style={[styles.sectionHeader, { marginTop: 24 }]}>ACCOUNT</Text>
 
@@ -885,6 +895,14 @@ export default function AccountModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent statusBarTranslucent>
+      {showEula && (
+        <EulaModal 
+          visible={showEula} 
+          onAccept={() => setShowEula(false)} 
+          onDecline={() => setShowEula(false)} 
+          isViewOnly={true} 
+        />
+      )}
       <KeyboardAvoidingView
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
