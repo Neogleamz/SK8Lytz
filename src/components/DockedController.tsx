@@ -50,6 +50,8 @@ import { getLocalProfileById, LOCAL_PRODUCT_CATALOG } from '../constants/Product
 import * as Location from 'expo-location';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import MarqueeText from './MarqueeText';
+import { STORAGE_PREFIX, HW_SPEED_MAX } from '../constants/AppConstants';
+import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
 
 /**
  * Convert Hex color #RRGGBB to Hue (0-360)
@@ -855,7 +857,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       if (favPromptTargetId) {
         const newFavorites = favorites.map(f => f.id === favPromptTargetId ? newFav : f);
         setFavorites(newFavorites);
-        AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
+        AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(newFavorites));
         setIsFavPromptVisible(false);
         setFavPromptTargetId(null);
         return;
@@ -863,14 +865,14 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
       const newFavorites = [...favorites, newFav];
       setFavorites(newFavorites);
-      AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
+      AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(newFavorites));
       setIsFavPromptVisible(false);
     };
 
     const deleteFavorite = (id: string) => {
       const newFavorites = favorites.filter(f => f.id !== id);
       setFavorites(newFavorites);
-      AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(newFavorites));
+      AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(newFavorites));
     };
 
     const loadFavorite = (favRaw: IFavoriteState, context: 'FAVORITE' | 'PICK' | 'COMMUNITY' = 'FAVORITE') => {
@@ -958,8 +960,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
      * The APK enforces 1–31 for all 0x59 animated patterns.
      * Static patterns (transitionType=0x00) ignore speed — pass 1 for those.
      */
-    const clampSpeed = (uiSpeed: number): number =>
-      Math.max(ZenggeProtocol.ANIM_SPEED_MIN, Math.min(ZenggeProtocol.ANIM_SPEED_MAX, Math.round((uiSpeed / 100) * ZenggeProtocol.ANIM_SPEED_MAX)));
+    const clampSpeed = (uiSpeed: number): number => normalizeUISpeedToHardware(uiSpeed);
 
     /**
      * Apply current fixed pattern state to devices.
@@ -1076,7 +1077,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const [picksLoading, setPicksLoading] = useState(true);
 
     useEffect(() => {
-      const CACHE_KEY = '@Sk8lytz_PicksCache';
+      const CACHE_KEY = `${STORAGE_PREFIX}PicksCache`;
 
       const loadFromCache = async () => {
         try {
@@ -1318,7 +1319,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     }, [lockedProduct]);
 
     React.useEffect(() => {
-      AsyncStorage.getItem('@Sk8lytz_ControllerState').then((saved) => {
+      AsyncStorage.getItem(`${STORAGE_PREFIX}ControllerState`).then((saved) => {
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
@@ -1347,7 +1348,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         }
       });
 
-      AsyncStorage.getItem('@Sk8lytz_Favorites').then((saved) => {
+      AsyncStorage.getItem(`${STORAGE_PREFIX}Favorites`).then((saved) => {
         if (saved) {
           try {
             const parsed: IFavoriteState[] = JSON.parse(saved);
@@ -1368,7 +1369,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               });
               if (needsMigration) {
                 console.log('[SK8Lytz Favorites] Migrated legacy mode entries to new taxonomy.');
-                AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(migrated));
+                AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(migrated));
               }
               setFavorites(migrated);
             } else {
@@ -1382,7 +1383,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 brightness: 90
               }];
               setFavorites(defaultFavorites);
-              AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(defaultFavorites));
+              AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(defaultFavorites));
             }
           } catch (e) { }
         } else {
@@ -1396,11 +1397,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             brightness: 90
           }];
           setFavorites(defaultFavorites);
-          AsyncStorage.setItem('@Sk8lytz_Favorites', JSON.stringify(defaultFavorites));
+          AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(defaultFavorites));
         }
       });
 
-      AsyncStorage.getItem('@Sk8lytz_QuickPresets').then((saved) => {
+      AsyncStorage.getItem(`${STORAGE_PREFIX}QuickPresets`).then((saved) => {
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
@@ -1416,7 +1417,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         micSensitivity, musicHue, musicSecondaryHue, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle, musicPatternId, micSource, musicSetting,
         fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
       };
-      AsyncStorage.setItem('@Sk8lytz_ControllerState', JSON.stringify(stateBlob)).catch(() => { });
+      AsyncStorage.setItem(`${STORAGE_PREFIX}ControllerState`, JSON.stringify(stateBlob)).catch(() => { });
     }, [
       activeMode, selectedColor, selectedPatternId, brightness, speed,
       micSensitivity, musicHue, musicSecondaryHue, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle, musicPatternId, micSource, musicSetting,
@@ -2719,7 +2720,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     const newArr = [...quickPresets];
                     newArr.splice(quickPromptTargetIndex, 1);
                     setQuickPresets(newArr);
-                    AsyncStorage.setItem('@Sk8lytz_QuickPresets', JSON.stringify(newArr));
+                    AsyncStorage.setItem(`${STORAGE_PREFIX}QuickPresets`, JSON.stringify(newArr));
                     AppLogger.log('BUILDER_PRESET_DELETED', { index: quickPromptTargetIndex });
                     setIsQuickPromptVisible(false);
                   }}>
@@ -2759,7 +2760,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     newArr[quickPromptTargetIndex].name = safeName;
                   }
                   setQuickPresets(newArr);
-                  AsyncStorage.setItem('@Sk8lytz_QuickPresets', JSON.stringify(newArr));
+                  AsyncStorage.setItem(`${STORAGE_PREFIX}QuickPresets`, JSON.stringify(newArr));
                   AppLogger.log('BUILDER_PRESET_SAVED', { name: safeName, isOverwrite: quickPromptTargetIndex !== -1 });
                   setIsQuickPromptVisible(false);
                 }}>
