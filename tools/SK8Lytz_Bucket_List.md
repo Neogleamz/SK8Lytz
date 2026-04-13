@@ -9,8 +9,8 @@ All active tasks, bugs, and feature work. Prioritized by **App Performance, Stab
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Core Development Progress
-  "Completed" : 28
-  "Remaining" : 25
+  "Completed" : 34
+  "Remaining" : 22
 ```
 
 ------
@@ -62,14 +62,11 @@ pie title Engineering Health
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Governance Shield
-  "Completed" : 2
-  "Remaining" : 2
+  "Completed" : 4
+  "Remaining" : 1
 ```
 
-- [x] `feat/eula-onboarding` : [CLOUD] [H-RISK] [Meal] [🤖 PRO-HIGH] [📝 NEEDS-PLAN] Implement the **Legal Shield** — a mandatory, scroll-to-accept EULA flow (Kinetic Safety, Photosensitivity, Data Privacy) in the Auth registration and global version enforcement for active sessions. → [Plan](docs/plans/feat-eula-onboarding.md)
-- [ ] `feat/telemetry-onboarding-ux` : [CLOUD] [L-RISK] [Meal] [🤖 FLASH] [📝️ NEEDS-PLAN] Implement a casual 'Permissions Hub' onboarding screen after EULA to enable Camera, Mic, GPS, and Bluetooth. → [Plan](docs/plans/feat-telemetry-onboarding-ux.md)
 - [ ] `feat/admin-app-manager` : [CLOUD] [L-RISK] [Feast] [🤖 PRO-HIGH] Finalized Governance Hub with Safety Locks (Consolidated Scope) → [Plan](docs/plans/feat-admin-app-manager.md)
-- [x] `feat/eula-in-account-manager` : [CLOUD] [L-RISK] [Snack] [🤖 FLASH] [⚡ FLASH-READY] Add EULA review link to User Account Manager Settings. → [Plan](docs/plans/feat-eula-in-account-manager.md)
 
 ---
 
@@ -80,8 +77,8 @@ pie title Governance Shield
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Feature Velocity
-  "Completed" : 3
-  "Remaining" : 15
+  "Completed" : 6
+  "Remaining" : 12
 ```
 
 - [ ] `feat/music-intel-phase-1` : [CLOUD] [H-RISK] [Feast] [🤖 THINK] [Spotify Sync] — OAuth2 PKCE login, BPM/Energy mapping, and Album Art color extraction. → [Plan](docs/plans/feat-music-integration-master.md)
@@ -93,9 +90,6 @@ pie title Feature Velocity
 - [ ] `feat/street-mode-telemetry-overhaul` : [CLOUD] [L-RISK] [Meal] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] Overhaul Street Mode with metrics grid and auto-scaling gauges. → [Plan](docs/plans/feat-street-mode-telemetry-overhaul.md)
 - [ ] `feat/usa-skate-spots-dataset` : [CLOUD] [BATCH] [L-RISK] [Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] US-only dataset of rinks and parks for map overlays. → [Plan](docs/plans/feat-usa-skate-spots-dataset.md)
 - [ ] `feat/app-wide-ux-tips` : [CLOUD] [L-RISK] [Meal] [🤖 FLASH] [📝️ NEEDS-PLAN] Contextual tips system for key friction points. → [Plan](docs/plans/feat-app-wide-ux-tips.md)
-- [x] `feat/onboarding-text-tweak` : [CLOUD] [L-RISK] [Snack] [🤖 FLASH] [⚡ FLASH-READY] Update "Eyes in the Dark" to "Match your Fit" in Telemetry Onboarding → [Plan](docs/plans/feat/onboarding-text-tweak.md)
-- [x] `feat/clean-username-pill` : [CLOUD] [L-RISK] [Snack] [🤖 FLASH] [⚡ FLASH-READY] Removed redundant ON/OFF text from user pill.
-- [x] `fix/dashboard-group-duplication` : [CLOUD] [H-RISK] [Meal] [🤖 THINK] [⚡ FLASH-READY] Resolved race condition in group processing causing duplicate groups on dashboard.
 
 ---
 
@@ -116,14 +110,17 @@ pie title Feature Velocity
 
 ## ✅ Completed Previously
 
-- [x] `fix/telemetry-button-text` : Corrected Onboarding Telemetry heading from "Eyes in the Dark" ➔ "Match your Fit".
-- [x] `fix/dashboard-username-fallback` : Implemented reactive useEffect to resolve the Username/Display Name race condition in the dashboard header.
-- [x] `feat/clean-username-pill` : Removed redundant ON/OFF text badge from the high-contrast dashboard status pill.
-- [x] `fix/dashboard-group-duplication` : Resolved race condition causing double registration calls on dashboard mount.
-- [x] `chore/sentient-tech-debt-sweep` : Standardized AsyncStorage keys, normalized speed logic, and removed redundant requires.
-- [x] `audit/domain-driven-architecture` : Audited all domain hooks; resolved P0/P1 bugs in state and race conditions.
-- [x] `feat/optimistic-picks-cache` : Implemented SWR caching for favorite lighting profiles.
-- [x] `refactor/micro-app-crew-modal` : Extracted the massive CrewModal monolith into decoupled domain hooks.
+- [x] `feat/telemetry-onboarding-ux` : [CLOUD] [L-RISK] [Meal] Implement a casual 'Permissions Hub' onboarding screen after EULA to enable Camera, Mic, GPS, and Bluetooth.
+- [x] `feat/eula-onboarding` : [CLOUD] [H-RISK] [Meal] Implement the **Legal Shield** — a mandatory, scroll-to-accept EULA flow.
+- [x] `feat/eula-in-account-manager` : [CLOUD] [L-RISK] [Snack] Add EULA review link to User Account Manager Settings.
+- [x] `feat/onboarding-text-tweak` : Update "Eyes in the Dark" ➔ "Match your Fit" across all onboarding screens.
+- [x] `feat/clean-username-pill` : Removed redundant ON/OFF text badge from the dashboard header pill.
+- [x] `fix/dashboard-username-fallback` : Implemented reactive useEffect to resolve the Username/Display Name race condition.
+- [x] `fix/dashboard-group-duplication` : Resolved race condition in group processing and onboarding state checks.
+- [x] `chore/sentient-tech-debt-sweep` : Standardized AsyncStorage keys (@Sk8lytz_ prefix) and normalized speed logic.
+- [x] `audit/domain-driven-architecture` : Audited domain hooks and resolved P0/P1 state/race condition bugs.
+- [x] `feat/optimistic-picks-cache` : Implemented SWR caching for Favorites and SK8Lytz Picks.
+- [x] `refactor/micro-app-crew-modal` : Extracted CrewModal monolith into decoupled domain hooks.
 - [x] `refactor/micro-app-account-modal` : Extracted settings, profile, and device management into modular sub-views.
 - [x] `feat/admin-hub-design-system` : Standardized admin headers and ToolCard grid.
 - [x] `chore/delete-orphan-backup` : Removed Sk8LytzDiagnosticLab_old.tsx.
@@ -133,5 +130,6 @@ pie title Feature Velocity
 - [x] `feat/speed-tracking-telemetry` : Statistics, Session Metadata, and GPS accumulation.
 - [x] `feat/voice-command-engine` : Offline voice command resolution.
 - [x] `feat/empty-skates-setup-cta` : Setup Wizard dashboard CTA.
+
 ---
 *Last updated: 2026-04-13 | Active tasks moved to Completed Archive.*
