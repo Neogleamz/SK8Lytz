@@ -13,7 +13,7 @@ pie title Core Development Progress
   "Remaining" : 25
 ```
 
----
+------
 
 ## 🔴 CRITICAL: Performance, Stability & Security
 
@@ -26,6 +26,11 @@ pie title Critical Stability
   "Remaining" : 4
 ```
 
+- [ ] `gate-offline-mode` : [CLOUD] [H-RISK] [Feast] [🤖 THINK] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
+- [ ] `refactor/state-machine-standard` : [CLOUD] [H-RISK] [Feast] [Pillar 8] [🤖 THINK] Deterministic UI — transition from boolean flags to explicit Enum-based Finite State Machines. → [Plan](docs/plans/refactor-state-machine-standard.md)
+- [ ] `feat/ble-hardware-watchdog` : [LAB] [H-RISK] [Feast] [Pillar 7] [🤖 THINK] Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks and silent-relatches connections. → [Plan](docs/plans/feat-ble-hardware-watchdog.md)
+- [ ] `perf/optimistic-ble-updates` : [LAB] [H-RISK] [Meal] [Pillar 2] [🤖 THINK] Mask hardware latency using 'Ghost' optimistic UI updates and state reconciliation. → [Plan](docs/plans/perf-optimistic-ble-updates.md)
+
 ---
 
 ## 🟠 HIGH: Engineering Excellence & Tech Debt
@@ -35,24 +40,16 @@ pie title Critical Stability
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
-  "Completed" : 1
+  "Completed" : 3
   "Remaining" : 7
 ```
 
-
-- [ ] `refactor/state-machine-standard` : [CLOUD] [H-RISK] [Feast] [Pillar 8] [🤖 THINK] Deterministic UI — transition from boolean flags to explicit Enum-based Finite State Machines. → [Plan](docs/plans/refactor-state-machine-standard.md)
-- [ ] `feat/ble-hardware-watchdog` : [LAB] [H-RISK] [Feast] [Pillar 7] [🤖 THINK] Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks and silent-relatches connections. → [Plan](docs/plans/feat-ble-hardware-watchdog.md)
-- [ ] `perf/optimistic-ble-updates` : [LAB] [H-RISK] [Meal] [Pillar 2] [🤖 THINK] Mask hardware latency using 'Ghost' optimistic UI updates and state reconciliation. → [Plan](docs/plans/perf-optimistic-ble-updates.md)
 - [ ] `perf/delta-sync-protocol` : [CLOUD] [L-RISK] [Meal] [Pillar 4] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] Implement differential data fetching to reduce bandwidth and battery consumption. → [Plan](docs/plans/perf-delta-sync-protocol.md)
-
 - [ ] `fix/remote-id-audit` : [LAB] [H-RISK] [Meal] [Security] [🤖 THINK] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
 - [ ] `audit-rls-performance` : [CLOUD] [H-RISK] [Meal] [🤖 THINK] #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges. → [Plan](docs/plans/audit-rls-performance.md)
 - [ ] `style/tokenized-spacing-standard` : [CLOUD] [L-RISK] [Meal] [Pillar 9] [🤖 FLASH] [📝️ NEEDS-PLAN] The 8pt Grid — enforce 8pt spacing tokens app-wide to eliminate magic numbers. → [Plan](docs/plans/style-tokenized-spacing-standard.md)
-
-- [ ] `chore/decompose-docked-controller-jsx` : [CLOUD] [H-RISK] [Feast] [P2 — DDA Audit] [🤖 PRO-HIGH] Extract DockedController's per-mode JSX panels (MultiMode, Music, Street, Camera, Programs, Favorites) into memoized sub-components. Target: reduce from 2,835 → ~1,800 lines. → [Audit Report](brain/206e904d-e0ff-4a1f-ab45-c74c74b82974/domain_architecture_audit.md)
+- [ ] `chore/decompose-docked-controller-jsx` : [CLOUD] [H-RISK] [Feast] [P2 — DDA Audit] [🤖 PRO-HIGH] Extract DockedController's per-mode JSX panels (MultiMode, Music, Street, Camera, Programs, Favorites) into memoized sub-components. Target: reduce from 2,835 ➔ ~1,800 lines. → [Audit Report](brain/206e904d-e0ff-4a1f-ab45-c74c74b82974/domain_architecture_audit.md)
 - [ ] `chore/refactor-dashboard-monolith` : [CLOUD] [H-RISK] [Feast] [Pillar 1] [🤖 THINK] Decompose `DashboardScreen.tsx` (2,342 lines / 95.9KB) — device-config mutation logic and group-save callbacks still inline; target ~1,400 lines.
-- [x] `fix/dashboard-display-name-fallback` : [CLOUD] [L-RISK] [Snack] [🤖 FLASH] [⚡ FLASH-READY] Fix React state race condition preventing `userProfile` from setting Dashboard username correctly. → [Plan](docs/plans/fix/dashboard-display-name-fallback.md)
-
 - [ ] `chore/refactor-diagnostic-lab` : [LAB] [L-RISK] [Meal] [🤖 FLASH] [📝️ NEEDS-PLAN] cleanup and modularize `Sk8LytzDiagnosticLab.tsx` (61KB) for better maintainability.
 - [ ] `chore/refactor-admin-tools` : [CLOUD] [L-RISK] [Meal] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] break down `AdminToolsModal.tsx` (637 lines) into feature-specific admin modules.
 
@@ -66,13 +63,12 @@ pie title Engineering Health
 %%{init: {'theme': 'dark'}}%%
 pie title Governance Shield
   "Completed" : 2
-  "Remaining" : 3
+  "Remaining" : 2
 ```
 
 - [x] `feat/eula-onboarding` : [CLOUD] [H-RISK] [Meal] [🤖 PRO-HIGH] [📝 NEEDS-PLAN] Implement the **Legal Shield** — a mandatory, scroll-to-accept EULA flow (Kinetic Safety, Photosensitivity, Data Privacy) in the Auth registration and global version enforcement for active sessions. → [Plan](docs/plans/feat-eula-onboarding.md)
 - [ ] `feat/telemetry-onboarding-ux` : [CLOUD] [L-RISK] [Meal] [🤖 FLASH] [📝️ NEEDS-PLAN] Implement a casual 'Permissions Hub' onboarding screen after EULA to enable Camera, Mic, GPS, and Bluetooth. → [Plan](docs/plans/feat-telemetry-onboarding-ux.md)
 - [ ] `feat/admin-app-manager` : [CLOUD] [L-RISK] [Feast] [🤖 PRO-HIGH] Finalized Governance Hub with Safety Locks (Consolidated Scope) → [Plan](docs/plans/feat-admin-app-manager.md)
-- [ ] `gate-offline-mode` : [CLOUD] [H-RISK] [Feast] [🤖 THINK] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
 - [x] `feat/eula-in-account-manager` : [CLOUD] [L-RISK] [Snack] [🤖 FLASH] [⚡ FLASH-READY] Add EULA review link to User Account Manager Settings. → [Plan](docs/plans/feat-eula-in-account-manager.md)
 
 ---
@@ -118,10 +114,17 @@ pie title Feature Velocity
 - [ ] `feat/geofence-rink-sync` : [CLOUD] [H-RISK] [Meal] [🤖 THINK] GPS-based auto-crew discovery.
 - [ ] `add-swipe-nav` : [CLOUD] [L-RISK] [Meal] [🤖 FLASH] [📝️ NEEDS-PLAN] Card Swipe Navigation.
 
----
-
 ## ✅ Completed Previously
 
+- [x] `fix/telemetry-button-text` : Corrected Onboarding Telemetry heading from "Eyes in the Dark" ➔ "Match your Fit".
+- [x] `fix/dashboard-username-fallback` : Implemented reactive useEffect to resolve the Username/Display Name race condition in the dashboard header.
+- [x] `feat/clean-username-pill` : Removed redundant ON/OFF text badge from the high-contrast dashboard status pill.
+- [x] `fix/dashboard-group-duplication` : Resolved race condition causing double registration calls on dashboard mount.
+- [x] `chore/sentient-tech-debt-sweep` : Standardized AsyncStorage keys, normalized speed logic, and removed redundant requires.
+- [x] `audit/domain-driven-architecture` : Audited all domain hooks; resolved P0/P1 bugs in state and race conditions.
+- [x] `feat/optimistic-picks-cache` : Implemented SWR caching for favorite lighting profiles.
+- [x] `refactor/micro-app-crew-modal` : Extracted the massive CrewModal monolith into decoupled domain hooks.
+- [x] `refactor/micro-app-account-modal` : Extracted settings, profile, and device management into modular sub-views.
 - [x] `feat/admin-hub-design-system` : Standardized admin headers and ToolCard grid.
 - [x] `chore/delete-orphan-backup` : Removed Sk8LytzDiagnosticLab_old.tsx.
 - [x] `lab-music-mode-parity` : Lab 0x73 Music Mode parity.
@@ -130,12 +133,5 @@ pie title Feature Velocity
 - [x] `feat/speed-tracking-telemetry` : Statistics, Session Metadata, and GPS accumulation.
 - [x] `feat/voice-command-engine` : Offline voice command resolution.
 - [x] `feat/empty-skates-setup-cta` : Setup Wizard dashboard CTA.
-
-- [x] `chore/sentient-tech-debt-sweep` : [CLOUD] [BATCH] [L-RISK] [Feast] [TOP PRIORITY] Standardize AsyncStorage keys (@Sk8lytz_ prefix), normalize UI speed → Hardware (1-31), and eliminate redundant buffer requires. → [Plan](docs/plans/chore-sentient-tech-debt-sweep.md)
-- [x] `audit/domain-driven-architecture` : [CLOUD] [H-RISK] [Feast] Audited all 14 extracted domain hooks; resolved 4 bugs (P0: missing state, P0: type narrowing, P1: ModeType duplication, P1: AsyncStorage race condition). TSC exit 0. → [Audit Report](brain/206e904d-e0ff-4a1f-ab45-c74c74b82974/domain_architecture_audit.md)
-- [x] `feat/optimistic-picks-cache` : [CLOUD] [H-RISK] [Meal] [Performance] Implement 'Stale-While-Revalidate' caching for Favorites and SK8Lytz Picks to eliminate load stutters. → [Plan](docs/plans/feat-optimistic-picks-cache.md)
-- [x] `chore/refactor-docked-controller` : [CLOUD] [H-RISK] [Feast] [Pillar 1] State extraction complete via domain hooks. Remaining size: 2,835 lines / 134.8KB — JSX render tree decomposition still needed (see P2 below).
-- [x] `chore/refactor-account-modal` : [CLOUD] [L-RISK] [Meal] refactor `AccountModal.tsx` (63KB) to separate settings, profiles, and device management views.
-
 ---
-*Last updated: 2026-04-13 | Active tasks moved to Completed.*
+*Last updated: 2026-04-13 | Active tasks moved to Completed Archive.*
