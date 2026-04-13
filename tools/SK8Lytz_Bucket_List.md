@@ -51,7 +51,7 @@ pie title Engineering Health
 - [ ] `fix/remote-id-audit` : [LAB] [H-RISK] [Meal] [Security] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
 - [ ] `audit-rls-performance` : [CLOUD] [H-RISK] [Meal] #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges. → [Plan](docs/plans/audit-rls-performance.md)
 - [ ] `style/tokenized-spacing-standard` : [CLOUD] [L-RISK] [Meal] [Pillar 9] The 8pt Grid — enforce 8pt spacing tokens app-wide to eliminate magic numbers. → [Plan](docs/plans/style-tokenized-spacing-standard.md)
-- [ ] `chore/refactor-docked-controller` : [CLOUD] [H-RISK] [Feast] [Pillar 1] Extract lighting logic and tab sub-containers from the massive 156KB `DockedController.tsx` monolith.
+- [x] `chore/refactor-docked-controller` : [CLOUD] [H-RISK] [Feast] [Pillar 1] Extract lighting logic and tab sub-containers from the massive 156KB `DockedController.tsx` monolith.
 - [ ] `chore/refactor-dashboard-monolith` : [CLOUD] [H-RISK] [Feast] [Pillar 1] Decompose `DashboardScreen.tsx` (102KB) into smaller, domain-specific sub-screens and modular hooks.
 - [ ] `chore/refactor-account-modal` : [CLOUD] [L-RISK] [Meal] refactor `AccountModal.tsx` (63KB) to separate settings, profiles, and device management views.
 - [ ] `chore/refactor-diagnostic-lab` : [LAB] [L-RISK] [Meal] cleanup and modularize `Sk8LytzDiagnosticLab.tsx` (61KB) for better maintainability.
