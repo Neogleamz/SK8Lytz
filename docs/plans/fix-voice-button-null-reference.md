@@ -1,89 +1,94 @@
 # ⚡ Flash-Executable Implementation Plan: fix/voice-button-null-reference
 
 > **WARNING TO AUTHOR (THINK MODEL)**: This plan is designed to be executed blindly by a `[🤖 FLASH]` or pure execution model in a future session.
-> Do NOT use line numbers (`Replace lines 45-50`). The codebase may have drifted between plan creation and execution.
-> You MUST use **Semantic Anchors** (e.g. `Find the entire useBLE hook`, `Search for the exact phrase: return <View>`).
-> All code snippets must be 100% complete, fully typed, and ready to be copy-pasted via the `replace_file_content` tool.
+> Do NOT use line numbers. Use **Semantic Anchors**. All code snippets must be 100% complete and ready to replace via the `replace_file_content` tool.
 
 ---
 
 ## 1. Pre-Flight Context Check (Drift Verification)
 
-Before executing any file modifications, execute the following strict checks using `view_file` or `grep_search`. Do NOT guess if the file looks different.
-
-- [ ] **Check 1:** Open `src/hooks/useVoiceControl.ts`. Search for semantic anchor: `const isVoiceSupported = Platform.OS !== 'web';`.
-  - _Expected state:_ The variable `isVoiceSupported` exists and is checking `Platform.OS`.
-  - _Abort Condition:_ If the function has been refactored or removed, **HALT** and instruct the user: _"Codebase has drifted. This plan is stale and must be recompiled by a THINK model."_
-- [ ] **Check 2:** Open `src/hooks/useVoiceControl.ts`. Search for semantic anchor: `Voice.onSpeechResults = onResults;`.
-  - _Expected state:_ The variables `onSpeechResults` and `onSpeechError` are directly assigned to the `Voice` object without a null check.
-  - _Abort Condition:_ If there exists a null check already, **HALT** and notify the user that the bug might have been resolved or drifted.
+*   [ ] **Check 1:** Open `src/hooks/useVoiceControl.ts`. Search for semantic anchor: `export const useVoiceControl = (favorites: IFavoriteState[], onAction: (action: IVoiceAction) => void) => {`.
+    *   *Expected state:* The `useVoiceControl` hook exists. 
 
 ---
 
 ## 2. Step-by-Step Execution Strict Instructions
 
-### Step 2.1: Fix the `isVoiceSupported` Constant
-
+### Step 2.1: Graceful Native Module Check
 - **Target File:** `src/hooks/useVoiceControl.ts`
-- **Semantic Anchor / Target Content:**
-
+- **Semantic Anchor / Target Content:** The try/catch block attempting to require Voice at the top of the file:
 ```typescript
-/** Voice recognition is only available on native iOS/Android platforms. */
-const isVoiceSupported = Platform.OS !== "web";
-```
-
-**Exact Replacement Snippet:**
-
-```typescript
-/** Voice recognition is only available on native iOS/Android platforms where the bridge exists. */
-const isVoiceSupported = Platform.OS !== "web" && !!Voice;
-```
-
-### Step 2.2: Safe Assign `Voice` Listeners in `useEffect`
-
-- **Target File:** `src/hooks/useVoiceControl.ts`
-- **Semantic Anchor / Target Content:**
-
-```typescript
-Voice.onSpeechResults = onResults;
-Voice.onSpeechError = onError;
-
-return () => {
-  try {
-    Voice.destroy().then(Voice.removeAllListeners);
-  } catch {
-    // Native module may not be available during cleanup
+let Voice: any;
+try {
+  if (Platform.OS !== 'web') {
+    Voice = require('@react-native-voice/voice').default;
   }
-};
-```
-
-**Exact Replacement Snippet:**
-
-```typescript
-if (Voice) {
-  Voice.onSpeechResults = onResults;
-  Voice.onSpeechError = onError;
+} catch (e) {
+  console.warn('Voice recognition native module not found');
 }
+```
 
-return () => {
-  try {
-    if (Voice) {
-      Voice.destroy().then(Voice.removeAllListeners);
+**Exact Replacement Snippet:**
+```typescript
+import { NativeModules } from 'react-native';
+
+// Safely handle native-only voice import for web compatibility
+let Voice: any = null;
+try {
+  if (Platform.OS !== 'web') {
+    // '@react-native-voice/voice' exports a JS wrapper, but its underlying native bridge is 'RCTVoice' or 'SpeechRecognizer'.
+    // If the native module is null (like in standard Expo Go), Voice.start will crash.
+    const rmVoice = require('@react-native-voice/voice');
+    if (NativeModules.RCTVoice || NativeModules.Voice) {
+      Voice = rmVoice.default;
+    } else {
+      console.warn('RCTVoice native module is missing. Running in Expo Go?');
+      Voice = null;
     }
-  } catch {
-    // Native module may not be available during cleanup
   }
-};
+} catch (e) {
+  console.warn('Voice recognition native module require failed.');
+}
+```
+
+### Step 2.2: Ensure robust error handling on `startListening`
+- **Target File:** `src/hooks/useVoiceControl.ts`
+- **Semantic Anchor / Target Content:** 
+```typescript
+  const startListening = useCallback(async () => {
+    if (!isVoiceSupported) {
+      setError('Voice control requires the native app (Android/iOS)');
+      return;
+    }
+    try {
+      setTranscript('');
+      setError(null);
+```
+
+**Exact Replacement Snippet:**
+```typescript
+  const startListening = useCallback(async () => {
+    if (!isVoiceSupported) {
+      setError('Voice control requires the native app (Android/iOS)');
+      return;
+    }
+    if (!Voice) {
+      setError('Voice native module missing. Requires Development Build (APK).');
+      return;
+    }
+    try {
+      setTranscript('');
+      setError(null);
 ```
 
 ---
 
 ## 3. Post-Execution Verification
 
-- [ ] **Command:** `npx tsc --noEmit src/hooks/useVoiceControl.ts`
-  - _Expected Output:_ Clean exit (0 errors) relating to the modified files.
-- [ ] **Manual Step:** Start Expo Go (`npx expo start --clear`) or run in simulator without the native module bridge. Clicking the Voice FAB should now gracefully return the error "Voice control requires the native app (Android/iOS)" or safely ignore it instead of throwing a red fatal error screen.
+*   [ ] **Command:** `npx tsc --noEmit`
+    *   *Expected Output:* Clean exit (0 errors) relating to `useVoiceControl.ts`.
+*   [ ] **Manual Step:** Ask user to tap the Voice Button. It should safely catch the missing bridge and display an error "Voice native module missing. Requires Development Build (APK)." instead of crashing with a "start speech of null" system error.
 
 ---
 
-**Completion:** Once all checks pass, proceed to Commit Phase using the semantic message: `fix(voice): handle missing native module bridge gracefully to prevent null reference crash`
+**Completion:** Once all checks pass, proceed to Commit Phase using the semantic message: `fix(voice): handle missing RCTVoice native bridge gracefully`

@@ -1,26 +1,84 @@
-# [PLAN] perf/delta-sync-protocol (The Delta Standard)
+# ⚡ Flash-Executable Implementation Plan: perf/delta-sync-protocol
+
+> **WARNING TO AUTHOR (THINK MODEL)**: This plan is designed to be executed blindly by a `[🤖 FLASH]` or pure execution model in a future session. 
+> Do NOT use line numbers (`Replace lines 45-50`). The codebase may have drifted between plan creation and execution.
+> You MUST use **Semantic Anchors** (e.g. `Find the entire useBLE hook`, `Search for the exact phrase: return <View>`).
+> All code snippets must be 100% complete, fully typed, and ready to be copy-pasted via the `replace_file_content` tool.
+
+---
 
 ### Design Decisions & Rationale
+The UI hooks (`useDeviceFleet`, `ProfileService`, `CrewService`) were already preemptively written to fetch data delta using `.gt('updated_at', updatedSince)`. However, the Supabase schema itself was missing the `updated_at` columns on these operational tables (`registered_devices`, `crews`, `crew_sessions`, `skate_sessions`). Applying this database migration bridges the parity gap and allows the front-end to truly benefit from bandwidth reduction instead of silent failures.
 
-To ensure the Crew Hub and high-density telemetry remain fast even with 50+ concurrent users, we are implementing **Differential Data Sync**. Instead of monolithic fetch requests, the app will track its `last_sync_timestamp` and only request "Deltas" (changes since then). This significantly reduces payload sizes and battery consumption.
+## 1. Pre-Flight Context Check (Drift Verification)
 
-## Proposed Changes
+Before executing any file modifications, execute the following strict checks using `view_file` or `grep_search`. Do NOT guess if the file looks different.
 
-### [Component Name] Sync Orchestrator
+*   [ ] **Check 1:** Use `mcp_supabase-mcp-server_list_tables` to check if `registered_devices` has an `updated_at` column.
+    *   *Expected state:* The column will NOT exist.
+    *   *Abort Condition:* If the column already exists, **HALT** and instruct the user: *"Codebase has drifted. The DB already has updated_at columns. This plan is stale."*
 
-#### [MODIFY] [SupabaseService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/SupabaseService.ts)
+---
 
-- Add `since` parameter to all primary fetch methods (`fetchCrews`, `fetchDevices`, `fetchSessions`).
-- Update queries to use `.gt('updated_at', lastSyncTime)`.
+## 2. Step-by-Step Execution Strict Instructions
 
-### [Component Name] Database Evolution
+### Step 2.1: Add Database Columns & Triggers
+- **Target Logic:** Apply a Supabase Database Migration using `mcp_supabase-mcp-server_apply_migration`.
+- **Migration Details:**
+  * Name: `add_delta_sync_updated_at_columns`
+  * Query: 
 
-#### [MODIFY] [Supabase Migration]
+**Exact Query Payload:**
+```sql
+-- 1. Create a generic function to automatically update the timestamp
+CREATE OR REPLACE FUNCTION public.set_current_timestamp_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-- Ensure every synced table (`registered_devices`, `skate_sessions`, `crew_sessions`) has a triggered `updated_at` column.
+-- 2. Add 'updated_at' columns safely (if not exists)
+ALTER TABLE public.registered_devices ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.crews ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.crew_sessions ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.skate_sessions ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT now();
 
-## Verification Plan
+-- 3. Attach 'BEFORE UPDATE' triggers to ensure auto-updating on mutations
+DROP TRIGGER IF EXISTS set_registered_devices_updated_at ON public.registered_devices;
+CREATE TRIGGER set_registered_devices_updated_at
+BEFORE UPDATE ON public.registered_devices
+FOR EACH ROW EXECUTE FUNCTION public.set_current_timestamp_updated_at();
 
-1. **Payload Audit**: Monitor network traffic in the Admin Hub; verify that the second fetch of the Dashboard data is significantly smaller than the first.
-2. **Conflict Test**: Modify a device on one phone and verify it syncs to the second phone via the Delta loop without refreshing the entire list.
-3. **Stale Data Cleanup**: Ensure the Delta loop correctly handles "Hard Deletes" (tombstoning deleted rows in the DB so the client knows to remove them locally).
+DROP TRIGGER IF EXISTS set_crews_updated_at ON public.crews;
+CREATE TRIGGER set_crews_updated_at
+BEFORE UPDATE ON public.crews
+FOR EACH ROW EXECUTE FUNCTION public.set_current_timestamp_updated_at();
+
+DROP TRIGGER IF EXISTS set_crew_sessions_updated_at ON public.crew_sessions;
+CREATE TRIGGER set_crew_sessions_updated_at
+BEFORE UPDATE ON public.crew_sessions
+FOR EACH ROW EXECUTE FUNCTION public.set_current_timestamp_updated_at();
+
+DROP TRIGGER IF EXISTS set_skate_sessions_updated_at ON public.skate_sessions;
+CREATE TRIGGER set_skate_sessions_updated_at
+BEFORE UPDATE ON public.skate_sessions
+FOR EACH ROW EXECUTE FUNCTION public.set_current_timestamp_updated_at();
+```
+
+### Step 2.2: Re-generate TypeScript Definitions
+- **Target Logic:** Execute `generate_typescript_types` from the `supabase-mcp-server` to sync the new schema with our frontend types.
+- **Action:** Sync the returned types into `src/types/supabase.ts` using `write_to_file` with Overwrite set to true.
+
+---
+
+## 3. Post-Execution Verification
+
+*   [ ] **Command:** `npx tsc --noEmit`
+    *   *Expected Output:* Clean exit (0 errors) confirming that the new `updated_at` properties generated by Supabase perfectly mesh with the App's `.gt('updated_at')` filters without TS errors.
+*   [ ] **Manual Step:** Ask user to load the app, browse settings, and refresh the Dashboard. Verify network traffic reflects the delta logic (i.e. Delta queries are cleanly dispatched by Supabase without 500 column missing errors).
+
+---
+
+**Completion:** Once all checks pass, proceed to Commit Phase using the semantic message: `feat(db)!: add updated_at columns and triggers for delta sync`

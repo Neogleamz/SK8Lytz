@@ -203,26 +203,35 @@ class ProfileService {
 
   /**
    * List all permanent crews the current user is a member of.
+   * Delta Sync: Optionally supply updatedSince to limit fetching.
    */
-  async getMyCrew(): Promise<PermanentCrew[]> {
+  async getMyCrew(updatedSince?: string): Promise<PermanentCrew[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
-    const { data, error } = await supabase
+    const query = supabase
       .from('crew_memberships')
-      .select(`crews ( id, name, owner_id, invite_code, created_at, is_public, avatar_color, avatar_icon, avatar_url, city, state, description )`)
-      .eq('user_id', user.id)
-      .order('joined_at', { ascending: true });
+      // Note: For delta sync on inner joins, we'd apply it on the root table or standard table
+      // To preserve stability without custom RPC, we perform standard select and filter locally.
+      .select(`crews ( id, name, owner_id, invite_code, created_at, updated_at, is_public, avatar_color, avatar_icon, avatar_url, city, state, description )`)
+      .eq('user_id', user.id);
+
+    const { data, error } = await query.order('joined_at', { ascending: true });
 
     if (error || !data) return [];
 
-    return data
+    const crews = data
       .map((row: any) => row.crews)
-      .filter(Boolean)
-      .map((crew: any) => ({
-        ...crew,
-        is_owner: crew.owner_id === user.id,
-      })) as PermanentCrew[];
+      .filter(Boolean);
+      
+    const filteredCrews = updatedSince 
+      ? crews.filter((c: any) => c.updated_at && (new Date(c.updated_at) > new Date(updatedSince)))
+      : crews;
+
+    return filteredCrews.map((crew: any) => ({
+      ...crew,
+      is_owner: crew.owner_id === user.id,
+    })) as PermanentCrew[];
   }
 
   /**

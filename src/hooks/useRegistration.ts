@@ -183,7 +183,7 @@ export function useRegistration() {
             led_version:     fullDevice.led_version,
             product_id:      fullDevice.product_id,
             user_id:         user.id,
-            id:              fullDevice.id,
+            id:              fullDevice.id || deviceId,
             updated_at:      now,
             registered_at:   fullDevice.registered_at,
           };
