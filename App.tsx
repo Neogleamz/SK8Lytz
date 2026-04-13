@@ -12,6 +12,7 @@ import { AppLogger } from './src/services/AppLogger';
 import { supabase } from './src/services/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
+import { ComplianceGate } from './src/providers/ComplianceGate';
 
 const STORAGE_OFFLINE_SKIP   = '@Sk8lytz_offline_skip';
 const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';
@@ -173,7 +174,9 @@ function AppContent() {
     <View style={[styles.container, { backgroundColor: Colors.background }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {isAuthenticated ? (
-        <DashboardScreen isOfflineMode={offlineMode} onLogout={() => setOfflineMode(false)} />
+        <ComplianceGate isOfflineMode={offlineMode}>
+          <DashboardScreen isOfflineMode={offlineMode} onLogout={() => setOfflineMode(false)} />
+        </ComplianceGate>
       ) : (
         <AuthScreen
           onAuthSuccess={() => {/* session change auto-handles via onAuthStateChange */}}

@@ -2055,6 +2055,7 @@ export type Database = {
       }
       user_profiles: {
         Row: {
+          accepted_eula_version: number | null
           avatar_color: string
           avatar_url: string | null
           created_at: string
@@ -2066,6 +2067,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
+          accepted_eula_version?: number | null
           avatar_color?: string
           avatar_url?: string | null
           created_at?: string
@@ -2077,6 +2079,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
+          accepted_eula_version?: number | null
           avatar_color?: string
           avatar_url?: string | null
           created_at?: string
