@@ -32,7 +32,7 @@ import GroupSettingsModal from '../components/GroupSettingsModal';
 import Sk8LytzProgrammerModal from '../components/Sk8LytzProgrammerModal';
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
-import AdminToolsModal from '../components/AdminToolsModal';
+import AdminToolsModal from '../components/admin/AdminToolsModal';
 import VoiceFAB from '../components/Voice/VoiceFAB';
 import VoiceCommandModal from '../components/Voice/VoiceCommandModal';
 import VoiceTutorialModal from '../components/Voice/VoiceTutorialModal';
