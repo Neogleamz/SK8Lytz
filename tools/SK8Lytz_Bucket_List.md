@@ -26,8 +26,6 @@ pie title Critical Stability
   "Remaining" : 4
 ```
 
-- [ ] `gate-offline-mode` : [CLOUD] [H-RISK] [Feast] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
-
 ---
 
 ## 🟠 HIGH: Engineering Excellence & Tech Debt
@@ -37,27 +35,28 @@ pie title Critical Stability
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
-  "Completed" : 3
-  "Remaining" : 13
+  "Completed" : 5
+  "Remaining" : 12
 ```
 
 - [x] `chore/sentient-tech-debt-sweep` : [CLOUD] [BATCH] [L-RISK] [Feast] [TOP PRIORITY] Standardize AsyncStorage keys (@Sk8lytz_ prefix), normalize UI speed → Hardware (1-31), and eliminate redundant buffer requires. → [Plan](docs/plans/chore-sentient-tech-debt-sweep.md)
 
 - [ ] `refactor/state-machine-standard` : [CLOUD] [H-RISK] [Feast] [Pillar 8] Deterministic UI — transition from boolean flags to explicit Enum-based Finite State Machines. → [Plan](docs/plans/refactor-state-machine-standard.md)
-- [ ] `feat/ble-hardware-watchdog` : [LAB] [H-RISK] [Feast] [Pillar 7] Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks and silent-relatches connections. → [Plan](docs/plans/feat-ble-hardware-watchdog.md)
-- [ ] `perf/optimistic-ble-updates` : [LAB] [H-RISK] [Meal] [Pillar 2] Mask hardware latency using 'Ghost' optimistic UI updates and state reconciliation. → [Plan](docs/plans/perf-optimistic-ble-updates.md)
-- [ ] `perf/delta-sync-protocol` : [CLOUD] [L-RISK] [Meal] [Pillar 4] Implement differential data fetching to reduce bandwidth and battery consumption. → [Plan](docs/plans/perf-delta-sync-protocol.md)
-- [ ] `audit/domain-driven-architecture` : [CLOUD] [H-RISK] [Feast] [Future Deep Dive] Decouple Hardware, Community, and Session logic into isolated, testable containers. → [Plan](docs/plans/audit-domain-driven-architecture.md)
+- [ ] `feat/ble-hardware-watchdog` : [LAB] [H-RISK] [Feast] [Pillar 7] [🤖 THINK] Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks and silent-relatches connections. → [Plan](docs/plans/feat-ble-hardware-watchdog.md)
+- [ ] `perf/optimistic-ble-updates` : [LAB] [H-RISK] [Meal] [Pillar 2] [🤖 THINK] Mask hardware latency using 'Ghost' optimistic UI updates and state reconciliation. → [Plan](docs/plans/perf-optimistic-ble-updates.md)
+- [ ] `perf/delta-sync-protocol` : [CLOUD] [L-RISK] [Meal] [Pillar 4] [🤖 PRO] Implement differential data fetching to reduce bandwidth and battery consumption. → [Plan](docs/plans/perf-delta-sync-protocol.md)
+- [x] `audit/domain-driven-architecture` : [CLOUD] [H-RISK] [Feast] Audited all 14 extracted domain hooks; resolved 4 bugs (P0: missing state, P0: type narrowing, P1: ModeType duplication, P1: AsyncStorage race condition). TSC exit 0. → [Audit Report](brain/206e904d-e0ff-4a1f-ab45-c74c74b82974/domain_architecture_audit.md)
 - [x] `feat/optimistic-picks-cache` : [CLOUD] [H-RISK] [Meal] [Performance] Implement 'Stale-While-Revalidate' caching for Favorites and SK8Lytz Picks to eliminate load stutters. → [Plan](docs/plans/feat-optimistic-picks-cache.md)
 
-- [ ] `fix/remote-id-audit` : [LAB] [H-RISK] [Meal] [Security] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
-- [ ] `audit-rls-performance` : [CLOUD] [H-RISK] [Meal] #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges. → [Plan](docs/plans/audit-rls-performance.md)
-- [ ] `style/tokenized-spacing-standard` : [CLOUD] [L-RISK] [Meal] [Pillar 9] The 8pt Grid — enforce 8pt spacing tokens app-wide to eliminate magic numbers. → [Plan](docs/plans/style-tokenized-spacing-standard.md)
-- [ ] `chore/refactor-docked-controller` : [CLOUD] [H-RISK] [Feast] [Pillar 1] Extract lighting logic and tab sub-containers from the massive 156KB `DockedController.tsx` monolith.
-- [ ] `chore/refactor-dashboard-monolith` : [CLOUD] [H-RISK] [Feast] [Pillar 1] Decompose `DashboardScreen.tsx` (102KB) into smaller, domain-specific sub-screens and modular hooks.
-- [ ] `chore/refactor-account-modal` : [CLOUD] [L-RISK] [Meal] refactor `AccountModal.tsx` (63KB) to separate settings, profiles, and device management views.
-- [ ] `chore/refactor-diagnostic-lab` : [LAB] [L-RISK] [Meal] cleanup and modularize `Sk8LytzDiagnosticLab.tsx` (61KB) for better maintainability.
-- [ ] `chore/refactor-admin-tools` : [CLOUD] [L-RISK] [Meal] break down `AdminToolsModal.tsx` (55KB) into feature-specific admin modules.
+- [ ] `fix/remote-id-audit` : [LAB] [H-RISK] [Meal] [Security] [🤖 THINK] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
+- [ ] `audit-rls-performance` : [CLOUD] [H-RISK] [Meal] [🤖 THINK] #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges. → [Plan](docs/plans/audit-rls-performance.md)
+- [ ] `style/tokenized-spacing-standard` : [CLOUD] [L-RISK] [Meal] [Pillar 9] [🤖 FLASH] The 8pt Grid — enforce 8pt spacing tokens app-wide to eliminate magic numbers. → [Plan](docs/plans/style-tokenized-spacing-standard.md)
+- [x] `chore/refactor-docked-controller` : [CLOUD] [H-RISK] [Feast] [Pillar 1] State extraction complete via domain hooks. Remaining size: 2,835 lines / 134.8KB — JSX render tree decomposition still needed (see P2 below).
+- [ ] `chore/decompose-docked-controller-jsx` : [CLOUD] [H-RISK] [Feast] [P2 — DDA Audit] [🤖 PRO] Extract DockedController's per-mode JSX panels (MultiMode, Music, Street, Camera, Programs, Favorites) into memoized sub-components. Target: reduce from 2,835 → ~1,800 lines. → [Audit Report](brain/206e904d-e0ff-4a1f-ab45-c74c74b82974/domain_architecture_audit.md)
+- [ ] `chore/refactor-dashboard-monolith` : [CLOUD] [H-RISK] [Feast] [Pillar 1] [🤖 THINK] Decompose `DashboardScreen.tsx` (2,342 lines / 95.9KB) — device-config mutation logic and group-save callbacks still inline; target ~1,400 lines.
+- [x] `chore/refactor-account-modal` : [CLOUD] [L-RISK] [Meal] refactor `AccountModal.tsx` (63KB) to separate settings, profiles, and device management views.
+- [ ] `chore/refactor-diagnostic-lab` : [LAB] [L-RISK] [Meal] [🤖 FLASH] cleanup and modularize `Sk8LytzDiagnosticLab.tsx` (61KB) for better maintainability.
+- [ ] `chore/refactor-admin-tools` : [CLOUD] [L-RISK] [Meal] [🤖 PRO] break down `AdminToolsModal.tsx` (637 lines) into feature-specific admin modules.
 
 ---
 
@@ -75,6 +74,7 @@ pie title Governance Shield
 - [ ] `feat/eula-onboarding` : [CLOUD] [H-RISK] [Meal] Implement the **Legal Shield** — a mandatory, scroll-to-accept EULA flow (Kinetic Safety, Photosensitivity, Data Privacy) in the Auth registration and global version enforcement for active sessions. → [Plan](docs/plans/feat-eula-onboarding.md)
 - [ ] `feat/telemetry-onboarding-ux` : [CLOUD] [L-RISK] [Meal] Implement a casual 'Permissions Hub' onboarding screen after EULA to enable Camera, Mic, GPS, and Bluetooth. → [Plan](docs/plans/feat-telemetry-onboarding-ux.md)
 - [ ] `feat/admin-app-manager` : [CLOUD] [L-RISK] [Feast] Finalized Governance Hub with Safety Locks (Consolidated Scope) → [Plan](docs/plans/feat-admin-app-manager.md)
+- [ ] `gate-offline-mode` : [CLOUD] [H-RISK] [Feast] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
 
 ---
 

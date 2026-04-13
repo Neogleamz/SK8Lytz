@@ -29,6 +29,8 @@ import { ZenggeProtocol, IC_TYPES, COLOR_SORTING_RGB } from '../protocols/Zengge
 import CustomEffectVisualizer from './CustomEffectVisualizer';
 import { useRegistration } from '../hooks/useRegistration';
 import { AppLogger } from '../services/AppLogger';
+import { useDiagnosticLog, BleLog } from '../hooks/useDiagnosticLog';
+import { useProtocolBuilder } from '../hooks/useProtocolBuilder';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,13 +57,7 @@ interface LabProps {
 
 type LabTab = 'DEVICES' | 'COLOR' | 'TRANSITION' | 'BUILDER' | 'SNIFFER';
 
-interface BleLog {
-  dir: 'TX' | 'RX';
-  hex: string;
-  t: number;
-  dev?: string;
-  note?: string;
-}
+// moved to useDiagnosticLog.ts
 
 // ─── Quick Palette for Lab Builders ────────────────────────────────────────
 const QUICK_PALETTE = [
@@ -106,49 +102,7 @@ const TRANSITION_TYPES = [
   { byte: 0x03, label: 'TRIGGER',  color: '#FF69B4', desc: '🔴 One-shot trigger — renders array at NEXT offset then stops. Causes blink+new-position on each send. NOT continuous animation.' },
 ];
 
-// ─── Helper: build annotated 0x59 payload manually ───────────────────────────
-function build0x59(
-  pixels: {r:number;g:number;b:number}[],
-  transitionType: number,
-  speed: number,
-  direction: number
-): { raw: number[]; wrapped: number[]; hex: string; annotations: string[] } {
-  const numPoints = pixels.length;
-  const totalLen = numPoints * 3 + 9;
-
-  const raw = new Array(totalLen).fill(0);
-  raw[0] = 0x59;
-  raw[1] = (totalLen >> 8) & 0xFF;
-  raw[2] = totalLen & 0xFF;
-  let idx = 3;
-  for (const p of pixels) {
-    raw[idx++] = Math.max(0, Math.min(255, p.r | 0));
-    raw[idx++] = Math.max(0, Math.min(255, p.g | 0));
-    raw[idx++] = Math.max(0, Math.min(255, p.b | 0));
-  }
-  raw[idx++] = (numPoints >> 8) & 0xFF;
-  raw[idx++] = numPoints & 0xFF;
-  raw[idx++] = transitionType & 0xFF;
-  raw[idx++] = Math.max(1, Math.min(255, speed | 0));
-  raw[idx++] = direction & 0xFF;
-  raw[idx] = ZenggeProtocol.calculateChecksum(raw.slice(0, totalLen - 1));
-
-  const wrapped = ZenggeProtocol.wrapCommand(raw);
-  const hex = wrapped.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
-
-  const annotations = [
-    `[0x59] Opcode`,
-    `[${raw[1].toString(16).toUpperCase().padStart(2,'0')} ${raw[2].toString(16).toUpperCase().padStart(2,'0')}] totalLen=${totalLen}`,
-    `[... ${numPoints * 3} pixel bytes (${numPoints} LEDs)]`,
-    `[${raw[totalLen-6].toString(16).toUpperCase().padStart(2,'0')} ${raw[totalLen-5].toString(16).toUpperCase().padStart(2,'0')}] numPoints=${numPoints}`,
-    `[${raw[totalLen-4].toString(16).toUpperCase().padStart(2,'0')}] transitionType=${transitionType} (${TRANSITION_TYPES.find(t=>t.byte===transitionType)?.label ?? 'UNKNOWN'})`,
-    `[${raw[totalLen-3].toString(16).toUpperCase().padStart(2,'0')}] speed=${speed}`,
-    `[${raw[totalLen-2].toString(16).toUpperCase().padStart(2,'0')}] direction=${direction}`,
-    `[${raw[totalLen-1].toString(16).toUpperCase().padStart(2,'0')}] checksum`,
-  ];
-
-  return { raw, wrapped, hex, annotations };
-}
+// moved to useProtocolBuilder.ts
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -170,146 +124,68 @@ export default function Sk8LytzDiagnosticLab({
   const { registeredDevices } = useRegistration();
 
   const [tab, setTab] = useState<LabTab>('DEVICES');
-  const [logs, setLogs] = useState<BleLog[]>([]);
-  const [lastSent, setLastSent] = useState<string>('');
-  const [lastNote, setLastNote] = useState<string>('');
-
-  // Target device tracking
-  const [targetDeviceId, setTargetDeviceId] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
-  
-  // Builder general
-  const [bldProtocol, setBldProtocol] = useState<'0x51' | '0x59' | '0x61' | '0x73' | '0x62'>('0x59');
-  
-  // Builder 0x59
-  const [bldColors, setBldColors] = useState([{r:255, g:0, b:0}]);
-  const [bldTrans, setBldTrans] = useState(0x01);
-  const [bldSpeed, setBldSpeed] = useState(16);
-  const [bldPoints, setBldPoints] = useState('16');
-  const [bldDir, setBldDir] = useState(1);
-  
-  // Builder 0x61
-  const [bldPatternId, setBldPatternId] = useState('1');
-  const [bldBright, setBldBright] = useState('100');
+  const hwPts = hwSettings?.ledPoints || 16;
 
-  // Builder 0x51 Custom Mode
-  const [bld51Mode, setBld51Mode] = useState('1');
-  const [bld51Speed, setBld51Speed] = useState('16');
-  const [bld51Color1, setBld51Color1] = useState({ r:255, g:0, b:0 });
-  const [bld51Color2, setBld51Color2] = useState({ r:0, g:255, b:0 });
-  const [bld51Dir, setBld51Dir] = useState(1);
-  const [bld51Seg, setBld51Seg] = useState(false);
+  /**
+   * targetDeviceId — the device currently selected for all TX/RX operations in the Lab.
+   * This state was missing from the original useDiagnosticLog extraction (P0 audit fix).
+   */
+  const [targetDeviceId, setTargetDeviceId] = useState<string | null>(null);
 
-  // Builder 0x73
-  const [bldMic, setBldMic] = useState(true);
-  const [bldMusicMode, setBldMusicMode] = useState('1');
-  const [bldSens, setBldSens] = useState('100');
-  const [bldC2, setBldC2] = useState({r:0, g:0, b:255});
-  const [bldMatrixStyle, setBldMatrixStyle] = useState<0x26 | 0x27>(0x27); // 0x27=Light Screen, 0x26=Light Bar
+  // Domain Hooks
+  const {
+    logs, lastSent, lastNote, transmit, sendRawHex, clearLogs
+  } = useDiagnosticLog({ visible, liveRxPayload, writeToDevice, targetDeviceId });
 
-  // Builder 0x62
-  const [bldIc, setBldIc] = useState('WS2812B');
-  const [bldOrder, setBldOrder] = useState('RGB');
-  const [bldSegs, setBldSegs] = useState('1');
+  const {
+    bldProtocol, setBldProtocol,
+    bldColors, setBldColors,
+    bldTrans, setBldTrans,
+    bldSpeed, setBldSpeed,
+    bldPoints, setBldPoints,
+    bldDir, setBldDir,
+    bldPatternId, setBldPatternId,
+    bldBright, setBldBright,
+    bld51Mode, setBld51Mode,
+    bld51Speed, setBld51Speed,
+    bld51Color1, setBld51Color1,
+    bld51Color2, setBld51Color2,
+    bld51Dir, setBld51Dir,
+    bld51Seg, setBld51Seg,
+    bldMic, setBldMic,
+    bldMusicMode, setBldMusicMode,
+    bldSens, setBldSens,
+    bldC2, setBldC2,
+    bldMatrixStyle, setBldMatrixStyle,
+    bldIc, setBldIc,
+    bldOrder, setBldOrder,
+    bldSegs, setBldSegs,
+    bldResult
+  } = useProtocolBuilder(hwPts);
 
-  // Shared
+  // Manual override for edited hex
   const [bldHexOverride, setBldHexOverride] = useState('');
-  const [bldResult, setBldResult] = useState<{raw: number[], wrapped: number[], hex: string, annotations: string[]} | null>(null);
 
-  // Rebuild payload when builder params change
+  // Sync override with result whenever result changes (unless manually edited)
   useEffect(() => {
-    try {
-      if (bldProtocol === '0x59') {
-        const pts = Math.max(1, Math.min(300, parseInt(bldPoints) || 16));
-        const pixels = Array(pts).fill(0).map((_, i) => bldColors[i % bldColors.length]);
-        const result = build0x59(pixels, bldTrans, bldSpeed, bldDir);
-        setBldResult(result);
-        setBldHexOverride(result.hex);
-      } else if (bldProtocol === '0x61') {
-        const id = parseInt(bldPatternId) || 1;
-        const spd = Math.max(1, bldSpeed); // No upper cap — raw value for hardware testing
-        const br = Math.max(0, Math.min(100, parseInt(bldBright)||100));
-        const wrapped = ZenggeProtocol.setCustomRbm(id, spd, br);
-        const hex = wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
-        setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x61] RBM Pattern Payload', `Pattern: ${id}`, `Speed: ${spd}`, `Brightness: ${br}`] });
-        setBldHexOverride(hex);
-      } else if (bldProtocol === '0x51') {
-        const mode = parseInt(bld51Mode) || 1;
-        const spd = Math.max(1, Math.min(31, parseInt(bld51Speed) || 16));
-        // Note: ZenggeProtocol.setCustomMode currently only supports color/speed.
-        // dir and seg flags are reserved for future protocol refinement.
-        const wrapped = ZenggeProtocol.setCustomMode([{
-            mode, speed: spd, 
-            color1: bld51Color1, color2: bld51Color2
-        }]);
-        const hex = wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
-        setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x51] DIY Mode Payload', `Effect ID: ${mode}`, `Speed: ${spd}`] });
-        setBldHexOverride(hex);
-      } else if (bldProtocol === '0x73') {
-        const id = parseInt(bldMusicMode) || 1;
-        const c1 = bldColors[0] || {r:255,g:0,b:0};
-        const s = parseInt(bldSens) || 100;
-        const br = parseInt(bldBright) || 100;
-        // matrixStyle=bldMatrixStyle (0x27 Screen, 0x26 Bar), patternId=id (effects 1-13)
-        const wrapped = ZenggeProtocol.setMusicConfig(bldMic, bldMatrixStyle, id, c1, bldC2, s, br);
-        const hex = wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
-        const matrixLabel = bldMatrixStyle === 0x27 ? 'Light Screen (0x27)' : 'Light Bar (0x26)';
-        setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x73] Symphony/Music Config', `Mode: ${id} | Matrix: ${matrixLabel}`, `Mic: ${bldMic ? 'DEVICE' : 'APP'} | Sens: ${s} | Bright: ${br}`, `C1 RGB(${c1.r},${c1.g},${c1.b}) | C2 RGB(${bldC2.r},${bldC2.g},${bldC2.b})`] });
-        setBldHexOverride(hex);
-      } else if (bldProtocol === '0x62') {
-        const pts = parseInt(bldPoints) || 16;
-        const seg = parseInt(bldSegs) || 1;
-        const wrapped = ZenggeProtocol.writeHardwareSettingsByName(pts, seg, bldIc, bldOrder);
-        const hex = wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
-        setBldResult({ raw: wrapped, wrapped, hex, annotations: ['[0x62] EEPROM Write', `IC: ${bldIc} Order: ${bldOrder}`, `LEDs: ${pts} Seg: ${seg}`] });
-        setBldHexOverride(hex);
-      }
-    } catch(e) { }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bldProtocol, bldColors, bldTrans, bldSpeed, bldPoints, bldDir, bldPatternId, bldBright, bldMic, bldMusicMode, bldSens, bldC2, bldMatrixStyle, bldIc, bldOrder, bldSegs]);
+    if (bldResult?.hex) setBldHexOverride(bldResult.hex);
+  }, [bldResult]);
 
-  // RX listener
-  useEffect(() => {
-    if (!visible || !liveRxPayload?.payloadHex) return;
-    const entry: BleLog = {
-      dir: 'RX',
-      hex: liveRxPayload.payloadHex,
-      t: liveRxPayload.timestamp || Date.now(),
-      dev: liveRxPayload.deviceId,
-    };
-    const bytes = liveRxPayload.payloadHex.split(' ').map(h => parseInt(h, 16));
-    const hw63 = ZenggeProtocol.parseHardwareSettingsResponse(bytes);
-    if (hw63) {
-      entry.note = `0x63 → LEDs:${hw63.ledPoints} ${hw63.icName} ${hw63.colorSortingName} sort:${hw63.colorSorting}`;
-    }
-    setLogs(prev => [entry, ...prev].slice(0, 200));
-  }, [liveRxPayload, visible]);
-
-  const transmit = useCallback(async (bytes: number[], note?: string) => {
-    if (!writeToDevice) return;
-    // Pass targetDeviceId so payload goes to the specific targeted device only
-    await writeToDevice(bytes, targetDeviceId ?? undefined).catch(console.warn);
-    const hexStr = bytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
-    setLastSent(hexStr);
-    setLastNote(note || '');
-    setLogs(prev => [{ dir: 'TX' as const, hex: hexStr, t: Date.now(), note, dev: targetDeviceId ?? undefined }, ...prev].slice(0, 200));
-    AppLogger.log('RAW_PAYLOAD', { dir: 'TX', hex: hexStr, note, deviceId: targetDeviceId ?? undefined });
-  }, [writeToDevice, targetDeviceId]);
-
-  const sendRawHex = useCallback(async (hexStr: string, note?: string) => {
-    const bytes = hexStr.replace(/[^0-9A-Fa-f]/g, '').match(/.{1,2}/g)?.map(h => parseInt(h, 16)) || [];
-    if (bytes.length === 0) return;
-    await transmit(bytes, note);
-  }, [transmit]);
-
-  // ─── Solid color test helpers ───────────────────────────────────────────────
+  // ─── Solid color test helper ────────────────────────────────────────────────
   const sendSolid = (r: number, g: number, b: number, pts: number, trans: number, note: string) => {
     const pixels = Array(pts).fill({ r, g, b });
-    const { wrapped } = build0x59(pixels, trans, 1, 1);
-    transmit(wrapped, note);
+    const numPoints = pixels.length;
+    const totalLen = numPoints * 3 + 9;
+    const raw = new Array(totalLen).fill(0);
+    raw[0] = 0x59; raw[1] = (totalLen >> 8) & 0xFF; raw[2] = totalLen & 0xFF;
+    let idx = 3;
+    for (const p of pixels) { raw[idx++] = p.r; raw[idx++] = p.g; raw[idx++] = p.b; }
+    raw[idx++] = (numPoints >> 8) & 0xFF; raw[idx++] = numPoints & 0xFF;
+    raw[idx++] = trans & 0xFF; raw[idx++] = 1; raw[idx++] = 1;
+    raw[idx] = ZenggeProtocol.calculateChecksum(raw.slice(0, totalLen - 1));
+    transmit(ZenggeProtocol.wrapCommand(raw), note);
   };
-
-  const hwPts = hwSettings?.ledPoints || 16;
 
   // ─── Render helpers ─────────────────────────────────────────────────────────
 
@@ -528,9 +404,16 @@ export default function Sk8LytzDiagnosticLab({
         <TouchableOpacity key={tt.byte}
           style={[S.transBtn, { borderColor: tt.color, backgroundColor: cardBg }]}
           onPress={() => {
-            const pixels = Array(hwPts).fill({ r: bldColors[0]?.r||0, g: bldColors[0]?.g||0, b: bldColors[0]?.b||0 });
-            const { wrapped } = build0x59(pixels, tt.byte, bldSpeed, 1);
-            transmit(wrapped, `transitionType=0x0${tt.byte.toString(16).toUpperCase()} ${tt.label}`);
+            const numPoints = hwPts;
+            const totalLen = numPoints * 3 + 9;
+            const raw = new Array(totalLen).fill(0);
+            raw[0] = 0x59; raw[1] = (totalLen >> 8) & 0xFF; raw[2] = totalLen & 0xFF;
+            let idx = 3;
+            for (let i=0; i<numPoints; i++) { raw[idx++] = bldColors[0]?.r||0; raw[idx++] = bldColors[0]?.g||0; raw[idx++] = bldColors[0]?.b||0; }
+            raw[idx++] = (numPoints >> 8) & 0xFF; raw[idx++] = numPoints & 0xFF;
+            raw[idx++] = tt.byte & 0xFF; raw[idx++] = bldSpeed; raw[idx++] = 1;
+            raw[idx] = ZenggeProtocol.calculateChecksum(raw.slice(0, totalLen - 1));
+            transmit(ZenggeProtocol.wrapCommand(raw), `transitionType=0x0${tt.byte.toString(16).toUpperCase()} ${tt.label}`);
           }}>
           <View style={[S.transByteBadge, { backgroundColor: tt.color + '22', borderColor: tt.color }]}>
             <Text style={{ color: tt.color, fontWeight: '900', fontSize: 14 }}>0x0{tt.byte.toString(16).toUpperCase()}</Text>
@@ -837,16 +720,15 @@ export default function Sk8LytzDiagnosticLab({
       )}
 
       <Text style={[S.subTitle, { color: txtMuted }]}>FULL HEX (EDITABLE)</Text>
-      <TextInput
-        style={[S.hexInput, { backgroundColor: isDark ? '#05070a' : '#f9fafb', color: cyan, borderColor: border }]}
-        value={bldHexOverride}
-        onChangeText={setBldHexOverride}
-        multiline
-        placeholder="Hex bytes..."
-        placeholderTextColor={txtMuted}
-      />
-
-      <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+          <TextInput
+            style={[S.hexInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]}
+            defaultValue={bldResult?.hex || ''}
+            onChangeText={sendRawHex}
+            placeholder="59 00 0F FF 00 00 ..."
+            placeholderTextColor={txtMuted}
+            multiline
+          />
+<View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
         <TouchableOpacity style={[S.txBtn, { flex: 1, backgroundColor: cyan, borderColor: cyan }]}
           onPress={() => sendRawHex(bldHexOverride, `Builder: trans=0x0${bldTrans.toString(16).toUpperCase()} pts=${bldPoints}`)}>
           <Text style={{ color: '#000', fontWeight: '900', fontSize: 12 }}>TX PAYLOAD</Text>
@@ -872,9 +754,9 @@ export default function Sk8LytzDiagnosticLab({
               if ('isCmd' in preset && preset.isCmd && preset.cmd) {
                 transmit(ZenggeProtocol.wrapCommand(preset.cmd), preset.note);
               } else if ('r' in preset) {
+                const p = preset as { r: number; g: number; b: number; trans: number; note: string };
                 const pts = parseInt(bldPoints) || hwPts || 16;
-                const { wrapped } = build0x59(Array(pts).fill({ r: preset.r, g: preset.g, b: preset.b }), preset.trans || 0x01, bldSpeed, 1);
-                transmit(wrapped, preset.note);
+                sendSolid(p.r, p.g, p.b, pts, p.trans ?? 0x01, p.note);
               }
             }}>
             <Text style={{ color: cyan, fontSize: 12, fontWeight: '900' }}>{preset.label}</Text>
@@ -890,7 +772,7 @@ export default function Sk8LytzDiagnosticLab({
     <View style={{ flex: 1 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <Text style={[S.sectionTitle, { color: txtPri }]}>BLE TRACE</Text>
-        <TouchableOpacity style={[S.chip, { borderColor: '#ff404022', backgroundColor: '#ff404011' }]} onPress={() => setLogs([])}>
+        <TouchableOpacity style={[S.chip, { borderColor: '#ff404022', backgroundColor: '#ff404011' }]} onPress={() => clearLogs()}>
           <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: '900' }}>CLEAR</Text>
         </TouchableOpacity>
       </View>
