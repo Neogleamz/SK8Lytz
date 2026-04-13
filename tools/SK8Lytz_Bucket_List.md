@@ -28,7 +28,6 @@ pie title Critical Stability
 
 - [ ] `feat/gate-offline-mode` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
 
-- [x] `feat/ble-hardware-watchdog` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [Pillar 7] [🧠 THINK] Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks and silent-relatches connections. → [Plan](docs/plans/feat-ble-hardware-watchdog.md)
 
 ---
 
@@ -43,7 +42,6 @@ pie title Engineering Health
   "Remaining" : 11
 ```
 
-- [x] `refactor/ble-notification-mailroom` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] [📝️ NEEDS-PLAN] [⏱️ 2h] Decompose the monolithic BLE notification callback into 4 single-responsibility handlers: (1) raw hex stamp → lastRawNotification, (2) fire-and-forget Supabase diagnostics upload, (3) pure LED config parser, (4) state writer → allDevices + deviceConfigs + AsyncStorage. **Requires architectural discussion before execution.** → [Plan](docs/plans/refactor-ble-notification-mailroom.md)
 
 - [ ] `fix/remote-id-audit` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [Security] [🧠 THINK] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
 
@@ -51,7 +49,6 @@ pie title Engineering Health
 
 - [ ] `chore/refactor-god-object-docked-controller` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [God Object] Refactor `DockedController.tsx` — 83 hooks and 134KB detected; critical modularity risk.
 
-- [x] `chore/refactor-god-object-dashboard` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [God Object] Refactor `DashboardScreen.tsx` — 48 hooks and 95KB detected; decompose state management.
 
 - [ ] `chore/refactor-use-ble-overheat` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] [God Object] Refactor `useBLE.ts` — 39 hooks and 42KB detected; decouple scanning from characteristic logic.
 

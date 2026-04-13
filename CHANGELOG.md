@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-04-13
+
+### Added
+
+- **Hardware Watchdog**: Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks, clears GATT buffers, and silently relatches connections to maintain stability.
+- **Diagnostic Controls**: Extracted Sniffer/Telemetry Diagnostics to its own toggle state in the Diagnostics Lab UI, rather than linking it to the modal open state.
+
+### Changed
+
+- **BLE Notification Mailroom**: Decomposed the monolithic BLE notification callback into 4 performant, single-responsibility handlers (gatekeeper, sniffer, pure config parser, and delta state writer), vastly minimizing UI-thread parser lag on heavy loads.
+- **Dashboard Deconstruction**: Executed massive refactor of `DashboardScreen.tsx` (previously a 95KB God Object). Stripped out 48 hooks and decomposed state management into structured modular domains.
+
 ## [1.4.0] - 2026-04-13
 
 ### Changed
