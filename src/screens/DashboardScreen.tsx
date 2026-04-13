@@ -744,55 +744,40 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     customGroupsRef.current = customGroups;
   }, [customGroups]); // Keep ref in sync with hook-managed state
 
+  // One-shot startup cleanup: prune simulator entries from AsyncStorage.
+  // NOTE: customGroups and deviceConfigs state are now fully owned by useDashboardGroups.
+  // This effect ONLY cleans sim- prefixed entries and ng_processed_devices — it does NOT
+  // call setDeviceConfigs to avoid a race condition with useDashboardGroups' own load.
   useEffect(() => {
-    // 1. Load and clean custom groups
-    AsyncStorage.getItem('ng_custom_groups')
-      .then(res => {
-        if (res) {
-          try { 
-            const parsed = JSON.parse(res) || [];
-            // customGroups is now managed by useDashboardGroups — local load handled there
-          } catch(e: any) { AppLogger.warn('JSON parse error groups', { error: String(e) }); }
-        }
-      })
-      .catch((e: any) => AppLogger.warn('AsyncStorage error custom groups', { error: String(e) }));
-
-    // 2. Load and clean device configs
+    // Prune sim-device entries from device configs (without overwriting hook state)
     AsyncStorage.getItem('ng_device_configs')
       .then(res => {
-        if (res) {
-          try {
-            const configs = JSON.parse(res) || {};
-            let changed = false;
-            for (const key in configs) {
-              if (key.startsWith('sim-')) {
-                delete configs[key];
-                changed = true;
-              }
-            }
-            if (changed) {
-              AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs)).catch(()=>{});
-            }
-            setDeviceConfigs(configs);
-          } catch(e: any) { AppLogger.warn('JSON parse error configs', { error: String(e) }); }
-        }
+        if (!res) return;
+        try {
+          const configs = JSON.parse(res) || {};
+          const hasSim = Object.keys(configs).some(k => k.startsWith('sim-'));
+          if (hasSim) {
+            for (const key in configs) { if (key.startsWith('sim-')) delete configs[key]; }
+            AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs)).catch(() => {});
+          }
+        } catch (e: any) { AppLogger.warn('JSON parse error configs cleanup', { error: String(e) }); }
       })
-      .catch((e: any) => AppLogger.warn('AsyncStorage error configs', { error: String(e) }));
+      .catch((e: any) => AppLogger.warn('AsyncStorage error configs cleanup', { error: String(e) }));
 
-    // 3. Load and clean processed devices log
+    // Prune sim-device entries from processed devices log
     AsyncStorage.getItem('ng_processed_devices')
       .then(res => {
-        if (res) {
-          try {
-            const processed = JSON.parse(res) || [];
-            const cleaned = processed.filter((id: string) => !id.startsWith('sim-'));
-            if (cleaned.length !== processed.length) {
-              AsyncStorage.setItem('ng_processed_devices', JSON.stringify(cleaned)).catch(()=>{});
-            }
-          } catch(e) {}
-        }
+        if (!res) return;
+        try {
+          const processed = JSON.parse(res) || [];
+          const cleaned = processed.filter((id: string) => !id.startsWith('sim-'));
+          if (cleaned.length !== processed.length) {
+            AsyncStorage.setItem('ng_processed_devices', JSON.stringify(cleaned)).catch(() => {});
+          }
+        } catch (e) {}
       });
   }, []);
+
 
   const runAutoProvisioning = useCallback(async () => {
     if (!isProvisioningTriggered.current) return;

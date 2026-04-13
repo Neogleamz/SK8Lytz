@@ -1,7 +1,8 @@
 import { useState } from 'react';
-export type ProductType = string;
+import type { ModeType } from '../types/dashboard.types';
 
-export type ModeType = 'FAVORITES' | 'MULTIMODE' | 'PROGRAMS' | 'MUSIC' | 'STREET' | 'CAMERA';
+/** Opaque alias kept for backward-compatibility — represents a product catalog ID string. */
+export type ProductType = string;
 
 export interface BuilderNode {
   id: string;

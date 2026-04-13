@@ -20,7 +20,9 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, 
 import { useSessionTracking } from '../hooks/useSessionTracking';
 import { useStreetMode } from '../hooks/useStreetMode';
 import { useFavorites } from '../hooks/useFavorites';
-import { useDockedControllerState, ModeType } from '../hooks/useDockedControllerState';
+import { useDockedControllerState } from '../hooks/useDockedControllerState';
+import type { ModeType } from '../types/dashboard.types';
+
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio } from 'expo-av';
 import { Typography, Layout } from '../theme/theme';
