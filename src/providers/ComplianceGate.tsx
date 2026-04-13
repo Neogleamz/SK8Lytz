@@ -4,6 +4,8 @@ import { supabase } from '../services/supabaseClient';
 import EulaModal from '../components/modals/EulaModal';
 import { AppSettingsService } from '../services/AppSettingsService';
 import { useTheme } from '../context/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import PermissionsOnboardingScreen from '../screens/Onboarding/PermissionsOnboardingScreen';
 
 interface ComplianceGateProps {
   children: React.ReactNode;
@@ -14,20 +16,22 @@ export function ComplianceGate({ children, isOfflineMode }: ComplianceGateProps)
   const { Colors } = useTheme();
   const [loading, setLoading] = useState(true);
   const [requiresEula, setRequiresEula] = useState(false);
+  const [requiresPermissions, setRequiresPermissions] = useState(false);
 
   useEffect(() => {
-    if (isOfflineMode) {
-      setLoading(false);
-      return;
-    }
-    
     checkCompliance();
   }, [isOfflineMode]);
 
   const checkCompliance = async () => {
     setLoading(true);
     try {
-      if (!supabase) {
+      // 1. Always evaluate local permissions requirement, even if offline
+      const hasSeenPermissions = await AsyncStorage.getItem('@Sk8lytz_has_seen_permissions');
+      if (!hasSeenPermissions) {
+        setRequiresPermissions(true);
+      }
+
+      if (isOfflineMode || !supabase) {
         setLoading(false);
         return;
       }
@@ -100,6 +104,19 @@ export function ComplianceGate({ children, isOfflineMode }: ComplianceGateProps)
     return (
       <View style={{ flex: 1, backgroundColor: Colors.background }}>
         <EulaModal visible={true} onAccept={handleAccept} onDecline={handleDecline} isViewOnly={false} />
+      </View>
+    );
+  }
+
+  if (requiresPermissions) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+        <PermissionsOnboardingScreen 
+          onComplete={async () => {
+            await AsyncStorage.setItem('@Sk8lytz_has_seen_permissions', 'true');
+            setRequiresPermissions(false);
+          }} 
+        />
       </View>
     );
   }
