@@ -56,8 +56,9 @@ interface AccountModalProps {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 import CustomSlider from './CustomSlider';
+import { STORAGE_PREFIX } from '../constants/AppConstants';
 
-const NOTIF_PREF_KEY = '@Sk8lytz_notif_prefs';
+const NOTIF_PREF_KEY = `${STORAGE_PREFIX}notif_prefs`;
 
 function hexToHue(hex: string | null | undefined): number {
   if (!hex) return 30; // default orange
