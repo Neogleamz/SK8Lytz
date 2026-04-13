@@ -55,6 +55,7 @@ pie title Engineering Health
 - [ ] `chore/refactor-use-ble-overheat` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [God Object] Refactor `useBLE.ts` — 39 hooks and 42KB detected; decouple scanning from characteristic logic.
 - [ ] `chore/cleanup-crew-screen-todos` : [☁️ CLOUD] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [⚡ FLASH-READY] Cleanup legacy import TODOs in CrewCreate, CrewDetail, and CrewManage screens.
 - [ ] `chore/refactor-admin-tools` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] break down `AdminToolsModal.tsx` (637 lines) into feature-specific admin modules.
+- [ ] `chore/telemetry-efficiency-audit` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] Re-evaluate the parsed_* telemetry tables and ingestion logic to eliminate data duplication and optimize storage efficiency. → [Plan](docs/plans/chore-telemetry-efficiency-audit.md)
 
 ---
 
@@ -93,7 +94,7 @@ pie title Feature Velocity
 - [ ] `feat/street-mode-telemetry-overhaul` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] Overhaul Street Mode with metrics grid and auto-scaling gauges. → [Plan](docs/plans/feat-street-mode-telemetry-overhaul.md)
 - [ ] `feat/usa-skate-spots-dataset` : [☁️ CLOUD] [📦 BATCH] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] US-only dataset of rinks and parks for map overlays. → [Plan](docs/plans/feat-usa-skate-spots-dataset.md)
 - [ ] `feat/app-wide-ux-tips` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🤖 FLASH] [📝️ NEEDS-PLAN] Contextual tips system for key friction points. → [Plan](docs/plans/feat-app-wide-ux-tips.md)
-- [ ] `chore/beautify-backlog` : [☁️ CLOUD] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] Prettify bucket list tags with icons and update intake rules for aesthetic consistency. → [Plan](docs/plans/chore-beautify-backlog.md)
+- [x] `chore/beautify-backlog` : [☁️ CLOUD] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] Prettify bucket list tags with icons and update intake rules for aesthetic consistency. → [Plan](docs/plans/chore-beautify-backlog.md)
 - [x] `feat/eula-content-update` : [☁️ CLOUD] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [⚡ FLASH-READY] Update EulaModal with the new formal legal text provided by Neogleamz. → [Plan](docs/plans/feat-eula-content-update.md)
 
 
