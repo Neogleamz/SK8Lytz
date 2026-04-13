@@ -71,7 +71,7 @@ pie title Governance Shield
   "Remaining" : 1
 ```
 
-- [ ] `feat/admin-app-manager` : [☁️ CLOUD] [✅ L-RISK] [🥩 Feast] [🤖 PRO-HIGH] Finalized Governance Hub with Safety Locks (Consolidated Scope) → [Plan](docs/plans/feat-admin-app-manager.md)
+- [x] `feat/admin-app-manager` : [☁️ CLOUD] [✅ L-RISK] [🥩 Feast] [🤖 PRO-HIGH] Finalized Governance Hub with Safety Locks (Consolidated Scope) → [Plan](docs/plans/feat-admin-app-manager.md)
 
 ---
 

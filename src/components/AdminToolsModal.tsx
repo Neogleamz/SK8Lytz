@@ -15,9 +15,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView,
-  Alert, FlatList, Platform, SafeAreaView, Switch, TextStyle, ViewStyle
+  Alert, FlatList, Platform, SafeAreaView, Switch, TextStyle, ViewStyle, TextInput
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Device from 'expo-device';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAdminTelemetry, EVENT_META, formatLogTime, getPayloadSummary, TelemetryStats } from '../hooks/useAdminTelemetry';
 import { useProductManager } from '../hooks/useProductManager';
@@ -644,51 +645,105 @@ const ProductsTab = React.memo(({
   allProfiles, editingProfile, startEditing, createNew, patchEdit, saveProduct, productSaving,
   textMuted, textPrimary, cardBg, borderColor 
 }: ProductsTabProps) => {
-  const activeProfile = editingProfile || allProfiles[0];
 
   const fieldWrapperStyle: ViewStyle = { marginBottom: 16, backgroundColor: cardBg, padding: 12, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#9D4EFF' };
   const fieldLabelStyle: TextStyle = { color: textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 };
   const fieldInputStyle: TextStyle = { color: textPrimary, fontSize: 16, padding: 0, fontWeight: '600' };
 
-  if (!activeProfile) return <Text style={{ color: textMuted, textAlign: 'center', marginTop: 32 }}>No profiles loaded.</Text>;
+  const renderField = (label: string, key: string, placeholder: string, keyboardType: any = 'default') => (
+    <View style={fieldWrapperStyle}>
+      <Text style={fieldLabelStyle}>{label}</Text>
+      <TextInput
+        style={fieldInputStyle}
+        value={editingProfile?.[key]?.toString() || ''}
+        onChangeText={v => {
+          if (keyboardType === 'numeric') {
+            patchEdit({ [key]: v ? Number(v.replace(/[^0-9.-]/g, '')) : 0 });
+          } else {
+            patchEdit({ [key]: v });
+          }
+        }}
+        placeholder={placeholder}
+        placeholderTextColor={textMuted}
+        keyboardType={keyboardType}
+        autoCapitalize={keyboardType === 'default' ? 'characters' : 'none'}
+      />
+    </View>
+  );
 
-  if (editingProfile) {
-    return (
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: borderColor }}>
-          <View>
-            <Text style={{ color: textPrimary, fontWeight: '800', fontSize: 18 }}>
-              {editingProfile.id ? 'EDIT PRODUCT' : 'ADD NEW PRODUCT'}
-            </Text>
-            <Text style={{ color: textMuted, fontSize: 12 }}>Catalog Override Mode</Text>
-          </View>
-          <TouchableOpacity onPress={() => patchEdit({ id: '' })} style={{ backgroundColor: borderColor, padding: 8, borderRadius: 8 }}>
-            <MaterialCommunityIcons name="close" size={20} color={textPrimary} />
+  const renderToggle = (label: string, key: string, desc: string) => (
+    <View style={[fieldWrapperStyle, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+      <View style={{ flex: 1, paddingRight: 12 }}>
+        <Text style={fieldLabelStyle}>{label}</Text>
+        <Text style={{ color: textMuted, fontSize: 11 }}>{desc}</Text>
+      </View>
+      <Switch 
+        value={!!editingProfile?.[key]} 
+        onValueChange={v => patchEdit({ [key]: v })}
+        trackColor={{ false: '#333', true: '#FF5A00' }}
+      />
+    </View>
+  );
+
+  return (
+    <View style={{ flex: 1 }}>
+      {/* ── PILL SELECTOR ── */}
+      <View style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, gap: 10 }}>
+          {allProfiles.map((p: any) => {
+            const isActive = editingProfile?.id === p.id;
+            return (
+              <TouchableOpacity key={p.id} onPress={() => startEditing(p)}
+                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: isActive ? '#9D4EFF' : '#333' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {p.brandIcon && <MaterialCommunityIcons name={p.brandIcon as any} size={14} color="#FFF" />}
+                  <Text style={{ color: '#FFF', fontWeight: '600' }}>{p.displayName || p.id}</Text>
+                </View>
+              </TouchableOpacity>
+            )
+          })}
+          <TouchableOpacity onPress={createNew}
+            style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#FF5A00', borderStyle: 'dashed', backgroundColor: (editingProfile && !editingProfile.id) ? 'rgba(255,90,0,0.2)' : 'transparent' }}>
+            <Text style={{ color: '#FF5A00', fontWeight: '800' }}>+ ADD NEW</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
+      </View>
 
+      {/* ── EDITOR ── */}
+      {editingProfile ? (
         <ScrollView style={{ flex: 1, padding: 16 }}>
-          <View style={fieldWrapperStyle}>
-            <Text style={fieldLabelStyle}>Unique Product ID (Hardware Ref)</Text>
-            <TextInput
-              style={fieldInputStyle}
-              value={editingProfile?.id?.toString() || ''}
-              onChangeText={v => patchEdit({ id: v })}
-              placeholder="e.g. SK8LYTZ_V2_PRO"
-              placeholderTextColor={textMuted}
-              autoCapitalize="characters"
-            />
-          </View>
-          <View style={fieldWrapperStyle}>
-            <Text style={fieldLabelStyle}>Display Name (User Visible)</Text>
-            <TextInput
-              style={fieldInputStyle}
-              value={editingProfile?.displayName?.toString() || ''}
-              onChangeText={v => patchEdit({ displayName: v })}
-              placeholder="e.g. SK8Lytz Pro Edition"
-              placeholderTextColor={textMuted}
-            />
-          </View>
+          <Text style={{ color: textPrimary, fontSize: 18, fontWeight: '800', marginBottom: 16 }}>
+            {editingProfile.id ? 'EDIT PROFILE' : 'NEW HARDWARE PROFILE'}
+          </Text>
+
+          {renderField('Product ID (Hardware Ref)', 'id', 'e.g. SK8LYTZ_V2')}
+          {renderField('Display Name', 'displayName', 'e.g. SK8Lytz Pro')}
+          {renderField('Brand Icon', 'brandIcon', 'e.g. circle-double')}
+          {renderField('Brand Color Hex', 'vizThemeColor', 'e.g. #FF5A00')}
+
+          <Text style={{ color: textMuted, fontWeight: '800', marginTop: 12, marginBottom: 8 }}>HARDWARE DEFAULTS</Text>
+          {renderField('Default LEDs', 'defaultLedPoints', '16', 'numeric')}
+          {renderField('Virtual Segments', 'defaultSegments', '1', 'numeric')}
+          {renderField('IC Type (1=WS2812B)', 'defaultIcType', '1', 'numeric')}
+          {renderField('Color Sorting (2=GRB)', 'defaultColorSorting', '2', 'numeric')}
+          {renderField('Battery Capacity (mAh)', 'batteryCapacityMilliAmpereHour', '3000', 'numeric')}
+          {renderToggle('Customizable Profile', 'hardwareAllowsCustomPoints', 'Allow user to cut and set custom length')}
+
+          <Text style={{ color: textMuted, fontWeight: '800', marginTop: 12, marginBottom: 8 }}>AUTODETECT THRESHOLDS</Text>
+          {renderField('Min HW Points', 'detectMinPoints', '1', 'numeric')}
+          {renderField('Max HW Points', 'detectMaxPoints', '99', 'numeric')}
+
+          <Text style={{ color: textMuted, fontWeight: '800', marginTop: 12, marginBottom: 8 }}>VISUALIZER GEOMETRY</Text>
+          {renderField('Canvas Shape', 'vizShape', 'OVAL | RING | DUAL_STRIP')}
+          {renderField('Base Width', 'vizBaseWidth', '55', 'numeric')}
+          {renderField('Base Height', 'vizBaseHeight', '115', 'numeric')}
+          {renderField('Blob Diameter (mm)', 'vizBlobDiameterMm', '5.7', 'numeric')}
+          {renderField('Visualizer Default Points', 'vizDefaultPoints', '16', 'numeric')}
+          {renderField('Strip Count (Railz)', 'vizStripCount', '2', 'numeric')}
+          {renderField('Strip Separation (Railz)', 'vizStripSeparation', '32', 'numeric')}
+          {renderField('Strip Orientation', 'vizStripOrientation', 'VERTICAL | HORIZONTAL')}
+          {renderToggle('Mirrored Render', 'vizIsMirrored', 'Mirror Seg2 over Seg1')}
+
           <TouchableOpacity 
             onPress={saveProduct} 
             disabled={productSaving}
@@ -699,27 +754,14 @@ const ProductsTab = React.memo(({
             </Text>
           </TouchableOpacity>
         </ScrollView>
-      </View>
-    );
-  }
-
-  return (
-    <View style={{ flex: 1 }}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, gap: 10 }}>
-        {allProfiles.map((p: any) => (
-          <TouchableOpacity key={p.id} onPress={() => startEditing(p)}
-            style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#333' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              {p.brandIcon && <MaterialCommunityIcons name={p.brandIcon as any} size={14} color="#FFF" />}
-              <Text style={{ color: '#FFF', fontWeight: '600' }}>{p.displayName || p.id}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-        <TouchableOpacity onPress={createNew}
-          style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#FF5A00', borderStyle: 'dashed' }}>
-          <Text style={{ color: '#FF5A00', fontWeight: '800' }}>+ ADD PRODUCT</Text>
-        </TouchableOpacity>
-      </ScrollView>
+      ) : (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+          <MaterialCommunityIcons name="cube-outline" size={48} color={borderColor} style={{ marginBottom: 16 }} />
+          <Text style={{ color: textMuted, textAlign: 'center', fontWeight: '600' }}>
+            Select a hardware profile from the top menu to view or edit its settings.
+          </Text>
+        </View>
+      )}
     </View>
   );
 });
