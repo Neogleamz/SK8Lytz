@@ -6,7 +6,7 @@
  *
  * Architecture:
  *  - Local buffer: compact LogEntry[] ({ t, e, d }) stored in AsyncStorage
- *    under '@Sk8lytz_logs'. Rotates at MAX_ENTRIES (10,000) to cap storage.
+ *    under '@Sk8lytz_logs'. Rotates at MAX_ENTRIES (500) to cap storage.
  *  - Session ID: generated once at instantiation (telemetry_TIMESTAMP),
  *    stable for the entire app lifetime to prevent duplicate Supabase rows.
  *  - uploadLogsToSupabase(): merges with cloud Storage JSON, deduplicates,
@@ -72,10 +72,8 @@ export type EventType =
   | 'REJOIN'
   | 'FTUE'
   | 'CREW_PERMANENT_DELETED'
-  | 'CREW_SESSION_CREATED'
-  | 'CREW_SESSION_JOINED'
+  // ── Crew Extended Events (unique — SESSION_CREATED/JOINED/LEFT/ERROR declared above) ──
   | 'CREW_SESSION_SCHEDULED'
-  | 'CREW_SESSION_LEFT'
   | 'CREW_SESSION_ENDED'
   | 'CREW_DISCOVERY_FETCH'
   | 'CREW_SESSION_SHARED'
@@ -83,7 +81,6 @@ export type EventType =
   | 'CREW_SCENE_BROADCAST'
   | 'CREW_SCENE_RECEIVED'
   | 'CREW_AUTO_REJOINED'
-  | 'CREW_ERROR'
   // ── Street Mode ───────────────────────────────────────────
   | 'STREET_MODE_ACTIVATED'
   | 'STREET_MODE_DEACTIVATED'
@@ -98,7 +95,6 @@ export type EventType =
   | 'CREW_PERMANENT_CREATED'
   | 'CREW_PERMANENT_JOINED'
   | 'CREW_PERMANENT_LEFT'
-  | 'CREW_PERMANENT_DELETED'
   | 'CREW_PERMANENT_UPDATED'
   | 'CREW_MEMBERS_ADDED'
   | 'PUSH_TOKEN_UNREGISTERED'
@@ -173,6 +169,8 @@ class AppLoggerService {
 
   private txPayloadQueue: { hex: string, timestamp: number } | null = null;
   private pendingLogQueue: { event: EventType, payload: Record<string, any>, resolve: () => void } | null = null;
+  /** Last-logged timestamp per high-frequency event — prevents slider drag from flooding the buffer */
+  private readonly throttleMap = new Map<string, number>();
 
   updateKnownDevices(devices: any[]) {
     this.activeDevices = devices;
@@ -292,6 +290,14 @@ class AppLoggerService {
   }
 
   async log(event: EventType, rawPayload: Record<string, any> = {}) {
+    // Throttle high-frequency slider events — max 1 entry per 500ms to prevent buffer bloat
+    const HIGH_FREQ_EVENTS: EventType[] = ['BRIGHTNESS_CHANGED', 'SPEED_CHANGED', 'COLOR_CHANGED'];
+    if (HIGH_FREQ_EVENTS.includes(event)) {
+      const now = Date.now();
+      const lastLogged = this.throttleMap.get(event) ?? 0;
+      if (now - lastLogged < 500) return;
+      this.throttleMap.set(event, now);
+    }
     await this.ensureLoaded();
     
     // Apply Black Box Standardization early
@@ -615,7 +621,7 @@ class AppLoggerService {
                   device_name: customNameMap.get(explicitDeviceId) || null,
                   group_id: isGroup ? item.d?.deviceIds?.join('_') : null,
                   group_name: isGroup ? `Group (${item.d?.groupSize || item.d?.deviceIds?.length} Devices)` : null,
-                  raw_data: item.d || {} 
+                  raw_data: (({ dir: _d, hex: _h, deviceId: _di, ...r }) => r)(item.d || {})
                 }));
              });
              await supabase.from('parsed_logs').insert(dbLogPayload);
@@ -772,3 +778,4 @@ class AppLoggerService {
 }
 
 export const AppLogger = new AppLoggerService();
+
