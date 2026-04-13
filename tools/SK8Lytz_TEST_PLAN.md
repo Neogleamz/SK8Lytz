@@ -23,10 +23,12 @@ npx expo start --web
 - **Trigger**: Tap the SK8Lytz logo in the dashboard header exactly 10 times.
 - **Passcode**: `0000`
 
-**Browser Agent** — kick off with:
-> "Run the SK8Lytz test plan against the web demo at localhost:8081"
+**Browser Subagent Boot Protocol**
+To properly execute this plan autonomously, you must boot the `browser_subagent` using the `default_api:browser_subagent` tool with the following `Task` prompt:
 
-The agent will step through each case, screenshot every step, and report ✅/❌.
+> "You are the SK8Lytz QA Subagent. Connect to the local Expo web interface at http://localhost:8081. Read the `tools/SK8Lytz_TEST_PLAN.md` file. Execute every applicable web-based test step under Section 1 (Auth), Section 3 (DockedController UI), Section 8 (Account Modal), and Section 9 (Responsive UI). Take a screenshot of every step. If any step fails, you must return a strict markdown list of the failures, detailing the exact step number, what you saw, and why it failed. If a step passes, take no action other than proceeding. Do NOT stop on the first failure. Finish the entire web sweep before returning."
+
+When the subagent returns, the parent agent MUST read the report. For every `[❌] Fail` result in the report, the parent agent MUST immediately format it into a `fix/...` branch slug and add it to `tools/SK8Lytz_Bucket_List.md` under the CRITICAL section.
 
 ---
 
