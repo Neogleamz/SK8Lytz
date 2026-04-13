@@ -1980,16 +1980,18 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       />
 
       {/* ──── VOICE COMMAND ENGINE UI ──── */}
-      <VoiceFAB 
-        onPress={() => {
-          if (!isVoiceTutorialDismissed) {
-             setIsVoiceTutorialVisible(true);
-          } else {
-             setIsVoiceModalVisible(true);
-          }
-        }} 
-        isListening={isListening}
-      />
+      {false && (
+        <VoiceFAB 
+          onPress={() => {
+            if (!isVoiceTutorialDismissed) {
+               setIsVoiceTutorialVisible(true);
+            } else {
+               setIsVoiceModalVisible(true);
+            }
+          }} 
+          isListening={isListening}
+        />
+      )}
       
       <VoiceTutorialModal
         isVisible={isVoiceTutorialVisible}
