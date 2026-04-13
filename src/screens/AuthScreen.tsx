@@ -248,7 +248,11 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
       email: email.trim(),
       password,
       options: { 
-        data: { username: username.trim(), accepted_eula_version: 1 },
+        data: { 
+          username: username.trim(), 
+          display_name: username.trim(), 
+          accepted_eula_version: 1 
+        },
         emailRedirectTo: 'sk8lytz://auth'
       },
     });

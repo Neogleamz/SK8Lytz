@@ -78,6 +78,8 @@ class ProfileService {
 
   /**
    * Fetch or auto-create a profile for the currently logged-in user.
+   * Automatically self-heals missing display names or usernames from Auth metadata
+   * if the database trigger failed to set them during signup.
    */
   async fetchOrCreateProfile(): Promise<UserProfile | null> {
     const { data: { user } } = await supabase.auth.getUser();
@@ -89,13 +91,47 @@ class ProfileService {
       .eq('user_id', user.id)
       .single();
 
-    if (existing) return existing as UserProfile;
+    if (existing) {
+      // Self-heal: If display_name or username is missing, patch from auth metadata
+      const profile = existing as UserProfile;
+      const metaUsername = user.user_metadata?.username;
+      const metaDisplayName = user.user_metadata?.display_name;
+      
+      if ((metaUsername || metaDisplayName) && (!profile.display_name || !profile.username)) {
+        const updateData: Partial<UserProfile> = {};
+        
+        if (!profile.display_name && (metaDisplayName || metaUsername)) {
+          updateData.display_name = metaDisplayName || metaUsername;
+        }
+        
+        if (!profile.username && metaUsername) {
+          updateData.username = metaUsername.toLowerCase();
+        }
+        
+        if (Object.keys(updateData).length > 0) {
+          await supabase
+            .from('user_profiles')
+            .update(updateData)
+            .eq('user_id', user.id);
+            
+          return { ...profile, ...updateData };
+        }
+      }
+      return profile;
+    }
 
-    // Auto-create with email prefix as default display name
-    const defaultName = user.email?.split('@')[0] ?? 'Sk8r';
+    // Auto-create using auth metadata username, falling back to email prefix
+    const metaUsername = user.user_metadata?.username;
+    const metaDisplayName = user.user_metadata?.display_name;
+    const defaultName = metaDisplayName ?? metaUsername ?? user.email?.split('@')[0] ?? 'Sk8r';
+    
     const { data: created } = await supabase
       .from('user_profiles')
-      .insert({ user_id: user.id, display_name: defaultName })
+      .insert({ 
+        user_id: user.id, 
+        display_name: defaultName,
+        username: metaUsername ? metaUsername.toLowerCase() : undefined
+      })
       .select()
       .single();
 
