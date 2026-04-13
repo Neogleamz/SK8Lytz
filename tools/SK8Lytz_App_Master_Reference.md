@@ -270,6 +270,8 @@ All FSM states and shared interfaces live in **`src/types/dashboard.types.ts`**.
 - **UI Components**: Must focus strictly on rendering and presentation.
 - **State Machines**: Complex multi-state logic must use `ModeType`/string-union FSMs, never boolean flag clusters.
 - **Atomic Operations**: All hardware writes must be wrapped in `try/catch` and logged via `AppLogger`.
+- **Database Telemetry Masking**: All non-critical DB telemetry inserts (e.g. `skate_sessions` or metrics) must be wrapped in `try/catch` blocks so they do NOT block the critical BLE execution pipeline on failure.
+- **Type Safety per Schema constraints**: Tactical type casting using `as unknown as CustomType` or `as any` is authorized when bypassing strict, auto-generated Supabase overload methods for `Json` fields and unresolvable overloads, as long as runtime validation aligns with the hardened database schema.
 - **Type Imports**: Always import `ModeType` and shared interfaces from `dashboard.types.ts`, not from hook files.
 - **Hook Contracts**: Hooks receive BLE context via props, never via direct import of BLE libraries.
 

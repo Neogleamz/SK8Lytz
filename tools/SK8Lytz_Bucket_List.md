@@ -142,6 +142,7 @@ pie title Feature Velocity
 - [x] `feat/speed-tracking-telemetry` : Statistics, Session Metadata, and GPS accumulation.
 - [x] `feat/voice-command-engine` : Offline voice command resolution.
 - [x] `feat/empty-skates-setup-cta` : Setup Wizard dashboard CTA.
+- [x] `fix/db-schema-type-parity` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] Resolved remaining 'type' column and schema mismatches in `registered_groups` and other mutations.
 
 ---
 *Last updated: 2026-04-13 | Active tasks moved to Completed Archive.*
