@@ -23,7 +23,7 @@ interface UseDashboardVoiceOptions {
    * Ref to the imperative DockedController handle.
    * DashboardScreen owns this ref since it mounts DockedController.
    */
-  dockedControllerRef: React.RefObject<DockedControllerHandle>;
+  dockedControllerRef: React.RefObject<DockedControllerHandle | null>;
 }
 
 export interface UseDashboardVoiceResult {

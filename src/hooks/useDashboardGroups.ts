@@ -19,11 +19,11 @@ import type { RegisteredDevice } from '../hooks/useRegistration';
 
 interface UseDashboardGroupsOptions {
   registeredDevices: RegisteredDevice[];
-  /**
-   * Injected from DashboardScreen's useRegistration hook.
+  /** Injected from DashboardScreen's useRegistration hook.
    * Saves the full device list to cloud + local after FTUE wizard.
+   * Return value (boolean | void) is intentionally discarded.
    */
-  saveAllRegisteredDevices: (devices: RegisteredDevice[]) => Promise<void>;
+  saveAllRegisteredDevices: (devices: RegisteredDevice[]) => Promise<boolean | void>;
   migrateLegacyGroups: (allDevices: any[], deviceConfigs: Record<string, DeviceSettings>) => Promise<RegisteredDevice[]>;
   clearPendingRegistrations: () => void;
   /** Called after FTUE setup completes to hide the SetupWizard. */

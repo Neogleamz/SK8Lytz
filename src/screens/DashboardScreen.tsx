@@ -5,18 +5,12 @@
  * This is intentionally monolithic — all BLE state must be co-located
  * to prevent race conditions between hardware events and UI re-renders.
  *
- * Owns:
- *  - BLE lifecycle (scan, connect, disconnect, group sync)
- *  - Device roster (allDevices, connectedDevices)
- *  - Custom groups (name, deviceIds, persistence)
- *  - Per-device configs (name, LED type, points, segments, sorting)
- *  - Power state map, modal visibility flags
- *  - BLE write dispatch (writeToDevice → useBLE → GATT)
- *
- * AsyncStorage keys:
- *  - @Sk8lytz_device_configs    → per-device settings dict (keyed by MAC)
- *  - @Sk8lytz_custom_groups     → user-defined multi-device groups
- *  - @Sk8lytz_processed_devices → cached discovered device list
+ * After Phase 1 Domain-Driven Refactor:
+ *  - BLE lifecycle (scan, connect, disconnect) → remains here (Master Reference constraint)
+ *  - Profile, AppSettings, modal flags        → useDashboardProfile
+ *  - Fleet groups, device configs, power map  → useDashboardGroups
+ *  - Voice commands, favorites, tutorial      → useDashboardVoice
+ *  - Crew session state                       → remains here (feeds BLE write dispatch)
  *
  * Platform: React Native (Android + Web)
  */
@@ -39,8 +33,6 @@ import Sk8LytzProgrammerModal from '../components/Sk8LytzProgrammerModal';
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
 import AdminToolsModal from '../components/AdminToolsModal';
-import { useVoiceControl } from '../hooks/useVoiceControl';
-import { IVoiceAction } from '../services/VoiceService';
 import VoiceFAB from '../components/Voice/VoiceFAB';
 import VoiceCommandModal from '../components/Voice/VoiceCommandModal';
 import VoiceTutorialModal from '../components/Voice/VoiceTutorialModal';
@@ -53,32 +45,16 @@ import { supabase } from '../services/supabaseClient';
 import { useRegistration, RegisteredDevice } from '../hooks/useRegistration';
 import AccountModal from '../components/AccountModal';
 import CrewMemberDashboard from '../components/CrewMemberDashboard';
-import { profileService, UserProfile } from '../services/ProfileService';
-import { notificationService } from '../services/NotificationService';
 import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
-import { AppSettingsService, AppSettingsMap } from '../services/AppSettingsService';
 
-interface DeviceSettings {
-  name: string;
-  /** Widened from 'HALOZ' | 'SOULZ' to accommodate all catalog product types (e.g. RAILZ). */
-  type: string;
-  points: number;
-  segments: number;
-  stripType: string;
-  sorting: string;
-  grouped: boolean;
-  groupId?: string;
-  groupName?: string;
-}
+// ─── Phase 1 Domain Hooks ──────────────────────────────────────────────────────
+import { useDashboardProfile } from '../hooks/useDashboardProfile';
+import { useDashboardGroups } from '../hooks/useDashboardGroups';
+import { useDashboardVoice } from '../hooks/useDashboardVoice';
+import type { DeviceSettings, CustomGroup } from '../types/dashboard.types';
 
-interface CustomGroup {
-  id: string;
-  name: string;
-  isGroup: boolean;
-  deviceIds: string[];
-  type?: string;
-  lastPatternName?: string; // Standardized persistence field
-}
+// DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
+// — migrated as part of Phase 1 Domain-Driven Refactor
 
 /**
  * SkateGroupCard Helper Component
@@ -245,16 +221,29 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     isLoading,
   } = useRegistration();
 
-  const [appSettings, setAppSettings] = useState<AppSettingsMap>({});
-
-  // Fetch app settings on mount — refreshed via AppState if foregrounded
-  useEffect(() => {
-    AppSettingsService.fetchAllSettings().then(setAppSettings);
-    const sub = AppState.addEventListener('change', (s: AppStateStatus) => {
-      if (s === 'active') AppSettingsService.fetchAllSettings().then(setAppSettings);
-    });
-    return () => sub.remove();
-  }, []);
+  // ── Phase 1: Profile, AppSettings & Modal Flags → useDashboardProfile ─────────────
+  const {
+    userProfile,
+    appSettings,
+    refreshProfile,
+    isAccountModalVisible,
+    setIsAccountModalVisible,
+    isAdminToolsVisible,
+    setIsAdminToolsVisible,
+    isSupportModalVisible,
+    setIsSupportModalVisible,
+    isProgrammerVisible,
+    setIsProgrammerVisible,
+    isLabVisible,
+    setIsLabVisible,
+    isMapVisible,
+    setIsMapVisible,
+  } = useDashboardProfile({
+    onCrewJoinNotification: (crewId: string) => {
+      setPendingJoinCrewId(crewId);
+      setIsCrewModalVisible(true);
+    },
+  });
 
   // Sync connected+discovered devices into AppLogger whenever they change
   // so that parsed_session_devices has fresh data at upload time
@@ -292,103 +281,78 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     });
   }, [setOnHardwareProbed]);
 
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [powerStates, setPowerStates] = useState<Record<string, boolean>>({});
-  const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
   const [updateTrigger, setUpdateTrigger] = useState(0);
   const [isTestModeActive, setIsTestModeActive] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
 
-  const [customGroups, setCustomGroups] = useState<CustomGroup[]>([]);
+  // ── Phase 1: Fleet Groups, Device Configs, Power States → useDashboardGroups ───────
+  const [isSetupWizardVisible, setIsSetupWizardVisible] = useState(false);
+  const {
+    customGroups,
+    customGroupsRef,
+    deviceConfigs,
+    setDeviceConfigs,
+    powerStates,
+    setPowerState,
+    lastGroupPatterns,
+    setLastGroupPattern,
+    groupModalState,
+    editingGroupId,
+    openGroupCreate,
+    openGroupRename,
+    closeGroupModal,
+    selectedIds,
+    isSelectionMode,
+    toggleDeviceSelection,
+    clearSelection,
+    isDeviceListCollapsed,
+    setIsDeviceListCollapsed,
+    isRegisteredCollapsed,
+    setIsRegisteredCollapsed,
+    handleRegistrationComplete,
+  } = useDashboardGroups({
+    registeredDevices,
+    saveAllRegisteredDevices,
+    migrateLegacyGroups,
+    clearPendingRegistrations,
+    onRegistrationComplete: () => {
+      setIsSetupWizardVisible(false);
+      wizardCheckedRef.current = false;
+    },
+  });
 
-  // ── Enforce UI Group SSOT via useRegistration ────────────────────────────────
-  useEffect(() => {
-    const groupMap: Record<string, CustomGroup> = {};
-    registeredDevices.forEach(rd => {
-      if (rd.group_id && rd.group_name && rd.group_id !== 'default-fleet') {
-        if (!groupMap[rd.group_id]) {
-          groupMap[rd.group_id] = { id: rd.group_id, name: rd.group_name, isGroup: true, deviceIds: [] };
-        }
-        if (!groupMap[rd.group_id].deviceIds.includes(rd.device_mac)) {
-          groupMap[rd.group_id].deviceIds.push(rd.device_mac);
-        }
-      }
-    });
-    setCustomGroups(Object.values(groupMap));
-  }, [registeredDevices]);
-  const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
-  const [groupModalMode, setGroupModalMode] = useState<'create' | 'rename'>('create');
-  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
-  const [isDeviceListCollapsed, setIsDeviceListCollapsed] = useState(true);
-  const [isRegisteredCollapsed, setIsRegisteredCollapsed] = useState(true);
-
-  // ── Crew Hub state ─────────────────────────────────────────────────────
+  // ── Crew Hub state (stays in DashboardScreen — feeds BLE write dispatch) ───────
   const [crewSession, setCrewSession] = useState<CrewSession | null>(null);
   const [crewRole, setCrewRole] = useState<CrewRole>(null);
   const [isCrewModalVisible, setIsCrewModalVisible] = useState(false);
   const [crewModeSummary, setCrewModeSummary] = useState<string | undefined>(undefined);
   const [lastLeaderScene, setLastLeaderScene] = useState<Record<string, any> | null>(null);
-  const dockedControllerRef = React.useRef<DockedControllerHandle>(null);
-  const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
-  const [isVoiceTutorialVisible, setIsVoiceTutorialVisible] = useState(false);
-  const [isVoiceTutorialDismissed, setIsVoiceTutorialDismissed] = useState(false);
-  const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
-
-  // ── Profile + Notifications state ────────────────────────────────────────
-  const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [lastGroupPatterns, setLastGroupPatterns] = useState<Record<string, string>>({});
   const [_pendingJoinCrewId, setPendingJoinCrewId] = useState<string | null>(null);
-  const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
-  const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
-  const [isAdminToolsVisible, setIsAdminToolsVisible] = useState(false);
-  const [isLabVisible, setIsLabVisible] = useState(false);
-  const [isMapVisible, setIsMapVisible] = useState(false);
+  const dockedControllerRef = React.useRef<DockedControllerHandle>(null);
 
-  const [isSetupWizardVisible, setIsSetupWizardVisible] = useState(false);
+  // ── Phase 1: Voice Commands & Favorites → useDashboardVoice ───────────────────
+  const {
+    isVoiceModalVisible,
+    setIsVoiceModalVisible,
+    isVoiceTutorialVisible,
+    setIsVoiceTutorialVisible,
+    isVoiceTutorialDismissed,
+    dismissTutorial,
+    favorites,
+    isListening,
+    transcript,
+    error: voiceError,
+    isVoiceSupported,
+    startListening,
+    stopListening,
+  } = useDashboardVoice({ dockedControllerRef });
+
   const [isCheckingRegistrations, setIsCheckingRegistrations] = useState(true);
   const lastProcessedRef = React.useRef<string>('');
   const allDevicesRef = React.useRef(allDevices);
-  const customGroupsRef = React.useRef(customGroups);
   const isProvisioningTriggered = React.useRef(false);
-
-  // Refs are updated manually — no isProvisioning state needed here.
-
-  // ── Load Dev/Demo Flags from AsyncStorage ──
-
-
-  // ── Load Last Known Group Patterns ──
-  useEffect(() => {
-    async function loadPatterns() {
-      try {
-        const saved = await AsyncStorage.getItem('@Sk8lytz_last_group_patterns');
-        if (saved) setLastGroupPatterns(JSON.parse(saved));
-      } catch (e) {}
-    }
-    loadPatterns();
-  }, []);
-
-  // ── Load Favorites for Voice Command Engine ──
-  useEffect(() => {
-    async function loadFavs() {
-      try {
-        const saved = await AsyncStorage.getItem('@Sk8lytz_Favorites');
-        if (saved) setFavorites(JSON.parse(saved));
-      } catch (e) {}
-    }
-    loadFavs();
-  }, [isVoiceModalVisible]); // Refresh when modal opens to ensure latest names
-
-  // ── Load Voice Tutorial Dismissal State ──
-  useEffect(() => {
-    async function loadTutorialState() {
-      const val = await AsyncStorage.getItem('@Sk8lytz_voice_tutorial_dismissed');
-      if (val === 'true') setIsVoiceTutorialDismissed(true);
-    }
-    loadTutorialState();
-  }, []);
+  // customGroupsRef is now provided by useDashboardGroups hook
 
   // AppState Telemetry
   useEffect(() => {
@@ -403,6 +367,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       subscription.remove();
     };
   }, []);
+
 
   const wizardCheckedRef = React.useRef(false);
   const [pendingNewDevice, setPendingNewDevice] = React.useState<any | null>(null);
@@ -445,37 +410,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     checkNewDevice();
   }, [pendingRegistrations]);
 
-  const handleRegistrationComplete = async (devices: RegisteredDevice[]) => {
-    const legacyDevices = await migrateLegacyGroups(allDevices, deviceConfigs);
-    const allToRegister = [
-      ...devices,
-      ...legacyDevices.filter(l => !devices.find(d => d.device_mac === l.device_mac)),
-    ];
-    await saveAllRegisteredDevices(allToRegister);
-
-    // Auto-connect and build UI Fleet Group instantly
-    const macs = devices.map(d => d.device_mac);
-    if (macs.length > 0) {
-      console.log('[FTUE] Auto-connecting to newly claimed fleet...', macs);
-      const newGroupId = `fleet_${Date.now()}`;
-      const groupName = devices[0].group_name || 'My Skates';
-      
-      const newGroup = { id: newGroupId, name: groupName, isGroup: true, deviceIds: macs };
-      const updatedGroups = [...customGroupsRef.current, newGroup];
-      
-      setCustomGroups(updatedGroups);
-      AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups)).catch(()=>{});
-      
-      // Auto-connect to newly registered fleet is now disabled; 
-      // stay on Dashboard so user can see their new hardware list.
-      // const devicesToConnect = allDevices.filter(d => macs.includes((d as any).id || (d as any).device_mac));
-      // connectToDevices(devicesToConnect);
-    }
-
-    clearPendingRegistrations();
-    setIsSetupWizardVisible(false);
-    wizardCheckedRef.current = false;
-  };
+  // handleRegistrationComplete is now provided by useDashboardGroups hook
 
   // Drop-out UI Alert
   useEffect(() => {
@@ -542,11 +477,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           CloudUserId = session.user.id;
-          // Fetch real display name from user_profiles (not user_metadata which may be empty)
+          // Fetch profile and set auth display name
           try {
-            const profile = await profileService.fetchOrCreateProfile();
-            setUserProfile(profile);
-            const name = profile?.display_name || profile?.username || session.user.email?.split('@')[0] || 'GUEST';
+            await refreshProfile();
+            const name = userProfile?.display_name || userProfile?.username || session.user.email?.split('@')[0] || 'GUEST';
             setAuthUsername(name);
             AsyncStorage.setItem('@Sk8lytz_auth_username', name).catch(() => {});
           } catch {
@@ -664,67 +598,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     return () => clearTimeout(t);
   }, []);
 
-  /** ──────── VOICE COMMAND DISPATCH ──────── */
-  const { isListening, transcript, error, startListening, stopListening, isVoiceSupported } = useVoiceControl(
-    favorites,
-    (action: IVoiceAction) => handleVoiceAction(action)
-  );
-
-  // Only auto-start/stop Voice on native platforms — web has no native bridge
-  useEffect(() => {
-    if (!isVoiceSupported) return;
-    if (isVoiceModalVisible) {
-      startListening();
-    } else {
-      stopListening();
-    }
-  }, [isVoiceModalVisible, isVoiceSupported]);
-
-  const handleVoiceAction = (action: IVoiceAction) => {
-    if (!dockedControllerRef.current) return;
-    
-    switch (action.type) {
-      case 'MODE':
-        dockedControllerRef.current.setActiveMode(action.value);
-        break;
-      case 'FAVORITE':
-        if (action.favorite) {
-          dockedControllerRef.current.loadFavorite(action.favorite);
-        }
-        break;
-      case 'PATTERN':
-        dockedControllerRef.current.handleRbmChange(action.patternId || 1);
-        break;
-      case 'BRIGHTNESS':
-        dockedControllerRef.current.setBrightness(action.value);
-        break;
-      case 'SPEED':
-        dockedControllerRef.current.setSpeed(action.value);
-        break;
-      case 'SPATIAL':
-        if (action.segments) {
-          dockedControllerRef.current.applySpatialSegments(action.segments);
-        }
-        break;
-    }
-  };
-
-  // ── Push notification init ────────────────────────────────────────────────
-  useEffect(() => {
-    // Wire notification tap → open CrewModal pre-loaded for that session
-    notificationService.setJoinHandler((crewId: string, _sessionId: string) => {
-      setPendingJoinCrewId(crewId);
-      setIsCrewModalVisible(true);
-    });
-
-    notificationService.init().catch(e =>
-      console.log('[Dashboard] Push notification init skipped:', e)
-    );
-
-    return () => {
-      notificationService.cleanup().catch(() => {});
-    };
-  }, []);
+  // Voice command dispatch + notification init are now handled
+  // by useDashboardVoice and useDashboardProfile hooks respectively.
 
   // Bind BLE Notification Hardware Sync Hook
   useEffect(() => {
@@ -867,7 +742,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   useEffect(() => {
     customGroupsRef.current = customGroups;
-  }, [customGroups]);
+  }, [customGroups]); // Keep ref in sync with hook-managed state
 
   useEffect(() => {
     // 1. Load and clean custom groups
@@ -876,12 +751,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         if (res) {
           try { 
             const parsed = JSON.parse(res) || [];
-            // Remove any groups containing simulated devices
-            const cleanedGroups = parsed.filter((g: any) => !(g.deviceIds || []).some((id: string) => id.startsWith('sim-')));
-            if (cleanedGroups.length !== parsed.length) {
-              AsyncStorage.setItem('ng_custom_groups', JSON.stringify(cleanedGroups)).catch(()=>{});
-            }
-            setCustomGroups(cleanedGroups);
+            // customGroups is now managed by useDashboardGroups — local load handled there
           } catch(e: any) { AppLogger.warn('JSON parse error groups', { error: String(e) }); }
         }
       })
@@ -1017,7 +887,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
     if (didUpdateGroups) {
       customGroupsRef.current = updatedGroups;
-      setCustomGroups(updatedGroups);
+      // Note: customGroups UI state is derived from registeredDevices via useDashboardGroups
     }
     
     // Sync to Supabase if authenticated
@@ -1171,35 +1041,15 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     })
   ).current;
 
-  const handleGlobalPowerToggle = (deviceIds: string[], forceState?: boolean) => {
-    // If forceState is provided, use it, else default to toggling based on first device's state
-    const targetState = forceState !== undefined ? forceState : !(powerStates[deviceIds[0]] ?? true);
-    
-    // Update local state optimistic
-    const newStates = { ...powerStates };
-    deviceIds.forEach(id => { 
-        newStates[id] = targetState; 
-        
-        // Broadcast BLE command targetted to each device
-        if (targetState) {
-            writeToDevice(ZenggeProtocol.turnOn(), id);
-        } else {
-            writeToDevice(ZenggeProtocol.turnOff(), id);
-        }
-    });
-    setPowerStates(newStates);
+  const handlePowerToggle = async (deviceIds: string[], forceState?: boolean) => {
+    setPowerState(deviceIds, forceState);
   };
 
-
-  const toggleSelect = (id: string) => {
-    if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter(i => i !== id));
-      if (selectedIds.length === 1) setIsSelectionMode(false);
-    } else {
-      setSelectedIds([...selectedIds, id]);
-      setIsSelectionMode(true);
-    }
+  const handleDeviceTap = (id: string) => {
+    toggleDeviceSelection(id);
   };
+
+  // toggleSelect replaced by toggleDeviceSelection from useDashboardGroups
 
   const openCreateGroup = () => {
     if (selectedIds.length === 0) return;
@@ -1214,14 +1064,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       return;
     }
 
-    setGroupModalMode('create');
-    setIsGroupModalVisible(true);
+    openGroupCreate();
   };
 
   const handleGroupDelete = async (id: string) => {
     const groupToDelete = customGroups.find(g => g.id === id);
     if (!groupToDelete) {
-      setIsGroupModalVisible(false);
+      closeGroupModal();
       return;
     }
 
@@ -1256,22 +1105,21 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       }
     }
 
-    setIsGroupModalVisible(false);
+    closeGroupModal();
   };
 
   const saveGroup = async (name: string, deviceIds: string[]) => {
     let finalGroupId = `group-${Date.now()}`;
     let previousDeviceIds: string[] = [];
 
-    if (groupModalMode === 'create') {
+    if (groupModalState === 'CREATE') {
       const existing = customGroups.find(g => g.name.toLowerCase() === name.toLowerCase());
       if (existing) {
         finalGroupId = existing.id;
         previousDeviceIds = existing.deviceIds || [];
       }
-      setIsSelectionMode(false);
-      setSelectedIds([]);
-    } else if (groupModalMode === 'rename' && editingGroupId) {
+      clearSelection();
+    } else if (groupModalState === 'RENAME' && editingGroupId) {
       if (deviceIds.length === 0) {
         handleGroupDelete(editingGroupId);
         return;
@@ -1476,9 +1324,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               // we don't have a specific group/skate selected.
               const targetGroupId = displayConnectedDevices[0]?.groupId || displayConnectedDevices[0]?.id;
               if (targetGroupId && patternName !== lastGroupPatterns[targetGroupId]) {
-                const updated = { ...lastGroupPatterns, [targetGroupId]: patternName };
-                setLastGroupPatterns(updated);
-                AsyncStorage.setItem('@Sk8lytz_last_group_patterns', JSON.stringify(updated)).catch(()=>{});
+                setLastGroupPattern(targetGroupId, patternName);
               }
             }}
           />
@@ -1515,7 +1361,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         isSelected={selectedIds.includes(item.id)}
         onPress={async () => {
           if (isSelectionMode) {
-            toggleSelect(item.id);
+            toggleDeviceSelection(item.id);
             return;
           }
           const fw = await connectToDevice(item);
@@ -1534,7 +1380,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         }}
         showGroupIcon={false}
         isPoweredOn={powerStates[item.id] ?? true}
-        onPowerToggle={() => handleGlobalPowerToggle([item.id])}
+        onPowerToggle={() => handlePowerToggle([item.id])}
       />
     </View>
     ); // close return
@@ -1624,7 +1470,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   borderWidth: 1, 
                   borderColor: (displayConnectedDevices.every(id => powerStates[id.id] ?? true)) ? 'rgba(0,240,255,0.3)' : 'rgba(255,255,255,0.15)' 
                 }}
-                onPress={() => handleGlobalPowerToggle(displayConnectedDevices.map(d => d.id))}
+                onPress={() => handlePowerToggle(displayConnectedDevices.map(d => d.id))}
                 activeOpacity={0.6}
               >
                 <MaterialCommunityIcons name="power" size={18} color={(displayConnectedDevices.every(id => powerStates[id.id] ?? true)) ? Colors.primary : Colors.textMuted} />
@@ -1724,7 +1570,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }
 
   if (isSetupWizardVisible) {
-    return <HardwareSetupWizardScreen onSetupComplete={(devices) => handleRegistrationComplete(devices)} />;
+    return <HardwareSetupWizardScreen onSetupComplete={async (devices) => { await handleRegistrationComplete(devices, allDevices); }} />;
   }
 
   return (
@@ -1830,9 +1676,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                               if (devicesToConnect.length > 0) connectToDevices(devicesToConnect);
                             }}
                             onLongPress={() => {
-                              setGroupModalMode('rename');
-                              setEditingGroupId(group.id);
-                              setIsGroupModalVisible(true);
+                              openGroupRename(group.id);
                             }}
                           />
                         );
@@ -1926,12 +1770,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           groups={customGroups}
         />
         <GroupSettingsModal
-          isVisible={isGroupModalVisible}
-          onClose={() => setIsGroupModalVisible(false)}
+          isVisible={groupModalState !== 'HIDDEN'}
+          onClose={closeGroupModal}
           onSave={saveGroup}
-          onDelete={groupModalMode === 'rename' && editingGroupId ? () => handleGroupDelete(editingGroupId) : undefined}
-          initialName={groupModalMode === 'rename' ? customGroups.find(g => g.id === editingGroupId)?.name : 'My SK8Lytz'}
-          initialDeviceIds={groupModalMode === 'rename' ? customGroups.find(g => g.id === editingGroupId)?.deviceIds : selectedIds}
+          onDelete={groupModalState === 'RENAME' && editingGroupId ? () => handleGroupDelete(editingGroupId) : undefined}
+          initialName={groupModalState === 'RENAME' ? customGroups.find(g => g.id === editingGroupId)?.name : 'My SK8Lytz'}
+          initialDeviceIds={groupModalState === 'RENAME' ? customGroups.find(g => g.id === editingGroupId)?.deviceIds : selectedIds}
           allDevices={allDevices}
         />
       </View>
@@ -2005,7 +1849,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             setIsAdminToolsVisible(true);
         }}
         allDevices={(allDevices as any)}
-        deviceConfigs={deviceConfigs}
+        deviceConfigs={deviceConfigs as any}
         connectToDevice={async (d: any) => { await connectToDevice(d); }}
         disconnectFromDevice={async (_id: string) => { disconnectFromDevice(); }}
         writeToDevice={writeToDevice}
@@ -2167,8 +2011,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         isVisible={isVoiceTutorialVisible}
         onDismiss={async () => {
           setIsVoiceTutorialVisible(false);
-          setIsVoiceTutorialDismissed(true);
-          await AsyncStorage.setItem('@Sk8lytz_voice_tutorial_dismissed', 'true').catch(()=>{});
+          dismissTutorial();
           // Smooth transition: open the actual voice modal after tutorial
           setTimeout(() => setIsVoiceModalVisible(true), 400);
         }}
@@ -2179,7 +2022,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         onClose={() => setIsVoiceModalVisible(false)}
         isListening={isListening}
         transcript={transcript}
-        error={error}
+        error={voiceError}
       />
     </SafeAreaView>
   );

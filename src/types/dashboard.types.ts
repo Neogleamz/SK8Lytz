@@ -21,6 +21,8 @@ export interface DeviceSettings {
   grouped: boolean;
   groupId?: string;
   groupName?: string;
+  /** Firmware version string as reported by the device — e.g. 'v2.0.1' or 'Unknown'. */
+  firmware?: string;
 }
 
 export interface CustomGroup {
