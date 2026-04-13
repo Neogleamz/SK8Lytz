@@ -14,8 +14,8 @@ try {
 import { voiceService, IVoiceAction } from '../services/VoiceService';
 import { IFavoriteState } from '../components/DockedController';
 
-/** Voice recognition is only available on native iOS/Android platforms. */
-const isVoiceSupported = Platform.OS !== 'web';
+/** Voice recognition is only available on native iOS/Android platforms where the bridge exists. */
+const isVoiceSupported = Platform.OS !== 'web' && !!Voice;
 
 export const useVoiceControl = (favorites: IFavoriteState[], onAction: (action: IVoiceAction) => void) => {
   const [isListening, setIsListening] = useState(false);
@@ -36,12 +36,16 @@ export const useVoiceControl = (favorites: IFavoriteState[], onAction: (action: 
       setIsListening(false);
     };
 
-    Voice.onSpeechResults = onResults;
-    Voice.onSpeechError = onError;
+    if (Voice) {
+      Voice.onSpeechResults = onResults;
+      Voice.onSpeechError = onError;
+    }
 
     return () => {
       try {
-        Voice.destroy().then(Voice.removeAllListeners);
+        if (Voice) {
+          Voice.destroy().then(Voice.removeAllListeners);
+        }
       } catch {
         // Native module may not be available during cleanup
       }
