@@ -139,6 +139,9 @@ async function ingestParsedLog(parsed, fileName) {
         delete cleanRaw.hex;
         delete cleanRaw.deviceId;
 
+        const isGroup = item.d?.target === 'group' || (item.d?.deviceIds && item.d.deviceIds.length > 1);
+        const tgtDev = isGroup ? null : (item.d?.deviceId || bleMac);
+
         return {
             session_id: sessionId,
             host_device_id: hostDeviceId,
@@ -146,7 +149,10 @@ async function ingestParsedLog(parsed, fileName) {
             event_type: item.e,
             direction: item.d?.dir || null,
             hex_payload: item.d?.hex || null,
-            device_id: item.d?.deviceId || null,
+            device_id: tgtDev,
+            device_name: null,
+            group_id: isGroup ? item.d?.deviceIds?.join('_') : null,
+            group_name: isGroup ? `Group (${item.d?.groupSize || item.d?.deviceIds?.length} Devices)` : null,
             raw_data: cleanRaw
         };
     });

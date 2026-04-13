@@ -1,29 +1,38 @@
 # [CHORE] Telemetry Efficiency & Deduplication Audit
 
 ## Design Decisions & Rationale
+After inspecting the database schema and `AppLogger.ts` Native Postgres Insertion stream, several critical findings contradict the initial assumptions of the stub plan:
 
-The current telemetry system utilizes multiple `parsed_*` tables (`parsed_logs`, `parsed_session_stats`, `parsed_session_devices`, etc.) to store data extracted from JSON log files. Initial investigation suggests potential data duplication between raw payloads, session summaries, and individual event logs. This audit aims to normalize the schema, identify redundant fields, and optimize the ingestion pipeline for higher performance and lower storage costs.
+1.  **No `skate_sessions` overlap**: `skate_sessions` is a domain-driven fitness tracking table (workout duration, miles skated), whereas `parsed_session_stats` stores hardware telemetry (RAM usage, battery level, `os_build_id`). They serve entirely divergent purposes and do not overlap.
+2.  **No `hex_payload` redundancy**: The `raw_data` JSONB payload in `parsed_logs` already strips `hex` and `dir` prior to insertion via `(({ dir: _d, hex: _h, deviceId: _di, ...r }) => r)(item.d || {})`. It is already optimized!
+3.  **The True Duplication Culprit**: `AppLogger.ts` uses `.flatMap()` during its Postgres injection stream. If a `MODE_CHANGED` event is broadcast to a "**Group of 4 Devices**", it physically creates 4 identical database rows in `parsed_logs` (and usage tables) varying only by `device_id`.
+4.  **Legacy Script Misnomer**: The `tools/ingestPicks.mjs` script doesn't actually ingest picks. It iterates `<SUPABASE_URL>/storage/v1/object/list/sk8lytz-logs` to sync older log files left in cloud storage buckets before native Postgres insertion was enabled.
+
+This implementation plan focuses relentlessly on eliminating the `.flatMap()` duplication array unrolling, changing ingestion queries to rely on the established `group_id` instead, and refactoring the offline sync fallback.
+
+> [!WARNING] User Review Required
+> Modifying the telemetry array unrolling to insert `device_id: null` in favor of `group_id` means that future Supabase dashboard queries searching for a single device will need to query `WHERE device_id = 'A' OR group_id LIKE '%A%'`. Is this query compromise acceptable to reduce database bloat by over 60%+ for group skaters?
 
 ## Proposed Changes
 
-### Database Re-evaluation
+### `src/services/AppLogger.ts`
+- **[MODIFY]** Remove the `targets.map(...)` unrolling for `parsed_logs`.
+- **[MODIFY]** Store Group events as a **single** row: `device_id` will be assigned `null` (or the primary host MAC if logical), while `group_id` / `group_name` retains the group identifier.
+- **[MODIFY]** Apply the same unrolling removal to the `parsed_mode_usage`, `parsed_color_usage`, and `parsed_pattern_usage` tables, preventing multi-insertion of usage aggregations.
 
-- **Normalization Analysis**: Compare `parsed_session_stats` vs `skate_sessions`. Are we storing the same metrics (speed, distance) twice?
-- **Log Compression**: Evaluate if `parsed_logs` should store the full `hex_payload` alongside `raw_data` JSONB, or if one can be derived from the other.
-- **Index Optimization**: Review indexes on `session_id` and `timestamp_ms` across all `parsed_` tables to ensure query performance.
-
-### Ingestion Logic (`tools/ingestPicks.mjs` & Backend)
-
-- **Atomic Upserts**: Ensure that re-uploading the same log file doesn't create duplicate entries (idempotency).
-- **Batch Processing**: Optimize the `CHUNK_SIZE` and parallelize uploads where safe.
+### `tools/ingestPicks.mjs`
+- **[DELETE]** `tools/ingestPicks.mjs` 
+- **[NEW]** Rename to `tools/syncTelemetryBuckets.mjs` to reflect its true purpose.
+- **[MODIFY]** Update the batch processing in this script to reflect the new non-duplicate logic matching `AppLogger.ts`.
 
 ## Open Questions
 
-- **Retention Policy**: Should `parsed_` telemetry be moved to a cold-storage solution after a certain period, or is permanent persistence required?
-- **Granularity**: Do we need every single BLE protocol byte in the DB, or should we only store parsed business logic events?
+1. Do we still actively run the bucket sync script via cron/GitHub Actions, or is the `AppLogger.ts` live Postgres stream fully replacing the need for it? Can we just delete the script entirely?
 
 ## Verification Plan
 
-1. **Redundancy Report**: Generate a comparison of data points across tables.
-2. **Mock Ingestion Test**: Run ingestion on the same file twice and verify `COUNT(*)` remains stable.
-3. **Query Performance Benchmarks**: measure execution time for standard telemetry dashboard queries.
+### Automated / Diagnostic Tests
+- Boot the app on physical device or emulator.
+- Group 2 devices together.
+- Invoke a `MODE_CHANGED` event on the group.
+- Using the `supabase-mcp-server_execute_sql` tool, query `SELECT * FROM parsed_logs ORDER BY created_at DESC LIMIT 5` and verify exactly 1 row was created for the group interaction rather than 2+.

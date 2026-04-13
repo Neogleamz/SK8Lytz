@@ -566,63 +566,62 @@ class AppLoggerService {
           }
 
           // 3. New Usage Tracking Matrix directly from current logs
-          const modeMap = new Map();
-          const patternMap = new Map();
-          const colorMap = new Map();
+          const modeMap = new Map<string, any>();
+          const patternMap = new Map<string, any>();
+          const colorMap = new Map<string, any>();
           
           currentRunLogs.forEach((item: any) => {
               const isGroup = item.d?.target === 'group' || (item.d?.deviceIds && item.d.deviceIds.length > 1);
               const groupId = isGroup ? item.d?.deviceIds?.join('_') : null;
               const groupName = isGroup ? `Group (${item.d?.groupSize || item.d?.deviceIds?.length} Devices)` : null;
-              const targets = isGroup && Array.isArray(item.d?.deviceIds) ? item.d.deviceIds : [item.d?.deviceId || primaryMacRaw];
+              // Optimization: Unrolling targets is a major redundancy. Store only primary or null mapping.
+              const tgtDev = isGroup ? null : (item.d?.deviceId || primaryMacRaw);
               
-              targets.forEach((tgtDev: string) => {
-                  if (item.e === 'MODE_CHANGED' && item.d?.mode) {
-                      const hash = `${groupId || tgtDev}|${item.d.mode}`;
-                      modeMap.set(hash, { mName: item.d.mode, count: (modeMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev });
-                  }
-                  if (item.e === 'PATTERN_CHANGED' && item.d?.pattern) {
-                      const pName = item.d.name || item.d.pattern;
-                      const hash = `${groupId || tgtDev}|${pName}`;
-                      patternMap.set(hash, { pName, count: (patternMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev });
-                  }
-                  if (item.e === 'COLOR_CHANGED' && item.d?.hex) {
-                      const hash = `${groupId || tgtDev}|${item.d.hex}`;
-                      colorMap.set(hash, { hex: item.d.hex, count: (colorMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev });
-                  }
-              });
+              if (item.e === 'MODE_CHANGED' && item.d?.mode) {
+                  const hash = `${groupId || tgtDev}|${item.d.mode}`;
+                  modeMap.set(hash, { mName: item.d.mode, count: (modeMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev });
+              }
+              if (item.e === 'PATTERN_CHANGED' && item.d?.pattern) {
+                  const pName = item.d.name || item.d.pattern;
+                  const hash = `${groupId || tgtDev}|${pName}`;
+                  patternMap.set(hash, { pName, count: (patternMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev });
+              }
+              if (item.e === 'COLOR_CHANGED' && item.d?.hex) {
+                  const hash = `${groupId || tgtDev}|${item.d.hex}`;
+                  colorMap.set(hash, { hex: item.d.hex, count: (colorMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev });
+              }
           });
 
-          const modePayload = Array.from(modeMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, device_name: customNameMap.get(v.tgtDev), mode_name: v.mName, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
+          const modePayload = Array.from(modeMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, device_name: v.tgtDev ? customNameMap.get(v.tgtDev) : null, mode_name: v.mName, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
           if (modePayload.length > 0) await supabase.from('parsed_mode_usage').insert(modePayload);
 
-          const patternPayload = Array.from(patternMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, device_name: customNameMap.get(v.tgtDev), pattern_idx: v.pName, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
+          const patternPayload = Array.from(patternMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, device_name: v.tgtDev ? customNameMap.get(v.tgtDev) : null, pattern_idx: v.pName, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
           if (patternPayload.length > 0) await supabase.from('parsed_pattern_usage').insert(patternPayload);
 
-          const colorPayload = Array.from(colorMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, device_name: customNameMap.get(v.tgtDev), hex_color: v.hex, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
+          const colorPayload = Array.from(colorMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, device_name: v.tgtDev ? customNameMap.get(v.tgtDev) : null, hex_color: v.hex, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
           if (colorPayload.length > 0) await supabase.from('parsed_color_usage').insert(colorPayload);
 
           // 4. Trace Log Push (Batched)
           const CHUNK = 1000;
           for (let i = 0; i < currentRunLogs.length; i += CHUNK) {
              const chunk = currentRunLogs.slice(i, i + CHUNK);
-             const dbLogPayload = chunk.flatMap((item: any) => {
+             const dbLogPayload = chunk.map((item: any) => {
                 const isGroup = item.d?.target === 'group' || (item.d?.deviceIds && item.d.deviceIds.length > 1);
-                const targets = isGroup && Array.isArray(item.d?.deviceIds) ? item.d.deviceIds : [item.d?.deviceId || primaryMacRaw];
+                const tgtDev = isGroup ? null : (item.d?.deviceId || primaryMacRaw);
                 
-                return targets.map((explicitDeviceId: string) => ({
+                return {
                   session_id: sessionId,
                   host_device_id: deviceId,
                   timestamp_ms: item.t,
                   event_type: item.e,
                   direction: item.d?.dir || null,
                   hex_payload: item.d?.hex || null,
-                  device_id: explicitDeviceId,
-                  device_name: customNameMap.get(explicitDeviceId) || null,
+                  device_id: tgtDev,
+                  device_name: tgtDev ? customNameMap.get(tgtDev) || null : null,
                   group_id: isGroup ? item.d?.deviceIds?.join('_') : null,
                   group_name: isGroup ? `Group (${item.d?.groupSize || item.d?.deviceIds?.length} Devices)` : null,
                   raw_data: (({ dir: _d, hex: _h, deviceId: _di, ...r }) => r)(item.d || {})
-                }));
+                };
              });
              await supabase.from('parsed_logs').insert(dbLogPayload);
           }
