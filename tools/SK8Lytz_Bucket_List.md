@@ -26,6 +26,7 @@ pie title Critical Stability
   "Remaining" : 4
 ```
 
+- [ ] `fix/hardware-default-propagation` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🧠 THINK] [📝️ NEEDS-PLAN] Hardware configurations (e.g. HALOZ defaulting to 2 segments) from the Product Manager are not feeding properly into the BLE initialization payload. Connect catalog logic to controller. → [Plan](docs/plans/fix-hardware-default-propagation.md)
 - [ ] `feat/gate-offline-mode` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
 - [ ] `refactor/state-machine-standard` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [Pillar 8] [🧠 THINK] Deterministic UI — transition from boolean flags to explicit Enum-based Finite State Machines. → [Plan](docs/plans/refactor-state-machine-standard.md)
 - [ ] `feat/ble-hardware-watchdog` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [Pillar 7] [🧠 THINK] Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks and silent-relatches connections. → [Plan](docs/plans/feat-ble-hardware-watchdog.md)
@@ -96,6 +97,7 @@ pie title Feature Velocity
 - [ ] `feat/app-wide-ux-tips` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🤖 FLASH] [📝️ NEEDS-PLAN] Contextual tips system for key friction points. → [Plan](docs/plans/feat-app-wide-ux-tips.md)
 - [ ] `feat/google-oauth-integration` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] Integrate Google OAuth as an auth provider. (Requires Google Cloud Console setup + Supabase config). → [Plan](docs/plans/feat-google-oauth-integration.md)
 - [ ] `fix/supabase-signup-400` : [🧪 LAB] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] Investigate Signup 400 error in web/simulator environments; verify redirect URI and rate limits.
+- [ ] `feat/device-specific-picks` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🤖 PRO-HIGH] [⚡ FLASH-READY] Allow the SK8Lytz Picks scheduler to target specific hardware device profiles (e.g. HALOZ, SOULZ, RAILZ) rather than universally pushing to all connected devices. → [Plan](docs/plans/feat-device-specific-picks.md)
 
 ---
 
