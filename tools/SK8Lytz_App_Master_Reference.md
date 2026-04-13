@@ -298,6 +298,21 @@ All FSM states and shared interfaces live in **`src/types/dashboard.types.ts`**.
 | `viz_shape` | TEXT | RING / OVAL / DUAL_STRIP |
 | `battery_capacity_mah`| INT | Rated capacity |
 
+#### **`skate_spots`** (Map Grounding)
+| Column | Type | Purpose |
+|:---|:---|:---|
+| `id` | UUID (PK) | Unique spot ID |
+| `name` | TEXT | Rink/Park name |
+| `lat` | DOUBLE | Latitude |
+| `lng` | DOUBLE | Longitude |
+| `surface_type` | TEXT | `wood` / `concrete` / `sport_court` |
+| `is_indoor` | BOOLEAN | Indoor vs Outdoor |
+| `source` | TEXT | `native_seed` / `osm` / `user_submit` |
+| `is_verified` | BOOLEAN | Administrative verification status |
+
+> [!NOTE]
+> **Map Grounding Strategy**: 20 iconic US Roller Rinks were seeded on 2026-04-13 using the `native_seed` tag to ensure immediate platform value in US territories.
+
 ---
 
 ## 6. Crew Hub & Session Lifecycle
