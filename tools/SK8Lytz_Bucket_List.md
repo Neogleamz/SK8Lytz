@@ -118,6 +118,7 @@ pie title Feature Velocity
 
 - [x] `chore/build-and-deploy-final-hardware` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] Final production build 6600713 and deployment to Pixel 7.
 - [x] `feat/usa-skate-spots-dataset` : [☁️ CLOUD] [📦 BATCH] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] US-only dataset of rinks and parks for map overlays. → [Plan](docs/plans/feat-usa-skate-spots-dataset.md)
+- [x] `fix/voice-button-null-reference` : [🧪 LAB] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] [⏱️ 15m] Fix null reference error on voice button (missing native module bridge gracefully catching instead of crashing). → [Plan](docs/plans/fix-voice-button-null-reference.md)
 - [x] `chore/beautify-backlog` : [☁️ CLOUD] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [📝️ NEEDS-PLAN] Prettify bucket list tags with icons and update intake rules for aesthetic consistency. → [Plan](docs/plans/chore-beautify-backlog.md)
 - [x] `feat/eula-content-update` : [☁️ CLOUD] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [⚡ FLASH-READY] Update EulaModal with the new formal legal text provided by Neogleamz. → [Plan](docs/plans/feat-eula-content-update.md)
 - [x] `chore/cleanup-crew-screen-todos` : [☁️ CLOUD] [✅ L-RISK] [🍪 Snack] [🤖 FLASH] [⚡ FLASH-READY] Cleanup legacy import TODOs in CrewCreate, CrewDetail, and CrewManage screens.
