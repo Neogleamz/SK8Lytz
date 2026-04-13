@@ -1,8 +1,18 @@
 # SK8Lytz App Master Reference
 
-*Last Updated: 2026-04-11 | Source of Truth: `src/protocols/ZenggeProtocol.ts`*
+*Last Updated: 2026-04-13 | Source of Truth: `src/protocols/ZenggeProtocol.ts`*
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
+
+1. [Product Bible](#1-product-bible-vision--north-star)
+2. [System Architecture](#2-system-architecture--local-storage)
+3. [BLE Protocol Library](#3-ble-protocol-library)
+4. [Domain-Driven Architecture](#4-domain-driven-architecture)
+5. [Database Schemas](#5-database-schemas)
+6. [Crew Hub & Session Lifecycle](#6-crew-hub--session-lifecycle)
+7. [Session Telemetry Architecture](#7-session-telemetry-architecture)
+8. [Agentic PM Protocols](#8-agentic-pm-protocols-the-brain)
+9. [Sentinel Engineering Governance](#9-sentinel-engineering-governance-workflow-v6)
 
 > [!CAUTION]
 > Do NOT append duplicate or conflicting protocol discoveries to this document. If a payload format changes, **overwrite** the existing entry to ensure this file remains a single, conflict-free source of truth.
@@ -104,7 +114,8 @@ The primary dashboard uses a **Vertical Slab (No-Scroll)** layout to maximize gl
 The **Admin Tools Hub** (`AdminToolsModal`) is the unified gateway for all system-level diagnostics and hardware maintenance. 
 
 * **Access**: 10-tap the SK8Lytz logo in the dashboard header + Passcode: `0000`.
-* **Tab 1: TIMELINE**: Virtualized system event log (BLE protocol, app lifecycle, errors).
+* **Architecture (Refactor/2026-04-12)**: To prevent "re-render storms" from high-frequency telemetry, the modal utilizes a **Memoized Tab Architecture**. Rendering logic for Timeline, Stats, Device, and Tools is extracted into standalone `React.memo` sub-components, ensuring UI stability during 20Hz notification bursts.
+* **Tab 1: TIMELINE**: Virtualized system event log (BLE protocol, app lifecycle, errors). Filtered to exclude RAW_PAYLOAD by default to preserve list performance.
 * **Tab 2: STATS**: Session analytics, mode usage frequency, and hardware performance metrics.
 * **Tab 3: DEVICE**: Deep-dive hardware view showing all discovered peripherals and their cached configs.
 * **Tab 4: TOOLS**: Administrative portal for low-level components:
@@ -112,7 +123,9 @@ The **Admin Tools Hub** (`AdminToolsModal`) is the unified gateway for all syste
     *   **LED Diagnostic Lab**: Atomic protocol validation and DIY payload building.
     *   **Firmware Programmer**: Low-level hardware updates and serial-over-BLE tools.
     *   **Optical Simulation Mode (Web Fallback)**: A dedicated developer interface for non-native environments (Expo Web). It provides manual telemetry simulation (randomized hex dispatch) to smoke-test visualizer and state-management pipelines without physical hardware.
-* **Schema Reliability**: Product Manager upserts are strictly typed to enforce the `batteryCapacityMilliAmpereHour` field, preventing database record drift for new HALOZ/SOULZ revisions.
+* **Persistence & Governance**: 
+    * App settings (feature flags) are persisted via `AppSettingsService` with atomic rollback on failure.
+    * Product Manager upserts are strictly typed to enforce the `batteryCapacityMilliAmpereHour` field, preventing database record drift.
 * **Navigation Orchestration**: Closing any administrative sub-tool (Lab, Programmer) must explicitly re-trigger the visibility of the `AdminToolsModal` in the parent `DashboardScreen` to ensure a consistent "nested" navigation experience.
 
 ### Test Users & Environments
@@ -122,142 +135,12 @@ For testing App Sync behavior vs. Offline mode offline fallbacks, you can authen
 * **Password**: `Password!2026`
 * **Username**: `TestSkater`
 
-### Supabase Architecture (Telemetry & Registration)
-
-*Project ID:* `qefmeivpjyaukbwadgaz`
-
-#### **Telemetry Data Ingestion RLS Pattern**
-To ensure 100% telemetry capture without interfering with legitimate authenticated users, tables handling high-volume operational diagnostic data (`device_diagnostics`, `telemetry_errors`) MUST implement permissive ingestion policies:
-- **`public` Role Access**: Grant `INSERT` (and `SELECT` for troubleshooting tools) to the `public` role to cover both `anon` and `authenticated` context flows.
-- *Rationale*: Prevents the "Authenticated Paradox" where logged-in users are blocked from writing telemetry that anonymous users can write, causing 403 Forbidden errors during routine hardware syncs.
-
-#### **`registered_devices`** (Hardened Schema)
-| Column | Type | Purpose |
-|:---|:---|:---|
-| `id` | TEXT (PK) | Unique system identifier (Client-generated UUID or Hash) |
-| `device_mac` | TEXT | Unique hardware address |
-| `user_id` | UUID | Owner ID |
-| `device_name` | TEXT | Custom alias |
-| `product_type` | TEXT | HALOZ / SOULZ / RAILZ (Dynamic from `product_catalog`) |
-| `position` | TEXT | Left / Right / Front / Back |
-| `group_name` | TEXT | Auto-assignment to hardware groups |
-| `led_points` | INT | Physical pixel count |
-| `segments` | INT | Virtual segments |
-| `ic_type` | INT | 1 (WS2812), etc. |
-| `color_sorting`| INT | 2 (GRB), etc. |
-| `rssi_at_register`| INT | Connection quality at first sync |
-| `firmware_ver` | INT | |
-| `led_version` | INT | |
-| `product_id` | INT | |
-
-#### **`product_catalog`** (Dynamic Hardware Definitions)
-| Column | Type | Purpose |
-|:---|:---|:---|
-| `id` | TEXT (PK) | Unique product key (e.g., SOULZ, HALOZ, RAILZ) |
-| `display_name` | TEXT | Human-readable name used in UI |
-| `is_active` | BOOLEAN | If false, app ignores this profile |
-| `detect_min_points` / `max` | INT | FTUE Auto-Detection ranges (0x63 query) |
-| `default_led_points` | INT | Factory default written via 0x62 |
-| `viz_shape` | TEXT | Geometry ID for ProductVisualizer (RING / OVAL / DUAL_STRIP) |
-| `viz_blob_diameter_mm` | REAL | Physical pixel diameter for canvas rendering scale |
-| `brand_icon` | TEXT | MaterialCommunityIcons string (e.g., 'circle-double') |
-| `viz_theme_color` | TEXT | HEX branding color (e.g., '#00C8FF') |
-| `battery_capacity_mah`| INT | Rated capacity for power modeling (e.g. 3000) |
-
-> [!WARNING]
-> The app enforces **Strict Column Mapping** in `useRegistration.ts`. Any new database column MUST be added to the explicit mapping in the `dbRow` object to prevent schema cache mismatch errors during cloud sync.
-
-#### **`app_settings`** (Governance & Registry)
-| Column | Type | Purpose |
-|:---|:---|:---|
-| `setting_key` | TEXT (PK) | Unique key (e.g., `required_eula_version`) |
-| `setting_value` | TEXT | Value (Version num, JSON flags) |
-
-#### **`user_profiles`** (Compliance Tracking)
-- **`accepted_eula_version`** (INT): Tracks the last EULA version signed by the user. Blocking logic triggers if this is less than `required_eula_version`.
-
-### 🏛️ Feature Governance Policy Model
-
-Features are managed via a centralized policy registry in `AppSettingsService`. All module visibility and "Smart Locks" are derived from this state:
-
-| Strategy | Behavior |
-|:---|:---|
-| `GLOBAL_LOCK` | Feature is physically disabled and grayed out across the entire fleet. |
-| `HIDE_OFFLINE` | Feature vanishes from the UI if the device has no internet/Supabase heartbeat. |
-| `GATED_OFFLINE` | Feature is visible but displays a "Connect to Cloud" overlay when tapped. |
-| `ADMIN_ONLY` | Feature only visible to `is_admin: true` profiles. |
-
-* **`parsed_session_stats`**: One row per app session summary (`session_id` UNIQUE)
-* **`parsed_session_devices`**: All BLE devices seen per session (`session_id + device_id` UNIQUE)
-* **`parsed_logs`**: Full event trace log. Appended continuously.
-* **`parsed_mode_usage`** / **`parsed_pattern_usage`** / **`parsed_color_usage`**: Frequency metrics.
-* **`telemetry_errors`**: Global crash hounds and unhandled exception tracker. Target for AI bug-hunter triage.
-
-> Group telemetry events MUST pass `deviceIds: string[]` in the `AppLogger` device context so the engine can unroll the event into individual, per-device rows in Postgres.
-
-### Hardware Discovery & Identification (The FTUE Logic)
-
-The app uses a "Search & Enrich" strategy for First Time User Experience (FTUE).
-
-1. **Instant Enrollment**: All Zengge/Symphony MAC addresses are listed immediately in the Wizard as "SCANNING".
-2. **Round-Robin Probing**: A sequential, persistent background loop connects to each unknown device to retrieve EEPROM data (0x63).
-3. **Threshold Classification**: (Dynamic via `ProductCatalog.ts` / `product_catalog` DB table)
-   * **SOULZ**: 28–300 LEDs (Standard 43).
-   * **HALOZ**: 10–27 LEDs (Standard 16).
-   * **RAILZ**: 1–9 LEDs (Standard 10 - *Pending HW confirmation*).
-   * **UNKNOWN**: Fallback to safe defaults (SOULZ @ 43pts) if probing fails after 3 retries.
-4. **Clean Install Enforcement**: The build-apk script strictly aborts on Gradle failure, and install-apk performs a full `adb uninstall` before push.
-
----
-
-## 2. Hardware Profiles & Constraints
-
-### Physical Product Specifications
-
-| **Feature** | **SOULZ** | **HALOZ** | **RAILZ** |
-|:---|:---|:---|:---|
-| **Form Factor** | Diffused Silicone Strips (x4) | Compact High-Density Box | Parallel Under-Strips (x2) |
-| **Length/Size** | 56" Total (14" per) | 1.5" x 3" Body | Inline Vertical Tracks |
-| **Battery Life**| 4-8+ hours (2000mAh) | 3-5+ hours (1200mAh) | 6-10+ hours (2000mAh) |
-| **Charging** | 90 min (USB-C) | 60 min Fast-Charge | 90 min (USB-C) |
-| **LED Type** | Diffused Addressable RGB | High-Density RGB Pixels | High-Intensity Strips |
-| **Audio** | Integrated Mic | Integrated Mic | Integrated Mic |
-
-### Hardware Capability Thresholds
-
-- **Maximum Points**: 300 LEDs
-* **Maximum PxS**: 2048 (Points × Segments)
-* **Maximum Mic Points**: 150 LEDs
-* **Maximum Mic PxS**: 960
-
-### IC Types (`icType` Index)
-
-- `1`: WS2812B (SK8Lytz Default for all HALOZ/SOULZ)
-* `2`: SM16703
-* `4`: WS2811
-* `6`: SK6812
-
-### Color Sorting Maps (`sorting` Index)
-
-- `0`: RGB
-* `1`: RBG
-* `2`: **GRB** (SK8Lytz Default for all HALOZ/SOULZ)
-* `3`: GBR
-* `4`: BRG
-* `5`: BGR
-
-> [!IMPORTANT]
-> Modern HALOZ/SOULZ hardware (WS2811/WS2812B) natively handles color remapping internally based on the EEPROM sorting index (set via 0x62).
-> The application software should send **PURE RGB** bytes. Do NOT pre-sort colors using `applyColorSorting()` for 0x59 or 0x73 payloads, as this will result in double-swapped / incorrect colors.
-
 ---
 
 ## 3. BLE Protocol Library
 
 > [!IMPORTANT]
-> **Dynamic Catalog Migration (2026-04-11)**: The legacy `SK8_DEFAULTS` constant in `ZenggeProtocol.ts` has been REMOVED.
-> All hardware profile logic—including default LED counts, visualization themes, and discovery categorization—is now handled strictly via `LOCAL_PRODUCT_CATALOG` (`src/constants/ProductCatalog.ts`).
-
+> **Dynamic Catalog Migration (2026-04-11)**: All hardware profile logic—including default LED counts, visualization themes, and discovery categorization—is now handled strictly via `LOCAL_PRODUCT_CATALOG` (`src/constants/ProductCatalog.ts`).
 
 All byte definitions below represent the inner payload *before* the V2 BLE packet wrapper is applied.
 
@@ -266,229 +149,98 @@ All byte definitions below represent the inner payload *before* the V2 BLE packe
 > [!CAUTION]
 > React Native BLE PLX and the Android native `BluetoothAdapter` suffer from extreme race conditions. To avoid GATT 133 exceptions, UI freezes, and buffer overflows, all logic must follow these three architectural constraints:
 
-1. **Strict Sequential Teardowns (`GATT 133` Prevention):** If `disconnectFromDevice()` fires overlapping or un-awaited `cancelDeviceConnection()` promises, the Android stack will overflow. 
-   - **Rule:** Teardowns MUST be strictly awaited sequentially using standard `for..of` loops, followed by a soft ~250ms buffer to allow the OS to complete physical teardown before clearing the UI state.
-   - **Latch Requirement:** UI components and the `disconnectFromDevice` function must implement and check an `isDisconnecting` state lock to intercept and drop any debounced Write promises so they don't fire into a dead stack.
-2. **Global Mutex Queue (Parallel Write Crash Prevention):** Calling multiple `writeCharacteristic` commands within milliseconds (e.g. user rapidly dragging a slider) will lock up the adapter.
-   - **Rule:** The `writeToDevice` function must be wrapped in a global Promise Mutex (FIFO queue). No payload chunk can be transmitted until the previous chunk's promise resolves or times out.
-3. **Hard Connection Timeouts (Infinite Freeze Prevention):** BLE promises can silently hang forever.
-   - **Rule:** EVERY connection attempt (`bleManager.connectToDevice()`) MUST include an explicit `{ timeout: 5000 }` parameter. Connect logic should aggressively catch timeout rejects, clear the connection, and reset the state machine.
+1. **Strict Sequential Teardowns (`GATT 133` Prevention):** Teardowns MUST be strictly awaited sequentially, followed by a soft ~250ms buffer.
+2. **Global Mutex Queue (Parallel Write Crash Prevention):** The `writeToDevice` function must be wrapped in a global Promise Mutex (FIFO queue).
+3. **Hard Connection Timeouts (Infinite Freeze Prevention):** Connect logic MUST include explicit timeouts (5000ms).
 
 ### The Transport Wrapper (`wrapCommand`)
 
-Every inner protocol payload must be wrapped using the standard 8-byte Zengge V2 framing before transmission over the GATT characteristics.
-
-* **Format:** `[0x00, SequenceNum, 0x80, 0x00, LenHi, LenLo, Len+1, 0x0B, ...innerPayload]`
-* **Characteristics:** Send to `FF01` (WRITE). Receive notifications on `FF02` (NOTIFY).
+Every inner protocol payload must be wrapped using the standard 8-byte Zengge V2 framing: 
+`[0x00, SequenceNum, 0x80, 0x00, LenHi, LenLo, Len+1, 0x0B, ...innerPayload]`
 
 ---
 
 ### Command: Hardware Config Query (0x63)
-
 *Reads the current EEPROM settings stored inside the controller chip.*
-
-* **Send (5 bytes):** `[0x63, 0x12, 0x21, 0x0F, checksum]` (Use `0xF0` flag if querying mic data).
-* **Receive parser rules:**
-  * Some firmware versions wrap the response in a JSON envelope `{"code":0,"payload":"<hex>"}`.
-  * After unwrapping, if the packet starts with `[0x00, 0x63]` (Index 1) the offsets are:
-    * `[3]` = LED points count
-    * `[5]` = Segments
-    * `[6]` = IC Type
-    * `[7]` = Color Sorting Index
-  * **CRITICAL ENDIANNESS:** If the classic format is used (0x63 at Index 0), the `ledPoints` bytes are **Little-Endian SWAPPED**: `((payload[9] & 0xFF) << 8) | (payload[8] & 0xFF)`.
+* **Send (5 bytes):** `[0x63, 0x12, 0x21, 0x0F, checksum]`
+* **CRITICAL ENDIANNESS:** `ledPoints` bytes are **Little-Endian SWAPPED**: `((payload[9] & 0xFF) << 8) | (payload[8] & 0xFF)`.
 
 ### Command: Hardware Config Write (0x62)
-
 *Writes custom segments, IC type, and max LED points permanently to the controller EEPROM.*
-
 * **Format:** `[0x62, ptsHigh, ptsLow, segHigh, segLow, icType, sorting, micPts, micSegs, 0xF0, checksum]`
-* **CRITICAL ENDIANNESS:** Unlike the 0x63 Response, the 0x62 Write command uses **Big-Endian format** for Points and Segments: `ptsHigh = (points >> 8) & 0xFF`, `ptsLow = points & 0xFF`.
+* **CRITICAL ENDIANNESS:** Uses **Big-Endian format**: `ptsHigh = (points >> 8) & 0xFF`, `ptsLow = points & 0xFF`.
 
 ---
 
 ### Command: Segmented Multi-Color Layout Array (0x59)
-
-*The primary command for drawing exact pixel-mapped arrays, fixed color swatches, and hardware-native directional animations.*
-
-* **Format:** `[0x59, totalLenHi, totalLenLo, [R1,G1,B1...R300,G300,B300], numLEDsHi, numLEDsLo, transitionType, speed, direction, checksum]`
-* **totalLen calculation:** `(numPoints * 3) + 9`
-* **transitionType:**
-  * `0x00`: Static (Instant visual snap, speed byte is ignored).
-  * `0x01`: Gradual (Hardware fades the array blocks smoothly).
-  * `0x02`: Strobe (Hardware flashes the full length at `speed`).
-  * `0x03`: RunningWater (Hardware scrolls the array linearly, acting as a marquee).
-* **speed:** Must be clamped strictly between `0x01` and `0x1F` (1-31).
+* **Format:** `[0x59, totalLenHi, totalLenLo, [R1,G1,B1...], numLEDsHi, numLEDsLo, transitionType, speed, direction, checksum]`
+* **transitionType:** `0x00` Static, `0x01` Gradual, `0x02` Strobe, `0x03` RunningWater.
+* **speed:** Clamped strictly between `0x01` and `0x1F`.
 
 ---
 
 ### Command: DIY Custom Animation Sequences (0x51)
-
-*Frames up to 32 animated sequence steps in a fixed-length memory block.*
-
-* **Format (291 Bytes):** `[0x51, Step0(9 bytes), Step1(9 bytes)... Step31(9 bytes), 0x0F_Terminator, checksum]`
-* **Step Structure (9 Bytes):** `[ACTIVE_FLAG, transMode, speed, fg.R, fg.G, fg.B, bg.R, bg.G, bg.B]`
-  * `ACTIVE_FLAG`: `0xF0` to run this step, `0x0F` to skip this frame slot.
-* **transMode:**
-  * Use custom Symphony ID values `0x01-0x21` (1-33) to trigger advanced hardware effects.
-  * Use standard transitions: `0x3A` (Jump), `0x3B` (Gradual), `0x3C` (Strobe).
-* **speed:** `0x01-0x64` (1-100 full 0-100% spread, unlike the 0x59 command).
-
-> [!TIP]
-> **COMPACT MODE (Variable Length)**: The hardware also tolerates non-standard truncation for 0x51. Instead of padding out 32 steps to 291 bytes, you can simply append `0x0F` (terminator) directly after the active steps to create payloads tiny enough to fit inside a single BLE MTU packet (20 bytes).
+* **Format (291 Bytes):** `[0x51, Step0...Step31, 0x0F_Terminator, checksum]`
+* **Step Structure (9 Bytes):** `[ACTIVE_FLAG, transMode, speed, fgRGB, bgRGB]`
 
 ---
 
 ### Basic Control Commands
-
 - **Power ON (0x71):** `[0x71, 0x23, 0x0F, 0xA3]`
-* **Power OFF (0x71):** `[0x71, 0x24, 0x0F, 0xA4]`
-* **Set RBM Pattern (0x42):** `[0x42, patternId, speed, brightness, checksum]`
-* **Music Config (0x73):** `[0x73, micSource, modeType, patternId, c1.R, c1.G, c1.B, c2.R, c2.G, c2.B, 0x20, sensitivity, brightness, checksum]`
-* **Music Live Data (0x74):** `[0x74, audioMagnitude, checksum]` — Dispatched continually for phone-mic reactivity.
-* **RF Auth Setting (0x2A):** `[0x2A, modeByte, 0xFF,0xFF,0xFF,0xFF,0xFF, clearByte, 0x00...0x0F]` (`modeByte=0x01` Block all, `0x02` Known only, `0x03` Allow all).
+- **Power OFF (0x71):** `[0x71, 0x24, 0x0F, 0xA4]`
+- **Set RBM Pattern (0x42):** `[0x42, patternId, speed, brightness, checksum]`
+- **Music Config (0x73):** `[0x73, micSource, modeType, patternId, c1RGB, c2RGB, 0x20, sensitivity, brightness, checksum]`
 
-### 4. Proactive Battery Management System (Architectural Skill)
-
-Due to the lack of high-fidelity state-of-charge feedback from the hardware, the app implements a **Mathematical Consumption Modeling** system:
-1. **Capacity Presets**: SOULZ (2000mAh), HALOZ (1200mAh), RAILZ (2000mAh).
-2. **Drain Calculation**: Real-time modeling of pixel density, brightness, and pattern intensity.
-3. **Safety "Limp Mode"**: Automatic 0x71 brightness dimming to **20%** when the modeled reserve reaches the 20% critical threshold.
-4. **Telemetry Sniffing**: Ongoing research into secondary 0x63 response bytes to identify raw voltage/SoC data.
+### ### Proactive Battery Management System (Architectural Skill)
+The app implements a **Mathematical Consumption Modeling** system using real-time modeling of pixel density, brightness, and pattern intensity to estimate battery reserve.
 
 ---
 
-## 5. Agentic PM Protocols (The Brain)
+## 4. Domain-Driven Architecture
 
-This project is governed by a custom-built **Agentic OS**—a suite of 38 strict protocols located in `.agents/rules/`. These rules are permanently active via the `trigger: always_on` YAML framework, ensuring the AI assistant operates with human-level precision, safety, and product empathy.
+To ensure scalability and maintain UI performance, the SK8Lytz app enforces a **Hook-First** architecture. Complex business logic, hardware protocols, and Supabase data fetching must be extracted from UI components into decoupled domain hooks.
 
-### The Agentic Manifesto
-We believe that AI coding shouldn't be a "black box." By enforcing strict intake gates, surgical edit patterns, and mandatory corporate memory synchronization, we ensure that every line of code is intentional, auditable, and aligned with the Neogleamz mission.
+### Core Domain Hooks
 
----
+| Hook | Domain | Responsibilities |
+| :--- | :--- | :--- |
+| `useCrewHub` | Social | Session synchronization, scene broadcasting, presence management. |
+| `useDeviceSync` | BLE | Connection state tracking, automatic reconnection, device metadata syncing. |
+| `useDiagnosticLog` | Debug | BLE RX/TX logging, packet sniffing, raw hex transmission bridge. |
+| `useProtocolBuilder` | Hardare | FSM-based payload generation for Zengge `0x51`, `0x59`, `0x61`, `0x73`, `0x62` protocols. |
+| `useAdminTelemetry` | Admin | App analytics, system health, cloud log uploads (Supabase). |
+| `useProductManager` | Admin | Hardware catalog CRUD, geometry visualizer state, product identity management. |
+| `useAdminSettings` | Admin | Global remote configuration and feature flags. |
 
-### Tier 1: Safety, Precision & Stealth (The Shield)
-*Protects the codebase from regressions, accidental deletions, and secondary impacts.*
-
-| Rule | Function |
-|:---|:---|
-| **Critical Safety & Quarantine** | Strict 7-step branching strategy. Forbids `main` pushes and `.git/hooks` manipulation. |
-| **Surgical Strike Protocol** | Mandates micro-edits and 10-line chunking. Forbids monolithic file overwrites. |
-| **Absolute Truth (Anti-Hallucination)** | Forces the AI to read the Master Reference before proposing byte-level or architectural changes. |
-| **Security & Secrets Standard** | Zero-tolerance for hardcoded keys. Enforces `.env` boundaries. |
-| **Panic Button (Emergency Triage)** | Immediate read-only mode. Provides safe git escape routes during crises. |
-| **Local Tool Enforcement** | Forces use of native API tools over generic terminal commands for FS operations. |
-
----
-
-### Tier 2: Workflow, PM & Intake (The Engine)
-*Manages the backlog, branch lifecycle, and project velocity.*
-
-| Rule | Function |
-|:---|:---|
-| **Zero-Bypass Intake** | Intercepts casual requests and routes them through the formal Bucket List system. |
-| **Auto-Branching (Bucket List)** | Sequentially parses `tools/SK8Lytz_Bucket_List.md` to automate feature development. |
-| **Idea Intake Workflow** | Categorizes and slugs new ideas with priority overrides (`bump`/`up next`). |
-| **Ship It / Merge Task** | Formalized release manager workflow for merging features into base branches. |
-| **Midnight Oil (Wind Down)** | Standardized end-of-session sequence (Git sync, Memory sync, SITREP). |
-| **Status Update (SITREP)** | Generates high-density progress dashboards for active Epics. |
-| **Semantic Commits Enforcer** | strictly enforces Conventional Commits (`feat:`, `fix:`, `docs:`) with scopes. |
-| **Whiteboard / Brainstorming** | Mode-switch for abstract thinking, logic mapping, and non-coding discussion. |
-| **Context Memory Compiler** | Rebuilds the `ARCHITECTURE_MAP.md` to ensure the AI's mental map is current. |
+### Engineering Standards
+- **UI Components**: Must focus strictly on rendering and layout.
+- **State Machines**: Complex logic must use Enum-based state machines or structured reduction.
+- **Atomic Operations**: Hardware writes should be wrapped in `try/catch` and logged via `AppLogger`.
 
 ---
 
-### Tier 3: Design & Quality Standards (The Ruler)
-*Enforces the visual and technical "Neogleamz Standard."*
+## 5. Database Schemas
 
-| Rule | Function |
-|:---|:---|
-| **Modern UI/UX Architect** | Enforces the 4-State Matrix (Loading/Error/Empty/Success) and 8pt grid discipline. |
-| **Mobile-First Standards** | Ensures absolute responsiveness and iOS/Android compatibility (Safe Areas, Touch Targets). |
-| **Coding Standards (Clean Code)** | Mandates modularity, single responsibility, and modern ES6+ syntax. |
-| **Test-First Standard (TDD)** | Requires unit test generation BEFORE application code modifications. |
-| **Dependency Diet** | requires 3-point justification before adding any external npm packages. |
-| **Product Alignment** | Lead PM persona that pushes back on features misaligned with the "Product Bible." |
-| **Meta-Evolution** | Enables the AI to propose updates to its own rule set when friction is detected. |
+### Supabase Architecture (Telemetry & Registration)
+*Project ID:* `qefmeivpjyaukbwadgaz`
 
----
+#### **`registered_devices`** (Hardened Schema)
+| Column | Type | Purpose |
+|:---|:---|:---|
+| `id` | TEXT (PK) | Unique system identifier |
+| `device_mac` | TEXT | Unique hardware address |
+| `user_id` | UUID | Owner ID |
+| `device_name` | TEXT | Custom alias |
+| `product_type` | TEXT | HALOZ / SOULZ / RAILZ |
+| `led_points` | INT | Physical pixel count |
 
-### Tier 4: Assistance, Empathy & Mentorship (The Guide)
-*Ensures human-AI alignment and logic transparency.*
-
-| Rule | Function |
-|:---|:---|
-| **Echo Protocol (Verification)** | mandatory playback of intent and assumptions to prevent scope creep. |
-| **Jargon Brake (Mentorship)** | ELI5 mode—breaks down complex BLE/Math logic using simple analogies. |
-| **Rubber Duck (Logic ELI5)** | Forced pause to explain "Black Box" logic before writing the first line of code. |
-| **Devil's Advocate** | Ruthlessly identifies critical failure points in new ideas before implementation. |
-| **Simulated User (UX)** | Novice skater persona—tests UI for usability while wearing wrist guards and skating. |
-
----
-
-### Tier 5: Debugging, Hygiene & Maintenance (The Janitor)
-*Keeping the repo clean and technical debt low.*
-
-| Rule | Function |
-|:---|:---|
-| **Emergency Debug Drill** | Halts production fix-guessing. Enforces instrumentation and telemetry validation. |
-| **Isolated Test & Verify** | Scope-locks testing to the current git diff only. |
-| **Legacy Audit & Refactor** | Formalized procedure for bringing old code up to the current Agentic Standard. |
-| **Boy Scout (Tech Debt)** | Mandates exactly ONE small cleanup in every file modified. |
-| **Tech Debt Janitor** | Maintenance sweep of TODOs, HACKs, and outdated dependencies. |
-| **Bug Hunter Workflow** | Specialized persona for root-cause analysis and edge-case discovery. |
-| **Supabase Schema Sync** | Automatically regenerates TypeScript types after any DB migration. |
-| **Repository Cleanup** | Automates the pruning of merged branches. |
-
----
-
-### Tier 6: Persistence & Continuity (The Memory)
-*Ensures the project learns and remembers.*
-
-| Rule | Function |
-|:---|:---|
-| **Corporate Memory Sync** | Mandatory updates to this Master Reference after every complex fix or discovery. |
-| **Save Point & Abort** | Enables rapid check-pointing of the workspace to allow safe rollbacks. |
-
----
-
-## 8. Sentinel Engineering Governance (Workflow V6)
-
-*Added: 2026-04-12 | Doctrine: "Stability-First"*
-
-The SK8Lytz development lifecycle is governed by the **Sentinel Engine**, a deterministic framework designed for high-reliability engineering.
-
-### Strategic Priority Hierarchy
-1.  **CRITICAL**: Performance, Stability & Security (Crashes, RLS Blocks).
-2.  **HIGH**: Engineering Excellence & Tech Debt (Refactors, FSMs).
-3.  **MEDIUM**: Compliance & Governance (EULA, Admin).
-4.  **LOW**: New Features & UI Polish.
-
-### Mandatory Safety Governors
-- **Safe-Commit Anchors**: For all `[H-RISK]` tasks, a git restore point is created immediately after branching to ensure 100% rollback reliability.
-- **The Senior Auditor (Step 6.5)**: Every task is blocked from transition until a mandatory "Self-Review & Refactor" pass is completed by the AI persona acting as a Senior Auditor.
-- **Devil's Advocate Gate**: All `[Feast]` items require a formal pre-mortem identifying 3 failure points before planning.
-- **Knowledge Audit Gate**: Merge blocks are enforced until this Master Reference is synced with the session's new architectural truths.
-
-### Velocity Protocols
-- **Turbo Step (`// turbo`)**: Authorized auto-run for terminal commands to reduce user approval friction.
-- **Snack Autopilot**: Zero-bypass execution allowed for tasks meeting the **`[BATCH]` + `[Snack]` + `[L-RISK]`** criteria.
-- **T-Shirt Sizing**: All tasks must be tagged `[Snack]` (<15m), `[Meal]` (1-2h), or `[Feast]` (Multi-day).
-
----
-
-### Developer Tooling & Distribution
-
-#### **Agentic PM Starter Kit**
-*   **Location**: `Agentic_PM_Starter_Kit.zip` (Root)
-*   **Contents**: All 38 rules + the `INIT_PM_AGENT.md` bootloader.
-*   **Purpose**: Allows any developer to inject this entire PM brain into their own AI-powered IDE (Cursor, VS Code + Agent) instantly.
-
-#### **The Genesis Prompt**
-The `INIT_PM_AGENT.md` is a specifically tuned bootloader. When pasted into a new AI session, it commands the agent to:
-1.  Ingest the rule vault.
-2.  Acknowledge the protocols.
-3.  Autonomously reformat the existing backlog into the **Bucket List Standard**.
-4.  Perform a "Gap Audit" on the project's documentation.
+#### **`product_catalog`** (Dynamic Hardware Definitions)
+| Column | Type | Purpose |
+|:---|:---|:---|
+| `id` | TEXT (PK) | Unique product key |
+| `display_name` | TEXT | Human-readable name |
+| `viz_shape` | TEXT | RING / OVAL / DUAL_STRIP |
+| `battery_capacity_mah`| INT | Rated capacity |
 
 ---
 
@@ -497,105 +249,64 @@ The `INIT_PM_AGENT.md` is a specifically tuned bootloader. When pasted into a ne
 To ensure high-fidelity discovery and telemetry, the Crew Hub follows strict lifecycle and naming protocols.
 
 ### Session Naming Convention
-To prevent confusion in the "Live Near You" discovery feed, all new sessions automatically append an `_MM/DD` suffix to the crew name (e.g., `O-Town_04/10`). This logic is enforced in `CrewModal.handleCreate`.
+Automatic `_MM/DD` suffix enforced in `CrewModal.handleCreate`.
 
 ### Proximity Discovery & Visibility Rules
-The Hub discovery feed is optimized for active, real-time sessions:
-
-- **Universal Radius Filter**: Discovery is governed by `LocationService.getNearbyPublicSessions(radiusMi)`. This console fetches both public and private sessions (for crews the user belongs to) with a strict distance constraint.
-- **Location Requirement**: Sessions without valid `location_coords` are suppressed from the "Live Near You" feed to maintain high-signal discovery.
-- **Visibility Logic**:
-    - **Public Sessions**: Visible to all within radius.
-    - **Private Sessions**: Visible ONLY to members of the parent Private Crew who are also within the radius.
+Discovery radius filter governed by `LocationService.getNearbyPublicSessions(radiusMi)`.
 
 ### Global Session Lifecycle Cleanup
-To prevent stale "ghost" sessions, the system implements multi-layered cleanup:
-1. **Global Proactive Cleanup**: `CrewService.cleanupExpiredSessions()` is a system-wide method that ends ANY session older than 24 hours or with stale activity. It is invoked automatically during every Discovery refresh.
-2. **Atomic Cleanup (Leader-Based)**: `CrewService.cleanupLegacySessions(userId)` ensures a single user cannot lead multiple concurrent sessions.
-3. **Database Hygiene**: `public.crew_sessions` includes an `expires_at` logic (handled via `cleanupExpiredSessions`) to ensure `is_active: true` remains an accurate flag for joint-ready skating events.
-
----
----
-> [!IMPORTANT]
-> To remain active, every rule file MUST contain the `trigger: always_on` YAML frontmatter. Failure to include this will cause the AI to revert to standard "Lax" coding behavior.
+System-wide `cleanupExpiredSessions()` ends sessions older than 24h.
 
 ---
 
 ## 7. Session Telemetry Architecture
 
-*Added: 2026-04-11 | Branch: feat/speed-tracking-telemetry*
-
 ### Supabase Table: `skate_sessions`
-
-The canonical store for all individual user skate sessions. Each row maps to one recorded session from Street Mode.
-
 | Column | Type | Notes |
 |--------|------|-------|
-| `id` | `uuid` (PK) | Auto-generated |
-| `user_id` | `uuid` | FK → `auth.users` |
-| `session_date` | `timestamptz` | Defaults to `now()` |
-| `duration_sec` | `int4` | Total session length in seconds |
-| `distance_miles` | `float8` | Accumulated via speed × time delta from GPS |
-| `avg_speed_mph` | `float8` | Mean of all GPS speed samples during session |
-| `peak_speed_mph` | `float8` | Maximum GPS speed recorded |
-| `peak_gforce` | `float8` | Peak accelerometer magnitude (G units) |
-| `calories` | `int4` | Estimated via MET formula (see below) |
-| `location_label` | `text` | Optional human-readable location string |
-| `crew_session_id` | `uuid` | Optional FK → `crew_sessions.id` |
+| `duration_sec` | `int4` | Total session length |
+| `distance_miles` | `float8` | Accumulated GPS distance |
+| `avg_speed_mph` | `float8` | Mean speed |
+| `peak_speed_mph` | `float8` | Maximum speed |
+| `calories` | `int4` | Estimated via MET formula |
 
-### Service: `SpeedTrackingService` (`src/services/SpeedTrackingService.ts`)
+---
 
-Stateless singleton for session persistence. All GPS/Accelerometer state lives in `DockedController.tsx`.
+## 8. Agentic PM Protocols (The Brain)
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `saveSession` | `(snapshot: ISessionSnapshot) => Promise<string \| null>` | Inserts one row into `skate_sessions`. Guards against zero-data saves (<0.01 mi AND <10s). Returns inserted `id`. |
-| `fetchRecentSessions` | `(limit?: number) => Promise<ISkateSession[]>` | Returns last N sessions for authenticated user, newest first. |
-| `fetchLifetimeStats` | `() => Promise<ILifetimeStats>` | Aggregates all sessions into a lifetime summary object. |
+This project is governed by a custom-built **Agentic OS**—a suite of 38 strict protocols located in `.agents/rules/`.
 
-### Contract: `ISessionSnapshot`
+### Tier 1: Safety, Precision & Stealth
+| Rule | Function |
+|:---|:---|
+| **Critical Safety & Quarantine** | Strict branching and rollback protocols. |
+| **Surgical Strike Protocol** | Mandates micro-edits and precision coding. |
+| **Absolute Truth** | Eliminates hallucinations via mandatory reference audits. |
 
-```typescript
-interface ISessionSnapshot {
-  durationSec: number;      // seconds elapsed
-  distanceMiles: number;    // GPS speed × time delta accumulation
-  avgSpeedMph: number;      // mean of all GPS samples
-  peakSpeedMph: number;     // highest GPS sample
-  peakGForce: number;       // highest accelerometer magnitude (G)
-  locationLabel?: string;   // optional reverse-geocoded label
-  crewSessionId?: string;   // optional crew session linkage
-}
-```
+### Tier 5: Debugging, Hygiene & Maintenance
+| Rule | Function |
+|:---|:---|
+| **Emergency Debug Drill** | Enforces instrumentation over guess-fixing. |
+| **Boy Scout (Tech Debt)** | Mandates one small cleanup in every modified file. |
+| **Supabase Schema Sync** | Automatic type regeneration after DB changes. |
 
-### Calorie Estimation Formula
+---
 
-Uses MET (Metabolic Equivalent of Task) scaled by average speed. Base weight: **70 kg** (canonical approximation — no personal data stored).
+## 9. Sentinel Engineering Governance (Workflow V6)
 
-```
-MET = avgSpeedMph > 12 ? 12 : avgSpeedMph > 8 ? 9 : 7
-calories = Math.round(MET × 70 × (durationSec / 3600))
-```
+The SK8Lytz lifecycle is governed by the **Sentinel Engine**.
 
-### DockedController Integration
+### Priority Hierarchy
+1. **CRITICAL**: Stability & Security.
+2. **HIGH**: Engineering Excellence.
+3. **MEDIUM**: Compliance & Governance.
+4. **LOW**: New Features.
 
-- **Start/Stop button** lives in the Street Mode dashboard footer row alongside the TOP SPEED / DISTANCE readouts.
-- **Accumulation** happens in `useRef`s (`sessionSpeedSamplesRef`, `sessionDistanceMilesRef`, `sessionPeakSpeedRef`) inside the GPS `watchPositionAsync` callback — **no state updates in the hot path**.
-- On STOP: a snapshot is built, `sessionActive` set to false, and `SessionSummaryModal` is shown.
-- On Save: `SpeedTrackingService.saveSession()` is called from the modal's `onSave` handler.
+### Mandatory Safety Governors
+- **Safe-Commit Anchors**: Git restore points for `[H-RISK]` tasks.
+- **The Senior Auditor**: Mandatory self-review pass before commit.
+- **Devil's Advocate Gate**: Pre-mortem required for `[Feast]` items.
 
-### SessionSummaryModal (`src/components/SessionSummaryModal.tsx`)
-
-Post-session debrief modal. Dynamic **speed-zone accent colour** based on peak speed:
-
-| Peak Speed | Accent | Theme |
-|-----------|--------|-------|
-| ≥ 18 mph | `#FF3D00` | Inferno — elite |
-| ≥ 12 mph | `#FF8C00` | SK8Lytz Orange — fast |
-| ≥ 6 mph  | `#00E676` | Neon Green — moderate |
-| < 6 mph  | `#00B0FF` | Cool Blue — chill |
-
-### AccountModal — Statistics Tab
-
-Tab ID: `'stats'`, icon: `lightning-bolt`. Loaded non-blocking on modal open via `Promise.all([fetchLifetimeStats(), fetchRecentSessions(10)])`. Shows:
-- 6-tile lifetime grid: Sessions, Distance, Record Speed, Avg Speed, Time on Skates, Calories
-- Scrollable recent session cards with left accent border
+---
+> [!IMPORTANT]
+> To remain active, every rule file MUST contain the `trigger: always_on` YAML frontmatter.

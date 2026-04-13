@@ -23,8 +23,9 @@ achieving full modularity.
 |:---|:---|:---|:---|
 | `DockedController.tsx` | **3,255** | 157 KB | 8+ domains: Street Mode (GPS+Accel), Session Tracking, Music, Favorites, Presets, Builder, Crew Scenes, Community — all co-mingled |
 | `DashboardScreen.tsx` | **2,500** | 103 KB | 6+ domains: BLE orchestration, Auth/Profile, Group fleet, Voice, Notifications, Persistence |
-| `AccountModal.tsx` | ~1,400 | 65 KB | 4 tabs with fully co-mingled data fetching and state |
-| `AdminToolsModal.tsx` | ~1,200 | 56 KB | Timeline, Stats, Devices, Tools (Lab, Programmer, Catalog) |
+| `AccountModal.tsx` | ~1,400 | 65 KB | [x] COMPLETE |
+| `Sk8LytzDiagnosticLab.tsx` | **1,117** | 63 KB | Protocol builders (0x51-0x73), BLE Sniffer/Log, Transition probes |
+| `AdminToolsModal.tsx` | **1,073** | 56 KB | Telemetry timeline, Analytics, Product Catalog CRUD, App Settings |
 
 ### Anti-Pattern Violations (per `clean-code.md` + `modern-ui-ux.md`)
 
@@ -389,7 +390,54 @@ sub-components. **Target size: ~700 lines** (down from ~1,400).
 
 ---
 
-## Phase 4: Type Safety Hardening
+## Phase 4: Diagnostic Lab Extraction
+
+**Risk**: Medium | **Duration**: ~2 hours
+
+Decompose the hardware testing monolith `Sk8LytzDiagnosticLab.tsx`.
+
+### [NEW] `src/hooks/useDiagnosticLog.ts`
+- RX/TX Buffer: Stores the last 200 packets.
+- RX Listener: Listens to `liveRxPayload` and applies `0x63` parsing for hardware settings.
+- Transmit Bridge: Helper that wraps `writeToDevice` with logging and hex formatting.
+
+### [NEW] `src/hooks/useProtocolBuilder.ts`
+- Protocol FSM: `0x51 | 0x59 | 0x61 | 0x73 | 0x62`.
+- Param States: All inputs for builders (colors, points, speed, IC types, etc).
+- Generator logic: Rebuilds the payload whenever params change.
+
+### [MODIFY] `src/components/Sk8LytzDiagnosticLab.tsx`
+- Consume `useDiagnosticLog` and `useProtocolBuilder`.
+- Target size: **~500 lines** (down from 1,117).
+
+---
+
+## Phase 5: Admin Tools Decomposition
+
+**Risk**: Medium | **Duration**: ~2 hours
+
+Decompose the administrative hub `AdminToolsModal.tsx`.
+
+### [NEW] `src/hooks/useAdminTelemetry.ts`
+- Log/Stats Fetching: Pulls from `AppLogger` on mount.
+- Export/Upload logic: Handles sharing and Supabase bucket uploads.
+- Clear/Flush: Logic for wiping logs.
+
+### [NEW] `src/hooks/useProductManager.ts`
+- Catalog CRUD: Owns `editingProfile` state and `saveProfile` calls.
+- Derivation: Logic for `blankProfile()` and `patchEdit()`.
+- Bridge to `useProductCatalog`.
+
+### [NEW] `src/hooks/useAdminSettings.ts`
+- App Settings: Owns `appSettings` map and `AppSettingsService` persistence.
+
+### [MODIFY] `src/components/AdminToolsModal.tsx`
+- Consume admin hooks.
+- Target size: **~400 lines** (down from 1,073).
+
+---
+
+## Phase 6: Type Safety Hardening
 
 **Risk**: Low | **Duration**: ~1 hour
 
@@ -437,7 +485,7 @@ export type ModeType = 'FAVORITES' | 'MULTIMODE' | 'PROGRAMS' | 'MUSIC' | 'STREE
 
 ---
 
-## Phase 5: Architecture Map Update
+## Phase 7: Architecture Map Update
 
 **Risk**: Zero | **Duration**: ~30 min
 
@@ -469,9 +517,15 @@ src/
 │   ├── useStreetMode.ts               ← NEW: Accelerometer + GPS + car-light dispatch
 │   ├── useSessionTracking.ts          ← NEW: GPS session recording + stats accumulation
 │   └── useFavorites.ts                ← NEW: Favorites + quick presets persistence
-│   ├── useAccountOverview.ts          ← NEW: Profile/EULA tab
-│   ├── useSkateStats.ts               ← NEW: Speed stats with loading FSM
-│   └── useDeviceFleet.ts              ← NEW: Device list + deregister action
+│   ├── useAccountOverview.ts          ← COMPLETE
+│   ├── useSkateStats.ts               ← COMPLETE
+│   ├── useDeviceFleet.ts              ← COMPLETE
+│   │
+│   ├── useDiagnosticLog.ts            ← NEW: RX/TX buffer + parse logic
+│   ├── useProtocolBuilder.ts          ← NEW: 0x51-0x73 payload generators
+│   ├── useAdminTelemetry.ts           ← NEW: Analytics + Log export/upload
+│   ├── useProductManager.ts           ← NEW: Profile CRUD logic
+│   └── useAdminSettings.ts            ← NEW: App feature flag management
 │
 ├── types/
 │   ├── supabase.ts                    ← Existing
@@ -482,7 +536,9 @@ src/
 │
 └── components/
     ├── DockedController.tsx           ← ~1,500 lines (BLE dispatch + JSX only)
-    └── AccountModal.tsx               ← ~700 lines (pure tab-router)
+    ├── AccountModal.tsx               ← ~700 lines (pure tab-router)
+    ├── Sk8LytzDiagnosticLab.tsx       ← ~500 lines (diagnostic router)
+    └── AdminToolsModal.tsx            ← ~400 lines (admin router)
 ```
 
 ---
