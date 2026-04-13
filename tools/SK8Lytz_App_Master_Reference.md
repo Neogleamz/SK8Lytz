@@ -1,6 +1,6 @@
 # SK8Lytz App Master Reference
 
-*Last Updated: 2026-04-13 | Source of Truth: `src/protocols/ZenggeProtocol.ts`*
+*Last Updated: 2026-04-13 | Synced with DDA Refactor — all 14 domain hooks documented | Source of Truth: `src/protocols/ZenggeProtocol.ts`*
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
 
@@ -198,24 +198,80 @@ The app implements a **Mathematical Consumption Modeling** system using real-tim
 
 ## 4. Domain-Driven Architecture
 
-To ensure scalability and maintain UI performance, the SK8Lytz app enforces a **Hook-First** architecture. Complex business logic, hardware protocols, and Supabase data fetching must be extracted from UI components into decoupled domain hooks.
+> [!IMPORTANT]
+> **DDA Refactor Shipped: 2026-04-13** — The architecture was refactored from a monolithic component model to a Hook-First domain model. All 14 domain hooks are live on `master`. The audit resolved 4 bugs (2x P0, 2x P1). TSC exit 0.
 
-### Core Domain Hooks
+To ensure scalability and maintain UI performance, the SK8Lytz app enforces a **Hook-First** architecture. Complex business logic, hardware protocols, and Supabase data fetching must be extracted from UI components into decoupled domain hooks. UI components must focus strictly on rendering.
 
-| Hook | Domain | Responsibilities |
+---
+
+### ⚡ Critical Architectural Constraint: BLE Co-location
+
+> [!CAUTION]
+> **BLE state (`connectedDevices`, `writeToDevice`, `setOnDataReceived`) MUST remain co-located in `DashboardScreen.tsx`.** Do NOT move these into any domain hook. The BLE lifecycle manager is a singleton with hardware-level race conditions (GATT 133). Distributing it across multiple hook contexts would create multiple competing subscribers which cause silent write failures and GATT exceptions. All domain hooks receive BLE context via **prop injection** only.
+
+---
+
+### 🗺️ Complete Hook Registry (All 14 Hooks)
+
+#### Dashboard Screen Domain (`src/hooks/`)
+
+| Hook | Consumer | Owns |
 | :--- | :--- | :--- |
-| `useCrewHub` | Social | Session synchronization, scene broadcasting, presence management. |
-| `useDeviceSync` | BLE | Connection state tracking, automatic reconnection, device metadata syncing. |
-| `useDiagnosticLog` | Debug | BLE RX/TX logging, packet sniffing, raw hex transmission bridge. |
-| `useProtocolBuilder` | Hardare | FSM-based payload generation for Zengge `0x51`, `0x59`, `0x61`, `0x73`, `0x62` protocols. |
-| `useAdminTelemetry` | Admin | App analytics, system health, cloud log uploads (Supabase). |
-| `useProductManager` | Admin | Hardware catalog CRUD, geometry visualizer state, product identity management. |
-| `useAdminSettings` | Admin | Global remote configuration and feature flags. |
+| `useDashboardProfile` | `DashboardScreen` | User profile, `displayName`, `avatarUrl`, Supabase profile fetch |
+| `useDashboardGroups` | `DashboardScreen` | `customGroups`, `deviceConfigs` AsyncStorage load/save, group CRUD |
+| `useDashboardVoice` | `DashboardScreen` | Voice command engine, mic permissions, command resolution |
+
+#### DockedController Domain (`src/hooks/`)
+
+| Hook | Consumer | Owns |
+| :--- | :--- | :--- |
+| `useDockedControllerState` | `DockedController` | All LED control FSM state: `activeMode`, `selectedColor`, `brightness`, `speed`, `multiColors`, `builderNodes`, scene capture/restore |
+| `useFavorites` | `DockedController` | `favorites[]`, `quickPresets[]`, save/delete/load operations, prompt FSM |
+| `useStreetMode` | `DockedController` | Accelerometer subscription, G-force calculation, brake/cruise color dispatch, GPS speed sampling |
+| `useSessionTracking` | `DockedController` | Session FSM (`IDLE → RECORDING → SUMMARY`), duration, distance, peak speed, session summary modal |
+
+#### AccountModal Domain (`src/hooks/`)
+
+| Hook | Consumer | Owns |
+| :--- | :--- | :--- |
+| `useAccountOverview` | `AccountModal` | Supabase profile read/write, avatar upload, display name update |
+| `useSkateStats` | `AccountModal` | Aggregate session stats fetch, totals calculation |
+| `useDeviceFleet` | `AccountModal` | `registered_devices` Supabase fetch, fleet display list |
+
+#### Admin Domain (`src/hooks/`)
+
+| Hook | Consumer | Owns |
+| :--- | :--- | :--- |
+| `useDiagnosticLog` | `Sk8LytzDiagnosticLab` | BLE RX/TX log buffer, `targetDeviceId` targeting, raw hex transmission |
+| `useProtocolBuilder` | `Sk8LytzProgrammerModal` | FSM-based payload generation for `0x51`, `0x59`, `0x62`, `0x63`, `0x73` |
+| `useAdminTelemetry` | `AdminToolsModal` | App analytics, system health metrics, cloud log uploads |
+| `useProductManager` | `AdminToolsModal` | Hardware catalog CRUD, `product_catalog` upserts, blank profile creation |
+| `useAdminSettings` | `AdminToolsModal` | Global remote feature flags, `AppSettingsService` read/write |
+
+---
+
+### 📐 Shared Type Contract
+
+All FSM states and shared interfaces live in **`src/types/dashboard.types.ts`**. Never re-declare these types in individual hooks or components.
+
+| Type | Values |
+| :--- | :--- |
+| `ModeType` | `'FAVORITES' \| 'MULTIMODE' \| 'PROGRAMS' \| 'MUSIC' \| 'STREET' \| 'CAMERA'` |
+| `FixedSubMode` | `'PATTERN' \| 'BUILDER'` |
+| `MicSource` | `'APP' \| 'DEVICE'` |
+| `MusicColorFocus` | `'PRIMARY' \| 'SECONDARY'` |
+| `DeviceSettingsState` | FSM: `'IDLE' \| 'LOADING' \| 'READY' \| 'ERROR'` |
+| `IDeviceConfigEntry` | `{ name, type, points, segments, sorting, stripType, groupId }` |
+
+---
 
 ### Engineering Standards
-- **UI Components**: Must focus strictly on rendering and layout.
-- **State Machines**: Complex logic must use Enum-based state machines or structured reduction.
-- **Atomic Operations**: Hardware writes should be wrapped in `try/catch` and logged via `AppLogger`.
+- **UI Components**: Must focus strictly on rendering and presentation.
+- **State Machines**: Complex multi-state logic must use `ModeType`/string-union FSMs, never boolean flag clusters.
+- **Atomic Operations**: All hardware writes must be wrapped in `try/catch` and logged via `AppLogger`.
+- **Type Imports**: Always import `ModeType` and shared interfaces from `dashboard.types.ts`, not from hook files.
+- **Hook Contracts**: Hooks receive BLE context via props, never via direct import of BLE libraries.
 
 ---
 
