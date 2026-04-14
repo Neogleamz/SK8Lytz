@@ -789,6 +789,16 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     ); // close return
   }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs]);
 
+  const mappedRegisteredDevicesForModal = useMemo(() => registeredDevices.map((d) => ({
+    id: d.id || '',
+    mac: d.device_mac || '',
+    name: d.device_name || '',
+    customName: d.custom_name || '',
+    groupName: d.group_name || '',
+    type: d.product_type as any,
+    registeredAt: d.registered_at,
+  })), [registeredDevices]);
+
   const BluetoothWarningBanner = useMemo(() => {
     if (isBluetoothEnabled || Platform.OS === 'web') return null;
     return (
@@ -1303,15 +1313,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           setIsCrewModalVisible(true);
           setIsAccountModalVisible(false);
         }}
-        registeredDevices={useMemo(() => registeredDevices.map((d) => ({
-          id: d.id || '',
-          mac: d.device_mac || '',
-          name: d.device_name || '',
-          customName: d.custom_name || '',
-          groupName: d.group_name || '',
-          type: d.product_type as any,
-          registeredAt: d.registered_at,
-        })), [registeredDevices])}
+        registeredDevices={mappedRegisteredDevicesForModal}
         onDeviceRenamed={async (deviceId, newName) => {
           setAllDevices((prev: any[]) => prev.map((d: any) =>
             d.id === deviceId ? { ...d, customName: newName } : d
