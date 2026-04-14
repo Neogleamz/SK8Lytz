@@ -527,9 +527,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // ── handleGroupDelete and saveGroup now live in useDashboardGroups ────────────
 
 
-  useEffect(() => {
-    requestPermissions();
-  }, []);
+
 
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [selectedDeviceForSettingsId, setSelectedDeviceForSettingsId] = useState<string | null>(null);

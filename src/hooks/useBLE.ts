@@ -17,7 +17,7 @@ import { ZENGGE_CHARACTERISTIC_UUID, ZENGGE_NOTIFY_UUID, ZENGGE_SERVICE_UUID, Ze
 import { AppLogger } from '../services/AppLogger';
 import type { BleConnectionState, PendingRegistration } from '../types/dashboard.types';
 
-import { requestPermissions } from '../utils/blePermissions';
+import { requestPermission } from '../services/PermissionService';
 import { useBLEScanner } from './ble/useBLEScanner';
 import { useBLEAutoRecovery } from './ble/useBLEAutoRecovery';
 
@@ -487,7 +487,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     connectedDevices.length > 0 ? 'READY' : 'IDLE';
 
   return useMemo(() => ({
-    requestPermissions,
+    requestPermissions: async () => requestPermission('BLUETOOTH'),
     scanForPeripherals: scanner.scanForPeripherals,
     connectToDevice,
     connectToDevices,
