@@ -30,6 +30,8 @@ if (Platform.OS !== 'web') {
   State = blePlx.State;
 }
 
+let writeMutex: Promise<any> = Promise.resolve();
+
 export interface BluetoothLowEnergyApi {
   requestPermissions(): Promise<boolean>;
   scanForPeripherals(options?: { keepAlive?: boolean, disableProbing?: boolean }): void;
@@ -165,11 +167,13 @@ export default function useBLE(): BluetoothLowEnergyApi {
           }
         );
 
-        const qp = ZenggeProtocol.queryHardwareSettings(false);
-        const b64 = Buffer.from(qp).toString('base64');
-        bleManager.writeCharacteristicWithoutResponseForDevice(
-          mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
-        ).catch((e: any) => AppLogger.warn('[BLE Probe Single] query write failed', { error: String(e) }));
+        setTimeout(() => {
+          const qp = ZenggeProtocol.queryHardwareSettings(false);
+          const b64 = Buffer.from(qp).toString('base64');
+          bleManager.writeCharacteristicWithoutResponseForDevice(
+            mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
+          ).catch((e: any) => AppLogger.warn('[BLE Probe Single] query write failed', { error: String(e) }));
+        }, 600);
       });
 
       return hwConfig;
@@ -424,32 +428,42 @@ export default function useBLE(): BluetoothLowEnergyApi {
     }
 
     const chunkSize = Math.max(20, negotiatedMtuRef.current - 3);
-    let allSucceeded = true;
 
-    await Promise.allSettled(targets.map(async (device) => {
-      // Skip ghosted (recovering) devices — don't count as failure
-      if (autoRecovery.ghostedDeviceIds.includes(device.id)) return;
-      try {
-        for (let i = 0; i < payload.length; i += chunkSize) {
-          const chunk = payload.slice(i, i + chunkSize);
-          const base64Chunk = Buffer.from(chunk).toString('base64');
-          await device.writeCharacteristicWithoutResponseForService(
-            ZENGGE_SERVICE_UUID,
-            ZENGGE_CHARACTERISTIC_UUID,
-            base64Chunk
-          );
-          if (i + chunkSize < payload.length) {
-            await new Promise(resolve => setTimeout(resolve, 5));
+    const executeWrite = async () => {
+      let allSucceeded = true;
+      for (const device of targets) {
+        // Skip ghosted (recovering) devices — don't count as failure
+        if (autoRecovery.ghostedDeviceIds.includes(device.id)) continue;
+        try {
+          for (let i = 0; i < payload.length; i += chunkSize) {
+            const chunk = payload.slice(i, i + chunkSize);
+            const base64Chunk = Buffer.from(chunk).toString('base64');
+            await device.writeCharacteristicWithoutResponseForService(
+              ZENGGE_SERVICE_UUID,
+              ZENGGE_CHARACTERISTIC_UUID,
+              base64Chunk
+            );
+            if (i + chunkSize < payload.length) {
+              await new Promise(resolve => setTimeout(resolve, 5));
+            }
           }
+        } catch (writeError: any) {
+          allSucceeded = false;
+          AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError?.message);
+          AppLogger.log('BLE_WRITE_ERROR', { error: writeError?.message || String(writeError), target: device.id, payloadLen: payload.length });
         }
-      } catch (writeError: any) {
-        allSucceeded = false;
-        AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError?.message);
-        AppLogger.log('BLE_WRITE_ERROR', { error: writeError?.message || String(writeError), target: device.id, payloadLen: payload.length });
       }
-    }));
+      return allSucceeded;
+    };
 
-    return allSucceeded;
+    const previousMutex = writeMutex;
+    const currentWrite = (async () => {
+      await previousMutex.catch(() => {});
+      return executeWrite();
+    })();
+    
+    writeMutex = currentWrite;
+    return currentWrite;
   };
 
 

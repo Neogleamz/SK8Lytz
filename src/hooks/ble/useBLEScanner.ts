@@ -32,6 +32,7 @@ export function useBLEScanner({
 
   const allDevicesRef = useRef<Device[]>([]);
   const scanTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const scannerStateRef = useRef<'IDLE' | 'SCANNING' | 'PROBING'>('IDLE');
   useEffect(() => { allDevicesRef.current = allDevices; }, [allDevices]);
 
   const isDuplicateDevice = (devices: Device[], nextDevice: Device) =>
@@ -117,15 +118,24 @@ export function useBLEScanner({
     const pending = devices.filter(d => (d as any).hwPoints == null);
     if (pending.length === 0) {
       setScannerState('IDLE');
+      scannerStateRef.current = 'IDLE';
       return;
     }
 
     setScannerState('PROBING');
+    scannerStateRef.current = 'PROBING';
     console.log(`[BLE Probe] Round-Robin Probing ${pending.length} device(s). Retries left: ${retriesLeft}`);
 
     const failedIds: string[] = [];
 
+    let aborted = false;
+
     for (const device of pending) {
+      if (scannerStateRef.current !== 'PROBING') {
+        console.log('[BLE Probe] Aborted via scanner cancellation.');
+        aborted = true;
+        break;
+      }
       try {
         const alreadyConn = await bleManager.isDeviceConnected(device.id).catch(() => false);
         const hasHwInfo = (device as any).hwPoints != null;
@@ -159,13 +169,21 @@ export function useBLEScanner({
       }
     }
 
+    if (aborted) return;
+
     if (failedIds.length > 0 && retriesLeft > 0) {
        console.log(`[BLE Probe] Retrying ${failedIds.length} failed probes in 2s...`);
        await new Promise(r => setTimeout(r, 2000));
-       return probeAllDiscoveredDevices(retriesLeft - 1);
+       if (scannerStateRef.current === 'PROBING') {
+         return probeAllDiscoveredDevices(retriesLeft - 1);
+       } else {
+         console.log('[BLE Probe] Aborted during retry cool-down.');
+         return;
+       }
     }
 
     setScannerState('IDLE');
+    scannerStateRef.current = 'IDLE';
     console.log('[BLE Probe] All rounds complete.');
   };
 
@@ -176,11 +194,13 @@ export function useBLEScanner({
       scanTimerRef.current = null;
     }
     setScannerState('IDLE');
+    scannerStateRef.current = 'IDLE';
   };
 
   const scanForPeripherals = (options?: { keepAlive?: boolean, disableProbing?: boolean }) => {
     if (scannerState === 'SCANNING') return;
     setScannerState('SCANNING');
+    scannerStateRef.current = 'SCANNING';
     
     if (!options?.keepAlive) {
       setPendingRegistrations([]);
@@ -230,15 +250,22 @@ export function useBLEScanner({
             });
             setPendingRegistrations(pendingMocks);
             setScannerState('IDLE');
+            scannerStateRef.current = 'IDLE';
           }, 500);
         } else if (!bleManager) {
-          setTimeout(() => setScannerState('IDLE'), 500);
+          setTimeout(() => {
+            setScannerState('IDLE');
+            scannerStateRef.current = 'IDLE';
+          }, 500);
         }
       });
       if (Platform.OS === 'web') return;
     } else {
       if (!bleManager) {
-        setTimeout(() => setScannerState('IDLE'), 500);
+        setTimeout(() => {
+          setScannerState('IDLE');
+          scannerStateRef.current = 'IDLE';
+        }, 500);
         return;
       }
     }
@@ -247,6 +274,7 @@ export function useBLEScanner({
       if (error) {
         AppLogger.error(error);
         setScannerState('IDLE');
+        scannerStateRef.current = 'IDLE';
         return;
       }
       if (device) {
@@ -341,6 +369,7 @@ export function useBLEScanner({
         probeAllDiscoveredDevices();
       } else {
         setScannerState('IDLE');
+        scannerStateRef.current = 'IDLE';
       }
     }, 5000);
   };
