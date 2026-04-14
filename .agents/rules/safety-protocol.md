@@ -7,7 +7,7 @@ trigger: always_on
 **⛔ CRITICAL SAFETY RULE 1: Never edit, parse, or delete `.git/hooks/` files.**
 **⛔ CRITICAL SAFETY RULE 2: Never push ANY changes to `main` without explicit user consent.**
 **⛔ CRITICAL SAFETY RULE 3: Passphrase amnesia: never reuse an authorized passphrase outside its immediate contextual use.**
-**⛔ CRITICAL SAFETY RULE 4: Always anchor your progress: run `git add .` + `git commit` to create local checkpoints after every discrete file edit.**
+**⛔ CRITICAL SAFETY RULE 4: Always anchor your progress: run `git add .` + `git commit` to create local checkpoints after every discrete file edit. Immediately after creating a confirmed checkpoint, you MUST explicitly ask the user for permission to push to the remote repository.**
 **⛔ CRITICAL SAFETY RULE 5: Keep `tools/SK8Lytz_Bucket_List.md` updated. It is now completely untracked locally (in .gitignore) to prevent branch drift. DO NOT try to stage or commit it via git.**
 
 ### Branching & Execute Workflow
