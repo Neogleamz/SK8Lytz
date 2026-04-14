@@ -19,7 +19,7 @@ import type { BleConnectionState, PendingRegistration } from '../types/dashboard
 
 import { requestPermissions } from '../utils/blePermissions';
 import { useBLEScanner } from './ble/useBLEScanner';
-import { useBLEWatchdog } from './ble/useBLEWatchdog';
+import { useBLEAutoRecovery } from './ble/useBLEAutoRecovery';
 
 let BleManager: any;
 let State: any;
@@ -51,7 +51,7 @@ export interface BluetoothLowEnergyApi {
   setDroppedOutDeviceIds: React.Dispatch<React.SetStateAction<string[]>>;
   pendingRegistrations: PendingRegistration[];
   clearPendingRegistrations: () => void;
-  isWatchdogActive: boolean;
+  ghostedDeviceIds: string[];
   bleState: BleConnectionState;
 }
 
@@ -184,16 +184,18 @@ export default function useBLE(): BluetoothLowEnergyApi {
   };
 
   // --- Sub-Hooks ---
-  const watchdog = useBLEWatchdog({
+  const handleOrganicDisconnect = (error: any, deviceId: string) => {
+    AppLogger.warn(`[BLE] Organic disconnect/dropout for ${deviceId}`);
+    AppLogger.log('DEVICE_DISCONNECTED', { id: deviceId, reason: 'dropout', error: error?.message });
+    autoRecovery.initiateRecovery(deviceId);
+  };
+
+  const autoRecovery = useBLEAutoRecovery({
     bleManager,
-    connectedDevicesRef,
     setConnectedDevices,
-    setDroppedOutDeviceIds,
     disconnectListeners,
     handleNotification,
-    onDeviceRecovered: (mac) => {
-      if (deviceRecoveredCallbackRef.current) deviceRecoveredCallbackRef.current(mac);
-    }
+    onOrganicDisconnect: handleOrganicDisconnect
   });
 
   const scanner = useBLEScanner({
@@ -244,13 +246,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
       if (disconnectListeners.current[device.id]) disconnectListeners.current[device.id].remove();
       disconnectListeners.current[device.id] = bleManager.onDeviceDisconnected(device.id, (error: any, _d: any) => {
-        AppLogger.warn(`[BLE] Device dropout detected for ${device.id}`);
-        AppLogger.log('DEVICE_DISCONNECTED', { id: device.id, reason: 'dropout', error: error?.message });
-        setConnectedDevices(prev => prev.filter(d => d.id !== device.id));
-        if (disconnectListeners.current[device.id]) {
-          disconnectListeners.current[device.id].remove();
-          delete disconnectListeners.current[device.id];
-        }
+        handleOrganicDisconnect(error, device.id);
       });
       
       const latencyMs = Date.now() - connectStartTime;
@@ -302,7 +298,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
       bleManager.stopDeviceScan();
       scanner.scanForPeripherals({ keepAlive: true }); // force state off inside sub hook
       
-      watchdog.startWatchdog();
       setInternalBlePhase('IDLE');
       return firmware;
     } catch (e: any) {
@@ -351,13 +346,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
           if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
           disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {
-            AppLogger.warn(`[BLE] Device dropout detected for ${conn.id} in group`);
-            AppLogger.log('DEVICE_DISCONNECTED', { id: conn.id, reason: 'dropout', context: 'group', error: error?.message });
-            setConnectedDevices(prev => prev.filter(d => d.id !== conn.id));
-            if (disconnectListeners.current[conn.id]) {
-              disconnectListeners.current[conn.id].remove();
-              delete disconnectListeners.current[conn.id];
-            }
+            handleOrganicDisconnect(error, conn.id);
           });
 
           conn.monitorCharacteristicForService(
@@ -405,7 +394,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
           AppLogger.log('BLE_CONNECTION_ERROR', { error: deviceError?.message || String(deviceError), deviceId: device.id, context: 'group_sync_fail' });
         }
       }
-      watchdog.startWatchdog();
       setInternalBlePhase('IDLE');
       bleManager.stopDeviceScan();
       scanner.scanForPeripherals({ keepAlive: true }); // force stop scan internally
@@ -437,6 +425,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     const chunkSize = Math.max(20, negotiatedMtuRef.current - 3);
 
     for (const device of targets) {
+      if (autoRecovery.ghostedDeviceIds.includes(device.id)) continue;
       try {
         for (let i = 0; i < payload.length; i += chunkSize) {
           const chunk = payload.slice(i, i + chunkSize);
@@ -461,7 +450,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
   const disconnectFromDevice = async () => {
     setInternalBlePhase('DISCONNECTING');
-    watchdog.stopWatchdog();
+    autoRecovery.cancelAllRecoveries();
 
     Object.values(disconnectListeners.current).forEach(sub => {
       try { sub.remove(); } catch (e) {}
@@ -522,7 +511,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     pendingRegistrations: scanner.pendingRegistrations,
     clearPendingRegistrations: () => scanner.setPendingRegistrations([]),
     probeDevice,
-    isWatchdogActive: watchdog.isWatchdogActive,
+    ghostedDeviceIds: autoRecovery.ghostedDeviceIds,
     bleState: derivedBleState,
   }), [
     allDevices,
@@ -534,7 +523,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     dataReceivedCallback,
     deviceRecoveredCallback,
     droppedOutDeviceIds,
-    watchdog.isWatchdogActive,
+    autoRecovery.ghostedDeviceIds,
     internalBlePhase
   ]);
 }

@@ -66,6 +66,8 @@ export type EventType =
   | 'APP_FOREGROUNDED'
   | 'ERROR_CAUGHT'
   | 'PERFORMANCE_METRIC'
+  | 'AUTO_RECOVERY_STARTED'
+  | 'AUTO_RECOVERY_SUCCESS'
   | 'MOUNT'
   | 'UNMOUNT'
   | 'SYNC'
