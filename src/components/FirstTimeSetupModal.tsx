@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { Typography, Spacing } from '../theme/theme';
-import type { PendingRegistration } from '../hooks/useBLE';
+import type { PendingRegistration } from '../types/dashboard.types';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import { LOCAL_PRODUCT_CATALOG, getLocalProfileById } from '../constants/ProductCatalog';
 

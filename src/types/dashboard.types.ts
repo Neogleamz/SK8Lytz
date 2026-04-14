@@ -10,6 +10,24 @@
 
 // ─── Device & Group Contracts ───────────────────────────────────────────────
 
+// Auto-classify result — fed into FirstTimeSetupModal
+export interface PendingRegistration {
+  device_mac: string;
+  device_name: string;
+  product_type: 'HALOZ' | 'SOULZ' | 'RAILZ' | 'UNKNOWN';
+  position: 'Left' | 'Right';
+  group_name: string;
+  led_points: number;
+  segments: number;
+  ic_type: string;
+  color_sorting: string;
+  rssi: number;
+  firmware_ver?: number;
+  led_version?: number;
+  product_id?: number;
+}
+
+
 export interface DeviceSettings {
   name: string;
   /** Widened from 'HALOZ' | 'SOULZ' to support all catalog product types (e.g. RAILZ). */
