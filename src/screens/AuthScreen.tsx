@@ -616,12 +616,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           </TouchableOpacity>
         )}
 
-        {/* HIBP attribution */}
-        {mode === 'SIGNUP' && (
-          <Text style={{ color: Colors.textMuted, fontSize: 10, textAlign: 'center', marginTop: Spacing.sm, paddingHorizontal: Spacing.xl }}>
-            🔒 Passwords are checked against HaveIBeenPwned's breach database using k-anonymity. Your password is never transmitted.
-          </Text>
-        )}
+
 
         {/* The Nuke Button */}
         {isSandboxEnabled && (
@@ -777,14 +772,15 @@ const createStyles = (Colors: ThemePalette, insets: { top: number; bottom: numbe
   toggleText: { color: Colors.textMuted, fontSize: 14 },
   toggleLink: { color: Colors.primary, fontSize: 14, fontWeight: 'bold' },
   offlineButton: {
+    alignSelf: 'center',
     alignItems: 'center',
-    width: '100%',
-    paddingVertical: Spacing.lg,
+    width: '50%',
+    paddingVertical: Spacing.sm,
     borderRadius: Layout.borderRadius,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
-  offlineButtonText: { color: Colors.textMuted, fontSize: 14, fontWeight: '600', marginBottom: Spacing.xxs },
-  offlineButtonSub: { color: Colors.textMuted, fontSize: 11, opacity: 0.7 },
+  offlineButtonText: { color: Colors.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 2 },
+  offlineButtonSub: { color: Colors.textMuted, fontSize: 9, opacity: 0.7, textAlign: 'center' },
 });
