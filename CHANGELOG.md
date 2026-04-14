@@ -1,3 +1,13 @@
+## [1.8.3] - 2026-04-14
+
+### 🐛 Bug Fixes
+
+**Zero-Day Permission Soft-Lock**
+- **Boot Desync Eradicated** (`PermissionService.ts`, `App.tsx`): Prevented `syncSystemPermissions` from silently opting out users from all hardware capabilities. On fresh installs, Native OS state is 'undetermined', which evaluated as `false`, triggering a flawed OS Desync Sweep that aggressively forced `@sk8lytz_permissions_optout` to TRUE without prompting. Users were permanently soft-locked. Neutered the sequence.
+- **Android 12+ BLE Prompts Fixed** (`PermissionService.ts`): Removed `ACCESS_FINE_LOCATION` from the `PermissionsAndroid.requestMultiple` array for devices API 31+. Requesting fine location without coarse location on Android 12 immediately throws a rejection, collapsing the UI prompt natively before the user ever sees it.
+
+---
+
 ## [1.8.2] - 2026-04-14
 
 ### 🐛 Bug Fixes

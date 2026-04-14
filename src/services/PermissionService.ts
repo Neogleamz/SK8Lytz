@@ -37,25 +37,10 @@ export const setPermissionOptOut = async (type: PermissionType, isOptedOut: bool
 };
 
 export const syncSystemPermissions = async (): Promise<void> => {
-  const ledger = await getOptOutLedger();
-  const types: PermissionType[] = ['CAMERA', 'MIC', 'LOCATION', 'NOTIFICATIONS', 'BLUETOOTH'];
-  let changed = false;
-
-  for (const type of types) {
-    const isNativelyGranted = await checkPermissionNative(type);
-    const isLexicallyOptedOut = !!ledger[type];
-
-    // OS Desync Sweep: App thought "Opt-In", but Native OS is strongly "Denied"
-    if (!isNativelyGranted && !isLexicallyOptedOut) {
-      ledger[type] = true;
-      changed = true;
-      AppLogger.log('PERMISSION_OPT_OUT', { feature: type, source: 'native_os_sync' });
-    }
-  }
-
-  if (changed) {
-    await AsyncStorage.setItem(OPTOUT_LEDGER_KEY, JSON.stringify(ledger));
-  }
+  // DEPRECATED: This used to aggressively sweep OS permissions and write to the
+  // opt-out ledger if the OS said 'Denied'. However, on a fresh install, OS stats
+  // are 'Undetermined' which evaluates as false, causing the sweep to lock users OUT
+  // of all permissions before they were even prompted.
 };
 
 export const requestPermission = async (type: PermissionType): Promise<boolean> => {
@@ -79,10 +64,12 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
       }
       case 'BLUETOOTH': {
         if (Platform.OS === 'android' && Platform.Version >= 31) {
+          // FIX: On Android 12+, we no longer request ACCESS_FINE_LOCATION for BLE.
+          // Requesting it without ACCESS_COARSE_LOCATION causes an instant rejection
+          // and the system prompt will never appear.
           const result = await PermissionsAndroid.requestMultiple([
             PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
             PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
           ]);
           return (
             result['android.permission.BLUETOOTH_CONNECT'] === PermissionsAndroid.RESULTS.GRANTED &&

@@ -199,9 +199,6 @@ export default function App() {
       SplashScreen.hideAsync().catch(() => {});
       AppLogger.log('APP_OPENED', { loadTimeMs: Date.now() - appStartTime });
       AppLogger.uploadLogsToSupabase();
-      import('./src/services/PermissionService').then(mod => {
-        mod.syncSystemPermissions().catch(() => {});
-      });
     }
   }, [fontsLoaded]);
 
@@ -211,9 +208,7 @@ export default function App() {
         AppLogger.uploadLogsToSupabase();
       }
       if (nextAppState === 'active') {
-        import('./src/services/PermissionService').then(mod => {
-          mod.syncSystemPermissions().catch(() => {});
-        });
+        // Reserved for future active-state syncs
       }
     });
     return () => subscription.remove();
