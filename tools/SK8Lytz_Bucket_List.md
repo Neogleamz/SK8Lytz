@@ -39,13 +39,13 @@ _System-wide health improvements, refactors, and performance optimizations._
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
-  "Completed" : 10
-  "Remaining" : 10
+  "Completed" : 12
+  "Remaining" : 8
 ```
 
 - [ ] `fix/remote-id-audit` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🪙 15k] [⏱️ 3h] [Security] [🧠 THINK] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
 
-- [ ] `chore/ts-dead-code-purge` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🪙 15k] [⏱️ 3h] [🧠 THINK] Purge 344 instances of dead parameters and unused imports identified during the DDA Audit.
+- [x] `chore/ts-dead-code-purge` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🪙 15k] [⏱️ 3h] [🧠 THINK] Purge 344 instances of dead parameters and unused imports identified during the DDA Audit.
 
 - [ ] `chore/refactor-dashboard-screen` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🪙 40k] [⏱️ 6h] [🧠 THINK] Break `DashboardScreen.tsx` (97 hooks) into DDA presentation-layer sub-components.
 
