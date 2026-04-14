@@ -111,36 +111,9 @@ export function useBLEWatchdog({
   };
 
   const startWatchdog = () => {
-    if (watchdogIntervalRef.current) clearInterval(watchdogIntervalRef.current);
-    watchdogMissCountRef.current = {};
-    watchdogIntervalRef.current = setInterval(async () => {
-      if (isWatchdogRecovering.current) return;
-      const devices = connectedDevicesRef.current;
-      if (devices.length === 0 || Platform.OS === 'web') return;
-
-      isWatchdogRecovering.current = true;
-      try {
-        for (const device of devices) {
-          const isAlive = await pingDeviceForLiveness(device.id);
-          if (isAlive) {
-            watchdogMissCountRef.current[device.id] = 0;
-          } else {
-            const misses = (watchdogMissCountRef.current[device.id] ?? 0) + 1;
-            watchdogMissCountRef.current[device.id] = misses;
-            AppLogger.warn(`[Watchdog] Device ${device.id} missed heartbeat (${misses}/2)`);
-            AppLogger.log('WATCHDOG_MISS', { deviceId: device.id, name: device.name, misses });
-
-            if (misses >= 2) {
-              watchdogMissCountRef.current[device.id] = 0;
-              await silentRelatch(device);
-              await new Promise(r => setTimeout(r, 600));
-            }
-          }
-        }
-      } finally {
-        isWatchdogRecovering.current = false;
-      }
-    }, 30_000);
+    // ⛔ WATCHDOG DISABLED: The watchdog interval was causing connection instability
+    // and random dropouts during active testing. Disabled per request.
+    return;
   };
 
   const stopWatchdog = () => {
