@@ -137,7 +137,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // ── Phase 1: Fleet Groups, Device Configs, Power States → useDashboardGroups ───────
   // Declare refs before domain hooks that consume them
   const allDevicesRef = React.useRef(allDevices);
-  const lastProcessedRef = React.useRef<string>('');
 
   const [viewState, setViewState] = useState<DashboardViewState>('LOADING_REGS');
   const {
@@ -163,8 +162,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     isRegisteredCollapsed,
     setIsRegisteredCollapsed,
     handleRegistrationComplete,
-    runAutoProvisioning,
-    isProvisioningTriggered,
+    // runAutoProvisioning: removed — useDashboardAutoConnect owns auto-connect on boot.
+    // runAutoProvisioning is preserved in useDashboardGroups for future manual-scan UI.
     saveGroup,
     handleGroupDelete,
   } = useDashboardGroups({
@@ -383,47 +382,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
 
   // Analytics / Dev tools hooks migrated to AuthScreen / removed
-
-  const handleScan = () => {
-    if (bleState === 'SCANNING' || isActuallyConnected) return;
-    
-    requestPermissions().then((granted) => {
-      if (granted) {
-        console.log('[SK8Lytz] Manual Scan Initiated');
-        AppLogger.log('SCAN_STARTED');
-        const _scanStartTime = Date.now();
-        isProvisioningTriggered.current = true;
-        AsyncStorage.removeItem('ng_processed_devices');
-        lastProcessedRef.current = '';
-        allDevicesRef.current = []; // Clear ref immediately
-        
-        scanForPeripherals();
-        
-        // Mock simulator logic moved to useBLE.ts
-
-        // Ensure we scan for at least 5 seconds for visual impact
-        const waitTime = Math.max(5000, Platform.OS === 'web' ? 5000 : 7000);
-        setTimeout(() => {
-          runAutoProvisioning();
-        }, waitTime);
-      }
-    });
-  };
-
-  // Automatically probe for hardware upon dashboard load to eliminate user friction
-  const hasAutoScanned = React.useRef(false);
-  useEffect(() => {
-    if (viewState === 'DASHBOARD' && !hasAutoScanned.current) {
-      if (connectedDevices.length === 0 && bleState !== 'SCANNING') {
-        hasAutoScanned.current = true;
-        // Wait 1 second to let dashboard natively render before hammering BLE stack
-        setTimeout(() => {
-          handleScan();
-        }, 1000);
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewState, connectedDevices.length, bleState]);
+  // handleScan + hasAutoScanned auto-fire useEffect removed:
+  //   useDashboardAutoConnect (t+1500ms) owns the boot-time scan and auto-connect sequence.
+  //   The inline auto-scan was a duplicate from before the domain-hook refactor:
+  //   it fired its own scanForPeripherals() + runAutoProvisioning() at t+1s/t+8s,
+  //   racing against useDashboardAutoConnect and mutating group configs mid-connection.
 
   useEffect(() => {
     customGroupsRef.current = customGroups;
