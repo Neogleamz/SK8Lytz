@@ -8,7 +8,7 @@ trigger: always_on
 **⛔ CRITICAL SAFETY RULE 2: Never push ANY changes to `main` without explicit user consent.**
 **⛔ CRITICAL SAFETY RULE 3: Passphrase amnesia: never reuse an authorized passphrase outside its immediate contextual use.**
 **⛔ CRITICAL SAFETY RULE 4: Always anchor your progress: run `git add .` + `git commit` to create local checkpoints after every discrete file edit.**
-**⛔ CRITICAL SAFETY RULE 5: Sync `tools/SK8Lytz_Bucket_List.md` updates immediately using a dedicated `chore(docs)` commit.**
+**⛔ CRITICAL SAFETY RULE 5: Keep `tools/SK8Lytz_Bucket_List.md` updated. It is now completely untracked locally (in .gitignore) to prevent branch drift. DO NOT try to stage or commit it via git.**
 
 ### Branching & Execute Workflow
 1. Verify State (`git pull origin main`).
