@@ -1,3 +1,21 @@
+## [1.8.2] - 2026-04-14
+
+### 🐛 Bug Fixes
+
+**BLE Group Stability — 5 Surgical Fixes**
+- **Critical Write Reconciliation Loop** (`useBLE.ts`): `writeToDevice` returned `void`, cast to `Promise<boolean>` but resolving as `undefined` at runtime — every single BLE write was falsy, triggering optimistic UI rollback on every command. Fixed to return honest `boolean` per-device success.
+- **Scanner FSM Poisoning** (`useBLEScanner.ts`): `keepAlive` calls mutated `scannerState` to `'SCANNING'` before checking the flag, causing`derivedBleState` to report `SCANNING` immediately after a successful group connection. Fixed by early-exiting before any state mutation.
+- **Ghost Device Infinite Loop** (`useBLEAutoRecovery.ts`): Recovery loop had no retry ceiling — a Zengge chip in a GATT soft-lock would loop forever, permanently blocking all writes to the dropped device. Added 8-attempt ceiling with device ejection on exhaustion.
+- **Premature Write Guard** (`DockedController.tsx`): Guard missed `CONNECTING` and `PROBING` states, allowing `useEffect` writes to race `discoverAllServices` during group connect. Simplified to canonical `bleState !== 'READY'`.
+- **Duplicate Boot Scan System** (`DashboardScreen.tsx`): Legacy `handleScan` + `hasAutoScanned` useEffect (System B) racing against `useDashboardAutoConnect` (System A) on every launch. System B's `runAutoProvisioning()` at t+8s mutated device state mid-GATT handshake, permanently corrupting one device in every pair. System B removed entirely.
+
+**Naming Consistency — 3 Missed Gaps**
+- **Scanner Storage Key** (`useBLEScanner.ts`): Scanner read `ng_registered_devices` (legacy) instead of `@Sk8lytz_registered_devices` — MAC deduplication was completely blind post-migration.
+- **swapDevicePositions Naming** (`useRegistration.ts`): Rebuilt `device_name` as `"HALOZ Left"` bypassing `NamingUtils`. Now uses `getDefaultDeviceName(mac) + position`.
+- **Auto-Provisioning Group Name** (`useDashboardGroups.ts`): Built group names as `"HALOZ SK8Lytz"` inline instead of `"My SK8Lytz HALOZ"` via `getDefaultGroupName()`. Same hardware produced different group names per registration path.
+
+---
+
 ## [1.8.1] - 2026-04-14
 
 ### 🐛 Bug Fixes
