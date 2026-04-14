@@ -9,8 +9,8 @@ All active tasks, bugs, and feature work. Prioritized by **App Performance, Stab
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Core Development Progress
-  "Completed" : 27
-  "Remaining" : 31
+  "Completed" : 28
+  "Remaining" : 34
 ```
 
 ---
@@ -26,9 +26,9 @@ pie title Critical Stability
   "Remaining" : 5
 ```
 
-- [ ] `feat/gate-offline-mode` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🪙 40k] [🧠 THINK] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
+- [ ] `feat/gate-offline-mode` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🪙 40k] [⏱️ 6h] [🧠 THINK] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
 
-- [ ] `chore/domain-architecture-audit` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🪙 30k] [🧠 THINK] [Stability] Full app-wide audit of domain-driven architecture refactors. Identify orphaned imports, stale hook references, leftover monolithic patterns, dead code from extracted components, and any misrouted business logic. Generate sub-tasks in the Bucket List for each finding. → [Plan](docs/plans/chore-domain-architecture-audit.md)
+- [x] `chore/domain-architecture-audit` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🪙 30k] [⏱️ 6h] [🧠 THINK] [Stability] Full app-wide audit of domain-driven architecture refactors. Identify orphaned imports, stale hook references, leftover monolithic patterns, dead code from extracted components, and any misrouted business logic. Generate sub-tasks in the Bucket List for each finding. → [Plan](docs/plans/chore-domain-architecture-audit.md)
 
 ---
 
@@ -39,15 +39,23 @@ _System-wide health improvements, refactors, and performance optimizations._
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
-  "Completed" : 9
-  "Remaining" : 7
+  "Completed" : 10
+  "Remaining" : 10
 ```
 
-- [ ] `fix/remote-id-audit` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🪙 15k] [Security] [🧠 THINK] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
+- [ ] `fix/remote-id-audit` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🪙 15k] [⏱️ 3h] [Security] [🧠 THINK] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
 
-- [ ] `feat/discord-agent-bridge` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [🪙 35k] [🧠 THINK] Implement a local Discord bridge that streams agent logs to a channel and pipes user replies back into the agent's context via a sanitized command buffer file. → [Plan](docs/plans/feat-discord-agent-bridge.md)
+- [ ] `chore/ts-dead-code-purge` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🪙 15k] [⏱️ 3h] [🧠 THINK] Purge 344 instances of dead parameters and unused imports identified during the DDA Audit.
 
-- [ ] `fix/voice-engine-integration` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [🪙 40k] [🧠 THINK] [⏱️ 2h] Repair the Voice Command Engine. The native voice bridge throws a null reference error on launch and requires a teardown/rebuild. → [Plan](docs/plans/fix-voice-engine-integration.md)
+- [ ] `chore/refactor-dashboard-screen` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🪙 40k] [⏱️ 6h] [🧠 THINK] Break `DashboardScreen.tsx` (97 hooks) into DDA presentation-layer sub-components.
+
+- [ ] `chore/refactor-docked-controller` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🪙 45k] [⏱️ 6h] [🧠 THINK] Extract `DockedController.tsx` (122KB presentation layer) into independent UI component nodes.
+
+- [ ] `fix/supabase-database-typing` : [☁️ CLOUD] [✅ L-RISK] [🍪 Snack] [🪙 5k] [⏱️ 1h] [🤖 FLASH] Resolve the persistent TS2305 error regarding `Database` generic typing from `src/types/supabase`.
+
+- [ ] `feat/discord-agent-bridge` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [🪙 35k] [⏱️ 6h] [🧠 THINK] Implement a local Discord bridge that streams agent logs to a channel and pipes user replies back into the agent's context via a sanitized command buffer file. → [Plan](docs/plans/feat-discord-agent-bridge.md)
+
+- [ ] `fix/voice-engine-integration` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [🪙 40k] [⏱️ 2h] [🧠 THINK] Repair the Voice Command Engine. The native voice bridge throws a null reference error on launch and requires a teardown/rebuild. → [Plan](docs/plans/fix-voice-engine-integration.md)
 
 ---
 
