@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-04-14
+
+### Changed
+
+- **BLE Engine Decoupling**: Refactored the monolithic `useBLE` God Object (1,200 LOC, 42KB) into a lightweight Domain-Driven Architecture. Isolated strictly-scoped hooks (`useBLEScanner`, `useBLEWatchdog`, and `blePermissions`) while explicitly preserving a centralized Thin Orchestrator to prevent native Android GATT 133 bugs.
+- **Workflow Architecture**: Injected exact LLM Token consumption estimates directly into the Bucket List system, drastically minimizing redundant workflow decision overhead.
+
+
 ## [1.6.0] - 2026-04-14
 
 ### Changed

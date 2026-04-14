@@ -9,8 +9,8 @@ All active tasks, bugs, and feature work. Prioritized by **App Performance, Stab
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Core Development Progress
-  "Completed" : 26
-  "Remaining" : 32
+  "Completed" : 27
+  "Remaining" : 31
 ```
 
 ---
@@ -39,13 +39,11 @@ _System-wide health improvements, refactors, and performance optimizations._
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
-  "Completed" : 8
-  "Remaining" : 8
+  "Completed" : 9
+  "Remaining" : 7
 ```
 
 - [ ] `fix/remote-id-audit` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🪙 15k] [Security] [🧠 THINK] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
-
-- [ ] `chore/refactor-use-ble-overheat` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🪙 15k] [🧠 THINK] [God Object] Refactor `useBLE.ts` — 39 hooks and 42KB detected; decouple scanning from characteristic logic.
 
 - [ ] `feat/discord-agent-bridge` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [🪙 35k] [🧠 THINK] Implement a local Discord bridge that streams agent logs to a channel and pipes user replies back into the agent's context via a sanitized command buffer file. → [Plan](docs/plans/feat-discord-agent-bridge.md)
 
