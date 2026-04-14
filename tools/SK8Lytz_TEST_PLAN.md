@@ -436,7 +436,55 @@ Run at **390px width (iPhone 14)** and **412px width (Pixel 7)**:
 
 ---
 
-## Regression Matrix
+## 16. FSM State Machine (refactor/state-machine-standard)
+
+> Tests for the `bleState` and `viewState` finite state machines introduced in the state-machine-standard refactor.
+> These tests verify deterministic transitions and elimination of illegal states.
+
+### 16.1 Dashboard `viewState` Router
+
+| #      | Step                                                             | Expected                                                              |
+| ------ | ---------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 16.1.1 | First launch — no registered devices                             | `LOADING_REGS` spinner shown briefly, then transitions to `SETUP_WIZARD` |
+| 16.1.2 | First launch — registered devices exist                          | `LOADING_REGS` spinner shown briefly, then transitions to `DASHBOARD` |
+| 16.1.3 | Tap "SET UP YOUR SKATES" on Groups empty state                   | View transitions to `SETUP_WIZARD` deterministically                   |
+| 16.1.4 | Tap "ADD DEVICE" in Registered Devices header                    | View transitions to `SETUP_WIZARD` deterministically                   |
+| 16.1.5 | Tap "START SETUP" in empty registered devices state              | View transitions to `SETUP_WIZARD` deterministically                   |
+| 16.1.6 | Complete setup wizard successfully                               | View transitions back to `DASHBOARD` via `onSetupComplete`             |
+
+**Results:** `[ ][ ][ ][ ][ ][ ]`
+
+---
+
+### 16.2 `bleState` FSM Guards
+
+| #      | Step                                                     | Expected                                                                    |
+| ------ | -------------------------------------------------------- | --------------------------------------------------------------------------- |
+| 16.2.1 | While `bleState === 'DISCONNECTING'`, press hardware back | Back press is intercepted — no double-disconnect fired                      |
+| 16.2.2 | While `bleState === 'DISCONNECTING'`, swipe-to-back       | Swipe ignored — `handleDisconnect` not re-invoked                           |
+| 16.2.3 | While `bleState === 'DISCONNECTING'`                      | Teardown overlay (spinner + "Disconnecting...") renders over DockedController |
+| 16.2.4 | While `bleState === 'SCANNING'`, tap Scan button          | Scan button is a no-op — no duplicate scan initiated                        |
+| 16.2.5 | After scan completes, `bleState` returns to `IDLE`        | Scan animation stops, device list updates                                   |
+| 16.2.6 | While `bleState === 'DISCONNECTING'`, DockedController writes | Write is short-circuited — no BLE payload dispatched to hardware         |
+| 16.2.7 | While `bleState === 'IDLE'`, DockedController writes      | Write is short-circuited — device is disconnected, no crash                 |
+| 16.2.8 | After connect, `bleState === 'CONNECTED'`                 | DockedController writes fire normally                                        |
+
+**Results:** `[ ][ ][ ][ ][ ][ ][ ][ ]`
+
+---
+
+### 16.3 AdminTools Modal FSM Display
+
+| #      | Step                           | Expected                                      |
+| ------ | ------------------------------ | --------------------------------------------- |
+| 16.3.1 | Open Admin Tools while scanning | `bleState` shows `SCANNING` in the modal UI  |
+| 16.3.2 | Open Admin Tools while connected | `bleState` shows `CONNECTED` in the modal UI |
+| 16.3.3 | Open Admin Tools while idle     | `bleState` shows `IDLE` in the modal UI      |
+
+**Results:** `[ ][ ][ ]`
+
+---
+
 
 <!-- Fill in after each release build. Keep last 5 runs. -->
 
@@ -456,4 +504,4 @@ Run at **390px width (iPhone 14)** and **412px width (Pixel 7)**:
 
 ---
 
-_Last updated: 2026-04-11 | Maintained by: AG + Andy_
+_Last updated: 2026-04-14 | Maintained by: AG + Andy_
