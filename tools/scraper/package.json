@@ -1,0 +1,22 @@
+{
+  "name": "sk8lytz-scraper",
+  "version": "1.0.0",
+  "description": "Zero-API Headless DOM Crawler for Skate Spots",
+  "main": "index.ts",
+  "scripts": {
+    "start": "ts-node index.ts",
+    "seed": "ts-node SeedOverpass.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.100.0",
+    "axios": "^1.6.8",
+    "cheerio": "1.0.0-rc.12",
+    "dotenv": "^16.4.5",
+    "puppeteer": "^22.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
