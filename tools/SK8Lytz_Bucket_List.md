@@ -9,8 +9,8 @@ All active tasks, bugs, and feature work. Prioritized by **App Performance, Stab
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Core Development Progress
-  "Completed" : 25
-  "Remaining" : 32
+  "Completed" : 26
+  "Remaining" : 31
 ```
 
 ---
@@ -38,7 +38,7 @@ _System-wide health improvements, refactors, and performance optimizations._
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
-  "Completed" : 4
+  "Completed" : 5
   "Remaining" : 11
 ```
 
@@ -54,11 +54,12 @@ pie title Engineering Health
 
 - [ ] `chore/telemetry-efficiency-audit` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🤖 PRO-HIGH] Re-evaluate the parsed\_\* telemetry tables and ingestion logic to eliminate data duplication and optimize storage efficiency. → [Plan](docs/plans/chore-telemetry-efficiency-audit.md)
 
-- [ ] `chore/redesign-parsed-data-storage` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [📝️ NEEDS-PLAN] [⏱️ 3h] Redesign device telemetry ingestion from an un-gated firehose into a Constraint-Based Auditing model. Implements local telemetry spooling/batching (TelemetryBatcher), and consolidates fragmented tables into a single JSONB telemetry_snapshots table to minimize cloud cost overhead. → [Plan](docs/plans/chore-redesign-parsed-data-storage.md)
 
 - [ ] `feat/discord-agent-bridge` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] Implement a local Discord bridge that streams agent logs to a channel and pipes user replies back into the agent's context via a sanitized command buffer file. → [Plan](docs/plans/feat-discord-agent-bridge.md)
 
 - [ ] `fix/voice-engine-integration` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [⏱️ 2h] Repair the Voice Command Engine. The native voice bridge throws a null reference error on launch and requires a teardown/rebuild. → [Plan](docs/plans/fix-voice-engine-integration.md)
+
+- [ ] `chore/refactor-admin-tools-hierarchy` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] [⏱️ 1h] Structural refactor of AdminToolsModal to consolidate 5 disjointed sub-tools (DiagnosticsLab, Programmer, AppManager, ProductManager, AdminPicksScheduler) into a unified `src/components/admin/tools/` namespace and wire them correctly as embedded tabs. → [Plan](docs/plans/chore-refactor-admin-tools-hierarchy.md)
 
 ---
 
@@ -116,6 +117,7 @@ pie title Feature Velocity
 
 ## ✅ Completed Previously
 
+- [x] `chore/redesign-parsed-data-storage` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [📝️ NEEDS-PLAN] [⏱️ 3h] Redesign device telemetry ingestion from an un-gated firehose into a Constraint-Based Auditing model. Implements local telemetry spooling/batching (TelemetryBatcher), and consolidates fragmented tables into a single JSONB telemetry_snapshots table to minimize cloud cost overhead. → [Plan](docs/plans/chore-redesign-parsed-data-storage.md)
 - [x] `chore/refactor-admin-tools` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] break down `AdminToolsModal.tsx` (637 lines) into feature-specific admin modules.
 
 ---
