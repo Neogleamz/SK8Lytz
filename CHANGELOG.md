@@ -1,3 +1,18 @@
+## [1.7.1] - 2026-04-14
+
+### ? Features
+- feat(governance): implement backlog grooming algorithm and dependency tagging
+- feat(workflows): append publish branch merging and cloud deployment pipeline to ship-it release protocol
+
+### ?? Maintenance
+- chore(performance): ast-driven purge of dead imports
+- chore(audit): document DDA findings and batch-sync supabase types
+
+### ?? Documentation
+- fix(docs): synchronize pie charts with actual task distribution and historical offset
+- chore(docs): move music intel epic to icebox and add mermaid dependency graph
+- chore(docs): mark dead-code purge as completed in bucket list
+- chore(docs): standardize estimated time to completion across all remaining bucket list tasks
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -129,3 +144,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Legacy Tools**: Retired the Simple Scanner, legacy DIY Builder, and Admin Hardware Tester in favor of consolidated modern modules.
 - **Stale Data**: Purged legacy 0x81 protocol commands and hardcoded product heuristics.
+
