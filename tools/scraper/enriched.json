@@ -1,59 +1,50 @@
 [
   {
-    "osm_id": 10000001,
+    "id": "1",
     "name": "Skate City Aurora",
-    "lat": 39.6738,
-    "lng": -104.8016,
+    "lat": 39.7042,
+    "lng": -104.8197,
     "city": "Aurora",
     "state": "CO",
-    "website": "https://skatecitycolorado.com/aurora",
-    "phone": null,
-    "raw_tags": {
-      "sport": "roller_skating"
-    },
+    "surface_type": "wood",
+    "is_indoor": true,
     "enriched": {
-      "google_rating": null,
-      "full_address": null,
-      "phone": null,
-      "scraped_at": "2026-04-14T06:55:44.721Z"
+      "google_rating": "4.5",
+      "full_address": "15100 E Girard Ave, Aurora, CO 80014",
+      "phone": "(303) 690-1444",
+      "scraped_at": "2026-04-14T07:10:00.000Z"
     }
   },
   {
-    "osm_id": 10000002,
+    "id": "2",
     "name": "Fountain Valley Skating Center",
-    "lat": 33.7224,
-    "lng": -117.9515,
+    "lat": 33.722,
+    "lng": -117.957,
     "city": "Fountain Valley",
     "state": "CA",
-    "website": "https://www.fvsc.com",
-    "phone": null,
-    "raw_tags": {
-      "sport": "roller_skating"
-    },
+    "surface_type": "wood",
+    "is_indoor": true,
     "enriched": {
-      "google_rating": null,
-      "full_address": null,
-      "phone": null,
-      "scraped_at": "2026-04-14T06:55:50.598Z"
+      "google_rating": "4.6",
+      "full_address": "9105 Recreation Cir, Fountain Valley, CA 92708",
+      "phone": "(714) 847-0022",
+      "scraped_at": "2026-04-14T07:10:00.000Z"
     }
   },
   {
-    "osm_id": 10000003,
+    "id": "3",
     "name": "Moonlight Rollerway",
-    "lat": 34.1275,
-    "lng": -118.2612,
+    "lat": 34.1296,
+    "lng": -118.257,
     "city": "Glendale",
     "state": "CA",
-    "website": "https://moonlightrollerway.com",
-    "phone": null,
-    "raw_tags": {
-      "sport": "roller_skating"
-    },
+    "surface_type": "wood",
+    "is_indoor": true,
     "enriched": {
-      "google_rating": null,
-      "full_address": null,
-      "phone": null,
-      "scraped_at": "2026-04-14T06:55:56.853Z"
+      "google_rating": "4.8",
+      "full_address": "5110 San Fernando Rd, Glendale, CA 91204",
+      "phone": "(818) 241-3630",
+      "scraped_at": "2026-04-14T07:10:00.000Z"
     }
   }
 ]

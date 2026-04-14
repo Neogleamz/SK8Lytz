@@ -37,23 +37,22 @@ async function scrapeGoogleDOM() {
       // Data Harvesting Target Selectors (The "Knowledge Panel" on the right side)
       // Note: Google changes class names frequently, so we rely on attributes or distinct structures
       
-      // Attempt to extract Rating
+      // Extract Knowledge Panel Data resiliently via text traversing
       const rating = await page.evaluate(() => {
-        const ratingEl = document.querySelector('span[aria-hidden="true"]:not([class=""])');
-        return ratingEl ? ratingEl.textContent?.trim() : null;
+        // Find element holding star rating e.g. 4.6
+        const els = Array.from(document.querySelectorAll('span'));
+        const found = els.find(s => s.textContent?.match(/^[1-5]\.\d$/));
+        return found ? found.textContent : null;
       });
 
-      // Attempt to extract Address
       const address = await page.evaluate(() => {
-        const addrLinks = Array.from(document.querySelectorAll('a')).filter(a => a.href.includes('maps/place'));
-        return addrLinks.length > 0 ? addrLinks[0].textContent : null;
+        const d = document.querySelector('div[data-attrid="kc:/location/location:address"]');
+        return d ? d.textContent?.replace('Address: ', '').replace('Address:', '').trim() : null;
       });
 
-      // Attempt to extract Phone Number
       const phone = await page.evaluate(() => {
-        const spans = Array.from(document.querySelectorAll('span'));
-        const phoneSpan = spans.find(s => s.textContent?.match(/^\+?1?\s*\(?-?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/));
-        return phoneSpan ? phoneSpan.textContent : null;
+         const p = document.querySelector('div[data-attrid="kc:/collection/knowledge_panels/has_phone"]');
+         return p ? p.textContent?.replace('Phone: ', '').replace('Phone:', '').trim() : null;
       });
 
       // Save enriched object

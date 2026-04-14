@@ -33,6 +33,7 @@ async function pushToDatabase() {
         lat: spot.lat,
         lng: spot.lng,
         phone: spot.enriched.phone || null,
+        address: spot.enriched.full_address || null,
         vibe_rating: spot.enriched.google_rating ? parseFloat(spot.enriched.google_rating) : null,
         source: 'native_crawler',
         is_verified: false

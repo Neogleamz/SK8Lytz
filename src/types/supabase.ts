@@ -1538,7 +1538,9 @@ export type Database = {
       }
       skate_spots: {
         Row: {
+          address: string | null
           adult_night_details: string | null
+          city: string | null
           created_at: string | null
           id: string
           is_indoor: boolean | null
@@ -1546,13 +1548,19 @@ export type Database = {
           lat: number
           lng: number
           name: string
+          phone: string | null
+          raw_knowledge_panel: Json | null
           source: string | null
+          state: string | null
           surface_type: Database["public"]["Enums"]["skate_spot_surface"] | null
           updated_at: string | null
           updated_by: string | null
+          vibe_rating: number | null
         }
         Insert: {
+          address?: string | null
           adult_night_details?: string | null
+          city?: string | null
           created_at?: string | null
           id?: string
           is_indoor?: boolean | null
@@ -1560,15 +1568,21 @@ export type Database = {
           lat: number
           lng: number
           name: string
+          phone?: string | null
+          raw_knowledge_panel?: Json | null
           source?: string | null
+          state?: string | null
           surface_type?:
             | Database["public"]["Enums"]["skate_spot_surface"]
             | null
           updated_at?: string | null
           updated_by?: string | null
+          vibe_rating?: number | null
         }
         Update: {
+          address?: string | null
           adult_night_details?: string | null
+          city?: string | null
           created_at?: string | null
           id?: string
           is_indoor?: boolean | null
@@ -1576,12 +1590,16 @@ export type Database = {
           lat?: number
           lng?: number
           name?: string
+          phone?: string | null
+          raw_knowledge_panel?: Json | null
           source?: string | null
+          state?: string | null
           surface_type?:
             | Database["public"]["Enums"]["skate_spot_surface"]
             | null
           updated_at?: string | null
           updated_by?: string | null
+          vibe_rating?: number | null
         }
         Relationships: []
       }
@@ -2070,3 +2088,4 @@ export const Constants = {
     },
   },
 } as const
+
