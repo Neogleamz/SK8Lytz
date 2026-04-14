@@ -181,7 +181,7 @@ export function useBLEScanner({
 
     const knownMacs = new Set<string>();
 
-    AsyncStorage.getItem('ng_registered_devices').then(cached => {
+    AsyncStorage.getItem('@Sk8lytz_registered_devices').then(cached => {
       if (cached) {
         try {
           JSON.parse(cached).forEach((d: any) => knownMacs.add(d.device_mac));

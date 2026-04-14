@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
+import { getDefaultDeviceName } from '../utils/NamingUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -303,9 +304,11 @@ export function useRegistration() {
     d1.position = d2.position;
     d2.position = tmp;
 
-    // Rebuild names from type + new position
-    d1.device_name = `${d1.product_type} ${d1.position}`;
-    d2.device_name = `${d2.product_type} ${d2.position}`;
+    // FIX: Use canonical NamingUtils format instead of `${productType} ${position}`
+    // which produced non-standard strings like "HALOZ Left" that never matched
+    // anything resolved via getDefaultDeviceName elsewhere in the app.
+    d1.device_name = `${getDefaultDeviceName(d1.device_mac)}${d1.position ? ` ${d1.position}` : ''}`;
+    d2.device_name = `${getDefaultDeviceName(d2.device_mac)}${d2.position ? ` ${d2.position}` : ''}`;
 
     await saveRegisteredDevice(d1);
     await saveRegisteredDevice(d2);

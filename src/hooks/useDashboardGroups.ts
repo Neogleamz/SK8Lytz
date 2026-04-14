@@ -318,8 +318,13 @@ export function useDashboardGroups({
     }
     for (const [typeKey, devices] of devicesByType.entries()) {
       const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === typeKey) ?? LOCAL_PRODUCT_CATALOG[0];
-      checkAndGroup(devices, `${profile.displayName} SK8Lytz`, typeKey, profile.defaultLedPoints);
+      // FIX: Route through NamingUtils so auto-provisioned group names are consistent
+      // with names produced by HardwareSetupWizard and other manual flows.
+      // Before: `${profile.displayName} SK8Lytz` → "HALOZ SK8Lytz"
+      // After:  getDefaultGroupName(typeKey)      → "My SK8Lytz HALOZ"
+      checkAndGroup(devices, getDefaultGroupName(typeKey), typeKey, profile.defaultLedPoints);
     }
+
 
     const storagePromises: Promise<void>[] = [];
     if (didUpdateProcessed)
