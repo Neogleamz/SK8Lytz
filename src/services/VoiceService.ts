@@ -15,7 +15,7 @@ try {
 import * as Speech from 'expo-speech';
 import * as stringSimilarity from 'string-similarity';
 import { RBM_PATTERNS } from '../utils/RbmDictionary';
-import { IFavoriteState } from '../components/DockedController';
+import type { IFavoriteState } from '../types/dashboard.types';
 
 export interface IVoiceAction {
   type: 'MODE' | 'FAVORITE' | 'PATTERN' | 'BRIGHTNESS' | 'SPEED' | 'SPATIAL' | 'POWER' | 'UNKNOWN';

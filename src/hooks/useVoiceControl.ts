@@ -12,7 +12,7 @@ try {
 }
 
 import { voiceService, IVoiceAction } from '../services/VoiceService';
-import { IFavoriteState } from '../components/DockedController';
+import type { IFavoriteState } from '../types/dashboard.types';
 
 /** Voice recognition is only available on native iOS/Android platforms where the bridge exists. */
 const isVoiceSupported = Platform.OS !== 'web' && !!Voice;

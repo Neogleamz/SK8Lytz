@@ -15,7 +15,7 @@ import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useVoiceControl } from '../hooks/useVoiceControl';
 import type { IVoiceAction } from '../services/VoiceService';
-import type { IFavoriteState } from '../components/DockedController';
+import type { IFavoriteState } from '../types/dashboard.types';
 import type { DockedControllerHandle } from '../components/DockedController';
 
 interface UseDashboardVoiceOptions {

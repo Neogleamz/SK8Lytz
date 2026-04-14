@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { IFavoriteState, IQuickPreset } from '../components/DockedController';
+import type { IFavoriteState, IQuickPreset } from '../types/dashboard.types';
 
 // Shared Storage Prefix constant
 const STORAGE_PREFIX = '@Sk8lytz_';
