@@ -1,4 +1,13 @@
+## [1.8.1] - 2026-04-14
+
+### 🐛 Bug Fixes
+- **Critical Dashboard Stability**: Resolved a hook split-brain bug in `DashboardScreen.tsx` where `isActuallyConnected` was computed in two separate, desynchronized locations — an inline expression passed to `useDashboardAutoConnect` and a `useMemo` defined ~150 lines later. Hoisted `displayConnectedDevices`, `isActuallyConnected`, and `isGrouped` above all consumers to establish a single canonical source of truth. This eliminates the root cause of the potential `Rendered more hooks than expected` crash during BLE reconnect cycles.
+- **TS Compliance**: Fixed `PermissionService` default ledger initialization from `{}` to a fully-typed `DEFAULT_LEDGER` constant, and resolved `delete_account` RPC type narrowing error in `AccountModal`.
+
+---
+
 ## [1.8.0] - 2026-04-14
+
 
 ### ✨ Features
 - **Legal Compliance**: Executed granular legal compliance architecture and Account Deletion workflow.
