@@ -1068,11 +1068,13 @@ export type Database = {
       }
       registered_devices: {
         Row: {
+          ble_version: number | null
           color_sorting: string | null
           created_at: string
           custom_name: string
           device_mac: string | null
           device_name: string | null
+          factory_name: string | null
           firmware_ver: number | null
           group_id: string
           group_name: string | null
@@ -1081,6 +1083,7 @@ export type Database = {
           is_pending_sync: boolean | null
           led_points: number | null
           led_version: number | null
+          manufacturer_data: string | null
           points: number
           position: string | null
           product_id: number | null
@@ -1094,11 +1097,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ble_version?: number | null
           color_sorting?: string | null
           created_at?: string
           custom_name: string
           device_mac?: string | null
           device_name?: string | null
+          factory_name?: string | null
           firmware_ver?: number | null
           group_id: string
           group_name?: string | null
@@ -1107,6 +1112,7 @@ export type Database = {
           is_pending_sync?: boolean | null
           led_points?: number | null
           led_version?: number | null
+          manufacturer_data?: string | null
           points: number
           position?: string | null
           product_id?: number | null
@@ -1120,11 +1126,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ble_version?: number | null
           color_sorting?: string | null
           created_at?: string
           custom_name?: string
           device_mac?: string | null
           device_name?: string | null
+          factory_name?: string | null
           firmware_ver?: number | null
           group_id?: string
           group_name?: string | null
@@ -1133,6 +1141,7 @@ export type Database = {
           is_pending_sync?: boolean | null
           led_points?: number | null
           led_version?: number | null
+          manufacturer_data?: string | null
           points?: number
           position?: string | null
           product_id?: number | null

@@ -8,6 +8,7 @@ import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProto
 import { AppLogger } from '../../services/AppLogger';
 import { supabase } from '../../services/supabaseClient';
 import type { PendingRegistration } from '../../types/dashboard.types';
+import { getDefaultGroupName } from '../../utils/NamingUtils';
 
 export interface UseBLEScannerProps {
   bleManager: any;
@@ -66,12 +67,16 @@ export function useBLEScanner({
       const pos = i % 2 === 0 ? 'Left' : 'Right';
       const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === type) || LOCAL_PRODUCT_CATALOG[0];
 
+      const deviceIdShort = d.id.replace(/:/g, '').slice(-4);
       return {
         device_mac:   d.id,
-        device_name:  isUnknown ? `SK8LYTZ (${d.id.slice(-5)})` : `${type} ${i + 1}`,
+        device_name:  `SK8Lytz-${deviceIdShort}`,
+        factory_name: d.name || 'Unknown',
+        manufacturer_data: d.manufacturerData,
+        ble_version:  d.bleVersion,
         product_type: type as any,
         position:     pos,
-        group_name:   isUnknown ? 'Identifying...' : `My SK8Lytz ${type}`,
+        group_name:   getDefaultGroupName(type),
         led_points:   d.hwPoints || profile.vizDefaultPoints,
         segments:     d.hwSegments ?? profile.defaultSegments,
         ic_type:      d.hwStripType ?? (profile.defaultIcType === 1 ? 'WS2812B' : 'SM16703'),
@@ -274,7 +279,10 @@ export function useBLEScanner({
                      const ownerIds = (existingRows || []).map((r: any) => r.user_id).filter(Boolean);
                      const telemetryPayload: any = {
                        device_mac: device.id,
-                       device_name: device.name || 'Unknown SK8Lytz',
+                       device_name: `SK8Lytz-${device.id.replace(/:/g, '').slice(-4)}`,
+                       factory_name: device.name || 'Unknown',
+                       manufacturer_data: manufacturerData || null,
+                       ble_version: bleVersion || null,
                        firmware_ver: firmwareVer || null,
                        led_version: ledVersion || null,
                        product_id: productId || null,

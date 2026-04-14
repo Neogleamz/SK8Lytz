@@ -134,10 +134,10 @@ export function useHardwareNotifications({
         };
 
         // Mirror securely to persistent memory
-        AsyncStorage.getItem('ng_device_configs').then(str => {
+        AsyncStorage.getItem('@Sk8lytz_device_configs').then(str => {
           const p = JSON.parse(str || '{}');
           p[deviceId] = { ...p[deviceId], ...newD };
-          AsyncStorage.setItem('ng_device_configs', JSON.stringify(p));
+          AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(p));
         }).catch(() => {});
 
         setDeviceConfigs(prevConfigs => ({
@@ -156,7 +156,7 @@ export function useHardwareNotifications({
       setDeviceConfigs(prev => {
         const merged = { ...(prev[deviceId] || {}), ...cfg };
         const next = { ...prev, [deviceId]: merged };
-        AsyncStorage.setItem('ng_device_configs', JSON.stringify(next)).catch(() => {});
+        AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(next)).catch(() => {});
         return next;
       });
       setAllDevices(prev => prev.map(d =>

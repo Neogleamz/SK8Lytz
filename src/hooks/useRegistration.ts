@@ -52,8 +52,8 @@ export type ClaimStatus =
   | 'claimed_by_other'    // Row exists, different user — cannot claim
   | 'offline_unknown';    // No network — cannot verify
 
-const LOCAL_KEY        = 'ng_registered_devices';
-const PENDING_SYNC_KEY = 'ng_pending_sync';
+const LOCAL_KEY        = '@Sk8lytz_registered_devices';
+const PENDING_SYNC_KEY = '@Sk8lytz_pending_sync';
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
@@ -340,7 +340,7 @@ export function useRegistration() {
   ): Promise<RegisteredDevice[]> => {
     const migrated: RegisteredDevice[] = [];
     try {
-      const raw = await AsyncStorage.getItem('ng_custom_groups');
+      const raw = await AsyncStorage.getItem('@Sk8lytz_custom_groups');
       if (!raw) return migrated;
       const groups: any[] = JSON.parse(raw);
 

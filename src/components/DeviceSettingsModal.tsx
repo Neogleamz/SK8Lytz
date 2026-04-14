@@ -5,6 +5,7 @@ import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 import { Colors, Spacing, Typography } from '../theme/theme';
+import { getDefaultGroupName } from '../utils/NamingUtils';
 
 interface DeviceSettings {
   name: string;
@@ -31,7 +32,7 @@ interface DeviceSettingsModalProps {
 // Derives device name + group name from type + position
 const deriveNames = (type: string, position: 'Left' | 'Right' | null) => {
   const deviceName = position ? `${type} ${position}` : type;
-  const groupName = `My SK8Lytz ${type}`;
+  const groupName = getDefaultGroupName(type);
   return { deviceName, groupName };
 };
 

@@ -38,6 +38,7 @@ import { AppLogger } from '../services/AppLogger';
 import { CrewRole, crewService, CrewSession } from '../services/CrewService';
 
 import AccountModal from '../components/AccountModal';
+import { getDefaultGroupName } from '../utils/NamingUtils';
 import CrewMemberDashboard from '../components/CrewMemberDashboard';
 import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { RegisteredDevice, useRegistration } from '../hooks/useRegistration';
@@ -419,7 +420,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // call setDeviceConfigs to avoid a race condition with useDashboardGroups' own load.
   useEffect(() => {
     // Prune sim-device entries from device configs (without overwriting hook state)
-    AsyncStorage.getItem('ng_device_configs')
+    AsyncStorage.getItem('@Sk8lytz_device_configs')
       .then(res => {
         if (!res) return;
         try {
@@ -427,21 +428,21 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           const hasSim = Object.keys(configs).some(k => k.startsWith('sim-'));
           if (hasSim) {
             for (const key in configs) { if (key.startsWith('sim-')) delete configs[key]; }
-            AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs)).catch(() => {});
+            AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs)).catch(() => {});
           }
         } catch (e: any) { AppLogger.warn('JSON parse error configs cleanup', { error: String(e) }); }
       })
       .catch((e: any) => AppLogger.warn('AsyncStorage error configs cleanup', { error: String(e) }));
 
     // Prune sim-device entries from processed devices log
-    AsyncStorage.getItem('ng_processed_devices')
+    AsyncStorage.getItem('@Sk8lytz_processed_devices')
       .then(res => {
         if (!res) return;
         try {
           const processed = JSON.parse(res) || [];
           const cleaned = processed.filter((id: string) => !id.startsWith('sim-'));
           if (cleaned.length !== processed.length) {
-            AsyncStorage.setItem('ng_processed_devices', JSON.stringify(cleaned)).catch(() => {});
+            AsyncStorage.setItem('@Sk8lytz_processed_devices', JSON.stringify(cleaned)).catch(() => {});
           }
         } catch (e) {}
       });
@@ -616,10 +617,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       setUpdateTrigger(prev => prev + 1);
  
        try {
-         const stored = await AsyncStorage.getItem('ng_device_configs');
+         const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
          const configs = stored ? JSON.parse(stored) : {};
          configs[selectedDeviceForSettings.id] = { ...settings, groupId: finalGroupId };
-         await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
+         await AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs));
          
          AppLogger.log('HARDWARE_CONFIG_CHANGED', {
            deviceId: selectedDeviceForSettings.id,
@@ -763,7 +764,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           if (fw) {
             setDeviceConfigs((prev: any) => {
                 const next = { ...prev, [item.id]: { ...(prev?.[item.id] || {}), firmware: fw } };
-                AsyncStorage.setItem('ng_device_configs', JSON.stringify(next)).catch(() => {});
+                AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(next)).catch(() => {});
                 return next;
             });
           }
@@ -1170,7 +1171,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             sorting: deviceConfigs[selectedDeviceForSettings?.id || '']?.sorting || (selectedDeviceForSettings as any)?.sorting || 'GRB',
             grouped: !!deviceConfigs[selectedDeviceForSettings?.id || '']?.groupId || (selectedDeviceForSettings as any)?.grouped || false,
             groupId: deviceConfigs[selectedDeviceForSettings?.id || '']?.groupId || (selectedDeviceForSettings as any)?.groupId,
-            groupName: customGroups.find(g => g.id === (deviceConfigs[selectedDeviceForSettings?.id || '']?.groupId || (selectedDeviceForSettings as any)?.groupId))?.name || 'My SK8Lytz',
+            groupName: customGroups.find(g => g.id === (deviceConfigs[selectedDeviceForSettings?.id || '']?.groupId || (selectedDeviceForSettings as any)?.groupId))?.name || getDefaultGroupName((selectedDeviceForSettings as any)?.product_type || (selectedDeviceForSettings as any)?.type),
             firmware: deviceConfigs[selectedDeviceForSettings?.id || '']?.firmware || (selectedDeviceForSettings as any)?.firmware || ((selectedDeviceForSettings as any)?.id?.startsWith('sim-') ? 'v2.0.1.DEMO' : 'Unknown')
           }}
           groups={customGroups}
@@ -1180,7 +1181,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           onClose={closeGroupModal}
           onSave={saveGroup}
           onDelete={groupModalState === 'RENAME' && editingGroupId ? () => handleGroupDelete(editingGroupId) : undefined}
-          initialName={groupModalState === 'RENAME' ? customGroups.find(g => g.id === editingGroupId)?.name : 'My SK8Lytz'}
+          initialName={groupModalState === 'RENAME' ? customGroups.find(g => g.id === editingGroupId)?.name : getDefaultGroupName()}
           initialDeviceIds={groupModalState === 'RENAME' ? customGroups.find(g => g.id === editingGroupId)?.deviceIds : selectedIds}
           allDevices={allDevices}
         />

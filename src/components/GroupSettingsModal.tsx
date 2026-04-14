@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { AppLogger } from '../services/AppLogger';
 import { Colors, Layout, Spacing, Typography } from '../theme/theme';
+import { getDefaultGroupName } from '../utils/NamingUtils';
 
 interface GroupSettingsModalProps {
   isVisible: boolean;
@@ -43,7 +44,7 @@ export default function GroupSettingsModal({ isVisible, onClose, onSave, onDelet
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="e.g. My SK8Lytz"
+            placeholder={`e.g. ${getDefaultGroupName('SOULZ')}`}
             placeholderTextColor={Colors.textMuted}
             autoFocus
           />

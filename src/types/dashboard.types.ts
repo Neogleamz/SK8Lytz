@@ -22,6 +22,9 @@ export interface PendingRegistration {
   ic_type: string;
   color_sorting: string;
   rssi: number;
+  factory_name?: string;
+  manufacturer_data?: string;
+  ble_version?: number;
   firmware_ver?: number;
   led_version?: number;
   product_id?: number;

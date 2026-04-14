@@ -19,6 +19,7 @@ import type { RegisteredDevice } from '../hooks/useRegistration';
 import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
 import type { CustomGroup, DeviceSettings, GroupModalState } from '../types/dashboard.types';
+import { getDefaultDeviceName, getDefaultGroupName } from '../utils/NamingUtils';
 
 interface UseDashboardGroupsOptions {
   registeredDevices: RegisteredDevice[];
@@ -115,7 +116,7 @@ export function useDashboardGroups({
 
   // Load persisted configs from AsyncStorage on mount
   useEffect(() => {
-    AsyncStorage.getItem('ng_device_configs').then(raw => {
+    AsyncStorage.getItem('@Sk8lytz_device_configs').then(raw => {
       if (raw) {
         try { setDeviceConfigs(JSON.parse(raw)); } catch (e) {}
       }
@@ -218,7 +219,7 @@ export function useDashboardGroups({
       const newGroup: CustomGroup = { id: newGroupId, name: groupName, isGroup: true, deviceIds: macs };
       const updatedGroups = [...customGroupsRef.current, newGroup];
       setCustomGroups(updatedGroups);
-      AsyncStorage.setItem('ng_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
+      AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
     }
 
     clearPendingRegistrations();
@@ -298,10 +299,9 @@ export function useDashboardGroups({
           didUpdateGroups = true;
         }
 
-        const names = [`${typeVal} Left Skate`, `${typeVal} Right Skate`];
         [leftId, rightId].forEach((id, idx) => {
-          if (!configs[id] || configs[id].name !== names[idx]) {
-            configs[id] = { ...configs[id], name: names[idx], type: typeVal, points: pointsVal };
+          if (!configs[id]) {
+            configs[id] = { name: getDefaultDeviceName(id), type: typeVal, points: pointsVal } as any;
             didUpdateConfigs = true;
           }
         });
@@ -409,7 +409,7 @@ export function useDashboardGroups({
 
     if (groupToDelete.deviceIds) {
       try {
-        const stored = await AsyncStorage.getItem('ng_device_configs');
+        const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
         if (stored) {
           const configs = JSON.parse(stored);
           let configsChanged = false;
@@ -422,7 +422,7 @@ export function useDashboardGroups({
             }
           }
           if (configsChanged) {
-            await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
+            await AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs));
             setDeviceConfigs(configs);
           }
         }
@@ -461,7 +461,7 @@ export function useDashboardGroups({
     }
 
     try {
-      const stored = await AsyncStorage.getItem('ng_device_configs');
+      const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
       const configs = stored ? JSON.parse(stored) : {};
       let configsChanged = false;
 
@@ -488,7 +488,7 @@ export function useDashboardGroups({
       }
 
       if (configsChanged) {
-        await AsyncStorage.setItem('ng_device_configs', JSON.stringify(configs));
+        await AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs));
         setDeviceConfigs(configs);
       }
     } catch (e) {

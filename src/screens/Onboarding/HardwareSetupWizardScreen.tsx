@@ -8,6 +8,7 @@ import { Spacing, Typography } from '../../theme/theme';
 
 import { LOCAL_PRODUCT_CATALOG, getLocalProfileById } from '../../constants/ProductCatalog';
 import { RegisteredDevice } from '../../hooks/useRegistration';
+import { getDefaultGroupName } from '../../utils/NamingUtils';
 
 interface HardwareSetupWizardScreenProps {
   onSetupComplete: (devices: RegisteredDevice[]) => Promise<void> | void;
@@ -429,7 +430,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                   }
                   
                   configs[d.device_mac] = {
-                    name: n || `My SK8Lytz ${pProfile.displayName.replace('™', '')}`,
+                    name: n || getDefaultGroupName(pProfile.id),
                     type: pType,
                     position: pos,
                     points: typeof d.led_points === 'number' ? d.led_points : pProfile.defaultLedPoints
@@ -442,7 +443,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                  if (entries.length > 0) {
                    const maxType = entries.reduce((a, b) => a[1] > b[1] ? a : b)[0];
                    const pProfile = getLocalProfileById(maxType);
-                   if (pProfile) defaultName = `My SK8Lytz ${pProfile.displayName.replace('™', '')}`;
+                   if (pProfile) defaultName = getDefaultGroupName(pProfile.id);
                  }
                  setGroupName(defaultName);
                }
