@@ -199,6 +199,9 @@ export default function App() {
       SplashScreen.hideAsync().catch(() => {});
       AppLogger.log('APP_OPENED', { loadTimeMs: Date.now() - appStartTime });
       AppLogger.uploadLogsToSupabase();
+      import('./src/services/PermissionService').then(mod => {
+        mod.syncSystemPermissions().catch(() => {});
+      });
     }
   }, [fontsLoaded]);
 
@@ -206,6 +209,11 @@ export default function App() {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (nextAppState === 'background' || nextAppState === 'inactive') {
         AppLogger.uploadLogsToSupabase();
+      }
+      if (nextAppState === 'active') {
+        import('./src/services/PermissionService').then(mod => {
+          mod.syncSystemPermissions().catch(() => {});
+        });
       }
     });
     return () => subscription.remove();

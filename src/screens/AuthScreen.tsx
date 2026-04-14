@@ -24,6 +24,7 @@ import {
     isCommonPassword,
     PasswordStrength
 } from '../services/AuthUtils';
+import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
 import { Layout, Spacing, ThemePalette } from '../theme/theme';
 
@@ -271,6 +272,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
     if (error) {
       showError(error.message);
     } else {
+      AppLogger.log('EULA_ACCEPTED', { policy_version: 'v1.0.0' });
       showSuccess('✅ Account created! Check your email for a verification link, then log in.');
       setTimeout(() => setMode('LOGIN'), 3000);
     }

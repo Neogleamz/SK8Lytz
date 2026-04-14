@@ -2,9 +2,53 @@ import { Audio } from 'expo-av';
 import { Camera } from 'expo-camera';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PermissionsAndroid, Platform } from 'react-native';
+import { AppLogger } from './AppLogger';
 
 export type PermissionType = 'CAMERA' | 'MIC' | 'LOCATION' | 'NOTIFICATIONS' | 'BLUETOOTH';
+
+export const OPTOUT_LEDGER_KEY = '@sk8lytz_permissions_optout';
+
+export const getOptOutLedger = async (): Promise<Record<PermissionType, boolean>> => {
+  try {
+    const data = await AsyncStorage.getItem(OPTOUT_LEDGER_KEY);
+    return data ? JSON.parse(data) : {};
+  } catch {
+    return {} as Record<PermissionType, boolean>;
+  }
+};
+
+export const setPermissionOptOut = async (type: PermissionType, isOptedOut: boolean): Promise<void> => {
+  const ledger = await getOptOutLedger();
+  ledger[type] = isOptedOut;
+  await AsyncStorage.setItem(OPTOUT_LEDGER_KEY, JSON.stringify(ledger));
+  
+  // Immutably log to Cloud Ledger
+  AppLogger.log(isOptedOut ? 'PERMISSION_OPT_OUT' : 'PERMISSION_OPT_IN', { feature: type, source: 'app_toggle' });
+};
+
+export const syncSystemPermissions = async (): Promise<void> => {
+  const ledger = await getOptOutLedger();
+  const types: PermissionType[] = ['CAMERA', 'MIC', 'LOCATION', 'NOTIFICATIONS', 'BLUETOOTH'];
+  let changed = false;
+
+  for (const type of types) {
+    const isNativelyGranted = await checkPermissionNative(type);
+    const isLexicallyOptedOut = !!ledger[type];
+
+    // OS Desync Sweep: App thought "Opt-In", but Native OS is strongly "Denied"
+    if (!isNativelyGranted && !isLexicallyOptedOut) {
+      ledger[type] = true;
+      changed = true;
+      AppLogger.log('PERMISSION_OPT_OUT', { feature: type, source: 'native_os_sync' });
+    }
+  }
+
+  if (changed) {
+    await AsyncStorage.setItem(OPTOUT_LEDGER_KEY, JSON.stringify(ledger));
+  }
+};
 
 export const requestPermission = async (type: PermissionType): Promise<boolean> => {
   try {
@@ -52,7 +96,7 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
   }
 };
 
-export const checkPermission = async (type: PermissionType): Promise<boolean> => {
+const checkPermissionNative = async (type: PermissionType): Promise<boolean> => {
   try {
     switch (type) {
       case 'CAMERA': {
@@ -85,7 +129,14 @@ export const checkPermission = async (type: PermissionType): Promise<boolean> =>
         return false;
     }
   } catch (error) {
-    console.warn(`Error checking ${type} permission:`, error);
+    console.warn(`Error checking ${type} permission natively:`, error);
     return false;
   }
+};
+
+export const checkPermission = async (type: PermissionType): Promise<boolean> => {
+  const ledger = await getOptOutLedger();
+  if (ledger[type]) return false; // App-Level Soft Revoke wins completely
+
+  return await checkPermissionNative(type);
 };

@@ -35,6 +35,7 @@ import { useSkateStats } from '../hooks/useSkateStats';
 import { PermanentCrew, profileService } from '../services/ProfileService';
 import { supabase } from '../services/supabaseClient';
 import EulaModal from './modals/EulaModal';
+import GranularPermissionsList from './permissions/GranularPermissionsList';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -282,14 +283,24 @@ export default function AccountModal({
                 {
                   text: 'Confirm Delete', style: 'destructive',
                   onPress: async () => {
-                    // Supabase does not allow client-side self-deletion by default
-                    // Direct user to support or trigger a server-side function
-                    Alert.alert(
-                      'Request Submitted',
-                      'Your account deletion request has been submitted. Your account will be deleted within 24 hours. You have been signed out.',
-                    );
-                    await supabase.auth.signOut();
-                    onSignOut(); onClose();
+                    try {
+                      // Attempt to run the dedicated Account Deletion RPC
+                      const { error } = await supabase.rpc('delete_account');
+                      if (error) {
+                        console.error('Account deletion RPC failed:', error);
+                        throw new Error('Database rejection. Please contact support.');
+                      }
+
+                      Alert.alert(
+                        'Account Deleted',
+                        'Your account and all associated data have been permanently erased.',
+                      );
+                      await supabase.auth.signOut();
+                      onSignOut();
+                      onClose();
+                    } catch (e: any) {
+                      Alert.alert('Deletion Failed', e.message);
+                    }
                   },
                 },
               ]
@@ -745,6 +756,10 @@ export default function AccountModal({
           thumbColor="#FFF"
         />
       </View>
+
+      {/* Privacy & Permissions */}
+      <Text style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>PRIVACY & PERMISSIONS</Text>
+      <GranularPermissionsList />
 
       {/* Legal & Compliance */}
       <Text style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>LEGAL</Text>

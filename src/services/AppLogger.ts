@@ -73,6 +73,9 @@ export type EventType =
   | 'SYNC'
   | 'REJOIN'
   | 'FTUE'
+  | 'EULA_ACCEPTED'
+  | 'PERMISSION_OPT_IN'
+  | 'PERMISSION_OPT_OUT'
   | 'CREW_PERMANENT_DELETED'
   // ── Crew Extended Events (unique — SESSION_CREATED/JOINED/LEFT/ERROR declared above) ──
   | 'CREW_SESSION_SCHEDULED'
