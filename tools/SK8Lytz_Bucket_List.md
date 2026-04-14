@@ -9,8 +9,8 @@ All active tasks, bugs, and feature work. Prioritized by **App Performance, Stab
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Core Development Progress
-  "Completed" : 28
-  "Remaining" : 34
+  "Completed" : 30
+  "Remaining" : 29
 ```
 
 ---
@@ -23,7 +23,7 @@ _These items address crashes, data corruption, and security blocks that impact t
 %%{init: {'theme': 'dark'}}%%
 pie title Critical Stability
   "Completed" : 4
-  "Remaining" : 5
+  "Remaining" : 1
 ```
 
 - [ ] `feat/gate-offline-mode` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🪙 40k] [⏱️ 6h] [🧠 THINK] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
@@ -40,7 +40,7 @@ _System-wide health improvements, refactors, and performance optimizations._
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
   "Completed" : 12
-  "Remaining" : 8
+  "Remaining" : 6
 ```
 
 - [ ] `fix/remote-id-audit` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🪙 15k] [⏱️ 3h] [Security] [🧠 THINK] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
@@ -67,7 +67,7 @@ _Legal requirements and administrative control systems._
 %%{init: {'theme': 'dark'}}%%
 pie title Governance Shield
   "Completed" : 4
-  "Remaining" : 1
+  "Remaining" : 0
 ```
 
 ---
@@ -80,7 +80,7 @@ _User-facing product value and UI refinements._
 %%{init: {'theme': 'dark'}}%%
 pie title Feature Velocity
   "Completed" : 10
-  "Remaining" : 10
+  "Remaining" : 22
 ```
 
 
