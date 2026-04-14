@@ -328,7 +328,8 @@ All FSM states and shared interfaces live in **`src/types/dashboard.types.ts`**.
 
 - **UI Components**: Must focus strictly on rendering and presentation.
 - **State Machines**: Complex multi-state logic must use `ModeType`/string-union FSMs, never boolean flag clusters.
-- **Atomic Operations**: All hardware writes must be wrapped in `try/catch` and logged via `AppLogger`.
+- **Strict Domain Exceptions (VIP Telemetry)**: All domain hooks (hardware dispatch, Supabase reads, filesystem access) MUST implement unified `try/catch` execution blocks. Errors must trigger `AppLogger.error()` to route telemetry into the Supabase VIP Fast-Lane. The use of naked `console.warn` or `console.error` inside domain hooks is strictly prohibited.
+- **Hook Scaffolding Constraint**: New hooks must be generated via the project `/scaffold-hook` automated workflow, which pre-injects the mandatory `AppLogger` crash loop sequence.
 - **Database Telemetry Masking**: All non-critical DB telemetry inserts (e.g. `skate_sessions` or metrics) must be wrapped in `try/catch` blocks so they do NOT block the critical BLE execution pipeline on failure.
 - **Type Safety per Schema constraints**: Tactical type casting using `as unknown as CustomType` or `as any` is authorized when bypassing strict, auto-generated Supabase overload methods for `Json` fields and unresolvable overloads, as long as runtime validation aligns with the hardened database schema.
 - **Type Imports**: Always import `ModeType` and shared interfaces from `dashboard.types.ts`, not from hook files.
