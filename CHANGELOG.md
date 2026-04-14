@@ -1,6 +1,15 @@
-## [1.8.6] - 2026-04-14
+## [1.8.7] - 2026-04-14
 
 ### 🚑 Emergency Hotfixes
+
+**Permission Ledger Desync & FTUE Bypass**
+- **Android Auto-Backup Override** (`app.json`): Added `allowBackup: false` to the Android manifest schema. Previously, when a user uninstalled and reinstalled the application, Android secretly restored the `@Sk8lytz_has_seen_permissions` flag from Google Drive, permanently lock-bypassing the `PermissionsOnboardingScreen` FTUE gate.
+- **Unified Permission Ledger** (`PermissionService.ts`, `DashboardScreen.tsx`): Completely stripped the aggressive `useEffect` inside DashboardScreen that was blindly spamming legacy Bluetooth permission prompts on every single mount. Deleted the legacy, isolated `blePermissions.ts` orchestrator and explicitly wired the BLE engine directly into the unified `AccountManager` ledger.
+- **Android Manifest Alignment** (`app.json`): Manually injected `android.permission.BLUETOOTH_SCAN` and `ACCESS_FINE_LOCATION` into the explicit permissions array. Previously, the `react-native-ble-plx` plugin silently handled this on compile, but dynamically calling `PermissionsAndroid.check()` for OS-level verifications immediately failed on AccountManager loads, causing the privacy toggles to always evaluate as `false`.
+
+---
+
+## [1.8.6] - 2026-04-14
 
 **Hardware Wizard Regression**
 - **Scanner Polling Restored** (`useBLEScanner.ts`, `useBLE.ts`, `HardwareSetupWizardScreen.tsx`): The `3bb9b691` deploy (v1.8.3) improperly hijacked `options.keepAlive: true` and forced it to act as a hard kill-switch for the entire scanner to satisfy a state machine standard. This broke the `HardwareSetupWizard` which relies on `keepAlive: true` to continuously poll for new devices over consecutive 2-second heartbeats without repeatedly wiping the list of discovered devices. The logic has been completely decoupled: `keepAlive: true` once again simply instructs the scanner to "scan without wiping the cache", and a new, explicit `stopScanner()` method handles Android GATT suspension.
