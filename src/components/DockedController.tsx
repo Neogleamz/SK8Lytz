@@ -169,21 +169,36 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
     const [lastSentPayload, setLastSentPayload] = useState<number[]>([]);
 
+    /**
+     * Snapshot of the full UI state captured immediately before each BLE write.
+     * If the write is rejected (RECONCILED phase), applyCloudScene restores this snapshot.
+     */
+    const lastConfirmedStateRef = useRef<any>(null);
+
+    /**
+     * Stable ref wrapper for the onReconcile callback.
+     * Updated every render so it always closes over the latest applyCloudScene.
+     * This prevents stale closures inside useOptimisticBLE's debounced async path.
+     */
+    const onReconcileRef = useRef<() => void>(() => {
+      AppLogger.warn('[DockedController] BLE write reconciled — no snapshot to restore yet');
+    });
+
     // ── Optimistic BLE Bridge (Ghost Standard) ─────────────────────────────
     const { optimisticWrite, writeStatus } = useOptimisticBLE({
       writeToDevice: parentWriteToDevice as ((payload: number[], targetDeviceId?: string) => Promise<boolean>) | undefined,
-      onReconcile: () => {
-        // On BLE failure: snap back to last confirmed state
-        // Currently a no-op — the UI already reflects the optimistic state.
-        // Future: restore from captureEntireState() snapshot.
-        AppLogger.warn('[DockedController] BLE write reconciled — UI may be stale');
-      },
+      // Indirection via ref: always calls the latest closure without recreating the hook callback
+      onReconcile: () => onReconcileRef.current(),
       debounceMs: 40,
     });
 
     const writeToDevice = async (payload: number[]) => {
       // Short-circuit dead writes if we are disconnected or disconnecting
       if (bleState === 'DISCONNECTING' || bleState === 'IDLE' || bleState === 'ERROR') return;
+      // Snapshot confirmed state BEFORE the write — onReconcile will restore this on failure.
+      // captureEntireState() is safe to call here because this function is only invoked at
+      // interaction time, by which point all consts in this render cycle are fully initialized.
+      lastConfirmedStateRef.current = captureEntireState();
       setLastSentPayload([...payload]);
       await optimisticWrite(payload);
     };
@@ -296,6 +311,17 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
     const captureEntireState = () => baseCaptureEntireState(streetSensitivity, streetCruiseColor, streetBrakeColor);
     const applyCloudScene = (scenePayload: any) => baseApplyCloudScene(scenePayload, setStreetSensitivity, setStreetCruiseColor, setStreetBrakeColor);
+
+    // ── Ghost Reconcile Wiring ──────────────────────────────────────────────
+    // Updated every render so the ref always holds the latest applyCloudScene closure.
+    // When a BLE write fails, optimisticWrite calls onReconcileRef.current() which
+    // restores the UI to the last confirmed hardware state via applyCloudScene.
+    onReconcileRef.current = () => {
+      if (lastConfirmedStateRef.current) {
+        applyCloudScene(lastConfirmedStateRef.current);
+        AppLogger.warn('[DockedController] BLE write reconciled — UI snapped back to last confirmed state');
+      }
+    };
 
     // Favorites Array — now managed by useFavorites hook above
 
