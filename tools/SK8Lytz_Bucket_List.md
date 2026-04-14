@@ -10,7 +10,7 @@ All active tasks, bugs, and feature work. Prioritized by **App Performance, Stab
 %%{init: {'theme': 'dark'}}%%
 pie title Core Development Progress
   "Completed" : 26
-  "Remaining" : 31
+  "Remaining" : 32
 ```
 
 ---
@@ -23,10 +23,12 @@ _These items address crashes, data corruption, and security blocks that impact t
 %%{init: {'theme': 'dark'}}%%
 pie title Critical Stability
   "Completed" : 4
-  "Remaining" : 4
+  "Remaining" : 5
 ```
 
 - [ ] `feat/gate-offline-mode` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [Stability] Gate off online capabilities when in offline mode (Crew Hub, Community Favorites, SK8Lytz Picks). Ensure Crew Hub card stays on dashboard but displays an "Offline" warning. → [Plan](docs/plans/gate-offline-mode.md)
+
+- [ ] `chore/domain-architecture-audit` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [Stability] Full app-wide audit of domain-driven architecture refactors. Identify orphaned imports, stale hook references, leftover monolithic patterns, dead code from extracted components, and any misrouted business logic. Generate sub-tasks in the Bucket List for each finding. → [Plan](docs/plans/chore-domain-architecture-audit.md)
 
 
 ---
@@ -38,8 +40,8 @@ _System-wide health improvements, refactors, and performance optimizations._
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
-  "Completed" : 5
-  "Remaining" : 11
+  "Completed" : 6
+  "Remaining" : 10
 ```
 
 

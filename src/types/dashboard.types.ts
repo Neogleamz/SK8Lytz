@@ -98,3 +98,52 @@ export interface IHardwareSettings {
   colorSorting?: number;
   colorSortingName?: string;
 }
+
+// ─── DockedController Domain Types (migrated from DockedController.tsx) ───────
+
+/** Mic audio source for Music mode. */
+export type MicSource = 'APP' | 'DEVICE';
+
+/** Color focus selector for Music mode dual-color picker. */
+export type MusicColorFocus = 'PRIMARY' | 'SECONDARY';
+
+/** A connected BLE device visible to the controller. */
+export interface IDeviceState {
+  id: string;
+  name: string;
+  points?: number;
+  segments?: number;
+  sorting?: 'RGB' | 'GRB' | 'BRG' | 'RBG' | 'BGR' | 'GBR';
+  [key: string]: any; // safe loose fallback for undocumented BLE peripheral keys
+}
+
+/** A saved light preset (user favorite or SK8Lytz Pick). */
+export interface IFavoriteState {
+  id: string;
+  name: string;
+  customName?: string;
+  mode: string;
+  color?: string;
+  patternId?: number;
+  speed: number;
+  brightness: number;
+  fixedColorMode?: 'FOREGROUND' | 'BACKGROUND';
+  fixedFgColor?: string;
+  fixedBgColor?: string;
+  fixedHue?: number;
+  multiColors?: string[];
+  multiTransition?: number;
+  multiLength?: number;
+  musicPrimaryColor?: string;
+  musicSecondaryColor?: string;
+  micSensitivity?: number;
+  micSource?: MicSource;
+  musicMatrixStyle?: number;
+}
+
+/** A quick color preset for the Builder sub-mode. */
+export interface IQuickPreset {
+  name: string;
+  colors: string[];
+  type: number;
+}
