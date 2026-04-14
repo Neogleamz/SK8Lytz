@@ -64,6 +64,32 @@ export const AppManager = React.memo(({
             </View>
           </View>
 
+          <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: Spacing.sm, marginTop: Spacing.sm }}>Hardware & UI Feedback</Text>
+          <View style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, borderRadius: 12, marginBottom: Spacing.lg, overflow: 'hidden' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: borderColor }}>
+              <View style={{ flex: 1, marginRight: Spacing.lg }}>
+                <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Ghost State (Optimistic UI)</Text>
+                <Text style={{ color: textMuted, fontSize: 12, marginTop: Spacing.xxs }}>Instantly update the UI before Bluetooth confirmation.</Text>
+              </View>
+              <Switch
+                value={appSettings['global_optimistic_ui_enabled'] !== false} // Default to true if undefined
+                onValueChange={(v) => updateSetting('global_optimistic_ui_enabled', v)}
+                trackColor={{ false: '#444', true: '#00f0ff' }}
+              />
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg }}>
+              <View style={{ flex: 1, marginRight: Spacing.lg }}>
+                <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Physical Haptics</Text>
+                <Text style={{ color: textMuted, fontSize: 12, marginTop: Spacing.xxs }}>Vibrate the device on Bluetooth command successes/failures.</Text>
+              </View>
+              <Switch
+                value={appSettings['global_haptics_enabled'] !== false} // Default to true if undefined
+                onValueChange={(v) => updateSetting('global_haptics_enabled', v)}
+                trackColor={{ false: '#444', true: '#00f0ff' }}
+              />
+            </View>
+          </View>
+
           <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: Spacing.sm }}>Community Hub Governance</Text>
           <View style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, borderRadius: 12, marginBottom: Spacing.lg, overflow: 'hidden' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: borderColor }}>

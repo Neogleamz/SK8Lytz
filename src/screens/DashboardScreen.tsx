@@ -78,6 +78,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     requestPermissions,
     setOnDataReceived,
     setOnHardwareProbed,
+    setOnDeviceRecovered,
     droppedOutDeviceIds,
     pendingRegistrations,
     clearPendingRegistrations,
@@ -123,6 +124,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     allDevices.forEach(d => { if (!merged.find(c => c.id === d.id)) merged.push(d); });
     AppLogger.updateKnownDevices(merged);
   }, [connectedDevices, allDevices]);
+
+  // Relay Soft Disconnect recoveries down to the DockedController for silent payload blasting
+  useEffect(() => {
+    setOnDeviceRecovered((deviceId: string) => {
+      dockedControllerRef.current?.replayStateToDevice(deviceId);
+    });
+  }, [setOnDeviceRecovered]);
 
   // ── Hardware BLE callbacks (extracted to useHardwareNotifications) ───────────
 
@@ -711,6 +719,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
             onDisconnect={handleDisconnect}
             crewRole={crewRole}
+            appSettings={appSettings}
             onCrewSceneChange={(scene: Record<string, any>) => crewService.broadcastScene(scene)}
             bleState={bleState}
             onPatternChanged={(patternName: string) => {

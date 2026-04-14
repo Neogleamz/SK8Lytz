@@ -27,12 +27,18 @@ interface UseOptimisticBLEOptions {
   onReconcile?: () => void;
   /** Debounce window (ms) for rapid-fire commands (sliders) */
   debounceMs?: number;
+  /** Global App Manager Toggle: Skips instant UI update returning immediately */
+  disableOptimisticUI?: boolean;
+  /** Global App Manager Toggle: Skips Haptics on success/failure */
+  disableHaptics?: boolean;
 }
 
 export function useOptimisticBLE({
   writeToDevice,
   onReconcile,
   debounceMs = 50,
+  disableOptimisticUI = false,
+  disableHaptics = false,
 }: UseOptimisticBLEOptions) {
   const [writeStatus, setWriteStatus] = useState<BLEWriteStatus>('IDLE');
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -51,8 +57,8 @@ export function useOptimisticBLE({
     onOptimistic?: () => void,
     targetDeviceId?: string,
   ): Promise<boolean> => {
-    // Phase 1: OPTIMISTIC — UI responds instantly
-    if (onOptimistic) onOptimistic();
+    // Phase 1: OPTIMISTIC — UI responds instantly unless globally disabled
+    if (onOptimistic && !disableOptimisticUI) onOptimistic();
     setWriteStatus('PENDING');
     pendingCount.current++;
 
@@ -76,8 +82,8 @@ export function useOptimisticBLE({
             // Phase 3a: CONFIRMED — hardware acknowledged
             if (pendingCount.current === 0) {
               setWriteStatus('CONFIRMED');
-              // Subtle success haptic (mobile only)
-              if (Platform.OS !== 'web') {
+              // Subtle success haptic (mobile only) unless globally disabled
+              if (Platform.OS !== 'web' && !disableHaptics) {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
               }
               // Reset to IDLE after brief confirmation window
@@ -94,8 +100,8 @@ export function useOptimisticBLE({
               source: 'optimistic_reconcile',
             });
 
-            // Error haptic (mobile only)
-            if (Platform.OS !== 'web') {
+            // Error haptic (mobile only) unless globally disabled
+            if (Platform.OS !== 'web' && !disableHaptics) {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
             }
 

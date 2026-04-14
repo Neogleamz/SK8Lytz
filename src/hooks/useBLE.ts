@@ -43,9 +43,10 @@ export interface BluetoothLowEnergyApi {
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   isBluetoothSupported: boolean;
   isBluetoothEnabled: boolean;
-  onDataReceived?: (deviceId: string, data: number[]) => void;
   setOnDataReceived: (callback: (deviceId: string, data: number[]) => void) => void;
   setOnHardwareProbed: (callback: (deviceId: string, config: any) => void) => void;
+  onDeviceRecovered?: (deviceId: string) => void;
+  setOnDeviceRecovered: (callback: (deviceId: string) => void) => void;
   droppedOutDeviceIds: string[];
   setDroppedOutDeviceIds: React.Dispatch<React.SetStateAction<string[]>>;
   pendingRegistrations: PendingRegistration[];
@@ -65,6 +66,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const [isBluetoothSupported, setIsBluetoothSupported] = useState(Platform.OS !== 'web');
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState(Platform.OS === 'web');
   const [dataReceivedCallback, setDataReceivedCallback] = useState<((deviceId: string, data: number[]) => void) | undefined>();
+  const [deviceRecoveredCallback, setDeviceRecoveredCallback] = useState<((deviceId: string) => void) | undefined>();
   const [droppedOutDeviceIds, setDroppedOutDeviceIds] = useState<string[]>([]);
   const [internalBlePhase, setInternalBlePhase] = useState<'IDLE' | 'CONNECTING' | 'DISCONNECTING'>('IDLE');
 
@@ -81,8 +83,14 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
   const disconnectListeners = useRef<Record<string, import('react-native-ble-plx').Subscription>>({});
   const dataReceivedCallbackRef = useRef<((deviceId: string, data: number[]) => void) | undefined>(undefined);
+  const deviceRecoveredCallbackRef = useRef<((deviceId: string) => void) | undefined>(undefined);
   const hardwareProbedCallbackRef = useRef<((deviceId: string, config: any) => void) | undefined>(undefined);
   const connectedDevicesRef = useRef<Device[]>([]);
+  const droppedOutDeviceIdsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    droppedOutDeviceIdsRef.current = droppedOutDeviceIds;
+  }, [droppedOutDeviceIds]);
 
   useEffect(() => {
     AppLogger.updateKnownDevices(allDevices);
@@ -182,7 +190,10 @@ export default function useBLE(): BluetoothLowEnergyApi {
     setConnectedDevices,
     setDroppedOutDeviceIds,
     disconnectListeners,
-    handleNotification
+    handleNotification,
+    onDeviceRecovered: (mac) => {
+      if (deviceRecoveredCallbackRef.current) deviceRecoveredCallbackRef.current(mac);
+    }
   });
 
   const scanner = useBLEScanner({
@@ -235,8 +246,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
       disconnectListeners.current[device.id] = bleManager.onDeviceDisconnected(device.id, (error: any, _d: any) => {
         AppLogger.warn(`[BLE] Device dropout detected for ${device.id}`);
         AppLogger.log('DEVICE_DISCONNECTED', { id: device.id, reason: 'dropout', error: error?.message });
-        setDroppedOutDeviceIds(prev => [...prev, device.id]);
-        setConnectedDevices(prev => prev.filter(c => c.id !== device.id));
+        setDroppedOutDeviceIds(prev => prev.includes(device.id) ? prev : [...prev, device.id]);
+        // FIX: Removed setConnectedDevices state purge to enable Soft Disconnect UI persistence
         if (disconnectListeners.current[device.id]) {
           disconnectListeners.current[device.id].remove();
           delete disconnectListeners.current[device.id];
@@ -343,8 +354,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
           disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {
             AppLogger.warn(`[BLE] Device dropout detected for ${conn.id} in group`);
             AppLogger.log('DEVICE_DISCONNECTED', { id: conn.id, reason: 'dropout', context: 'group', error: error?.message });
-            setDroppedOutDeviceIds(prev => [...prev, conn.id]);
-            setConnectedDevices(prev => prev.filter(c => c.id !== conn.id));
+            setDroppedOutDeviceIds(prev => prev.includes(conn.id) ? prev : [...prev, conn.id]);
+            // FIX: Removed setConnectedDevices state purge to enable Soft Disconnect UI persistence
             if (disconnectListeners.current[conn.id]) {
               disconnectListeners.current[conn.id].remove();
               delete disconnectListeners.current[conn.id];
@@ -428,6 +439,10 @@ export default function useBLE(): BluetoothLowEnergyApi {
     const chunkSize = Math.max(20, negotiatedMtuRef.current - 3);
 
     for (const device of targets) {
+      if (droppedOutDeviceIdsRef.current.includes(device.id)) {
+        // FIX: Skip writing to Soft Disconnected devices to prevent GATT timeouts and Thread Blocking
+        continue;
+      }
       try {
         for (let i = 0; i < payload.length; i += chunkSize) {
           const chunk = payload.slice(i, i + chunkSize);
@@ -503,6 +518,11 @@ export default function useBLE(): BluetoothLowEnergyApi {
     setOnHardwareProbed: (callback: (deviceId: string, config: any) => void) => { 
         hardwareProbedCallbackRef.current = callback; 
     },
+    onDeviceRecovered: deviceRecoveredCallback,
+    setOnDeviceRecovered: (callback: (deviceId: string) => void) => {
+        deviceRecoveredCallbackRef.current = callback;
+        setDeviceRecoveredCallback(() => callback);
+    },
     droppedOutDeviceIds,
     setDroppedOutDeviceIds,
     pendingRegistrations: scanner.pendingRegistrations,
@@ -518,6 +538,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     isBluetoothSupported,
     isBluetoothEnabled,
     dataReceivedCallback,
+    deviceRecoveredCallback,
     droppedOutDeviceIds,
     watchdog.isWatchdogActive,
     internalBlePhase

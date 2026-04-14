@@ -12,6 +12,7 @@ export interface UseBLEWatchdogProps {
   setDroppedOutDeviceIds: React.Dispatch<React.SetStateAction<string[]>>;
   disconnectListeners: React.MutableRefObject<Record<string, Subscription>>;
   handleNotification: (error: any, characteristic: any, deviceId: string) => void;
+  onDeviceRecovered?: (deviceId: string) => void;
 }
 
 export function useBLEWatchdog({
@@ -20,7 +21,8 @@ export function useBLEWatchdog({
   setConnectedDevices,
   setDroppedOutDeviceIds,
   disconnectListeners,
-  handleNotification
+  handleNotification,
+  onDeviceRecovered
 }: UseBLEWatchdogProps) {
   const isWatchdogRecovering = useRef<boolean>(false);
   const watchdogMissCountRef = useRef<Record<string, number>>({});
@@ -73,8 +75,11 @@ export function useBLEWatchdog({
 
       disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {
         AppLogger.log('DEVICE_DISCONNECTED', { id: conn.id, reason: 'dropout_post_relatch', error: error?.message });
-        setDroppedOutDeviceIds(prev => [...prev, conn.id]);
-        setConnectedDevices(prev => prev.filter(c => c.id !== conn.id));
+        setDroppedOutDeviceIds(prev => {
+           if (!prev.includes(conn.id)) return [...prev, conn.id];
+           return prev;
+        });
+        // FIX: Removed setConnectedDevices filter to keep device in UI for Soft Disconnects
         if (disconnectListeners.current[conn.id]) {
           disconnectListeners.current[conn.id].remove();
           delete disconnectListeners.current[conn.id];
@@ -94,7 +99,9 @@ export function useBLEWatchdog({
       ).catch(() => {});
 
       setConnectedDevices(prev => prev.map(d => d.id === device.id ? conn : d));
+      setDroppedOutDeviceIds(prev => prev.filter(id => id !== device.id));
       AppLogger.log('WATCHDOG_RELATCH', { deviceId: device.id, action: 'success' });
+      if (onDeviceRecovered) onDeviceRecovered(device.id);
       return true;
     } catch (e: any) {
       AppLogger.warn(`[Watchdog] Relatch failed for ${device.id}`, e?.message);

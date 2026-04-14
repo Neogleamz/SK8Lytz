@@ -138,6 +138,7 @@ interface Sk8lytzControllerProps {
   onCrewSceneChange?: (scene: Record<string, any>) => void;
   /** Triggered to persist the active pattern name to dashboard group persistent storage */
   onPatternChanged?: (patternName: string) => void;
+  appSettings?: Record<string, string | boolean>;
 }
 
 export type DockedControllerHandle = {
@@ -148,6 +149,7 @@ export type DockedControllerHandle = {
   setSpeed: (val: number) => void;
   handleRbmChange: (id: number) => void;
   applySpatialSegments: (segments: any[]) => void;
+  replayStateToDevice: (deviceId: string) => void;
 };
 
 // CURATED_PRESETS logic moved to internal component state for Supabase updating
@@ -155,7 +157,7 @@ export type DockedControllerHandle = {
 // MarqueeText moved to standalone component MarqueeText.tsx
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
-  function DockedController({ hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged }: Sk8lytzControllerProps, ref) {
+  function DockedController({ hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {} }: Sk8lytzControllerProps, ref) {
     const { Colors, isDark } = useTheme();
     const { height: windowHeight } = useWindowDimensions();
     const isShort = windowHeight < 720;
@@ -193,6 +195,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       // Indirection via ref: always calls the latest closure without recreating the hook callback
       onReconcile: () => onReconcileRef.current(),
       debounceMs: 40,
+      disableOptimisticUI: appSettings['global_optimistic_ui_enabled'] === false,
+      disableHaptics: appSettings['global_haptics_enabled'] === false,
     });
 
     const writeToDevice = async (payload: number[]) => {
@@ -339,8 +343,14 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         setSelectedPatternId(id);
         if (writeToDevice) writeToDevice(ZenggeProtocol.setCustomRbm(id, speed, brightness));
       },
-      applySpatialSegments
-    }), [speed, brightness, writeToDevice]);
+      applySpatialSegments,
+      replayStateToDevice: (deviceId: string) => {
+        if (!lastSentPayload || lastSentPayload.length === 0) return;
+        AppLogger.log('BLE_QUEUE_REPLAY', { deviceId, payloadLen: lastSentPayload.length });
+        // Use direct write to skip optimistic UI/haptics when ghosting a resurrected device
+        optimisticWrite(lastSentPayload, undefined, deviceId).catch(() => {});
+      }
+    }), [speed, brightness, writeToDevice, lastSentPayload, optimisticWrite]);
 
 
     // ── Global Device Context for Analytics ────────────────────────────────────
