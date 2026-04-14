@@ -329,11 +329,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
         return;
       }
       
-      const connections = [];
       for (const device of devices) {
         try {
           const conn = await bleManager.connectToDevice(device.id);
-          connections.push(conn);
           await conn.discoverAllServicesAndCharacteristics();
 
           try {
@@ -373,23 +371,31 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
           AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name, firmware });
 
-          const connCapture = conn;
-          setTimeout(async () => {
-            try {
-              const qp = ZenggeProtocol.queryHardwareSettings(false);
-              const b64 = Buffer.from(qp).toString('base64');
-              await connCapture.writeCharacteristicWithoutResponseForService(
-                ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
-              );
-            } catch (e: any) {}
-          }, 600);
+          // FIX: Add directly to React state immediately to prevent ghost overwrite at the end of the loop
+          setConnectedDevices(prev => {
+            if (!prev.find(c => c.id === conn.id)) return [...prev, conn];
+            return prev;
+          });
+
+          // FIX: Strictly sequence the 600ms latency before sending the 0x63 query
+          await new Promise(resolve => setTimeout(resolve, 600));
+
+          try {
+            const qp = ZenggeProtocol.queryHardwareSettings(false);
+            const b64 = Buffer.from(qp).toString('base64');
+            await conn.writeCharacteristicWithoutResponseForService(
+              ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
+            );
+          } catch (e: any) {}
+
+          // FIX: Mandatory 250ms buffer to allow Android OS to settle before next connection
+          await new Promise(resolve => setTimeout(resolve, 250));
+
         } catch (deviceError: any) {
           AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${device.id}`, deviceError);
           AppLogger.log('BLE_CONNECTION_ERROR', { error: deviceError?.message || String(deviceError), deviceId: device.id, context: 'group_sync_fail' });
         }
       }
-
-      setConnectedDevices(connections);
       watchdog.startWatchdog();
       setInternalBlePhase('IDLE');
       bleManager.stopDeviceScan();
