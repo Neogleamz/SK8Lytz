@@ -125,13 +125,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     AppLogger.updateKnownDevices(merged);
   }, [connectedDevices, allDevices]);
 
-  // Relay Soft Disconnect recoveries down to the DockedController for silent payload blasting
-  useEffect(() => {
-    setOnDeviceRecovered((deviceId: string) => {
-      dockedControllerRef.current?.replayStateToDevice(deviceId);
-    });
-  }, [setOnDeviceRecovered]);
-
   // ── Hardware BLE callbacks (extracted to useHardwareNotifications) ───────────
 
   const [updateTrigger, setUpdateTrigger] = useState(0);
@@ -196,6 +189,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [lastLeaderScene, setLastLeaderScene] = useState<Record<string, any> | null>(null);
   const [_pendingJoinCrewId, setPendingJoinCrewId] = useState<string | null>(null);
   const dockedControllerRef = React.useRef<DockedControllerHandle>(null);
+
+  // Relay Soft Disconnect recoveries down to the DockedController for silent payload blasting
+  useEffect(() => {
+    setOnDeviceRecovered((deviceId: string) => {
+      dockedControllerRef.current?.replayStateToDevice(deviceId);
+    });
+  }, [setOnDeviceRecovered]);
 
   // ── Phase 1: Voice Commands & Favorites → useDashboardVoice ───────────────────
   const {
