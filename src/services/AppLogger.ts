@@ -307,8 +307,29 @@ class AppLoggerService {
     // Apply Black Box Standardization early
     const payload = this.formatPayload(rawPayload);
 
+    // VIP Fast-Lane: Critical errors bypass the queue and physical storage to guarantee delivery
+    const CRITICAL_EVENTS: EventType[] = ['ERROR_CAUGHT', 'PROTOCOL_ERROR', 'BLE_WRITE_ERROR', 'BLE_CONNECTION_ERROR', 'CREW_ERROR'];
+    if (CRITICAL_EVENTS.includes(event)) {
+      if (supabase) {
+        supabase.from('telemetry_errors').insert({
+          session_id: this.sessionId,
+          event_type: event,
+          error_message: String(payload.message || payload.error || payload.errorMessage || JSON.stringify(payload) || 'Unknown error').substring(0, 500),
+          stack_trace: payload.stack || payload.stackTrace || null,
+          raw_context: {
+            ...payload,
+            host_device_id: Device.osInternalBuildId || Device.modelId || 'unknown'
+          }
+        }).then(({ error }: any) => {
+          if (error) console.warn('[AppLogger] VIP Fast-Lane failed:', error.message);
+        });
+      }
+      if (__DEV__) console.log(`[AppLogger VIP] ${event}`, payload);
+      return; 
+    }
+
     // Non-hardware events bypass correlation
-    if (['APP_LOG', 'APP_OPENED', 'SCAN_STARTED', 'SCAN_COMPLETED', 'DEVICE_DISCOVERED', 'DEVICE_CONNECTED', 'DEVICE_DISCONNECTED', 'PROTOCOL_ERROR'].includes(event)) {
+    if (['APP_LOG', 'APP_OPENED', 'SCAN_STARTED', 'SCAN_COMPLETED', 'DEVICE_DISCOVERED', 'DEVICE_CONNECTED', 'DEVICE_DISCONNECTED'].includes(event)) {
       const entry: LogEntry = { t: Date.now(), e: event, d: payload };
       this.buffer.push(entry);
       this.persist();
@@ -398,286 +419,51 @@ class AppLoggerService {
 
   async uploadLogsToSupabase() {
     if (!supabase) {
-      console.log('[AppLogger] Supabase client not configured. Skipping log upload.');
+      console.log('[AppLogger] Supabase client not configured. Skipping snapshot ingestion.');
       return;
     }
     await this.ensureLoaded();
     if (this.buffer.length === 0) return;
 
     try {
-      const deviceId = Device.osInternalBuildId || Device.modelId || 'unknown-device';
-      const primaryMacRaw = this.activeDevices.length > 0 ? this.activeDevices[0].id : 'unpaired-host';
-      const bleMac = primaryMacRaw.replace(/[^a-zA-Z0-9_-]/g, '');
-      const filename = `logs_${bleMac}.json`;
-
-      let mergedLogs = [...this.buffer];
-      let existingStats = null;
-      let existingDevices = [];
-
-      // Attempt to fetch existing cloud file for appending
-      const { data: fileData, error: dlError } = await supabase.storage.from('sk8lytz-logs').download(filename);
+      const deviceId = Device.osInternalBuildId || Device.modelId || 'unknown';
+      const sessionId = this.sessionId;
       
-      if (!dlError && fileData) {
-        try {
-          // Native RN safe text extraction
-          const text = await new Promise<string>((resolve, reject) => {
-            const fr = new FileReader();
-            fr.onload = () => resolve(fr.result as string);
-            fr.onerror = reject;
-            fr.readAsText(fileData);
-          });
-          
-          const parsed = JSON.parse(text);
-          if (parsed) {
-            existingStats = parsed.stats || null;
-            existingDevices = parsed.devices || [];
+      const currentRunLogs = [...this.buffer];
 
-            if (Array.isArray(parsed.logs)) {
-              // Deduplicate logs using timestamp + event fingerprint
-              const logMap = new Map();
-              parsed.logs.forEach((l: any) => {
-                  if (l.e !== 'RAW_PAYLOAD') logMap.set(l.t + '_' + l.e, l);
-              });
-              this.buffer.forEach((l: any) => {
-                  if (l.e !== 'RAW_PAYLOAD') logMap.set(l.t + '_' + l.e, l);
-              });
-              
-              mergedLogs = Array.from(logMap.values()).sort((a: any, b: any) => a.t - b.t);
-              
-              // Prevent critical memory faults on mobile by capping massive files
-              if (mergedLogs.length > 50000) mergedLogs = mergedLogs.slice(-50000);
-            }
-          }
-        } catch (e) {
-           console.warn('[AppLogger] Existing log parser failed, overwriting safely.');
-        }
-      }
+      console.log(`[AppLogger] Pushing ${currentRunLogs.length} events to telemetry_snapshots...`);
 
-      // Re-compile stats for exact current bounds
-      const currentStats = await this.getStats();
+      const CHUNK = 500;
+      for (let i = 0; i < currentRunLogs.length; i += CHUNK) {
+        const chunk = currentRunLogs.slice(i, i + CHUNK);
+        const dbPayload = chunk.map((item: any) => {
+          const isGroup = item.d?.target === 'group' || (item.d?.deviceIds && item.d.deviceIds.length > 1);
+          const tgtDev = isGroup ? null : (item.d?.deviceId || null);
 
-      // Deduplicate devices
-      const deviceMap = new Map();
-      existingDevices.forEach((d: any) => deviceMap.set(d.id, d));
-      this.activeDevices.forEach((d: any) => deviceMap.set(d.id, d));
-
-      const mergedPayload = {
-        app: 'SK8Lytz',
-        hostDeviceId: deviceId,
-        bleMac: primaryMacRaw,
-        exported: new Date().toISOString(),
-        count: mergedLogs.length,
-        stats: { ...existingStats, ...currentStats, totalEvents: mergedLogs.length },
-        devices: Array.from(deviceMap.values()),
-        logs: mergedLogs,
-      };
-
-      const jsonStr = JSON.stringify(mergedPayload, null, 2);
-
-      // Uploading as a string/Blob to the 'sk8lytz-logs' bucket, force upsert
-      const { data, error } = await supabase.storage
-        .from('sk8lytz-logs')
-        .upload(filename, jsonStr, {
-          contentType: 'application/json',
-          upsert: true,
+          return {
+             session_id: sessionId,
+             device_id: tgtDev,
+             event_type: item.e,
+             metadata: {
+               timestamp_ms: item.t,
+               host_device_id: deviceId,
+               ...item.d
+             }
+          };
         });
 
-      if (error) {
-        console.error('[AppLogger] Failed to upload logs to Supabase:', error);
-        throw new Error(error.message);
-      } else {
-        console.log(`[AppLogger] Successfully appended and uploaded logs: ${data.path}`);
-        
-        // ENTERPRISE DB INJECTION STREAM
-        // Directly maps telemetry to normalized raw relational Postgres tables
-        // INSERTS ONLY THE CURRENT DELTA BUFFER - Prevents doubling up historical merged logs
-        try {
-          console.log('[AppLogger] Pushing native telemetry structures to Postgres Timeseries...');
-          const sessionId = this.sessionId;
-          const currentRunLogs = [...this.buffer].filter(l => l.e !== 'RAW_PAYLOAD');
-          
-          // 1. Session Stats — full host device profile + session metrics
-          const hostInfo = await this.getHostDeviceInfo();
-          await supabase.from('parsed_session_stats').upsert([{
-            session_id: sessionId,
-            device_id: primaryMacRaw,
-            host_device_id: deviceId,
-            timestamp_ms: currentRunLogs.length > 0 ? currentRunLogs[currentRunLogs.length - 1].t : Date.now(),
-            devices_discovered: currentStats.devicesDiscovered || 0,
-            total_events: currentRunLogs.length || 0,
-            storage_bytes_estimate: currentStats.storageBytesEstimate || 0,
-            total_storage_estimate: currentStats.totalStorageEstimate || 0,
-            average_load_time_ms: currentStats.averageLoadTimeMs || 0,
-            last_app_opened_time: currentStats.lastAppOpenedTime || 0,
-            primary_ble_mac: currentStats.primaryBleMac || primaryMacRaw,
-            mode_usage: currentStats.modeUsage || {},
-            color_usage: currentStats.colorUsage || {},
-            // ── Host Device Identity ──────────────────────────────────────
-            device_brand:         hostInfo.brand,
-            device_model:         hostInfo.model_name,
-            device_manufacturer:  hostInfo.manufacturer,
-            device_model_id:      hostInfo.model_id,
-            device_name:          hostInfo.device_name,
-            device_type:          hostInfo.device_type,
-            device_year_class:    hostInfo.device_year_class,
-            is_physical_device:   hostInfo.is_physical_device,
-            // ── OS ───────────────────────────────────────────────────────
-            os_name:              hostInfo.os_name,
-            os_version:           hostInfo.os_version,
-            os_build_id:          hostInfo.os_build_id,
-            platform_api_level:   hostInfo.platform_api_level,
-            // ── Hardware ─────────────────────────────────────────────────
-            total_memory_mb:      hostInfo.total_memory_mb,
-            // ── Power ────────────────────────────────────────────────────
-            battery_level:        hostInfo.battery_level,
-            battery_state:        hostInfo.battery_state,
-            is_low_power_mode:    hostInfo.is_low_power_mode,
-            // ── Full blob (all fields including rare/platform-specific) ──
-            host_device_info:     hostInfo,
-          }], { onConflict: 'session_id' });
-
-          // Extract Custom Hardware Names from ng_device_configs (keyed by device MAC)
-          const customNameMap = new Map<string, string>();
-          try {
-            const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
-            if (stored) {
-              const configs = JSON.parse(stored);
-              for (const d of this.activeDevices) {
-                const cfg = configs[d.id];
-                if (cfg?.name) customNameMap.set(d.id, cfg.name);
-              }
-            }
-          } catch(e) {
-            console.warn('[AppLogger] Failed to read device configs for name resolution', e);
-          }
-
-          // 2. Devices
-          if (this.activeDevices.length > 0) {
-            const devPayload = this.activeDevices.map((d: any) => ({
-                session_id: sessionId,
-                device_id: d.id,
-                timestamp_ms: Date.now(),
-                host_device_id: deviceId,
-                name: customNameMap.get(d.id) || d.name,
-                rssi: d.rssi,
-                firmware_ver: d.firmwareVer ? { fw: d.firmwareVer, led: d.ledVersion, ble: d.bleVersion } : (d.manufacturerData || {}),
-                ic_type: d.hardwareSettings?.icType,
-                led_points: d.hardwareSettings?.ledPoints,
-                segments: d.hardwareSettings?.segments,
-                color_sorting: d.hardwareSettings?.colorSorting
-            }));
-            await supabase.from('parsed_session_devices').upsert(devPayload, { onConflict: 'session_id, device_id' });
-          }
-
-          // 3. New Usage Tracking Matrix directly from current logs
-          const modeMap = new Map<string, any>();
-          const patternMap = new Map<string, any>();
-          const colorMap = new Map<string, any>();
-          
-          currentRunLogs.forEach((item: any) => {
-              const isGroup = item.d?.target === 'group' || (item.d?.deviceIds && item.d.deviceIds.length > 1);
-              const groupId = isGroup ? item.d?.deviceIds?.join('_') : null;
-              const groupName = isGroup ? `Group (${item.d?.groupSize || item.d?.deviceIds?.length} Devices)` : null;
-              // Optimization: Unrolling targets is a major redundancy. Store only primary or null mapping.
-              const tgtDev = isGroup ? null : (item.d?.deviceId || primaryMacRaw);
-              
-              if (item.e === 'MODE_CHANGED' && item.d?.mode) {
-                  const hash = `${groupId || tgtDev}|${item.d.mode}`;
-                  modeMap.set(hash, { mName: item.d.mode, count: (modeMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev });
-              }
-              if (item.e === 'PATTERN_CHANGED' && item.d?.pattern) {
-                  const pName = item.d.name || item.d.pattern;
-                  const hash = `${groupId || tgtDev}|${pName}`;
-                  patternMap.set(hash, { pName, count: (patternMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev });
-              }
-              if (item.e === 'COLOR_CHANGED' && item.d?.hex) {
-                  const hash = `${groupId || tgtDev}|${item.d.hex}`;
-                  colorMap.set(hash, { hex: item.d.hex, count: (colorMap.get(hash)?.count || 0) + 1, gId: groupId, gName: groupName, tgtDev });
-              }
-          });
-
-          const modePayload = Array.from(modeMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, device_name: v.tgtDev ? customNameMap.get(v.tgtDev) : null, mode_name: v.mName, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
-          if (modePayload.length > 0) await supabase.from('parsed_mode_usage').insert(modePayload);
-
-          const patternPayload = Array.from(patternMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, device_name: v.tgtDev ? customNameMap.get(v.tgtDev) : null, pattern_idx: v.pName, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
-          if (patternPayload.length > 0) await supabase.from('parsed_pattern_usage').insert(patternPayload);
-
-          const colorPayload = Array.from(colorMap.values()).map(v => ({ session_id: sessionId, device_id: v.tgtDev, device_name: v.tgtDev ? customNameMap.get(v.tgtDev) : null, hex_color: v.hex, usage_count: v.count, group_id: v.gId, group_name: v.gName, timestamp_ms: Date.now() }));
-          if (colorPayload.length > 0) await supabase.from('parsed_color_usage').insert(colorPayload);
-
-          // 4. Trace Log Push (Batched)
-          const CHUNK = 1000;
-          for (let i = 0; i < currentRunLogs.length; i += CHUNK) {
-             const chunk = currentRunLogs.slice(i, i + CHUNK);
-             const dbLogPayload = chunk.map((item: any) => {
-                const isGroup = item.d?.target === 'group' || (item.d?.deviceIds && item.d.deviceIds.length > 1);
-                const tgtDev = isGroup ? null : (item.d?.deviceId || primaryMacRaw);
-                
-                return {
-                  session_id: sessionId,
-                  host_device_id: deviceId,
-                  timestamp_ms: item.t,
-                  event_type: item.e,
-                  direction: item.d?.dir || null,
-                  hex_payload: item.d?.hex || null,
-                  device_id: tgtDev,
-                  device_name: tgtDev ? customNameMap.get(tgtDev) || null : null,
-                  group_id: isGroup ? item.d?.deviceIds?.join('_') : null,
-                  group_name: isGroup ? `Group (${item.d?.groupSize || item.d?.deviceIds?.length} Devices)` : null,
-                  raw_data: (({ dir: _d, hex: _h, deviceId: _di, ...r }) => r)(item.d || {})
-                };
-             });
-             await supabase.from('parsed_logs').insert(dbLogPayload);
-          }
-          
-          // 5. Critical Error Telemetry
-          const CRITICAL_EVENTS = ['ERROR_CAUGHT', 'PROTOCOL_ERROR', 'BLE_WRITE_ERROR', 'BLE_CONNECTION_ERROR', 'CREW_ERROR'];
-          const errorLogs = currentRunLogs.filter((item: any) => CRITICAL_EVENTS.includes(item.e));
-          if (errorLogs.length > 0) {
-              const errorPayload = errorLogs.map((item: any) => ({
-                  session_id: sessionId,
-                  event_type: item.e,
-                  error_message: String(item.d?.message || item.d?.error || item.d?.errorMessage || JSON.stringify(item.d) || 'Unknown error').substring(0, 500),
-                  stack_trace: item.d?.stack || item.d?.stackTrace || null,
-                  raw_context: {
-                      ...item.d,
-                      host_device_id: deviceId,
-                      target_device_id: item.d?.deviceId || primaryMacRaw,
-                      os_name: hostInfo.os_name,
-                      os_version: hostInfo.os_version
-                  }
-              }));
-              await supabase.from('telemetry_errors').insert(errorPayload);
-              console.log(`[AppLogger] Pushed ${errorPayload.length} critical errors to telemetry tracker.`);
-          }
-
-          // 6. LED Diagnostics Fast-Track
-          const labLogs = [...this.buffer].filter((l: any) => l.e === 'RAW_PAYLOAD' && l.d?.dir === 'TX');
-          if (labLogs.length > 0) {
-              const diagPayload = labLogs.map((item: any) => ({
-                  device_id: item.d?.deviceId || primaryMacRaw,
-                  payload_hex: item.d?.hex,
-                  protocol: item.d?.hex ? '0x' + item.d.hex.substring(0, 2) : 'UNKNOWN',
-                  test_label: item.d?.note || 'Diagnostic Lab TX',
-                  session_notes: sessionId
-              }));
-              await supabase.from('led_diagnostics').insert(diagPayload);
-              console.log(`[AppLogger] Pushed ${diagPayload.length} diagnostic payloads to telemetry track.`);
-          }
-
-          console.log('[AppLogger] Postgres Native Insertion Complete!');
-
-          // Buffer rotation: clear local log buffer after a confirmed clean push
-          // This prevents old events from re-uploading on subsequent calls
-          this.buffer = [];
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([]));
-          console.log('[AppLogger] Local buffer cleared after successful push.');
-        } catch (dbErr) {
-          console.error('[AppLogger] Non-fatal Supabase DB ingestion failure:', dbErr);
+        const { error } = await supabase.from('telemetry_snapshots').insert(dbPayload);
+        if (error) {
+           console.error('[AppLogger] Batch insert failed:', error);
         }
       }
+
+      this.buffer = [];
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+      console.log('[AppLogger] Ingestion complete. Local buffer cleared.');
+      
     } catch (err) {
-      console.error('[AppLogger] Upload exception:', err);
+      console.error('[AppLogger] Ingestion exception:', err);
       throw err;
     }
   }

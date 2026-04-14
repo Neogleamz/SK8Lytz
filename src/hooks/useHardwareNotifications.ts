@@ -88,23 +88,18 @@ export function useHardwareNotifications({
         
         // Pure parser call
         const parsed = BlePayloadParser.parseLedPayload(payload);
-        const deviceName = allDevicesRef.current.find((d: BLEDeviceMinimal) => d.id === deviceId)?.name ?? null;
-
-        supabase.from('device_diagnostics').insert({
-          device_id:     deviceId,
-          device_name:   deviceName,
-          payload_hex:   payloadHex,
-          payload_bytes: payload.length,
-          byte_0:        payload[0] ?? null,
-          byte_2:        payload[2] ?? null,
-          parsed_ok:     parsed?.parsedOk ?? false,
-          points:        parsed?.rawUploadData.points ?? null,
-          ic_type:       parsed?.rawUploadData.icType ?? null,
-          ic_name:       parsed?.rawUploadData.icName ?? null,
-          color_sorting: parsed?.rawUploadData.colorSorting ?? null,
-          color_order:   parsed?.rawUploadData.colorOrder ?? null,
-        }).then(({ error }: any) => {
-          if (error) AppLogger.warn('[Diagnostics] upload failed:', error.message);
+        
+        AppLogger.log('RAW_PAYLOAD', {
+           dir: 'RX',
+           deviceId: deviceId,
+           hex: payloadHex,
+           bytes: payload.length,
+           parsedOk: parsed?.parsedOk ?? false,
+           diagnostics: {
+               byte_0: payload[0] ?? null,
+               byte_2: payload[2] ?? null,
+               ...parsed?.rawUploadData
+           }
         });
       }
 

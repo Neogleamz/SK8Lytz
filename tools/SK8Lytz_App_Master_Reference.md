@@ -405,11 +405,12 @@ System-wide `cleanupExpiredSessions()` ends sessions older than 24h.
 | `peak_speed_mph` | `float8` | Maximum speed             |
 | `calories`       | `int4`   | Estimated via MET formula |
 
-### Telemetry Storage Optimization (Group Deduplication)
-To prevent database bloat, the telemetry ingestion pipelines (`AppLogger.ts`, `syncTelemetryBuckets.mjs`) enforce strict deduplication:
-- **Single-Row Mappings**: Multi-device commands (like changing mode on a group of 4 skates) MUST NOT be expanded into 4 individual database rows via `.flatMap()`. 
-- **The `group_id` Standard**: Instead, a single row is inserted, assigning `device_id` as `null` while mapping the devices into `group_id`. Future dashboard queries searching for single device interactions must utilize `WHERE device_id = 'A' OR group_id LIKE '%A%'`.
-- **JSONB Optimization**: The `raw_data` JSON structure strips redundant keys (`deviceId`, `hex`, `dir`) before Postgres insertion since they are already stored explicitly in native SQL columns in `parsed_logs`.
+### Telemetry Storage Optimization (JSONB Consolidation)
+To maximize query performance and eliminate cloud storage bloat, SK8Lytz utilizes a unified JSONB ingestion model, completely bypassing legacy flat-file chunking and fragmented Postgres tables.
+- **Unified Ingestion (`telemetry_snapshots`)**: All hardware usage, BLE events, and functional telemetry logs are pipe-lined directly into `telemetry_snapshots` utilizing a generic `event_type` and a flexible `JSONB` `metadata` column.
+- **GIN Indexing**: The `metadata` JSONB column features a full Postgres `GIN` index, enabling hyper-fast arbitrary querying on any nested diagnostic property without table mutations.
+- **VIP Error Fast-Lane (`telemetry_errors`)**: Critical crashes (`ERROR_CAUGHT`, `PROTOCOL_ERROR`) completely bypass the standard Spool buffers. They are instantly asynchronously fired into a dedicated `telemetry_errors` table using isolated `try/catch` fallbacks, guaranteeing delivery even during OOM crashes or buffer failures.
+- **Deduplication Strategy**: Multi-device hardware commands (e.g. groups) insert a single row with `device_id` as `null` while identifying targets in the `group_id` or `metadata->>'deviceIds'` array, preventing duplicate db row expansion.
 
 ---
 
