@@ -22,6 +22,10 @@ export function useBLEAutoRecovery({
   const [ghostedDeviceIds, setGhostedDeviceIds] = useState<string[]>([]);
   const ghostedRefs = useRef<string[]>([]);
 
+  // After this many failures we give up and eject the device from the UI.
+  // Prevents permanent dark-device limbo when a Zengge chip is in a hard soft-lock.
+  const MAX_RECOVERY_ATTEMPTS = 8;
+
   const initiateRecovery = useCallback((deviceId: string) => {
     // If already recovering, ignore
     if (ghostedRefs.current.includes(deviceId)) return;
@@ -37,23 +41,36 @@ export function useBLEAutoRecovery({
     const attemptRecoveryLoop = async () => {
       while (ghostedRefs.current.includes(deviceId)) {
         try {
-          // Exponential backoff ceiling at 5s, start at 1.5s
+          // Exponential backoff: 1.5s → 5s ceiling
           const backoff = Math.min(1500 + (attempts * 500), 5000);
           await new Promise(r => setTimeout(r, backoff));
-          
+
           // Safety check if it was cancelled during sleep
           if (!ghostedRefs.current.includes(deviceId)) break;
           attempts++;
+
+          // FIX: Hard ceiling — eject device after MAX_RECOVERY_ATTEMPTS failures.
+          // This prevents the device from staying in the ghost queue indefinitely,
+          // silently blocking all writes with no user feedback.
+          if (attempts > MAX_RECOVERY_ATTEMPTS) {
+            AppLogger.warn(`[AutoRecovery] ${deviceId} failed after ${attempts} attempts — ejecting from UI`);
+            AppLogger.log('AUTO_RECOVERY_FAILED', { deviceId, attempts });
+            ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
+            setGhostedDeviceIds([...ghostedRefs.current]);
+            // Remove the dead device from the connected list so the UI is honest
+            setConnectedDevices(prev => prev.filter(d => d.id !== deviceId));
+            break;
+          }
 
           if (!bleManager) break;
 
           // Attempt blind GATT connection
           const conn = await bleManager.connectToDevice(deviceId, { timeout: 3500 });
           await conn.discoverAllServicesAndCharacteristics();
-          
+
           try { await conn.requestMTU(512); } catch (e) {}
 
-          // 3. Purge old listener and attach new one
+          // Purge old listener and attach new one
           if (disconnectListeners.current[conn.id]) {
             disconnectListeners.current[conn.id].remove();
             delete disconnectListeners.current[conn.id];
@@ -69,24 +86,24 @@ export function useBLEAutoRecovery({
             (error: any, characteristic: any) => handleNotification(error, characteristic, conn.id)
           );
 
-          // 4. Send 0x63 Ping to align hardware state
+          // Send 0x63 Ping to align hardware state
           await new Promise(r => setTimeout(r, 600));
           const qp = ZenggeProtocol.queryHardwareSettings(false);
           await conn.writeCharacteristicWithoutResponseForService(
             ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, Buffer.from(qp).toString('base64')
           ).catch(() => {});
 
-          // 5. Publish back to UI and clear ghost state
+          // Publish back to UI and clear ghost state
           setConnectedDevices(prev => prev.map(d => d.id === deviceId ? conn : d));
-          
+
           ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
           setGhostedDeviceIds([...ghostedRefs.current]);
-          
+
           AppLogger.log('AUTO_RECOVERY_SUCCESS', { deviceId, attempts });
           break;
 
         } catch (e: any) {
-          // Silent ignore, will loop again
+          // Silent ignore on GATT error — will loop again with backoff
         }
       }
     };

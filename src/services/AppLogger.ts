@@ -68,6 +68,7 @@ export type EventType =
   | 'PERFORMANCE_METRIC'
   | 'AUTO_RECOVERY_STARTED'
   | 'AUTO_RECOVERY_SUCCESS'
+  | 'AUTO_RECOVERY_FAILED'
   | 'MOUNT'
   | 'UNMOUNT'
   | 'SYNC'

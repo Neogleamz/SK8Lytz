@@ -129,7 +129,7 @@ interface Sk8lytzControllerProps {
   points?: number;
   devices?: IDeviceState[];
   onLongPressDevice?: (device: IDeviceState) => void;
-  writeToDevice?: (payload: number[]) => Promise<void | boolean>;
+  writeToDevice?: (payload: number[]) => Promise<boolean>;
   isPoweredOn?: boolean;
   onDisconnect?: () => void;
   /** 'leader' = broadcast changes, 'member' = receive changes, null = solo */
@@ -200,15 +200,17 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     });
 
     const writeToDevice = async (payload: number[]) => {
-      // Short-circuit dead writes if we are disconnected or disconnecting
-      if (bleState === 'DISCONNECTING' || bleState === 'IDLE' || bleState === 'ERROR') return;
-      // Snapshot confirmed state BEFORE the write — onReconcile will restore this on failure.
-      // captureEntireState() is safe to call here because this function is only invoked at
-      // interaction time, by which point all consts in this render cycle are fully initialized.
+      // FIX: Single canonical gate — only allow writes when hardware is READY.
+      // Previously guarded DISCONNECTING | IDLE | ERROR only, leaving CONNECTING
+      // and PROBING unguarded. During a group connect sequence, useEffect hooks
+      // (e.g. applyFixedPattern) could fire writes into a partially-initialized
+      // GATT connection, causing write errors and racing discoverAllServices.
+      if (bleState !== 'READY') return;
       lastConfirmedStateRef.current = captureEntireState();
       setLastSentPayload([...payload]);
       await optimisticWrite(payload);
     };
+
 
 
     const {

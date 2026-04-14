@@ -36,7 +36,7 @@ export interface BluetoothLowEnergyApi {
   connectToDevice: (device: Device) => Promise<string | undefined>;
   connectToDevices: (devices: Device[]) => Promise<void>;
   disconnectFromDevice: () => void;
-  writeToDevice: (payload: number[], targetDeviceId?: string) => Promise<void>;
+  writeToDevice: (payload: number[], targetDeviceId?: string) => Promise<boolean>;
   probeDevice: (mac: string) => Promise<void>;
   connectedDevices: Device[];
   allDevices: Device[];
@@ -406,12 +406,13 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
   const negotiatedMtuRef = useRef<number>(186);
 
-  const writeToDevice = async (payload: number[], targetDeviceId?: string) => {
+  const writeToDevice = async (payload: number[], targetDeviceId?: string): Promise<boolean> => {
     const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
     console.log(`[BLE WRITE ${payload.length}B | MTU=${negotiatedMtuRef.current}]${targetDeviceId ? ` [→${targetDeviceId.slice(-4)}]` : ''}`, hexString.substring(0, 80));
     AppLogger.setLastTxPayload(hexString);
 
-    if (connectedDevicesRef.current.length === 0 || Platform.OS === 'web') return;
+    // Web / no-op path: return true so optimisticWrite sees success
+    if (connectedDevicesRef.current.length === 0 || Platform.OS === 'web') return true;
 
     const targets = targetDeviceId
       ? connectedDevicesRef.current.filter(d => d.id === targetDeviceId)
@@ -419,34 +420,38 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
     if (targets.length === 0 && targetDeviceId) {
       AppLogger.warn(`Target device ${targetDeviceId} not found in connected devices`);
-      return;
+      return false;
     }
 
     const chunkSize = Math.max(20, negotiatedMtuRef.current - 3);
+    let allSucceeded = true;
 
     for (const device of targets) {
+      // Skip ghosted (recovering) devices — don't count as failure
       if (autoRecovery.ghostedDeviceIds.includes(device.id)) continue;
       try {
         for (let i = 0; i < payload.length; i += chunkSize) {
           const chunk = payload.slice(i, i + chunkSize);
           const base64Chunk = Buffer.from(chunk).toString('base64');
-          
           await device.writeCharacteristicWithoutResponseForService(
             ZENGGE_SERVICE_UUID,
             ZENGGE_CHARACTERISTIC_UUID,
             base64Chunk
           );
-          
           if (i + chunkSize < payload.length) {
             await new Promise(resolve => setTimeout(resolve, 10));
           }
         }
       } catch (writeError: any) {
+        allSucceeded = false;
         AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError?.message);
         AppLogger.log('BLE_WRITE_ERROR', { error: writeError?.message || String(writeError), target: device.id, payloadLen: payload.length });
       }
     }
+
+    return allSucceeded;
   };
+
 
   const disconnectFromDevice = async () => {
     setInternalBlePhase('DISCONNECTING');
