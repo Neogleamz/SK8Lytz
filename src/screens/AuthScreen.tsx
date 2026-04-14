@@ -14,6 +14,7 @@ import {
     View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { makeRedirectUri } from 'expo-auth-session';
 import EulaModal from '../components/modals/EulaModal';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -147,9 +148,10 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
     if (!email.trim()) { showError('Enter your email to receive a magic link.'); return; }
     if (!isValidEmail(email)) { showError('Please enter a valid email address.'); return; }
     setLoading(true);
+    const redirectUrl = makeRedirectUri({ path: 'auth' });
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: 'sk8lytz://auth' },
+      options: { emailRedirectTo: redirectUrl },
     });
     setLoading(false);
     if (error) {
@@ -252,6 +254,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
     }
 
     setLoading(true);
+    const redirectUrl = makeRedirectUri({ path: 'auth' });
     const { error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
@@ -261,7 +264,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           display_name: username.trim(), 
           accepted_eula_version: 1 
         },
-        emailRedirectTo: 'sk8lytz://auth'
+        emailRedirectTo: redirectUrl
       },
     });
     setLoading(false);
@@ -280,7 +283,8 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
     if (!isValidEmail(email)) { showError('Please enter a valid email address.'); return; }
     setErrorMessage('');
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: 'sk8lytz://auth' });
+    const redirectUrl = makeRedirectUri({ path: 'auth' });
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: redirectUrl });
     setLoading(false);
     if (error) {
       showError(error.message);
