@@ -73,22 +73,23 @@ async function scrapeGoogleDOM() {
       });
       console.log(`✅ Extracted: ⭐${rating || '?'} | 📍${address || '?'} | 📞${phone || '?'} | 🛒${hasProshop ? 'YES' : 'NO'}`);
 
+      // Incremental Save: Write to disk immediately so background crashes don't lose data
+      const outputPath = path.join(__dirname, 'enriched.json');
+      fs.writeFileSync(outputPath, JSON.stringify(enrichedData, null, 2), 'utf8');
+
     } catch (err: any) {
       console.error(`❌ Failed on ${spot.name}:`, err.message);
     } finally {
       await page.close();
-      // Random delay to avoid IP ban (2-5 seconds)
-      const waitTime = Math.floor(Math.random() * 3000) + 2000;
+      // Stealth Mode: Random delay between 30 to 90 seconds to fly completely under radar
+      const waitTime = Math.floor(Math.random() * 60000) + 30000;
+      console.log(`⏳ Sleeping for ${Math.floor(waitTime/1000)}s...`);
       await delay(waitTime);
     }
   }
 
   await browser.close();
-
-  // Save the enriched data
-  const outputPath = path.join(__dirname, 'enriched.json');
-  fs.writeFileSync(outputPath, JSON.stringify(enrichedData, null, 2), 'utf8');
-  console.log(`\n💾 Saved highly-enriched JSON heist to ${outputPath}`);
+  console.log(`\n💾 Saved highly-enriched JSON heist to ${path.join(__dirname, 'enriched.json')}`);
 }
 
 // Execute if run directly

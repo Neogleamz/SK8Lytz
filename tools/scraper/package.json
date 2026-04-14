@@ -5,7 +5,10 @@
   "main": "index.ts",
   "scripts": {
     "start": "ts-node index.ts",
-    "seed": "ts-node SeedOverpass.ts"
+    "seed": "ts-node SeedOverpass.ts",
+    "crawl": "ts-node GoogleShadowDOM.ts",
+    "push": "ts-node PushToDB.ts",
+    "start:bg": "powershell -Command \"Start-Process node -ArgumentList 'node_modules/ts-node/dist/bin.js', 'GoogleShadowDOM.ts' -WindowStyle Hidden -RedirectStandardOutput 'scraper.log' -RedirectStandardError 'scraper.error.log'\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.0",
