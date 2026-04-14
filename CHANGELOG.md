@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-04-14
+
+### Changed
+
+- **Telemetry Integrity**: Performed complete Supabase RLS security audit. Deprecated universal anon INSERT protocols for `telemetry_snapshots` and `led_diagnostics`, enforcing strict authentication barriers for all telemetry logging to prevent data spoofing.
+- **Rendering Performance**: Implemented rigorous React.memo and useMemo optimizations across SVG Cartesian coordinate mapping components (`AnalogGauge`), saving critical JS thread FPS during Dashboard data cascades.
+- **Query Hardening**: Applied an automated `idx_parsed_session_stats_session_id` B-Tree Database Migration mapping to `parsed_session_stats`, eliminating Postgres Sequential Scan fallbacks.
+- **Agentic Workflows**: Integrated `turbo-all` autonomy scripts to speed up safe administrative and Git cleanup macros.
+
 ## [1.5.0] - 2026-04-14
 
 ### Changed
