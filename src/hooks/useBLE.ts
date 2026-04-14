@@ -234,8 +234,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
       }
       
       // FIX: Android thoroughly forbids GATT connections during high-duty LE scans. Must stop before connect.
-      bleManager.stopDeviceScan();
-      scanner.scanForPeripherals({ keepAlive: true });
+      scanner.stopScanner();
       const deviceConnection = await bleManager.connectToDevice(device.id);
       setConnectedDevices([deviceConnection]);
       await deviceConnection.discoverAllServicesAndCharacteristics();
@@ -335,8 +334,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
         return;
       }
       // FIX: Android thoroughly forbids GATT connections during high-duty LE scans. Must stop before connect.
-      bleManager.stopDeviceScan();
-      scanner.scanForPeripherals({ keepAlive: true });
+      scanner.stopScanner();
 
       for (const device of devices) {
         try {

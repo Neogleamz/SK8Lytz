@@ -1,6 +1,13 @@
-## [1.8.5] - 2026-04-14
+## [1.8.6] - 2026-04-14
 
 ### 🚑 Emergency Hotfixes
+
+**Hardware Wizard Regression**
+- **Scanner Polling Restored** (`useBLEScanner.ts`, `useBLE.ts`, `HardwareSetupWizardScreen.tsx`): The `3bb9b691` deploy (v1.8.3) improperly hijacked `options.keepAlive: true` and forced it to act as a hard kill-switch for the entire scanner to satisfy a state machine standard. This broke the `HardwareSetupWizard` which relies on `keepAlive: true` to continuously poll for new devices over consecutive 2-second heartbeats without repeatedly wiping the list of discovered devices. The logic has been completely decoupled: `keepAlive: true` once again simply instructs the scanner to "scan without wiping the cache", and a new, explicit `stopScanner()` method handles Android GATT suspension.
+
+---
+
+## [1.8.5] - 2026-04-14
 
 **Zero-Day Connection Blocker**
 - **Android GATT/LE Scan Exception** (`useBLE.ts`, `useDashboardAutoConnect.ts`): Re-injected the hard `bleManager.stopDeviceScan()` immediately prior to GATT initialization. The v1.8.4 deployment removed this under the mistaken assumption it was sabotaging the auto-scanner. Without it, Android violently rejects all incoming GATT connection intents (`operation canceled`) because native LE background scans consume the BLE adapter's duty-cycle. To resolve the 'Auto-Scanner Sabotage' properly, a new recursive `scanForPeripherals()` resume trigger was injected into the `.finally()` block of `useDashboardAutoConnect`, ensuring multi-skate discovery continues *after* the GATT initialization completes.

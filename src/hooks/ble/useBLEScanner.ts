@@ -167,17 +167,18 @@ export function useBLEScanner({
     console.log('[BLE Probe] All rounds complete.');
   };
 
+  const stopScanner = () => {
+    bleManager?.stopDeviceScan();
+    setScannerState('IDLE');
+  };
+
   const scanForPeripherals = (options?: { keepAlive?: boolean }) => {
-    // FIX: keepAlive is a pure intent signal to stop the hardware scan.
-    // It must exit BEFORE setScannerState to avoid poisoning derivedBleState
-    // back to 'SCANNING' right after a successful group connect.
-    if (options?.keepAlive) {
-      bleManager?.stopDeviceScan();
-      return;
-    }
     if (scannerState === 'SCANNING') return;
     setScannerState('SCANNING');
-    setPendingRegistrations([]);
+    
+    if (!options?.keepAlive) {
+      setPendingRegistrations([]);
+    }
 
     const knownMacs = new Set<string>();
 
@@ -335,6 +336,7 @@ export function useBLEScanner({
     scannerState,
     pendingRegistrations,
     scanForPeripherals,
+    stopScanner,
     setPendingRegistrations,
     classifyProbeResults
   };
