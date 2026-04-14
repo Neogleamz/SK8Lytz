@@ -24,6 +24,7 @@ import { useDockedControllerState } from '../hooks/useDockedControllerState';
 import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
 import { useMusicMode, MUSIC_PATTERNS, getMusicPatternLabel } from '../hooks/useMusicMode';
 import { useCuratedPicks } from '../hooks/useCuratedPicks';
+import { useAppMicrophone } from '../hooks/useAppMicrophone';
 import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
 import { hexToHue, hueToHex, getColorName, hexToRgb, COLOR_PRESET_PALETTE, PRESET_HUE_MAP } from '../utils/ColorUtils';
 import AnalogGauge from './docked/AnalogGauge';
@@ -73,88 +74,7 @@ import type { MotionState } from '../hooks/useStreetMode';
 // AnalogGauge — now imported from './docked/AnalogGauge'
 // FixedPatternPreviewRow — kept inline (tightly coupled to parent animation state)
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _AnalogGaugeRemoved = null; // placeholder to preserve line numbering
-
-
-
-
-  // Tick marks
-  const numTicks = 8;
-  const ticks = Array.from({ length: numTicks + 1 }).map((_, i) => {
-    const p = i / numTicks;
-    const a = startAngle + (p * angleRange);
-    const rad = (a - 90) * Math.PI / 180;
-    const isMajor = i % 2 === 0;
-    const innerRadius = radius - (isMajor ? 8 : 4);
-    return {
-      x1: center + radius * Math.cos(rad),
-      y1: center + radius * Math.sin(rad),
-      x2: center + innerRadius * Math.cos(rad),
-      y2: center + innerRadius * Math.sin(rad),
-      isMajor
-    };
-  });
-
-  return (
-    <View style={{ alignItems: 'center', marginHorizontal: Spacing.xxs }}>
-      <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-        <Svg width={size} height={size}>
-          <Defs>
-            <SvgLinearGradient id="grad" x1="0" y1="1" x2="1" y2="0">
-              <Stop offset="0" stopColor={activeColor} stopOpacity="1" />
-              <Stop offset="1" stopColor={activeColor} stopOpacity="0.4" />
-            </SvgLinearGradient>
-          </Defs>
-          {/* Background track */}
-          <Path d={trackPath} stroke="rgba(255,255,255,0.08)" strokeWidth={10} fill="none" strokeDasharray="6 4" strokeLinecap="butt" />
-
-          {dangerPath ? <Path d={dangerPath} stroke="rgba(255,140,0,0.3)" strokeWidth={10} fill="none" strokeDasharray="6 4" /> : null}
-          {criticalPath ? <Path d={criticalPath} stroke="rgba(255,0,0,0.35)" strokeWidth={10} fill="none" strokeDasharray="6 4" /> : null}
-
-          {/* Active fill */}
-          {fillPath ? <Path d={fillPath} stroke="url(#grad)" strokeWidth={10} fill="none" strokeDasharray="6 4" strokeLinecap="butt" /> : null}
-
-          {/* Ticks (optional, but let's keep them very faint outside the dashed ring) */}
-          {ticks.map((tick, i) => (
-            <Path key={i} d={`M ${tick.x1} ${tick.y1} L ${tick.x2} ${tick.y2}`} stroke={tick.isMajor ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.15)"} strokeWidth={tick.isMajor ? 2 : 1} />
-          ))}
-
-          {/* Center Hub */}
-          <Circle cx={center} cy={center} r={6} fill="#222" stroke="rgba(255,255,255,0.2)" strokeWidth={2} />
-        </Svg>
-
-        {/* Animated Needle */}
-        <View style={{ position: 'absolute', width: size, height: size, justifyContent: 'center', alignItems: 'center', transform: [{ rotate: `${currentAngle}deg` }] }}>
-          <View style={{
-            width: 4, height: radius * 0.90,
-            backgroundColor: '#FF8C00',
-            position: 'absolute',
-            top: center - (radius * 0.90),
-            borderTopLeftRadius: 2,
-            borderTopRightRadius: 2,
-            shadowColor: '#FF8C00',
-            shadowOpacity: 1,
-            shadowRadius: 10,
-            elevation: 8
-          }} />
-        </View>
-
-        {/* Digital display */}
-        <View style={{ position: 'absolute', right: size * 0.15, top: size * 0.32, alignItems: 'flex-end' }}>
-          <Text style={{ color: '#FFF', fontSize: size * 0.22, fontWeight: '900', fontVariant: ['tabular-nums'], textShadowColor: activeColor !== '#00F0FF' ? activeColor : '#00F0FF', textShadowRadius: 16 }}>{Math.floor(value)}</Text>
-          {unit ? <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: size * 0.08, fontWeight: '800', marginTop: -4 }}>{unit}</Text> : null}
-        </View>
-      </View>
-      <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '900', letterSpacing: 2, marginTop: -4 }}>{label}</Text>
-    </View>
-  );
-});
-
-
-
 type ProductType = string;
-
 
 // MUSIC_PATTERNS — now imported from '../hooks/useMusicMode'
 
@@ -278,9 +198,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       await optimisticWrite(payload);
     };
 
-    const [recording, setRecording] = useState<Audio.Recording | null>(null);
-    const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
-    const magnitudeInterval = React.useRef<NodeJS.Timeout | null>(null);
 
     const {
       activeProduct, setActiveProduct,
@@ -656,241 +573,28 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       }
     }, [fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, activeMode, fixedSubMode, parentWriteToDevice]);
 
-    // -- Curated Presets (SK8Lytz Picks) -- driven from Supabase DB table
-    const [curatedPresets, setCuratedPresets] = useState<IFavoriteState[]>([]);
-    const [picksLoading, setPicksLoading] = useState(true);
+    // -- Curated Presets (SK8Lytz Picks) — now owned by useCuratedPicks hook --
+    const { curatedPresets, picksLoading } = useCuratedPicks();
 
-    useEffect(() => {
-      const CACHE_KEY = `${STORAGE_PREFIX}PicksCache`;
+    // -- App Microphone — now owned by useAppMicrophone hook --
+    const { audioMagnitude } = useAppMicrophone({
+      writeToDevice,
+      activeMode,
+      micSource,
+      isPoweredOn,
+    });
 
-      const loadFromCache = async () => {
-        try {
-          const cached = await AsyncStorage.getItem(CACHE_KEY);
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-              setCuratedPresets(parsed);
-              setPicksLoading(false);
-            }
-          }
-        } catch (e) {
-          console.warn('[SK8Lytz Picks] Cache read error:', e);
-        }
-      };
+    // -- Analytics Logging — now owned by useControllerAnalytics hook --
+    useControllerAnalytics({
+      activeMode,
+      selectedPatternId,
+      selectedColor,
+      brightness,
+      speed,
+      streetSensitivity,
+      deviceContext,
+    });
 
-      const fetchPicks = async () => {
-        try {
-          if (!supabase) return;
-          // Filter: is_active = true AND (active_from is null OR active_from <= today)
-          //                           AND (active_until is null OR active_until >= today)
-          const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
-          const { data, error } = await supabase
-            .from('sk8lytz_picks')
-            .select('*')
-            .eq('is_active', true)
-            .or(`active_from.is.null,active_from.lte.${today}`)
-            .or(`active_until.is.null,active_until.gte.${today}`)
-            .order('sort_order', { ascending: true });
-
-          if (error) {
-            console.warn('[SK8Lytz Picks] Failed to fetch from DB:', error.message);
-            return;
-          }
-
-          if (data && Array.isArray(data)) {
-            // Map snake_case DB columns → IFavoriteState camelCase
-            const mapped: IFavoriteState[] = data.map((row: any) => ({
-              id: row.id,
-              name: row.name,
-              customName: row.custom_name,
-              mode: row.mode,
-              color: row.color,
-              patternId: row.pattern_id,
-              speed: row.speed ?? 50,
-              brightness: row.brightness ?? 90,
-              fixedColorMode: row.fixed_color_mode,
-              fixedFgColor: row.fixed_fg_color,
-              fixedBgColor: row.fixed_bg_color,
-              fixedHue: row.fixed_hue,
-              multiColors: row.multi_colors ?? undefined,
-              multiTransition: row.multi_transition,
-              multiLength: row.multi_length,
-              musicPrimaryColor: row.music_primary_color,
-              musicSecondaryColor: row.music_secondary_color,
-              micSensitivity: row.mic_sensitivity,
-              micSource: row.mic_source,
-              musicMatrixStyle: row.music_matrix_style,
-            }));
-            
-            // Only update and re-render if the fetched data differs to prevent flicker
-            setCuratedPresets((prev) => {
-               if (JSON.stringify(prev) !== JSON.stringify(mapped)) {
-                 return mapped;
-               }
-               return prev;
-            });
-            
-            // Update cache asynchronously
-            AsyncStorage.setItem(CACHE_KEY, JSON.stringify(mapped)).catch(() => {});
-          }
-        } catch (e) {
-          console.warn('[SK8Lytz Picks] Exception fetching from DB:', e);
-        } finally {
-          setPicksLoading(false);
-        }
-      };
-
-      // 1. Instantly load from cache to populate UI
-      loadFromCache().then(() => {
-        // 2. Perform background revalidation
-        fetchPicks();
-      });
-    }, []);
-
-    // -- App Microphone Logic --
-    useEffect(() => {
-      if (Platform.OS === 'web') return; // expo-av Audio Recording not supported on web
-      const isMusicActive = activeMode === 'MUSIC';
-      if (isMusicActive && micSource === 'APP' && isPoweredOn) {
-        startRecording();
-      } else {
-        stopRecording();
-      }
-      return () => {
-        stopRecording();
-      };
-    }, [activeMode, fixedSubMode, micSource, isPoweredOn]);
-
-    // -- Analytics Logging --
-    const logTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-
-
-
-    // Mode change logger
-    useEffect(() => {
-      AppLogger.log('MODE_CHANGED', { mode: activeMode, ...deviceContext });
-    }, [activeMode, deviceContext]);
-
-    useEffect(() => {
-      const name = getRbmPatternName(selectedPatternId);
-      AppLogger.log('PATTERN_CHANGED', {
-        pattern: `ID:${selectedPatternId}`,
-        name,
-        mode: activeMode,
-        color: selectedColor,
-        ...deviceContext
-      });
-    }, [selectedPatternId, deviceContext]);
-
-    // Color change logger
-    useEffect(() => {
-      AppLogger.log('COLOR_CHANGED', { hex: selectedColor, ...deviceContext });
-    }, [selectedColor, deviceContext]);
-
-    // Brightness change logger (debounced 600ms)
-    useEffect(() => {
-      clearTimeout(logTimers.current['brightness']);
-      logTimers.current['brightness'] = setTimeout(() => {
-        AppLogger.log('BRIGHTNESS_CHANGED', { value: brightness, mode: activeMode, ...deviceContext });
-      }, 600);
-    }, [brightness, activeMode, deviceContext]);
-
-    // Speed change logger (debounced 600ms)
-    useEffect(() => {
-      clearTimeout(logTimers.current['speed']);
-      logTimers.current['speed'] = setTimeout(() => {
-        AppLogger.log('SPEED_CHANGED', { value: speed, mode: activeMode, ...deviceContext });
-      }, 600);
-    }, [speed, activeMode, deviceContext]);
-
-    // Street sensitivity change logger (debounced 800ms — user drags slider)
-    useEffect(() => {
-      if (activeMode !== 'STREET') return;
-      clearTimeout(logTimers.current['streetSens']);
-      logTimers.current['streetSens'] = setTimeout(() => {
-        AppLogger.log('STREET_SENSITIVITY_CHANGED', { sensitivity: streetSensitivity, ...deviceContext });
-      }, 800);
-    }, [streetSensitivity, activeMode, deviceContext]);
-
-    const startRecording = async () => {
-      try {
-        const { granted } = await Audio.requestPermissionsAsync();
-        if (!granted) return;
-
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-        });
-
-        const { recording: newRecording } = await Audio.Recording.createAsync(
-          {
-            ...Audio.RecordingOptionsPresets.LOW_QUALITY,
-            isMeteringEnabled: true, // REQUIRED: enables stats.metering — without this mic always reads silence
-            android: {
-              ...Audio.RecordingOptionsPresets.LOW_QUALITY.android,
-              extension: '.m4a',
-              outputFormat: Audio.AndroidOutputFormat.MPEG_4,
-              audioEncoder: Audio.AndroidAudioEncoder.AAC,
-              sampleRate: 44100,
-              numberOfChannels: 1,
-              bitRate: 128000,
-            },
-            ios: {
-              ...Audio.RecordingOptionsPresets.LOW_QUALITY.ios,
-              extension: '.m4a',
-              outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
-              audioQuality: Audio.IOSAudioQuality.MIN,
-              sampleRate: 44100,
-              numberOfChannels: 1,
-              bitRate: 128000,
-              linearPCMBitDepth: 16,
-              linearPCMIsBigEndian: false,
-              linearPCMIsFloat: false,
-            },
-          },
-          null, // initialStatus
-          50 // progressUpdateIntervalMillis
-        );
-
-        await newRecording.setProgressUpdateInterval(50);
-        setRecording(newRecording);
-
-        // Start magnitude stream
-        magnitudeInterval.current = setInterval(async () => {
-          if (!writeToDevice) return;
-          const stats = await newRecording.getStatusAsync();
-          if (stats.canRecord && stats.isRecording) {
-            // stats.metering ranges from -160 to 0. 
-            // Typical music peaks around -20 to 0.
-            const metering = stats.metering ?? -160;
-            // Map -60...0 to 0...1 for usable visualization
-            const normalized = Math.max(0, Math.min(1, (metering + 60) / 60));
-
-            setAudioMagnitude(normalized);
-
-            // Send to physical device (Symphony 0x74 command expects 0-255)
-            const deviceMag = Math.floor(normalized * 255);
-            writeToDevice(ZenggeProtocol.sendMusicMagnitude(deviceMag));
-          }
-        }, 50);
-
-      } catch (err) {
-        console.error('Failed to start recording', err);
-      }
-    };
-
-    const stopRecording = async () => {
-      if (magnitudeInterval.current) {
-        clearInterval(magnitudeInterval.current);
-        magnitudeInterval.current = null;
-      }
-      if (recording) {
-        try {
-          await recording.stopAndUnloadAsync();
-        } catch (e) { }
-        setRecording(null);
-      }
-    };
 
     React.useEffect(() => {
       if (lockedProduct) {
@@ -997,15 +701,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       );
     }, [musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
 
-    const getColorName = (hex: string) => {
-      const map: { [key: string]: string } = {
-        '#FF0000': 'Red', '#FFFF00': 'Yellow', '#00FF00': 'Green',
-        '#00FFFF': 'Cyan', '#0000FF': 'Blue', '#FF00FF': 'Magenta',
-        '#FFFFFF': 'White', '#000000': 'Black'
-      };
-      const upperHex = hex.toUpperCase();
-      return map[upperHex] || 'Custom';
-    };
+    // getColorName — now imported from '../utils/ColorUtils'
 
     const currentStatusText = React.useMemo(() => {
       switch (activeMode) {
