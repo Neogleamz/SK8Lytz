@@ -26,7 +26,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import useBLE from '../hooks/useBLE';
 import { ZenggeProtocol, ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol';
 
-import DockedController, { DockedControllerHandle, IFavoriteState } from '../components/DockedController';
+import DockedController, { DockedControllerHandle } from '../components/DockedController';
+import type { IFavoriteState } from '../types/dashboard.types';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 
