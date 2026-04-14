@@ -1,6 +1,13 @@
-## [1.8.7] - 2026-04-14
+## [1.8.8] - 2026-04-14
 
 ### 🚑 Emergency Hotfixes
+
+**Android 12+ BLE Scanning Deadlock**
+- **Restored neverForLocation Flag** (`app.json`): Reverted the raw injection of `android.permission.BLUETOOTH_SCAN`. Manually defining this in the manifest overrode `react-native-ble-plx`'s auto-configurator, intentionally dropping the `usesPermissionFlags="neverForLocation"` attribute. Without this flag, Android 12+ enforced strict Location tracking requirements on all BLE scanning events and silently blockaded the Bluetooth radio at the OS level since we do not request background location tracking natively.
+
+---
+
+## [1.8.7] - 2026-04-14
 
 **Permission Ledger Desync & FTUE Bypass**
 - **Android Auto-Backup Override** (`app.json`): Added `allowBackup: false` to the Android manifest schema. Previously, when a user uninstalled and reinstalled the application, Android secretly restored the `@Sk8lytz_has_seen_permissions` flag from Google Drive, permanently lock-bypassing the `PermissionsOnboardingScreen` FTUE gate.
