@@ -727,7 +727,20 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             toggleDeviceSelection(item.id);
             return;
           }
-          const fw = await connectToDevice(item);
+          // RegisteredDevice.id is a DB composite key, NOT a BLE peripheral id.
+          // Resolve the live BLE peripheral by MAC before calling connectToDevice.
+          const mac = (item.device_mac || item.id || '').toLowerCase();
+          const bleDevice = allDevices.find(
+            (d: any) => (d.id || '').toLowerCase() === mac
+          );
+          if (!bleDevice) {
+            // Device not yet discovered — trigger a scan. useDashboardAutoConnect
+            // observer will connect it automatically when it appears.
+            AppLogger.log('BLE_STATE_CHANGE', { event: 'manual_connect_scan_triggered', mac });
+            scanForPeripherals();
+            return;
+          }
+          const fw = await connectToDevice(bleDevice);
           if (fw) {
             setDeviceConfigs((prev: any) => {
                 const next = { ...prev, [item.id]: { ...(prev?.[item.id] || {}), firmware: fw } };
@@ -735,8 +748,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 return next;
             });
           }
-          
-          writeToDevice(ZenggeProtocol.queryHardwareSettings(false), item.id);
+          writeToDevice(ZenggeProtocol.queryHardwareSettings(false), bleDevice.id);
         }}
         onLongPress={() => {
           openSettings(mergedItem);
@@ -747,7 +759,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       />
     </View>
     ); // close return
-  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs]);
+  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs, allDevices, connectToDevice, scanForPeripherals, writeToDevice]);
 
   const mappedRegisteredDevicesForModal = useMemo(() => registeredDevices.map((d) => ({
     id: d.id || '',

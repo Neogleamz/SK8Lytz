@@ -151,7 +151,11 @@ export function useDashboardAutoConnect({
       if (groupsToProcess.length > 0) {
         const granted = await requestPermissions();
         if (granted && !isActuallyConnected) {
-          scanForPeripherals();
+          // NOTE: scan is intentionally deferred until AFTER autoConnectIdsRef is
+          // populated below. If scan starts first, devices appear in allDevices
+          // before the ref is set — the observer fires, sees an empty queue,
+          // and skips them. Starting scan after setting the ref guarantees every
+          // discovered device is evaluated against a populated target list.
 
           let presentGroups: any[] = [];
           let idsToConnect: string[] = [];
@@ -187,6 +191,8 @@ export function useDashboardAutoConnect({
               count: idsToConnect.length,
             });
             autoConnectIdsRef.current = idsToConnect;
+            // Start scan NOW — ref is populated, observer will catch every device
+            scanForPeripherals();
           }
         }
       }
