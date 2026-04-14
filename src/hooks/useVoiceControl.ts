@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
 // Safely handle native-only voice import for web compatibility
@@ -11,7 +11,7 @@ try {
   console.warn('Voice recognition native module not found');
 }
 
-import { voiceService, IVoiceAction } from '../services/VoiceService';
+import { IVoiceAction, voiceService } from '../services/VoiceService';
 import type { IFavoriteState } from '../types/dashboard.types';
 
 /** Voice recognition is only available on native iOS/Android platforms where the bridge exists. */

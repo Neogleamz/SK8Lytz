@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
-import { Layout, ThemePalette, Spacing } from '../../theme/theme';
-import { requestPermission, checkPermission, PermissionType } from '../../services/PermissionService';
+import { checkPermission, PermissionType, requestPermission } from '../../services/PermissionService';
+import { Layout, Spacing, ThemePalette } from '../../theme/theme';
 
 interface PermissionsOnboardingScreenProps {
   onComplete: () => void;

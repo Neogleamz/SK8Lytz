@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../services/supabaseClient';
-import { crewService, CrewSession, CrewRole, CrewMember } from '../services/CrewService';
+import { useCallback, useEffect, useState } from 'react';
 import { AppLogger } from '../services/AppLogger';
+import { CrewMember, CrewRole, crewService, CrewSession } from '../services/CrewService';
+import { supabase } from '../services/supabaseClient';
 
 export function useCrewSession(
   activeSession: CrewSession | null,

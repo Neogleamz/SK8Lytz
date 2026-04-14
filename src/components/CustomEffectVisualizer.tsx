@@ -1,7 +1,7 @@
-import { Spacing } from '../theme/theme';
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { ZenggeVisualizerMath } from '../protocols/ZenggeVisualizerMath';
+import { Spacing } from '../theme/theme';
 
 interface CustomEffectVisualizerProps {
   effectId: number;

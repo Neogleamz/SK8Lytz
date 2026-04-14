@@ -8,9 +8,9 @@
  * Extracted from DockedController.tsx to isolate platform-specific
  * audio recording from LED control state.
  */
-import { useState, useRef, useEffect } from 'react';
-import { Platform } from 'react-native';
 import { Audio } from 'expo-av';
+import { useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import type { ModeType } from '../types/dashboard.types';
 

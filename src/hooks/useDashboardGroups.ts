@@ -12,13 +12,13 @@
  *
  * Depends on: AsyncStorage, useRegistration (via options), custom types
  */
-import { useState, useEffect, useRef, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../services/supabaseClient';
-import { AppLogger } from '../services/AppLogger';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
-import type { CustomGroup, GroupModalState, DeviceSettings } from '../types/dashboard.types';
 import type { RegisteredDevice } from '../hooks/useRegistration';
+import { AppLogger } from '../services/AppLogger';
+import { supabase } from '../services/supabaseClient';
+import type { CustomGroup, DeviceSettings, GroupModalState } from '../types/dashboard.types';
 
 interface UseDashboardGroupsOptions {
   registeredDevices: RegisteredDevice[];

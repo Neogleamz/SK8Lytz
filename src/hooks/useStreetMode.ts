@@ -18,14 +18,14 @@
  * Depends on: ZenggeProtocol, AppLogger, Accelerometer, expo-location, crewService
  * Platform: React Native (Android only for sensors — web returns early)
  */
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Platform } from 'react-native';
-import { Accelerometer } from 'expo-sensors';
 import * as Location from 'expo-location';
+import { Accelerometer } from 'expo-sensors';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
+import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 import { crewService } from '../services/CrewService';
-import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
 
 export type MotionState = 'STOPPED' | 'ACCELERATING' | 'CRUISING' | 'SLOWING_DOWN' | 'HARD_BRAKING';

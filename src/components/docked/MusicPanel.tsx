@@ -6,11 +6,11 @@
  *
  * Extracted from DockedController.tsx (Phase 3).
  */
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Typography, Spacing } from '../../theme/theme';
+import React from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { getMusicPatternLabel, MUSIC_PATTERNS } from '../../hooks/useMusicMode';
+import { Spacing, Typography } from '../../theme/theme';
 
 interface MusicPanelProps {
   musicPatternId: number;

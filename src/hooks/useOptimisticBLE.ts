@@ -11,9 +11,9 @@
  *
  * @see docs/plans/perf-optimistic-ble-updates.md
  */
-import { useRef, useCallback, useState } from 'react';
-import { Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { useCallback, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { AppLogger } from '../services/AppLogger';
 
 type WriteFunction = (payload: number[], targetDeviceId?: string) => Promise<boolean>;

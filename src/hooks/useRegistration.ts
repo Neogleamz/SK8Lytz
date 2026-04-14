@@ -12,11 +12,11 @@
  * hardware binding is possible with Zengge controllers).
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { AppLogger } from '../services/AppLogger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../services/supabaseClient';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
+import { AppLogger } from '../services/AppLogger';
+import { supabase } from '../services/supabaseClient';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

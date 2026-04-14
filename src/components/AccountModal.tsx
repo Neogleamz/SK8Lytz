@@ -12,23 +12,28 @@ import { Spacing } from '../theme/theme';
  *              + Sign Out + Danger Zone (delete account)
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View, Text, Modal, TouchableOpacity, TextInput, Platform,
-  StyleSheet, ScrollView, ActivityIndicator, Alert, Switch, Image,
-  KeyboardAvoidingView,
-} from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import {
+    ActivityIndicator, Alert,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { profileService, UserProfile, PermanentCrew, SessionHistoryItem } from '../services/ProfileService';
-import { supabase } from '../services/supabaseClient';
-import { AppLogger } from '../services/AppLogger';
-import { SpeedTrackingService, ILifetimeStats, ISkateSession } from '../services/SpeedTrackingService';
 import { useAccountOverview } from '../hooks/useAccountOverview';
+import { StoredDevice, useDeviceFleet } from '../hooks/useDeviceFleet';
 import { useSkateStats } from '../hooks/useSkateStats';
-import { useDeviceFleet, StoredDevice } from '../hooks/useDeviceFleet';
+import { PermanentCrew, profileService } from '../services/ProfileService';
+import { supabase } from '../services/supabaseClient';
 import EulaModal from './modals/EulaModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -52,8 +57,8 @@ interface AccountModalProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-import CustomSlider from './CustomSlider';
 import { STORAGE_PREFIX } from '../constants/AppConstants';
+import CustomSlider from './CustomSlider';
 
 const NOTIF_PREF_KEY = `${STORAGE_PREFIX}notif_prefs`;
 

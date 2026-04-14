@@ -1,22 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, Alert,
-  ActivityIndicator, KeyboardAvoidingView, Platform, Animated, Linking, Image
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Image,
+    KeyboardAvoidingView,
+    Linking,
+    Platform,
+    StyleSheet,
+    Text, TextInput, TouchableOpacity,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supabase } from '../services/supabaseClient';
-import { Layout, ThemePalette, Spacing } from '../theme/theme';
-import { useTheme } from '../context/ThemeContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import {
-  checkPasswordComplexity,
-  isCommonPassword,
-  checkHIBP,
-  containsProfanity,
-  PasswordStrength
-} from '../services/AuthUtils';
 import EulaModal from '../components/modals/EulaModal';
+import { useTheme } from '../context/ThemeContext';
+import {
+    checkHIBP,
+    checkPasswordComplexity,
+    containsProfanity,
+    isCommonPassword,
+    PasswordStrength
+} from '../services/AuthUtils';
+import { supabase } from '../services/supabaseClient';
+import { Layout, Spacing, ThemePalette } from '../theme/theme';
 
 const STORAGE_LAST_EMAIL    = '@Sk8lytz_auth_last_email';
 const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';  // { email, rememberMe }

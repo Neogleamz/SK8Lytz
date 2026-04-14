@@ -1,12 +1,12 @@
-import { Spacing } from '../theme/theme';
-import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Dimensions, ActivityIndicator, Modal } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useRef, useState } from 'react';
+import { ActivityIndicator, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView from 'react-native-map-clustering';
 import { Marker, Region } from 'react-native-maps';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '../context/ThemeContext';
-import { SkateSpotsService, SkateSpot } from '../services/SkateSpotsService';
 import { SkateSpotBottomSheet } from '../components/SkateSpotBottomSheet';
+import { useTheme } from '../context/ThemeContext';
+import { SkateSpot, SkateSpotsService } from '../services/SkateSpotsService';
+import { Spacing } from '../theme/theme';
 
 const { width, height } = Dimensions.get('window');
 

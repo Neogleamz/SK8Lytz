@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, SafeAreaView, Linking, Platform, ScrollView, KeyboardAvoidingView, TextInput } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import { Typography, Spacing } from '../../theme/theme';
 import useBLE from '../../hooks/useBLE';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
+import { Spacing, Typography } from '../../theme/theme';
 
-import { RegisteredDevice } from '../../hooks/useRegistration';
 import { LOCAL_PRODUCT_CATALOG, getLocalProfileById } from '../../constants/ProductCatalog';
+import { RegisteredDevice } from '../../hooks/useRegistration';
 
 interface HardwareSetupWizardScreenProps {
   onSetupComplete: (devices: RegisteredDevice[]) => Promise<void> | void;

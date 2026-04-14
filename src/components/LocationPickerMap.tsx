@@ -1,5 +1,5 @@
 import React from 'react';
-import MapView, { Marker, MapViewProps } from 'react-native-maps';
+import MapView, { MapViewProps, Marker } from 'react-native-maps';
 
 export const LocationPickerMap: React.FC<MapViewProps> = (props) => {
   return <MapView {...props} />;

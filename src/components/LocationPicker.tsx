@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import React, { useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { LocationPickerMap, LocationMarker } from './LocationPickerMap';
 import { Spacing } from '../theme/theme';
+import { LocationMarker, LocationPickerMap } from './LocationPickerMap';
 
 interface LocationPickerProps {
   locationLabel: string;

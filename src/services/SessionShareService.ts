@@ -8,7 +8,7 @@
  * Uses React Native's built-in Share API — zero external dependencies.
  */
 
-import { Share, Platform } from 'react-native';
+import { Platform, Share } from 'react-native';
 import { AppLogger } from './AppLogger';
 
 // App store / download links — update when app is published

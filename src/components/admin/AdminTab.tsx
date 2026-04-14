@@ -1,6 +1,6 @@
-import React from 'react';
-import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React from 'react';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Spacing } from '../../theme/theme';
 import { adminStyles as styles } from './adminStyles';
 import { TabProps } from './DeviceTab';

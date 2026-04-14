@@ -17,8 +17,8 @@
 
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { profileService } from './ProfileService';
 import { AppLogger } from './AppLogger';
+import { profileService } from './ProfileService';
 
 // Show push notifications as banners even when app is in foreground
 Notifications.setNotificationHandler({

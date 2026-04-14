@@ -1,8 +1,8 @@
-import { Spacing } from '../theme/theme';
-import React, { useRef, useState } from 'react';
-import { View, StyleSheet, PanResponder, LayoutChangeEvent, Text, ViewStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useRef, useState } from 'react';
+import { LayoutChangeEvent, PanResponder, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { Spacing } from '../theme/theme';
 
 interface TacticalSliderProps {
   value: number;

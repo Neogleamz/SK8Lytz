@@ -14,11 +14,11 @@
  *
  * Extracted from DashboardScreen.tsx (Phase 2 — God Object Surgery).
  */
-import { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../services/supabaseClient';
-import { AppLogger } from '../services/AppLogger';
+import { useEffect, useRef } from 'react';
 import type { RegisteredDevice } from '../hooks/useRegistration';
+import { AppLogger } from '../services/AppLogger';
+import { supabase } from '../services/supabaseClient';
 
 /** Minimal device shape needed from useBLE */
 interface BLEDevice {

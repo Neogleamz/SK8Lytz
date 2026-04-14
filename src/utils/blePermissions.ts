@@ -1,5 +1,5 @@
-import { PermissionsAndroid, Platform } from 'react-native';
 import * as ExpoDevice from 'expo-device';
+import { PermissionsAndroid, Platform } from 'react-native';
 
 const requestAndroid31Permissions = async () => {
   const bluetoothScanPermission = await PermissionsAndroid.request(

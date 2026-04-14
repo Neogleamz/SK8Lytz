@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  TouchableOpacity,
-  ScrollView,
-  Switch,
-  Platform,
-  Alert,
-  SafeAreaView,
-  TextInput
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { useEffect, useState } from 'react';
+import {
+    Alert,
+    Modal,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import { useTheme } from '../../../context/ThemeContext';
+import { BuilderNode } from '../../../protocols/PositionalMathBuffer';
 import { supabase } from '../../../services/supabaseClient';
 import PositionalGradientBuilder from '../../PositionalGradientBuilder';
-import { BuilderNode } from '../../../protocols/PositionalMathBuffer';
-import { useTheme } from '../../../context/ThemeContext';
 
 interface Sk8LytzPick {
   id: string;

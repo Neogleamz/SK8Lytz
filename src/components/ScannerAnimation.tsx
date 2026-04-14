@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Animated, Easing, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { Typography, Spacing } from '../theme/theme';
+import { Spacing, Typography } from '../theme/theme';
 
 interface ScannerAnimationProps {
   deviceCount: number;

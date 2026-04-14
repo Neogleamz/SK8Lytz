@@ -1,21 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, Modal, SafeAreaView, TouchableOpacity,
-  ScrollView, ActivityIndicator, Platform, TextInput
+    ActivityIndicator, Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppLogger } from '../../../services/AppLogger';
-import { useTheme } from '../../../context/ThemeContext';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Typography, Spacing } from '../../../theme/theme';
-import {
-  ZenggeProtocol,
-  HardwareSettings,
-  IC_TYPES,
-  COLOR_SORTING_RGB,
-} from '../../../protocols/ZenggeProtocol';
 import { LOCAL_PRODUCT_CATALOG } from '../../../constants/ProductCatalog';
+import { useTheme } from '../../../context/ThemeContext';
+import {
+    COLOR_SORTING_RGB,
+    HardwareSettings,
+    IC_TYPES,
+    ZenggeProtocol,
+} from '../../../protocols/ZenggeProtocol';
+import { AppLogger } from '../../../services/AppLogger';
+import { Spacing, Typography } from '../../../theme/theme';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 

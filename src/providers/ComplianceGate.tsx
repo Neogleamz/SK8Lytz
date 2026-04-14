@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, Alert } from 'react-native';
-import { supabase } from '../services/supabaseClient';
-import EulaModal from '../components/modals/EulaModal';
-import { AppSettingsService } from '../services/AppSettingsService';
-import { useTheme } from '../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, View } from 'react-native';
+import EulaModal from '../components/modals/EulaModal';
+import { useTheme } from '../context/ThemeContext';
 import PermissionsOnboardingScreen from '../screens/Onboarding/PermissionsOnboardingScreen';
+import { AppSettingsService } from '../services/AppSettingsService';
+import { supabase } from '../services/supabaseClient';
 
 interface ComplianceGateProps {
   children: React.ReactNode;

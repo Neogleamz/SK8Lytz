@@ -1,19 +1,15 @@
-import { Spacing } from '../../theme/theme';
-import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert, Share, TextInput, Image, RefreshControl, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '../../context/ThemeContext';
-import * as Clipboard from 'expo-clipboard';
-import { profileService, PermanentCrew } from '../../services/ProfileService';
-import { crewService, CrewSession } from '../../services/CrewService';
-import { locationService } from '../../services/LocationService';
-import { AppLogger } from '../../services/AppLogger';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import React from 'react';
+import { ActivityIndicator, Image, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
+import { AppLogger } from '../../services/AppLogger';
+import { profileService } from '../../services/ProfileService';
+import { Spacing } from '../../theme/theme';
 import CustomSlider from '../CustomSlider';
 
-import { createStyles } from './CrewStyles';
 import { useCrewContext } from '../../context/CrewContext';
+import { createStyles } from './CrewStyles';
 
 const AVATAR_ICONS = ['account-group', 'star', 'fire', 'lightning-bolt', 'skull', 'heart', 'basketball', 'music-note', 'rocket', 'ghost', 'robot', 'alien'];
 

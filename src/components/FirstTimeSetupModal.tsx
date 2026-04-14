@@ -11,18 +11,27 @@
  *   Step 3: Confirm + "SAVE & REGISTER DEVICES"
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView,
-  TextInput, Animated, Platform, ActivityIndicator, KeyboardAvoidingView,
+    ActivityIndicator,
+    Animated,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '../context/ThemeContext';
-import { Typography, Spacing } from '../theme/theme';
-import type { PendingRegistration } from '../types/dashboard.types';
-import type { RegisteredDevice } from '../hooks/useRegistration';
 import { LOCAL_PRODUCT_CATALOG, getLocalProfileById } from '../constants/ProductCatalog';
+import { useTheme } from '../context/ThemeContext';
+import type { RegisteredDevice } from '../hooks/useRegistration';
+import { Spacing, Typography } from '../theme/theme';
+import type { PendingRegistration } from '../types/dashboard.types';
 
 interface FirstTimeSetupModalProps {
   visible: boolean;

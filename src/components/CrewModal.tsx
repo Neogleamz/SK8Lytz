@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, KeyboardAvoidingView, Platform, View } from 'react-native';
-import { CrewSession, CrewRole } from '../services/CrewService';
+import React, { useEffect, useState } from 'react';
+import { KeyboardAvoidingView, Modal, Platform, View } from 'react-native';
 import { CrewProvider, useCrewContext } from '../context/CrewContext';
-import { createStyles } from './crew/CrewStyles';
 import { useTheme } from '../context/ThemeContext';
+import { CrewRole, CrewSession } from '../services/CrewService';
 import { supabase } from '../services/supabaseClient';
+import { createStyles } from './crew/CrewStyles';
 
 import { useCrewHub } from '../hooks/useCrewHub';
 import { useCrewManage } from '../hooks/useCrewManage';
 import { useCrewSession } from '../hooks/useCrewSession';
 
-import { CrewLandingScreen } from './crew/CrewLandingScreen';
+import { CrewControllerScreen } from './crew/CrewControllerScreen';
 import { CrewCreateScreen } from './crew/CrewCreateScreen';
+import { CrewDetailScreen } from './crew/CrewDetailScreen';
+import { CrewJoinScreen } from './crew/CrewJoinScreen';
+import { CrewLandingScreen } from './crew/CrewLandingScreen';
 import { CrewManageScreen } from './crew/CrewManageScreen';
 import { CrewScheduleScreen } from './crew/CrewScheduleScreen';
-import { CrewJoinScreen } from './crew/CrewJoinScreen';
-import { CrewControllerScreen } from './crew/CrewControllerScreen';
-import { CrewDetailScreen } from './crew/CrewDetailScreen';
 
 type ModalStep = 'landing' | 'create' | 'schedule' | 'join' | 'controller' | 'manage' | 'crew-detail';
 

@@ -4,13 +4,13 @@
  * Consolidates ~180 lines of near-identical card rendering JSX that was
  * duplicated between the "YOURS" and "SK8Lytz Picks" sections.
  */
-import React from 'react';
-import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Spacing, Layout } from '../../theme/theme';
-import MarqueeText from '../MarqueeText';
+import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { Spacing } from '../../theme/theme';
 import type { IFavoriteState } from '../../types/dashboard.types';
+import MarqueeText from '../MarqueeText';
 
 interface PresetCardProps {
   preset: IFavoriteState;

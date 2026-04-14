@@ -12,7 +12,7 @@
  * to audio-reactive pixel arrays using the same motion primitives.
  */
 
-import { getRbmPattern, PALETTE, BG_HEX, type RbmMotion, type RbmColorPalette } from './RbmDictionary';
+import { BG_HEX, getRbmPattern, PALETTE, type RbmColorPalette, type RbmMotion } from './RbmDictionary';
 
 // ── Internal RGB type (matches PatternEngine for compatibility) ──────────────
 export interface RGB { r: number; g: number; b: number; }

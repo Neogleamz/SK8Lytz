@@ -1,8 +1,8 @@
-import React from 'react';
-import { ScrollView, View, Text, Platform } from 'react-native';
 import * as Device from 'expo-device';
-import { adminStyles as styles } from './adminStyles';
+import React from 'react';
+import { Platform, ScrollView, Text, View } from 'react-native';
 import { TelemetryStats } from '../../hooks/useAdminTelemetry';
+import { adminStyles as styles } from './adminStyles';
 import { TabProps } from './DeviceTab';
 
 export interface StatsTabProps extends TabProps {

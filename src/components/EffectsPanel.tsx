@@ -19,14 +19,17 @@ import { Spacing } from '../theme/theme';
  *
  * Platform: React Native (Android + iOS)
  */
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet, Animated,
+    Animated,
+    ScrollView, StyleSheet,
+    Text, TouchableOpacity,
+    View,
 } from 'react-native';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { ZENGGE_EFFECTS } from '../constants/CustomEffects';
-import CustomEffectVisualizer from './CustomEffectVisualizer';
 import { useTheme } from '../context/ThemeContext';
+import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import CustomEffectVisualizer from './CustomEffectVisualizer';
 
 // ─── Effect default BG colours (from kd/t0.java line 142) ────────────────────
 // Effects 1,2,4,25,31,32 default BG to blue; all others to black

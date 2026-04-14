@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, Switch, TouchableOpacity, ScrollView, Modal, SafeAreaView, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React from 'react';
+import { Alert, SafeAreaView, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { Spacing } from '../../../theme/theme';
 import { adminStyles as styles } from '../adminStyles';
 

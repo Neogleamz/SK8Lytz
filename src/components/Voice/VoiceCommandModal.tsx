@@ -1,13 +1,21 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, Modal, TouchableOpacity,
-  SafeAreaView, Animated, Easing, Dimensions, Platform
+    Animated,
+    Dimensions,
+    Easing,
+    Modal,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { useTheme } from '../../context/ThemeContext';
-import { Typography, Spacing } from '../../theme/theme';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Spacing, Typography } from '../../theme/theme';
 
 const { width } = Dimensions.get('window');
 

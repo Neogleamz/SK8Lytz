@@ -27,9 +27,9 @@
  * Platform: React Native (Android + Web)
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from './supabaseClient';
-import * as Device from 'expo-device';
 import * as Battery from 'expo-battery';
+import * as Device from 'expo-device';
+import { supabase } from './supabaseClient';
 
 const STORAGE_KEY = '@Sk8lytz_logs';         // canonical casing — matches @Sk8lytz_ convention
 const LEGACY_KEY  = '@sk8lytz_logs';          // old lowercase key — migrated on first load

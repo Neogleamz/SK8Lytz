@@ -15,16 +15,20 @@
  *   • Footer          — Leave Session button
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Animated, Dimensions,
-} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    Animated, Dimensions,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { CrewSession, CrewRole } from '../services/CrewService';
-import { supabase } from '../services/supabaseClient';
+import { CrewRole, CrewSession } from '../services/CrewService';
 import { shareSessionInvite } from '../services/SessionShareService';
+import { supabase } from '../services/supabaseClient';
 import { Spacing } from '../theme/theme';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

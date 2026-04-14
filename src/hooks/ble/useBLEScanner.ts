@@ -1,12 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
-import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Device } from 'react-native-ble-plx';
 import { Buffer } from 'buffer';
+import { useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
+import type { Device } from 'react-native-ble-plx';
+import { LOCAL_PRODUCT_CATALOG, getLocalProfileByPoints } from '../../constants/ProductCatalog';
+import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { AppLogger } from '../../services/AppLogger';
 import { supabase } from '../../services/supabaseClient';
-import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
-import { LOCAL_PRODUCT_CATALOG, getLocalProfileByPoints } from '../../constants/ProductCatalog';
 import type { PendingRegistration } from '../../types/dashboard.types';
 
 export interface UseBLEScannerProps {

@@ -1,8 +1,8 @@
-import * as Location from 'expo-location';
-import { Camera } from 'expo-camera';
 import { Audio } from 'expo-av';
+import { Camera } from 'expo-camera';
+import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
-import { Platform, PermissionsAndroid } from 'react-native';
+import { PermissionsAndroid, Platform } from 'react-native';
 
 export type PermissionType = 'CAMERA' | 'MIC' | 'LOCATION' | 'NOTIFICATIONS' | 'BLUETOOTH';
 

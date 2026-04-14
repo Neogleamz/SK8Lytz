@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import { Spacing } from '../theme/theme';
 
 const BARS_COUNT = 30;

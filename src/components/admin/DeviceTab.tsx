@@ -1,10 +1,10 @@
-import React from 'react';
-import { ScrollView, View, Text } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Spacing } from '../../theme/theme';
-import { adminStyles as styles } from './adminStyles';
+import React from 'react';
+import { ScrollView, Text, View } from 'react-native';
 import { formatLogTime } from '../../hooks/useAdminTelemetry';
 import { LogEntry } from '../../services/AppLogger';
+import { Spacing } from '../../theme/theme';
+import { adminStyles as styles } from './adminStyles';
 
 export interface TabProps {
   textMuted: string;

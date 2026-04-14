@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Modal } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React from 'react';
+import { Modal, Text, TouchableOpacity, View } from 'react-native';
 import { Spacing } from '../../theme/theme';
 
 export interface ConfirmDeleteModalProps {

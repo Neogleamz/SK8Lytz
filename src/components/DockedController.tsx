@@ -15,61 +15,51 @@
  * Depends on: ZenggeProtocol, AppLogger, useBLE (via prop injection), ThemeContext
  * Platform: React Native (Android + Web)
  */
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, TextInput, Alert, Dimensions, FlatList } from 'react-native';
-import { useSessionTracking } from '../hooks/useSessionTracking';
-import { useStreetMode } from '../hooks/useStreetMode';
-import { useFavorites } from '../hooks/useFavorites';
-import { useDockedControllerState } from '../hooks/useDockedControllerState';
-import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
-import { useMusicMode, MUSIC_PATTERNS, getMusicPatternLabel } from '../hooks/useMusicMode';
-import { useCuratedPicks } from '../hooks/useCuratedPicks';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Dimensions, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAppMicrophone } from '../hooks/useAppMicrophone';
 import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
-import { hexToHue, hueToHex, getColorName, hexToRgb, COLOR_PRESET_PALETTE, PRESET_HUE_MAP } from '../utils/ColorUtils';
+import { useCuratedPicks } from '../hooks/useCuratedPicks';
+import { useDockedControllerState } from '../hooks/useDockedControllerState';
+import { useFavorites } from '../hooks/useFavorites';
+import { MUSIC_PATTERNS } from '../hooks/useMusicMode';
+import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
+import { useSessionTracking } from '../hooks/useSessionTracking';
+import { useStreetMode } from '../hooks/useStreetMode';
+import type { BleConnectionState, IDeviceState, IFavoriteState, ModeType } from '../types/dashboard.types';
+import { getColorName, hexToHue } from '../utils/ColorUtils';
 import AnalogGauge from './docked/AnalogGauge';
-import FloatingDock from './docked/FloatingDock';
-import type { ModeType, BleConnectionState, IDeviceState, IFavoriteState, IQuickPreset } from '../types/dashboard.types';
 
 import { LinearGradient } from 'expo-linear-gradient';
-import { Audio } from 'expo-av';
-import { Typography, Layout, Spacing } from '../theme/theme';
+import { Layout, Spacing, Typography } from '../theme/theme';
 
+import { ZENGGE_EFFECTS } from '../constants/CustomEffects';
+import { getRbmPatternName } from '../constants/RbmPatterns';
 import { useTheme } from '../context/ThemeContext';
-import ProductVisualizer from './ProductVisualizer';
+import CameraTracker from './CameraTracker';
+import CustomEffectVisualizer from './CustomEffectVisualizer';
 import NeonHueStrip from './NeonHueStrip';
+import ProductVisualizer from './ProductVisualizer';
 import TacticalSlider from './TacticalSlider';
 import VerticalPatternDrum from './VerticalPatternDrum';
-import CameraTracker from './CameraTracker';
-import { getRbmPatternName } from '../constants/RbmPatterns';
-import { ZENGGE_EFFECTS } from '../constants/CustomEffects';
-import CustomEffectVisualizer from './CustomEffectVisualizer';
 
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
-import { PositionalMathBuffer, BuilderNode } from '../protocols/PositionalMathBuffer';
-import PositionalGradientBuilder from './PositionalGradientBuilder';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_PREFIX } from '../constants/AppConstants';
+import { getLocalProfileById, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
+import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
-import { supabase } from '../services/supabaseClient';
-import { ScenesService } from '../services/ScenesService';
 import { containsProfanity } from '../services/AuthUtils';
 import { crewService } from '../services/CrewService';
-import { SpeedTrackingService } from '../services/SpeedTrackingService';
-import CommunityModal from './CommunityModal';
-import SessionSummaryModal from './SessionSummaryModal';
-import type { ISessionSnapshot } from '../services/SpeedTrackingService';
-import { Accelerometer } from 'expo-sensors';
-import { getLocalProfileById, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
-import * as Location from 'expo-location';
-import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
-import MarqueeText from './MarqueeText';
-import { STORAGE_PREFIX, HW_SPEED_MAX } from '../constants/AppConstants';
+import { ScenesService } from '../services/ScenesService';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
+import CommunityModal from './CommunityModal';
+import MarqueeText from './MarqueeText';
+import PositionalGradientBuilder from './PositionalGradientBuilder';
+import SessionSummaryModal from './SessionSummaryModal';
 
 // hexToHue — now imported from '../utils/ColorUtils'
 
-import type { MotionState } from '../hooks/useStreetMode';
 
 // AnalogGauge — now imported from './docked/AnalogGauge'
 // FixedPatternPreviewRow — kept inline (tightly coupled to parent animation state)

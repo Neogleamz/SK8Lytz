@@ -14,46 +14,43 @@
  *
  * Platform: React Native (Android + Web)
  */
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Platform, Image, Linking, Animated, Modal, TextInput, BackHandler, PanResponder, AppState, AppStateStatus, Alert, ActivityIndicator, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Typography, Layout } from '../theme/theme';
-import { useTheme } from '../context/ThemeContext';
-import DeviceItem from '../components/DeviceItem';
-import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, AppState, AppStateStatus, BackHandler, Image, Linking, Modal, PanResponder, Platform, SafeAreaView, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import DeviceItem from '../components/DeviceItem';
+import { useTheme } from '../context/ThemeContext';
 import useBLE from '../hooks/useBLE';
-import { ZenggeProtocol, ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol';
+import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { Layout, Typography } from '../theme/theme';
 
-import DockedController, { DockedControllerHandle } from '../components/DockedController';
-import type { IFavoriteState } from '../types/dashboard.types';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
+import DockedController, { DockedControllerHandle } from '../components/DockedController';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 
-import ScannerAnimation from '../components/ScannerAnimation';
-import { AppLogger } from '../services/AppLogger';
 import AdminToolsModal from '../components/admin/AdminToolsModal';
-import VoiceFAB from '../components/Voice/VoiceFAB';
-import VoiceCommandModal from '../components/Voice/VoiceCommandModal';
-import VoiceTutorialModal from '../components/Voice/VoiceTutorialModal';
 import { CrewModal } from '../components/CrewModal';
-import { crewService, CrewSession, CrewRole } from '../services/CrewService';
+import VoiceCommandModal from '../components/Voice/VoiceCommandModal';
+import VoiceFAB from '../components/Voice/VoiceFAB';
+import VoiceTutorialModal from '../components/Voice/VoiceTutorialModal';
+import { AppLogger } from '../services/AppLogger';
+import { CrewRole, crewService, CrewSession } from '../services/CrewService';
 
-import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
-import { supabase } from '../services/supabaseClient';
-import { useRegistration, RegisteredDevice } from '../hooks/useRegistration';
 import AccountModal from '../components/AccountModal';
 import CrewMemberDashboard from '../components/CrewMemberDashboard';
 import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
+import { RegisteredDevice, useRegistration } from '../hooks/useRegistration';
+import { supabase } from '../services/supabaseClient';
+import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
 
 // ─── Phase 1 Domain Hooks ──────────────────────────────────────────────────────
-import { useDashboardProfile } from '../hooks/useDashboardProfile';
-import { useDashboardGroups } from '../hooks/useDashboardGroups';
-import { useDashboardVoice } from '../hooks/useDashboardVoice';
 import { useDashboardAutoConnect } from '../hooks/useDashboardAutoConnect';
+import { useDashboardGroups } from '../hooks/useDashboardGroups';
+import { useDashboardProfile } from '../hooks/useDashboardProfile';
+import { useDashboardVoice } from '../hooks/useDashboardVoice';
 import { useHardwareNotifications } from '../hooks/useHardwareNotifications';
-import type { DeviceSettings, CustomGroup } from '../types/dashboard.types';
+import type { DeviceSettings } from '../types/dashboard.types';
 
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
 // — migrated as part of Phase 1 Domain-Driven Refactor

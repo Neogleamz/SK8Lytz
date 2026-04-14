@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import type { CustomGroup } from '../../types/dashboard.types';
+import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 import type { ThemePalette } from '../../theme/theme';
+import type { CustomGroup } from '../../types/dashboard.types';
 
 interface SkateGroupCardProps {
   group: CustomGroup;

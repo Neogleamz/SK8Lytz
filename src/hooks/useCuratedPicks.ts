@@ -6,10 +6,10 @@
  *
  * Extracted from DockedController.tsx to isolate cloud data fetching.
  */
-import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../services/supabaseClient';
+import { useEffect, useState } from 'react';
 import { STORAGE_PREFIX } from '../constants/AppConstants';
+import { supabase } from '../services/supabaseClient';
 import type { IFavoriteState } from '../types/dashboard.types';
 
 /**

@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Animated, StyleSheet, TextStyle, StyleProp } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, StyleProp, TextStyle, View } from 'react-native';
 
 interface MarqueeTextProps {
   children: string;

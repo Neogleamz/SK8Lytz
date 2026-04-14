@@ -14,11 +14,15 @@ import { Spacing } from '../theme/theme';
  *
  * Platform: React Native (Android + iOS) + Web-safe
  */
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useCallback } from 'react';
 import {
-  View, Text, Modal, TouchableOpacity, StyleSheet, Animated,
+    Modal,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import type { ISessionSnapshot } from '../services/SpeedTrackingService';
 

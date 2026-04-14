@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView } from 'react-native';
-import { Colors, Typography, Layout, Spacing } from '../theme/theme';
+import React, { useEffect, useState } from 'react';
+import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { AppLogger } from '../services/AppLogger';
+import { Colors, Layout, Spacing, Typography } from '../theme/theme';
 
 interface GroupSettingsModalProps {
   isVisible: boolean;

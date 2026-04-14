@@ -1,15 +1,14 @@
-import { Spacing } from '../../theme/theme';
-import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert, Share, TextInput, Image, RefreshControl, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { useTheme } from '../../context/ThemeContext';
-import { createStyles } from './CrewStyles';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, Image, Platform, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useCrewContext } from '../../context/CrewContext';
-import { profileService, PermanentCrew } from '../../services/ProfileService';
-import { crewService, CrewSession } from '../../services/CrewService';
-import { locationService } from '../../services/LocationService';
+import { useTheme } from '../../context/ThemeContext';
 import { AppLogger } from '../../services/AppLogger';
+import { crewService, CrewSession } from '../../services/CrewService';
+import { PermanentCrew, profileService } from '../../services/ProfileService';
+import { Spacing } from '../../theme/theme';
+import { createStyles } from './CrewStyles';
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();

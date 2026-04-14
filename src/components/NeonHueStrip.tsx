@@ -1,6 +1,6 @@
-import React, { useRef, useState } from 'react';
-import { View, StyleSheet, PanResponder, LayoutChangeEvent } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useRef, useState } from 'react';
+import { LayoutChangeEvent, PanResponder, StyleSheet, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
 interface NeonHueStripProps {

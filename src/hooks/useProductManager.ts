@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
-import { supabase } from '../services/supabaseClient';
 import { useProductCatalog } from '../hooks/useProductCatalog';
+import { supabase } from '../services/supabaseClient';
 import type { ProductProfile } from '../types/ProductCatalog';
 
 /**

@@ -1,26 +1,32 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View, Text, Modal, TouchableOpacity, FlatList, Platform, SafeAreaView, Alert
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useAdminTelemetry, EVENT_META, formatLogTime, getPayloadSummary } from '../../hooks/useAdminTelemetry';
-import { useProductManager } from '../../hooks/useProductManager';
-import { useAdminSettings } from '../../hooks/useAdminSettings';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+    Alert,
+    FlatList,
+    Modal,
+    Platform, SafeAreaView,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import { LogEntry, EventType } from '../../services/AppLogger';
+import { useAdminSettings } from '../../hooks/useAdminSettings';
+import { EVENT_META, formatLogTime, getPayloadSummary, useAdminTelemetry } from '../../hooks/useAdminTelemetry';
+import { useProductManager } from '../../hooks/useProductManager';
+import { EventType, LogEntry } from '../../services/AppLogger';
 import { Spacing } from '../../theme/theme';
 import { adminStyles as styles } from './adminStyles';
 
-import AdminPicksScheduler from './tools/AdminPicksScheduler';
+import { AdminTab } from './AdminTab';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { DeviceTab } from './DeviceTab';
 import { StatsTab } from './StatsTab';
-import { AdminTab } from './AdminTab';
+import AdminPicksScheduler from './tools/AdminPicksScheduler';
 import { AppManager } from './tools/AppManager';
 import { ProductManager } from './tools/ProductManager';
 import Sk8LytzDiagnosticLab from './tools/Sk8LytzDiagnosticLab';
 import Sk8LytzProgrammer from './tools/Sk8LytzProgrammer';
-import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 
 type Tab = 'timeline' | 'stats' | 'device' | 'tools';

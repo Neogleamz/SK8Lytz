@@ -4,11 +4,11 @@
  * Owns: 0x73 music config dispatch, pattern names, pattern navigation.
  * Extracted from DockedController.tsx to isolate music-specific BLE logic.
  */
-import { useEffect, useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
-import { hexToRgb } from '../utils/ColorUtils';
 import type { ModeType } from '../types/dashboard.types';
+import { hexToRgb } from '../utils/ColorUtils';
 
 /** The 13 built-in Zengge music reactive patterns. */
 export const MUSIC_PATTERNS = [

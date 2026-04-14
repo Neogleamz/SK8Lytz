@@ -11,14 +11,14 @@
  *   const { getProfileById, getProfileByPoints, allProfiles } = useProductCatalog();
  */
 
-import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../services/supabaseClient';
+import { useCallback, useEffect, useState } from 'react';
 import {
-  LOCAL_PRODUCT_CATALOG,
-  getLocalProfileById,
-  getLocalProfileByPoints,
+    LOCAL_PRODUCT_CATALOG,
+    getLocalProfileById,
+    getLocalProfileByPoints,
 } from '../constants/ProductCatalog';
+import { supabase } from '../services/supabaseClient';
 import type { ProductProfile } from '../types/ProductCatalog';
 
 const CATALOG_CACHE_KEY = 'ng_product_catalog';

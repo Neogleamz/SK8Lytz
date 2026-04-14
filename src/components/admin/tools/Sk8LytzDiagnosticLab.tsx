@@ -16,21 +16,26 @@
  * exactly what the hardware is receiving.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, Modal, TouchableOpacity,
-  ScrollView, SafeAreaView, TextInput, FlatList, Platform,
+    FlatList, Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../../context/ThemeContext';
-import { Typography, Spacing } from '../../../theme/theme';
-import { ZenggeProtocol, IC_TYPES, COLOR_SORTING_RGB } from '../../../protocols/ZenggeProtocol';
-import CustomEffectVisualizer from '../../CustomEffectVisualizer';
-import { useRegistration } from '../../../hooks/useRegistration';
-import { AppLogger } from '../../../services/AppLogger';
-import { useDiagnosticLog, BleLog } from '../../../hooks/useDiagnosticLog';
+import { useDiagnosticLog } from '../../../hooks/useDiagnosticLog';
 import { useProtocolBuilder } from '../../../hooks/useProtocolBuilder';
+import { useRegistration } from '../../../hooks/useRegistration';
+import { ZenggeProtocol } from '../../../protocols/ZenggeProtocol';
+import { Spacing, Typography } from '../../../theme/theme';
+import CustomEffectVisualizer from '../../CustomEffectVisualizer';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

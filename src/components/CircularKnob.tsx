@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { View, StyleSheet, PanResponder, LayoutChangeEvent, Text } from 'react-native';
-import { Colors, Typography, Spacing } from '../theme/theme';
+import { LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
+import { Colors, Spacing, Typography } from '../theme/theme';
 
 export default function CircularKnob({ value, onValueChange, min = 1, max = 100 }: any) {
   const [center, setCenter] = useState({ x: 0, y: 0 });

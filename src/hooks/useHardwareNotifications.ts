@@ -9,9 +9,8 @@
  * 3. Uses pure stateless parser (BlePayloadParser).
  * 4. Checks Delta before mutating State/AsyncStorage.
  */
-import { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../services/supabaseClient';
+import { useEffect, useRef } from 'react';
 import { AppLogger } from '../services/AppLogger';
 import { BlePayloadParser } from '../utils/BlePayloadParser';
 

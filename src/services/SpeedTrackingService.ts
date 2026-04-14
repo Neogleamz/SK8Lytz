@@ -17,8 +17,8 @@
  *
  * Platform: React Native (Android + iOS) + Web-safe fallbacks
  */
-import { supabase } from './supabaseClient';
 import { AppLogger } from './AppLogger';
+import { supabase } from './supabaseClient';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 

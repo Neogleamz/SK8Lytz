@@ -7,10 +7,10 @@
  * Extracted from DockedController.tsx (Phase 3).
  */
 import React from 'react';
-import { View, Text, FlatList, Dimensions } from 'react-native';
-import { Typography, Layout, Spacing } from '../../theme/theme';
-import PresetCard from './PresetCard';
+import { Dimensions, FlatList, Text, View } from 'react-native';
+import { Layout, Spacing, Typography } from '../../theme/theme';
 import type { IFavoriteState } from '../../types/dashboard.types';
+import PresetCard from './PresetCard';
 
 interface FavoritesPanelProps {
   favorites: IFavoriteState[];

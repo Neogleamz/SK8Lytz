@@ -1,9 +1,9 @@
-import { Spacing } from '../theme/theme';
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Dimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { SkateSpotsService, SkateSpot } from '../services/SkateSpotsService';
+import { SkateSpot, SkateSpotsService } from '../services/SkateSpotsService';
+import { Spacing } from '../theme/theme';
 
 interface BottomSheetProps {
   visible: boolean;

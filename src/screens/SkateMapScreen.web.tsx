@@ -1,7 +1,7 @@
-import { Spacing } from '../theme/theme';
-import React from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React from 'react';
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Spacing } from '../theme/theme';
 
 interface SkateMapScreenProps {
   visible: boolean;

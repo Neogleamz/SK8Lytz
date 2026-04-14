@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, Modal, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { Modal, NativeScrollEvent, NativeSyntheticEvent, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import { Layout, Spacing } from '../../theme/theme';
 
 interface EulaModalProps {

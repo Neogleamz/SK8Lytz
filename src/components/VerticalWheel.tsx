@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, Platform, TouchableOpacity } from 'react-native';
+import { FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../theme/theme';
 interface VerticalWheelProps {
   value: number;

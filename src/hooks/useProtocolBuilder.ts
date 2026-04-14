@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 
 export type ProtocolType = '0x51' | '0x59' | '0x61' | '0x73' | '0x62';

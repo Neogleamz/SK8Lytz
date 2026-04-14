@@ -1,5 +1,5 @@
+import { Dimensions, Platform, StyleSheet } from 'react-native';
 import { Spacing } from '../../theme/theme';
-import { StyleSheet, Dimensions, Platform } from 'react-native';
 const { width } = Dimensions.get('window');
 
 export const createStyles = (Colors: any) => StyleSheet.create({

@@ -1,20 +1,16 @@
-import { Spacing } from '../../theme/theme';
-import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert, Share, TextInput, Image, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '../../context/ThemeContext';
-import * as Clipboard from 'expo-clipboard';
-import { profileService, PermanentCrew } from '../../services/ProfileService';
-import { crewService, CrewSession } from '../../services/CrewService';
-import { locationService } from '../../services/LocationService';
-import { AppLogger } from '../../services/AppLogger';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import * as ImagePicker from 'expo-image-picker';
+import React from 'react';
+import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
+import { AppLogger } from '../../services/AppLogger';
+import { crewService } from '../../services/CrewService';
+import { Spacing } from '../../theme/theme';
 import { LocationPicker } from '../LocationPicker';
 
-import { createStyles } from './CrewStyles';
-import { useCrewContext } from '../../context/CrewContext';
 import { Platform } from 'react-native';
+import { useCrewContext } from '../../context/CrewContext';
+import { createStyles } from './CrewStyles';
 
 export function CrewScheduleScreen() {
   const { Colors } = useTheme();

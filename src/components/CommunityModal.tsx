@@ -1,12 +1,19 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, Modal, TouchableOpacity, FlatList,
-  ActivityIndicator, Alert, SafeAreaView, Animated, Easing
+    ActivityIndicator, Alert,
+    Animated, Easing,
+    FlatList,
+    Modal,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { Typography, Layout, Spacing } from '../theme/theme';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ScenesService, ICloudScene } from '../services/ScenesService';
+import { ICloudScene, ScenesService } from '../services/ScenesService';
+import { Layout, Spacing, Typography } from '../theme/theme';
 
 interface Props {
   isVisible: boolean;

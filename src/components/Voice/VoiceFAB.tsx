@@ -1,14 +1,13 @@
-import { Spacing } from '../../theme/theme';
-import React from 'react';
-import {
-  TouchableOpacity,
-  StyleSheet,
-  View,
-  Dimensions,
-  Platform
-} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import {
+    Dimensions,
+    StyleSheet,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import { Spacing } from '../../theme/theme';
 
 const { width } = Dimensions.get('window');
 

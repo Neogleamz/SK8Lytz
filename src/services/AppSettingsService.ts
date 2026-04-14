@@ -1,6 +1,6 @@
-import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from './AppLogger';
+import { supabase } from './supabaseClient';
 
 /**
  * Valid known keys for App Settings

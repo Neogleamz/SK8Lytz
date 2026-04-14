@@ -6,13 +6,13 @@
  *
  * Extracted from DockedController.tsx (Phase 3).
  */
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Spacing } from '../../theme/theme';
-import AnalogGauge from './AnalogGauge';
+import React from 'react';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { crewService } from '../../services/CrewService';
+import { Spacing } from '../../theme/theme';
 import type { MotionState } from '../../types/dashboard.types';
+import AnalogGauge from './AnalogGauge';
 
 interface StreetPanelProps {
   isStreetBraking: boolean;

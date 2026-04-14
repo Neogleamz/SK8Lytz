@@ -9,8 +9,8 @@
  */
 
 import * as Location from 'expo-location';
-import { supabase } from './supabaseClient';
 import { AppLogger } from './AppLogger';
+import { supabase } from './supabaseClient';
 
 export interface SessionLocation {
   label: string;          // "SkateCity OP, Olathe KS"

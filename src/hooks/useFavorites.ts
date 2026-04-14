@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback, useEffect, useState } from 'react';
 import type { IFavoriteState, IQuickPreset } from '../types/dashboard.types';
 
 // Shared Storage Prefix constant

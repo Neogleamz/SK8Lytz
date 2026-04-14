@@ -1,8 +1,8 @@
-import { Spacing } from '../theme/theme';
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, NativeSyntheticEvent, NativeScrollEvent, TouchableOpacity, LayoutChangeEvent } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { FlatList, LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
+import { Spacing } from '../theme/theme';
 
 const REPEATS = 5;      // How many full cycles to pre-build (virtual infinite)
 const VISIBLE_ITEMS = 5; // Items visible at once on wheel

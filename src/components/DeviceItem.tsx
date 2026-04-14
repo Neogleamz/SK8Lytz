@@ -1,9 +1,9 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
-import { Typography, Layout, Spacing } from '../theme/theme';
-import { useTheme } from '../context/ThemeContext';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
+import { Layout, Spacing, Typography } from '../theme/theme';
 
 interface DeviceItemProps {
   device: { name: string | null; id: string; rssi?: number | null; rssiList?: number[]; isGroup?: boolean };

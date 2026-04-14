@@ -11,10 +11,10 @@
  * Payload:         { scene: CapturedScene, leader_id: string, ts: number }
  */
 
-import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { AppLogger } from './AppLogger';
+import { supabase } from './supabaseClient';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

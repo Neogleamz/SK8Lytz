@@ -11,10 +11,10 @@
  *  - No BLE interaction occurs in this hook.
  *  - Depends on: SpeedTrackingService (Supabase), AppLogger
  */
-import { useState, useRef, useCallback } from 'react';
-import { SpeedTrackingService } from '../services/SpeedTrackingService';
-import type { ISessionSnapshot } from '../services/SpeedTrackingService';
+import { useCallback, useRef, useState } from 'react';
 import { AppLogger } from '../services/AppLogger';
+import type { ISessionSnapshot } from '../services/SpeedTrackingService';
+import { SpeedTrackingService } from '../services/SpeedTrackingService';
 
 export type SessionState = 'IDLE' | 'RECORDING' | 'COMPLETE';
 

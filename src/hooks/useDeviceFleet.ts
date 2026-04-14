@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { supabase } from '../services/supabaseClient';
-import { AppLogger } from '../services/AppLogger';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
+import { AppLogger } from '../services/AppLogger';
+import { supabase } from '../services/supabaseClient';
 
 export type StoredDevice = {
   id: string;

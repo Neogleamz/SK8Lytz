@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { DarkColors, LightColors, ThemePalette } from '../theme/theme';
 
 const THEME_KEY = '@Sk8lytz_ThemeMode';

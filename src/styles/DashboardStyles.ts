@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
-import { Layout } from '../theme/theme';
 import type { ThemePalette } from '../theme/theme';
+import { Layout } from '../theme/theme';
 
 /**
  * Utility to generate premium gradient colors based on pattern name/state

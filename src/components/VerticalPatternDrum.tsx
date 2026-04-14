@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, NativeSyntheticEvent, NativeScrollEvent, TouchableOpacity, FlatList } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { FlatList, NativeScrollEvent, NativeSyntheticEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Spacing } from '../theme/theme';
 

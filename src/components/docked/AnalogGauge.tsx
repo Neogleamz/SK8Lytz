@@ -5,8 +5,8 @@
  * Used in Street Mode to display GPS speed and G-force telemetry.
  */
 import React, { useMemo } from 'react';
-import { View, Text } from 'react-native';
-import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import { Text, View } from 'react-native';
+import Svg, { Circle, Defs, Path, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { Spacing } from '../../theme/theme';
 
 export interface IAnalogGaugeProps {

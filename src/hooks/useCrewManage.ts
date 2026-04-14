@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { profileService, CrewMemberFull, PermanentCrew } from '../services/ProfileService';
+import { useEffect, useState } from 'react';
+import { CrewMemberFull, PermanentCrew, profileService } from '../services/ProfileService';
 
 export function useCrewManage(
   myCrews: PermanentCrew[]

@@ -1,13 +1,13 @@
-import { Spacing } from '../theme/theme';
-import React, { useEffect, useRef, useMemo, useState } from 'react';
-import { View, StyleSheet, Animated, Text, TouchableOpacity, Platform } from 'react-native';
-import { getRbmVisualizerFrame, getRbmMusicFrame, rgbToHex } from '../utils/RbmSimulator';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { useTheme } from '../context/ThemeContext';
+import type { PatternId, RGB } from '../protocols/PatternEngine';
 import { getVisualizerFrame } from '../protocols/PatternEngine';
-import type { RGB, PatternId } from '../protocols/PatternEngine';
-import { ZenggeVisualizerMath } from '../protocols/ZenggeVisualizerMath';
 import { PositionalMathBuffer } from '../protocols/PositionalMathBuffer';
-import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
+import { ZenggeVisualizerMath } from '../protocols/ZenggeVisualizerMath';
+import { Spacing } from '../theme/theme';
+import { getRbmMusicFrame, getRbmVisualizerFrame, rgbToHex } from '../utils/RbmSimulator';
 
 interface DeviceConfig {
   id?: string;

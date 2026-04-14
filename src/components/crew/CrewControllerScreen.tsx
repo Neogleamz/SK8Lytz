@@ -1,19 +1,14 @@
-import { Spacing } from '../../theme/theme';
-import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert, Share, TextInput, Image, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '../../context/ThemeContext';
 import * as Clipboard from 'expo-clipboard';
-import { profileService, PermanentCrew } from '../../services/ProfileService';
-import { crewService, CrewSession, CrewMember } from '../../services/CrewService';
-import { locationService } from '../../services/LocationService';
-import { AppLogger } from '../../services/AppLogger';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import * as ImagePicker from 'expo-image-picker';
+import React from 'react';
+import { Alert, Animated, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
+import { CrewMember, crewService } from '../../services/CrewService';
+import { Spacing } from '../../theme/theme';
 
-import { createStyles } from './CrewStyles';
 import { useCrewContext } from '../../context/CrewContext';
 import CrewMemberDashboard from '../CrewMemberDashboard';
+import { createStyles } from './CrewStyles';
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();

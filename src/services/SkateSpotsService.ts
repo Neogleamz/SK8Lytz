@@ -1,6 +1,6 @@
-import { supabase } from './supabaseClient';
 import type { Database } from '../types/supabase';
 import { AppLogger } from './AppLogger';
+import { supabase } from './supabaseClient';
 
 export type SkateSpot = Database['public']['Tables']['skate_spots']['Row'];
 

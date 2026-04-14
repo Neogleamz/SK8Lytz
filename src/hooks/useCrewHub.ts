@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { profileService, PermanentCrew } from '../services/ProfileService';
-import { locationService, NearbySession } from '../services/LocationService';
+import { useCallback, useEffect, useState } from 'react';
 import { crewService, CrewSession } from '../services/CrewService';
+import { locationService, NearbySession } from '../services/LocationService';
+import { PermanentCrew, profileService } from '../services/ProfileService';
 
 export function useCrewHub(visible: boolean, step: string) {
   const [discoverRadiusMi, setDiscoverRadiusMi] = useState<number | null>(50);

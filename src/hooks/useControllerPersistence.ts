@@ -6,8 +6,8 @@
  *
  * Extracted from DockedController.tsx to isolate persistence side-effects.
  */
-import { useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect } from 'react';
 import { STORAGE_PREFIX } from '../constants/AppConstants';
 import type { ModeType } from '../types/dashboard.types';
 

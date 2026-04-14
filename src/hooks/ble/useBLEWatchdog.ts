@@ -1,9 +1,9 @@
-import { useRef, useEffect } from 'react';
+import { Buffer } from 'buffer';
+import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import type { Device, Subscription } from 'react-native-ble-plx';
-import { Buffer } from 'buffer';
+import { ZENGGE_CHARACTERISTIC_UUID, ZENGGE_NOTIFY_UUID, ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { AppLogger } from '../../services/AppLogger';
-import { ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, ZENGGE_NOTIFY_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 
 export interface UseBLEWatchdogProps {
   bleManager: any;

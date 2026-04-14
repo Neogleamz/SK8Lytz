@@ -1,18 +1,14 @@
-import { Spacing } from '../../theme/theme';
-import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Animated, ActivityIndicator, Alert, Share, TextInput, Image, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '../../context/ThemeContext';
 import * as Clipboard from 'expo-clipboard';
-import { profileService, PermanentCrew } from '../../services/ProfileService';
-import { crewService, CrewSession } from '../../services/CrewService';
-import { locationService } from '../../services/LocationService';
+import React from 'react';
+import { ActivityIndicator, Alert, Image, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import { AppLogger } from '../../services/AppLogger';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import * as ImagePicker from 'expo-image-picker';
+import { PermanentCrew, profileService } from '../../services/ProfileService';
+import { Spacing } from '../../theme/theme';
 
-import { createStyles } from './CrewStyles';
 import { useCrewContext } from '../../context/CrewContext';
+import { createStyles } from './CrewStyles';
 
 
 

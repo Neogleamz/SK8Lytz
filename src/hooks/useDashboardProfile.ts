@@ -8,11 +8,11 @@
  *
  * Depends on: ProfileService, AppSettingsService, NotificationService
  */
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { profileService, UserProfile } from '../services/ProfileService';
-import { AppSettingsService, AppSettingsMap } from '../services/AppSettingsService';
+import { AppSettingsMap, AppSettingsService } from '../services/AppSettingsService';
 import { notificationService } from '../services/NotificationService';
+import { profileService, UserProfile } from '../services/ProfileService';
 
 interface UseDashboardProfileOptions {
   /**

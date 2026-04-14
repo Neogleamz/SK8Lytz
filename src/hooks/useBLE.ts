@@ -8,13 +8,13 @@
  * This hook is now a Thin Orchestrator, dynamically routing scanning to useBLEScanner
  * and watchdog connection health to useBLEWatchdog.
  */
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
+import { ZENGGE_CHARACTERISTIC_UUID, ZENGGE_NOTIFY_UUID, ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
-import { ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, ZENGGE_NOTIFY_UUID, ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import type { PendingRegistration } from '../types/dashboard.types';
 
 import { requestPermissions } from '../utils/blePermissions';

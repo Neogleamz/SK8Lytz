@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, StyleSheet } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
 export const LocationPickerMap: React.FC<any> = ({ style, initialRegion, children }) => {
   // Use OSM static map for web fallback

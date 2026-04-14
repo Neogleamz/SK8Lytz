@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { SpeedTrackingService, ILifetimeStats, ISkateSession } from '../services/SpeedTrackingService';
+import { useEffect, useState } from 'react';
+import { ILifetimeStats, ISkateSession, SpeedTrackingService } from '../services/SpeedTrackingService';
 
 export function useSkateStats(visible: boolean) {
   const [lifetimeStats, setLifetimeStats] = useState<ILifetimeStats | null>(null);

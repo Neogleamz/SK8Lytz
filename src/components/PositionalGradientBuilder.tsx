@@ -1,15 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { BuilderNode, PositionalMathBuffer, CustomBuilderPreset } from '../protocols/PositionalMathBuffer';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
-import CustomSlider from './CustomSlider';
-import { supabase } from '../services/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Modal, TextInput, ActivityIndicator, Alert } from 'react-native';
-import MarqueeText from './MarqueeText';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
+import { BuilderNode, CustomBuilderPreset, PositionalMathBuffer } from '../protocols/PositionalMathBuffer';
+import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
+import { supabase } from '../services/supabaseClient';
+import CustomSlider from './CustomSlider';
+import MarqueeText from './MarqueeText';
 
 interface Props {
   nodes: BuilderNode[];
