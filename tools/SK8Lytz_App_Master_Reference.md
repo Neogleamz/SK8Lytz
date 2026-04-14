@@ -80,6 +80,7 @@ Sk8Lytz caters to a diverse, family-oriented community of dedicated roller skate
 | `@sk8lytz_theme`                    | ThemeContext                | `dark` or `light`                                                                                                                               |
 | `@sk8lytz_control_theme`            | ThemeContext                | Control color theme name                                                                                                                        |
 | `@Sk8lytz_Favorites`                | DashboardScreen             | Dictionary of user-defined lighting presets (Name, Palette, Mode)                                                                               |
+| `@sk8lytz_permissions_optout`       | PermissionService           | App-Level Opt-Out Ledger. User toggles that override OS permissions for legal/privacy reasons.                                                  |
 | `@Sk8lytz_voice_tutorial_dismissed` | boolean                     | Gating for the Voice Command onboarding modal                                                                                                   |
 
 ## Build Config & Troubleshooting 🛠️
@@ -130,6 +131,7 @@ The **Admin Tools Hub** (`AdminToolsModal`) is the unified gateway for all syste
 - **Persistence & Governance**:
   - App settings (feature flags) are persisted via `AppSettingsService` with atomic rollback on failure.
   - Product Manager upserts are strictly typed to enforce the `batteryCapacityMilliAmpereHour` field, preventing database record drift.
+  - **Account Deletion (Danger Zone)**: Implements a destructive `delete_account` RPC on Supabase. This uses `ON DELETE CASCADE` to completely shred user data across all tables (telemetry, profiles, and auth).
 - **Navigation Orchestration**: Closing any administrative sub-tool (Lab, Programmer) must explicitly re-trigger the visibility of the `AdminToolsModal` in the parent `DashboardScreen` to ensure a consistent "nested" navigation experience.
 
 ### Optimistic BLE Write Pipeline ("The Ghost Standard")
@@ -438,12 +440,26 @@ This project is governed by a custom-built **Agentic OS**—a suite of 38 strict
 | **Emergency Debug Drill** | Enforces instrumentation over guess-fixing.        |
 | **Boy Scout (Tech Debt)** | Mandates one small cleanup in every modified file. |
 | **Supabase Schema Sync**  | Automatic type regeneration after DB changes.      |
+| **Direct Merge Protocol** | (v1.8.0) Authorized to merge/push to master locally upon explicit user consent. |
 
 ---
 
 ## 9. Sentinel Engineering Governance (Workflow V6)
 
 The SK8Lytz lifecycle is governed by the **Sentinel Engine**.
+
+### 9.1 Legal Hardening (The Compliance Shield)
+_Shipped: v1.8.0 | Mandatory for App Store Governance_
+
+**App-Level Opt-Out Ledger**:
+- **Source of Truth**: `@sk8lytz_permissions_optout` in AsyncStorage.
+- **Behavior**: If a user revokes inside the app, the app "Soft-Revokes" (stops using the API) even if the OS says "Allowed".
+- **OS Sync**: `syncSystemPermissions()` runs on boot/foreground to reconcile the ledger with native OS settings. If OS is "Denied", App ledger is forced to "Opt-Out".
+
+**Immutable Audit Trail**:
+- **AppLogger Dispatch**: Every permission change and EULA acceptance fires an immutable cloud event (`PERMISSION_OPT_IN`, `PERMISSION_OPT_OUT`, `EULA_ACCEPTED`) with a forced timestamp.
+- **Legal Defense**: Provides a non-repudiable log of when a user accepted terms.
+
 
 ### Priority Hierarchy
 

@@ -10,12 +10,20 @@ export type PermissionType = 'CAMERA' | 'MIC' | 'LOCATION' | 'NOTIFICATIONS' | '
 
 export const OPTOUT_LEDGER_KEY = '@sk8lytz_permissions_optout';
 
+export const DEFAULT_LEDGER: Record<PermissionType, boolean> = {
+  CAMERA: false,
+  MIC: false,
+  LOCATION: false,
+  NOTIFICATIONS: false,
+  BLUETOOTH: false,
+};
+
 export const getOptOutLedger = async (): Promise<Record<PermissionType, boolean>> => {
   try {
     const data = await AsyncStorage.getItem(OPTOUT_LEDGER_KEY);
-    return data ? JSON.parse(data) : {};
+    return data ? JSON.parse(data) : DEFAULT_LEDGER;
   } catch {
-    return {} as Record<PermissionType, boolean>;
+    return DEFAULT_LEDGER;
   }
 };
 

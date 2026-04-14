@@ -285,7 +285,7 @@ export default function AccountModal({
                   onPress: async () => {
                     try {
                       // Attempt to run the dedicated Account Deletion RPC
-                      const { error } = await supabase.rpc('delete_account');
+                      const { error } = await (supabase as any).rpc('delete_account');
                       if (error) {
                         console.error('Account deletion RPC failed:', error);
                         throw new Error('Database rejection. Please contact support.');
