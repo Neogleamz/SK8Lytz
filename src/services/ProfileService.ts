@@ -80,9 +80,15 @@ class ProfileService {
    * Fetch or auto-create a profile for the currently logged-in user.
    * Automatically self-heals missing display names or usernames from Auth metadata
    * if the database trigger failed to set them during signup.
+   * @param cachedUser Optional pre-fetched user object to avoid redundant network calls
    */
-  async fetchOrCreateProfile(): Promise<UserProfile | null> {
-    const { data: { user } } = await supabase.auth.getUser();
+  async fetchOrCreateProfile(cachedUser?: any): Promise<UserProfile | null> {
+    let user = cachedUser;
+    if (!user) {
+      const { data: authData } = await supabase.auth.getUser();
+      user = authData.user;
+    }
+    
     if (!user) return null;
 
     const { data: existing } = await supabase
@@ -163,10 +169,15 @@ class ProfileService {
 
   /**
    * Return the last 20 crew sessions the current user was part of.
+   * @param cachedUserId Optional pre-fetched user ID to avoid redundant network calls
    */
-  async getSessionHistory(): Promise<SessionHistoryItem[]> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+  async getSessionHistory(cachedUserId?: string): Promise<SessionHistoryItem[]> {
+    let userId = cachedUserId;
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      userId = user.id;
+    }
 
     const { data, error } = await supabase
       .from('crew_members')
@@ -180,7 +191,7 @@ class ProfileService {
           crews ( name )
         )
       `)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('joined_at', { ascending: false })
       .limit(20);
 
@@ -192,7 +203,7 @@ class ProfileService {
         session_id:   session?.id ?? '',
         session_name: session?.name ?? 'Crew Session',
         crew_name:    session?.crews?.name ?? null,
-        role:         session?.leader_user_id === user.id ? 'leader' : 'member',
+        role:         session?.leader_user_id === userId ? 'leader' : 'member',
         joined_at:    row.joined_at,
         expires_at:   session?.expires_at ?? '',
       } as SessionHistoryItem;
@@ -204,17 +215,23 @@ class ProfileService {
   /**
    * List all permanent crews the current user is a member of.
    * Delta Sync: Optionally supply updatedSince to limit fetching.
+   * @param updatedSince Timestamp string for delta sync
+   * @param cachedUserId Optional pre-fetched user ID to avoid redundant network calls
    */
-  async getMyCrew(updatedSince?: string): Promise<PermanentCrew[]> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+  async getMyCrew(updatedSince?: string, cachedUserId?: string): Promise<PermanentCrew[]> {
+    let userId = cachedUserId;
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      userId = user.id;
+    }
 
     const query = supabase
       .from('crew_memberships')
       // Note: For delta sync on inner joins, we'd apply it on the root table or standard table
       // To preserve stability without custom RPC, we perform standard select and filter locally.
       .select(`crews ( id, name, owner_id, invite_code, created_at, updated_at, is_public, avatar_color, avatar_icon, avatar_url, city, state, description )`)
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
 
     const { data, error } = await query.order('joined_at', { ascending: true });
 
@@ -230,7 +247,7 @@ class ProfileService {
 
     return filteredCrews.map((crew: any) => ({
       ...crew,
-      is_owner: crew.owner_id === user.id,
+      is_owner: crew.owner_id === userId,
     })) as PermanentCrew[];
   }
 

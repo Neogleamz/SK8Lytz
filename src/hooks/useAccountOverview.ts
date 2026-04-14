@@ -60,14 +60,17 @@ export function useAccountOverview(visible: boolean) {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      AppLogger.log('ACCOUNT_MODAL_LOAD_START');
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setUserEmail(user.email ?? '');
 
+      // Pass the cached user/userId to avoid redundant auth token lookups
       const [p, c, h] = await Promise.all([
-        profileService.fetchOrCreateProfile(),
-        profileService.getMyCrew(),
-        profileService.getSessionHistory(),
+        profileService.fetchOrCreateProfile(user),
+        profileService.getMyCrew(undefined, user?.id),
+        profileService.getSessionHistory(user?.id),
       ]);
+      AppLogger.log('ACCOUNT_MODAL_DATA_RESOLVED', { hasProfile: !!p, crewCount: c?.length || 0, historyCount: h?.length || 0 });
       if (p) {
         setProfile(p);
         setEditName(p.display_name ?? '');

@@ -8,7 +8,7 @@
  */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { crewService } from '../../services/CrewService';
 import { Spacing } from '../../theme/theme';
 import type { MotionState } from '../../types/dashboard.types';
@@ -37,6 +37,10 @@ const StreetPanel = React.memo(({
   stopSessionRecording,
   Colors,
 }: StreetPanelProps) => {
+  const { height: windowHeight } = useWindowDimensions();
+  const isShort = windowHeight < 720;
+  const gaugeSize = isShort ? 100 : 120;
+
   return (
     <ScrollView
       style={{ flex: 1 }}
@@ -45,8 +49,8 @@ const StreetPanel = React.memo(({
       bounces={false}
     >
       {/* Car-light zone bar */}
-      <View style={{ marginBottom: Spacing.md }}>
-        <View style={{ flexDirection: 'row', height: 26, borderRadius: 13, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+      <View style={{ marginBottom: isShort ? Spacing.sm : Spacing.md }}>
+        <View style={{ flexDirection: 'row', height: isShort ? 22 : 26, borderRadius: 13, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
           <View style={{ flex: 3, backgroundColor: isStreetBraking ? '#FF0000' : '#660000', justifyContent: 'center', alignItems: 'center' }}>
             <Text allowFontScaling={false} style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>TAIL (30%)</Text>
           </View>
@@ -108,8 +112,8 @@ const StreetPanel = React.memo(({
 
         {/* Gauges */}
         <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
-          <AnalogGauge value={gpsSpeed} min={0} max={25} label="SPEED" unit="MPH" size={120} defaultColor="#00F0FF" dangerVal={15} criticalVal={20} />
-          <AnalogGauge value={peakGForce} min={0.3} max={2.5} label="G-FORCE" unit="G" size={120} defaultColor="#FFD700" dangerVal={1.2} criticalVal={1.8} />
+          <AnalogGauge value={gpsSpeed} min={0} max={25} label="SPEED" unit="MPH" size={gaugeSize} defaultColor="#00F0FF" dangerVal={15} criticalVal={20} />
+          <AnalogGauge value={peakGForce} min={0.3} max={2.5} label="G-FORCE" unit="G" size={gaugeSize} defaultColor="#FFD700" dangerVal={1.2} criticalVal={1.8} />
         </View>
 
         {/* Session controls */}

@@ -16,7 +16,7 @@
  * Platform: React Native (Android + Web)
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Dimensions, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useAppMicrophone } from '../hooks/useAppMicrophone';
 import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
 import { useCuratedPicks } from '../hooks/useCuratedPicks';
@@ -157,6 +157,9 @@ export type DockedControllerHandle = {
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
   function DockedController({ hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged }: Sk8lytzControllerProps, ref) {
     const { Colors, isDark } = useTheme();
+    const { height: windowHeight } = useWindowDimensions();
+    const isShort = windowHeight < 720;
+    const gaugeSize = isShort ? 100 : 120;
     const styles = createStyles(Colors);
 
     /**
@@ -1296,8 +1299,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 bounces={false}
               >
                 {/* ── Street Visualizer: Car-light zone bar ── */}
-                <View style={{ marginBottom: Spacing.md }}>
-                  <View style={{ flexDirection: 'row', height: 26, borderRadius: 13, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                <View style={{ marginBottom: isShort ? Spacing.sm : Spacing.md }}>
+                  <View style={{ flexDirection: 'row', height: isShort ? 22 : 26, borderRadius: 13, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
                     {/* Rear zone — red tail lights */}
                     <View style={{ flex: 3, backgroundColor: isStreetBraking ? '#FF0000' : '#660000', justifyContent: 'center', alignItems: 'center' }}>
                       <Text allowFontScaling={false} style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>TAIL (30%)</Text>
@@ -1369,8 +1372,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
                   {/* CENTER: Telemetry Gauges */}
                   <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
-                    <AnalogGauge value={gpsSpeed} min={0} max={25} label="SPEED" unit="MPH" size={120} defaultColor="#00F0FF" dangerVal={15} criticalVal={20} />
-                    <AnalogGauge value={peakGForce} min={0.3} max={2.5} label="G-FORCE" unit="G" size={120} defaultColor="#FFD700" dangerVal={1.2} criticalVal={1.8} />
+                    <AnalogGauge value={gpsSpeed} min={0} max={25} label="SPEED" unit="MPH" size={gaugeSize} defaultColor="#00F0FF" dangerVal={15} criticalVal={20} />
+                    <AnalogGauge value={peakGForce} min={0.3} max={2.5} label="G-FORCE" unit="G" size={gaugeSize} defaultColor="#FFD700" dangerVal={1.2} criticalVal={1.8} />
                   </View>
                   
                   {/* BOTTOM: Global Telemetry + Session Controls */}

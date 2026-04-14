@@ -17,7 +17,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, AppState, AppStateStatus, BackHandler, Image, Linking, Modal, PanResponder, Platform, SafeAreaView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, AppState, AppStateStatus, BackHandler, Dimensions, Image, Linking, Modal, PanResponder, Platform, SafeAreaView, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DeviceItem from '../components/DeviceItem';
 import { useTheme } from '../context/ThemeContext';
@@ -61,7 +61,8 @@ import { createDashboardStyles, getPatternColors } from '../styles/DashboardStyl
 export default function DashboardScreen({ isOfflineMode = false, onLogout }: { isOfflineMode?: boolean; onLogout?: () => void } = {}) {
   const { Colors, isDark, toggleTheme } = useTheme();
   const insets = useSafeAreaInsets();
-  const styles = createDashboardStyles(Colors);
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const styles = createDashboardStyles(Colors, windowHeight, windowWidth);
   const {
     scanForPeripherals,
     allDevices,
@@ -982,10 +983,17 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 {renderDashboardHeader()}
              </View>
 
-             <View style={{ flex: 1, paddingBottom: 40 }}>
+             <ScrollView 
+               style={{ flex: 1 }} 
+               contentContainerStyle={{ paddingBottom: insets.bottom + 60, flexGrow: 1 }}
+               showsVerticalScrollIndicator={false}
+             >
                 {/* SLAB 2: CREW HUB (Sessions) */}
                 <View style={[styles.slabContainer, { marginTop: 12 }]}>
-                  <View style={[styles.glassSlab, { borderColor: isOfflineMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,170,0,0.2)', paddingVertical: isOfflineMode ? 16 : 40 }]}>
+                  <View style={[styles.glassSlab, { 
+                    borderColor: isOfflineMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,170,0,0.2)', 
+                    paddingVertical: isOfflineMode ? 16 : (windowHeight < 720 ? 16 : 40) 
+                  }]}>
                     <View style={[styles.slabHeader, isOfflineMode && { marginBottom: 8 }]}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <MaterialCommunityIcons name={isOfflineMode ? "cloud-off-outline" : "account-group"} size={18} color={isOfflineMode ? Colors.textMuted : "#FFAA00"} />
@@ -1087,7 +1095,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   )}
                 </View>
 
-                <View style={{ flex: 1 }} />
+                {/* Flexible spacer — only pushes content on large screens */}
+                <View style={{ flex: 1, minHeight: windowHeight < 720 ? 0 : 20 }} />
 
                 {/* SLAB 4: REGISTERED FLEET (Devices) */}
                 <View style={styles.slabContainer}>
@@ -1132,7 +1141,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     )
                   )}
                 </View>
-             </View>
+              </ScrollView>
           </View>
         )}
         <DeviceSettingsModal
@@ -1285,7 +1294,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           setIsCrewModalVisible(true);
           setIsAccountModalVisible(false);
         }}
-        registeredDevices={registeredDevices.map((d) => ({
+        registeredDevices={useMemo(() => registeredDevices.map((d) => ({
           id: d.id || '',
           mac: d.device_mac || '',
           name: d.device_name || '',
@@ -1293,7 +1302,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           groupName: d.group_name || '',
           type: d.product_type as any,
           registeredAt: d.registered_at,
-        }))}
+        })), [registeredDevices])}
         onDeviceRenamed={async (deviceId, newName) => {
           setAllDevices((prev: any[]) => prev.map((d: any) =>
             d.id === deviceId ? { ...d, customName: newName } : d

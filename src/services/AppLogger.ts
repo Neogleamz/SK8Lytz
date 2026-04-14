@@ -101,6 +101,8 @@ export type EventType =
   | 'SESSION_SAVED'
   | 'SPEED_REACTIVE_ENABLED'
   | 'SPEED_REACTIVE_DISABLED'
+  | 'ACCOUNT_MODAL_LOAD_START'
+  | 'ACCOUNT_MODAL_DATA_RESOLVED'
   // ── Voice & Audio ─────────────────────────────────────────
   | 'VOICE_RESULT'
   | 'VOICE_ERROR'

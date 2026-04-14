@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
@@ -36,10 +36,19 @@ export function useDeviceFleet({
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [groupNewName, setGroupNewName] = useState('');
 
+  const initialDevicesRef = React.useRef(initialDevices);
+  useEffect(() => {
+    initialDevicesRef.current = initialDevices;
+  }, [initialDevices]);
+
   const loadDevices = useCallback(async (updatedSince?: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      // If offline/unauthenticated, fallback to initial devices
+      if (!user) {
+        if (initialDevicesRef.current.length > 0) setDevices(initialDevicesRef.current);
+        return;
+      }
 
       let query = supabase
         .from('registered_devices')
@@ -79,14 +88,14 @@ export function useDeviceFleet({
            });
            return patched;
         });
-      } else if (initialDevices.length > 0 && !updatedSince) {
-        setDevices(initialDevices);
+      } else if (initialDevicesRef.current.length > 0 && !updatedSince) {
+        setDevices(initialDevicesRef.current);
       }
     } catch (err) {
       console.warn('[useDeviceFleet] Could not fetch cloud devices:', err);
-      if (initialDevices.length > 0) setDevices(initialDevices);
+      if (initialDevicesRef.current.length > 0) setDevices(initialDevicesRef.current);
     }
-  }, [initialDevices]);
+  }, []); // Empty dependencies to prevent re-render loop
 
   useEffect(() => {
     if (visible) {

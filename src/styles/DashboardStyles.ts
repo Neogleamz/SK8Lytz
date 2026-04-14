@@ -23,7 +23,12 @@ export const getPatternColors = (patternName?: string, Colors?: ThemePalette) =>
   return [Colors?.primary || '#00F0FF', Colors?.secondary || '#7000FF'];
 };
 
-export const createDashboardStyles = (Colors: ThemePalette) => StyleSheet.create({
+export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number = 800, windowWidth: number = 400) => {
+  const isShort = windowHeight < 720;
+  const isVeryShort = windowHeight < 640;
+  const isNarrow = windowWidth < 360;
+
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -134,7 +139,7 @@ export const createDashboardStyles = (Colors: ThemePalette) => StyleSheet.create
   },
   slabContainer: {
     paddingHorizontal: Layout.padding,
-    marginBottom: 24,
+    marginBottom: isVeryShort ? 8 : isShort ? 16 : 24,
   },
   slabHeader: {
     flexDirection: 'row',
@@ -169,7 +174,7 @@ export const createDashboardStyles = (Colors: ThemePalette) => StyleSheet.create
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    padding: 16,
+    padding: isShort ? 12 : 16,
   },
   slabEmptyText: {
     fontSize: 12,
@@ -279,7 +284,7 @@ export const createDashboardStyles = (Colors: ThemePalette) => StyleSheet.create
     marginBottom: 16,
   },
   skateCardGroupName: {
-    fontSize: 22,
+    fontSize: isVeryShort ? 18 : isShort ? 20 : 22,
     fontWeight: '900',
     color: Colors.text,
     fontFamily: 'Righteous',
@@ -332,6 +337,7 @@ export const createDashboardStyles = (Colors: ThemePalette) => StyleSheet.create
   deviceListFixed: {
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderRadius: 16,
-    padding: 8,
+    padding: isShort ? 4 : 8,
   }
 });
+};
