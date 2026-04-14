@@ -1,5 +1,25 @@
-## [1.7.1] - 2026-04-14
+## [1.8.0] - 2026-04-14
 
+### ✨ Features
+- **Legal Compliance**: Executed granular legal compliance architecture and Account Deletion workflow.
+- **Telemetry Convergence**: Standardized device naming syntax and unified global namespace to `@Sk8lytz_`.
+- **Ghost Protocol**: Built pessimistic silent auto-recovery engine for Soft Disconnect drops.
+- **Skate Discovery ETL**: Evolved Headless Scraper pipeline into a zero-api DOM crawler with automated background job runner logic for stealth.
+- **Magic Workflows**: Added `/run-scraper` AI trigger.
+
+### 🐛 Bug Fixes
+- **BLE Engine**: Neutered over-aggressive hardware watchdog to resolve connection dropouts. Tore down legacy Soft Disconnect UI alerts.
+- **Dashboard Hook Ordering**: Solved infinite 'Rendered more hooks' React error during async group recovery via closure stabilization.
+- **Account Management**: Resolved `AccountModal` crash loops and network hangs.
+- **Expo Auth Deep Linking**: Repaired dynamic `expo-auth-session` scheme callbacks, fixing Web 400 errors.
+
+### 🔧 Maintenance & Performance
+- **Ghost Reconciliation**: Enforced true pessimistic reconciliation loop within `DockedController`.
+- **Fast-Lane Telemetry**: Refactored error-boundary catch blocks to bypass standard spool queues for VIP AppLogger payloads.
+- **Agent Governance**: Upgraded internal Bucket List parsing and enforced explicit PUSH blocks in AI workflow pipelines.
+- **UI Simplification**: Compressed offline buttons and deprecated HIBP string literals.
+
+## [1.7.1] - 2026-04-14
 ### ? Features
 - feat(governance): implement backlog grooming algorithm and dependency tagging
 - feat(workflows): append publish branch merging and cloud deployment pipeline to ship-it release protocol
