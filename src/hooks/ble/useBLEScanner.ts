@@ -16,6 +16,7 @@ export interface UseBLEScannerProps {
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   probeDevice: (mac: string) => Promise<any>;
   hardwareProbedCallbackRef: React.MutableRefObject<((deviceId: string, config: any) => void) | undefined>;
+  disableProbing?: boolean;
 }
 
 export function useBLEScanner({
@@ -23,12 +24,14 @@ export function useBLEScanner({
   allDevices,
   setAllDevices,
   probeDevice,
-  hardwareProbedCallbackRef
+  hardwareProbedCallbackRef,
+  disableProbing = false
 }: UseBLEScannerProps) {
   const [scannerState, setScannerState] = useState<'IDLE' | 'SCANNING' | 'PROBING'>('IDLE');
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
 
   const allDevicesRef = useRef<Device[]>([]);
+  const scanTimerRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => { allDevicesRef.current = allDevices; }, [allDevices]);
 
   const isDuplicateDevice = (devices: Device[], nextDevice: Device) =>
@@ -129,9 +132,9 @@ export function useBLEScanner({
         if (alreadyConn && hasHwInfo) continue;
 
         console.log(`[BLE Probe] Probing ${device.name || device.id}...`);
-        const conn = await bleManager.connectToDevice(device.id, { timeout: 3500 });
-        await conn.discoverAllServicesAndCharacteristics();
-
+        
+        // FIX: Remove manual connectToDevice wrap here. Let probeDevice() handle
+        // its own connection, spec-query, and mandatory disconnection cleanly.
         const hwConfig = await probeDevice(device.id);
         if (hwConfig) {
           (device as any).hwPoints = hwConfig.ledPoints;
@@ -146,7 +149,6 @@ export function useBLEScanner({
           classifyProbeResults([...allDevicesRef.current]);
         }
         
-        await bleManager.cancelDeviceConnection(device.id).catch(() => {});
         await new Promise(r => setTimeout(r, 600));
 
       } catch (probeErr: any) {
@@ -169,16 +171,22 @@ export function useBLEScanner({
 
   const stopScanner = () => {
     bleManager?.stopDeviceScan();
+    if (scanTimerRef.current) {
+      clearTimeout(scanTimerRef.current);
+      scanTimerRef.current = null;
+    }
     setScannerState('IDLE');
   };
 
-  const scanForPeripherals = (options?: { keepAlive?: boolean }) => {
+  const scanForPeripherals = (options?: { keepAlive?: boolean, disableProbing?: boolean }) => {
     if (scannerState === 'SCANNING') return;
     setScannerState('SCANNING');
     
     if (!options?.keepAlive) {
       setPendingRegistrations([]);
     }
+
+    const shouldProbe = options?.disableProbing ?? disableProbing;
 
     const knownMacs = new Set<string>();
 
@@ -325,10 +333,15 @@ export function useBLEScanner({
       }
     });
 
-    setTimeout(() => {
+    if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
+    scanTimerRef.current = setTimeout(() => {
       bleManager.stopDeviceScan();
-      // Keep state at SCANNING briefly then probeAllDiscoveredDevices will switch to PROBING or IDLE
-      probeAllDiscoveredDevices();
+      scanTimerRef.current = null;
+      if (shouldProbe) {
+        probeAllDiscoveredDevices();
+      } else {
+        setScannerState('IDLE');
+      }
     }, 5000);
   };
 

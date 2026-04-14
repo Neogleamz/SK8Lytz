@@ -34,7 +34,7 @@ interface UseDashboardAutoConnectOptions {
   connectedDevices: BLEDevice[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   connectToDevices: (devices: any[]) => Promise<void>;
-  scanForPeripherals: () => void;
+  scanForPeripherals: (options?: { disableProbing?: boolean }) => void;
   requestPermissions: () => Promise<boolean>;
   refreshProfile: () => Promise<void>;
   registeredDevices: RegisteredDevice[];
@@ -81,7 +81,7 @@ export function useDashboardAutoConnect({
       connectToDevices(pendingToConnect as any).finally(() => {
         if (autoConnectIdsRef.current.length > 0) {
           AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_resume_scan' });
-          scanForPeripherals();
+          scanForPeripherals({ disableProbing: true });
         }
       });
     }
@@ -197,7 +197,7 @@ export function useDashboardAutoConnect({
             });
             autoConnectIdsRef.current = idsToConnect;
             // Start scan NOW — ref is populated, observer will catch every device
-            scanForPeripherals();
+            scanForPeripherals({ disableProbing: true });
           }
         }
       }

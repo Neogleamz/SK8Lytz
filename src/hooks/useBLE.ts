@@ -32,7 +32,7 @@ if (Platform.OS !== 'web') {
 
 export interface BluetoothLowEnergyApi {
   requestPermissions(): Promise<boolean>;
-  scanForPeripherals(options?: { keepAlive?: boolean }): void;
+  scanForPeripherals(options?: { keepAlive?: boolean, disableProbing?: boolean }): void;
   connectToDevice: (device: Device) => Promise<string | undefined>;
   connectToDevices: (devices: Device[]) => Promise<void>;
   disconnectFromDevice: () => void;
