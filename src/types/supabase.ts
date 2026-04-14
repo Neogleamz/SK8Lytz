@@ -1542,6 +1542,7 @@ export type Database = {
           adult_night_details: string | null
           city: string | null
           created_at: string | null
+          has_proshop: boolean | null
           id: string
           is_indoor: boolean | null
           is_verified: boolean | null
@@ -1556,12 +1557,14 @@ export type Database = {
           updated_at: string | null
           updated_by: string | null
           vibe_rating: number | null
+          zip: string | null
         }
         Insert: {
           address?: string | null
           adult_night_details?: string | null
           city?: string | null
           created_at?: string | null
+          has_proshop?: boolean | null
           id?: string
           is_indoor?: boolean | null
           is_verified?: boolean | null
@@ -1578,12 +1581,14 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
           vibe_rating?: number | null
+          zip?: string | null
         }
         Update: {
           address?: string | null
           adult_night_details?: string | null
           city?: string | null
           created_at?: string | null
+          has_proshop?: boolean | null
           id?: string
           is_indoor?: boolean | null
           is_verified?: boolean | null
@@ -1600,6 +1605,7 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
           vibe_rating?: number | null
+          zip?: string | null
         }
         Relationships: []
       }

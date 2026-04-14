@@ -55,6 +55,11 @@ async function scrapeGoogleDOM() {
          return p ? p.textContent?.replace('Phone: ', '').replace('Phone:', '').trim() : null;
       });
 
+      const hasProshop = await page.evaluate(() => {
+        const text = document.body.innerText.toLowerCase();
+        return text.includes('skate shop') || text.includes('pro shop') || text.includes('skate store');
+      });
+
       // Save enriched object
       enrichedData.push({
         ...spot,
@@ -62,10 +67,11 @@ async function scrapeGoogleDOM() {
           google_rating: rating,
           full_address: address,
           phone: phone,
+          has_proshop: hasProshop,
           scraped_at: new Date().toISOString()
         }
       });
-      console.log(`✅ Extracted: ⭐${rating || '?'} | 📍${address || '?'} | 📞${phone || '?'}`);
+      console.log(`✅ Extracted: ⭐${rating || '?'} | 📍${address || '?'} | 📞${phone || '?'} | 🛒${hasProshop ? 'YES' : 'NO'}`);
 
     } catch (err: any) {
       console.error(`❌ Failed on ${spot.name}:`, err.message);

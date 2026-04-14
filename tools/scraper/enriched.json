@@ -12,6 +12,7 @@
       "google_rating": "4.5",
       "full_address": "15100 E Girard Ave, Aurora, CO 80014",
       "phone": "(303) 690-1444",
+      "has_proshop": true,
       "scraped_at": "2026-04-14T07:10:00.000Z"
     }
   },
@@ -28,6 +29,7 @@
       "google_rating": "4.6",
       "full_address": "9105 Recreation Cir, Fountain Valley, CA 92708",
       "phone": "(714) 847-0022",
+      "has_proshop": true,
       "scraped_at": "2026-04-14T07:10:00.000Z"
     }
   },
@@ -44,6 +46,7 @@
       "google_rating": "4.8",
       "full_address": "5110 San Fernando Rd, Glendale, CA 91204",
       "phone": "(818) 241-3630",
+      "has_proshop": false,
       "scraped_at": "2026-04-14T07:10:00.000Z"
     }
   }

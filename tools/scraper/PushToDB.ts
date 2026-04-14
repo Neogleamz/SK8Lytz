@@ -26,18 +26,29 @@ async function pushToDatabase() {
   console.log(`📤 Pushing ${spots.length} highly enriched skate spots to Supabase...`);
 
   for (const spot of spots) {
-    const { error } = await supabase
-      .from('skate_spots')
-      .upsert({
-        name: spot.name,
-        lat: spot.lat,
-        lng: spot.lng,
-        phone: spot.enriched.phone || null,
-        address: spot.enriched.full_address || null,
-        vibe_rating: spot.enriched.google_rating ? parseFloat(spot.enriched.google_rating) : null,
-        source: 'native_crawler',
-        is_verified: false
-      }, { onConflict: 'name' }); // Assuming name prevents exact dupes in this POC
+      // Attempt to extract ZIP from the address (basic 5-digit regex at the end of the string)
+      let parsedZip = null;
+      if (spot.enriched.full_address) {
+        const zipMatch = spot.enriched.full_address.match(/\b\d{5}\b/);
+        if (zipMatch) parsedZip = zipMatch[0];
+      }
+
+      const { error } = await supabase
+        .from('skate_spots')
+        .upsert({
+          name: spot.name,
+          lat: spot.lat,
+          lng: spot.lng,
+          city: spot.city,
+          state: spot.state,
+          zip: parsedZip,
+          phone: spot.enriched.phone || null,
+          address: spot.enriched.full_address || null,
+          has_proshop: spot.enriched.has_proshop || false,
+          vibe_rating: spot.enriched.google_rating ? parseFloat(spot.enriched.google_rating) : null,
+          source: 'native_crawler',
+          is_verified: false
+        }, { onConflict: 'name' }); // Assuming name prevents exact dupes in this POC
 
     if (error) {
       console.error(`❌ DB Insert failed for ${spot.name}:`, error.message);
