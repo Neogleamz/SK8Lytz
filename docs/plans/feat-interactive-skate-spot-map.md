@@ -1,92 +1,86 @@
-# Implementation Plan: Interactive Skate Spot Map
+# Implementation Plan: Interactive Skate Spot Map & DOM Crawler
 
-This plan outlines the architecture for the "Waze of Roller Skating," a high-density Map view powered by `react-native-maps` and a hybrid data pipeline that relies on native Supabase data combined with a fallback Google Places model for crowdsourced enrichment.
+Build a massively detailed, interactive global map of roller skating rinks, powered by a 100% free "Zero-API" backend extraction pipeline that heuristically scrapes rich data (hours, photos, vibes, pricing) and serves it through a clustered React Native Map.
 
-## Design Decisions & Rationale
+## User Review Required
 
-We are using `react-native-maps` (already in the project's `package.json`) to render native Google/Apple maps depending on the device. Because plotting thousands of rinks simultaneously creates serious memory and render-loop blockages, we must use a clustering algorithm. We will introduce a fast, specialized JS port of MapBox's Supercluster for this. We are also defining a dual-layer data source (our Supabase DB for rich skating metadata + a read-only OSM/Google fallback) to solve the "empty map" cold-start problem.
+> [!CAUTION]
+> **Data Scraping Legality & TOS**
+> We are using an Open-Source seed (OSM), but scraping Google Maps DOM and Facebook DOM violates their Terms of Service if done commercially or at massive scale. This architecture relies on running the scraping script strictly on your local machine, rate-limiting the requests, and doing it as a one-time educational extraction (ETL) run, rather than a persistent cloud service. Please confirm you understand this constraint.
 
----
-
-## 📦 Dependency Diet Proposal
-
-Before adding any packages, please review the following justification:
-
-**Proposed Library 1:** `react-native-map-clustering` (and its peer `supercluster`)
-
-- **Weight**: Extremely light (~40kb minified).
-- **Activity**: Heavily maintained and widely used as the default clustering solution for `react-native-maps`.
-- **Necessity**: Attempting to render > 500 MapMarker elements in React Native without clustering will crash older Android devices and stutter the main UI thread. A spatial index tree (like Supercluster) is mandatory for high-density map exploration.
-- **Alternatives**: We could write our own quad-tree clustering algorithm from scratch in JS, but it would likely be less performant than `supercluster` and introduce significant overhead to test. I highly recommend using the standard library.
-
-> [!WARNING]
-> Please explicitly approve the `react-native-map-clustering` package when you respond to this plan.
-
----
+> [!IMPORTANT]
+> **Dependency Approvals**
+> The UI phase requires `react-native-map-clustering` and `supercluster` (already in `package.json`).
+> The Scraper phase requires setting up a standalone Node project in a `tools/scraper` directory using `puppeteer` and `cheerio`. 
 
 ## Proposed Changes
 
-### Database Layer
+---
 
-#### [NEW] Supabase Migration: `add_skate_spots_table` (via MCP)
+### Phase 1: The Zero-API Crawler (Local Backend)
 
-We will execute an MCP database migration to create the foundational `skate_spots` table.
+We aren't polluting the React Native app code with scraping logic. The scraper will be a standalone administrative node script run locally.
 
-- **Table:** `skate_spots`
-- **Columns:**
-  - `id` (UUID, PK)
-  - `name` (Text)
-  - `lat` (Float8)
-  - `lng` (Float8)
-  - `surface_type` (Enum: 'wood', 'concrete', 'asphalt', 'sport_court', 'unknown')
-  - `is_indoor` (Boolean)
-  - `adult_night_details` (Text, nullable)
-  - `source` (Text: e.g. 'native', 'google_fallback')
-  - `is_verified` (Boolean)
-- _Note: We will automatically run `generate_typescript_types` after the migration._
+#### [NEW] `tools/scraper/package.json`
+- Initialize a local Node script environment independent of Expo.
+- Install `puppeteer`, `cheerio`, `axios`, and `@supabase/supabase-js`.
+
+#### [NEW] `tools/scraper/SeedOverpass.ts`
+- Performs zero-cost Axios calls to the OpenStreetMap Overpass API for `leisure=ice_rink` and `sport=roller_skating`.
+- Saves base data (Lat/Lng, Name) to a local `seed.json`.
+ 
+#### [NEW] `tools/scraper/GoogleShadowDOM.ts`
+- Launches a headless Puppeteer browser.
+- Reads `seed.json`, and sequentially searches Google Maps.
+- Extracts DOM elements:
+  - `<div class="hours">` matrix
+  - Text from the Rating spans and Phone spans.
+  - Intercepts network requests to grab the high-res cover image URL.
+- Randomizes delays (`sleep(2000 - 5000)`) to avoid shadowbans.
+
+#### [NEW] `tools/scraper/SocialVibeCrawler.ts`
+- Uses DuckDuckGo search to locate the rink's Facebook page.
+- Scans recent posts for `Regex(/18\+|21\+|adult night/i)`.
+- Compiles the final enriched JSON and pushes to Supabase.
 
 ---
 
-### Service Layer
+### Phase 2: Database Submersion (Supabase)
 
-#### [NEW] `src/services/SkateSpotsService.ts`
-
-- Functions to fetch `skate_spots` within a geographical bounding box.
-- Function `claimAndUpdateSpot` to write back crowdsourced metadata when a user "claims" an unverified location.
-- **Note:** We will integrate OSM Nominatim / Google Places API directly via Axios for the fallback layer (using the same endpoint seen in `LocationPicker.tsx`).
+#### [NEW] Supabase Migration `add_skate_spots_table`
+Execute an MCP database migration to hold our harvested data permanently.
+- `id` (UUID, PK)
+- `name` (Text)
+- `lat` (Float8)
+- `lng` (Float8)
+- `hours` (JSONB)
+- `phone` (Text)
+- `cover_photo_url` (Text)
+- `has_adult_night` (Boolean)
+- `surface_type` (Enum: 'wood', 'concrete', 'asphalt', 'sport_court', 'unknown')
+- `vibe_rating` (Float8)
 
 ---
 
-### UI & Platform Strategy
+### Phase 3: Display (React Native UI)
 
 #### [NEW] `src/screens/SkateMapScreen.tsx`
-
-- **Full Viewport Map**: Utilizes `<MapView>` wrapped in the clustering provider.
-- **Responsive Layout**: Uses Flexbox to ensure the map fills the remaining safe-area on all devices.
-- **Platform Parity**: `react-native-maps` handles the platform split (Google Maps on Android, MapKit on iOS) automatically. Touch targets for the markers will be artificially padded (44x44) to ensure they are easily tappable while skating or wearing gear.
+- Utilizes `<MapView>` wrapped in the `react-native-map-clustering` provider to prevent Android crashes.
+- Only executes a single backend call: `supabase.from('skate_spots').select('*')`. No commercial API calls are ever made on the client.
 
 #### [NEW] `src/components/SkateSpotBottomSheet.tsx`
-
-- The slide-up UI panel that appears when tapping a marker.
-- **4-State Matrix Handled**:
-  - _Loading_: Skeleton outlines for details while verifying claims.
-  - _Empty/Unverified_: Prompts the user with a glowing "Verify this Spot" CTA.
-  - _Error_: "Failed to load details" text with a retry icon.
-  - _Success_: Rich display of `surface_type` and `adult_night_details`.
-
----
+- The slide-up UI panel that handles the 4-State Matrix:
+  - *Loading*: Skeleton outlines.
+  - *Success*: High-res image header, rating, `has_adult_night` badge, and wood/concrete icon.
+  - *Empty/Unverified*: "Suggest an Edit" CTA.
 
 ## Verification Plan
 
 ### Automated Tests
-
-- Run `tsc --noEmit` to ensure the generated Supabase types are perfectly mirrored by `SkateSpotsService.ts`.
-- Ensure NO `any` types leak into the cluster calculations.
+- Run the scraper against 5 test cities locally, verifying that Google does not throw Captchas on the Puppeteer browser.
+- Run `tsc --noEmit` on the app frontend to ensure Supabase type generation correctly mirrors the new table.
 
 ### Manual Verification
-
-- Render the `SkateMapScreen` via the browser subagent in the Expo Web setup.
-- Verify map clustering combines 10+ fake localized points into a single numbered cluster icon.
-- Tap a fake spot to dynamically verify the `SkateSpotBottomSheet` sliding state and UI form.
-
-I have generated the plan artifact. Review the plan above. Type 'proceed' to execute, or provide feedback.
+- Deploy the app to simulator or Web.
+- Open the Skate Map; verify clustering works.
+- Tap a cluster, tap a rink, and verify the slide-up modal smoothly renders the image URL fetched by the scraper without lag.
