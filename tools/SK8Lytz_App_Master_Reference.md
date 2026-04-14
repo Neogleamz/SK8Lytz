@@ -1,6 +1,6 @@
 # SK8Lytz App Master Reference
 
-_Last Updated: 2026-04-13 | Synced with DDA Refactor — all 14 domain hooks documented | Source of Truth: `src/protocols/ZenggeProtocol.ts`_
+_Last Updated: 2026-04-14 | Synced with DDA Refactor — all 18 domain hooks documented | Source of Truth: `src/protocols/ZenggeProtocol.ts`_
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
 
@@ -253,7 +253,7 @@ The app implements a **Mathematical Consumption Modeling** system using real-tim
 ## 4. Domain-Driven Architecture
 
 > [!IMPORTANT]
-> **DDA Refactor Shipped: 2026-04-13** — The architecture was refactored from a monolithic component model to a Hook-First domain model. All 14 domain hooks are live on `master`. The audit resolved 4 bugs (2x P0, 2x P1). TSC exit 0.
+> **DDA Refactor Shipped: 2026-04-14** — The architecture was refactored from a monolithic component model to a Hook-First domain model. All 18 domain hooks are live on `master`. The audit resolved 4 bugs (2x P0, 2x P1). TSC exit 0.
 
 To ensure scalability and maintain UI performance, the SK8Lytz app enforces a **Hook-First** architecture. Complex business logic, hardware protocols, and Supabase data fetching must be extracted from UI components into decoupled domain hooks. UI components must focus strictly on rendering.
 
@@ -266,7 +266,7 @@ To ensure scalability and maintain UI performance, the SK8Lytz app enforces a **
 
 ---
 
-### 🗺️ Complete Hook Registry (All 14 Hooks)
+### 🗺️ Complete Hook Registry (All 18 Hooks)
 
 #### Dashboard Screen Domain (`src/hooks/`)
 
@@ -284,6 +284,10 @@ To ensure scalability and maintain UI performance, the SK8Lytz app enforces a **
 | `useFavorites`             | `DockedController` | `favorites[]`, `quickPresets[]`, save/delete/load operations, prompt FSM                                                              |
 | `useStreetMode`            | `DockedController` | Accelerometer subscription, G-force calculation, brake/cruise color dispatch, GPS speed sampling                                      |
 | `useSessionTracking`       | `DockedController` | Session FSM (`IDLE → RECORDING → SUMMARY`), duration, distance, peak speed, session summary modal                                     |
+| `useMusicMode`             | `DockedController` | Owns 0x73 music config dispatch, pattern names, pattern navigation.                                                                   |
+| `useCuratedPicks`          | `DockedController` | Fetches and caches SK8Lytz Picks (curated presets) from Supabase.                                                                     |
+| `useAppMicrophone`         | `DockedController` | Manages the expo-av Audio.Recording lifecycle for APP MIC mode. Streams normalized magnitude (0–1).                                   |
+| `useControllerAnalytics`   | `DockedController` | Debounced telemetry logging for mode, pattern, color, brightness, speed changes.                                                      |
 
 #### AccountModal Domain (`src/hooks/`)
 
