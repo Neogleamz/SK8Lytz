@@ -35,15 +35,15 @@ pie title Critical Stability
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
-  "Completed" : 0
-  "Remaining" : 8
+  "Completed" : 3
+  "Remaining" : 5
 ```
 
 
-- [ ] `refactor/state-machine-standard` : [CLOUD] [H-RISK] [Feast] [Pillar 8] [🤖 THINK] Deterministic UI — transition from boolean flags to explicit Enum-based Finite State Machines. → [Plan](docs/plans/refactor-state-machine-standard.md)
+- [x] `refactor/state-machine-standard` : [CLOUD] [H-RISK] [Feast] [Pillar 8] [🤖 THINK] Deterministic UI — transition from boolean flags to explicit Enum-based Finite State Machines. → [Plan](docs/plans/refactor-state-machine-standard.md)
 - [ ] `feat/ble-hardware-watchdog` : [LAB] [H-RISK] [Feast] [Pillar 7] [🤖 THINK] Autonomous BLE 'Self-Healing' loop — detects hardware soft-locks and silent-relatches connections. → [Plan](docs/plans/feat-ble-hardware-watchdog.md)
-- [ ] `perf/optimistic-ble-updates` : [LAB] [H-RISK] [Meal] [Pillar 2] [🤖 THINK] Mask hardware latency using 'Ghost' optimistic UI updates and state reconciliation. → [Plan](docs/plans/perf-optimistic-ble-updates.md)
-- [ ] `perf/delta-sync-protocol` : [CLOUD] [L-RISK] [Meal] [Pillar 4] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] Implement differential data fetching to reduce bandwidth and battery consumption. → [Plan](docs/plans/perf-delta-sync-protocol.md)
+- [x] `perf/optimistic-ble-updates` : [LAB] [H-RISK] [Meal] [Pillar 2] [🤖 THINK] Mask hardware latency using 'Ghost' optimistic UI updates and state reconciliation. → [Plan](docs/plans/perf-optimistic-ble-updates.md)
+- [x] `perf/delta-sync-protocol` : [CLOUD] [L-RISK] [Meal] [Pillar 4] [🤖 PRO-HIGH] Implement differential data fetching to reduce bandwidth and battery consumption. → [Plan](docs/plans/perf-delta-sync-protocol.md)
 
 - [ ] `fix/remote-id-audit` : [LAB] [H-RISK] [Meal] [Security] [🤖 THINK] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
 - [ ] `audit-rls-performance` : [CLOUD] [H-RISK] [Meal] [🤖 THINK] #20 — Security & Performance Review — Routine RLS audit on Supabase queries; optimize React Native render cycles for dashboard gauges. → [Plan](docs/plans/audit-rls-performance.md)
