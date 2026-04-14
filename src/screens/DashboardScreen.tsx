@@ -268,16 +268,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   // handleRegistrationComplete is now provided by useDashboardGroups hook
 
-  // Drop-out UI Alert
-  useEffect(() => {
-    if (droppedOutDeviceIds.length > 0) {
-      Alert.alert(
-        'Device Disconnected', 
-        `Hardware dropout detected. Connection has been lost to a skate.`,
-        [{ text: 'OK' }]
-      );
-    }
-  }, [droppedOutDeviceIds]);
+  // The Drop-out UI Alert has been excised per user mandate.
+  // We no longer spam the user when hardware connections drop out organically.
 
   // User Profile
   const [authUsername, setAuthUsername] = useState<string | null>(null);

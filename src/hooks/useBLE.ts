@@ -246,8 +246,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
       disconnectListeners.current[device.id] = bleManager.onDeviceDisconnected(device.id, (error: any, _d: any) => {
         AppLogger.warn(`[BLE] Device dropout detected for ${device.id}`);
         AppLogger.log('DEVICE_DISCONNECTED', { id: device.id, reason: 'dropout', error: error?.message });
-        setDroppedOutDeviceIds(prev => prev.includes(device.id) ? prev : [...prev, device.id]);
-        // FIX: Removed setConnectedDevices state purge to enable Soft Disconnect UI persistence
+        setConnectedDevices(prev => prev.filter(d => d.id !== device.id));
         if (disconnectListeners.current[device.id]) {
           disconnectListeners.current[device.id].remove();
           delete disconnectListeners.current[device.id];
@@ -354,8 +353,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
           disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {
             AppLogger.warn(`[BLE] Device dropout detected for ${conn.id} in group`);
             AppLogger.log('DEVICE_DISCONNECTED', { id: conn.id, reason: 'dropout', context: 'group', error: error?.message });
-            setDroppedOutDeviceIds(prev => prev.includes(conn.id) ? prev : [...prev, conn.id]);
-            // FIX: Removed setConnectedDevices state purge to enable Soft Disconnect UI persistence
+            setConnectedDevices(prev => prev.filter(d => d.id !== conn.id));
             if (disconnectListeners.current[conn.id]) {
               disconnectListeners.current[conn.id].remove();
               delete disconnectListeners.current[conn.id];
@@ -439,10 +437,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
     const chunkSize = Math.max(20, negotiatedMtuRef.current - 3);
 
     for (const device of targets) {
-      if (droppedOutDeviceIdsRef.current.includes(device.id)) {
-        // FIX: Skip writing to Soft Disconnected devices to prevent GATT timeouts and Thread Blocking
-        continue;
-      }
       try {
         for (let i = 0; i < payload.length; i += chunkSize) {
           const chunk = payload.slice(i, i + chunkSize);
