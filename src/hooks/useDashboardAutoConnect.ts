@@ -78,7 +78,12 @@ export function useDashboardAutoConnect({
         event: 'auto_connect_observer',
         devices: pendingToConnect.map(d => d.name ?? d.id),
       });
-      connectToDevices(pendingToConnect as any);
+      connectToDevices(pendingToConnect as any).finally(() => {
+        if (autoConnectIdsRef.current.length > 0) {
+          AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_resume_scan' });
+          scanForPeripherals();
+        }
+      });
     }
   }, [allDevices, connectedDevices]);
 

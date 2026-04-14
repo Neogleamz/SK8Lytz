@@ -1,6 +1,13 @@
-## [1.8.4] - 2026-04-14
+## [1.8.5] - 2026-04-14
 
-### 🐛 Bug Fixes
+### 🚑 Emergency Hotfixes
+
+**Zero-Day Connection Blocker**
+- **Android GATT/LE Scan Exception** (`useBLE.ts`, `useDashboardAutoConnect.ts`): Re-injected the hard `bleManager.stopDeviceScan()` immediately prior to GATT initialization. The v1.8.4 deployment removed this under the mistaken assumption it was sabotaging the auto-scanner. Without it, Android violently rejects all incoming GATT connection intents (`operation canceled`) because native LE background scans consume the BLE adapter's duty-cycle. To resolve the 'Auto-Scanner Sabotage' properly, a new recursive `scanForPeripherals()` resume trigger was injected into the `.finally()` block of `useDashboardAutoConnect`, ensuring multi-skate discovery continues *after* the GATT initialization completes.
+
+---
+
+## [1.8.4] - 2026-04-14
 
 **BLE Group Concurrency & Sync**
 - **GATT Initialization Race** (`useBLE.ts`): Blocked early UI payload dispatch by delaying `setConnectedDevices` until after the hardware completes its critical 600ms boot-up MTU queries. This prevents the "GATT ambush" where the React UI blasted heavy animation payloads at a skate before the chip was ready, causing one skate in a group to ignore all commands.
