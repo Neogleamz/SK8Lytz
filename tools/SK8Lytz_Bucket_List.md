@@ -39,8 +39,8 @@ _System-wide health improvements, refactors, and performance optimizations._
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 pie title Engineering Health
-  "Completed" : 12
-  "Remaining" : 6
+  "Completed" : 13
+  "Remaining" : 5
 ```
 
 - [ ] `fix/remote-id-audit` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🪙 15k] [⏱️ 3h] [Security] [🧠 THINK] Implementation of the 0x2B protocol parser to extract and display unique paired RF Remote IDs in the Device Settings modal for security verification. → [Plan](docs/plans/hw-test-remote-pairing-logic.md)
@@ -51,7 +51,7 @@ pie title Engineering Health
 
 - [ ] `chore/refactor-docked-controller` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🪙 45k] [⏱️ 6h] [🧠 THINK] Extract `DockedController.tsx` (122KB presentation layer) into independent UI component nodes.
 
-- [ ] `fix/supabase-database-typing` : [☁️ CLOUD] [✅ L-RISK] [🍪 Snack] [🪙 5k] [⏱️ 1h] [🤖 FLASH] Resolve the persistent TS2305 error regarding `Database` generic typing from `src/types/supabase`.
+- [x] `fix/supabase-database-typing` : [☁️ CLOUD] [✅ L-RISK] [🍪 Snack] [🪙 5k] [⏱️ 1h] [🤖 FLASH] Resolve the persistent TS2305 error regarding `Database` generic typing from `src/types/supabase`.
 
 - [ ] `feat/discord-agent-bridge` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [🪙 35k] [⏱️ 6h] [🧠 THINK] Implement a local Discord bridge that streams agent logs to a channel and pipes user replies back into the agent's context via a sanitized command buffer file. → [Plan](docs/plans/feat-discord-agent-bridge.md)
 
