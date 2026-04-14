@@ -369,12 +369,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
           AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name, firmware });
 
-          // FIX: Add directly to React state immediately to prevent ghost overwrite at the end of the loop
-          setConnectedDevices(prev => {
-            if (!prev.find(c => c.id === conn.id)) return [...prev, conn];
-            return prev;
-          });
-
           // FIX: Strictly sequence the 600ms latency before sending the 0x63 query
           await new Promise(resolve => setTimeout(resolve, 600));
 
@@ -389,14 +383,18 @@ export default function useBLE(): BluetoothLowEnergyApi {
           // FIX: Mandatory 250ms buffer to allow Android OS to settle before next connection
           await new Promise(resolve => setTimeout(resolve, 250));
 
+          // FIX: Add to React state ONLY AFTER GATT is fully booted to block the UI from blasting animation payloads during MTU queries
+          setConnectedDevices(prev => {
+            if (!prev.find(c => c.id === conn.id)) return [...prev, conn];
+            return prev;
+          });
+
         } catch (deviceError: any) {
           AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${device.id}`, deviceError);
           AppLogger.log('BLE_CONNECTION_ERROR', { error: deviceError?.message || String(deviceError), deviceId: device.id, context: 'group_sync_fail' });
         }
       }
       setInternalBlePhase('IDLE');
-      bleManager.stopDeviceScan();
-      scanner.scanForPeripherals({ keepAlive: true }); // force stop scan internally
     } catch (e: any) {
       AppLogger.error('FAILED TO CONNECT TO GROUP', e);
       AppLogger.log('BLE_CONNECTION_ERROR', { error: e?.message || String(e), context: 'group' });
@@ -426,9 +424,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
     const chunkSize = Math.max(20, negotiatedMtuRef.current - 3);
     let allSucceeded = true;
 
-    for (const device of targets) {
+    await Promise.allSettled(targets.map(async (device) => {
       // Skip ghosted (recovering) devices — don't count as failure
-      if (autoRecovery.ghostedDeviceIds.includes(device.id)) continue;
+      if (autoRecovery.ghostedDeviceIds.includes(device.id)) return;
       try {
         for (let i = 0; i < payload.length; i += chunkSize) {
           const chunk = payload.slice(i, i + chunkSize);
@@ -439,7 +437,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
             base64Chunk
           );
           if (i + chunkSize < payload.length) {
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await new Promise(resolve => setTimeout(resolve, 5));
           }
         }
       } catch (writeError: any) {
@@ -447,7 +445,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
         AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError?.message);
         AppLogger.log('BLE_WRITE_ERROR', { error: writeError?.message || String(writeError), target: device.id, payloadLen: payload.length });
       }
-    }
+    }));
 
     return allSucceeded;
   };

@@ -1,6 +1,15 @@
-## [1.8.3] - 2026-04-14
+## [1.8.4] - 2026-04-14
 
 ### 🐛 Bug Fixes
+
+**BLE Group Concurrency & Sync**
+- **GATT Initialization Race** (`useBLE.ts`): Blocked early UI payload dispatch by delaying `setConnectedDevices` until after the hardware completes its critical 600ms boot-up MTU queries. This prevents the "GATT ambush" where the React UI blasted heavy animation payloads at a skate before the chip was ready, causing one skate in a group to ignore all commands.
+- **Auto-Scanner Sabotage** (`useBLE.ts`): Removed aggressive `bleManager.stopDeviceScan()` from the inner loop of `connectToDevices()`, allowing the continuous background observer in `useDashboardAutoConnect` to properly queue and connect the second skate rather than randomly stranding it in the ether.
+- **Popcorn Latency Effect** (`useBLE.ts`): Converted the sequential `for/await` loop inside `writeToDevice` into an aggressive, highly concurrent `Promise.allSettled(targets.map(...))` array. This guarantees both write intents enter the BLE adapter simultaneously, nearly eradicating visual desync across the group.
+
+---
+
+## [1.8.3] - 2026-04-14
 
 **Zero-Day Permission Soft-Lock**
 - **Boot Desync Eradicated** (`PermissionService.ts`, `App.tsx`): Prevented `syncSystemPermissions` from silently opting out users from all hardware capabilities. On fresh installs, Native OS state is 'undetermined', which evaluated as `false`, triggering a flawed OS Desync Sweep that aggressively forced `@sk8lytz_permissions_optout` to TRUE without prompting. Users were permanently soft-locked. Neutered the sequence.
