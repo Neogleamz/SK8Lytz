@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-04-14
+
+### Changed
+
+- **God Object Elimination**: Refactored the massive 2,857-line `DockedController.tsx` down to a thin 2,441-line orchestrator by decoupling logic into 4 specialized domain hooks (`useMusicMode`, `useCuratedPicks`, `useAppMicrophone`, `useControllerAnalytics`) while strictly adhering to BLE singleton concurrency safety.
+
 ## [1.4.2] - 2026-04-13
 
 ### Changed
