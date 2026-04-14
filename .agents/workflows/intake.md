@@ -4,7 +4,7 @@ description: Intake an idea, draft a plan, generate the slug, and append to buck
 
 1. **The Intercept**: If the user asks for a feature/fix casually, halt and route it through intake: "Intercepting request. Routing through formal intake..."
 2. **Generate Slug**: e.g., `feat/` for new, `fix/` for bugs, `chore/` for updates.
-3. **Determine Classification**: Rank: [☁️ CLOUD|🧪 LAB], [⚠️ H-RISK|✅ L-RISK], [🍪 Snack|🍱 Meal|🥩 Feast], recommended [🤖 MODEL], and [⏱️ TIME].
+3. **Determine Classification**: Rank: [☁️ CLOUD|🧪 LAB], [⚠️ H-RISK|✅ L-RISK], [🍪 Snack|🍱 Meal|🥩 Feast], recommended [🤖 MODEL], [⏱️ TIME], and projected token spend [🪙 XXk].
 4. **Draft the Plan**: Autonomously write a markdown plan and save it to `docs/plans/<generated-slug>.md`. 
 5. **Format the Item**:
    `- [ ] <slug> : [tags...] <description> → [Plan](docs/plans/<slug>.md)`
