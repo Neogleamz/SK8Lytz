@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, Switch, TouchableOpacity, ScrollView, Modal, SafeAreaView, TextInput, ViewStyle, TextStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Spacing } from '../../theme/theme';
-import { adminStyles as styles } from './adminStyles';
+import { Spacing } from '../../../theme/theme';
+import { adminStyles as styles } from '../adminStyles';
 
-export interface ProductManagerModalProps {
+export interface ProductManagerProps {
   visible: boolean;
   onClose: () => void;
   bg: string;
@@ -21,10 +21,10 @@ export interface ProductManagerModalProps {
   productSaving: boolean;
 }
 
-export const ProductManagerModal = React.memo(({
+export const ProductManager = React.memo(({
   visible, onClose, bg, cardBg, borderColor, textPrimary, textMuted,
   allProfiles, editingProfile, startEditing, createNew, patchEdit, saveProduct, productSaving
-}: ProductManagerModalProps) => {
+}: ProductManagerProps) => {
 
   const fieldWrapperStyle: ViewStyle = { marginBottom: Spacing.lg, backgroundColor: cardBg, padding: Spacing.md, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#9D4EFF' };
   const fieldLabelStyle: TextStyle = { color: textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', marginBottom: Spacing.sm, letterSpacing: 0.5 };
@@ -66,7 +66,7 @@ export const ProductManagerModal = React.memo(({
   );
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+    <View style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: borderColor, backgroundColor: cardBg }}>
           <TouchableOpacity onPress={onClose} style={{ marginRight: Spacing.lg, padding: Spacing.xs }}>
@@ -156,6 +156,6 @@ export const ProductManagerModal = React.memo(({
           )}
         </View>
       </SafeAreaView>
-    </Modal>
+    </View>
   );
 });

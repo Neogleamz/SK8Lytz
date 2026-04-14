@@ -5,17 +5,17 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppLogger } from '../services/AppLogger';
-import { useTheme } from '../context/ThemeContext';
+import { AppLogger } from '../../../services/AppLogger';
+import { useTheme } from '../../../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Typography, Spacing } from '../theme/theme';
+import { Typography, Spacing } from '../../../theme/theme';
 import {
   ZenggeProtocol,
   HardwareSettings,
   IC_TYPES,
   COLOR_SORTING_RGB,
-} from '../protocols/ZenggeProtocol';
-import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
+} from '../../../protocols/ZenggeProtocol';
+import { LOCAL_PRODUCT_CATALOG } from '../../../constants/ProductCatalog';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -47,7 +47,7 @@ type ActiveProfileType = string;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function Sk8LytzProgrammerModal({
+export default function Sk8LytzProgrammer({
   visible, onClose, onExitToLogs, allDevices,
   deviceConfigs = {},
   connectToDevice, disconnectFromDevice,
@@ -243,7 +243,7 @@ export default function Sk8LytzProgrammerModal({
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+    <View style={{ flex: 1 }}>
       <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
 
         {/* ── Header ── */}
@@ -429,7 +429,7 @@ export default function Sk8LytzProgrammerModal({
             </TouchableOpacity>
         </View>
       </SafeAreaView>
-    </Modal>
+    </View>
   );
 }
 

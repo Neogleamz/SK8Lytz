@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, Modal, TouchableOpacity, FlatList, Platform, SafeAreaView
+  View, Text, Modal, TouchableOpacity, FlatList, Platform, SafeAreaView, Alert
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -12,22 +12,26 @@ import { LogEntry, EventType } from '../../services/AppLogger';
 import { Spacing } from '../../theme/theme';
 import { adminStyles as styles } from './adminStyles';
 
-import AdminPicksScheduler from '../AdminPicksScheduler';
+import AdminPicksScheduler from './tools/AdminPicksScheduler';
 import { DeviceTab } from './DeviceTab';
 import { StatsTab } from './StatsTab';
 import { AdminTab } from './AdminTab';
-import { AppManagerModal } from './AppManagerModal';
-import { ProductManagerModal } from './ProductManagerModal';
+import { AppManager } from './tools/AppManager';
+import { ProductManager } from './tools/ProductManager';
+import Sk8LytzDiagnosticLab from './tools/Sk8LytzDiagnosticLab';
+import Sk8LytzProgrammer from './tools/Sk8LytzProgrammer';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
-import { Alert } from 'react-native';
+
 
 type Tab = 'timeline' | 'stats' | 'device' | 'tools';
 
 export interface AdminToolsModalProps {
   visible: boolean;
   onClose: () => void;
-  onOpenProgrammer?: () => void;
-  onOpenLab?: () => void;
+  isDiagnosticsMode?: boolean;
+  onToggleDiagnostics?: () => void;
+  hwSettings?: any;
+  onDisconnectFromDevice?: (id: string) => Promise<void>;
   writeToDevice?: (data: number[], deviceId?: string) => Promise<void | boolean>;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
   connectedDevices?: { id: string, name: string | null }[];
@@ -39,12 +43,18 @@ export interface AdminToolsModalProps {
   liveDeviceConfigs?: Record<string, any>;
 }
 
-export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, onOpenLab, onClearAll }: AdminToolsModalProps) {
+export default function AdminToolsModal({ 
+  visible, onClose, onClearAll, writeToDevice, liveRxPayload, 
+  connectedDevices, allDevices, bleState, handleScan, onConnectToDevice, 
+  liveDeviceConfigs, isDiagnosticsMode, onToggleDiagnostics, hwSettings, onDisconnectFromDevice 
+}: AdminToolsModalProps) {
   const { isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
   const [isProductManagerVisible, setIsProductManagerVisible] = useState(false);
   const [isPicksSchedulerVisible, setIsPicksSchedulerVisible] = useState(false);
   const [isAppManagerVisible, setIsAppManagerVisible] = useState(false);
+  const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
+  const [isLabVisible, setIsLabVisible] = useState(false);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
 
   // ── Domain Hooks ────────────────────────────────────────────────────────────
@@ -164,8 +174,8 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
       case 'tools':
         return (
           <AdminTab 
-            onOpenProgrammer={onOpenProgrammer} 
-            onOpenLab={onOpenLab} 
+            onOpenProgrammer={() => setIsProgrammerVisible(true)} 
+            onOpenLab={() => setIsLabVisible(true)} 
             setIsPicksSchedulerVisible={setIsPicksSchedulerVisible}
             setIsProductManagerVisible={setIsProductManagerVisible}
             setIsAppManagerVisible={setIsAppManagerVisible}
@@ -182,57 +192,113 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
-      <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
-        {/* Header */}
-        <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
-          <View style={{ flexShrink: 1, paddingRight: Spacing.sm }}>
-            <Text style={[styles.title, { color: textPrimary }]} numberOfLines={1}>Admin Tools</Text>
-            <Text style={[styles.subtitle, { color: textMuted }]} numberOfLines={1}>{memoizedTimelineLogs.length} events stored</Text>
+      
+      {isAppManagerVisible ? (
+        <AppManager 
+          visible={isAppManagerVisible} 
+          onClose={() => setIsAppManagerVisible(false)}
+          appSettings={appSettings}
+          handlePolicyToggle={handlePolicyToggle}
+          updateSetting={updateSetting}
+          bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
+        />
+      ) : isProductManagerVisible ? (
+         <ProductManager 
+           visible={isProductManagerVisible} 
+           onClose={() => setIsProductManagerVisible(false)}
+           allProfiles={allProfiles}
+           editingProfile={editingProfile}
+           startEditing={startEditing}
+           createNew={createNew}
+           patchEdit={patchEdit}
+           saveProduct={saveProduct}
+           productSaving={productSaving}
+           bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
+         />
+      ) : isPicksSchedulerVisible ? (
+        <AdminPicksScheduler visible={isPicksSchedulerVisible} onClose={() => setIsPicksSchedulerVisible(false)} />
+      ) : isProgrammerVisible ? (
+        <Sk8LytzProgrammer 
+          visible={isProgrammerVisible} 
+          onClose={() => setIsProgrammerVisible(false)} 
+          onExitToLogs={() => setIsProgrammerVisible(false)}
+          allDevices={(allDevices as any)}
+          deviceConfigs={liveDeviceConfigs as any}
+          connectToDevice={async (d: any) => { if (onConnectToDevice) await onConnectToDevice(d); }}
+          disconnectFromDevice={async (id: string) => { if (onDisconnectFromDevice) await onDisconnectFromDevice(id); }}
+          writeToDevice={writeToDevice || (async () => false)}
+          bleState={bleState || 'IDLE'}
+          handleScan={handleScan || (() => {})}
+        />
+      ) : isLabVisible ? (
+        <Sk8LytzDiagnosticLab
+          visible={isLabVisible}
+          isDiagnosticsMode={isDiagnosticsMode}
+          onToggleDiagnostics={onToggleDiagnostics}
+          onClose={() => setIsLabVisible(false)}
+          connectedDevices={connectedDevices as any}
+          writeToDevice={writeToDevice || (async () => false)}
+          liveRxPayload={liveRxPayload}
+          hwSettings={hwSettings}
+          allDevices={allDevices}
+          bleState={bleState || 'IDLE'}
+          handleScan={handleScan || (() => {})}
+          connectToDevice={async (d: any) => { if (onConnectToDevice) await onConnectToDevice(d); }}
+          liveDeviceConfigs={liveDeviceConfigs as any}
+        />
+      ) : (
+        <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
+          {/* Header */}
+          <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
+            <View style={{ flexShrink: 1, paddingRight: Spacing.sm }}>
+              <Text style={[styles.title, { color: textPrimary }]} numberOfLines={1}>Admin Tools</Text>
+              <Text style={[styles.subtitle, { color: textMuted }]} numberOfLines={1}>{memoizedTimelineLogs.length} events stored</Text>
+            </View>
+            <View style={styles.headerActions}>
+              <TouchableOpacity onPress={handleExport} style={styles.actionBtn}>
+                <MaterialCommunityIcons name="download" size={22} color="#00f0ff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleUpload}
+                style={[styles.actionBtn, isUploading && { opacity: 0.5 }]}
+                disabled={isUploading}
+              >
+                <MaterialCommunityIcons
+                  name={isUploading ? 'cloud-sync' : 'cloud-upload'}
+                  size={22}
+                  color="#00E676"
+                />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleClear} style={styles.actionBtn}>
+                <MaterialCommunityIcons name="delete-sweep" size={22} color="#ff4040" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onClose} style={styles.actionBtn}>
+                <MaterialCommunityIcons name="close" size={22} color={textPrimary} />
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity onPress={handleExport} style={styles.actionBtn}>
-              <MaterialCommunityIcons name="download" size={22} color="#00f0ff" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleUpload}
-              style={[styles.actionBtn, isUploading && { opacity: 0.5 }]}
-              disabled={isUploading}
-            >
-              <MaterialCommunityIcons
-                name={isUploading ? 'cloud-sync' : 'cloud-upload'}
-                size={22}
-                color="#00E676"
-              />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleClear} style={styles.actionBtn}>
-              <MaterialCommunityIcons name="delete-sweep" size={22} color="#ff4040" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} style={styles.actionBtn}>
-              <MaterialCommunityIcons name="close" size={22} color={textPrimary} />
-            </TouchableOpacity>
+
+          {/* Tabs */}
+          <View style={[styles.tabs, { borderBottomColor: borderColor }]}>
+            {(['timeline', 'stats', 'device', 'tools'] as Tab[]).map(t => (
+              <TouchableOpacity
+                key={t}
+                onPress={() => setTab(t)}
+                style={[styles.tabBtn, tab === t && { borderBottomColor: Colors.primary }]}
+              >
+                <Text style={[styles.tabLabel, { color: tab === t ? Colors.primary : textMuted }]}>
+                  {t === 'device' ? 'Device' : t === 'tools' ? 'Tools' : t.charAt(0).toUpperCase() + t.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        </View>
 
-        {/* Tabs */}
-        <View style={[styles.tabs, { borderBottomColor: borderColor }]}>
-          {(['timeline', 'stats', 'device', 'tools'] as Tab[]).map(t => (
-            <TouchableOpacity
-              key={t}
-              onPress={() => setTab(t)}
-              style={[styles.tabBtn, tab === t && { borderBottomColor: Colors.primary }]}
-            >
-              <Text style={[styles.tabLabel, { color: tab === t ? Colors.primary : textMuted }]}>
-                {t === 'device' ? 'Device' : t === 'tools' ? 'Tools' : t.charAt(0).toUpperCase() + t.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Content */}
-        <View style={{ flex: 1 }}>
-          {renderContent()}
-        </View>
-      </SafeAreaView>
+          {/* Content */}
+          <View style={{ flex: 1 }}>
+            {renderContent()}
+          </View>
+        </SafeAreaView>
+      )}
 
       <ConfirmDeleteModal 
         visible={confirmDeleteVisible} 
@@ -241,30 +307,6 @@ export default function AdminToolsModal({ visible, onClose, onOpenProgrammer, on
         isDark={isDark} 
       />
 
-      <AppManagerModal 
-        visible={isAppManagerVisible} 
-        onClose={() => setIsAppManagerVisible(false)}
-        appSettings={appSettings}
-        handlePolicyToggle={handlePolicyToggle}
-        updateSetting={updateSetting}
-        bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
-      />
-
-      {/* ── Picks Scheduler Modal ── */}
-      <AdminPicksScheduler visible={isPicksSchedulerVisible} onClose={() => setIsPicksSchedulerVisible(false)} />
-
-      <ProductManagerModal 
-        visible={isProductManagerVisible} 
-        onClose={() => setIsProductManagerVisible(false)}
-        allProfiles={allProfiles}
-        editingProfile={editingProfile}
-        startEditing={startEditing}
-        createNew={createNew}
-        patchEdit={patchEdit}
-        saveProduct={saveProduct}
-        productSaving={productSaving}
-        bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
-      />
     </Modal>
   );
 }

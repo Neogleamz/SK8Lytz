@@ -14,10 +14,10 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { supabase } from '../services/supabaseClient';
-import PositionalGradientBuilder from './PositionalGradientBuilder';
-import { BuilderNode } from '../protocols/PositionalMathBuffer';
-import { useTheme } from '../context/ThemeContext';
+import { supabase } from '../../../services/supabaseClient';
+import PositionalGradientBuilder from '../../PositionalGradientBuilder';
+import { BuilderNode } from '../../../protocols/PositionalMathBuffer';
+import { useTheme } from '../../../context/ThemeContext';
 
 interface Sk8LytzPick {
   id: string;
@@ -231,7 +231,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
   const borderColor = Colors.surfaceHighlight;
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+    <View style={{ flex: 1 }}>
       <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
         {/* ── Canonical Admin Header ── */}
         <View style={[styles.header, { borderBottomColor: borderColor, backgroundColor: Colors.surface }]}>
@@ -441,7 +441,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
          </Modal>
 
       </SafeAreaView>
-    </Modal>
+    </View>
   );
 }
 

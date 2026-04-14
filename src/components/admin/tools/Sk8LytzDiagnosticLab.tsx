@@ -23,14 +23,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '../context/ThemeContext';
-import { Typography, Spacing } from '../theme/theme';
-import { ZenggeProtocol, IC_TYPES, COLOR_SORTING_RGB } from '../protocols/ZenggeProtocol';
-import CustomEffectVisualizer from './CustomEffectVisualizer';
-import { useRegistration } from '../hooks/useRegistration';
-import { AppLogger } from '../services/AppLogger';
-import { useDiagnosticLog, BleLog } from '../hooks/useDiagnosticLog';
-import { useProtocolBuilder } from '../hooks/useProtocolBuilder';
+import { useTheme } from '../../../context/ThemeContext';
+import { Typography, Spacing } from '../../../theme/theme';
+import { ZenggeProtocol, IC_TYPES, COLOR_SORTING_RGB } from '../../../protocols/ZenggeProtocol';
+import CustomEffectVisualizer from '../../CustomEffectVisualizer';
+import { useRegistration } from '../../../hooks/useRegistration';
+import { AppLogger } from '../../../services/AppLogger';
+import { useDiagnosticLog, BleLog } from '../../../hooks/useDiagnosticLog';
+import { useProtocolBuilder } from '../../../hooks/useProtocolBuilder';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -805,7 +805,7 @@ export default function Sk8LytzDiagnosticLab({
 
   // ─── Root render ───────────────────────────────────────────────────
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+    <View style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
         {/* Header (Aligned with Programmer) */}
         <View style={[S.header, { borderBottomColor: border, paddingTop: insets.top || 16, paddingBottom: Spacing.lg }]}>
@@ -869,7 +869,7 @@ export default function Sk8LytzDiagnosticLab({
           {tab === 'SNIFFER' && renderSnifferTab()}
         </View>
       </SafeAreaView>
-    </Modal>
+    </View>
   );
 }
 

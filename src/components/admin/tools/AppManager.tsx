@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, Switch, TouchableOpacity, ScrollView, Modal, SafeAreaView, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Spacing } from '../../theme/theme';
-import { adminStyles as styles } from './adminStyles';
+import { Spacing } from '../../../theme/theme';
+import { adminStyles as styles } from '../adminStyles';
 
-export interface AppManagerModalProps {
+export interface AppManagerProps {
   visible: boolean;
   onClose: () => void;
   appSettings: Record<string, string | boolean>;
@@ -17,12 +17,12 @@ export interface AppManagerModalProps {
   textMuted: string;
 }
 
-export const AppManagerModal = React.memo(({
+export const AppManager = React.memo(({
   visible, onClose, appSettings, handlePolicyToggle, updateSetting,
   bg, cardBg, borderColor, textPrimary, textMuted
-}: AppManagerModalProps) => {
+}: AppManagerProps) => {
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+    <View style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: borderColor, backgroundColor: cardBg }}>
           <TouchableOpacity onPress={onClose} style={{ marginRight: Spacing.lg, padding: Spacing.xs }}>
@@ -153,6 +153,6 @@ export const AppManagerModal = React.memo(({
           </View>
         </ScrollView>
       </SafeAreaView>
-    </Modal>
+    </View>
   );
 });

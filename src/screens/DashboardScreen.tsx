@@ -29,7 +29,7 @@ import { ZenggeProtocol, ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol
 import DockedController, { DockedControllerHandle, IFavoriteState } from '../components/DockedController';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
-import Sk8LytzProgrammerModal from '../components/Sk8LytzProgrammerModal';
+
 import ScannerAnimation from '../components/ScannerAnimation';
 import { AppLogger } from '../services/AppLogger';
 import AdminToolsModal from '../components/admin/AdminToolsModal';
@@ -38,7 +38,6 @@ import VoiceCommandModal from '../components/Voice/VoiceCommandModal';
 import VoiceTutorialModal from '../components/Voice/VoiceTutorialModal';
 import { CrewModal } from '../components/CrewModal';
 import { crewService, CrewSession, CrewRole } from '../services/CrewService';
-import Sk8LytzDiagnosticLab from '../components/Sk8LytzDiagnosticLab';
 
 import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
 import { supabase } from '../services/supabaseClient';
@@ -109,10 +108,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     setIsAdminToolsVisible,
     isSupportModalVisible,
     setIsSupportModalVisible,
-    isProgrammerVisible,
-    setIsProgrammerVisible,
-    isLabVisible,
-    setIsLabVisible,
     isMapVisible,
     setIsMapVisible,
   } = useDashboardProfile({
@@ -1236,45 +1231,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           </View>
         </Modal>
 
-      {/* Developer Modals migrated to Sandbox Auth logic */}
-      <Sk8LytzProgrammerModal 
-        visible={isProgrammerVisible} 
-        onClose={() => {
-            setIsProgrammerVisible(false);
-            setIsAdminToolsVisible(true);
-        }} 
-        onExitToLogs={() => {
-            setIsProgrammerVisible(false);
-            setIsAdminToolsVisible(true);
-        }}
-        allDevices={(allDevices as any)}
-        deviceConfigs={deviceConfigs as any}
-        connectToDevice={async (d: any) => { await connectToDevice(d); }}
-        disconnectFromDevice={async (_id: string) => { disconnectFromDevice(); }}
-        writeToDevice={writeToDevice}
-        bleState={isScanProbing ? 'PROBING' : isScanning ? 'SCANNING' : 'IDLE'}
-        handleScan={scanForPeripherals}
-      />
-      {/* LED Diagnostic Lab — long-press the SNIFFER button to open */}
-      <Sk8LytzDiagnosticLab
-        visible={isLabVisible ?? false}
-        isDiagnosticsMode={isDiagnosticsMode}
-        onToggleDiagnostics={() => setIsDiagnosticsMode(!isDiagnosticsMode)}
-        onClose={() => { 
-            setIsLabVisible(false); 
-            setIsAdminToolsVisible(true);
-        }}
-        connectedDevices={connectedDevices as any[]}
-        writeToDevice={writeToDevice}
-        liveRxPayload={lastRawNotification}
-        hwSettings={activeHwSettings}
-        allDevices={allDevices}
-        bleState={isScanning ? 'SCANNING' : 'IDLE'}
-        handleScan={scanForPeripherals}
-        connectToDevice={async (d: any) => { await connectToDevice(d); }}
-        liveDeviceConfigs={deviceConfigs}
-      />
-
       {/* HardwareSetupWizardScreen is conditionally returned at the top level instead of here */}
 
 
@@ -1377,14 +1333,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       <AdminToolsModal
         visible={isAdminToolsVisible}
         onClose={() => setIsAdminToolsVisible(false)}
-        onOpenProgrammer={() => {
-          setIsAdminToolsVisible(false);
-          setIsProgrammerVisible(true);
-        }}
-        onOpenLab={() => {
-          setIsAdminToolsVisible(false);
-          setIsLabVisible(true);
-        }}
         allDevices={allDevices}
         connectedDevices={connectedDevices as any[]}
         bleState={isScanning ? 'SCANNING' : 'IDLE'}
@@ -1393,6 +1341,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         liveRxPayload={lastRawNotification}
         liveDeviceConfigs={deviceConfigs}
         onConnectToDevice={async (d: any) => { await connectToDevice(d); }}
+        onDisconnectFromDevice={async (_id: string) => { disconnectFromDevice(); }}
+        isDiagnosticsMode={isDiagnosticsMode}
+        onToggleDiagnostics={() => setIsDiagnosticsMode(!isDiagnosticsMode)}
+        hwSettings={activeHwSettings}
       />
 
       {/* ──── VOICE COMMAND ENGINE UI ──── */}

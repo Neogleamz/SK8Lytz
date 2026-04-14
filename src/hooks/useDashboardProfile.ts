@@ -34,10 +34,6 @@ export interface UseDashboardProfileResult {
   setIsAdminToolsVisible: (v: boolean) => void;
   isSupportModalVisible: boolean;
   setIsSupportModalVisible: (v: boolean) => void;
-  isProgrammerVisible: boolean;
-  setIsProgrammerVisible: (v: boolean) => void;
-  isLabVisible: boolean;
-  setIsLabVisible: (v: boolean) => void;
   isMapVisible: boolean;
   setIsMapVisible: (v: boolean) => void;
 }
@@ -52,8 +48,6 @@ export function useDashboardProfile({
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
   const [isAdminToolsVisible, setIsAdminToolsVisible] = useState(false);
   const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
-  const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
-  const [isLabVisible, setIsLabVisible] = useState(false);
   const [isMapVisible, setIsMapVisible] = useState(false);
 
   // ─── App settings — fetched on mount, refreshed on app foreground ──────────
@@ -102,10 +96,6 @@ export function useDashboardProfile({
     setIsAdminToolsVisible,
     isSupportModalVisible,
     setIsSupportModalVisible,
-    isProgrammerVisible,
-    setIsProgrammerVisible,
-    isLabVisible,
-    setIsLabVisible,
     isMapVisible,
     setIsMapVisible,
   };
