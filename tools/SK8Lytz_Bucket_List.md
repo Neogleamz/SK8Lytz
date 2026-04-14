@@ -132,6 +132,7 @@ pie title Feature Velocity
 - [x] `audit/domain-driven-architecture` : [CLOUD] [H-RISK] [Feast] Audited all 14 extracted domain hooks; resolved 4 bugs (P0: missing state, P0: type narrowing, P1: ModeType duplication, P1: AsyncStorage race condition). TSC exit 0. → [Audit Report](brain/206e904d-e0ff-4a1f-ab45-c74c74b82974/domain_architecture_audit.md)
 - [x] `feat/optimistic-picks-cache` : [CLOUD] [H-RISK] [Meal] [Performance] Implement 'Stale-While-Revalidate' caching for Favorites and SK8Lytz Picks to eliminate load stutters. → [Plan](docs/plans/feat-optimistic-picks-cache.md)
 - [x] `chore/refactor-docked-controller` : [CLOUD] [H-RISK] [Feast] [Pillar 1] State extraction complete via domain hooks. Remaining size: 2,835 lines / 134.8KB — JSX render tree decomposition still needed (see P2 below).
+- [x] `audit/telemetry-efficiency-architectures` : [CLOUD] [H-RISK] [Meal] Audited AppLogger and group JSONB aggregation. Confirmed legacy unrolling array remnants are eradicated. Verified payload execution paths across hooks and components. TSC exit 0. -> [Findings](brain/f0e32848-1ae8-4776-b1e9-5a5a002c8fd4/artifacts/telemetry_efficiency_audit_findings.md)
 - [x] `chore/refactor-account-modal` : [CLOUD] [L-RISK] [Meal] refactor `AccountModal.tsx` (63KB) to separate settings, profiles, and device management views.
 
 ---

@@ -12,16 +12,15 @@
  *  - uploadLogsToSupabase(): merges with cloud Storage JSON, deduplicates,
  *    pushes current delta to 6 normalized Postgres tables, then CLEARS the
  *    local buffer (rotation) on confirmed success.
- *  - Group event unrolling: group-targeted events (deviceIds[]) are flatMapped
- *    into individual per-device rows in Supabase, enabling per-device diagnostics.
+ *  - Deduplication: group-targeted events (deviceIds[]) insert a single row
+ *    with device_id as null, instead of unrolling.
  *  - Custom device names: resolved from 'ng_device_configs' AsyncStorage key
  *    (same key DashboardScreen writes) and injected into all DB payloads.
- *  - RAW_PAYLOAD events (Diagnostic TX Payloads) are explicitly EXCLUDED from general 
- *    parsed_logs to prevent noise, but are fast-tracked into the `led_diagnostics` table.
+ *  - VIP Error Fast-Lane: Critical crash/error events bypass the normal buffers
+ *    and are immediately pushed to `telemetry_errors`.
  *
  * Supabase tables written:
- *  parsed_session_stats, parsed_session_devices, parsed_logs,
- *  parsed_mode_usage, parsed_pattern_usage, parsed_color_usage, led_diagnostics
+ *  telemetry_snapshots, telemetry_errors
  *
  * Event types: see EventType union below
  * Platform: React Native (Android + Web)
