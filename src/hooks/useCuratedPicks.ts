@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { STORAGE_PREFIX } from '../constants/AppConstants';
 import { supabase } from '../services/supabaseClient';
+import { AppLogger } from '../services/AppLogger';
 import type { IFavoriteState } from '../types/dashboard.types';
 
 /**
@@ -34,7 +35,7 @@ export function useCuratedPicks() {
           }
         }
       } catch (e) {
-        console.warn('[SK8Lytz Picks] Cache read error:', e);
+        AppLogger.error('[SK8Lytz Picks] Cache read error', e);
       }
     };
 
@@ -51,7 +52,7 @@ export function useCuratedPicks() {
           .order('sort_order', { ascending: true });
 
         if (error) {
-          console.warn('[SK8Lytz Picks] Failed to fetch from DB:', error.message);
+          AppLogger.error('[SK8Lytz Picks] Failed to fetch from DB', error);
           return;
         }
 
@@ -92,7 +93,7 @@ export function useCuratedPicks() {
           AsyncStorage.setItem(CACHE_KEY, JSON.stringify(mapped)).catch(() => {});
         }
       } catch (e) {
-        console.warn('[SK8Lytz Picks] Exception fetching from DB:', e);
+        AppLogger.error('[SK8Lytz Picks] Exception fetching from DB', e);
       } finally {
         setPicksLoading(false);
       }

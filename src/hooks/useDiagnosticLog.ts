@@ -46,7 +46,7 @@ export const useDiagnosticLog = ({
 
   const transmit = useCallback(async (bytes: number[], note?: string) => {
     if (!writeToDevice) return;
-    await writeToDevice(bytes, targetDeviceId ?? undefined).catch(console.warn);
+    await writeToDevice(bytes, targetDeviceId ?? undefined).catch(e => AppLogger.error('[useDiagnosticLog] write failed', e));
     const hexStr = bytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
     setLastSent(hexStr);
     setLastNote(note || '');

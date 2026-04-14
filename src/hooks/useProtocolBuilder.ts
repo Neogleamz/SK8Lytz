@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { AppLogger } from '../services/AppLogger';
 
 export type ProtocolType = '0x51' | '0x59' | '0x61' | '0x73' | '0x62';
 
@@ -139,7 +140,7 @@ export const useProtocolBuilder = (hwPts: number = 16) => {
         setBldResult({ raw: wrapped, wrapped, hex: wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' '), annotations: ['[0x62] EEPROM Write', `IC: ${bldIc} Order: ${bldOrder}`, `LEDs: ${pts} Seg: ${seg}`] });
       }
     } catch(e) { 
-      console.warn('[useProtocolBuilder] Build failed', e);
+      AppLogger.error('[useProtocolBuilder] Build failed', e);
     }
   }, [bldProtocol, bldColors, bldTrans, bldSpeed, bldPoints, bldDir, bldPatternId, bldBright, bldMic, bldMusicMode, bldSens, bldC2, bldMatrixStyle, bldIc, bldOrder, bldSegs, bld51Mode, bld51Speed, bld51Color1, bld51Color2]);
 

@@ -305,7 +305,7 @@ export function useStreetMode({
           );
         }
       } catch (e) {
-        console.warn('[useStreetMode] Location permission denied or unavailable', e);
+        AppLogger.error('[useStreetMode] Location permission denied or unavailable', e);
       }
     })();
 

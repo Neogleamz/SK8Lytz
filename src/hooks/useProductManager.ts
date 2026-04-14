@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 import { useProductCatalog } from '../hooks/useProductCatalog';
 import { supabase } from '../services/supabaseClient';
+import { AppLogger } from '../services/AppLogger';
 import type { ProductProfile } from '../types/ProductCatalog';
 
 /**
@@ -71,7 +72,7 @@ export function useProductManager() {
       }
       return false;
     } catch (err) {
-      console.error('Save failed:', err);
+      AppLogger.error('Save failed', err);
       return false;
     } finally {
       setIsSaving(false);

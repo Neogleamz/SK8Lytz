@@ -92,7 +92,7 @@ export function useDeviceFleet({
         setDevices(initialDevicesRef.current);
       }
     } catch (err) {
-      console.warn('[useDeviceFleet] Could not fetch cloud devices:', err);
+      AppLogger.error('[useDeviceFleet] Could not fetch cloud devices', err);
       if (initialDevicesRef.current.length > 0) setDevices(initialDevicesRef.current);
     }
   }, []); // Empty dependencies to prevent re-render loop

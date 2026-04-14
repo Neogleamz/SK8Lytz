@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { crewService, CrewSession } from '../services/CrewService';
 import { locationService, NearbySession } from '../services/LocationService';
 import { PermanentCrew, profileService } from '../services/ProfileService';
+import { AppLogger } from '../services/AppLogger';
 
 export function useCrewHub(visible: boolean, step: string) {
   const [discoverRadiusMi, setDiscoverRadiusMi] = useState<number | null>(50);
@@ -27,7 +28,7 @@ export function useCrewHub(visible: boolean, step: string) {
     profileService.getMyCrew().then((crews: PermanentCrew[]) => {
       setMyCrews(crews);
       setPermanentCrews(crews.map(c => ({ id: c.id, name: c.name })));
-    }).catch((e) => { console.warn('[useCrewHub] Failed to load my crews:', e); });
+    }).catch((e) => { AppLogger.error('[useCrewHub] Failed to load my crews', e); });
   }, [visible, step]);
 
   // Load member counts for My Crews
@@ -37,7 +38,7 @@ export function useCrewHub(visible: boolean, step: string) {
       if (crewMemberCounts[crew.id]) return;
       profileService.getCrewMembersForDisplay(crew.id).then(info => {
         setCrewMemberCounts(prev => ({ ...prev, [crew.id]: info }));
-      }).catch((e) => { console.warn('[useCrewHub] Failed to load member counts:', e); });
+      }).catch((e) => { AppLogger.error('[useCrewHub] Failed to load member counts', e); });
     });
   }, [visible, step, myCrews]);
 

@@ -13,6 +13,7 @@ import { AppState, AppStateStatus } from 'react-native';
 import { AppSettingsMap, AppSettingsService } from '../services/AppSettingsService';
 import { notificationService } from '../services/NotificationService';
 import { profileService, UserProfile } from '../services/ProfileService';
+import { AppLogger } from '../services/AppLogger';
 
 interface UseDashboardProfileOptions {
   /**
@@ -82,7 +83,7 @@ export function useDashboardProfile({
       const profile = await profileService.fetchOrCreateProfile();
       setUserProfile(profile);
     } catch (e) {
-      console.warn('[useDashboardProfile] Profile refresh failed:', e);
+      AppLogger.error('[useDashboardProfile] Profile refresh failed', e);
     }
   };
 

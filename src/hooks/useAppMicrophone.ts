@@ -8,6 +8,8 @@
  * Extracted from DockedController.tsx to isolate platform-specific
  * audio recording from LED control state.
  */
+import * as FileSystem from 'expo-file-system';
+import { AppLogger } from '../services/AppLogger';
 import { Audio } from 'expo-av';
 import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
@@ -94,7 +96,7 @@ export function useAppMicrophone({
         }
       }, 50);
     } catch (err) {
-      console.error('Failed to start recording', err);
+      AppLogger.error('Failed to start recording', err);
     }
   };
 

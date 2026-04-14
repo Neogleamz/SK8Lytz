@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ILifetimeStats, ISkateSession, SpeedTrackingService } from '../services/SpeedTrackingService';
+import { AppLogger } from '../services/AppLogger';
 
 export function useSkateStats(visible: boolean) {
   const [lifetimeStats, setLifetimeStats] = useState<ILifetimeStats | null>(null);
@@ -18,7 +19,7 @@ export function useSkateStats(visible: boolean) {
           setRecentSessions(sessions);
         })
         .catch((err) => {
-          console.warn('[useSkateStats] Failed to fetch stats:', err);
+          AppLogger.error('[useSkateStats] Failed to fetch stats', err);
         })
         .finally(() => setStatsLoading(false));
     }

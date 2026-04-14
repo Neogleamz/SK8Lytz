@@ -110,7 +110,7 @@ export function useSessionTracking(): UseSessionTrackingResult {
       await SpeedTrackingService.saveSession(sessionSummary);
       AppLogger.log('SESSION_SAVED', { action: 'SAVED_TO_DB', durationSec: sessionSummary.durationSec });
     } catch (err) {
-      console.warn('[useSessionTracking] Failed to persist session to Supabase:', err);
+      AppLogger.error('[useSessionTracking] Failed to persist session to Supabase', err);
     }
   }, [sessionSummary]);
 
