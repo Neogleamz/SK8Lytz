@@ -182,6 +182,21 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     },
   });
 
+  // ── Derived connection state (hoisted above all consumers) ────────────────
+  // CRITICAL: These must be declared before useDashboardAutoConnect, handleScan,
+  // and any useEffect/useCallback that closes over isActuallyConnected.
+  // Having two separate definitions of this concept was the root cause of the
+  // 'Rendered more hooks than previous render' crash.
+  const displayConnectedDevices = useMemo(() => {
+    return connectedDevices.map(d => {
+      const cfg = deviceConfigs[(d as any).id] || {};
+      return { ...d, ...cfg };
+    });
+  }, [connectedDevices, deviceConfigs]);
+
+  const isActuallyConnected = displayConnectedDevices.length > 0;
+  const isGrouped = displayConnectedDevices.length > 1 && displayConnectedDevices.every(d => (d as any).grouped);
+
   // ── Crew Hub state (stays in DashboardScreen — feeds BLE write dispatch) ───────
   const [crewSession, setCrewSession] = useState<CrewSession | null>(null);
   const [crewRole, setCrewRole] = useState<CrewRole>(null);
@@ -311,7 +326,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   useDashboardAutoConnect({
     isBluetoothSupported,
     isBluetoothEnabled,
-    isActuallyConnected: connectedDevices.length > 0, // computed early before displayConnectedDevices useMemo
+    isActuallyConnected, // now canonical — hoisted displayConnectedDevices above
     allDevices,
     connectedDevices,
     connectToDevices,
@@ -448,18 +463,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       });
   }, []);
 
-
-
-
-  const displayConnectedDevices = useMemo(() => {
-    return connectedDevices.map(d => {
-      const cfg = deviceConfigs[(d as any).id] || {};
-      return { ...d, ...cfg };
-    });
-  }, [connectedDevices, deviceConfigs]);
-
-  const isActuallyConnected = displayConnectedDevices.length > 0;
-  const isGrouped = displayConnectedDevices.length > 1 && displayConnectedDevices.every(d => (d as any).grouped);
+  // displayConnectedDevices, isActuallyConnected, isGrouped hoisted to top of component (after useDashboardGroups).
 
   const sortedAllDevices = useMemo(() => {
     return [...allDevices]
