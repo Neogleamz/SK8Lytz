@@ -22,7 +22,13 @@ import { useStreetMode } from '../hooks/useStreetMode';
 import { useFavorites } from '../hooks/useFavorites';
 import { useDockedControllerState } from '../hooks/useDockedControllerState';
 import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
-import type { ModeType, BleConnectionState } from '../types/dashboard.types';
+import { useMusicMode, MUSIC_PATTERNS, getMusicPatternLabel } from '../hooks/useMusicMode';
+import { useCuratedPicks } from '../hooks/useCuratedPicks';
+import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
+import { hexToHue, hueToHex, getColorName, hexToRgb, COLOR_PRESET_PALETTE, PRESET_HUE_MAP } from '../utils/ColorUtils';
+import AnalogGauge from './docked/AnalogGauge';
+import FloatingDock from './docked/FloatingDock';
+import type { ModeType, BleConnectionState, IDeviceState, IFavoriteState, IQuickPreset } from '../types/dashboard.types';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio } from 'expo-av';
@@ -60,87 +66,18 @@ import MarqueeText from './MarqueeText';
 import { STORAGE_PREFIX, HW_SPEED_MAX } from '../constants/AppConstants';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
 
-/**
- * Convert Hex color #RRGGBB to Hue (0-360)
- */
-const hexToHue = (hex: string): number => {
-  const r = (parseInt(hex.slice(1, 3), 16) || 0) / 255;
-  const g = (parseInt(hex.slice(3, 5), 16) || 0) / 255;
-  const b = (parseInt(hex.slice(5, 7), 16) || 0) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0;
-  if (max === min) h = 0;
-  else if (max === r) h = (g - b) / (max - min) + (g < b ? 6 : 0);
-  else if (max === g) h = (b - r) / (max - min) + 2;
-  else if (max === b) h = (r - g) / (max - min) + 4;
-  return Math.round(h * 60);
-};
+// hexToHue — now imported from '../utils/ColorUtils'
 
 import type { MotionState } from '../hooks/useStreetMode';
 
-interface IAnalogGaugeProps {
-  value: number;
-  min: number;
-  max: number;
-  label: string;
-  unit?: string;
-  defaultColor?: string;
-  size?: number;
-  dangerVal?: number;
-  criticalVal?: number;
-}
+// AnalogGauge — now imported from './docked/AnalogGauge'
+// FixedPatternPreviewRow — kept inline (tightly coupled to parent animation state)
 
-const AnalogGauge = React.memo(({
-  value,
-  min,
-  max,
-  label,
-  unit = '',
-  defaultColor = '#00F0FF',
-  size = 140,
-  dangerVal,
-  criticalVal
-}: IAnalogGaugeProps) => {
-  const radius = size * 0.42;
-  const center = size / 2;
-  const angleRange = 260;
-  const startAngle = -220; // Starts bottom-left
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _AnalogGaugeRemoved = null; // placeholder to preserve line numbering
 
-  const clampedVal = Math.min(Math.max(value, min), max);
-  const percent = (clampedVal - min) / (max - min);
-  const currentAngle = startAngle + (percent * angleRange);
 
-  let activeColor = defaultColor;
-  if (criticalVal !== undefined && clampedVal >= criticalVal) activeColor = '#FF0000';
-  else if (dangerVal !== undefined && clampedVal >= dangerVal) activeColor = '#FF8C00';
 
-  const polarToCartesian = (centerX: number, centerY: number, r: number, angleInDegrees: number) => {
-    const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
-    return { x: centerX + (r * Math.cos(angleInRadians)), y: centerY + (r * Math.sin(angleInRadians)) };
-  };
-
-  const describeArc = (x: number, y: number, r: number, sAngle: number, eAngle: number) => {
-    // If start closely matches end, return nothing
-    if (Math.abs(eAngle - sAngle) < 0.1) return "";
-    const start = polarToCartesian(x, y, r, eAngle);
-    const end = polarToCartesian(x, y, r, sAngle);
-    const largeArcFlag = eAngle - sAngle <= 180 ? "0" : "1";
-    return ["M", start.x, start.y, "A", r, r, 0, largeArcFlag, 0, end.x, end.y].join(" ");
-  };
-
-  const trackPath = describeArc(center, center, radius, startAngle, startAngle + angleRange);
-  const fillPath = describeArc(center, center, radius, startAngle, currentAngle);
-
-  let dangerPath = "";
-  let criticalPath = "";
-  if (dangerVal !== undefined && criticalVal !== undefined) {
-    const dPercent = Math.max(0, Math.min(1, (dangerVal - min) / (max - min)));
-    const cPercent = Math.max(0, Math.min(1, (criticalVal - min) / (max - min)));
-    const dAngle = startAngle + (dPercent * angleRange);
-    const cAngle = startAngle + (cPercent * angleRange);
-    dangerPath = describeArc(center, center, radius, dAngle, cAngle);
-    criticalPath = describeArc(center, center, radius, cAngle, startAngle + angleRange);
-  }
 
   // Tick marks
   const numTicks = 8;
@@ -219,21 +156,7 @@ const AnalogGauge = React.memo(({
 type ProductType = string;
 
 
-const MUSIC_PATTERNS = [
-  'Soft',
-  'Cheerful',
-  'Energy',
-  'Relax',
-  'Passion',
-  'Brisk',
-  'Rhythm',
-  'Rolling',
-  'Flicker',
-  'Accumulation',
-  'Shuttle',
-  'Fireworks',
-  'Snow'
-];
+// MUSIC_PATTERNS — now imported from '../hooks/useMusicMode'
 
 const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segments = 1 }: { baseDots: string[], patternId: number, speed: number, points?: number, segments?: number }) => {
   const [offset, setOffset] = React.useState(0);
@@ -284,43 +207,9 @@ const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segme
 };
 
 
-export interface IDeviceState {
-  id: string;
-  name: string;
-  points?: number;
-  segments?: number;
-  sorting?: 'RGB' | 'GRB' | 'BRG' | 'RBG' | 'BGR' | 'GBR';
-  [key: string]: any; // safe loose fallback for undocumented BLE peripheral keys
-}
-
-export interface IFavoriteState {
-  id: string;
-  name: string;
-  customName?: string;
-  mode: string;
-  color?: string;
-  patternId?: number;
-  speed: number;
-  brightness: number;
-  fixedColorMode?: 'FOREGROUND' | 'BACKGROUND';
-  fixedFgColor?: string;
-  fixedBgColor?: string;
-  fixedHue?: number;
-  multiColors?: string[];
-  multiTransition?: number;
-  multiLength?: number;
-  musicPrimaryColor?: string;
-  musicSecondaryColor?: string;
-  micSensitivity?: number;
-  micSource?: 'APP' | 'DEVICE';
-  musicMatrixStyle?: number;
-}
-
-export interface IQuickPreset {
-  name: string;
-  colors: string[];
-  type: number;
-}
+// IDeviceState, IFavoriteState, IQuickPreset — canonical source: '../types/dashboard.types'
+// Re-exported for backward compatibility with any remaining consumers.
+export type { IDeviceState, IFavoriteState, IQuickPreset } from '../types/dashboard.types';
 
 interface Sk8lytzControllerProps {
   hwSettings?: any;
