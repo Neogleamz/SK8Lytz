@@ -4,7 +4,7 @@
  * Extracted from DockedController.tsx to eliminate god-object coupling.
  * Used in Street Mode to display GPS speed and G-force telemetry.
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { Spacing } from '../../theme/theme';
@@ -45,48 +45,53 @@ const AnalogGauge = React.memo(({
   if (criticalVal !== undefined && clampedVal >= criticalVal) activeColor = '#FF0000';
   else if (dangerVal !== undefined && clampedVal >= dangerVal) activeColor = '#FF8C00';
 
-  const polarToCartesian = (centerX: number, centerY: number, r: number, angleInDegrees: number) => {
-    const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
-    return { x: centerX + (r * Math.cos(angleInRadians)), y: centerY + (r * Math.sin(angleInRadians)) };
-  };
+  const { trackPath, fillPath, dangerPath, criticalPath } = useMemo(() => {
+    const polarToCartesian = (centerX: number, centerY: number, r: number, angleInDegrees: number) => {
+      const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+      return { x: centerX + (r * Math.cos(angleInRadians)), y: centerY + (r * Math.sin(angleInRadians)) };
+    };
 
-  const describeArc = (x: number, y: number, r: number, sAngle: number, eAngle: number) => {
-    if (Math.abs(eAngle - sAngle) < 0.1) return "";
-    const start = polarToCartesian(x, y, r, eAngle);
-    const end = polarToCartesian(x, y, r, sAngle);
-    const largeArcFlag = eAngle - sAngle <= 180 ? "0" : "1";
-    return ["M", start.x, start.y, "A", r, r, 0, largeArcFlag, 0, end.x, end.y].join(" ");
-  };
+    const describeArc = (x: number, y: number, r: number, sAngle: number, eAngle: number) => {
+      if (Math.abs(eAngle - sAngle) < 0.1) return "";
+      const start = polarToCartesian(x, y, r, eAngle);
+      const end = polarToCartesian(x, y, r, sAngle);
+      const largeArcFlag = eAngle - sAngle <= 180 ? "0" : "1";
+      return ["M", start.x, start.y, "A", r, r, 0, largeArcFlag, 0, end.x, end.y].join(" ");
+    };
 
-  const trackPath = describeArc(center, center, radius, startAngle, startAngle + angleRange);
-  const fillPath = describeArc(center, center, radius, startAngle, currentAngle);
+    const tPath = describeArc(center, center, radius, startAngle, startAngle + angleRange);
+    const fPath = describeArc(center, center, radius, startAngle, currentAngle);
 
-  let dangerPath = "";
-  let criticalPath = "";
-  if (dangerVal !== undefined && criticalVal !== undefined) {
-    const dPercent = Math.max(0, Math.min(1, (dangerVal - min) / (max - min)));
-    const cPercent = Math.max(0, Math.min(1, (criticalVal - min) / (max - min)));
-    const dAngle = startAngle + (dPercent * angleRange);
-    const cAngle = startAngle + (cPercent * angleRange);
-    dangerPath = describeArc(center, center, radius, dAngle, cAngle);
-    criticalPath = describeArc(center, center, radius, cAngle, startAngle + angleRange);
-  }
+    let dPath = "";
+    let cPath = "";
+    if (dangerVal !== undefined && criticalVal !== undefined) {
+      const dPercent = Math.max(0, Math.min(1, (dangerVal - min) / (max - min)));
+      const cPercent = Math.max(0, Math.min(1, (criticalVal - min) / (max - min)));
+      const dAngle = startAngle + (dPercent * angleRange);
+      const cAngle = startAngle + (cPercent * angleRange);
+      dPath = describeArc(center, center, radius, dAngle, cAngle);
+      cPath = describeArc(center, center, radius, cAngle, startAngle + angleRange);
+    }
+    return { trackPath: tPath, fillPath: fPath, dangerPath: dPath, criticalPath: cPath };
+  }, [center, radius, currentAngle, min, max, dangerVal, criticalVal]);
 
   const numTicks = 8;
-  const ticks = Array.from({ length: numTicks + 1 }).map((_, i) => {
-    const p = i / numTicks;
-    const a = startAngle + (p * angleRange);
-    const rad = (a - 90) * Math.PI / 180;
-    const isMajor = i % 2 === 0;
-    const innerRadius = radius - (isMajor ? 8 : 4);
-    return {
-      x1: center + radius * Math.cos(rad),
-      y1: center + radius * Math.sin(rad),
-      x2: center + innerRadius * Math.cos(rad),
-      y2: center + innerRadius * Math.sin(rad),
-      isMajor
-    };
-  });
+  const ticks = useMemo(() => {
+    return Array.from({ length: numTicks + 1 }).map((_, i) => {
+      const p = i / numTicks;
+      const a = startAngle + (p * angleRange);
+      const rad = (a - 90) * Math.PI / 180;
+      const isMajor = i % 2 === 0;
+      const innerRadius = radius - (isMajor ? 8 : 4);
+      return {
+        x1: center + radius * Math.cos(rad),
+        y1: center + radius * Math.sin(rad),
+        x2: center + innerRadius * Math.cos(rad),
+        y2: center + innerRadius * Math.sin(rad),
+        isMajor
+      };
+    });
+  }, [center, radius]);
 
   return (
     <View style={{ alignItems: 'center', marginHorizontal: Spacing.xxs }}>
