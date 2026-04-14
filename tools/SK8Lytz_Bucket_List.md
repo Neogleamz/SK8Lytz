@@ -59,7 +59,6 @@ pie title Engineering Health
 
 - [ ] `fix/voice-engine-integration` : [🧪 LAB] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [⏱️ 2h] Repair the Voice Command Engine. The native voice bridge throws a null reference error on launch and requires a teardown/rebuild. → [Plan](docs/plans/fix-voice-engine-integration.md)
 
-- [ ] `chore/refactor-admin-tools-hierarchy` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] [⏱️ 1h] Structural refactor of AdminToolsModal to consolidate 5 disjointed sub-tools (DiagnosticsLab, Programmer, AppManager, ProductManager, AdminPicksScheduler) into a unified `src/components/admin/tools/` namespace and wire them correctly as embedded tabs. → [Plan](docs/plans/chore-refactor-admin-tools-hierarchy.md)
 
 ---
 
@@ -119,6 +118,7 @@ pie title Feature Velocity
 
 - [x] `chore/redesign-parsed-data-storage` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🧠 THINK] [📝️ NEEDS-PLAN] [⏱️ 3h] Redesign device telemetry ingestion from an un-gated firehose into a Constraint-Based Auditing model. Implements local telemetry spooling/batching (TelemetryBatcher), and consolidates fragmented tables into a single JSONB telemetry_snapshots table to minimize cloud cost overhead. → [Plan](docs/plans/chore-redesign-parsed-data-storage.md)
 - [x] `chore/refactor-admin-tools` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] break down `AdminToolsModal.tsx` (637 lines) into feature-specific admin modules.
+- [x] `chore/refactor-admin-tools-hierarchy` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] [⏱️ 1h] Structural refactor of AdminToolsModal to consolidate 5 disjointed sub-tools (DiagnosticsLab, Programmer, AppManager, ProductManager, AdminPicksScheduler) into a unified `src/components/admin/tools/` namespace and wire them correctly as embedded tabs. → [Plan](docs/plans/chore-refactor-admin-tools-hierarchy.md)
 
 ---
 
