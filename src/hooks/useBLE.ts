@@ -15,7 +15,7 @@ import { Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { ZENGGE_CHARACTERISTIC_UUID, ZENGGE_NOTIFY_UUID, ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
-import type { PendingRegistration } from '../types/dashboard.types';
+import type { BleConnectionState, PendingRegistration } from '../types/dashboard.types';
 
 import { requestPermissions } from '../utils/blePermissions';
 import { useBLEScanner } from './ble/useBLEScanner';
@@ -41,8 +41,6 @@ export interface BluetoothLowEnergyApi {
   connectedDevices: Device[];
   allDevices: Device[];
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
-  isScanning: boolean;
-  isScanProbing: boolean;
   isBluetoothSupported: boolean;
   isBluetoothEnabled: boolean;
   onDataReceived?: (deviceId: string, data: number[]) => void;
@@ -53,7 +51,7 @@ export interface BluetoothLowEnergyApi {
   pendingRegistrations: PendingRegistration[];
   clearPendingRegistrations: () => void;
   isWatchdogActive: boolean;
-  bleState: 'IDLE' | 'SCANNING' | 'PROBING' | 'CONNECTED';
+  bleState: BleConnectionState;
 }
 
 export default function useBLE(): BluetoothLowEnergyApi {
@@ -68,6 +66,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState(Platform.OS === 'web');
   const [dataReceivedCallback, setDataReceivedCallback] = useState<((deviceId: string, data: number[]) => void) | undefined>();
   const [droppedOutDeviceIds, setDroppedOutDeviceIds] = useState<string[]>([]);
+  const [internalBlePhase, setInternalBlePhase] = useState<'IDLE' | 'CONNECTING' | 'DISCONNECTING'>('IDLE');
 
   useEffect(() => {
     if (__DEV__) {
@@ -197,6 +196,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
   // --- Connection & Writes ---
   const connectToDevice = async (device: Device): Promise<string | undefined> => {
     try {
+      setInternalBlePhase('CONNECTING');
       const connectStartTime = Date.now();
       
       let isMock = 'false';
@@ -293,16 +293,19 @@ export default function useBLE(): BluetoothLowEnergyApi {
       scanner.scanForPeripherals({ keepAlive: true }); // force state off inside sub hook
       
       watchdog.startWatchdog();
+      setInternalBlePhase('IDLE');
       return firmware;
     } catch (e: any) {
       AppLogger.error('FAILED TO CONNECT', e);
       AppLogger.log('BLE_CONNECTION_ERROR', { error: e?.message || String(e), deviceId: device.id });
+      setInternalBlePhase('IDLE');
     }
   };
 
   const connectToDevices = async (devices: Device[]) => {
     if (devices.length === 0) return;
     try {
+      setInternalBlePhase('CONNECTING');
       let isMock = 'false';
       if (__DEV__) {
          isMock = await AsyncStorage.getItem('@Sk8lytz_demo_mode') || 'false';
@@ -322,6 +325,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
              });
           }, 1000);
         }
+        setInternalBlePhase('IDLE');
         return;
       }
       
@@ -387,11 +391,13 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
       setConnectedDevices(connections);
       watchdog.startWatchdog();
+      setInternalBlePhase('IDLE');
       bleManager.stopDeviceScan();
       scanner.scanForPeripherals({ keepAlive: true }); // force stop scan internally
     } catch (e: any) {
       AppLogger.error('FAILED TO CONNECT TO GROUP', e);
       AppLogger.log('BLE_CONNECTION_ERROR', { error: e?.message || String(e), context: 'group' });
+      setInternalBlePhase('IDLE');
     }
   };
 
@@ -439,6 +445,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
   };
 
   const disconnectFromDevice = async () => {
+    setInternalBlePhase('DISCONNECTING');
     watchdog.stopWatchdog();
 
     Object.values(disconnectListeners.current).forEach(sub => {
@@ -460,7 +467,15 @@ export default function useBLE(): BluetoothLowEnergyApi {
     }
     
     setConnectedDevices([]);
+    setInternalBlePhase('IDLE');
   };
+
+  const derivedBleState: BleConnectionState = 
+    internalBlePhase === 'DISCONNECTING' ? 'DISCONNECTING' :
+    internalBlePhase === 'CONNECTING' ? 'CONNECTING' :
+    scanner.scannerState === 'SCANNING' ? 'SCANNING' :
+    scanner.scannerState === 'PROBING' ? 'PROBING' :
+    connectedDevices.length > 0 ? 'READY' : 'IDLE';
 
   return useMemo(() => ({
     requestPermissions,
@@ -472,8 +487,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
     setAllDevices,
     connectedDevices,
     disconnectFromDevice,
-    isScanning: scanner.isScanning,
-    isScanProbing: scanner.isScanProbing,
     isBluetoothSupported,
     isBluetoothEnabled,
     onDataReceived: dataReceivedCallback,
@@ -490,17 +503,17 @@ export default function useBLE(): BluetoothLowEnergyApi {
     clearPendingRegistrations: () => scanner.setPendingRegistrations([]),
     probeDevice,
     isWatchdogActive: watchdog.isWatchdogActive,
-    bleState: scanner.isScanning ? 'SCANNING' : scanner.isScanProbing ? 'PROBING' : connectedDevices.length > 0 ? 'CONNECTED' : 'IDLE',
+    bleState: derivedBleState,
   }), [
     allDevices,
     connectedDevices,
-    scanner.isScanning,
-    scanner.isScanProbing,
+    scanner.scannerState,
     scanner.pendingRegistrations,
     isBluetoothSupported,
     isBluetoothEnabled,
     dataReceivedCallback,
     droppedOutDeviceIds,
-    watchdog.isWatchdogActive
+    watchdog.isWatchdogActive,
+    internalBlePhase
   ]);
 }

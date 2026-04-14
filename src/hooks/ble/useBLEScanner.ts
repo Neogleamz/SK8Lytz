@@ -24,8 +24,7 @@ export function useBLEScanner({
   probeDevice,
   hardwareProbedCallbackRef
 }: UseBLEScannerProps) {
-  const [isScanning, setIsScanning] = useState(false);
-  const [isScanProbing, setIsScanProbing] = useState(false);
+  const [scannerState, setScannerState] = useState<'IDLE' | 'SCANNING' | 'PROBING'>('IDLE');
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
 
   const allDevicesRef = useRef<Device[]>([]);
@@ -109,11 +108,11 @@ export function useBLEScanner({
     
     const pending = devices.filter(d => (d as any).hwPoints == null);
     if (pending.length === 0) {
-      setIsScanProbing(false);
+      setScannerState('IDLE');
       return;
     }
 
-    setIsScanProbing(true);
+    setScannerState('PROBING');
     console.log(`[BLE Probe] Round-Robin Probing ${pending.length} device(s). Retries left: ${retriesLeft}`);
 
     const failedIds: string[] = [];
@@ -159,13 +158,13 @@ export function useBLEScanner({
        return probeAllDiscoveredDevices(retriesLeft - 1);
     }
 
-    setIsScanProbing(false);
+    setScannerState('IDLE');
     console.log('[BLE Probe] All rounds complete.');
   };
 
   const scanForPeripherals = (options?: { keepAlive?: boolean }) => {
-    if (isScanning) return;
-    setIsScanning(true);
+    if (scannerState === 'SCANNING') return;
+    setScannerState('SCANNING');
     if (!options?.keepAlive) {
       setPendingRegistrations([]);
     }
@@ -210,16 +209,16 @@ export function useBLEScanner({
                } as PendingRegistration;
             });
             setPendingRegistrations(pendingMocks);
-            setIsScanning(false);
+            setScannerState('IDLE');
           }, 500);
         } else if (!bleManager) {
-          setTimeout(() => setIsScanning(false), 500);
+          setTimeout(() => setScannerState('IDLE'), 500);
         }
       });
       if (Platform.OS === 'web') return;
     } else {
       if (!bleManager) {
-        setTimeout(() => setIsScanning(false), 500);
+        setTimeout(() => setScannerState('IDLE'), 500);
         return;
       }
     }
@@ -227,7 +226,7 @@ export function useBLEScanner({
     bleManager.startDeviceScan(null, null, (error: any, device: any) => {
       if (error) {
         AppLogger.error(error);
-        setIsScanning(false);
+        setScannerState('IDLE');
         return;
       }
       if (device) {
@@ -313,14 +312,13 @@ export function useBLEScanner({
 
     setTimeout(() => {
       bleManager.stopDeviceScan();
-      setIsScanning(false);
+      // Keep state at SCANNING briefly then probeAllDiscoveredDevices will switch to PROBING or IDLE
       probeAllDiscoveredDevices();
     }, 5000);
   };
 
   return {
-    isScanning,
-    isScanProbing,
+    scannerState,
     pendingRegistrations,
     scanForPeripherals,
     setPendingRegistrations,

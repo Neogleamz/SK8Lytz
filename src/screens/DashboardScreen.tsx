@@ -50,7 +50,7 @@ import { useDashboardGroups } from '../hooks/useDashboardGroups';
 import { useDashboardProfile } from '../hooks/useDashboardProfile';
 import { useDashboardVoice } from '../hooks/useDashboardVoice';
 import { useHardwareNotifications } from '../hooks/useHardwareNotifications';
-import type { DeviceSettings } from '../types/dashboard.types';
+import type { DashboardViewState, DeviceSettings } from '../types/dashboard.types';
 
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
 // — migrated as part of Phase 1 Domain-Driven Refactor
@@ -71,8 +71,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     connectedDevices,
     disconnectFromDevice,
     writeToDevice,
-    isScanning,
-    isScanProbing,
+    // isScanning / isScanProbing removed — bleState FSM is the canonical source of truth
     isBluetoothSupported,
     isBluetoothEnabled,
     requestPermissions,
@@ -81,6 +80,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     droppedOutDeviceIds,
     pendingRegistrations,
     clearPendingRegistrations,
+    bleState
   } = useBLE();
 
   // ── Registration system ────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   const [updateTrigger, setUpdateTrigger] = useState(0);
   const [isTestModeActive, setIsTestModeActive] = useState(false);
-  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  // isDisconnecting removed — bleState === 'DISCONNECTING' is the canonical FSM gate
   const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
   const [isDiagnosticsMode, setIsDiagnosticsMode] = useState(false);
 
@@ -136,7 +136,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const allDevicesRef = React.useRef(allDevices);
   const lastProcessedRef = React.useRef<string>('');
 
-  const [isSetupWizardVisible, setIsSetupWizardVisible] = useState(false);
+  const [viewState, setViewState] = useState<DashboardViewState>('LOADING_REGS');
   const {
     customGroups,
     customGroupsRef,
@@ -174,7 +174,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     setAllDevices,
     allDevicesRef,
     onRegistrationComplete: () => {
-      setIsSetupWizardVisible(false);
+      setViewState('DASHBOARD');
       wizardCheckedRef.current = false;
     },
   });
@@ -205,7 +205,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     stopListening,
   } = useDashboardVoice({ dockedControllerRef });
 
-  const [isCheckingRegistrations, setIsCheckingRegistrations] = useState(true);
+
 
   // AppState Telemetry
   useEffect(() => {
@@ -225,21 +225,15 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const wizardCheckedRef = React.useRef(false);
   const [pendingNewDevice, setPendingNewDevice] = React.useState<any | null>(null);
 
-  // 0. Auto-scan on mount
-  useEffect(() => {
-    if (!isScanning) {
-      scanForPeripherals();
-    }
-  }, []);
+  // NOTE: auto-scan on mount is handled by the hasAutoScanned effect below (requires viewState === 'DASHBOARD')
 
   // 1. Check FTUE state on mount
   useEffect(() => {
     hasCloudRegistrations().then(hasAny => {
       if (!hasAny) {
-        setIsSetupWizardVisible(true);
-        setIsCheckingRegistrations(false);
+        setViewState('SETUP_WIZARD');
       } else {
-        setIsCheckingRegistrations(false);
+        setViewState('DASHBOARD');
       }
     });
   }, []);
@@ -247,7 +241,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // 2. Continuous listener for new devices beyond FTUE
   useEffect(() => {
     if (pendingRegistrations.length === 0) return;
-    if (isSetupWizardVisible) return; // Ignore if wizard is already active
+    if (viewState === 'SETUP_WIZARD') return; // Ignore if wizard is already active
     
     // Only check if we are in dashboard mode and a new untracked device appears
     const checkNewDevice = async () => {
@@ -374,7 +368,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // Analytics / Dev tools hooks migrated to AuthScreen / removed
 
   const handleScan = () => {
-    if (isScanning || isActuallyConnected) return;
+    if (bleState === 'SCANNING' || isActuallyConnected) return;
     
     requestPermissions().then((granted) => {
       if (granted) {
@@ -402,8 +396,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // Automatically probe for hardware upon dashboard load to eliminate user friction
   const hasAutoScanned = React.useRef(false);
   useEffect(() => {
-    if (!isCheckingRegistrations && !isSetupWizardVisible && !hasAutoScanned.current) {
-      if (connectedDevices.length === 0 && !isScanning) {
+    if (viewState === 'DASHBOARD' && !hasAutoScanned.current) {
+      if (connectedDevices.length === 0 && bleState !== 'SCANNING') {
         hasAutoScanned.current = true;
         // Wait 1 second to let dashboard natively render before hammering BLE stack
         setTimeout(() => {
@@ -412,7 +406,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCheckingRegistrations, isSetupWizardVisible, connectedDevices.length, isScanning]);
+  }, [viewState, connectedDevices.length, bleState]);
 
   useEffect(() => {
     customGroupsRef.current = customGroups;
@@ -485,11 +479,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, [sortedAllDevices, registeredDevices]);
 
   const handleDisconnect = useCallback(async () => {
-    if (isDisconnecting) return;
-    setIsDisconnecting(true);
+    if (bleState === 'DISCONNECTING') return;
     await disconnectFromDevice();
-    setIsDisconnecting(false);
-  }, [disconnectFromDevice, isDisconnecting]);
+  }, [disconnectFromDevice, bleState]);
 
   useEffect(() => {
     const handleBackPress = () => {
@@ -497,8 +489,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         setIsTestModeActive(false);
         return true; // intercept
       }
-      if (isDisconnecting) {
-        return true; // intercept and block multiple back presses
+      if (bleState === 'DISCONNECTING') {
+        return true; // intercept and block multiple back presses during teardown
       }
       if (isActuallyConnected) {
         handleDisconnect();
@@ -509,7 +501,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
     const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
     return () => backHandler.remove();
-  }, [isTestModeActive, isActuallyConnected, handleDisconnect, isDisconnecting]);
+  }, [isTestModeActive, isActuallyConnected, handleDisconnect, bleState]);
 
   // Handle Swipe-to-Back natively for Visualizer screens (IOS & Android edge swipe)
   const edgePanResponder = useRef(
@@ -525,13 +517,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       onPanResponderRelease: (evt, gestureState) => {
         if (gestureState.dx > 60) {
           if (isTestModeActive) setIsTestModeActive(false);
-          else if (isActuallyConnected && !isDisconnecting) handleDisconnect();
+          else if (isActuallyConnected && bleState !== 'DISCONNECTING') handleDisconnect();
         }
       },
       onPanResponderTerminate: (evt, gestureState) => {
         if (gestureState.dx > 60) {
           if (isTestModeActive) setIsTestModeActive(false);
-          else if (isActuallyConnected && !isDisconnecting) handleDisconnect();
+          else if (isActuallyConnected && bleState !== 'DISCONNECTING') handleDisconnect();
         }
       }
     })
@@ -719,6 +711,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             onDisconnect={handleDisconnect}
             crewRole={crewRole}
             onCrewSceneChange={(scene: Record<string, any>) => crewService.broadcastScene(scene)}
+            bleState={bleState}
             onPatternChanged={(patternName: string) => {
               // Ensure we only bind this to a physical hardware controller view, not when
               // we don't have a specific group/skate selected.
@@ -728,8 +721,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               }
             }}
           />
-          {/* Disconnection Teardown Overlay */}
-          {isDisconnecting && (
+          {/* Disconnection Teardown Overlay — driven by FSM bleState */}
+          {bleState === 'DISCONNECTING' && (
             <Animated.View style={{
               position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
               backgroundColor: 'rgba(0,0,0,0.85)',
@@ -742,7 +735,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           )}
       </Animated.View>
     );
-  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, activeHwSettings, crewRole, crewSession, lastLeaderScene, isDisconnecting]);
+  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, activeHwSettings, crewRole, crewSession, lastLeaderScene, bleState]);
 
   /**
    * Renders a single device item card, merging registration data 
@@ -953,16 +946,17 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     </View>
   );
 
-  if (isCheckingRegistrations) {
-    return (
-      <View style={[styles.container, { backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator color={Colors.primary} size="large" />
-      </View>
-    );
-  }
-
-  if (isSetupWizardVisible) {
-    return <HardwareSetupWizardScreen onSetupComplete={async (devices) => { await handleRegistrationComplete(devices, allDevices); }} />;
+  switch (viewState) {
+    case 'LOADING_REGS':
+      return (
+        <View style={[styles.container, { backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator color={Colors.primary} size="large" />
+        </View>
+      );
+    case 'SETUP_WIZARD':
+      return <HardwareSetupWizardScreen onSetupComplete={async (devices) => { await handleRegistrationComplete(devices, allDevices); }} />;
+    default:
+      break;
   }
 
   return (
@@ -1083,7 +1077,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                       </Text>
                       {registeredDevices.length === 0 && (
                         <TouchableOpacity 
-                          onPress={() => setIsSetupWizardVisible(true)}
+                          onPress={() => setViewState('SETUP_WIZARD')}
                           style={[styles.scanButton, { marginTop: 16, width: '70%', backgroundColor: Colors.primary }]}
                         >
                           <Text style={styles.scanButtonText}>SET UP YOUR SKATES</Text>
@@ -1107,7 +1101,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                        <Text style={styles.slabTitle}>REGISTERED DEVICES</Text>
                      </View>
                      <TouchableOpacity 
-                       onPress={() => setIsSetupWizardVisible(true)}
+                       onPress={() => setViewState('SETUP_WIZARD')}
                        style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                      >
                        <MaterialCommunityIcons name="plus-circle-outline" size={14} color={Colors.primary} />
@@ -1129,7 +1123,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                         <MaterialCommunityIcons name="bluetooth-connect" size={32} color={Colors.textMuted} style={{ marginBottom: 12 }} />
                         <Text style={styles.slabEmptyText}>No registered skates found.</Text>
                         <TouchableOpacity 
-                          onPress={() => setIsSetupWizardVisible(true)}
+                          onPress={() => setViewState('SETUP_WIZARD')}
                           style={[styles.scanButton, { marginTop: 16, width: '60%' }]}
                         >
                           <Text style={styles.scanButtonText}>START SETUP</Text>
@@ -1333,7 +1327,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         onClose={() => setIsAdminToolsVisible(false)}
         allDevices={allDevices}
         connectedDevices={connectedDevices as any[]}
-        bleState={isScanning ? 'SCANNING' : 'IDLE'}
+        bleState={bleState}
         handleScan={() => scanForPeripherals()}
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
