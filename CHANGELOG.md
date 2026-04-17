@@ -1,3 +1,25 @@
+## [1.8.15] - 2026-04-17
+
+### ✨ Features
+- feat(crewz): rebrand UI exclusively to CREWZ and migrate national harvest pipeline to vertical synchrony
+- feat(map): unify crew hub map strategy with interactive clustering and OS-specific fallbacks
+- feat(crew): unified radius UI, flex map filters, dynamic local memory, and smart skate spots
+
+### 🎨 Style
+- style(crewz): fix grammar by restoring singular CREW capitalization in UI display text
+
+### 📖 Documentation
+- docs(schema): sync Master Reference with new skate_spots DB schema
+
+---
+
+## [1.8.14] - 2026-04-17
+
+### 📖 Documentation
+- docs(discord-bridge): expand developer portal setup instructions
+
+---
+
 ## [1.8.13] - 2026-04-17
 
 ### ✨ Features
