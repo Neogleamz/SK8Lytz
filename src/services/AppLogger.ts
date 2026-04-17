@@ -132,7 +132,10 @@ export type EventType =
   // ── Hardware Watchdog ──────────────────────────────────────
   | 'BLE_STATE_CHANGE'
   | 'WATCHDOG_MISS'
-  | 'WATCHDOG_RELATCH';
+  | 'WATCHDOG_RELATCH'
+  // ── Auto-Recovery Extended ─────────────────────────────────
+  | 'AUTO_RECOVERY_CANCELLED'
+  | 'AUTO_RECOVERY_GATE_WAIT';
 
 
 export interface LogEntry {

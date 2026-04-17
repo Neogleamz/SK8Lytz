@@ -54,6 +54,8 @@ export interface BluetoothLowEnergyApi {
   clearPendingRegistrations: () => void;
   ghostedDeviceIds: string[];
   bleState: BleConnectionState;
+  /** Global connection gate semaphore — exposed for consumers that need gate-awareness */
+  bleGateRef: React.MutableRefObject<'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING'>;
 }
 
 export default function useBLE(): BluetoothLowEnergyApi {
@@ -241,6 +243,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
       return;
     }
     setGate('CONNECTING');
+    try {
       let isMock = 'false';
       if (__DEV__) {
          isMock = await AsyncStorage.getItem('@Sk8lytz_demo_mode') || 'false';
@@ -334,8 +337,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
       setGate('IDLE');
     }
   };
-
-  const negotiatedMtuRef = useRef<number>(186);
 
   const writeToDevice = async (payload: number[], targetDeviceId?: string): Promise<boolean | 'partial'> => {
     const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');

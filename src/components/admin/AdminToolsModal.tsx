@@ -38,7 +38,7 @@ export interface AdminToolsModalProps {
   onToggleDiagnostics?: () => void;
   hwSettings?: any;
   onDisconnectFromDevice?: (id: string) => Promise<void>;
-  writeToDevice?: (data: number[], deviceId?: string) => Promise<void | boolean>;
+  writeToDevice?: (data: number[], deviceId?: string) => Promise<void | boolean | 'partial'>;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
   connectedDevices?: { id: string, name: string | null }[];
   allDevices?: any[];

@@ -42,7 +42,7 @@ import CustomEffectVisualizer from '../../CustomEffectVisualizer';
 interface LabProps {
   visible: boolean;
   onClose: () => void;
-  writeToDevice?: (data: number[], deviceId?: string) => Promise<void | boolean>;
+  writeToDevice?: (data: number[], deviceId?: string) => Promise<void | boolean | 'partial'>;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
   connectedDevices?: { id: string; name: string | null }[];
   hwSettings?: {

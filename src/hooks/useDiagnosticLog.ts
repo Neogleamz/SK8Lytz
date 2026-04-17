@@ -13,7 +13,7 @@ export interface BleLog {
 interface UseDiagnosticLogProps {
   visible: boolean;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
-  writeToDevice?: (data: number[], deviceId?: string) => Promise<void | boolean>;
+  writeToDevice?: (data: number[], deviceId?: string) => Promise<void | boolean | 'partial'>;
   targetDeviceId: string | null;
 }
 
