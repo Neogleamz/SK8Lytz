@@ -6,7 +6,7 @@ let SpeechErrorEvent: any;
 try {
   if (Platform.OS !== 'web') {
     const rmVoice = require('@react-native-voice/voice');
-    Voice = rmVoice.default;
+    Voice = rmVoice.default || rmVoice;
   }
 } catch (e) {
   // Native module not linked

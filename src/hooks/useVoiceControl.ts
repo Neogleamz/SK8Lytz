@@ -5,7 +5,8 @@ import { Platform } from 'react-native';
 let Voice: any;
 try {
   if (Platform.OS !== 'web') {
-    Voice = require('@react-native-voice/voice').default;
+    const rmVoice = require('@react-native-voice/voice');
+    Voice = rmVoice.default || rmVoice;
   }
 } catch (e) {
   console.warn('Voice recognition native module not found');
@@ -44,7 +45,9 @@ export const useVoiceControl = (favorites: IFavoriteState[], onAction: (action: 
     return () => {
       try {
         if (Voice) {
-          Voice.destroy().then(Voice.removeAllListeners);
+          Voice.destroy().then(() => {
+            if (Voice.removeAllListeners) Voice.removeAllListeners();
+          }).catch(() => {});
         }
       } catch {
         // Native module may not be available during cleanup
