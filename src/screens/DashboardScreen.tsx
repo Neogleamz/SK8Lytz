@@ -42,21 +42,27 @@ import { getDefaultGroupName } from '../utils/NamingUtils';
 import CrewMemberDashboard from '../components/CrewMemberDashboard';
 import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { RegisteredDevice, useRegistration } from '../hooks/useRegistration';
-import { supabase } from '../services/supabaseClient';
 import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
 
 // ─── Phase 1 Domain Hooks ──────────────────────────────────────────────────────
 import { useDashboardAutoConnect } from '../hooks/useDashboardAutoConnect';
 import { useDashboardGroups } from '../hooks/useDashboardGroups';
 import { useDashboardProfile } from '../hooks/useDashboardProfile';
+import { useDashboardCrew } from '../hooks/useDashboardCrew';
+import { useDashboardDeviceConfig } from '../hooks/useDashboardDeviceConfig';
 import { useDashboardVoice } from '../hooks/useDashboardVoice';
 import { useHardwareNotifications } from '../hooks/useHardwareNotifications';
-import type { DashboardViewState, DeviceSettings } from '../types/dashboard.types';
+import type { DashboardViewState, DeviceSettings, CustomGroup } from '../types/dashboard.types';
 
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
 // — migrated as part of Phase 1 Domain-Driven Refactor
 
 import { SkateGroupCard } from '../components/dashboard/SkateGroupCard';
+import CrewHubSlab from '../components/dashboard/CrewHubSlab';
+import DashboardHeader from '../components/dashboard/DashboardHeader';
+import MySkatesSlab from '../components/dashboard/MySkatesSlab';
+import RegisteredFleetSlab from '../components/dashboard/RegisteredFleetSlab';
+import SupportModal from '../components/dashboard/SupportModal';
 import { createDashboardStyles, getPatternColors } from '../styles/DashboardStyles';
 
 export default function DashboardScreen({ isOfflineMode = false, onLogout }: { isOfflineMode?: boolean; onLogout?: () => void } = {}) {
@@ -103,6 +109,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     userProfile,
     appSettings,
     refreshProfile,
+    authUsername,
+    handleLogout,
     isAccountModalVisible,
     setIsAccountModalVisible,
     isAdminToolsVisible,
@@ -196,13 +204,23 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const isActuallyConnected = displayConnectedDevices.length > 0;
   const isGrouped = displayConnectedDevices.length > 1 && displayConnectedDevices.every(d => (d as any).grouped);
 
-  // ── Crew Hub state (stays in DashboardScreen — feeds BLE write dispatch) ───────
-  const [crewSession, setCrewSession] = useState<CrewSession | null>(null);
-  const [crewRole, setCrewRole] = useState<CrewRole>(null);
-  const [isCrewModalVisible, setIsCrewModalVisible] = useState(false);
-  const [crewModeSummary, setCrewModeSummary] = useState<string | undefined>(undefined);
-  const [lastLeaderScene, setLastLeaderScene] = useState<Record<string, any> | null>(null);
-  const [_pendingJoinCrewId, setPendingJoinCrewId] = useState<string | null>(null);
+  // 🔶 Crew Hub state & auto-rejoin → useDashboardCrew
+  const {
+    crewSession,
+    setCrewSession,
+    crewRole,
+    setCrewRole,
+    isCrewModalVisible,
+    setIsCrewModalVisible,
+    crewModeSummary,
+    setCrewModeSummary,
+    lastLeaderScene,
+    setLastLeaderScene,
+    pendingJoinCrewId: _pendingJoinCrewId,
+    setPendingJoinCrewId,
+  } = useDashboardCrew({
+    onApplyScene: (scene) => dockedControllerRef.current?.applyCloudScene(scene),
+  });
   const dockedControllerRef = React.useRef<DockedControllerHandle>(null);
 
   // Relay Soft Disconnect recoveries down to the DockedController for silent payload blasting
@@ -286,41 +304,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // The Drop-out UI Alert has been excised per user mandate.
   // We no longer spam the user when hardware connections drop out organically.
 
-  // User Profile
-  const [authUsername, setAuthUsername] = useState<string | null>(null);
-
-  // Load cached username on mount for instant UI feedback
-  useEffect(() => {
-    AsyncStorage.getItem('@Sk8lytz_auth_username').then(val => {
-      if (val && !authUsername) setAuthUsername(val);
-    }).catch(() => {});
-  }, []);
-
-  // Derive username reactively from userProfile context
-  useEffect(() => {
-    if (supabase) {
-      supabase.auth.getSession().then(({ data: { session } }: { data: { session: any } }) => {
-        const dbDisplay = userProfile?.display_name?.trim();
-        const dbUser = userProfile?.username?.trim();
-        
-        const sessionEmailPrefix = session?.user?.email?.split('@')[0];
-        const fallback = dbDisplay || dbUser || sessionEmailPrefix || 'GUEST';
-        
-        setAuthUsername(fallback);
-        AsyncStorage.setItem('@Sk8lytz_auth_username', fallback).catch(() => {});
-      }).catch(() => {});
-    }
-  }, [userProfile, supabase]);
-
-  const handleLogout = async () => {
-     try {
-       await supabase.auth.signOut();
-       // App.tsx onAuthStateChange will detect session=null and redirect to AuthScreen automatically
-     } catch (e) {
-       AppLogger.error('Logout error:', e);
-     }
-  };
-
   // ── Cloud Sync & BLE Auto-Connect (extracted to useDashboardAutoConnect) ──
   useDashboardAutoConnect({
     isBluetoothSupported,
@@ -335,36 +318,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     registeredDevices,
   });
 
-  // ── Crew auto-rejoin on launch ────────────────────────────────────────────
-  useEffect(() => {
-    const tryRejoin = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const displayName = user.email?.split('@')[0] || 'Skater';
-      const result = await crewService.tryAutoRejoin(displayName);
-      if (!result) return;
-
-      const { session, role } = result;
-      setCrewSession(session);
-      setCrewRole(role);
-
-      if (role === 'leader') {
-        crewService.subscribeAsLeader(session.id, () => {});
-      } else {
-        crewService.subscribeAsMember(session.id, (scene) => {
-          dockedControllerRef.current?.applyCloudScene(scene);
-        });
-        // Apply last known scene immediately
-        const lastScene = await crewService.fetchLastScene(session.id).catch(() => null);
-        if (lastScene) {
-          setTimeout(() => dockedControllerRef.current?.applyCloudScene(lastScene), 500);
-        }
-      }
-    };
-    // Delay slightly to let auth session restore
-    const t = setTimeout(tryRejoin, 2000);
-    return () => clearTimeout(t);
-  }, []);
 
   // Voice command dispatch + notification init are now handled
   // by useDashboardVoice and useDashboardProfile hooks respectively.
@@ -548,68 +501,17 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     setIsSettingsVisible(true);
   };
 
-  const saveSettings = async (settings: DeviceSettings) => {
-    if (selectedDeviceForSettings) {
-      // Avoid direct mutations, use functional state updates instead
-      let finalGroupId = settings.groupId;
-
-      // Capture implicit group associations assigned through the Hardware settings modal
-      if (settings.grouped && settings.groupName && !settings.groupId) {
-        // Find existing group by name or create a fresh one natively
-        const existingGroup = customGroups.find(g => g.name.toLowerCase() === settings.groupName?.toLowerCase());
-        finalGroupId = existingGroup ? existingGroup.id : `group-${Date.now()}`;
-      } else if (!settings.grouped) {
-        finalGroupId = 'default-fleet';
-      }
-
-      // Sync via useRegistration SSOT
-      const rd = registeredDevices.find(r => r.device_mac === selectedDeviceForSettings.id);
-      if (rd) {
-        const targetGroupName = settings.grouped ? (settings.groupName || rd.group_name) : undefined;
-        saveRegisteredDevice({ ...rd, group_id: finalGroupId, group_name: targetGroupName, is_pending_sync: true }).catch(AppLogger.warn);
-      }
-
-      setAllDevices((prev: any[]) => {
-        const next = prev.map(d => 
-          d.id === selectedDeviceForSettings.id 
-            ? { ...d, name: settings.name, type: settings.type, points: settings.points, segments: settings.segments, sorting: settings.sorting, stripType: settings.stripType, groupId: finalGroupId } 
-            : d
-        );
-        allDevicesRef.current = next as any;
-        return next;
-      });
-      
-      setUpdateTrigger(prev => prev + 1);
- 
-       try {
-         const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
-         const configs = stored ? JSON.parse(stored) : {};
-         configs[selectedDeviceForSettings.id] = { ...settings, groupId: finalGroupId };
-         await AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs));
-         
-         AppLogger.log('HARDWARE_CONFIG_CHANGED', {
-           deviceId: selectedDeviceForSettings.id,
-           name: settings.name,
-           type: settings.type,
-           points: settings.points,
-           segments: settings.segments,
-           sorting: settings.sorting,
-           stripType: settings.stripType,
-         });
-
-         // Log rename separately for device audit trail
-         const previousName = selectedDeviceForSettings.name;
-         if (settings.name && settings.name !== previousName) {
-           AppLogger.log('DEVICE_RENAMED', {
-             deviceId: selectedDeviceForSettings.id,
-             oldName: previousName || 'Unknown',
-             newName: settings.name,
-           });
-         }
-      } catch (e) { AppLogger.error('Failed to persist settings', e); }
-    }
-    setIsSettingsVisible(false);
-  };
+  // 🔶 Device config mutation → useDashboardDeviceConfig
+  const { saveSettings } = useDashboardDeviceConfig({
+    selectedDeviceForSettings,
+    customGroups,
+    registeredDevices,
+    saveRegisteredDevice,
+    setAllDevices,
+    allDevicesRef,
+    setUpdateTrigger,
+    setIsSettingsVisible,
+  });
 
   const activeHwSettings = useMemo(() => {
     const raw = displayConnectedDevices[0] as any;
@@ -795,147 +697,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     );
   }, [isBluetoothEnabled]);
 
-  const renderDashboardHeader = () => (
-    <View style={{
-      paddingHorizontal: Layout.padding,
-      paddingTop: insets.top + 12,
-      paddingBottom: isActuallyConnected ? 2 : 8,
-    }}>
-      {isActuallyConnected ? (
-        /* ── Connected: Unified Header Layout ── */
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {/* LEFT: Back button */}
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity
-              onPress={handleDisconnect}
-              style={{
-                flexDirection: 'row', alignItems: 'center',
-                paddingHorizontal: 6, paddingVertical: 4,
-                borderRadius: 20, gap: 2,
-              }}
-            >
-              <MaterialCommunityIcons name="chevron-left" size={24} color={Colors.primary} />
-              <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 }}>
-                Back
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* CENTER: logo + discovered status */}
-          <TouchableOpacity activeOpacity={0.7} style={{ position: 'relative', alignItems: 'center' }} onPress={() => setIsAdminToolsVisible(true)}>
-            <Image source={require('../../assets/logo.png')} style={{ width: 80, height: 24 }} resizeMode="contain" tintColor={Colors.text} />
-            {(() => {
-              const connectedCount = displayConnectedDevices.length;
-              let expectedCount = 1;
-              const firstDevice = displayConnectedDevices[0] as any;
-              if (firstDevice?.grouped && firstDevice?.groupId) {
-                const group = customGroups.find(g => g.id === firstDevice.groupId);
-                if (group) expectedCount = group.deviceIds.length;
-              }
-              let statusColor = connectedCount === 0 ? Colors.error : connectedCount < expectedCount ? '#FFA500' : Colors.success;
-              return (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                  <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: statusColor, marginRight: 4 }} />
-                  <Text style={{ color: statusColor, fontSize: 8, fontWeight: 'bold', letterSpacing: 0.5 }}>CONNECTED ({connectedCount})</Text>
-                </View>
-              );
-            })()}
-          </TouchableOpacity>
-
-          {/* RIGHT: utilities group (matching AuthScreen style) */}
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
-            {!isTestModeActive && (
-              <TouchableOpacity
-                style={{ 
-                  width: 34, height: 34, borderRadius: 17, 
-                  backgroundColor: (displayConnectedDevices.every(id => powerStates[id.id] ?? true)) ? 'rgba(0,240,255,0.15)' : 'rgba(255,255,255,0.07)', 
-                  justifyContent: 'center', alignItems: 'center', 
-                  borderWidth: 1, 
-                  borderColor: (displayConnectedDevices.every(id => powerStates[id.id] ?? true)) ? 'rgba(0,240,255,0.3)' : 'rgba(255,255,255,0.15)' 
-                }}
-                onPress={() => handlePowerToggle(displayConnectedDevices.map(d => d.id))}
-                activeOpacity={0.6}
-              >
-                <MaterialCommunityIcons name="power" size={18} color={(displayConnectedDevices.every(id => powerStates[id.id] ?? true)) ? Colors.primary : Colors.textMuted} />
-              </TouchableOpacity>
-            )}
-            
-            <TouchableOpacity 
-              onPress={() => setIsSupportModalVisible(true)}
-              style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}
-            >
-              <MaterialCommunityIcons name="help-circle-outline" size={18} color={Colors.textMuted} />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              onPress={toggleTheme} 
-              style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}
-            >
-              <MaterialCommunityIcons name={isDark ? 'weather-sunny' : 'weather-night'} size={18} color={Colors.primary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      ) : (
-        /* ── Not connected: 3-column layout — user pill left, icons right ── */
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-
-          {/* LEFT: user pill left-justified */}
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity
-              onPress={() => setIsAccountModalVisible(true)}
-              style={{
-                flexDirection: 'row', alignItems: 'center',
-                paddingHorizontal: 6, paddingVertical: 4,
-                borderRadius: 16, borderWidth: 1, gap: 4,
-                borderColor: isOfflineMode ? 'rgba(255,170,0,0.35)' : 'rgba(0,240,255,0.25)',
-                backgroundColor: isOfflineMode ? 'rgba(255,170,0,0.08)' : 'rgba(0,240,255,0.06)',
-              }}
-            >
-              <View style={{
-                width: 6, height: 6, borderRadius: 3,
-                backgroundColor: isOfflineMode ? '#FFA500' : Colors.success,
-                shadowColor: isOfflineMode ? '#FFA500' : Colors.success,
-                shadowOpacity: 0.8, shadowRadius: 4, elevation: 2,
-              }} />
-              <Text style={{ color: Colors.text, fontSize: 10, fontWeight: '700', maxWidth: 55, fontFamily: 'Righteous' }} numberOfLines={1}>
-                {authUsername || 'GUEST'}
-              </Text>
-              <MaterialCommunityIcons name="account-cog" size={12} color={Colors.textMuted} style={{ opacity: 0.8 }} />
-            </TouchableOpacity>
-          </View>
-
-          {/* [BUG FIX]: Replaced zIndex: -1 with pointerEvents="box-none" so logo TouchableOpacity catches touches */}
-          {/* CENTER: logo perfectly absolute centered */}
-          <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, top: 0, justifyContent: 'center', alignItems: 'center' }}>
-            <TouchableOpacity activeOpacity={0.7} style={{ position: 'relative', alignItems: 'center' }} onPress={() => setIsAdminToolsVisible(true)}>
-              <Image source={require('../../assets/logo.png')} style={{ width: 85, height: 26 }} resizeMode="contain" tintColor={Colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          {/* RIGHT: grouped icons */}
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-            <TouchableOpacity
-              style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}
-              onPress={() => setIsSupportModalVisible(true)}
-            >
-              <MaterialCommunityIcons name="help-circle-outline" size={16} color={Colors.textMuted} />
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={toggleTheme} style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}>
-              <MaterialCommunityIcons name={isDark ? 'weather-sunny' : 'weather-night'} size={16} color={Colors.primary} />
-            </TouchableOpacity>
-
-          </View>
-        </View>
-      )}
-
-      {/* Accent line under logo when not connected */}
-      {!isActuallyConnected && (
-        <View style={{ height: 2, width: 30, backgroundColor: Colors.secondary, marginTop: 6, borderRadius: 1, alignSelf: 'center' }} />
-      )}
-    </View>
-  );
-
   switch (viewState) {
     case 'LOADING_REGS':
       return (
@@ -957,7 +718,24 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         {isActuallyConnected && (
           <View style={{ flex: 1 }}>
             <View pointerEvents="box-none" style={{ paddingBottom: 16, zIndex: 100, elevation: 100 }}>
-              {renderDashboardHeader()}
+              <DashboardHeader
+                isActuallyConnected={isActuallyConnected}
+                isOfflineMode={isOfflineMode}
+                isTestModeActive={isTestModeActive}
+                isDark={isDark}
+                displayConnectedDevices={displayConnectedDevices}
+                customGroups={customGroups}
+                powerStates={powerStates}
+                handleDisconnect={handleDisconnect}
+                handlePowerToggle={handlePowerToggle}
+                onPressAdminTools={() => setIsAdminToolsVisible(true)}
+                onPressSupport={() => setIsSupportModalVisible(true)}
+                onPressTheme={toggleTheme}
+                authUsername={authUsername}
+                onPressAccount={() => setIsAccountModalVisible(true)}
+                insetTop={insets.top}
+                Colors={Colors}
+              />
             </View>
             <View style={{ flex: 1 }}>
               {MemoizedSk8lytzController}
@@ -969,7 +747,24 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           <View style={{ flex: 1, backgroundColor: Colors.background }}>
              {/* SLAB 1: HEADER (Logo + Pulse) */}
              <View style={styles.headerSlab}>
-                {renderDashboardHeader()}
+                <DashboardHeader
+                  isActuallyConnected={isActuallyConnected}
+                  isOfflineMode={isOfflineMode}
+                  isTestModeActive={isTestModeActive}
+                  isDark={isDark}
+                  displayConnectedDevices={displayConnectedDevices}
+                  customGroups={customGroups}
+                  powerStates={powerStates}
+                  handleDisconnect={handleDisconnect}
+                  handlePowerToggle={handlePowerToggle}
+                  onPressAdminTools={() => setIsAdminToolsVisible(true)}
+                  onPressSupport={() => setIsSupportModalVisible(true)}
+                  onPressTheme={toggleTheme}
+                  authUsername={authUsername}
+                  onPressAccount={() => setIsAccountModalVisible(true)}
+                  insetTop={insets.top}
+                  Colors={Colors}
+                />
              </View>
 
              <ScrollView 
@@ -977,159 +772,50 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                contentContainerStyle={{ paddingBottom: insets.bottom + 60, flexGrow: 1 }}
                showsVerticalScrollIndicator={false}
              >
-                {/* SLAB 2: CREW HUB (Sessions) */}
-                <View style={[styles.slabContainer, { marginTop: 12 }]}>
-                  <View style={[styles.glassSlab, { 
-                    borderColor: isOfflineMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,170,0,0.2)', 
-                    paddingVertical: isOfflineMode ? 16 : (windowHeight < 720 ? 16 : 40) 
-                  }]}>
-                    <View style={[styles.slabHeader, isOfflineMode && { marginBottom: 8 }]}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <MaterialCommunityIcons name={isOfflineMode ? "cloud-off-outline" : "account-group"} size={18} color={isOfflineMode ? Colors.textMuted : "#FFAA00"} />
-                        <Text style={[styles.slabTitle, { color: isOfflineMode ? Colors.textMuted : '#FFAA00' }]}>CREW HUB</Text>
-                      </View>
-                      {!crewSession && !isOfflineMode && (
-                        <TouchableOpacity onPress={() => setIsCrewModalVisible(true)} style={styles.slabAction}>
-                          <Text style={styles.slabActionText}>OPEN HUB</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-
-                    {appSettings['global_crew_hub_locked'] ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
-                        <MaterialCommunityIcons name="lock-outline" size={16} color={Colors.textMuted} style={{ marginRight: 8 }} />
-                        <Text style={[styles.slabEmptyText, { color: Colors.textMuted, flex: 1, fontSize: 11 }]}>FEATURE TEMPORARILY DISABLED BY ADMIN</Text>
-                      </View>
-                    ) : isOfflineMode ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
-                        <MaterialCommunityIcons name="cloud-off-outline" size={16} color={Colors.textMuted} style={{ marginRight: 8 }} />
-                        <Text style={[styles.slabEmptyText, { color: Colors.textMuted, flex: 1, fontSize: 11 }]}>Go online to sync lights with nearby skaters.</Text>
-                      </View>
-                    ) : crewSession ? (
-                      <TouchableOpacity
-                        style={[styles.activeCrewPill, { paddingVertical: 24 }]}
-                        onPress={() => setIsCrewModalVisible(true)}
-                      >
-                        <View style={[styles.statusDot, { backgroundColor: crewRole === 'leader' ? '#FFAA00' : '#00AAFF' }]} />
-                        <Text style={[styles.activeCrewText, { color: crewRole === 'leader' ? '#FFAA00' : '#00AAFF' }]}>
-                          {crewSession.name.toUpperCase()} · LIVE
-                        </Text>
-                        <MaterialCommunityIcons name="chevron-right" size={16} color={crewRole === 'leader' ? '#FFAA00' : '#00AAFF'} />
-                      </TouchableOpacity>
-                    ) : (
-                      <View style={{ gap: 16 }}>
-                        <Text style={styles.slabEmptyText}>No active sessions nearby. Launch a crew to sync lights.</Text>
-                        <TouchableOpacity 
-                          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: '#FFAA00', marginTop: 8 }}
-                          onPress={() => Alert.alert("Coming Soon", "The Interactive Skate Spot Map is currently in development!")}
-                        >
-                          <MaterialCommunityIcons name="map-marker-radius" size={18} color="#FFAA00" style={{ marginRight: 8 }} />
-                          <Text style={{ color: '#FFAA00', fontWeight: '800', letterSpacing: 1, fontSize: 13 }}>EXPLORE SKATE MAP</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
-                </View>
+                {/* SLAB 2: CREW HUB */}
+                <CrewHubSlab
+                  crewSession={crewSession}
+                  crewRole={crewRole}
+                  isOfflineMode={isOfflineMode}
+                  appSettings={appSettings}
+                  windowHeight={windowHeight}
+                  onOpenHub={() => setIsCrewModalVisible(true)}
+                  Colors={Colors}
+                  styles={styles}
+                />
 
 
-                {/* SLAB 3: SKATES (Groups) */}
-                <View style={styles.slabContainer}>
-                  <View style={styles.slabHeader}>
-                     <Text style={styles.slabTitle}>MY SKATES</Text>
-                     <MaterialCommunityIcons name="lightning-bolt" size={14} color={Colors.primary} />
-                  </View>
-                  {customGroups.length > 0 ? (
-                    <View style={{ gap: 12 }}>
-                      {customGroups.map((group) => {
-                        const lastPattern = lastGroupPatterns[group.id];
-                        const cardColors = getPatternColors(lastPattern, Colors);
-                        
-                        return (
-                          <SkateGroupCard
-                            key={group.id}
-                            group={group}
-                            colors={cardColors}
-                            lastPattern={lastPattern}
-                            userProfile={userProfile}
-                            powerStates={powerStates}
-                            Colors={Colors}
-                            styles={styles}
-                            onPress={() => {
-                              const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id));
-                              if (devicesToConnect.length > 0) connectToDevices(devicesToConnect);
-                            }}
-                            onLongPress={() => {
-                              openGroupRename(group.id);
-                            }}
-                          />
-                        );
-                      })}
-                    </View>
-                  ) : (
-                    <View style={[styles.glassSlab, { alignItems: 'center', paddingVertical: 24 }]}>
-                      <Text style={styles.slabEmptyText}>
-                        {registeredDevices.length === 0 
-                          ? "No skates detected. Time to link your hardware!" 
-                          : "Create a group to control both skates at once."}
-                      </Text>
-                      {registeredDevices.length === 0 && (
-                        <TouchableOpacity 
-                          onPress={() => setViewState('SETUP_WIZARD')}
-                          style={[styles.scanButton, { marginTop: 16, width: '70%', backgroundColor: Colors.primary }]}
-                        >
-                          <Text style={styles.scanButtonText}>SET UP YOUR SKATES</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  )}
-                </View>
+                {/* SLAB 3: MY SKATES */}
+                <MySkatesSlab
+                  customGroups={customGroups}
+                  lastGroupPatterns={lastGroupPatterns}
+                  allDevices={allDevices}
+                  registeredDevices={registeredDevices}
+                  powerStates={powerStates}
+                  userProfile={userProfile}
+                  onGroupPress={(group: CustomGroup) => {
+                    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id));
+                    if (devicesToConnect.length > 0) connectToDevices(devicesToConnect);
+                  }}
+                  onGroupLongPress={(id: string) => openGroupRename(id)}
+                  onSetupWizard={() => setViewState('SETUP_WIZARD')}
+                  Colors={Colors}
+                  styles={styles}
+                />
 
                 {/* Flexible spacer — only pushes content on large screens */}
                 <View style={{ flex: 1, minHeight: windowHeight < 720 ? 0 : 20 }} />
 
-                {/* SLAB 4: REGISTERED FLEET (Devices) */}
-                <View style={styles.slabContainer}>
-                  <TouchableOpacity 
-                    style={styles.slabHeader} 
-                    onPress={() => setIsRegisteredCollapsed(!isRegisteredCollapsed)}
-                    activeOpacity={0.7}
-                  >
-                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                       <MaterialCommunityIcons name={isRegisteredCollapsed ? "chevron-down" : "chevron-up"} size={16} color={Colors.textMuted} />
-                       <Text style={styles.slabTitle}>REGISTERED DEVICES</Text>
-                     </View>
-                     <TouchableOpacity 
-                       onPress={() => setViewState('SETUP_WIZARD')}
-                       style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                     >
-                       <MaterialCommunityIcons name="plus-circle-outline" size={14} color={Colors.primary} />
-                       <Text style={[styles.slabActionText, { color: Colors.primary }]}>ADD DEVICE</Text>
-                     </TouchableOpacity>
-                  </TouchableOpacity>
-                  
-                  {!isRegisteredCollapsed && (
-                    registeredDevices.length > 0 ? (
-                      <View style={styles.deviceListFixed}>
-                        {registeredDevices.map((d: RegisteredDevice) => (
-                          <View key={d.id || d.device_mac} style={{ marginBottom: 8 }}>
-                            {renderItem({ item: d } as any)}
-                          </View>
-                        ))}
-                      </View>
-                    ) : (
-                      <View style={[styles.glassSlab, { alignItems: 'center', paddingVertical: 32 }]}>
-                        <MaterialCommunityIcons name="bluetooth-connect" size={32} color={Colors.textMuted} style={{ marginBottom: 12 }} />
-                        <Text style={styles.slabEmptyText}>No registered skates found.</Text>
-                        <TouchableOpacity 
-                          onPress={() => setViewState('SETUP_WIZARD')}
-                          style={[styles.scanButton, { marginTop: 16, width: '60%' }]}
-                        >
-                          <Text style={styles.scanButtonText}>START SETUP</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )
-                  )}
-                </View>
+                {/* SLAB 4: REGISTERED FLEET */}
+                <RegisteredFleetSlab
+                  registeredDevices={registeredDevices}
+                  isRegisteredCollapsed={isRegisteredCollapsed}
+                  onToggleCollapse={() => setIsRegisteredCollapsed(!isRegisteredCollapsed)}
+                  onSetupWizard={() => setViewState('SETUP_WIZARD')}
+                  renderItem={renderItem}
+                  Colors={Colors}
+                  styles={styles}
+                />
               </ScrollView>
           </View>
         )}
@@ -1166,60 +852,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       
 
 
-        <Modal
+        <SupportModal
           visible={isSupportModalVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setIsSupportModalVisible(false)}
-        >
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}>
-            <View style={{ backgroundColor: Colors.surface, padding: 24, borderRadius: 16, width: '85%', borderWidth: 1, borderColor: Colors.surfaceHighlight }}>
-              <View style={{ alignItems: 'center', marginBottom: 20 }}>
-                <MaterialCommunityIcons name="lifebuoy" size={48} color={Colors.primary} />
-                <Text style={{ ...Typography.title, color: Colors.primary, marginTop: 12 }}>Support Portal</Text>
-                <Text style={{ color: Colors.textMuted, fontSize: 13, textAlign: 'center', marginTop: 8 }}>Need help configuring your hardware? Browse our official guides below.</Text>
-              </View>
-               <TouchableOpacity
-                style={[styles.groupButton, { backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: Colors.primary, borderWidth: 1, marginBottom: 16, paddingVertical: 12 }]}
-                onPress={() => Linking.openURL('https://neogleamz.com/pages/getting-started')}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialCommunityIcons name="book-open-page-variant" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
-                  <Text style={[styles.groupButtonText, { color: Colors.primary, fontSize: 14 }]}>Installation Guides</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.groupButton, { backgroundColor: 'rgba(255, 170, 0, 0.1)', borderColor: '#FFAA00', borderWidth: 1, marginBottom: 16, paddingVertical: 12 }]}
-                onPress={() => Linking.openURL('https://neogleamz.com')}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialCommunityIcons name="cart" size={20} color="#FFAA00" style={{ marginRight: 8 }} />
-                  <Text style={[styles.groupButtonText, { color: '#FFAA00', fontSize: 14 }]}>Visit Store</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.groupButton, { backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: Colors.secondary, borderWidth: 1, marginBottom: 16, paddingVertical: 12 }]}
-                onPress={() => Linking.openURL('https://neogleamz.com/pages/contact')}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialCommunityIcons name="email-fast" size={20} color={Colors.secondary} style={{ marginRight: 8 }} />
-                  <Text style={[styles.groupButtonText, { color: Colors.secondary, fontSize: 14 }]}>Contact Support</Text>
-                </View>
-              </TouchableOpacity>
-
-
-
-              <TouchableOpacity
-                style={{ paddingVertical: 12, alignItems: 'center' }}
-                onPress={() => setIsSupportModalVisible(false)}
-              >
-                <Text style={{ color: Colors.textMuted, fontWeight: 'bold' }}>CLOSE</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+          onClose={() => setIsSupportModalVisible(false)}
+          Colors={Colors}
+          styles={styles}
+        />
 
       {/* HardwareSetupWizardScreen is conditionally returned at the top level instead of here */}
 

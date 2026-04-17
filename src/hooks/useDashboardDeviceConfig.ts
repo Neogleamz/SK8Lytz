@@ -1,0 +1,141 @@
+/**
+ * useDashboardDeviceConfig.ts — Device Config Mutation Hook
+ *
+ * Encapsulates the `saveSettings` logic that was inline in DashboardScreen.tsx —
+ * group-id resolution, optimistic device-state update, AsyncStorage persist,
+ * and AppLogger audit trail for renames.
+ *
+ * Extracted from DashboardScreen.tsx (chore/refactor-dashboard-monolith).
+ */
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MutableRefObject } from 'react';
+import { AppLogger } from '../services/AppLogger';
+import type { DeviceSettings } from '../types/dashboard.types';
+
+interface Group {
+  id: string;
+  name: string;
+  deviceIds: string[];
+}
+
+interface RegisteredDevice {
+  device_mac: string;
+  group_id?: string;
+  group_name?: string;
+  is_pending_sync?: boolean;
+  [key: string]: any;
+}
+
+interface UseDashboardDeviceConfigOptions {
+  selectedDeviceForSettings: { id: string; name: string | null; [key: string]: any } | null;
+  customGroups: Group[];
+  registeredDevices: RegisteredDevice[];
+  saveRegisteredDevice: (rd: any) => Promise<any>;
+  setAllDevices: (updater: (prev: any[]) => any[]) => void;
+  allDevicesRef: MutableRefObject<any[]>;
+  setUpdateTrigger: (updater: (prev: number) => number) => void;
+  setIsSettingsVisible: (v: boolean) => void;
+}
+
+export interface UseDashboardDeviceConfigResult {
+  saveSettings: (settings: DeviceSettings) => Promise<void>;
+}
+
+export function useDashboardDeviceConfig({
+  selectedDeviceForSettings,
+  customGroups,
+  registeredDevices,
+  saveRegisteredDevice,
+  setAllDevices,
+  allDevicesRef,
+  setUpdateTrigger,
+  setIsSettingsVisible,
+}: UseDashboardDeviceConfigOptions): UseDashboardDeviceConfigResult {
+
+  const saveSettings = async (settings: DeviceSettings): Promise<void> => {
+    if (!selectedDeviceForSettings) return;
+
+    // ── Group-ID resolution ────────────────────────────────────────────────
+    let finalGroupId = settings.groupId;
+
+    if (settings.grouped && settings.groupName && !settings.groupId) {
+      // Implicit group association from the settings modal name field
+      const existingGroup = customGroups.find(
+        g => g.name.toLowerCase() === settings.groupName?.toLowerCase()
+      );
+      finalGroupId = existingGroup ? existingGroup.id : `group-${Date.now()}`;
+    } else if (!settings.grouped) {
+      finalGroupId = 'default-fleet';
+    }
+
+    // ── Registration SSOT sync ─────────────────────────────────────────────
+    const rd = registeredDevices.find(r => r.device_mac === selectedDeviceForSettings.id);
+    if (rd) {
+      const targetGroupName = settings.grouped
+        ? (settings.groupName || rd.group_name)
+        : undefined;
+      saveRegisteredDevice({
+        ...rd,
+        group_id: finalGroupId,
+        group_name: targetGroupName,
+        is_pending_sync: true,
+      }).catch(AppLogger.warn);
+    }
+
+    // ── Optimistic device-list update ──────────────────────────────────────
+    setAllDevices((prev: any[]) => {
+      const next = prev.map(d =>
+        d.id === selectedDeviceForSettings.id
+          ? {
+              ...d,
+              name:      settings.name,
+              type:      settings.type,
+              points:    settings.points,
+              segments:  settings.segments,
+              sorting:   settings.sorting,
+              stripType: settings.stripType,
+              groupId:   finalGroupId,
+            }
+          : d
+      );
+      allDevicesRef.current = next as any;
+      return next;
+    });
+
+    setUpdateTrigger(prev => prev + 1);
+
+    // ── AsyncStorage persist ───────────────────────────────────────────────
+    try {
+      const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
+      const configs = stored ? JSON.parse(stored) : {};
+      configs[selectedDeviceForSettings.id] = { ...settings, groupId: finalGroupId };
+      await AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs));
+
+      AppLogger.log('HARDWARE_CONFIG_CHANGED', {
+        deviceId:  selectedDeviceForSettings.id,
+        name:      settings.name,
+        type:      settings.type,
+        points:    settings.points,
+        segments:  settings.segments,
+        sorting:   settings.sorting,
+        stripType: settings.stripType,
+      });
+
+      // Separate audit event for device renames
+      const previousName = selectedDeviceForSettings.name;
+      if (settings.name && settings.name !== previousName) {
+        AppLogger.log('DEVICE_RENAMED', {
+          deviceId: selectedDeviceForSettings.id,
+          oldName:  previousName || 'Unknown',
+          newName:  settings.name,
+        });
+      }
+    } catch (e) {
+      AppLogger.error('Failed to persist settings', e);
+    }
+
+    setIsSettingsVisible(false);
+  };
+
+  return { saveSettings };
+}
