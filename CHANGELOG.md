@@ -1,3 +1,10 @@
+## [1.8.11] - 2026-04-17
+
+### ✨ Features
+- feat(security): implement RF remote ID discovery and UI audit
+
+---
+
 ## [1.8.10] - 2026-04-17
 
 ### 🔧 Maintenance
