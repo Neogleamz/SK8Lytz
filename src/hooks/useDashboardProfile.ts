@@ -76,7 +76,7 @@ export function useDashboardProfile({
     });
 
     notificationService.init().catch(e =>
-      console.log('[useDashboardProfile] Push notification init skipped:', e)
+      AppLogger.log('SYNC', { context: 'push_notification_init_skipped', error: String(e) })
     );
 
     return () => {

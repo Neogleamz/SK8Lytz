@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AppSettingsMap, AppSettingsService } from '../services/AppSettingsService';
+import { AppLogger } from '../services/AppLogger';
 
 /**
  * useAdminSettings — Domain hook for managing global app configuration and feature flags.
@@ -14,7 +15,7 @@ export function useAdminSettings(visible: boolean) {
       const settings = await AppSettingsService.fetchAllSettings();
       setAppSettings(settings);
     } catch (err) {
-      console.error('Failed to fetch app settings:', err);
+      AppLogger.warn('[AdminSettings] Failed to fetch app settings', { error: String(err) });
     } finally {
       setIsLoading(false);
     }
@@ -34,7 +35,7 @@ export function useAdminSettings(visible: boolean) {
         loadSettings();
       }
     } catch (err) {
-      console.error(`Failed to update setting ${key}:`, err);
+      AppLogger.warn(`[AdminSettings] Failed to update setting ${key}`, { error: String(err) });
       loadSettings();
     }
   }, [loadSettings]);

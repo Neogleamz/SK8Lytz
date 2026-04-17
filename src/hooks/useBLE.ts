@@ -277,7 +277,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
           try {
             const negotiated = await conn.requestMTU(512);
             mtuMapRef.current.set(conn.id, negotiated.mtu);
-            console.log(`[BLE] MTU negotiated: ${negotiated.mtu} bytes for ${conn.id}`);
+            AppLogger.log('DEVICE_CONNECTED', { context: 'mtu_negotiated', mtu: negotiated.mtu, deviceId: conn.id });
           } catch (mtuErr: any) {}
 
           if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
@@ -340,7 +340,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
   const writeToDevice = async (payload: number[], targetDeviceId?: string): Promise<boolean | 'partial'> => {
     const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
-    console.log(`[BLE WRITE ${payload.length}B]${targetDeviceId ? ` [→${targetDeviceId.slice(-4)}]` : ''}`, hexString.substring(0, 80));
+    AppLogger.log('RAW_PAYLOAD', { bytes: payload.length, targetDeviceId: targetDeviceId?.slice(-4), hex: hexString.substring(0, 80) });
     AppLogger.setLastTxPayload(hexString);
 
     // Web / no-op path: return true so optimisticWrite sees success

@@ -87,7 +87,7 @@ export function useAdminTelemetry(visible: boolean) {
       setLogs(allLogs);
       setStats(allStats);
     } catch (err) {
-      console.error('Failed to load telemetry:', err);
+      AppLogger.warn('[AdminTelemetry] Failed to load telemetry', { error: String(err) });
     }
   }, []);
 
