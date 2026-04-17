@@ -1,3 +1,4 @@
+import { Spacing } from '../../../theme/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useEffect, useState } from 'react';
@@ -240,11 +241,11 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={[styles.title, { color: Colors.text }]}>📅 PICKS SCHEDULER</Text>
-            <Text style={{ color: textMuted, fontSize: 11, marginTop: 2 }}>Manage and schedule SK8Lytz spotlight picks</Text>
+            <Text style={{ color: textMuted, fontSize: 11, marginTop: Spacing.xxs }}>Manage and schedule SK8Lytz spotlight picks</Text>
           </View>
           <TouchableOpacity
             onPress={() => setCreateModalVisible(true)}
-            style={{ backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+            style={{ backgroundColor: Colors.primary, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: 8 }}
           >
             <Text style={{ color: isDark ? '#000' : '#FFF', fontWeight: '900', fontSize: 12, letterSpacing: 0.5 }}>+ NEW</Text>
           </TouchableOpacity>
@@ -256,13 +257,13 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
           </Text>
 
           {isLoading && picks.length === 0 ? (
-            <Text style={{ textAlign: 'center', marginTop: 40, color: textMuted }}>Loading picks...</Text>
+            <Text style={{ textAlign: 'center', marginTop: Spacing.xxxl, color: textMuted }}>Loading picks...</Text>
           ) : (
             picks.map((pick) => (
               <View key={pick.id} style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
                 <View style={styles.cardHeader}>
-                  <View style={{ flex: 1, paddingRight: 10 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ flex: 1, paddingRight: Spacing.md }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                       <Text style={[styles.pickName, { color: textPrimary }]}>{pick.custom_name || pick.name}</Text>
                       <TouchableOpacity onPress={() => handleDeletePick(pick.id)}>
                         <MaterialCommunityIcons name="trash-can-outline" size={16} color="#ff4040" />
@@ -278,24 +279,24 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
                   />
                 </View>
 
-                <View style={{ borderTopWidth: 1, borderTopColor: borderColor, paddingTop: 12 }}>
-                  <Text style={{ color: textPrimary, fontSize: 13, fontWeight: '700', marginBottom: 6 }}>Visibility Window</Text>
+                <View style={{ borderTopWidth: 1, borderTopColor: borderColor, paddingTop: Spacing.md }}>
+                  <Text style={{ color: textPrimary, fontSize: 13, fontWeight: '700', marginBottom: Spacing.sm }}>Visibility Window</Text>
                   
                   <View style={styles.dateRow}>
                     <Text style={{ width: 45, color: textMuted, fontSize: 13 }}>From:</Text>
                     {pick.active_from ? (
                       <View style={styles.dateChip}>
-                        <Text style={{ color: textPrimary, fontSize: 13, marginRight: 8, fontWeight: '600' }}>{pick.active_from}</Text>
+                        <Text style={{ color: textPrimary, fontSize: 13, marginRight: Spacing.sm, fontWeight: '600' }}>{pick.active_from}</Text>
                         <TouchableOpacity onPress={() => openDatePicker(pick.id, 'active_from', pick.active_from)}>
                           <MaterialCommunityIcons name="pencil" size={16} color="#00AAFF" />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => clearDate(pick.id, 'active_from')} style={{ marginLeft: 12 }}>
+                        <TouchableOpacity onPress={() => clearDate(pick.id, 'active_from')} style={{ marginLeft: Spacing.md }}>
                           <MaterialCommunityIcons name="close-circle" size={16} color="#ff4040" />
                         </TouchableOpacity>
                       </View>
                     ) : (
                       <TouchableOpacity onPress={() => openDatePicker(pick.id, 'active_from', null)} style={styles.addDateBtn}>
-                        <MaterialCommunityIcons name="calendar-plus" size={14} color="#FFF" style={{ marginRight: 6 }}/>
+                        <MaterialCommunityIcons name="calendar-plus" size={14} color="#FFF" style={{ marginRight: Spacing.sm }}/>
                         <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Set Start Date</Text>
                       </TouchableOpacity>
                     )}
@@ -305,17 +306,17 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
                     <Text style={{ width: 45, color: textMuted, fontSize: 13 }}>Until:</Text>
                     {pick.active_until ? (
                       <View style={styles.dateChip}>
-                        <Text style={{ color: textPrimary, fontSize: 13, marginRight: 8, fontWeight: '600' }}>{pick.active_until}</Text>
+                        <Text style={{ color: textPrimary, fontSize: 13, marginRight: Spacing.sm, fontWeight: '600' }}>{pick.active_until}</Text>
                         <TouchableOpacity onPress={() => openDatePicker(pick.id, 'active_until', pick.active_until)}>
                           <MaterialCommunityIcons name="pencil" size={16} color="#00AAFF" />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => clearDate(pick.id, 'active_until')} style={{ marginLeft: 12 }}>
+                        <TouchableOpacity onPress={() => clearDate(pick.id, 'active_until')} style={{ marginLeft: Spacing.md }}>
                           <MaterialCommunityIcons name="close-circle" size={16} color="#ff4040" />
                         </TouchableOpacity>
                       </View>
                     ) : (
                       <TouchableOpacity onPress={() => openDatePicker(pick.id, 'active_until', null)} style={styles.addDateBtn}>
-                        <MaterialCommunityIcons name="calendar-plus" size={14} color="#FFF" style={{ marginRight: 6 }}/>
+                        <MaterialCommunityIcons name="calendar-plus" size={14} color="#FFF" style={{ marginRight: Spacing.sm }}/>
                         <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Set End Date</Text>
                       </TouchableOpacity>
                     )}
@@ -337,7 +338,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
              />
              {Platform.OS === 'ios' && (
                <View style={styles.iosDatePickerActions}>
-                  <TouchableOpacity onPress={() => setDatePickerConfig(null)} style={{ padding: 12 }}>
+                  <TouchableOpacity onPress={() => setDatePickerConfig(null)} style={{ padding: Spacing.md }}>
                      <Text style={{ color: '#00AAFF', fontSize: 16, fontWeight: '700' }}>Done</Text>
                   </TouchableOpacity>
                </View>
@@ -347,36 +348,36 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
          {/* Create New Pick Modal */}
          <Modal visible={createModalVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setCreateModalVisible(false)}>
            <SafeAreaView style={{ flex: 1, backgroundColor: '#1E1E1E' }}>
-             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' }}>
+             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' }}>
                <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>Create New Pick</Text>
                <TouchableOpacity onPress={() => setCreateModalVisible(false)}>
                  <MaterialCommunityIcons name="close" size={24} color="#FFF" />
                </TouchableOpacity>
              </View>
              
-             <ScrollView style={{ flex: 1, padding: 16 }}>
-               <Text style={{ color: '#999', marginBottom: 4, fontWeight: 'bold' }}>PICK NAME</Text>
+             <ScrollView style={{ flex: 1, padding: Spacing.lg }}>
+               <Text style={{ color: '#999', marginBottom: Spacing.xs, fontWeight: 'bold' }}>PICK NAME</Text>
                <TextInput 
                  value={createName}
                  onChangeText={setCreateName}
                  placeholder="e.g., Neon Cyberpunk"
                  placeholderTextColor="#666"
-                 style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#FFF', padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 16 }}
+                 style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#FFF', padding: Spacing.md, borderRadius: 8, marginBottom: Spacing.lg, fontSize: 16 }}
                />
 
-               <Text style={{ color: '#999', marginBottom: 4, fontWeight: 'bold' }}>MODE TYPE</Text>
-               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
-                 <TouchableOpacity onPress={() => setCreateMode('BUILDER')} style={{ flex: 1, padding: 12, borderRadius: 8, backgroundColor: createMode === 'BUILDER' ? '#00AAFF' : 'rgba(255,255,255,0.1)' }}>
+               <Text style={{ color: '#999', marginBottom: Spacing.xs, fontWeight: 'bold' }}>MODE TYPE</Text>
+               <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.lg }}>
+                 <TouchableOpacity onPress={() => setCreateMode('BUILDER')} style={{ flex: 1, padding: Spacing.md, borderRadius: 8, backgroundColor: createMode === 'BUILDER' ? '#00AAFF' : 'rgba(255,255,255,0.1)' }}>
                    <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Array Builder</Text>
                  </TouchableOpacity>
-                 <TouchableOpacity onPress={() => setCreateMode('PROGRAMS')} style={{ flex: 1, padding: 12, borderRadius: 8, backgroundColor: createMode === 'PROGRAMS' ? '#00AAFF' : 'rgba(255,255,255,0.1)' }}>
+                 <TouchableOpacity onPress={() => setCreateMode('PROGRAMS')} style={{ flex: 1, padding: Spacing.md, borderRadius: 8, backgroundColor: createMode === 'PROGRAMS' ? '#00AAFF' : 'rgba(255,255,255,0.1)' }}>
                    <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Program Pattern</Text>
                  </TouchableOpacity>
                </View>
 
                {createMode === 'BUILDER' && (
-                 <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12, marginBottom: 16 }}>
-                   <Text style={{ color: '#FFF', fontWeight: 'bold', marginBottom: 8 }}>Array Builder</Text>
+                 <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: Spacing.md, marginBottom: Spacing.lg }}>
+                   <Text style={{ color: '#FFF', fontWeight: 'bold', marginBottom: Spacing.sm }}>Array Builder</Text>
                    <PositionalGradientBuilder 
                      nodes={builderNodes}
                      onNodesChange={setBuilderNodes}
@@ -394,46 +395,46 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
                )}
 
                {createMode === 'PROGRAMS' && (
-                 <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12, marginBottom: 16 }}>
-                   <Text style={{ color: '#FFF', fontWeight: 'bold', marginBottom: 8 }}>Pattern ID</Text>
-                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                     <TouchableOpacity onPress={() => setCreatePatternId(Math.max(1, createPatternId - 1))} style={{ padding: 12, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 }}>
+                 <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: Spacing.md, marginBottom: Spacing.lg }}>
+                   <Text style={{ color: '#FFF', fontWeight: 'bold', marginBottom: Spacing.sm }}>Pattern ID</Text>
+                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
+                     <TouchableOpacity onPress={() => setCreatePatternId(Math.max(1, createPatternId - 1))} style={{ padding: Spacing.md, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 }}>
                        <MaterialCommunityIcons name="minus" size={20} color="#FFF" />
                      </TouchableOpacity>
                      <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold', flex: 1, textAlign: 'center' }}>{createPatternId}</Text>
-                     <TouchableOpacity onPress={() => setCreatePatternId(Math.min(100, createPatternId + 1))} style={{ padding: 12, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 }}>
+                     <TouchableOpacity onPress={() => setCreatePatternId(Math.min(100, createPatternId + 1))} style={{ padding: Spacing.md, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 }}>
                        <MaterialCommunityIcons name="plus" size={20} color="#FFF" />
                      </TouchableOpacity>
                    </View>
                  </View>
                )}
 
-               <Text style={{ color: '#999', marginBottom: 4, fontWeight: 'bold' }}>SPEED ({createSpeed}%)</Text>
-               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                 <TouchableOpacity onPress={() => setCreateSpeed(Math.max(0, createSpeed - 5))} style={{ padding: 10, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 }}>
+               <Text style={{ color: '#999', marginBottom: Spacing.xs, fontWeight: 'bold' }}>SPEED ({createSpeed}%)</Text>
+               <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.lg }}>
+                 <TouchableOpacity onPress={() => setCreateSpeed(Math.max(0, createSpeed - 5))} style={{ padding: Spacing.md, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 }}>
                    <MaterialCommunityIcons name="minus" size={16} color="#FFF" />
                  </TouchableOpacity>
                  <Text style={{ color: '#FFF', flex: 1, textAlign: 'center' }}>Speed</Text>
-                 <TouchableOpacity onPress={() => setCreateSpeed(Math.min(100, createSpeed + 5))} style={{ padding: 10, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 }}>
+                 <TouchableOpacity onPress={() => setCreateSpeed(Math.min(100, createSpeed + 5))} style={{ padding: Spacing.md, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 }}>
                    <MaterialCommunityIcons name="plus" size={16} color="#FFF" />
                  </TouchableOpacity>
                </View>
 
-               <Text style={{ color: '#999', marginBottom: 4, fontWeight: 'bold' }}>BRIGHTNESS ({createBrightness}%)</Text>
-               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 30 }}>
-                 <TouchableOpacity onPress={() => setCreateBrightness(Math.max(0, createBrightness - 5))} style={{ padding: 10, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 }}>
+               <Text style={{ color: '#999', marginBottom: Spacing.xs, fontWeight: 'bold' }}>BRIGHTNESS ({createBrightness}%)</Text>
+               <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.xxl }}>
+                 <TouchableOpacity onPress={() => setCreateBrightness(Math.max(0, createBrightness - 5))} style={{ padding: Spacing.md, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 }}>
                    <MaterialCommunityIcons name="minus" size={16} color="#FFF" />
                  </TouchableOpacity>
                  <Text style={{ color: '#FFF', flex: 1, textAlign: 'center' }}>Brightness</Text>
-                 <TouchableOpacity onPress={() => setCreateBrightness(Math.min(100, createBrightness + 5))} style={{ padding: 10, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 }}>
+                 <TouchableOpacity onPress={() => setCreateBrightness(Math.min(100, createBrightness + 5))} style={{ padding: Spacing.md, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 }}>
                    <MaterialCommunityIcons name="plus" size={16} color="#FFF" />
                  </TouchableOpacity>
                </View>
 
              </ScrollView>
 
-             <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' }}>
-               <TouchableOpacity onPress={handleCreatePick} style={{ backgroundColor: '#00E676', padding: 16, borderRadius: 12, alignItems: 'center' }}>
+             <View style={{ padding: Spacing.lg, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' }}>
+               <TouchableOpacity onPress={handleCreatePick} style={{ backgroundColor: '#00E676', padding: Spacing.lg, borderRadius: 12, alignItems: 'center' }}>
                  <Text style={{ color: '#000', fontSize: 16, fontWeight: 'bold' }}>Publish New Pick</Text>
                </TouchableOpacity>
              </View>
@@ -450,25 +451,25 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.lg,
     borderBottomWidth: 1,
   },
-  backBtn: { marginRight: 16, padding: 4 },
+  backBtn: { marginRight: Spacing.lg, padding: Spacing.xs },
   title: { fontSize: 18, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' },
-  content: { flex: 1, padding: 16 },
-  instructions: { fontSize: 12, lineHeight: 18, marginBottom: 16 },
-  card: { padding: 16, borderRadius: 12, borderWidth: 1, marginBottom: 16 },
-  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 },
+  content: { flex: 1, padding: Spacing.lg },
+  instructions: { fontSize: 12, lineHeight: 18, marginBottom: Spacing.lg },
+  card: { padding: Spacing.lg, borderRadius: 12, borderWidth: 1, marginBottom: Spacing.lg },
+  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: Spacing.lg },
   pickName: { fontSize: 16, fontWeight: '800' },
-  pickMode: { fontSize: 12, marginTop: 4 },
-  dateRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 6 },
-  dateChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, borderWidth: 1 },
-  addDateBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, backgroundColor: 'rgba(0,240,255,0.15)', borderWidth: 1, borderColor: 'rgba(0,240,255,0.3)' },
+  pickMode: { fontSize: 12, marginTop: Spacing.xs },
+  dateRow: { flexDirection: 'row', alignItems: 'center', marginVertical: Spacing.sm },
+  dateChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: 6, borderWidth: 1 },
+  addDateBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: 6, backgroundColor: 'rgba(0,240,255,0.15)', borderWidth: 1, borderColor: 'rgba(0,240,255,0.3)' },
   iosDatePickerOverlay: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingBottom: 30, borderTopWidth: 1,
+    paddingBottom: Spacing.xxl, borderTopWidth: 1,
   },
-  iosDatePickerActions: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, borderBottomWidth: 1 }
+  iosDatePickerActions: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: Spacing.lg, borderBottomWidth: 1 }
 });

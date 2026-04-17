@@ -1,3 +1,4 @@
+import { Spacing } from '../../theme/theme';
 /**
  * RegisteredFleetSlab.tsx — "REGISTERED DEVICES" Fleet Slab
  *
@@ -36,7 +37,7 @@ const RegisteredFleetSlab = React.memo(({
       onPress={onToggleCollapse}
       activeOpacity={0.7}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
         <MaterialCommunityIcons
           name={isRegisteredCollapsed ? 'chevron-down' : 'chevron-up'}
           size={16}
@@ -46,7 +47,7 @@ const RegisteredFleetSlab = React.memo(({
       </View>
       <TouchableOpacity
         onPress={onSetupWizard}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
       >
         <MaterialCommunityIcons name="plus-circle-outline" size={14} color={Colors.primary} />
         <Text style={[styles.slabActionText, { color: Colors.primary }]}>ADD DEVICE</Text>
@@ -57,18 +58,18 @@ const RegisteredFleetSlab = React.memo(({
       registeredDevices.length > 0 ? (
         <View style={styles.deviceListFixed}>
           {registeredDevices.map((d: any) => (
-            <View key={d.id || d.device_mac} style={{ marginBottom: 8 }}>
+            <View key={d.id || d.device_mac} style={{ marginBottom: Spacing.sm }}>
               {renderItem({ item: d })}
             </View>
           ))}
         </View>
       ) : (
-        <View style={[styles.glassSlab, { alignItems: 'center', paddingVertical: 32 }]}>
-          <MaterialCommunityIcons name="bluetooth-connect" size={32} color={Colors.textMuted} style={{ marginBottom: 12 }} />
+        <View style={[styles.glassSlab, { alignItems: 'center', paddingVertical: Spacing.xxl }]}>
+          <MaterialCommunityIcons name="bluetooth-connect" size={32} color={Colors.textMuted} style={{ marginBottom: Spacing.md }} />
           <Text style={styles.slabEmptyText}>No registered skates found.</Text>
           <TouchableOpacity
             onPress={onSetupWizard}
-            style={[styles.scanButton, { marginTop: 16, width: '60%' }]}
+            style={[styles.scanButton, { marginTop: Spacing.lg, width: '60%' }]}
           >
             <Text style={styles.scanButtonText}>START SETUP</Text>
           </TouchableOpacity>

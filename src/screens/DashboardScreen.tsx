@@ -23,7 +23,7 @@ import DeviceItem from '../components/DeviceItem';
 import { useTheme } from '../context/ThemeContext';
 import useBLE from '../hooks/useBLE';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
-import { Layout, Typography } from '../theme/theme';
+import { Layout, Typography, Spacing } from '../theme/theme';
 
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import DockedController, { DockedControllerHandle } from '../components/DockedController';
@@ -600,7 +600,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               zIndex: 9999
             }}>
               <ActivityIndicator size="large" color="#00F0FF" />
-              <Text style={[Typography.header, { color: '#00F0FF', marginTop: 12 }]}>Disconnecting...</Text>
+              <Text style={[Typography.header, { color: '#00F0FF', marginTop: Spacing.md }]}>Disconnecting...</Text>
             </Animated.View>
           )}
       </Animated.View>
@@ -678,11 +678,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         onPress={() => Linking.openSettings()}
         style={{ 
           backgroundColor: Colors.error, 
-          padding: 16, 
+          padding: Spacing.lg, 
           alignItems: 'center', 
           justifyContent: 'center', 
           flexDirection: 'row', 
-          gap: 12,
+          gap: Spacing.md,
           borderBottomWidth: 1,
           borderBottomColor: 'rgba(255,255,255,0.2)'
         }}
@@ -717,7 +717,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
         {isActuallyConnected && (
           <View style={{ flex: 1 }}>
-            <View pointerEvents="box-none" style={{ paddingBottom: 16, zIndex: 100, elevation: 100 }}>
+            <View pointerEvents="box-none" style={{ paddingBottom: Spacing.lg, zIndex: 100, elevation: 100 }}>
               <DashboardHeader
                 isActuallyConnected={isActuallyConnected}
                 isOfflineMode={isOfflineMode}

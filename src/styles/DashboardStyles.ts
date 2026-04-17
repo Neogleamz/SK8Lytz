@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import type { ThemePalette } from '../theme/theme';
-import { Layout } from '../theme/theme';
+import { Layout, Spacing } from '../theme/theme';
 
 /**
  * Utility to generate premium gradient colors based on pattern name/state
@@ -39,7 +39,7 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Layout.borderRadius,
-    padding: 16,
+    padding: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.surfaceHighlight,
     shadowColor: Colors.primary,
@@ -49,9 +49,9 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     elevation: 10,
   },
   scanButton: {
-    marginTop: 24,
+    marginTop: Spacing.xl,
     backgroundColor: Colors.primary,
-    paddingVertical: 14,
+    paddingVertical: Spacing.lg,
     borderRadius: Layout.borderRadius,
     alignItems: 'center',
     justifyContent: 'center',
@@ -68,13 +68,13 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     letterSpacing: 1,
   },
   emptyStateContainer: {
-    marginTop: 40,
+    marginTop: Spacing.xxxl,
     alignItems: 'center',
   },
   disconnectButtonSmall: {
     backgroundColor: Colors.surfaceHighlight,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.error + '44',
@@ -86,7 +86,7 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
   },
   groupButton: {
     backgroundColor: Colors.secondary,
-    paddingVertical: 14,
+    paddingVertical: Spacing.lg,
     borderRadius: Layout.borderRadius,
     alignItems: 'center',
     justifyContent: 'center',
@@ -123,8 +123,8 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     fontWeight: '900',
   },
   errorContainer: {
-    marginTop: 16,
-    padding: 12,
+    marginTop: Spacing.lg,
+    padding: Spacing.md,
     backgroundColor: 'rgba(255, 61, 0, 0.1)',
     borderRadius: 8,
     borderWidth: 1,
@@ -132,7 +132,7 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
   },
   /* ──── 4-SLAB DASHBOARD STYLES ──── */
   headerSlab: {
-    paddingBottom: 4,
+    paddingBottom: Spacing.xs,
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,240,255,0.1)',
@@ -145,8 +145,8 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 4,
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.xs,
   },
   slabTitle: {
     fontSize: 13,
@@ -156,8 +156,8 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     fontFamily: 'Righteous',
   },
   slabAction: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
     borderRadius: 4,
     backgroundColor: 'rgba(255,170,0,0.1)',
     borderWidth: 1,
@@ -187,8 +187,8 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 12,
-    padding: 12,
-    gap: 10,
+    padding: Spacing.md,
+    gap: Spacing.md,
   },
   statusDot: {
     width: 8,
@@ -205,7 +205,7 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     letterSpacing: 0.5,
   },
   skateCardWrapper: {
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
     borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -215,12 +215,12 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
   },
   skateCardGradient: {
     borderRadius: 20,
-    padding: 2, // Border thickness
+    padding: Spacing.xxs, // Border thickness
   },
   skateCardInner: {
     backgroundColor: Colors.isDark ? 'rgba(35, 42, 55, 0.85)' : 'rgba(255, 255, 255, 0.95)',
     borderRadius: 18,
-    padding: 16,
+    padding: Spacing.lg,
     overflow: 'hidden',
   },
   skateCardRefraction: {
@@ -236,12 +236,12 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   avatarPill: {
     backgroundColor: 'rgba(255,255,255,0.05)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
     borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -257,31 +257,31 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     height: 6,
     borderRadius: 3,
     backgroundColor: Colors.success,
-    marginLeft: 6,
+    marginLeft: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.background,
   },
   telemetryContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
   },
   telemetryItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: Spacing.xs,
   },
   rssiBars: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 2,
+    gap: Spacing.xxs,
   },
   rssiBar: {
     width: 3,
     borderRadius: 1,
   },
   skateCardContent: {
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   skateCardGroupName: {
     fontSize: isVeryShort ? 18 : isShort ? 20 : 22,
@@ -293,18 +293,18 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
   patternPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: Spacing.xs,
     backgroundColor: 'rgba(255,255,255,0.03)',
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xxs,
     borderRadius: 10,
   },
   patternDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    marginRight: 6,
+    marginRight: Spacing.sm,
   },
   patternName: {
     fontSize: 10,
@@ -319,7 +319,7 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.05)',
-    paddingTop: 12,
+    paddingTop: Spacing.md,
   },
   deviceCountText: {
     fontSize: 10,

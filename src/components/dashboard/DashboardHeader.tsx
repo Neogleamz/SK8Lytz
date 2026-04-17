@@ -11,7 +11,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
-import { Layout } from '../../theme/theme';
+import { Layout, Spacing } from '../../theme/theme';
 
 interface DashboardHeaderProps {
   isActuallyConnected: boolean;
@@ -68,7 +68,7 @@ const DashboardHeader = React.memo(({
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity
               onPress={handleDisconnect}
-              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 4, borderRadius: 20, gap: 2 }}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, borderRadius: 20, gap: Spacing.xxs }}
             >
               <MaterialCommunityIcons name="chevron-left" size={24} color={Colors.primary} />
               <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 }}>Back</Text>
@@ -90,8 +90,8 @@ const DashboardHeader = React.memo(({
                 : connectedCount < expectedCount ? '#FFA500'
                 : Colors.success;
               return (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                  <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: statusColor, marginRight: 4 }} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.xxs }}>
+                  <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: statusColor, marginRight: Spacing.xs }} />
                   <Text style={{ color: statusColor, fontSize: 8, fontWeight: 'bold', letterSpacing: 0.5 }}>
                     CONNECTED ({connectedCount})
                   </Text>
@@ -101,7 +101,7 @@ const DashboardHeader = React.memo(({
           </TouchableOpacity>
 
           {/* RIGHT: power / support / theme */}
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: Spacing.sm }}>
             {!isTestModeActive && (
               <TouchableOpacity
                 style={{
@@ -140,8 +140,8 @@ const DashboardHeader = React.memo(({
               onPress={onPressAccount}
               style={{
                 flexDirection: 'row', alignItems: 'center',
-                paddingHorizontal: 6, paddingVertical: 4,
-                borderRadius: 16, borderWidth: 1, gap: 4,
+                paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
+                borderRadius: 16, borderWidth: 1, gap: Spacing.xs,
                 borderColor: isOfflineMode ? 'rgba(255,170,0,0.35)' : 'rgba(0,240,255,0.25)',
                 backgroundColor: isOfflineMode ? 'rgba(255,170,0,0.08)' : 'rgba(0,240,255,0.06)',
               }}
@@ -168,7 +168,7 @@ const DashboardHeader = React.memo(({
           </View>
 
           {/* RIGHT: support + theme */}
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: Spacing.sm }}>
             <TouchableOpacity
               style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}
               onPress={onPressSupport}
@@ -187,7 +187,7 @@ const DashboardHeader = React.memo(({
 
       {/* Accent line under logo when disconnected */}
       {!isActuallyConnected && (
-        <View style={{ height: 2, width: 30, backgroundColor: Colors.secondary, marginTop: 6, borderRadius: 1, alignSelf: 'center' }} />
+        <View style={{ height: 2, width: 30, backgroundColor: Colors.secondary, marginTop: Spacing.sm, borderRadius: 1, alignSelf: 'center' }} />
       )}
     </View>
   );

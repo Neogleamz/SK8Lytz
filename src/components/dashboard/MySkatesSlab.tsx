@@ -1,3 +1,4 @@
+import { Spacing } from '../../theme/theme';
 /**
  * MySkatesSlab.tsx — "MY SKATES" Group Cards Slab
  *
@@ -48,7 +49,7 @@ const MySkatesSlab = React.memo(({
     </View>
 
     {customGroups.length > 0 ? (
-      <View style={{ gap: 12 }}>
+      <View style={{ gap: Spacing.md }}>
         {customGroups.map((group) => {
           const lastPattern = lastGroupPatterns[group.id];
           const cardColors = getPatternColors(lastPattern, Colors);
@@ -69,7 +70,7 @@ const MySkatesSlab = React.memo(({
         })}
       </View>
     ) : (
-      <View style={[styles.glassSlab, { alignItems: 'center', paddingVertical: 24 }]}>
+      <View style={[styles.glassSlab, { alignItems: 'center', paddingVertical: Spacing.xl }]}>
         <Text style={styles.slabEmptyText}>
           {registeredDevices.length === 0
             ? 'No skates detected. Time to link your hardware!'
@@ -78,7 +79,7 @@ const MySkatesSlab = React.memo(({
         {registeredDevices.length === 0 && (
           <TouchableOpacity
             onPress={onSetupWizard}
-            style={[styles.scanButton, { marginTop: 16, width: '70%', backgroundColor: Colors.primary }]}
+            style={[styles.scanButton, { marginTop: Spacing.lg, width: '70%', backgroundColor: Colors.primary }]}
           >
             <Text style={styles.scanButtonText}>SET UP YOUR SKATES</Text>
           </TouchableOpacity>

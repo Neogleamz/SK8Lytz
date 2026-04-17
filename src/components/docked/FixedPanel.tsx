@@ -59,7 +59,7 @@ const FixedPanel = React.memo(({
               borderBottomRightRadius: pat.id === 'BLINK' ? Layout.borderRadius : 0,
               flexDirection: 'row',
               justifyContent: 'center',
-              gap: 4
+              gap: Spacing.xs
             }}
           >
             <MaterialCommunityIcons name={pat.icon} size={14} color={fixedModePattern === pat.id ? '#000' : Colors.textMuted} />
