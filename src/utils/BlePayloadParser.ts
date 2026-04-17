@@ -28,6 +28,12 @@ export interface ParsedLedConfig {
   };
 }
 
+export interface ParsedRfConfig {
+  parsedOk: boolean;
+  rfMode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED';
+  rfRemotes: string[];
+}
+
 export const BlePayloadParser = {
   /**
    * Deterministically parses Zengge V1 and V2 hardware configurations from raw bytes.
@@ -85,6 +91,25 @@ export const BlePayloadParser = {
       };
     } catch (error) {
       AppLogger.warn('[BlePayloadParser] Malformed payload dropped', error);
+      return null;
+    }
+  },
+
+  /**
+   * Parses the 0x2B RF Remote state response packet.
+   */
+  parseRfPayload(payload: number[]): ParsedRfConfig | null {
+    try {
+      if (!Array.isArray(payload) || payload.length === 0) return null;
+      const rfState = ZenggeProtocol.parseRfRemoteState(payload);
+      if (!rfState) return null;
+
+      return {
+        parsedOk: true,
+        rfMode: rfState.mode,
+        rfRemotes: rfState.pairedRemoteIds,
+      };
+    } catch {
       return null;
     }
   },

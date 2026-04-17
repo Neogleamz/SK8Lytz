@@ -613,6 +613,7 @@ export class ZenggeProtocol {
     mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED';
     modeName: string;
     pairedCount: number;
+    pairedRemoteIds: string[];
   } | null {
     // Response is wrapped — locate the 0x2B marker in the inner payload
     const innerStart = payload.findIndex(b => b === 0x2B);
@@ -630,6 +631,18 @@ export class ZenggeProtocol {
       ALLOW_NONE: 'Block All Remotes',
       ALLOW_PAIRED: 'Paired Remote Only',
     };
-    return { mode, modeName: modeNames[mode], pairedCount };
+
+    const pairedRemoteIds: string[] = [];
+    let offset = innerStart + 3;
+    for (let i = 0; i < pairedCount; i++) {
+       if (offset + 4 <= payload.length) {
+          const idBytes = payload.slice(offset, offset + 4);
+          const hexId = idBytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join('');
+          pairedRemoteIds.push(hexId);
+          offset += 4;
+       }
+    }
+
+    return { mode, modeName: modeNames[mode], pairedCount, pairedRemoteIds };
   }
 }

@@ -803,6 +803,21 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     return (
       <View style={styles.container}>
 
+        {/* ── POWER OVERRIDE OVERLAY ────────────────────────────────────────── */}
+        {isPoweredOn === false && (
+          <View style={[StyleSheet.absoluteFill, { zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', borderRadius: Layout.borderRadius }]} pointerEvents="box-only">
+            <TouchableOpacity
+              onPress={() => writeToDevice && writeToDevice(ZenggeProtocol.turnOn())}
+              style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(0, 240, 255, 0.1)', borderWidth: 3, borderColor: '#00f0ff', shadowColor: '#00f0ff', shadowOpacity: 1, shadowRadius: 30, elevation: 15, justifyContent: 'center', alignItems: 'center' }}
+            >
+              <MaterialCommunityIcons name="power" size={64} color="#00f0ff" />
+            </TouchableOpacity>
+            <Text style={{ color: '#00f0ff', fontSize: 28, fontFamily: 'Righteous', marginTop: Spacing.xl, letterSpacing: 6 }}>STANDBY</Text>
+            <Text style={{ color: Colors.textMuted, fontSize: 13, marginTop: Spacing.sm, letterSpacing: 1 }}>Hardware is in low-power idle mode.</Text>
+            <Text style={{ color: Colors.textMuted, fontSize: 12, position: 'absolute', bottom: 40, opacity: 0.5 }}>Tap to Wake</Text>
+          </View>
+        )}
+
         {/* Product Selector - Only show if NO lockedProduct is provided */}
         {!lockedProduct && (
           <View style={styles.tabContainer}>
@@ -838,6 +853,15 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF4444', position: 'absolute', right: 8, top: 8, zIndex: 10 }} />
           )}
           <View style={{ marginBottom: Spacing.sm, width: '100%' }}>
+            {/* Power Toggle Button (Left) */}
+            <TouchableOpacity
+              style={{ position: 'absolute', top: 12, left: 16, zIndex: 100, backgroundColor: 'rgba(255,255,255,0.06)', padding: Spacing.sm, borderRadius: 20 }}
+              onPress={() => writeToDevice && writeToDevice(ZenggeProtocol.turnOff())}
+            >
+              <MaterialCommunityIcons name="power" size={22} color="#00f0ff" />
+            </TouchableOpacity>
+
+            {/* Favorite Button (Right) */}
             <TouchableOpacity
               style={{ position: 'absolute', top: 12, right: 16, zIndex: 100, backgroundColor: 'rgba(255,255,255,0.1)', padding: Spacing.sm, borderRadius: 20 }}
               onPress={handleSaveFavoriteClick}

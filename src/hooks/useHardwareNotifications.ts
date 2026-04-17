@@ -102,6 +102,21 @@ export function useHardwareNotifications({
         });
       }
 
+      // ── [RF Remote Config] ────────────────────────────────────────────────
+      const rfConfig = BlePayloadParser.parseRfPayload(payload);
+      if (rfConfig && rfConfig.parsedOk) {
+        setDeviceConfigs(prevConfigs => {
+          const updated = {
+            ...(prevConfigs[deviceId] || {}),
+            rfMode: rfConfig.rfMode,
+            rfRemotes: rfConfig.rfRemotes
+          };
+          AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify({ ...prevConfigs, [deviceId]: updated })).catch(() => {});
+          return { ...prevConfigs, [deviceId]: updated };
+        });
+        return; // Handled the RF packet, exit mailroom
+      }
+
       // ── [Pure Utility] Parse hardware config ────────────────────────────────
       const ledConfig = BlePayloadParser.parseLedPayload(payload);
       if (!ledConfig || !ledConfig.parsedOk || ledConfig.points === undefined || ledConfig.sorting === undefined) {

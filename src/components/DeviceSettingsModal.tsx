@@ -18,6 +18,8 @@ interface DeviceSettings {
   groupId?: string;
   groupName?: string;
   firmware?: string;
+  rfMode?: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED';
+  rfRemotes?: string[];
 }
 
 interface DeviceSettingsModalProps {
@@ -48,8 +50,9 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
   const [stripType, setStripType] = useState(initialSettings.stripType || 'WS2812B');
   const [sorting, setSorting] = useState(initialSettings.sorting || 'GRB');
   const [rfMode, setRfMode] = useState<'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED'>(
-    (initialSettings as any).rfMode || 'ALLOW_PAIRED'
+    initialSettings.rfMode || 'ALLOW_PAIRED'
   );
+  const [rfRemotes, setRfRemotes] = useState<string[]>(initialSettings.rfRemotes || []);
 
   // Derived values
   const { deviceName: autoName, groupName: autoGroupName } = deriveNames(type, position);
@@ -62,15 +65,19 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
       initialSettings.points?.toString() !== pointsText ||
       initialSettings.segments?.toString() !== segmentsText ||
       initialSettings.sorting !== sorting ||
-      initialSettings.stripType !== stripType;
+      initialSettings.stripType !== stripType ||
+      initialSettings.rfMode !== rfMode ||
+      JSON.stringify(initialSettings.rfRemotes) !== JSON.stringify(rfRemotes);
 
     if (hasChange) {
       setPointsText(initialSettings.points?.toString() || pointsText);
       setSegmentsText(initialSettings.segments?.toString() || segmentsText);
       if (initialSettings.sorting) setSorting(initialSettings.sorting);
       if (initialSettings.stripType) setStripType(initialSettings.stripType);
+      if (initialSettings.rfMode) setRfMode(initialSettings.rfMode);
+      if (initialSettings.rfRemotes) setRfRemotes(initialSettings.rfRemotes);
     }
-  }, [initialSettings.points, initialSettings.segments, initialSettings.sorting, initialSettings.stripType]);
+  }, [initialSettings.points, initialSettings.segments, initialSettings.sorting, initialSettings.stripType, initialSettings.rfMode, initialSettings.rfRemotes]);
 
   // Full reset when modal opens
   useEffect(() => {
@@ -83,7 +90,8 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
       setSegmentsText(initialSettings.segments?.toString() || '1');
       setStripType(initialSettings.stripType || 'WS2812B');
       setSorting(initialSettings.sorting || 'GRB');
-      setRfMode((initialSettings as any).rfMode || 'ALLOW_PAIRED');
+      setRfMode(initialSettings.rfMode || 'ALLOW_PAIRED');
+      setRfRemotes(initialSettings.rfRemotes || []);
     }
   }, [isVisible]);
 
@@ -312,6 +320,20 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
                   </TouchableOpacity>
                 ))}
               </View>
+
+              {/* Paired Remotes Tag List */}
+              {rfRemotes.length > 0 && (
+                <View style={{ marginTop: Spacing.sm, marginBottom: Spacing.md }}>
+                  <Text style={[styles.label, { marginBottom: Spacing.xs }]}>Discovered Remotes</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
+                    {rfRemotes.map(id => (
+                      <View key={id} style={{ backgroundColor: 'rgba(0,240,255,0.06)', borderWidth: 1, borderColor: '#00f0ff', paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xxs, borderRadius: 6 }}>
+                        <Text style={{ color: '#00f0ff', fontSize: 11, fontWeight: 'bold' }}>⚡ ID: {id}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
 
               {/* Clear paired remotes — destructive action */}
               <TouchableOpacity
