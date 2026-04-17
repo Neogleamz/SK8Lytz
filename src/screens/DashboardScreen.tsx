@@ -74,7 +74,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     scanForPeripherals,
     allDevices,
     setAllDevices,
-    connectToDevice,
     connectToDevices,
     connectedDevices,
     disconnectFromDevice,
@@ -973,7 +972,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
         liveDeviceConfigs={deviceConfigs}
-        onConnectToDevice={async (d: any) => { await connectToDevice(d); }}
+        onConnectToDevice={async (d: any) => { await connectToDevices([d]); }}
         onDisconnectFromDevice={async (_id: string) => { disconnectFromDevice(); }}
         isDiagnosticsMode={isDiagnosticsMode}
         onToggleDiagnostics={() => setIsDiagnosticsMode(!isDiagnosticsMode)}
