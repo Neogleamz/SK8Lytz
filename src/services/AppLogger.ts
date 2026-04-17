@@ -14,7 +14,7 @@
  *    local buffer (rotation) on confirmed success.
  *  - Deduplication: group-targeted events (deviceIds[]) insert a single row
  *    with device_id as null, instead of unrolling.
- *  - Custom device names: resolved from 'ng_device_configs' AsyncStorage key
+ *  - Custom device names: resolved from '@Sk8lytz_device_configs' AsyncStorage key
  *    (same key DashboardScreen writes) and injected into all DB payloads.
  *  - VIP Error Fast-Lane: Critical crash/error events bypass the normal buffers
  *    and are immediately pushed to `telemetry_errors`.

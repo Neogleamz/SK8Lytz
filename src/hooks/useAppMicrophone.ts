@@ -17,7 +17,7 @@ import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import type { ModeType } from '../types/dashboard.types';
 
 interface UseAppMicrophoneParams {
-  writeToDevice?: (payload: number[]) => Promise<void | boolean>;
+  writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
   activeMode: ModeType;
   micSource: 'APP' | 'DEVICE';
   isPoweredOn: boolean;

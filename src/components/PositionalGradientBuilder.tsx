@@ -23,7 +23,7 @@ interface Props {
   speed: number;
   deviceLedCount: number;
   selectedColor: string; // The universal color passed from DockedController
-  writeToDevice?: (payload: number[]) => Promise<void>;
+  writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
 }
 
 export default function PositionalGradientBuilder({ 

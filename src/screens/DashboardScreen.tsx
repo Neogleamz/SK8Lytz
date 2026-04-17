@@ -347,10 +347,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     customGroupsRef.current = customGroups;
   }, [customGroups]); // Keep ref in sync with hook-managed state
 
-  // One-shot startup cleanup: prune simulator entries from AsyncStorage.
+  // One-shot startup cleanup: prune simulator entries from @Sk8lytz_device_configs.
   // NOTE: customGroups and deviceConfigs state are now fully owned by useDashboardGroups.
-  // This effect ONLY cleans sim- prefixed entries and ng_processed_devices — it does NOT
-  // call setDeviceConfigs to avoid a race condition with useDashboardGroups' own load.
+  // This effect ONLY cleans sim- prefixed entries — it does NOT call setDeviceConfigs
+  // to avoid a race condition with useDashboardGroups' own load.
   useEffect(() => {
     // Prune sim-device entries from device configs (without overwriting hook state)
     AsyncStorage.getItem('@Sk8lytz_device_configs')
@@ -644,8 +644,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             scanForPeripherals();
             return;
           }
-          // CRITICAL: Use connectToDevices (plural) to prevent group-wipe.
-          // The singular connectToDevice REPLACES the connected array, nuking other group members.
+          // connectToDevices (gated) — additive connection, preserves existing group members.
           await connectToDevices([bleDevice]);
           // Store firmware under MAC key — same key used by probe/0x63 responses.
           setDeviceConfigs((prev: any) => {

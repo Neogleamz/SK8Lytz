@@ -89,7 +89,7 @@ export default function AdminToolsModal({
   useEffect(() => {
     const loadConfigs = async () => {
       try {
-        const stored = await AsyncStorage.getItem('ng_device_configs');
+        const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
         if (stored) setDeviceConfigs(JSON.parse(stored) || {});
       } catch(e) {}
     };

@@ -23,7 +23,7 @@ export const getMusicPatternLabel = (patternId: number): string =>
 
 interface UseMusicModeParams {
   activeMode: ModeType;
-  writeToDevice?: (payload: number[]) => Promise<void | boolean>;
+  writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
   musicPatternId: number;
   micSensitivity: number;
   brightness: number;
