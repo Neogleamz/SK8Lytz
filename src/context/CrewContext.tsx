@@ -4,7 +4,7 @@ import { useCrewHub } from '../hooks/useCrewHub';
 import { useCrewManage } from '../hooks/useCrewManage';
 import { useCrewSession } from '../hooks/useCrewSession';
 
-type ModalStep = 'landing' | 'create' | 'schedule' | 'join' | 'controller' | 'manage' | 'crew-detail';
+type ModalStep = 'landing' | 'create' | 'schedule' | 'join' | 'controller' | 'manage' | 'crew-detail' | 'map';
 
 interface CrewContextValue {
   step: ModalStep;

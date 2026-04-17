@@ -174,6 +174,8 @@ class LocationService {
         isPublic:      s.is_public ?? true,
         distanceMi,
         distanceLabel,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
       };
     });
 
@@ -187,6 +189,71 @@ class LocationService {
 
     // Apply radius filter (sessions without coords pass through — user might be at same location)
     // Apply radius filter (Only show sessions with valid coordinates within the radius)
+    if (radiusMi != null) {
+      return sorted.filter(s => s.distanceMi !== null && s.distanceMi <= radiusMi);
+    }
+    return sorted;
+  }
+
+  /**
+   * Fetch static skate spots sorted by distance from current position.
+   */
+  async getNearbySkateSpots(radiusMi?: number | null): Promise<NearbySkateSpot[]> {
+    const { data } = await supabase
+      .from('skate_spots')
+      .select('*')
+      .limit(500); // For MVP, grab a reasonable chunk. (Requires PostGIS bounding box for scale)
+
+    if (!data || data.length === 0) return [];
+
+    let userLat: number | null = null;
+    let userLng: number | null = null;
+    try {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+        userLat = pos.coords.latitude;
+        userLng = pos.coords.longitude;
+      }
+    } catch { /* ignore */ }
+
+    const spots: NearbySkateSpot[] = data.map((spot: any) => {
+      let distanceMi: number | null = null;
+      let distanceLabel = '';
+
+      if (userLat !== null && userLng !== null && spot.lat && spot.lng) {
+        distanceMi = this._haversineMi(userLat, userLng, spot.lat, spot.lng);
+        distanceLabel = distanceMi < 0.1
+          ? 'Here now'
+          : distanceMi < 1
+            ? `${(distanceMi * 5280).toFixed(0)} ft away`
+            : `${distanceMi.toFixed(1)} mi away`;
+      }
+
+      return {
+        id: spot.id,
+        name: spot.name,
+        lat: spot.lat,
+        lng: spot.lng,
+        city: spot.city,
+        state: spot.state,
+        zip: spot.zip,
+        phone: spot.phone,
+        surface_type: spot.surface_type,
+        is_indoor: spot.is_indoor,
+        vibe_rating: spot.vibe_rating,
+        distanceMi,
+        distanceLabel,
+      } as NearbySkateSpot;
+    });
+
+    const sorted = spots.sort((a, b) => {
+      if (a.distanceMi !== null && b.distanceMi !== null) return a.distanceMi - b.distanceMi;
+      if (a.distanceMi !== null) return -1;
+      if (b.distanceMi !== null) return 1;
+      return 0;
+    });
+
     if (radiusMi != null) {
       return sorted.filter(s => s.distanceMi !== null && s.distanceMi <= radiusMi);
     }
@@ -242,6 +309,24 @@ export interface NearbySession {
   scheduledAt:   string | null;
   isPublic:      boolean;  // whether this session is publicly discoverable
   distanceMi:    number | null;
+  distanceLabel: string;
+  lat:           number | null;
+  lng:           number | null;
+}
+
+export interface NearbySkateSpot {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  phone: string | null;
+  surface_type: 'wood' | 'concrete' | 'asphalt' | 'sport_court' | 'unknown' | null;
+  is_indoor: boolean | null;
+  vibe_rating: number | null;
+  distanceMi: number | null;
   distanceLabel: string;
 }
 

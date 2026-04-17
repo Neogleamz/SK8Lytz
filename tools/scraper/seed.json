@@ -1,0 +1,38 @@
+[
+  {
+    "id": 311128782,
+    "name": "Linden Square",
+    "lat": 39.2213474,
+    "lng": -94.5730444,
+    "city": "Gladstone",
+    "state": "MO",
+    "zip": "64118",
+    "phone": "+1-816-423-4070",
+    "surface_type": "unknown",
+    "is_indoor": false
+  },
+  {
+    "id": 565626483,
+    "name": "Skate City",
+    "lat": 38.9396746,
+    "lng": -94.7038414,
+    "city": "Overland Park",
+    "state": "KS",
+    "zip": "66212",
+    "phone": "+1-913-888-6668",
+    "surface_type": "unknown",
+    "is_indoor": false
+  },
+  {
+    "id": 1360459507,
+    "name": "Skate City",
+    "lat": 39.1197369,
+    "lng": -94.7619826,
+    "city": "Kansas City",
+    "state": "KS",
+    "zip": "66112",
+    "phone": "+1-913-788-7788",
+    "surface_type": "unknown",
+    "is_indoor": true
+  }
+]

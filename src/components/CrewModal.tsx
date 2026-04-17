@@ -30,6 +30,7 @@ interface CrewModalProps {
   activeRole: CrewRole;
   currentModeSummary?: string;
   lastLeaderScene?: Record<string, any> | null;
+  initialStep?: ModalStep;
 }
 
 function CrewModalRouter({ onClose, currentModeSummary, lastLeaderScene }: { onClose: () => void, currentModeSummary?: string, lastLeaderScene?: Record<string, any> | null }) {
@@ -46,6 +47,7 @@ function CrewModalRouter({ onClose, currentModeSummary, lastLeaderScene }: { onC
       case 'controller': return <CrewControllerScreen onClose={onClose} currentModeSummary={currentModeSummary} lastLeaderScene={lastLeaderScene} />;
       case 'manage': return <CrewManageScreen />;
       case 'crew-detail': return <CrewDetailScreen />;
+      case 'map': return <CrewLandingScreen onClose={onClose} showOnlyMap />;
       default: return <CrewLandingScreen />;
     }
   };
@@ -64,10 +66,10 @@ function CrewModalRouter({ onClose, currentModeSummary, lastLeaderScene }: { onC
 
 export function CrewModal({
   visible, onClose, onSessionReady, onSessionLeft, onSessionEnded,
-  activeSession, activeRole, currentModeSummary, lastLeaderScene,
+  activeSession, activeRole, currentModeSummary, lastLeaderScene, initialStep
 }: CrewModalProps) {
 
-  const [step, setStep] = useState<ModalStep>(activeSession ? 'controller' : 'landing');
+  const [step, setStep] = useState<ModalStep>(activeSession ? 'controller' : (initialStep || 'landing'));
   const [showCodeEntry, setShowCodeEntry] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -95,7 +97,8 @@ export function CrewModal({
 
   useEffect(() => {
     if (visible && activeSession) setStep('controller');
-  }, [visible, activeSession]);
+    else if (visible && initialStep) setStep(initialStep);
+  }, [visible, activeSession, initialStep]);
 
   const hub = useCrewHub(visible, step);
   const manage = useCrewManage(hub.myCrews);

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { crewService, CrewSession } from '../services/CrewService';
-import { locationService, NearbySession } from '../services/LocationService';
+import { locationService, NearbySession, NearbySkateSpot } from '../services/LocationService';
 import { PermanentCrew, profileService } from '../services/ProfileService';
 import { AppLogger } from '../services/AppLogger';
 
@@ -12,6 +12,7 @@ export function useCrewHub(visible: boolean, step: string) {
   const [crewMemberCounts, setCrewMemberCounts] = useState<Record<string, { count: number; avatarColors: string[] }>>({});
   
   const [nearbySessions, setNearbySessions] = useState<NearbySession[]>([]);
+  const [nearbySpots, setNearbySpots] = useState<NearbySkateSpot[]>([]);
   const [isLoadingNearby, setIsLoadingNearby] = useState(false);
   
   const [activeSessions, setActiveSessions] = useState<CrewSession[]>([]);
@@ -45,10 +46,14 @@ export function useCrewHub(visible: boolean, step: string) {
   // Refresh Nearby Sessions
   const refreshNearby = useCallback(() => {
     setIsLoadingNearby(true);
-    locationService.getNearbyPublicSessions(discoverRadiusMi)
-      .then(s => setNearbySessions(s))
-      .catch(() => { })
-      .finally(() => setIsLoadingNearby(false));
+    Promise.all([
+      locationService.getNearbyPublicSessions(discoverRadiusMi),
+      locationService.getNearbySkateSpots(discoverRadiusMi)
+    ]).then(([sessions, spots]) => {
+      setNearbySessions(sessions);
+      setNearbySpots(spots);
+    }).catch(() => { })
+    .finally(() => setIsLoadingNearby(false));
   }, [discoverRadiusMi]);
 
   useEffect(() => {
@@ -90,6 +95,7 @@ export function useCrewHub(visible: boolean, step: string) {
     permanentCrews, setPermanentCrews,
     crewMemberCounts, setCrewMemberCounts,
     nearbySessions, setNearbySessions,
+    nearbySpots, setNearbySpots,
     isLoadingNearby, refreshNearby,
     activeSessions, setActiveSessions,
     isLoadingSessions, loadActiveSessions,

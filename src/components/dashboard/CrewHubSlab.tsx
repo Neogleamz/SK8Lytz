@@ -19,6 +19,7 @@ interface CrewHubSlabProps {
   appSettings: Record<string, any>;
   windowHeight: number;
   onOpenHub: () => void;
+  onOpenMap?: () => void;
   Colors: any;
   styles: any;
 }
@@ -30,6 +31,7 @@ const CrewHubSlab = React.memo(({
   appSettings,
   windowHeight,
   onOpenHub,
+  onOpenMap,
   Colors,
   styles,
 }: CrewHubSlabProps) => (
@@ -96,7 +98,7 @@ const CrewHubSlab = React.memo(({
           <Text style={styles.slabEmptyText}>No active sessions nearby. Launch a crew to sync lights.</Text>
           <TouchableOpacity
             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingVertical: Spacing.md, borderRadius: 8, borderWidth: 1, borderColor: '#FFAA00', marginTop: Spacing.sm }}
-            onPress={() => Alert.alert('Coming Soon', 'The Interactive Skate Spot Map is currently in development!')}
+            onPress={onOpenMap}
           >
             <MaterialCommunityIcons name="map-marker-radius" size={18} color="#FFAA00" style={{ marginRight: Spacing.sm }} />
             <Text style={{ color: '#FFAA00', fontWeight: '800', letterSpacing: 1, fontSize: 13 }}>EXPLORE SKATE MAP</Text>

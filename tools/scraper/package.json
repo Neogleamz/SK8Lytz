@@ -1,0 +1,23 @@
+{
+  "name": "sk8lytz-scraper",
+  "version": "1.0.0",
+  "description": "Zero-API Headless Backend for mapping skate spots",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node index.ts",
+    "seed": "ts-node SeedOverpass.ts",
+    "scrape": "ts-node GoogleShadowDOM.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "axios": "^1.6.5",
+    "cheerio": "^1.0.0-rc.12",
+    "dotenv": "^16.4.1",
+    "puppeteer": "^21.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

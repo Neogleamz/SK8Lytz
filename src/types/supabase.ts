@@ -1966,6 +1966,7 @@ export type Database = {
         | "asphalt"
         | "sport_court"
         | "unknown"
+      surface_type: "wood" | "concrete" | "asphalt" | "sport_court" | "unknown"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2100,7 +2101,7 @@ export const Constants = {
         "sport_court",
         "unknown",
       ],
+      surface_type: ["wood", "concrete", "asphalt", "sport_court", "unknown"],
     },
   },
 } as const
-

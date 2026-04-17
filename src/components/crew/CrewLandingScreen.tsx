@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Image, Platform, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { CrewLandingMap } from './CrewLandingMap';
 import { useCrewContext } from '../../context/CrewContext';
 import { useTheme } from '../../context/ThemeContext';
 import { AppLogger } from '../../services/AppLogger';
@@ -18,13 +19,13 @@ function timeAgo(iso: string): string {
   return `${Math.floor(m / 60)}h ago`;
 }
 
-export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
+export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => void, showOnlyMap?: boolean }) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
   
   const context = useCrewContext();
   const { hub, manage, session, setStep, step, confirmAction, setConfirmAction, currentUserId, displayName, errorMsg, setErrorMsg, isLoading, setIsLoading, showCodeEntry, setShowCodeEntry, formState } = context;
-  const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, handleDetectLocation, isGettingLocation, crewMemberCounts } = hub;
+  const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, nearbySpots, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, locationCoords, handleDetectLocation, isGettingLocation, crewMemberCounts } = hub;
   const { selectedCrewDetail, setSelectedCrewDetail, expandedCrewId, setExpandedCrewId, cardMembers, setCardMembers, loadingCardMembersFor, makingOwnerFor, setMakingOwnerFor, confirmingDeleteCrewId, setConfirmingDeleteCrewId, confirmingLeaveCrewId, setConfirmingLeaveCrewId, createCrewError, setCreateCrewError, isCreatingCrew, newCrewName, setNewCrewName, newCrewIsPublic, setNewCrewIsPublic, newCrewCity, setNewCrewCity, newCrewState, setNewCrewState, loadCrewMembers } = manage;
   const { currentSession, isHandoffMode, executeLeaveSession, executeEndSession, handleHandoffLeadership, handleSessionJoined } = session;
   
@@ -148,8 +149,8 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
         {/* ── Header ── */}
         <View style={[styles.hubHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
           <View>
-            <Text style={styles.hubTitle}>Crew Hub</Text>
-            <Text style={styles.hubSub}>Skate together · sync your light show</Text>
+            <Text style={styles.hubTitle}>{showOnlyMap ? 'Explore Skate Map' : 'Crew Hub'}</Text>
+            <Text style={styles.hubSub}>{showOnlyMap ? 'Discover spots and live sessions nearby' : 'Skate together · sync your light show'}</Text>
           </View>
           {onClose && (
             <TouchableOpacity onPress={onClose} style={{ padding: Spacing.sm, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20 }}>
@@ -159,7 +160,9 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
         </View>
 
         {/* ── MY CREWS ── */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm, marginTop: Spacing.xs, width: '100%' }}>
+        {!showOnlyMap && (
+          <>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm, marginTop: Spacing.xs, width: '100%' }}>
           <Text style={[styles.hubSectionLabel, { marginBottom: 0, marginTop: 0 }]}>MY CREWS</Text>
           {myCrews.length > 0 && (
             <TouchableOpacity onPress={() => setStep('manage')} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: 12 }}>
@@ -521,10 +524,12 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
             </TouchableOpacity>
           </View>
         )}
+        </>
+        )}
 
-        {/* ── LIVE NEAR YOU ── */}
+        {/* ── LIVE NEAR YOU MAP ── */}
         <View style={styles.hubSectionRow}>
-          <Text style={styles.hubSectionLabel}>🔴 LIVE NEAR YOU</Text>
+          <Text style={styles.hubSectionLabel}>🔴 LIVE NEAR YOU MAP</Text>
           <TouchableOpacity onPress={() => refreshNearby()}>
             <MaterialCommunityIcons name="refresh" size={15} color={Colors.textMuted} />
           </TouchableOpacity>
@@ -532,7 +537,7 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
 
         {/* Radius pills */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
-          style={{ width: '100%', marginBottom: Spacing.md }}
+          style={{ width: '100%', marginBottom: Spacing.xs }}
           contentContainerStyle={styles.radiusPillRow}>
           {([20, 50, 100, 250, null] as (number | null)[]).map(r => {
             const label = r === null ? 'Show All' : `${r} mi`;
@@ -549,10 +554,25 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
           })}
         </ScrollView>
 
-        {isLoadingNearby ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.lg }} />
-        ) : nearbySessions.length === 0 ? (
-          <View style={styles.hubEmptyCard}>
+         <View style={{ height: 350, width: '100%', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginBottom: Spacing.md }}>
+          {isLoadingNearby ? (
+             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+               <ActivityIndicator color={Colors.primary} />
+             </View>
+          ) : (
+            <CrewLandingMap
+               nearbySpots={nearbySpots}
+               nearbySessions={nearbySessions}
+               pulseAnim={pulseAnim}
+               handleJoinById={handleJoinById}
+               locationCoords={locationCoords}
+               discoverRadiusMi={discoverRadiusMi}
+             />
+          )}
+        </View>
+
+        {nearbySessions.length === 0 && !isLoadingNearby && (
+          <View style={[styles.hubEmptyCard, { marginTop: 0 }]}>
             <Text style={styles.hubEmptyText}>
               {discoverRadiusMi != null
                 ? `No live sessions within ${discoverRadiusMi} mi`
@@ -560,43 +580,19 @@ export function CrewLandingScreen({ onClose }: { onClose?: () => void }) {
             </Text>
             <Text style={[styles.hubEmptyText, { fontSize: 11, marginTop: Spacing.xs }]}>Start one and skaters nearby will see it!</Text>
           </View>
-        ) : (
-          nearbySessions.map(s => (
-            <TouchableOpacity
-              key={s.id}
-              style={styles.nearbySessionCard}
-              onPress={() => handleJoinById(s.id)}
-              disabled={!!joiningSessionId}
-              activeOpacity={0.75}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.nearbySessionName}>{s.crewName || s.name}</Text>
-                <Text style={styles.nearbySessionSub}>
-                  {s.crewName && s.crewName !== s.name ? `${s.name} · ` : ''}
-                  {s.memberCount} skater{s.memberCount !== 1 ? 's' : ''}
-                  {s.distanceLabel ? ` · ${s.distanceLabel}` : ''}
-                </Text>
-              </View>
-              {joiningSessionId === s.id ? (
-                <ActivityIndicator size="small" color="#000" />
-              ) : (
-                <View style={styles.nearbyJoinBtn}>
-                  <Text style={styles.nearbyJoinText}>JOIN ▶</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))
         )}
 
 
         {/* ── Schedule ── */}
-        <TouchableOpacity
-          style={[styles.secondaryBtn, { marginTop: Spacing.xl }]}
-          onPress={() => { setStep('schedule'); setErrorMsg(''); }}
-        >
-          <MaterialCommunityIcons name="calendar-clock" size={18} color={Colors.primary} />
-          <Text style={styles.secondaryBtnText}>📅 Schedule a Session</Text>
-        </TouchableOpacity>
+        {!showOnlyMap && (
+           <TouchableOpacity
+             style={[styles.secondaryBtn, { marginTop: Spacing.xl }]}
+             onPress={() => { setStep('schedule'); setErrorMsg(''); }}
+           >
+             <MaterialCommunityIcons name="calendar-clock" size={18} color={Colors.primary} />
+             <Text style={styles.secondaryBtnText}>📅 Schedule a Session</Text>
+           </TouchableOpacity>
+        )}
 
         <View style={{ height: 32 }} />
       </ScrollView>
