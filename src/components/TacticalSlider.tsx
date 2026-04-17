@@ -15,7 +15,7 @@ interface TacticalSliderProps {
   label?: string;
   fillColor?: string;
   formatValue?: (val: number) => string;
-  dynamicMode?: 'TURBO' | 'BRIGHTNESS';
+  dynamicMode?: string;
 }
 
 const TacticalSlider = ({ 

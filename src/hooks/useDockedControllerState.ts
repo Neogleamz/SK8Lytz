@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { ModeType } from '../types/dashboard.types';
+import type { FixedModePattern, ModeType } from '../types/dashboard.types';
 
 /** Opaque alias kept for backward-compatibility — represents a product catalog ID string. */
 export type ProductType = string;
@@ -34,6 +34,7 @@ export function useDockedControllerState(initialProduct: ProductType = 'HALOZ') 
 
   // Active Sub-Mode for the Consolidated Fixed Tab
   const [fixedSubMode, setFixedSubMode] = useState<'PATTERN' | 'BUILDER'>('PATTERN');
+  const [fixedModePattern, setFixedModePattern] = useState<FixedModePattern>('STATIC');
 
   // Multi-Color Builder State
   const [builderNodes, setBuilderNodes] = useState<BuilderNode[]>([
@@ -74,6 +75,7 @@ export function useDockedControllerState(initialProduct: ProductType = 'HALOZ') 
   ) => {
     if (scenePayload.activeMode) setActiveMode(scenePayload.activeMode);
     if (scenePayload.fixedSubMode) setFixedSubMode(scenePayload.fixedSubMode);
+    if (scenePayload.fixedModePattern) setFixedModePattern(scenePayload.fixedModePattern);
     if (scenePayload.selectedColor) setSelectedColor(scenePayload.selectedColor);
     if (scenePayload.selectedPatternId) setSelectedPatternId(scenePayload.selectedPatternId);
     if (scenePayload.brightness !== undefined) setBrightness(scenePayload.brightness);
@@ -98,7 +100,7 @@ export function useDockedControllerState(initialProduct: ProductType = 'HALOZ') 
     streetBrakeColor: string
   ) => {
     return {
-      activeMode, fixedSubMode,
+      activeMode, fixedSubMode, fixedModePattern,
       selectedColor, selectedPatternId, brightness, speed,
       multiColors, multiLength, multiTransition,
       musicPatternId, musicPrimaryColor, musicSecondaryColor, micSensitivity, micSource, musicMatrixStyle,
@@ -143,6 +145,7 @@ export function useDockedControllerState(initialProduct: ProductType = 'HALOZ') 
     multiTransition, setMultiTransition,
     multiLength, setMultiLength,
     fixedSubMode, setFixedSubMode,
+    fixedModePattern, setFixedModePattern,
     builderNodes, setBuilderNodes,
     builderFillMode, setBuilderFillMode,
     builderTransitionType, setBuilderTransitionType,

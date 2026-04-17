@@ -96,6 +96,7 @@ export type DashboardViewState =
 /** FSM for the DockedController primary mode selector. */
 export type ModeType =
   | 'FAVORITES'
+  | 'FIXED'
   | 'MULTIMODE'
   | 'PROGRAMS'
   | 'MUSIC'
@@ -104,6 +105,9 @@ export type ModeType =
 
 /** Sub-mode for the consolidated MultiMode / Fixed tab in DockedController. */
 export type FixedSubMode = 'PATTERN' | 'BUILDER';
+
+/** Pattern state for the Fixed Mode tab. */
+export type FixedModePattern = 'STATIC' | 'STROBE' | 'BLINK';
 
 // ─── Hardware Settings Interface ─────────────────────────────────────────────
 

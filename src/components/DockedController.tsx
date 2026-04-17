@@ -31,6 +31,7 @@ import { getColorName, hexToHue } from '../utils/ColorUtils';
 import AnalogGauge from './docked/AnalogGauge';
 import FavoritesPanel from './docked/FavoritesPanel';
 import MusicPanel from './docked/MusicPanel';
+import FixedPanel from './docked/FixedPanel';
 import MultiModePanel from './docked/MultiModePanel';
 import CameraPanel from './docked/CameraPanel';
 import ProgramsPanel from './docked/ProgramsPanel';
@@ -234,6 +235,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       multiTransition, setMultiTransition,
       multiLength, setMultiLength,
       fixedSubMode, setFixedSubMode,
+      fixedModePattern, setFixedModePattern,
       builderNodes, setBuilderNodes,
       builderFillMode, setBuilderFillMode,
       builderTransitionType, setBuilderTransitionType,
@@ -502,6 +504,27 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       const colors = Array(numLEDs).fill({ r, g, b });
       await writeToDevice(ZenggeProtocol.setMultiColor(colors, 1, 1, 0x01));
     };
+
+    const applyStaticModePattern = (pat: typeof fixedModePattern, r?: number, g?: number, b?: number, spd?: number) => {
+      if (!writeToDevice) return;
+      const tR = r !== undefined ? Math.max(0, Math.min(255, r | 0)) : parseInt(selectedColor.slice(1,3), 16) || 255;
+      const tG = g !== undefined ? Math.max(0, Math.min(255, g | 0)) : parseInt(selectedColor.slice(3,5), 16) || 255;
+      const tB = b !== undefined ? Math.max(0, Math.min(255, b | 0)) : parseInt(selectedColor.slice(5,7), 16) || 255;
+      const tSpd = normalizeUISpeedToHardware(spd !== undefined ? spd : speed);
+
+      if (pat === 'STATIC') {
+        sendColor(tR, tG, tB);
+      } else if (pat === 'STROBE') {
+        writeToDevice(ZenggeProtocol.setCustomModeCompact([
+          { mode: ZenggeProtocol.STEP_STROBE, speed: tSpd, color1: {r: tR, g: tG, b: tB}, color2: {r: 0, g: 0, b: 0} }
+        ]));
+      } else if (pat === 'BLINK') {
+        writeToDevice(ZenggeProtocol.setCustomModeCompact([
+          { mode: ZenggeProtocol.STEP_JUMP, speed: tSpd, color1: {r: tR, g: tG, b: tB}, color2: {r: 0, g: 0, b: 0} }
+        ]));
+      }
+    };
+
 
 
     // (Removed generatePristineColors since it is unused after purging applyColorSorting)
@@ -868,7 +891,16 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               />
             )}
 
-
+            {activeMode === 'FIXED' && (
+              <FixedPanel
+                fixedModePattern={fixedModePattern}
+                setFixedModePattern={setFixedModePattern}
+                speed={speed}
+                setSpeed={setSpeed}
+                applyPattern={(pat, spd) => applyStaticModePattern(pat, undefined, undefined, undefined, spd)}
+                Colors={Colors}
+              />
+            )}
 
             {activeMode === 'MULTIMODE' && (
               <MultiModePanel
@@ -976,7 +1008,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                           const r = parseInt(dynamicColor.slice(1, 3), 16) || 255;
                           const g = parseInt(dynamicColor.slice(3, 5), 16) || 255;
                           const b = parseInt(dynamicColor.slice(5, 7), 16) || 255;
-                          if (activeMode === 'MULTIMODE' && fixedSubMode !== 'PATTERN') sendColor(r, g, b);
+                          if (activeMode === 'FIXED') applyStaticModePattern(fixedModePattern, r, g, b);
+                          else if (activeMode === 'MULTIMODE' && fixedSubMode !== 'PATTERN') sendColor(r, g, b);
                           else if (activeMode === 'STREET') applyStreetPattern(motionStateRef.current);
                         }}
                         style={{
@@ -1126,6 +1159,13 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                                 setStreetCruiseColor(color);
                                 if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
                                 applyStreetPattern(motionStateRef.current);
+                              } else if (activeMode === 'FIXED') {
+                                setSelectedColor(color);
+                                if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
+                                const r = parseInt(color.slice(1, 3), 16);
+                                const g = parseInt(color.slice(3, 5), 16);
+                                const b = parseInt(color.slice(5, 7), 16);
+                                applyStaticModePattern(fixedModePattern, r, g, b);
                               } else {
                                 setSelectedColor(color);
                                 if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
@@ -1351,21 +1391,38 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 )}
 
                 {activeMode === 'MUSIC' && (
-                  <TacticalSlider
-                    style={{ flex: 1 }}
-                    iconName="white-balance-sunny"
-                    label="BRIGHTNESS"
-                    fillColor="#00F0FF"
-                    dynamicMode="BRIGHTNESS"
-                    value={brightness}
-                    onValueChange={setBrightness}
-                    minimumValue={0}
-                    maximumValue={100}
-                    onSlidingComplete={(val: number) => {
-                      AppLogger.log('BRIGHTNESS_CHANGED', { value: val, mode: activeMode });
-                      handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
-                    }}
-                  />
+                  <View style={{ flexDirection: 'row', width: '100%', gap: Spacing.sm }}>
+                    <TacticalSlider
+                      style={{ flex: 1 }}
+                      iconName="microphone-outline"
+                      label="SENSITIVITY"
+                      fillColor="#FF00FF"
+                      dynamicMode="SENSITIVITY"
+                      value={micSensitivity}
+                      onValueChange={setMicSensitivity}
+                      minimumValue={0}
+                      maximumValue={100}
+                      onSlidingComplete={(val: number) => {
+                        AppLogger.log('MIC_SENSITIVITY_CHANGED', { value: val, mode: activeMode });
+                        handleMusicChange(musicPatternId, val, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
+                      }}
+                    />
+                    <TacticalSlider
+                      style={{ flex: 1 }}
+                      iconName="white-balance-sunny"
+                      label="BRIGHTNESS"
+                      fillColor="#00F0FF"
+                      dynamicMode="BRIGHTNESS"
+                      value={brightness}
+                      onValueChange={setBrightness}
+                      minimumValue={0}
+                      maximumValue={100}
+                      onSlidingComplete={(val: number) => {
+                        AppLogger.log('BRIGHTNESS_CHANGED', { value: val, mode: activeMode });
+                        handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
+                      }}
+                    />
+                  </View>
                 )}
               </View>
             </View>
@@ -1378,7 +1435,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             {[
               { id: 'HOME',      icon: 'home-outline'         },
               { id: 'FAVORITES', icon: 'cards-heart-outline'  },
-
+              { id: 'FIXED',     icon: 'record-circle-outline'},
               { id: 'MULTI',     icon: 'palette'              },
               { id: 'PROGRAMS',  icon: 'animation-play'       },
               { id: 'MUSIC',     icon: 'music'                },
@@ -1397,7 +1454,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                       if (onDisconnect) onDisconnect();
                     } else if (dockItem.id === 'FAVORITES') {
                       setActiveMode('FAVORITES');
-
+                    } else if (dockItem.id === 'FIXED') {
+                      setActiveMode('FIXED');
+                      setLastOperatingMode('FIXED');
                     } else if (dockItem.id === 'STREET') {
                       setActiveMode('STREET');
                       setLastOperatingMode('STREET');
