@@ -1,3 +1,25 @@
+## [1.8.9] - 2026-04-17
+
+### ✨ Features
+- feat(dashboard): extract fixed mode into dedicated docked panel with strobe/blink support
+
+### 🐛 Bug Fixes
+- fix(ble): inject neverForLocation plugin flag and sync scanner race blocks
+- fix(ble): resolve device settings probing and group connection regressions
+- fix(ble): resolve scanner race condition and manifest permissions gap
+- fix(ble): revert manual BLE permissions blocking Android 12 scanning
+- fix(permissions): stop Android auto-backup FTUE bypass, decouple dashboard Bluetooth spam, and sync AccountManager ledger
+- fix(ble): decouple keepAlive from GATT lock to restore wizard polling regression
+- fix(ble): hotfix zero-day android gatt exception by restoring scan lock and queue resumer
+- fix(ble): resolve group firmware sync race condition and popcorn effect
+
+### 🔧 Maintenance
+- chore(dashboard): decompose DashboardScreen monolith (-450 lines, -32.9%)
+- chore(docked): decompose DockedController JSX into 6 memoized sub-panels
+- build(version): bump version to 1.8.7 for permission ledger fix
+
+---
+
 ## [1.8.8] - 2026-04-14
 
 ### 🚑 Emergency Hotfixes
