@@ -367,16 +367,18 @@ _Project ID:_ `qefmeivpjyaukbwadgaz`
 
 #### **`skate_spots`** (Map Grounding)
 
-| Column         | Type      | Purpose                               |
-| :------------- | :-------- | :------------------------------------ |
-| `id`           | UUID (PK) | Unique spot ID                        |
-| `name`         | TEXT      | Rink/Park name                        |
-| `lat`          | DOUBLE    | Latitude                              |
-| `lng`          | DOUBLE    | Longitude                             |
-| `surface_type` | TEXT      | `wood` / `concrete` / `sport_court`   |
-| `is_indoor`    | BOOLEAN   | Indoor vs Outdoor                     |
-| `source`       | TEXT      | `native_seed` / `osm` / `user_submit` |
-| `is_verified`  | BOOLEAN   | Administrative verification status    |
+| Column          | Type      | Purpose                               |
+| :-------------- | :-------- | :------------------------------------ |
+| `id`            | UUID (PK) | Unique spot ID                        |
+| `name`          | TEXT      | Rink/Park name                        |
+| `lat`           | DOUBLE    | Latitude                              |
+| `lng`           | DOUBLE    | Longitude                             |
+| `surface_type`  | TEXT      | `wood` / `concrete` / `sport_court`   |
+| `is_indoor`     | BOOLEAN   | Indoor vs Outdoor                     |
+| `source`        | TEXT      | `native_seed` / `osm` / `user_submit` |
+| `is_verified`   | BOOLEAN   | Administrative verification status    |
+| `facility_type` | TEXT      | `roller_rink`/`skatepark`/`pro_shop`  |
+| `has_pro_shop`  | BOOLEAN   | Embedded pro shop indicator           |
 
 > [!NOTE]
 > **Map Grounding Strategy**: 20 iconic US Roller Rinks were seeded on 2026-04-13 using the `native_seed` tag to ensure immediate platform value in US territories.
@@ -404,13 +406,14 @@ System-wide `cleanupExpiredSessions()` ends sessions older than 24h.
 ## 7. Session Telemetry Architecture
 
 ### Supabase Table: `skate_sessions`
-| Column           | Type     | Notes                     |
-| ---------------- | -------- | ------------------------- |
-| `duration_sec`   | `int4`   | Total session length      |
-| `distance_miles` | `float8` | Accumulated GPS distance  |
-| `avg_speed_mph`  | `float8` | Mean speed                |
-| `peak_speed_mph` | `float8` | Maximum speed             |
-| `calories`       | `int4`   | Estimated via MET formula |
+| Column           | Type     | Notes                                   |
+| ---------------- | -------- | --------------------------------------- |
+| `duration_sec`   | `int4`   | Total session length                    |
+| `distance_miles` | `float8` | Accumulated GPS distance                |
+| `avg_speed_mph`  | `float8` | Mean speed                              |
+| `peak_speed_mph` | `float8` | Maximum speed                           |
+| `calories`       | `int4`   | Estimated via MET formula               |
+| `skate_spot_id`  | `uuid`   | Foreign key linked to `skate_spots` PK  |
 
 ### Telemetry Storage Optimization (JSONB Consolidation)
 To maximize query performance and eliminate cloud storage bloat, SK8Lytz utilizes a unified JSONB ingestion model, completely bypassing legacy flat-file chunking and fragmented Postgres tables.
