@@ -1,6 +1,13 @@
-## [1.8.12] - 2026-04-17
+## [1.8.13] - 2026-04-17
 
-### 🐛 Bug Fixes
+### ✨ Features
+- feat(discord-bridge): implement bidirectional telemetry agent link via powershell keystrokes
+- docs(discord-bridge): add setup and usage instructions
+- chore(agents): add standalone discord bridge startup workflow and inject into hello routine
+
+---
+
+## [1.8.12] - 2026-04-17
 - fix(voice): resolve null reference on launch and harden cleanup handler
 
 ---
