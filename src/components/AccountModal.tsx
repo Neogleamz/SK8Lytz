@@ -391,7 +391,7 @@ export default function AccountModal({
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
           <Text style={styles.statNum}>{crews.length}</Text>
-          <Text style={styles.statLabel}>Crews</Text>
+          <Text style={styles.statLabel}>CREWZ</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statNum}>{history.length || '—'}</Text>
@@ -497,7 +497,7 @@ export default function AccountModal({
       <View style={styles.body}>
         <TouchableOpacity style={styles.backBtn} onPress={() => { setCrewStep('list'); setCrewError(''); }}>
           <MaterialCommunityIcons name="chevron-left" size={20} color={Colors.textMuted} />
-          <Text style={styles.backText}>My Crews</Text>
+          <Text style={styles.backText}>My CREWZ</Text>
         </TouchableOpacity>
         <Text style={styles.sectionHeader}>CREATE A CREW</Text>
         <Text style={styles.label}>CREW NAME</Text>
@@ -507,7 +507,7 @@ export default function AccountModal({
         {!!crewError && <Text style={styles.errorText}>{crewError}</Text>}
         <TouchableOpacity style={[styles.primaryBtn, crewLoading && { opacity: 0.6 }]}
           onPress={handleCreateCrew} disabled={crewLoading}>
-          {crewLoading ? <ActivityIndicator color="#000" /> : <Text style={styles.primaryBtnText}>Create Crew</Text>}
+          {crewLoading ? <ActivityIndicator color="#000" /> : <Text style={styles.primaryBtnText}>Create CREWZ</Text>}
         </TouchableOpacity>
       </View>
     );
@@ -516,7 +516,7 @@ export default function AccountModal({
       <View style={styles.body}>
         <TouchableOpacity style={styles.backBtn} onPress={() => { setCrewStep('list'); setCrewError(''); }}>
           <MaterialCommunityIcons name="chevron-left" size={20} color={Colors.textMuted} />
-          <Text style={styles.backText}>My Crews</Text>
+          <Text style={styles.backText}>My CREWZ</Text>
         </TouchableOpacity>
         <Text style={styles.sectionHeader}>JOIN PRIVATE CREW</Text>
         <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: Spacing.md, lineHeight: 17 }}>
@@ -530,7 +530,7 @@ export default function AccountModal({
         {!!crewError && <Text style={styles.errorText}>{crewError}</Text>}
         <TouchableOpacity style={[styles.primaryBtn, crewLoading && { opacity: 0.6 }]}
           onPress={handleJoinCrew} disabled={crewLoading}>
-          {crewLoading ? <ActivityIndicator color="#000" /> : <Text style={styles.primaryBtnText}>Join Private Crew</Text>}
+          {crewLoading ? <ActivityIndicator color="#000" /> : <Text style={styles.primaryBtnText}>Join Private CREWZ</Text>}
         </TouchableOpacity>
       </View>
     );
@@ -540,7 +540,7 @@ export default function AccountModal({
         {crews.length === 0 ? (
           <View style={styles.emptyState}>
             <MaterialCommunityIcons name="account-group-outline" size={52} color={Colors.textMuted} />
-            <Text style={styles.emptyTitle}>No Saved Crews</Text>
+            <Text style={styles.emptyTitle}>No Saved CREWZ</Text>
             <Text style={styles.emptySubtitle}>Create or join a permanent crew to get notified when sessions start.</Text>
           </View>
         ) : (
@@ -579,11 +579,11 @@ export default function AccountModal({
 
         <TouchableOpacity style={styles.primaryBtn} onPress={() => { setCrewStep('create'); setCrewError(''); }}>
           <MaterialCommunityIcons name="plus" size={18} color="#000" />
-          <Text style={styles.primaryBtnText}>Create a Crew</Text>
+          <Text style={styles.primaryBtnText}>Create a CREWZ</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.secondaryBtn} onPress={() => { setCrewStep('join'); setCrewError(''); }}>
           <MaterialCommunityIcons name="lock-outline" size={18} color={Colors.textMuted} />
-          <Text style={[styles.secondaryBtnText, { color: Colors.textMuted }]}>Join Private Crew (by Code)</Text>
+          <Text style={[styles.secondaryBtnText, { color: Colors.textMuted }]}>Join Private CREWZ (by Code)</Text>
         </TouchableOpacity>
         <View style={{ height: 20 }} />
       </ScrollView>

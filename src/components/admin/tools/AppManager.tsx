@@ -38,12 +38,12 @@ export const AppManager = React.memo(({
             These policies are globally enforced. Safety locks are required for critical changes.
           </Text>
 
-          <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: Spacing.sm, marginTop: Spacing.sm }}>Crew Hub Governance</Text>
+          <Text style={{ color: textPrimary, fontWeight: 'bold', marginBottom: Spacing.sm, marginTop: Spacing.sm }}>CREWZ HUB Governance</Text>
           <View style={{ backgroundColor: cardBg, borderWidth: 1, borderColor: borderColor, borderRadius: 12, marginBottom: Spacing.lg, overflow: 'hidden' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: borderColor }}>
               <View style={{ flex: 1, marginRight: Spacing.lg }}>
                 <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>Global Lock</Text>
-                <Text style={{ color: textMuted, fontSize: 12, marginTop: Spacing.xxs }}>Completely disable the Crew Hub for everyone.</Text>
+                <Text style={{ color: textMuted, fontSize: 12, marginTop: Spacing.xxs }}>Completely disable the CREWZ HUB for everyone.</Text>
               </View>
               <Switch
                 value={appSettings['global_crew_hub_locked'] === true}

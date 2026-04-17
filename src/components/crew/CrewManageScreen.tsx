@@ -82,7 +82,7 @@ export function CrewManageScreen() {
           <MaterialCommunityIcons name="chevron-left" size={22} color={Colors.textMuted} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
-        <Text style={styles.titleLarge}>Create a Crew</Text>
+        <Text style={styles.titleLarge}>Create a CREWZ</Text>
 
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ padding: Spacing.lg, paddingBottom: Spacing.giant }}>
@@ -235,7 +235,7 @@ export function CrewManageScreen() {
 
           <TouchableOpacity style={[styles.primaryBtn, { marginTop: Spacing.xl }]} onPress={handleCreateCrew} disabled={isCreatingCrew}>
             {isCreatingCrew ? <ActivityIndicator size="small" color="#000" /> : <MaterialCommunityIcons name="check" size={18} color="#000" />}
-            <Text style={styles.primaryBtnText}>Create Crew</Text>
+            <Text style={styles.primaryBtnText}>Create CREWZ</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>

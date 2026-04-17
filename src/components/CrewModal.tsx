@@ -18,7 +18,7 @@ import { CrewLandingScreen } from './crew/CrewLandingScreen';
 import { CrewManageScreen } from './crew/CrewManageScreen';
 import { CrewScheduleScreen } from './crew/CrewScheduleScreen';
 
-type ModalStep = 'landing' | 'create' | 'schedule' | 'join' | 'controller' | 'manage' | 'crew-detail';
+type ModalStep = 'landing' | 'create' | 'schedule' | 'join' | 'controller' | 'manage' | 'crew-detail' | 'map';
 
 interface CrewModalProps {
   visible: boolean;

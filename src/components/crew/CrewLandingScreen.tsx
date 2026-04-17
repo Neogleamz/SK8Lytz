@@ -152,7 +152,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
         {/* ── Header ── */}
         <View style={[styles.hubHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
           <View>
-            <Text style={styles.hubTitle}>{showOnlyMap ? 'Explore Skate Map' : 'Crew Hub'}</Text>
+            <Text style={styles.hubTitle}>{showOnlyMap ? 'Explore Skate Map' : 'CREWZ HUB'}</Text>
             <Text style={styles.hubSub}>{showOnlyMap ? 'Discover spots and live sessions nearby' : 'Skate together · sync your light show'}</Text>
           </View>
           {onClose && (
@@ -170,7 +170,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
           {myCrews.length > 0 && (
             <TouchableOpacity onPress={() => setStep('manage')} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: 12 }}>
               <MaterialCommunityIcons name="plus" size={14} color={Colors.primary} />
-              <Text style={{ color: Colors.primary, fontSize: 11, fontWeight: '700', marginLeft: Spacing.xs }}>New Crew</Text>
+              <Text style={{ color: Colors.primary, fontSize: 11, fontWeight: '700', marginLeft: Spacing.xs }}>New CREWZ</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -184,7 +184,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
               onPress={() => setStep('manage')}
             >
               <MaterialCommunityIcons name="plus" size={14} color={Colors.primary} />
-              <Text style={styles.hubActionChipText}>Create a Crew</Text>
+              <Text style={styles.hubActionChipText}>Create a CREWZ</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -429,7 +429,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
                           onPress={() => { handleStartEdit(crew); setSelectedCrewDetail(crew); setStep('manage'); }}
                         >
                           <MaterialCommunityIcons name="pencil" size={12} color={Colors.primary} />
-                          <Text style={styles.hubActionChipText}>Edit Crew</Text>
+                          <Text style={styles.hubActionChipText}>Edit CREWZ</Text>
                         </TouchableOpacity>
                       )}
                       {!crew.is_public && (
@@ -469,7 +469,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
                             onPress={() => setConfirmingDeleteCrewId(crew.id)}
                           >
                             <MaterialCommunityIcons name="trash-can-outline" size={12} color="#FF4444" />
-                            <Text style={[styles.hubActionChipText, { color: '#FF4444' }]}>Delete Crew</Text>
+                            <Text style={[styles.hubActionChipText, { color: '#FF4444' }]}>Delete CREWZ</Text>
                           </TouchableOpacity>
                         )
                       )}
@@ -522,7 +522,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
             >
               {isLoading
                 ? <ActivityIndicator color="#000" />
-                : <Text style={styles.primaryBtnText}>Join Crew</Text>
+                : <Text style={styles.primaryBtnText}>Join CREWZ</Text>
               }
             </TouchableOpacity>
           </View>

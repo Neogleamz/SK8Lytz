@@ -176,7 +176,7 @@ export function CrewScheduleScreen() {
         {isLoading ? <ActivityIndicator color="#000" /> : (
           <>
             <MaterialCommunityIcons name="calendar-check" size={18} color="#000" />
-            <Text style={styles.primaryBtnText}>Schedule &amp; Notify Crew</Text>
+            <Text style={styles.primaryBtnText}>Schedule &amp; Notify CREWZ</Text>
           </>
         )}
       </TouchableOpacity>
