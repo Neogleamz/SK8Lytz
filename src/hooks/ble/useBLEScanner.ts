@@ -164,7 +164,7 @@ export function useBLEScanner({
       } catch (probeErr: any) {
         AppLogger.warn(`[BLE Probe] Failed ${device.id}:`, probeErr?.message);
         failedIds.push(device.id);
-        try { await bleManager.cancelDeviceConnection(device.id); } catch (e) { }
+        try { await bleManager.cancelDeviceConnection(device.id); } catch (e) { AppLogger.warn('[Scanner] Failed to cancel probe connection', { deviceId: device.id, error: String(e) }); }
         await new Promise(r => setTimeout(r, 500));
       }
     }
@@ -214,7 +214,7 @@ export function useBLEScanner({
       if (cached) {
         try {
           JSON.parse(cached).forEach((d: any) => knownMacs.add(d.device_mac));
-        } catch (e) {}
+        } catch (e) { AppLogger.warn('[Scanner] Failed to parse registered_devices cache', { error: String(e) }); }
       }
     }).catch(() => {});
 
@@ -287,7 +287,7 @@ export function useBLEScanner({
           try {
             const mfBuf = Buffer.from(manufacturerData, 'base64');
             if (mfBuf.length > 9 && (mfBuf[9] === 0x33 || mfBuf[9] === 0xBF)) isSymphony = true;
-          } catch (e) { }
+          } catch (e) { AppLogger.warn('[Scanner] Failed to parse manufacturer data', { deviceId: device.id, error: String(e) }); }
         }
 
         const isKnownPrefix = nameLower.startsWith('lednet') || nameLower.startsWith('sk8') || nameLower.startsWith('zg') || nameLower.startsWith('halo') || nameLower.startsWith('soul');
@@ -310,7 +310,7 @@ export function useBLEScanner({
                     productId   = fwInfo.productId;
                     Object.assign(device, { firmware: advFirmware, firmwareVer, ledVersion, bleVersion, productId });
                   }
-                } catch (e) { }
+                } catch (e) { AppLogger.warn('[Scanner] Failed to parse firmware from adv data', { deviceId: device.id, error: String(e) }); }
               }
               
               AppLogger.log('DEVICE_DISCOVERED', { ...logData, firmware: advFirmware, firmwareVer, ledVersion, bleVersion, productId });
@@ -343,7 +343,7 @@ export function useBLEScanner({
                      if (ownerIds.length > 0) {
                        setAllDevices(prev => prev.map(d => d.id === device.id ? Object.assign(d, { owner_ids: ownerIds }) : d));
                      }
-                   } catch(e) {}
+                   } catch(e) { AppLogger.warn('[Scanner] Telemetry upsert failed', { deviceId: device.id, error: String(e) }); }
                 })();
               }
 

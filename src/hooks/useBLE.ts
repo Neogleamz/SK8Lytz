@@ -301,7 +301,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
               const rawFw = Buffer.from(fwChar.value, 'base64').toString('ascii');
               firmware = rawFw.replace(/[^\x20-\x7E]/g, '');
             }
-          } catch (e) { }
+          } catch (e) { AppLogger.warn('[BLE] Failed to read firmware characteristic', { deviceId: conn.id, error: String(e) }); }
 
           AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name, firmware });
 
@@ -411,7 +411,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     await autoRecovery.cancelAllRecoveries();
 
     Object.values(disconnectListeners.current).forEach(sub => {
-      try { sub.remove(); } catch (e) {}
+      try { sub.remove(); } catch (e) { AppLogger.warn('[BLE] Failed to remove disconnect listener', { error: String(e) }); }
     });
     disconnectListeners.current = {};
 

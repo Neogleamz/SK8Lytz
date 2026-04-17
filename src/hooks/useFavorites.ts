@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
+import { AppLogger } from '../services/AppLogger';
 import type { IFavoriteState, IQuickPreset } from '../types/dashboard.types';
 
 // Shared Storage Prefix constant
@@ -54,7 +55,7 @@ export function useFavorites() {
           } else {
             setFavorites([]);
           }
-        } catch (e) {}
+        } catch (e) { AppLogger.warn('[Favorites] Failed to parse saved favorites', { error: String(e) }); }
       }
     });
 
@@ -63,7 +64,7 @@ export function useFavorites() {
         try {
           const parsed = JSON.parse(saved);
           if (parsed && parsed.length > 0) setQuickPresets(parsed);
-        } catch (e) {}
+        } catch (e) { AppLogger.warn('[Favorites] Failed to parse quick presets', { error: String(e) }); }
       }
     });
   }, []);

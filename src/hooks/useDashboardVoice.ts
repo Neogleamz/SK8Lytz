@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import type { DockedControllerHandle } from '../components/DockedController';
 import { useVoiceControl } from '../hooks/useVoiceControl';
+import { AppLogger } from '../services/AppLogger';
 import type { IVoiceAction } from '../services/VoiceService';
 import type { IFavoriteState } from '../types/dashboard.types';
 
@@ -65,7 +66,7 @@ export function useDashboardVoice({
     if (!isVoiceModalVisible) return;
     AsyncStorage.getItem('@Sk8lytz_Favorites').then(saved => {
       if (saved) {
-        try { setFavorites(JSON.parse(saved)); } catch (e) {}
+        try { setFavorites(JSON.parse(saved)); } catch (e) { AppLogger.warn('[Voice] Failed to parse favorites', { error: String(e) }); }
       }
     }).catch(() => {});
   }, [isVoiceModalVisible]);

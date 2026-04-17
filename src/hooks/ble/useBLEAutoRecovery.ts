@@ -107,7 +107,7 @@ export function useBLEAutoRecovery({
           const conn = await bleManager.connectToDevice(deviceId, { timeout: 3500 });
           await conn.discoverAllServicesAndCharacteristics();
 
-          try { await conn.requestMTU(512); } catch (e) {}
+          try { await conn.requestMTU(512); } catch (e) { AppLogger.warn('[AutoRecovery] MTU negotiation failed', { deviceId, error: String(e) }); }
 
           // Purge old listener and attach new one
           if (disconnectListeners.current[conn.id]) {

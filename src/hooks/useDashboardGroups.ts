@@ -118,7 +118,7 @@ export function useDashboardGroups({
   useEffect(() => {
     AsyncStorage.getItem('@Sk8lytz_device_configs').then(raw => {
       if (raw) {
-        try { setDeviceConfigs(JSON.parse(raw)); } catch (e) {}
+        try { setDeviceConfigs(JSON.parse(raw)); } catch (e) { AppLogger.warn('[Groups] Failed to parse device configs', { error: String(e) }); }
       }
     }).catch(() => {});
   }, []);
@@ -143,7 +143,7 @@ export function useDashboardGroups({
   useEffect(() => {
     AsyncStorage.getItem('@Sk8lytz_last_group_patterns').then(saved => {
       if (saved) {
-        try { setLastGroupPatterns(JSON.parse(saved)); } catch (e) {}
+        try { setLastGroupPatterns(JSON.parse(saved)); } catch (e) { AppLogger.warn('[Groups] Failed to parse last group patterns', { error: String(e) }); }
       }
     }).catch(() => {});
   }, []);
@@ -256,10 +256,10 @@ export function useDashboardGroups({
     ]);
 
     let configs: any = {};
-    if (resConfigs) { try { configs = JSON.parse(resConfigs); } catch (e) {} }
+    if (resConfigs) { try { configs = JSON.parse(resConfigs); } catch (e) { AppLogger.warn('[Groups] Failed to parse stored configs during migration', { error: String(e) }); } }
 
     let processed: string[] = [];
-    if (resProcessed) { try { processed = JSON.parse(resProcessed); } catch (e) {} }
+    if (resProcessed) { try { processed = JSON.parse(resProcessed); } catch (e) { AppLogger.warn('[Groups] Failed to parse processed devices', { error: String(e) }); } }
     let didUpdateProcessed = false;
 
     const checkAndGroup = (
