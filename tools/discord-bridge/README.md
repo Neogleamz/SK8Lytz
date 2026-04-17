@@ -4,12 +4,30 @@ A standalone Node.js microservice that links the Antigravity agent to your local
 
 ## 🚀 Setup & Installation
 
-### 1. Discord Developer Portal Setup
-1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) and click **New Application**.
-2. Navigate to the **Bot** tab on the left.
-3. Scroll down to **Privileged Gateway Intents** and enable **MESSAGE CONTENT INTENT** (crucial for reading your replies).
-4. Click **Reset Token** and copy your `Bot Token`.
-5. Under the **OAuth2 > URL Generator** tab, select the `bot` scope and give it `Send Messages` and `Read Messages/View Channels` permissions. Paste the generated URL into your browser to invite the bot to your private server.
+### 1. The Discord Developer Portal (Creating the Bot)
+If you've never created a Discord bot before, follow these exact steps:
+
+1. **Create the Application:**
+   - Go to the [Discord Developer Portal](https://discord.com/developers/applications).
+   - Click the **New Application** button in the top right.
+   - Name it "Antigravity Bridge" (or whatever you like) and click **Create**.
+
+2. **Enable Bot Privileges (Crucial):**
+   - On the left sidebar, click on **Bot**.
+   - Scroll down to the **Privileged Gateway Intents** section.
+   - Flip the switch for **MESSAGE CONTENT INTENT** to ON. (Without this, the bot cannot read your replies!)
+   - Click **Save Changes** at the bottom.
+   
+3. **Get Your Bot Token:**
+   - Still on the **Bot** page, look underneath the bot's username and click the **Reset Token** button.
+   - **Copy** the huge generated token. This is your `DISCORD_BOT_TOKEN`. Keep it secret!
+
+4. **Invite the Bot to your Discord Server:**
+   - On the left sidebar, click **OAuth2** -> **URL Generator**.
+   - Under **Scopes**, check the box for `bot`.
+   - Under **Bot Permissions** (which appears after checking bot), check `Send Messages` and `Read Messages/View Channels`.
+   - Scroll to the bottom of the page and **Copy** the generated URL.
+   - Paste that URL into your web browser, select your private Discord Server, and hit **Authorize**. Your bot is now in your server!
 
 ### 2. Environment Variables (.env)
 In the `tools/discord-bridge` directory, copy `.env.example` to a new `.env` file and populate it:
