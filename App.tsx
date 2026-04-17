@@ -59,7 +59,7 @@ class SafeErrorBoundary extends React.Component<{ children: React.ReactNode }, {
                 <Text 
                   style={{ color: '#000', fontWeight: 'bold' }}
                   onPress={async () => {
-                    await AsyncStorage.multiRemove([STORAGE_OFFLINE_SKIP, '@Sk8lytz_logs', 'ng_device_configs']);
+                    await AsyncStorage.multiRemove([STORAGE_OFFLINE_SKIP, '@Sk8lytz_logs', '@Sk8lytz_device_configs']);
                     // Reload app (native reload is preferred but this serves as a reset)
                     this.setState({ hasError: false });
                   }}

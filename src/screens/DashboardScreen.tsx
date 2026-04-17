@@ -28,6 +28,7 @@ import { Layout, Typography, Spacing } from '../theme/theme';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import DockedController, { DockedControllerHandle } from '../components/DockedController';
 import GroupSettingsModal from '../components/GroupSettingsModal';
+import { BLEErrorBoundary } from '../components/shared/BLEErrorBoundary';
 
 import AdminToolsModal from '../components/admin/AdminToolsModal';
 import { CrewModal } from '../components/CrewModal';
@@ -565,6 +566,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
     return (
       <Animated.View {...edgePanResponder.panHandlers} style={{ flex: 1, backgroundColor: 'transparent' }}>
+          <BLEErrorBoundary componentName="DockedController">
           <DockedController
             ref={dockedControllerRef}
             hwSettings={activeHwSettings}
@@ -593,6 +595,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               }
             }}
           />
+          </BLEErrorBoundary>
           {/* Disconnection Teardown Overlay — driven by FSM bleState */}
           {bleState === 'DISCONNECTING' && (
             <Animated.View style={{
