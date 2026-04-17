@@ -30,15 +30,28 @@ export function CrewLandingMap({
       showsMyLocationButton
     >
       {/* Static Spots */}
-      {nearbySpots.map((spot: any) => (
-        <Marker
-          key={`spot-${spot.id}`}
-          coordinate={{ latitude: spot.lat, longitude: spot.lng }}
-          pinColor={spot.is_indoor ? 'blue' : 'gray'}
-          title={spot.name}
-          description={`${spot.city || ''} ${spot.state || ''} ${spot.is_indoor ? '(Indoor)' : '(Outdoor)'}`}
-        />
-      ))}
+      {nearbySpots.map((spot: any) => {
+        let pin = spot.is_indoor ? 'blue' : 'brown';
+        if (spot.facility_type === 'roller_rink') pin = 'blue';
+        if (spot.facility_type === 'pro_shop' || spot.has_pro_shop) pin = 'purple';
+        
+        let desc = `${spot.city || ''} ${spot.state || ''}`;
+        const tags = [];
+        if (spot.is_indoor) tags.push('Indoor');
+        else tags.push('Outdoor');
+        if (spot.has_pro_shop) tags.push('Has Pro Shop');
+        if (spot.has_adult_night) tags.push('Adult Night');
+
+        return (
+          <Marker
+            key={`spot-${spot.id}`}
+            coordinate={{ latitude: spot.lat, longitude: spot.lng }}
+            pinColor={pin}
+            title={spot.name}
+            description={`${desc} (${tags.join(' • ')})`}
+          />
+        );
+      })}
 
       {/* Active Remote Sessions (Glowing Beacons) */}
       {nearbySessions.map((s: any) => {

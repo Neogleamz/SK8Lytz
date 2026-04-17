@@ -21,6 +21,8 @@ export function CrewScheduleScreen() {
   const { currentSession, isHandoffMode, executeLeaveSession, executeEndSession, handleHandoffLeadership } = session;
   const { selectedCrewId, setSelectedCrewId, crewName, setCrewName, schedDateTime, setSchedDateTime, showDatePicker, setShowDatePicker, showTimePicker, setShowTimePicker } = formState;
 
+  const [locationSpotId, setLocationSpotId] = React.useState<string | undefined>();
+
   const handleCreate = async (scheduled?: Date) => {
     let sessionName = crewName.trim() || permanentCrews.find(c => c.id === selectedCrewId)?.name || '';
     if (!sessionName) { setErrorMsg('Pick a crew or enter a session name'); return; }
@@ -40,6 +42,7 @@ export function CrewScheduleScreen() {
       };
       if (locationLabel) opts.locationLabel = locationLabel;
       if (locationCoords) opts.locationCoords = locationCoords;
+      if (locationSpotId) opts.skateSpotId = locationSpotId;
       if (scheduled) opts.scheduledAt = scheduled.toISOString();
 
       const newSession = await crewService.createSession(sessionName, displayName.trim(), opts);
@@ -158,9 +161,12 @@ export function CrewScheduleScreen() {
         onLocationLabelChange={setLocationLabel}
         locationCoords={locationCoords}
         onLocationCoordsChange={setLocationCoords}
+        locationSpotId={locationSpotId}
+        onLocationSpotIdChange={setLocationSpotId}
         isGettingLocation={isGettingLocation}
         onDetectLocation={handleDetectLocation}
         searchRadiusMi={discoverRadiusMi || undefined}
+        curatedSpots={hub.nearbySpots}
       />
 
       {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}

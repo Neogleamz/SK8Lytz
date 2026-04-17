@@ -1562,6 +1562,13 @@ export type Database = {
           raw_knowledge_panel: Json | null
           source: string | null
           state: string | null
+          street_address: string | null
+          opening_hours: Json | null
+          website: string | null
+          socials: Json | null
+          facility_type: string | null
+          has_pro_shop: boolean | null
+          has_adult_night: boolean | null
           surface_type: Database["public"]["Enums"]["skate_spot_surface"] | null
           updated_at: string | null
           updated_by: string | null
@@ -1584,6 +1591,13 @@ export type Database = {
           raw_knowledge_panel?: Json | null
           source?: string | null
           state?: string | null
+          street_address?: string | null
+          opening_hours?: Json | null
+          website?: string | null
+          socials?: Json | null
+          facility_type?: string | null
+          has_pro_shop?: boolean | null
+          has_adult_night?: boolean | null
           surface_type?:
             | Database["public"]["Enums"]["skate_spot_surface"]
             | null
@@ -1608,6 +1622,13 @@ export type Database = {
           raw_knowledge_panel?: Json | null
           source?: string | null
           state?: string | null
+          street_address?: string | null
+          opening_hours?: Json | null
+          website?: string | null
+          socials?: Json | null
+          facility_type?: string | null
+          has_pro_shop?: boolean | null
+          has_adult_night?: boolean | null
           surface_type?:
             | Database["public"]["Enums"]["skate_spot_surface"]
             | null

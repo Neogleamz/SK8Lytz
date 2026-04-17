@@ -3,6 +3,8 @@ import * as Clipboard from 'expo-clipboard';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Image, Platform, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { CrewLandingMap } from './CrewLandingMap';
+import { MapFiltersTray } from './MapFiltersTray';
+import { useMapFilters } from '../../hooks/useMapFilters';
 import { useCrewContext } from '../../context/CrewContext';
 import { useTheme } from '../../context/ThemeContext';
 import { AppLogger } from '../../services/AppLogger';
@@ -22,6 +24,7 @@ function timeAgo(iso: string): string {
 export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => void, showOnlyMap?: boolean }) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
+  const { filters, toggleFilter, applyFilters } = useMapFilters();
   
   const context = useCrewContext();
   const { hub, manage, session, setStep, step, confirmAction, setConfirmAction, currentUserId, displayName, errorMsg, setErrorMsg, isLoading, setIsLoading, showCodeEntry, setShowCodeEntry, formState } = context;
@@ -535,24 +538,26 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
           </TouchableOpacity>
         </View>
 
-        {/* Radius pills */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}
-          style={{ width: '100%', marginBottom: Spacing.xs }}
-          contentContainerStyle={styles.radiusPillRow}>
-          {([20, 50, 100, 250, null] as (number | null)[]).map(r => {
-            const label = r === null ? 'Show All' : `${r} mi`;
-            const active = discoverRadiusMi === r;
-            return (
-              <TouchableOpacity
-                key={String(r)}
-                style={[styles.radiusPill, active && styles.radiusPillActive]}
-                onPress={() => setDiscoverRadiusMi(r)}
-              >
-                <Text style={[styles.radiusPillText, active && styles.radiusPillTextActive]}>{label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        {/* Unified Map Filters Bar */}
+        <View
+          style={{ width: '100%', marginBottom: Spacing.sm, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          
+          {/* Radius Dropdown Switcher */}
+          <TouchableOpacity 
+            style={[styles.radiusPill, { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', paddingVertical: 6, paddingHorizontal: 10 }]} 
+            onPress={() => {
+                const rads = [20, 50, 100, 250, null] as (number | null)[];
+                const next = rads[(rads.indexOf(discoverRadiusMi) + 1) % rads.length];
+                setDiscoverRadiusMi(next);
+            }}>
+            <MaterialCommunityIcons name="radar" size={14} color="#FFF" style={{ marginRight: 4 }} />
+            <Text style={[styles.radiusPillTextActive, { fontSize: 11, fontWeight: '700' }]}>{discoverRadiusMi === null ? 'All' : `${discoverRadiusMi} mi`} ▾</Text>
+          </TouchableOpacity>
+          
+          {/* Map Filters */}
+          <MapFiltersTray filters={filters} toggleFilter={toggleFilter} />
+
+        </View>
 
          <View style={{ height: 350, width: '100%', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginBottom: Spacing.md }}>
           {isLoadingNearby ? (
@@ -560,14 +565,16 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
                <ActivityIndicator color={Colors.primary} />
              </View>
           ) : (
-            <CrewLandingMap
-               nearbySpots={nearbySpots}
-               nearbySessions={nearbySessions}
-               pulseAnim={pulseAnim}
-               handleJoinById={handleJoinById}
-               locationCoords={locationCoords}
-               discoverRadiusMi={discoverRadiusMi}
-             />
+            <>
+              <CrewLandingMap
+                 nearbySpots={applyFilters(nearbySpots)}
+                 nearbySessions={nearbySessions}
+                 pulseAnim={pulseAnim}
+                 handleJoinById={handleJoinById}
+                 locationCoords={locationCoords}
+                 discoverRadiusMi={discoverRadiusMi}
+               />
+            </>
           )}
         </View>
 

@@ -38,6 +38,7 @@ export interface CrewSession {
   is_public?: boolean;  // true = anyone nearby can join without a code
   // Migration 008 fields
   crew_id?: string | null;  // FK to permanent crews table — enables reliable crew↔session matching
+  skate_spot_id?: string | null; // FK to skate_spots table
 }
 
 export interface CrewMember {
@@ -86,7 +87,7 @@ class CrewService {
   async createSession(
     name: string,
     displayName: string,
-    opts?: { locationLabel?: string; locationCoords?: { lat: number; lng: number }; scheduledAt?: string; isPublic?: boolean; crewId?: string }
+    opts?: { locationLabel?: string; locationCoords?: { lat: number; lng: number }; scheduledAt?: string; isPublic?: boolean; crewId?: string; skateSpotId?: string }
   ): Promise<CrewSession> {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) throw new Error('Must be signed in to create a crew');
@@ -104,6 +105,7 @@ class CrewService {
     if (opts?.scheduledAt)    insertData.scheduled_at    = opts.scheduledAt;
     if (opts?.isPublic !== undefined) insertData.is_public = opts.isPublic;
     if (opts?.crewId)         insertData.crew_id         = opts.crewId;
+    if (opts?.skateSpotId)    insertData.skate_spot_id   = opts.skateSpotId;
 
     const { data, error } = await supabase
       .from('crew_sessions')

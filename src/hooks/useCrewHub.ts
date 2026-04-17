@@ -1,11 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { crewService, CrewSession } from '../services/CrewService';
 import { locationService, NearbySession, NearbySkateSpot } from '../services/LocationService';
 import { PermanentCrew, profileService } from '../services/ProfileService';
 import { AppLogger } from '../services/AppLogger';
 
+const RADIUS_STORAGE_KEY = '@Sk8lytz_RadiusPreference';
+
 export function useCrewHub(visible: boolean, step: string) {
-  const [discoverRadiusMi, setDiscoverRadiusMi] = useState<number | null>(50);
+  const [discoverRadiusMi, _setDiscoverRadiusMi] = useState<number | null>(50);
+
+  useEffect(() => {
+    AsyncStorage.getItem(RADIUS_STORAGE_KEY).then(val => {
+      if (val !== null) _setDiscoverRadiusMi(JSON.parse(val));
+    }).catch(() => {});
+  }, []);
+
+  const setDiscoverRadiusMi = useCallback((val: number | null) => {
+    _setDiscoverRadiusMi(val);
+    AsyncStorage.setItem(RADIUS_STORAGE_KEY, JSON.stringify(val)).catch(() => {});
+  }, []);
   
   const [myCrews, setMyCrews] = useState<PermanentCrew[]>([]);
   const [permanentCrews, setPermanentCrews] = useState<{ id: string; name: string }[]>([]);
