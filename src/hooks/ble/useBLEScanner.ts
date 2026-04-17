@@ -198,7 +198,7 @@ export function useBLEScanner({
   };
 
   const scanForPeripherals = (options?: { keepAlive?: boolean, disableProbing?: boolean }) => {
-    if (scannerState === 'SCANNING') return;
+    if (scannerStateRef.current === 'SCANNING' || scannerStateRef.current === 'PROBING') return;
     setScannerState('SCANNING');
     scannerStateRef.current = 'SCANNING';
     
