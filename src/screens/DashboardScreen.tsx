@@ -88,7 +88,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     droppedOutDeviceIds,
     pendingRegistrations,
     clearPendingRegistrations,
-    bleState
+    bleState,
+    bleGateRef,
   } = useBLE();
 
   // ── Registration system ────────────────────────────────────────────────────
@@ -316,6 +317,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     requestPermissions,
     refreshProfile,
     registeredDevices,
+    bleGateRef,
   });
 
 

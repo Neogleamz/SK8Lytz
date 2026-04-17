@@ -38,6 +38,8 @@ interface UseDashboardAutoConnectOptions {
   requestPermissions: () => Promise<boolean>;
   refreshProfile: () => Promise<void>;
   registeredDevices: RegisteredDevice[];
+  /** Global connection gate semaphore — observer only connects when IDLE */
+  bleGateRef: React.MutableRefObject<string>;
 }
 
 /**
@@ -55,12 +57,17 @@ export function useDashboardAutoConnect({
   scanForPeripherals,
   requestPermissions,
   refreshProfile,
+  bleGateRef,
 }: UseDashboardAutoConnectOptions): void {
 
   const hasAutoConnectedRef = useRef(false);
   const autoConnectIdsRef = useRef<string[]>([]);
 
   // ── Continuous observer: connect queued devices as they appear in scan ───
+  // Debounce: batch devices that appear within 500ms into a single connectToDevices call.
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingBatchRef = useRef<BLEDevice[]>([]);
+
   useEffect(() => {
     if (autoConnectIdsRef.current.length === 0) return;
 
@@ -70,20 +77,48 @@ export function useDashboardAutoConnect({
     );
 
     if (pendingToConnect.length > 0) {
-      // Drain queue for this batch to prevent reconnection loop
-      autoConnectIdsRef.current = autoConnectIdsRef.current.filter(
-        id => !pendingToConnect.some(p => p.id === id)
-      );
-      AppLogger.log('BLE_STATE_CHANGE', {
-        event: 'auto_connect_observer',
-        devices: pendingToConnect.map(d => d.name ?? d.id),
-      });
-      connectToDevices(pendingToConnect as any).finally(() => {
-        if (autoConnectIdsRef.current.length > 0) {
-          AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_resume_scan' });
-          scanForPeripherals({ disableProbing: true });
+      // Accumulate into batch
+      for (const d of pendingToConnect) {
+        if (!pendingBatchRef.current.some(p => p.id === d.id)) {
+          pendingBatchRef.current.push(d);
         }
-      });
+      }
+
+      // Clear existing debounce timer and set a new one
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+      debounceTimerRef.current = setTimeout(() => {
+        // ── GATE CHECK: Only connect when no other BLE operation is in-flight ──
+        if (bleGateRef.current !== 'IDLE') {
+          AppLogger.log('BLE_STATE_CHANGE', {
+            event: 'auto_connect_observer_gate_blocked',
+            gate: bleGateRef.current,
+            batchSize: pendingBatchRef.current.length,
+          });
+          pendingBatchRef.current = [];
+          return;
+        }
+
+        const batch = [...pendingBatchRef.current];
+        pendingBatchRef.current = [];
+
+        // Drain queue for this batch to prevent reconnection loop
+        autoConnectIdsRef.current = autoConnectIdsRef.current.filter(
+          id => !batch.some(p => p.id === id)
+        );
+
+        AppLogger.log('BLE_STATE_CHANGE', {
+          event: 'auto_connect_observer',
+          devices: batch.map(d => d.name ?? d.id),
+        });
+
+        connectToDevices(batch as any).finally(() => {
+          if (autoConnectIdsRef.current.length > 0) {
+            AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_resume_scan' });
+            scanForPeripherals({ disableProbing: true });
+          }
+        });
+      }, 500); // 500ms debounce window
     }
   }, [allDevices, connectedDevices]);
 
