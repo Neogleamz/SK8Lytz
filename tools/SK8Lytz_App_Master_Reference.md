@@ -379,6 +379,7 @@ _Project ID:_ `qefmeivpjyaukbwadgaz`
 | `is_verified`   | BOOLEAN   | Administrative verification status    |
 | `facility_type` | TEXT      | `roller_rink`/`skatepark`/`pro_shop`  |
 | `has_pro_shop`  | BOOLEAN   | Embedded pro shop indicator           |
+| `is_featured`   | BOOLEAN   | Highlighted partner or rink           |
 
 > [!NOTE]
 > **Map Grounding Strategy**: 20 iconic US Roller Rinks were seeded on 2026-04-13 using the `native_seed` tag to ensure immediate platform value in US territories.

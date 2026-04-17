@@ -127,7 +127,8 @@ async function processState(stateCode: string) {
          has_adult_night: culture.has_adult_night,
          vibe_rating: culture.vibe_rating,
          socials: culture.socials,
-         website: spot.website || culture.fetched_website
+         website: spot.website || culture.fetched_website,
+         is_featured: false
      });
      // Prevent aggressive ban from Google custom search headless scraper
      await sleep(1000); 

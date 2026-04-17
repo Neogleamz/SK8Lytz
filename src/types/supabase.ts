@@ -1574,6 +1574,7 @@ export type Database = {
           updated_by: string | null
           vibe_rating: number | null
           zip: string | null
+          is_featured: boolean | null
         }
         Insert: {
           address?: string | null
@@ -1605,6 +1606,7 @@ export type Database = {
           updated_by?: string | null
           vibe_rating?: number | null
           zip?: string | null
+          is_featured?: boolean | null
         }
         Update: {
           address?: string | null
@@ -1636,6 +1638,7 @@ export type Database = {
           updated_by?: string | null
           vibe_rating?: number | null
           zip?: string | null
+          is_featured?: boolean | null
         }
         Relationships: []
       }
