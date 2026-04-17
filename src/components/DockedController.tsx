@@ -29,6 +29,12 @@ import { useStreetMode } from '../hooks/useStreetMode';
 import type { BleConnectionState, IDeviceState, IFavoriteState, ModeType } from '../types/dashboard.types';
 import { getColorName, hexToHue } from '../utils/ColorUtils';
 import AnalogGauge from './docked/AnalogGauge';
+import FavoritesPanel from './docked/FavoritesPanel';
+import MusicPanel from './docked/MusicPanel';
+import MultiModePanel from './docked/MultiModePanel';
+import CameraPanel from './docked/CameraPanel';
+import ProgramsPanel from './docked/ProgramsPanel';
+import StreetPanel from './docked/StreetPanel';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Layout, Spacing, Typography } from '../theme/theme';
@@ -850,586 +856,104 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         <View style={[styles.controlsContainer, { padding: Spacing.xs, overflow: 'hidden' }]}>
           <View style={[styles.activeModeContainer, { flex: 1, justifyContent: 'space-evenly' }]}>
             {activeMode === 'FAVORITES' && (
-              <View style={{ flex: 1, paddingVertical: Layout.padding, paddingBottom: Spacing.xl, justifyContent: 'space-between' }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, paddingHorizontal: Layout.padding, marginBottom: Spacing.sm }]}>YOURS</Text>
-                
-                <FlatList
-                  style={{ flex: 1 }}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  data={favorites.length > 0 ? favorites : [null as any]}
-                  keyExtractor={(item, index) => item ? item.id : `empty-yours-${index}`}
-                  contentContainerStyle={{ paddingHorizontal: Layout.padding, flexGrow: 1 }}
-                  renderItem={({ item: fav }) => {
-                    const cardWidth = (Dimensions.get('window').width - (Layout.padding * 2)) / 3.5;
-                    
-                    if (!fav) {
-                      return <View style={[styles.presetCard, { width: cardWidth, marginHorizontal: Spacing.xs, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
-                    }
-
-                    const glow = fav.mode === 'MUSIC' ? (fav.musicPrimaryColor || fav.musicSecondaryColor || Colors.primary) :
-                                 (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') ? (fav.fixedFgColor || fav.fixedBgColor || Colors.primary) :
-                                 (fav.mode === 'MULTI' || fav.mode === 'BUILDER') ? (fav.multiColors?.[0] || Colors.primary) : Colors.primary;
-
-                    let gradColors: string[] = [glow, glow];
-                    if (fav.mode === 'MUSIC' && fav.musicPrimaryColor) gradColors = [fav.musicPrimaryColor, fav.musicSecondaryColor || fav.musicPrimaryColor];
-                    else if ((fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') && fav.fixedFgColor) gradColors = [fav.fixedFgColor, fav.fixedBgColor || fav.fixedFgColor];
-                    else if ((fav.mode === 'MULTI' || fav.mode === 'BUILDER') && fav.multiColors && fav.multiColors.length > 0) gradColors = fav.multiColors.length === 1 ? [fav.multiColors[0], fav.multiColors[0]] : fav.multiColors;
-
-                    return (
-                      <TouchableOpacity
-                        style={{ flex: 1, marginHorizontal: Spacing.xs, shadowColor: glow, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 }}
-                        onPress={() => loadFavorite(fav)}
-                      >
-                        <LinearGradient
-                          colors={gradColors as any}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={{ flex: 1, width: cardWidth, borderRadius: 9, padding: 1.5 }}
-                        >
-                          <View style={[styles.presetCard, { flex: 1, width: '100%', marginHorizontal: 0, borderWidth: 0, borderRadius: 8, justifyContent: 'flex-start', paddingVertical: Spacing.md, paddingHorizontal: Spacing.sm }]}>
-                            <TouchableOpacity
-                              style={{ position: 'absolute', right: 4, top: 4, zIndex: 10, padding: Spacing.xs }}
-                              onPress={() => {
-                                openFavoritePrompt(fav.id, fav.name);
-                              }}
-                            >
-                              <MaterialCommunityIcons name="pencil-outline" size={12} color={Colors.textMuted} />
-                            </TouchableOpacity>
-
-                            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-                              <MaterialCommunityIcons 
-                                name={fav.mode === 'MUSIC' ? 'microphone-outline' : (fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'animation-play' : (fav.mode === 'MULTI' || fav.mode === 'BUILDER') ? 'shape-square-plus' : 'speedometer'} 
-                                size={24} 
-                                color={glow} 
-                                style={{ marginBottom: Spacing.sm }} 
-                              />
-                              
-                              <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.name}</MarqueeText>
-                            </View>
-                            
-                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: Spacing.sm, opacity: 0.8, paddingHorizontal: Spacing.xs }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xxs }}>
-                                {fav.mode === 'MUSIC' ? (
-                                  <><MaterialCommunityIcons name="microphone-outline" size={10} color={glow} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.micSensitivity || fav.speed || 50)}%</Text></>
-                                ) : (
-                                  <><MaterialCommunityIcons name="speedometer" size={10} color={glow} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.speed || 50)}%</Text></>
-                                )}
-                              </View>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xxs }}>
-                                <MaterialCommunityIcons name="brightness-6" size={10} color={glow} />
-                                <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
-                              </View>
-                            </View>
-                            
-                            {(() => {
-                              if (fav.mode === 'MUSIC') {
-                                return (
-                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: Spacing.xs }}>
-                                    <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
-                                    <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
-                                  </View>
-                                );
-                              } else if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') {
-                                return (
-                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: Spacing.xs }}>
-                                    <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
-                                    <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
-                                  </View>
-                                );
-                              } else if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
-                                const colors = fav.multiColors || ['#FFFFFF'];
-                                return (
-                                  <View style={{ width: '90%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: Spacing.xs }}>
-                                    {colors.map((c: string, i: number) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}
-                                  </View>
-                                );
-                              } else {
-                                return <View style={{ height: 6, width: '100%', marginTop: Spacing.xs }} />;
-                              }
-                            })()}
-                          </View>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    );
-                  }}
-                />
-                </View>
-
-                <View style={{ flex: 1, marginTop: Spacing.lg }}>
-                  <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, paddingHorizontal: Layout.padding, marginBottom: Spacing.sm }]}>SK8Lytz Picks</Text>
-
-                  <FlatList
-                  style={{ flex: 1 }}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  data={curatedPresets.length > 0 ? curatedPresets : [null as any]}
-                  keyExtractor={(item, index) => item ? item.id : `empty-picks-${index}`}
-                  contentContainerStyle={{ paddingHorizontal: Layout.padding, flexGrow: 1 }}
-                  renderItem={({ item: fav }) => {
-                    const cardWidth = (Dimensions.get('window').width - (Layout.padding * 2)) / 3.5;
-                    
-                    if (!fav) {
-                      return <View style={[styles.presetCard, { width: cardWidth, marginHorizontal: Spacing.xs, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />;
-                    }
-
-                    const glow = fav.mode === 'MUSIC' ? (fav.musicPrimaryColor || fav.musicSecondaryColor || Colors.secondary) :
-                                 (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') ? (fav.fixedFgColor || fav.fixedBgColor || Colors.secondary) :
-                                 (fav.mode === 'MULTI' || fav.mode === 'BUILDER') ? (fav.multiColors?.[0] || Colors.secondary) : Colors.secondary;
-
-                    let gradColors: string[] = [glow, glow];
-                    if (fav.mode === 'MUSIC' && fav.musicPrimaryColor) gradColors = [fav.musicPrimaryColor, fav.musicSecondaryColor || fav.musicPrimaryColor];
-                    else if ((fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') && fav.fixedFgColor) gradColors = [fav.fixedFgColor, fav.fixedBgColor || fav.fixedFgColor];
-                    else if ((fav.mode === 'MULTI' || fav.mode === 'BUILDER') && fav.multiColors && fav.multiColors.length > 0) gradColors = fav.multiColors.length === 1 ? [fav.multiColors[0], fav.multiColors[0]] : fav.multiColors;
-
-                    return (
-                      <TouchableOpacity
-                        style={{ flex: 1, marginHorizontal: Spacing.xs, shadowColor: glow, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 }}
-                        onPress={() => loadFavorite(fav, 'PICK')}
-                      >
-                        <LinearGradient
-                          colors={gradColors as any}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={{ flex: 1, width: cardWidth, borderRadius: 9, padding: 1.5 }}
-                        >
-                          <View style={[styles.presetCard, { flex: 1, width: '100%', marginHorizontal: 0, borderWidth: 0, borderRadius: 8, justifyContent: 'flex-start', paddingVertical: Spacing.md, paddingHorizontal: Spacing.sm }]}>
-                            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-                              <MaterialCommunityIcons 
-                                name={fav.mode === 'MUSIC' ? 'microphone-outline' : (fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'animation-play' : (fav.mode === 'MULTI' || fav.mode === 'BUILDER') ? 'shape-square-plus' : 'speedometer'} 
-                                size={24} 
-                                color={glow} 
-                                style={{ marginBottom: Spacing.sm }} 
-                              />
-                              
-                              <MarqueeText style={[styles.presetTitle, { fontSize: 13, textAlign: 'center', width: '100%' }]}>{fav.customName || fav.name}</MarqueeText>
-                            </View>
-                            
-                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: Spacing.sm, opacity: 0.8, paddingHorizontal: Spacing.xs }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xxs }}>
-                                {fav.mode === 'MUSIC' ? (
-                                  <><MaterialCommunityIcons name="microphone-outline" size={10} color={glow} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.micSensitivity || fav.speed || 50)}%</Text></>
-                                ) : (
-                                  <><MaterialCommunityIcons name="speedometer" size={10} color={glow} /><Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.speed || 50)}%</Text></>
-                                )}
-                              </View>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xxs }}>
-                                <MaterialCommunityIcons name="brightness-6" size={10} color={glow} />
-                                <Text style={{ fontSize: 9, color: Colors.textMuted }}>{Math.round(fav.brightness || 100)}%</Text>
-                              </View>
-                            </View>
-                            
-                            {(() => {
-                              if (fav.mode === 'MUSIC') {
-                                return (
-                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: Spacing.xs }}>
-                                    <View style={{ flex: 1, backgroundColor: fav.musicPrimaryColor || '#00FFFF' }} />
-                                    <View style={{ flex: 1, backgroundColor: fav.musicSecondaryColor || '#FF00FF' }} />
-                                  </View>
-                                );
-                              } else if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') {
-                                return (
-                                  <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: Spacing.xs }}>
-                                    <View style={{ flex: 1, backgroundColor: fav.fixedFgColor || '#FFFFFF' }} />
-                                    <View style={{ flex: 1, backgroundColor: fav.fixedBgColor || '#000000' }} />
-                                  </View>
-                                );
-                              } else if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
-                                const colors = fav.multiColors || ['#FFFFFF'];
-                                return (
-                                  <View style={{ width: '90%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: Spacing.xs }}>
-                                    {colors.map((c: string, i: number) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}
-                                  </View>
-                                );
-                              } else {
-                                return <View style={{ height: 6, width: '100%', marginTop: Spacing.xs }} />;
-                              }
-                            })()}
-                          </View>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    );
-                  }}
-                />
-                </View>
-              </View>
+              <FavoritesPanel
+                favorites={favorites}
+                curatedPresets={curatedPresets}
+                picksLoading={picksLoading}
+                onLoadFavorite={loadFavorite}
+                onEditFavorite={(id, name) => openFavoritePrompt(id, name)}
+                isDark={isDark}
+                Colors={Colors}
+                styles={styles}
+              />
             )}
 
 
 
             {activeMode === 'MULTIMODE' && (
-              <View style={{ flex: 1, marginBottom: Spacing.sm, justifyContent: 'flex-start' }}>
-
-                {/* UNIFIED PRO EFFECTS & POSITIONAL BUILDER */}
-                {(fixedSubMode === 'PATTERN' || fixedSubMode === 'BUILDER') && (
-                  <View style={{ flex: 1, width: '100%', marginBottom: Spacing.xs }}>
-
-                    {/* UNIFIED TOGGLE */}
-                    <View style={{ flexDirection: 'row', marginBottom: Spacing.sm, marginTop: Spacing.xxs, flexShrink: 0, minHeight: 36 }}>
-                      <TouchableOpacity
-                        onPress={() => {
-                          setFixedSubMode('PATTERN');
-                        }}
-                        style={{ flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', backgroundColor: fixedSubMode === 'PATTERN' ? Colors.primary : Colors.surfaceHighlight, borderTopLeftRadius: Layout.borderRadius, borderBottomLeftRadius: Layout.borderRadius }}
-                      >
-                        <Text style={{ color: fixedSubMode === 'PATTERN' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Pro Effects</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => {
-                          AppLogger.log('BUILDER_UI_TOGGLED');
-                          setFixedSubMode('BUILDER');
-                        }}
-                        style={{ flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', backgroundColor: fixedSubMode === 'BUILDER' ? Colors.primary : Colors.surfaceHighlight, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.05)', borderTopRightRadius: Layout.borderRadius, borderBottomRightRadius: Layout.borderRadius }}
-                      >
-                        <Text style={{ color: fixedSubMode === 'BUILDER' ? '#000' : Colors.textMuted, fontWeight: 'bold' }}>Builder</Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* PRO EFFECTS TIER */}
-                    {fixedSubMode === 'PATTERN' && (
-                      <View style={{ flex: 1, paddingBottom: Spacing.sm }}>
-                        <ScrollView
-                          style={{ flex: 1, backgroundColor: Colors.isDark ? '#000000' : 'rgba(0,0,0,0.04)', borderRadius: 8 }}
-                          contentContainerStyle={{ padding: Spacing.sm, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}
-                          showsVerticalScrollIndicator={false}
-                        >
-                          {ZENGGE_EFFECTS.map(effect => (
-                            <TouchableOpacity
-                              key={effect.id}
-                              onPress={() => {
-                                setFixedSubMode('PATTERN');
-                                setFixedPatternId(effect.id);
-                                if (writeToDevice) {
-                                  const hexToRgb = (hex: string) => {
-                                    const h = hex || '#000000';
-                                    return {
-                                      r: parseInt(h.substring(1, 3), 16) || 0,
-                                      g: parseInt(h.substring(3, 5), 16) || 0,
-                                      b: parseInt(h.substring(5, 7), 16) || 0,
-                                    };
-                                  };
-                                  writeToDevice(ZenggeProtocol.setCustomModeCompact([
-                                    {
-                                      mode: effect.id,
-                                      speed: speed,
-                                      color1: hexToRgb(fixedFgColor || '#FF0000'),
-                                      color2: hexToRgb(fixedBgColor || '#000000'),
-                                    }
-                                  ]));
-                                }
-                              }}
-                              style={{ width: '48%', minHeight: 40, marginBottom: Spacing.sm, flexDirection: 'column', justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
-                            >
-                              <Text style={{ color: fixedPatternId === effect.id ? Colors.primary : Colors.text, fontWeight: 'bold', fontSize: 11, marginBottom: Spacing.xs }} numberOfLines={1}>
-                                {effect.id}. {effect.name}
-                              </Text>
-                              <CustomEffectVisualizer
-                                effectId={effect.id}
-                                speed={speed}
-                                points={devices?.[0]?.points || points || 16}
-                                segments={devices?.[0]?.segments || 1}
-                                direction={true}
-                                fgColorHex={fixedFgColor}
-                                bgColorHex={fixedBgColor}
-                              />
-                            </TouchableOpacity>
-                          ))}
-                        </ScrollView>
-                      </View>
-                    )}
-
-                    {/* POSITIONAL ARRAY BUILDER TIER */}
-                    {fixedSubMode === 'BUILDER' && (
-                      <PositionalGradientBuilder
-                        nodes={builderNodes}
-                        onNodesChange={setBuilderNodes}
-                        fillMode={builderFillMode}
-                        onFillModeChange={setBuilderFillMode}
-                        transitionType={builderTransitionType}
-                        onTransitionTypeChange={setBuilderTransitionType}
-                        direction={builderDirection}
-                        onDirectionChange={setBuilderDirection}
-                        speed={speed}
-                        deviceLedCount={hwSettings?.ledPoints || points || 150}
-                        selectedColor={selectedColor}
-                        writeToDevice={writeToDevice}
-                      />
-                    )}
-
-                  </View>
-                )}
-              </View>
+              <MultiModePanel
+                fixedSubMode={fixedSubMode}
+                setFixedSubMode={setFixedSubMode}
+                fixedPatternId={fixedPatternId}
+                setFixedPatternId={setFixedPatternId}
+                fixedFgColor={fixedFgColor}
+                setFixedFgColor={setFixedFgColor}
+                fixedBgColor={fixedBgColor}
+                setFixedBgColor={setFixedBgColor}
+                builderNodes={builderNodes}
+                setBuilderNodes={setBuilderNodes}
+                builderFillMode={builderFillMode}
+                setBuilderFillMode={setBuilderFillMode}
+                builderTransitionType={builderTransitionType}
+                setBuilderTransitionType={setBuilderTransitionType}
+                builderDirection={builderDirection}
+                setBuilderDirection={setBuilderDirection}
+                speed={speed}
+                hwSettings={hwSettings}
+                points={points}
+                devices={devices}
+                selectedColor={selectedColor}
+                writeToDevice={writeToDevice}
+                Colors={Colors}
+              />
             )}
-
-            {/* ── PROGRAMS MODE UI ────────────────────────────────────────────── */}
+            {/* ── PROGRAMS MODE UI ──────────────────────────────────────────────── */}
             {activeMode === 'PROGRAMS' && (
-              <View style={{ flex: 1, paddingHorizontal: Spacing.xs, paddingTop: Spacing.xs }}>
-                <VerticalPatternDrum
-                  value={selectedPatternId}
-                  onValueChange={(id: number) => {
-                    setSelectedPatternId(id);
-                    if (writeToDevice) {
-                      if (id === 100) {
-                        applyEmergencyPattern(speed, brightness);
-                      } else {
-                        writeToDevice(ZenggeProtocol.setCustomRbm(id, speed, brightness));
-                      }
-                    }
-                  }}
-                  itemLabel={(id) => getRbmPatternName(id)}
-                />
-              </View>
+              <ProgramsPanel
+                selectedPatternId={selectedPatternId}
+                setSelectedPatternId={setSelectedPatternId}
+                speed={speed}
+                brightness={brightness}
+                writeToDevice={writeToDevice}
+                applyEmergencyPattern={applyEmergencyPattern}
+              />
             )}
 
             {/* ── MUSIC MODE UI ────────────────────────────────────────────────── */}
             {activeMode === 'MUSIC' && (
-              <View style={{ flex: 1, paddingHorizontal: Spacing.xs, paddingTop: Spacing.xs, overflow: 'hidden' }}>
-                {/* ── Matrix Style Selector: Light Screen (0x27) vs Light Bar (0x26) ── */}
-                <View style={{ flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.xs, marginTop: Spacing.xxs, marginBottom: Spacing.md, flexShrink: 0 }}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setMusicMatrixStyle(0x27);
-                      handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 0x27);
-                    }}
-                    style={{
-                      flex: 1, paddingVertical: Spacing.md, borderRadius: 10, alignItems: 'center',
-                      backgroundColor: musicMatrixStyle === 0x27 ? Colors.primary + '33' : 'rgba(255,255,255,0.05)',
-                      borderWidth: 1.5, borderColor: musicMatrixStyle === 0x27 ? Colors.primary : 'rgba(255,255,255,0.1)'
-                    }}
-                  >
-                    <Text style={{ color: musicMatrixStyle === 0x27 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>LIGHT SCREEN</Text>
-                    <Text style={{ color: musicMatrixStyle === 0x27 ? Colors.primary : Colors.textMuted, fontSize: 8, opacity: 0.8 }}>0x27 (DENSE)</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setMusicMatrixStyle(0x26);
-                      handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 0x26);
-                    }}
-                    style={{
-                      flex: 1, paddingVertical: Spacing.md, borderRadius: 10, alignItems: 'center',
-                      backgroundColor: musicMatrixStyle === 0x26 ? Colors.accent + '33' : 'rgba(255,255,255,0.05)',
-                      borderWidth: 1.5, borderColor: musicMatrixStyle === 0x26 ? Colors.accent : 'rgba(255,255,255,0.1)'
-                    }}
-                  >
-                    <Text style={{ color: musicMatrixStyle === 0x26 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>LIGHT BAR</Text>
-                    <Text style={{ color: musicMatrixStyle === 0x26 ? Colors.accent : Colors.textMuted, fontSize: 8, opacity: 0.8 }}>0x26 (BAR)</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={{ flex: 1, justifyContent: 'space-evenly' }}>
-                  <View style={[styles.musicToggleHeader, { justifyContent: 'center' }]}>
-                    <View style={[styles.musicModeIndicator, { alignItems: 'center' }]}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <TouchableOpacity onPress={() => {
-                          const pid = musicPatternId > 1 ? musicPatternId - 1 : MUSIC_PATTERNS.length;
-                          setMusicPatternId(pid);
-                          handleMusicChange(pid);
-                        }} style={{ paddingHorizontal: Spacing.md }}>
-                          <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'<'}</Text>
-                        </TouchableOpacity>
-                        <View style={[styles.musicModeCircle, { width: 32, height: 32, borderRadius: 16 }]}>
-                          <Text style={[styles.musicModeNumber, { fontSize: 14 }]}>{musicPatternId}</Text>
-                        </View>
-                        <TouchableOpacity onPress={() => {
-                          const pid = musicPatternId < MUSIC_PATTERNS.length ? musicPatternId + 1 : 1;
-                          setMusicPatternId(pid);
-                          handleMusicChange(pid);
-                        }} style={{ paddingHorizontal: Spacing.md }}>
-                          <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'>'}</Text>
-                        </TouchableOpacity>
-                      </View>
-                      <Text style={[Typography.caption, { marginTop: Spacing.xs, color: Colors.primary, fontWeight: 'bold', fontSize: 13 }]}>
-                        {MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.micControlSection}>
-                    <TouchableOpacity
-                      style={[styles.micIconBtn, micSource === 'APP' && styles.micBtnActive]}
-                      onPress={() => {
-                        setMicSource('APP');
-                        handleMusicChange(musicPatternId, micSensitivity, brightness, 'APP');
-                      }}
-                    >
-                      <View style={[styles.micIconCircle, micSource === 'APP' && { backgroundColor: Colors.primary }]}>
-                        <MaterialCommunityIcons name="microphone-outline" size={20} color={micSource === 'APP' ? '#FFF' : Colors.textMuted} />
-                      </View>
-                      <Text style={[styles.micSubText, micSource === 'APP' && { color: Colors.primary, fontWeight: 'bold' }]}>APP MIC</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.playButtonMain}
-                      onPress={() => handleMusicChange()}
-                    >
-                      <View style={styles.playIconInner}>
-                        <MaterialCommunityIcons name="play" size={32} color="#FFF" />
-                      </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[styles.micIconBtn, micSource === 'DEVICE' && styles.micBtnActive]}
-                      onPress={() => {
-                        setMicSource('DEVICE');
-                        handleMusicChange(musicPatternId, micSensitivity, brightness, 'DEVICE');
-                      }}
-                    >
-                      <View style={[styles.micIconCircle, micSource === 'DEVICE' && { backgroundColor: Colors.primary }]}>
-                        <MaterialCommunityIcons name="bluetooth-audio" size={20} color={micSource === 'DEVICE' ? '#FFF' : Colors.textMuted} />
-                      </View>
-                      <Text style={[styles.micSubText, micSource === 'DEVICE' && { color: Colors.primary, fontWeight: 'bold' }]}>DEVICE MIC</Text>
-                    </TouchableOpacity>
-                  </View>
-
-
-                </View>
-              </View>
+              <MusicPanel
+                musicPatternId={musicPatternId}
+                setMusicPatternId={setMusicPatternId}
+                micSource={micSource}
+                setMicSource={setMicSource}
+                musicMatrixStyle={musicMatrixStyle}
+                setMusicMatrixStyle={setMusicMatrixStyle}
+                micSensitivity={micSensitivity}
+                brightness={brightness}
+                musicPrimaryColor={musicPrimaryColor}
+                musicSecondaryColor={musicSecondaryColor}
+                handleMusicChange={handleMusicChange}
+                Colors={Colors}
+                styles={styles}
+              />
             )}
 
             {/* ── CAMERA MODE UI ────────────────────────────────────────────────── */}
             {activeMode === 'CAMERA' && (
-              <View style={{ flex: 1 }}>
-                <CameraTracker
-                  isActive={activeMode === 'CAMERA'}
-                  onColorDetected={(hex: string) => {
-                    setSelectedColor(hex);
-                    const r = parseInt(hex.slice(1, 3), 16);
-                    const g = parseInt(hex.slice(3, 5), 16);
-                    const b = parseInt(hex.slice(5, 7), 16);
-                    sendColor(r, g, b);
-                  }}
-                />
-              </View>
+              <CameraPanel
+                onColorDetected={(hex: string) => {
+                  setSelectedColor(hex);
+                  const r = parseInt(hex.slice(1, 3), 16);
+                  const g = parseInt(hex.slice(3, 5), 16);
+                  const b = parseInt(hex.slice(5, 7), 16);
+                  sendColor(r, g, b);
+                }}
+              />
             )}
 
             {/* ── STREET MODE UI: FAST & FURIOUS DASHBOARD ─────────────────── */}
             {activeMode === 'STREET' && (
-              <ScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={{ flexGrow: 1, paddingHorizontal: Spacing.xs, paddingTop: Spacing.sm, paddingBottom: Spacing.xl }}
-                showsVerticalScrollIndicator={false}
-                bounces={false}
-              >
-                {/* ── Street Visualizer: Car-light zone bar ── */}
-                <View style={{ marginBottom: isShort ? Spacing.sm : Spacing.md }}>
-                  <View style={{ flexDirection: 'row', height: isShort ? 22 : 26, borderRadius: 13, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-                    {/* Rear zone — red tail lights */}
-                    <View style={{ flex: 3, backgroundColor: isStreetBraking ? '#FF0000' : '#660000', justifyContent: 'center', alignItems: 'center' }}>
-                      <Text allowFontScaling={false} style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>TAIL (30%)</Text>
-                    </View>
-                    {/* Middle zone — cruise color */}
-                    <View style={{ flex: 4, backgroundColor: streetCruiseColor, justifyContent: 'center', alignItems: 'center', opacity: 0.9 }}>
-                      <Text allowFontScaling={false} style={{ color: '#000', fontSize: 9, fontWeight: '800' }}>CRUISE (40%)</Text>
-                    </View>
-                    {/* Front zone — headlights */}
-                    <View style={{ flex: 3, backgroundColor: '#FFF5E0', justifyContent: 'center', alignItems: 'center' }}>
-                      <Text allowFontScaling={false} style={{ color: '#333', fontSize: 9, fontWeight: '800' }}>HEAD (30%)</Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Status Bar */}
-                <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent', paddingVertical: Spacing.xxs, marginBottom: Spacing.md }}>
-                  <Text
-                    allowFontScaling={false}
-                    style={{
-                      color: (motionState === 'HARD_BRAKING' || motionState === 'STOPPED') ? '#FF4444' : motionState === 'SLOWING_DOWN' ? '#FFD700' : '#00FF00',
-                      fontSize: 14, fontWeight: '900', letterSpacing: 4
-                    }}>
-                    {motionState === 'STOPPED' && '>> STOPPED <<'}
-                    {motionState === 'HARD_BRAKING' && '>> HARD BRAKING <<'}
-                    {motionState === 'SLOWING_DOWN' && '>> DECELERATING <<'}
-                    {motionState === 'ACCELERATING' && '>> ACCELERATING <<'}
-                    {motionState === 'CRUISING' && '>> CRUISING <<'}
-                  </Text>
-                </View>
-
-                <View style={{
-                  flexGrow: 1,
-                  flexDirection: 'row',
-                  backgroundColor: 'transparent',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  paddingVertical: Spacing.md,
-                  marginBottom: Spacing.sm,
-                }}>
-                  {/* LEFT: Stoplight Vertical Graphic */}
-                  <View style={{
-                    width: 50,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}>
-                    {/* Red Light */}
-                    <View style={{
-                      width: 22, height: 22, borderRadius: 11, marginBottom: Spacing.sm,
-                      backgroundColor: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? '#FF0000' : '#330000',
-                      shadowColor: '#FF0000', shadowOpacity: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? 1 : 0, shadowRadius: 10, elevation: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? 8 : 0,
-                      borderWidth: 1, borderColor: (motionState === 'STOPPED' || motionState === 'HARD_BRAKING') ? '#FFAAAA' : '#000',
-                    }} />
-                    {/* Yellow Light */}
-                    <View style={{
-                      width: 22, height: 22, borderRadius: 11, marginBottom: Spacing.sm,
-                      backgroundColor: motionState === 'SLOWING_DOWN' ? '#FFFF00' : '#444400',
-                      shadowColor: '#FFFF00', shadowOpacity: motionState === 'SLOWING_DOWN' ? 1 : 0, shadowRadius: 10, elevation: motionState === 'SLOWING_DOWN' ? 8 : 0,
-                      borderWidth: 1, borderColor: motionState === 'SLOWING_DOWN' ? '#FFFFAA' : '#000',
-                    }} />
-                    {/* Green Light */}
-                    <View style={{
-                      width: 22, height: 22, borderRadius: 11,
-                      backgroundColor: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? '#00FF00' : '#003300',
-                      shadowColor: '#00FF00', shadowOpacity: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? 1 : 0, shadowRadius: 10, elevation: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? 8 : 0,
-                      borderWidth: 1, borderColor: (motionState === 'ACCELERATING' || motionState === 'CRUISING') ? '#AAFFAA' : '#000',
-                    }} />
-                  </View>
-
-                  {/* CENTER: Telemetry Gauges */}
-                  <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
-                    <AnalogGauge value={gpsSpeed} min={0} max={25} label="SPEED" unit="MPH" size={gaugeSize} defaultColor="#00F0FF" dangerVal={15} criticalVal={20} />
-                    <AnalogGauge value={peakGForce} min={0.3} max={2.5} label="G-FORCE" unit="G" size={gaugeSize} defaultColor="#FFD700" dangerVal={1.2} criticalVal={1.8} />
-                  </View>
-                  
-                  {/* BOTTOM: Global Telemetry + Session Controls */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, marginTop: Spacing.md, marginBottom: Spacing.sm, alignItems: 'center' }}>
-                    <View>
-                      <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '700', letterSpacing: 0.5 }}>
-                        TOP SPEED: <Text style={{ color: '#00F0FF', fontWeight: '800' }}>{crewService.sessionTelemetry.topSpeedMph.toFixed(1)} MPH</Text>
-                      </Text>
-                      <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '700', letterSpacing: 0.5, marginTop: Spacing.xxs }}>
-                        DISTANCE: <Text style={{ color: '#00F0FF', fontWeight: '800' }}>{crewService.sessionTelemetry.distanceMiles.toFixed(2)} MI</Text>
-                      </Text>
-                    </View>
-
-                    {/* START / STOP SESSION BUTTON */}
-                    <TouchableOpacity
-                      onPress={() => {
-                        if (!sessionActive) {
-                          startSession();
-                        } else {
-                          stopSessionRecording();
-                        }
-                      }}
-                      activeOpacity={0.85}
-                      style={{
-                        flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-                        paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
-                        borderRadius: 20,
-                        backgroundColor: sessionActive ? '#FF3D00' : '#00C853',
-                        shadowColor: sessionActive ? '#FF3D00' : '#00C853',
-                        shadowOpacity: 0.5, shadowRadius: 8, elevation: 6,
-                      }}
-                    >
-                      <MaterialCommunityIcons
-                        name={sessionActive ? 'stop-circle' : 'play-circle'}
-                        size={18}
-                        color="#FFF"
-                      />
-                      <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 13, letterSpacing: 0.5 }}>
-                        {sessionActive ? 'SAVE' : 'RECORD'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </ScrollView>
+              <StreetPanel
+                isStreetBraking={isStreetBraking}
+                motionState={motionState}
+                gpsSpeed={gpsSpeed}
+                peakGForce={peakGForce}
+                streetCruiseColor={streetCruiseColor}
+                sessionActive={sessionActive}
+                startSession={startSession}
+                stopSessionRecording={stopSessionRecording}
+                Colors={Colors}
+              />
             )}
 
           </View>
