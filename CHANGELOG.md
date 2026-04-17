@@ -1,3 +1,12 @@
+## [1.8.10] - 2026-04-17
+
+### 🔧 Maintenance
+- style(theme): enforce tokenized 8pt spacing grid app-wide via codemod
+- chore(database): audit RLS performance and seal telemetry access vectors
+- docs(bucket-list): sweep backlog, clean tasks, and sync core 8pt grid metrics
+
+---
+
 ## [1.8.9] - 2026-04-17
 
 ### ✨ Features
