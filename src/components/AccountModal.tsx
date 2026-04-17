@@ -507,7 +507,7 @@ export default function AccountModal({
         {!!crewError && <Text style={styles.errorText}>{crewError}</Text>}
         <TouchableOpacity style={[styles.primaryBtn, crewLoading && { opacity: 0.6 }]}
           onPress={handleCreateCrew} disabled={crewLoading}>
-          {crewLoading ? <ActivityIndicator color="#000" /> : <Text style={styles.primaryBtnText}>Create CREWZ</Text>}
+          {crewLoading ? <ActivityIndicator color="#000" /> : <Text style={styles.primaryBtnText}>Create CREW</Text>}
         </TouchableOpacity>
       </View>
     );
@@ -520,7 +520,7 @@ export default function AccountModal({
         </TouchableOpacity>
         <Text style={styles.sectionHeader}>JOIN PRIVATE CREW</Text>
         <Text style={{ color: Colors.textMuted, fontSize: 12, marginBottom: Spacing.md, lineHeight: 17 }}>
-          Enter the 6-character invite code from a private crew. Public crews don't need a code — browse them from the Crew Hub.
+          Enter the 6-character invite code from a private CREW. Public CREWZ don't need a code — browse them from the CREWZ HUB.
         </Text>
         <Text style={styles.label}>PRIVATE INVITE CODE</Text>
         <TextInput style={[styles.input, styles.codeInput]}
@@ -530,7 +530,7 @@ export default function AccountModal({
         {!!crewError && <Text style={styles.errorText}>{crewError}</Text>}
         <TouchableOpacity style={[styles.primaryBtn, crewLoading && { opacity: 0.6 }]}
           onPress={handleJoinCrew} disabled={crewLoading}>
-          {crewLoading ? <ActivityIndicator color="#000" /> : <Text style={styles.primaryBtnText}>Join Private CREWZ</Text>}
+          {crewLoading ? <ActivityIndicator color="#000" /> : <Text style={styles.primaryBtnText}>Join Private CREW</Text>}
         </TouchableOpacity>
       </View>
     );
@@ -579,11 +579,11 @@ export default function AccountModal({
 
         <TouchableOpacity style={styles.primaryBtn} onPress={() => { setCrewStep('create'); setCrewError(''); }}>
           <MaterialCommunityIcons name="plus" size={18} color="#000" />
-          <Text style={styles.primaryBtnText}>Create a CREWZ</Text>
+          <Text style={styles.primaryBtnText}>Create a CREW</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.secondaryBtn} onPress={() => { setCrewStep('join'); setCrewError(''); }}>
           <MaterialCommunityIcons name="lock-outline" size={18} color={Colors.textMuted} />
-          <Text style={[styles.secondaryBtnText, { color: Colors.textMuted }]}>Join Private CREWZ (by Code)</Text>
+          <Text style={[styles.secondaryBtnText, { color: Colors.textMuted }]}>Join Private CREW (by Code)</Text>
         </TouchableOpacity>
         <View style={{ height: 20 }} />
       </ScrollView>

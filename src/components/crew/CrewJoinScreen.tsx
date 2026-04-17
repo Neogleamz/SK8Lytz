@@ -92,7 +92,7 @@ export function CrewJoinScreen() {
           <MaterialCommunityIcons name="chevron-left" size={22} color={Colors.textMuted} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
-        <Text style={styles.titleLarge}>Join a CREWZ</Text>
+        <Text style={styles.titleLarge}>Join a CREW</Text>
 
         <Text style={styles.label}>YOUR NAME IN CREW</Text>
         <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName}

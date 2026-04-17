@@ -49,7 +49,7 @@ const CrewHubSlab = React.memo(({
             color={isOfflineMode ? Colors.textMuted : '#FFAA00'}
           />
           <Text style={[styles.slabTitle, { color: isOfflineMode ? Colors.textMuted : '#FFAA00' }]}>
-            CREW HUB
+            CREWZ HUB
           </Text>
         </View>
         {!crewSession && !isOfflineMode && (

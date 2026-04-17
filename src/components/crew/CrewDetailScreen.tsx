@@ -231,7 +231,7 @@ export function CrewDetailScreen() {
           {crew.is_owner && editingCrewId !== crew.id && (
             <TouchableOpacity style={styles.editBtn} onPress={() => handleStartEdit(crew)}>
               <MaterialCommunityIcons name="pencil" size={17} color={Colors.primary} />
-              <Text style={styles.editBtnText}>Edit CREWZ Settings</Text>
+              <Text style={styles.editBtnText}>Edit CREW Settings</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -241,7 +241,7 @@ export function CrewDetailScreen() {
         {/* Inline edit form */}
         {crew.is_owner && editingCrewId === crew.id && (
           <View style={{ gap: Spacing.md, marginTop: Spacing.md }}>
-            <Text style={[styles.titleLarge, { marginBottom: Spacing.md }]}>Edit CREWZ Settings</Text>
+            <Text style={[styles.titleLarge, { marginBottom: Spacing.md }]}>Edit CREW Settings</Text>
             <Text style={styles.label}>CREW NAME</Text>
             <TextInput style={styles.input} value={editCrewName} onChangeText={setEditCrewName}
               placeholder="Crew name" placeholderTextColor={Colors.textMuted} maxLength={40} />
@@ -437,7 +437,7 @@ export function CrewDetailScreen() {
             ) : (
               <TouchableOpacity style={styles.dangerBtn} onPress={() => setConfirmingDeleteCrewId(crew.id)}>
                 <MaterialCommunityIcons name="delete-forever" size={17} color="#FF4444" />
-                <Text style={styles.dangerBtnText}>Delete CREWZ</Text>
+                <Text style={styles.dangerBtnText}>Delete CREW</Text>
               </TouchableOpacity>
             )
             : confirmingLeaveCrewId === crew.id ? (
@@ -453,7 +453,7 @@ export function CrewDetailScreen() {
             ) : (
               <TouchableOpacity style={styles.dangerBtn} onPress={() => setConfirmingLeaveCrewId(crew.id)}>
                 <MaterialCommunityIcons name="exit-run" size={17} color="#FF6B00" />
-                <Text style={[styles.dangerBtnText, { color: '#FF6B00' }]}>Leave CREWZ</Text>
+                <Text style={[styles.dangerBtnText, { color: '#FF6B00' }]}>Leave CREW</Text>
               </TouchableOpacity>
             )}
       </ScrollView>

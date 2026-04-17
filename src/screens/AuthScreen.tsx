@@ -577,7 +577,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
             activeOpacity={0.7}
           >
             <Text style={styles.offlineButtonText}>📵 Continue Offline</Text>
-            <Text style={styles.offlineButtonSub}>No account needed. Cloud Sync, Crew Hub, Live Sessions, SK8Lytz Picks, and Global Presets will be disabled.</Text>
+            <Text style={styles.offlineButtonSub}>No account needed. Cloud Sync, CREWZ HUB, Live Sessions, SK8Lytz Picks, and Global Presets will be disabled.</Text>
             
             {/* Remember Checkbox inside button */}
             <TouchableOpacity
