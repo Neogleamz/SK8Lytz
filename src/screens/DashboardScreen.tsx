@@ -613,24 +613,26 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
    * with live discovered BLE configs.
    */
   const renderItem = useCallback(({ item }: { item: RegisteredDevice | any }) => {
-    const cachedConfig = deviceConfigs?.[item.id || item.device_mac] || {};
+    // IDENTITY FIX: Always resolve to BLE MAC address for all lookups.
+    // RegisteredDevice.id is a Supabase composite key (MAC+userId) — NOT usable
+    // as a deviceConfigs/powerStates key. Only device_mac or BLE device.id (which IS the MAC) works.
+    const mac = (item.device_mac || item.id || '').toLowerCase();
+    const cachedConfig = deviceConfigs?.[mac] || {};
     const mergedItem = { ...item, ...cachedConfig };
 
     return (
     <View style={{ paddingHorizontal: Layout.padding }}>
       <DeviceItem
         device={mergedItem}
-        isConnected={displayConnectedDevices.some(d => d.id === item.id)}
+        isConnected={displayConnectedDevices.some(d => d.id.toLowerCase() === mac)}
         isSelectionMode={isSelectionMode}
-        isSelected={selectedIds.includes(item.id)}
+        isSelected={selectedIds.includes(mac)}
         onPress={async () => {
           if (isSelectionMode) {
-            toggleDeviceSelection(item.id);
+            toggleDeviceSelection(mac);
             return;
           }
-          // RegisteredDevice.id is a DB composite key, NOT a BLE peripheral id.
-          // Resolve the live BLE peripheral by MAC before calling connectToDevice.
-          const mac = (item.device_mac || item.id || '').toLowerCase();
+          // Resolve the live BLE peripheral by MAC.
           const bleDevice = allDevices.find(
             (d: any) => (d.id || '').toLowerCase() === mac
           );
@@ -641,26 +643,27 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             scanForPeripherals();
             return;
           }
-          const fw = await connectToDevice(bleDevice);
-          if (fw) {
-            setDeviceConfigs((prev: any) => {
-                const next = { ...prev, [item.id]: { ...(prev?.[item.id] || {}), firmware: fw } };
-                AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(next)).catch(() => {});
-                return next;
-            });
-          }
+          // CRITICAL: Use connectToDevices (plural) to prevent group-wipe.
+          // The singular connectToDevice REPLACES the connected array, nuking other group members.
+          await connectToDevices([bleDevice]);
+          // Store firmware under MAC key — same key used by probe/0x63 responses.
+          setDeviceConfigs((prev: any) => {
+              const next = { ...prev, [mac]: { ...(prev?.[mac] || {}) } };
+              AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(next)).catch(() => {});
+              return next;
+          });
           writeToDevice(ZenggeProtocol.queryHardwareSettings(false), bleDevice.id);
         }}
         onLongPress={() => {
           openSettings(mergedItem);
         }}
         showGroupIcon={false}
-        isPoweredOn={powerStates[item.id] ?? true}
-        onPowerToggle={() => handlePowerToggle([item.id])}
+        isPoweredOn={powerStates[mac] ?? true}
+        onPowerToggle={() => handlePowerToggle([mac])}
       />
     </View>
     ); // close return
-  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs, allDevices, connectToDevice, scanForPeripherals, writeToDevice]);
+  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs, allDevices, connectToDevices, scanForPeripherals, writeToDevice]);
 
   const mappedRegisteredDevicesForModal = useMemo(() => registeredDevices.map((d) => ({
     id: d.id || '',
@@ -797,7 +800,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   userProfile={userProfile}
                   onGroupPress={(group: CustomGroup) => {
                     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id));
-                    if (devicesToConnect.length > 0) connectToDevices(devicesToConnect);
+                    if (devicesToConnect.length > 0) {
+                      connectToDevices(devicesToConnect);
+                    } else {
+                      // No BLE devices discovered yet — trigger scan and inform user
+                      AppLogger.log('BLE_STATE_CHANGE', { event: 'group_tap_no_ble_devices', groupId: group.id, expectedMacs: group.deviceIds });
+                      scanForPeripherals();
+                      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
+                    }
                   }}
                   onGroupLongPress={(id: string) => openGroupRename(id)}
                   onSetupWizard={() => setViewState('SETUP_WIZARD')}
