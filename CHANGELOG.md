@@ -1,3 +1,10 @@
+## [1.8.16] - 2026-04-17
+
+### ✨ Features
+- feat(schema): add is_featured column to skate_spots schema and harvester pipeline
+
+---
+
 ## [1.8.15] - 2026-04-17
 
 ### ✨ Features
