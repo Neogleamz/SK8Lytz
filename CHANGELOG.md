@@ -1,3 +1,10 @@
+## [1.8.12] - 2026-04-17
+
+### 🐛 Bug Fixes
+- fix(voice): resolve null reference on launch and harden cleanup handler
+
+---
+
 ## [1.8.11] - 2026-04-17
 
 ### ✨ Features
