@@ -48,7 +48,8 @@ yarn-error.*
 *.log.*
 
 # Zengge APK extraction artifacts (local analysis only)
-ZENGGE*
+ZENGGE_APK/
+!src/protocols/ZenggeAdapter.ts
 !src/protocols/ZenggeProtocol.ts
 app_strings.txt
 en_strings.txt

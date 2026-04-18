@@ -26,6 +26,9 @@ The main repo directory (`C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`) is the **master 
 cd C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz
 git pull origin master
 git worktree add ../SK8Lytz-worktrees/<slug> -b <slug>
+# **Worktree Manifest Audit (MANDATORY)**:
+# Copy untracked config files (.env) and ignored source files (e.g. ZenggeAdapter.ts) manually.
+Copy-Item .env ../SK8Lytz-worktrees/<slug>/.env -ErrorAction SilentlyContinue
 # Then do ALL work inside the worktree directory:
 cd C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\<slug>
 ```
