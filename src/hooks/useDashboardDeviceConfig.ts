@@ -55,6 +55,8 @@ export function useDashboardDeviceConfig({
   const saveSettings = async (settings: DeviceSettings): Promise<void> => {
     if (!selectedDeviceForSettings) return;
 
+    const targetMac = (selectedDeviceForSettings.device_mac || selectedDeviceForSettings.id).toUpperCase();
+
     // ── Group-ID resolution ────────────────────────────────────────────────
     let finalGroupId = settings.groupId;
 
@@ -69,7 +71,7 @@ export function useDashboardDeviceConfig({
     }
 
     // ── Registration SSOT sync ─────────────────────────────────────────────
-    const rd = registeredDevices.find(r => r.device_mac === selectedDeviceForSettings.id);
+    const rd = registeredDevices.find(r => r.device_mac?.toUpperCase() === targetMac);
     if (rd) {
       const targetGroupName = settings.grouped
         ? (settings.groupName || rd.group_name)
@@ -84,8 +86,9 @@ export function useDashboardDeviceConfig({
 
     // ── Optimistic device-list update ──────────────────────────────────────
     setAllDevices((prev: any[]) => {
-      const next = prev.map(d =>
-        d.id === selectedDeviceForSettings.id
+      const next = prev.map(d => {
+        const dMac = (d.device_mac || d.id).toUpperCase();
+        return dMac === targetMac
           ? {
               ...d,
               name:      settings.name,
@@ -97,7 +100,7 @@ export function useDashboardDeviceConfig({
               groupId:   finalGroupId,
             }
           : d
-      );
+      });
       allDevicesRef.current = next as any;
       return next;
     });
@@ -108,11 +111,11 @@ export function useDashboardDeviceConfig({
     try {
       const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
       const configs = stored ? JSON.parse(stored) : {};
-      configs[selectedDeviceForSettings.id] = { ...settings, groupId: finalGroupId };
+      configs[targetMac] = { ...settings, groupId: finalGroupId };
       await AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs));
 
       AppLogger.log('HARDWARE_CONFIG_CHANGED', {
-        deviceId:  selectedDeviceForSettings.id,
+        deviceId:  targetMac,
         name:      settings.name,
         type:      settings.type,
         points:    settings.points,
@@ -125,7 +128,7 @@ export function useDashboardDeviceConfig({
       const previousName = selectedDeviceForSettings.name;
       if (settings.name && settings.name !== previousName) {
         AppLogger.log('DEVICE_RENAMED', {
-          deviceId: selectedDeviceForSettings.id,
+          deviceId: targetMac,
           oldName:  previousName || 'Unknown',
           newName:  settings.name,
         });

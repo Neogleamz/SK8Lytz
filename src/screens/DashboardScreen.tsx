@@ -849,19 +849,24 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           onClose={() => setIsSettingsVisible(false)}
           onSave={saveSettings}
           writeToDevice={writeToDevice}
-          initialSettings={{
-            name: selectedDeviceForSettings?.name || LOCAL_PRODUCT_CATALOG[0].displayName,
-            // Catalog-driven: resolve from stored points rather than name-string heuristic.
-            type: getLocalProfileByPoints((selectedDeviceForSettings as any)?.points ?? 0).id,
-            points: deviceConfigs[selectedDeviceForSettings?.id || '']?.points || (selectedDeviceForSettings as any)?.points || getLocalProfileByPoints((selectedDeviceForSettings as any)?.points ?? 0).defaultLedPoints,
-            segments: deviceConfigs[selectedDeviceForSettings?.id || '']?.segments || (selectedDeviceForSettings as any)?.segments || getLocalProfileByPoints((selectedDeviceForSettings as any)?.points ?? 0).defaultSegments,
-            stripType: deviceConfigs[selectedDeviceForSettings?.id || '']?.stripType || (selectedDeviceForSettings as any)?.stripType || 'WS2812B',
-            sorting: deviceConfigs[selectedDeviceForSettings?.id || '']?.sorting || (selectedDeviceForSettings as any)?.sorting || 'GRB',
-            grouped: !!deviceConfigs[selectedDeviceForSettings?.id || '']?.groupId || (selectedDeviceForSettings as any)?.grouped || false,
-            groupId: deviceConfigs[selectedDeviceForSettings?.id || '']?.groupId || (selectedDeviceForSettings as any)?.groupId,
-            groupName: customGroups.find(g => g.id === (deviceConfigs[selectedDeviceForSettings?.id || '']?.groupId || (selectedDeviceForSettings as any)?.groupId))?.name || getDefaultGroupName((selectedDeviceForSettings as any)?.product_type || (selectedDeviceForSettings as any)?.type),
-            firmware: deviceConfigs[selectedDeviceForSettings?.id || '']?.firmware || (selectedDeviceForSettings as any)?.firmware || ((selectedDeviceForSettings as any)?.id?.startsWith('sim-') ? 'v2.0.1.DEMO' : 'Unknown')
-          }}
+          initialSettings={(() => {
+            const sDef = selectedDeviceForSettings as any;
+            const targetMac = (sDef?.device_mac || sDef?.id || '').toUpperCase();
+            const dCfg = deviceConfigs[targetMac] || {};
+            return {
+              name: selectedDeviceForSettings?.name || LOCAL_PRODUCT_CATALOG[0].displayName,
+              // Catalog-driven: resolve from stored points rather than name-string heuristic.
+              type: getLocalProfileByPoints(sDef?.points ?? 0).id,
+              points: dCfg?.points || sDef?.points || getLocalProfileByPoints(sDef?.points ?? 0).defaultLedPoints,
+              segments: dCfg?.segments || sDef?.segments || getLocalProfileByPoints(sDef?.points ?? 0).defaultSegments,
+              stripType: dCfg?.stripType || sDef?.stripType || 'WS2812B',
+              sorting: dCfg?.sorting || sDef?.sorting || 'GRB',
+              grouped: !!dCfg?.groupId || sDef?.grouped || false,
+              groupId: dCfg?.groupId || sDef?.groupId,
+              groupName: customGroups.find(g => g.id === (dCfg?.groupId || sDef?.groupId))?.name || getDefaultGroupName(sDef?.product_type || sDef?.type),
+              firmware: dCfg?.firmware || sDef?.firmware || (sDef?.id?.startsWith('sim-') ? 'v2.0.1.DEMO' : 'Unknown')
+            };
+          })()}
           groups={customGroups}
         />
         <GroupSettingsModal
