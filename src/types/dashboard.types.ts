@@ -37,10 +37,11 @@ export interface DeviceSettings {
   name: string;
   /** Widened from 'HALOZ' | 'SOULZ' to support all catalog product types (e.g. RAILZ). */
   type: string;
-  points: number;
-  segments: number;
-  stripType: string;
-  sorting: string;
+  provenance?: 'PROBED' | 'MANUALLY_CONFIGURED' | 'UNCONFIGURED';
+  points?: number;
+  segments?: number;
+  stripType?: string;
+  sorting?: string;
   grouped: boolean;
   groupId?: string;
   groupName?: string;
@@ -52,6 +53,8 @@ export interface DeviceSettings {
    * defaults or BLE probe results unless the probe returns a strictly higher timestamp.
    */
   userConfiguredAt?: string;
+  rfMode?: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED';
+  rfRemotes?: string[];
 }
 
 

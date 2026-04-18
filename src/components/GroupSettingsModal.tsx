@@ -50,16 +50,29 @@ export default function GroupSettingsModal({ isVisible, onClose, onSave, onDelet
           />
           <Text style={[Typography.caption, { color: Colors.textMuted, marginBottom: Spacing.sm }]}>Devices in Group ({selectedIds.length})</Text>
           <ScrollView style={styles.deviceList}>
-            {allDevices.map(d => {
+            {allDevices.length === 0 ? (
+              <View style={{ padding: Spacing.md, alignItems: 'center' }}>
+                <Text style={{ color: Colors.textMuted, fontSize: 13 }}>No registered devices found</Text>
+              </View>
+            ) : allDevices.map(d => {
                const isSelected = selectedIds.includes(d.id);
                return (
                   <TouchableOpacity key={d.id} onPress={() => toggleDevice(d.id)} style={[styles.deviceRow, isSelected && styles.deviceRowSelected]}>
-                     <Text style={{ color: Colors.text }}>{d.name}</Text>
+                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                       {/* Connection indicator — green = in BLE range, dim = offline */}
+                       <View style={{
+                         width: 7, height: 7, borderRadius: 4,
+                         backgroundColor: d.connected ? '#00e887' : Colors.textMuted,
+                         opacity: d.connected ? 1 : 0.4,
+                       }} />
+                       <Text style={{ color: Colors.text, flex: 1 }}>{d.name}</Text>
+                     </View>
                      <View style={[styles.checkbox, isSelected && styles.checkboxSelected]} />
                   </TouchableOpacity>
                );
             })}
           </ScrollView>
+
 
           {onDelete && (
              <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>

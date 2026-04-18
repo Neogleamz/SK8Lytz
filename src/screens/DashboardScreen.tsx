@@ -864,14 +864,19 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             const sDef = selectedDeviceForSettings as any;
             const targetMac = (sDef?.device_mac || sDef?.id || '').toUpperCase();
             const dCfg = deviceConfigs[targetMac] || {};
+            
+            const hasProbeData = (sDef?.points > 0 && sDef?.stripType !== 'UNKNOWN' && sDef?.stripType);
+            const hasManualData = !!dCfg?.userConfiguredAt;
+            const provenance = hasManualData ? 'MANUALLY_CONFIGURED' : (hasProbeData ? 'PROBED' : 'UNCONFIGURED');
+
             return {
               name: selectedDeviceForSettings?.name || LOCAL_PRODUCT_CATALOG[0].displayName,
-              // Catalog-driven: resolve from stored points rather than name-string heuristic.
               type: getLocalProfileByPoints(sDef?.points ?? 0).id,
-              points: dCfg?.points || sDef?.points || getLocalProfileByPoints(sDef?.points ?? 0).defaultLedPoints,
-              segments: dCfg?.segments || sDef?.segments || getLocalProfileByPoints(sDef?.points ?? 0).defaultSegments,
-              stripType: dCfg?.stripType || sDef?.stripType || 'WS2812B',
-              sorting: dCfg?.sorting || sDef?.sorting || 'GRB',
+              provenance,
+              points: provenance === 'UNCONFIGURED' ? undefined : (dCfg?.points || sDef?.points),
+              segments: provenance === 'UNCONFIGURED' ? undefined : (dCfg?.segments || sDef?.segments),
+              stripType: provenance === 'UNCONFIGURED' ? undefined : (dCfg?.stripType || sDef?.stripType),
+              sorting: provenance === 'UNCONFIGURED' ? undefined : (dCfg?.sorting || sDef?.sorting),
               grouped: !!dCfg?.groupId || sDef?.grouped || false,
               groupId: dCfg?.groupId || sDef?.groupId,
               groupName: customGroups.find(g => g.id === (dCfg?.groupId || sDef?.groupId))?.name || getDefaultGroupName(sDef?.product_type || sDef?.type),
@@ -906,11 +911,17 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           onDelete={groupModalState === 'RENAME' && editingGroupId ? () => handleGroupDelete(editingGroupId) : undefined}
           initialName={groupModalState === 'RENAME' ? customGroups.find(g => g.id === editingGroupId)?.name : getDefaultGroupName()}
           initialDeviceIds={groupModalState === 'RENAME' ? customGroups.find(g => g.id === editingGroupId)?.deviceIds : selectedIds}
-          allDevices={allDevices.map(d => ({
-            ...d,
-            name: registeredDevices.find(rd => rd.device_mac.toUpperCase() === d.id.toUpperCase())?.device_name || d.name
+          allDevices={registeredDevices.map(rd => ({
+            // Use the registered fleet as the pool — NOT the BLE scan.
+            // BLE scan (allDevices) only has currently-connected/discovered devices.
+            // Group membership is a persistent concept that must survive being offline.
+            id: rd.device_mac.toUpperCase(),
+            name: rd.custom_name || rd.device_name || rd.device_mac,
+            // Show connection status as a hint — doesn't gate visibility
+            connected: allDevices.some(d => d.id.toUpperCase() === rd.device_mac.toUpperCase()),
           }))}
         />
+
       </View>
       
 

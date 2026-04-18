@@ -7,25 +7,13 @@ import { AppLogger } from '../services/AppLogger';
 import { Colors, Spacing, Typography } from '../theme/theme';
 import { getDefaultGroupName } from '../utils/NamingUtils';
 
-interface DeviceSettings {
-  name: string;
-  type: string;
-  points: number;
-  segments: number;
-  stripType: string;
-  sorting: string;
-  grouped: boolean;
-  groupId?: string;
-  groupName?: string;
-  firmware?: string;
-  rfMode?: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED';
-  rfRemotes?: string[];
-}
+import { DeviceSettings } from '../types/dashboard.types';
+
 
 interface DeviceSettingsModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onSave: (settings: DeviceSettings) => void;
+  onSave: (settings: DeviceSettings) => void | Promise<void>;
   initialSettings: DeviceSettings;
   groups?: any[];
   writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
@@ -51,14 +39,16 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
     initialSettings.name?.includes('Left') ? 'Left' : initialSettings.name?.includes('Right') ? 'Right' : null
   );
   const [customName, setCustomName] = useState<string | null>(null); // null = use auto-name
-  const [pointsText, setPointsText] = useState(initialSettings.points?.toString() || '43');
-  const [segmentsText, setSegmentsText] = useState(initialSettings.segments?.toString() || '1');
-  const [stripType, setStripType] = useState(initialSettings.stripType || 'WS2812B');
-  const [sorting, setSorting] = useState(initialSettings.sorting || 'GRB');
+  const [pointsText, setPointsText] = useState(initialSettings.points?.toString() || '');
+  const [segmentsText, setSegmentsText] = useState(initialSettings.segments?.toString() || '');
+  const [stripType, setStripType] = useState(initialSettings.stripType || null);
+  const [sorting, setSorting] = useState(initialSettings.sorting || null);
   const [rfMode, setRfMode] = useState<'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED'>(
     initialSettings.rfMode || 'ALLOW_PAIRED'
   );
   const [rfRemotes, setRfRemotes] = useState<string[]>(initialSettings.rfRemotes || []);
+  const [isProbing, setIsProbing] = useState(false);
+
 
   // Derived values
   const { deviceName: autoName, groupName: autoGroupName } = deriveNames(type, position);
@@ -76,14 +66,19 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
       JSON.stringify(initialSettings.rfRemotes) !== JSON.stringify(rfRemotes);
 
     if (hasChange) {
-      setPointsText(initialSettings.points?.toString() || pointsText);
-      setSegmentsText(initialSettings.segments?.toString() || segmentsText);
+      if (initialSettings.points) setPointsText(initialSettings.points.toString());
+      if (initialSettings.segments) setSegmentsText(initialSettings.segments.toString());
       if (initialSettings.sorting) setSorting(initialSettings.sorting);
       if (initialSettings.stripType) setStripType(initialSettings.stripType);
       if (initialSettings.rfMode) setRfMode(initialSettings.rfMode);
       if (initialSettings.rfRemotes) setRfRemotes(initialSettings.rfRemotes);
+      
+      // Data arrived, stop probing spinner
+      if (isProbing && initialSettings.provenance !== 'UNCONFIGURED') {
+        setIsProbing(false);
+      }
     }
-  }, [initialSettings.points, initialSettings.segments, initialSettings.sorting, initialSettings.stripType, initialSettings.rfMode, initialSettings.rfRemotes]);
+  }, [initialSettings.points, initialSettings.segments, initialSettings.sorting, initialSettings.stripType, initialSettings.rfMode, initialSettings.rfRemotes, initialSettings.provenance]);
 
   // Full reset when modal opens
   useEffect(() => {
@@ -92,12 +87,13 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
       setTypeState(initialSettings.type || 'SOULZ');
       setPosition(initialSettings.name?.includes('Left') ? 'Left' : initialSettings.name?.includes('Right') ? 'Right' : null);
       setCustomName(null); // reset to auto-name
-      setPointsText(initialSettings.points?.toString() || '43');
-      setSegmentsText(initialSettings.segments?.toString() || '1');
-      setStripType(initialSettings.stripType || 'WS2812B');
-      setSorting(initialSettings.sorting || 'GRB');
+      setPointsText(initialSettings.points?.toString() || '');
+      setSegmentsText(initialSettings.segments?.toString() || '');
+      setStripType(initialSettings.stripType || null);
+      setSorting(initialSettings.sorting || null);
       setRfMode(initialSettings.rfMode || 'ALLOW_PAIRED');
       setRfRemotes(initialSettings.rfRemotes || []);
+      setIsProbing(false);
     }
   }, [isVisible]);
 
@@ -112,8 +108,11 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
   };
 
   const handleSave = () => {
-    const finalPoints = parseInt(pointsText) || initialSettings.points || 43;
-    const finalSegments = parseInt(segmentsText) || initialSettings.segments || 1;
+    // Only use fallbacks if the user explicitly saves before probe/manual config. Otherwise save what they type.
+    const finalPoints = parseInt(pointsText) || 43;
+    const finalSegments = parseInt(segmentsText) || 1;
+    const finalStripType = stripType || 'WS2812B';
+    const finalSorting = sorting || 'GRB';
 
     // Find existing group by auto-name, or flag for creation
     const existingGroup = groups?.find(g => g.name === autoGroupName);
@@ -123,8 +122,8 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
       type,
       points: finalPoints,
       segments: finalSegments,
-      stripType,
-      sorting,
+      stripType: finalStripType,
+      sorting: finalSorting,
       grouped: true,
       groupId: existingGroup?.id,    // undefined = will be created by saveSettings
       groupName: autoGroupName,
@@ -134,7 +133,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
     onSave(finalSettings);
 
     if (writeToDevice) {
-      writeToDevice(ZenggeProtocol.writeHardwareSettingsByName(finalPoints, finalSegments, stripType, sorting));
+      writeToDevice(ZenggeProtocol.writeHardwareSettingsByName(finalPoints, finalSegments, finalStripType, finalSorting));
     }
 
     onClose();
@@ -189,6 +188,24 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
     }
   };
 
+  const handleProbeHardware = () => {
+    if (writeToDevice) {
+      setIsProbing(true);
+      writeToDevice(ZenggeProtocol.queryHardwareSettings(false));
+      // Fallback timeout in case the device doesn't respond
+      setTimeout(() => {
+        setIsProbing(prev => {
+          if (prev) {
+             Alert.alert("Probe Timeout", "Device didn't respond to hardware query. Make sure it's nearby and connected.");
+             return false;
+          }
+          return prev;
+        });
+      }, 5000);
+    }
+  };
+
+
   return (
     <Modal visible={isVisible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -198,6 +215,39 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
             <TouchableOpacity onPress={onClose}>
               <Text style={{ color: Colors.textMuted, fontSize: 18 }}>✕</Text>
             </TouchableOpacity>
+          </View>
+
+          {/* PROVENANCE BANNER */}
+          <View style={[styles.provenanceBanner, 
+            initialSettings.provenance === 'UNCONFIGURED' ? styles.provenanceBannerUnconfigured :
+            initialSettings.provenance === 'MANUALLY_CONFIGURED' ? styles.provenanceBannerManual :
+            styles.provenanceBannerProbed
+          ]}>
+            <Text style={{ fontSize: 20, marginRight: 8 }}>
+              {initialSettings.provenance === 'UNCONFIGURED' ? '⚠️' : 
+               initialSettings.provenance === 'MANUALLY_CONFIGURED' ? '✏️' : '📡'}
+            </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: Colors.text, fontWeight: 'bold' }}>
+                {initialSettings.provenance === 'UNCONFIGURED' ? 'Hardware Not Configured' : 
+                 initialSettings.provenance === 'MANUALLY_CONFIGURED' ? 'Manually Configured' : 'BLE Probed Configuration'}
+              </Text>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 2 }}>
+                {initialSettings.provenance === 'UNCONFIGURED' ? 'Values below are blank until probed or set' : 
+                 initialSettings.provenance === 'MANUALLY_CONFIGURED' ? 'Saved by user' : 'Detected automatically over BLE'}
+              </Text>
+            </View>
+            {initialSettings.provenance === 'UNCONFIGURED' && writeToDevice && (
+               <TouchableOpacity 
+                  style={[styles.probeBtn, isProbing && { opacity: 0.5 }]} 
+                  onPress={handleProbeHardware}
+                  disabled={isProbing}
+               >
+                 <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>
+                   {isProbing ? 'Probing...' : 'PROBE'}
+                 </Text>
+               </TouchableOpacity>
+            )}
           </View>
 
           <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
@@ -261,12 +311,28 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
             {/* POINTS + SEGMENTS */}
             <View style={styles.row}>
               <View style={[styles.inputGroup, { flex: 1, marginRight: Spacing.sm }]}>
-                <Text style={styles.label}>LED Points</Text>
-                <TextInput style={styles.input} value={pointsText} onChangeText={setPointsText} keyboardType="numeric" placeholder="43" placeholderTextColor="#444" />
+                <Text style={styles.label}>Total LEDs</Text>
+                <TextInput 
+                  style={styles.input} 
+                  value={pointsText} 
+                  onChangeText={t => setPointsText(t.replace(/[^0-9]/g, ''))} 
+                  keyboardType="number-pad" 
+                  placeholder="e.g. 43" 
+                  placeholderTextColor={Colors.textMuted} 
+                  maxLength={4} 
+                />
               </View>
               <View style={[styles.inputGroup, { flex: 1, marginLeft: Spacing.sm }]}>
                 <Text style={styles.label}>Segments</Text>
-                <TextInput style={styles.input} value={segmentsText} onChangeText={setSegmentsText} keyboardType="numeric" placeholder="1" placeholderTextColor="#444" />
+                <TextInput 
+                  style={styles.input} 
+                  value={segmentsText} 
+                  onChangeText={t => setSegmentsText(t.replace(/[^0-9]/g, ''))} 
+                  keyboardType="number-pad" 
+                  placeholder="e.g. 1" 
+                  placeholderTextColor={Colors.textMuted} 
+                  maxLength={2} 
+                />
               </View>
             </View>
 
@@ -455,4 +521,31 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,61,113,0.35)',
     backgroundColor: 'rgba(255,61,113,0.06)',
   },
+  provenanceBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.md,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  provenanceBannerUnconfigured: {
+    backgroundColor: 'rgba(255, 179, 64, 0.1)',
+    borderColor: 'rgba(255, 179, 64, 0.3)',
+  },
+  provenanceBannerManual: {
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderColor: 'rgba(0, 122, 255, 0.3)',
+  },
+  provenanceBannerProbed: {
+    backgroundColor: 'rgba(0, 232, 135, 0.1)',
+    borderColor: 'rgba(0, 232, 135, 0.3)',
+  },
+  probeBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+  }
 });
