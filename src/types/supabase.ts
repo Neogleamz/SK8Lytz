@@ -1882,6 +1882,9 @@ export type Database = {
           updated_at: string
           user_id: string
           username: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          is_banned: boolean
+          ban_reason: string | null
         }
         Insert: {
           accepted_eula_version?: number | null
@@ -1894,6 +1897,9 @@ export type Database = {
           updated_at?: string
           user_id: string
           username?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          is_banned?: boolean
+          ban_reason?: string | null
         }
         Update: {
           accepted_eula_version?: number | null
@@ -1906,6 +1912,9 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          is_banned?: boolean
+          ban_reason?: string | null
         }
         Relationships: []
       }
@@ -1969,6 +1978,22 @@ export type Database = {
       }
     }
     Functions: {
+      admin_ban_user: {
+        Args: { p_target_user_id: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_revoke_ban: {
+        Args: { p_target_user_id: string }
+        Returns: undefined
+      }
+      admin_force_password_reset: {
+        Args: { p_target_user_id: string }
+        Returns: undefined
+      }
+      admin_soft_delete_user: {
+        Args: { p_target_user_id: string }
+        Returns: undefined
+      }
       get_email_by_username: { Args: { p_username: string }; Returns: string }
       get_nearby_push_tokens: {
         Args: { p_max_tokens?: number; p_session_id: string }
@@ -1984,6 +2009,7 @@ export type Database = {
       increment_scene_upvote: { Args: { scene_id: string }; Returns: undefined }
     }
     Enums: {
+      user_role: "user" | "moderator" | "admin"
       skate_spot_surface:
         | "wood"
         | "concrete"
@@ -2118,6 +2144,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      user_role: ["user", "moderator", "admin"],
       skate_spot_surface: [
         "wood",
         "concrete",

@@ -11,12 +11,13 @@ export interface AdminTabProps extends TabProps {
   setIsPicksSchedulerVisible: (v: boolean) => void;
   setIsProductManagerVisible: (v: boolean) => void;
   setIsAppManagerVisible: (v: boolean) => void;
+  setIsUserManagementVisible: (v: boolean) => void;
   setIsDaemonMonitorVisible: (v: boolean) => void;
 }
 
 export const AdminTab = React.memo(({ 
   onOpenProgrammer, onOpenLab, setIsPicksSchedulerVisible, 
-  setIsProductManagerVisible, setIsAppManagerVisible, setIsDaemonMonitorVisible,
+  setIsProductManagerVisible, setIsAppManagerVisible, setIsDaemonMonitorVisible, setIsUserManagementVisible,
   textMuted, textPrimary, cardBg, borderColor 
 }: AdminTabProps) => {
   return (
@@ -43,6 +44,15 @@ export const AdminTab = React.memo(({
         <View style={{ marginLeft: Spacing.md }}>
           <Text style={{ color: textPrimary, fontWeight: '700' }}>App Manager</Text>
           <Text style={{ color: textMuted, fontSize: 12 }}>Master governance and policy compliance</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => setIsUserManagementVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center', marginTop: Spacing.md }]}>
+        <MaterialCommunityIcons name="account-group-outline" size={24} color="#00E676" />
+        <View style={{ marginLeft: Spacing.md }}>
+          <Text style={{ color: textPrimary, fontWeight: '700' }}>User Management</Text>
+          <Text style={{ color: textMuted, fontSize: 12 }}>Ban, lockout, or supervise users</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
       </TouchableOpacity>
