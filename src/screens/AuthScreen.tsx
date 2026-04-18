@@ -561,87 +561,83 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
           </View>
         </View>
 
-      </View>
+        {/* BOTTOM ACTIONS (Flex Native) */}
+        <View style={{ marginTop: 'auto', alignItems: 'center', paddingTop: Spacing.xl, paddingBottom: Math.max(insets.bottom, Spacing.md) }}>
+          {/* Offline mode option */}
+          {mode !== 'FORGOT_PASSWORD' && onOfflineMode && (
+            <View style={{ alignItems: 'center' }}>
+              <TouchableOpacity
+                onPress={async () => {
+                  if (rememberOffline) {
+                    await AsyncStorage.setItem(STORAGE_OFFLINE_SKIP, 'true');
+                  }
+                  onOfflineMode();
+                }}
+                style={styles.offlineButton}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.offlineButtonText}>📵 Continue Offline</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={() => setRememberOffline(v => !v)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.sm, paddingVertical: Spacing.xs }}
+                activeOpacity={0.7}
+              >
+                <View style={[
+                  styles.checkbox,
+                  rememberOffline && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                ]}>
+                  {rememberOffline && <MaterialCommunityIcons name="check" size={12} color="#000" />}
+                </View>
+                <Text style={{ color: Colors.textMuted, fontSize: 12 }}>Remember offline choice</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-      {/* DOCKED BOTTOM ACTIONS */}
-      <View style={styles.bottomDock}>
-        {/* Offline mode option */}
-        {mode !== 'FORGOT_PASSWORD' && onOfflineMode && (
-          <TouchableOpacity
-            onPress={async () => {
-              if (rememberOffline) {
-                await AsyncStorage.setItem(STORAGE_OFFLINE_SKIP, 'true');
-              }
-              onOfflineMode();
-            }}
-            style={styles.offlineButton}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.offlineButtonText}>📵 Continue Offline</Text>
-            <Text style={styles.offlineButtonSub}>No account needed. Cloud Sync, CREWZ HUB, Live Sessions, SK8Lytz Picks, and Global Presets will be disabled.</Text>
-            
-            {/* Remember Checkbox inside button */}
+          {/* DEV MODE - Virtual Skates Bypass */}
+          {isSandboxEnabled && (mode === 'LOGIN') && onOfflineMode && (
             <TouchableOpacity
-              onPress={() => setRememberOffline(v => !v)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.md, paddingVertical: Spacing.xs }}
-              activeOpacity={0.7}
+              style={{ 
+                marginTop: Spacing.lg, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, 
+                borderWidth: 1, borderColor: 'rgba(0,240,255,0.4)', borderRadius: 12, 
+                backgroundColor: 'rgba(0,240,255,0.05)', alignItems: 'center',
+                flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm
+              }}
+              onPress={async () => {
+                await AsyncStorage.setItem('@Sk8lytz_demo_halo', 'true');
+                await AsyncStorage.setItem('@Sk8lytz_demo_soul', 'true');
+                onOfflineMode();
+              }}
             >
-              <View style={[
-                styles.checkbox,
-                rememberOffline && { backgroundColor: Colors.primary, borderColor: Colors.primary }
-              ]}>
-                {rememberOffline && <MaterialCommunityIcons name="check" size={12} color="#000" />}
-              </View>
-              <Text style={{ color: Colors.textMuted, fontSize: 13, fontWeight: 'bold' }}>Remember my choice</Text>
+              <MaterialCommunityIcons name="developer-board" size={16} color="#00f0ff" />
+              <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 13, letterSpacing: 1 }}>DEV MODE: VIRTUAL SKATES</Text>
             </TouchableOpacity>
-          </TouchableOpacity>
-        )}
+          )}
 
-        {/* DEV MODE - Virtual Skates Bypass */}
-        {isSandboxEnabled && (mode === 'LOGIN') && onOfflineMode && (
-          <TouchableOpacity
-            style={{ 
-              marginTop: Spacing.lg, marginHorizontal: Spacing.xl, paddingVertical: Spacing.md, 
-              borderWidth: 1, borderColor: 'rgba(0,240,255,0.4)', borderRadius: 12, 
-              backgroundColor: 'rgba(0,240,255,0.05)', alignItems: 'center',
-              flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm
-            }}
-            onPress={async () => {
-              // Enable the virtual skates flags in storage so the dashboard picks them up
-              await AsyncStorage.setItem('@Sk8lytz_demo_halo', 'true');
-              await AsyncStorage.setItem('@Sk8lytz_demo_soul', 'true');
-              // Bypass Auth
-              onOfflineMode();
-            }}
-          >
-            <MaterialCommunityIcons name="developer-board" size={16} color="#00f0ff" />
-            <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 13, letterSpacing: 1 }}>DEV MODE: VIRTUAL SKATES</Text>
-          </TouchableOpacity>
-        )}
+          {/* The Nuke Button */}
+          {isSandboxEnabled && (
+            <TouchableOpacity
+              style={{
+                marginTop: Spacing.md,
+                alignSelf: 'center',
+                backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                paddingVertical: Spacing.md,
+                paddingHorizontal: Spacing.xl,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: 'rgba(255, 0, 0, 0.4)'
+              }}
+              onPress={async () => {
+                await AsyncStorage.clear();
+                setErrorMessage('APP RESET: ALL DATA CLEARED. PLEASE RESTART APP.');
+              }}
+            >
+              <Text style={{ color: '#FF4444', fontWeight: 'bold', fontSize: 12 }}>☢️ NUKE APP CACHE</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
-
-
-        {/* The Nuke Button */}
-        {isSandboxEnabled && (
-          <TouchableOpacity
-            style={{
-              marginTop: Spacing.md,
-              alignSelf: 'center',
-              backgroundColor: 'rgba(255, 0, 0, 0.1)',
-              paddingVertical: Spacing.md,
-              paddingHorizontal: Spacing.xl,
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 0, 0, 0.4)'
-            }}
-            onPress={async () => {
-              await AsyncStorage.clear();
-              setErrorMessage('APP RESET: ALL DATA CLEARED. PLEASE RESTART APP.');
-            }}
-          >
-            <Text style={{ color: '#FF4444', fontWeight: 'bold', fontSize: 12 }}>☢️ NUKE APP CACHE</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {showEulaModal && (
@@ -665,15 +661,6 @@ const createStyles = (Colors: ThemePalette, insets: { top: number; bottom: numbe
     paddingHorizontal: Spacing.xl,
     paddingTop: Math.max(insets.top + 60, 80),
     paddingBottom: Spacing.xl,
-  },
-  bottomDock: {
-    width: '100%',
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.surfaceHighlight,
-    paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.lg,
-    paddingBottom: Math.max(insets.bottom + 16, 24),
   },
   topButtons: {
     position: 'absolute', top: Math.max(insets.top + 10, 20), right: 16,
@@ -777,13 +764,12 @@ const createStyles = (Colors: ThemePalette, insets: { top: number; bottom: numbe
   offlineButton: {
     alignSelf: 'center',
     alignItems: 'center',
-    width: '50%',
     paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
     borderRadius: Layout.borderRadius,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
-  offlineButtonText: { color: Colors.textMuted, fontSize: 12, fontWeight: '600', marginBottom: Spacing.xxs },
-  offlineButtonSub: { color: Colors.textMuted, fontSize: 9, opacity: 0.7, textAlign: 'center' },
+  offlineButtonText: { color: Colors.textMuted, fontSize: 13, fontWeight: '600' },
 });
