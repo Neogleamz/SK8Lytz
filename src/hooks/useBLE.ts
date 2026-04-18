@@ -299,33 +299,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
             (error: any, characteristic: any) => handleNotificationRef.current(error, characteristic, conn.id)
           );
 
-          let firmware = undefined;
-          try {
-            const fwChar = await conn.readCharacteristicForService(
-              '0000180a-0000-1000-8000-00805f9b34fb',
-              '00002a26-0000-1000-8000-00805f9b34fb'
-            );
-            if (fwChar && fwChar.value) {
-              const rawFw = Buffer.from(fwChar.value, 'base64').toString('ascii');
-              firmware = rawFw.replace(/[^\x20-\x7E]/g, '');
-            }
-          } catch (e) { AppLogger.warn('[BLE] Failed to read firmware characteristic', { deviceId: conn.id, error: String(e) }); }
-
-          AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name, firmware });
-
-          // FIX: Strictly sequence the 600ms latency before sending the 0x63 query
-          await new Promise(resolve => setTimeout(resolve, 600));
-
-          try {
-            const qp = ZenggeProtocol.queryHardwareSettings(false);
-            const b64 = Buffer.from(qp).toString('base64');
-            await conn.writeCharacteristicWithoutResponseForService(
-              ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
-            );
-          } catch (e: any) {}
-
-          // FIX: Mandatory 250ms buffer to allow Android OS to settle before next connection
-          await new Promise(resolve => setTimeout(resolve, 250));
+          AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name });
 
           // FIX: Add to React state ONLY AFTER GATT is fully booted to block the UI from blasting animation payloads during MTU queries
           setConnectedDevices(prev => {
