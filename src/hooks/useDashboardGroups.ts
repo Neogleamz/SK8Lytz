@@ -12,8 +12,9 @@
  *
  * Depends on: AsyncStorage, useRegistration (via options), custom types
  */
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import { AppLogger } from '../services/AppLogger';
@@ -41,6 +42,7 @@ interface UseDashboardGroupsOptions {
   setAllDevices: (updater: (prev: any[]) => any[]) => void;
   /** Ref that mirrors allDevices for stale-closure-safe access inside callbacks. */
   allDevicesRef: React.MutableRefObject<any[]>;
+  deregisterDevice: (mac: string) => Promise<void>;
 }
 
 export interface UseDashboardGroupsResult {
@@ -87,6 +89,7 @@ export function useDashboardGroups({
   getAllScannedDevices,
   setAllDevices,
   allDevicesRef,
+  deregisterDevice,
 }: UseDashboardGroupsOptions): UseDashboardGroupsResult {
 
   // ─── Group state (derived from useRegistration, kept as display SSOT) ─────
@@ -398,20 +401,47 @@ export function useDashboardGroups({
   // ─── Group CRUD: save and delete handlers ───────────────────────────────────
 
   /**
-   * Deletes a custom group: moves all its registered devices back to the
-   * default fleet and scrubs their group config from AsyncStorage.
+   * Prompts the user: Forget Group Only or Deregister Hardware?
    */
   const handleGroupDelete = async (id: string): Promise<void> => {
     const groupToDelete = customGroups.find(g => g.id === id);
     if (!groupToDelete) { closeGroupModal(); return; }
 
-    const devsToDelete = registeredDevices.filter(d => d.group_id === id);
-    for (const d of devsToDelete) {
-      await saveRegisteredDevice({
-        ...d, group_id: 'default-fleet', group_name: '', is_pending_sync: true,
-      });
-    }
+    Alert.alert(
+      "Delete Group",
+      "Do you want to just forget the group organization, or permanently deregister the physical hardware inside it?",
+      [
+        { text: "Cancel", style: "cancel", onPress: () => closeGroupModal() },
+        { 
+          text: "Forget Group Only", 
+          onPress: async () => {
+            const devsToDelete = registeredDevices.filter(d => d.group_id === id);
+            for (const d of devsToDelete) {
+              await saveRegisteredDevice({
+                ...d, group_id: 'default-fleet', group_name: '', is_pending_sync: true,
+              });
+            }
+            await _scrubGhostGroupFromLocal(groupToDelete);
+            _purgeGroupFromState(id);
+          }
+        },
+        {
+          text: "Deregister Hardware",
+          style: "destructive",
+          onPress: async () => {
+            const devsToDelete = registeredDevices.filter(d => d.group_id === id);
+            for (const d of devsToDelete) {
+              await deregisterDevice(d.device_mac);
+            }
+            await _scrubGhostGroupFromLocal(groupToDelete);
+            _purgeGroupFromState(id);
+          }
+        }
+      ]
+    );
+  };
 
+  const _scrubGhostGroupFromLocal = async (groupToDelete: CustomGroup) => {
     if (groupToDelete.deviceIds) {
       try {
         const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
@@ -435,12 +465,13 @@ export function useDashboardGroups({
         AppLogger.warn('Failed to scrub ghost group from device configs', { error: String(e) });
       }
     }
+  };
 
+  const _purgeGroupFromState = (id: string) => {
     // Permanently remove the group from state and storage
     const updatedGroups = customGroupsRef.current.filter(g => g.id !== id);
     setCustomGroups(updatedGroups);
     AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
-
     closeGroupModal();
   };
 

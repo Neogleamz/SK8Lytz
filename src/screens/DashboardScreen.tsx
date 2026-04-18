@@ -190,6 +190,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     getAllScannedDevices: () => allDevicesRef.current,
     setAllDevices,
     allDevicesRef,
+    deregisterDevice,
     onRegistrationComplete: () => {
       setViewState('DASHBOARD');
       wizardCheckedRef.current = false;
