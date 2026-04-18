@@ -43,6 +43,21 @@ async function seed() {
       else if (surface.includes('concrete')) surface = 'concrete';
       else if (surface.includes('asphalt')) surface = 'asphalt';
 
+      const has_lights = tags.lit === 'yes';
+      const has_fee = tags.fee === 'yes';
+      const has_rental = tags['skates:rental'] === 'yes';
+      const is_wheelchair_accessible = tags.wheelchair === 'yes';
+      const has_wifi = tags.internet_access === 'wlan' || tags.internet_access === 'yes';
+      const has_toilets = tags.toilets === 'yes';
+      const operator_name = tags.operator || null;
+      const operator_description = tags.description || null;
+
+      const has_food = tags.food === 'yes' || tags.snack_bar === 'yes' || tags.fast_food === 'yes';
+      const has_ac = tags.air_conditioning === 'yes';
+      const has_lockers = tags.lockers === 'yes';
+      const capacity = tags.capacity ? parseInt(tags.capacity, 10) : null;
+      const hosts_derby = tags.roller_derby === 'yes' || (tags.club && tags.club.includes('derby')) || null;
+
       return {
         id: el.id,
         name,
@@ -53,7 +68,20 @@ async function seed() {
         zip,
         phone,
         surface_type: surface,
-        is_indoor: indoor
+        is_indoor: indoor,
+        has_lights,
+        has_fee,
+        has_rental,
+        is_wheelchair_accessible,
+        has_wifi,
+        has_toilets,
+        operator_name,
+        operator_description,
+        has_food,
+        has_ac,
+        has_lockers,
+        capacity,
+        hosts_derby
       };
     }).filter((s: any) => s.name !== 'Unknown Skate Spot');
 

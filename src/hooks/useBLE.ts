@@ -274,12 +274,40 @@ export default function useBLE(): BluetoothLowEnergyApi {
       scanner.stopScanner();
 
       for (const device of devices) {
+        let conn: any = null;
+        let lastErr: any = null;
+        
+        // FIX: The GATT 133 Retry Bumper
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            const isConnected = await bleManager.isDeviceConnected(device.id);
+            conn = isConnected 
+              ? device 
+              : await bleManager.connectToDevice(device.id);
+            break; // Connection acquired
+          } catch (e: any) {
+            lastErr = e;
+            if (String(e).includes('133')) {
+              AppLogger.warn(`[BLE] GATT 133 congestion linking ${device.id}. Attempt ${attempt}/2...`);
+              await new Promise(resolve => setTimeout(resolve, 200));
+            } else {
+              break; // Hard fault, don't retry
+            }
+          }
+        }
+
+        if (!conn) {
+          AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${device.id}`, lastErr);
+          AppLogger.log('BLE_CONNECTION_ERROR', { error: lastErr?.message || String(lastErr), deviceId: device.id, context: 'group_sync_fail' });
+          continue;
+        }
+
         try {
-          const isConnected = await bleManager.isDeviceConnected(device.id);
-          const conn = isConnected 
-            ? device 
-            : await bleManager.connectToDevice(device.id);
-            
+          // FIX: Escalate Android connection interval to 'High' (~11.25ms) to beat RF interference
+          if (Platform.OS === 'android') {
+            await bleManager.requestConnectionPriorityForDevice(conn.id, 1).catch(() => {});
+          }
+
           await conn.discoverAllServicesAndCharacteristics();
 
           try {
