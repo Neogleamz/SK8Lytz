@@ -96,3 +96,6 @@ tools/SK8Lytz_Bucket_List.md
 # Scraper caches (generated, local only)
 tools/scraper/nominatim_cache.json
 tools/scraper/state_caches/
+
+# Plan files (archived/local only)
+docs/plans/
