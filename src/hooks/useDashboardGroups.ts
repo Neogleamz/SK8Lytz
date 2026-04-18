@@ -98,7 +98,8 @@ export function useDashboardGroups({
   const customGroupsRef = useRef<CustomGroup[]>([]);
   useEffect(() => { customGroupsRef.current = customGroups; }, [customGroups]);
 
-  // Derive groups from registeredDevices whenever cloud sync updates them
+  // Derive groups from registeredDevices whenever cloud sync updates them.
+  // INVARIANT: deviceIds always contains UPPERCASE MACs — matching BLE d.id.toUpperCase().
   useEffect(() => {
     const groupMap: Record<string, CustomGroup> = {};
     registeredDevices.forEach(rd => {
@@ -106,8 +107,9 @@ export function useDashboardGroups({
         if (!groupMap[rd.group_id]) {
           groupMap[rd.group_id] = { id: rd.group_id, name: rd.group_name, isGroup: true, deviceIds: [] };
         }
-        if (!groupMap[rd.group_id].deviceIds.includes(rd.device_mac)) {
-          groupMap[rd.group_id].deviceIds.push(rd.device_mac);
+        const mac = rd.device_mac.toUpperCase();
+        if (!groupMap[rd.group_id].deviceIds.includes(mac)) {
+          groupMap[rd.group_id].deviceIds.push(mac);
         }
       }
     });
@@ -264,12 +266,12 @@ export function useDashboardGroups({
       pointsVal: number,
     ) => {
       const unprocessed = devicesToProcess.filter(d =>
-        !processed.includes(d.id) &&
-        !updatedGroups.some(g => g.deviceIds.includes(d.id))
+        !processed.includes(d.id.toUpperCase()) &&
+        !updatedGroups.some(g => g.deviceIds.includes(d.id.toUpperCase()))
       );
       if (unprocessed.length >= 2) {
-        const leftId = unprocessed[0].id;
-        const rightId = unprocessed[1].id;
+        const leftId = unprocessed[0].id.toUpperCase();
+        const rightId = unprocessed[1].id.toUpperCase();
         processed.push(leftId, rightId);
         didUpdateProcessed = true;
 

@@ -125,7 +125,9 @@ export function useRegistration() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const now = new Date().toISOString();
-      const deviceId = device.id || `${device.device_mac.replace(/:/g, '')}-${user?.id?.slice(0, 8) || 'offline'}`;
+      // INVARIANT: always normalize MAC to uppercase to prevent case-mismatch split-brain
+      const normalizedMac = device.device_mac.toUpperCase();
+      const deviceId = device.id || `${normalizedMac.replace(/:/g, '')}-${user?.id?.slice(0, 8) || 'offline'}`;
       const groupId = device.group_id || device.group_name?.toLowerCase().replace(/\s+/g, '-') || 'default-fleet';
       
       const fullDevice: RegisteredDevice = {
@@ -134,6 +136,7 @@ export function useRegistration() {
         group_name: device.group_name || 'Default Fleet',
         position: device.position || null,
         ...device,
+        device_mac: normalizedMac,
         id: deviceId,
         group_id: groupId,
         user_id: user?.id,
@@ -144,7 +147,7 @@ export function useRegistration() {
 
       // 1. Write local immediately (offline-safe)
       const current = await getLocalDevices();
-      const idx = current.findIndex(d => d.device_mac === device.device_mac);
+      const idx = current.findIndex(d => d.device_mac.toUpperCase() === normalizedMac);
       if (idx >= 0) current[idx] = fullDevice;
       else current.push(fullDevice);
       await AsyncStorage.setItem(LOCAL_KEY, JSON.stringify(current));

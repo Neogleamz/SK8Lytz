@@ -809,7 +809,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   powerStates={powerStates}
                   userProfile={userProfile}
                   onGroupPress={(group: CustomGroup) => {
-                    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id));
+                    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
                     if (devicesToConnect.length > 0) {
                       connectToDevices(devicesToConnect);
                     } else {

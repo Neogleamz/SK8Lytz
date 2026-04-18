@@ -73,9 +73,10 @@ export function useBLEScanner({
       const pos = i % 2 === 0 ? 'Left' : 'Right';
       const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === type) || LOCAL_PRODUCT_CATALOG[0];
 
-      const deviceIdShort = d.id.replace(/:/g, '').slice(-4);
+      const normalizedMac = d.id.toUpperCase();
+      const deviceIdShort = normalizedMac.replace(/:/g, '').slice(-4);
       return {
-        device_mac:   d.id,
+        device_mac:   normalizedMac,
         device_name:  `SK8Lytz-${deviceIdShort}`,
         factory_name: d.name || 'Unknown',
         manufacturer_data: d.manufacturerData,
