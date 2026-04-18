@@ -116,8 +116,14 @@ export function useDashboardDeviceConfig({
     try {
       const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
       const configs = stored ? JSON.parse(stored) : {};
-      configs[targetMac] = { ...settings, groupId: finalGroupId };
+      // USER-EXPLICIT SAVE: stamp with current timestamp so this config has
+      // the highest priority in the local/cloud merge arbitration.
+      // The userConfiguredAt field prevents cloud sync from ever overwriting
+      // these settings unless the user explicitly saves again.
+      const userConfiguredAt = new Date().toISOString();
+      configs[targetMac] = { ...settings, groupId: finalGroupId, userConfiguredAt };
       await AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs));
+
 
       AppLogger.log('HARDWARE_CONFIG_CHANGED', {
         deviceId:  targetMac,

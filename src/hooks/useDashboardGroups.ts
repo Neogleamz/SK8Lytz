@@ -120,28 +120,38 @@ export function useDashboardGroups({
         }
 
         // Identify truthy values from the cloud that should replace missing or stale local state.
-        // We strictly require points/segments > 0 to prevent cloud defaults (0) from wiping valid cache.
-        const canSyncPoints = rd.led_points !== undefined && rd.led_points > 0 && rd.led_points !== existing.points;
-        const canSyncSegments = rd.segments !== undefined && rd.segments > 0 && rd.segments !== existing.segments;
-        const canSyncSorting = rd.color_sorting && rd.color_sorting !== 'UNKNOWN' && rd.color_sorting !== existing.sorting;
-        const canSyncStrip = rd.ic_type && rd.ic_type !== 'UNKNOWN' && rd.ic_type !== existing.stripType;
-        const canSyncName = rd.device_name && rd.device_name !== existing.name;
+        // LOCAL WINS rule: if local has an explicit userConfiguredAt stamp, hardware fields are
+        // protected from cloud overwrite regardless of what Supabase returns.
+        // We also strictly require points/segments > 0 to prevent cloud defaults (0) from wiping valid cache.
+        const existing = nextConfigs[mac] || {} as DeviceSettings;
+        const localIsUserConfigured = !!existing.userConfiguredAt;
+
+        const canSyncPoints = !localIsUserConfigured && rd.led_points !== undefined && rd.led_points > 0 && rd.led_points !== existing.points;
+        const canSyncSegments = !localIsUserConfigured && rd.segments !== undefined && rd.segments > 0 && rd.segments !== existing.segments;
+        const canSyncSorting = !localIsUserConfigured && !!rd.color_sorting && rd.color_sorting !== 'UNKNOWN' && rd.color_sorting !== existing.sorting;
+        const canSyncStrip = !localIsUserConfigured && !!rd.ic_type && rd.ic_type !== 'UNKNOWN' && rd.ic_type !== existing.stripType;
+        // Name and group metadata always sync from cloud (cross-device authoritative state)
+        const canSyncName = !!rd.device_name && rd.device_name !== existing.name;
+        const canSyncGroup = rd.group_id && rd.group_id !== 'default-fleet' && rd.group_id !== existing.groupId;
 
         // Sync hardware profile settings into deviceConfigs ONLY if cloud has newer/valid data
-        if (canSyncPoints || canSyncSegments || canSyncSorting || canSyncStrip || canSyncName) {
+        if (canSyncPoints || canSyncSegments || canSyncSorting || canSyncStrip || canSyncName || canSyncGroup) {
           nextConfigs[mac] = {
             ...existing,
-            points: canSyncPoints ? rd.led_points! : existing.points,
-            segments: canSyncSegments ? rd.segments! : existing.segments,
-            sorting: canSyncSorting ? rd.color_sorting! : existing.sorting,
-            stripType: canSyncStrip ? rd.ic_type! : existing.stripType,
-            name: canSyncName ? rd.device_name! : existing.name,
-            groupId: rd.group_id && rd.group_id !== 'default-fleet' ? rd.group_id : existing.groupId,
-            groupName: rd.group_name || existing.groupName,
-            grouped: !!(rd.group_id && rd.group_id !== 'default-fleet')
+            points:    canSyncPoints    ? rd.led_points!    : existing.points,
+            segments:  canSyncSegments  ? rd.segments!      : existing.segments,
+            sorting:   canSyncSorting   ? rd.color_sorting! : existing.sorting,
+            stripType: canSyncStrip     ? rd.ic_type!       : existing.stripType,
+            name:      canSyncName      ? rd.device_name!   : existing.name,
+            groupId:   canSyncGroup     ? rd.group_id!      : existing.groupId,
+            groupName: rd.group_name    || existing.groupName,
+            grouped:   !!(rd.group_id && rd.group_id !== 'default-fleet'),
+            // Preserve the userConfiguredAt stamp — never erase it via cloud sync
+            userConfiguredAt: existing.userConfiguredAt,
           };
           configsChanged = true;
         }
+
       });
 
       if (configsChanged) {

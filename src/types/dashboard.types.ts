@@ -46,7 +46,14 @@ export interface DeviceSettings {
   groupName?: string;
   /** Firmware version string as reported by the device — e.g. 'v2.0.1' or 'Unknown'. */
   firmware?: string;
+  /**
+   * ISO timestamp of the last explicit user-initiated Save in the Settings Modal.
+   * When present, this config has USER priority and must not be overwritten by cloud
+   * defaults or BLE probe results unless the probe returns a strictly higher timestamp.
+   */
+  userConfiguredAt?: string;
 }
+
 
 export interface CustomGroup {
   id: string;

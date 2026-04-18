@@ -99,18 +99,53 @@ export function useRegistration() {
       if (error) throw error;
       if (!data) return;
 
-      // Cast via `as RegisteredDevice` — Supabase Row type infers a precise shape
-      // that doesn't fully overlap with RegisteredDevice's optional fields at compile time,
-      // but the data contract is guaranteed by the schema.
-      const devices: RegisteredDevice[] = data.map((row: Record<string, any>) => ({
-        ...row,
-        is_pending_sync: false,
-      } as RegisteredDevice));
+      // ── LOCAL-FIRST SMART MERGE ───────────────────────────────────────────────
+      // RULE: Local hardware config (points, segments, ic_type, sorting) wins over
+      // cloud when the local record has valid non-zero/non-UNKNOWN data.
+      // This protects offline sessions and user-configured settings from being
+      // silently overwritten by stale/zeroed cloud records on reconnect.
+      // Cloud wins ONLY for metadata: group membership, device name, user_id.
+      const localRaw = await AsyncStorage.getItem(LOCAL_KEY);
+      const localDevices: RegisteredDevice[] = localRaw ? JSON.parse(localRaw) : [];
 
-      setRegisteredDevices(devices);
-      await AsyncStorage.setItem(LOCAL_KEY, JSON.stringify(devices));
+      const merged: RegisteredDevice[] = data.map((row: Record<string, any>) => {
+        const cloud = { ...row, is_pending_sync: false } as RegisteredDevice;
+        const local = localDevices.find(
+          l => l.device_mac.toUpperCase() === cloud.device_mac.toUpperCase()
+        );
 
-      // Flush any offline-queued registrations
+        // No local record — accept cloud as-is (fresh install path)
+        if (!local) return cloud;
+
+        // If local has a pending_sync flag it means we have unsaved local changes
+        // — don't let cloud overwrite hardware fields until flush completes
+        const localHasPendingChanges = !!local.is_pending_sync;
+        const localHasValidPoints    = (local.led_points ?? 0) > 0;
+        const localHasValidSegments  = (local.segments ?? 0) > 0;
+        const localHasValidIcType    = local.ic_type && local.ic_type !== 'UNKNOWN' && local.ic_type !== 'WS2812B';
+        const localHasValidSorting   = local.color_sorting && local.color_sorting !== 'UNKNOWN';
+
+        return {
+          ...cloud,
+          // Hardware specs: local wins when it has valid data or pending changes
+          led_points:    (localHasPendingChanges || localHasValidPoints)    ? local.led_points    : cloud.led_points,
+          segments:      (localHasPendingChanges || localHasValidSegments)  ? local.segments      : cloud.segments,
+          ic_type:       (localHasPendingChanges || localHasValidIcType)    ? local.ic_type       : cloud.ic_type,
+          color_sorting: (localHasPendingChanges || localHasValidSorting)   ? local.color_sorting : cloud.color_sorting,
+          // Metadata: cloud is authoritative (reflects cross-device group changes)
+          group_id:      cloud.group_id,
+          group_name:    cloud.group_name,
+          device_name:   cloud.device_name || local.device_name,
+          // Keep pending_sync false now that we've merged — flush will set it
+          is_pending_sync: localHasPendingChanges,
+        };
+      });
+
+      setRegisteredDevices(merged);
+      await AsyncStorage.setItem(LOCAL_KEY, JSON.stringify(merged));
+
+      // Flush any offline-queued registrations AFTER updating local state
+      // so the UI reflects merged local first, then cloud reflects the flush
       await flushPendingSync(user.id);
     } catch (e) {
       AppLogger.warn('[Registration] Cloud sync failed (offline?):', e);
@@ -170,6 +205,17 @@ export function useRegistration() {
             AppLogger.warn('[Registration] Could not establish group FK pre-flight:', fkError);
           }
 
+          // ── SPREAD-IF-VALID: Only include hardware fields when they carry real data ──
+          // Using `|| 0` or `|| 'WS2812B'` defaults was overwriting valid Supabase rows
+          // with zeroed/unknown sentinel values every time the device was saved without
+          // a freshly probed hardware config attached. This permanently corrupted the DB.
+          // By omitting the key when value is zero/unknown, the upsert preserves the
+          // existing column value in the DB (partial-update semantics via ON CONFLICT DO UPDATE).
+          const validPoints   = fullDevice.led_points && fullDevice.led_points > 0   ? fullDevice.led_points   : undefined;
+          const validSegments = fullDevice.segments   && fullDevice.segments   > 0   ? fullDevice.segments     : undefined;
+          const validIcType   = fullDevice.ic_type    && fullDevice.ic_type !== 'UNKNOWN' ? fullDevice.ic_type : undefined;
+          const validSorting  = fullDevice.color_sorting && fullDevice.color_sorting !== 'UNKNOWN' ? fullDevice.color_sorting : undefined;
+
           const dbRow = {
             device_mac:      fullDevice.device_mac,
             device_name:     fullDevice.device_name,
@@ -178,23 +224,21 @@ export function useRegistration() {
             group_name:      fullDevice.group_name,
             group_id:        fullDevice.group_id,
             custom_name:     fullDevice.device_name,
-            points:          fullDevice.led_points || 0,
-            led_points:      fullDevice.led_points,
-            segments:        fullDevice.segments || 1,
-            ic_type:         fullDevice.ic_type,
-            strip_type:      fullDevice.ic_type || 'WS2812B',
-            color_sorting:   fullDevice.color_sorting,
-            sorting:         fullDevice.color_sorting || 'GRB',
+            user_id:         user.id,
+            id:              fullDevice.id || deviceId,
+            updated_at:      now,
+            registered_at:   fullDevice.registered_at,
             rssi_at_register: fullDevice.rssi_at_register,
             firmware_ver:    fullDevice.firmware_ver,
             led_version:     fullDevice.led_version,
             product_id:      fullDevice.product_id,
             rf_mode:         fullDevice.rf_mode,
             rf_paired_count: fullDevice.rf_paired_count,
-            user_id:         user.id,
-            id:              fullDevice.id || deviceId,
-            updated_at:      now,
-            registered_at:   fullDevice.registered_at,
+            // Hardware fields: only included when they have real values
+            ...(validPoints   !== undefined ? { points: validPoints,   led_points: validPoints }   : {}),
+            ...(validSegments !== undefined ? { segments: validSegments }                           : {}),
+            ...(validIcType   !== undefined ? { ic_type: validIcType,  strip_type: validIcType }   : {}),
+            ...(validSorting  !== undefined ? { color_sorting: validSorting, sorting: validSorting } : {}),
           };
 
           // Cast as `any` — dbRow contains valid DB columns (points, strip_type) that exist
