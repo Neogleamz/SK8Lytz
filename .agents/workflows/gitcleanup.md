@@ -1,4 +1,5 @@
 ---
+description: Repository Cleanup
 trigger: always_on
 ---
 

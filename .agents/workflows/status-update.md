@@ -1,4 +1,5 @@
 ---
+description: Status Update Workflow Rule
 trigger: always_on
 ---
 
