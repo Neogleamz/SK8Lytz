@@ -1,3 +1,29 @@
+## [1.8.19] - 2026-04-17
+
+### ✨ Features
+- feat(hardware): option to delete hardware on dashboard and enforce MAC uniqueness
+- feat(permissions): architect universal routing to Global Permissions Onboarding UI
+
+### 🐛 Bug Fixes
+- fix(ble): isolate probing to setup wizard and remove diagnostic probe alerts
+- fix(hardware): remove legacy group migration to prevent case-sensitive recursive ghost injection
+- fix(hardware): normalize all device MACs to uppercase — single device identity invariant
+- fix(hardware): eliminate split-brain duplicate groups on setup completion
+- fix(groups): sync account-manager renaming with dashboard ui cache
+- fix(groups): sync account-manager device grouping cache with dashboard deletes
+
+### 🔧 Maintenance
+- chore(db): add nuclear option script to completely flush all devices and groups database-wide
+- chore: major repository cleanup
+
+---
+
+## [1.8.18] - 2026-04-17
+- AppLogger telemetry hardening
+- DockedController diet phase 2
+
+---
+
 ## [1.8.17] - 2026-04-17
 
 ### 🔧 BLE Pipeline Overhaul (`fix/ble-pipeline-overhaul`)
