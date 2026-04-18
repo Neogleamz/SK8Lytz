@@ -11,7 +11,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { ZENGGE_CHARACTERISTIC_UUID, ZENGGE_NOTIFY_UUID, ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
@@ -160,15 +160,12 @@ export default function useBLE(): BluetoothLowEnergyApi {
       await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
       
       const hwConfig = await new Promise<any>((resolve) => {
-        let attempts = 0;
-        let pingInterval: ReturnType<typeof setInterval>;
-        let timeoutTimer: ReturnType<typeof setTimeout>;
-
-        const cleanup = () => {
-          clearInterval(pingInterval);
-          clearTimeout(timeoutTimer);
+        const timer = setTimeout(() => {
           sub.remove();
-        };
+          AppLogger.warn(`[BLE Probe Single] Probe timed out for ${mac} after 3500ms`);
+          Alert.alert('Probe Timeout', `No hardware telemetry received from ${mac} within 3500ms.`);
+          resolve(null);
+        }, 3500);
 
         const sub = bleManager.monitorCharacteristicForDevice(
           mac,
@@ -184,44 +181,28 @@ export default function useBLE(): BluetoothLowEnergyApi {
               const raw = Array.from(Buffer.from(char.value, 'base64')) as number[];
               const parsed = ZenggeProtocol.parseHardwareSettingsResponse(raw);
               if (parsed) {
-                cleanup();
-                AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_success', deviceId: mac, attempts: attempts + 1 });
+                clearTimeout(timer);
+                sub.remove();
+                AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_success', deviceId: mac });
                 resolve(parsed);
               }
             } catch (e) { /* ignore */ }
           }
         );
 
-        // Send the initial ping + up to 2 retries (total 3 attempts) spaced by 1200ms
-        const sendPing = () => {
-          if (attempts >= 3) return;
+        setTimeout(() => {
           const qp = ZenggeProtocol.queryHardwareSettings(false);
           const b64 = Buffer.from(qp).toString('base64');
           bleManager.writeCharacteristicWithoutResponseForDevice(
             mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
-          ).catch((e: any) => AppLogger.warn('[BLE Probe] query write failed', { deviceId: mac, error: String(e) }));
-          attempts++;
-        };
-
-        // 1. Send first ping after settling time
-        setTimeout(() => {
-          sendPing();
-          // 2. Schedule up to 2 more retries every 1200ms if no response
-          pingInterval = setInterval(sendPing, 1200);
+          ).catch((e: any) => AppLogger.warn('[BLE Probe Single] query write failed', { error: String(e) }));
         }, 600);
-
-        // 3. Absolute ceiling: 600ms start + (3 attempts * 1200ms space) = 4200ms max.
-        // We set hard abort at 4500ms
-        timeoutTimer = setTimeout(() => {
-          cleanup();
-          AppLogger.warn(`[BLE Probe Single] Probe timed out for ${mac} after ${attempts} attempts`);
-          resolve(null);
-        }, 4500);
       });
 
       return hwConfig;
     } catch (err: any) {
       AppLogger.warn(`[BLE Probe Single] Failed to probe ${mac}:`, { error: String(err) });
+      Alert.alert('Probe Error', `Hardware probe failed for ${mac}: ${String(err)}`);
       return null;
     } finally {
       await bleManager.cancelDeviceConnection(mac).catch(() => {});

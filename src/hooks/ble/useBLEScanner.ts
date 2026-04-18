@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
 import { useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { LOCAL_PRODUCT_CATALOG, getLocalProfileByPoints } from '../../constants/ProductCatalog';
 import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
@@ -160,6 +160,7 @@ export function useBLEScanner({
         } else {
           // If hwConfig is null, the 0x63 ping timed out entirely after all retries.
           AppLogger.warn(`[BLE Scanner] Device ${device.id} silently failed to yield telemetry`);
+          Alert.alert("Probe Failed", `Failed to identify ${device.id}. Check logs.`);
           failedIds.push(device.id);
         }
         
