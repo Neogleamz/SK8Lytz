@@ -1,3 +1,7 @@
+---
+description: Orchestrate the comprehensive release pipeline enforcing the Test Before Merge strategy
+---
+
 # Ship It Orchestrator -- "/ship-it"
 
 When invoked via `/ship-it`, you must act as a strict state machine orchestrating the comprehensive release pipeline. This pipeline enforces the "Test Before Merge" strategy, guaranteeing that the `master` branch is only updated with hardware-verified builds.

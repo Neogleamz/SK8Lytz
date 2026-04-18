@@ -1,4 +1,5 @@
 ---
+description: The Midnight Oil Protocol (Wind Down Workflow)
 trigger: always_on
 ---
 

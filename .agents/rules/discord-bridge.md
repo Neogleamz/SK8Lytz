@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Discord Bridge Operational Rule
 
 To maintain real-time visibility into the agent's active workflow, you must proactively broadcast your status via the Discord Webhook bridge.
