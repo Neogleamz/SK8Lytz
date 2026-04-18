@@ -186,10 +186,10 @@ All byte definitions below represent the inner payload _before_ the V2 BLE packe
 > React Native BLE PLX and the Android native `BluetoothAdapter` suffer from extreme race conditions. To avoid GATT 133 exceptions, UI freezes, and buffer overflows, all logic must follow these architectural constraints:
 
 1. **Global Connection Gate (`bleGateRef`):** A `useRef` semaphore with states `IDLE | SCANNING | CONNECTING | DISCONNECTING | RECOVERING`. ALL BLE operations must check/acquire the gate before touching the radio. Only one operation class at a time.
-2. **Strict Sequential Teardowns (`GATT 133` Prevention):** Teardowns MUST be strictly awaited sequentially, followed by a soft ~250ms buffer.
-3. **Additive Connection Only (`connectToDevices`):** The singular `connectToDevice` is DELETED. All connections go through `connectToDevices(devices[])` which APPENDS to the connected array without wiping existing members.
-4. **Hard Connection Timeouts (Infinite Freeze Prevention):** Connect logic MUST include explicit timeouts (5000ms).
-5. **Per-Device MTU Tracking (`mtuMapRef`):** MTU values are cached per-device MAC in a Map, not a shared ref.
+2. **Parallel Writes and Teardowns (`Promise.all`):** Previous sequential constraints caused massive UI lag. Group-wide commands (sliders) and teardowns (`cancelDeviceConnection`) MUST be wrapped in `Promise.all` loops to eliminate staggered latency.
+3. **The GATT 133 Retry Bumper:** `connectToDevice` MUST be wrapped in a 2-attempt retry loop that explicitly catches `133` routing errors and applies a 200ms thread-sleep before the second attempt to silently absorb Android RF congestion.
+4. **High-Priority Channel Escalation:** Upon resolving connection on Android, the `requestConnectionPriorityForDevice(conn.id, 1)` command must be instantly fired. This throttles the kernel polling interval to ~11.25ms to defend against crowded RF environments.
+5. **Lean Connection Loops:** `connectToDevices` strictly establishes MTU (request 512 bytes) and notification pipes. Do NOT execute 600ms latency buffers, firmware loads, or 0x63 hardware settings queries during the connection stack, as this artificially bloats the boot sequence by 2.5s per device.
 
 ### The Transport Wrapper (`wrapCommand`)
 
