@@ -78,8 +78,13 @@ export function useDashboardDeviceConfig({
         : undefined;
       saveRegisteredDevice({
         ...rd,
+        device_name: settings.name,
         group_id: finalGroupId,
         group_name: targetGroupName,
+        led_points: settings.points,
+        segments: settings.segments,
+        ic_type: settings.stripType,
+        color_sorting: settings.sorting,
         is_pending_sync: true,
       }).catch(AppLogger.warn);
     }
