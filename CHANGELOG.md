@@ -1,3 +1,20 @@
+## [1.9.0] - 2026-04-18
+
+### ✨ Features
+- feat(telemetry): implement robust dual-probe harvesting pipeline (0x63 Hardware Config + 0x2B RF Remote State)
+- feat(ui): deploy high-fidelity `HardwareStatusPills` component to Dashboard and Setup Wizard
+- feat(ui): optimize `AuthScreen` layout and significantly reduce the visual footprint of the offline mode controls
+
+### 🐛 Bug Fixes
+- fix(scanner): corrected product classification logic for HALOZ and SOULZ devices via flexible prefix matching
+- fix(onboarding): resolved telemetry persistence regression where hardware settings were overwritten by defaults during setup
+
+### 🔧 Maintenance & Infrastructure
+- chore(agents): restored global workflow registry with missing YAML frontmatter descriptions
+- chore(release): bumped Android `versionCode` to 19
+
+---
+
 ## [1.8.20] - 2026-04-18
 
 ### ✨ Features

@@ -3,7 +3,7 @@
     "name": "SK8Lytz",
     "slug": "sk8lytz",
     "scheme": "sk8lytz",
-    "version": "1.8.20",
+    "version": "1.9.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,6 +20,7 @@
       }
     },
     "android": {
+      "versionCode": 19,
       "predictiveBackGestureEnabled": false,
       "allowBackup": false,
       "permissions": [
