@@ -10,6 +10,7 @@ trigger: always_on
 **⛔ CRITICAL SAFETY RULE 4: Always anchor your progress: run `git add .` + `git commit` to create local checkpoints after every discrete file edit. Immediately after creating a confirmed checkpoint, you MUST explicitly ask the user for permission to push to the remote repository.**
 **⛔ CRITICAL SAFETY RULE 5: Keep `tools/SK8Lytz_Bucket_List.md` updated. It is now completely untracked locally (in .gitignore) to prevent branch drift. DO NOT try to stage or commit it via git.**
 **⛔ CRITICAL SAFETY RULE 6: NEVER run `git checkout -b`, `git checkout <branch>`, `git switch`, or ANY branch-changing command in the main repository directory (`C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`). The main directory MUST always stay on `master`. All feature work MUST use `git worktree` to create an isolated directory. See the Worktree Isolation Protocol below.**
+**⛔ CRITICAL SAFETY RULE 7: NEVER push code to the remote repository (i.e. 'release') without first explicitly executing the `/health-sweep` workflow to run the MCP Database Scanner and npm audit.**
 
 ### Worktree Isolation Protocol (Mandatory)
 
