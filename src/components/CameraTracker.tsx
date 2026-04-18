@@ -145,8 +145,11 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
           if (h < 0) h += 360;
         }
 
-        // Boost saturation safely by 0.2 (20%)
-        s = Math.min(1, s + 0.2);
+        // FORCE PURE HUE VIVIDNESS:
+        // By locking Saturation to 100% and Lightness to 50%, we discard shadows/lighting
+        // and extract pure, blazing colors optimized for physical LEDs.
+        s = 1.0;
+        l = 0.5;
 
         // Convert back to RGB
         const c = (1 - Math.abs(2 * l - 1)) * s;
@@ -208,35 +211,33 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
 
   return (
     <View style={styles.container}>
-      <View style={styles.cameraBox}>
-        <TouchableOpacity 
-          activeOpacity={1} 
-          onPress={handlePress}
-          style={{ flex: 1 }}
+      <TouchableOpacity 
+        activeOpacity={1} 
+        onPress={handlePress}
+        style={StyleSheet.absoluteFillObject}
+      >
+        <CameraView 
+          style={StyleSheet.absoluteFillObject} 
+          ref={cameraRef} 
+          facing="back"
+          onLayout={(e) => {
+            setLayout({
+              width: e.nativeEvent.layout.width,
+              height: e.nativeEvent.layout.height
+            });
+          }}
         >
-          <CameraView 
-            style={styles.camera} 
-            ref={cameraRef} 
-            facing="back"
-            onLayout={(e) => {
-              setLayout({
-                width: e.nativeEvent.layout.width,
-                height: e.nativeEvent.layout.height
-              });
-            }}
-          >
-             <View style={styles.instructionOverlay}>
-                <Text style={styles.instructionText}>
-                  {isProcessing ? 'Analyzing...' : 'Touch screen to pick color'}
-                </Text>
-             </View>
-          </CameraView>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.statusBox}>
-         <View style={[styles.swatch, { backgroundColor: detectedHex }]} />
-         <Text style={styles.hexText}>{detectedHex}</Text>
-      </View>
+           <View style={styles.instructionOverlay}>
+              <View style={styles.pillContainer}>
+                <View style={[styles.swatch, { backgroundColor: detectedHex }]} />
+                <Text style={styles.pillText}>{detectedHex}</Text>
+              </View>
+              <Text style={styles.instructionText}>
+                {isProcessing ? 'Analyzing light matrix...' : 'Touch anywhere to extract pure hue'}
+              </Text>
+           </View>
+        </CameraView>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -246,13 +247,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 200,
     backgroundColor: '#000',
-    borderRadius: 0,
-    marginTop: 0,
-    borderWidth: 0,
     overflow: 'hidden',
-    alignItems: 'center',
-    paddingTop: 0,
-    paddingBottom: 0
   },
   message: {
     color: '#FFF',
@@ -267,60 +262,48 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: Spacing.xl,
   },
-  cameraBox: {
-    width: '100%',
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  camera: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   instructionOverlay: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    paddingBottom: Spacing.xl,
   },
-  instructionText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontFamily: 'Righteous',
-    textAlign: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  statusBox: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  pillContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: 12,
+    borderRadius: 30,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  pillText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    letterSpacing: 2,
+  },
+  instructionText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    textAlign: 'center',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.md,
   },
   swatch: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     marginRight: Spacing.md,
-    borderWidth: 1,
-    borderColor: '#FFF',
-  },
-  hexText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontFamily: 'Righteous',
-    letterSpacing: 1
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.8)',
   }
 });
