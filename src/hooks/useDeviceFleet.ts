@@ -11,7 +11,13 @@ export type StoredDevice = {
   groupName?: string;
   type?: string;
   registeredAt?: string;
+  // Hardware config fields — mirrors RegisteredDevice for pill display in AccountModal
+  led_points?: number;
+  segments?: number;
+  ic_type?: string;
+  color_sorting?: string;
 };
+
 
 interface UseDeviceFleetProps {
   visible: boolean;

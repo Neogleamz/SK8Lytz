@@ -322,22 +322,37 @@ export function useRegistration() {
 
   // ── Deregister (release ownership) ───────────────────────────────────────────
   const deregisterDevice = useCallback(async (deviceMac: string): Promise<void> => {
+    // Normalize to uppercase — BLE MACs are always uppercase in this app.
+    // Case mismatch previously caused silent local removal failure (ghost entries).
+    const normalizedMac = deviceMac.toUpperCase();
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Remove from local
+      // Remove from local registered_devices (case-insensitive MAC filter)
       const current = await getLocalDevices();
-      const filtered = current.filter(d => d.device_mac !== deviceMac);
+      const filtered = current.filter(d => d.device_mac.toUpperCase() !== normalizedMac);
       await AsyncStorage.setItem(LOCAL_KEY, JSON.stringify(filtered));
       setRegisteredDevices(filtered);
 
-      // Remove from Supabase
+      // Also scrub the hardware config entry so no zombie data remains
+      try {
+        const configsRaw = await AsyncStorage.getItem('@Sk8lytz_device_configs');
+        if (configsRaw) {
+          const configs = JSON.parse(configsRaw);
+          if (configs[normalizedMac]) {
+            delete configs[normalizedMac];
+            await AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs));
+          }
+        }
+      } catch (_ce) { /* best-effort config cleanup */ }
+
+      // Remove from Supabase (matches both id and device_mac columns)
       if (user) {
         const { error } = await supabase
           .from('registered_devices')
           .delete()
           .eq('user_id', user.id)
-          .eq('device_mac', deviceMac);
+          .eq('device_mac', normalizedMac);
           
         if (error) {
           throw error;
@@ -350,6 +365,7 @@ export function useRegistration() {
       syncFromCloud();
     }
   }, []);
+
 
   // ── Swap positions of two paired devices ─────────────────────────────────────
   const swapDevicePositions = useCallback(async (mac1: string, mac2: string): Promise<void> => {

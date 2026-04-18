@@ -686,7 +686,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     groupName: d.group_name || '',
     type: d.product_type as any,
     registeredAt: d.registered_at,
+    // Hardware fields — required for pill display in AccountModal Devices tab
+    led_points: d.led_points,
+    segments: d.segments,
+    ic_type: d.ic_type,
+    color_sorting: d.color_sorting,
   })), [registeredDevices]);
+
 
   const BluetoothWarningBanner = useMemo(() => {
     if (isBluetoothEnabled || Platform.OS === 'web') return null;

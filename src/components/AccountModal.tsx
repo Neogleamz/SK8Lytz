@@ -36,6 +36,8 @@ import { PermanentCrew, profileService } from '../services/ProfileService';
 import { supabase } from '../services/supabaseClient';
 import EulaModal from './modals/EulaModal';
 import GranularPermissionsList from './permissions/GranularPermissionsList';
+import { HardwareStatusPills } from './dashboard/HardwareStatusPills';
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -675,6 +677,15 @@ export default function AccountModal({
                         <Text style={styles.deviceName}>{device.customName || device.name}</Text>
                         {device.type && <Text style={styles.deviceMeta}>{device.type} · {device.id.slice(-8)}</Text>}
                         {device.registeredAt && <Text style={styles.deviceMeta}>Paired {formatDate(device.registeredAt)}</Text>}
+                        {/* Hardware pills — shows LED count, strip type, sorting from registration data */}
+                        {(device.led_points || device.ic_type) && (
+                          <HardwareStatusPills device={{
+                            led_points: device.led_points,
+                            segments: device.segments,
+                            ic_type: device.ic_type,
+                            color_sorting: device.color_sorting,
+                          }} />
+                        )}
                       </>
                     )}
                   </View>
