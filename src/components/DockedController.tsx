@@ -136,7 +136,7 @@ interface Sk8lytzControllerProps {
   points?: number;
   devices?: IDeviceState[];
   onLongPressDevice?: (device: IDeviceState) => void;
-  writeToDevice?: (payload: number[]) => Promise<boolean>;
+  writeToDevice?: (payload: number[]) => Promise<boolean | 'partial'>;
   isPoweredOn?: boolean;
   onDisconnect?: () => void;
   /** 'leader' = broadcast changes, 'member' = receive changes, null = solo */
@@ -198,7 +198,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
     // ── Optimistic BLE Bridge (Ghost Standard) ─────────────────────────────
     const { optimisticWrite, writeStatus } = useOptimisticBLE({
-      writeToDevice: parentWriteToDevice as ((payload: number[], targetDeviceId?: string) => Promise<boolean>) | undefined,
+      writeToDevice: parentWriteToDevice as ((payload: number[], targetDeviceId?: string) => Promise<boolean | 'partial'>) | undefined,
       // Indirection via ref: always calls the latest closure without recreating the hook callback
       onReconcile: () => onReconcileRef.current(),
       debounceMs: 40,

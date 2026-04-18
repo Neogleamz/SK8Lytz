@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
+import { AppLogger } from '../services/AppLogger';
 
 // Safely handle native-only voice import for web compatibility
 let Voice: any;
@@ -9,7 +10,7 @@ try {
     Voice = rmVoice.default || rmVoice;
   }
 } catch (e) {
-  console.warn('Voice recognition native module not found');
+  AppLogger.warn('[Voice] Native module not found — voice disabled');
 }
 
 import { IVoiceAction, voiceService } from '../services/VoiceService';

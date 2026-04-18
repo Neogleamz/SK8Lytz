@@ -14,7 +14,7 @@
  *    local buffer (rotation) on confirmed success.
  *  - Deduplication: group-targeted events (deviceIds[]) insert a single row
  *    with device_id as null, instead of unrolling.
- *  - Custom device names: resolved from 'ng_device_configs' AsyncStorage key
+ *  - Custom device names: resolved from '@Sk8lytz_device_configs' AsyncStorage key
  *    (same key DashboardScreen writes) and injected into all DB payloads.
  *  - VIP Error Fast-Lane: Critical crash/error events bypass the normal buffers
  *    and are immediately pushed to `telemetry_errors`.
@@ -132,7 +132,13 @@ export type EventType =
   // ── Hardware Watchdog ──────────────────────────────────────
   | 'BLE_STATE_CHANGE'
   | 'WATCHDOG_MISS'
-  | 'WATCHDOG_RELATCH';
+  | 'WATCHDOG_RELATCH'
+  // ── Auto-Recovery Extended ─────────────────────────────────
+  | 'AUTO_RECOVERY_CANCELLED'
+  | 'AUTO_RECOVERY_GATE_WAIT'
+  // ── Telemetry Hardening ─────────────────────────────────────────
+  | 'SCREEN_ERROR'
+  | 'PROMISE_REJECTION';
 
 
 export interface LogEntry {
@@ -175,7 +181,7 @@ class AppLoggerService {
       }
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(this.buffer));
     } catch (e) {
-      console.warn('[AppLogger] persist failed', e);
+      if (__DEV__) console.warn('[AppLogger] persist failed', e);
     }
   }
 
@@ -406,7 +412,7 @@ class AppLoggerService {
       try {
         await supabase.storage.from('sk8lytz-logs').remove([`logs_${bleMac}.json`, `logs_${deviceId}.json`]);
       } catch(e) {
-        console.warn('Failed cloud wipe', e);
+        if (__DEV__) console.warn('Failed cloud wipe', e);
       }
     }
   }
@@ -427,7 +433,7 @@ class AppLoggerService {
 
   async uploadLogsToSupabase() {
     if (!supabase) {
-      console.log('[AppLogger] Supabase client not configured. Skipping snapshot ingestion.');
+      if (__DEV__) console.log('[AppLogger] Supabase client not configured. Skipping snapshot ingestion.');
       return;
     }
     await this.ensureLoaded();
@@ -439,7 +445,7 @@ class AppLoggerService {
       
       const currentRunLogs = [...this.buffer];
 
-      console.log(`[AppLogger] Pushing ${currentRunLogs.length} events to telemetry_snapshots...`);
+      if (__DEV__) console.log(`[AppLogger] Pushing ${currentRunLogs.length} events to telemetry_snapshots...`);
 
       const CHUNK = 500;
       for (let i = 0; i < currentRunLogs.length; i += CHUNK) {
@@ -462,16 +468,16 @@ class AppLoggerService {
 
         const { error } = await supabase.from('telemetry_snapshots').insert(dbPayload);
         if (error) {
-           console.error('[AppLogger] Batch insert failed:', error);
+           if (__DEV__) console.error('[AppLogger] Batch insert failed:', error);
         }
       }
 
       this.buffer = [];
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([]));
-      console.log('[AppLogger] Ingestion complete. Local buffer cleared.');
+      if (__DEV__) console.log('[AppLogger] Ingestion complete. Local buffer cleared.');
       
     } catch (err) {
-      console.error('[AppLogger] Ingestion exception:', err);
+      if (__DEV__) console.error('[AppLogger] Ingestion exception:', err);
       throw err;
     }
   }

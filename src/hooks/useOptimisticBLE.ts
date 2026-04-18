@@ -16,7 +16,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { AppLogger } from '../services/AppLogger';
 
-type WriteFunction = (payload: number[], targetDeviceId?: string) => Promise<boolean>;
+type WriteFunction = (payload: number[], targetDeviceId?: string) => Promise<boolean | 'partial'>;
 
 export type BLEWriteStatus = 'IDLE' | 'PENDING' | 'CONFIRMED' | 'RECONCILED';
 
@@ -128,7 +128,7 @@ export function useOptimisticBLE({
   const directWrite = useCallback(async (
     payload: number[],
     targetDeviceId?: string,
-  ): Promise<boolean> => {
+  ): Promise<boolean | 'partial'> => {
     if (!writeToDevice) return true;
     return writeToDevice(payload, targetDeviceId);
   }, [writeToDevice]);

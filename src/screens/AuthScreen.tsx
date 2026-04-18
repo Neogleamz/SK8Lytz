@@ -73,6 +73,7 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
   const strengthAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    AppLogger.log('SCREEN_OPENED', { screen: 'AuthScreen' });
     AsyncStorage.getItem('@Sk8lytz_demo_mode').then(val => {
       setIsSandboxEnabled(val === 'true');
     });

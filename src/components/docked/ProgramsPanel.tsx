@@ -18,7 +18,7 @@ interface ProgramsPanelProps {
   setSelectedPatternId: (id: number) => void;
   speed: number;
   brightness: number;
-  writeToDevice?: (payload: number[]) => Promise<void>;
+  writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
   applyEmergencyPattern: (speed: number, brightness: number) => void;
 }
 

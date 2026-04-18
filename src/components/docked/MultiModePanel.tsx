@@ -41,7 +41,7 @@ interface MultiModePanelProps {
   points?: number;
   devices?: any[];
   selectedColor: string;
-  writeToDevice?: (payload: number[]) => Promise<void>;
+  writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
   Colors: any;
 }
 

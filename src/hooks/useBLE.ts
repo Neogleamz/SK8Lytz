@@ -6,11 +6,11 @@
  *
  * Refactored using Domain-Driven Architecture (DDA):
  * This hook is now a Thin Orchestrator, dynamically routing scanning to useBLEScanner
- * and watchdog connection health to useBLEWatchdog.
+ * and auto-recovery to useBLEAutoRecovery.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { ZENGGE_CHARACTERISTIC_UUID, ZENGGE_NOTIFY_UUID, ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../protocols/ZenggeProtocol';
@@ -35,10 +35,9 @@ let writeMutex: Promise<any> = Promise.resolve();
 export interface BluetoothLowEnergyApi {
   requestPermissions(): Promise<boolean>;
   scanForPeripherals(options?: { keepAlive?: boolean, disableProbing?: boolean }): void;
-  connectToDevice: (device: Device) => Promise<string | undefined>;
   connectToDevices: (devices: Device[]) => Promise<void>;
   disconnectFromDevice: () => void;
-  writeToDevice: (payload: number[], targetDeviceId?: string) => Promise<boolean>;
+  writeToDevice: (payload: number[], targetDeviceId?: string) => Promise<boolean | 'partial'>;
   probeDevice: (mac: string) => Promise<void>;
   connectedDevices: Device[];
   allDevices: Device[];
@@ -55,6 +54,8 @@ export interface BluetoothLowEnergyApi {
   clearPendingRegistrations: () => void;
   ghostedDeviceIds: string[];
   bleState: BleConnectionState;
+  /** Global connection gate semaphore — exposed for consumers that need gate-awareness */
+  bleGateRef: React.MutableRefObject<'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING'>;
 }
 
 export default function useBLE(): BluetoothLowEnergyApi {
@@ -70,7 +71,18 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const [dataReceivedCallback, setDataReceivedCallback] = useState<((deviceId: string, data: number[]) => void) | undefined>();
   const [deviceRecoveredCallback, setDeviceRecoveredCallback] = useState<((deviceId: string) => void) | undefined>();
   const [droppedOutDeviceIds, setDroppedOutDeviceIds] = useState<string[]>([]);
-  const [internalBlePhase, setInternalBlePhase] = useState<'IDLE' | 'CONNECTING' | 'DISCONNECTING'>('IDLE');
+  // ── Connection Gate Semaphore ──────────────────────────────────────────────
+  // ALL BLE operations (scan, connect, disconnect, recovery) must acquire this
+  // gate before touching the radio. Prevents the "stampeding herd" of competing
+  // GATT operations that cause Android GATT 133 errors.
+  const bleGateRef = useRef<'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING'>('IDLE');
+  const [bleGateState, setBleGateState] = useState<'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING'>('IDLE');
+
+  // Helper: set gate in both ref (for sync checks) and state (for React re-renders)
+  const setGate = useCallback((phase: 'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING') => {
+    bleGateRef.current = phase;
+    setBleGateState(phase);
+  }, []);
 
   useEffect(() => {
     if (__DEV__) {
@@ -120,6 +132,11 @@ export default function useBLE(): BluetoothLowEnergyApi {
       }
     }
   };
+
+  // Wrap handleNotification in a stable ref callback to prevent stale closures
+  // when AutoRecovery re-registers notification monitors after reconnect.
+  const handleNotificationRef = useRef(handleNotification);
+  handleNotificationRef.current = handleNotification;
 
   useEffect(() => {
     if (!bleManager || Platform.OS === 'web') return;
@@ -198,8 +215,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
     bleManager,
     setConnectedDevices,
     disconnectListeners,
-    handleNotification,
-    onOrganicDisconnect: handleOrganicDisconnect
+    handleNotification: (error: any, characteristic: any, deviceId: string) => handleNotificationRef.current(error, characteristic, deviceId),
+    onOrganicDisconnect: handleOrganicDisconnect,
+    bleGateRef,
   });
 
   const scanner = useBLEScanner({
@@ -210,111 +228,22 @@ export default function useBLE(): BluetoothLowEnergyApi {
     hardwareProbedCallbackRef
   });
 
-  // --- Connection & Writes ---
-  const connectToDevice = async (device: Device): Promise<string | undefined> => {
-    try {
-      setInternalBlePhase('CONNECTING');
-      const connectStartTime = Date.now();
-      
-      let isMock = 'false';
-      if (__DEV__) {
-         isMock = await AsyncStorage.getItem('@Sk8lytz_demo_mode') || 'false';
-      }
-
-      if (Platform.OS === 'web' || isMock === 'true') {
-        setConnectedDevices(prev => {
-          if (!prev.find(d => d.id === device.id)) return [...prev, device];
-          return prev;
-        });
-        AppLogger.log('DEVICE_CONNECTED', { id: device.id, name: device.name, firmware: 'v2.0.1.DEMO' });
-        
-        if (dataReceivedCallbackRef.current) {
-          setTimeout(() => {
-             const mockPacket = [0x66, 0x14, 0x22, 0x01, 0x01, 0x33, 0x01, 0x55, 0x66, 0x99];
-             dataReceivedCallbackRef.current!(device.id, mockPacket);
-          }, 1000);
-        }
-        return 'v2.0.1.DEMO';
-      }
-      
-      // FIX: Android thoroughly forbids GATT connections during high-duty LE scans. Must stop before connect.
-      scanner.stopScanner();
-      const deviceConnection = await bleManager.connectToDevice(device.id);
-      setConnectedDevices([deviceConnection]);
-      await deviceConnection.discoverAllServicesAndCharacteristics();
-
-      try {
-        const negotiated = await deviceConnection.requestMTU(512);
-        negotiatedMtuRef.current = negotiated.mtu;
-        console.log(`[BLE] MTU negotiated: ${negotiated.mtu} bytes for ${device.id}`);
-      } catch (mtuErr: any) {
-        AppLogger.warn('[BLE] MTU negotiation failed (continuing with default 186):', mtuErr?.message);
-      }
-
-      if (disconnectListeners.current[device.id]) disconnectListeners.current[device.id].remove();
-      disconnectListeners.current[device.id] = bleManager.onDeviceDisconnected(device.id, (error: any, _d: any) => {
-        handleOrganicDisconnect(error, device.id);
-      });
-      
-      const latencyMs = Date.now() - connectStartTime;
-      AppLogger.log('PERFORMANCE_METRIC', { metricName: 'BLE_Auth_Latency', value: latencyMs, unit: 'ms', deviceId: device.id });
-      
-      deviceConnection.monitorCharacteristicForService(
-        ZENGGE_SERVICE_UUID,
-        ZENGGE_NOTIFY_UUID,
-        (error: any, characteristic: any) => handleNotification(error, characteristic, device.id)
-      );
-
-      let firmware: string | undefined;
-      const advFw = (device as any).firmware;
-      if (advFw && typeof advFw === 'string' && advFw.length > 0) {
-        firmware = advFw;
-      }
-
-      if (!firmware) {
-        try {
-          const fwChar = await deviceConnection.readCharacteristicForService(
-            '0000180a-0000-1000-8000-00805f9b34fb',
-            '00002a26-0000-1000-8000-00805f9b34fb'
-          );
-          if (fwChar && fwChar.value) {
-            const rawFw = Buffer.from(fwChar.value, 'base64').toString('ascii');
-            const clean = rawFw.replace(/[^\x20-\x7E]/g, '');
-            if (clean.length > 0) firmware = clean;
-          }
-        } catch (e) {
-          console.log(`[BLE] No standard firmware for ${device.id}`);
-        }
-      }
-
-      setTimeout(async () => {
-        try {
-          const queryPayload = ZenggeProtocol.queryHardwareSettings(false);
-          const b64 = Buffer.from(queryPayload).toString('base64');
-          await deviceConnection.writeCharacteristicWithoutResponseForService(
-            ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
-          );
-          console.log(`[BLE] 0x63 hw query sent to ${device.id}`);
-        } catch (e: any) {
-          AppLogger.warn('[BLE] hw query write failed', { error: String(e) });
-        }
-      }, 600);
-
-      AppLogger.log('DEVICE_CONNECTED', { id: device.id, name: device.name, firmware });
-      
-      setInternalBlePhase('IDLE');
-      return firmware;
-    } catch (e: any) {
-      AppLogger.error('FAILED TO CONNECT', e);
-      AppLogger.log('BLE_CONNECTION_ERROR', { error: e?.message || String(e), deviceId: device.id });
-      setInternalBlePhase('IDLE');
-    }
-  };
+  // ─── Per-device MTU map ────────────────────────────────────────────────────
+  // Each device may negotiate a different MTU. Using a single shared ref caused
+  // the "last device wins" bug where payload chunking used the wrong MTU.
+  const mtuMapRef = useRef<Map<string, number>>(new Map());
+  const getDeviceMtu = (deviceId: string) => mtuMapRef.current.get(deviceId) ?? 186;
 
   const connectToDevices = async (devices: Device[]) => {
     if (devices.length === 0) return;
+
+    // ── CONNECTION GATE: Reject if another BLE operation is in-flight ────────
+    if (bleGateRef.current !== 'IDLE') {
+      AppLogger.warn('[BLE] connectToDevices REJECTED — gate is ' + bleGateRef.current, { requestedDevices: devices.map(d => d.id) });
+      return;
+    }
+    setGate('CONNECTING');
     try {
-      setInternalBlePhase('CONNECTING');
       let isMock = 'false';
       if (__DEV__) {
          isMock = await AsyncStorage.getItem('@Sk8lytz_demo_mode') || 'false';
@@ -334,7 +263,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
              });
           }, 1000);
         }
-        setInternalBlePhase('IDLE');
+        setGate('IDLE');
         return;
       }
       // FIX: Android thoroughly forbids GATT connections during high-duty LE scans. Must stop before connect.
@@ -347,7 +276,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
           try {
             const negotiated = await conn.requestMTU(512);
-            negotiatedMtuRef.current = negotiated.mtu;
+            mtuMapRef.current.set(conn.id, negotiated.mtu);
+            AppLogger.log('DEVICE_CONNECTED', { context: 'mtu_negotiated', mtu: negotiated.mtu, deviceId: conn.id });
           } catch (mtuErr: any) {}
 
           if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
@@ -358,7 +288,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
           conn.monitorCharacteristicForService(
             ZENGGE_SERVICE_UUID,
             ZENGGE_NOTIFY_UUID,
-            (error: any, characteristic: any) => handleNotification(error, characteristic, conn.id)
+            (error: any, characteristic: any) => handleNotificationRef.current(error, characteristic, conn.id)
           );
 
           let firmware = undefined;
@@ -371,7 +301,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
               const rawFw = Buffer.from(fwChar.value, 'base64').toString('ascii');
               firmware = rawFw.replace(/[^\x20-\x7E]/g, '');
             }
-          } catch (e) { }
+          } catch (e) { AppLogger.warn('[BLE] Failed to read firmware characteristic', { deviceId: conn.id, error: String(e) }); }
 
           AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name, firmware });
 
@@ -400,19 +330,17 @@ export default function useBLE(): BluetoothLowEnergyApi {
           AppLogger.log('BLE_CONNECTION_ERROR', { error: deviceError?.message || String(deviceError), deviceId: device.id, context: 'group_sync_fail' });
         }
       }
-      setInternalBlePhase('IDLE');
+      setGate('IDLE');
     } catch (e: any) {
       AppLogger.error('FAILED TO CONNECT TO GROUP', e);
       AppLogger.log('BLE_CONNECTION_ERROR', { error: e?.message || String(e), context: 'group' });
-      setInternalBlePhase('IDLE');
+      setGate('IDLE');
     }
   };
 
-  const negotiatedMtuRef = useRef<number>(186);
-
-  const writeToDevice = async (payload: number[], targetDeviceId?: string): Promise<boolean> => {
+  const writeToDevice = async (payload: number[], targetDeviceId?: string): Promise<boolean | 'partial'> => {
     const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
-    console.log(`[BLE WRITE ${payload.length}B | MTU=${negotiatedMtuRef.current}]${targetDeviceId ? ` [→${targetDeviceId.slice(-4)}]` : ''}`, hexString.substring(0, 80));
+    AppLogger.log('RAW_PAYLOAD', { bytes: payload.length, targetDeviceId: targetDeviceId?.slice(-4), hex: hexString.substring(0, 80) });
     AppLogger.setLastTxPayload(hexString);
 
     // Web / no-op path: return true so optimisticWrite sees success
@@ -427,23 +355,30 @@ export default function useBLE(): BluetoothLowEnergyApi {
       return false;
     }
 
-    const chunkSize = Math.max(20, negotiatedMtuRef.current - 3);
+    const chunkSize = Math.max(20, (targetDeviceId ? getDeviceMtu(targetDeviceId) : Math.min(...targets.map(d => getDeviceMtu(d.id)))) - 3);
 
-    const executeWrite = async () => {
+    const executeWrite = async (): Promise<boolean | 'partial'> => {
       let allSucceeded = true;
+      let skippedGhosted = 0;
       for (const device of targets) {
-        // Skip ghosted (recovering) devices — don't count as failure
-        if (autoRecovery.ghostedDeviceIds.includes(device.id)) continue;
+        // Skip ghosted (recovering) devices — track for partial write report
+        if (autoRecovery.ghostedDeviceIds.includes(device.id)) {
+          skippedGhosted++;
+          AppLogger.warn(`[BLE] Write SKIPPED ghosted device ${device.id}`);
+          continue;
+        }
+        const deviceMtu = getDeviceMtu(device.id);
+        const deviceChunk = Math.max(20, deviceMtu - 3);
         try {
-          for (let i = 0; i < payload.length; i += chunkSize) {
-            const chunk = payload.slice(i, i + chunkSize);
+          for (let i = 0; i < payload.length; i += deviceChunk) {
+            const chunk = payload.slice(i, i + deviceChunk);
             const base64Chunk = Buffer.from(chunk).toString('base64');
             await device.writeCharacteristicWithoutResponseForService(
               ZENGGE_SERVICE_UUID,
               ZENGGE_CHARACTERISTIC_UUID,
               base64Chunk
             );
-            if (i + chunkSize < payload.length) {
+            if (i + deviceChunk < payload.length) {
               await new Promise(resolve => setTimeout(resolve, 5));
             }
           }
@@ -453,6 +388,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
           AppLogger.log('BLE_WRITE_ERROR', { error: writeError?.message || String(writeError), target: device.id, payloadLen: payload.length });
         }
       }
+      // Report partial write when some devices were ghosted but others succeeded
+      if (skippedGhosted > 0 && allSucceeded) return 'partial';
       return allSucceeded;
     };
 
@@ -468,11 +405,13 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
 
   const disconnectFromDevice = async () => {
-    setInternalBlePhase('DISCONNECTING');
-    autoRecovery.cancelAllRecoveries();
+    // ── CONNECTION GATE: Acquire DISCONNECTING phase ─────────────────────────
+    if (bleGateRef.current === 'DISCONNECTING') return; // Already tearing down
+    setGate('DISCONNECTING');
+    await autoRecovery.cancelAllRecoveries();
 
     Object.values(disconnectListeners.current).forEach(sub => {
-      try { sub.remove(); } catch (e) {}
+      try { sub.remove(); } catch (e) { AppLogger.warn('[BLE] Failed to remove disconnect listener', { error: String(e) }); }
     });
     disconnectListeners.current = {};
 
@@ -489,13 +428,15 @@ export default function useBLE(): BluetoothLowEnergyApi {
       await new Promise(resolve => setTimeout(resolve, 250));
     }
     
+    // Clear per-device MTU cache
+    mtuMapRef.current.clear();
     setConnectedDevices([]);
-    setInternalBlePhase('IDLE');
+    setGate('IDLE');
   };
 
   const derivedBleState: BleConnectionState = 
-    internalBlePhase === 'DISCONNECTING' ? 'DISCONNECTING' :
-    internalBlePhase === 'CONNECTING' ? 'CONNECTING' :
+    bleGateState === 'DISCONNECTING' ? 'DISCONNECTING' :
+    bleGateState === 'CONNECTING' ? 'CONNECTING' :
     scanner.scannerState === 'SCANNING' ? 'SCANNING' :
     scanner.scannerState === 'PROBING' ? 'PROBING' :
     connectedDevices.length > 0 ? 'READY' : 'IDLE';
@@ -503,7 +444,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
   return useMemo(() => ({
     requestPermissions: async () => requestPermission('BLUETOOTH'),
     scanForPeripherals: scanner.scanForPeripherals,
-    connectToDevice,
     connectToDevices,
     writeToDevice,
     allDevices,
@@ -532,6 +472,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     probeDevice,
     ghostedDeviceIds: autoRecovery.ghostedDeviceIds,
     bleState: derivedBleState,
+    bleGateRef,
   }), [
     allDevices,
     connectedDevices,
@@ -543,6 +484,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
     deviceRecoveredCallback,
     droppedOutDeviceIds,
     autoRecovery.ghostedDeviceIds,
-    internalBlePhase
+    bleGateState
   ]);
 }

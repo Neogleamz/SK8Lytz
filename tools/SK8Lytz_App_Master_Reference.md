@@ -1,6 +1,6 @@
 # SK8Lytz App Master Reference
 
-_Last Updated: 2026-04-14 | Synced with DDA Refactor — all 18 domain hooks documented | Source of Truth: `src/protocols/ZenggeProtocol.ts`_
+_Last Updated: 2026-04-17 | BLE Pipeline Overhaul: Gate semaphore, AutoRecovery, HAL, ng_* key purge | Source of Truth: `src/protocols/ZenggeProtocol.ts`_
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
 
@@ -69,19 +69,24 @@ Sk8Lytz caters to a diverse, family-oriented community of dedicated roller skate
 
 ### AsyncStorage Key Registry
 
-| Key                                 | Owner                       | Contents                                                                                                                                        |
-| :---------------------------------- | :-------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@sk8lytz_logs`                     | AppLogger                   | Compact telemetry event buffer array                                                                                                            |
-| `@Sk8lytz_auth_username`            | DashboardScreen             | Local cache of Supabase display_name for instant UI feedback. Synced via Reactive Context Pattern (Load Cache -> Hydrate Profile -> Update UI). |
-| `ng_device_configs`                 | DashboardScreen / AppLogger | Dict keyed by MAC containing `{ name, type, points, segments, sorting, stripType, groupId }`                                                    |
-| `ng_custom_groups`                  | DashboardScreen             | Array of `{ id, name, isGroup, deviceIds }`                                                                                                     |
-| `ng_processed_devices`              | DashboardScreen             | Cached array of previously discovered device objects                                                                                            |
-| `@sk8_hw_<deviceId>`                | Sk8LytzProgrammerModal      | Per-device EEPROM hardware settings cache                                                                                                       |
-| `@sk8lytz_theme`                    | ThemeContext                | `dark` or `light`                                                                                                                               |
-| `@sk8lytz_control_theme`            | ThemeContext                | Control color theme name                                                                                                                        |
-| `@Sk8lytz_Favorites`                | DashboardScreen             | Dictionary of user-defined lighting presets (Name, Palette, Mode)                                                                               |
-| `@sk8lytz_permissions_optout`       | PermissionService           | App-Level Opt-Out Ledger. User toggles that override OS permissions for legal/privacy reasons.                                                  |
-| `@Sk8lytz_voice_tutorial_dismissed` | boolean                     | Gating for the Voice Command onboarding modal                                                                                                   |
+| Key                                 | Owner                           | Contents                                                                                                                                        |
+| :---------------------------------- | :------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@sk8lytz_logs`                     | AppLogger                       | Compact telemetry event buffer array                                                                                                            |
+| `@Sk8lytz_auth_username`            | DashboardScreen                 | Local cache of Supabase display_name for instant UI feedback. Synced via Reactive Context Pattern (Load Cache -> Hydrate Profile -> Update UI). |
+| `@Sk8lytz_device_configs`           | useDashboardGroups / AppLogger  | Dict keyed by **BLE MAC** containing `{ name, type, points, segments, sorting, stripType, groupId }`                                           |
+| `@Sk8lytz_custom_groups`            | useDashboardGroups              | Array of `{ id, name, isGroup, deviceIds }` — group memberships                                                                                |
+| `@sk8_hw_<deviceId>`                | Sk8LytzProgrammerModal          | Per-device EEPROM hardware settings cache                                                                                                       |
+| `@sk8lytz_theme`                    | ThemeContext                    | `dark` or `light`                                                                                                                               |
+| `@sk8lytz_control_theme`            | ThemeContext                    | Control color theme name                                                                                                                        |
+| `@Sk8lytz_Favorites`                | useFavorites                    | Dictionary of user-defined lighting presets (Name, Palette, Mode)                                                                               |
+| `@sk8lytz_permissions_optout`       | PermissionService               | App-Level Opt-Out Ledger. User toggles that override OS permissions for legal/privacy reasons.                                                  |
+| `@Sk8lytz_voice_tutorial_dismissed` | boolean                         | Gating for the Voice Command onboarding modal                                                                                                   |
+
+> [!CAUTION]
+> **PURGED KEYS (2026-04-17):** The following legacy `ng_*` keys are fully deprecated and MUST NOT be used anywhere in the codebase. They caused split-brain bugs due to namespace drift:
+> - ~~`ng_device_configs`~~ → migrated to `@Sk8lytz_device_configs`
+> - ~~`ng_custom_groups`~~ → migrated to `@Sk8lytz_custom_groups`
+> - ~~`ng_processed_devices`~~ → DELETED (one-shot cleanup on boot)
 
 ## Build Config & Troubleshooting 🛠️
 
@@ -148,10 +153,15 @@ The BLE write path uses an **Optimistic UI** architecture to eliminate perceived
 **Key Files:**
 
 - `src/hooks/useOptimisticBLE.ts` — Ghost state FSM, debounce, haptics
-- `src/hooks/useBLE.ts` — Core write function (`writeToDevice` returns `Promise<boolean>`)
+- `src/hooks/useBLE.ts` — Core write function (`writeToDevice` returns `Promise<boolean | 'partial'>`)
 - `src/components/DockedController.tsx` — Consumer integration (status indicator dot)
 
-**Architectural Constraint:** `writeToDevice` MUST return `Promise<boolean>` (true = success, false = failure) to enable the reconciliation pipeline. All component prop interfaces use `Promise<void | boolean>` for backwards compatibility.
+**Architectural Constraint:** `writeToDevice` MUST return `Promise<boolean | 'partial'>` where:
+- `true` = all devices received the payload
+- `false` = write failed, trigger reconciliation
+- `'partial'` = some devices received it (ghosted devices skipped) — treated as success for UI
+
+All component prop interfaces must use `Promise<void | boolean | 'partial'>` for full compatibility.
 
 ### Test Users & Environments
 
@@ -173,38 +183,52 @@ All byte definitions below represent the inner payload _before_ the V2 BLE packe
 ### BLE Stability Constraints & GATT Error Prevention
 
 > [!CAUTION]
-> React Native BLE PLX and the Android native `BluetoothAdapter` suffer from extreme race conditions. To avoid GATT 133 exceptions, UI freezes, and buffer overflows, all logic must follow these three architectural constraints:
+> React Native BLE PLX and the Android native `BluetoothAdapter` suffer from extreme race conditions. To avoid GATT 133 exceptions, UI freezes, and buffer overflows, all logic must follow these architectural constraints:
 
-1. **Strict Sequential Teardowns (`GATT 133` Prevention):** Teardowns MUST be strictly awaited sequentially, followed by a soft ~250ms buffer.
-2. **Global Mutex Queue (Parallel Write Crash Prevention):** The `writeToDevice` function must be wrapped in a global Promise Mutex (FIFO queue).
-3. **Hard Connection Timeouts (Infinite Freeze Prevention):** Connect logic MUST include explicit timeouts (5000ms).
+1. **Global Connection Gate (`bleGateRef`):** A `useRef` semaphore with states `IDLE | SCANNING | CONNECTING | DISCONNECTING | RECOVERING`. ALL BLE operations must check/acquire the gate before touching the radio. Only one operation class at a time.
+2. **Strict Sequential Teardowns (`GATT 133` Prevention):** Teardowns MUST be strictly awaited sequentially, followed by a soft ~250ms buffer.
+3. **Additive Connection Only (`connectToDevices`):** The singular `connectToDevice` is DELETED. All connections go through `connectToDevices(devices[])` which APPENDS to the connected array without wiping existing members.
+4. **Hard Connection Timeouts (Infinite Freeze Prevention):** Connect logic MUST include explicit timeouts (5000ms).
+5. **Per-Device MTU Tracking (`mtuMapRef`):** MTU values are cached per-device MAC in a Map, not a shared ref.
 
 ### The Transport Wrapper (`wrapCommand`)
 
 Every inner protocol payload must be wrapped using the standard 8-byte Zengge V2 framing:
 `[0x00, SequenceNum, 0x80, 0x00, LenHi, LenLo, Len+1, 0x0B, ...innerPayload]`
 
-### Autonomous Hardware Watchdog (Self-Healing Standard)
+### Auto-Recovery System (Gate-Coordinated)
 
-_Shipped: 2026-04-13 | Lives in: `src/hooks/useBLE.ts` (co-located per BLE Co-location Constraint)_
+_Refactored: 2026-04-17 | Lives in: `src/hooks/ble/useBLEAutoRecovery.ts`_
 
-The **Hardware Watchdog** monitors GATT-connected devices for silent soft-locks — a failure mode where `bleManager.isDeviceConnected()` returns `true` but the Zengge microcontroller has frozen and stopped responding to writes. It performs autonomous `silentRelatch` recovery without any user interaction.
+The **Auto-Recovery** system monitors GATT-connected devices for organic disconnects (dropout events). When a device drops, recovery automatically attempts reconnection with gate coordination.
 
 | Property | Value |
 | :--- | :--- |
-| **Heartbeat interval** | `30 seconds` |
-| **Heartbeat mechanism** | `0x63` hardware query → wait for FF02 (ZENGGE_NOTIFY_UUID) response ≤ 2500ms |
-| **Miss threshold** | `2 consecutive misses` before relatch is triggered |
-| **Relatch sequence** | 1. Remove dropout listener → 2. `cancelDeviceConnection` → 3. 250ms OS buffer → 4. Fresh `connectToDevice` (5000ms timeout) → 5. Re-discover services → 6. Re-register FF02 monitor → 7. 600ms settle → 8. Send 0x63 hw query |
-| **Device cooldown** | `600ms` between devices in a multi-device relatch (GATT 133 prevention) |
-| **Overlap protection** | `isWatchdogRecovering` ref blocks new ticks while recovery is in-flight |
-| **Lifecycle** | `startWatchdog()` called after `connectToDevice`/`connectToDevices`; `stopWatchdog()` called at top of `disconnectFromDevice` and on hook unmount |
+| **Trigger** | Organic `onDisconnected` event from BLE PLX |
+| **Gate coordination** | Skips recovery attempts when `bleGateRef ≠ IDLE` (e.g., during manual connections) |
+| **Retry sequence** | 1. Set gate → `RECOVERING` → 2. `connectToDevice` (3500ms timeout) → 3. Discover services → 4. Re-register FF02 monitor → 5. Release gate → `IDLE` |
+| **Cancellation** | AbortController-style token — incrementing counter instantly breaks all active loops |
+| **Max retries** | `5` with exponential delay: `2s, 4s, 8s, 16s, 30s` |
+| **Ghosting** | Failed recovery adds device to `ghostedDeviceIds` — UI dims card, `writeToDevice` skips it |
 
-**Telemetry Events (visible in Admin Hub → TIMELINE):**
-- `WATCHDOG_MISS` — emitted each time a device fails the ping; includes `misses` count (1 or 2)
-- `WATCHDOG_RELATCH` — emitted at `begin`, `success`, or `failed` stages of relatch
+**Telemetry Events:**
+- `AUTO_RECOVERY_STARTED` — emitted when recovery loop begins for a device
+- `AUTO_RECOVERY_SUCCESS` — device reconnected and services restored
+- `AUTO_RECOVERY_FAILED` — all retries exhausted, device is now ghosted
+- `AUTO_RECOVERY_CANCELLED` — recovery loop cancelled (user-initiated disconnect)
+- `AUTO_RECOVERY_GATE_WAIT` — recovery attempt skipped because gate is busy
 
-**Key Constraint:** The watchdog intentionally does NOT use a mutex on writes because the heartbeat ping (`0x63`) goes through `bleManager.writeCharacteristicWithoutResponseForDevice` directly, which bypasses the main `writeToDevice` pipeline to avoid reentrant locking during recovery cycles.
+> [!IMPORTANT]
+> **DELETED (2026-04-17):** The legacy `useBLEWatchdog.ts` heartbeat system has been completely removed. Its functionality (30s polling + silentRelatch) is replaced by the reactive `onDisconnected` observer in `useBLEAutoRecovery`. The watchdog created GATT collisions by issuing writes (`0x63`) during active user operations.
+
+### Auto-Connect Observer (Debounced)
+
+_Lives in: `src/hooks/useDashboardAutoConnect.ts`_
+
+The dashboard auto-connect observer watches `allDevices` for registered peripherals that appear during passive scanning. It is hardened with:
+- **500ms debounce** — batches devices discovered within 500ms into a single `connectToDevices` call
+- **Gate check** — skips connection when `bleGateRef ≠ IDLE`
+- **Prevents stampeding herd** — no concurrent auto-connect attempts
 
 ---
 

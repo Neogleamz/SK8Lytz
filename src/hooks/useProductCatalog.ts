@@ -19,6 +19,7 @@ import {
     getLocalProfileByPoints,
 } from '../constants/ProductCatalog';
 import { supabase } from '../services/supabaseClient';
+import { AppLogger } from '../services/AppLogger';
 import type { ProductProfile } from '../types/ProductCatalog';
 
 const CATALOG_CACHE_KEY = 'ng_product_catalog';
@@ -69,7 +70,7 @@ export function useProductCatalog() {
         if (cached.length > 0) setAllProfiles(cached);
       }
     } catch (e) {
-      console.warn('[ProductCatalog] Cache load failed:', e);
+      AppLogger.warn('[ProductCatalog] Cache load failed', { error: String(e) });
     }
   };
 
@@ -93,7 +94,7 @@ export function useProductCatalog() {
       setAllProfiles(merged);
       await AsyncStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify(merged));
     } catch (e) {
-      console.warn('[ProductCatalog] Cloud sync failed (offline?):', e);
+      AppLogger.warn('[ProductCatalog] Cloud sync failed (offline?)', { error: String(e) });
     }
   };
 
@@ -147,7 +148,7 @@ export function useProductCatalog() {
       await syncFromCloud();
       return true;
     } catch (e) {
-      console.warn('[ProductCatalog] Save failed:', e);
+      AppLogger.warn('[ProductCatalog] Save failed', { error: String(e) });
       return false;
     }
   }, []);

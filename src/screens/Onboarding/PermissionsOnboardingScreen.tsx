@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { checkPermission, PermissionType, requestPermission } from '../../services/PermissionService';
 import { Layout, Spacing, ThemePalette } from '../../theme/theme';
+import { AppLogger } from '../../services/AppLogger';
 
 interface PermissionsOnboardingScreenProps {
   onComplete: () => void;
@@ -18,6 +19,11 @@ export default function PermissionsOnboardingScreen({ onComplete }: PermissionsO
   const styles = createStyles(Colors, insets);
 
   const [allRequiredGranted, setAllRequiredGranted] = useState(false);
+
+  // ── Screen Navigation Telemetry ────────────────────────────────────────────
+  useEffect(() => {
+    AppLogger.log('SCREEN_OPENED', { screen: 'PermissionsOnboarding' });
+  }, []);
 
   return (
     <View style={styles.container}>

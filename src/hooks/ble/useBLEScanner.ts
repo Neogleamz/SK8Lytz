@@ -124,7 +124,7 @@ export function useBLEScanner({
 
     setScannerState('PROBING');
     scannerStateRef.current = 'PROBING';
-    console.log(`[BLE Probe] Round-Robin Probing ${pending.length} device(s). Retries left: ${retriesLeft}`);
+    AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_round_start', pendingCount: pending.length, retriesLeft });
 
     const failedIds: string[] = [];
 
@@ -132,7 +132,7 @@ export function useBLEScanner({
 
     for (const device of pending) {
       if (scannerStateRef.current !== 'PROBING') {
-        console.log('[BLE Probe] Aborted via scanner cancellation.');
+        AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_aborted', reason: 'scanner_cancellation' });
         aborted = true;
         break;
       }
@@ -141,7 +141,7 @@ export function useBLEScanner({
         const hasHwInfo = (device as any).hwPoints != null;
         if (alreadyConn && hasHwInfo) continue;
 
-        console.log(`[BLE Probe] Probing ${device.name || device.id}...`);
+        AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_start', deviceName: device.name || device.id });
         
         // FIX: Remove manual connectToDevice wrap here. Let probeDevice() handle
         // its own connection, spec-query, and mandatory disconnection cleanly.
@@ -164,7 +164,7 @@ export function useBLEScanner({
       } catch (probeErr: any) {
         AppLogger.warn(`[BLE Probe] Failed ${device.id}:`, probeErr?.message);
         failedIds.push(device.id);
-        try { await bleManager.cancelDeviceConnection(device.id); } catch (e) { }
+        try { await bleManager.cancelDeviceConnection(device.id); } catch (e) { AppLogger.warn('[Scanner] Failed to cancel probe connection', { deviceId: device.id, error: String(e) }); }
         await new Promise(r => setTimeout(r, 500));
       }
     }
@@ -172,19 +172,19 @@ export function useBLEScanner({
     if (aborted) return;
 
     if (failedIds.length > 0 && retriesLeft > 0) {
-       console.log(`[BLE Probe] Retrying ${failedIds.length} failed probes in 2s...`);
+       AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_retry', failedCount: failedIds.length, delayMs: 2000 });
        await new Promise(r => setTimeout(r, 2000));
        if (scannerStateRef.current === 'PROBING') {
          return probeAllDiscoveredDevices(retriesLeft - 1);
        } else {
-         console.log('[BLE Probe] Aborted during retry cool-down.');
+         AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_aborted', reason: 'retry_cooldown' });
          return;
        }
     }
 
     setScannerState('IDLE');
     scannerStateRef.current = 'IDLE';
-    console.log('[BLE Probe] All rounds complete.');
+    AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_all_complete' });
   };
 
   const stopScanner = () => {
@@ -214,14 +214,14 @@ export function useBLEScanner({
       if (cached) {
         try {
           JSON.parse(cached).forEach((d: any) => knownMacs.add(d.device_mac));
-        } catch (e) {}
+        } catch (e) { AppLogger.warn('[Scanner] Failed to parse registered_devices cache', { error: String(e) }); }
       }
     }).catch(() => {});
 
     if (__DEV__) {
       AsyncStorage.getItem('@Sk8lytz_demo_mode').then((isMock) => {
         if (Platform.OS === 'web' || isMock === 'true') {
-          console.log('[useBLE] Sandbox Mode Active: Injecting Mock Peripherals');
+          AppLogger.log('DEVICE_DISCOVERED', { context: 'sandbox_mode_inject' });
           setTimeout(() => {
             const mockDevices = [
               { id: 'sim-DE:M0:HA:L0:00:01', name: 'HALOZ Left Skate', type: 'HALOZ', points: 11, segments: 2, sorting: 'GRB', stripType: 'WS2812B', rssi: -45, serviceUUIDs: [ZENGGE_SERVICE_UUID], manufacturerData: 'AAAAAAAAAAAz' },
@@ -287,7 +287,7 @@ export function useBLEScanner({
           try {
             const mfBuf = Buffer.from(manufacturerData, 'base64');
             if (mfBuf.length > 9 && (mfBuf[9] === 0x33 || mfBuf[9] === 0xBF)) isSymphony = true;
-          } catch (e) { }
+          } catch (e) { AppLogger.warn('[Scanner] Failed to parse manufacturer data', { deviceId: device.id, error: String(e) }); }
         }
 
         const isKnownPrefix = nameLower.startsWith('lednet') || nameLower.startsWith('sk8') || nameLower.startsWith('zg') || nameLower.startsWith('halo') || nameLower.startsWith('soul');
@@ -310,7 +310,7 @@ export function useBLEScanner({
                     productId   = fwInfo.productId;
                     Object.assign(device, { firmware: advFirmware, firmwareVer, ledVersion, bleVersion, productId });
                   }
-                } catch (e) { }
+                } catch (e) { AppLogger.warn('[Scanner] Failed to parse firmware from adv data', { deviceId: device.id, error: String(e) }); }
               }
               
               AppLogger.log('DEVICE_DISCOVERED', { ...logData, firmware: advFirmware, firmwareVer, ledVersion, bleVersion, productId });
@@ -343,7 +343,7 @@ export function useBLEScanner({
                      if (ownerIds.length > 0) {
                        setAllDevices(prev => prev.map(d => d.id === device.id ? Object.assign(d, { owner_ids: ownerIds }) : d));
                      }
-                   } catch(e) {}
+                   } catch(e) { AppLogger.warn('[Scanner] Telemetry upsert failed', { deviceId: device.id, error: String(e) }); }
                 })();
               }
 

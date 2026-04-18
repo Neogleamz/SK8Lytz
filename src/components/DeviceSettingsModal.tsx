@@ -28,7 +28,7 @@ interface DeviceSettingsModalProps {
   onSave: (settings: DeviceSettings) => void;
   initialSettings: DeviceSettings;
   groups?: any[];
-  writeToDevice?: (payload: number[]) => Promise<void | boolean>;
+  writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
 }
 
 // Derives device name + group name from type + position

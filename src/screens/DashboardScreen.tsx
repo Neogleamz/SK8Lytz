@@ -28,6 +28,7 @@ import { Layout, Typography, Spacing } from '../theme/theme';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import DockedController, { DockedControllerHandle } from '../components/DockedController';
 import GroupSettingsModal from '../components/GroupSettingsModal';
+import { BLEErrorBoundary } from '../components/shared/BLEErrorBoundary';
 
 import AdminToolsModal from '../components/admin/AdminToolsModal';
 import { CrewModal } from '../components/CrewModal';
@@ -74,7 +75,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     scanForPeripherals,
     allDevices,
     setAllDevices,
-    connectToDevice,
     connectToDevices,
     connectedDevices,
     disconnectFromDevice,
@@ -89,7 +89,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     droppedOutDeviceIds,
     pendingRegistrations,
     clearPendingRegistrations,
-    bleState
+    bleState,
+    bleGateRef,
   } = useBLE();
 
   // ── Registration system ────────────────────────────────────────────────────
@@ -133,6 +134,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     allDevices.forEach(d => { if (!merged.find(c => c.id === d.id)) merged.push(d); });
     AppLogger.updateKnownDevices(merged);
   }, [connectedDevices, allDevices]);
+
+  // ── Screen Navigation Telemetry ────────────────────────────────────────────
+  useEffect(() => {
+    AppLogger.log('SCREEN_OPENED', { screen: 'DashboardScreen' });
+  }, []);
 
   // ── Hardware BLE callbacks (extracted to useHardwareNotifications) ───────────
 
@@ -317,6 +323,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     requestPermissions,
     refreshProfile,
     registeredDevices,
+    bleGateRef,
   });
 
 
@@ -346,10 +353,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     customGroupsRef.current = customGroups;
   }, [customGroups]); // Keep ref in sync with hook-managed state
 
-  // One-shot startup cleanup: prune simulator entries from AsyncStorage.
+  // One-shot startup cleanup: prune simulator entries from @Sk8lytz_device_configs.
   // NOTE: customGroups and deviceConfigs state are now fully owned by useDashboardGroups.
-  // This effect ONLY cleans sim- prefixed entries and ng_processed_devices — it does NOT
-  // call setDeviceConfigs to avoid a race condition with useDashboardGroups' own load.
+  // This effect ONLY cleans sim- prefixed entries — it does NOT call setDeviceConfigs
+  // to avoid a race condition with useDashboardGroups' own load.
   useEffect(() => {
     // Prune sim-device entries from device configs (without overwriting hook state)
     AsyncStorage.getItem('@Sk8lytz_device_configs')
@@ -564,6 +571,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
     return (
       <Animated.View {...edgePanResponder.panHandlers} style={{ flex: 1, backgroundColor: 'transparent' }}>
+          <BLEErrorBoundary componentName="DockedController">
           <DockedController
             ref={dockedControllerRef}
             hwSettings={activeHwSettings}
@@ -592,6 +600,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               }
             }}
           />
+          </BLEErrorBoundary>
           {/* Disconnection Teardown Overlay — driven by FSM bleState */}
           {bleState === 'DISCONNECTING' && (
             <Animated.View style={{
@@ -613,24 +622,26 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
    * with live discovered BLE configs.
    */
   const renderItem = useCallback(({ item }: { item: RegisteredDevice | any }) => {
-    const cachedConfig = deviceConfigs?.[item.id || item.device_mac] || {};
+    // IDENTITY FIX: Always resolve to BLE MAC address for all lookups.
+    // RegisteredDevice.id is a Supabase composite key (MAC+userId) — NOT usable
+    // as a deviceConfigs/powerStates key. Only device_mac or BLE device.id (which IS the MAC) works.
+    const mac = (item.device_mac || item.id || '').toLowerCase();
+    const cachedConfig = deviceConfigs?.[mac] || {};
     const mergedItem = { ...item, ...cachedConfig };
 
     return (
     <View style={{ paddingHorizontal: Layout.padding }}>
       <DeviceItem
         device={mergedItem}
-        isConnected={displayConnectedDevices.some(d => d.id === item.id)}
+        isConnected={displayConnectedDevices.some(d => d.id.toLowerCase() === mac)}
         isSelectionMode={isSelectionMode}
-        isSelected={selectedIds.includes(item.id)}
+        isSelected={selectedIds.includes(mac)}
         onPress={async () => {
           if (isSelectionMode) {
-            toggleDeviceSelection(item.id);
+            toggleDeviceSelection(mac);
             return;
           }
-          // RegisteredDevice.id is a DB composite key, NOT a BLE peripheral id.
-          // Resolve the live BLE peripheral by MAC before calling connectToDevice.
-          const mac = (item.device_mac || item.id || '').toLowerCase();
+          // Resolve the live BLE peripheral by MAC.
           const bleDevice = allDevices.find(
             (d: any) => (d.id || '').toLowerCase() === mac
           );
@@ -641,26 +652,26 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             scanForPeripherals();
             return;
           }
-          const fw = await connectToDevice(bleDevice);
-          if (fw) {
-            setDeviceConfigs((prev: any) => {
-                const next = { ...prev, [item.id]: { ...(prev?.[item.id] || {}), firmware: fw } };
-                AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(next)).catch(() => {});
-                return next;
-            });
-          }
+          // connectToDevices (gated) — additive connection, preserves existing group members.
+          await connectToDevices([bleDevice]);
+          // Store firmware under MAC key — same key used by probe/0x63 responses.
+          setDeviceConfigs((prev: any) => {
+              const next = { ...prev, [mac]: { ...(prev?.[mac] || {}) } };
+              AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(next)).catch(() => {});
+              return next;
+          });
           writeToDevice(ZenggeProtocol.queryHardwareSettings(false), bleDevice.id);
         }}
         onLongPress={() => {
           openSettings(mergedItem);
         }}
         showGroupIcon={false}
-        isPoweredOn={powerStates[item.id] ?? true}
-        onPowerToggle={() => handlePowerToggle([item.id])}
+        isPoweredOn={powerStates[mac] ?? true}
+        onPowerToggle={() => handlePowerToggle([mac])}
       />
     </View>
     ); // close return
-  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs, allDevices, connectToDevice, scanForPeripherals, writeToDevice]);
+  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs, allDevices, connectToDevices, scanForPeripherals, writeToDevice]);
 
   const mappedRegisteredDevicesForModal = useMemo(() => registeredDevices.map((d) => ({
     id: d.id || '',
@@ -797,7 +808,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   userProfile={userProfile}
                   onGroupPress={(group: CustomGroup) => {
                     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id));
-                    if (devicesToConnect.length > 0) connectToDevices(devicesToConnect);
+                    if (devicesToConnect.length > 0) {
+                      connectToDevices(devicesToConnect);
+                    } else {
+                      // No BLE devices discovered yet — trigger scan and inform user
+                      AppLogger.log('BLE_STATE_CHANGE', { event: 'group_tap_no_ble_devices', groupId: group.id, expectedMacs: group.deviceIds });
+                      scanForPeripherals();
+                      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
+                    }
                   }}
                   onGroupLongPress={(id: string) => openGroupRename(id)}
                   onSetupWizard={() => setViewState('SETUP_WIZARD')}
@@ -963,7 +981,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         writeToDevice={writeToDevice}
         liveRxPayload={lastRawNotification}
         liveDeviceConfigs={deviceConfigs}
-        onConnectToDevice={async (d: any) => { await connectToDevice(d); }}
+        onConnectToDevice={async (d: any) => { await connectToDevices([d]); }}
         onDisconnectFromDevice={async (_id: string) => { disconnectFromDevice(); }}
         isDiagnosticsMode={isDiagnosticsMode}
         onToggleDiagnostics={() => setIsDiagnosticsMode(!isDiagnosticsMode)}

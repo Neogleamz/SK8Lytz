@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView from 'react-native-map-clustering';
 import { Marker, Region } from 'react-native-maps';
@@ -7,6 +7,7 @@ import { SkateSpotBottomSheet } from '../components/SkateSpotBottomSheet';
 import { useTheme } from '../context/ThemeContext';
 import { SkateSpot, SkateSpotsService } from '../services/SkateSpotsService';
 import { Spacing } from '../theme/theme';
+import { AppLogger } from '../services/AppLogger';
 
 const { width, height } = Dimensions.get('window');
 
@@ -33,6 +34,11 @@ export const SkateMapScreen: React.FC<SkateMapScreenProps> = ({ visible, onClose
   // Bottom sheet state
   const [selectedSpot, setSelectedSpot] = useState<Partial<SkateSpot> | null>(null);
   const [isSheetVisible, setIsSheetVisible] = useState(false);
+
+  // ── Screen Navigation Telemetry ────────────────────────────────────────────
+  useEffect(() => {
+    if (visible) AppLogger.log('SCREEN_OPENED', { screen: 'SkateMapScreen' });
+  }, [visible]);
 
   // Fetch spots in view
   const fetchSpotsForRegion = async (region: Region) => {

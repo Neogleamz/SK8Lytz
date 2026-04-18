@@ -89,7 +89,7 @@ export function useAccountOverview(visible: boolean) {
         setNotifLeaderHandoff(prefs.leaderHandoff ?? true);
       }
     } catch (e) {
-      console.warn('[useAccountOverview] loadData error:', e);
+      AppLogger.warn('[AccountOverview] loadData error', { error: String(e) });
     } finally {
       setLoading(false);
     }

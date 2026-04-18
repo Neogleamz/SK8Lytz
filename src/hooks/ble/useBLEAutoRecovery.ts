@@ -1,3 +1,16 @@
+/**
+ * useBLEAutoRecovery.ts — BLE Auto-Recovery Engine
+ *
+ * Handles organic (unexpected) device disconnects by spawning isolated
+ * async recovery loops with exponential backoff.
+ *
+ * KEY CHANGE (fix/ble-pipeline-overhaul):
+ *   - Now coordinates with the global `bleGateRef` semaphore.
+ *   - Recovery only attempts reconnection when gate is 'IDLE'.
+ *   - Uses AbortController-style cancellation token so cancelAllRecoveries()
+ *     can immediately break all active loops.
+ *   - cancelAllRecoveries() returns a Promise that resolves once all loops exit.
+ */
 import { Buffer } from 'buffer';
 import { useCallback, useRef, useState } from 'react';
 import type { Device, Subscription } from 'react-native-ble-plx';
@@ -10,6 +23,8 @@ export interface UseBLEAutoRecoveryProps {
   disconnectListeners: React.MutableRefObject<Record<string, Subscription>>;
   handleNotification: (error: any, characteristic: any, deviceId: string) => void;
   onOrganicDisconnect: (error: any, deviceId: string) => void;
+  /** Global connection gate semaphore — recovery waits for IDLE before touching radio */
+  bleGateRef: React.MutableRefObject<'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING'>;
 }
 
 export function useBLEAutoRecovery({
@@ -17,10 +32,19 @@ export function useBLEAutoRecovery({
   setConnectedDevices,
   disconnectListeners,
   handleNotification,
-  onOrganicDisconnect
+  onOrganicDisconnect,
+  bleGateRef,
 }: UseBLEAutoRecoveryProps) {
   const [ghostedDeviceIds, setGhostedDeviceIds] = useState<string[]>([]);
   const ghostedRefs = useRef<string[]>([]);
+
+  // AbortController-style cancellation: incrementing token.
+  // When cancelAllRecoveries() is called, the token increments.
+  // Each recovery loop captures the token at start — if it changes, the loop exits.
+  const cancelTokenRef = useRef(0);
+
+  // Track active recovery loop promises so cancelAllRecoveries can await them.
+  const activeLoopsRef = useRef<Promise<void>[]>([]);
 
   // After this many failures we give up and eject the device from the UI.
   // Prevents permanent dark-device limbo when a Zengge chip is in a hard soft-lock.
@@ -36,39 +60,54 @@ export function useBLEAutoRecovery({
     ghostedRefs.current = [...ghostedRefs.current, deviceId];
     setGhostedDeviceIds([...ghostedRefs.current]);
 
+    // Capture cancellation token at loop start
+    const myToken = cancelTokenRef.current;
+
     // 2. Spawn isolated async recovery loop
     let attempts = 0;
     const attemptRecoveryLoop = async () => {
       while (ghostedRefs.current.includes(deviceId)) {
+        // ── CANCELLATION CHECK: break if token has changed ──
+        if (cancelTokenRef.current !== myToken) {
+          AppLogger.log('AUTO_RECOVERY_CANCELLED', { deviceId, attempts, reason: 'token_changed' });
+          break;
+        }
+
         try {
           // Exponential backoff: 1.5s → 5s ceiling
           const backoff = Math.min(1500 + (attempts * 500), 5000);
           await new Promise(r => setTimeout(r, backoff));
 
-          // Safety check if it was cancelled during sleep
+          // Safety check after sleep — token or ghost list may have changed
+          if (cancelTokenRef.current !== myToken) break;
           if (!ghostedRefs.current.includes(deviceId)) break;
           attempts++;
 
           // FIX: Hard ceiling — eject device after MAX_RECOVERY_ATTEMPTS failures.
-          // This prevents the device from staying in the ghost queue indefinitely,
-          // silently blocking all writes with no user feedback.
           if (attempts > MAX_RECOVERY_ATTEMPTS) {
             AppLogger.warn(`[AutoRecovery] ${deviceId} failed after ${attempts} attempts — ejecting from UI`);
             AppLogger.log('AUTO_RECOVERY_FAILED', { deviceId, attempts });
             ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
             setGhostedDeviceIds([...ghostedRefs.current]);
-            // Remove the dead device from the connected list so the UI is honest
             setConnectedDevices(prev => prev.filter(d => d.id !== deviceId));
             break;
           }
 
           if (!bleManager) break;
 
+          // ── GATE CHECK: Wait for IDLE before touching the radio ──
+          // If the gate isn't IDLE, skip this attempt and try again next loop.
+          // This prevents recovery from colliding with active connections/scans.
+          if (bleGateRef.current !== 'IDLE') {
+            AppLogger.log('AUTO_RECOVERY_GATE_WAIT', { deviceId, gate: bleGateRef.current, attempt: attempts });
+            continue; // Will sleep again via backoff at top of loop
+          }
+
           // Attempt blind GATT connection
           const conn = await bleManager.connectToDevice(deviceId, { timeout: 3500 });
           await conn.discoverAllServicesAndCharacteristics();
 
-          try { await conn.requestMTU(512); } catch (e) {}
+          try { await conn.requestMTU(512); } catch (e) { AppLogger.warn('[AutoRecovery] MTU negotiation failed', { deviceId, error: String(e) }); }
 
           // Purge old listener and attach new one
           if (disconnectListeners.current[conn.id]) {
@@ -108,12 +147,27 @@ export function useBLEAutoRecovery({
       }
     };
 
-    attemptRecoveryLoop();
-  }, [bleManager, disconnectListeners, handleNotification, onOrganicDisconnect, setConnectedDevices]);
+    const loopPromise = attemptRecoveryLoop();
+    activeLoopsRef.current.push(loopPromise);
+    // Clean up completed loops
+    loopPromise.finally(() => {
+      activeLoopsRef.current = activeLoopsRef.current.filter(p => p !== loopPromise);
+    });
+  }, [bleManager, disconnectListeners, handleNotification, onOrganicDisconnect, setConnectedDevices, bleGateRef]);
 
-  const cancelAllRecoveries = useCallback(() => {
+  /**
+   * Cancel all active recovery loops and wait for them to exit.
+   * Returns a Promise that resolves once every loop has terminated.
+   */
+  const cancelAllRecoveries = useCallback(async () => {
+    // Increment token — all active loops will see mismatch and break
+    cancelTokenRef.current++;
     ghostedRefs.current = [];
     setGhostedDeviceIds([]);
+    // Wait for all active loops to finish their current iteration and exit
+    if (activeLoopsRef.current.length > 0) {
+      await Promise.allSettled([...activeLoopsRef.current]);
+    }
   }, []);
 
   return {

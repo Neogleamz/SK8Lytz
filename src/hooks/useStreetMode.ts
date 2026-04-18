@@ -34,7 +34,7 @@ export interface UseStreetModeOptions {
   /** Must be 'STREET' to activate — hook self-deactivates on any other mode */
   activeMode: string;
   /** BLE write delegate — injected to keep hook decoupled from BLE layer */
-  writeToDevice: ((payload: number[]) => Promise<void | boolean>) | undefined;
+  writeToDevice: ((payload: number[]) => Promise<void | boolean | 'partial'>) | undefined;
   hwSettings: any;
   points: number | undefined;
   activeProduct: string;

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppLogger } from '../services/AppLogger';
 
 const FILTER_PERSIST_KEY = '@Sk8lytz_MapFilters';
 
@@ -32,7 +33,7 @@ export function useMapFilters() {
         }
         if (isMounted) setStatus('ready');
       } catch (err) {
-        console.error('Failed to load Map Filters from AsyncStorage', err);
+        AppLogger.warn('[MapFilters] Failed to load from AsyncStorage', { error: String(err) });
         if (isMounted) setStatus('error');
       }
     };
@@ -46,7 +47,7 @@ export function useMapFilters() {
     try {
       await AsyncStorage.setItem(FILTER_PERSIST_KEY, JSON.stringify(nextState));
     } catch (err) {
-      console.warn('Failed to persist Map Filters', err);
+      AppLogger.warn('[MapFilters] Failed to persist filters', { error: String(err) });
     }
   };
 
