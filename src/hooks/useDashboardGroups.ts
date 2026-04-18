@@ -99,21 +99,58 @@ export function useDashboardGroups({
   const customGroupsRef = useRef<CustomGroup[]>([]);
   useEffect(() => { customGroupsRef.current = customGroups; }, [customGroups]);
 
-  // Derive groups from registeredDevices whenever cloud sync updates them.
+  // Derive groups and hardware configs from registeredDevices whenever cloud sync updates them.
   // INVARIANT: deviceIds always contains UPPERCASE MACs — matching BLE d.id.toUpperCase().
   useEffect(() => {
     const groupMap: Record<string, CustomGroup> = {};
-    registeredDevices.forEach(rd => {
-      if (rd.group_id && rd.group_name && rd.group_id !== 'default-fleet') {
-        if (!groupMap[rd.group_id]) {
-          groupMap[rd.group_id] = { id: rd.group_id, name: rd.group_name, isGroup: true, deviceIds: [] };
-        }
+
+    setDeviceConfigs(prevConfigs => {
+      let nextConfigs = { ...prevConfigs };
+      let configsChanged = false;
+
+      registeredDevices.forEach(rd => {
         const mac = rd.device_mac.toUpperCase();
-        if (!groupMap[rd.group_id].deviceIds.includes(mac)) {
-          groupMap[rd.group_id].deviceIds.push(mac);
+        if (rd.group_id && rd.group_name && rd.group_id !== 'default-fleet') {
+          if (!groupMap[rd.group_id]) {
+            groupMap[rd.group_id] = { id: rd.group_id, name: rd.group_name, isGroup: true, deviceIds: [] };
+          }
+          if (!groupMap[rd.group_id].deviceIds.includes(mac)) {
+            groupMap[rd.group_id].deviceIds.push(mac);
+          }
         }
+
+        // Sync hardware profile settings into deviceConfigs
+        const existing = nextConfigs[mac] || {};
+        
+        if (
+          (rd.led_points !== undefined && rd.led_points !== existing.points) ||
+          (rd.segments !== undefined && rd.segments !== existing.segments) ||
+          (rd.color_sorting && rd.color_sorting !== existing.sorting) ||
+          (rd.ic_type && rd.ic_type !== existing.stripType) ||
+          (rd.device_name && rd.device_name !== existing.name)
+        ) {
+          nextConfigs[mac] = {
+            ...existing,
+            points: rd.led_points ?? existing.points,
+            segments: rd.segments ?? existing.segments,
+            sorting: rd.color_sorting ?? existing.sorting,
+            stripType: rd.ic_type ?? existing.stripType,
+            name: rd.device_name || existing.name,
+            groupId: rd.group_id && rd.group_id !== 'default-fleet' ? rd.group_id : existing.groupId,
+            groupName: rd.group_name || existing.groupName,
+            grouped: !!(rd.group_id && rd.group_id !== 'default-fleet')
+          };
+          configsChanged = true;
+        }
+      });
+
+      if (configsChanged) {
+        AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(nextConfigs)).catch(() => {});
+        return nextConfigs;
       }
+      return prevConfigs;
     });
+
     setCustomGroups(Object.values(groupMap));
   }, [registeredDevices]);
 
