@@ -879,7 +879,26 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             };
           })()}
           groups={customGroups}
+          deviceName={(() => {
+            const sDef = selectedDeviceForSettings as any;
+            const targetMac = (sDef?.device_mac || sDef?.id || '').toUpperCase();
+            const rd = registeredDevices.find(r => r.device_mac.toUpperCase() === targetMac);
+            return rd?.custom_name || rd?.device_name || sDef?.name;
+          })()}
+          onDeregister={(() => {
+            // Only provide onDeregister if the device is actually registered
+            const sDef = selectedDeviceForSettings as any;
+            const targetMac = (sDef?.device_mac || sDef?.id || '').toUpperCase();
+            const isRegistered = registeredDevices.some(r => r.device_mac.toUpperCase() === targetMac);
+            if (!isRegistered) return undefined;
+            return async () => {
+              setIsSettingsVisible(false);
+              setAllDevices((prev: any[]) => prev.filter((d: any) => d.id.toUpperCase() !== targetMac));
+              await deregisterDevice(targetMac);
+            };
+          })()}
         />
+
         <GroupSettingsModal
           isVisible={groupModalState !== 'HIDDEN'}
           onClose={closeGroupModal}

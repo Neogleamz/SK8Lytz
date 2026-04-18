@@ -29,7 +29,12 @@ interface DeviceSettingsModalProps {
   initialSettings: DeviceSettings;
   groups?: any[];
   writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
+  /** If provided, shows a "Forget Device" button that deregisters and closes the modal */
+  onDeregister?: () => void;
+  /** Friendly name shown in the deregister confirmation prompt */
+  deviceName?: string;
 }
+
 
 // Derives device name + group name from type + position
 const deriveNames = (type: string, position: 'Left' | 'Right' | null) => {
@@ -38,7 +43,8 @@ const deriveNames = (type: string, position: 'Left' | 'Right' | null) => {
   return { deviceName, groupName };
 };
 
-export default function DeviceSettingsModal({ isVisible, onClose, onSave, initialSettings, groups, writeToDevice }: DeviceSettingsModalProps) {
+export default function DeviceSettingsModal({ isVisible, onClose, onSave, initialSettings, groups, writeToDevice, onDeregister, deviceName }: DeviceSettingsModalProps) {
+
   const insets = useSafeAreaInsets();
   const [type, setTypeState] = useState<string>(initialSettings.type || 'SOULZ');
   const [position, setPosition] = useState<'Left' | 'Right' | null>(
@@ -139,6 +145,24 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
     if (writeToDevice) {
       writeToDevice(ZenggeProtocol.setRfRemoteState(mode, false));
     }
+  };
+
+  const handleDeregister = () => {
+    const label = deviceName || finalName || 'this device';
+    Alert.alert(
+      `Forget "${label}"?`,
+      'This removes it from your registered devices and clears its hardware config. You can always re-pair later.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Forget Device', style: 'destructive',
+          onPress: () => {
+            onClose(); // close the modal first to prevent stale UI
+            onDeregister?.();
+          },
+        },
+      ]
+    );
   };
 
   const handleClearRfRemotes = () => {
@@ -363,9 +387,20 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
               <Text style={styles.cancelButtonText}>CANCEL</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveButtonText}>SAVE HARDWARE CONFIG</Text>
+              <Text style={styles.saveButtonText}>SAVE CONFIG</Text>
             </TouchableOpacity>
           </View>
+          {/* Deregister — shown only when the device is registered (onDeregister is provided) */}
+          {onDeregister && (
+            <TouchableOpacity
+              style={[styles.deregisterBtn, { marginBottom: Math.max(insets.bottom, Spacing.md) }]}
+              onPress={handleDeregister}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.deregisterBtnText}>⚠ Forget &amp; Deregister Device</Text>
+            </TouchableOpacity>
+          )}
+
         </View>
       </View>
     </Modal>
@@ -399,6 +434,17 @@ const styles = StyleSheet.create({
   cancelButtonText: { color: Colors.textMuted, fontWeight: 'bold' },
   saveButton: { flex: 2, paddingVertical: Spacing.lg, alignItems: 'center', borderRadius: 12, backgroundColor: Colors.primary },
   saveButtonText: { color: '#000', fontWeight: 'bold' },
+  deregisterBtn: {
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.md,
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,61,113,0.4)',
+    backgroundColor: 'rgba(255,61,113,0.07)',
+  },
+  deregisterBtnText: { color: '#FF3D71', fontWeight: '800', fontSize: 13, letterSpacing: 0.5 },
+
   rfModeBtn: {
     padding: Spacing.md, borderRadius: 10, borderWidth: 1,
     borderColor: Colors.surfaceHighlight,
