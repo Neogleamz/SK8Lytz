@@ -6,7 +6,7 @@ import { Spacing } from '../theme/theme';
  *
  *  PROFILE   — display name, username, avatar color, email display
  *  SECURITY  — change password, change email
- *  CREWS     — my permanent crews (owned & joined), create / join / leave / delete
+ *  CREWZ     — my permanent crews (owned & joined), create / join / leave / delete
  *  DEVICES   — registered BLE devices, rename / forget
  *  SETTINGS  — push notifications toggle, notification prefs, app preferences
  *              + Sign Out + Danger Zone (delete account)
@@ -54,6 +54,8 @@ interface AccountModalProps {
   onDeviceForgotten?: (deviceId: string) => void;
   onGroupRenamed?: (oldGroupName: string, newGroupName: string) => void;
   onGroupForgotten?: (groupName: string) => void;
+  /** When true, hides online-only tabs like CREWZ */
+  isOfflineMode?: boolean;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -85,6 +87,7 @@ export default function AccountModal({
   onDeviceForgotten,
   onGroupRenamed,
   onGroupForgotten,
+  isOfflineMode = false,
 }: AccountModalProps) {
   const { Colors, isDark, toggleTheme } = useTheme();
   const styles = createStyles(Colors);
@@ -901,14 +904,17 @@ export default function AccountModal({
   // TABS CONFIG
   // ════════════════════════════════════════════════════════
 
-  const TABS: { id: Tab; icon: string; label: string }[] = [
+  const ALL_TABS: { id: Tab; icon: string; label: string }[] = [
     { id: 'profile',  icon: 'account',           label: 'Profile' },
     { id: 'security', icon: 'lock',               label: 'Security' },
-    { id: 'crews',    icon: 'account-group',      label: 'Crews' },
+    { id: 'crews',    icon: 'account-group',      label: 'CREWZ' },
     { id: 'devices',  icon: 'bluetooth',          label: 'Devices' },
     { id: 'stats',    icon: 'lightning-bolt',     label: 'Stats' },
     { id: 'settings', icon: 'cog',                label: 'Settings' },
   ];
+
+  // Hide CREWZ tab when in offline mode — crews require Supabase
+  const TABS = isOfflineMode ? ALL_TABS.filter(t => t.id !== 'crews') : ALL_TABS;
 
   // ════════════════════════════════════════════════════════
   // MAIN RENDER
