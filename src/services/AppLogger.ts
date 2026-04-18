@@ -77,6 +77,7 @@ export type EventType =
   | 'SYNC'
   | 'REJOIN'
   | 'FTUE'
+  | 'GLOBAL_MODAL_MOUNTED'
   | 'EULA_ACCEPTED'
   | 'PERMISSION_OPT_IN'
   | 'PERMISSION_OPT_OUT'

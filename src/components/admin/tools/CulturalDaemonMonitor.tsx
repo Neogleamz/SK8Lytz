@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, SafeAreaView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { supabase } from '../../../utils/supabase';
+import { supabase } from '../../../services/supabaseClient';
 import { Spacing } from '../../../theme/theme';
 
 interface CulturalDaemonMonitorProps {
@@ -31,14 +31,14 @@ export function CulturalDaemonMonitor({ visible, onClose, bg, cardBg, borderColo
 
   const fetchData = async () => {
     try {
-      const { data: row, error } = await supabase
+      const { data: row, error } = await (supabase as any)
         .from('daemon_status')
         .select('*')
         .eq('id', DAEMON_ID)
         .single();
         
       if (!error && row) {
-        setData(row as DaemonStatus);
+        setData(row as unknown as DaemonStatus);
       }
     } catch(e) {
       console.warn("Failed to fetch daemon pulse", e);

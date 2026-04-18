@@ -11,6 +11,8 @@ trigger: always_on
 **⛔ CRITICAL SAFETY RULE 5: Keep `tools/SK8Lytz_Bucket_List.md` updated. It is now completely untracked locally (in .gitignore) to prevent branch drift. DO NOT try to stage or commit it via git.**
 **⛔ CRITICAL SAFETY RULE 6: NEVER run `git checkout -b`, `git checkout <branch>`, `git switch`, or ANY branch-changing command in the main repository directory (`C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`). The main directory MUST always stay on `master`. All feature work MUST use `git worktree` to create an isolated directory. See the Worktree Isolation Protocol below.**
 **⛔ CRITICAL SAFETY RULE 7: NEVER push code to the remote repository (i.e. 'release') without first explicitly executing the `/health-sweep` workflow to run the MCP Database Scanner and npm audit.**
+**⛔ CRITICAL SAFETY RULE 8: The Core Fortress Mandate. NEVER perform unsolicited architectural refactors, hook extractions, or "Boy-Scout" cleanups on core stability systems (e.g., DashboardScreen.tsx, useBLE.ts, or the BLE/Group architecture). Unless explicitly commanded by the user, you are strictly prohibited from reorganizing working core logic. If it works, DO NOT TOUCH IT.**
+
 
 ### Worktree Isolation Protocol (Mandatory)
 

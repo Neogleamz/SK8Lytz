@@ -22,6 +22,9 @@ export interface UserProfile {
   avatar_url?: string | null;  // added: profile photo in Supabase Storage
   created_at: string;
   updated_at: string;
+  is_banned?: boolean;
+  ban_reason?: string | null;
+  role?: 'user' | 'moderator' | 'admin';
 }
 
 export interface PermanentCrew {

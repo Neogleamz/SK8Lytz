@@ -47,6 +47,7 @@ interface UseDashboardGroupsOptions {
 
 export interface UseDashboardGroupsResult {
   customGroups: CustomGroup[];
+  setCustomGroups: React.Dispatch<React.SetStateAction<CustomGroup[]>>;
   customGroupsRef: React.MutableRefObject<CustomGroup[]>;
   deviceConfigs: Record<string, DeviceSettings>;
   setDeviceConfigs: React.Dispatch<React.SetStateAction<Record<string, DeviceSettings>>>;

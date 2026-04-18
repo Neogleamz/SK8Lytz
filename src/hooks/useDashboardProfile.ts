@@ -120,26 +120,17 @@ export function useDashboardProfile({
   const refreshProfile = async (): Promise<void> => {
     try {
       const profile = await profileService.fetchOrCreateProfile();
-      if (profile.is_banned) {
+      if (profile?.is_banned) {
         Alert.alert(
           'Account Suspended',
           profile.ban_reason ? `Reason: ${profile.ban_reason}` : 'Your account has been suspended by an administrator.',
           [{ text: 'OK', onPress: () => handleLogout() }]
         );
-      } else {
+      } else if (profile) {
         setUserProfile(profile);
       }
     } catch (e) {
       AppLogger.error('[useDashboardProfile] Profile refresh failed', e);
-    }
-  };
-
-  const handleLogout = async (): Promise<void> => {
-    try {
-      await supabase.auth.signOut();
-      // App.tsx onAuthStateChange detects session=null and redirects to AuthScreen
-    } catch (e) {
-      AppLogger.error('Logout error:', e);
     }
   };
 

@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { AppLogger } from '../../../services/AppLogger';
 import { supabase } from '../../../services/supabaseClient';
-import { Spacing, TextStyles } from '../../../theme/theme';
+import { Spacing, Typography } from '../../../theme/theme';
 
 export interface UserManagementPanelProps {
   visible: boolean;
@@ -30,7 +30,7 @@ interface AdminUserProfile {
   user_id: string;
   username: string | null;
   display_name: string | null;
-  email: string | null;
+  email?: string | null;
   role: 'user' | 'moderator' | 'admin';
   is_banned: boolean;
   ban_reason: string | null;
@@ -89,7 +89,7 @@ export function UserManagementPanel({
         {
           text: 'Ban',
           style: 'destructive',
-          onPress: async (reason) => {
+          onPress: async (reason?: string) => {
             if (!reason) {
               Alert.alert('Error', 'Ban reason is required');
               return;
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     marginRight: Spacing.sm,
   },
   headerTitle: {
-    ...TextStyles.h3,
+    ...Typography.header,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: Spacing.sm,
   },
-  userTitle: { ...TextStyles.body },
+  userTitle: { ...Typography.body },
   userSubtitle: { fontSize: 13, marginTop: 2 },
   bannedNotice: {
     padding: Spacing.sm,

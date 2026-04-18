@@ -1,38 +1,43 @@
-# Ship It & Release Manager Workflow
+# Ship It Orchestrator -- "/ship-it"
 
-This workflow handles both branch merging ("Ship It") and production versioning ("Release Manager"). Execute the corresponding path based on my trigger phrase.
+When invoked via `/ship-it`, you must act as a strict state machine orchestrating the comprehensive release pipeline. This pipeline enforces the "Test Before Merge" strategy, guaranteeing that the `master` branch is only updated with hardware-verified builds.
 
-## Path A: Feature Merge (Triggers: "ship it", "merge task", "finalize branch")
+**CRITICAL RULE:** If ANY phase or child workflow fails or raises errors, you must HALT the sequence immediately. Do not proceed to the next phase until the user confirms the issues are resolved.
 
-1. **Verify Context**: Run `git branch --show-current` to ensure we are currently on a feature branch (e.g., `feature/...`, `fix/...`, or `chore/...`).
-2. **Find Base**: If you remember the Epic Target from the bucket list context, use it. If unable to determine the base branch, explicitly ask me which branch to merge into (e.g., `epic/device-registration` or `main`).
-3. **Pre-Flight Code Audit**: Before merging, act as a Senior Security & Performance Engineer. Review the critical files changed on this feature branch for:
-   - Security flaws (hardcoded secrets, unhandled exceptions)
-   - Performance bottlenecks (inefficient react loops, excessive re-renders, memory leaks)
-   - Code cleanliness and proper architecture
-   If any issues are flagged, list them out and **HALT**. Wait for me to give permission to either fix them or proceed.
-4. **Knowledge Audit Gate**: Before merging, evaluate if the overarching feature branch established new critical knowledge (DB tables, Bluetooth commands, global contexts). If yes, ensure it is documented in `tools/SK8Lytz_App_Master_Reference.md`.
-5. **The Safe Push**:
-   - `git push -u origin <feature-branch>`
-6. **PR Handoff**: Tell me the branch was safely pushed to the cloud. Instruct me to either open GitHub or run `gh pr create` to initiate a Pull Request.
-7. **Halt**: Wait for me to confirm that the PR is merged remotely. Once I do, remind me to checkout `master`, `git pull`, and safely delete my local quarantine branch.
+---
 
-## Path B: Production Release (Triggers: "cut a release", "prepare release", "draft release")
+### Phase 1: Worktree Hardening (The Crucible)
+*Location: Must be executed inside the isolated feature worktree (`../SK8Lytz-worktrees/<slug>`)*
+1. **Health Sweep:** Execute the `/health-sweep` workflow to run the DB scanner and npm audit.
+2. **Type Check:** Execute the `/tsc-check` workflow.
+3. **Smoke Test:** Execute the `/smoke-test` workflow to visually guarantee the app won't fatal exception/white screen.
+4. **Bundle Audit:** Execute the `/bundle-audit` workflow.
+*(Pause and verify no errors exist before proceeding).*
 
-1. **Version Bump**:
-   - Ask me if this is a `major`, `minor`, or `patch` release.
-   - Once I answer, automatically use your tools to update the version number in `package.json`.
-2. **Generate Changelog**:
-   - Parse the `tools/SK8Lytz_Bucket_List.md` file and extract all tasks marked as completed (`- [x]`) since the last release.
-   - Update the `CHANGELOG.md` file in the root directory. Add a new section at the top with the new version number, the current date, and a bulleted list of these completed features and fixes.
-3. **Bucket List Cleanup**:
-   - Remove the completed items that were just added to the changelog from `tools/SK8Lytz_Bucket_List.md` to keep the active list clean.
-4. **The Release Commit & Cloud Pipeline**:
-   - Execute `git add .`
-   - Execute `git commit -m "chore: release v<new-version-number>"`
-   - Execute `git tag v<new-version-number>` to officially stamp the timeline.
-   - Push the latest master state and tags to GitHub: `git push origin master --tags`
-   - Auto-deploy by merging to the publish branch: `git checkout publish` and `git merge master`
-   - Push the deployment: `git push origin publish`
-   - Return safely home: `git checkout master`
-5. **Halt**: Output a success message, confirm the deployment pipeline was triggered, and print the new release notes to the chat.
+### Phase 2: The Physical Proof (Test Before Merge)
+*Location: Still inside the worktree.*
+1. **Compile:** Execute the `/build-apk` workflow to compile the worktree's code into a physical `.apk`.
+2. **Deploy:** Execute the `/install-apk` workflow to push the build via ADB to the connected physical device.
+3. **The QA Halt:** You must enter a Strict Wait State. Ask the user: 
+   > "Build deployed to physical device. Please perform manual QA. Type 'approve' to proceed to merge, or 'reject' to abort."
+
+### Phase 3: Versioning & Paperwork
+*Prerequisite: User explicitly typed 'approve' in Phase 2.*
+1. **Bump versions:** Ask the user if this is a `patch`, `minor`, or `major` release. Once confirmed, manually increment the version in `package.json` and `app.json` (update `versionCode`, `buildNumber`, and semver string).
+2. **Documentation:** Execute the `/changelog` and `/pr-summary` workflows to generate release notes based on the worktree's commits.
+3. **Staging:** Execute `/diff-review` for a final check of the file modifications.
+4. **Final Commit:** Stage all changes and commit directly to the worktree branch: `git commit -m "chore(release): vX.Y.Z"`
+
+### Phase 4: The Master Fortress Merge
+*Location: Context switch back to the main directory (`C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`)*
+1. **Prepare Master:** Change directory to the master fortress and run `git pull origin master`.
+2. **Merge:** Run `git merge <slug> --no-ff -m "Merge branch '<slug>' for release vX.Y.Z"`. (Replace `<slug>` with the worktree branch name).
+3. **Tag:** Create the git tag: `git tag vX.Y.Z`.
+4. **The Push Threshold:** You must PAUSE to satisfy Critical Safety Rule 7. Ask the user:
+   > "Merge complete and tagged on master. Permission to push to remote master (`git push origin master --tags`)? (Yes/No)"
+
+### Phase 5: Cleanup
+*Prerequisite: User approved push in Phase 4 and the push command was successfully executed.*
+1. **Nuke Worktree:** Run `git worktree remove ../SK8Lytz-worktrees/<slug> --force`.
+2. **Delete Branch:** Run `git branch -D <slug>`.
+3. **Completion:** Announce successful launch and exit the orchestrator.
