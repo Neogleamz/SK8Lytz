@@ -1,6 +1,6 @@
 # SK8Lytz App Master Reference
 
-_Last Updated: 2026-04-17 | BLE Pipeline Overhaul: Gate semaphore, AutoRecovery, HAL, ng_* key purge | Source of Truth: `src/protocols/ZenggeProtocol.ts`_
+_Last Updated: 2026-04-17 | LED Modes & Pattern Library added, BLE Pipeline Overhaul | Source of Truth: `src/protocols/ZenggeProtocol.ts`, `src/protocols/PatternEngine.ts`_
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
 
@@ -232,6 +232,56 @@ The dashboard auto-connect observer watches `allDevices` for registered peripher
 
 ---
 
+### LED Modes & Pattern Library
+
+_Source of Truth: `src/protocols/PatternEngine.ts` (Fixed Mode), `src/utils/RbmDictionary.ts` (RBM), `src/utils/MusicDictionary.ts` (Music)_
+
+#### User-Facing Mode Taxonomy
+
+| ModeType (FSM) | UI Tab | Protocol Family | Key Hook |
+|:---|:---|:---|:---|
+| `FAVORITES` | Quick Presets | `0x59` / `0x51` (replays saved state) | `useFavorites` |
+| `MULTIMODE` | Color Picker / Fixed Patterns | `0x59` / `0x51` | `useDockedControllerState` |
+| `PROGRAMS` | RBM Built-in Effects | `0x42` / `0x61` (`setCustomRbm`) | `useDockedControllerState` |
+| `MUSIC` | Music Reactive | `0x73` (`setMusicConfig`) | `useMusicMode` |
+| `STREET` | Motion Reactive | `0x59` (solid dispatches on accelerometer) | `useStreetMode` |
+| `CAMERA` | Camera Color Capture | `0x59` | `useDockedControllerState` |
+
+#### Fixed Mode Patterns (IDs 1–10)
+
+10 curated lighting behaviors using foreground (FG) and background (BG) colors.
+Dispatch chain: `useControllerDispatch.ts` → `PatternEngine.ts` → `ZenggeProtocol.ts`.
+
+| ID | Name | Protocol | Pixel Tile (FG/BG) | Transition |
+|:---|:---|:---|:---|:---|
+| 1 | **Solid** | `0x59` | `[FG]` tiled to `numLEDs` | `0x01` FREEZE |
+| 2 | **Single Dot** | `0x59` | `[FG, BG×7]` | `0x00` CASCADE |
+| 3 | **Comet** | `0x59` | `[FG, 50%FG, 20%FG, BG×3]` | `0x00` CASCADE |
+| 4 | **Dashed** | `0x59` | `[FG×4, BG×4]` | `0x00` CASCADE |
+| 5 | **Alternating** | `0x59` | `[FG×2, BG×2]` | `0x00` CASCADE |
+| 6 | **Breath** | `0x51` | 2-step Gradual (`0x3B`) FG↔BG | N/A |
+| 7 | **Flash** | `0x51` | 2-step Jump (`0x3A`) FG↔BG | N/A |
+| 8 | **Strobe** | `0x51` | 2-step Jump (`0x3A`) @ Speed 100 | N/A |
+| 9 | **Wave** | `0x59` | `[BG×2, FG×2, BG×2]` | `0x00` CASCADE |
+| 10 | **Pinch** | `0x59` | `[FG, BG×4, FG]` | `0x00` CASCADE |
+
+> [!IMPORTANT]
+> Patterns 1–5, 9–10 use the **`0x59`** pixel-array command. Patterns 6–8 use the **`0x51`** step-based command. The `PatternEngine.buildPatternPayload()` master dispatcher selects the correct protocol automatically.
+
+#### RBM Built-in Patterns (100 Modes)
+
+Source of truth: `src/utils/RbmDictionary.ts` — IDs 1–100, mapped 1:1 to Zengge `SymphonyBuild` string table.
+Visualizer: `src/utils/RbmSimulator.ts` (pixel-perfect frame generation).
+Protocol: `0x42` (`setCustomRbm`) or `0x61` (legacy APK path — same pattern table).
+
+#### Music Mode Patterns (13 Profiles)
+
+Source of truth: `src/utils/MusicDictionary.ts` — 13 music-reactive patterns keyed to protocol IDs.
+Visualizer: `src/utils/RbmSimulator.ts` → `getRbmMusicFrame()`.
+Protocol: `0x73` (`setMusicConfig`) + `0x74` (App Mic magnitude stream).
+
+---
+
 ### Command: Hardware Config Query (0x63)
 
 _Reads the current EEPROM settings stored inside the controller chip._
@@ -250,16 +300,45 @@ _Writes custom segments, IC type, and max LED points permanently to the controll
 
 ### Command: Segmented Multi-Color Layout Array (0x59)
 
+_Primary command for all IC-strip patterns. Sends a per-pixel RGB array that the hardware loops autonomously._
+
 - **Format:** `[0x59, totalLenHi, totalLenLo, [R1,G1,B1...], numLEDsHi, numLEDsLo, transitionType, speed, direction, checksum]`
-- **transitionType:** `0x00` Static, `0x01` Gradual, `0x02` Strobe, `0x03` RunningWater.
-- **speed:** Clamped strictly between `0x01` and `0x1F`.
+- **Source of Truth:** `ZenggeProtocol.setMultiColor()` — _do NOT replicate this logic elsewhere._
+- **Minimum Payload:** 12 pixels. Payloads <10 cause **hardware memory lock glitching**.
+- **TransitionType Bytes (Hardware-Confirmed Apr 2026):**
+
+| Byte | Label | Behavior |
+|:---|:---|:---|
+| `0x00` | CASCADE | Continuous hardware scroll — use for animated patterns |
+| `0x01` | FREEZE | Pixel array locked in place — solid/static |
+| `0x02` | STROBE | Flashing segments (may not differ from FREEZE on all HW) |
+| `0x03` | Running Water | Hard jumping marquee — one-shot trigger per command. **DO NOT use for continuous animations.** |
+
+- **Speed:** UI 0–100 → HW 1–31. Formula: `max(1, min(31, round(uiSpeed / 100 × 30) + 1))`. Source: APK `Protocol/n.java: ad.e.a(f, 1, 31)`.
+- **Direction:** `0x01` Forward, `0x00` Reverse.
+- **Solid Mode Replication:** A single 1-pixel padded array with `transitionType=0x01` (FREEZE) safely replicates Solid Mode without `0x31` flickering glitches.
 
 ---
 
 ### Command: DIY Custom Animation Sequences (0x51)
 
-- **Format (291 Bytes):** `[0x51, Step0...Step31, 0x0F_Terminator, checksum]`
-- **Step Structure (9 Bytes):** `[ACTIVE_FLAG, transMode, speed, fgRGB, bgRGB]`
+_Sends up to 32 animation steps. Hardware loops through active steps autonomously._
+
+- **Full Format (291 Bytes):** `[0x51, Step0(9)...Step31(9), 0x0F_Terminator, checksum]`
+- **Compact Format (Variable):** `[0x51, Step0(9)...StepN(9), 0x0F_Terminator, checksum]` — only active steps, no 32-slot padding.
+- **Step Structure (9 Bytes):** `[ACTIVE_FLAG, transMode, speed, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b]`
+  - `ACTIVE_FLAG:` `0xF0` = active step, `0x0F` = inactive (skip).
+- **Step Transition Mode Bytes:**
+
+| Byte | Constant | Behavior |
+|:---|:---|:---|
+| `0x3A` | `STEP_JUMP` | Hard cut between FG and BG colors |
+| `0x3B` | `STEP_GRADUAL` | Smooth cross-fade between FG and BG |
+| `0x3C` | `STEP_STROBE` | Rapid flash between FG and BG |
+| `0x01`–`0x21` | Custom Effects 1–33 | Hardware `SymphonyEffect` IDs (advanced per-pixel effects) |
+
+- **Speed:** Full 1–100 range valid (unlike `0x59` which is capped at 31).
+- **Source of Truth:** `ZenggeProtocol.setCustomMode()` (full format), `ZenggeProtocol.setCustomModeCompact()` (compact format).
 
 ---
 
@@ -267,10 +346,42 @@ _Writes custom segments, IC type, and max LED points permanently to the controll
 
 - **Power ON (0x71):** `[0x71, 0x23, 0x0F, 0xA3]`
 - **Power OFF (0x71):** `[0x71, 0x24, 0x0F, 0xA4]`
-- **Set RBM Pattern (0x42):** `[0x42, patternId, speed, brightness, checksum]`
-- **Music Config (0x73):** `[0x73, micSource, modeType, patternId, c1RGB, c2RGB, 0x20, sensitivity, brightness, checksum]`
 
-### ### Proactive Battery Management System (Architectural Skill)
+### Command: Set RBM Built-in Pattern (0x42)
+
+_Triggers one of 100 hardware-native RBM patterns by ID. The controller runs the animation internally — no pixel array needed._
+
+- **Format:** `[0x42, patternId(1–100), speed(1–100), brightness(1–100), checksum]`
+- **Source of Truth:** `ZenggeProtocol.setCustomRbm()`
+- **Pattern IDs:** 1–100 mapped 1:1 to Zengge `SymphonyBuild` string table. Full dictionary in `src/utils/RbmDictionary.ts`.
+
+### Command: Symphony Multi-Color / RBM Legacy (0x61)
+
+_Legacy/alternative opcode for triggering RBM patterns. Present in Zengge APK code paths and the SK8Lytz Diagnostic Lab._
+
+- **Format:** `[0x61, patternId, speed, brightness, checksum]` — identical structure to `0x42`.
+- **Relationship to 0x42:** Both target the same on-chip RBM pattern table. The `0x61` opcode appears in older Zengge firmware revisions and specific APK UI code paths (`symphony_SymphonyBuild_*`). The production dispatch path uses `0x42` via `setCustomRbm()`, while the Diagnostic Lab UI labels it `0x61` for APK parity.
+- **SK8Lytz Usage:** Exposed in Admin Diagnostic Lab (`useProtocolBuilder.ts`, `Sk8LytzDiagnosticLab.tsx`) for protocol testing.
+
+### Command: Music Configuration (0x73)
+
+_Configures the hardware's music-reactive mode with mic source, pattern, and dual colors._
+
+- **Format:** `[0x73, micSource, matrixStyle, patternId, C1.r, C1.g, C1.b, C2.r, C2.g, C2.b, 0x20, sensitivity, brightness, checksum]`
+- **micSource:** `0x01` = Device mic, `0x00` = App mic (magnitude sent via `0x74`).
+- **matrixStyle:** Visual animation archetype ID (mapped in `MusicDictionary.ts`).
+- **patternId:** 1–13 music-reactive patterns.
+- **Source of Truth:** `ZenggeProtocol.setMusicConfig()`
+
+### Command: App Mic Magnitude (0x74)
+
+_Streams real-time audio magnitude from the app's microphone to drive hardware music-reactive LEDs._
+
+- **Format:** `[0x74, magnitude(0–255), checksum]`
+- **Used when:** `micSource = APP` (0x00) in the `0x73` music config.
+- **Source of Truth:** `useAppMicrophone.ts` → `ZenggeProtocol.sendMusicMagnitude()`
+
+### Proactive Battery Management System (Architectural Skill)
 
 The app implements a **Mathematical Consumption Modeling** system using real-time modeling of pixel density, brightness, and pattern intensity to estimate battery reserve.
 

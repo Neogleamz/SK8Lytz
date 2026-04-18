@@ -504,4 +504,98 @@ Run at **390px width (iPhone 14)** and **412px width (Pixel 7)**:
 
 ---
 
-_Last updated: 2026-04-14 | Maintained by: AG + Andy_
+## 17. BLE Group Stress Test (`fix/hw-stress-test-validation`)
+
+> [!IMPORTANT]
+> **Requires:** 2+ physical Zengge LED controllers, Android device with BLE. This section validates
+> the entire gate semaphore + AutoRecovery + partial write pipeline end-to-end.
+
+### Prerequisites
+
+- [ ] 2 SK8Lytz devices (HALOZ or SOULZ) powered on and in range
+- [ ] Android device with BLE enabled
+- [ ] Fresh APK installed (`/build-apk` → `/install-apk`)
+- [ ] Admin Tools accessible (10-tap logo + passcode `0000`)
+- [ ] Admin Timeline tab open to observe real-time telemetry
+
+### 17.1 Group Connection Sequence
+
+| #      | Step                                           | Expected                                                              | Telemetry Event                    |
+| ------ | ---------------------------------------------- | --------------------------------------------------------------------- | ---------------------------------- |
+| 17.1.1 | Tap ⚡ scan — discover 2 devices               | Both devices appear in scan list                                      | `SCAN_STARTED`, `DEVICE_DISCOVERED` ×2 |
+| 17.1.2 | Tap first device to connect                    | `bleGateRef` transitions: `IDLE` → `CONNECTING` → `IDLE`             | `DEVICE_CONNECTED`                 |
+| 17.1.3 | Tap second device to connect (group)           | Both devices listed as connected, group formed                        | `DEVICE_CONNECTED`                 |
+| 17.1.4 | Send solid RED to both (color picker)          | **Both** devices illuminate RED simultaneously                        | `RAW_PAYLOAD` ×1 (group write)     |
+| 17.1.5 | Verify `writeToDevice` return                  | Returns `true` (not `'partial'`) when all devices online              | — (check console)                  |
+
+**Results:** `[ ][ ][ ][ ][ ]`
+
+---
+
+### 17.2 Forced Disconnect → AutoRecovery
+
+| #      | Step                                                    | Expected                                                                 | Telemetry Event                        |
+| ------ | ------------------------------------------------------- | ------------------------------------------------------------------------ | -------------------------------------- |
+| 17.2.1 | **Power OFF** Device 1 physically (pull battery/switch) | Device 1 drops from connected list within 5-10s                          | `DEVICE_DISCONNECTED`, `AUTO_RECOVERY_STARTED` |
+| 17.2.2 | Observe ghosted state                                   | Device 1 ID appears in `ghostedDeviceIds`; UI shows recovery indicator   | `AUTO_RECOVERY_GATE_WAIT` (if gate busy) |
+| 17.2.3 | Send GREEN to devices while Device 1 is ghosted         | **Device 2** turns GREEN; Device 1 write **skipped**                      | `RAW_PAYLOAD` with partial write       |
+| 17.2.4 | Verify `writeToDevice` return                           | Returns `'partial'` — some devices skipped but healthy ones succeeded    | — (check return value)                 |
+| 17.2.5 | Verify `bleGateRef` stays `IDLE` during recovery        | Gate does NOT lock to `RECOVERING` permanently                            | `AUTO_RECOVERY_GATE_WAIT`              |
+
+**Results:** `[ ][ ][ ][ ][ ]`
+
+---
+
+### 17.3 AutoRecovery → Reconnect
+
+| #      | Step                                           | Expected                                                               | Telemetry Event                    |
+| ------ | ---------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------- |
+| 17.3.1 | **Power ON** Device 1 again                    | AutoRecovery loop detects device, starts reconnect                     | `AUTO_RECOVERY_SUCCESS`            |
+| 17.3.2 | Wait for reconnect (up to 30s with backoff)    | Device 1 reappears in connected list; ghosted ID removed               | `DEVICE_CONNECTED`                 |
+| 17.3.3 | Send BLUE to both devices after recovery       | **Both** devices illuminate BLUE — group is fully restored             | `RAW_PAYLOAD` ×1 (group write)     |
+| 17.3.4 | Verify `writeToDevice` return post-recovery    | Returns `true` (not `'partial'`) — all devices healthy                 | —                                  |
+| 17.3.5 | Verify no duplicate recovery loops             | Only 1 recovery loop per device — no exponential fan-out               | Check for duplicate `AUTO_RECOVERY_STARTED` |
+
+**Results:** `[ ][ ][ ][ ][ ]`
+
+---
+
+### 17.4 Gate Semaphore Safety Under Load
+
+| #      | Step                                                    | Expected                                                              | Telemetry Event                    |
+| ------ | ------------------------------------------------------- | --------------------------------------------------------------------- | ---------------------------------- |
+| 17.4.1 | While recovering, tap ⚡ scan                           | Scan **rejected** — gate is not IDLE                                   | `SCAN_STARTED` not fired           |
+| 17.4.2 | Rapidly send 10 color commands in 2 seconds             | All 10 commands queued via `writeMutex` — no GATT collision            | 10× `RAW_PAYLOAD` in sequence      |
+| 17.4.3 | While connected, disconnect all → immediately reconnect | Disconnect completes fully before connect starts                       | `bleGateRef`: `DISCONNECTING` → `IDLE` → `CONNECTING` |
+| 17.4.4 | AdminTools Timeline: verify no `BLE_WRITE_ERROR`        | Zero write errors during normal operation                              | No `BLE_WRITE_ERROR` entries       |
+
+**Results:** `[ ][ ][ ][ ]`
+
+---
+
+### 17.5 MAX_RECOVERY_ATTEMPTS Ejection
+
+| #      | Step                                                    | Expected                                                              |
+| ------ | ------------------------------------------------------- | --------------------------------------------------------------------- |
+| 17.5.1 | Power OFF Device 1, wait for 8 recovery attempts        | After 8 failed attempts, device ejected from connected list           |
+| 17.5.2 | Verify UI cleans up                                     | No permanent "ghosted" indicator stuck — device fully removed         |
+| 17.5.3 | Verify remaining device still works                     | Device 2 continues receiving commands normally                        |
+
+**Results:** `[ ][ ][ ]`
+
+---
+
+### 17.6 Rapid Group Cycling (Chaos Test)
+
+| #      | Step                                                             | Expected                                      |
+| ------ | ---------------------------------------------------------------- | --------------------------------------------- |
+| 17.6.1 | Connect 2 devices → disconnect all → connect both → repeat ×5   | No crash, no stuck gate, all connects succeed |
+| 17.6.2 | Connect 2 → power off 1 → power on 1 → power off 2 → repeat   | Recovery handles alternating dropouts cleanly |
+| 17.6.3 | While recovering, switch DockedController tabs rapidly           | No React error boundary triggered             |
+| 17.6.4 | Final state: both devices connected and responding               | Group write returns `true`                    |
+
+**Results:** `[ ][ ][ ][ ]`
+
+---
+
+_Last updated: 2026-04-17 | Maintained by: AG + Andy_
