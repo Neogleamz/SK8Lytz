@@ -51,6 +51,8 @@ yarn-error.*
 ZENGGE_APK/
 !src/protocols/ZenggeAdapter.ts
 !src/protocols/ZenggeProtocol.ts
+!src/protocols/ZenggeAdapter.ts
+!src/protocols/ZenggeAdapter.ts
 app_strings.txt
 en_strings.txt
 libapp_strings.txt
