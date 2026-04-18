@@ -472,7 +472,7 @@ export function useDashboardGroups({
               });
             }
             await _scrubGhostGroupFromLocal(groupToDelete);
-            _purgeGroupFromState(id);
+            await _purgeGroupFromState(id);
           }
         },
         {
@@ -484,7 +484,7 @@ export function useDashboardGroups({
               await deregisterDevice(d.device_mac);
             }
             await _scrubGhostGroupFromLocal(groupToDelete);
-            _purgeGroupFromState(id);
+            await _purgeGroupFromState(id);
           }
         }
       ]
@@ -517,11 +517,23 @@ export function useDashboardGroups({
     }
   };
 
-  const _purgeGroupFromState = (id: string) => {
+  const _purgeGroupFromState = async (id: string) => {
     // Permanently remove the group from state and storage
     const updatedGroups = customGroupsRef.current.filter(g => g.id !== id);
     setCustomGroups(updatedGroups);
     AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
+    
+    if (supabase) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { error } = await supabase.from('registered_groups').delete().eq('id', id).eq('user_id', session.user.id);
+          if (error) AppLogger.warn('Failed to delete group from cloud', { error: error.message });
+        }
+      } catch (e) {
+        AppLogger.warn('Error scrubbing cloud group', { error: String(e) });
+      }
+    }
     closeGroupModal();
   };
 
