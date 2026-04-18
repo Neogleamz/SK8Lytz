@@ -210,12 +210,9 @@ export function useDashboardGroups({
     devices: RegisteredDevice[],
     allBleDevices: any[]
   ): Promise<void> => {
-    const legacyDevices = await migrateLegacyGroups(allBleDevices, deviceConfigs);
-    const allToRegister = [
-      ...devices,
-      ...legacyDevices.filter(l => !devices.find(d => d.device_mac === l.device_mac)),
-    ];
-    await saveAllRegisteredDevices(allToRegister);
+    // [Ghost Injection Fix]: We completely remove `migrateLegacyGroups` which was re-injecting 
+    // mismatched lower-case MACs from local cache alongside fresh upper-case MACs, bypassing DB UNIQUE constraints.
+    await saveAllRegisteredDevices(devices);
 
     // Groups are derived automatically from registeredDevices via the useEffect derivation loop.
     // Devices carry the correct group_id from the wizard — no manual group creation needed.

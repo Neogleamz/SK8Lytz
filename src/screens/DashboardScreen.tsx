@@ -625,11 +625,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
    */
   const renderItem = useCallback(({ item }: { item: RegisteredDevice | any }) => {
     // IDENTITY FIX: Always resolve to BLE MAC address for all lookups.
-    // RegisteredDevice.id is a Supabase composite key (MAC+userId) — NOT usable
-    // as a deviceConfigs/powerStates key. Only device_mac or BLE device.id (which IS the MAC) works.
-    const mac = (item.device_mac || item.id || '').toLowerCase();
+    // RegisteredDevice.id is a Supabase composite key (MAC+userId).
+    const mac = (item.device_mac || item.id || '').toUpperCase();
     const cachedConfig = deviceConfigs?.[mac] || {};
-    const mergedItem = { ...item, ...cachedConfig };
+    const mergedItem = { 
+      ...item, 
+      ...cachedConfig,
+      name: item.device_name || cachedConfig.name || item.name // Map DB field to component prop
+    };
 
     return (
     <View style={{ paddingHorizontal: Layout.padding }}>
@@ -868,7 +871,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           onDelete={groupModalState === 'RENAME' && editingGroupId ? () => handleGroupDelete(editingGroupId) : undefined}
           initialName={groupModalState === 'RENAME' ? customGroups.find(g => g.id === editingGroupId)?.name : getDefaultGroupName()}
           initialDeviceIds={groupModalState === 'RENAME' ? customGroups.find(g => g.id === editingGroupId)?.deviceIds : selectedIds}
-          allDevices={allDevices}
+          allDevices={allDevices.map(d => ({
+            ...d,
+            name: registeredDevices.find(rd => rd.device_mac.toUpperCase() === d.id.toUpperCase())?.device_name || d.name
+          }))}
         />
       </View>
       

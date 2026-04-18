@@ -521,11 +521,22 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         applyFixedRef.current = setTimeout(() => {
           applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness);
         }, 50);
+      } else if (activeMode === 'PROGRAMS') {
+        if (applyFixedRef.current) clearTimeout(applyFixedRef.current);
+        applyFixedRef.current = setTimeout(() => {
+          if (selectedPatternId === 100) {
+            applyEmergencyPattern(speed, brightness);
+          } else {
+            if (parentWriteToDevice) {
+              optimisticWrite(ZenggeProtocol.setCustomRbm(selectedPatternId, speed, brightness)).catch(() => {});
+            }
+          }
+        }, 50);
       }
       return () => {
         if (applyFixedRef.current) clearTimeout(applyFixedRef.current);
       }
-    }, [fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, activeMode, fixedSubMode, parentWriteToDevice]);
+    }, [fixedPatternId, fixedFgColor, fixedBgColor, selectedPatternId, speed, brightness, activeMode, fixedSubMode, parentWriteToDevice]);
 
     // -- Curated Presets (SK8Lytz Picks) — now owned by useCuratedPicks hook --
     const { curatedPresets, picksLoading } = useCuratedPicks();
