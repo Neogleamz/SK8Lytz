@@ -25,7 +25,7 @@ export function useBLEScanner({
   setAllDevices,
   probeDevice,
   hardwareProbedCallbackRef,
-  disableProbing = false
+  disableProbing = true
 }: UseBLEScannerProps) {
   const [scannerState, setScannerState] = useState<'IDLE' | 'SCANNING' | 'PROBING'>('IDLE');
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
@@ -163,7 +163,6 @@ export function useBLEScanner({
         } else {
           // If hwConfig is null, the 0x63 ping timed out entirely after all retries.
           AppLogger.warn(`[BLE Scanner] Device ${device.id} silently failed to yield telemetry`);
-          Alert.alert("Probe Failed", `Failed to identify ${device.id}. Check logs.`);
           failedIds.push(device.id);
         }
         

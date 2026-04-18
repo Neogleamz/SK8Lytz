@@ -202,7 +202,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
       return hwConfig;
     } catch (err: any) {
       AppLogger.warn(`[BLE Probe Single] Failed to probe ${mac}:`, { error: String(err) });
-      Alert.alert('Probe Error', `Hardware probe failed for ${mac}: ${String(err)}`);
       return null;
     } finally {
       await bleManager.cancelDeviceConnection(mac).catch(() => {});

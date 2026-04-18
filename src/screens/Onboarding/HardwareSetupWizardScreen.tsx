@@ -43,7 +43,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
     if (hasStartedScan && step < 3 && bleState !== 'SCANNING' && bleState !== 'PROBING') {
       // Keep continuously polling while the user is still looking for hardware (Wait 2s to let radio breathe)
       timer = setTimeout(() => {
-        scanForPeripherals({ keepAlive: true });
+        scanForPeripherals({ keepAlive: true, disableProbing: false });
       }, 2000);
     }
     return () => clearTimeout(timer);
@@ -53,7 +53,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
     const granted = await requestPermissions();
     if (granted && bleState !== 'SCANNING') {
       setHasStartedScan(true);
-      scanForPeripherals();
+      scanForPeripherals({ disableProbing: false });
     }
   };
 
