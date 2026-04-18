@@ -368,42 +368,45 @@ export default function useBLE(): BluetoothLowEnergyApi {
     const chunkSize = Math.max(20, (targetDeviceId ? getDeviceMtu(targetDeviceId) : Math.min(...targets.map(d => getDeviceMtu(d.id)))) - 3);
 
     const executeWrite = async (): Promise<boolean | 'partial'> => {
-      const writePromises = targets.map(async (device) => {
-        // Skip ghosted (recovering) devices — track for partial write report
+      const liveTargets = targets.filter(device => {
         if (autoRecovery.ghostedDeviceIds.includes(device.id)) {
           AppLogger.warn(`[BLE] Write SKIPPED ghosted device ${device.id}`);
-          return 'ghosted';
+          return false;
         }
+        return true;
+      });
+      
+      const skippedGhosted = targets.length - liveTargets.length;
+      if (liveTargets.length === 0) return skippedGhosted > 0 ? 'partial' : true;
+
+      let allSucceeded = true;
+      
+      // We process chunk-by-chunk synchronously to avoid GATT Buffer Overflow crashes.
+      // Every device receives chunk 1, then thread sleeps 5ms, then chunk 2, etc.
+      // This synchronizes group animations seamlessly without hanging Android's Baseband radio.
+      for (let i = 0; i < payload.length; i += chunkSize) {
+        const chunk = payload.slice(i, i + chunkSize);
+        const base64Chunk = Buffer.from(chunk).toString('base64');
         
-        const deviceMtu = getDeviceMtu(device.id);
-        const deviceChunk = Math.max(20, deviceMtu - 3);
-        
-        try {
-          for (let i = 0; i < payload.length; i += deviceChunk) {
-            const chunk = payload.slice(i, i + deviceChunk);
-            const base64Chunk = Buffer.from(chunk).toString('base64');
+        for (const device of liveTargets) {
+          try {
             await device.writeCharacteristicWithoutResponseForService(
               ZENGGE_SERVICE_UUID,
               ZENGGE_CHARACTERISTIC_UUID,
               base64Chunk
             );
-            if (i + deviceChunk < payload.length) {
-              await new Promise(resolve => setTimeout(resolve, 5));
-            }
+          } catch (writeError: any) {
+            AppLogger.warn(`[BLE] Write failed for ${device.id} at chunk pos ${i}`, writeError?.message);
+            allSucceeded = false;
           }
-          return 'success';
-        } catch (writeError: any) {
-          AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError?.message);
-          AppLogger.log('BLE_WRITE_ERROR', { error: writeError?.message || String(writeError), target: device.id, payloadLen: payload.length });
-          return 'failure';
         }
-      });
+        
+        // 5ms inter-chunk latency to allow baseband buffers to flush
+        if (i + chunkSize < payload.length) {
+          await new Promise(resolve => setTimeout(resolve, 5));
+        }
+      }
 
-      const results = await Promise.all(writePromises);
-      const skippedGhosted = results.filter(r => r === 'ghosted').length;
-      const allSucceeded = results.every(r => r === 'success' || r === 'ghosted') && results.some(r => r === 'success');
-
-      // Report partial write when some devices were ghosted but others succeeded
       if (skippedGhosted > 0 && allSucceeded) return 'partial';
       return allSucceeded;
     };
