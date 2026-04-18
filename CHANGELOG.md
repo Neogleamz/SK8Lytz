@@ -1,3 +1,34 @@
+## [1.8.17] - 2026-04-17
+
+### 🔧 BLE Pipeline Overhaul (`fix/ble-pipeline-overhaul`)
+- **Gate Semaphore**: Implemented `bleGateRef` FSM (`IDLE|SCANNING|CONNECTING|DISCONNECTING|RECOVERING`) to serialize all BLE lifecycle operations and eliminate GATT collisions
+- **connectToDevice Deleted**: Removed singular device connector; unified all connections through `connectToDevices` group path
+- **AutoRecovery v2**: Replaced `useBLEWatchdog.ts` (deleted) with AbortController-based cancellation and 8-retry ceiling
+- **HAL Seam**: Created `IControllerProtocol.ts` interface + `ZenggeAdapter` + `ControllerRegistry` for future multi-hardware support
+- **Write Type Propagation**: `writeToDevice` now returns `Promise<boolean | 'partial'>` across all 15 consumers
+- **Auto-Connect Observer**: Debounced with gate checks to prevent concurrent GATT boots
+
+### 🛡️ Observability & Error Handling
+- **Silent Catch Purge**: Replaced 15 empty `catch(e){}` blocks with `AppLogger.warn()` across 6 BLE hooks
+- **BLEErrorBoundary**: New crash recovery component wrapping DockedController in DashboardScreen
+- **Console→AppLogger Migration**: Converted 20 raw `console.log/warn/error` calls in 9 hooks to AppLogger
+- **Telemetry Hardening**: Added `PROMISE_REJECTION` event type, unhandled rejection handler (web), `APP_FOREGROUNDED` event, `SCREEN_OPENED` telemetry for 4 screens, `__DEV__`-guarded console.error in AppLogger internals
+
+### 🏗️ Architecture Diet (`chore/docked-controller-diet`)
+- **Color Math Dedup**: Replaced 8 inline hue→hex lambdas with `ColorUtils.hueToHex()`; centralized `COLOR_PRESET_PALETTE` and `PRESET_HUE_MAP`
+- **Persistence Hook**: Wired orphaned `useControllerPersistence` hook, deleted 45 lines of duplicate inline AsyncStorage effects
+- **BLE Dispatch Hook**: Extracted 6 functions into `useControllerDispatch.ts` (185 lines): `sendColor`, `applyFixedPattern`, `applyStaticModePattern`, `applyEmergencyPattern`, `handleMusicChange`, `clampSpeed`
+- **FavoritePromptModal**: Extracted inline modal JSX into `FavoritePromptModal.tsx` (69 lines)
+- **Result**: DockedController slimmed from 97KB/2,080 lines → 87KB/1,874 lines (-10KB, -206 lines)
+
+### 🧹 Housekeeping
+- **Legacy Purge**: Eliminated all `ng_*` AsyncStorage keys from codebase; fixed AdminToolsModal reading dead `ng_device_configs`
+- **Scraper Caches**: Added `nominatim_cache.json` and `state_caches/` to `.gitignore` to fix persistent CRLF dirtying
+- **Master Reference**: Updated storage keys, watchdog→AutoRecovery docs, gate semaphore docs, writeToDevice type docs
+
+---
+
+
 ## [1.8.16] - 2026-04-17
 
 ### ✨ Features
