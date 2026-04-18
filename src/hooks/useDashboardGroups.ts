@@ -119,23 +119,23 @@ export function useDashboardGroups({
           }
         }
 
-        // Sync hardware profile settings into deviceConfigs
-        const existing = nextConfigs[mac] || {};
-        
-        if (
-          (rd.led_points !== undefined && rd.led_points !== existing.points) ||
-          (rd.segments !== undefined && rd.segments !== existing.segments) ||
-          (rd.color_sorting && rd.color_sorting !== existing.sorting) ||
-          (rd.ic_type && rd.ic_type !== existing.stripType) ||
-          (rd.device_name && rd.device_name !== existing.name)
-        ) {
+        // Identify truthy values from the cloud that should replace missing or stale local state.
+        // We strictly require points/segments > 0 to prevent cloud defaults (0) from wiping valid cache.
+        const canSyncPoints = rd.led_points !== undefined && rd.led_points > 0 && rd.led_points !== existing.points;
+        const canSyncSegments = rd.segments !== undefined && rd.segments > 0 && rd.segments !== existing.segments;
+        const canSyncSorting = rd.color_sorting && rd.color_sorting !== 'UNKNOWN' && rd.color_sorting !== existing.sorting;
+        const canSyncStrip = rd.ic_type && rd.ic_type !== 'UNKNOWN' && rd.ic_type !== existing.stripType;
+        const canSyncName = rd.device_name && rd.device_name !== existing.name;
+
+        // Sync hardware profile settings into deviceConfigs ONLY if cloud has newer/valid data
+        if (canSyncPoints || canSyncSegments || canSyncSorting || canSyncStrip || canSyncName) {
           nextConfigs[mac] = {
             ...existing,
-            points: rd.led_points ?? existing.points,
-            segments: rd.segments ?? existing.segments,
-            sorting: rd.color_sorting ?? existing.sorting,
-            stripType: rd.ic_type ?? existing.stripType,
-            name: rd.device_name || existing.name,
+            points: canSyncPoints ? rd.led_points! : existing.points,
+            segments: canSyncSegments ? rd.segments! : existing.segments,
+            sorting: canSyncSorting ? rd.color_sorting! : existing.sorting,
+            stripType: canSyncStrip ? rd.ic_type! : existing.stripType,
+            name: canSyncName ? rd.device_name! : existing.name,
             groupId: rd.group_id && rd.group_id !== 'default-fleet' ? rd.group_id : existing.groupId,
             groupName: rd.group_name || existing.groupName,
             grouped: !!(rd.group_id && rd.group_id !== 'default-fleet')
