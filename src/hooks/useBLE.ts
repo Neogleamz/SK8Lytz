@@ -156,9 +156,11 @@ export default function useBLE(): BluetoothLowEnergyApi {
     
     try {
       if (!alreadyConn) {
-        await bleManager.connectToDevice(mac, { timeout: 5000 });
-        await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
+        await bleManager.connectToDevice(mac, { timeout: 5000 }).catch((e: any) => {
+           if (!String(e).includes('already')) throw e;
+        });
       }
+      await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
       
       const hwConfig = await new Promise<any>((resolve) => {
         let attempts = 0;
@@ -176,7 +178,11 @@ export default function useBLE(): BluetoothLowEnergyApi {
           ZENGGE_SERVICE_UUID,
           ZENGGE_NOTIFY_UUID,
           (err: any, char: any) => {
-            if (err || !char?.value) return;
+            if (err) {
+              AppLogger.warn(`[BLE Probe Single] Monitor error for ${mac}`, { error: String(err) });
+              return;
+            }
+            if (!char?.value) return;
             try {
               const raw = Array.from(Buffer.from(char.value, 'base64')) as number[];
               const parsed = ZenggeProtocol.parseHardwareSettingsResponse(raw);
