@@ -101,23 +101,36 @@ export function useDashboardGroups({
 
   // Derive groups and hardware configs from registeredDevices whenever cloud sync updates them.
   // INVARIANT: deviceIds always contains UPPERCASE MACs — matching BLE d.id.toUpperCase().
+  //
+  // CRITICAL async-trap fix: setDeviceConfigs uses a functional updater that React runs
+  // asynchronously during reconciliation. groupMap must be populated BEFORE the updater
+  // fires — so we iterate registeredDevices TWICE:
+  //   Pass 1 (sync): Build groupMap → setCustomGroups (always has data)
+  //   Pass 2 (async functional updater): Merge hardware config fields → setDeviceConfigs
   useEffect(() => {
+    // ── Pass 1: Group derivation (synchronous) ───────────────────────────────
     const groupMap: Record<string, CustomGroup> = {};
+    registeredDevices.forEach(rd => {
+      const mac = rd.device_mac.toUpperCase();
+      if (rd.group_id && rd.group_name && rd.group_id !== 'default-fleet') {
+        if (!groupMap[rd.group_id]) {
+          groupMap[rd.group_id] = { id: rd.group_id, name: rd.group_name, isGroup: true, deviceIds: [] };
+        }
+        if (!groupMap[rd.group_id].deviceIds.includes(mac)) {
+          groupMap[rd.group_id].deviceIds.push(mac);
+        }
+      }
+    });
+    // setCustomGroups is called synchronously — groupMap is fully populated here
+    setCustomGroups(Object.values(groupMap));
 
+    // ── Pass 2: Hardware config merge (functional updater, async-safe) ───────
     setDeviceConfigs(prevConfigs => {
       let nextConfigs = { ...prevConfigs };
       let configsChanged = false;
 
       registeredDevices.forEach(rd => {
         const mac = rd.device_mac.toUpperCase();
-        if (rd.group_id && rd.group_name && rd.group_id !== 'default-fleet') {
-          if (!groupMap[rd.group_id]) {
-            groupMap[rd.group_id] = { id: rd.group_id, name: rd.group_name, isGroup: true, deviceIds: [] };
-          }
-          if (!groupMap[rd.group_id].deviceIds.includes(mac)) {
-            groupMap[rd.group_id].deviceIds.push(mac);
-          }
-        }
 
         // Identify truthy values from the cloud that should replace missing or stale local state.
         // LOCAL WINS rule: if local has an explicit userConfiguredAt stamp, hardware fields are
@@ -126,15 +139,14 @@ export function useDashboardGroups({
         const existing = nextConfigs[mac] || {} as DeviceSettings;
         const localIsUserConfigured = !!existing.userConfiguredAt;
 
-        const canSyncPoints = !localIsUserConfigured && rd.led_points !== undefined && rd.led_points > 0 && rd.led_points !== existing.points;
-        const canSyncSegments = !localIsUserConfigured && rd.segments !== undefined && rd.segments > 0 && rd.segments !== existing.segments;
-        const canSyncSorting = !localIsUserConfigured && !!rd.color_sorting && rd.color_sorting !== 'UNKNOWN' && rd.color_sorting !== existing.sorting;
-        const canSyncStrip = !localIsUserConfigured && !!rd.ic_type && rd.ic_type !== 'UNKNOWN' && rd.ic_type !== existing.stripType;
+        const canSyncPoints    = !localIsUserConfigured && rd.led_points !== undefined && rd.led_points > 0 && rd.led_points !== existing.points;
+        const canSyncSegments  = !localIsUserConfigured && rd.segments   !== undefined && rd.segments   > 0 && rd.segments   !== existing.segments;
+        const canSyncSorting   = !localIsUserConfigured && !!rd.color_sorting   && rd.color_sorting   !== 'UNKNOWN' && rd.color_sorting   !== existing.sorting;
+        const canSyncStrip     = !localIsUserConfigured && !!rd.ic_type          && rd.ic_type          !== 'UNKNOWN' && rd.ic_type          !== existing.stripType;
         // Name and group metadata always sync from cloud (cross-device authoritative state)
-        const canSyncName = !!rd.device_name && rd.device_name !== existing.name;
-        const canSyncGroup = rd.group_id && rd.group_id !== 'default-fleet' && rd.group_id !== existing.groupId;
+        const canSyncName  = !!rd.device_name && rd.device_name !== existing.name;
+        const canSyncGroup = !!rd.group_id && rd.group_id !== 'default-fleet' && rd.group_id !== existing.groupId;
 
-        // Sync hardware profile settings into deviceConfigs ONLY if cloud has newer/valid data
         if (canSyncPoints || canSyncSegments || canSyncSorting || canSyncStrip || canSyncName || canSyncGroup) {
           nextConfigs[mac] = {
             ...existing,
@@ -151,7 +163,6 @@ export function useDashboardGroups({
           };
           configsChanged = true;
         }
-
       });
 
       if (configsChanged) {
@@ -160,9 +171,9 @@ export function useDashboardGroups({
       }
       return prevConfigs;
     });
-
-    setCustomGroups(Object.values(groupMap));
   }, [registeredDevices]);
+
+
 
   // ─── Device configs — 0x63 probe results + user overrides ────────────────
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, DeviceSettings>>({});
