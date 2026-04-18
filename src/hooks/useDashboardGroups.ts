@@ -408,7 +408,7 @@ export function useDashboardGroups({
     const devsToDelete = registeredDevices.filter(d => d.group_id === id);
     for (const d of devsToDelete) {
       await saveRegisteredDevice({
-        ...d, group_id: 'default-fleet', group_name: d.group_name ?? '', is_pending_sync: true,
+        ...d, group_id: 'default-fleet', group_name: '', is_pending_sync: true,
       });
     }
 
@@ -435,6 +435,11 @@ export function useDashboardGroups({
         AppLogger.warn('Failed to scrub ghost group from device configs', { error: String(e) });
       }
     }
+
+    // Permanently remove the group from state and storage
+    const updatedGroups = customGroupsRef.current.filter(g => g.id !== id);
+    setCustomGroups(updatedGroups);
+    AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
 
     closeGroupModal();
   };
@@ -480,7 +485,7 @@ export function useDashboardGroups({
           configsChanged = true;
         }
         const rd = registeredDevices.find(r => r.device_mac === mac);
-        if (rd) await saveRegisteredDevice({ ...rd, group_id: 'default-fleet', group_name: rd.group_name ?? '', is_pending_sync: true });
+        if (rd) await saveRegisteredDevice({ ...rd, group_id: 'default-fleet', group_name: '', is_pending_sync: true });
       }
 
       // Added/preserved devices: enforce group membership

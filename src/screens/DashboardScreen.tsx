@@ -968,6 +968,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           for (const d of devs) {
             await deregisterDevice(d.device_mac);
           }
+          // Also forcibly scrub the group from the dashboard cache if it exists there
+          const group = customGroups.find(g => g.name === groupName);
+          if (group) {
+            await handleGroupDelete(group.id);
+          }
         }}
       />
       
