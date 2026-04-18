@@ -515,9 +515,32 @@ _Project ID:_ `qefmeivpjyaukbwadgaz`
 | `facility_type` | TEXT      | `roller_rink`/`skatepark`/`pro_shop`  |
 | `has_pro_shop`  | BOOLEAN   | Embedded pro shop indicator           |
 | `is_featured`   | BOOLEAN   | Highlighted partner or rink           |
+| `last_enriched_at`| TIMESTAMP | Last Cultural Daemon crawl timestamp  |
+| `socials`       | JSONB     | Scraped Instagram/Facebook URLs       |
+| `vibe_rating`   | DOUBLE    | Aggregate 5-star Google/Yelp rating   |
+| `has_adult_night`| BOOLEAN  | Scraped confirmation of 18+ nights    |
+| `has_lights`    | BOOLEAN   | OSM Tag: Night lighting               |
+| `has_fee`       | BOOLEAN   | OSM Tag: Paid entry                   |
+| `has_rental`    | BOOLEAN   | OSM Tag: Gear rental                  |
+| `has_wifi`      | BOOLEAN   | OSM Tag: Public Wifi                  |
 
 > [!NOTE]
-> **Map Grounding Strategy**: 20 iconic US Roller Rinks were seeded on 2026-04-13 using the `native_seed` tag to ensure immediate platform value in US territories.
+> **Map Grounding Strategy**: Over 10,000 skate spots are horizontally harvested natively from OpenStreetMap (`tools/scraper/USANationalHarvest.ts`) populating coordinates, facility type, and physical properties. 
+
+---
+
+## 8. Data Pipelines & ETL (The Cultural Daemon)
+
+The project leverages a decoupled, two-phase zero-cost backend to populate `skate_spots`.
+
+### Wave 1: Spatial Harvesting (The Cartographer)
+A fast, lightweight Node script (`USANationalHarvest.ts`) queries the OSM Overpass API state-by-state. It extracts coordinates, resolves full addresses via Nominatim, and maps physical boolean tags (`has_ac`, `has_food`, `capacity`) into Supabase in bulk.
+
+### Wave 2: Cultural Enrichment (The Daemon)
+A stealthy `Puppeteer` background process (`CulturalDaemon.ts`) runs infinitely via PM2. 
+- **The Priority Queue:** It queries Supabase via the `get_next_spot_to_enrich()` RPC, which enforces a strict hierarchy: `roller_rink` -> `hybrid` -> `pro_shop` -> `skatepark`.
+- **The Engine:** It uses Google Shadow-DOM scraping to extract aggregate `vibe_rating`, Instagram links, and adult-night presence.
+- **The Stealth:** The script strictly sleeps for 4 minutes between hits (~280 locations/day), guaranteeing zero CAPTCHAs and eliminating the need for paid IP proxies.
 
 ---
 

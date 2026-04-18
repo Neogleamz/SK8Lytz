@@ -55,12 +55,12 @@ class NotificationService {
    *   4. Register token with Supabase
    *   5. Wire foreground + response handlers
    */
-  async init(): Promise<string | null> {
+  async init(autoRequest: boolean = false): Promise<string | null> {
     await this._setupAndroidChannel();
 
-    const granted = await this._requestPermissions();
+    const granted = await this._requestPermissions(autoRequest);
     if (!granted) {
-      console.log('[NotificationService] Permission denied');
+      console.log('[NotificationService] Permission denied (or undetermined)');
       return null;
     }
 
@@ -208,14 +208,18 @@ class NotificationService {
   }
 
 
-  private async _requestPermissions(): Promise<boolean> {
+  private async _requestPermissions(autoRequest: boolean): Promise<boolean> {
     if (Platform.OS === 'web') return false; // Web push not supported in this flow
 
     const { status: existing } = await Notifications.getPermissionsAsync();
     if (existing === 'granted') return true;
 
-    const { status } = await Notifications.requestPermissionsAsync();
-    return status === 'granted';
+    if (autoRequest) {
+      const { status } = await Notifications.requestPermissionsAsync();
+      return status === 'granted';
+    }
+    
+    return false;
   }
 
   private async _setupAndroidChannel(): Promise<void> {

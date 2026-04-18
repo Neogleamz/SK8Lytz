@@ -6,7 +6,8 @@
   "scripts": {
     "start": "ts-node index.ts",
     "seed": "ts-node SeedOverpass.ts",
-    "scrape": "ts-node GoogleShadowDOM.ts"
+    "scrape": "ts-node GoogleShadowDOM.ts",
+    "daemon": "tsx CulturalDaemon.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@types/node": "^20.11.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.3.3"
   }
 }

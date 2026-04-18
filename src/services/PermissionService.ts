@@ -72,6 +72,11 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
       }
       case 'NOTIFICATIONS': {
         const { status } = await Notifications.requestPermissionsAsync();
+        if (status === 'granted') {
+          // Import inline to avoid circular dependency issues at the module level
+          const { notificationService } = require('./NotificationService');
+          notificationService.init(true).catch(() => {});
+        }
         return status === 'granted';
       }
       case 'BLUETOOTH': {

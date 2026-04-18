@@ -75,7 +75,7 @@ export function useDashboardProfile({
       onCrewJoinNotification(crewId);
     });
 
-    notificationService.init().catch(e =>
+    notificationService.init(false).catch(e =>
       AppLogger.log('SYNC', { context: 'push_notification_init_skipped', error: String(e) })
     );
 

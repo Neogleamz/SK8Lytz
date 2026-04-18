@@ -24,14 +24,6 @@ export const PERMISSIONS_LIST: PermissionItem[] = [
     disabledFeature: 'Full app lockout',
   },
   {
-    id: 'NOTIFICATIONS',
-    title: 'Stay Connected',
-    icon: 'bell-outline',
-    description: 'Get alerts when your crew starts a live session near you.',
-    required: false,
-    disabledFeature: 'Crew Session Invites',
-  },
-  {
     id: 'LOCATION',
     title: 'The Roll Call',
     icon: 'map-marker-outline',
@@ -54,6 +46,14 @@ export const PERMISSIONS_LIST: PermissionItem[] = [
     description: 'Allows Music Mode to sync your lights to the ambient room audio or DJ.',
     required: false,
     disabledFeature: 'Live Music Sync',
+  },
+  {
+    id: 'NOTIFICATIONS',
+    title: 'Stay Connected',
+    icon: 'bell-outline',
+    description: 'Get alerts when your crew starts a live session near you.',
+    required: false,
+    disabledFeature: 'Crew Session Invites',
   }
 ];
 
