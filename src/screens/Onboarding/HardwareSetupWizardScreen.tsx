@@ -492,7 +492,7 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                      device_name: cfg?.name.trim() || device.device_name,
                      product_type: (cfg?.type || LOCAL_PRODUCT_CATALOG[0].id) as any,
                      position: cfg?.position || null,
-                     group_id: '',
+                     group_id: groupName.trim().toLowerCase().replace(/\s+/g, '-'),
                      led_points: cfg?.points || device.led_points,
                      segments: 1,
                      ic_type: 'WS2812B',

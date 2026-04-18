@@ -215,16 +215,8 @@ export function useDashboardGroups({
     ];
     await saveAllRegisteredDevices(allToRegister);
 
-    const macs = devices.map(d => d.device_mac);
-    if (macs.length > 0) {
-      const newGroupId = `fleet_${Date.now()}`;
-      const groupName = devices[0].group_name || 'My Skates';
-      const newGroup: CustomGroup = { id: newGroupId, name: groupName, isGroup: true, deviceIds: macs };
-      const updatedGroups = [...customGroupsRef.current, newGroup];
-      setCustomGroups(updatedGroups);
-      AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
-    }
-
+    // Groups are derived automatically from registeredDevices via the useEffect derivation loop.
+    // Devices carry the correct group_id from the wizard — no manual group creation needed.
     clearPendingRegistrations();
     onRegistrationComplete();
   };
