@@ -97,11 +97,17 @@ async function processState(stateCode: string) {
     let state = tags['addr:state'] || null;
     let zip = tags['addr:postcode'] || null;
 
-    if (!street_address) {
-      const fallbackFullAddress = await reverseGeocode(lat, lon);
-      if (!fallbackFullAddress) continue; 
-      street_address = fallbackFullAddress;
+    if (!street_address || !city || !state || !zip) {
+      const geo = await reverseGeocode(lat, lon);
+      if (geo) {
+        if (!street_address && geo.fullAddress) street_address = geo.fullAddress;
+        if (!city && geo.city) city = geo.city;
+        if (!state && geo.state) state = geo.state;
+        if (!zip && geo.zip) zip = geo.zip;
+      }
     }
+
+    if (!street_address) continue;
 
     let surface = tags.surface || 'unknown';
     if (surface.includes('wood')) surface = 'wood';

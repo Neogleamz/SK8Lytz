@@ -638,7 +638,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     <View style={{ paddingHorizontal: Layout.padding }}>
       <DeviceItem
         device={mergedItem}
-        isConnected={displayConnectedDevices.some(d => d.id.toLowerCase() === mac)}
+        isConnected={displayConnectedDevices.some(d => d.id.toUpperCase() === mac)}
         isSelectionMode={isSelectionMode}
         isSelected={selectedIds.includes(mac)}
         onPress={async () => {
@@ -648,7 +648,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           }
           // Resolve the live BLE peripheral by MAC.
           const bleDevice = allDevices.find(
-            (d: any) => (d.id || '').toLowerCase() === mac
+            (d: any) => (d.id || '').toUpperCase() === mac
           );
           if (!bleDevice) {
             // Device not yet discovered — trigger a scan. useDashboardAutoConnect

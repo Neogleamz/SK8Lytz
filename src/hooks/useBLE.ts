@@ -366,17 +366,16 @@ export default function useBLE(): BluetoothLowEnergyApi {
     const chunkSize = Math.max(20, (targetDeviceId ? getDeviceMtu(targetDeviceId) : Math.min(...targets.map(d => getDeviceMtu(d.id)))) - 3);
 
     const executeWrite = async (): Promise<boolean | 'partial'> => {
-      let allSucceeded = true;
-      let skippedGhosted = 0;
-      for (const device of targets) {
+      const writePromises = targets.map(async (device) => {
         // Skip ghosted (recovering) devices — track for partial write report
         if (autoRecovery.ghostedDeviceIds.includes(device.id)) {
-          skippedGhosted++;
           AppLogger.warn(`[BLE] Write SKIPPED ghosted device ${device.id}`);
-          continue;
+          return 'ghosted';
         }
+        
         const deviceMtu = getDeviceMtu(device.id);
         const deviceChunk = Math.max(20, deviceMtu - 3);
+        
         try {
           for (let i = 0; i < payload.length; i += deviceChunk) {
             const chunk = payload.slice(i, i + deviceChunk);
@@ -390,12 +389,18 @@ export default function useBLE(): BluetoothLowEnergyApi {
               await new Promise(resolve => setTimeout(resolve, 5));
             }
           }
+          return 'success';
         } catch (writeError: any) {
-          allSucceeded = false;
           AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError?.message);
           AppLogger.log('BLE_WRITE_ERROR', { error: writeError?.message || String(writeError), target: device.id, payloadLen: payload.length });
+          return 'failure';
         }
-      }
+      });
+
+      const results = await Promise.all(writePromises);
+      const skippedGhosted = results.filter(r => r === 'ghosted').length;
+      const allSucceeded = results.every(r => r === 'success' || r === 'ghosted') && results.some(r => r === 'success');
+
       // Report partial write when some devices were ghosted but others succeeded
       if (skippedGhosted > 0 && allSucceeded) return 'partial';
       return allSucceeded;
@@ -426,13 +431,14 @@ export default function useBLE(): BluetoothLowEnergyApi {
     const staleDevices = [...connectedDevicesRef.current];
 
     if (staleDevices.length > 0 && Platform.OS !== 'web') {
-      for (const device of staleDevices) {
+      const disconnectPromises = staleDevices.map(async (device) => {
         try {
           await bleManager.cancelDeviceConnection(device.id).catch((e: any) => AppLogger.warn(`[BLE] Disconnect soft fail for ${device.id}`, e));
         } catch (e: any) {
           AppLogger.error(`[BLE] Fatal disconnect fault for ${device.id}`, e);
         }
-      }
+      });
+      await Promise.all(disconnectPromises);
       await new Promise(resolve => setTimeout(resolve, 250));
     }
     
