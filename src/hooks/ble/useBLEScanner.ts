@@ -331,37 +331,8 @@ export function useBLEScanner({
               
               AppLogger.log('DEVICE_DISCOVERED', { ...logData, firmware: advFirmware, firmwareVer, ledVersion, bleVersion, productId });
               
-              if (supabase) {
-                (async () => {
-                   try {
-                     const { data: existingRows } = await supabase.from('registered_devices').select('user_id').eq('device_mac', device.id);
-                     const ownerIds = (existingRows || []).map((r: any) => r.user_id).filter(Boolean);
-                     const telemetryPayload: any = {
-                       device_mac: device.id,
-                       device_name: `SK8Lytz-${device.id.replace(/:/g, '').slice(-4)}`,
-                       factory_name: device.name || 'Unknown',
-                       manufacturer_data: manufacturerData || null,
-                       ble_version: bleVersion || null,
-                       firmware_ver: firmwareVer || null,
-                       led_version: ledVersion || null,
-                       product_id: productId || null,
-                       rssi_at_register: device.rssi,
-                       updated_at: new Date().toISOString()
-                     };
-                     if (ownerIds.length === 0) {
-                       telemetryPayload.product_type = nameLower.includes('halo') ? 'HALOZ' : 'SOULZ';
-                       telemetryPayload.group_name = 'Unclaimed';
-                       telemetryPayload.position = null;
-                     }
-                     try { await supabase.from('registered_devices').upsert(telemetryPayload, { onConflict: 'device_mac', ignoreDuplicates: false }); } 
-                     catch { try { await supabase.from('registered_devices').upsert(telemetryPayload, { onConflict: 'user_id,device_mac', ignoreDuplicates: false }); } catch {} }
-
-                     if (ownerIds.length > 0) {
-                       setAllDevices(prev => prev.map(d => d.id === device.id ? Object.assign(d, { owner_ids: ownerIds }) : d));
-                     }
-                   } catch(e) { AppLogger.warn('[Scanner] Telemetry upsert failed', { deviceId: device.id, error: String(e) }); }
-                })();
-              }
+              // Removed malformed registered_devices upsert. Discovery payloads should not be
+              // written to registered_devices until explicitly claimed by a user.
 
               const updatedDevices = [...prevState, device];
               classifyProbeResults(updatedDevices);

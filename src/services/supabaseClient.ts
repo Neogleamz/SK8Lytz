@@ -16,4 +16,19 @@ export const supabase = supabaseUrl && supabaseAnonKey
         detectSessionInUrl: false,
       },
     })
-  : (null as unknown as ReturnType<typeof createClient<Database>>);
+  : ({
+      auth: {
+        getUser: async () => ({ data: { user: null }, error: null }),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+        signInWithPassword: async () => ({ data: null, error: new Error('Offline mode') }),
+        signOut: async () => ({ error: null }),
+      },
+      channel: () => ({
+        on: () => ({ subscribe: () => ({ unsubscribe: () => {} }) }),
+      }),
+      from: () => ({
+        select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }), order: async () => ({ data: [] }) }), maybeSingle: async () => ({ data: null }), order: async () => ({ data: [] }) }), maybeSingle: async () => ({ data: null }), order: async () => ({ data: [] }) }),
+        upsert: async () => ({ error: null }),
+        delete: () => ({ eq: () => ({ eq: async () => ({ error: null }), delete: async () => ({ error: null }) }) })
+      })
+    } as unknown as ReturnType<typeof createClient<Database>>);
