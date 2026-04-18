@@ -38,6 +38,7 @@ import MultiModePanel from './docked/MultiModePanel';
 import CameraPanel from './docked/CameraPanel';
 import ProgramsPanel from './docked/ProgramsPanel';
 import StreetPanel from './docked/StreetPanel';
+import FavoritePromptModal from './docked/FavoritePromptModal';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Layout, Spacing, Typography } from '../theme/theme';
@@ -66,7 +67,7 @@ import MarqueeText from './MarqueeText';
 import PositionalGradientBuilder from './PositionalGradientBuilder';
 import SessionSummaryModal from './SessionSummaryModal';
 
-// hexToHue — now imported from '../utils/ColorUtils'
+
 
 
 // AnalogGauge — now imported from './docked/AnalogGauge'
@@ -1432,41 +1433,16 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         />
 
         {/* Favorite Prompt Modal */}
-        <Modal visible={promptState === 'NAMING_FAVORITE'} transparent animationType="fade">
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }}>
-            <View style={{ backgroundColor: Colors.surface, padding: Spacing.xl, borderRadius: 20, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: Spacing.md, textAlign: 'center' }}>
-                {favPromptTargetId ? 'Edit Favorite' : 'Save Favorite'}
-              </Text>
-              <Text style={{ color: Colors.textMuted, fontSize: 14, marginBottom: Spacing.xl, textAlign: 'center' }}>
-                {favPromptTargetId ? 'Rename your preset or delete it.' : 'Name your preset. Leave blank to use the default name.'}
-              </Text>
-              <TextInput
-                style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: Spacing.md, borderRadius: 8, fontSize: 16, marginBottom: Spacing.xl, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
-                placeholder="Custom Preset Name..."
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                value={promptName}
-                onChangeText={setPromptName}
-                autoFocus
-              />
-              <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-                {favPromptTargetId && (
-                  <TouchableOpacity style={{ flex: 1, padding: Spacing.lg, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={() => { deleteFavorite(favPromptTargetId); closePrompt(); }}>
-                    <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Delete</Text>
-                  </TouchableOpacity>
-                )}
-                {(!favPromptTargetId) && (
-                  <TouchableOpacity style={{ flex: 1, padding: Spacing.lg, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => closePrompt()}>
-                    <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity style={{ flex: 1, padding: Spacing.lg, borderRadius: 10, backgroundColor: Colors.primary }} onPress={handleConfirmSaveFavorite}>
-                  <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>Save</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+        <FavoritePromptModal
+          visible={promptState === 'NAMING_FAVORITE'}
+          Colors={Colors}
+          promptName={promptName}
+          onChangePromptName={setPromptName}
+          favPromptTargetId={favPromptTargetId}
+          onDelete={() => { deleteFavorite(favPromptTargetId!); closePrompt(); }}
+          onCancel={() => closePrompt()}
+          onSave={handleConfirmSaveFavorite}
+        />
         {/* Session Summary Modal */}
         <SessionSummaryModal
           visible={showSessionModal}
