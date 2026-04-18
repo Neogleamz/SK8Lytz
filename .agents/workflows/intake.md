@@ -13,4 +13,4 @@ description: Intake an idea, draft a plan, generate the slug, and append to buck
    - 🟠 HIGH: Tech Debt
    - 🟡 MEDIUM: Admin
    - 🔵 LOW: New Features
-7. **The Priority Override (Zero-Bypass Integration)**: If the user explicitly says "up next", "bump", or "priority", draft the plan and HALT for approval. Do NOT create a branch — branch creation is gated by Safety Rule 6 and requires an explicit execution trigger phrase from the user.
+7. **The Priority Override (Zero-Bypass Integration)**: If the user explicitly says "up next", "bump", or "priority", draft the plan and HALT for approval. Do NOT create a branch or worktree — branch creation is gated by Safety Rule 6 and requires an explicit execution trigger phrase from the user.

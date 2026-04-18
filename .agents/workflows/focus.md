@@ -36,14 +36,18 @@ description: Focus on a bucket list task — load its plan, set up the branch, a
 <any hooks, services, or components this task depends on>
 ```
 
-5. **Branch Pre-Flight (⛔ Safety Rule 6 Enforced)**:
+5. **Worktree Setup (⛔ Safety Rule 6 — Worktree Isolation)**:
    - The `/focus` command IS an explicit execution trigger — the user is saying "I want to work on this now."
-   - **However**, before checking out, run `git status` and `git branch --show-current` first.
-   - If there are **uncommitted changes** or the current branch is **not `master`**, **HALT** and ask: "You have uncommitted work on branch `<current>`. Stash, commit, or abort?"
-   - Only after the working tree is clean, proceed:
-```powershell
-Set-Location "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
-git checkout <slug> 2>&1 | Out-String | ForEach-Object { if ($_ -match "error: pathspec") { git checkout -b <slug> } }
-```
+   - Check if a worktree already exists for this slug:
+     ```powershell
+     git worktree list
+     ```
+   - If the worktree **already exists**, just inform the user: "Worktree for `<slug>` already exists at `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\<slug>`. Work should continue there."
+   - If it **does not exist**, create it:
+     ```powershell
+     cd C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz
+     git worktree add ../SK8Lytz-worktrees/<slug> -b <slug>
+     ```
+   - **NEVER run `git checkout` or `git switch` in the main repo directory.**
 
-6. **Halt** — inform the user the branch is checked out and ask if they are ready to proceed.
+6. **Halt** — inform the user the worktree is ready and ask if they are ready to proceed. Remind them all work for this task happens in `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\<slug>`.

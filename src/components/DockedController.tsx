@@ -39,6 +39,7 @@ import CameraPanel from './docked/CameraPanel';
 import ProgramsPanel from './docked/ProgramsPanel';
 import StreetPanel from './docked/StreetPanel';
 import FavoritePromptModal from './docked/FavoritePromptModal';
+import UniversalSlidersFooter from './docked/UniversalSlidersFooter';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Layout, Spacing, Typography } from '../theme/theme';
@@ -430,71 +431,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       saveFavorite(capturedState, name);
     };
 
-    const loadFavorite = (favRaw: IFavoriteState, context: 'FAVORITE' | 'PICK' | 'COMMUNITY' = 'FAVORITE') => {
-      const fav = favRaw as IFavoriteState;
-      AppLogger.log(context === 'PICK' ? 'PICK_LOADED' : 'FAVORITE_LOADED', { name: fav.name, mode: fav.mode });
-      setActiveFavoriteId(fav.id);
-      setSpeed(fav.speed);
-      setBrightness(fav.brightness);
-      if (fav.color) setSelectedColor(fav.color);
-
-      // Normalize legacy mode names to new taxonomy
-      const legacyMode = (fav.mode === 'RBM' || fav.mode === 'PROGRAMS') ? 'PROGRAMS'
-        : (fav.mode === 'FAVORITES' || fav.mode === 'PRESETS') ? 'FAVORITES'
-          : fav.mode;
-
-      if (legacyMode === 'PROGRAMS') {
-        setActiveMode('PROGRAMS');
-        setSelectedPatternId(fav.patternId ?? 0);
-        if (writeToDevice) writeToDevice(ZenggeProtocol.setCustomRbm(fav.patternId ?? 0, fav.speed, fav.brightness));
-      } else if (legacyMode === 'MUSIC') {
-        setActiveMode('MUSIC');
-        setMusicPatternId(fav.patternId ?? 0);
-        handleMusicChange(fav.patternId ?? 0, micSensitivity, fav.brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
-      } else if (legacyMode === 'CAMERA') {
-        setActiveMode('CAMERA');
-      } else if (legacyMode === 'FAVORITES') {
-        setActiveMode('FAVORITES');
-      } else if (legacyMode === 'MULTIMODE' || legacyMode === 'PATTERN') {
-        setActiveMode('MULTIMODE');
-        setFixedSubMode('PATTERN');
-        setFixedPatternId(fav.patternId ?? 0);
-        setFixedColorMode(fav.fixedColorMode ?? 'FOREGROUND');
-        setFixedFgColor(fav.fixedFgColor ?? '#FFFFFF');
-        setFixedBgColor(fav.fixedBgColor ?? '#000000');
-        applyFixedPattern(fav.patternId ?? 0, fav.fixedFgColor ?? '#FFFFFF', fav.fixedBgColor ?? '#000000', fav.speed, fav.brightness);
-      } else if (legacyMode === 'MULTI' || legacyMode === 'DIY' || legacyMode === 'MULTICOLOR') {
-        setActiveMode('MULTIMODE');
-        setFixedSubMode('BUILDER');
-        setMultiColors(fav.multiColors || []);
-        setMultiTransition(fav.multiTransition || 3);
-        setMultiLength(fav.multiLength || 16);
-        if (writeToDevice && fav.multiColors) {
-          const sortIdx = hwSettings?.colorSorting ?? 2;
-          const rgbColors = fav.multiColors.map((h: string) => {
-            const r = parseInt(h.slice(1, 3), 16) || 0;
-            const g = parseInt(h.slice(3, 5), 16) || 0;
-            const b = parseInt(h.slice(5, 7), 16) || 0;
-            return { r, g, b };
-          });
-          writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(fav.speed), 1, fav.multiTransition));
-        }
-      } else {
-        // Unknown/legacy mode - best-effort color dispatch
-        if (fav.color) {
-          const fallbackColor = fav.color;
-          setTimeout(() => {
-            sendColor(parseInt(fallbackColor.slice(1, 3), 16) || 0, parseInt(fallbackColor.slice(3, 5), 16) || 0, parseInt(fallbackColor.slice(5, 7), 16) || 0);
-          }, 100);
-        }
-      }
-      
-      if (context === 'PICK') {
-        AppLogger.log('PICK_SELECTED', { id: fav.id, name: fav.name || fav.customName, mode: legacyMode });
-      } else {
-        AppLogger.log('FAVORITE_RENDERED', { id: fav.id, name: fav.name || fav.customName, mode: legacyMode, patternId: fav.patternId });
-      }
-    };
 
     // ── BLE Dispatch: hardware command translation via extracted hook ──────
     const {
@@ -509,6 +445,70 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     /** Convenience wrapper — pre-binds selectedColor and speed for callers */
     const applyStaticModePattern = (pat: typeof fixedModePattern, r?: number, g?: number, b?: number, spd?: number) =>
       _applyStaticModePattern(pat, selectedColor, speed, r, g, b, spd);
+
+    /** Restore a saved favorite — dispatches mode switch + BLE commands */
+    const loadFavorite = React.useCallback((favRaw: IFavoriteState, context: 'FAVORITE' | 'PICK' | 'COMMUNITY' = 'FAVORITE') => {
+      AppLogger.log(context === 'PICK' ? 'PICK_LOADED' : 'FAVORITE_LOADED', { name: favRaw.name, mode: favRaw.mode });
+      setActiveFavoriteId(favRaw.id);
+      setSpeed(favRaw.speed);
+      setBrightness(favRaw.brightness);
+      if (favRaw.color) setSelectedColor(favRaw.color);
+
+      // Normalize legacy mode names to new taxonomy
+      const legacyMode = (favRaw.mode === 'RBM' || favRaw.mode === 'PROGRAMS') ? 'PROGRAMS'
+        : (favRaw.mode === 'FAVORITES' || favRaw.mode === 'PRESETS') ? 'FAVORITES'
+          : favRaw.mode;
+
+      if (legacyMode === 'PROGRAMS') {
+        setActiveMode('PROGRAMS');
+        setSelectedPatternId(favRaw.patternId ?? 0);
+        if (writeToDevice) writeToDevice(ZenggeProtocol.setCustomRbm(favRaw.patternId ?? 0, favRaw.speed, favRaw.brightness));
+      } else if (legacyMode === 'MUSIC') {
+        setActiveMode('MUSIC');
+        setMusicPatternId(favRaw.patternId ?? 0);
+        handleMusicChange(favRaw.patternId ?? 0, micSensitivity, favRaw.brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
+      } else if (legacyMode === 'CAMERA') {
+        setActiveMode('CAMERA');
+      } else if (legacyMode === 'FAVORITES') {
+        setActiveMode('FAVORITES');
+      } else if (legacyMode === 'MULTIMODE' || legacyMode === 'PATTERN') {
+        setActiveMode('MULTIMODE');
+        setFixedSubMode('PATTERN');
+        setFixedPatternId(favRaw.patternId ?? 0);
+        setFixedColorMode(favRaw.fixedColorMode ?? 'FOREGROUND');
+        setFixedFgColor(favRaw.fixedFgColor ?? '#FFFFFF');
+        setFixedBgColor(favRaw.fixedBgColor ?? '#000000');
+        applyFixedPattern(favRaw.patternId ?? 0, favRaw.fixedFgColor ?? '#FFFFFF', favRaw.fixedBgColor ?? '#000000', favRaw.speed, favRaw.brightness);
+      } else if (legacyMode === 'MULTI' || legacyMode === 'DIY' || legacyMode === 'MULTICOLOR') {
+        setActiveMode('MULTIMODE');
+        setFixedSubMode('BUILDER');
+        setMultiColors(favRaw.multiColors || []);
+        setMultiTransition(favRaw.multiTransition || 3);
+        setMultiLength(favRaw.multiLength || 16);
+        if (writeToDevice && favRaw.multiColors) {
+          const rgbColors = favRaw.multiColors.map((h: string) => ({
+            r: parseInt(h.slice(1, 3), 16) || 0,
+            g: parseInt(h.slice(3, 5), 16) || 0,
+            b: parseInt(h.slice(5, 7), 16) || 0,
+          }));
+          writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(favRaw.speed), 1, favRaw.multiTransition));
+        }
+      } else {
+        // Unknown/legacy mode — best-effort color dispatch
+        if (favRaw.color) {
+          const fallbackColor = favRaw.color;
+          setTimeout(() => {
+            sendColor(parseInt(fallbackColor.slice(1, 3), 16) || 0, parseInt(fallbackColor.slice(3, 5), 16) || 0, parseInt(fallbackColor.slice(5, 7), 16) || 0);
+          }, 100);
+        }
+      }
+      
+      if (context === 'PICK') {
+        AppLogger.log('PICK_SELECTED', { id: favRaw.id, name: favRaw.name || favRaw.customName, mode: legacyMode });
+      } else {
+        AppLogger.log('FAVORITE_RENDERED', { id: favRaw.id, name: favRaw.name || favRaw.customName, mode: legacyMode, patternId: favRaw.patternId });
+      }
+    }, [writeToDevice, handleMusicChange, applyFixedPattern, sendColor, clampSpeed, micSensitivity, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle]);
 
 
     // --- PRO EFFECTS REACTIVITY LOGIC ---
@@ -836,440 +836,62 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
           {/* UNIVERSAL SLIDERS FOOTER - Hidden in FAVORITES only */}
           {activeMode !== 'FAVORITES' && (
-            <View style={[styles.sceneSlidersContainer, { marginTop: Spacing.sm, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: Spacing.sm, paddingBottom: 0, flexShrink: 0 }]}>
-              {/* Color Grid wrappers */}
-              {!(activeMode === 'PROGRAMS') && (
-                <View style={{ marginBottom: Spacing.xs }}>
-                  {/* Dynamic Selected Color Bar */}
-                  {!(activeMode === 'MUSIC' || (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN')) && (() => {
-                    const dynamicColor = activeMode === 'STREET' ? streetCruiseColor : selectedColor;
-
-                    return (
-                      <TouchableOpacity
-                        activeOpacity={0.9}
-                        onPress={() => {
-                          // Send immediately if pressed just in case
-                          const r = parseInt(dynamicColor.slice(1, 3), 16) || 255;
-                          const g = parseInt(dynamicColor.slice(3, 5), 16) || 255;
-                          const b = parseInt(dynamicColor.slice(5, 7), 16) || 255;
-                          if (activeMode === 'FIXED') applyStaticModePattern(fixedModePattern, r, g, b);
-                          else if (activeMode === 'MULTIMODE' && fixedSubMode !== 'PATTERN') sendColor(r, g, b);
-                          else if (activeMode === 'STREET') applyStreetPattern(motionStateRef.current);
-                        }}
-                        style={{
-                          width: '100%',
-                          height: 18,
-                          borderRadius: 9,
-                          backgroundColor: dynamicColor,
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          marginBottom: Spacing.xs,
-                          shadowColor: dynamicColor,
-                          shadowOpacity: 0.8,
-                          shadowRadius: 10,
-                          shadowOffset: { width: 0, height: 0 },
-                          elevation: 6,
-                          borderWidth: 1,
-                          borderColor: 'rgba(255,255,255,0.4)'
-                        }}
-                      >
-                        <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '800', letterSpacing: 2, textShadowColor: '#000', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } }}>
-                          SELECTED COLOR
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })()}
-
-                  {/* Music Mode Split Color Tracker */}
-                  {(activeMode === 'MUSIC') && (() => {
-                    const primHex = musicPrimaryColor;
-                    const secHex = musicSecondaryColor;
-
-                    return (
-                      <View style={{
-                        flexDirection: 'row', width: '100%', height: 18, borderRadius: 9, marginBottom: Spacing.xs,
-                        borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'transparent'
-                      }}>
-                        <TouchableOpacity
-                          activeOpacity={0.9}
-                          onPress={() => setMusicColorFocus('PRIMARY')}
-                          style={{ flex: 1, backgroundColor: primHex, justifyContent: 'center', alignItems: 'center', opacity: musicColorFocus === 'PRIMARY' ? 1.0 : 0.4, borderTopLeftRadius: 8, borderBottomLeftRadius: 8, shadowColor: primHex, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
-                        >
-                          <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>SOUND COLUMN</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          activeOpacity={0.9}
-                          onPress={() => setMusicColorFocus('SECONDARY')}
-                          style={{ flex: 1, backgroundColor: secHex, justifyContent: 'center', alignItems: 'center', opacity: musicColorFocus === 'SECONDARY' ? 1.0 : 0.4, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.4)', borderTopRightRadius: 8, borderBottomRightRadius: 8, shadowColor: secHex, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
-                        >
-                          <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>DROP COLOR</Text>
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })()}
-
-                  {/* Fixed Pattern Mode Split Color Tracker — respects effect's color requirements */}
-                  {(activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') && (() => {
-                    const selectedEffect = ZENGGE_EFFECTS.find(e => e.id === fixedPatternId);
-                    const showFg = selectedEffect ? selectedEffect.requiresForeground : true;
-                    const showBg = selectedEffect ? selectedEffect.requiresBackground : true;
-                    // 7-color auto effects (27-33): hardware ignores colors — hide both pickers
-                    if (!showFg && !showBg) return null;
-                    return (
-                      <View style={{
-                        flexDirection: 'row', width: '100%', height: 18, borderRadius: 9, marginBottom: Spacing.xs,
-                        borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'transparent'
-                      }}>
-                        {showFg && (
-                          <TouchableOpacity
-                            activeOpacity={0.9}
-                            onPress={() => {
-                              setFixedColorMode('FOREGROUND');
-                              setFixedHue(hexToHue(fixedFgColor));
-                            }}
-                            style={{ flex: 1, backgroundColor: fixedFgColor, justifyContent: 'center', alignItems: 'center', opacity: fixedColorMode === 'FOREGROUND' ? 1.0 : 0.4, borderTopLeftRadius: 8, borderBottomLeftRadius: 8, shadowColor: fixedFgColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
-                          >
-                            <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>FOREGROUND</Text>
-                          </TouchableOpacity>
-                        )}
-                        {showBg && (
-                          <TouchableOpacity
-                            activeOpacity={0.9}
-                            onPress={() => {
-                              setFixedColorMode('BACKGROUND');
-                              setFixedHue(hexToHue(fixedBgColor));
-                            }}
-                            style={{ flex: 1, backgroundColor: fixedBgColor, justifyContent: 'center', alignItems: 'center', opacity: fixedColorMode === 'BACKGROUND' ? 1.0 : 0.4, borderLeftWidth: showFg ? 1 : 0, borderLeftColor: 'rgba(255,255,255,0.4)', borderTopRightRadius: 8, borderBottomRightRadius: 8, borderTopLeftRadius: showFg ? 0 : 8, borderBottomLeftRadius: showFg ? 0 : 8, shadowColor: fixedBgColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
-                          >
-                            <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>BACKGROUND</Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    );
-                  })()}
-
-
-                  {/* 9 Preset Colors Grid */}
-                  {!(activeMode === 'CAMERA') && (
-                    <View style={[styles.colorGrid, { paddingHorizontal: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-                      {[
-                        '#FF0000', '#FF8000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#800080', '#FF00FF', '#FFFFFF', '#000000'
-                      ].map((color, index) => {
-                        let dynamicColor = selectedColor;
-                        if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
-                          dynamicColor = fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
-                        } else if (activeMode === 'MUSIC') {
-                          dynamicColor = musicColorFocus === 'PRIMARY' ? musicPrimaryColor : musicSecondaryColor;
-                        }
-                        const isActive = typeof dynamicColor === 'string' && dynamicColor.toUpperCase() === color.toUpperCase();
-                        return (
-                          <TouchableOpacity
-                            key={index}
-                            onPress={() => {
-                              const hueMap: { [key: string]: number } = {
-                                '#FF0000': 0, '#FF8000': 30, '#FFFF00': 60, '#00FF00': 120,
-                                '#00FFFF': 180, '#0000FF': 240, '#800080': 280, '#FF00FF': 300, '#FFFFFF': 0, '#000000': 0
-                              };
-                              if (activeMode === 'MULTIMODE') {
-                                if (fixedSubMode === 'PATTERN') {
-                                  let newFg = fixedFgColor;
-                                  let newBg = fixedBgColor;
-                                  if (fixedColorMode === 'FOREGROUND') {
-                                    newFg = color;
-                                    setFixedFgColor(color);
-                                    setSelectedColor(color);
-                                  } else {
-                                    newBg = color;
-                                    setFixedBgColor(color);
-                                    setSelectedColor(color);
-                                  }
-                                  if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
-                                  applyFixedPattern(fixedPatternId, newFg, newBg);
-                                } else {
-                                  setSelectedColor(color);
-                                  if (hueMap[color] !== undefined) setFixedHue(hueMap[color]);
-                                }
-                              } else if (activeMode === 'MUSIC') {
-                                if (musicColorFocus === 'PRIMARY') {
-                                  setMusicPrimaryColor(color);
-                                  if (hueMap[color] !== undefined) setMusicHue(hueMap[color]);
-                                  handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, color, musicSecondaryColor, musicMatrixStyle);
-                                } else {
-                                  setMusicSecondaryColor(color);
-                                  if (hueMap[color] !== undefined) setMusicSecondaryHue(hueMap[color]);
-                                  handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, color, musicMatrixStyle);
-                                }
-                              } else if (activeMode === 'STREET') {
-                                setStreetCruiseColor(color);
-                                if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
-                                applyStreetPattern(motionStateRef.current);
-                              } else if (activeMode === 'FIXED') {
-                                setSelectedColor(color);
-                                if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
-                                const r = parseInt(color.slice(1, 3), 16);
-                                const g = parseInt(color.slice(3, 5), 16);
-                                const b = parseInt(color.slice(5, 7), 16);
-                                applyStaticModePattern(fixedModePattern, r, g, b);
-                              } else {
-                                setSelectedColor(color);
-                                if (hueMap[color] !== undefined) setSelectedHue(hueMap[color]);
-                                const r = parseInt(color.slice(1, 3), 16);
-                                const g = parseInt(color.slice(3, 5), 16);
-                                const b = parseInt(color.slice(5, 7), 16);
-                                sendColor(r, g, b);
-                              }
-                            }}
-                            style={[
-                              {
-                                backgroundColor: color,
-                                width: 20,
-                                height: 20,
-                                borderRadius: 10,
-                                shadowColor: color,
-                                shadowOpacity: 1,
-                                shadowRadius: 10,
-                                shadowOffset: { width: 0, height: 0 },
-                                elevation: 8,
-                                margin: Spacing.xxs
-                              },
-                              isActive && { borderWidth: 2, borderColor: '#FFF' }
-                            ]}
-                          />
-                        );
-                      })}
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {/* Old Color Focus Toggle for Music Mode has been moved above the color grid */}
-
-              {/* Hue Slider */}
-              {!(activeMode === 'PROGRAMS' || activeMode === 'CAMERA') && (
-                <View style={[styles.controlRow, { marginTop: Spacing.xs, marginBottom: Spacing.xs, flexShrink: 0, minHeight: 40 }]}>
-                  <NeonHueStrip
-                    value={activeMode === 'MUSIC' ? (musicColorFocus === 'PRIMARY' ? musicHue : musicSecondaryHue) : activeMode === 'MULTIMODE' ? fixedHue : selectedHue}
-                    onValueChange={(hue) => {
-                      if (activeMode === 'MULTIMODE') {
-                        if (fixedSubMode === 'PATTERN') {
-                          setFixedHue(hue);
-                          const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                          const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
-                          const hex = rgb2hex(f(5), f(3), f(1));
-                          if (fixedColorMode === 'FOREGROUND') {
-                            setFixedFgColor(hex);
-                            setSelectedColor(hex);
-                          } else {
-                            setFixedBgColor(hex);
-                            setSelectedColor(hex);
-                          }
-                        } else {
-                          setFixedHue(hue);
-                          const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                          const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
-                          const hex = rgb2hex(f(5), f(3), f(1));
-                          setSelectedColor(hex);
-                        }
-                      } else if (activeMode === 'MUSIC') {
-                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
-                        const hex = rgb2hex(f(5), f(3), f(1));
-                        if (musicColorFocus === 'PRIMARY') { setMusicPrimaryColor(hex); setMusicHue(hue); }
-                        else { setMusicSecondaryColor(hex); setMusicSecondaryHue(hue); }
-                      } else if (activeMode === 'STREET') {
-                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
-                        const hex = rgb2hex(f(5), f(3), f(1));
-                        setStreetCruiseColor(hex);
-                        setSelectedHue(hue);
-                        applyStreetPattern(motionStateRef.current);
-                      } else {
-                        setSelectedHue(hue);
-                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
-                        setSelectedColor(rgb2hex(f(5), f(3), f(1)));
-                      }
-                    }}
-                    onSlidingComplete={(hue) => {
-                      if (activeMode === 'MULTIMODE') {
-                        if (fixedSubMode === 'PATTERN') {
-                          applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor);
-                        }
-                      } else if (activeMode === 'MUSIC') {
-                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
-                        const hex = rgb2hex(f(5), f(3), f(1));
-                        if (musicColorFocus === 'PRIMARY') {
-                          handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hex, musicSecondaryColor, musicMatrixStyle);
-                        } else {
-                          handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, hex, musicMatrixStyle);
-                        }
-                      } else if (activeMode === 'STREET') {
-                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                        const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
-                        const hex = rgb2hex(f(5), f(3), f(1));
-                        applyStreetPattern(motionStateRef.current);
-                      } else {
-                        const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                        const r = Math.round(f(5) * 255);
-                        const g = Math.round(f(3) * 255);
-                        const b = Math.round(f(1) * 255);
-                        sendColor(r, g, b);
-                      }
-                    }}
-                    minimumValue={0}
-                    maximumValue={360}
-                    style={{ flex: 1 }}
-                  />
-                </View>
-              )}
-
-              {/* TACTICAL UNIVERSAL SLIDERS SECTIONS (50/50 Split) */}
-              <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, marginBottom: Spacing.xs, minHeight: 44 }}>
-
-                {/* === LEFT SLOT COMPUTATION === */}
-                {/* Brightness is standard on left, UNLESS it's Street (Brake Sens) or Music (Mic Sens) or DIY (Nothing) */}
-
-                {!(activeMode === 'CAMERA') && !(activeMode === 'STREET') && !(activeMode === 'MUSIC') && (
-                  <TacticalSlider
-                    style={{ flex: 1 }}
-                    iconName="white-balance-sunny"
-                    label="BRIGHTNESS"
-                    fillColor="#00F0FF"
-                    dynamicMode="BRIGHTNESS"
-                    value={brightness}
-                    onValueChange={setBrightness}
-                    minimumValue={0}
-                    maximumValue={100}
-                    onSlidingComplete={(val: number) => {
-                      AppLogger.log('BRIGHTNESS_CHANGED', { value: val, mode: activeMode });
-                      if (writeToDevice) {
-                        if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
-                          applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
-                        } else if (activeMode === 'PROGRAMS') {
-                          if (selectedPatternId === 100) applyEmergencyPattern(speed, val);
-                          else writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, speed, val));
-                        } else {
-                          const factor = brtFactor(val);
-                          const hex = selectedColor;
-                          const r = Math.round(parseInt(hex.slice(1, 3), 16) * factor);
-                          const g = Math.round(parseInt(hex.slice(3, 5), 16) * factor);
-                          const b = Math.round(parseInt(hex.slice(5, 7), 16) * factor);
-                          sendColor(r, g, b);
-                        }
-                      }
-                    }}
-                  />
-                )}
-
-                {activeMode === 'MUSIC' && (
-                  <TacticalSlider
-                    style={{ flex: 1 }}
-                    iconName="microphone-outline"
-                    label="MIC SENSITIVITY"
-                    fillColor="#FF0055"
-                    value={micSensitivity}
-                    onValueChange={setMicSensitivity}
-                    minimumValue={0}
-                    maximumValue={100}
-                    onSlidingComplete={(val: number) => {
-                      AppLogger.log('MIC_SENSITIVITY_CHANGED', { value: val });
-                      handleMusicChange(musicPatternId, val, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
-                    }}
-                  />
-                )}
-
-                {activeMode === 'STREET' && (
-                  <TacticalSlider
-                    style={{ flex: 1 }}
-                    iconName="octagon-outline"
-                    label="BRAKE SENSITIVITY"
-                    fillColor="#FF3300"
-                    value={streetSensitivity}
-                    onValueChange={setStreetSensitivity}
-                    minimumValue={5}
-                    maximumValue={95}
-                    onSlidingComplete={(val: number) => AppLogger.log('STREET_SENSITIVITY_CHANGED', { value: val })}
-                  />
-                )}
-
-                {/* === RIGHT SLOT COMPUTATION === */}
-                {/* Speed is standard on right, but Music puts Brightness here. Camera has nothing. */}
-
-                {!(activeMode === 'MUSIC' || activeMode === 'CAMERA') && (
-                  <TacticalSlider
-                    style={{ flex: 1 }}
-                    iconName="engine-outline"
-                    label="SPEED"
-                    fillColor="#FF9900"
-                    dynamicMode="TURBO"
-                    value={speed}
-                    onValueChange={setSpeed}
-                    minimumValue={0}
-                    maximumValue={100}
-                    onSlidingComplete={(val: number) => {
-                      AppLogger.log('SPEED_CHANGED', { value: val, mode: activeMode });
-                      if (writeToDevice) {
-                        if (activeMode === 'MULTIMODE') {
-                          if (fixedSubMode === 'PATTERN') {
-                            applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
-                          } else if (fixedSubMode === 'BUILDER') {
-                            const factor = brtFactor(brightness);
-                            const rgbColors = multiColors.map(h => {
-                              const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
-                              const rawG = Math.round((parseInt(h.slice(3, 5), 16) || 0) * factor);
-                              const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
-                              return { r: rawR, g: rawG, b: rawB };
-                            });
-                            writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(val), 1, multiTransition));
-                          }
-                        } else if (activeMode === 'PROGRAMS') {
-                          if (selectedPatternId === 100) applyEmergencyPattern(val, brightness);
-                          else writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
-                        } else if (activeMode === 'STREET') {
-                          applyStreetPattern(motionStateRef.current, brightness, val);
-                        }
-                      }
-                    }}
-                  />
-                )}
-
-                {activeMode === 'MUSIC' && (
-                  <View style={{ flexDirection: 'row', width: '100%', gap: Spacing.sm }}>
-                    <TacticalSlider
-                      style={{ flex: 1 }}
-                      iconName="microphone-outline"
-                      label="SENSITIVITY"
-                      fillColor="#FF00FF"
-                      dynamicMode="SENSITIVITY"
-                      value={micSensitivity}
-                      onValueChange={setMicSensitivity}
-                      minimumValue={0}
-                      maximumValue={100}
-                      onSlidingComplete={(val: number) => {
-                        AppLogger.log('MIC_SENSITIVITY_CHANGED', { value: val, mode: activeMode });
-                        handleMusicChange(musicPatternId, val, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
-                      }}
-                    />
-                    <TacticalSlider
-                      style={{ flex: 1 }}
-                      iconName="white-balance-sunny"
-                      label="BRIGHTNESS"
-                      fillColor="#00F0FF"
-                      dynamicMode="BRIGHTNESS"
-                      value={brightness}
-                      onValueChange={setBrightness}
-                      minimumValue={0}
-                      maximumValue={100}
-                      onSlidingComplete={(val: number) => {
-                        AppLogger.log('BRIGHTNESS_CHANGED', { value: val, mode: activeMode });
-                        handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
-                      }}
-                    />
-                  </View>
-                )}
-              </View>
-            </View>
+            <UniversalSlidersFooter
+              activeMode={activeMode}
+              fixedSubMode={fixedSubMode}
+              fixedColorMode={fixedColorMode}
+              fixedModePattern={fixedModePattern}
+              selectedColor={selectedColor}
+              fixedFgColor={fixedFgColor}
+              fixedBgColor={fixedBgColor}
+              fixedHue={fixedHue}
+              musicPrimaryColor={musicPrimaryColor}
+              musicSecondaryColor={musicSecondaryColor}
+              musicHue={musicHue}
+              musicSecondaryHue={musicSecondaryHue}
+              selectedHue={selectedHue}
+              musicColorFocus={musicColorFocus}
+              streetCruiseColor={streetCruiseColor}
+              brightness={brightness}
+              speed={speed}
+              micSensitivity={micSensitivity}
+              streetSensitivity={streetSensitivity}
+              fixedPatternId={fixedPatternId}
+              selectedPatternId={selectedPatternId}
+              musicPatternId={musicPatternId}
+              musicMatrixStyle={musicMatrixStyle}
+              micSource={micSource}
+              multiColors={multiColors}
+              multiTransition={multiTransition}
+              setSelectedColor={setSelectedColor}
+              setFixedFgColor={setFixedFgColor}
+              setFixedBgColor={setFixedBgColor}
+              setFixedHue={setFixedHue}
+              setMusicPrimaryColor={setMusicPrimaryColor}
+              setMusicSecondaryColor={setMusicSecondaryColor}
+              setMusicHue={setMusicHue}
+              setMusicSecondaryHue={setMusicSecondaryHue}
+              setSelectedHue={setSelectedHue}
+              setMusicColorFocus={setMusicColorFocus}
+              setFixedColorMode={setFixedColorMode}
+              setStreetCruiseColor={setStreetCruiseColor}
+              setBrightness={setBrightness}
+              setSpeed={setSpeed}
+              setMicSensitivity={setMicSensitivity}
+              setStreetSensitivity={setStreetSensitivity}
+              sendColor={sendColor}
+              applyFixedPattern={applyFixedPattern}
+              applyStaticModePattern={applyStaticModePattern}
+              applyEmergencyPattern={applyEmergencyPattern}
+              applyStreetPattern={applyStreetPattern}
+              handleMusicChange={handleMusicChange}
+              clampSpeed={clampSpeed}
+              brtFactor={brtFactor}
+              writeToDevice={writeToDevice}
+              hwSettings={hwSettings}
+              motionStateRef={motionStateRef}
+              styles={styles}
+            />
           )}
         </View>
 
