@@ -33,6 +33,8 @@ export function useBLEScanner({
   const allDevicesRef = useRef<Device[]>([]);
   const scanTimerRef = useRef<NodeJS.Timeout | null>(null);
   const scannerStateRef = useRef<'IDLE' | 'SCANNING' | 'PROBING'>('IDLE');
+  const rejectedMacsRef = useRef<Set<string>>(new Set());
+
   useEffect(() => { allDevicesRef.current = allDevices; }, [allDevices]);
 
   const isDuplicateDevice = (devices: Device[], nextDevice: Device) =>
@@ -209,9 +211,10 @@ export function useBLEScanner({
     
     if (!options?.keepAlive) {
       setPendingRegistrations([]);
+      rejectedMacsRef.current.clear();
     }
 
-    const shouldProbe = options?.disableProbing ?? disableProbing;
+    const skipProbing = options?.disableProbing ?? disableProbing;
 
     const knownMacs = new Set<string>();
 
@@ -359,8 +362,12 @@ export function useBLEScanner({
             return prevState;
           });
         } else {
-          if (device.name || (device.serviceUUIDs && device.serviceUUIDs.length > 0)) {
-            AppLogger.log('SCAN_FILTER_REJECT', { ...logData, reason: 'No matching signature' });
+          // Add the device to rejected tracking and only log once
+          if (!rejectedMacsRef.current.has(device.id)) {
+            rejectedMacsRef.current.add(device.id);
+            if (device.name || (device.serviceUUIDs && device.serviceUUIDs.length > 0)) {
+              AppLogger.log('SCAN_FILTER_REJECT', { ...logData, reason: 'No matching signature' });
+            }
           }
         }
       }
@@ -370,7 +377,7 @@ export function useBLEScanner({
     scanTimerRef.current = setTimeout(() => {
       bleManager.stopDeviceScan();
       scanTimerRef.current = null;
-      if (shouldProbe) {
+      if (!skipProbing) {
         probeAllDiscoveredDevices();
       } else {
         setScannerState('IDLE');
