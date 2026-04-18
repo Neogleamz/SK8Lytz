@@ -71,10 +71,6 @@ export const SkateGroupCard = ({
                   <View style={[styles.rssiBar, { height: 10, backgroundColor: Colors.success }]} />
                 </View>
               </View>
-              <View style={styles.telemetryItem}>
-                <MaterialCommunityIcons name="battery" size={14} color="#00FF85" />
-                <Text style={{ fontSize: 10, color: '#AAA', fontWeight: '800' }}>92%</Text>
-              </View>
             </View>
           </View>
 
