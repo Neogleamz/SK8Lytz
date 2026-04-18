@@ -36,7 +36,11 @@ description: Focus on a bucket list task — load its plan, set up the branch, a
 <any hooks, services, or components this task depends on>
 ```
 
-5. **Branch Auto-Jumper**: Autonomously check out the branch for this task.
+5. **Branch Pre-Flight (⛔ Safety Rule 6 Enforced)**:
+   - The `/focus` command IS an explicit execution trigger — the user is saying "I want to work on this now."
+   - **However**, before checking out, run `git status` and `git branch --show-current` first.
+   - If there are **uncommitted changes** or the current branch is **not `master`**, **HALT** and ask: "You have uncommitted work on branch `<current>`. Stash, commit, or abort?"
+   - Only after the working tree is clean, proceed:
 ```powershell
 Set-Location "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
 git checkout <slug> 2>&1 | Out-String | ForEach-Object { if ($_ -match "error: pathspec") { git checkout -b <slug> } }
