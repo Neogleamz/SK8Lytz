@@ -21,6 +21,8 @@ import { useAppMicrophone } from '../hooks/useAppMicrophone';
 import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
 import { useCuratedPicks } from '../hooks/useCuratedPicks';
 import { useDockedControllerState } from '../hooks/useDockedControllerState';
+import { useControllerPersistence } from '../hooks/useControllerPersistence';
+import { useControllerDispatch } from '../hooks/useControllerDispatch';
 import { useFavorites } from '../hooks/useFavorites';
 import { MUSIC_PATTERNS } from '../hooks/useMusicMode';
 import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
@@ -53,13 +55,12 @@ import VerticalPatternDrum from './VerticalPatternDrum';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_PREFIX } from '../constants/AppConstants';
-import { getLocalProfileById, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
+import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 import { containsProfanity } from '../services/AuthUtils';
 import { crewService } from '../services/CrewService';
 import { ScenesService } from '../services/ScenesService';
-import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
 import CommunityModal from './CommunityModal';
 import MarqueeText from './MarqueeText';
 import PositionalGradientBuilder from './PositionalGradientBuilder';
@@ -448,7 +449,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       } else if (legacyMode === 'MUSIC') {
         setActiveMode('MUSIC');
         setMusicPatternId(fav.patternId ?? 0);
-        handleMusicChange(fav.patternId ?? 0, micSensitivity, fav.brightness, micSource);
+        handleMusicChange(fav.patternId ?? 0, micSensitivity, fav.brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
       } else if (legacyMode === 'CAMERA') {
         setActiveMode('CAMERA');
       } else if (legacyMode === 'FAVORITES') {
@@ -494,127 +495,19 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       }
     };
 
-    /** Unified color sender — sends solid color instantly using actual LED count */
-    const sendColor = async (r: number, g: number, b: number) => {
-      if (!writeToDevice) return;
-      // hwSettings.ledPoints IS the total LED count — do NOT divide by segments
-      const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
-      // DO NOT apply applyColorSorting — hardware auto-remaps GRB via 0x62 EEPROM config
-      // transitionType=0x01 (FREEZE) = immediate hardware lock, no animation
-      const colors = Array(numLEDs).fill({ r, g, b });
-      await writeToDevice(ZenggeProtocol.setMultiColor(colors, 1, 1, 0x01));
-    };
+    // ── BLE Dispatch: hardware command translation via extracted hook ──────
+    const {
+      sendColor,
+      applyFixedPattern,
+      applyStaticModePattern: _applyStaticModePattern,
+      applyEmergencyPattern,
+      handleMusicChange,
+      clampSpeed,
+    } = useControllerDispatch({ writeToDevice, hwSettings, points });
 
-    const applyStaticModePattern = (pat: typeof fixedModePattern, r?: number, g?: number, b?: number, spd?: number) => {
-      if (!writeToDevice) return;
-      const tR = r !== undefined ? Math.max(0, Math.min(255, r | 0)) : parseInt(selectedColor.slice(1,3), 16) || 255;
-      const tG = g !== undefined ? Math.max(0, Math.min(255, g | 0)) : parseInt(selectedColor.slice(3,5), 16) || 255;
-      const tB = b !== undefined ? Math.max(0, Math.min(255, b | 0)) : parseInt(selectedColor.slice(5,7), 16) || 255;
-      const tSpd = normalizeUISpeedToHardware(spd !== undefined ? spd : speed);
-
-      if (pat === 'STATIC') {
-        sendColor(tR, tG, tB);
-      } else if (pat === 'STROBE') {
-        writeToDevice(ZenggeProtocol.setCustomModeCompact([
-          { mode: ZenggeProtocol.STEP_STROBE, speed: tSpd, color1: {r: tR, g: tG, b: tB}, color2: {r: 0, g: 0, b: 0} }
-        ]));
-      } else if (pat === 'BLINK') {
-        writeToDevice(ZenggeProtocol.setCustomModeCompact([
-          { mode: ZenggeProtocol.STEP_JUMP, speed: tSpd, color1: {r: tR, g: tG, b: tB}, color2: {r: 0, g: 0, b: 0} }
-        ]));
-      }
-    };
-
-
-
-    // (Removed generatePristineColors since it is unused after purging applyColorSorting)
-
-    /**
-     * Maps UI speed slider (0–100) to Zengge hardware speed range (1–31).
-     * The APK enforces 1–31 for all 0x59 animated patterns.
-     * Static patterns (transitionType=0x00) ignore speed — pass 1 for those.
-     */
-    const clampSpeed = (uiSpeed: number): number => normalizeUISpeedToHardware(uiSpeed);
-
-    /**
-     * Apply current fixed pattern state to devices.
-     * Delegates to PatternEngine — single source of truth for all 10 patterns.
-     * Ensures correct 0x59 / 0x51 protocol, correct transition constants,
-     * full LED count pixel arrays, and APK-proven speed clamping.
-     */
-    const applyFixedPattern = async (
-      patternId: number = fixedPatternId,
-      fg: string = fixedFgColor,
-      bg: string = fixedBgColor,
-      currentSpeed: number = speed,
-      currentBrightness: number = brightness
-    ) => {
-      if (!writeToDevice) return;
-
-      const factor = currentBrightness / 100;
-
-      // hwSettings.ledPoints IS the total LED count — do NOT divide by segments
-      const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
-
-
-      // 0x51 Custom Engines expect pure, unmodified hexadecimal parameters.
-      // The hardware engines interpret brightness separately natively.
-      const fgRaw = {
-        r: parseInt(fg.substring(1, 3), 16) || 0,
-        g: parseInt(fg.substring(3, 5), 16) || 0,
-        b: parseInt(fg.substring(5, 7), 16) || 0,
-      };
-      const bgRaw = {
-        r: parseInt(bg.substring(1, 3), 16) || 0,
-        g: parseInt(bg.substring(3, 5), 16) || 0,
-        b: parseInt(bg.substring(5, 7), 16) || 0,
-      };
-
-      // Use compact format: only 1 active step (12 bytes raw, 20 bytes wrapped).
-      // Fits in any BLE MTU. Tests if hardware accepts variable-length 0x51.
-      const payload = ZenggeProtocol.setCustomModeCompact([
-        { mode: patternId, speed: currentSpeed, color1: fgRaw, color2: bgRaw },
-      ]);
-
-      if (payload) writeToDevice(payload);
-    };
-
-    const applyEmergencyPattern = (spd: number, bright: number) => {
-      if (!writeToDevice) return;
-      const factor = bright / 100;
-      const pts = hwSettings?.ledPoints || points || 16;
-      const profile = getLocalProfileById(hwSettings?.type || '');
-      const isRingShape = profile?.vizShape === 'RING';
-      const hwSpd = Math.min(spd, ZenggeProtocol.ANIM_SPEED_MAX);
-
-      const red = { r: Math.round(255 * factor), g: 0, b: 0 };
-      const white = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: Math.round(255 * factor) };
-      const yellow = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: 0 };
-      const off = { r: 0, g: 0, b: 0 };
-
-      let arr: { r: number; g: number; b: number }[];
-
-      if (isRingShape) {
-        // ── HALOZ 2-segment: 8-LED frame mirrored to 16 ──
-        // Frame: RED RED YEL off YEL off WHT WHT
-        // Mirror: WHT WHT off YEL off YEL RED RED
-        // Physical: back=RED, sides=flashing amber, front=WHITE  ✅
-        const frame8 = [red, red, yellow, off, yellow, off, white, white];
-        const mirror8 = [...frame8].reverse();
-        arr = [...frame8, ...mirror8];
-      } else {
-        // ── SOULZ linear: [rear RED×4][mid flash×8][front WHITE×4] ──
-        arr = [
-          red, red, red, red,
-          yellow, off, yellow, off, yellow, off, yellow, off,
-          white, white, white, white,
-        ];
-      }
-
-      // 0x03 = RunningWater: hardware scrolls mid section natively
-      writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpd, 1, 0x03));
-    };
-
+    /** Convenience wrapper — pre-binds selectedColor and speed for callers */
+    const applyStaticModePattern = (pat: typeof fixedModePattern, r?: number, g?: number, b?: number, spd?: number) =>
+      _applyStaticModePattern(pat, selectedColor, speed, r, g, b, spd);
 
 
     // --- PRO EFFECTS REACTIVITY LOGIC ---
@@ -662,93 +555,19 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       }
     }, [lockedProduct]);
 
-    React.useEffect(() => {
-      AsyncStorage.getItem(`${STORAGE_PREFIX}ControllerState`).then((saved) => {
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            // if (parsed.activeMode) setActiveMode(parsed.activeMode); // Ensure Docked Mode always defaults to PRESETS on load
-            if (parsed.selectedColor) setSelectedColor(parsed.selectedColor);
-            if (parsed.selectedPatternId) setSelectedPatternId(parsed.selectedPatternId);
-            if (parsed.brightness !== undefined) setBrightness(parsed.brightness);
-            else setBrightness(90);
-            if (parsed.speed !== undefined) setSpeed(parsed.speed);
-            else setSpeed(50);
-            if (parsed.micSensitivity !== undefined) setMicSensitivity(parsed.micSensitivity);
-            if (parsed.musicHue !== undefined) setMusicHue(parsed.musicHue);
-            if (parsed.musicSecondaryHue !== undefined) setMusicSecondaryHue(parsed.musicSecondaryHue);
-            if (parsed.musicPrimaryColor) setMusicPrimaryColor(parsed.musicPrimaryColor);
-            if (parsed.musicSecondaryColor) setMusicSecondaryColor(parsed.musicSecondaryColor);
-            if (parsed.musicMatrixStyle) setMusicMatrixStyle(parsed.musicMatrixStyle);
-            if (parsed.musicPatternId) setMusicPatternId(parsed.musicPatternId);
-            if (parsed.micSource) setMicSource(parsed.micSource);
-            if (parsed.musicSetting) setMusicSetting(parsed.musicSetting);
-            if (parsed.fixedPatternId) setFixedPatternId(parsed.fixedPatternId);
-            if (parsed.fixedColorMode) setFixedColorMode(parsed.fixedColorMode);
-            if (parsed.fixedFgColor) setFixedFgColor(parsed.fixedFgColor);
-            if (parsed.fixedBgColor) setFixedBgColor(parsed.fixedBgColor);
-            if (parsed.fixedHue !== undefined) setFixedHue(parsed.fixedHue);
-          } catch (e) { }
-        }
-      });
+    // ── Persistence: load/save controller state via extracted hook ──────────
+    useControllerPersistence(
+      { activeMode, selectedColor, selectedPatternId, brightness, speed,
+        micSensitivity, musicHue, musicSecondaryHue, musicPrimaryColor, musicSecondaryColor,
+        musicMatrixStyle, musicPatternId, micSource, musicSetting,
+        fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue },
+      { setSelectedColor, setSelectedPatternId, setBrightness, setSpeed,
+        setMicSensitivity, setMusicHue, setMusicSecondaryHue, setMusicPrimaryColor,
+        setMusicSecondaryColor, setMusicMatrixStyle, setMusicPatternId, setMicSource,
+        setMusicSetting, setFixedPatternId, setFixedColorMode, setFixedFgColor,
+        setFixedBgColor, setFixedHue }
+    );
 
-
-    }, []);
-
-    React.useEffect(() => {
-      const stateBlob = {
-        activeMode, selectedColor, selectedPatternId, brightness, speed,
-        micSensitivity, musicHue, musicSecondaryHue, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle, musicPatternId, micSource, musicSetting,
-        fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
-      };
-      AsyncStorage.setItem(`${STORAGE_PREFIX}ControllerState`, JSON.stringify(stateBlob)).catch(() => { });
-    }, [
-      activeMode, selectedColor, selectedPatternId, brightness, speed,
-      micSensitivity, musicHue, musicSecondaryHue, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle, musicPatternId, micSource, musicSetting,
-      fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue
-    ]);
-
-    const handleMusicChange = (
-      patternId: number = musicPatternId,
-      sens: number = micSensitivity,
-      bright: number = brightness,
-      src: 'APP' | 'DEVICE' = micSource,
-      color1Hex: string = musicPrimaryColor,
-      color2Hex: string = musicSecondaryColor,
-      matrix: number = musicMatrixStyle
-    ) => {
-      if (!writeToDevice) return;
-
-      const isDeviceMic = src === 'DEVICE';
-
-      const c1Raw = {
-        r: parseInt(color1Hex.slice(1, 3), 16) || 0,
-        g: parseInt(color1Hex.slice(3, 5), 16) || 0,
-        b: parseInt(color1Hex.slice(5, 7), 16) || 0
-      };
-
-      const c2Raw = {
-        r: parseInt(color2Hex.slice(1, 3), 16) || 0,
-        g: parseInt(color2Hex.slice(3, 5), 16) || 0,
-        b: parseInt(color2Hex.slice(5, 7), 16) || 0
-      };
-
-      const c1 = c1Raw;
-      const c2 = c2Raw;
-
-      // [DEBUG LOGGING]
-      AppLogger.log("MUSIC_CONFIG_REQUESTED", { patternId, c1Hex: color1Hex, c2Hex: color2Hex, matrix });
-
-      writeToDevice(ZenggeProtocol.setMusicConfig(
-        isDeviceMic,
-        matrix,
-        patternId,
-        c1,
-        c2,
-        sens,
-        bright
-      ));
-    };
 
     // ── Music Mode: re-send config on color/pattern/source change ──
     // Placed AFTER handleMusicChange so the closure is always fresh.
