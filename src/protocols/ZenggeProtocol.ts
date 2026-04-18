@@ -9,7 +9,17 @@
  */
 
 import { Buffer } from 'buffer';
-import { AppLogger } from '../services/AppLogger';
+
+// Lazy AppLogger to avoid circular/early-init crashes on Android release builds.
+// ZenggeProtocol is evaluated at bundle load time — AppLogger depends on
+// supabase + expo-device + AsyncStorage which may not be ready yet.
+let _appLogger: any;
+function getAppLogger() {
+  if (!_appLogger) {
+    try { _appLogger = require('../services/AppLogger').AppLogger; } catch (_e) { _appLogger = console; }
+  }
+  return _appLogger;
+}
 
 export const ZENGGE_SERVICE_UUID        = '0000ffff-0000-1000-8000-00805f9b34fb';
 export const ZENGGE_CHARACTERISTIC_UUID = '0000ff01-0000-1000-8000-00805f9b34fb'; // WRITE
@@ -379,7 +389,7 @@ export class ZenggeProtocol {
       color1.r, color1.g, color1.b, color2.r, color2.g, color2.b, 0x20, sensitivity, brightness];
       
     // Protocol debug: log music config params for hardware correlation
-    AppLogger.log('ZENGGE_MUSIC_CONFIG', { patternId, matrixStyle, c1: `${color1.r},${color1.g},${color1.b}`, c2: `${color2.r},${color2.g},${color2.b}` });
+    getAppLogger().log('ZENGGE_MUSIC_CONFIG', { patternId, matrixStyle, c1: `${color1.r},${color1.g},${color1.b}`, c2: `${color2.r},${color2.g},${color2.b}` });
     
     const checksum = this.calculateChecksum(payload);
     return this.wrapCommand([...payload, checksum]);
@@ -526,7 +536,7 @@ export class ZenggeProtocol {
     }
     raw.push(0x0F); // terminator
     raw.push(this.calculateChecksum(raw.slice(0, raw.length)));
-    AppLogger.log('ZENGGE_CUSTOM_MODE_COMPACT', { bytes: raw.length, steps: safeSteps.length });
+    getAppLogger().log('ZENGGE_CUSTOM_MODE_COMPACT', { bytes: raw.length, steps: safeSteps.length });
     return this.wrapCommand(raw);
   }
 

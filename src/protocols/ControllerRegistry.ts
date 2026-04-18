@@ -19,8 +19,16 @@
  */
 
 import type { IControllerProtocol } from './IControllerProtocol';
-import { AppLogger } from '../services/AppLogger';
 import { ZenggeAdapter } from './ZenggeAdapter';
+
+// Lazy AppLogger — ControllerRegistry may load before native modules are ready
+let _appLogger: any;
+function getAppLogger() {
+  if (!_appLogger) {
+    try { _appLogger = require('../services/AppLogger').AppLogger; } catch (_e) { _appLogger = console; }
+  }
+  return _appLogger;
+}
 
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
@@ -48,7 +56,7 @@ export function resolveProtocol(
 export function registerProtocol(protocol: IControllerProtocol): void {
   // Prevent duplicate registrations
   if (registry.some(p => p.protocolId === protocol.protocolId)) {
-    AppLogger.warn(`[ControllerRegistry] Protocol '${protocol.protocolId}' already registered — skipping`);
+    getAppLogger().warn(`[ControllerRegistry] Protocol '${protocol.protocolId}' already registered — skipping`);
     return;
   }
   registry.push(protocol);
