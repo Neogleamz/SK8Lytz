@@ -58,6 +58,10 @@ export type ClaimStatus =
 
 const LOCAL_KEY        = '@Sk8lytz_registered_devices';
 const PENDING_SYNC_KEY = '@Sk8lytz_pending_sync';
+// Tombstone: MACs deleted by the user. syncFromCloud filters these out to prevent
+// resurrection when a Supabase DELETE is silently blocked by RLS or network lag.
+const DELETED_MACS_KEY = '@Sk8lytz_deleted_macs';
+
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
@@ -99,16 +103,22 @@ export function useRegistration() {
       if (error) throw error;
       if (!data) return;
 
+      // ── TOMBSTONE FILTER ─────────────────────────────────────────────────────
+      // MACs that were explicitly deleted by the user are tracked in DELETED_MACS_KEY.
+      // Even if the Supabase DELETE was silently blocked by RLS or is still in-flight,
+      // we must NOT allow the cloud row to resurrect a locally-deleted device.
+      const deletedRaw = await AsyncStorage.getItem(DELETED_MACS_KEY);
+      const deletedMacs: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
+      const cloudRows = data.filter((row: any) => !deletedMacs.includes(row.device_mac?.toUpperCase?.()));
+      if (cloudRows.length < data.length) {
+        AppLogger.warn('[Registration] syncFromCloud tombstone filtered devices', { skipped: data.length - cloudRows.length, tombstoned: deletedMacs });
+      }
+
       // ── LOCAL-FIRST SMART MERGE ───────────────────────────────────────────────
-      // RULE: Local hardware config (points, segments, ic_type, sorting) wins over
-      // cloud when the local record has valid non-zero/non-UNKNOWN data.
-      // This protects offline sessions and user-configured settings from being
-      // silently overwritten by stale/zeroed cloud records on reconnect.
-      // Cloud wins ONLY for metadata: group membership, device name, user_id.
       const localRaw = await AsyncStorage.getItem(LOCAL_KEY);
       const localDevices: RegisteredDevice[] = localRaw ? JSON.parse(localRaw) : [];
 
-      const merged: RegisteredDevice[] = data.map((row: Record<string, any>) => {
+      const merged: RegisteredDevice[] = cloudRows.map((row: Record<string, any>) => {
         const cloud = { ...row, is_pending_sync: false } as RegisteredDevice;
         const local = localDevices.find(
           l => l.device_mac.toUpperCase() === cloud.device_mac.toUpperCase()
@@ -145,12 +155,12 @@ export function useRegistration() {
       await AsyncStorage.setItem(LOCAL_KEY, JSON.stringify(merged));
 
       // Flush any offline-queued registrations AFTER updating local state
-      // so the UI reflects merged local first, then cloud reflects the flush
       await flushPendingSync(user.id);
     } catch (e) {
       AppLogger.warn('[Registration] Cloud sync failed (offline?):', e);
     }
   };
+
 
   // ── Save (upsert) a device ───────────────────────────────────────────────────
   /**
@@ -323,18 +333,28 @@ export function useRegistration() {
   // ── Deregister (release ownership) ───────────────────────────────────────────
   const deregisterDevice = useCallback(async (deviceMac: string): Promise<void> => {
     // Normalize to uppercase — BLE MACs are always uppercase in this app.
-    // Case mismatch previously caused silent local removal failure (ghost entries).
     const normalizedMac = deviceMac.toUpperCase();
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Remove from local registered_devices (case-insensitive MAC filter)
+      // ── STEP 1: Write tombstone FIRST — prevents syncFromCloud resurrection
+      // even if the Supabase DELETE fails silently (e.g. RLS policy gap)
+      try {
+        const tombRaw = await AsyncStorage.getItem(DELETED_MACS_KEY);
+        const tomb: string[] = tombRaw ? JSON.parse(tombRaw) : [];
+        if (!tomb.includes(normalizedMac)) {
+          tomb.push(normalizedMac);
+          await AsyncStorage.setItem(DELETED_MACS_KEY, JSON.stringify(tomb));
+        }
+      } catch (_te) { /* tombstone write best-effort */ }
+
+      // ── STEP 2: Remove from local registered_devices (case-insensitive MAC filter)
       const current = await getLocalDevices();
       const filtered = current.filter(d => d.device_mac.toUpperCase() !== normalizedMac);
       await AsyncStorage.setItem(LOCAL_KEY, JSON.stringify(filtered));
       setRegisteredDevices(filtered);
 
-      // Also scrub the hardware config entry so no zombie data remains
+      // ── STEP 3: Scrub the hardware config entry so no zombie data remains
       try {
         const configsRaw = await AsyncStorage.getItem('@Sk8lytz_device_configs');
         if (configsRaw) {
@@ -346,23 +366,42 @@ export function useRegistration() {
         }
       } catch (_ce) { /* best-effort config cleanup */ }
 
-      // Remove from Supabase (matches both id and device_mac columns)
+      // ── STEP 4: Remove from Supabase with full diagnostic logging
       if (user) {
-        const { error } = await supabase
+        AppLogger.warn('[Registration] DEREGISTER_ATTEMPT', { mac: normalizedMac, userId: user.id });
+        const { error, count } = await supabase
           .from('registered_devices')
-          .delete()
+          .delete({ count: 'exact' })
           .eq('user_id', user.id)
           .eq('device_mac', normalizedMac);
-          
+
         if (error) {
+          AppLogger.warn('[Registration] DB delete error (RLS?)', { mac: normalizedMac, error: error.message, code: error.code });
           throw error;
+        }
+
+        AppLogger.warn('[Registration] DEREGISTER_RESULT', { mac: normalizedMac, rowsDeleted: count });
+
+        if (count === 0) {
+          // Supabase silently deleted 0 rows — likely an RLS gap or wrong MAC format
+          // The tombstone above will prevent resurrection. Log for diagnostics.
+          AppLogger.warn('[Registration] Supabase DELETE matched 0 rows — RLS or MAC mismatch?', {
+            mac: normalizedMac, userId: user.id,
+          });
+          // Try alternate: delete by id column (old records may use UUID as id)
+          const { count: count2 } = await supabase
+            .from('registered_devices')
+            .delete({ count: 'exact' })
+            .eq('user_id', user.id)
+            .ilike('device_mac', normalizedMac); // case-insensitive fallback
+          AppLogger.warn('[Registration] DEREGISTER_FALLBACK', { mac: normalizedMac, rowsDeleted: count2 });
         }
       }
     } catch (e: any) {
       AppLogger.warn('[Registration] Deregister failed:', e);
-      Alert.alert('Delete Failed', `Could not deregister hardware: ${e.message || String(e)}`);
-      // Immediately revert local state to prevent ghost out-of-sync
-      syncFromCloud();
+      Alert.alert('Delete Failed', `Could not remove device: ${e.message || String(e)}`);
+      // NOTE: We intentionally do NOT call syncFromCloud here because the tombstone
+      // above already prevents resurrection. Only revert local if user explicitly cancels.
     }
   }, []);
 
