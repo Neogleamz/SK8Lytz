@@ -58,7 +58,7 @@ export function useDeviceFleet({
 
       let query = supabase
         .from('registered_devices')
-        .select('device_mac, device_name, custom_name, product_type, position, group_name, created_at, updated_at')
+        .select('device_mac, device_name, custom_name, product_type, position, group_name, created_at, updated_at, led_points, segments, ic_type, color_sorting')
         .eq('user_id', user.id);
         
       if (updatedSince) {
@@ -75,13 +75,19 @@ export function useDeviceFleet({
            const patched: StoredDevice[] = updatedSince ? [...prev] : [];
            
            dbDevices.forEach((d: any) => {
-             const newDev = {
-               id: d.device_mac,
+             const newDev: StoredDevice = {
+               id: d.device_mac,           // Always MAC — consistent with deregisterDevice expectations
+               mac: d.device_mac,
                name: d.device_name ?? d.device_mac,
                customName: d.custom_name ?? undefined,
                groupName: d.group_name ?? undefined,
                type: d.product_type ?? undefined,
                registeredAt: d.created_at,
+               // Hardware fields for pill display
+               led_points: d.led_points ?? undefined,
+               segments: d.segments ?? undefined,
+               ic_type: d.ic_type ?? undefined,
+               color_sorting: d.color_sorting ?? undefined,
              };
              
              if (updatedSince) {
@@ -94,6 +100,7 @@ export function useDeviceFleet({
            });
            return patched;
         });
+
       } else if (initialDevicesRef.current.length > 0 && !updatedSince) {
         setDevices(initialDevicesRef.current);
       }

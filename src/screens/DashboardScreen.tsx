@@ -679,7 +679,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs, allDevices, connectToDevices, scanForPeripherals, writeToDevice]);
 
   const mappedRegisteredDevicesForModal = useMemo(() => registeredDevices.map((d) => ({
-    id: d.id || '',
+    // IDENTITY KEY: always use device_mac (BLE MAC address), NOT d.id (Supabase UUID).
+    // useDeviceFleet.loadDevices maps id: d.device_mac from the DB. The initialDevices
+    // fallback path must be consistent or onDeviceForgotten/onDeviceRenamed receive a
+    // UUID that deregisterDevice cannot match — causing silent, invisible no-ops.
+    id: d.device_mac || '',
     mac: d.device_mac || '',
     name: d.device_name || '',
     customName: d.custom_name || '',
@@ -692,6 +696,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     ic_type: d.ic_type,
     color_sorting: d.color_sorting,
   })), [registeredDevices]);
+
 
 
   const BluetoothWarningBanner = useMemo(() => {
