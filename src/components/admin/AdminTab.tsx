@@ -11,11 +11,12 @@ export interface AdminTabProps extends TabProps {
   setIsPicksSchedulerVisible: (v: boolean) => void;
   setIsProductManagerVisible: (v: boolean) => void;
   setIsAppManagerVisible: (v: boolean) => void;
+  setIsDaemonMonitorVisible: (v: boolean) => void;
 }
 
 export const AdminTab = React.memo(({ 
   onOpenProgrammer, onOpenLab, setIsPicksSchedulerVisible, 
-  setIsProductManagerVisible, setIsAppManagerVisible, 
+  setIsProductManagerVisible, setIsAppManagerVisible, setIsDaemonMonitorVisible,
   textMuted, textPrimary, cardBg, borderColor 
 }: AdminTabProps) => {
   return (
@@ -61,6 +62,16 @@ export const AdminTab = React.memo(({
         <View style={{ marginLeft: Spacing.md }}>
           <Text style={{ color: textPrimary, fontWeight: '700' }}>Community Picks Queue</Text>
           <Text style={{ color: textMuted, fontSize: 12 }}>Schedule and manage featured animations</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
+      </TouchableOpacity>
+
+      <Text style={[styles.statSection, { color: textPrimary, marginTop: Spacing.xl }]}>🌐 Data Pipelines</Text>
+      <TouchableOpacity onPress={() => setIsDaemonMonitorVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.xl }]}>
+        <MaterialCommunityIcons name="robot" size={24} color="#00E676" />
+        <View style={{ marginLeft: Spacing.md }}>
+          <Text style={{ color: textPrimary, fontWeight: '700' }}>Cultural Daemon Pulse</Text>
+          <Text style={{ color: textMuted, fontSize: 12 }}>Monitor background ETL scraping queues</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
       </TouchableOpacity>
