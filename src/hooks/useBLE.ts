@@ -152,14 +152,11 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
   const probeDevice = async (mac: string): Promise<any> => {
     if (Platform.OS === 'web' || !bleManager) return null;
-    const alreadyConn = await bleManager.isDeviceConnected(mac).catch(() => false);
     
     try {
-      if (!alreadyConn) {
-        await bleManager.connectToDevice(mac, { timeout: 5000 }).catch((e: any) => {
-           if (!String(e).includes('already')) throw e;
-        });
-      }
+      await bleManager.connectToDevice(mac, { timeout: 5000 }).catch((e: any) => {
+         if (!String(e).includes('already')) throw e;
+      });
       await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
       
       const hwConfig = await new Promise<any>((resolve) => {
@@ -227,9 +224,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
       AppLogger.warn(`[BLE Probe Single] Failed to probe ${mac}:`, { error: String(err) });
       return null;
     } finally {
-      if (!alreadyConn) {
-        await bleManager.cancelDeviceConnection(mac).catch(() => {});
-      }
+      await bleManager.cancelDeviceConnection(mac).catch(() => {});
     }
   };
 
