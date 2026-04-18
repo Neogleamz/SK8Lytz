@@ -376,7 +376,7 @@ export function useBLEScanner({
               if (!lastSeen || now - lastSeen > 30 * 60 * 1000) {
                 telemetryCacheRef.current.set(device.id, now);
                 telemetryBatchRef.current.push({
-                   id: device.id,
+                   id: device.id.toUpperCase(),
                    rssi: device.rssi,
                    type: nameLower.includes('halo') ? 'HALOZ' : (nameLower.includes('soul') ? 'SOULZ' : 'UNKNOWN'),
                    manufacturerData: manufacturerData || null,
