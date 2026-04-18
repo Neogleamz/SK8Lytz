@@ -19,6 +19,7 @@
  */
 
 import type { IControllerProtocol } from './IControllerProtocol';
+import { AppLogger } from '../services/AppLogger';
 import { ZenggeAdapter } from './ZenggeAdapter';
 
 // ─── Registry ─────────────────────────────────────────────────────────────────
@@ -47,7 +48,7 @@ export function resolveProtocol(
 export function registerProtocol(protocol: IControllerProtocol): void {
   // Prevent duplicate registrations
   if (registry.some(p => p.protocolId === protocol.protocolId)) {
-    console.warn(`[ControllerRegistry] Protocol '${protocol.protocolId}' already registered — skipping`);
+    AppLogger.warn(`[ControllerRegistry] Protocol '${protocol.protocolId}' already registered — skipping`);
     return;
   }
   registry.push(protocol);

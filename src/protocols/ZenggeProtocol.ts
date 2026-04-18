@@ -9,6 +9,7 @@
  */
 
 import { Buffer } from 'buffer';
+import { AppLogger } from '../services/AppLogger';
 
 export const ZENGGE_SERVICE_UUID        = '0000ffff-0000-1000-8000-00805f9b34fb';
 export const ZENGGE_CHARACTERISTIC_UUID = '0000ff01-0000-1000-8000-00805f9b34fb'; // WRITE
@@ -377,8 +378,8 @@ export class ZenggeProtocol {
     const payload = [0x73, isDeviceMic ? 0x01 : 0x00, matrixStyle, patternId,
       color1.r, color1.g, color1.b, color2.r, color2.g, color2.b, 0x20, sensitivity, brightness];
       
-    // [DEBUG LOGGING] - Added for fix-music-mode-color investigation
-    console.log(`[ZenggeProtocol] setMusicConfig 0x73 -> patternId: ${patternId}, matrixStyle: ${matrixStyle}, C1: ${color1.r},${color1.g},${color1.b}, C2: ${color2.r},${color2.g},${color2.b}`);
+    // Protocol debug: log music config params for hardware correlation
+    AppLogger.log('ZENGGE_MUSIC_CONFIG', { patternId, matrixStyle, c1: `${color1.r},${color1.g},${color1.b}`, c2: `${color2.r},${color2.g},${color2.b}` });
     
     const checksum = this.calculateChecksum(payload);
     return this.wrapCommand([...payload, checksum]);
@@ -525,7 +526,7 @@ export class ZenggeProtocol {
     }
     raw.push(0x0F); // terminator
     raw.push(this.calculateChecksum(raw.slice(0, raw.length)));
-    console.log(`[0x51 COMPACT] ${raw.length} bytes (${safeSteps.length} step(s))`);
+    AppLogger.log('ZENGGE_CUSTOM_MODE_COMPACT', { bytes: raw.length, steps: safeSteps.length });
     return this.wrapCommand(raw);
   }
 

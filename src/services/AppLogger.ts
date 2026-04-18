@@ -61,6 +61,9 @@ export type EventType =
   | 'BLE_CONNECTION_ERROR'
   | 'BLE_QUEUE_REPLAY'
   | 'RAW_PAYLOAD'
+  // ── HAL / Protocol Debug ────────────────────────────────
+  | 'ZENGGE_MUSIC_CONFIG'
+  | 'ZENGGE_CUSTOM_MODE_COMPACT'
   | 'SCREEN_OPENED'
   | 'APP_BACKGROUNDED'
   | 'APP_FOREGROUNDED'
