@@ -11,6 +11,7 @@
 import * as Location from 'expo-location';
 import { AppLogger } from './AppLogger';
 import { supabase } from './supabaseClient';
+import { checkPermission, openGlobalPermissionsModal } from './PermissionService';
 
 export interface SessionLocation {
   label: string;          // "SkateCity OP, Olathe KS"
@@ -25,16 +26,13 @@ class LocationService {
    */
   async getSessionLocation(): Promise<SessionLocation | null> {
     try {
-      // Check existing permission
-      const { status: existing } = await Location.getForegroundPermissionsAsync();
-      let granted = existing === 'granted';
-
-      if (!granted) {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        granted = status === 'granted';
+      let isGranted = await checkPermission('LOCATION');
+      if (!isGranted) {
+        await openGlobalPermissionsModal();
+        isGranted = await checkPermission('LOCATION');
       }
 
-      if (!granted) {
+      if (!isGranted) {
         AppLogger.log('ERROR_CAUGHT', { service: 'LocationService', reason: 'foreground_location_denied' });
         return null;
       }

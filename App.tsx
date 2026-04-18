@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import DashboardScreen from './src/screens/DashboardScreen';
 import AuthScreen from './src/screens/AuthScreen';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { GlobalPermissionsModal } from './src/components/modals/GlobalPermissionsModal';
 import { useFonts, Righteous_400Regular } from '@expo-google-fonts/righteous';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppLogger } from './src/services/AppLogger';
@@ -235,6 +236,7 @@ export default function App() {
       <SafeAreaProvider>
         <ThemeProvider>
           <AppContent />
+          <GlobalPermissionsModal />
         </ThemeProvider>
       </SafeAreaProvider>
     </SafeErrorBoundary>

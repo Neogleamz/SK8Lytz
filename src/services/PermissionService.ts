@@ -3,8 +3,20 @@ import { Camera } from 'expo-camera';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PermissionsAndroid, Platform } from 'react-native';
+import { PermissionsAndroid, Platform, DeviceEventEmitter } from 'react-native';
 import { AppLogger } from './AppLogger';
+
+import { SHOW_GLOBAL_PERMISSIONS_EVENT, GLOBAL_PERMISSIONS_CLOSED_EVENT } from '../components/modals/GlobalPermissionsModal';
+
+export const openGlobalPermissionsModal = (): Promise<void> => {
+  return new Promise((resolve) => {
+    const listener = DeviceEventEmitter.addListener(GLOBAL_PERMISSIONS_CLOSED_EVENT, () => {
+      listener.remove();
+      resolve();
+    });
+    DeviceEventEmitter.emit(SHOW_GLOBAL_PERMISSIONS_EVENT);
+  });
+};
 
 export type PermissionType = 'CAMERA' | 'MIC' | 'LOCATION' | 'NOTIFICATIONS' | 'BLUETOOTH';
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { AppLogger } from '../services/AppLogger';
+import { checkPermission, openGlobalPermissionsModal } from '../services/PermissionService';
 
 // Safely handle native-only voice import for web compatibility
 let Voice: any;
@@ -66,11 +67,14 @@ export const useVoiceControl = (favorites: IFavoriteState[], onAction: (action: 
       setError(null);
 
       // Check permissions
-      const { Audio } = require('expo-av');
-      const perm = await Audio.requestPermissionsAsync();
-      if (perm.status !== 'granted') {
-        setError('Microphone permission denied');
-        return;
+      const isGranted = await checkPermission('MIC');
+      if (!isGranted) {
+        await openGlobalPermissionsModal();
+        const reG = await checkPermission('MIC');
+        if (!reG) {
+          setError('Microphone permission denied');
+          return;
+        }
       }
 
       setIsListening(true);

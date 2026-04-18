@@ -4,6 +4,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, Spacing } from '../theme/theme';
+import { openGlobalPermissionsModal } from '../services/PermissionService';
 
 // Types for dynamically loaded native-only libraries
 type ImageManipulatorModule = {
@@ -48,7 +49,7 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
   // Aggressive prompt for undetermined permissions on mount
   useEffect(() => {
     if (permission && permission.status === 'undetermined') {
-      requestPermission();
+      openGlobalPermissionsModal().then(() => requestPermission());
     }
   }, [permission, requestPermission]);
 
@@ -196,7 +197,7 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
             ? 'Camera access was denied permanently. Please enable it in your device Settings.'
             : 'Camera access is needed to detect colors from your environment.'}
         </Text>
-        <TouchableOpacity style={styles.button} onPress={requiresSettings ? () => Linking.openSettings() : requestPermission}>
+        <TouchableOpacity style={styles.button} onPress={requiresSettings ? () => Linking.openSettings() : async () => { await openGlobalPermissionsModal(); requestPermission(); }}>
           <Text style={{ color: Colors.isDark ? '#FFF' : '#000', fontWeight: 'bold' }}>
             {requiresSettings ? 'OPEN SETTINGS' : 'GRANT PERMISSION'}
           </Text>

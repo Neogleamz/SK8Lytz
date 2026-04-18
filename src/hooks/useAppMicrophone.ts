@@ -27,6 +27,8 @@ interface UseAppMicrophoneParams {
  * Manages the device microphone recording lifecycle and magnitude streaming.
  * Returns the current normalized audio magnitude (0–1) for visualizers.
  */
+import { checkPermission, openGlobalPermissionsModal } from '../services/PermissionService';
+
 export function useAppMicrophone({
   writeToDevice,
   activeMode,
@@ -39,8 +41,12 @@ export function useAppMicrophone({
 
   const startRecording = async () => {
     try {
-      const { granted } = await Audio.requestPermissionsAsync();
-      if (!granted) return;
+      const isGranted = await checkPermission('MIC');
+      if (!isGranted) {
+        await openGlobalPermissionsModal();
+        const reG = await checkPermission('MIC');
+        if (!reG) return;
+      }
 
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,

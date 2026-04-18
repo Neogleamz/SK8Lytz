@@ -22,6 +22,7 @@ import * as Location from 'expo-location';
 import { Accelerometer } from 'expo-sensors';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
+import { checkPermission, openGlobalPermissionsModal } from '../services/PermissionService';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
@@ -247,9 +248,14 @@ export function useStreetMode({
     // Start Location tracking
     (async () => {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          locationSubRef.current = await Location.watchPositionAsync(
+        const isGranted = await checkPermission('LOCATION');
+        if (!isGranted) {
+           await openGlobalPermissionsModal();
+           const reG = await checkPermission('LOCATION');
+           if (!reG) throw new Error('Location permission denied via modal');
+        }
+        
+        locationSubRef.current = await Location.watchPositionAsync(
             { accuracy: Location.Accuracy.Balanced, timeInterval: 1000, distanceInterval: 1 },
             (pos) => {
               const spdMpS = pos.coords.speed || 0;
@@ -303,7 +309,6 @@ export function useStreetMode({
               }
             }
           );
-        }
       } catch (e) {
         AppLogger.error('[useStreetMode] Location permission denied or unavailable', e);
       }
