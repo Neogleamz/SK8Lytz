@@ -27,7 +27,7 @@ if (typeof (global as any).ErrorUtils !== 'undefined') {
 }
 
 // ── Unhandled Promise Rejection capture (web builds) ──────────────────────────
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener('unhandledrejection', (event) => {
     AppLogger.error('[UnhandledPromise]', event.reason);
   });

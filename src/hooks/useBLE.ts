@@ -161,10 +161,15 @@ export default function useBLE(): BluetoothLowEnergyApi {
       }
       
       const hwConfig = await new Promise<any>((resolve) => {
-        const timer = setTimeout(() => {
+        let attempts = 0;
+        let pingInterval: ReturnType<typeof setInterval>;
+        let timeoutTimer: ReturnType<typeof setTimeout>;
+
+        const cleanup = () => {
+          clearInterval(pingInterval);
+          clearTimeout(timeoutTimer);
           sub.remove();
-          resolve(null);
-        }, 2500);
+        };
 
         const sub = bleManager.monitorCharacteristicForDevice(
           mac,
@@ -176,21 +181,39 @@ export default function useBLE(): BluetoothLowEnergyApi {
               const raw = Array.from(Buffer.from(char.value, 'base64')) as number[];
               const parsed = ZenggeProtocol.parseHardwareSettingsResponse(raw);
               if (parsed) {
-                clearTimeout(timer);
-                sub.remove();
+                cleanup();
+                AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_success', deviceId: mac, attempts: attempts + 1 });
                 resolve(parsed);
               }
             } catch (e) { /* ignore */ }
           }
         );
 
-        setTimeout(() => {
+        // Send the initial ping + up to 2 retries (total 3 attempts) spaced by 1200ms
+        const sendPing = () => {
+          if (attempts >= 3) return;
           const qp = ZenggeProtocol.queryHardwareSettings(false);
           const b64 = Buffer.from(qp).toString('base64');
           bleManager.writeCharacteristicWithoutResponseForDevice(
             mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
-          ).catch((e: any) => AppLogger.warn('[BLE Probe Single] query write failed', { error: String(e) }));
+          ).catch((e: any) => AppLogger.warn('[BLE Probe] query write failed', { deviceId: mac, error: String(e) }));
+          attempts++;
+        };
+
+        // 1. Send first ping after settling time
+        setTimeout(() => {
+          sendPing();
+          // 2. Schedule up to 2 more retries every 1200ms if no response
+          pingInterval = setInterval(sendPing, 1200);
         }, 600);
+
+        // 3. Absolute ceiling: 600ms start + (3 attempts * 1200ms space) = 4200ms max.
+        // We set hard abort at 4500ms
+        timeoutTimer = setTimeout(() => {
+          cleanup();
+          AppLogger.warn(`[BLE Probe Single] Probe timed out for ${mac} after ${attempts} attempts`);
+          resolve(null);
+        }, 4500);
       });
 
       return hwConfig;
@@ -271,7 +294,11 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
       for (const device of devices) {
         try {
-          const conn = await bleManager.connectToDevice(device.id);
+          const isConnected = await bleManager.isDeviceConnected(device.id);
+          const conn = isConnected 
+            ? device 
+            : await bleManager.connectToDevice(device.id);
+            
           await conn.discoverAllServicesAndCharacteristics();
 
           try {

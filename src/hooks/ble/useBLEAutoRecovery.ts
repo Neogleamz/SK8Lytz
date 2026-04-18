@@ -103,8 +103,17 @@ export function useBLEAutoRecovery({
             continue; // Will sleep again via backoff at top of loop
           }
 
-          // Attempt blind GATT connection
-          const conn = await bleManager.connectToDevice(deviceId, { timeout: 3500 });
+          // Attempt blind GATT connection (or reuse if natively connected)
+          const nativelyConnected = await bleManager.isDeviceConnected(deviceId).catch(() => false);
+          
+          let conn: Device;
+          if (nativelyConnected) {
+            // Re-discover services just in case, since we lost the logical connection
+            const devicesList = await bleManager.connectedDevices([ZENGGE_SERVICE_UUID]).catch(() => []);
+            conn = devicesList.find((d: any) => d.id === deviceId) || (await bleManager.connectToDevice(deviceId, { timeout: 3500 }));
+          } else {
+            conn = await bleManager.connectToDevice(deviceId, { timeout: 3500 });
+          }
           await conn.discoverAllServicesAndCharacteristics();
 
           try { await conn.requestMTU(512); } catch (e) { AppLogger.warn('[AutoRecovery] MTU negotiation failed', { deviceId, error: String(e) }); }

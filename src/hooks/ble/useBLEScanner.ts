@@ -157,12 +157,16 @@ export function useBLEScanner({
           }
           setAllDevices([...allDevicesRef.current]);
           classifyProbeResults([...allDevicesRef.current]);
+        } else {
+          // If hwConfig is null, the 0x63 ping timed out entirely after all retries.
+          AppLogger.warn(`[BLE Scanner] Device ${device.id} silently failed to yield telemetry`);
+          failedIds.push(device.id);
         }
         
         await new Promise(r => setTimeout(r, 600));
 
       } catch (probeErr: any) {
-        AppLogger.warn(`[BLE Probe] Failed ${device.id}:`, probeErr?.message);
+        AppLogger.warn(`[BLE Probe] Hard crash on ${device.id}:`, probeErr?.message);
         failedIds.push(device.id);
         try { await bleManager.cancelDeviceConnection(device.id); } catch (e) { AppLogger.warn('[Scanner] Failed to cancel probe connection', { deviceId: device.id, error: String(e) }); }
         await new Promise(r => setTimeout(r, 500));
