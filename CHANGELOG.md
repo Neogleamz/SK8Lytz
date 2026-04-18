@@ -1,3 +1,26 @@
+## [1.8.20] - 2026-04-18
+
+### ✨ Features
+- feat(ux): implement Vivid Flush Slab architecture for Camera Tracker
+- feat(admin): build zero-edge user management architecture
+- feat(etl): implement comprehensive Cultural Daemon Pulse UI monitor inside Admin Tools
+- feat(etl): decoupled cultural enrichment daemon with PM2 queue
+- feat(ble): inject GATT 133 retry bumper and elevate connection priority to High
+
+### 🐛 Bug Fixes
+- fix(dashboard): stabilize profile service and resolve type regressions
+- fix(permissions): decouple push notification init and reorder priority
+- fix(ble): convert payload engine to synchronous interleaved chunking to prevent native lockups
+- fix(ble): parallelize group teardown and payload pipeline
+- fix(db): add missing delete RLS policies to prevent ghost device retention on deregistration
+
+### 🔧 Maintenance & Architecture
+- refactor(ble): rip out firmware and hardware state query bloat from connectToDevices to eliminate lag
+- docs: formalize health sweep pre-flight requirement and capture architecture anomalies
+- docs: update BLE stability constraints to memorialize GATT 133 retry and high priority connection architectural invariants
+
+---
+
 ## [1.8.19] - 2026-04-17
 
 ### ✨ Features
