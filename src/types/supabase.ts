@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      discovered_devices_telemetry: {
+        Row: {
+          ble_version: number | null
+          device_mac: string
+          discovered_at: string | null
+          firmware_ver: number | null
+          id: string
+          is_claimed: boolean | null
+          led_version: number | null
+          location: string | null
+          manufacturer_data: string | null
+          product_id: number | null
+          product_type: string | null
+          rssi: number | null
+        }
+        Insert: {
+          ble_version?: number | null
+          device_mac: string
+          discovered_at?: string | null
+          firmware_ver?: number | null
+          id?: string
+          is_claimed?: boolean | null
+          led_version?: number | null
+          location?: string | null
+          manufacturer_data?: string | null
+          product_id?: number | null
+          product_type?: string | null
+          rssi?: number | null
+        }
+        Update: {
+          ble_version?: number | null
+          device_mac?: string
+          discovered_at?: string | null
+          firmware_ver?: number | null
+          id?: string
+          is_claimed?: boolean | null
+          led_version?: number | null
+          location?: string | null
+          manufacturer_data?: string | null
+          product_id?: number | null
+          product_type?: string | null
+          rssi?: number | null
+        }
+        Relationships: []
+      }
       admin_audit_logs: {
         Row: {
           action: string

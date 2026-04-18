@@ -1,3 +1,13 @@
+## [1.10.0] - 2026-04-18
+
+### 🚀 Features
+- feat(telemetry): implemented passive, zero-performance-impact ambient BLE telemetry harvester
+- feat(db): integrated `discovered_devices_telemetry` table with PostGIS location batching for global hardware heatmapping
+- feat(ux): added silent background location fetcher via `LocationService` to avoid UI interruption/permission modals during background sync
+
+### 🐛 Bug Fixes
+- fix(dashboard): resolved "Ghost Device" and orphaned group split-brain regressions by enforcing native `Alert` dialogs on RLS deletion failures and patching PostgreSQL policies
+
 ## [1.9.0] - 2026-04-18
 
 ### ✨ Features

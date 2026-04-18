@@ -68,6 +68,28 @@ class LocationService {
   }
 
   /**
+   * Silently attempts to get the last known location.
+   * Will NOT trigger a permission modal. Will NOT spin up the GPS.
+   * Returns null if permission is denied or location is unknown.
+   */
+  async getSilentLocation(): Promise<{ lat: number; lng: number } | null> {
+    try {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== 'granted') return null;
+
+      // Use last known position for zero battery impact ambient scanning
+      const pos = await Location.getLastKnownPositionAsync();
+      if (pos) {
+        return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      }
+      return null;
+    } catch (err) {
+      // Don't clutter logs during passive scanning
+      return null;
+    }
+  }
+
+  /**
    * Fetch active public sessions sorted by distance from current position.
    * Falls back to creation-date order if location permission denied.
    */

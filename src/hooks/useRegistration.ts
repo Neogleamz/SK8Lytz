@@ -14,6 +14,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert } from 'react-native';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
@@ -288,14 +289,21 @@ export function useRegistration() {
 
       // Remove from Supabase
       if (user) {
-        await supabase
+        const { error } = await supabase
           .from('registered_devices')
           .delete()
           .eq('user_id', user.id)
           .eq('device_mac', deviceMac);
+          
+        if (error) {
+          throw error;
+        }
       }
-    } catch (e) {
+    } catch (e: any) {
       AppLogger.warn('[Registration] Deregister failed:', e);
+      Alert.alert('Delete Failed', `Could not deregister hardware: ${e.message || String(e)}`);
+      // Immediately revert local state to prevent ghost out-of-sync
+      syncFromCloud();
     }
   }, []);
 
