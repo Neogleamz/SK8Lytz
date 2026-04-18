@@ -135,6 +135,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     AppLogger.updateKnownDevices(merged);
   }, [connectedDevices, allDevices]);
 
+  // ── Screen Navigation Telemetry ────────────────────────────────────────────
+  useEffect(() => {
+    AppLogger.log('SCREEN_OPENED', { screen: 'DashboardScreen' });
+  }, []);
+
   // ── Hardware BLE callbacks (extracted to useHardwareNotifications) ───────────
 
   const [updateTrigger, setUpdateTrigger] = useState(0);

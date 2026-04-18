@@ -26,6 +26,20 @@ if (typeof (global as any).ErrorUtils !== 'undefined') {
   });
 }
 
+// ── Unhandled Promise Rejection capture (web builds) ──────────────────────────
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    AppLogger.error('[UnhandledPromise]', event.reason);
+  });
+}
+
+// ── Console.error monkey-patch: pipe third-party library errors to telemetry ──
+const _originalConsoleError = console.error;
+console.error = (...args: any[]) => {
+  AppLogger.warn('[console.error]', { args: args.map((a: any) => String(a)).slice(0, 3).join(' ') });
+  _originalConsoleError.apply(console, args);
+};
+
 /** ── Global Error Boundary to prevent White Screens ────────────────────────────────── */
 class SafeErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: React.ReactNode }) {
@@ -208,7 +222,7 @@ export default function App() {
         AppLogger.uploadLogsToSupabase();
       }
       if (nextAppState === 'active') {
-        // Reserved for future active-state syncs
+        AppLogger.log('APP_FOREGROUNDED', { timestamp: Date.now() });
       }
     });
     return () => subscription.remove();
