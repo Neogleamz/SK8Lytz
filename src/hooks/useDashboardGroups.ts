@@ -565,7 +565,7 @@ export function useDashboardGroups({
           configs[mac].grouped = false;
           configsChanged = true;
         }
-        const rd = registeredDevices.find(r => r.device_mac === mac);
+        const rd = registeredDevices.find(r => r.device_mac.toUpperCase() === mac.toUpperCase());
         if (rd) await saveRegisteredDevice({ ...rd, group_id: 'default-fleet', group_name: '', is_pending_sync: true });
       }
 
@@ -574,7 +574,7 @@ export function useDashboardGroups({
         if (!configs[mac]) configs[mac] = {};
         configs[mac] = { ...configs[mac], groupId: finalGroupId, groupName: name, grouped: true };
         configsChanged = true;
-        const rd = registeredDevices.find(r => r.device_mac === mac);
+        const rd = registeredDevices.find(r => r.device_mac.toUpperCase() === mac.toUpperCase());
         if (rd) await saveRegisteredDevice({ ...rd, group_id: finalGroupId, group_name: name, is_pending_sync: true });
       }
 

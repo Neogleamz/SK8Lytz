@@ -373,7 +373,7 @@ export function useRegistration() {
           .from('registered_devices')
           .delete({ count: 'exact' })
           .eq('user_id', user.id)
-          .eq('device_mac', normalizedMac);
+          .ilike('device_mac', normalizedMac); // Case-insensitive to handle mismatch between iOS/Android and DB
 
         if (error) {
           AppLogger.warn('[Registration] DB delete error (RLS?)', { mac: normalizedMac, error: error.message, code: error.code });
@@ -383,18 +383,10 @@ export function useRegistration() {
         AppLogger.warn('[Registration] DEREGISTER_RESULT', { mac: normalizedMac, rowsDeleted: count });
 
         if (count === 0) {
-          // Supabase silently deleted 0 rows — likely an RLS gap or wrong MAC format
-          // The tombstone above will prevent resurrection. Log for diagnostics.
-          AppLogger.warn('[Registration] Supabase DELETE matched 0 rows — RLS or MAC mismatch?', {
+          // The database had 0 matches for ilike. The local tombstone will prevent resurrection.
+          AppLogger.warn('[Registration] Supabase DELETE matched 0 rows — RLS or truly deleted?', {
             mac: normalizedMac, userId: user.id,
           });
-          // Try alternate: delete by id column (old records may use UUID as id)
-          const { count: count2 } = await supabase
-            .from('registered_devices')
-            .delete({ count: 'exact' })
-            .eq('user_id', user.id)
-            .ilike('device_mac', normalizedMac); // case-insensitive fallback
-          AppLogger.warn('[Registration] DEREGISTER_FALLBACK', { mac: normalizedMac, rowsDeleted: count2 });
         }
       }
     } catch (e: any) {
@@ -409,8 +401,8 @@ export function useRegistration() {
   // ── Swap positions of two paired devices ─────────────────────────────────────
   const swapDevicePositions = useCallback(async (mac1: string, mac2: string): Promise<void> => {
     const current = await getLocalDevices();
-    const d1 = current.find(d => d.device_mac === mac1);
-    const d2 = current.find(d => d.device_mac === mac2);
+    const d1 = current.find(d => d.device_mac.toUpperCase() === mac1.toUpperCase());
+    const d2 = current.find(d => d.device_mac.toUpperCase() === mac2.toUpperCase());
     if (!d1 || !d2) return;
 
     // Swap positions
@@ -503,7 +495,7 @@ export function useRegistration() {
     try {
       const raw = await AsyncStorage.getItem(PENDING_SYNC_KEY);
       const queue: RegisteredDevice[] = raw ? JSON.parse(raw) : [];
-      const idx = queue.findIndex(d => d.device_mac === device.device_mac);
+      const idx = queue.findIndex(d => d.device_mac.toUpperCase() === device.device_mac.toUpperCase());
       const marked: RegisteredDevice = { 
         device_name: device.device_name || 'Unknown Device',
         product_type: device.product_type || LOCAL_PRODUCT_CATALOG[0].id,
