@@ -41,6 +41,8 @@ export interface RegisteredDevice {
   firmware_ver?: number;
   led_version?: number;
   product_id?: number;
+  rf_mode?: string;
+  rf_paired_count?: number;
   // Offline sync state
   is_pending_sync?: boolean;
   registered_at?: string;
@@ -186,6 +188,8 @@ export function useRegistration() {
             firmware_ver:    fullDevice.firmware_ver,
             led_version:     fullDevice.led_version,
             product_id:      fullDevice.product_id,
+            rf_mode:         fullDevice.rf_mode,
+            rf_paired_count: fullDevice.rf_paired_count,
             user_id:         user.id,
             id:              fullDevice.id || deviceId,
             updated_at:      now,
@@ -448,6 +452,8 @@ export function useRegistration() {
           firmware_ver:    device.firmware_ver,
           led_version:     device.led_version,
           product_id:      device.product_id,
+          rf_mode:         device.rf_mode,
+          rf_paired_count: device.rf_paired_count,
           user_id:         userId,
           id:              device.id || `${device.device_mac.replace(/:/g, '')}-${userId.slice(0, 8)}`,
           updated_at:      new Date().toISOString(),

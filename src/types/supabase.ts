@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          id: string
+          reason: string | null
+          target_user_id: string
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          target_user_id: string
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           created_at: string
@@ -262,6 +289,36 @@ export type Database = {
           transition_type?: number
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      daemon_status: {
+        Row: {
+          current_target: string | null
+          id: string
+          last_error: string | null
+          last_heartbeat: string | null
+          status: string
+          total_denials: number
+          total_enriched: number
+        }
+        Insert: {
+          current_target?: string | null
+          id?: string
+          last_error?: string | null
+          last_heartbeat?: string | null
+          status?: string
+          total_denials?: number
+          total_enriched?: number
+        }
+        Update: {
+          current_target?: string | null
+          id?: string
+          last_error?: string | null
+          last_heartbeat?: string | null
+          status?: string
+          total_denials?: number
+          total_enriched?: number
         }
         Relationships: []
       }
@@ -1089,6 +1146,8 @@ export type Database = {
           product_id: number | null
           product_type: string | null
           registered_at: string | null
+          rf_mode: string | null
+          rf_paired_count: number | null
           rssi_at_register: number | null
           segments: number
           sorting: string
@@ -1118,6 +1177,8 @@ export type Database = {
           product_id?: number | null
           product_type?: string | null
           registered_at?: string | null
+          rf_mode?: string | null
+          rf_paired_count?: number | null
           rssi_at_register?: number | null
           segments: number
           sorting: string
@@ -1147,6 +1208,8 @@ export type Database = {
           product_id?: number | null
           product_type?: string | null
           registered_at?: string | null
+          rf_mode?: string | null
+          rf_paired_count?: number | null
           rssi_at_register?: number | null
           segments?: number
           sorting?: string
@@ -1549,96 +1612,138 @@ export type Database = {
         Row: {
           address: string | null
           adult_night_details: string | null
+          capacity: number | null
           city: string | null
           created_at: string | null
+          facility_type: string | null
+          has_ac: boolean | null
+          has_adult_night: boolean | null
+          has_fee: boolean | null
+          has_food: boolean | null
+          has_lights: boolean | null
+          has_lockers: boolean | null
+          has_pro_shop: boolean | null
           has_proshop: boolean | null
+          has_rental: boolean | null
+          has_toilets: boolean | null
+          has_wifi: boolean | null
+          hosts_derby: boolean | null
           id: string
+          is_featured: boolean | null
           is_indoor: boolean | null
           is_verified: boolean | null
+          is_wheelchair_accessible: boolean | null
+          last_enriched_at: string | null
           lat: number
           lng: number
           name: string
+          opening_hours: Json | null
+          operator_description: string | null
+          operator_name: string | null
           phone: string | null
           raw_knowledge_panel: Json | null
+          socials: Json | null
           source: string | null
           state: string | null
           street_address: string | null
-          opening_hours: Json | null
-          website: string | null
-          socials: Json | null
-          facility_type: string | null
-          has_pro_shop: boolean | null
-          has_adult_night: boolean | null
           surface_type: Database["public"]["Enums"]["skate_spot_surface"] | null
           updated_at: string | null
           updated_by: string | null
           vibe_rating: number | null
+          website: string | null
           zip: string | null
-          is_featured: boolean | null
         }
         Insert: {
           address?: string | null
           adult_night_details?: string | null
+          capacity?: number | null
           city?: string | null
           created_at?: string | null
+          facility_type?: string | null
+          has_ac?: boolean | null
+          has_adult_night?: boolean | null
+          has_fee?: boolean | null
+          has_food?: boolean | null
+          has_lights?: boolean | null
+          has_lockers?: boolean | null
+          has_pro_shop?: boolean | null
           has_proshop?: boolean | null
+          has_rental?: boolean | null
+          has_toilets?: boolean | null
+          has_wifi?: boolean | null
+          hosts_derby?: boolean | null
           id?: string
+          is_featured?: boolean | null
           is_indoor?: boolean | null
           is_verified?: boolean | null
+          is_wheelchair_accessible?: boolean | null
+          last_enriched_at?: string | null
           lat: number
           lng: number
           name: string
+          opening_hours?: Json | null
+          operator_description?: string | null
+          operator_name?: string | null
           phone?: string | null
           raw_knowledge_panel?: Json | null
+          socials?: Json | null
           source?: string | null
           state?: string | null
           street_address?: string | null
-          opening_hours?: Json | null
-          website?: string | null
-          socials?: Json | null
-          facility_type?: string | null
-          has_pro_shop?: boolean | null
-          has_adult_night?: boolean | null
           surface_type?:
             | Database["public"]["Enums"]["skate_spot_surface"]
             | null
           updated_at?: string | null
           updated_by?: string | null
           vibe_rating?: number | null
+          website?: string | null
           zip?: string | null
-          is_featured?: boolean | null
         }
         Update: {
           address?: string | null
           adult_night_details?: string | null
+          capacity?: number | null
           city?: string | null
           created_at?: string | null
+          facility_type?: string | null
+          has_ac?: boolean | null
+          has_adult_night?: boolean | null
+          has_fee?: boolean | null
+          has_food?: boolean | null
+          has_lights?: boolean | null
+          has_lockers?: boolean | null
+          has_pro_shop?: boolean | null
           has_proshop?: boolean | null
+          has_rental?: boolean | null
+          has_toilets?: boolean | null
+          has_wifi?: boolean | null
+          hosts_derby?: boolean | null
           id?: string
+          is_featured?: boolean | null
           is_indoor?: boolean | null
           is_verified?: boolean | null
+          is_wheelchair_accessible?: boolean | null
+          last_enriched_at?: string | null
           lat?: number
           lng?: number
           name?: string
+          opening_hours?: Json | null
+          operator_description?: string | null
+          operator_name?: string | null
           phone?: string | null
           raw_knowledge_panel?: Json | null
+          socials?: Json | null
           source?: string | null
           state?: string | null
           street_address?: string | null
-          opening_hours?: Json | null
-          website?: string | null
-          socials?: Json | null
-          facility_type?: string | null
-          has_pro_shop?: boolean | null
-          has_adult_night?: boolean | null
           surface_type?:
             | Database["public"]["Enums"]["skate_spot_surface"]
             | null
           updated_at?: string | null
           updated_by?: string | null
           vibe_rating?: number | null
+          website?: string | null
           zip?: string | null
-          is_featured?: boolean | null
         }
         Relationships: []
       }
@@ -1875,46 +1980,46 @@ export type Database = {
           accepted_eula_version: number | null
           avatar_color: string
           avatar_url: string | null
+          ban_reason: string | null
           created_at: string
           display_name: string | null
+          is_banned: boolean
           lifetime_distance_miles: number | null
           lifetime_top_speed_mph: number | null
+          role: Database["public"]["Enums"]["user_role"]
           updated_at: string
           user_id: string
           username: string | null
-          role: Database["public"]["Enums"]["user_role"]
-          is_banned: boolean
-          ban_reason: string | null
         }
         Insert: {
           accepted_eula_version?: number | null
           avatar_color?: string
           avatar_url?: string | null
+          ban_reason?: string | null
           created_at?: string
           display_name?: string | null
+          is_banned?: boolean
           lifetime_distance_miles?: number | null
           lifetime_top_speed_mph?: number | null
+          role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
           user_id: string
           username?: string | null
-          role?: Database["public"]["Enums"]["user_role"]
-          is_banned?: boolean
-          ban_reason?: string | null
         }
         Update: {
           accepted_eula_version?: number | null
           avatar_color?: string
           avatar_url?: string | null
+          ban_reason?: string | null
           created_at?: string
           display_name?: string | null
+          is_banned?: boolean
           lifetime_distance_miles?: number | null
           lifetime_top_speed_mph?: number | null
+          role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
           user_id?: string
           username?: string | null
-          role?: Database["public"]["Enums"]["user_role"]
-          is_banned?: boolean
-          ban_reason?: string | null
         }
         Relationships: []
       }
@@ -1979,14 +2084,14 @@ export type Database = {
     }
     Functions: {
       admin_ban_user: {
-        Args: { p_target_user_id: string; p_reason: string }
-        Returns: undefined
-      }
-      admin_revoke_ban: {
-        Args: { p_target_user_id: string }
+        Args: { p_reason: string; p_target_user_id: string }
         Returns: undefined
       }
       admin_force_password_reset: {
+        Args: { p_target_user_id: string }
+        Returns: undefined
+      }
+      admin_revoke_ban: {
         Args: { p_target_user_id: string }
         Returns: undefined
       }
@@ -2002,6 +2107,59 @@ export type Database = {
           token: string
         }[]
       }
+      get_next_spot_to_enrich: {
+        Args: never
+        Returns: {
+          address: string | null
+          adult_night_details: string | null
+          capacity: number | null
+          city: string | null
+          created_at: string | null
+          facility_type: string | null
+          has_ac: boolean | null
+          has_adult_night: boolean | null
+          has_fee: boolean | null
+          has_food: boolean | null
+          has_lights: boolean | null
+          has_lockers: boolean | null
+          has_pro_shop: boolean | null
+          has_proshop: boolean | null
+          has_rental: boolean | null
+          has_toilets: boolean | null
+          has_wifi: boolean | null
+          hosts_derby: boolean | null
+          id: string
+          is_featured: boolean | null
+          is_indoor: boolean | null
+          is_verified: boolean | null
+          is_wheelchair_accessible: boolean | null
+          last_enriched_at: string | null
+          lat: number
+          lng: number
+          name: string
+          opening_hours: Json | null
+          operator_description: string | null
+          operator_name: string | null
+          phone: string | null
+          raw_knowledge_panel: Json | null
+          socials: Json | null
+          source: string | null
+          state: string | null
+          street_address: string | null
+          surface_type: Database["public"]["Enums"]["skate_spot_surface"] | null
+          updated_at: string | null
+          updated_by: string | null
+          vibe_rating: number | null
+          website: string | null
+          zip: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "skate_spots"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       increment_scene_download: {
         Args: { scene_id: string }
         Returns: undefined
@@ -2009,7 +2167,6 @@ export type Database = {
       increment_scene_upvote: { Args: { scene_id: string }; Returns: undefined }
     }
     Enums: {
-      user_role: "user" | "moderator" | "admin"
       skate_spot_surface:
         | "wood"
         | "concrete"
@@ -2017,6 +2174,7 @@ export type Database = {
         | "sport_court"
         | "unknown"
       surface_type: "wood" | "concrete" | "asphalt" | "sport_court" | "unknown"
+      user_role: "user" | "moderator" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2144,7 +2302,6 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      user_role: ["user", "moderator", "admin"],
       skate_spot_surface: [
         "wood",
         "concrete",
@@ -2153,6 +2310,7 @@ export const Constants = {
         "unknown",
       ],
       surface_type: ["wood", "concrete", "asphalt", "sport_court", "unknown"],
+      user_role: ["user", "moderator", "admin"],
     },
   },
 } as const

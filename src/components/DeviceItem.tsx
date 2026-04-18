@@ -4,6 +4,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Layout, Spacing, Typography } from '../theme/theme';
+import { HardwareStatusPills } from './dashboard/HardwareStatusPills';
 
 interface DeviceItemProps {
   device: { name: string | null; id: string; rssi?: number | null; rssiList?: number[]; isGroup?: boolean };
@@ -100,23 +101,7 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
         {!device.isGroup && (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.xs }}>
             {isSelectionMode && <View style={{ width: 34 }} />}
-            <Text style={[Typography.caption, { color: Colors.textMuted, flex: 1 }]} numberOfLines={0}>
-                {(() => {
-                  const devAny = device as any;
-                  // If unqueried during scan, use safe defaults
-                  const pts = devAny.points ?? (devAny.name?.toLowerCase().includes('soul') ? '43' : '8');
-                  const segs = devAny.segments ?? (devAny.name?.toLowerCase().includes('soul') ? '1' : '2');
-                  const strip = devAny.stripType ?? 'WS2812B';
-                  const sort = devAny.sorting ?? 'GRB';
-                  
-                  const id = device.id.toUpperCase();
-                  const mac4 = id.startsWith('SIM-') 
-                    ? `000${id.split('-').pop()}`.slice(-4)
-                    : id.replace(/:/g, '').slice(-4);
-
-                  return `${pts}-${segs}-${strip}-${sort}-${mac4}`;
-                })()}
-              </Text>
+            <HardwareStatusPills device={device} />
           </View>
         )}
       </View>

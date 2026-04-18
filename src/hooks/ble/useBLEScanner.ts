@@ -57,7 +57,11 @@ export function useBLEScanner({
         if (!groups[typeId]) groups[typeId] = [];
         groups[typeId].push(d);
       } else {
-        const matchedProfile = LOCAL_PRODUCT_CATALOG.find(p => name.includes(p.id));
+        const matchedProfile = LOCAL_PRODUCT_CATALOG.find(p => {
+          if (p.id === 'HALOZ' && name.includes('HALO')) return true;
+          if (p.id === 'SOULZ' && name.includes('SOUL')) return true;
+          return name.includes(p.id);
+        });
         if (matchedProfile) {
           const tid = matchedProfile.id;
           if (!groups[tid]) groups[tid] = [];
@@ -92,6 +96,8 @@ export function useBLEScanner({
         firmware_ver: d.firmwareVer,
         led_version:  d.ledVersion,
         product_id:   d.productId,
+        rf_mode:      d.hwRfMode,
+        rf_paired_count: d.hwRfPairedCount,
       };
     };
 
@@ -154,6 +160,8 @@ export function useBLEScanner({
           (device as any).hwSegments = hwConfig.segments;
           (device as any).hwSorting = hwConfig.colorSortingName;
           (device as any).hwStripType = hwConfig.icName;
+          (device as any).hwRfMode = hwConfig.rfMode;
+          (device as any).hwRfPairedCount = hwConfig.rfPairedCount;
 
           if (hardwareProbedCallbackRef.current) {
             hardwareProbedCallbackRef.current(device.id, hwConfig);

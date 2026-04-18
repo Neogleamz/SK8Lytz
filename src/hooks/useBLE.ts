@@ -160,11 +160,17 @@ export default function useBLE(): BluetoothLowEnergyApi {
       await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
       
       const hwConfig = await new Promise<any>((resolve) => {
+        let accumulatedTelemetry: any = null;
+
         const timer = setTimeout(() => {
           sub.remove();
-          AppLogger.warn(`[BLE Probe Single] Probe timed out for ${mac} after 3500ms`);
-          Alert.alert('Probe Timeout', `No hardware telemetry received from ${mac} within 3500ms.`);
-          resolve(null);
+          if (accumulatedTelemetry) {
+             AppLogger.warn(`[BLE Probe Single] Partial telemetry for ${mac} — RF or HW missing. Returning partial.`);
+             resolve(accumulatedTelemetry);
+          } else {
+             AppLogger.warn(`[BLE Probe Single] Probe empty timed out for ${mac} after 3500ms`);
+             resolve(null);
+          }
         }, 3500);
 
         const sub = bleManager.monitorCharacteristicForDevice(
@@ -179,23 +185,48 @@ export default function useBLE(): BluetoothLowEnergyApi {
             if (!char?.value) return;
             try {
               const raw = Array.from(Buffer.from(char.value, 'base64')) as number[];
-              const parsed = ZenggeProtocol.parseHardwareSettingsResponse(raw);
-              if (parsed) {
+              
+              const hwParsed = ZenggeProtocol.parseHardwareSettingsResponse(raw);
+              if (hwParsed) {
+                 accumulatedTelemetry = { ...accumulatedTelemetry, ...hwParsed };
+              }
+
+              const rfParsed = ZenggeProtocol.parseRfRemoteState(raw);
+              if (rfParsed) {
+                 accumulatedTelemetry = { 
+                   ...accumulatedTelemetry, 
+                   rfMode: rfParsed.mode, 
+                   rfPairedCount: rfParsed.pairedCount 
+                 };
+              }
+
+              if (accumulatedTelemetry?.detected && accumulatedTelemetry?.rfMode) {
                 clearTimeout(timer);
                 sub.remove();
-                AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_success', deviceId: mac });
-                resolve(parsed);
+                AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_success_full', deviceId: mac });
+                resolve(accumulatedTelemetry);
               }
             } catch (e) { /* ignore */ }
           }
         );
 
         setTimeout(() => {
-          const qp = ZenggeProtocol.queryHardwareSettings(false);
-          const b64 = Buffer.from(qp).toString('base64');
+          // Fire HW Query
+          const qpHW = ZenggeProtocol.queryHardwareSettings(false);
+          const b64HW = Buffer.from(qpHW).toString('base64');
           bleManager.writeCharacteristicWithoutResponseForDevice(
-            mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
-          ).catch((e: any) => AppLogger.warn('[BLE Probe Single] query write failed', { error: String(e) }));
+            mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64HW
+          ).catch((e: any) => AppLogger.warn('[BLE Probe Single] hw query write failed', { error: String(e) }));
+
+          // Fire RF Query 200ms later to avoid baseband collision
+          setTimeout(() => {
+             const qpRF = ZenggeProtocol.queryRfRemoteState();
+             const b64RF = Buffer.from(qpRF).toString('base64');
+             bleManager.writeCharacteristicWithoutResponseForDevice(
+               mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64RF
+             ).catch((e: any) => AppLogger.warn('[BLE Probe Single] rf query write failed', { error: String(e) }));
+          }, 200);
+
         }, 600);
       });
 

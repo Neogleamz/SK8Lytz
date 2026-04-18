@@ -28,6 +28,8 @@ export interface PendingRegistration {
   firmware_ver?: number;
   led_version?: number;
   product_id?: number;
+  rf_mode?: string;
+  rf_paired_count?: number;
 }
 
 

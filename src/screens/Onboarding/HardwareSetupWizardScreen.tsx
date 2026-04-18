@@ -8,6 +8,7 @@ import { Spacing, Typography } from '../../theme/theme';
 
 import { LOCAL_PRODUCT_CATALOG, getLocalProfileById } from '../../constants/ProductCatalog';
 import { RegisteredDevice } from '../../hooks/useRegistration';
+import { HardwareStatusPills } from '../../components/dashboard/HardwareStatusPills';
 import { getDefaultGroupName } from '../../utils/NamingUtils';
 
 interface HardwareSetupWizardScreenProps {
@@ -168,10 +169,12 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                     <Text style={[styles.deviceName, isSelected ? { color } : { opacity: 0.6 }]}>
                       {device.device_name}
                     </Text>
-                    <Text style={styles.deviceMeta}>MAC: {device.device_mac.slice(-5).toUpperCase()} • RSSI: {device.rssi}</Text>
-                    <Text style={styles.deviceMeta}>
-                      {device.product_type === 'UNKNOWN' ? 'IDENTIFYING HARDWARE...' : `LEDS: ${device.led_points} • IC: ${device.ic_type}`}
-                    </Text>
+                    <Text style={[styles.deviceMeta, {marginBottom: Spacing.xs}]}>ID: {device.device_mac.slice(-5).toUpperCase()}  •  RSSI: {device.rssi}</Text>
+                    {device.product_type === 'UNKNOWN' ? (
+                       <Text style={styles.deviceMeta}>IDENTIFYING HARDWARE...</Text>
+                    ) : (
+                       <HardwareStatusPills device={device} />
+                    )}
                   </View>
                 <TouchableOpacity 
                   style={[styles.blinkBtn, isBlinking === device.device_mac && styles.blinkBtnActive]}
@@ -494,9 +497,9 @@ export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareS
                      position: cfg?.position || null,
                      group_id: groupName.trim().toLowerCase().replace(/\s+/g, '-'),
                      led_points: cfg?.points || device.led_points,
-                     segments: 1,
-                     ic_type: 'WS2812B',
-                     color_sorting: 'GRB'
+                     segments: device.segments ?? 1,
+                     ic_type: device.ic_type ?? 'WS2812B',
+                     color_sorting: device.color_sorting ?? 'GRB'
                    };
                  });
                  await onSetupComplete(finalizedDevices);
