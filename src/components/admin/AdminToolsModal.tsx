@@ -27,6 +27,7 @@ import { AppManager } from './tools/AppManager';
 import { ProductManager } from './tools/ProductManager';
 import Sk8LytzDiagnosticLab from './tools/Sk8LytzDiagnosticLab';
 import Sk8LytzProgrammer from './tools/Sk8LytzProgrammer';
+import { UserManagementPanel } from './tools/UserManagementPanel';
 
 
 type Tab = 'timeline' | 'stats' | 'device' | 'tools';
@@ -59,6 +60,7 @@ export default function AdminToolsModal({
   const [isProductManagerVisible, setIsProductManagerVisible] = useState(false);
   const [isPicksSchedulerVisible, setIsPicksSchedulerVisible] = useState(false);
   const [isAppManagerVisible, setIsAppManagerVisible] = useState(false);
+  const [isUserManagementVisible, setIsUserManagementVisible] = useState(false);
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
   const [isLabVisible, setIsLabVisible] = useState(false);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
@@ -185,6 +187,7 @@ export default function AdminToolsModal({
             setIsPicksSchedulerVisible={setIsPicksSchedulerVisible}
             setIsProductManagerVisible={setIsProductManagerVisible}
             setIsAppManagerVisible={setIsAppManagerVisible}
+            setIsUserManagementVisible={setIsUserManagementVisible}
             textMuted={textMuted} 
             textPrimary={textPrimary} 
             cardBg={cardBg} 
@@ -206,6 +209,12 @@ export default function AdminToolsModal({
           appSettings={appSettings}
           handlePolicyToggle={handlePolicyToggle}
           updateSetting={updateSetting}
+          bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
+        />
+      ) : isUserManagementVisible ? (
+        <UserManagementPanel
+          visible={isUserManagementVisible}
+          onClose={() => setIsUserManagementVisible(false)}
           bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
         />
       ) : isProductManagerVisible ? (

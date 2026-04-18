@@ -12,7 +12,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Alert } from 'react-native';
 import { AppLogger } from '../services/AppLogger';
 import { AppSettingsMap, AppSettingsService } from '../services/AppSettingsService';
 import { notificationService } from '../services/NotificationService';
@@ -108,10 +108,27 @@ export function useDashboardProfile({
     }).catch(() => {});
   }, [userProfile]);
 
+  const handleLogout = async (): Promise<void> => {
+    try {
+      await supabase.auth.signOut();
+      // App.tsx onAuthStateChange detects session=null and redirects to AuthScreen
+    } catch (e) {
+      AppLogger.error('Logout error:', e);
+    }
+  };
+
   const refreshProfile = async (): Promise<void> => {
     try {
       const profile = await profileService.fetchOrCreateProfile();
-      setUserProfile(profile);
+      if (profile.is_banned) {
+        Alert.alert(
+          'Account Suspended',
+          profile.ban_reason ? `Reason: ${profile.ban_reason}` : 'Your account has been suspended by an administrator.',
+          [{ text: 'OK', onPress: () => handleLogout() }]
+        );
+      } else {
+        setUserProfile(profile);
+      }
     } catch (e) {
       AppLogger.error('[useDashboardProfile] Profile refresh failed', e);
     }
