@@ -508,6 +508,7 @@ export function useDashboardGroups({
 
   return {
     customGroups,
+    setCustomGroups,
     customGroupsRef,
     deviceConfigs,
     setDeviceConfigs,

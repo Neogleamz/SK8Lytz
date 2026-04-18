@@ -155,6 +155,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [viewState, setViewState] = useState<DashboardViewState>('LOADING_REGS');
   const {
     customGroups,
+    setCustomGroups,
     customGroupsRef,
     deviceConfigs,
     setDeviceConfigs,
@@ -962,6 +963,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           for (const d of devs) {
             await saveRegisteredDevice({ ...d, group_name: newGroupName, is_pending_sync: true });
           }
+          // Sync local customGroups array so the dashboard UI instantly re-renders
+          const updatedGroups = customGroupsRef.current.map(g => 
+            g.name === oldGroupName ? { ...g, name: newGroupName } : g
+          );
+          setCustomGroups(updatedGroups);
+          AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
         }}
         onGroupForgotten={async (groupName) => {
           const devs = registeredDevices.filter(d => d.group_name === groupName);
