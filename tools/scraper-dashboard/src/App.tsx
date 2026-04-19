@@ -375,9 +375,10 @@ function App() {
 
       {/* =========== OMNI CONTROL CENTER (GLOBAL CONTROLS) =========== */}
       <div className="omni-control-center fade-in" style={{ marginBottom: '2rem', background: 'var(--surface)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--surface-highlight)' }}>
-         <div className="security-control-bar" style={{ background: 'transparent', padding: '0 0 1rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+         <div className="security-control-bar" style={{ position: 'relative', background: 'transparent', padding: '0 0 1rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="ghost-badge mini" style={{position: 'absolute', top: -35, right: 0}}>🛡️ GHOST ENCRYPTED PIPELINE ACTIVE</span>
             <div className="security-label">
-                <span className="ghost-badge" style={{margin:0}}>🛡️ UNIVERSAL TACTICS & SPOOFING</span>
+                <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 800}}>🛡️ UNIVERSAL TACTICS & SPOOFING</span>
             </div>
             <div className="security-inputs" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                 <div className="input-group-inline">

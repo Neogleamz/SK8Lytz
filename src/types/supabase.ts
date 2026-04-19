@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -1686,8 +1686,10 @@ export type Database = {
           operator_description: string | null
           operator_name: string | null
           phone: string | null
+          pricing_data: Json | null
           raw_knowledge_panel: Json | null
           socials: Json | null
+          special_events: Json | null
           source: string | null
           state: string | null
           street_address: string | null
@@ -1730,8 +1732,10 @@ export type Database = {
           operator_description?: string | null
           operator_name?: string | null
           phone?: string | null
+          pricing_data?: Json | null
           raw_knowledge_panel?: Json | null
           socials?: Json | null
+          special_events?: Json | null
           source?: string | null
           state?: string | null
           street_address?: string | null
@@ -1776,8 +1780,10 @@ export type Database = {
           operator_description?: string | null
           operator_name?: string | null
           phone?: string | null
+          pricing_data?: Json | null
           raw_knowledge_panel?: Json | null
           socials?: Json | null
+          special_events?: Json | null
           source?: string | null
           state?: string | null
           street_address?: string | null
