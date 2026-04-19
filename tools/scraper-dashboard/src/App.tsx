@@ -559,21 +559,27 @@ function App() {
         {/* Phase 1 Mini Data Bank (Newly Seeded Target Monitor) */}
         {activeTab === 'phase1' && (() => {
            const queue = phaseQueues[activeTab] || [];
-           if (queue.length === 0) return null;
            return (
              <div style={{marginTop: '0px', padding: '0 2rem', marginBottom: '2rem'}}>
                 <h4 style={{fontSize: '0.8rem', textTransform:'uppercase', color:'var(--text-secondary)', marginBottom: 0}}>Newly Spawned Targets (Unprocessed)</h4>
-                <div className="mini-data-bank">
-                  {queue.map(spot => (
-                    <div key={spot.id} className="queue-card active">
-                      <div className="queue-card-title">{spot.name}</div>
-                      <div className="queue-card-loc">{spot.city}, {spot.state}</div>
-                      <div className="queue-tags">
-                        <span className="queue-badge">⏳ RAW SEED</span>
-                      </div>
+                
+                {queue.length === 0 ? (
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '2rem', textAlign: 'center', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic', marginTop: '10px' }}>
+                        Vault is empty. Click [START NATIONAL HARVEST] to spawn targets from OSM.
                     </div>
-                  ))}
-                </div>
+                ) : (
+                    <div className="mini-data-bank">
+                      {queue.map(spot => (
+                        <div key={spot.id} className="queue-card active">
+                          <div className="queue-card-title">{spot.name}</div>
+                          <div className="queue-card-loc">{spot.city}, {spot.state}</div>
+                          <div className="queue-tags">
+                            <span className="queue-badge">⏳ RAW SEED</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                )}
              </div>
            );
         })()}
@@ -685,22 +691,27 @@ function App() {
                 if (activeTab === 'phase4') hydratingFields = ['Vibe Score', 'Description'];
                 if (activeTab === 'phase5') hydratingFields = ['Media URLs', 'Thumbnails'];
 
-                if (queue.length === 0) return null;
-
                 return (
                   <div style={{marginTop: '20px'}}>
                      <h4 style={{fontSize: '0.8rem', textTransform:'uppercase', color:'var(--text-secondary)', marginBottom: 0}}>Processing Queue (Top 10)</h4>
-                     <div className="mini-data-bank">
-                       {queue.map(spot => (
-                         <div key={spot.id} className="queue-card active">
-                           <div className="queue-card-title">{spot.name}</div>
-                           <div className="queue-card-loc">{spot.city}, {spot.state}</div>
-                           <div className="queue-tags">
-                             {hydratingFields.map(f => <span key={f} className="queue-badge">⏳ {f}</span>)}
-                           </div>
+                     
+                     {queue.length === 0 ? (
+                        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '2rem', textAlign: 'center', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic', marginTop: '10px' }}>
+                            Queue is empty. Awaiting spots from the previous phase.
+                        </div>
+                     ) : (
+                         <div className="mini-data-bank">
+                           {queue.map(spot => (
+                             <div key={spot.id} className="queue-card active">
+                               <div className="queue-card-title">{spot.name}</div>
+                               <div className="queue-card-loc">{spot.city}, {spot.state}</div>
+                               <div className="queue-tags">
+                                 {hydratingFields.map(f => <span key={f} className="queue-badge">⏳ {f}</span>)}
+                               </div>
+                             </div>
+                           ))}
                          </div>
-                       ))}
-                     </div>
+                     )}
                   </div>
                 );
               })()}
