@@ -15,21 +15,28 @@
  *   }, []);
  */
 
-import * as Notifications from 'expo-notifications';
+import type * as NotificationsType from 'expo-notifications';
 import { Platform } from 'react-native';
 import { AppLogger } from './AppLogger';
 import { profileService } from './ProfileService';
 
-// Show push notifications as banners even when app is in foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+let Notifications: typeof NotificationsType | null = null;
+if (Platform.OS !== 'web') {
+  Notifications = require('expo-notifications');
+}
+
+if (Notifications) {
+  // Show push notifications as banners even when app is in foreground
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Types
@@ -44,8 +51,8 @@ export type JoinHandler = (crewId: string, sessionId: string) => void;
 class NotificationService {
   private token: string | null = null;
   private joinHandler: JoinHandler | null = null;
-  private foregroundSub: Notifications.Subscription | null = null;
-  private responseSub: Notifications.Subscription | null = null;
+  private foregroundSub: NotificationsType.Subscription | null = null;
+  private responseSub: NotificationsType.Subscription | null = null;
 
   /**
    * Full initialization:
@@ -65,6 +72,7 @@ class NotificationService {
     }
 
     try {
+      if (!Notifications) return null;
       const tokenObj = await Notifications.getExpoPushTokenAsync({
         projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
       });
@@ -118,6 +126,7 @@ class NotificationService {
     sessionId?: string;
   }): Promise<void> {
     try {
+      if (!Notifications) return;
       await Notifications.scheduleNotificationAsync({
         content: {
           title: `🛼 ${opts.joinerName} joined your crew!`,
@@ -155,6 +164,7 @@ class NotificationService {
   /** Cancel a previously scheduled session reminder by its notification ID. */
   async cancelSessionReminder(notificationId: string): Promise<void> {
     try {
+      if (!Notifications) return;
       await Notifications.cancelScheduledNotificationAsync(notificationId);
     } catch { /* already fired or didn't exist */ }
   }
@@ -167,6 +177,7 @@ class NotificationService {
     locationLabel: string;
   }): Promise<void> {
     try {
+      if (!Notifications) return;
       await Notifications.scheduleNotificationAsync({
         content: {
           title: `🛼 "${opts.sessionName}" is LIVE!`,
@@ -189,6 +200,7 @@ class NotificationService {
     trigger: { date: Date } | null,
   ): Promise<string | null> {
     try {
+      if (!Notifications) return null;
       const id = await Notifications.scheduleNotificationAsync({
         content: {
           title: `⏰ Session starting in 15 min!`,
@@ -209,7 +221,7 @@ class NotificationService {
 
 
   private async _requestPermissions(autoRequest: boolean): Promise<boolean> {
-    if (Platform.OS === 'web') return false; // Web push not supported in this flow
+    if (Platform.OS === 'web' || !Notifications) return false; // Web push not supported in this flow
 
     const { status: existing } = await Notifications.getPermissionsAsync();
     if (existing === 'granted') return true;
@@ -223,7 +235,7 @@ class NotificationService {
   }
 
   private async _setupAndroidChannel(): Promise<void> {
-    if (Platform.OS !== 'android') return;
+    if (Platform.OS !== 'android' || !Notifications) return;
 
     await Notifications.setNotificationChannelAsync('crew-alerts', {
       name: 'Crew Alerts',
@@ -242,6 +254,7 @@ class NotificationService {
   }
 
   private _wireForegroundHandler(): void {
+    if (!Notifications) return;
     this.foregroundSub = Notifications.addNotificationReceivedListener(notification => {
       // Already handled by setNotificationHandler above (shows banner)
       console.log('[NotificationService] Foreground notification:', notification.request.identifier);
@@ -249,6 +262,7 @@ class NotificationService {
   }
 
   private _wireResponseHandler(): void {
+    if (!Notifications) return;
     this.responseSub = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data as Record<string, string>;
       const crewId    = data?.crewId;
