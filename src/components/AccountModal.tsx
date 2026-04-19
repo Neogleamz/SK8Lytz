@@ -30,7 +30,6 @@ import {
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useAccountOverview } from '../hooks/useAccountOverview';
-import { StoredDevice, useDeviceFleet } from '../hooks/useDeviceFleet';
 import { useSkateStats } from '../hooks/useSkateStats';
 import { PermanentCrew, profileService } from '../services/ProfileService';
 import { supabase } from '../services/supabaseClient';
@@ -43,14 +42,27 @@ import { HardwareStatusPills } from './dashboard/HardwareStatusPills';
 
 type Tab = 'profile' | 'security' | 'crews' | 'devices' | 'settings' | 'stats';
 
-// StoredDevice type now imported from useDeviceFleet
+/** Lightweight device display type for AccountModal, mapped from RegisteredDevice. */
+export type StoredDevice = {
+  id: string;
+  mac?: string;
+  name: string;
+  customName?: string;
+  groupName?: string;
+  type?: string;
+  registeredAt?: string;
+  led_points?: number;
+  segments?: number;
+  ic_type?: string;
+  color_sorting?: string;
+};
 
 interface AccountModalProps {
   visible: boolean;
   onClose: () => void;
   onSignOut: () => void;
   onJoinCrewSession?: (crewId: string) => void;
-  /** Registered devices from the main app state */
+  /** Registered devices from the main app state — SINGLE SOURCE OF TRUTH */
   registeredDevices?: StoredDevice[];
   onDeviceRenamed?: (deviceId: string, newName: string) => void;
   onDeviceForgotten?: (deviceId: string) => void;
@@ -163,25 +175,70 @@ export default function AccountModal({
     statsLoading,
   } = useSkateStats(visible);
 
-  const {
-    devices,
-    editingDeviceId, setEditingDeviceId,
-    deviceNewName, setDeviceNewName,
-    editingGroupId, setEditingGroupId,
-    groupNewName, setGroupNewName,
-    groupedDevices,
-    handleRenameDevice,
-    handleForgetDevice,
-    handleRenameGroup,
-    handleForgetGroup,
-  } = useDeviceFleet({
-    visible,
-    initialDevices: registeredDevices,
-    onDeviceRenamed,
-    onDeviceForgotten,
-    onGroupRenamed,
-    onGroupForgotten,
-  });
+  // ─── Device Fleet State (was useDeviceFleet — now reads from shared registeredDevices prop) ──
+  const devices = registeredDevices;
+  const [editingDeviceId, setEditingDeviceId] = useState<string | null>(null);
+  const [deviceNewName, setDeviceNewName] = useState('');
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [groupNewName, setGroupNewName] = useState('');
+
+  const groupedDevices = React.useMemo(() => {
+    const groups: { [key: string]: StoredDevice[] } = { "_Ungrouped": [] };
+    devices.forEach(d => {
+      const gName = d.groupName || '';
+      if (gName) {
+        if (!groups[gName]) groups[gName] = [];
+        groups[gName].push(d);
+      } else {
+        groups["_Ungrouped"].push(d);
+      }
+    });
+    return groups;
+  }, [devices]);
+
+  const handleRenameDevice = (device: StoredDevice) => {
+    if (!deviceNewName.trim()) return;
+    const newName = deviceNewName.trim();
+    onDeviceRenamed?.(device.id, newName);
+    setEditingDeviceId(null);
+    setDeviceNewName('');
+  };
+
+  const handleForgetDevice = (device: StoredDevice) => {
+    Alert.alert(
+      `Forget "${device.customName || device.name}"?`,
+      'This removes it from your registered devices. You can always re-pair later.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Forget', style: 'destructive',
+          onPress: () => { onDeviceForgotten?.(device.id); },
+        },
+      ]
+    );
+  };
+
+  const handleRenameGroup = (oldName: string) => {
+    if (!groupNewName.trim()) return;
+    const newName = groupNewName.trim();
+    onGroupRenamed?.(oldName, newName);
+    setEditingGroupId(null);
+    setGroupNewName('');
+  };
+
+  const handleForgetGroup = (groupName: string) => {
+    Alert.alert(
+      `Forget Group "${groupName}"?`,
+      'This removes all devices within this group from your registered devices.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Forget All', style: 'destructive',
+          onPress: () => { onGroupForgotten?.(groupName); },
+        },
+      ]
+    );
+  };
 
   const loading = accountLoading; // Aliased for legacy UI
   const setSavingNotifs = (_val: boolean) => {}; // Legacy shim

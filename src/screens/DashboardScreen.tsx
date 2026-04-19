@@ -680,9 +680,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   const mappedRegisteredDevicesForModal = useMemo(() => registeredDevices.map((d) => ({
     // IDENTITY KEY: always use device_mac (BLE MAC address), NOT d.id (Supabase UUID).
-    // useDeviceFleet.loadDevices maps id: d.device_mac from the DB. The initialDevices
-    // fallback path must be consistent or onDeviceForgotten/onDeviceRenamed receive a
-    // UUID that deregisterDevice cannot match — causing silent, invisible no-ops.
+    // AccountModal receives this array directly via the registeredDevices prop —
+    // there is no independent Supabase query. All views share one state authority.
     id: d.device_mac || '',
     mac: d.device_mac || '',
     name: d.device_name || '',
