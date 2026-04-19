@@ -92,10 +92,9 @@ function App() {
     const interval = setInterval(() => {
       fetchSystemStatus();
       fetchQueue();
-      fetchCoverage(); // Refresh coverage stats periodically
+      fetchCoverage(); 
     }, 5000);
 
-    // SSE Log Hook
     const es = new EventSource(`${API_BASE}/api/logs/stream`);
     es.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -118,7 +117,7 @@ function App() {
   }, [logs]);
 
   useEffect(() => {
-    if (activeTab === 'phase3') {
+    if (activeTab === 'phase6') {
       fetchSpots(0, gridFilter, sortCol, sortDir, searchQuery);
     }
   }, [activeTab, gridFilter, sortCol, sortDir, searchQuery]);
@@ -129,10 +128,7 @@ function App() {
       const res = await fetch(`${API_BASE}/status`);
       if (res.ok) {
         const data = await res.json();
-      isGated,
-      lastError,
-      pulseRegistry: data.pulseRegistry || {}
-    });
+        setStatus(data);
         setIsHeadless(data.isHeadless ?? true);
       }
       
@@ -141,7 +137,6 @@ function App() {
          const { config } = await configRes.json();
          if (config) {
             setTargetFacilities(config.target_facilities || []);
-            // Support both array and scalar migrations gracefully
             setStateOverride(Array.isArray(config.state_override) ? config.state_override : (config.state_override ? [config.state_override] : []));
             setSleepInterval(config.sleep_interval_ms || 10000);
             setCooldownBase(config.cooldown_base_ms || 300000);
@@ -284,7 +279,6 @@ function App() {
      });
   };
 
-  // --- Handlers ---
   const triggerHarvest = async (type: string, states: string[] = []) => {
     try {
        await fetch(`${API_BASE}/api/harvest/${type}`, {
@@ -294,9 +288,7 @@ function App() {
        });
        fetchSystemStatus();
     } catch (e) {
-      alert('Harvest failed to start.');
-    } finally {
-      // isHarvesting state removed
+       alert('Harvest failed to start.');
     }
   };
 
@@ -321,7 +313,6 @@ function App() {
     });
   };
 
-  // Rest of Grid CRUD handlers
   const toggleSort = (col: string) => {
      if (sortCol === col) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
      else { setSortCol(col); setSortDir('asc'); }
@@ -500,144 +491,125 @@ function App() {
 
       <div className="content-area fade-in">
         {/* =========== PHASE 1: GLOBAL STRATEGY & INTAKE =========== */}
-        {activeTab === 'phase1' && (() => {
-          return (
-            <div className="tab-pane phase-1">
-              <div className="explainer-block" style={{marginBottom: '1rem'}}>
+        {activeTab === 'phase1' && (
+          <div className="tab-pane phase-1">
+            <div className="explainer-block" style={{marginBottom: '1rem'}}>
               <h3 style={{marginTop: 0, color: '#8a2be2'}}>The Scout: Polygon Infrastructure</h3>
               <div className="ghost-badge">🛡️ GHOST ENCRYPTED PIPELINE ACTIVE</div>
               <p>This engine interfaces directly with OpenStreetMap's Overpass API. It extracts raw GIS locations (longitude/latitude) and establishes baseline row injection into Supabase. Real data validation occurs downstream.</p>
-              </div>
+            </div>
 
-              <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', marginBottom: '2rem' }}>
-                 <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                    <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#8a2be2' }}>∞</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>OSM Dataset</div>
-                 </div>
-                 <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
-                    <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                       <button className="btn-mini start" onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive}>
-                          ▶ {stateOverride.length > 0 ? `SEED ${stateOverride.join(', ')}` : 'GLOBAL SEED'}
-                       </button>
-                       <button className="btn-mini stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive}>■ STOP</button>
-                    </div>
-                    {status?.isHarvestingActive && <div className="flow-animation"></div>}
-                 </div>
-                 <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                    <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#8a2be2' }}>{status?.pendingCount || 0}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>PENDING DB</div>
-                 </div>
-              </div>
-
-              <div className="omni-grid tri-grid phase-1-controls" style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'minmax(250px, 1fr) 1.5fr', marginBottom: '2rem' }}>
-
-                 {/* Facility Switches */}
-                 <div className="facility-switches-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1.5rem', marginTop: 0 }}>Target Facilities</h3>
-                    <div className="facility-switches">
-                       {['skatepark', 'roller_rink', 'skate_shop'].map(f => (
-                         <label key={f} className="switch-row mini" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', padding: '4px 0' }}>
-                            <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{f.replace('_', ' ').toUpperCase()}</span>
-                            <label className="switch">
-                              <input type="checkbox" checked={targetFacilities.includes(f)} onChange={() => updateGlobalStrategy('facility', f)} />
-                              <span className="slider round"></span>
-                            </label>
-                         </label>
-                       ))}
-                    </div>
-                 </div>
-                 
-                 {/* State Targets */}
-                 <div className="state-targets-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1rem', marginTop: 0, display: 'flex', justifyContent: 'space-between' }}>
-                      Target States
-                      <span className="btn-mini" onClick={() => updateGlobalStrategy('state_override', 'ALL')} style={{ cursor: 'pointer' }}>ALL</span>
-                    </h3>
-                    <div className="state-pill-container" style={{maxHeight: '180px', overflowY: 'auto', gap: '6px', display: 'flex', flexWrap: 'wrap'}}>
-                       {US_STATES.map(st => {
-                          const count = harvestData.stateCounts[st] || 0;
-                          return (
-                            <button key={st} className={`state-pill mini ${stateOverride.includes(st) ? 'active' : ''}`} onClick={() => updateGlobalStrategy('state_override', st)} style={{ padding: '6px 12px', fontSize: '0.8rem', margin: '2px', background: stateOverride.includes(st) ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)', color: stateOverride.includes(st) ? '#000' : '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer' }}>
-                              {st} {count > 0 && <span className="pill-dot" style={{display:'inline-block', width:'6px', height:'6px', background:'var(--success)', borderRadius:'50%', marginLeft:'4px'}}></span>}
-                            </button>
-                          )
-                       })}
-                    </div>
-                 </div>
-              </div>
-
-              <div className="panel coverage-panel" style={{marginTop: '2rem', textAlign: 'center'}}>
-                <h2 className="panel-header">GIS Intake Leaderboard (State Coverage)</h2>
-                
-                <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '800px', margin: '0 auto' }}>
-                   {/* @ts-ignore */}
-                   <USAMap 
-                      defaultFill="rgba(255,255,255,0.05)"
-                      customize={(() => {
-                         const colors: Record<string, any> = {};
-                         coverageStats.forEach((stat: any) => {
-                            if (stat.total === 0) return;
-                            let color = '#8a2be2'; // Purple: In Pipeline
-                            const enrichedRatio = stat.enriched / stat.total;
-                            if (enrichedRatio > 0.5) color = '#ff5a00'; // Mostly Enriched -> Orange
-                            const verifiedRatio = stat.verified / stat.total;
-                            if (verifiedRatio > 0.5) color = '#4caf50'; // Mostly Verified -> Green
-                            
-                            colors[stat.state] = { fill: color };
-                         });
-                         return colors;
-                      })()}
-                      onClick={(e: any) => updateGlobalStrategy('state_override', e.target.dataset.name)}
-                   />
-                </div>
-                
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px' }}></span> Empty / No Target</div>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: '#8a2be2', borderRadius: '2px' }}></span> In Processing Pipeline</div>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: '#ff5a00', borderRadius: '2px' }}></span> Deep Enriched</div>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: '#4caf50', borderRadius: '2px' }}></span> Final Verified</div>
-                </div>
+            <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', marginBottom: '2rem' }}>
+               <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#8a2be2' }}>∞</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>OSM Dataset</div>
+               </div>
+               <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
+                  <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
+                     <button className="btn-mini start" onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive}>
+                        ▶ {stateOverride.length > 0 ? `SEED ${stateOverride.join(', ')}` : 'GLOBAL SEED'}
+                     </button>
+                     <button className="btn-mini stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive}>■ STOP</button>
                   </div>
-                  
-                  {/* Evasion Audit Panel */}
-                  <div className="evasion-audit-card" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: '1px solid rgba(138, 43, 226, 0.2)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                       <h3 style={{ margin: 0, color: '#8a2be2', fontSize: '0.9rem', textTransform: 'uppercase' }}>🛡️ Phase 1 Evasion Audit</h3>
-                       <div className="pulse-badge">LAST: {status?.pulseRegistry?.['Phase 1']?.lastRunAt ? new Date(status.pulseRegistry['Phase 1'].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
-                    </div>
-                    
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                       <div className="audit-stat">
-                          <label>SPOOFED IDENTITY</label>
-                          <div className="audit-val" style={{ fontSize: '0.75rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                             {status?.pulseRegistry?.['Phase 1']?.ghost?.userAgent || 'ROTATING...'}
-                          </div>
-                       </div>
-                       <div className="audit-stat" style={{ textAlign: 'center' }}>
-                          <PulseTimer nextRunAt={status?.pulseRegistry?.['Phase 1']?.nextRunAt} />
-                       </div>
-                    </div>
+                  {status?.isHarvestingActive && <div className="flow-animation"></div>}
+               </div>
+               <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#8a2be2' }}>{status?.pendingCount || 0}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>PENDING DB</div>
+               </div>
+            </div>
+
+            <div className="omni-grid tri-grid phase-1-controls" style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'minmax(250px, 1fr) 1.5fr', marginBottom: '2rem' }}>
+               <div className="facility-switches-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1.5rem', marginTop: 0 }}>Target Facilities</h3>
+                  <div className="facility-switches">
+                     {['skatepark', 'roller_rink', 'skate_shop'].map(f => (
+                       <label key={f} className="switch-row mini" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', padding: '4px 0' }}>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{f.replace('_', ' ').toUpperCase()}</span>
+                          <label className="switch">
+                            <input type="checkbox" checked={targetFacilities.includes(f)} onChange={() => updateGlobalStrategy('facility', f)} />
+                            <span className="slider round"></span>
+                          </label>
+                       </label>
+                     ))}
                   </div>
-                </div>
+               </div>
+               
+               <div className="state-targets-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1rem', marginTop: 0, display: 'flex', justifyContent: 'space-between' }}>
+                    Target States
+                    <span className="btn-mini" onClick={() => updateGlobalStrategy('state_override', 'ALL')} style={{ cursor: 'pointer' }}>ALL</span>
+                  </h3>
+                  <div className="state-pill-container" style={{maxHeight: '180px', overflowY: 'auto', gap: '6px', display: 'flex', flexWrap: 'wrap'}}>
+                     {US_STATES.map(st => {
+                        const count = harvestData.stateCounts[st] || 0;
+                        return (
+                          <button key={st} className={`state-pill mini ${stateOverride.includes(st) ? 'active' : ''}`} onClick={() => updateGlobalStrategy('state_override', st)} style={{ padding: '6px 12px', fontSize: '0.8rem', margin: '2px', background: stateOverride.includes(st) ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)', color: stateOverride.includes(st) ? '#000' : '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer' }}>
+                            {st} {count > 0 && <span className="pill-dot" style={{display:'inline-block', width:'6px', height:'6px', background:'var(--success)', borderRadius:'50%', marginLeft:'4px'}}></span>}
+                          </button>
+                        )
+                     })}
+                  </div>
+               </div>
+            </div>
+
+            <div className="panel coverage-panel" style={{marginTop: '2rem', textAlign: 'center'}}>
+              <h2 className="panel-header">GIS Intake Leaderboard (State Coverage)</h2>
+              <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '800px', margin: '0 auto' }}>
+                 {/* @ts-ignore */}
+                 <USAMap 
+                    defaultFill="rgba(255,255,255,0.05)"
+                    customize={(() => {
+                       const colors: Record<string, any> = {};
+                       coverageStats.forEach((stat: any) => {
+                          if (stat.total === 0) return;
+                          let color = '#8a2be2'; 
+                          const enrichedRatio = stat.enriched / stat.total;
+                          if (enrichedRatio > 0.5) color = '#ff5a00';
+                          const verifiedRatio = stat.verified / stat.total;
+                          if (verifiedRatio > 0.5) color = '#4caf50';
+                          colors[stat.state] = { fill: color };
+                       });
+                       return colors;
+                    })()}
+                    onClick={(e: any) => updateGlobalStrategy('state_override', e.target.dataset.name)}
+                 />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px' }}></span> Empty / No Target</div>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: '#8a2be2', borderRadius: '2px' }}></span> In Processing Pipeline</div>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: '#ff5a00', borderRadius: '2px' }}></span> Deep Enriched</div>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: '#4caf50', borderRadius: '2px' }}></span> Final Verified</div>
               </div>
             </div>
-          );
-        })()}
+            
+            <div className="evasion-audit-card" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: '1px solid rgba(138, 43, 226, 0.2)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                 <h3 style={{ margin: 0, color: '#8a2be2', fontSize: '0.9rem', textTransform: 'uppercase' }}>🛡️ Phase 1 Evasion Audit</h3>
+                 <div className="pulse-badge">LAST: {status?.pulseRegistry?.['Phase 1']?.lastRunAt ? new Date(status.pulseRegistry['Phase 1'].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                 <div className="audit-stat">
+                    <label>SPOOFED IDENTITY</label>
+                    <div className="audit-val" style={{ fontSize: '0.75rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                       {status?.pulseRegistry?.['Phase 1']?.ghost?.userAgent || 'ROTATING...'}
+                    </div>
+                 </div>
+                 <div className="audit-stat" style={{ textAlign: 'center' }}>
+                    <PulseTimer nextRunAt={status?.pulseRegistry?.['Phase 1']?.nextRunAt} />
+                 </div>
+              </div>
+            </div>
 
-        {/* Phase 1 Mini Data Bank (Newly Seeded Target Monitor) */}
-        {activeTab === 'phase1' && (() => {
-           const queue = phaseQueues[activeTab] || [];
-           return (
-             <div style={{marginTop: '0px', padding: '0 2rem', marginBottom: '2rem'}}>
+            <div style={{marginTop: '2rem'}}>
                 <h4 style={{fontSize: '0.8rem', textTransform:'uppercase', color:'var(--text-secondary)', marginBottom: 0}}>Newly Spawned Targets (Unprocessed)</h4>
-                
-                {queue.length === 0 ? (
+                {(phaseQueues['phase1'] || []).length === 0 ? (
                     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '2rem', textAlign: 'center', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic', marginTop: '10px' }}>
                         Vault is empty. Click [START NATIONAL HARVEST] to spawn targets from OSM.
                     </div>
                 ) : (
-                    <div className="mini-data-bank">
-                      {queue.map(spot => (
+                    <div className="mini-data-bank" style={{marginTop: '10px'}}>
+                      {(phaseQueues['phase1'] || []).map(spot => (
                         <div key={spot.id} className="queue-card active">
                           <div className="queue-card-title">{spot.name}</div>
                           <div className="queue-card-loc">{spot.city}, {spot.state}</div>
@@ -648,9 +620,9 @@ function App() {
                       ))}
                     </div>
                 )}
-             </div>
-           );
-        })()}
+            </div>
+          </div>
+        )}
 
         {/* =========== DAEMON CONTROL CENTER (PHASE 2-5) =========== */}
         {(['phase2', 'phase3', 'phase4', 'phase5'].includes(activeTab)) && (
@@ -750,8 +722,8 @@ function App() {
                 </div>
              )}
 
-              {/* Mini Data Bank injected here! */}
-              {(() => {
+             {/* Mini Data Bank & Evasion Audit */}
+             {(() => {
                 const queue = phaseQueues[activeTab] || [];
                 let hydratingFields: string[] = [];
                 if (activeTab === 'phase2') hydratingFields = ['Website', 'Phone Number'];
@@ -759,59 +731,59 @@ function App() {
                 if (activeTab === 'phase4') hydratingFields = ['Vibe Score', 'Description'];
                 if (activeTab === 'phase5') hydratingFields = ['Media URLs', 'Thumbnails'];
 
+                const activeLabel = `Phase ${activeTab.replace('phase','')}`;
+                const activeColor = PIPELINE_PHASES.find(p=>p.route===activeTab)?.color || '#fff';
+
                 return (
                   <div style={{marginTop: '20px'}}>
-                     <h4 style={{fontSize: '0.8rem', textTransform:'uppercase', color:'var(--text-secondary)', marginBottom: 0}}>Processing Queue (Top 10)</h4>
-                     
+                     <div className="evasion-audit-card" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: `1px solid ${activeColor}44` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                           <h3 style={{ margin: 0, color: activeColor, fontSize: '0.9rem', textTransform: 'uppercase' }}>🛡️ {activeLabel} Evasion Audit</h3>
+                           <div className="pulse-badge" style={{fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)'}}>LAST: {status?.pulseRegistry?.[activeLabel]?.lastRunAt ? new Date(status.pulseRegistry[activeLabel].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) 1fr', gap: '1.5rem', alignItems: 'center' }}>
+                           <div className="audit-details">
+                              <div className="audit-stat" style={{marginBottom: '0.8rem'}}>
+                                 <label style={{display:'block', fontSize:'0.6rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px'}}>BROWSER FINGERPRINT</label>
+                                 <div className="audit-val" style={{ fontSize: '0.75rem', opacity: 0.8, wordBreak: 'break-all' }}>
+                                    {status?.pulseRegistry?.[activeLabel]?.ghost?.userAgent || 'STABILIZING IDENTITY...'}
+                                 </div>
+                              </div>
+                              <div className="audit-stat">
+                                 <label style={{display:'block', fontSize:'0.6rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px'}}>RANDOMIZED VIEWPORT</label>
+                                 <div className="audit-val" style={{ color: activeColor, fontWeight: 700 }}>
+                                    {status?.pulseRegistry?.[activeLabel]?.ghost?.viewport ? `${status.pulseRegistry[activeLabel].ghost.viewport.width}x${status.pulseRegistry[activeLabel].ghost.viewport.height}` : 'SCALING...'}
+                                 </div>
+                              </div>
+                           </div>
+                           <div className="audit-countdown" style={{ display: 'flex', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '50%', width: '60px', height: '60px', alignItems: 'center', border: `1px solid ${activeColor}44` }}>
+                              <PulseTimer nextRunAt={status?.pulseRegistry?.[activeLabel]?.nextRunAt} />
+                           </div>
+                        </div>
+                      </div>
+
+                     <h4 style={{fontSize: '0.8rem', textTransform:'uppercase', color:'var(--text-secondary)', marginBottom: 0, marginTop: '2rem'}}>Processing Queue (Top 10)</h4>
                      {queue.length === 0 ? (
                         <div style={{ background: 'rgba(255,255,255,0.02)', padding: '2rem', textAlign: 'center', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic', marginTop: '10px' }}>
                             Queue is empty. Awaiting spots from the previous phase.
                         </div>
                      ) : (
-                                  {/* Evasion Audit for Active Tab */}
-                   <div className="evasion-audit-card" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: `1px solid ${PIPELINE_PHASES.find(p=>p.route===activeTab)?.color}44` }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                       <h3 style={{ margin: 0, color: PIPELINE_PHASES.find(p=>p.route===activeTab)?.color, fontSize: '0.9rem', textTransform: 'uppercase' }}>🛡️ Phase {activeTab.replace('phase','')} Evasion Audit</h3>
-                       <div className="pulse-badge" style={{fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)'}}>LAST: {status?.pulseRegistry?.[`Phase ${activeTab.replace('phase','')}`]?.lastRunAt ? new Date(status.pulseRegistry[`Phase ${activeTab.replace('phase','')}`].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
-                    </div>
-                    
-                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) 1fr', gap: '1.5rem', alignItems: 'center' }}>
-                       <div className="audit-details">
-                          <div className="audit-stat" style={{marginBottom: '0.8rem'}}>
-                             <label style={{display:'block', fontSize:'0.6rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px'}}>BROWSER FINGERPRINT</label>
-                             <div className="audit-val" style={{ fontSize: '0.75rem', opacity: 0.8, wordBreak: 'break-all' }}>
-                                {status?.pulseRegistry?.[`Phase ${activeTab.replace('phase','')}`]?.ghost?.userAgent || 'STABILIZING IDENTITY...'}
-                             </div>
-                          </div>
-                          <div className="audit-stat">
-                             <label style={{display:'block', fontSize:'0.6rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px'}}>RANDOMIZED VIEWPORT</label>
-                             <div className="audit-val" style={{ color: PIPELINE_PHASES.find(p=>p.route===activeTab)?.color, fontWeight: 700 }}>
-                                {status?.pulseRegistry?.[`Phase ${activeTab.replace('phase','')}`]?.ghost?.viewport ? `${status.pulseRegistry[`Phase ${activeTab.replace('phase','')}`].ghost.viewport.width}x${status.pulseRegistry[`Phase ${activeTab.replace('phase','')}`].ghost.viewport.height}` : 'SCALING...'}
-                             </div>
-                          </div>
-                       </div>
-                       <div className="audit-countdown" style={{ display: 'flex', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '50%', width: '60px', height: '60px', alignItems: 'center', border: `1px solid ${PIPELINE_PHASES.find(p=>p.route===activeTab)?.color}44` }}>
-                          <PulseTimer nextRunAt={status?.pulseRegistry?.[`Phase ${activeTab.replace('phase','')}`]?.nextRunAt} />
-                       </div>
-                    </div>
-                  </div>
-
-                   <div className="mini-data-bank" style={{ marginTop: '2rem' }}>
-                           {queue.map(spot => (
-                             <div key={spot.id} className="queue-card active">
-                               <div className="queue-card-title">{spot.name}</div>
-                               <div className="queue-card-loc">{spot.city}, {spot.state}</div>
-                               <div className="queue-tags">
-                                 {hydratingFields.map(f => <span key={f} className="queue-badge">⏳ {f}</span>)}
-                               </div>
-                             </div>
-                           ))}
-                         </div>
+                        <div className="mini-data-bank" style={{ marginTop: '10px' }}>
+                          {queue.map(spot => (
+                            <div key={spot.id} className="queue-card active">
+                              <div className="queue-card-title">{spot.name}</div>
+                              <div className="queue-card-loc">{spot.city}, {spot.state}</div>
+                              <div className="queue-tags">
+                                {hydratingFields.map(f => <span key={f} className="queue-badge" style={{color: activeColor}}>⏳ {f}</span>)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                      )}
                   </div>
                 );
-              })()}
-           </div>
+             })()}
+          </div>
         )}
 
         {/* =========== PHASE 6: DATABANK QA =========== */}
@@ -853,9 +825,9 @@ function App() {
                     <th>Surface</th>
                     <th onClick={() => toggleSort('website')} style={{cursor:'pointer'}}>Website {sortCol==='website' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                     <th onClick={() => toggleSort('phone_number')} style={{cursor:'pointer'}}>Phone {sortCol==='phone_number' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                     <th onClick={() => toggleSort('has_adult_night')} style={{cursor:'pointer'}}>18+ {sortCol==='has_adult_night' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                     <th onClick={() => toggleSort('retry_count')} style={{cursor:'pointer'}}>Retries {sortCol==='retry_count' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                     <th onClick={() => toggleSort('last_attempted_at')} style={{cursor:'pointer'}}>Last Ping {sortCol==='last_attempted_at' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th onClick={() => toggleSort('has_adult_night')} style={{cursor:'pointer'}}>18+ {sortCol==='has_adult_night' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th onClick={() => toggleSort('retry_count')} style={{cursor:'pointer'}}>Retries {sortCol==='retry_count' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th onClick={() => toggleSort('last_attempted_at')} style={{cursor:'pointer'}}>Last Ping {sortCol==='last_attempted_at' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -880,7 +852,7 @@ function App() {
                         <td>
                           {isEditing ? <input className="table-input" value={editForm.street_address || ''} onChange={e => setEditForm({...editForm, street_address: e.target.value})} placeholder="Street Address" /> : <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}>{row.street_address || '-'}</div>}
                         </td>
-                        <td>
+                        <td className="status-cell">
                           {isEditing ? (
                             <select className="table-input" value={editForm.verification_status || 'PENDING'} onChange={e => setEditForm({...editForm, verification_status: e.target.value})}>
                               <option value="PENDING">PHASE 1 PENDING</option>
@@ -918,14 +890,14 @@ function App() {
                             row.phone_number || '-'
                           )}
                         </td>
-                         <td>{isEditing ? <input type="checkbox" checked={editForm.has_adult_night} onChange={e => setEditForm({...editForm, has_adult_night: e.target.checked})} /> : (row.has_adult_night ? '✅' : '❌')}</td>
-                         <td>
-                           {isEditing ? (
-                             <input type="number" className="table-input" value={editForm.retry_count || 0} onChange={e => setEditForm({...editForm, retry_count: parseInt(e.target.value) || 0})} />
-                           ) : (
-                             <span style={{ color: row.retry_count >= 8 ? 'var(--danger)' : 'var(--text-secondary)' }}>{row.retry_count || 0}/10</span>
-                           )}
-                         </td>
+                        <td>{isEditing ? <input type="checkbox" checked={editForm.has_adult_night} onChange={e => setEditForm({...editForm, has_adult_night: e.target.checked})} /> : (row.has_adult_night ? '✅' : '❌')}</td>
+                        <td>
+                          {isEditing ? (
+                            <input type="number" className="table-input" value={editForm.retry_count || 0} onChange={e => setEditForm({...editForm, retry_count: parseInt(e.target.value) || 0})} />
+                          ) : (
+                            <span style={{ color: row.retry_count >= 8 ? 'var(--danger)' : 'var(--text-secondary)' }}>{row.retry_count || 0}/10</span>
+                          )}
+                        </td>
                         <td style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>
                           {row.last_attempted_at ? new Date(row.last_attempted_at).toLocaleString() : 'Never'}
                         </td>
@@ -954,7 +926,6 @@ function App() {
         )}
       </div>
 
-      {/* Synchronized Terminal Wrapper - Filters per Phase Tab */}
       <div className="log-panel panel">
         <div className="log-header">
            <h2 className="panel-header" style={{margin:0}}>
@@ -971,7 +942,7 @@ function App() {
                 if (activeTab === 'phase1') return log.source === 'Phase 1' || log.source === 'System';
                 if (activeTab === 'phase2') return log.source === 'Phase 2' || log.source === 'System';
                 if (activeTab === 'phase3') return log.source === 'Phase 3' || log.source === 'System';
-                return true; // Show all on other tabs like grid
+                return true; 
              })
              .map((log, i) => (
                <div key={i} className={`log-entry ${log.type === 'ERROR' ? 'error' : ''}`}>
@@ -1006,5 +977,3 @@ function App() {
 }
 
 export default App;
-
-
