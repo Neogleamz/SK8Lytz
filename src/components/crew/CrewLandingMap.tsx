@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, Platform, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
@@ -10,12 +10,37 @@ export function CrewLandingMap({
   nearbySessions, 
   pulseAnim, 
   handleJoinById, 
-  locationCoords
+  locationCoords,
+  discoverRadiusMi
 }: any) {
   const { Colors } = useTheme();
-  
+  const mapRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (mapRef.current && locationCoords) {
+      // Default USA-wide zoom out when radius is "ALL" (discoverRadiusMi === null)
+      let latDelta = 30;
+      let lngDelta = 30;
+      
+      if (discoverRadiusMi !== null) {
+        // 1 degree ~ 69 miles. We want bounded viewport diameter (radius * 2.2 for padding)
+        const degrees = (discoverRadiusMi * 2.2) / 69.0;
+        latDelta = degrees;
+        lngDelta = degrees;
+      }
+
+      mapRef.current.animateToRegion({
+        latitude: locationCoords.lat,
+        longitude: locationCoords.lng,
+        latitudeDelta: latDelta,
+        longitudeDelta: lngDelta,
+      }, 800); // smooth 800ms animation
+    }
+  }, [discoverRadiusMi, locationCoords]);
+
   return (
     <MapViewCluster
+      ref={mapRef}
       provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
       style={{ flex: 1 }}
       initialRegion={{
