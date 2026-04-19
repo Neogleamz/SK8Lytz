@@ -589,10 +589,10 @@ function App() {
                  <div className="pulse-badge">LAST: {status?.pulseRegistry?.['Phase 1']?.lastRunAt ? new Date(status.pulseRegistry['Phase 1'].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                 <div className="audit-stat">
-                    <label>SPOOFED IDENTITY</label>
-                    <div className="audit-val" style={{ fontSize: '0.75rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                       {status?.pulseRegistry?.['Phase 1']?.ghost?.userAgent || 'ROTATING...'}
+                 <div className="audit-stat" style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', marginBottom: '4px', textTransform: 'uppercase' }}>Applied Cooldown</div>
+                    <div style={{ color: '#8a2be2', fontWeight: 800, fontSize: '1.2rem' }}>
+                      {status?.pulseRegistry?.['Phase 1']?.delayMs ? `${(status.pulseRegistry['Phase 1'].delayMs / 1000).toFixed(1)}s` : '--'}
                     </div>
                  </div>
                  <div className="audit-stat" style={{ textAlign: 'center' }}>
@@ -753,6 +753,20 @@ function App() {
                                  <label style={{display:'block', fontSize:'0.6rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px'}}>RANDOMIZED VIEWPORT</label>
                                  <div className="audit-val" style={{ color: activeColor, fontWeight: 700 }}>
                                     {status?.pulseRegistry?.[activeLabel]?.ghost?.viewport ? `${status.pulseRegistry[activeLabel].ghost.viewport.width}x${status.pulseRegistry[activeLabel].ghost.viewport.height}` : 'SCALING...'}
+                                 </div>
+                              </div>
+                           </div>
+                           <div className="audit-vitals" style={{ display: 'flex', flex: 1, justifyContent: 'space-around', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px' }}>
+                              <div className="audit-stat" style={{textAlign: 'center'}}>
+                                 <label style={{display:'block', fontSize:'0.5rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px', textTransform: 'uppercase'}}>Applied Cooldown</label>
+                                 <div style={{ color: activeColor, fontWeight: 800, fontSize: '1.4rem' }}>
+                                    {status?.pulseRegistry?.[activeLabel]?.delayMs ? `${(status.pulseRegistry[activeLabel].delayMs / 1000).toFixed(1)}s` : '--'}
+                                 </div>
+                              </div>
+                              <div className="audit-stat" style={{textAlign: 'center'}}>
+                                 <label style={{display:'block', fontSize:'0.5rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px', textTransform: 'uppercase'}}>Throttle Config</label>
+                                 <div style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: '1.2rem' }}>
+                                    {activeLabel === 'Phase 1' ? `${(sleepInterval / 1000).toFixed(1)}s` : `${(cooldownBase / 1000).toFixed(1)}s`}
                                  </div>
                               </div>
                            </div>
