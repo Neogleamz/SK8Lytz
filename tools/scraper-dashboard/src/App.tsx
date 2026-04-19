@@ -292,6 +292,35 @@ function App() {
     }
   };
 
+  const triggerForceHarvest = async (state: string) => {
+    if (!confirm(`FORCE re-harvest of US-${state}? This will bypass the local cache.`)) return;
+    try {
+      await fetch(`${API_BASE}/api/harvest/force`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state })
+      });
+      alert(`Forced re-harvest initiated for ${state}.`);
+    } catch (e) {
+      alert('Failed to trigger force harvest.');
+    }
+  };
+
+  const triggerDiscovery = async (state: string) => {
+    const stateFull = prompt('Enter FULL state name for Google Maps discovery (e.g., "Missouri"):');
+    if (!stateFull) return;
+    try {
+      await fetch(`${API_BASE}/api/discover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stateFull })
+      });
+      alert(`Direct Discovery initiated for ${stateFull}. Check logs.`);
+    } catch (e) {
+      alert('Discovery failed to start.');
+    }
+  };
+
   const handleSysStart = async () => { await fetch(`${API_BASE}/start`, { method: 'POST' }); fetchSystemStatus(); };
   const handleSysStop = async () => { await fetch(`${API_BASE}/stop`, { method: 'POST' }); fetchSystemStatus(); };
   
@@ -499,7 +528,7 @@ function App() {
               <p>This engine interfaces directly with OpenStreetMap's Overpass API. It extracts raw GIS locations (longitude/latitude) and establishes baseline row injection into Supabase. Real data validation occurs downstream.</p>
             </div>
 
-            <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '1.5rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', marginBottom: '1.5rem' }}>
+            <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', marginBottom: '2rem' }}>
                <div style={{ textAlign: 'center', minWidth: '100px' }}>
                   <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#8a2be2' }}>∞</div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>OSM Dataset</div>
@@ -516,6 +545,32 @@ function App() {
                <div style={{ textAlign: 'center', minWidth: '100px' }}>
                   <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#8a2be2' }}>{status?.pendingCount || 0}</div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>PENDING DB</div>
+               </div>
+            </div>
+
+            {/* OMNI-NET DISCOVERY PANEL */}
+            <div className="discovery-net-panel" style={{ background: 'linear-gradient(135deg, rgba(138,43,226,0.1) 0%, rgba(0,0,0,0.3) 100%)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(138, 43, 226, 0.3)', marginBottom: '2rem', position: 'relative' }}>
+               <div style={{ position: 'absolute', top: '-10px', right: '20px', background: '#8a2be2', color: '#fff', fontSize: '0.6rem', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>OMNI-NET DISCOVERY v2.0</div>
+               <h3 style={{ marginTop: 0, color: '#fff', fontSize: 18 }}>📡 Omni-Net Discovery & Re-seeding</h3>
+               <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem' }}>Use these controls to bypass OpenStreetMap limitations or manually target "Stealth" rinks that are under-mapped in GIS datasets.</p>
+               
+               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
+                     <h4 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: '#8a2be2' }}>Wide-Net Re-harvest</h4>
+                     <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>Force-refresh OSM GIS data using the new naming heuristic net. Captures rinks tagged only as generic buildings.</p>
+                     <div style={{ display: 'flex', gap: '8px' }}>
+                       <select className="mini-input" style={{ flex: 1, background: '#1a1a1a' }} id="force-state-sel">
+                         {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                       </select>
+                       <button className="btn-mini" onClick={() => triggerForceHarvest((document.getElementById('force-state-sel') as HTMLSelectElement).value)}>FORCE RELOAD</button>
+                     </div>
+                  </div>
+                  
+                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
+                     <h4 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: '#ffb300' }}>Direct Google Discovery</h4>
+                     <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>Trigger the Google Maps "Phase 0" crawler. Scrapes business listings directly from Google for maximum fidelity.</p>
+                     <button className="btn-mini" style={{ width: '100%', borderColor: '#ffb300', color: '#ffb300' }} onClick={() => triggerDiscovery('Missouri')}>LAUNCH STALKER</button>
+                  </div>
                </div>
             </div>
 
@@ -589,10 +644,10 @@ function App() {
                  <div className="pulse-badge">LAST: {status?.pulseRegistry?.['Phase 1']?.lastRunAt ? new Date(status.pulseRegistry['Phase 1'].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                 <div className="audit-stat" style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', marginBottom: '4px', textTransform: 'uppercase' }}>Applied Cooldown</div>
-                    <div style={{ color: '#8a2be2', fontWeight: 800, fontSize: '1.2rem' }}>
-                      {status?.pulseRegistry?.['Phase 1']?.delayMs ? `${(status.pulseRegistry['Phase 1'].delayMs / 1000).toFixed(1)}s` : '--'}
+                 <div className="audit-stat">
+                    <label>SPOOFED IDENTITY</label>
+                    <div className="audit-val" style={{ fontSize: '0.75rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                       {status?.pulseRegistry?.['Phase 1']?.ghost?.userAgent || 'ROTATING...'}
                     </div>
                  </div>
                  <div className="audit-stat" style={{ textAlign: 'center' }}>
@@ -638,7 +693,7 @@ function App() {
              </div>
              
              {activeTab === 'phase2' && (
-                <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '1.5rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
+                <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
                    <div style={{ textAlign: 'center', minWidth: '100px' }}>
                       <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#8a2be2' }}>{status?.pendingCount || 0}</div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>PENDING</div>
@@ -753,20 +808,6 @@ function App() {
                                  <label style={{display:'block', fontSize:'0.6rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px'}}>RANDOMIZED VIEWPORT</label>
                                  <div className="audit-val" style={{ color: activeColor, fontWeight: 700 }}>
                                     {status?.pulseRegistry?.[activeLabel]?.ghost?.viewport ? `${status.pulseRegistry[activeLabel].ghost.viewport.width}x${status.pulseRegistry[activeLabel].ghost.viewport.height}` : 'SCALING...'}
-                                 </div>
-                              </div>
-                           </div>
-                           <div className="audit-vitals" style={{ display: 'flex', flex: 1, justifyContent: 'space-around', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px' }}>
-                              <div className="audit-stat" style={{textAlign: 'center'}}>
-                                 <label style={{display:'block', fontSize:'0.5rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px', textTransform: 'uppercase'}}>Applied Cooldown</label>
-                                 <div style={{ color: activeColor, fontWeight: 800, fontSize: '1.4rem' }}>
-                                    {status?.pulseRegistry?.[activeLabel]?.delayMs ? `${(status.pulseRegistry[activeLabel].delayMs / 1000).toFixed(1)}s` : '--'}
-                                 </div>
-                              </div>
-                              <div className="audit-stat" style={{textAlign: 'center'}}>
-                                 <label style={{display:'block', fontSize:'0.5rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px', textTransform: 'uppercase'}}>Throttle Config</label>
-                                 <div style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: '1.2rem' }}>
-                                    {activeLabel === 'Phase 1' ? `${(sleepInterval / 1000).toFixed(1)}s` : `${(cooldownBase / 1000).toFixed(1)}s`}
                                  </div>
                               </div>
                            </div>

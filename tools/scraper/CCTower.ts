@@ -319,6 +319,24 @@ app.post('/api/harvest', async (req, res) => {
   res.json({ success: true, message: `Started harvest for US-${state}` });
 });
 
+app.post('/api/harvest/force', async (req, res) => {
+  const { state } = req.body;
+  if (!state) return res.status(400).json({ error: 'State code required' });
+  
+  const { processState } = require('./USANationalHarvest');
+  processState(state, [], true).catch(e => console.error(e));
+  res.json({ success: true, message: `Forced re-harvest started for ${state}` });
+});
+
+app.post('/api/discover', async (req, res) => {
+  const { stateFull } = req.body;
+  if (!stateFull) return res.status(400).json({ error: 'State name required' });
+  
+  const { runDirectDiscovery } = require('./Discoverer');
+  runDirectDiscovery(stateFull).catch(e => console.error(e));
+  res.json({ success: true, message: `Started direct discovery for ${stateFull}` });
+});
+
 app.get('/api/spots', async (req, res) => {
   const { status, limit = 50, offset = 0, sortCol = 'last_attempted_at', sortDir = 'desc', search = '' } = req.query;
   let query = supabase.from('skate_spots').select('*', { count: 'exact' });

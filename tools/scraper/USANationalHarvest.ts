@@ -80,9 +80,9 @@ export async function startNationalHarvester(targetFacilities: string[] = [], ta
   }
 }
 
-export async function processState(stateCode: string, targetFacilities: string[] = []): Promise<boolean> {
+export async function processState(stateCode: string, targetFacilities: string[] = [], forceResult: boolean = false): Promise<boolean> {
   const stateCachePath = path.join(CACHE_DIR, `${stateCode}.json`);
-  if (fs.existsSync(stateCachePath)) {
+  if (fs.existsSync(stateCachePath) && !forceResult) {
     return false;
   }
 
@@ -94,13 +94,14 @@ export async function processState(stateCode: string, targetFacilities: string[]
   let conditions = '';
   if (includeAll || targetFacilities.includes('roller_rink')) {
     conditions += `    nwr["sport"="roller_skating"](area.searchArea);\n`;
+    // New Wide-Net Heuristics for under-tagged rinks (like Winnwood)
+    conditions += `    nwr["leisure"="sports_centre"]["name"~"Skate|Rink|Roll",i](area.searchArea);\n`;
+    conditions += `    nwr["building"]["name"~"Skate Center|Rink|Roll",i](area.searchArea);\n`;
   }
   if (includeAll || targetFacilities.includes('skatepark')) {
     conditions += `    nwr["sport"="skateboard"](area.searchArea);\n`;
     conditions += `    nwr["leisure"="skatepark"](area.searchArea);\n`;
-  }
-  if (includeAll || targetFacilities.includes('skate_shop')) {
-    conditions += `    nwr["shop"="skates"](area.searchArea);\n`;
+    conditions += `    nwr["name"~"Skatepark",i](area.searchArea);\n`;
   }
   
   const SAFE_QL_QUERY = `
@@ -108,7 +109,7 @@ export async function processState(stateCode: string, targetFacilities: string[]
   area["ISO3166-2"="US-${stateCode}"]->.searchArea;
   (
 ${conditions}  );
-  out center;
+  out body center;
   `;
 
   let elements: any[] = [];
@@ -179,6 +180,9 @@ ${conditions}  );
     let zip = tags['addr:postcode'] || null;
 
     if (!street_address || !city || !state || !zip) {
+      // Bypassing expensive reverse geocode for broad-net pulse to avoid stalls.
+      // Phase 2 (Operator) will enrich these later.
+      /*
       const geo = await reverseGeocode(lat, lon);
       if (geo) {
         if (!street_address && geo.fullAddress) street_address = geo.fullAddress;
@@ -186,9 +190,12 @@ ${conditions}  );
         if (!state && geo.state) state = geo.state;
         if (!zip && geo.zip) zip = geo.zip;
       }
+      */
     }
 
-    if (!street_address) continue;
+    if (i % 10 === 0) console.log(`  ⏳ [${stateCode}] Geocoding progress: ${i}/${elements.length}...`);
+
+    if (!street_address && !tags.name && !lat) continue;
 
     let surface = tags.surface || 'unknown';
     if (surface.includes('wood')) surface = 'wood';
