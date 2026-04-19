@@ -1,8 +1,39 @@
-import React, { useState, useEffect, useRef } from 'react';
-import USAMap from 'react-usa-map';
+import { useState, useEffect, useRef } from 'react';
+import USAMap from './USMap';
 import './App.css';
 
 const API_BASE = 'http://localhost:5999';
+
+// --- Countdown Timer Component ---
+const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!nextRunAt) {
+      setTimeLeft(null);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const target = new Date(nextRunAt).getTime();
+      const diff = Math.max(0, Math.floor((target - now) / 1000));
+      setTimeLeft(diff);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [nextRunAt]);
+
+  if (timeLeft === null) return <div style={{color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem'}}>IDLE</div>;
+  if (timeLeft === 0) return <div style={{color: 'var(--success)', fontWeight: 800, fontSize: '0.8rem'}}>RUNNING...</div>;
+
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff' }}>{timeLeft}s</div>
+      <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>Next Run</div>
+    </div>
+  );
+};
 
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
@@ -36,7 +67,6 @@ function App() {
 
   // --- Harvest Manager States ---
   const [harvestData, setHarvestData] = useState<{seededStates: string[], stateCounts: Record<string, number>, allStates: string[]}>({ seededStates: [], stateCounts: {}, allStates: [] });
-  const [isHarvesting, setIsHarvesting] = useState<string | null>(null);
   const [coverageStats, setCoverageStats] = useState<any[]>([]);
   const [historyLogs, setHistoryLogs] = useState<string[]>([]);
 
@@ -99,7 +129,10 @@ function App() {
       const res = await fetch(`${API_BASE}/status`);
       if (res.ok) {
         const data = await res.json();
-        setStatus(data);
+      isGated,
+      lastError,
+      pulseRegistry: data.pulseRegistry || {}
+    });
         setIsHeadless(data.isHeadless ?? true);
       }
       
@@ -263,7 +296,7 @@ function App() {
     } catch (e) {
       alert('Harvest failed to start.');
     } finally {
-      setIsHarvesting(null);
+      // isHarvesting state removed
     }
   };
 
@@ -537,6 +570,7 @@ function App() {
                 <h2 className="panel-header">GIS Intake Leaderboard (State Coverage)</h2>
                 
                 <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '800px', margin: '0 auto' }}>
+                   {/* @ts-ignore */}
                    <USAMap 
                       defaultFill="rgba(255,255,255,0.05)"
                       customize={(() => {
@@ -562,6 +596,28 @@ function App() {
                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: '#8a2be2', borderRadius: '2px' }}></span> In Processing Pipeline</div>
                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: '#ff5a00', borderRadius: '2px' }}></span> Deep Enriched</div>
                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: '#4caf50', borderRadius: '2px' }}></span> Final Verified</div>
+                </div>
+                  </div>
+                  
+                  {/* Evasion Audit Panel */}
+                  <div className="evasion-audit-card" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: '1px solid rgba(138, 43, 226, 0.2)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                       <h3 style={{ margin: 0, color: '#8a2be2', fontSize: '0.9rem', textTransform: 'uppercase' }}>🛡️ Phase 1 Evasion Audit</h3>
+                       <div className="pulse-badge">LAST: {status?.pulseRegistry?.['Phase 1']?.lastRunAt ? new Date(status.pulseRegistry['Phase 1'].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
+                    </div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                       <div className="audit-stat">
+                          <label>SPOOFED IDENTITY</label>
+                          <div className="audit-val" style={{ fontSize: '0.75rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                             {status?.pulseRegistry?.['Phase 1']?.ghost?.userAgent || 'ROTATING...'}
+                          </div>
+                       </div>
+                       <div className="audit-stat" style={{ textAlign: 'center' }}>
+                          <PulseTimer nextRunAt={status?.pulseRegistry?.['Phase 1']?.nextRunAt} />
+                       </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -712,7 +768,35 @@ function App() {
                             Queue is empty. Awaiting spots from the previous phase.
                         </div>
                      ) : (
-                         <div className="mini-data-bank">
+                                  {/* Evasion Audit for Active Tab */}
+                   <div className="evasion-audit-card" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: `1px solid ${PIPELINE_PHASES.find(p=>p.route===activeTab)?.color}44` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                       <h3 style={{ margin: 0, color: PIPELINE_PHASES.find(p=>p.route===activeTab)?.color, fontSize: '0.9rem', textTransform: 'uppercase' }}>🛡️ Phase {activeTab.replace('phase','')} Evasion Audit</h3>
+                       <div className="pulse-badge" style={{fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)'}}>LAST: {status?.pulseRegistry?.[`Phase ${activeTab.replace('phase','')}`]?.lastRunAt ? new Date(status.pulseRegistry[`Phase ${activeTab.replace('phase','')}`].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
+                    </div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) 1fr', gap: '1.5rem', alignItems: 'center' }}>
+                       <div className="audit-details">
+                          <div className="audit-stat" style={{marginBottom: '0.8rem'}}>
+                             <label style={{display:'block', fontSize:'0.6rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px'}}>BROWSER FINGERPRINT</label>
+                             <div className="audit-val" style={{ fontSize: '0.75rem', opacity: 0.8, wordBreak: 'break-all' }}>
+                                {status?.pulseRegistry?.[`Phase ${activeTab.replace('phase','')}`]?.ghost?.userAgent || 'STABILIZING IDENTITY...'}
+                             </div>
+                          </div>
+                          <div className="audit-stat">
+                             <label style={{display:'block', fontSize:'0.6rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px'}}>RANDOMIZED VIEWPORT</label>
+                             <div className="audit-val" style={{ color: PIPELINE_PHASES.find(p=>p.route===activeTab)?.color, fontWeight: 700 }}>
+                                {status?.pulseRegistry?.[`Phase ${activeTab.replace('phase','')}`]?.ghost?.viewport ? `${status.pulseRegistry[`Phase ${activeTab.replace('phase','')}`].ghost.viewport.width}x${status.pulseRegistry[`Phase ${activeTab.replace('phase','')}`].ghost.viewport.height}` : 'SCALING...'}
+                             </div>
+                          </div>
+                       </div>
+                       <div className="audit-countdown" style={{ display: 'flex', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '50%', width: '60px', height: '60px', alignItems: 'center', border: `1px solid ${PIPELINE_PHASES.find(p=>p.route===activeTab)?.color}44` }}>
+                          <PulseTimer nextRunAt={status?.pulseRegistry?.[`Phase ${activeTab.replace('phase','')}`]?.nextRunAt} />
+                       </div>
+                    </div>
+                  </div>
+
+                   <div className="mini-data-bank" style={{ marginTop: '2rem' }}>
                            {queue.map(spot => (
                              <div key={spot.id} className="queue-card active">
                                <div className="queue-card-title">{spot.name}</div>

@@ -6,7 +6,6 @@ import { createClient } from '@supabase/supabase-js';
 
 import { buildHoursJSON } from './lib/OSMHoursParser';
 import { reverseGeocode } from './lib/NominatimAPI';
-import { scrapeCulturalDetails } from './lib/GoogleScraper';
 import { GHOST } from './lib/GHOST';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -28,6 +27,14 @@ async function sleep(ms: number) {
   return new Promise(r => setTimeout(r, ms));
 }
 
+const reportPulse = (delayMs: number, ghost?: any) => {
+    fetch('http://localhost:5999/api/pulse', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ source: 'Phase 1', delayMs, ghost })
+    }).catch(() => {});
+ };
+
 export let isHarvestingActive = false;
 
 export async function stopNationalHarvester() {
@@ -38,7 +45,7 @@ export async function stopNationalHarvester() {
 export async function startNationalHarvester(targetFacilities: string[] = [], targetStates: string[] = []) {
   if (isHarvestingActive) return;
   isHarvestingActive = true;
-  console.log(`🌎 STARTING VERTICAL PIPELINE HARVEST 🌎 (States: ${targetStates.length ? targetStates.join(',') : 'ALL'})`);
+  console.log(`🌎 STARTING VERTICAL PIPELINE HARVEST 🌎 (States: ${targetStates.join(',') || 'ALL'})`);
   const statesToRun = targetStates.length > 0 ? targetStates : US_STATES;
   
   let statesProcessed = 0;
@@ -47,12 +54,19 @@ export async function startNationalHarvester(targetFacilities: string[] = [], ta
        console.log('⛔ Harvester pipeline cleanly aborted by C&C signal.');
        break;
      }
+
+     // Report starting pulse
+     reportPulse(0, GHOST.generateIdentity());
+
      const didWork = await processState(statesToRun[i], targetFacilities);
      if (didWork) statesProcessed++;
 
      if (i < statesToRun.length - 1 && isHarvestingActive) {
          const waitTime = await GHOST.getAdaptiveDelay('OSM');
          console.log(`⏳ Global GHOST: Cooling down OSM limits (${Math.round(waitTime/1000)}s)...`);
+         
+         const identity = GHOST.generateIdentity();
+         reportPulse(waitTime, identity);
          await sleep(waitTime);
      }
   }
@@ -102,21 +116,20 @@ ${conditions}  );
     const response = await axios.post(OVERPASS_URL, `data=${encodeURIComponent(SAFE_QL_QUERY)}`, {
       headers: { 
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': GHOST.generateIdentity().userAgent
+        'User-Agent': identity.userAgent
       },
       timeout: 300000 
     });
     elements = response.data.elements || [];
     console.log(`  ✅ [${stateCode}] Found ${elements.length} raw GIS geometries`);
-    return true;
   } catch (err: any) {
     console.error(`❌ Overpass Failure for ${stateCode}:`, err.message);
-    return false; // Fast fail this state, next pipeline resumes it
+    return false;
   }
 
   if (elements.length === 0) {
     fs.writeFileSync(stateCachePath, JSON.stringify({ status: 'empty' }));
-    return;
+    return true;
   }
 
   console.log(`⚙️  [US-${stateCode}] Phase 2: Sanitization & Geocoding [${elements.length} records]`);
@@ -195,18 +208,16 @@ ${conditions}  );
   console.log(`🚀 [US-${stateCode}] Phase 3: Supabase Upsert (Raw Skeletons)`);
   const mappedUpload = validSpots.map(s => ({
       ...s,
-      // Map arbitrary OSM IDs to valid UUID formats
       id: s.id.toString().padStart(32, '0').replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, "$1-$2-$3-$4-$5")
   }));
 
   const { error } = await supabase.from('skate_spots').upsert(mappedUpload);
   if (error) {
       console.error(`❌ Supabase Sync Error for ${stateCode}:`, error);
+      return false;
   } else {
       console.log(`✅ ${stateCode} complete! Committed ${mappedUpload.length} rows.`);
-      // Checkpoint Save! Prevents this state from ever running again
       fs.writeFileSync(stateCachePath, JSON.stringify(mappedUpload, null, 2));
+      return true;
   }
 }
-
-

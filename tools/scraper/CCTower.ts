@@ -67,6 +67,26 @@ let consecutiveErrors = 0; // Tracking for circuit breaker
 let lastError: string | null = null;
 let isGated = false; // Circuit Breaker status
 
+// --- Pulse Registry for Real-time Telemetry ---
+interface PulseData {
+  lastRunAt: string | null;
+  nextRunAt: string | null;
+  delayMs: number;
+  ghost?: {
+    userAgent: string;
+    viewport: { width: number; height: number };
+  }
+}
+
+const pulseRegistry: Record<string, PulseData> = {
+  'Phase 1': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
+  'Phase 2': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
+  'Phase 3': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
+  'Phase 4': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
+  'Phase 5': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
+  'Phase 6': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
+};
+
 // Async sleep helper
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -163,9 +183,23 @@ app.get('/status', async (req, res) => {
       errorCount,
       consecutiveErrors,
       isGated,
-      lastError
+      lastError,
+      pulseRegistry
     });
   });
+});
+
+app.post('/api/pulse', (req, res) => {
+  const { source, delayMs, ghost } = req.body;
+  if (pulseRegistry[source]) {
+    pulseRegistry[source] = {
+      lastRunAt: new Date().toISOString(),
+      nextRunAt: new Date(Date.now() + delayMs).toISOString(),
+      delayMs,
+      ghost
+    };
+  }
+  res.json({ success: true });
 });
 
 app.post('/start', (req, res) => {
@@ -385,8 +419,9 @@ app.get('/api/queue', async (req, res) => {
   const { phase } = req.query;
   
   let query = supabase.from('skate_spots').select('*');
-  
-  if (phase === 'phase2') {
+  if (phase === 'phase1') {
+     query = query.or('verification_status.eq.PENDING,verification_status.is.null');
+  } else if (phase === 'phase2') {
      query = query.eq('verification_status', 'PENDING');
   } else if (phase === 'phase3') {
      query = query.eq('verification_status', 'IDENTITY_ESTABLISHED');

@@ -1,7 +1,6 @@
 // @ts-nocheck
 import React from "react";
-import PropTypes from "prop-types";
-import data from "./data/usa-map-dimensions";
+import data from "./data/usa-map-dimensions.js";
 import USAState from "./components/USAState";
 
 class USAMap extends React.Component<any, any> {

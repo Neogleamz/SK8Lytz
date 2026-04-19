@@ -2,6 +2,7 @@ import puppeteer from 'puppeteer';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
+import { GHOST } from './lib/GHOST';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const supabase = createClient(
@@ -20,6 +21,14 @@ const pushLog = (type: 'INFO'|'ERROR', message: string) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, source: 'Phase 2', message })
+   }).catch(() => {});
+};
+
+const reportPulse = (delayMs: number, ghost?: any) => {
+   fetch('http://localhost:5999/api/pulse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: 'Phase 2', delayMs, ghost })
    }).catch(() => {});
 };
 
@@ -42,7 +51,9 @@ async function runOperator() {
 
       if (!spots || spots.length === 0) {
         // Queue empty
-        await sleep(10000);
+        const delay = 10000;
+        reportPulse(delay);
+        await sleep(delay);
         continue;
       }
 
@@ -54,12 +65,17 @@ async function runOperator() {
           : `${target.name} ${target.city} ${target.state}`;
 
       const statusRes = await fetch("http://localhost:5999/status").then(r => r.json()).catch(() => ({ isHeadless: true }));
+      
+      const identity = GHOST.generateIdentity();
+      
       const browser = await puppeteer.launch({ 
         headless: statusRes.isHeadless ? true : false,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
       });
       
       const page = await browser.newPage();
+      await page.setUserAgent(identity.userAgent);
+      await page.setViewport(identity.viewport);
       
       const queryUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
       
@@ -76,7 +92,9 @@ async function runOperator() {
       if (isBotGated) {
           console.error('[Operator] Google Captcha hit. Sleeping for 45s.');
           await browser.close();
-          await sleep(45000);
+          const delay = 45000;
+          reportPulse(delay);
+          await sleep(delay);
           continue;
       }
 
@@ -113,11 +131,15 @@ async function runOperator() {
 
       if (updateError) throw updateError;
       
-      await sleep(5000);
+      const delay = await GHOST.getAdaptiveDelay('GOOGLE');
+      reportPulse(delay, identity);
+      await sleep(delay);
 
     } catch (err: any) {
       console.error('[Operator Error]', err.message);
-      await sleep(30000);
+      const delay = 30000;
+      reportPulse(delay);
+      await sleep(delay);
     }
   }
 }
