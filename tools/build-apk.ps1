@@ -1,6 +1,7 @@
 $ProjectRoot = Get-Location
-$JdkPath = Join-Path $ProjectRoot ".local-builder\jdk\jdk-17.0.10+7"
-$SdkPath = Join-Path $ProjectRoot ".local-builder\android-sdk"
+$MasterRoot = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
+$JdkPath = Join-Path $MasterRoot ".local-builder\jdk\jdk-17.0.10+7"
+$SdkPath = Join-Path $MasterRoot ".local-builder\android-sdk"
 
 # Set session environment
 $env:JAVA_HOME = $JdkPath
@@ -11,7 +12,7 @@ $env:PATH = "$JdkPath\bin;$SdkPath\cmdline-tools\latest\bin;$SdkPath\platform-to
 Set-Location android
 
 Write-Host "### Starting Gradle Build (Release) ###"
-./gradlew assembleRelease
+.\gradlew.bat assembleRelease
 if ($LASTEXITCODE -ne 0) {
     Set-Location ..
     Write-Error "### Gradle Build FAILED! Aborting. ###"

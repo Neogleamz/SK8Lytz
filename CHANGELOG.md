@@ -304,6 +304,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2026-04-18
+
+### Changed
+
+- **Device Pipeline Stabilization**: Extracted the ultimate `DeviceRepository` singleton service, completely decoupling device, group, and configuration persistence from the React presentation layer to guarantee atomicity.
+- **State Consolidation**: Executed the death of `useDeviceFleet`, unifying all local storage and RPC queries into a single shared authority to eliminate race conditions.
+- **Dashboard Context Sharing**: Re-architected `HardwareSetupWizardScreen` to consume the global Dashboard BLE Context Provider natively, eradicating redundant concurrent `useBLE` instances that were causing BLE transport pipeline crashes.
+
+### Fixed
+
+- **TS Type Safety**: Resolved strict typing regressions regarding Supabase dynamic model assignment payload objects in `AdminPicksScheduler` and `CrewService`. 
+- **Identity Invariant**: Hardened MAC address lookup strings universally, enforcing `toUpperCase()` transformation and database-layer `ilike` operators to destroy "ghost device" synchronization bugs.
+
 ## [1.7.0] - 2026-04-14
 
 ### Changed
