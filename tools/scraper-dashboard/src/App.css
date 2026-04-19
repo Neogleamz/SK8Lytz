@@ -31,24 +31,23 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
-  border-bottom: 1px solid var(--surface-highlight);
-  padding-bottom: 1rem;
 }
 
 .title {
   margin: 0;
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   font-weight: 800;
   background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -1px;
+  position: relative;
 }
 
 .subtitle {
   color: var(--text-secondary);
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  margin-top: 2px;
 }
 
 .status-badge {
@@ -598,8 +597,9 @@ body {
 
 .pipeline-card.active {
   background: rgba(255,255,255,0.05);
-  box-shadow: 0 0 0 2px rgba(255,255,255,0.1), 0 12px 24px rgba(0,0,0,0.6);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.6);
   transform: translateY(-2px);
+  border-color: var(--primary-color);
 }
 
 .pipeline-card-header {
