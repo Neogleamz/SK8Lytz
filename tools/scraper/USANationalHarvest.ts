@@ -40,10 +40,10 @@ async function processState(stateCode: string) {
   [out:json][timeout:300];
   area["ISO3166-2"="US-${stateCode}"]->.searchArea;
   (
-    nwr["sport"~"roller_skating|skateboard"](area.searchArea);
+    nwr["sport"="roller_skating"](area.searchArea);
+    nwr["sport"="skateboard"](area.searchArea);
     nwr["leisure"="skatepark"](area.searchArea);
-    nwr["shop"~"skates|sports"]["sport"~"roller_skating|skateboard"](area.searchArea);
-    nwr["name"~"skatepark|roller rink|skateland|skate center|skate world",i](area.searchArea);
+    nwr["shop"="skates"](area.searchArea);
   );
   out center;
   `;
@@ -139,26 +139,8 @@ async function processState(stateCode: string) {
     });
   }
 
-  console.log(`🕵️  [US-${stateCode}] Phase 3: Cultural Extraction (${validSpots.length} filtered spots)`);
-  let enrichedSpots: any[] = [];
-  for (let i = 0; i < validSpots.length; i++) {
-     const spot = validSpots[i];
-     const culture = await scrapeCulturalDetails(spot.name, spot.city);
-     enrichedSpots.push({
-         ...spot,
-         has_pro_shop: culture.has_pro_shop,
-         has_adult_night: culture.has_adult_night,
-         vibe_rating: culture.vibe_rating,
-         socials: culture.socials,
-         website: spot.website || culture.fetched_website,
-         is_featured: false
-     });
-     // Prevent aggressive ban from Google custom search headless scraper
-     await sleep(1000); 
-  }
-
-  console.log(`🚀 [US-${stateCode}] Phase 4: Supabase Upsert`);
-  const mappedUpload = enrichedSpots.map(s => ({
+  console.log(`🚀 [US-${stateCode}] Phase 3: Supabase Upsert (Raw Skeletons)`);
+  const mappedUpload = validSpots.map(s => ({
       ...s,
       // Map arbitrary OSM IDs to valid UUID formats
       id: s.id.toString().padStart(32, '0').replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, "$1-$2-$3-$4-$5")
@@ -187,3 +169,4 @@ async function runNationalHarvester() {
 }
 
 runNationalHarvester();
+

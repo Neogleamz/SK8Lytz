@@ -22,7 +22,7 @@ const DAEMON_ID = '00000000-0000-0000-0000-000000000000';
 
 async function pushTelemetry(updates: { status: string; current_target?: string; last_error?: string | null }) {
   try {
-    await supabase.from('daemon_status').upsert({
+    const { error } = await supabase.from('daemon_status').upsert({
       id: DAEMON_ID,
       status: updates.status,
       current_target: updates.current_target || null,
@@ -31,6 +31,7 @@ async function pushTelemetry(updates: { status: string; current_target?: string;
       last_error: updates.last_error || null,
       last_heartbeat: new Date().toISOString()
     });
+    if (error) throw error;
   } catch (err) {
     console.error('Failed to push daemon telemetry:', err);
   }
