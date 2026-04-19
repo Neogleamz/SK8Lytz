@@ -102,3 +102,6 @@ tools/scraper/state_caches/
 
 # Plan files (archived/local only)
 docs/plans/
+
+# Temporary scratchpad directory
+scratch/
