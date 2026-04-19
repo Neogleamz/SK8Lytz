@@ -469,8 +469,8 @@ class AppLoggerService {
 
         const { error } = await supabase.from('telemetry_snapshots').insert(dbPayload);
         if (error) {
-           if (__DEV__) console.warn('[AppLogger] Batch insert rejected (RLS/Permissions). Data will rotate locally:', error.message);
-           // We intentionally do not throw here to avoid Redbox crashes on Web Demo
+           // Silently swallow RLS failures on Web to prevent console pollution.
+           // Data will continue to rotate locally until the DB permissions are fixed.
         }
       }
 
