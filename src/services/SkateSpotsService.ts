@@ -21,6 +21,7 @@ export const SkateSpotsService = {
       const { data, error } = await supabase
         .from('skate_spots')
         .select('*')
+        .eq('is_published', true)
         .gte('lat', bbox.minLat)
         .lte('lat', bbox.maxLat)
         .gte('lng', bbox.minLng)

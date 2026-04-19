@@ -846,7 +846,7 @@ const styles = StyleSheet.create({
       },
       web: {
         // @ts-ignore
-        shadowColor: '#ffffff', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 24,
+        boxShadow: '0px 0px 24px rgba(255, 255, 255, 0.8)'
       }
     })
   },
@@ -865,7 +865,7 @@ const styles = StyleSheet.create({
       },
       web: {
         // @ts-ignore
-        shadowColor: '#ffffff', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 18,
+        boxShadow: '0px 0px 18px rgba(255, 255, 255, 0.8)'
       }
     })
   }

@@ -383,7 +383,8 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
         <View style={styles.headerContainer}>
           <Image 
             source={require('../../assets/logo.png')} 
-            style={{ width: '80%', maxWidth: 300, height: 80, tintColor: isDark ? '#FFFFFF' : undefined }} 
+            style={{ width: '80%', maxWidth: 300, height: 80 }}
+            tintColor={isDark ? '#FFFFFF' : undefined} 
             resizeMode="contain" 
           />
           <TouchableOpacity 
