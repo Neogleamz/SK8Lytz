@@ -96,10 +96,11 @@ async function runOperator() {
       });
 
       if (isBotGated) {
-          console.error(`[Operator] 🚨 Google Captcha hit on ${target.name}. Applying penalty cooldown.`);
+          console.error(`[Operator] 🚨 Google Captcha hit on ${target.name}. Moving to GHOST_PAUSED.`);
           await supabase.from('skate_spots').update({ 
+              verification_status: 'GHOST_PAUSED',
               last_error: 'GOOGLE_CAPTCHA_GATED' 
-          }).eq('id', target.id).catch(() => {});
+          }).eq('id', target.id);
           
           delay = delay * 5; // 5x Penalty Delay
           continue;
@@ -141,7 +142,7 @@ async function runOperator() {
       if (target) {
           await supabase.from('skate_spots').update({ 
                last_error: err.message.slice(0, 200) 
-          }).eq('id', target.id).catch(() => {});
+          }).eq('id', target.id);
       }
       delay = Math.max(delay, 45000); // 45s minimum on error
     } finally {

@@ -112,19 +112,30 @@ ${conditions}  );
   `;
 
   let elements: any[] = [];
-  try {
-    const response = await axios.post(OVERPASS_URL, `data=${encodeURIComponent(SAFE_QL_QUERY)}`, {
-      headers: { 
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': identity.userAgent
-      },
-      timeout: 300000 
-    });
-    elements = response.data.elements || [];
-    console.log(`  ✅ [${stateCode}] Found ${elements.length} raw GIS geometries`);
-  } catch (err: any) {
-    console.error(`❌ Overpass Failure for ${stateCode}:`, err.message);
-    return false;
+  let attempts = 0;
+  while (attempts < 3) {
+    try {
+      const response = await axios.post(OVERPASS_URL, `data=${encodeURIComponent(SAFE_QL_QUERY)}`, {
+        headers: { 
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': identity.userAgent,
+          'Referer': 'https://sk8lytz.com/'
+        },
+        timeout: 300000 
+      });
+      elements = response.data.elements || [];
+      console.log(`  ✅ [${stateCode}] Found ${elements.length} raw GIS geometries`);
+      break;
+    } catch (err: any) {
+      attempts++;
+      if (err.response?.status === 429 || err.response?.status === 504 || err.response?.status === 406) {
+        console.log(`⚠️ Overpass Service Pressure (${err.response?.status}). Retrying check in 10s... (${attempts}/3)`);
+        await sleep(10000);
+        continue;
+      }
+      console.error(`❌ Overpass Failure for ${stateCode}:`, err.message);
+      return false;
+    }
   }
 
   if (elements.length === 0) {
