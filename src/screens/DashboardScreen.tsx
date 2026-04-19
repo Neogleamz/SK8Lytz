@@ -91,6 +91,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     clearPendingRegistrations,
     bleState,
     bleGateRef,
+    probeDevice,
   } = useBLE();
 
   // ── Registration system ────────────────────────────────────────────────────
@@ -732,7 +733,19 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         </View>
       );
     case 'SETUP_WIZARD':
-      return <HardwareSetupWizardScreen onSetupComplete={async (devices) => { await handleRegistrationComplete(devices, allDevices); }} />;
+      return (
+        <HardwareSetupWizardScreen
+          onSetupComplete={async (devices) => { await handleRegistrationComplete(devices, allDevices); }}
+          scanForPeripherals={scanForPeripherals}
+          bleState={bleState}
+          requestPermissions={requestPermissions}
+          isBluetoothSupported={isBluetoothSupported}
+          isBluetoothEnabled={isBluetoothEnabled}
+          pendingRegistrations={pendingRegistrations}
+          writeToDevice={writeToDevice}
+          probeDevice={probeDevice}
+        />
+      );
     default:
       break;
   }

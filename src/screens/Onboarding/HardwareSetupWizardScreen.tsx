@@ -2,7 +2,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import useBLE from '../../hooks/useBLE';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { Spacing, Typography } from '../../theme/theme';
 
@@ -11,14 +10,35 @@ import { RegisteredDevice } from '../../hooks/useRegistration';
 import { HardwareStatusPills } from '../../components/dashboard/HardwareStatusPills';
 import { getDefaultGroupName } from '../../utils/NamingUtils';
 
+import type { BleConnectionState } from '../../types/dashboard.types';
+import type { PendingRegistration } from '../../types/dashboard.types';
+
 interface HardwareSetupWizardScreenProps {
   onSetupComplete: (devices: RegisteredDevice[]) => Promise<void> | void;
+  /** BLE primitives injected from DashboardScreen — eliminates competing useBLE() instance */
+  scanForPeripherals: (options?: { disableProbing?: boolean; keepAlive?: boolean }) => void;
+  bleState: BleConnectionState;
+  requestPermissions: () => Promise<boolean>;
+  isBluetoothSupported: boolean;
+  isBluetoothEnabled: boolean;
+  pendingRegistrations: PendingRegistration[];
+  writeToDevice: (data: number[], deviceId?: string) => Promise<void | boolean | 'partial'>;
+  probeDevice: (deviceId: string) => Promise<void>;
 }
 
-export default function HardwareSetupWizardScreen({ onSetupComplete }: HardwareSetupWizardScreenProps) {
+export default function HardwareSetupWizardScreen({
+  onSetupComplete,
+  scanForPeripherals,
+  bleState,
+  requestPermissions,
+  isBluetoothSupported,
+  isBluetoothEnabled,
+  pendingRegistrations,
+  writeToDevice,
+  probeDevice,
+}: HardwareSetupWizardScreenProps) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
-  const { scanForPeripherals, bleState, requestPermissions, isBluetoothSupported, isBluetoothEnabled, pendingRegistrations, writeToDevice, probeDevice } = useBLE();
   const [hasStartedScan, setHasStartedScan] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [isBlinking, setIsBlinking] = useState<string | null>(null);
