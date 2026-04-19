@@ -393,7 +393,12 @@ export default function useBLE(): BluetoothLowEnergyApi {
       return false;
     }
 
-    const chunkSize = Math.max(20, (targetDeviceId ? getDeviceMtu(targetDeviceId) : Math.min(...targets.map(d => getDeviceMtu(d.id)))) - 3);
+    const maxSafeSize = targetDeviceId ? getDeviceMtu(targetDeviceId) - 3 : Math.min(...targets.map(d => getDeviceMtu(d.id))) - 3;
+    
+    if (payload.length > maxSafeSize) {
+      AppLogger.warn(`[BLE] PAYLOAD TOO LARGE: ${payload.length} bytes exceeds safe MTU window of ${maxSafeSize} bytes. Rejecting to prevent hardware lockup.`);
+      return false;
+    }
 
     const executeWrite = async (): Promise<boolean | 'partial'> => {
       const liveTargets = targets.filter(device => {
@@ -408,30 +413,20 @@ export default function useBLE(): BluetoothLowEnergyApi {
       if (liveTargets.length === 0) return skippedGhosted > 0 ? 'partial' : true;
 
       let allSucceeded = true;
+      const base64Full = Buffer.from(payload).toString('base64');
       
-      // We process chunk-by-chunk synchronously to avoid GATT Buffer Overflow crashes.
-      // Every device receives chunk 1, then thread sleeps 5ms, then chunk 2, etc.
-      // This synchronizes group animations seamlessly without hanging Android's Baseband radio.
-      for (let i = 0; i < payload.length; i += chunkSize) {
-        const chunk = payload.slice(i, i + chunkSize);
-        const base64Chunk = Buffer.from(chunk).toString('base64');
-        
-        for (const device of liveTargets) {
-          try {
-            await device.writeCharacteristicWithoutResponseForService(
-              ZENGGE_SERVICE_UUID,
-              ZENGGE_CHARACTERISTIC_UUID,
-              base64Chunk
-            );
-          } catch (writeError: any) {
-            AppLogger.warn(`[BLE] Write failed for ${device.id} at chunk pos ${i}`, writeError?.message);
-            allSucceeded = false;
-          }
-        }
-        
-        // 5ms inter-chunk latency to allow baseband buffers to flush
-        if (i + chunkSize < payload.length) {
-          await new Promise(resolve => setTimeout(resolve, 5));
+      // Sending payload atomically in a single write packet without chunking or mid-transmission delays
+      // This matches hardware constraint: each write packet is treated as an independent complete command
+      for (const device of liveTargets) {
+        try {
+          await device.writeCharacteristicWithoutResponseForService(
+            ZENGGE_SERVICE_UUID,
+            ZENGGE_CHARACTERISTIC_UUID,
+            base64Full
+          );
+        } catch (writeError: any) {
+          AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError?.message);
+          allSucceeded = false;
         }
       }
 

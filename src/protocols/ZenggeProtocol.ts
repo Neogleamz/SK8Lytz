@@ -421,12 +421,17 @@ export class ZenggeProtocol {
     direction: number,
     transitionType: number = 0x00
   ): number[] {
+    // Determine how many pixels we can safely send in a single default MTU write packet.
+    // Assuming default safe MTU of ~180 bytes, wrapper + 0x59 headers = 16 bytes.
+    // 164 bytes / 3 bytes per pixel = 54 pixels max.
+    const MAX_PIXELS = 54;
+    
     // Enforce an absolute minimum matrix length of 12! Master Reference explicitly warns that 0x59 payloads < 10 cause hardware memory lock glitching!
-    const numPoints = Math.max(12, colors.length);
+    const numPoints = Math.max(12, Math.min(MAX_PIXELS, colors.length));
     
     // Pad the physical array out to numPoints internally if the caller under-filled it
     const paddedColors = new Array(numPoints).fill(colors[0] || {r:0, g:0, b:0});
-    for(let i=0; i<colors.length; i++) paddedColors[i] = colors[i];
+    for(let i=0; i<numPoints; i++) paddedColors[i] = colors[i];
 
     // Speed mapping: user-facing 0–100 → hardware 1–31.
     // Previously 0x00 (CASCADE) was HARDCODED to speed=1 — that was wrong, made animations look frozen.
@@ -454,19 +459,8 @@ export class ZenggeProtocol {
   }
 
   /**
-   * Build a 0x51 DIY Custom Mode packet (up to 32 steps, 291 bytes total).
-   *
-   * APK-proven format (Protocol/x.java method b):
-   *   [0x51, Step0(9 bytes), Step1(9 bytes), ..., Step31(9 bytes), 0x0F, checksum]
-   *
-   * Each active step: [0xF0, effectId, speed, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b]
-   * Each inactive step: [0x0F, 0, 0, 0, 0, 0, 0, 0, 0]
-   *
-   * IMPORTANT: effectId must be your protocol mapped ID.
-   *   For the 33 Custom Step Effects, this is 0x01 to 0x21 (1-33).
-   *   For the standard 3 modes (Jump, Gradual, Strobe), it is 0x3A, 0x3B, 0x3C.
-   *
-   * speed per step: 1–100 (full range valid for 0x51, unlike 0x59)
+   * Old fixed 32-step custom mode packet logic removed. 
+   * Now proxies directly to setCustomModeCompact to ensure safe MTU size.
    */
   static setCustomMode(steps: {
     mode: number;  // 1-33 (0x01-0x21) for Custom Effects, or 0x3A, 0x3B, 0x3C for Standard
@@ -474,31 +468,7 @@ export class ZenggeProtocol {
     color1: {r: number, g: number, b: number}; // foreground
     color2: {r: number, g: number, b: number}; // background
   }[]): number[] {
-    const safeSteps = steps.slice(0, 32);
-    const payload = new Array(291).fill(0);
-    payload[0] = 0x51;
-    let idx = 1;
-    for (let i = 0; i < 32; i++) {
-      if (i < safeSteps.length) {
-        const step = safeSteps[i];
-        const safeSpeed = Math.max(1, Math.min(100, Math.round(step.speed)));
-        payload[idx++] = 0xF0; // active flag
-        payload[idx++] = step.mode & 0xFF; // effect ID (1-33 for advanced, 58-60 for classic)
-        payload[idx++] = safeSpeed;
-        payload[idx++] = Math.max(0, Math.min(255, step.color1.r | 0));
-        payload[idx++] = Math.max(0, Math.min(255, step.color1.g | 0));
-        payload[idx++] = Math.max(0, Math.min(255, step.color1.b | 0));
-        payload[idx++] = Math.max(0, Math.min(255, step.color2.r | 0));
-        payload[idx++] = Math.max(0, Math.min(255, step.color2.g | 0));
-        payload[idx++] = Math.max(0, Math.min(255, step.color2.b | 0));
-      } else {
-        payload[idx++] = 0x0F; // inactive flag
-        idx += 8;              // 8 zero bytes already filled
-      }
-    }
-    payload[289] = 0x0F; // terminator
-    payload[290] = this.calculateChecksum(payload.slice(0, 290));
-    return this.wrapCommand(payload);
+    return this.setCustomModeCompact(steps);
   }
 
   /**
@@ -506,12 +476,6 @@ export class ZenggeProtocol {
    *
    * Format: [0x51, step0(9), step1(9), ..., 0x0F, checksum]
    * For 1 step: 12 bytes raw → 20 bytes wrapped — fits ANY BLE MTU.
-   *
-   * This tests whether the hardware accepts variable-length 0x51 payloads vs.
-   * always requiring the full 32-slot 291-byte fixed format.
-   *
-   * If the hardware responds to this but not setCustomMode(), the fix is to always
-   * use the compact format. If it doesn't respond to either, 0x51 is unsupported.
    */
   static setCustomModeCompact(steps: {
     mode: number;
@@ -519,7 +483,8 @@ export class ZenggeProtocol {
     color1: {r: number, g: number, b: number};
     color2: {r: number, g: number, b: number};
   }[]): number[] {
-    const safeSteps = steps.slice(0, 32);
+    // 18 steps * 9 bytes/step + 11 overhead bytes = 173 bytes. Fits safely within 180 byte MTU limit.
+    const safeSteps = steps.slice(0, 18);
     // Variable-length: only active steps
     const raw: number[] = [0x51];
     for (const step of safeSteps) {
