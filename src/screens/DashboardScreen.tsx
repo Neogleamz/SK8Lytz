@@ -285,7 +285,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         firmwareVer: first.firmware_ver,
         productId:   first.product_id,
       });
-      if (status === 'unclaimed') setPendingNewDevice(first);
+      // Allow registration for both unclaimed devices AND when we can't verify
+      // claim status due to being offline (BUG: offline_unknown was blocking post-FTUE device adds)
+      if (status === 'unclaimed' || status === 'offline_unknown') setPendingNewDevice(first);
     };
     
     checkNewDevice();
@@ -642,12 +644,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           }
           // connectToDevices (gated) — additive connection, preserves existing group members.
           await connectToDevices([bleDevice]);
-          // Store firmware under MAC key — same key used by probe/0x63 responses.
-          setDeviceConfigs((prev: any) => {
-              const next = { ...prev, [mac]: { ...(prev?.[mac] || {}) } };
-              AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(next)).catch(() => {});
-              return next;
-          });
+          // Query hardware settings immediately after connect to populate deviceConfigs correctly
           writeToDevice(ZenggeProtocol.queryHardwareSettings(false), bleDevice.id);
         }}
         onLongPress={() => {

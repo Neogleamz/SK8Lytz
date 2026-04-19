@@ -28,9 +28,10 @@ const DEVICES_KEY     = '@Sk8lytz_registered_devices';
 const CONFIGS_KEY     = '@Sk8lytz_device_configs';
 const GROUPS_KEY      = '@Sk8lytz_custom_groups';
 const TOMBSTONE_KEY   = '@Sk8lytz_deleted_macs';
-const PENDING_KEY     = '@Sk8lytz_pending_sync';
-const PROCESSED_KEY   = '@Sk8lytz_processed_devices';
-const PATTERNS_KEY    = '@Sk8lytz_last_group_patterns';
+const PENDING_KEY       = '@Sk8lytz_pending_sync';
+const PENDING_GROUP_KEY = '@Sk8lytz_pending_group_sync';
+const PROCESSED_KEY     = '@Sk8lytz_processed_devices';
+const PATTERNS_KEY      = '@Sk8lytz_last_group_patterns';
 
 // ─── Listener Type ────────────────────────────────────────────────────────────
 type Listener = () => void;
@@ -187,6 +188,13 @@ class DeviceRepository {
       const idx = this.devices.findIndex(d => d.device_mac.toUpperCase() === normalizedMac);
       if (idx >= 0) this.devices[idx] = fullDevice;
       else this.devices.push(fullDevice);
+
+      // 1.5. Purge from tombstone on re-add (Fix: BUG-14 — permanent tombstone lock)
+      if (this.tombstones.includes(normalizedMac)) {
+        this.tombstones = this.tombstones.filter(t => t !== normalizedMac);
+        await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(this.tombstones)).catch(() => {});
+        AppLogger.warn('[DeviceRepository] Tombstone cleared on re-add', { mac: normalizedMac });
+      }
 
       // 2. Persist to AsyncStorage
       await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(this.devices));
@@ -433,7 +441,7 @@ class DeviceRepository {
     const existingIdx = this.groups.findIndex(g => g.id === groupId);
     const updatedGroup: CustomGroup = existingIdx >= 0
       ? { ...this.groups[existingIdx], id: groupId, name: groupName, deviceIds: deviceMacs }
-      : { id: groupId, name: groupName, color: undefined, deviceIds: deviceMacs } as any;
+      : { id: groupId, name: groupName, isGroup: true, deviceIds: deviceMacs };
 
     if (existingIdx >= 0) this.groups[existingIdx] = updatedGroup;
     else this.groups.push(updatedGroup);
@@ -468,6 +476,14 @@ class DeviceRepository {
 
     // 2. Cloud: atomic RPC transaction
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        // Offline: queue for later sync
+        await this._queuePendingGroupSync(groupId, groupName, deviceMacs, type);
+        AppLogger.warn('[DeviceRepository] Offline — group queued for sync', { groupId });
+        return true; // Local write succeeded — return true
+      }
+
       const { error } = await supabase.rpc('upsert_group_with_devices', {
         p_group_id:   groupId,
         p_group_name: groupName,
@@ -477,7 +493,8 @@ class DeviceRepository {
       if (error) throw error;
       return true;
     } catch (e) {
-      AppLogger.warn('[DeviceRepository] saveGroupTransactional RPC failed:', e);
+      AppLogger.warn('[DeviceRepository] saveGroupTransactional RPC failed, queuing:', e);
+      await this._queuePendingGroupSync(groupId, groupName, deviceMacs, type);
       return false;
     }
   }
@@ -541,15 +558,27 @@ class DeviceRepository {
         };
       });
 
+      // Pure-local preservation (Fix: BUG-13 — offline device wiping)
+      // Retain any locally-registered (pending_sync) devices not yet in cloud
+      const offlineLocalOnly = this.devices.filter(
+        localD =>
+          !!localD.is_pending_sync &&
+          !cloudRows.some((cloudD: any) => cloudD.device_mac.toUpperCase() === localD.device_mac.toUpperCase())
+      );
+
+      const finalDevices = [...merged, ...offlineLocalOnly];
+
       // Update in-memory state
-      this.devices = merged;
-      await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(merged));
+      this.devices = finalDevices;
+      await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(finalDevices));
       this._notifyListeners();
 
-      // Flush any pending offline registrations
+      // Flush pending offline device registrations, group sync, and tombstone deletions
       await this._flushPendingSync(user.id);
+      await this._flushPendingGroupSync(user.id);
+      await this._flushPendingTombstones(user.id);
 
-      return merged;
+      return finalDevices;
     } catch (e) {
       AppLogger.warn('[DeviceRepository] Cloud sync failed (offline?):', e);
       return this.devices;
@@ -733,6 +762,114 @@ class DeviceRepository {
       AppLogger.warn('[DeviceRepository] Flush failed:', e);
     }
   }
+
+  /**
+   * Queue a group for cloud sync when offline or RPC fails.
+   * Mirror of _queuePendingSync for groups.
+   */
+  private async _queuePendingGroupSync(
+    groupId: string,
+    groupName: string,
+    deviceMacs: string[],
+    type: string
+  ): Promise<void> {
+    try {
+      const raw = await AsyncStorage.getItem(PENDING_GROUP_KEY);
+      const queue: Array<{ groupId: string; groupName: string; deviceMacs: string[]; type: string }> =
+        raw ? JSON.parse(raw) : [];
+      const idx = queue.findIndex(q => q.groupId === groupId);
+      const entry = { groupId, groupName, deviceMacs, type };
+      if (idx >= 0) queue[idx] = entry; else queue.push(entry);
+      await AsyncStorage.setItem(PENDING_GROUP_KEY, JSON.stringify(queue));
+    } catch (e) {
+      AppLogger.warn('[DeviceRepository] Group queue failed:', e);
+    }
+  }
+
+  /**
+   * Flush all pending offline group saves to Supabase on login.
+   * Called by syncFromCloud() after _flushPendingSync().
+   */
+  private async _flushPendingGroupSync(userId: string): Promise<void> {
+    try {
+      const raw = await AsyncStorage.getItem(PENDING_GROUP_KEY);
+      if (!raw) return;
+      const queue: Array<{ groupId: string; groupName: string; deviceMacs: string[]; type: string }> =
+        JSON.parse(raw);
+      if (queue.length === 0) return;
+
+      for (const entry of queue) {
+        const dbDeviceIds = this.devices
+          .filter(d => entry.deviceMacs.map(m => m.toUpperCase()).includes(d.device_mac.toUpperCase()))
+          .map(d => d.id)
+          .filter(Boolean) as string[];
+
+        try {
+          const { error } = await supabase.rpc('upsert_group_with_devices', {
+            p_group_id:   entry.groupId,
+            p_group_name: entry.groupName,
+            p_type:       entry.type,
+            p_device_ids: dbDeviceIds,
+          });
+          if (error) throw error;
+        } catch (rpcErr) {
+          // Fallback: direct group upsert without device membership
+          try {
+            await supabase.from('registered_groups').upsert({
+              id: entry.groupId,
+              group_name: entry.groupName,
+              type: entry.type,
+              user_id: userId,
+            } as any, { onConflict: 'id' } as any);
+          } catch (fbErr) {
+            AppLogger.warn('[DeviceRepository] Group flush fallback failed:', fbErr);
+          }
+        }
+      }
+
+      await AsyncStorage.removeItem(PENDING_GROUP_KEY);
+      AppLogger.warn('[DeviceRepository] Pending group sync flushed', { count: queue.length });
+    } catch (e) {
+      AppLogger.warn('[DeviceRepository] Group flush failed:', e);
+    }
+  }
+
+  /**
+   * Push any locally-tombstoned MACs to Supabase on login.
+   * Clears synced tombstones to prevent permanent accumulation.
+   * Fix: BUG — offline device deletion leaves orphaned cloud rows.
+   */
+  private async _flushPendingTombstones(userId: string): Promise<void> {
+    if (this.tombstones.length === 0) return;
+    const synced: string[] = [];
+
+    for (const mac of this.tombstones) {
+      try {
+        const { error } = await supabase
+          .from('registered_devices')
+          .delete()
+          .eq('user_id', userId)
+          .ilike('device_mac', mac);
+
+        if (!error) {
+          synced.push(mac);
+          AppLogger.warn('[DeviceRepository] Tombstone synced to cloud', { mac });
+        } else {
+          AppLogger.warn('[DeviceRepository] Tombstone cloud delete failed', { mac, error: error.message });
+        }
+      } catch (e) {
+        AppLogger.warn('[DeviceRepository] Tombstone flush error', { mac, error: String(e) });
+      }
+    }
+
+    if (synced.length > 0) {
+      // Tombstones that were successfully deleted from cloud can be cleared locally.
+      // We KEEP any we failed to sync so the next boot retries them.
+      this.tombstones = this.tombstones.filter(t => !synced.includes(t));
+      await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(this.tombstones)).catch(() => {});
+    }
+  }
 }
+
 
 export default DeviceRepository;
