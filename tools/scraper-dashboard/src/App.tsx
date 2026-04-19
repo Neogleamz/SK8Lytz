@@ -465,19 +465,27 @@ function App() {
               <p>This engine interfaces directly with OpenStreetMap's Overpass API. It extracts raw GIS locations (longitude/latitude) and establishes baseline row injection into Supabase. Real data validation occurs downstream.</p>
               </div>
 
-              <div className="omni-grid tri-grid phase-1-controls" style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'minmax(250px, 1fr) 1fr 1.5fr', marginBottom: '2rem' }}>
-                 {/* Intake Power */}
-                 <div className="master-power-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1.5rem', marginTop: 0 }}>Intake Engine Grid</h3>
-                    <div className="btn-group-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      <button className="btn btn-start" onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive} style={{ fontSize: '1rem', padding: '1rem' }}>
-                          {stateOverride.length > 0 ? `🚀 Seed ${stateOverride.join(', ')}` : '🌎 Global Intake (Ph1)'}
-                      </button>
-                      <button className="btn btn-stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive} style={{ fontSize: '1rem', padding: '1rem' }}>
-                        🛑 HALT INTAKE
-                      </button>
-                    </div>
+              <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', marginBottom: '2rem' }}>
+                 <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                    <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#8a2be2' }}>∞</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>OSM Dataset</div>
                  </div>
+                 <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
+                    <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
+                       <button className="btn-mini" onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive} style={{ background: '#4caf50', color: '#000', border: 'none', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                          ▶ {stateOverride.length > 0 ? `SEED ${stateOverride.join(', ')}` : 'GLOBAL SEED'}
+                       </button>
+                       <button className="btn-mini" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive} style={{ background: 'transparent', color: 'var(--danger)', border: '1px solid var(--danger)', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>■ STOP</button>
+                    </div>
+                    {status?.isHarvestingActive && <div className="flow-animation"></div>}
+                 </div>
+                 <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                    <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#8a2be2' }}>{status?.pendingCount || 0}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>PENDING DB</div>
+                 </div>
+              </div>
+
+              <div className="omni-grid tri-grid phase-1-controls" style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'minmax(250px, 1fr) 1.5fr', marginBottom: '2rem' }}>
 
                  {/* Facility Switches */}
                  <div className="facility-switches-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
