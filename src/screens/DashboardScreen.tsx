@@ -401,13 +401,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, [allDevices, deviceConfigs]);
 
   const registeredDevicesData = useMemo(() => {
-    const macs = new Set(registeredDevices.map((d: any) => d.device_mac?.toLowerCase() ?? ''));
-    return sortedAllDevices.filter((d: any) => macs.has(d.id?.toLowerCase() ?? ''));
+    const macs = new Set(registeredDevices.map((d: any) => d.device_mac?.toUpperCase() ?? ''));
+    return sortedAllDevices.filter((d: any) => macs.has(d.id?.toUpperCase() ?? ''));
   }, [sortedAllDevices, registeredDevices]);
 
   const availableDevicesData = useMemo(() => {
-    const macs = new Set(registeredDevices.map((d: any) => d.device_mac?.toLowerCase() ?? ''));
-    return sortedAllDevices.filter((d: any) => !macs.has(d.id?.toLowerCase() ?? ''));
+    const macs = new Set(registeredDevices.map((d: any) => d.device_mac?.toUpperCase() ?? ''));
+    return sortedAllDevices.filter((d: any) => !macs.has(d.id?.toUpperCase() ?? ''));
   }, [sortedAllDevices, registeredDevices]);
 
   const handleDisconnect = useCallback(async () => {

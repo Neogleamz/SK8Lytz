@@ -291,7 +291,7 @@ export function useRegistration() {
     try {
       // 1. FAST PATH: Check local storage first. If we already hold it locally, it's ours.
       const localDevices = await getLocalDevices();
-      if (localDevices.some(d => d.device_mac.toLowerCase() === deviceMac.toLowerCase())) {
+      if (localDevices.some(d => d.device_mac.toUpperCase() === deviceMac.toUpperCase())) {
         return 'claimed_by_self';
       }
 
@@ -302,7 +302,7 @@ export function useRegistration() {
       const { data, error } = await supabase
         .from('registered_devices')
         .select('user_id')
-        .eq('device_mac', deviceMac)
+        .ilike('device_mac', deviceMac)
         .maybeSingle();
 
       if (error) throw error;
@@ -554,7 +554,7 @@ export function useRegistration() {
           rf_mode:         device.rf_mode,
           rf_paired_count: device.rf_paired_count,
           user_id:         userId,
-          id:              device.id || `${device.device_mac.replace(/:/g, '')}-${userId.slice(0, 8)}`,
+          id:              device.id || `${device.device_mac.toUpperCase().replace(/:/g, '')}-${userId.slice(0, 8)}`,
           updated_at:      new Date().toISOString(),
           registered_at:   device.registered_at,
         };
