@@ -120,7 +120,7 @@ function App() {
          }
       }
     } catch {
-      setStatus({ isRunning: false, currentTarget: 'API OFFLINE', enrichedCount: 0, verifiedCount: 0, errorCount: 0, lastError: 'Could not connect.' });
+      setStatus({ isRunning: false, currentTarget: 'API OFFLINE', processedCount: 0, enrichedCount: 0, verifiedCount: 0, errorCount: 0, lastError: 'Could not connect.' });
     }
   };
 
@@ -508,8 +508,12 @@ function App() {
 
           <div className="hero-grid">
             <div className="hero-card">
+              <h3 className="card-title">Processed Attempts</h3>
+              <p className="card-value">{status?.processedCount || 0}</p>
+            </div>
+            <div className="hero-card">
               <h3 className="card-title">Enriched Nodes</h3>
-              <p className="card-value">{status?.enrichedCount || 0}</p>
+              <p className="card-value" style={{ color: 'var(--primary-color)' }}>{status?.enrichedCount || 0}</p>
             </div>
             <div className="hero-card">
               <h3 className="card-title">Verified (Gold)</h3>

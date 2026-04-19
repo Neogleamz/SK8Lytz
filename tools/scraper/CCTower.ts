@@ -230,6 +230,11 @@ async function runDaemonLoop() {
 
 // Routes
 app.get('/status', async (req, res) => {
+  const { count: totalProcessed } = await supabase
+    .from('skate_spots')
+    .select('*', { count: 'exact', head: true })
+    .not('last_attempted_at', 'is', null);
+
   const { count: totalEnriched } = await supabase
     .from('skate_spots')
     .select('*', { count: 'exact', head: true })
@@ -245,6 +250,7 @@ app.get('/status', async (req, res) => {
     isHarvestingActive,
     isHeadless,
     currentTarget,
+    processedCount: totalProcessed || 0,
     enrichedCount: totalEnriched || 0,
     verifiedCount: totalVerified || 0,
     errorCount,
