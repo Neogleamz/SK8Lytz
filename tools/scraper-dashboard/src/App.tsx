@@ -406,68 +406,24 @@ function App() {
             </div>
          </div>
 
-         <div className="omni-grid tri-grid" style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'minmax(350px, 1.5fr) 1fr 1fr' }}>
-            {/* Column 1: Intake & Daemon Master Power */}
-            <div className="master-power-panel">
+         <div className="omni-grid" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+            <div className="master-power-panel" style={{ flex: 1 }}>
                <h3 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1rem', marginTop: 0 }}>Omni-Engine Power Grid</h3>
                
-               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                  <div className="btn-group-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <button className="btn btn-start" onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive} style={{ fontSize: '0.85rem', padding: '0.8rem' }}>
-                        {stateOverride.length > 0 ? `🚀 Seed ${stateOverride.join(', ')}` : '🌎 Global Intake (Ph1)'}
-                    </button>
-                    <button className="btn btn-stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive} style={{ fontSize: '0.85rem', padding: '0.8rem' }}>
-                      🛑 HALT INTAKE
-                    </button>
-                  </div>
-                  
-                  <div className="btn-group-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                     <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning} style={{ background: '#ff5a00', color: 'white', fontSize: '0.85rem', padding: '0.8rem' }}>
-                       🔥 BOOT DAEMONS (Ph2+)
+               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) 1fr', gap: '1rem' }}>
+                  <div className="btn-group-vertical" style={{ display: 'flex', gap: '0.5rem' }}>
+                     <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning} style={{ background: '#ff5a00', color: 'white', fontSize: '0.85rem', padding: '0.8rem', flex: 1 }}>
+                       🔥 BOOT ALL DAEMONS (Ph2+)
                      </button>
                      <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning} style={{ fontSize: '0.85rem', padding: '0.8rem', border: '1px solid var(--danger)', color: 'var(--danger)', background: 'transparent' }}>
-                       🛑 DAEMON SHUTDOWN
+                       🛑 HALT ALL
                      </button>
                   </div>
-               </div>
-               
-               <div className="input-group-inline" style={{ background: 'rgba(0,0,0,0.2)', padding: '0.8rem', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>Global Throttle Interval (ms)</label>
-                  <input type="number" className="mini-input" style={{width: '90px'}} value={sleepInterval} onChange={e => updateGlobalStrategy('sleep_interval', parseInt(e.target.value))} />
-               </div>
-            </div>
-
-            {/* Column 2: Facility Switches */}
-            <div className="facility-switches-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-               <h3 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1rem', marginTop: 0 }}>1. Target Facilities</h3>
-               <div className="facility-switches">
-                  {['skatepark', 'roller_rink', 'skate_shop'].map(f => (
-                    <label key={f} className="switch-row mini" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem', padding: '4px 0' }}>
-                       <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{f.replace('_', ' ').toUpperCase()}</span>
-                       <label className="switch mini">
-                         <input type="checkbox" checked={targetFacilities.includes(f)} onChange={() => updateGlobalStrategy('facility', f)} />
-                         <span className="slider round"></span>
-                       </label>
-                    </label>
-                  ))}
-               </div>
-            </div>
-            
-            {/* Column 3: State Targets (Mini) */}
-            <div className="state-targets-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-               <h3 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1rem', marginTop: 0, display: 'flex', justifyContent: 'space-between' }}>
-                 2. Target States
-                 <span className="btn-mini" onClick={() => updateGlobalStrategy('state_override', 'ALL')} style={{ cursor: 'pointer' }}>ALL</span>
-               </h3>
-               <div className="state-pill-container" style={{maxHeight: '130px', overflowY: 'auto', gap: '4px', display: 'flex', flexWrap: 'wrap'}}>
-                  {US_STATES.map(st => {
-                     const count = harvestData.stateCounts[st] || 0;
-                     return (
-                       <button key={st} className={`state-pill mini ${stateOverride.includes(st) ? 'active' : ''}`} onClick={() => updateGlobalStrategy('state_override', st)} style={{ padding: '4px 8px', fontSize: '0.7rem', margin: '2px', background: stateOverride.includes(st) ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)', color: stateOverride.includes(st) ? '#000' : '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer' }}>
-                         {st} {count > 0 && <span className="pill-dot" style={{display:'inline-block', width:'6px', height:'6px', background:'var(--success)', borderRadius:'50%', marginLeft:'4px'}}></span>}
-                       </button>
-                     )
-                  })}
+                  
+                  <div className="input-group-inline" style={{ background: 'rgba(0,0,0,0.2)', padding: '0.8rem', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                     <label style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>Global Throttle Interval (ms)</label>
+                     <input type="number" className="mini-input" style={{width: '90px'}} value={sleepInterval} onChange={e => updateGlobalStrategy('sleep_interval', parseInt(e.target.value))} />
+                  </div>
                </div>
             </div>
          </div>
@@ -507,6 +463,55 @@ function App() {
               <h3 style={{marginTop: 0, color: '#8a2be2'}}>The Scout: Polygon Infrastructure</h3>
               <div className="ghost-badge">🛡️ GHOST ENCRYPTED PIPELINE ACTIVE</div>
               <p>This engine interfaces directly with OpenStreetMap's Overpass API. It extracts raw GIS locations (longitude/latitude) and establishes baseline row injection into Supabase. Real data validation occurs downstream.</p>
+              </div>
+
+              <div className="omni-grid tri-grid phase-1-controls" style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'minmax(250px, 1fr) 1fr 1.5fr', marginBottom: '2rem' }}>
+                 {/* Intake Power */}
+                 <div className="master-power-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1.5rem', marginTop: 0 }}>Intake Engine Grid</h3>
+                    <div className="btn-group-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <button className="btn btn-start" onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive} style={{ fontSize: '1rem', padding: '1rem' }}>
+                          {stateOverride.length > 0 ? `🚀 Seed ${stateOverride.join(', ')}` : '🌎 Global Intake (Ph1)'}
+                      </button>
+                      <button className="btn btn-stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive} style={{ fontSize: '1rem', padding: '1rem' }}>
+                        🛑 HALT INTAKE
+                      </button>
+                    </div>
+                 </div>
+
+                 {/* Facility Switches */}
+                 <div className="facility-switches-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1.5rem', marginTop: 0 }}>Target Facilities</h3>
+                    <div className="facility-switches">
+                       {['skatepark', 'roller_rink', 'skate_shop'].map(f => (
+                         <label key={f} className="switch-row mini" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', padding: '4px 0' }}>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{f.replace('_', ' ').toUpperCase()}</span>
+                            <label className="switch">
+                              <input type="checkbox" checked={targetFacilities.includes(f)} onChange={() => updateGlobalStrategy('facility', f)} />
+                              <span className="slider round"></span>
+                            </label>
+                         </label>
+                       ))}
+                    </div>
+                 </div>
+                 
+                 {/* State Targets */}
+                 <div className="state-targets-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1rem', marginTop: 0, display: 'flex', justifyContent: 'space-between' }}>
+                      Target States
+                      <span className="btn-mini" onClick={() => updateGlobalStrategy('state_override', 'ALL')} style={{ cursor: 'pointer' }}>ALL</span>
+                    </h3>
+                    <div className="state-pill-container" style={{maxHeight: '180px', overflowY: 'auto', gap: '6px', display: 'flex', flexWrap: 'wrap'}}>
+                       {US_STATES.map(st => {
+                          const count = harvestData.stateCounts[st] || 0;
+                          return (
+                            <button key={st} className={`state-pill mini ${stateOverride.includes(st) ? 'active' : ''}`} onClick={() => updateGlobalStrategy('state_override', st)} style={{ padding: '6px 12px', fontSize: '0.8rem', margin: '2px', background: stateOverride.includes(st) ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)', color: stateOverride.includes(st) ? '#000' : '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer' }}>
+                              {st} {count > 0 && <span className="pill-dot" style={{display:'inline-block', width:'6px', height:'6px', background:'var(--success)', borderRadius:'50%', marginLeft:'4px'}}></span>}
+                            </button>
+                          )
+                       })}
+                    </div>
+                 </div>
               </div>
 
               <div className="panel coverage-panel" style={{marginTop: '2rem'}}>
