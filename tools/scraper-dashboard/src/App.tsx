@@ -128,7 +128,7 @@ function App() {
 
   const fetchQueue = async () => {
     try {
-      const phasesToFetch = ['phase2', 'phase3', 'phase4', 'phase5'];
+      const phasesToFetch = ['phase1', 'phase2', 'phase3', 'phase4', 'phase5'];
       const results = await Promise.all(
          phasesToFetch.map(phase => fetch(`${API_BASE}/api/queue?phase=${phase}`).then(r => r.json()))
       );
@@ -556,6 +556,28 @@ function App() {
           );
         })()}
 
+        {/* Phase 1 Mini Data Bank (Newly Seeded Target Monitor) */}
+        {activeTab === 'phase1' && (() => {
+           const queue = phaseQueues[activeTab] || [];
+           if (queue.length === 0) return null;
+           return (
+             <div style={{marginTop: '0px', padding: '0 2rem', marginBottom: '2rem'}}>
+                <h4 style={{fontSize: '0.8rem', textTransform:'uppercase', color:'var(--text-secondary)', marginBottom: 0}}>Newly Spawned Targets (Unprocessed)</h4>
+                <div className="mini-data-bank">
+                  {queue.map(spot => (
+                    <div key={spot.id} className="queue-card active">
+                      <div className="queue-card-title">{spot.name}</div>
+                      <div className="queue-card-loc">{spot.city}, {spot.state}</div>
+                      <div className="queue-tags">
+                        <span className="queue-badge">⏳ RAW SEED</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+             </div>
+           );
+        })()}
+
         {/* =========== DAEMON CONTROL CENTER (PHASE 2-5) =========== */}
         {(['phase2', 'phase3', 'phase4', 'phase5'].includes(activeTab)) && (
           <div className="tab-pane daemon-center">
@@ -580,6 +602,9 @@ function App() {
                          <button className="btn-mini start" onClick={() => triggerSpecificDaemon('operator', 'start')} disabled={status?.currentTarget?.includes('Operator: online')}>▶ START OPERATOR</button>
                          <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('operator', 'stop')} disabled={!status?.currentTarget?.includes('Operator: online')}>■ STOP</button>
                       </div>
+                      <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
+                         {status?.identityCount || 0} / {(status?.pendingCount || 0) + (status?.identityCount || 0)} Completed
+                      </div>
                       {status?.currentTarget?.includes('Operator: online') && <div className="flow-animation"></div>}
                    </div>
                    <div style={{ textAlign: 'center', minWidth: '100px' }}>
@@ -600,6 +625,9 @@ function App() {
                          <button className="btn-mini start" onClick={() => triggerSpecificDaemon('indexer', 'start')} disabled={status?.currentTarget?.includes('Indexer: online')}>▶ START DETECTIVE</button>
                          <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('indexer', 'stop')} disabled={!status?.currentTarget?.includes('Indexer: online')}>■ STOP</button>
                       </div>
+                      <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
+                         {status?.indexedCount || 0} / {(status?.identityCount || 0) + (status?.indexedCount || 0)} Completed
+                      </div>
                       {status?.currentTarget?.includes('Indexer: online') && <div className="flow-animation"></div>}
                    </div>
                    <div style={{ textAlign: 'center', minWidth: '100px' }}>
@@ -618,6 +646,9 @@ function App() {
                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
                          <button className="btn-mini stop" disabled>MOCKED</button>
+                      </div>
+                      <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
+                         {status?.enrichedCount || 0} / {(status?.indexedCount || 0) + (status?.enrichedCount || 0)} Completed
                       </div>
                    </div>
                    <div style={{ textAlign: 'center', minWidth: '100px' }}>
