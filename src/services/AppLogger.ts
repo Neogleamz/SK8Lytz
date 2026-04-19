@@ -114,10 +114,7 @@ export type EventType =
   | 'SPEED_REACTIVE_DISABLED'
   | 'ACCOUNT_MODAL_LOAD_START'
   | 'ACCOUNT_MODAL_DATA_RESOLVED'
-  // ── Voice & Audio ─────────────────────────────────────────
-  | 'VOICE_RESULT'
-  | 'VOICE_ERROR'
-  | 'VOICE_SPATIAL_APPLIED'
+  // ── Audio ─────────────────────────────────────────
   | 'MUSIC_CONFIG_REQUESTED'
   // ── Builder & Favorites ───────────────────────────────────
   | 'BUILDER_PRESET_SAVED'

@@ -21,8 +21,7 @@ export default () => {
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "SK8Lytz needs microphone access to synchronize your lights to ambient music and process voice commands.",
-        "NSSpeechRecognitionUsageDescription": "SK8Lytz uses speech recognition to allow hands-free control of your skate lights while you ride."
+        "NSMicrophoneUsageDescription": "SK8Lytz needs microphone access to synchronize your lights to ambient music."
       },
       "buildNumber": "1",
       "config": {
