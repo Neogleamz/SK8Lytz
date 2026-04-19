@@ -137,7 +137,7 @@ app.get('/status', async (req, res) => {
 
 app.post('/start', (req, res) => {
   console.log('Orchestrating micro-scrapers start...');
-  exec('pm2 start scraper-operator scraper-indexer', (err, stdout, stderr) => {
+  exec('pm2 start ecosystem.config.js --only scraper-operator,scraper-indexer', { cwd: __dirname }, (err, stdout, stderr) => {
      if (err) {
         console.error('Failed to start scrapers cluster:', err);
         return res.status(500).json({ success: false, message: 'Start failed', error: err.message });
@@ -149,7 +149,7 @@ app.post('/start', (req, res) => {
 
 app.post('/stop', (req, res) => {
   console.log('Orchestrating micro-scrapers stop...');
-  exec('pm2 stop scraper-operator scraper-indexer', (err, stdout, stderr) => {
+  exec('pm2 stop scraper-operator scraper-indexer', { cwd: __dirname }, (err, stdout, stderr) => {
      if (err) {
         console.error('Failed to stop scrapers cluster:', err);
         return res.status(500).json({ success: false, message: 'Stop failed', error: err.message });
