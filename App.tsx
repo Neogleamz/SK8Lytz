@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, AppState, Text } from 'react-native';
+import { StyleSheet, View, AppState, Text, LogBox } from 'react-native';
 import { Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import DashboardScreen from './src/screens/DashboardScreen';
@@ -14,6 +14,11 @@ import { supabase } from './src/services/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
 import { ComplianceGate } from './src/providers/ComplianceGate';
+
+LogBox.ignoreLogs([
+  '"shadow*" style props are deprecated',
+  'props.pointerEvents is deprecated'
+]);
 
 const STORAGE_OFFLINE_SKIP   = '@Sk8lytz_offline_skip';
 const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';

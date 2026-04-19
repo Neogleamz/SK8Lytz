@@ -10,7 +10,7 @@
  */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { Layout, Spacing } from '../../theme/theme';
 
 interface DashboardHeaderProps {
@@ -146,12 +146,13 @@ const DashboardHeader = React.memo(({
                 backgroundColor: isOfflineMode ? 'rgba(255,170,0,0.08)' : 'rgba(0,240,255,0.06)',
               }}
             >
-              <View style={{
+              <View style={[{
                 width: 6, height: 6, borderRadius: 3,
                 backgroundColor: isOfflineMode ? '#FFA500' : Colors.success,
-                shadowColor: isOfflineMode ? '#FFA500' : Colors.success,
-                shadowOpacity: 0.8, shadowRadius: 4, elevation: 2,
-              }} />
+              }, Platform.OS === 'web' 
+                ? { boxShadow: `0px 0px 4px ${isOfflineMode ? '#FFA500' : Colors.success}` } as any
+                : { shadowColor: isOfflineMode ? '#FFA500' : Colors.success, shadowOpacity: 0.8, shadowRadius: 4, elevation: 2 }
+              ]} />
               <Text style={{ color: Colors.text, fontSize: 10, fontWeight: '700', maxWidth: 55, fontFamily: 'Righteous' }} numberOfLines={1}>
                 {authUsername || 'GUEST'}
               </Text>
@@ -159,9 +160,8 @@ const DashboardHeader = React.memo(({
             </TouchableOpacity>
           </View>
 
-          {/* CENTER: logo — absolute so it truly centers regardless of pill width */}
           {/* [BUG FIX]: pointerEvents="box-none" prevents blocking the logo TouchableOpacity */}
-          <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, top: 0, justifyContent: 'center', alignItems: 'center' }}>
+          <View pointerEvents="box-none" style={[{ position: 'absolute', left: 0, right: 0, bottom: 0, top: 0, justifyContent: 'center', alignItems: 'center' }, Platform.OS === 'web' && { pointerEvents: 'box-none' } as any]}>
             <TouchableOpacity activeOpacity={0.7} style={{ position: 'relative', alignItems: 'center' }} onPress={onPressAdminTools}>
               <Image source={require('../../../assets/logo.png')} style={{ width: 85, height: 26 }} resizeMode="contain" tintColor={Colors.text} />
             </TouchableOpacity>
