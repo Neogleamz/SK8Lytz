@@ -413,10 +413,10 @@ function App() {
                
                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) 1fr', gap: '1rem' }}>
                   <div className="btn-group-vertical" style={{ display: 'flex', gap: '0.5rem' }}>
-                     <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning} style={{ background: '#ff5a00', color: 'white', fontSize: '0.85rem', padding: '0.8rem', flex: 1 }}>
+                     <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}>
                        🔥 BOOT ALL DAEMONS (Ph2+)
                      </button>
-                     <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning} style={{ fontSize: '0.85rem', padding: '0.8rem', border: '1px solid var(--danger)', color: 'var(--danger)', background: 'transparent' }}>
+                     <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}>
                        🛑 HALT ALL
                      </button>
                   </div>
@@ -473,10 +473,10 @@ function App() {
                  </div>
                  <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                     <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                       <button className="btn-mini" onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive} style={{ background: '#4caf50', color: '#000', border: 'none', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                       <button className="btn-mini start" onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive}>
                           ▶ {stateOverride.length > 0 ? `SEED ${stateOverride.join(', ')}` : 'GLOBAL SEED'}
                        </button>
-                       <button className="btn-mini" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive} style={{ background: 'transparent', color: 'var(--danger)', border: '1px solid var(--danger)', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>■ STOP</button>
+                       <button className="btn-mini stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive}>■ STOP</button>
                     </div>
                     {status?.isHarvestingActive && <div className="flow-animation"></div>}
                  </div>
@@ -567,8 +567,8 @@ function App() {
                    </div>
                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini" onClick={() => triggerSpecificDaemon('operator', 'start')} disabled={status?.currentTarget?.includes('Operator: online')} style={{ background: '#4caf50', color: '#000', border: 'none', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>▶ START OPERATOR</button>
-                         <button className="btn-mini" onClick={() => triggerSpecificDaemon('operator', 'stop')} disabled={!status?.currentTarget?.includes('Operator: online')} style={{ background: 'transparent', color: 'var(--danger)', border: '1px solid var(--danger)', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>■ STOP</button>
+                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('operator', 'start')} disabled={status?.currentTarget?.includes('Operator: online')}>▶ START OPERATOR</button>
+                         <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('operator', 'stop')} disabled={!status?.currentTarget?.includes('Operator: online')}>■ STOP</button>
                       </div>
                       {status?.currentTarget?.includes('Operator: online') && <div className="flow-animation"></div>}
                    </div>
@@ -587,8 +587,8 @@ function App() {
                    </div>
                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini" onClick={() => triggerSpecificDaemon('indexer', 'start')} disabled={status?.currentTarget?.includes('Indexer: online')} style={{ background: '#4caf50', color: '#000', border: 'none', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>▶ START DETECTIVE</button>
-                         <button className="btn-mini" onClick={() => triggerSpecificDaemon('indexer', 'stop')} disabled={!status?.currentTarget?.includes('Indexer: online')} style={{ background: 'transparent', color: 'var(--danger)', border: '1px solid var(--danger)', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>■ STOP</button>
+                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('indexer', 'start')} disabled={status?.currentTarget?.includes('Indexer: online')}>▶ START DETECTIVE</button>
+                         <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('indexer', 'stop')} disabled={!status?.currentTarget?.includes('Indexer: online')}>■ STOP</button>
                       </div>
                       {status?.currentTarget?.includes('Indexer: online') && <div className="flow-animation"></div>}
                    </div>
@@ -607,7 +607,7 @@ function App() {
                    </div>
                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini" disabled style={{ background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--text-secondary)', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold' }}>MOCKED</button>
+                         <button className="btn-mini stop" disabled>MOCKED</button>
                       </div>
                    </div>
                    <div style={{ textAlign: 'center', minWidth: '100px' }}>
@@ -625,7 +625,7 @@ function App() {
                    </div>
                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini" disabled style={{ background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--text-secondary)', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold' }}>MOCKED</button>
+                         <button className="btn-mini stop" disabled>MOCKED</button>
                       </div>
                    </div>
                    <div style={{ textAlign: 'center', minWidth: '100px' }}>

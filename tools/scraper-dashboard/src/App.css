@@ -199,9 +199,14 @@ body {
   color: #000;
 }
 
-.btn-start:hover {
+.btn-start:hover:not(:disabled) {
   filter: brightness(1.2);
   box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+}
+
+.btn-start:active:not(:disabled) {
+  transform: scale(0.95);
+  filter: brightness(0.8);
 }
 
 .btn-start:disabled {
@@ -217,8 +222,13 @@ body {
   border: 1px solid var(--danger);
 }
 
-.btn-stop:hover {
+.btn-stop:hover:not(:disabled) {
   background-color: rgba(255, 107, 107, 0.1);
+}
+
+.btn-stop:active:not(:disabled) {
+  transform: scale(0.95);
+  filter: brightness(0.8);
 }
 
 .btn-stop:disabled {
@@ -368,12 +378,52 @@ body {
   border-radius: 4px;
   cursor: pointer;
   text-transform: uppercase;
-  transition: all 0.2s;
+  transition: all 0.15s ease-in-out;
 }
 
-.btn-mini:hover {
+.btn-mini:hover:not(:disabled) {
   background: var(--primary-color);
   color: var(--bg-color);
+  transform: translateY(-1px);
+}
+
+.btn-mini:active:not(:disabled) {
+  transform: scale(0.95);
+  filter: brightness(0.8);
+}
+
+.btn-mini:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+.btn-mini.start {
+  background: #4caf50;
+  color: #000;
+  border: none;
+  padding: 6px 15px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.btn-mini.start:hover:not(:disabled) {
+  background: #66bb6a;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.btn-mini.stop {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  padding: 6px 15px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.btn-mini.stop:hover:not(:disabled) {
+  background: rgba(255, 107, 107, 0.1);
+  color: #ff8a80;
 }
 
 .log-container.mini {
