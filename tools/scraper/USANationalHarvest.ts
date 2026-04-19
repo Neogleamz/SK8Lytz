@@ -140,6 +140,10 @@ ${conditions}  );
     const lon = el.lon || el.center?.lon;
     const tags = el.tags || {};
     
+    // Stealth Throttle: Don't hammer Nominatim/OSM
+    const delay = await GHOST.getAdaptiveDelay('NOMINATIM');
+    await sleep(delay);
+
     let facility_type = 'unknown';
     const isSkatepark = tags['leisure'] === 'skatepark' || tags.name?.toLowerCase().includes('skatepark');
     const isRollerRink = tags['sport']?.includes('roller_skating') || tags.name?.toLowerCase().match(/rink|skateland|skate center/);
@@ -201,7 +205,8 @@ ${conditions}  );
       surface_type: surface, is_indoor: tags.indoor === 'yes', facility_type, street_address,
       opening_hours: buildHoursJSON(tags['opening_hours']), website: tags.website || tags['contact:website'] || null,
       has_lights, has_fee, has_rental, is_wheelchair_accessible, has_wifi, has_toilets, operator_name, operator_description,
-      has_food, has_ac, has_lockers, capacity, hosts_derby
+      has_food, has_ac, has_lockers, capacity, hosts_derby,
+      verification_status: 'PENDING'
     });
   }
 
@@ -211,12 +216,17 @@ ${conditions}  );
       id: s.id.toString().padStart(32, '0').replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, "$1-$2-$3-$4-$5")
   }));
 
-  const { error } = await supabase.from('skate_spots').upsert(mappedUpload);
+  // IMPORTANT: Use ignoreDuplicates to prevent overwriting existing progress
+  const { error } = await supabase.from('skate_spots').upsert(mappedUpload, { 
+    onConflict: 'id',
+    ignoreDuplicates: true 
+  });
+  
   if (error) {
       console.error(`❌ Supabase Sync Error for ${stateCode}:`, error);
       return false;
   } else {
-      console.log(`✅ ${stateCode} complete! Committed ${mappedUpload.length} rows.`);
+      console.log(`✅ ${stateCode} complete! Committed ${mappedUpload.length} entries (Skipped processed duplicates).`);
       fs.writeFileSync(stateCachePath, JSON.stringify(mappedUpload, null, 2));
       return true;
   }
