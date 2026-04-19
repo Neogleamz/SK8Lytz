@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import USAMap from 'react-usa-map';
 import './App.css';
 
 const API_BASE = 'http://localhost:5999';
@@ -12,7 +13,7 @@ const US_STATES = [
 ];
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'phase1' | 'phase2' | 'phase3'>('phase1');
+  const [activeTab, setActiveTab] = useState<'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5' | 'phase6'>('phase1');
 
   // --- Sys Dashboard States ---
   const [status, setStatus] = useState<any>(null);
@@ -30,13 +31,11 @@ function App() {
   const [autoResume, setAutoResume] = useState<boolean>(true);
 
   // --- Logs & Queue States ---
-  const [logs, setLogs] = useState<{type: string, message: string}[]>([]);
-  const [queueSpots, setQueueSpots] = useState<any[]>([]);
+  const [logs, setLogs] = useState<{type: string, message: string, source?: string}[]>([]);
   const logsRef = useRef<HTMLDivElement>(null);
 
   // --- Harvest Manager States ---
   const [harvestData, setHarvestData] = useState<{seededStates: string[], stateCounts: Record<string, number>, allStates: string[]}>({ seededStates: [], stateCounts: {}, allStates: [] });
-  const [isHarvesting, setIsHarvesting] = useState<string | null>(null);
   const [coverageStats, setCoverageStats] = useState<any[]>([]);
   const [historyLogs, setHistoryLogs] = useState<string[]>([]);
 
@@ -446,7 +445,7 @@ function App() {
             <div 
                key={phase.id} 
                className={`pipeline-card ${activeTab === phase.route ? 'active' : ''}`}
-               onClick={() => setActiveTab(phase.route)}
+               onClick={() => setActiveTab(phase.route as any)}
                style={{ borderTop: `4px solid ${phase.color}` }}
             >
                <div className="pipeline-card-header">
@@ -533,23 +532,35 @@ function App() {
                  </div>
               </div>
 
-              <div className="panel coverage-panel" style={{marginTop: '2rem'}}>
+              <div className="panel coverage-panel" style={{marginTop: '2rem', textAlign: 'center'}}>
                 <h2 className="panel-header">GIS Intake Leaderboard (State Coverage)</h2>
-                <div className="coverage-list" style={{display: 'grid', gridTemplateColumns: 'minmax(250px, 1fr) minmax(250px, 1fr)', gap: '1rem'}}>
-                   {coverageStats.slice(0, 20).map(stat => {
-                      const enrichedPct = Math.min(100, Math.round((stat.enriched / stat.total) * 100) || 0);
-                      return (
-                        <div key={stat.state} className="coverage-item" style={{background: 'rgba(0,0,0,0.2)', padding:'10px', borderRadius:'8px'}}>
-                           <div className="coverage-meta" style={{marginBottom: '5px'}}>
-                              <strong>{stat.state}</strong>
-                              <span>{stat.total}</span>
-                           </div>
-                           <div className="coverage-progress-bg">
-                              <div className="progress-bar enriched" style={{width: `${enrichedPct}%`}}></div>
-                           </div>
-                        </div>
-                      );
-                   })}
+                
+                <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '800px', margin: '0 auto' }}>
+                   <USAMap 
+                      defaultFill="rgba(255,255,255,0.05)"
+                      customize={(() => {
+                         const colors: Record<string, any> = {};
+                         coverageStats.forEach((stat: any) => {
+                            if (stat.total === 0) return;
+                            let color = '#8a2be2'; // Purple: In Pipeline
+                            const enrichedRatio = stat.enriched / stat.total;
+                            if (enrichedRatio > 0.5) color = '#ff5a00'; // Mostly Enriched -> Orange
+                            const verifiedRatio = stat.verified / stat.total;
+                            if (verifiedRatio > 0.5) color = '#4caf50'; // Mostly Verified -> Green
+                            
+                            colors[stat.state] = { fill: color };
+                         });
+                         return colors;
+                      })()}
+                      onClick={(e: any) => updateGlobalStrategy('state_override', e.target.dataset.name)}
+                   />
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px' }}></span> Empty / No Target</div>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: '#8a2be2', borderRadius: '2px' }}></span> In Processing Pipeline</div>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: '#ff5a00', borderRadius: '2px' }}></span> Deep Enriched</div>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: '#4caf50', borderRadius: '2px' }}></span> Final Verified</div>
                 </div>
               </div>
             </div>
