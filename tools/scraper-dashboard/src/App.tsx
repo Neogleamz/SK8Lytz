@@ -61,7 +61,7 @@ function App() {
     
     const interval = setInterval(() => {
       fetchSystemStatus();
-      if (activeTab === 'phase2') fetchQueue();
+      fetchQueue();
       fetchCoverage(); // Refresh coverage stats periodically
     }, 5000);
 
@@ -124,10 +124,20 @@ function App() {
     }
   };
 
+  const [phaseQueues, setPhaseQueues] = useState<Record<string, any[]>>({});
+
   const fetchQueue = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/queue`);
-      if (res.ok) setQueueSpots((await res.json()).spots);
+      const phasesToFetch = ['phase2', 'phase3', 'phase4', 'phase5'];
+      const results = await Promise.all(
+         phasesToFetch.map(phase => fetch(`${API_BASE}/api/queue?phase=${phase}`).then(r => r.json()))
+      );
+      
+      const newQueues: Record<string, any[]> = {};
+      phasesToFetch.forEach((phase, idx) => {
+         newQueues[phase] = results[idx]?.spots || [];
+      });
+      setPhaseQueues(newQueues);
     } catch (e) {
       console.error('Queue fetch error:', e);
     }
@@ -634,7 +644,36 @@ function App() {
                    </div>
                 </div>
              )}
-          </div>
+
+              {/* Mini Data Bank injected here! */}
+              {(() => {
+                const queue = phaseQueues[activeTab] || [];
+                let hydratingFields: string[] = [];
+                if (activeTab === 'phase2') hydratingFields = ['Website', 'Phone Number'];
+                if (activeTab === 'phase3') hydratingFields = ['Pricing', 'Adult Night', 'Hours'];
+                if (activeTab === 'phase4') hydratingFields = ['Vibe Score', 'Description'];
+                if (activeTab === 'phase5') hydratingFields = ['Media URLs', 'Thumbnails'];
+
+                if (queue.length === 0) return null;
+
+                return (
+                  <div style={{marginTop: '20px'}}>
+                     <h4 style={{fontSize: '0.8rem', textTransform:'uppercase', color:'var(--text-secondary)', marginBottom: 0}}>Processing Queue (Top 10)</h4>
+                     <div className="mini-data-bank">
+                       {queue.map(spot => (
+                         <div key={spot.id} className="queue-card active">
+                           <div className="queue-card-title">{spot.name}</div>
+                           <div className="queue-card-loc">{spot.city}, {spot.state}</div>
+                           <div className="queue-tags">
+                             {hydratingFields.map(f => <span key={f} className="queue-badge">⏳ {f}</span>)}
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                  </div>
+                );
+              })()}
+           </div>
         )}
 
         {/* =========== PHASE 6: DATABANK QA =========== */}

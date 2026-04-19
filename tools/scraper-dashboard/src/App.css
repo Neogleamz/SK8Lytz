@@ -1083,3 +1083,77 @@ input:checked + .slider:before {
   90% { opacity: 1; }
   100% { left: 100%; opacity: 0; }
 }
+
+/* --- Mini Data Bank --- */
+.mini-data-bank {
+  display: flex;
+  overflow-x: auto;
+  gap: 12px;
+  padding: 10px 0;
+  margin: 15px 0;
+}
+
+.mini-data-bank::-webkit-scrollbar {
+  height: 6px;
+}
+.mini-data-bank::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.queue-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 220px;
+  max-width: 280px;
+  flex-shrink: 0;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.queue-card.active {
+  border-color: rgba(255, 165, 0, 0.5);
+  box-shadow: 0 0 12px rgba(255, 165, 0, 0.1);
+}
+
+.queue-card-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-card-loc {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.queue-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.queue-badge {
+  font-size: 0.65rem;
+  background: rgba(255, 165, 0, 0.15);
+  color: #ffa500;
+  padding: 3px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  animation: pulse-op 2s infinite ease-in-out;
+  border: 1px solid rgba(255, 165, 0, 0.3);
+}
+
+@keyframes pulse-op {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}

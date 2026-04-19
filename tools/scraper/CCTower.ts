@@ -382,8 +382,21 @@ app.post('/api/harvest/stop-all', async (req, res) => {
 });
 
 app.get('/api/queue', async (req, res) => {
-  let query = supabase.from('skate_spots').select('*')
-    .or('verification_status.eq.PENDING,verification_status.eq.ENRICHED,verification_status.is.null');
+  const { phase } = req.query;
+  
+  let query = supabase.from('skate_spots').select('*');
+  
+  if (phase === 'phase2') {
+     query = query.eq('verification_status', 'PENDING');
+  } else if (phase === 'phase3') {
+     query = query.eq('verification_status', 'IDENTITY_ESTABLISHED');
+  } else if (phase === 'phase4') {
+     query = query.eq('verification_status', 'INDEXED');
+  } else if (phase === 'phase5') {
+     query = query.eq('verification_status', 'ENRICHED');
+  } else {
+     query = query.or('verification_status.eq.PENDING,verification_status.eq.IDENTITY_ESTABLISHED,verification_status.eq.INDEXED,verification_status.eq.ENRICHED,verification_status.is.null');
+  }
 
   const { data, error } = await query
     .order('last_attempted_at', { ascending: true, nullsFirst: true })
