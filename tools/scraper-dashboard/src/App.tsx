@@ -322,8 +322,8 @@ function App() {
         <div>
           <h1 className="title">SK8Lytz Skate Spots</h1>
           <div className="tab-bar">
-            <button className={`tab-btn ${activeTab === 'phase1' ? 'active' : ''}`} onClick={() => setActiveTab('phase1')}>Phase 1: OSM Intake</button>
-            <button className={`tab-btn ${activeTab === 'phase2' ? 'active' : ''}`} onClick={() => setActiveTab('phase2')}>Phase 2: Google Enrichment</button>
+            <button className={`tab-btn ${activeTab === 'phase1' ? 'active' : ''}`} onClick={() => setActiveTab('phase1')}>Phase 1: OSM Extraction</button>
+            <button className={`tab-btn ${activeTab === 'phase2' ? 'active' : ''}`} onClick={() => setActiveTab('phase2')}>Phase 2: Scraper Pipeline</button>
             <button className={`tab-btn ${activeTab === 'phase3' ? 'active' : ''}`} onClick={() => setActiveTab('phase3')}>Phase 3: Databank QA</button>
           </div>
         </div>
@@ -497,106 +497,99 @@ function App() {
         );
       })()}
 
-      {/* =========== PHASE 2: CULTURAL ENRICHMENT =========== */}
+            {/* =========== PHASE 2: MICRO-SCRAPER PIPELINE =========== */}
       {activeTab === 'phase2' && (
         <div className="tab-pane phase-2 fade-in">
-          <div className="explainer-block">
-            <h3 style={{marginTop: 0, color: 'var(--primary-color)'}}>Phase 2: Google Maps Cultural Enrichment</h3>
-            <div className="ghost-badge">🛡️ GHOST IDENTITY SPOOFING ACTIVE</div>
-            <p>The Cultural Enrichment Daemon operates as a persistent queue-worker utilizing a headless Chromium instance via Puppeteer. Upon activation, it continuously polls the Databank for "UNVERIFIED" geographical records created during Phase 1. Bypassing rigid APIs, the robot navigates raw internet search algorithms to emulate human discovery. It scrapes business logic seeking "adult nights", analyzes live user reviews to calculate a median Vibe Rating, and verifies true operational capacity. Culturally enriched data is then written back to Supabase.</p>
+          <div className="explainer-block" style={{marginBottom: '1rem'}}>
+            <h3 style={{marginTop: 0, color: 'var(--primary-color)'}}>Phase 2: Micro-Scraper Global Pipeline</h3>
+            <div className="ghost-badge">??? MULTI-DAEMON ARCHITECTURE ACTIVE</div>
+            <p>The Cultural Enrichment Daemon has been decoupled into specialized micro-services. The <strong>Operator</strong> processes PENDING spots to discover identities (website, phone) via Google. The <strong>Indexer</strong> consumes those identities to deep-crawl websites and extract social links (Instagram, Facebook). Eventually, specialist agents will execute on INDEXED URLs. This pipeline runs autonomously in the background.</p>
           </div>
 
-          <div className="hero-grid">
-            <div className="hero-card">
-              <h3 className="card-title">Processed Attempts</h3>
-              <p className="card-value">{status?.processedCount || 0}</p>
-            </div>
-            <div className="hero-card">
-              <h3 className="card-title">Enriched Nodes</h3>
-              <p className="card-value" style={{ color: 'var(--primary-color)' }}>{status?.enrichedCount || 0}</p>
-            </div>
-            <div className="hero-card">
-              <h3 className="card-title">Verified (Gold)</h3>
-              <p className="card-value" style={{ color: 'var(--success)' }}>{status?.verifiedCount || 0}</p>
-            </div>
-            <div className="hero-card">
-              <h3 className="card-title">Errors Encountered</h3>
-              <p className="card-value" style={{ color: 'var(--danger)' }}>{status?.errorCount || 0}</p>
-            </div>
-            <div className="hero-card" style={{ gridColumn: 'span 2' }}>
-              <h3 className="card-title">Current Engine Block</h3>
-              <p className="card-value card-target">{status?.currentTarget || 'Waiting...'}</p>
-              {status?.lastError && <div className="error-box"><p className="error-text">⚠️ {status.lastError}</p></div>}
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+             {/* OPERATOR CARD */}
+             <div className="pipeline-card" style={{ border: '2px solid #5d78ff', borderRadius: '12px', background: 'rgba(93, 120, 255, 0.05)', padding: '1.5rem', position: 'relative', overflow: 'hidden' }}>
+                 <div style={{ position: 'absolute', top: 0, right: 0, padding: '0.5rem', background: '#5d78ff', color: '#fff', fontSize: '0.8rem', fontWeight: 'bold', borderBottomLeftRadius: '12px' }}>
+                    {status?.currentTarget?.includes('Operator: online') ? '? ONLINE' : '? OFFLINE'}
+                 </div>
+                 <h2 style={{ color: '#5d78ff', margin: 0, fontSize: '1.5rem' }}>1. The Operator</h2>
+                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.5rem 0 1.5rem 0' }}>TARGET: PENDING ? IDENTITY_ESTABLISHED</p>
+                 
+                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="mini-stat-box">
+                       <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Pending Queue</span>
+                       <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{status?.pendingCount || 0}</div>
+                    </div>
+                    <div className="mini-stat-box">
+                       <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Identities Found</span>
+                       <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#4ADE80' }}>{status?.identityCount || 0}</div>
+                    </div>
+                 </div>
+                 
+                 <div style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Strategy: Google Search API / Places Spoofing</div>
+                    <div style={{ fontSize: '0.8rem', color: '#ff6b6b' }}>Errors: {status?.errorCount || 0}</div>
+                 </div>
+             </div>
+
+             {/* INDEXER CARD */}
+             <div className="pipeline-card" style={{ border: '2px solid #ff5a00', borderRadius: '12px', background: 'rgba(255, 90, 0, 0.05)', padding: '1.5rem', position: 'relative', overflow: 'hidden' }}>
+                 <div style={{ position: 'absolute', top: 0, right: 0, padding: '0.5rem', background: '#ff5a00', color: '#fff', fontSize: '0.8rem', fontWeight: 'bold', borderBottomLeftRadius: '12px' }}>
+                    {status?.currentTarget?.includes('Indexer: online') ? '? ONLINE' : '? OFFLINE'}
+                 </div>
+                 <h2 style={{ color: '#ff5a00', margin: 0, fontSize: '1.5rem' }}>2. The Indexer</h2>
+                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.5rem 0 1.5rem 0' }}>TARGET: IDENTITY_ESTABLISHED ? INDEXED</p>
+                 
+                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="mini-stat-box">
+                       <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Ready for Index</span>
+                       <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{status?.identityCount || 0}</div>
+                    </div>
+                    <div className="mini-stat-box">
+                       <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Socials Indexed</span>
+                       <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#64d2ff' }}>{status?.indexedCount || 0}</div>
+                    </div>
+                 </div>
+                 
+                 <div style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Strategy: Deep-Crawl Cheerio Regex Scraping</div>
+                    <div style={{ fontSize: '0.8rem', color: '#ff6b6b' }}>Circuit Breaker: {status?.consecutiveErrors || 0}/{maxStrikes}</div>
+                 </div>
+             </div>
           </div>
-          
+
           <div className="omni-grid" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem'}}>
             <div className="panel enrichment-panel">
-               <h2 className="panel-header">GHOST Security Profile</h2>
-               <div className="ghost-info-card">
-                  <div className="info-row"><strong>Global Mode:</strong> <span style={{color: 'var(--primary-color)'}}>ACTIVE ✅</span></div>
-                  <div className="info-row"><strong>Phase 1 (OSM):</strong> <span style={{color: 'var(--primary-color)'}}>Spoofed / Synced</span></div>
-                  <div className="info-row"><strong>Phase 2 (Google):</strong> <span style={{color: 'var(--primary-color)'}}>Spoofed / Synced</span></div>
-                  <hr style={{borderColor: 'rgba(255,255,255,0.1)', margin: '15px 0'}} />
-                  <div className="info-row"><strong>Active Agent:</strong> <span className="mono-text">{identityRotation ? 'Rotating...' : 'Default (Legacy)'}</span></div>
-                  <div className="info-row"><strong>Resolution:</strong> <span className="mono-text">{randomizeViewport ? 'Randomized' : 'Fixed 1280x800'}</span></div>
+               <h2 className="panel-header">PM2 Cluster Control</h2>
+               <div className="btn-group">
+                 <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}>Force Boot Cluster</button>
+                 <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}>Halt Pipelines</button>
                </div>
-            </div>
-
-            <div className="controls-section">
-              <div className="panel">
-                <h2 className="panel-header">Execution Control</h2>
-                <div className="btn-group">
-                  <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}>Force Start Engine</button>
-                  <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}>Halt Process</button>
-                </div>
-                <div className="switch-row" style={{marginTop: '1.5rem'}}>
+               
+               <div className="switch-row" style={{marginTop: '1.5rem'}}>
                   <span>Crawler Headless Mode</span>
                   <label className="switch">
                     <input type="checkbox" checked={isHeadless} onChange={e => toggleHeadless(e.target.checked)} />
                     <span className="slider round"></span>
                   </label>
-                </div>
-                <div className="form-group" style={{marginTop: '1.5rem'}}>
+               </div>
+               
+               <div className="form-group" style={{marginTop: '1.5rem'}}>
                   <label className="form-label">Throttle Sleep Interval (ms)</label>
                   <input className="form-input" type="number" value={sleepInterval} onChange={e => updateGlobalStrategy('sleep_interval', parseInt(e.target.value))} />
-                </div>
-              </div>
-
-              <div className="panel" style={{marginTop: '1rem'}}>
-                <h2 className="panel-header" style={{color: 'var(--success)'}}>Engine Config</h2>
-                <div className="form-group">
-                  <label className="form-label" style={{marginBottom: '0.5rem', display: 'block'}}>Strike Threshold (Circuit Breaker)</label>
-                  <select className="form-input" value={maxStrikes} onChange={e => updateGlobalStrategy('max_consecutive_errors', parseInt(e.target.value))}>
-                    <option value={1}>1 Strike (Paranoid)</option>
-                    <option value={3}>3 Strikes (Balanced)</option>
-                    <option value={5}>5 Strikes (Aggressive)</option>
-                    <option value={10}>10 Strikes (Dangerous)</option>
-                  </select>
-                  <p className="text-secondary" style={{fontSize: '0.8rem', marginTop: '0.5rem'}}>
-                    Number of consecutive cultural scraping failures before the engine enters GATED safety mode.
-                  </p>
-                </div>
-              </div>
+               </div>
             </div>
 
             <div className="panel queue-panel">
-               <h2 className="panel-header">Next Up (Queue Preview)</h2>
+               <h2 className="panel-header">Active Execution Tail</h2>
                <p className="text-secondary" style={{fontSize: '0.8rem', paddingBottom:'0.5rem'}}>Targeting: {stateOverride || 'NATIONWIDE'} | Facilities: {targetFacilities.length ? targetFacilities.join(', ') : 'ALL'}</p>
-               <div className="queue-list">
-                 {queueSpots.length === 0 && <p className="text-secondary">Queue empty for current strategy.</p>}
-                 {queueSpots.map(s => (
-                   <div key={s.id} className="queue-item">
-                     <strong>{s.name}</strong>
-                     <span className="queue-meta">{s.city}, {s.state} · {s.facility_type}</span>
-                   </div>
-                 ))}
+               <div className="queue-list" style={{opacity: 0.5}}>
+                 <p>Queue Visualization moved to Databank Tab.</p>
                </div>
             </div>
           </div>
         </div>
       )}
-
       {/* =========== PHASE 3: DATABANK =========== */}
       {activeTab === 'phase3' && (
         <div className="tab-pane graveyard fade-in">
@@ -766,3 +759,5 @@ function App() {
 }
 
 export default App;
+
+
