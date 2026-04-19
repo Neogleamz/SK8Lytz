@@ -1,9 +1,15 @@
-{
-  "expo": {
+export default () => {
+  const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+
+  if (!googleMapsApiKey) {
+    console.warn("⚠️ EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is not set in .env. Maps may crash nateively on Android!");
+  }
+
+  return {
     "name": "SK8Lytz",
     "slug": "sk8lytz",
     "scheme": "sk8lytz",
-    "version": "1.12.0",
+    "version": "1.12.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -18,10 +24,13 @@
         "NSMicrophoneUsageDescription": "SK8Lytz needs microphone access to synchronize your lights to ambient music and process voice commands.",
         "NSSpeechRecognitionUsageDescription": "SK8Lytz uses speech recognition to allow hands-free control of your skate lights while you ride."
       },
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "config": {
+        "googleMapsApiKey": googleMapsApiKey
+      }
     },
     "android": {
-      "versionCode": 22,
+      "versionCode": 23,
       "predictiveBackGestureEnabled": false,
       "allowBackup": false,
       "permissions": [
@@ -38,7 +47,7 @@
       "package": "com.neogleamz.sk8lytz",
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyDjioVcuz5mBpBhzlmUO9kSoTRhgoqMHrs"
+          "apiKey": googleMapsApiKey
         }
       }
     },
@@ -75,5 +84,5 @@
       }
     },
     "owner": "neogleamz"
-  }
-}
+  };
+};
