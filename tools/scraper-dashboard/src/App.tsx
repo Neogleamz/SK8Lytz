@@ -339,10 +339,28 @@ function App() {
 
   return (
     <div className="dashboard-container">
-      <header className="header" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div style={{width: '100%'}}>
+      <header className="header" style={{ alignItems: 'center', flexWrap: 'nowrap', display: 'flex', justifyContent: 'space-between' }}>
+        <div>
           <h1 className="title">SK8Lytz Global Extraction Pipeline</h1>
           <p style={{marginTop: 0, color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Decoupled 6-Phase Micro-Scraper Architecture</p>
+        </div>
+        <div className="daemon-status-header" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+           <div style={{ background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px', border: `1px solid ${status?.currentTarget?.includes('Operator: online') ? '#4caf50' : 'rgba(255,255,255,0.1)'}` }}>
+              <div className={`status-dot ${status?.currentTarget?.includes('Operator: online') ? 'online' : 'offline'}`}></div>
+              <span style={{color: 'var(--text-secondary)'}}>Operator:</span> <strong style={{color: status?.currentTarget?.includes('Operator: online') ? '#4caf50' : 'var(--text-secondary)'}}>{status?.currentTarget?.includes('Operator: online') ? 'ONLINE' : 'OFFLINE'}</strong>
+           </div>
+           <div style={{ background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px', border: `1px solid ${status?.currentTarget?.includes('Indexer: online') ? '#ff5a00' : 'rgba(255,255,255,0.1)'}` }}>
+              <div className={`status-dot ${status?.currentTarget?.includes('Indexer: online') ? 'online' : 'offline'}`} style={{ background: status?.currentTarget?.includes('Indexer: online') ? '#ff5a00' : '', boxShadow: status?.currentTarget?.includes('Indexer: online') ? '0 0 8px #ff5a00' : '' }}></div>
+              <span style={{color: 'var(--text-secondary)'}}>Indexer:</span> <strong style={{color: status?.currentTarget?.includes('Indexer: online') ? '#ff5a00' : 'var(--text-secondary)'}}>{status?.currentTarget?.includes('Indexer: online') ? 'ONLINE' : 'OFFLINE'}</strong>
+           </div>
+           <div style={{ background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px', opacity: 0.5 }}>
+              <div className="status-dot offline"></div>
+              <span style={{color: 'var(--text-secondary)'}}>Specialists:</span> <strong>MOCKED</strong>
+           </div>
+           <div style={{ background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px', opacity: 0.5 }}>
+              <div className="status-dot offline"></div>
+              <span style={{color: 'var(--text-secondary)'}}>Photographer:</span> <strong>MOCKED</strong>
+           </div>
         </div>
       </header>
 
@@ -518,28 +536,6 @@ function App() {
                {activeTab === 'phase5' && <p>A high-throughput media engine mapping Google Place photos and social gallery artifacts directly into our automated WebP CDN to power client-side mobile rendering.</p>}
              </div>
              
-             <div className="panel queue-panel" style={{marginTop: '2rem'}}>
-                 <h2 className="panel-header">Daemon Network Status</h2>
-                 <p className="text-secondary" style={{fontSize: '0.8rem', paddingBottom:'0.5rem'}}>Master Diagnostic Matrix</p>
-                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'var(--surface-highlight)', borderRadius: '8px' }}>
-                       <span>Operator Daemon:</span>
-                       <strong style={{ color: status?.currentTarget?.includes('Operator: online') ? '#4caf50' : '#ff5a00' }}>{status?.currentTarget?.includes('Operator: online') ? 'ONLINE' : 'OFFLINE'}</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'var(--surface-highlight)', borderRadius: '8px' }}>
-                       <span>Indexer Daemon:</span>
-                       <strong style={{ color: status?.currentTarget?.includes('Indexer: online') ? '#4caf50' : '#ff5a00' }}>{status?.currentTarget?.includes('Indexer: online') ? 'ONLINE' : 'OFFLINE'}</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', opacity: 0.5 }}>
-                       <span>Specialist Daemon:</span>
-                       <strong>MOCKED</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', opacity: 0.5 }}>
-                       <span>Photographer Daemon:</span>
-                       <strong>MOCKED</strong>
-                    </div>
-                 </div>
-              </div>
           </div>
         )}
 
