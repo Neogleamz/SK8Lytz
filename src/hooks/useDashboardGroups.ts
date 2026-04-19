@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import { AppLogger } from '../services/AppLogger';
+import DeviceRepository from '../services/DeviceRepository';
 import { supabase } from '../services/supabaseClient';
 import type { CustomGroup, DeviceSettings, GroupModalState } from '../types/dashboard.types';
 import { getDefaultDeviceName, getDefaultGroupName } from '../utils/NamingUtils';
@@ -93,6 +94,8 @@ export function useDashboardGroups({
   deregisterDevice,
 }: UseDashboardGroupsOptions): UseDashboardGroupsResult {
 
+  const repo = DeviceRepository.getInstance();
+
   // ─── Group state (derived from useRegistration, kept as display SSOT) ─────
   const [customGroups, setCustomGroups] = useState<CustomGroup[]>([]);
   /** Stable ref so callbacks (e.g. handleRegistrationComplete) always read current groups. */
@@ -166,7 +169,8 @@ export function useDashboardGroups({
       });
 
       if (configsChanged) {
-        AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(nextConfigs)).catch(() => {});
+        // Persist via DeviceRepository singleton (canonical write path)
+        repo.setConfigs(nextConfigs).catch(() => {});
         return nextConfigs;
       }
       return prevConfigs;
@@ -178,11 +182,12 @@ export function useDashboardGroups({
   // ─── Device configs — 0x63 probe results + user overrides ────────────────
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, DeviceSettings>>({});
 
-  // Load persisted configs from AsyncStorage on mount
+  // Load persisted configs from DeviceRepository on mount
   useEffect(() => {
-    AsyncStorage.getItem('@Sk8lytz_device_configs').then(raw => {
-      if (raw) {
-        try { setDeviceConfigs(JSON.parse(raw)); } catch (e) { AppLogger.warn('[Groups] Failed to parse device configs', { error: String(e) }); }
+    repo.initialize().then(() => {
+      const configs = repo.getConfigs();
+      if (Object.keys(configs).length > 0) {
+        setDeviceConfigs(configs);
       }
     }).catch(() => {});
   }, []);
@@ -383,9 +388,9 @@ export function useDashboardGroups({
     if (didUpdateProcessed)
       storagePromises.push(AsyncStorage.setItem('@Sk8lytz_processed_devices', JSON.stringify(processed)));
     if (didUpdateGroups)
-      storagePromises.push(AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(updatedGroups)));
+      storagePromises.push(repo.setGroups(updatedGroups));
     if (didUpdateConfigs)
-      storagePromises.push(AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs)));
+      storagePromises.push(repo.setConfigs(configs));
     if (storagePromises.length > 0) await Promise.all(storagePromises);
 
     if (didUpdateGroups) {
@@ -494,22 +499,19 @@ export function useDashboardGroups({
   const _scrubGhostGroupFromLocal = async (groupToDelete: CustomGroup) => {
     if (groupToDelete.deviceIds) {
       try {
-        const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
-        if (stored) {
-          const configs = JSON.parse(stored);
-          let configsChanged = false;
-          for (const mac of groupToDelete.deviceIds) {
-            if (configs[mac]) {
-              delete configs[mac].groupId;
-              delete configs[mac].groupName;
-              configs[mac].grouped = false;
-              configsChanged = true;
-            }
+        const configs = { ...repo.getConfigs() };
+        let configsChanged = false;
+        for (const mac of groupToDelete.deviceIds) {
+          if (configs[mac]) {
+            delete configs[mac].groupId;
+            delete configs[mac].groupName;
+            configs[mac].grouped = false;
+            configsChanged = true;
           }
-          if (configsChanged) {
-            await AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs));
-            setDeviceConfigs(configs);
-          }
+        }
+        if (configsChanged) {
+          await repo.setConfigs(configs);
+          setDeviceConfigs(configs);
         }
       } catch (e) {
         AppLogger.warn('Failed to scrub ghost group from device configs', { error: String(e) });
@@ -518,10 +520,10 @@ export function useDashboardGroups({
   };
 
   const _purgeGroupFromState = async (id: string) => {
-    // Permanently remove the group from state and storage
+    // Permanently remove the group from state and storage via DeviceRepository
     const updatedGroups = customGroupsRef.current.filter(g => g.id !== id);
     setCustomGroups(updatedGroups);
-    AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
+    repo.setGroups(updatedGroups).catch(() => {});
     
     if (supabase) {
       try {
@@ -564,8 +566,7 @@ export function useDashboardGroups({
     }
 
     try {
-      const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
-      const configs = stored ? JSON.parse(stored) : {};
+      const configs = { ...repo.getConfigs() };
       let configsChanged = false;
 
       // Removed devices: scrub their configs
@@ -583,7 +584,7 @@ export function useDashboardGroups({
 
       // Added/preserved devices: enforce group membership
       for (const mac of deviceIds) {
-        if (!configs[mac]) configs[mac] = {};
+        if (!configs[mac]) configs[mac] = {} as DeviceSettings;
         configs[mac] = { ...configs[mac], groupId: finalGroupId, groupName: name, grouped: true };
         configsChanged = true;
         const rd = registeredDevices.find(r => r.device_mac.toUpperCase() === mac.toUpperCase());
@@ -591,7 +592,7 @@ export function useDashboardGroups({
       }
 
       if (configsChanged) {
-        await AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs));
+        await repo.setConfigs(configs);
         setDeviceConfigs(configs);
       }
     } catch (e) {

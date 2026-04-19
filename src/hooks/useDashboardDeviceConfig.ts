@@ -7,9 +7,9 @@
  *
  * Extracted from DashboardScreen.tsx (chore/refactor-dashboard-monolith).
  */
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MutableRefObject } from 'react';
 import { AppLogger } from '../services/AppLogger';
+import DeviceRepository from '../services/DeviceRepository';
 import type { DeviceSettings } from '../types/dashboard.types';
 
 interface Group {
@@ -112,17 +112,15 @@ export function useDashboardDeviceConfig({
 
     setUpdateTrigger(prev => prev + 1);
 
-    // ── AsyncStorage persist ───────────────────────────────────────────────
+    // ── Device config persist via DeviceRepository ───────────────────────────────────────
     try {
-      const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
-      const configs = stored ? JSON.parse(stored) : {};
+      const repo = DeviceRepository.getInstance();
       // USER-EXPLICIT SAVE: stamp with current timestamp so this config has
       // the highest priority in the local/cloud merge arbitration.
       // The userConfiguredAt field prevents cloud sync from ever overwriting
       // these settings unless the user explicitly saves again.
       const userConfiguredAt = new Date().toISOString();
-      configs[targetMac] = { ...settings, groupId: finalGroupId, userConfiguredAt };
-      await AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs));
+      await repo.updateConfig(targetMac, { ...settings, groupId: finalGroupId, userConfiguredAt });
 
 
       AppLogger.log('HARDWARE_CONFIG_CHANGED', {

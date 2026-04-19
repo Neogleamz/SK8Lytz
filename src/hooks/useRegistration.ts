@@ -2,22 +2,25 @@
  * useRegistration.ts — SK8Lytz Device Ownership Registry
  *
  * Local-first architecture:
- *   1. On mount → load from AsyncStorage (instant, no network needed)
- *   2. If online → fetch from Supabase, overwrite local cache
- *   3. All writes → AsyncStorage first, then Supabase (or queue if offline)
- *   4. On reconnect → flush pending offline registrations
+ *   1. On mount → load from DeviceRepository (instant, no network needed)
+ *   2. If online → DeviceRepository syncs from Supabase
+ *   3. All writes → DeviceRepository (AsyncStorage first, then Supabase)
+ *   4. On reconnect → DeviceRepository flushes pending offline registrations
+ *
+ * Phase 3 refactor: This hook is now a thin React facade over DeviceRepository.
+ * It maintains its own React state for rendering, but delegates all persistence
+ * to the singleton DeviceRepository service.
  *
  * A "registered device" means a specific BLE controller MAC address is
  * associated with a Supabase user account. This is soft-ownership (no
  * hardware binding is possible with Zengge controllers).
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { AppLogger } from '../services/AppLogger';
-import { supabase } from '../services/supabaseClient';
+import DeviceRepository from '../services/DeviceRepository';
 import { getDefaultDeviceName } from '../utils/NamingUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -56,12 +59,6 @@ export type ClaimStatus =
   | 'claimed_by_other'    // Row exists, different user — cannot claim
   | 'offline_unknown';    // No network — cannot verify
 
-const LOCAL_KEY        = '@Sk8lytz_registered_devices';
-const PENDING_SYNC_KEY = '@Sk8lytz_pending_sync';
-// Tombstone: MACs deleted by the user. syncFromCloud filters these out to prevent
-// resurrection when a Supabase DELETE is silently blocked by RLS or network lag.
-const DELETED_MACS_KEY = '@Sk8lytz_deleted_macs';
-
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
@@ -69,340 +66,80 @@ export function useRegistration() {
   const [registeredDevices, setRegisteredDevices] = useState<RegisteredDevice[]>([]);
   const [isLoading, setIsLoading]                 = useState(true);
   const [hasPendingSync, setHasPendingSync]       = useState(false);
-  const isSyncing = useRef(false);
 
-  // ── Boot: load local cache, then sync from Supabase ─────────────────────────
+  const repo = DeviceRepository.getInstance();
+
+  // ── Boot: initialize repo, load local, then sync from cloud ─────────────────
   useEffect(() => {
-    loadLocal().then(() => syncFromCloud());
-  }, []);
-
-  const loadLocal = async () => {
-    try {
-      const raw = await AsyncStorage.getItem(LOCAL_KEY);
-      if (raw) {
-        setRegisteredDevices(JSON.parse(raw));
-      }
-    } catch (e) {
-      AppLogger.warn('[Registration] Local load failed:', e);
-    } finally {
+    const boot = async () => {
+      await repo.initialize();
+      setRegisteredDevices(repo.getDevices());
       setIsLoading(false);
-    }
-  };
 
-  const syncFromCloud = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('registered_devices')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('registered_at', { ascending: true });
-
-      if (error) throw error;
-      if (!data) return;
-
-      // ── TOMBSTONE FILTER ─────────────────────────────────────────────────────
-      // MACs that were explicitly deleted by the user are tracked in DELETED_MACS_KEY.
-      // Even if the Supabase DELETE was silently blocked by RLS or is still in-flight,
-      // we must NOT allow the cloud row to resurrect a locally-deleted device.
-      const deletedRaw = await AsyncStorage.getItem(DELETED_MACS_KEY);
-      const deletedMacs: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
-      const cloudRows = data.filter((row: any) => !deletedMacs.includes(row.device_mac?.toUpperCase?.()));
-      if (cloudRows.length < data.length) {
-        AppLogger.warn('[Registration] syncFromCloud tombstone filtered devices', { skipped: data.length - cloudRows.length, tombstoned: deletedMacs });
-      }
-
-      // ── LOCAL-FIRST SMART MERGE ───────────────────────────────────────────────
-      const localRaw = await AsyncStorage.getItem(LOCAL_KEY);
-      const localDevices: RegisteredDevice[] = localRaw ? JSON.parse(localRaw) : [];
-
-      const merged: RegisteredDevice[] = cloudRows.map((row: Record<string, any>) => {
-        const cloud = { ...row, is_pending_sync: false } as RegisteredDevice;
-        const local = localDevices.find(
-          l => l.device_mac.toUpperCase() === cloud.device_mac.toUpperCase()
-        );
-
-        // No local record — accept cloud as-is (fresh install path)
-        if (!local) return cloud;
-
-        // If local has a pending_sync flag it means we have unsaved local changes
-        // — don't let cloud overwrite hardware fields until flush completes
-        const localHasPendingChanges = !!local.is_pending_sync;
-        const localHasValidPoints    = (local.led_points ?? 0) > 0;
-        const localHasValidSegments  = (local.segments ?? 0) > 0;
-        const localHasValidIcType    = local.ic_type && local.ic_type !== 'UNKNOWN' && local.ic_type !== 'WS2812B';
-        const localHasValidSorting   = local.color_sorting && local.color_sorting !== 'UNKNOWN';
-
-        return {
-          ...cloud,
-          // Hardware specs: local wins when it has valid data or pending changes
-          led_points:    (localHasPendingChanges || localHasValidPoints)    ? local.led_points    : cloud.led_points,
-          segments:      (localHasPendingChanges || localHasValidSegments)  ? local.segments      : cloud.segments,
-          ic_type:       (localHasPendingChanges || localHasValidIcType)    ? local.ic_type       : cloud.ic_type,
-          color_sorting: (localHasPendingChanges || localHasValidSorting)   ? local.color_sorting : cloud.color_sorting,
-          // Metadata: cloud is authoritative (reflects cross-device group changes)
-          group_id:      cloud.group_id,
-          group_name:    cloud.group_name,
-          device_name:   cloud.device_name || local.device_name,
-          // Keep pending_sync false now that we've merged — flush will set it
-          is_pending_sync: localHasPendingChanges,
-        };
-      });
-
+      // Cloud sync — updates repo in-memory, then we pull fresh state
+      const merged = await repo.syncFromCloud();
       setRegisteredDevices(merged);
-      await AsyncStorage.setItem(LOCAL_KEY, JSON.stringify(merged));
+    };
+    boot();
 
-      // Flush any offline-queued registrations AFTER updating local state
-      await flushPendingSync(user.id);
-    } catch (e) {
-      AppLogger.warn('[Registration] Cloud sync failed (offline?):', e);
-    }
-  };
+    // Subscribe to repo changes (from other callers)
+    const unsub = repo.subscribe(() => {
+      setRegisteredDevices(repo.getDevices());
+    });
+    return unsub;
+  }, []);
 
 
   // ── Save (upsert) a device ───────────────────────────────────────────────────
   /**
    * Persists a device registration to local storage and Supabase.
-   * Uses "Hardened Column Mapping" to ensure only valid database schema fields
-   * are sent to Supabase, protecting against schema mismatch crashes.
-   * Auto-generates mandatory UI-required fields like 'id' and 'group_id'.
+   * Delegates to DeviceRepository for all persistence logic.
    */
   const saveRegisteredDevice = async (device: Partial<RegisteredDevice> & { device_mac: string }) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const now = new Date().toISOString();
-      // INVARIANT: always normalize MAC to uppercase to prevent case-mismatch split-brain
-      const normalizedMac = device.device_mac.toUpperCase();
-      const deviceId = device.id || `${normalizedMac.replace(/:/g, '')}-${user?.id?.slice(0, 8) || 'offline'}`;
-      const groupId = device.group_id || device.group_name?.toLowerCase().replace(/\s+/g, '-') || 'default-fleet';
-      
-      const fullDevice: RegisteredDevice = {
-        device_name: device.device_name || 'Unknown Device',
-        product_type: device.product_type || LOCAL_PRODUCT_CATALOG[0].id,
-        group_name: device.group_name || 'Default Fleet',
-        position: device.position || null,
-        ...device,
-        device_mac: normalizedMac,
-        id: deviceId,
-        group_id: groupId,
-        user_id: user?.id,
-        updated_at: now,
-        registered_at: device.registered_at || now,
-        is_pending_sync: false,
-      };
-
-      // 1. Write local immediately (offline-safe)
-      const current = await getLocalDevices();
-      const idx = current.findIndex(d => d.device_mac.toUpperCase() === normalizedMac);
-      if (idx >= 0) current[idx] = fullDevice;
-      else current.push(fullDevice);
-      await AsyncStorage.setItem(LOCAL_KEY, JSON.stringify(current));
-      setRegisteredDevices([...current]);
-
-        // 2. Try Supabase upsert - Explicitly pick valid columns
-        if (user) {
-          // PRE-FLIGHT: Ensure the group exists in 'registered_groups' to satisfy the 'registered_devices_group_id_fkey' constraint.
-          try {
-            await supabase.from('registered_groups').upsert({
-              id: fullDevice.group_id,
-              group_name: fullDevice.group_name || 'Default Fleet',
-              type: 'device-fleet',
-              user_id: user.id
-            } as any, { onConflict: 'id' } as any);
-          } catch (fkError) {
-            AppLogger.warn('[Registration] Could not establish group FK pre-flight:', fkError);
-          }
-
-          // ── SPREAD-IF-VALID: Only include hardware fields when they carry real data ──
-          // Using `|| 0` or `|| 'WS2812B'` defaults was overwriting valid Supabase rows
-          // with zeroed/unknown sentinel values every time the device was saved without
-          // a freshly probed hardware config attached. This permanently corrupted the DB.
-          // By omitting the key when value is zero/unknown, the upsert preserves the
-          // existing column value in the DB (partial-update semantics via ON CONFLICT DO UPDATE).
-          const validPoints   = fullDevice.led_points && fullDevice.led_points > 0   ? fullDevice.led_points   : undefined;
-          const validSegments = fullDevice.segments   && fullDevice.segments   > 0   ? fullDevice.segments     : undefined;
-          const validIcType   = fullDevice.ic_type    && fullDevice.ic_type !== 'UNKNOWN' ? fullDevice.ic_type : undefined;
-          const validSorting  = fullDevice.color_sorting && fullDevice.color_sorting !== 'UNKNOWN' ? fullDevice.color_sorting : undefined;
-
-          const dbRow = {
-            device_mac:      fullDevice.device_mac,
-            device_name:     fullDevice.device_name,
-            product_type:    fullDevice.product_type,
-            position:        fullDevice.position,
-            group_name:      fullDevice.group_name,
-            group_id:        fullDevice.group_id,
-            custom_name:     fullDevice.device_name,
-            user_id:         user.id,
-            id:              fullDevice.id || deviceId,
-            updated_at:      now,
-            registered_at:   fullDevice.registered_at,
-            rssi_at_register: fullDevice.rssi_at_register,
-            firmware_ver:    fullDevice.firmware_ver,
-            led_version:     fullDevice.led_version,
-            product_id:      fullDevice.product_id,
-            rf_mode:         fullDevice.rf_mode,
-            rf_paired_count: fullDevice.rf_paired_count,
-            // Hardware fields: only included when they have real values
-            ...(validPoints   !== undefined ? { points: validPoints,   led_points: validPoints }   : {}),
-            ...(validSegments !== undefined ? { segments: validSegments }                           : {}),
-            ...(validIcType   !== undefined ? { ic_type: validIcType,  strip_type: validIcType }   : {}),
-            ...(validSorting  !== undefined ? { color_sorting: validSorting, sorting: validSorting } : {}),
-          };
-
-          // Cast as `any` — dbRow contains valid DB columns (points, strip_type) that exist
-          // in the schema but the auto-generated Insert type doesn't perfectly capture.
-          const { error } = await supabase
-            .from('registered_devices')
-            .upsert(dbRow as any, { onConflict: 'user_id,device_mac' } as any);
-
-          if (error) throw error;
-        } else {
-        // No session — queue for later sync
-        await queuePendingSync(fullDevice);
-        setHasPendingSync(true);
-      }
-
-      return true;
+      const ok = await repo.saveDevice(device);
+      setRegisteredDevices(repo.getDevices());
+      if (!ok) setHasPendingSync(true);
+      return ok;
     } catch (e) {
-      AppLogger.warn('[Registration] Save failed, queuing offline:', e);
-      await queuePendingSync(device);
+      AppLogger.warn('[Registration] Save failed:', e);
       setHasPendingSync(true);
-      return false; // saved locally, pending cloud
+      return false;
     }
   };
 
   // ── Save multiple devices at once (first-time wizard) ───────────────────────
   const saveAllRegisteredDevices = useCallback(async (devices: RegisteredDevice[]): Promise<boolean> => {
-    let allOk = true;
-    for (const d of devices) {
-      const ok = await saveRegisteredDevice(d);
-      if (!ok) allOk = false;
-    }
-    return allOk;
-  }, [saveRegisteredDevice]);
+    const ok = await repo.saveAllDevices(devices);
+    setRegisteredDevices(repo.getDevices());
+    if (!ok) setHasPendingSync(true);
+    return ok;
+  }, []);
 
   // ── Check claim status of a specific device MAC ──────────────────────────────
   const checkDeviceClaimed = useCallback(async (
     deviceMac: string,
     fingerprint?: { firmwareVer?: number; ledVersion?: number; productId?: number }
   ): Promise<ClaimStatus> => {
-    try {
-      // 1. FAST PATH: Check local storage first. If we already hold it locally, it's ours.
-      const localDevices = await getLocalDevices();
-      if (localDevices.some(d => d.device_mac.toUpperCase() === deviceMac.toUpperCase())) {
-        return 'claimed_by_self';
-      }
-
-      // 2. NETWORK PATH: Check Supabase to see if someone else owns it
-      const { data: { user } } = await supabase.auth.getUser();
-
-      // Query DB for this device_mac
-      const { data, error } = await supabase
-        .from('registered_devices')
-        .select('user_id')
-        .ilike('device_mac', deviceMac)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (!data) {
-        // Try fingerprint fallback if MAC returned nothing
-        if (fingerprint?.firmwareVer && fingerprint?.productId) {
-          const { data: fpData } = await supabase
-            .from('registered_devices')
-            .select('user_id')
-            .eq('firmware_ver', fingerprint.firmwareVer)
-            .eq('product_id', fingerprint.productId)
-            .maybeSingle();
-          if (fpData) {
-            return fpData.user_id === user?.id ? 'claimed_by_self' : 'claimed_by_other';
-          }
-        }
-        return 'unclaimed';
-      }
-
-      return data.user_id === user?.id ? 'claimed_by_self' : 'claimed_by_other';
-    } catch (e) {
-      AppLogger.warn('[Registration] Claim check failed (offline?):', e);
-      return 'offline_unknown';
-    }
+    return repo.checkDeviceClaimed(deviceMac, fingerprint);
   }, []);
 
   // ── Deregister (release ownership) ───────────────────────────────────────────
   const deregisterDevice = useCallback(async (deviceMac: string): Promise<void> => {
-    // Normalize to uppercase — BLE MACs are always uppercase in this app.
-    const normalizedMac = deviceMac.toUpperCase();
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      // ── STEP 1: Write tombstone FIRST — prevents syncFromCloud resurrection
-      // even if the Supabase DELETE fails silently (e.g. RLS policy gap)
-      try {
-        const tombRaw = await AsyncStorage.getItem(DELETED_MACS_KEY);
-        const tomb: string[] = tombRaw ? JSON.parse(tombRaw) : [];
-        if (!tomb.includes(normalizedMac)) {
-          tomb.push(normalizedMac);
-          await AsyncStorage.setItem(DELETED_MACS_KEY, JSON.stringify(tomb));
-        }
-      } catch (_te) { /* tombstone write best-effort */ }
-
-      // ── STEP 2: Remove from local registered_devices (case-insensitive MAC filter)
-      const current = await getLocalDevices();
-      const filtered = current.filter(d => d.device_mac.toUpperCase() !== normalizedMac);
-      await AsyncStorage.setItem(LOCAL_KEY, JSON.stringify(filtered));
-      setRegisteredDevices(filtered);
-
-      // ── STEP 3: Scrub the hardware config entry so no zombie data remains
-      try {
-        const configsRaw = await AsyncStorage.getItem('@Sk8lytz_device_configs');
-        if (configsRaw) {
-          const configs = JSON.parse(configsRaw);
-          if (configs[normalizedMac]) {
-            delete configs[normalizedMac];
-            await AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs));
-          }
-        }
-      } catch (_ce) { /* best-effort config cleanup */ }
-
-      // ── STEP 4: Remove from Supabase with full diagnostic logging
-      if (user) {
-        AppLogger.warn('[Registration] DEREGISTER_ATTEMPT', { mac: normalizedMac, userId: user.id });
-        const { error, count } = await supabase
-          .from('registered_devices')
-          .delete({ count: 'exact' })
-          .eq('user_id', user.id)
-          .ilike('device_mac', normalizedMac); // Case-insensitive to handle mismatch between iOS/Android and DB
-
-        if (error) {
-          AppLogger.warn('[Registration] DB delete error (RLS?)', { mac: normalizedMac, error: error.message, code: error.code });
-          throw error;
-        }
-
-        AppLogger.warn('[Registration] DEREGISTER_RESULT', { mac: normalizedMac, rowsDeleted: count });
-
-        if (count === 0) {
-          // The database had 0 matches for ilike. The local tombstone will prevent resurrection.
-          AppLogger.warn('[Registration] Supabase DELETE matched 0 rows — RLS or truly deleted?', {
-            mac: normalizedMac, userId: user.id,
-          });
-        }
-      }
+      await repo.deleteDevice(deviceMac);
+      setRegisteredDevices(repo.getDevices());
     } catch (e: any) {
       AppLogger.warn('[Registration] Deregister failed:', e);
       Alert.alert('Delete Failed', `Could not remove device: ${e.message || String(e)}`);
-      // NOTE: We intentionally do NOT call syncFromCloud here because the tombstone
-      // above already prevents resurrection. Only revert local if user explicitly cancels.
     }
   }, []);
 
 
   // ── Swap positions of two paired devices ─────────────────────────────────────
   const swapDevicePositions = useCallback(async (mac1: string, mac2: string): Promise<void> => {
-    const current = await getLocalDevices();
-    const d1 = current.find(d => d.device_mac.toUpperCase() === mac1.toUpperCase());
-    const d2 = current.find(d => d.device_mac.toUpperCase() === mac2.toUpperCase());
+    const d1 = repo.findDevice(mac1);
+    const d2 = repo.findDevice(mac2);
     if (!d1 || !d2) return;
 
     // Swap positions
@@ -410,36 +147,18 @@ export function useRegistration() {
     d1.position = d2.position;
     d2.position = tmp;
 
-    // FIX: Use canonical NamingUtils format instead of `${productType} ${position}`
-    // which produced non-standard strings like "HALOZ Left" that never matched
-    // anything resolved via getDefaultDeviceName elsewhere in the app.
+    // FIX: Use canonical NamingUtils format
     d1.device_name = `${getDefaultDeviceName(d1.device_mac)}${d1.position ? ` ${d1.position}` : ''}`;
     d2.device_name = `${getDefaultDeviceName(d2.device_mac)}${d2.position ? ` ${d2.position}` : ''}`;
 
-    await saveRegisteredDevice(d1);
-    await saveRegisteredDevice(d2);
-  }, [saveRegisteredDevice]);
+    await repo.saveDevice(d1);
+    await repo.saveDevice(d2);
+    setRegisteredDevices(repo.getDevices());
+  }, []);
 
   // ── Check if user has ANY registered devices (cloud or local) ────────────────
   const hasCloudRegistrations = useCallback(async (): Promise<boolean> => {
-    try {
-      // 1. Always check local first because it reflects the true current state
-      const local = await getLocalDevices();
-      if (local.length > 0) return true;
-
-      // 2. Fallback to Supabase if local is empty (e.g., fresh install with existing cloud data)
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
-
-      const { count } = await supabase
-        .from('registered_devices')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-        
-      return (count ?? 0) > 0;
-    } catch {
-      return false;
-    }
+    return repo.hasRegistrations();
   }, []);
 
   // ── Migrate legacy local groups into registered_devices ──────────────────────
@@ -447,8 +166,11 @@ export function useRegistration() {
     allDevices: any[],
     deviceConfigs: Record<string, any>
   ): Promise<RegisteredDevice[]> => {
+    // Legacy migration path — builds RegisteredDevice objects from old AsyncStorage groups.
+    // DeviceRepository doesn't own this because it's a one-time migration helper.
     const migrated: RegisteredDevice[] = [];
     try {
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const raw = await AsyncStorage.getItem('@Sk8lytz_custom_groups');
       if (!raw) return migrated;
       const groups: any[] = JSON.parse(raw);
@@ -462,7 +184,7 @@ export function useRegistration() {
           const rd: RegisteredDevice = {
             device_mac:     mac,
             device_name:    config.name || device.name || mac,
-            product_type:   config.type || LOCAL_PRODUCT_CATALOG[0].id, // Local-first fallback: use first catalog entry
+            product_type:   config.type || LOCAL_PRODUCT_CATALOG[0].id,
             position:       config.name?.includes('Left') ? 'Left' :
                            config.name?.includes('Right') ? 'Right' : null,
             group_name:     group.name,
@@ -482,97 +204,11 @@ export function useRegistration() {
     return migrated;
   }, []);
 
-  // ── Internals ────────────────────────────────────────────────────────────────
-
-  const getLocalDevices = async (): Promise<RegisteredDevice[]> => {
-    try {
-      const raw = await AsyncStorage.getItem(LOCAL_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
-  };
-
-  const queuePendingSync = async (device: Partial<RegisteredDevice> & { device_mac: string }) => {
-    try {
-      const raw = await AsyncStorage.getItem(PENDING_SYNC_KEY);
-      const queue: RegisteredDevice[] = raw ? JSON.parse(raw) : [];
-      const idx = queue.findIndex(d => d.device_mac.toUpperCase() === device.device_mac.toUpperCase());
-      const marked: RegisteredDevice = { 
-        device_name: device.device_name || 'Unknown Device',
-        product_type: device.product_type || LOCAL_PRODUCT_CATALOG[0].id,
-        group_name: device.group_name || 'Default Fleet',
-        position: device.position || null,
-        group_id: device.group_id || 'default-fleet',
-        ...device, 
-        is_pending_sync: true 
-      };
-      if (idx >= 0) queue[idx] = marked; else queue.push(marked);
-      await AsyncStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(queue));
-    } catch (e) { AppLogger.warn('[Registration] Queue failed:', e); }
-  };
-
-  const flushPendingSync = async (userId: string) => {
-    if (isSyncing.current) return;
-    isSyncing.current = true;
-    try {
-      const raw = await AsyncStorage.getItem(PENDING_SYNC_KEY);
-      if (!raw) return;
-      const queue: RegisteredDevice[] = JSON.parse(raw);
-      if (queue.length === 0) return;
-
-      for (const device of queue) {
-        // PRE-FLIGHT: Ensure the group exists in 'registered_groups'
-        const groupId = device.group_id || device.group_name.toLowerCase().replace(/\s+/g, '-') || 'default-fleet';
-        try {
-          await supabase.from('registered_groups').upsert({
-            id: groupId,
-            group_name: device.group_name || 'Default Fleet',
-            type: 'device-fleet',
-            user_id: userId
-          } as any, { onConflict: 'id' } as any);
-        } catch (fkError) {
-          AppLogger.warn('[Registration] Flush pre-flight group FK error:', fkError);
-        }
-
-        const dbRow = {
-          device_mac:      device.device_mac,
-          device_name:     device.device_name,
-          product_type:    device.product_type,
-          position:        device.position,
-          group_id:        device.group_id || device.group_name.toLowerCase().replace(/\s+/g, '-') || 'default-fleet',
-          custom_name:     device.device_name,
-          points:          device.led_points || 0,
-          led_points:      device.led_points,
-          segments:        device.segments || 1,
-          ic_type:         device.ic_type,
-          strip_type:      device.ic_type || 'WS2812B',
-          color_sorting:   device.color_sorting,
-          sorting:         device.color_sorting || 'GRB',
-          rssi_at_register: device.rssi_at_register,
-          firmware_ver:    device.firmware_ver,
-          led_version:     device.led_version,
-          product_id:      device.product_id,
-          rf_mode:         device.rf_mode,
-          rf_paired_count: device.rf_paired_count,
-          user_id:         userId,
-          id:              device.id || `${device.device_mac.toUpperCase().replace(/:/g, '')}-${userId.slice(0, 8)}`,
-          updated_at:      new Date().toISOString(),
-          registered_at:   device.registered_at,
-        };
-
-        const { error } = await supabase
-          .from('registered_devices')
-          .upsert(dbRow as any, { onConflict: 'user_id,device_mac' } as any);
-        if (error) AppLogger.warn('[Registration] Flush error for ' + device.device_mac, { error: error.message });
-      }
-
-      await AsyncStorage.removeItem(PENDING_SYNC_KEY);
-      setHasPendingSync(false);
-    } catch (e) {
-      AppLogger.warn('[Registration] Flush failed:', e);
-    } finally {
-      isSyncing.current = false;
-    }
-  };
+  // ── Cloud re-sync (exposed for manual refresh) ──────────────────────────────
+  const syncFromCloud = useCallback(async () => {
+    const merged = await repo.syncFromCloud();
+    setRegisteredDevices(merged);
+  }, []);
 
   return {
     registeredDevices,
@@ -588,4 +224,3 @@ export function useRegistration() {
     syncFromCloud,
   };
 }
-
