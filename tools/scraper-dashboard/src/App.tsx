@@ -346,6 +346,106 @@ function App() {
         </div>
       </header>
 
+      {/* =========== OMNI CONTROL CENTER (GLOBAL CONTROLS) =========== */}
+      <div className="omni-control-center fade-in" style={{ marginBottom: '2rem', background: 'var(--surface)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--surface-highlight)' }}>
+         <div className="security-control-bar" style={{ background: 'transparent', padding: '0 0 1rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="security-label">
+                <span className="ghost-badge" style={{margin:0}}>🛡️ UNIVERSAL TACTICS & SPOOFING</span>
+            </div>
+            <div className="security-inputs" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                <div className="input-group-inline">
+                  <label>Base Cooldown (ms)</label>
+                  <input type="number" className="mini-input" value={cooldownBase} onChange={e => updateGlobalStrategy('cooldown_base_ms', parseInt(e.target.value))} />
+                </div>
+                <div className="input-group-inline">
+                  <label>Jitter Entropy (%)</label>
+                  <input type="number" className="mini-input" value={cooldownJitter} onChange={e => updateGlobalStrategy('cooldown_jitter_pct', parseInt(e.target.value))} />
+                </div>
+                <div className="v-divider" style={{ width: '1px', height: '20px', background: 'rgba(255, 255, 255, 0.1)' }}></div>
+                <label className="input-group-inline" style={{cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'}}>
+                  <span>Headless Stealth</span>
+                  <label className="switch mini">
+                    <input type="checkbox" checked={isHeadless} onChange={e => toggleHeadless(e.target.checked)} />
+                    <span className="slider round"></span>
+                  </label>
+                </label>
+                <label className="input-group-inline" style={{cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'}}>
+                  <span>Identity Spoofing</span>
+                  <label className="switch mini">
+                    <input type="checkbox" checked={identityRotation} onChange={e => updateGlobalStrategy('identity_rotation_enabled', e.target.checked)} />
+                    <span className="slider round"></span>
+                  </label>
+                </label>
+            </div>
+         </div>
+
+         <div className="omni-grid tri-grid" style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'minmax(350px, 1.5fr) 1fr 1fr' }}>
+            {/* Column 1: Intake & Daemon Master Power */}
+            <div className="master-power-panel">
+               <h3 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1rem', marginTop: 0 }}>Omni-Engine Power Grid</h3>
+               
+               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="btn-group-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <button className="btn btn-start" onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive} style={{ fontSize: '0.85rem', padding: '0.8rem' }}>
+                        {stateOverride.length > 0 ? `🚀 Seed ${stateOverride.join(', ')}` : '🌎 Global Intake (Ph1)'}
+                    </button>
+                    <button className="btn btn-stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive} style={{ fontSize: '0.85rem', padding: '0.8rem' }}>
+                      🛑 HALT INTAKE
+                    </button>
+                  </div>
+                  
+                  <div className="btn-group-vertical" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                     <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning} style={{ background: '#ff5a00', color: 'white', fontSize: '0.85rem', padding: '0.8rem' }}>
+                       🔥 BOOT DAEMONS (Ph2+)
+                     </button>
+                     <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning} style={{ fontSize: '0.85rem', padding: '0.8rem', border: '1px solid var(--danger)', color: 'var(--danger)', background: 'transparent' }}>
+                       🛑 DAEMON SHUTDOWN
+                     </button>
+                  </div>
+               </div>
+               
+               <div className="input-group-inline" style={{ background: 'rgba(0,0,0,0.2)', padding: '0.8rem', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>Global Throttle Interval (ms)</label>
+                  <input type="number" className="mini-input" style={{width: '90px'}} value={sleepInterval} onChange={e => updateGlobalStrategy('sleep_interval', parseInt(e.target.value))} />
+               </div>
+            </div>
+
+            {/* Column 2: Facility Switches */}
+            <div className="facility-switches-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+               <h3 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1rem', marginTop: 0 }}>1. Target Facilities</h3>
+               <div className="facility-switches">
+                  {['skatepark', 'roller_rink', 'skate_shop'].map(f => (
+                    <label key={f} className="switch-row mini" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem', padding: '4px 0' }}>
+                       <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{f.replace('_', ' ').toUpperCase()}</span>
+                       <label className="switch mini">
+                         <input type="checkbox" checked={targetFacilities.includes(f)} onChange={() => updateGlobalStrategy('facility', f)} />
+                         <span className="slider round"></span>
+                       </label>
+                    </label>
+                  ))}
+               </div>
+            </div>
+            
+            {/* Column 3: State Targets (Mini) */}
+            <div className="state-targets-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+               <h3 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1rem', marginTop: 0, display: 'flex', justifyContent: 'space-between' }}>
+                 2. Target States
+                 <span className="btn-mini" onClick={() => updateGlobalStrategy('state_override', 'ALL')} style={{ cursor: 'pointer' }}>ALL</span>
+               </h3>
+               <div className="state-pill-container" style={{maxHeight: '130px', overflowY: 'auto', gap: '4px', display: 'flex', flexWrap: 'wrap'}}>
+                  {US_STATES.map(st => {
+                     const count = harvestData.stateCounts[st] || 0;
+                     return (
+                       <button key={st} className={`state-pill mini ${stateOverride.includes(st) ? 'active' : ''}`} onClick={() => updateGlobalStrategy('state_override', st)} style={{ padding: '4px 8px', fontSize: '0.7rem', margin: '2px', background: stateOverride.includes(st) ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)', color: stateOverride.includes(st) ? '#000' : '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer' }}>
+                         {st} {count > 0 && <span className="pill-dot" style={{display:'inline-block', width:'6px', height:'6px', background:'var(--success)', borderRadius:'50%', marginLeft:'4px'}}></span>}
+                       </button>
+                     )
+                  })}
+               </div>
+            </div>
+         </div>
+      </div>
+
       {/* =========== 6-PHASE UNIFORM PIPELINE GRID =========== */}
       <div className="pipeline-grid fade-in">
          {PIPELINE_PHASES.map((phase) => (
@@ -374,7 +474,6 @@ function App() {
       <div className="content-area fade-in">
         {/* =========== PHASE 1: GLOBAL STRATEGY & INTAKE =========== */}
         {activeTab === 'phase1' && (() => {
-          const totalNodes = Object.values(harvestData.stateCounts).reduce((a, b) => a + b, 0);
           return (
             <div className="tab-pane phase-1">
               <div className="explainer-block" style={{marginBottom: '1rem'}}>
@@ -383,71 +482,23 @@ function App() {
               <p>This engine interfaces directly with OpenStreetMap's Overpass API. It extracts raw GIS locations (longitude/latitude) and establishes baseline row injection into Supabase. Real data validation occurs downstream.</p>
               </div>
 
-              <div className="omni-grid tri-grid">
-                <div className="controls-section">
-                  <div className="panel intake-panel" style={{marginBottom: '1rem'}}>
-                    <h2 className="panel-header">Execution Matrix</h2>
-                    <div className="btn-group-vertical">
-                      <button className="btn btn-start" onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive}>
-                          {stateOverride.length > 0 ? `🚀 Seed ${stateOverride.join(', ')}` : '🌎 Global Harvest'}
-                      </button>
-                      <button className="btn btn-stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive}>
-                        🛑 STOP HARVEST
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="panel strategy-panel">
-                    <h2 className="panel-header">1. Target Facilities</h2>
-                    <div className="facility-switches">
-                       {['skatepark', 'roller_rink', 'skate_shop'].map(f => (
-                         <label key={f} className="switch-row mini">
-                            <span>{f.replace('_', ' ').toUpperCase()}</span>
-                            <label className="switch mini">
-                              <input type="checkbox" checked={targetFacilities.includes(f)} onChange={() => updateGlobalStrategy('facility', f)} />
-                              <span className="slider round"></span>
-                            </label>
-                         </label>
-                       ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="panel strategy-panel">
-                  <h2 className="panel-header">2. Pipeline Targets</h2>
-                  <div className="state-pill-container" style={{maxHeight: '400px'}}>
-                     <button className={`state-pill ${stateOverride.length === 0 ? 'active' : ''}`} onClick={() => updateGlobalStrategy('state_override', 'ALL')}>
-                       ALL STATES
-                     </button>
-                     {US_STATES.map(st => {
-                        const count = harvestData.stateCounts[st] || 0;
-                        return (
-                          <button key={st} className={`state-pill ${stateOverride.includes(st) ? 'active' : ''}`} onClick={() => updateGlobalStrategy('state_override', st)}>
-                            {st} {count > 0 && <span className="pill-dot"></span>}
-                          </button>
-                        )
-                     })}
-                  </div>
-                </div>
-
-                <div className="panel coverage-panel">
-                  <h2 className="panel-header">3. Intake Leaderboard</h2>
-                  <div className="coverage-list">
-                     {coverageStats.slice(0, 10).map(stat => {
-                        const enrichedPct = Math.min(100, Math.round((stat.enriched / stat.total) * 100) || 0);
-                        return (
-                          <div key={stat.state} className="coverage-item">
-                             <div className="coverage-meta">
-                                <strong>{stat.state}</strong>
-                                <span>{stat.total}</span>
-                             </div>
-                             <div className="coverage-progress-bg">
-                                <div className="progress-bar enriched" style={{width: `${enrichedPct}%`}}></div>
-                             </div>
-                          </div>
-                        );
-                     })}
-                  </div>
+              <div className="panel coverage-panel" style={{marginTop: '2rem'}}>
+                <h2 className="panel-header">GIS Intake Leaderboard (State Coverage)</h2>
+                <div className="coverage-list" style={{display: 'grid', gridTemplateColumns: 'minmax(250px, 1fr) minmax(250px, 1fr)', gap: '1rem'}}>
+                   {coverageStats.slice(0, 20).map(stat => {
+                      const enrichedPct = Math.min(100, Math.round((stat.enriched / stat.total) * 100) || 0);
+                      return (
+                        <div key={stat.state} className="coverage-item" style={{background: 'rgba(0,0,0,0.2)', padding:'10px', borderRadius:'8px'}}>
+                           <div className="coverage-meta" style={{marginBottom: '5px'}}>
+                              <strong>{stat.state}</strong>
+                              <span>{stat.total}</span>
+                           </div>
+                           <div className="coverage-progress-bg">
+                              <div className="progress-bar enriched" style={{width: `${enrichedPct}%`}}></div>
+                           </div>
+                        </div>
+                      );
+                   })}
                 </div>
               </div>
             </div>
@@ -466,81 +517,29 @@ function App() {
                {activeTab === 'phase4' && <p>Cluster of specialized scrapers (Instagram, Yelp API). Fetches live Vibe Ratings, user engagement reviews, and secondary source verifications.</p>}
                {activeTab === 'phase5' && <p>A high-throughput media engine mapping Google Place photos and social gallery artifacts directly into our automated WebP CDN to power client-side mobile rendering.</p>}
              </div>
-
-             {/* SHARED SECURITY CONTROL BAR */}
-            <div className="security-control-bar fade-in" style={{marginBottom: '1.5rem'}}>
-              <div className="security-label">
-                <span className="ghost-badge" style={{margin:0}}>🛡️ GLOBAL DAEMON TACTICS</span>
-              </div>
-              
-              <div className="security-inputs">
-                <div className="input-group-inline">
-                  <label>Base Cooldown</label>
-                  <input type="number" className="mini-input" value={cooldownBase} onChange={e => updateGlobalStrategy('cooldown_base_ms', parseInt(e.target.value))} />
-                </div>
-                <div className="input-group-inline">
-                  <label>Jitter</label>
-                  <input type="number" className="mini-input" value={cooldownJitter} onChange={e => updateGlobalStrategy('cooldown_jitter_pct', parseInt(e.target.value))} />
-                  <span>%</span>
-                </div>
-                
-                <div className="v-divider"></div>
-
-                <label className="security-switch">
-                  <span>Stealth Headless Mode</span>
-                  <label className="switch mini">
-                    <input type="checkbox" checked={isHeadless} onChange={e => toggleHeadless(e.target.checked)} />
-                    <span className="slider round"></span>
-                  </label>
-                </label>
-
-                <label className="security-switch">
-                  <span>Identity Rotation</span>
-                  <label className="switch mini">
-                    <input type="checkbox" checked={identityRotation} onChange={e => updateGlobalStrategy('identity_rotation_enabled', e.target.checked)} />
-                    <span className="slider round"></span>
-                  </label>
-                </label>
-              </div>
-            </div>
-
-            <div className="omni-grid" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
-              <div className="panel enrichment-panel">
-                 <h2 className="panel-header">Cluster Master Matrix</h2>
-                 <div className="btn-group">
-                   <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}>Boot PM2 Daemon Cluster</button>
-                   <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}>Emergency Halt All</button>
-                 </div>
-                 
-                 <div className="form-group" style={{marginTop: '1.5rem'}}>
-                    <label className="form-label">Global Throttle Sleep Interval (ms)</label>
-                    <input className="form-input" type="number" value={sleepInterval} onChange={e => updateGlobalStrategy('sleep_interval', parseInt(e.target.value))} />
-                 </div>
-              </div>
-
-              <div className="panel queue-panel">
+             
+             <div className="panel queue-panel" style={{marginTop: '2rem'}}>
                  <h2 className="panel-header">Daemon Network Status</h2>
-                 <p className="text-secondary" style={{fontSize: '0.8rem', paddingBottom:'0.5rem'}}>Targeting: NATIONWIDE | Pipeline Engine Status</p>
-                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                 <p className="text-secondary" style={{fontSize: '0.8rem', paddingBottom:'0.5rem'}}>Master Diagnostic Matrix</p>
+                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'var(--surface-highlight)', borderRadius: '8px' }}>
                        <span>Operator Daemon:</span>
                        <strong style={{ color: status?.currentTarget?.includes('Operator: online') ? '#4caf50' : '#ff5a00' }}>{status?.currentTarget?.includes('Operator: online') ? 'ONLINE' : 'OFFLINE'}</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'var(--surface-highlight)', borderRadius: '8px' }}>
                        <span>Indexer Daemon:</span>
                        <strong style={{ color: status?.currentTarget?.includes('Indexer: online') ? '#4caf50' : '#ff5a00' }}>{status?.currentTarget?.includes('Indexer: online') ? 'ONLINE' : 'OFFLINE'}</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', opacity: 0.5 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', opacity: 0.5 }}>
                        <span>Specialist Daemon:</span>
                        <strong>MOCKED</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.5 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', opacity: 0.5 }}>
                        <span>Photographer Daemon:</span>
                        <strong>MOCKED</strong>
                     </div>
                  </div>
               </div>
-            </div>
           </div>
         )}
 
