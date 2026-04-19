@@ -3,8 +3,7 @@ import { DeviceEventEmitter, Modal } from 'react-native';
 import PermissionsOnboardingScreen from '../../screens/Onboarding/PermissionsOnboardingScreen';
 import { AppLogger } from '../../services/AppLogger';
 
-export const SHOW_GLOBAL_PERMISSIONS_EVENT = 'SHOW_GLOBAL_PERMISSIONS_EVENT';
-export const GLOBAL_PERMISSIONS_CLOSED_EVENT = 'GLOBAL_PERMISSIONS_CLOSED_EVENT';
+import { SHOW_GLOBAL_PERMISSIONS_EVENT, GLOBAL_PERMISSIONS_CLOSED_EVENT } from '../../services/PermissionService';
 
 export function GlobalPermissionsModal() {
   const [visible, setVisible] = useState(false);

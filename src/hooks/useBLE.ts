@@ -46,7 +46,6 @@ export interface BluetoothLowEnergyApi {
   isBluetoothEnabled: boolean;
   setOnDataReceived: (callback: (deviceId: string, data: number[]) => void) => void;
   setOnHardwareProbed: (callback: (deviceId: string, config: any) => void) => void;
-  onDeviceRecovered?: (deviceId: string) => void;
   setOnDeviceRecovered: (callback: (deviceId: string) => void) => void;
   droppedOutDeviceIds: string[];
   setDroppedOutDeviceIds: React.Dispatch<React.SetStateAction<string[]>>;
@@ -68,8 +67,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
   const [connectedDevices, setConnectedDevices] = useState<Device[]>([]);
   const [isBluetoothSupported, setIsBluetoothSupported] = useState(Platform.OS !== 'web');
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState(Platform.OS === 'web');
-  const [dataReceivedCallback, setDataReceivedCallback] = useState<((deviceId: string, data: number[]) => void) | undefined>();
-  const [deviceRecoveredCallback, setDeviceRecoveredCallback] = useState<((deviceId: string) => void) | undefined>();
   const [droppedOutDeviceIds, setDroppedOutDeviceIds] = useState<string[]>([]);
   // ── Connection Gate Semaphore ──────────────────────────────────────────────
   // ALL BLE operations (scan, connect, disconnect, recovery) must acquire this
@@ -509,18 +506,14 @@ export default function useBLE(): BluetoothLowEnergyApi {
     disconnectFromDevice,
     isBluetoothSupported,
     isBluetoothEnabled,
-    onDataReceived: dataReceivedCallback,
     setOnDataReceived: (callback: (deviceId: string, data: number[]) => void) => { 
         dataReceivedCallbackRef.current = callback;
-        setDataReceivedCallback(() => callback);
     },
     setOnHardwareProbed: (callback: (deviceId: string, config: any) => void) => { 
         hardwareProbedCallbackRef.current = callback; 
     },
-    onDeviceRecovered: deviceRecoveredCallback,
     setOnDeviceRecovered: (callback: (deviceId: string) => void) => {
         deviceRecoveredCallbackRef.current = callback;
-        setDeviceRecoveredCallback(() => callback);
     },
     droppedOutDeviceIds,
     setDroppedOutDeviceIds,
@@ -537,8 +530,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
     scanner.pendingRegistrations,
     isBluetoothSupported,
     isBluetoothEnabled,
-    dataReceivedCallback,
-    deviceRecoveredCallback,
     droppedOutDeviceIds,
     autoRecovery.ghostedDeviceIds,
     bleGateState

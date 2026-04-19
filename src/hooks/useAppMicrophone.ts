@@ -10,8 +10,8 @@
  */
 import * as FileSystem from 'expo-file-system';
 import { AppLogger } from '../services/AppLogger';
-import { Audio } from 'expo-av';
-import { useEffect, useRef, useState } from 'react';
+import { useAudioRecorder, setAudioModeAsync, RecordingPresets } from 'expo-audio';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { Platform } from 'react-native';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import type { ModeType } from '../types/dashboard.types';
@@ -35,7 +35,11 @@ export function useAppMicrophone({
   micSource,
   isPoweredOn,
 }: UseAppMicrophoneParams) {
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const recorderConfig = useMemo(() => ({
+    ...RecordingPresets.LOW_QUALITY,
+    isMeteringEnabled: true,
+  }), []);
+  const recorder = useAudioRecorder(recorderConfig);
   const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
   const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -48,48 +52,18 @@ export function useAppMicrophone({
         if (!reG) return;
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
 
-      const { recording: newRecording } = await Audio.Recording.createAsync(
-        {
-          ...Audio.RecordingOptionsPresets.LOW_QUALITY,
-          isMeteringEnabled: true, // REQUIRED: enables stats.metering
-          android: {
-            ...Audio.RecordingOptionsPresets.LOW_QUALITY.android,
-            extension: '.m4a',
-            outputFormat: Audio.AndroidOutputFormat.MPEG_4,
-            audioEncoder: Audio.AndroidAudioEncoder.AAC,
-            sampleRate: 44100,
-            numberOfChannels: 1,
-            bitRate: 128000,
-          },
-          ios: {
-            ...Audio.RecordingOptionsPresets.LOW_QUALITY.ios,
-            extension: '.m4a',
-            outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
-            audioQuality: Audio.IOSAudioQuality.MIN,
-            sampleRate: 44100,
-            numberOfChannels: 1,
-            bitRate: 128000,
-            linearPCMBitDepth: 16,
-            linearPCMIsBigEndian: false,
-            linearPCMIsFloat: false,
-          },
-        },
-        null, // initialStatus
-        50   // progressUpdateIntervalMillis
-      );
-
-      await newRecording.setProgressUpdateInterval(50);
-      setRecording(newRecording);
+      await recorder.prepareToRecordAsync();
+      recorder.record();
 
       // Start magnitude stream
-      magnitudeInterval.current = setInterval(async () => {
+      magnitudeInterval.current = setInterval(() => {
         if (!writeToDevice) return;
-        const stats = await newRecording.getStatusAsync();
+        const stats = recorder.getStatus();
         if (stats.canRecord && stats.isRecording) {
           const metering = stats.metering ?? -160;
           // Map -60...0 to 0...1 for usable visualization
@@ -111,12 +85,11 @@ export function useAppMicrophone({
       clearInterval(magnitudeInterval.current);
       magnitudeInterval.current = null;
     }
-    if (recording) {
-      try {
-        await recording.stopAndUnloadAsync();
-      } catch (_e) { /* swallow — recording may already be stopped */ }
-      setRecording(null);
-    }
+    try {
+      if (recorder.isRecording) {
+        await recorder.stop();
+      }
+    } catch (_e) { /* swallow */ }
   };
 
   // Lifecycle: auto-start/stop recording based on Music mode + APP mic
@@ -134,5 +107,5 @@ export function useAppMicrophone({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeMode, micSource, isPoweredOn]);
 
-  return { audioMagnitude, recording };
+  return { audioMagnitude, recording: recorder.isRecording ? recorder : null };
 }

@@ -1,4 +1,4 @@
-import { Audio } from 'expo-av';
+import { requestRecordingPermissionsAsync, getRecordingPermissionsAsync } from 'expo-audio';
 import { Camera } from 'expo-camera';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
@@ -6,8 +6,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PermissionsAndroid, Platform, DeviceEventEmitter } from 'react-native';
 import { AppLogger } from './AppLogger';
 
-import { SHOW_GLOBAL_PERMISSIONS_EVENT, GLOBAL_PERMISSIONS_CLOSED_EVENT } from '../components/modals/GlobalPermissionsModal';
-
+export const SHOW_GLOBAL_PERMISSIONS_EVENT = 'SHOW_GLOBAL_PERMISSIONS_EVENT';
+export const GLOBAL_PERMISSIONS_CLOSED_EVENT = 'GLOBAL_PERMISSIONS_CLOSED_EVENT';
 export const openGlobalPermissionsModal = (): Promise<void> => {
   return new Promise((resolve) => {
     const listener = DeviceEventEmitter.addListener(GLOBAL_PERMISSIONS_CLOSED_EVENT, () => {
@@ -63,7 +63,7 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
         return status === 'granted';
       }
       case 'MIC': {
-        const { status } = await Audio.requestPermissionsAsync();
+        const { status } = await requestRecordingPermissionsAsync();
         return status === 'granted';
       }
       case 'LOCATION': {
@@ -116,7 +116,7 @@ const checkPermissionNative = async (type: PermissionType): Promise<boolean> => 
         return status === 'granted';
       }
       case 'MIC': {
-        const { status } = await Audio.getPermissionsAsync();
+        const { status } = await getRecordingPermissionsAsync();
         return status === 'granted';
       }
       case 'LOCATION': {
