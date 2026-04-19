@@ -68,8 +68,9 @@ export const GHOST = {
     let jitter = 35; // 35% Jitter
 
     if (config) {
-      // If dashboard has values, use them, otherwise use our optimized defaults
-      base = config.cooldown_base_ms || 30000;
+      // Clamp base between 5s and 120s to ensure performance
+      const dbBase = config.cooldown_base_ms || 30000;
+      base = Math.min(Math.max(dbBase, 5000), 120000);
       jitter = config.cooldown_jitter_pct || 35;
     }
 
