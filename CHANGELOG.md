@@ -1,9 +1,12 @@
-﻿## [1.12.3] - 2026-04-18
+## [1.12.4] - 2026-04-19
 
-### 🚀 Features
-- **Map Auto-Zoom**: Implemented dynamic geographic viewport scaling bounded to the Earth's curvature proxy. The Crew Hub map now flawlessly tweens its delta coordinates to accurately focus on the exact 20, 50, 100, and 250-mile discovery radius, falling back to a nationwide zoom when the toggle is cleared.
+### 🐛 Bug Fixes
+- **Data Sync Regression**: Resolved offline synchronization integrity regressions across the device and group pipelines, ensuring cloud connectivity does not unintentionally wipe locally cached devices or phantom groups.
+- **Pro Effects Controller Lock**: Enforced single MTU strict write constraint logic and abolished multi-packet BLE chunking payloads to rectify severe hardware-level protocol freezes.
 
 ---
+
+## [1.12.3] - 2026-04-18
 
 ## [1.12.2] - 2026-04-18
 
