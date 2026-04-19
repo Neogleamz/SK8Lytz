@@ -185,6 +185,30 @@ app.post('/stop', (req, res) => {
   });
 });
 
+app.post('/api/daemons/:name/start', (req, res) => {
+  const { name } = req.params;
+  console.log(`Commanding daemon start: scraper-${name}`);
+  exec(`pm2 start scraper-${name}`, { cwd: __dirname, windowsHide: true }, (err, stdout, stderr) => {
+     if (err) {
+        console.error(`Failed to start ${name}:`, err);
+        return res.status(500).json({ success: false, message: `Failed to start ${name}` });
+     }
+     res.json({ success: true, message: `${name} daemon started` });
+  });
+});
+
+app.post('/api/daemons/:name/stop', (req, res) => {
+  const { name } = req.params;
+  console.log(`Commanding daemon stop: scraper-${name}`);
+  exec(`pm2 stop scraper-${name}`, { cwd: __dirname, windowsHide: true }, (err, stdout, stderr) => {
+     if (err) {
+        console.error(`Failed to stop ${name}:`, err);
+        return res.status(500).json({ success: false, message: `Failed to stop ${name}` });
+     }
+     res.json({ success: true, message: `${name} daemon stopped` });
+  });
+});
+
 app.get('/config', async (req, res) => {
   const { data, error } = await supabase.from('scraper_config').select('*').eq('id', 1).single();
   if (error) return res.status(500).json({ error: error.message });

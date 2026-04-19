@@ -260,6 +260,15 @@ function App() {
   const handleSysStart = async () => { await fetch(`${API_BASE}/start`, { method: 'POST' }); fetchSystemStatus(); };
   const handleSysStop = async () => { await fetch(`${API_BASE}/stop`, { method: 'POST' }); fetchSystemStatus(); };
   
+  const triggerSpecificDaemon = async (name: string, action: 'start' | 'stop') => {
+    try {
+      await fetch(`${API_BASE}/api/daemons/${name}/${action}`, { method: 'POST' });
+      fetchSystemStatus();
+    } catch (e) {
+      alert(`Failed to ${action} ${name} daemon.`);
+    }
+  };
+  
   const toggleHeadless = async (newVal: boolean) => {
     setIsHeadless(newVal);
     await fetch(`${API_BASE}/api/headless`, {
@@ -536,6 +545,81 @@ function App() {
                {activeTab === 'phase5' && <p>A high-throughput media engine mapping Google Place photos and social gallery artifacts directly into our automated WebP CDN to power client-side mobile rendering.</p>}
              </div>
              
+             {activeTab === 'phase2' && (
+                <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
+                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#8a2be2' }}>{status?.pendingCount || 0}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>PENDING</div>
+                   </div>
+                   <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
+                      <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
+                         <button className="btn-mini" onClick={() => triggerSpecificDaemon('operator', 'start')} disabled={status?.currentTarget?.includes('Operator: online')} style={{ background: '#4caf50', color: '#000', border: 'none', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>▶ START OPERATOR</button>
+                         <button className="btn-mini" onClick={() => triggerSpecificDaemon('operator', 'stop')} disabled={!status?.currentTarget?.includes('Operator: online')} style={{ background: 'transparent', color: 'var(--danger)', border: '1px solid var(--danger)', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>■ STOP</button>
+                      </div>
+                      {status?.currentTarget?.includes('Operator: online') && <div className="flow-animation"></div>}
+                   </div>
+                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#5d78ff' }}>{status?.identityCount || 0}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>IDENTIFIED</div>
+                   </div>
+                </div>
+             )}
+
+             {activeTab === 'phase3' && (
+                <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
+                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#5d78ff' }}>{status?.identityCount || 0}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>IDENTIFIED</div>
+                   </div>
+                   <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
+                      <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
+                         <button className="btn-mini" onClick={() => triggerSpecificDaemon('indexer', 'start')} disabled={status?.currentTarget?.includes('Indexer: online')} style={{ background: '#4caf50', color: '#000', border: 'none', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>▶ START DETECTIVE</button>
+                         <button className="btn-mini" onClick={() => triggerSpecificDaemon('indexer', 'stop')} disabled={!status?.currentTarget?.includes('Indexer: online')} style={{ background: 'transparent', color: 'var(--danger)', border: '1px solid var(--danger)', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>■ STOP</button>
+                      </div>
+                      {status?.currentTarget?.includes('Indexer: online') && <div className="flow-animation"></div>}
+                   </div>
+                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ff5a00' }}>{status?.indexedCount || 0}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>INDEXED</div>
+                   </div>
+                </div>
+             )}
+
+             {activeTab === 'phase4' && (
+                <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', opacity: 0.5 }}>
+                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ff5a00' }}>{status?.indexedCount || 0}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>INDEXED</div>
+                   </div>
+                   <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
+                      <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
+                         <button className="btn-mini" disabled style={{ background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--text-secondary)', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold' }}>MOCKED</button>
+                      </div>
+                   </div>
+                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ffb300' }}>{status?.enrichedCount || 0}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>ENRICHED</div>
+                   </div>
+                </div>
+             )}
+
+             {activeTab === 'phase5' && (
+                <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', opacity: 0.5 }}>
+                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ffb300' }}>{status?.enrichedCount || 0}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>ENRICHED</div>
+                   </div>
+                   <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
+                      <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
+                         <button className="btn-mini" disabled style={{ background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--text-secondary)', padding: '6px 15px', fontSize: '0.8rem', fontWeight: 'bold' }}>MOCKED</button>
+                      </div>
+                   </div>
+                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#e91e63' }}>{status?.mediaReadyCount || 0}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>MEDIA_READY</div>
+                   </div>
+                </div>
+             )}
           </div>
         )}
 

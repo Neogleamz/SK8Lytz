@@ -1011,3 +1011,17 @@ input:checked + .slider:before {
 
 .filter-dropdown option { background-color: #1e1e1e; color: #fff; }
 
+
+.flow-animation {
+  position: absolute;
+  top: 0; left: 0; height: 100%;
+  background: var(--primary-color);
+  width: 20%;
+  animation: flowSlide 1.5s infinite linear;
+}
+@keyframes flowSlide {
+  0% { left: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
