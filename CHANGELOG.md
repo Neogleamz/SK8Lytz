@@ -299,6 +299,11 @@
 - chore(docs): standardize estimated time to completion across all remaining bucket list tasks
 # Changelog
 
+
+## [1.12.1] - 2026-04-18
+
+### Bug Fixes
+* **environment:** migrated \pp.json\ to dynamic \pp.config.js\ for secure Google Maps API key injection via \.env\ to resolve native MapView crashes on release builds.
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
@@ -441,4 +446,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Legacy Tools**: Retired the Simple Scanner, legacy DIY Builder, and Admin Hardware Tester in favor of consolidated modern modules.
 - **Stale Data**: Purged legacy 0x81 protocol commands and hardcoded product heuristics.
+
 
