@@ -109,7 +109,7 @@ class CrewService {
 
     const { data, error } = await supabase
       .from('crew_sessions')
-      .insert(insertData)
+      .insert(insertData as any)
       .select()
       .single();
 

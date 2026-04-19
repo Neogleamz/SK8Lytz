@@ -470,14 +470,10 @@ export function useDashboardGroups({
         { 
           text: "Forget Group Only", 
           onPress: async () => {
-            const devsToDelete = registeredDevices.filter(d => d.group_id === id);
-            for (const d of devsToDelete) {
-              await saveRegisteredDevice({
-                ...d, group_id: 'default-fleet', group_name: '', is_pending_sync: true,
-              });
-            }
+            // Phase 5: Atomic RPC-backed backend sync and instantaneous RAM cleanup
+            await repo.deleteGroup(id);
             await _scrubGhostGroupFromLocal(groupToDelete);
-            await _purgeGroupFromState(id);
+            closeGroupModal();
           }
         },
         {
@@ -488,8 +484,10 @@ export function useDashboardGroups({
             for (const d of devsToDelete) {
               await deregisterDevice(d.device_mac);
             }
+            // Phase 5: Atomic RPC-backed cleanup follows the device removal
+            await repo.deleteGroup(id);
             await _scrubGhostGroupFromLocal(groupToDelete);
-            await _purgeGroupFromState(id);
+            closeGroupModal();
           }
         }
       ]
@@ -519,30 +517,9 @@ export function useDashboardGroups({
     }
   };
 
-  const _purgeGroupFromState = async (id: string) => {
-    // Permanently remove the group from state and storage via DeviceRepository
-    const updatedGroups = customGroupsRef.current.filter(g => g.id !== id);
-    setCustomGroups(updatedGroups);
-    repo.setGroups(updatedGroups).catch(() => {});
-    
-    if (supabase) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const { error } = await supabase.from('registered_groups').delete().eq('id', id).eq('user_id', session.user.id);
-          if (error) AppLogger.warn('Failed to delete group from cloud', { error: error.message });
-        }
-      } catch (e) {
-        AppLogger.warn('Error scrubbing cloud group', { error: String(e) });
-      }
-    }
-    closeGroupModal();
-  };
-
   /**
    * Creates or renames a custom group. If renaming with zero devices, deletes
-   * the group. Persists group membership changes to AsyncStorage and Supabase
-   * via saveRegisteredDevice.
+   * the group. Persists group membership changes atomically via DeviceRepository RPC.
    */
   const saveGroup = async (name: string, deviceIds: string[]): Promise<void> => {
     let finalGroupId = `group-${Date.now()}`;
@@ -569,7 +546,11 @@ export function useDashboardGroups({
       const configs = { ...repo.getConfigs() };
       let configsChanged = false;
 
-      // Removed devices: scrub their configs
+      // Phase 5 RPC Call: Atomically write new configuration 
+      // (Handles both additions and removals dynamically)
+      await repo.saveGroupTransactional(finalGroupId, name, deviceIds);
+
+      // Local UI configs map cleanup (for disconnected state overlays)
       const removedIds = previousDeviceIds.filter(id => !deviceIds.includes(id));
       for (const mac of removedIds) {
         if (configs[mac]) {
@@ -578,22 +559,18 @@ export function useDashboardGroups({
           configs[mac].grouped = false;
           configsChanged = true;
         }
-        const rd = registeredDevices.find(r => r.device_mac.toUpperCase() === mac.toUpperCase());
-        if (rd) await saveRegisteredDevice({ ...rd, group_id: 'default-fleet', group_name: '', is_pending_sync: true });
       }
 
-      // Added/preserved devices: enforce group membership
       for (const mac of deviceIds) {
         if (!configs[mac]) configs[mac] = {} as DeviceSettings;
         configs[mac] = { ...configs[mac], groupId: finalGroupId, groupName: name, grouped: true };
         configsChanged = true;
-        const rd = registeredDevices.find(r => r.device_mac.toUpperCase() === mac.toUpperCase());
-        if (rd) await saveRegisteredDevice({ ...rd, group_id: finalGroupId, group_name: name, is_pending_sync: true });
       }
 
       if (configsChanged) {
         await repo.setConfigs(configs);
         setDeviceConfigs(configs);
+        closeGroupModal();
       }
     } catch (e) {
       AppLogger.warn('Failed to sync group cache changes', { error: String(e) });

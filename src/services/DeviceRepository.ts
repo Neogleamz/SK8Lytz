@@ -196,16 +196,26 @@ class DeviceRepository {
 
       // 4. Sync to Supabase
       if (user) {
-        // Pre-flight: ensure group FK exists
+        // Phase 5: Atomic group upsert via server-side RPC (single transaction)
         try {
-          await supabase.from('registered_groups').upsert({
-            id: fullDevice.group_id,
-            group_name: fullDevice.group_name || 'Default Fleet',
-            type: 'device-fleet',
-            user_id: user.id
-          } as any, { onConflict: 'id' } as any);
-        } catch (_fk) {
-          AppLogger.warn('[DeviceRepository] Group FK pre-flight failed:', _fk);
+          await supabase.rpc('upsert_group_with_devices', {
+            p_group_id:   fullDevice.group_id,
+            p_group_name: fullDevice.group_name || 'Default Fleet',
+            p_type:       'device-fleet',
+            p_device_ids: [deviceId],
+          });
+        } catch (_rpc) {
+          AppLogger.warn('[DeviceRepository] upsert_group_with_devices RPC failed, falling back:', _rpc);
+          try {
+            await supabase.from('registered_groups').upsert({
+              id: fullDevice.group_id,
+              group_name: fullDevice.group_name || 'Default Fleet',
+              type: 'device-fleet',
+              user_id: user.id
+            } as any, { onConflict: 'id' } as any);
+          } catch (_fk) {
+            AppLogger.warn('[DeviceRepository] Group FK fallback also failed:', _fk);
+          }
         }
 
         // Spread-if-valid: only include hardware fields with real data
@@ -362,23 +372,113 @@ class DeviceRepository {
   }
 
   /**
-   * Remove a group by ID from local state and cloud.
+   * Remove a group by ID from local state and cloud (atomic via RPC).
+   * Phase 5: Uses delete_group_cascade RPC to clear device group_ids and
+   * delete the group row in a single server-side transaction.
    */
   async deleteGroup(groupId: string): Promise<void> {
+    // 1. Remove group row
     this.groups = this.groups.filter(g => g.id !== groupId);
     await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch(() => {});
+
+    // 2. Clear group assignments from in-memory devices
+    let devicesChanged = false;
+    this.devices = this.devices.map(d => {
+      if (d.group_id === groupId) {
+        devicesChanged = true;
+        return { ...d, group_id: 'default-fleet', group_name: 'Default Fleet' };
+      }
+      return d;
+    });
+    if (devicesChanged) await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(this.devices));
+
+    // 3. Notify
     this._notifyListeners();
 
-    // Cloud cleanup
+    // Cloud cleanup via atomic RPC
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await supabase.from('registered_groups').delete()
-          .eq('id', groupId)
-          .eq('user_id', session.user.id);
-      }
+      const { error } = await supabase.rpc('delete_group_cascade', {
+        p_group_id: groupId,
+      });
+      if (error) throw error;
     } catch (e) {
-      AppLogger.warn('[DeviceRepository] Cloud group delete failed:', e);
+      AppLogger.warn('[DeviceRepository] delete_group_cascade RPC failed, falling back:', e);
+      // Graceful fallback: direct row delete (membership cleared on next sync)
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await supabase.from('registered_groups').delete()
+            .eq('id', groupId)
+            .eq('user_id', session.user.id);
+        }
+      } catch (fe) {
+        AppLogger.warn('[DeviceRepository] Cloud group delete fallback also failed:', fe);
+      }
+    }
+  }
+
+  /**
+   * Transactional group save: atomically upserts the group and bulk-assigns
+   * device membership in one RPC call (prevents partial-write corruption).
+   *
+   * Called by useDashboardGroups.saveGroup() for explicit group CRUD operations.
+   */
+  async saveGroupTransactional(
+    groupId: string,
+    groupName: string,
+    deviceMacs: string[],  // Array of MAC addresses (frontend convention)
+    type = 'device-fleet'
+  ): Promise<boolean> {
+    // 1. Update local group state immediately (optimistic)
+    const existingIdx = this.groups.findIndex(g => g.id === groupId);
+    const updatedGroup: CustomGroup = existingIdx >= 0
+      ? { ...this.groups[existingIdx], id: groupId, name: groupName, deviceIds: deviceMacs }
+      : { id: groupId, name: groupName, color: undefined, deviceIds: deviceMacs } as any;
+
+    if (existingIdx >= 0) this.groups[existingIdx] = updatedGroup;
+    else this.groups.push(updatedGroup);
+    await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch(() => {});
+
+    // In-memory mapping: convert frontend MAC addresses to Supabase registered_devices PKs
+    // AND update in-memory devices for immediate UI rendering.
+    const normalizedMacs = deviceMacs.map(m => m.toUpperCase());
+    let devicesChanged = false;
+    const dbDeviceIds: string[] = [];
+
+    this.devices = this.devices.map(d => {
+      const mac = d.device_mac.toUpperCase();
+      // Case A: Part of the new group
+      if (normalizedMacs.includes(mac)) {
+        if (d.id) dbDeviceIds.push(d.id);
+        if (d.group_id !== groupId || d.group_name !== groupName) {
+          devicesChanged = true;
+          return { ...d, group_id: groupId, group_name: groupName };
+        }
+      } 
+      // Case B: Booted out of this group
+      else if (d.group_id === groupId) {
+        devicesChanged = true;
+        return { ...d, group_id: 'default-fleet', group_name: 'Default Fleet' };
+      }
+      return d;
+    });
+
+    if (devicesChanged) await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(this.devices));
+    this._notifyListeners();
+
+    // 2. Cloud: atomic RPC transaction
+    try {
+      const { error } = await supabase.rpc('upsert_group_with_devices', {
+        p_group_id:   groupId,
+        p_group_name: groupName,
+        p_type:       type,
+        p_device_ids: dbDeviceIds,
+      });
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      AppLogger.warn('[DeviceRepository] saveGroupTransactional RPC failed:', e);
+      return false;
     }
   }
 
