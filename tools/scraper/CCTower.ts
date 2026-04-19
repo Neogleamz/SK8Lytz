@@ -80,7 +80,7 @@ async function fetchConfig() {
 
 app.get('/status', async (req, res) => {
   // Let's use PM2 to check if the scrapers are actually running online
-  exec('pm2 jlist', async (err, stdout) => {
+  exec('pm2 jlist', { windowsHide: true }, async (err, stdout) => {
     let running = false;
     let operatorStatus = 'Offline';
     let indexerStatus = 'Offline';
@@ -128,13 +128,24 @@ app.get('/status', async (req, res) => {
       .select('*', { count: 'exact', head: true })
       .eq('verification_status', 'INDEXED');
 
+    const { count: enrichedCount } = await supabase
+      .from('skate_spots')
+      .select('*', { count: 'exact', head: true })
+      .eq('verification_status', 'ENRICHED');
+      
+    const { count: mediaReadyCount } = await supabase
+      .from('skate_spots')
+      .select('*', { count: 'exact', head: true })
+      .eq('verification_status', 'MEDIA_READY');
+
     res.json({
       isRunning: running,
       isHarvestingActive,
       isHeadless,
       currentTarget: `Operator: ${operatorStatus} | Indexer: ${indexerStatus}`,
       processedCount: totalProcessed || 0,
-      enrichedCount: totalIdentified || 0, // Legacy
+      enrichedCount: enrichedCount || 0,
+      mediaReadyCount: mediaReadyCount || 0,
       verifiedCount: totalVerified || 0,
       
       // New Micro-Scraper Metrics
@@ -152,7 +163,7 @@ app.get('/status', async (req, res) => {
 
 app.post('/start', (req, res) => {
   console.log('Orchestrating micro-scrapers start...');
-  exec('pm2 start ecosystem.config.js --only scraper-operator,scraper-indexer', { cwd: __dirname }, (err, stdout, stderr) => {
+  exec('pm2 start ecosystem.config.js --only scraper-operator,scraper-indexer', { cwd: __dirname, windowsHide: true }, (err, stdout, stderr) => {
      if (err) {
         console.error('Failed to start scrapers cluster:', err);
         return res.status(500).json({ success: false, message: 'Start failed', error: err.message });
@@ -164,7 +175,7 @@ app.post('/start', (req, res) => {
 
 app.post('/stop', (req, res) => {
   console.log('Orchestrating micro-scrapers stop...');
-  exec('pm2 stop scraper-operator scraper-indexer', { cwd: __dirname }, (err, stdout, stderr) => {
+  exec('pm2 stop scraper-operator scraper-indexer', { cwd: __dirname, windowsHide: true }, (err, stdout, stderr) => {
      if (err) {
         console.error('Failed to stop scrapers cluster:', err);
         return res.status(500).json({ success: false, message: 'Stop failed', error: err.message });
@@ -373,3 +384,4 @@ app.get('/api/stats/coverage', async (req, res) => {
 app.listen(5999, () => {
   console.log('📡 CCTower API listening on port 5999');
 });
+

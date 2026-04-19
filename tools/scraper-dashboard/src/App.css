@@ -502,36 +502,134 @@ body {
   font-weight: 500;
 }
 
-/* --- Navigation & Tabs --- */
-.tab-bar {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
+/* --- 6-Phase Pipeline Layout --- */
+.pipeline-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin: 2rem 0;
 }
 
-.tab-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 1.1rem;
-  font-weight: 600;
+.pipeline-card {
+  background: var(--surface);
+  border: 1px solid var(--surface-highlight);
+  border-radius: 12px;
+  padding: 15px;
   cursor: pointer;
-  padding: 0.5rem 1rem;
-  border-bottom: 3px solid transparent;
-  transition: all 0.2s ease-in-out;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  min-height: 140px;
 }
 
-.tab-btn:hover {
-  color: var(--text-primary);
+.pipeline-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0));
+  pointer-events: none;
 }
 
-.tab-btn.active {
-  color: var(--primary-color);
-  border-bottom: 3px solid var(--primary-color);
+.pipeline-card:hover {
+  transform: translateY(-4px);
+  background: var(--surface-highlight);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+}
+
+.pipeline-card.active {
+  background: rgba(255,255,255,0.05);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.1), 0 12px 24px rgba(0,0,0,0.6);
+  transform: translateY(-2px);
+}
+
+.pipeline-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.phase-id {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  font-weight: 800;
+}
+
+.pipeline-card h3 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  letter-spacing: -0.5px;
+}
+
+.phase-sub {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
+.phase-target {
+  margin: 8px 0 0 0;
+  font-size: 0.65rem;
+  font-family: 'Consolas', monospace;
+  color: #fff;
+  opacity: 0.5;
+  background: rgba(0,0,0,0.3);
+  padding: 3px 6px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.mini-stat-box {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 8px;
+  padding: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.status-dot.online {
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+}
+.status-dot.offline {
+  background: var(--surface-highlight);
 }
 
 .tab-pane {
-  animation: fadeIn 0.3s ease-in-out;
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+.content-area {
+  background: rgba(20, 24, 41, 0.5);
+  border-radius: var(--border-radius);
+  padding: 2rem;
+  border: 1px solid var(--surface-highlight);
+  margin-bottom: 2rem;
 }
 
 @keyframes fadeIn {

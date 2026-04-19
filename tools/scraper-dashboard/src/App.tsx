@@ -316,425 +316,378 @@ function App() {
     } catch (e) {}
   };
 
+  const PIPELINE_PHASES = [
+    { id: '1', title: 'The Scout', sub: 'GIS Ingestion / OSM', route: 'phase1', color: '#8a2be2', target: 'Nationwide -> PENDING', 
+      metric: status?.processedCount || harvestData.seededStates?.length || 0, metricLabel: 'Extracted Nodes', isDaemon: false, 
+      statusActive: status?.isHarvestingActive },
+    { id: '2', title: 'The Operator', sub: 'Identity & Contact', route: 'phase2', color: '#5d78ff', target: 'PENDING -> IDENTIFIED', 
+      metric: status?.identityCount || 0, metricLabel: 'Identities Found', isDaemon: true, 
+      statusActive: status?.currentTarget?.includes('Operator: online') },
+    { id: '3', title: 'The Detective', sub: 'Hours & Pricing Engine', route: 'phase3', color: '#ff5a00', target: 'IDENTIFIED -> INDEXED', 
+      metric: status?.indexedCount || 0, metricLabel: 'Websites Indexed', isDaemon: true, 
+      statusActive: status?.currentTarget?.includes('Indexer: online') },
+    { id: '4', title: 'Specialist Daemons', sub: 'Yelp & Social APIs', route: 'phase4', color: '#ffb300', target: 'INDEXED -> ENRICHED', 
+      metric: status?.enrichedCount || 0, metricLabel: 'Enriched Spots', isDaemon: true, 
+      statusActive: false },
+    { id: '5', title: 'The Photographer', sub: 'Media Storage Pipeline', route: 'phase5', color: '#e91e63', target: 'ENRICHED -> MEDIA_READY', 
+      metric: status?.mediaReadyCount || 0, metricLabel: 'Galleries Built', isDaemon: true, 
+      statusActive: false },
+    { id: '6', title: 'Databank QA', sub: 'Master Review Grid', route: 'phase6', color: '#4caf50', target: 'ALL -> VERIFIED', 
+      metric: status?.verifiedCount || 0, metricLabel: 'Gold Standard', isDaemon: false, 
+      statusActive: true }
+  ];
+
   return (
     <div className="dashboard-container">
-      <header className="header" style={{ alignItems: 'flex-start' }}>
-        <div>
-          <h1 className="title">SK8Lytz Skate Spots</h1>
-          <div className="tab-bar">
-            <button className={`tab-btn ${activeTab === 'phase1' ? 'active' : ''}`} onClick={() => setActiveTab('phase1')}>Phase 1: OSM Extraction</button>
-            <button className={`tab-btn ${activeTab === 'phase2' ? 'active' : ''}`} onClick={() => setActiveTab('phase2')}>Phase 2: Scraper Pipeline</button>
-            <button className={`tab-btn ${activeTab === 'phase3' ? 'active' : ''}`} onClick={() => setActiveTab('phase3')}>Phase 3: Databank QA</button>
-          </div>
-        </div>
-        <div style={{display: 'flex', gap: '1rem', marginTop: '0.5rem'}}>
-          <div className={`status-badge ${status?.isHarvestingActive ? 'status-online' : 'status-offline'}`}>
-               PHASE 1 HARVEST {status?.isHarvestingActive ? '● ON' : '○ OFF'}
-          </div>
-          <div className={`status-badge ${status?.isRunning ? 'status-online' : 'status-offline'}`}>
-               PHASE 2 ENRICHMENT {status?.isRunning ? '● ON' : '○ OFF'}
-          </div>
+      <header className="header" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div style={{width: '100%'}}>
+          <h1 className="title">SK8Lytz Global Extraction Pipeline</h1>
+          <p style={{marginTop: 0, color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Decoupled 6-Phase Micro-Scraper Architecture</p>
         </div>
       </header>
 
-      {/* =========== GLOBAL SECURITY CONTROL BAR (Shared by Phase 1 & 2) =========== */}
-      {(activeTab === 'phase1' || activeTab === 'phase2') && (
-        <div className="security-control-bar fade-in">
-          <div className="security-label">
-            <span className="ghost-badge" style={{margin:0}}>🛡️ GHOST ENCRYPTED</span>
-            <strong>GLOBAL SECURITY TACTICS</strong>
-          </div>
-          
-          <div className="security-inputs">
-            <div className="input-group-inline">
-              <label>Cooldown Base</label>
-              <input type="number" className="mini-input" value={cooldownBase} onChange={e => updateGlobalStrategy('cooldown_base_ms', parseInt(e.target.value))} />
-              <span>ms</span>
+      {/* =========== 6-PHASE UNIFORM PIPELINE GRID =========== */}
+      <div className="pipeline-grid fade-in">
+         {PIPELINE_PHASES.map((phase) => (
+            <div 
+               key={phase.id} 
+               className={`pipeline-card ${activeTab === phase.route ? 'active' : ''}`}
+               onClick={() => setActiveTab(phase.route)}
+               style={{ borderTop: `4px solid ${phase.color}` }}
+            >
+               <div className="pipeline-card-header">
+                  <span className="phase-id">Phase {phase.id}</span>
+                  <div className={`status-dot ${phase.statusActive ? 'online' : 'offline'}`}></div>
+               </div>
+               <h3 style={{ color: phase.color }}>{phase.title}</h3>
+               <p className="phase-sub">{phase.sub}</p>
+               <p className="phase-target">{phase.target}</p>
+               
+               <div className="mini-stat-box" style={{marginTop: 'auto'}}>
+                  <span className="stat-label">{phase.metricLabel}</span>
+                  <div className="stat-value" style={{ color: phase.color }}>{phase.metric?.toLocaleString()}</div>
+               </div>
             </div>
-            <div className="input-group-inline">
-              <label>Jitter</label>
-              <input type="number" className="mini-input" value={cooldownJitter} onChange={e => updateGlobalStrategy('cooldown_jitter_pct', parseInt(e.target.value))} />
-              <span>%</span>
-            </div>
-            
-            <div className="v-divider"></div>
+         ))}
+      </div>
 
-            <label className="security-switch">
-              <span>Identity Rotation</span>
-              <label className="switch mini">
-                <input type="checkbox" checked={identityRotation} onChange={e => updateGlobalStrategy('identity_rotation_enabled', e.target.checked)} />
-                <span className="slider round"></span>
-              </label>
-            </label>
-
-            <label className="security-switch">
-              <span>Random Viewports</span>
-              <label className="switch mini">
-                <input type="checkbox" checked={randomizeViewport} onChange={e => updateGlobalStrategy('randomize_viewport_enabled', e.target.checked)} />
-                <span className="slider round"></span>
-              </label>
-            </label>
-
-            <label className="security-switch">
-              <span>Auto-Resume</span>
-              <label className="switch mini">
-                <input type="checkbox" checked={autoResume} onChange={e => updateGlobalStrategy('auto_resume_enabled', e.target.checked)} />
-                <span className="slider round"></span>
-              </label>
-            </label>
-          </div>
-        </div>
-      )}
-
-      {/* =========== PHASE 1: GLOBAL STRATEGY & INTAKE =========== */}
-      {activeTab === 'phase1' && (() => {
-        const totalNodes = Object.values(harvestData.stateCounts).reduce((a, b) => a + b, 0);
-        return (
-          <div className="tab-pane phase-1 fade-in">
-            <div className="explainer-block">
-            <h3 style={{marginTop: 0, color: 'var(--primary-color)'}}>Phase 1: OpenStreetMap (OSM) Extraction</h3>
-            <div className="ghost-badge">🛡️ GHOST ENCRYPTED PIPELINE ACTIVE</div>
-            <p>This engine interfaces directly with OpenStreetMap's Overpass API. It isolates geographical boundaries for the targeted US State and extracts raw, unverified polygons based on your strategy toggles (e.g. leisure=skatepark, sport=roller_skating). Upon extraction, the backend pipeline runs reverse-geocoding over raw GPS coordinate data to establish a sterile, structural record in the Supabase Databank. No human concepts like "vibes" or "pro shops" are gathered at this phase—this step solely establishes ground truth location data.</p>
-            </div>
-            
-            <div className="hero-grid">
-              <div className="hero-card">
-                <h3 className="card-title">Total Extracted Nodes</h3>
-                <p className="card-value">{totalNodes.toLocaleString()}</p>
+      <div className="content-area fade-in">
+        {/* =========== PHASE 1: GLOBAL STRATEGY & INTAKE =========== */}
+        {activeTab === 'phase1' && (() => {
+          const totalNodes = Object.values(harvestData.stateCounts).reduce((a, b) => a + b, 0);
+          return (
+            <div className="tab-pane phase-1">
+              <div className="explainer-block" style={{marginBottom: '1rem'}}>
+              <h3 style={{marginTop: 0, color: '#8a2be2'}}>The Scout: Polygon Infrastructure</h3>
+              <div className="ghost-badge">🛡️ GHOST ENCRYPTED PIPELINE ACTIVE</div>
+              <p>This engine interfaces directly with OpenStreetMap's Overpass API. It extracts raw GIS locations (longitude/latitude) and establishes baseline row injection into Supabase. Real data validation occurs downstream.</p>
               </div>
-              <div className="hero-card">
-                <h3 className="card-title">Enriched Nodes</h3>
-                <p className="card-value">{harvestData.seededStates.length} / 50</p>
-              </div>
-              <div className="hero-card" style={{ gridColumn: 'span 2' }}>
-                <h3 className="card-title">Harvester Engine Block</h3>
-                <p className="card-value card-target">
-                  {status?.isHarvestingActive ? (stateOverride.length > 0 ? `Harvesting Target: ${stateOverride.join(', ')}...` : 'Running National Sequence...') : 'Idle'}
-                </p>
-              </div>
-            </div>
 
-            <div className="omni-grid tri-grid">
-              {/* Column 1: Control & Facilities */}
-              <div className="controls-section">
-                <div className="panel intake-panel" style={{marginBottom: '1rem'}}>
-                  <h2 className="panel-header">Execution</h2>
-                  <div className="btn-group-vertical">
-                    <button className="btn btn-start" onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive}>
-                        {stateOverride.length > 0 ? `🚀 Seed ${stateOverride.join(', ')}` : '🌎 Global Harvest'}
-                    </button>
-                    <button className="btn btn-stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive}>
-                      🛑 STOP HARVEST
-                    </button>
+              <div className="omni-grid tri-grid">
+                <div className="controls-section">
+                  <div className="panel intake-panel" style={{marginBottom: '1rem'}}>
+                    <h2 className="panel-header">Execution Matrix</h2>
+                    <div className="btn-group-vertical">
+                      <button className="btn btn-start" onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive}>
+                          {stateOverride.length > 0 ? `🚀 Seed ${stateOverride.join(', ')}` : '🌎 Global Harvest'}
+                      </button>
+                      <button className="btn btn-stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive}>
+                        🛑 STOP HARVEST
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="panel strategy-panel">
+                    <h2 className="panel-header">1. Target Facilities</h2>
+                    <div className="facility-switches">
+                       {['skatepark', 'roller_rink', 'skate_shop'].map(f => (
+                         <label key={f} className="switch-row mini">
+                            <span>{f.replace('_', ' ').toUpperCase()}</span>
+                            <label className="switch mini">
+                              <input type="checkbox" checked={targetFacilities.includes(f)} onChange={() => updateGlobalStrategy('facility', f)} />
+                              <span className="slider round"></span>
+                            </label>
+                         </label>
+                       ))}
+                    </div>
                   </div>
                 </div>
 
                 <div className="panel strategy-panel">
-                  <h2 className="panel-header">1. Target Facilities</h2>
-                  <div className="facility-switches">
-                     {['skatepark', 'roller_rink', 'skate_shop'].map(f => (
-                       <label key={f} className="switch-row mini">
-                          <span>{f.replace('_', ' ').toUpperCase()}</span>
-                          <label className="switch mini">
-                            <input type="checkbox" checked={targetFacilities.includes(f)} onChange={() => updateGlobalStrategy('facility', f)} />
-                            <span className="slider round"></span>
-                          </label>
-                       </label>
-                     ))}
+                  <h2 className="panel-header">2. Pipeline Targets</h2>
+                  <div className="state-pill-container" style={{maxHeight: '400px'}}>
+                     <button className={`state-pill ${stateOverride.length === 0 ? 'active' : ''}`} onClick={() => updateGlobalStrategy('state_override', 'ALL')}>
+                       ALL STATES
+                     </button>
+                     {US_STATES.map(st => {
+                        const count = harvestData.stateCounts[st] || 0;
+                        return (
+                          <button key={st} className={`state-pill ${stateOverride.includes(st) ? 'active' : ''}`} onClick={() => updateGlobalStrategy('state_override', st)}>
+                            {st} {count > 0 && <span className="pill-dot"></span>}
+                          </button>
+                        )
+                     })}
+                  </div>
+                </div>
+
+                <div className="panel coverage-panel">
+                  <h2 className="panel-header">3. Intake Leaderboard</h2>
+                  <div className="coverage-list">
+                     {coverageStats.slice(0, 10).map(stat => {
+                        const enrichedPct = Math.min(100, Math.round((stat.enriched / stat.total) * 100) || 0);
+                        return (
+                          <div key={stat.state} className="coverage-item">
+                             <div className="coverage-meta">
+                                <strong>{stat.state}</strong>
+                                <span>{stat.total}</span>
+                             </div>
+                             <div className="coverage-progress-bg">
+                                <div className="progress-bar enriched" style={{width: `${enrichedPct}%`}}></div>
+                             </div>
+                          </div>
+                        );
+                     })}
                   </div>
                 </div>
               </div>
-
-              {/* Column 2: State Selection */}
-              <div className="panel strategy-panel">
-                <h2 className="panel-header">2. Select State Target</h2>
-                <div className="state-pill-container" style={{maxHeight: '400px'}}>
-                   <button 
-                      className={`state-pill ${stateOverride.length === 0 ? 'active' : ''}`}
-                      onClick={() => updateGlobalStrategy('state_override', 'ALL')}
-                   >
-                     ALL STATES
-                   </button>
-                   {US_STATES.map(st => {
-                      const count = harvestData.stateCounts[st] || 0;
-                      return (
-                        <button 
-                          key={st} 
-                          className={`state-pill ${stateOverride.includes(st) ? 'active' : ''} ${status?.isHarvestingActive && stateOverride.includes(st) ? 'pulse-border' : ''}`}
-                          onClick={() => updateGlobalStrategy('state_override', st)}
-                        >
-                          {st} {count > 0 && <span className="pill-dot"></span>}
-                        </button>
-                      )
-                   })}
-                </div>
-              </div>
-
-              {/* Column 3: Coverage Leaderboard */}
-              <div className="panel coverage-panel">
-                <h2 className="panel-header">3. Coverage Leaderboard</h2>
-                <div className="coverage-list">
-                   {coverageStats.slice(0, 10).map(stat => {
-                      const enrichedPct = Math.min(100, Math.round((stat.enriched / stat.total) * 100) || 0);
-                      const verifiedPct = Math.min(100, Math.round((stat.verified / stat.total) * 100) || 0);
-                      return (
-                        <div key={stat.state} className="coverage-item">
-                           <div className="coverage-meta">
-                              <strong>{stat.state}</strong>
-                              <span>{stat.total}</span>
-                           </div>
-                           <div className="coverage-progress-bg">
-                              <div className="progress-bar enriched" style={{width: `${enrichedPct}%`}}></div>
-                              <div className="progress-bar verified" style={{width: `${verifiedPct}%`}}></div>
-                           </div>
-                        </div>
-                      );
-                   })}
-                </div>
-              </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
-            {/* =========== PHASE 2: MICRO-SCRAPER PIPELINE =========== */}
-      {activeTab === 'phase2' && (
-        <div className="tab-pane phase-2 fade-in">
-          <div className="explainer-block" style={{marginBottom: '1rem'}}>
-            <h3 style={{marginTop: 0, color: 'var(--primary-color)'}}>Phase 2: Micro-Scraper Global Pipeline</h3>
-            <div className="ghost-badge">??? MULTI-DAEMON ARCHITECTURE ACTIVE</div>
-            <p>The Cultural Enrichment Daemon has been decoupled into specialized micro-services. The <strong>Operator</strong> processes PENDING spots to discover identities (website, phone) via Google. The <strong>Indexer</strong> consumes those identities to deep-crawl websites and extract social links (Instagram, Facebook). Eventually, specialist agents will execute on INDEXED URLs. This pipeline runs autonomously in the background.</p>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
-             {/* OPERATOR CARD */}
-             <div className="pipeline-card" style={{ border: '2px solid #5d78ff', borderRadius: '12px', background: 'rgba(93, 120, 255, 0.05)', padding: '1.5rem', position: 'relative', overflow: 'hidden' }}>
-                 <div style={{ position: 'absolute', top: 0, right: 0, padding: '0.5rem', background: '#5d78ff', color: '#fff', fontSize: '0.8rem', fontWeight: 'bold', borderBottomLeftRadius: '12px' }}>
-                    {status?.currentTarget?.includes('Operator: online') ? '? ONLINE' : '? OFFLINE'}
-                 </div>
-                 <h2 style={{ color: '#5d78ff', margin: 0, fontSize: '1.5rem' }}>1. The Operator</h2>
-                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.5rem 0 1.5rem 0' }}>TARGET: PENDING ? IDENTITY_ESTABLISHED</p>
-                 
-                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div className="mini-stat-box">
-                       <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Pending Queue</span>
-                       <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{status?.pendingCount || 0}</div>
-                    </div>
-                    <div className="mini-stat-box">
-                       <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Identities Found</span>
-                       <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#4ADE80' }}>{status?.identityCount || 0}</div>
-                    </div>
-                 </div>
-                 
-                 <div style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Strategy: Google Search API / Places Spoofing</div>
-                    <div style={{ fontSize: '0.8rem', color: '#ff6b6b' }}>Errors: {status?.errorCount || 0}</div>
-                 </div>
+        {/* =========== DAEMON CONTROL CENTER (PHASE 2-5) =========== */}
+        {(['phase2', 'phase3', 'phase4', 'phase5'].includes(activeTab)) && (
+          <div className="tab-pane daemon-center">
+             <div className="explainer-block" style={{marginBottom: '1rem'}}>
+               <h3 style={{marginTop: 0, color: PIPELINE_PHASES.find(p=>p.route===activeTab)?.color}}>
+                   {PIPELINE_PHASES.find(p=>p.route===activeTab)?.title}: {PIPELINE_PHASES.find(p=>p.route===activeTab)?.sub}
+               </h3>
+               {activeTab === 'phase2' && <p>Combats Google's Captcha to establish physical existence via search queries. Injects legitimate websites and phone numbers, resolving PENDING data debris.</p>}
+               {activeTab === 'phase3' && <p>Autonomous Heuristic Search algorithm. Bypasses Google entirely; crawls targeted websites searching context strings for 18+ Adult Nights, Operating Hours, and Schedule structures to extract real Roller Rink economy data.</p>}
+               {activeTab === 'phase4' && <p>Cluster of specialized scrapers (Instagram, Yelp API). Fetches live Vibe Ratings, user engagement reviews, and secondary source verifications.</p>}
+               {activeTab === 'phase5' && <p>A high-throughput media engine mapping Google Place photos and social gallery artifacts directly into our automated WebP CDN to power client-side mobile rendering.</p>}
              </div>
 
-             {/* INDEXER CARD */}
-             <div className="pipeline-card" style={{ border: '2px solid #ff5a00', borderRadius: '12px', background: 'rgba(255, 90, 0, 0.05)', padding: '1.5rem', position: 'relative', overflow: 'hidden' }}>
-                 <div style={{ position: 'absolute', top: 0, right: 0, padding: '0.5rem', background: '#ff5a00', color: '#fff', fontSize: '0.8rem', fontWeight: 'bold', borderBottomLeftRadius: '12px' }}>
-                    {status?.currentTarget?.includes('Indexer: online') ? '? ONLINE' : '? OFFLINE'}
-                 </div>
-                 <h2 style={{ color: '#ff5a00', margin: 0, fontSize: '1.5rem' }}>2. The Indexer</h2>
-                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.5rem 0 1.5rem 0' }}>TARGET: IDENTITY_ESTABLISHED ? INDEXED</p>
-                 
-                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div className="mini-stat-box">
-                       <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Ready for Index</span>
-                       <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{status?.identityCount || 0}</div>
-                    </div>
-                    <div className="mini-stat-box">
-                       <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Socials Indexed</span>
-                       <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#64d2ff' }}>{status?.indexedCount || 0}</div>
-                    </div>
-                 </div>
-                 
-                 <div style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Strategy: Deep-Crawl Cheerio Regex Scraping</div>
-                    <div style={{ fontSize: '0.8rem', color: '#ff6b6b' }}>Circuit Breaker: {status?.consecutiveErrors || 0}/{maxStrikes}</div>
-                 </div>
-             </div>
-          </div>
+             {/* SHARED SECURITY CONTROL BAR */}
+            <div className="security-control-bar fade-in" style={{marginBottom: '1.5rem'}}>
+              <div className="security-label">
+                <span className="ghost-badge" style={{margin:0}}>🛡️ GLOBAL DAEMON TACTICS</span>
+              </div>
+              
+              <div className="security-inputs">
+                <div className="input-group-inline">
+                  <label>Base Cooldown</label>
+                  <input type="number" className="mini-input" value={cooldownBase} onChange={e => updateGlobalStrategy('cooldown_base_ms', parseInt(e.target.value))} />
+                </div>
+                <div className="input-group-inline">
+                  <label>Jitter</label>
+                  <input type="number" className="mini-input" value={cooldownJitter} onChange={e => updateGlobalStrategy('cooldown_jitter_pct', parseInt(e.target.value))} />
+                  <span>%</span>
+                </div>
+                
+                <div className="v-divider"></div>
 
-          <div className="omni-grid" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem'}}>
-            <div className="panel enrichment-panel">
-               <h2 className="panel-header">PM2 Cluster Control</h2>
-               <div className="btn-group">
-                 <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}>Force Boot Cluster</button>
-                 <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}>Halt Pipelines</button>
-               </div>
-               
-               <div className="switch-row" style={{marginTop: '1.5rem'}}>
-                  <span>Crawler Headless Mode</span>
-                  <label className="switch">
+                <label className="security-switch">
+                  <span>Stealth Headless Mode</span>
+                  <label className="switch mini">
                     <input type="checkbox" checked={isHeadless} onChange={e => toggleHeadless(e.target.checked)} />
                     <span className="slider round"></span>
                   </label>
-               </div>
-               
-               <div className="form-group" style={{marginTop: '1.5rem'}}>
-                  <label className="form-label">Throttle Sleep Interval (ms)</label>
-                  <input className="form-input" type="number" value={sleepInterval} onChange={e => updateGlobalStrategy('sleep_interval', parseInt(e.target.value))} />
-               </div>
+                </label>
+
+                <label className="security-switch">
+                  <span>Identity Rotation</span>
+                  <label className="switch mini">
+                    <input type="checkbox" checked={identityRotation} onChange={e => updateGlobalStrategy('identity_rotation_enabled', e.target.checked)} />
+                    <span className="slider round"></span>
+                  </label>
+                </label>
+              </div>
             </div>
 
-            <div className="panel queue-panel">
-               <h2 className="panel-header">Active Execution Tail</h2>
-               <p className="text-secondary" style={{fontSize: '0.8rem', paddingBottom:'0.5rem'}}>Targeting: {stateOverride || 'NATIONWIDE'} | Facilities: {targetFacilities.length ? targetFacilities.join(', ') : 'ALL'}</p>
-               <div className="queue-list" style={{opacity: 0.5}}>
-                 <p>Queue Visualization moved to Databank Tab.</p>
-               </div>
+            <div className="omni-grid" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+              <div className="panel enrichment-panel">
+                 <h2 className="panel-header">Cluster Master Matrix</h2>
+                 <div className="btn-group">
+                   <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}>Boot PM2 Daemon Cluster</button>
+                   <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}>Emergency Halt All</button>
+                 </div>
+                 
+                 <div className="form-group" style={{marginTop: '1.5rem'}}>
+                    <label className="form-label">Global Throttle Sleep Interval (ms)</label>
+                    <input className="form-input" type="number" value={sleepInterval} onChange={e => updateGlobalStrategy('sleep_interval', parseInt(e.target.value))} />
+                 </div>
+              </div>
+
+              <div className="panel queue-panel">
+                 <h2 className="panel-header">Daemon Network Status</h2>
+                 <p className="text-secondary" style={{fontSize: '0.8rem', paddingBottom:'0.5rem'}}>Targeting: NATIONWIDE | Pipeline Engine Status</p>
+                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                       <span>Operator Daemon:</span>
+                       <strong style={{ color: status?.currentTarget?.includes('Operator: online') ? '#4caf50' : '#ff5a00' }}>{status?.currentTarget?.includes('Operator: online') ? 'ONLINE' : 'OFFLINE'}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                       <span>Indexer Daemon:</span>
+                       <strong style={{ color: status?.currentTarget?.includes('Indexer: online') ? '#4caf50' : '#ff5a00' }}>{status?.currentTarget?.includes('Indexer: online') ? 'ONLINE' : 'OFFLINE'}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', opacity: 0.5 }}>
+                       <span>Specialist Daemon:</span>
+                       <strong>MOCKED</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.5 }}>
+                       <span>Photographer Daemon:</span>
+                       <strong>MOCKED</strong>
+                    </div>
+                 </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-      {/* =========== PHASE 3: DATABANK =========== */}
-      {activeTab === 'phase3' && (
-        <div className="tab-pane graveyard fade-in">
-          <div className="explainer-block" style={{marginBottom: '1rem'}}>
-            <h3 style={{marginTop: 0, color: 'var(--primary-color)'}}>Phase 3: Human Verification & Quality Assurance</h3>
-            <p>This represents the final staging server before datasets are exposed to the live SK8Lytz userbase. Because autonomous machine scraping encounters edge cases (e.g., closed businesses, incorrect geo-fencing), Phase 3 acts as the master review grid. Administrators can monitor the exact output of the Phase 2 bot, execute precise inline modifications, flag garbage data as "REJECTED" to prevent future scrapers from touching it, or authorize clean rows into "VERIFIED" status.</p>
-          </div>
+        )}
 
-          <div className="grid-toolbar">
-            <input className="form-input" style={{width: '250px'}} placeholder="Search Location / City / State..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-             <select className="form-input filter-dropdown" value={gridFilter} onChange={e => setGridFilter(e.target.value)}>
-                <option value="ALL">All Validations</option>
-                <option value="PENDING">Pending (Queue)</option>
-                <option value="IDENTITY_ESTABLISHED">Identity Found</option>
-                <option value="INDEXED">Socials Indexed</option>
-                <option value="ENRICHED">Enriched (Partial)</option>
-                <option value="VERIFIED">Verified Culturally</option>
-                <option value="REJECTED">Graveyard / Rejected</option>
-                <option value="DEPRECATED">Deprecated (Tombstone)</option>
-             </select>
-            <button className="btn-primary" onClick={bulkPromote}>🚀 Bulk Promote</button>
-            <div className="pagination">
-              <button disabled={page === 0} onClick={() => fetchSpots(page - 1, gridFilter)}>Prev</button>
-              <span className="page-indicator">Page {page + 1} of {Math.ceil(totalSpots/rowsPerPage) || 1} ({totalSpots} total)</span>
-              <button disabled={(page+1)*rowsPerPage >= totalSpots} onClick={() => fetchSpots(page + 1, gridFilter)}>Next</button>
+        {/* =========== PHASE 6: DATABANK QA =========== */}
+        {activeTab === 'phase6' && (
+          <div className="tab-pane graveyard fade-in">
+            <div className="explainer-block" style={{marginBottom: '1rem'}}>
+              <h3 style={{marginTop: 0, color: '#4caf50'}}>Phase 6: Databank QA Staging Grid</h3>
+              <p>This is the final human-in-the-loop verification protocol. Filter by pipeline status down below to intercept spot identities parsed by the Operator/Detective heuristics. Utilize inline editing to clean Context Snippets into exact integers, delete garbage ghosts, or execute bulk promotions sending `VERIFIED` data directly into the live mobile application.</p>
             </div>
-          </div>
 
-          <div className="table-container">
-            <table className="databank-table">
-              <thead>
-                <tr>
-                  <th onClick={() => toggleSort('name')} style={{cursor:'pointer'}}>Location {sortCol==='name' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                  <th onClick={() => toggleSort('street_address')} style={{cursor:'pointer'}}>Address {sortCol==='street_address' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                  <th onClick={() => toggleSort('facility_type')} style={{cursor:'pointer'}}>Type {sortCol==='facility_type' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                  <th onClick={() => toggleSort('verification_status')} style={{cursor:'pointer'}}>Status {sortCol==='verification_status' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                  <th>Vibe</th>
-                  <th>Surface</th>
-                  <th onClick={() => toggleSort('website')} style={{cursor:'pointer'}}>Website {sortCol==='website' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                  <th onClick={() => toggleSort('phone_number')} style={{cursor:'pointer'}}>Phone {sortCol==='phone_number' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                  <th onClick={() => toggleSort('has_pro_shop')} style={{cursor:'pointer'}}>Shop {sortCol==='has_pro_shop' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                   <th onClick={() => toggleSort('has_adult_night')} style={{cursor:'pointer'}}>18+ {sortCol==='has_adult_night' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                   <th onClick={() => toggleSort('retry_count')} style={{cursor:'pointer'}}>Retries {sortCol==='retry_count' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                   <th onClick={() => toggleSort('last_enriched_at')} style={{cursor:'pointer'}}>Enriched At {sortCol==='last_enriched_at' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {spots.map(row => {
-                  const isEditing = editingId === row.id;
-                  return (
-                    <tr key={row.id}>
-                      <td>
-                        {isEditing ? (
-                          <>
-                            <input className="table-input" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="Name" />
-                            <input className="table-input" value={editForm.city} onChange={e => setEditForm({...editForm, city: e.target.value})} placeholder="City" />
-                          </>
-                        ) : (
-                          <>
-                            <div style={{fontWeight: 'bold', color: 'var(--text-primary)'}}>{row.name}</div>
-                            <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>{row.city}, {row.state}</div>
-                          </>
-                        )}
-                      </td>
-                      <td>
-                        {isEditing ? <input className="table-input" value={editForm.street_address || ''} onChange={e => setEditForm({...editForm, street_address: e.target.value})} placeholder="Street Address" /> : <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}>{row.street_address || '-'}</div>}
-                      </td>
-                      <td>
-                        {isEditing ? <input className="table-input" value={editForm.facility_type} onChange={e => setEditForm({...editForm, facility_type: e.target.value})} /> : row.facility_type}
-                      </td>
-                      <td>
-                        {isEditing ? (
-                          <select className="table-input" value={editForm.verification_status || 'PENDING'} onChange={e => setEditForm({...editForm, verification_status: e.target.value})}>
-                            <option value="PENDING">PENDING</option>
-                            <option value="ENRICHED">ENRICHED</option>
-                            <option value="VERIFIED">VERIFIED</option>
-                            <option value="DEPRECATED">DEPRECATED</option>
-                            <option value="REJECTED">REJECTED</option>
-                          </select>
-                        ) : (
-                          <span className={`status-pill ${row.verification_status?.toLowerCase() || 'pending'}`}>
-                            {row.verification_status || 'UNVERIFIED'}
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                         {row.vibe_score ? <span style={{color: 'var(--primary-color)', fontWeight:'bold'}}>{row.vibe_score}★</span> : '-'}
-                      </td>
-                      <td>
-                         {isEditing ? (
-                           <input className="table-input" value={editForm.surface_quality || ''} onChange={e => setEditForm({...editForm, surface_quality: e.target.value})} placeholder="Buttery..." />
-                         ) : (
-                           <span className={`surface-tag ${row.surface_quality?.toLowerCase()}`}>{row.surface_quality || '-'}</span>
-                         )}
-                      </td>
-                      <td>
-                        {isEditing ? <input className="table-input" value={editForm.website || ''} onChange={e => setEditForm({...editForm, website: e.target.value})} /> : (
-                          row.website ? <a href={row.website} target="_blank" rel="noreferrer" style={{color: 'var(--success)', fontWeight: 600}}>Visit ↗</a> : '-'
-                        )}
-                      </td>
-                      <td>
-                        {isEditing ? <input className="table-input" value={editForm.phone_number || ''} onChange={e => setEditForm({...editForm, phone_number: e.target.value})} /> : (
-                          row.phone_number || '-'
-                        )}
-                      </td>
-                       <td>{isEditing ? <input type="checkbox" checked={editForm.has_pro_shop} onChange={e => setEditForm({...editForm, has_pro_shop: e.target.checked})} /> : (row.has_pro_shop ? '✅' : '❌')}</td>
-                       <td>{isEditing ? <input type="checkbox" checked={editForm.has_adult_night} onChange={e => setEditForm({...editForm, has_adult_night: e.target.checked})} /> : (row.has_adult_night ? '✅' : '❌')}</td>
-                       <td>
-                         {isEditing ? (
-                           <input type="number" className="table-input" value={editForm.retry_count || 0} onChange={e => setEditForm({...editForm, retry_count: parseInt(e.target.value) || 0})} />
-                         ) : (
-                           <span style={{ color: row.retry_count >= 8 ? 'var(--danger)' : 'inherit' }}>{row.retry_count || 0}/10</span>
-                         )}
-                       </td>
-                      <td style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>
-                        {row.last_enriched_at ? new Date(row.last_enriched_at).toLocaleString() : 'Never'}
-                      </td>
-                      <td>
-                        <div className="action-row">
-                          {row.is_published ? (
-                             <button className="btn-icon" onClick={() => promoteSpot(row.id, false)} title="Unpublish from Map">🛑</button>
-                          ) : (
-                             <button className="btn-icon" onClick={() => promoteSpot(row.id, true)} disabled={row.verification_status !== 'VERIFIED'} title="Promote to Map">🚀</button>
-                          )}
+            <div className="grid-toolbar">
+              <input className="form-input search-bar" placeholder="Search Location / City / State..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+               <select className="form-input filter-dropdown" value={gridFilter} onChange={e => setGridFilter(e.target.value)}>
+                  <option value="ALL">All Grid Records</option>
+                  <option value="PENDING">Phase 1 Pending (Queue)</option>
+                  <option value="IDENTITY_ESTABLISHED">Phase 2 Identified</option>
+                  <option value="INDEXED">Phase 3 Web-Crawled</option>
+                  <option value="ENRICHED">Phase 4 Deep Enriched</option>
+                  <option value="MEDIA_READY">Phase 5 Media Prepped</option>
+                  <option value="VERIFIED">Phase 6 Verified & Published</option>
+                  <option value="REJECTED">Graveyard / Rejected</option>
+               </select>
+              <button className="btn-primary" onClick={bulkPromote}>🚀 Bulk App Promote</button>
+              <div className="pagination">
+                <button disabled={page === 0} onClick={() => fetchSpots(page - 1, gridFilter)}>Prev</button>
+                <span className="page-indicator">Page {page + 1} of {Math.ceil(totalSpots/rowsPerPage) || 1} ({totalSpots} total)</span>
+                <button disabled={(page+1)*rowsPerPage >= totalSpots} onClick={() => fetchSpots(page + 1, gridFilter)}>Next</button>
+              </div>
+            </div>
+
+            <div className="table-container">
+              <table className="databank-table">
+                <thead>
+                  <tr>
+                    <th onClick={() => toggleSort('name')} style={{cursor:'pointer'}}>Location {sortCol==='name' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th onClick={() => toggleSort('street_address')} style={{cursor:'pointer'}}>Address {sortCol==='street_address' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th onClick={() => toggleSort('verification_status')} style={{cursor:'pointer'}}>Current Phase {sortCol==='verification_status' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th>Vibe</th>
+                    <th>Surface</th>
+                    <th onClick={() => toggleSort('website')} style={{cursor:'pointer'}}>Website {sortCol==='website' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th onClick={() => toggleSort('phone_number')} style={{cursor:'pointer'}}>Phone {sortCol==='phone_number' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                     <th onClick={() => toggleSort('has_adult_night')} style={{cursor:'pointer'}}>18+ {sortCol==='has_adult_night' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                     <th onClick={() => toggleSort('retry_count')} style={{cursor:'pointer'}}>Retries {sortCol==='retry_count' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                     <th onClick={() => toggleSort('last_attempted_at')} style={{cursor:'pointer'}}>Last Ping {sortCol==='last_attempted_at' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {spots.map(row => {
+                    const isEditing = editingId === row.id;
+                    return (
+                      <tr key={row.id}>
+                        <td>
                           {isEditing ? (
-                            <button className="btn-icon btn-save-inline" onClick={saveEdit}>💾</button>
+                            <>
+                              <input className="table-input" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="Name" />
+                              <input className="table-input" value={editForm.city} onChange={e => setEditForm({...editForm, city: e.target.value})} placeholder="City" />
+                            </>
                           ) : (
-                            <button className="btn-icon" onClick={() => startEdit(row)}>✏️</button>
+                            <>
+                              <div style={{fontWeight: 'bold', color: 'var(--text-primary)'}}>{row.name}</div>
+                              <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>{row.city}, {row.state}</div>
+                            </>
                           )}
-                          <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>🗑️</button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                        <td>
+                          {isEditing ? <input className="table-input" value={editForm.street_address || ''} onChange={e => setEditForm({...editForm, street_address: e.target.value})} placeholder="Street Address" /> : <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}>{row.street_address || '-'}</div>}
+                        </td>
+                        <td>
+                          {isEditing ? (
+                            <select className="table-input" value={editForm.verification_status || 'PENDING'} onChange={e => setEditForm({...editForm, verification_status: e.target.value})}>
+                              <option value="PENDING">PHASE 1 PENDING</option>
+                              <option value="IDENTITY_ESTABLISHED">PHASE 2 IDENTIFIED</option>
+                              <option value="INDEXED">PHASE 3 INDEXED</option>
+                              <option value="ENRICHED">PHASE 4 ENRICHED</option>
+                              <option value="MEDIA_READY">PHASE 5 MEDIA</option>
+                              <option value="VERIFIED">PHASE 6 VERIFIED</option>
+                              <option value="DEPRECATED">Tombstone (Deleted)</option>
+                              <option value="REJECTED">Graveyard (Blacklist)</option>
+                            </select>
+                          ) : (
+                            <span className={`status-pill ${row.verification_status?.toLowerCase() || 'pending'}`}>
+                              {row.verification_status || 'PHASE_1_PENDING'}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                           {row.vibe_score ? <span style={{color: 'var(--primary-color)', fontWeight:'bold'}}>{row.vibe_score}★</span> : '-'}
+                        </td>
+                        <td>
+                           {isEditing ? (
+                             <input className="table-input" value={editForm.surface_quality || ''} onChange={e => setEditForm({...editForm, surface_quality: e.target.value})} placeholder="Buttery..." />
+                           ) : (
+                             <span className={`surface-tag ${row.surface_quality?.toLowerCase()}`}>{row.surface_quality || '-'}</span>
+                           )}
+                        </td>
+                        <td>
+                          {isEditing ? <input className="table-input" value={editForm.website || ''} onChange={e => setEditForm({...editForm, website: e.target.value})} /> : (
+                            row.website ? <a href={row.website} target="_blank" rel="noreferrer" style={{color: 'var(--success)', fontWeight: 600}}>Visit ↗</a> : '-'
+                          )}
+                        </td>
+                        <td>
+                          {isEditing ? <input className="table-input" value={editForm.phone_number || ''} onChange={e => setEditForm({...editForm, phone_number: e.target.value})} /> : (
+                            row.phone_number || '-'
+                          )}
+                        </td>
+                         <td>{isEditing ? <input type="checkbox" checked={editForm.has_adult_night} onChange={e => setEditForm({...editForm, has_adult_night: e.target.checked})} /> : (row.has_adult_night ? '✅' : '❌')}</td>
+                         <td>
+                           {isEditing ? (
+                             <input type="number" className="table-input" value={editForm.retry_count || 0} onChange={e => setEditForm({...editForm, retry_count: parseInt(e.target.value) || 0})} />
+                           ) : (
+                             <span style={{ color: row.retry_count >= 8 ? 'var(--danger)' : 'var(--text-secondary)' }}>{row.retry_count || 0}/10</span>
+                           )}
+                         </td>
+                        <td style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>
+                          {row.last_attempted_at ? new Date(row.last_attempted_at).toLocaleString() : 'Never'}
+                        </td>
+                        <td>
+                          <div className="action-row">
+                            {row.is_published ? (
+                               <button className="btn-icon" onClick={() => promoteSpot(row.id, false)} title="Unpublish from App">🛑</button>
+                            ) : (
+                               <button className="btn-icon" onClick={() => promoteSpot(row.id, true)} disabled={row.verification_status !== 'VERIFIED'} title="Promote to Live Database">🚀</button>
+                            )}
+                            {isEditing ? (
+                              <button className="btn-icon btn-save-inline" onClick={saveEdit}>💾</button>
+                            ) : (
+                              <button className="btn-icon" onClick={() => startEdit(row)}>✏️</button>
+                            )}
+                            <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>🗑️</button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
       {/* Global Terminal Wrapper - Persists across all tabs */}
       <div className="log-panel panel">
         <div className="log-header">
-           <h2 className="panel-header" style={{margin:0}}>Omni-Terminal (Real-time)</h2>
+           <h2 className="panel-header" style={{margin:0}}>Omni-Terminal (Real-time Logs)</h2>
            <button className="btn-mini" onClick={fetchHistory}>PERSISTENT HISTORY</button>
         </div>
         <div className="log-container" ref={logsRef}>
