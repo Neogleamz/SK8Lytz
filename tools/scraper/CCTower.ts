@@ -431,19 +431,8 @@ app.post('/api/harvest/stop-all', async (req, res) => {
 });
 
 app.get('/api/queue', async (req, res) => {
-  // Fetch current config to mirror daemon targeting logic
-  const { data: config } = await supabase.from('scraper_config').select('*').single();
-  
   let query = supabase.from('skate_spots').select('*')
     .or('verification_status.eq.PENDING,verification_status.eq.ENRICHED,verification_status.is.null');
-
-  if (config && config.state_override && config.state_override.length > 0) {
-    query = query.in('state', config.state_override);
-  }
-
-  if (config && config.target_facilities && config.target_facilities.length > 0) {
-    query = query.in('facility_type', config.target_facilities);
-  }
 
   const { data, error } = await query
     .order('last_attempted_at', { ascending: true, nullsFirst: true })
