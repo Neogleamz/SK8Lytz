@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#111',
     borderRadius: 24, borderWidth: 1.5,
     padding: Spacing.xl,
-    boxShadow: '0px 0px 30px rgba(0,0,0,0.8)', elevation: 20,
+    shadowColor: '#000000', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 30, elevation: 20,
   },
   headerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.md, marginBottom: Spacing.md,

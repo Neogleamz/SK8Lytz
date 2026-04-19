@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
-    boxShadow: '0 4px 4px rgba(0,0,0,0.3)',
+    shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4,
   },
   pillText: {
     color: '#FFF',

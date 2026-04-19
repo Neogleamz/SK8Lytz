@@ -639,7 +639,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           <View style={[StyleSheet.absoluteFill, { zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', borderRadius: Layout.borderRadius }]} pointerEvents="box-only">
             <TouchableOpacity
               onPress={() => writeToDevice && writeToDevice(ZenggeProtocol.turnOn())}
-              style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(0, 240, 255, 0.1)', borderWidth: 3, borderColor: '#00f0ff', boxShadow: '0px 0px 30px rgba(0, 240, 255, 1)', elevation: 15, justifyContent: 'center', alignItems: 'center' }}
+              style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(0, 240, 255, 0.1)', borderWidth: 3, borderColor: '#00f0ff', shadowColor: '#00f0ff', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 30, elevation: 15, justifyContent: 'center', alignItems: 'center' }}
             >
               <MaterialCommunityIcons name="power" size={64} color="#00f0ff" />
             </TouchableOpacity>

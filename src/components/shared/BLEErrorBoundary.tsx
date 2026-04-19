@@ -32,12 +32,12 @@ export class BLEErrorBoundary extends React.Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, errorMessage: error.message };
+    return { hasError: true, errorMessage: error?.message || JSON.stringify(error) || 'Unknown Object Error' };
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     AppLogger.error(`[ErrorBoundary] ${this.props.componentName} crashed`, {
-      error: error.message,
+      error: error?.message || JSON.stringify(error),
       stack: error.stack?.slice(0, 500),
       componentStack: info.componentStack?.slice(0, 500),
     });
