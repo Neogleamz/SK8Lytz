@@ -1,0 +1,74 @@
+# SK8Lytz Completed Tasks Archive
+
+*Archived from `SK8Lytz_Bucket_List.md` on 2026-04-19 to keep the active bucket list lean.*
+
+---
+
+- [x] `feat/ambient-telemetry-harvester` : ✅ v1.10.0 — Passive zero-performance-impact ambient BLE telemetry harvester.
+- [x] `fix/rls-ghost-device-deletion` : ✅ v1.10.0 — Patched missing `DELETE` RLS policies on `registered_devices` and `registered_groups`.
+- [x] `fix/skate-map-api-key-crash` : ✅ Google Maps API key injected into `app.json`.
+- [x] `chore/google-maps-api-config` : ✅ API key injected into `app.json` for Android `MapView` support.
+- [x] `feat/camera-mode-ux-overhaul` : ✅ Shipped Vivid Flush Slab architecture and Pure-Hue optical matrix mapping.
+- [x] `feat/admin-user-management` : ✅ Zero-Edge Admin Tools shipped. Includes RBAC.
+- [x] `fix/ble-chunk-interleaving` : ✅ Phase 1/3 — Synchronous Interleaved Chunking.
+- [x] `fix/permissions-onboarding-ux` : ✅ Decoupled push notification prompt from dashboard boot.
+- [x] `fix/silent-catch-purge` : ✅ Replaced 15 silent `catch(e){}` blocks with `AppLogger.warn`.
+- [x] `fix/error-boundary-shield` : ✅ Created `BLEErrorBoundary` component.
+- [x] `chore/hal-adapter-wiring` : ✅ Wired all 4 HAL stubs.
+- [x] `chore/docked-controller-diet-p2` : ✅ Phase 2 — extracted `UniversalSlidersFooter.tsx` (488 lines).
+- [x] `chore/docked-controller-diet` : ✅ Phase 1 — DockedController -206 lines.
+- [x] `chore/telemetry-hardening-sweep` : ✅ All 7 plan items.
+- [x] `chore/console-to-applogger` : ✅ Replaced 20 raw `console.*` calls.
+- [x] `chore/legacy-namespace-purge` : ✅ Purged all `ng_*` AsyncStorage keys.
+- [x] `fix/ble-pipeline-overhaul` : ✅ Complete BLE pipeline rebuild.
+- [x] `fix/remote-id-audit` : ✅ 0x2B protocol parser.
+- [x] `fix/crewz-offline-gate` : ✅ CREWZ tab filtered in offline mode.
+- [x] `fix/crewz-account-tab-rename` : ✅ Renamed tab to 'CREWZ'.
+- [x] `fix/voice-engine-integration` : ✅ Repaired null reference error.
+- [x] `feat/discord-agent-bridge` : ✅ Discord bridge streaming agent logs.
+- [x] `feat/interactive-skate-spot-map` : ✅ Interactive skate spot map.
+- [x] `feat/usa-skate-spots-dataset` : ✅ US-only dataset of rinks and parks.
+- [x] `style/tokenized-spacing-standard` : ✅ Enforced 8pt spacing tokens app-wide.
+- [x] `audit-rls-performance` : ✅ Strict append-only RLS rules, injected B-Tree index.
+- [x] `feat/fixed-mode-refactor` : ✅ Extracted Solid mode into FixedPanel.
+- [x] `chore/decompose-docked-controller-jsx` : ✅ Extracted 6 memoized panels.
+- [x] `chore/refactor-dashboard-monolith` : ✅ Extracted 2 hooks and 5 components.
+- [x] `fix/ble-pipeline-permissions-gap` : ✅ Fixed Android 12+ permissions gap.
+- [x] `fix/dashboard-hook-violation` : ✅ Resolved "Rendered more hooks" crash.
+- [x] `refactor/state-machine-standard` : ✅ Enum-based FSMs.
+- [x] `perf/optimistic-ble-updates` : ✅ Ghost optimistic UI updates.
+- [x] `perf/delta-sync-protocol` : ✅ Differential data fetching.
+- [x] `chore/domain-architecture-audit` : ✅ Full app-wide audit.
+- [x] `chore/ts-dead-code-purge` : ✅ Purged 344 instances of dead code.
+- [x] `chore/refactor-diagnostic-lab` : ✅ Modularized DiagnosticLab.
+- [x] `chore/refactor-admin-tools` : ✅ Feature-specific modules.
+- [x] `feat/eula-onboarding` : ✅ Mandatory scroll-to-accept EULA.
+- [x] `feat/admin-app-manager` : ✅ Governance Hub with Safety Locks.
+- [x] `gate-offline-mode` : ✅ Gated online capabilities offline.
+- [x] `feat/eula-in-account-manager` : ✅ EULA review link.
+- [x] `feat/onboarding-text-tweak` : ✅ Updated telemetry onboarding text.
+- [x] `fix/supabase-signup-400` : ✅ Investigated Signup 400 error.
+- [x] `fix/supabase-database-typing` : ✅ Resolved TS2305 error.
+- [x] `feat/vertical-etl-crewz-rebrand` : ✅ Vertical ETL + CREWZ rebrand.
+- [x] `feat/skate-spot-featured-schema` : ✅ `is_featured` boolean.
+- [x] `feat/etl-cultural-daemon` : ✅ PM2 Cultural Enrichment Daemon.
+- [x] `feat/admin-hub-design-system` : ✅ Standardized admin headers.
+- [x] `chore/delete-orphan-backup` : ✅ Removed old backup file.
+- [x] `lab-music-mode-parity` : ✅ Lab 0x73 Music Mode parity.
+- [x] `epic/connection-reliability` : ✅ Multiphase BLE connection overhaul.
+- [x] `fix-ble-audit` : ✅ BLE discovery speed fixes.
+- [x] `feat/speed-tracking-telemetry` : ✅ Statistics, Session Metadata, GPS.
+- [x] `feat/voice-command-engine` : ✅ Offline voice command resolution.
+- [x] `feat/empty-skates-setup-cta` : ✅ Setup Wizard dashboard CTA.
+- [x] `chore/sentient-tech-debt-sweep` : ✅ Standardized AsyncStorage keys.
+- [x] `audit/domain-driven-architecture` : ✅ Audited all 14 domain hooks.
+- [x] `feat/optimistic-picks-cache` : ✅ Stale-While-Revalidate caching.
+- [x] `chore/refactor-docked-controller` : ✅ State extraction via domain hooks.
+- [x] `audit/telemetry-efficiency-architectures` : ✅ Audited AppLogger.
+- [x] `chore/refactor-account-modal` : ✅ Refactored AccountModal (63KB).
+- [x] `chore/refactor-admin-tools-hierarchy` : ✅ Structural refactor.
+- [x] `chore/redesign-parsed-data-storage` : ✅ Constraint-Based Auditing.
+- [x] `chore/telemetry-efficiency-audit` : ✅ Re-evaluated parsed_* tables.
+- [x] `audit/device-group-naming-consistency` : ✅ Audited naming logic.
+- [x] `feat/account-deletion` : ✅ Cascade-deletion for App Store compliance.
+- [x] `feat/granular-permissions-flow` : ✅ Granular opt-in/out toggles.
