@@ -1,6 +1,6 @@
 {
   "name": "mobileapp",
-  "version": "1.12.1",
+  "version": "1.12.2",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -12,10 +12,10 @@
   "dependencies": {
     "@config-plugins/react-native-ble-plx": "^7.0.0",
     "@expo-google-fonts/righteous": "^0.4.1",
+    "@expo/config-plugins": "^55.0.8",
     "@expo/metro-runtime": "~55.0.6",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/datetimepicker": "^9.1.0",
-    "@react-native-voice/voice": "^3.2.4",
     "@supabase/supabase-js": "^2.100.0",
     "buffer": "^6.0.3",
     "expo": "~55.0.8",
@@ -42,7 +42,7 @@
     "expo-status-bar": "~55.0.4",
     "jpeg-js": "^0.4.4",
     "react": "19.2.0",
-    "react-dom": "^19.2.0",
+    "react-dom": "19.2.0",
     "react-native": "0.83.2",
     "react-native-ble-plx": "^3.5.1",
     "react-native-map-clustering": "^4.0.0",

@@ -32,9 +32,7 @@ import { BLEErrorBoundary } from '../components/shared/BLEErrorBoundary';
 
 import AdminToolsModal from '../components/admin/AdminToolsModal';
 import { CrewModal } from '../components/CrewModal';
-import VoiceCommandModal from '../components/Voice/VoiceCommandModal';
-import VoiceFAB from '../components/Voice/VoiceFAB';
-import VoiceTutorialModal from '../components/Voice/VoiceTutorialModal';
+
 import { AppLogger } from '../services/AppLogger';
 import { CrewRole, crewService, CrewSession } from '../services/CrewService';
 
@@ -51,7 +49,7 @@ import { useDashboardGroups } from '../hooks/useDashboardGroups';
 import { useDashboardProfile } from '../hooks/useDashboardProfile';
 import { useDashboardCrew } from '../hooks/useDashboardCrew';
 import { useDashboardDeviceConfig } from '../hooks/useDashboardDeviceConfig';
-import { useDashboardVoice } from '../hooks/useDashboardVoice';
+
 import { useHardwareNotifications } from '../hooks/useHardwareNotifications';
 import type { DashboardViewState, DeviceSettings, CustomGroup } from '../types/dashboard.types';
 
@@ -240,22 +238,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     });
   }, [setOnDeviceRecovered]);
 
-  // ── Phase 1: Voice Commands & Favorites → useDashboardVoice ───────────────────
-  const {
-    isVoiceModalVisible,
-    setIsVoiceModalVisible,
-    isVoiceTutorialVisible,
-    setIsVoiceTutorialVisible,
-    isVoiceTutorialDismissed,
-    dismissTutorial,
-    favorites,
-    isListening,
-    transcript,
-    error: voiceError,
-    isVoiceSupported,
-    startListening,
-    stopListening,
-  } = useDashboardVoice({ dockedControllerRef });
 
 
 
@@ -1066,35 +1048,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         hwSettings={activeHwSettings}
       />
 
-      {/* ──── VOICE COMMAND ENGINE UI ──── */}
-      <VoiceFAB 
-        onPress={() => {
-          if (!isVoiceTutorialDismissed) {
-             setIsVoiceTutorialVisible(true);
-          } else {
-             setIsVoiceModalVisible(true);
-          }
-        }} 
-        isListening={isListening}
-      />
-      
-      <VoiceTutorialModal
-        isVisible={isVoiceTutorialVisible}
-        onDismiss={async () => {
-          setIsVoiceTutorialVisible(false);
-          dismissTutorial();
-          // Smooth transition: open the actual voice modal after tutorial
-          setTimeout(() => setIsVoiceModalVisible(true), 400);
-        }}
-      />
 
-      <VoiceCommandModal
-        isVisible={isVoiceModalVisible}
-        onClose={() => setIsVoiceModalVisible(false)}
-        isListening={isListening}
-        transcript={transcript}
-        error={voiceError}
-      />
     </SafeAreaView>
   );
 }

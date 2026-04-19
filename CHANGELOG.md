@@ -1,3 +1,13 @@
+## [1.12.2] - 2026-04-18
+
+### 🚀 Features
+- **Voice Engine Deprecation**: Surgically stripped the `@react-native-voice/voice` native dependency and the Voice Command Engine UI from the Dashboard to reduce the Android APK bundle size and improve app latency.
+
+### 🐛 Bug Fixes
+- **React Native Web Hydration Regression**: Pinned `react-dom` explicitly to version `19.2.0` to resolve an invariant crash during web startup caused by NPM module resolution drift.
+
+---
+
 ## [1.10.0] - 2026-04-18
 
 ### 🚀 Features

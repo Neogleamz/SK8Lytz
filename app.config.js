@@ -9,7 +9,7 @@ export default () => {
     "name": "SK8Lytz",
     "slug": "sk8lytz",
     "scheme": "sk8lytz",
-    "version": "1.12.1",
+    "version": "1.12.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -21,16 +21,15 @@ export default () => {
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "SK8Lytz needs microphone access to synchronize your lights to ambient music and process voice commands.",
-        "NSSpeechRecognitionUsageDescription": "SK8Lytz uses speech recognition to allow hands-free control of your skate lights while you ride."
+        "NSMicrophoneUsageDescription": "SK8Lytz needs microphone access to synchronize your lights to ambient music."
       },
-      "buildNumber": "1",
+      "buildNumber": "2",
       "config": {
         "googleMapsApiKey": googleMapsApiKey
       }
     },
     "android": {
-      "versionCode": 23,
+      "versionCode": 24,
       "predictiveBackGestureEnabled": false,
       "allowBackup": false,
       "permissions": [
