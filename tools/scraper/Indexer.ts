@@ -11,6 +11,27 @@ const supabase = createClient(
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Telemetry Hook to CCTower
+const _log = console.log;
+const _err = console.error;
+
+const pushLog = (type: 'INFO'|'ERROR', message: string) => {
+   fetch('http://localhost:5999/api/logs/ingest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, source: 'Phase 3', message })
+   }).catch(() => {});
+};
+
+console.log = (...args) => {
+   _log(...args);
+   pushLog('INFO', args.join(' '));
+};
+console.error = (...args) => {
+   _err(...args);
+   pushLog('ERROR', args.join(' '));
+};
+
 async function runIndexer() {
   console.log('[Indexer] Booting Social & Node Discovery Scraper...');
   

@@ -27,18 +27,25 @@ function writeToLogFile(type: 'INFO' | 'ERROR', message: string) {
   fs.appendFileSync(LOG_FILE, logEntry);
 }
 
+const autoTagSource = (msg: string) => {
+  if (msg.includes('[Harvester]') || msg.includes('[GIS]')) return 'Phase 1';
+  if (msg.includes('[Operator]') || msg.includes('Google Captcha') || msg.includes('Overpass')) return 'Phase 2';
+  if (msg.includes('[Indexer]')) return 'Phase 3';
+  return 'System';
+}
+
 console.log = (...args) => {
   const msg = args.join(' ');
   originalLog(...args);
   writeToLogFile('INFO', msg);
-  logEmitter.emit('log', { type: 'INFO', message: msg });
+  logEmitter.emit('log', { type: 'INFO', source: autoTagSource(msg), message: msg });
 };
 
 console.error = (...args) => {
   const msg = args.join(' ');
   originalError(...args);
   writeToLogFile('ERROR', msg);
-  logEmitter.emit('log', { type: 'ERROR', message: msg });
+  logEmitter.emit('log', { type: 'ERROR', source: autoTagSource(msg), message: msg });
 };
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -344,6 +351,21 @@ app.get('/api/logs/stream', (req, res) => {
   const listener = (data: any) => res.write(`data: ${JSON.stringify(data)}\n\n`);
   logEmitter.on('log', listener);
   req.on('close', () => logEmitter.off('log', listener));
+});
+
+// External Webhook to push logs into the live SSE stream from PM2 Daemons
+app.post('/api/logs/ingest', (req, res) => {
+  const { type, source, message } = req.body;
+  if (!message) return res.status(400).json({ error: 'Message payload required' });
+  
+  // Format for internal tracking and logging
+  const msgContext = source ? `[${source}] ${message}` : message;
+  writeToLogFile(type || 'INFO', msgContext);
+  
+  // Emit to SSE clients immediately
+  logEmitter.emit('log', { type: type || 'INFO', source: source || 'UNKNOWN', message });
+  
+  res.sendStatus(200);
 });
 
 app.post('/api/harvest/start-all', async (req, res) => {

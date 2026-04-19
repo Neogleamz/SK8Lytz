@@ -777,18 +777,42 @@ function App() {
         )}
       </div>
 
-      {/* Global Terminal Wrapper - Persists across all tabs */}
+      {/* Synchronized Terminal Wrapper - Filters per Phase Tab */}
       <div className="log-panel panel">
         <div className="log-header">
-           <h2 className="panel-header" style={{margin:0}}>Omni-Terminal (Real-time Logs)</h2>
+           <h2 className="panel-header" style={{margin:0}}>
+             {activeTab === 'phase1' ? 'Phase 1: Seed Engine Logs' :
+              activeTab === 'phase2' ? 'Phase 2: Operator Logs' :
+              activeTab === 'phase3' ? 'Phase 3: Indexer Logs' :
+              'Omni-Terminal (Restricted Access)'}
+           </h2>
            <button className="btn-mini" onClick={fetchHistory}>PERSISTENT HISTORY</button>
         </div>
         <div className="log-container" ref={logsRef}>
-          {logs.map((log, i) => (
-            <div key={i} className={`log-entry ${log.type === 'ERROR' ? 'error' : ''}`}>
-              <span className="log-timestamp">[{new Date().toLocaleTimeString()}]</span> {log.message}
-            </div>
+          {logs
+             .filter(log => {
+                if (activeTab === 'phase1') return log.source === 'Phase 1' || log.source === 'System';
+                if (activeTab === 'phase2') return log.source === 'Phase 2' || log.source === 'System';
+                if (activeTab === 'phase3') return log.source === 'Phase 3' || log.source === 'System';
+                return true; // Show all on other tabs like grid
+             })
+             .map((log, i) => (
+               <div key={i} className={`log-entry ${log.type === 'ERROR' ? 'error' : ''}`}>
+                 <span className="log-timestamp">[{new Date().toLocaleTimeString()}]</span>
+                 <span style={{ color: 'var(--primary-color)', fontWeight: 'bold', marginRight: '8px' }}>
+                    [{log.source || 'UNKNOWN'}]
+                 </span> 
+                 {log.message}
+               </div>
           ))}
+          {logs.filter(log => {
+             if (activeTab === 'phase1') return log.source === 'Phase 1' || log.source === 'System';
+             if (activeTab === 'phase2') return log.source === 'Phase 2' || log.source === 'System';
+             if (activeTab === 'phase3') return log.source === 'Phase 3' || log.source === 'System';
+             return true;
+          }).length === 0 && (
+             <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', padding: '1rem' }}>No active telemetry signals detected for this phase.</div>
+          )}
         </div>
         
         {historyLogs.length > 0 && (
