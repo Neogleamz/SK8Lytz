@@ -36,6 +36,7 @@ function App() {
 
   // --- Harvest Manager States ---
   const [harvestData, setHarvestData] = useState<{seededStates: string[], stateCounts: Record<string, number>, allStates: string[]}>({ seededStates: [], stateCounts: {}, allStates: [] });
+  const [isHarvesting, setIsHarvesting] = useState<string | null>(null);
   const [coverageStats, setCoverageStats] = useState<any[]>([]);
   const [historyLogs, setHistoryLogs] = useState<string[]>([]);
 
