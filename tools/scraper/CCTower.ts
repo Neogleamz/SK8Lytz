@@ -113,11 +113,20 @@ app.get('/status', async (req, res) => {
       .select('*', { count: 'exact', head: true })
       .eq('verification_status', 'VERIFIED');
       
-    // New counts for indexer metrics
-    const { count: totalIdentified } = await supabase
+    const { count: pendingCount } = await supabase
       .from('skate_spots')
       .select('*', { count: 'exact', head: true })
-      .in('verification_status', ['IDENTITY_ESTABLISHED', 'INDEXED', 'ENRICHED', 'VERIFIED']);
+      .or('verification_status.eq.PENDING,verification_status.is.null');
+
+    const { count: identityCount } = await supabase
+      .from('skate_spots')
+      .select('*', { count: 'exact', head: true })
+      .eq('verification_status', 'IDENTITY_ESTABLISHED');
+
+    const { count: indexedCount } = await supabase
+      .from('skate_spots')
+      .select('*', { count: 'exact', head: true })
+      .eq('verification_status', 'INDEXED');
 
     res.json({
       isRunning: running,
@@ -125,8 +134,14 @@ app.get('/status', async (req, res) => {
       isHeadless,
       currentTarget: `Operator: ${operatorStatus} | Indexer: ${indexerStatus}`,
       processedCount: totalProcessed || 0,
-      enrichedCount: totalIdentified || 0, // Using identified to reflect Phase 2/3 progress
+      enrichedCount: totalIdentified || 0, // Legacy
       verifiedCount: totalVerified || 0,
+      
+      // New Micro-Scraper Metrics
+      pendingCount: pendingCount || 0,
+      identityCount: identityCount || 0,
+      indexedCount: indexedCount || 0,
+      
       errorCount,
       consecutiveErrors,
       isGated,

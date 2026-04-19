@@ -38,8 +38,9 @@ async function runIndexer() {
          continue;
       }
 
+      const statusRes = await fetch("http://localhost:5999/status").then(r => r.json()).catch(() => ({ isHeadless: true }));
       const browser = await puppeteer.launch({ 
-        headless: 'new',
+        headless: statusRes.isHeadless ? true : false,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
       });
       
