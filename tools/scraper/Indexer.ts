@@ -50,9 +50,12 @@ async function runIndexer() {
       await page.goto(target.website, { waitUntil: 'domcontentloaded', timeout: 25000 });
       await sleep(2000);
 
-      const links = await page.evaluate(() => {
+      const pageData = await page.evaluate(() => {
          const anchors = Array.from(document.querySelectorAll('a'));
-         return anchors.map(a => a.href.toLowerCase()).filter(Boolean);
+         return {
+            links: anchors.map(a => a.href.toLowerCase()).filter(Boolean),
+            bodyText: document.body.innerText.replace(/\n+/g, ' ') // Flatten newlines
+         };
       });
 
       let instagram_url = target.instagram_url || null;
@@ -60,7 +63,7 @@ async function runIndexer() {
       let tiktok_url = target.tiktok_url || null;
       let schedule_url = target.schedule_url || null;
 
-      links.forEach(href => {
+      pageData.links.forEach(href => {
         if (!instagram_url && href.includes('instagram.com') && !href.includes('/explore') && !href.includes('/p/')) {
            instagram_url = href;
         }
@@ -74,10 +77,52 @@ async function runIndexer() {
            schedule_url = href;
         }
       });
+
+      // -------------------------------------------------------------
+      // HEURISTIC SPIDER ENGINE (Context Extraction without LLM)
+      // -------------------------------------------------------------
+      const text = pageData.bodyText;
+      let has_adult_night = target.has_adult_night || false;
+      let adult_night_details = target.adult_night_details || null;
+      let pricing_data: string[] | null = null;
+      let opening_hours: any = target.opening_hours || {};
+
+      // 1. ADULT NIGHT HEURISTIC
+      const adultRegex = /(\b18\s*\+|\b18\s*and\s*older|\b21\s*\+|\b(?:adult|adults)\s*(?:skate|only|night))/gi;
+      const adultMatch = adultRegex.exec(text);
+      if (adultMatch) {
+         has_adult_night = true;
+         // Extract surrounding 60 characters for context
+         const ctxStart = Math.max(0, adultMatch.index - 30);
+         adult_night_details = text.substring(ctxStart, adultMatch.index + 80).trim();
+      }
+
+      // 2. PRICING HEURISTIC
+      const pricingSet = new Set<string>();
+      // Look for $ amounts within 40 characters of pricing keywords
+      const priceRegex = /(?:admission|skate rental|price|entry).{0,50}\$\d+/gi;
+      let pMatch;
+      while ((pMatch = priceRegex.exec(text)) !== null) {
+         pricingSet.add(pMatch[0].trim());
+      }
+      if (pricingSet.size > 0) pricing_data = Array.from(pricingSet);
+
+      // 3. OPERATING HOURS HEURISTIC
+      // Extract days followed by times
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      days.forEach(day => {
+         // Look for "Monday 4:00 PM - 9:00 PM" loosely
+         const dayRegex = new RegExp(`\\b${day}\\b.{0,20}(\\d{1,2}(?::\\d{2})?\\s*(?:am|pm)?\\s*(?:-|to)\\s*\\d{1,2}(?::\\d{2})?\\s*(?:am|pm)?|closed)`, 'i');
+         const dMatch = dayRegex.exec(text);
+         if (dMatch && !opening_hours[day]) {
+            opening_hours[day] = dMatch[1].trim();
+         }
+      });
+      if (Object.keys(opening_hours).length === 0) opening_hours = null;
       
       await browser.close();
 
-      console.log(`   Result: IG[${instagram_url ? 'Y' : 'N'}] FB[${facebook_url ? 'Y' : 'N'}] TK[${tiktok_url ? 'Y' : 'N'}] SCHED[${schedule_url ? 'Y' : 'N'}]`);
+      console.log(`   Result: IG[${instagram_url ? 'Y' : 'N'}] FB[${facebook_url ? 'Y' : 'N'}] TK[${tiktok_url ? 'Y' : 'N'}]; Adult:[${has_adult_night ? 'Y' : 'N'}] Prices:[${pricing_data ? pricing_data.length : 0}] Hours:[${opening_hours ? Object.keys(opening_hours).length : 0}]`);
 
       // Update to INDEXED
       const { error: updateError } = await supabase.from('skate_spots').update({
@@ -85,6 +130,10 @@ async function runIndexer() {
         facebook_url,
         tiktok_url,
         schedule_url,
+        has_adult_night,
+        adult_night_details,
+        pricing_data,
+        opening_hours,
         verification_status: 'INDEXED',
         retry_count: 0, // Reset retries for the next pipeline phase
         last_attempted_at: new Date().toISOString()
