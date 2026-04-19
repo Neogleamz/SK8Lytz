@@ -1,6 +1,7 @@
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import { GHOST } from './GHOST';
 
 export interface GeocodeResult {
   fullAddress: string | null;
@@ -50,7 +51,7 @@ export async function reverseGeocode(lat: number, lon: number): Promise<GeocodeR
         'accept-language': 'en'
       },
       headers: {
-        'User-Agent': 'SK8Lytz-DataSet-Compiler/1.0 (contact@sk8lytz.com)'
+        'User-Agent': GHOST.generateIdentity().userAgent
       }
     });
 

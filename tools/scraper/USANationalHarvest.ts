@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import { buildHoursJSON } from './lib/OSMHoursParser';
 import { reverseGeocode } from './lib/NominatimAPI';
 import { scrapeCulturalDetails } from './lib/GoogleScraper';
+import { GHOST } from './lib/GHOST';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const supabase = createClient(process.env.EXPO_PUBLIC_SUPABASE_URL || '', process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '');
@@ -15,7 +16,7 @@ const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 const CACHE_DIR = path.join(__dirname, 'state_caches');
 if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR);
 
-const US_STATES = [
+export const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
   'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
   'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
@@ -27,38 +28,90 @@ async function sleep(ms: number) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-async function processState(stateCode: string) {
+export let isHarvestingActive = false;
+
+export async function stopNationalHarvester() {
+  isHarvestingActive = false;
+  console.log('🛑 Master Harvester signal received: Halting pipeline after current cycle.');
+}
+
+export async function startNationalHarvester(targetFacilities: string[] = [], targetStates: string[] = []) {
+  if (isHarvestingActive) return;
+  isHarvestingActive = true;
+  console.log(`🌎 STARTING VERTICAL PIPELINE HARVEST 🌎 (States: ${targetStates.length ? targetStates.join(',') : 'ALL'})`);
+  const statesToRun = targetStates.length > 0 ? targetStates : US_STATES;
+  
+  let statesProcessed = 0;
+  for (let i = 0; i < statesToRun.length; i++) {
+     if (!isHarvestingActive) {
+       console.log('⛔ Harvester pipeline cleanly aborted by C&C signal.');
+       break;
+     }
+     const didWork = await processState(statesToRun[i], targetFacilities);
+     if (didWork) statesProcessed++;
+
+     if (i < statesToRun.length - 1 && isHarvestingActive) {
+         const waitTime = await GHOST.getAdaptiveDelay('OSM');
+         console.log(`⏳ Global GHOST: Cooling down OSM limits (${Math.round(waitTime/1000)}s)...`);
+         await sleep(waitTime);
+     }
+  }
+  if (isHarvestingActive) {
+    if (statesProcessed > 0) {
+      console.log(`\n🏁 USA Dataset Sweep Complete! ${statesProcessed} states updated.`);
+    } else {
+      console.log(`\n🏁 USA Dataset is up to date.`);
+    }
+    isHarvestingActive = false;
+  }
+}
+
+export async function processState(stateCode: string, targetFacilities: string[] = []): Promise<boolean> {
   const stateCachePath = path.join(CACHE_DIR, `${stateCode}.json`);
   if (fs.existsSync(stateCachePath)) {
-    console.log(`⏩ Skipping ${stateCode} - Successfully processed in a previous pass!`);
-    return;
+    return false;
   }
 
+  const identity = GHOST.generateIdentity();
   console.log(`\n🛹 [US-${stateCode}] Phase 1: Contacting OpenStreetMap Overpass Servers...`);
+  console.log(`    🆔 Identity: ${identity.userAgent.slice(0, 45)}... [Global GHOST]`);
+
+  const includeAll = targetFacilities.length === 0;
+  let conditions = '';
+  if (includeAll || targetFacilities.includes('roller_rink')) {
+    conditions += `    nwr["sport"="roller_skating"](area.searchArea);\n`;
+  }
+  if (includeAll || targetFacilities.includes('skatepark')) {
+    conditions += `    nwr["sport"="skateboard"](area.searchArea);\n`;
+    conditions += `    nwr["leisure"="skatepark"](area.searchArea);\n`;
+  }
+  if (includeAll || targetFacilities.includes('skate_shop')) {
+    conditions += `    nwr["shop"="skates"](area.searchArea);\n`;
+  }
   
   const SAFE_QL_QUERY = `
   [out:json][timeout:300];
   area["ISO3166-2"="US-${stateCode}"]->.searchArea;
   (
-    nwr["sport"="roller_skating"](area.searchArea);
-    nwr["sport"="skateboard"](area.searchArea);
-    nwr["leisure"="skatepark"](area.searchArea);
-    nwr["shop"="skates"](area.searchArea);
-  );
+${conditions}  );
   out center;
   `;
 
   let elements: any[] = [];
   try {
     const response = await axios.post(OVERPASS_URL, `data=${encodeURIComponent(SAFE_QL_QUERY)}`, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: { 
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': GHOST.generateIdentity().userAgent
+      },
       timeout: 300000 
     });
     elements = response.data.elements || [];
-    console.log(`  ✅ Found ${elements.length} raw GIS geometries in ${stateCode}`);
+    console.log(`  ✅ [${stateCode}] Found ${elements.length} raw GIS geometries`);
+    return true;
   } catch (err: any) {
     console.error(`❌ Overpass Failure for ${stateCode}:`, err.message);
-    return; // Fast fail this state, next pipeline resumes it
+    return false; // Fast fail this state, next pipeline resumes it
   }
 
   if (elements.length === 0) {
@@ -156,17 +209,4 @@ async function processState(stateCode: string) {
   }
 }
 
-async function runNationalHarvester() {
-  console.log('🌎 STARTING VERTICAL PIPELINE HARVEST 🌎');
-  for (let i = 0; i < US_STATES.length; i++) {
-     await processState(US_STATES[i]);
-     if (i < US_STATES.length - 1) {
-         console.log('⏳ Sleeping 15s to cool down OSM limits before next state...');
-         await sleep(15000);
-     }
-  }
-  console.log('\n🏁 USA Dataset Fully Synchronized! Ready to roll.');
-}
-
-runNationalHarvester();
 

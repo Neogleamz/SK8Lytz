@@ -27,7 +27,6 @@ import { AppManager } from './tools/AppManager';
 import { ProductManager } from './tools/ProductManager';
 import Sk8LytzDiagnosticLab from './tools/Sk8LytzDiagnosticLab';
 import Sk8LytzProgrammer from './tools/Sk8LytzProgrammer';
-import { CulturalDaemonMonitor } from './tools/CulturalDaemonMonitor';
 import { UserManagementPanel } from './tools/UserManagementPanel';
 
 
@@ -64,7 +63,6 @@ export default function AdminToolsModal({
   const [isUserManagementVisible, setIsUserManagementVisible] = useState(false);
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
   const [isLabVisible, setIsLabVisible] = useState(false);
-  const [isDaemonMonitorVisible, setIsDaemonMonitorVisible] = useState(false);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
 
   // ── Domain Hooks ────────────────────────────────────────────────────────────
@@ -189,7 +187,6 @@ export default function AdminToolsModal({
             setIsPicksSchedulerVisible={setIsPicksSchedulerVisible}
             setIsProductManagerVisible={setIsProductManagerVisible}
             setIsAppManagerVisible={setIsAppManagerVisible}
-            setIsDaemonMonitorVisible={setIsDaemonMonitorVisible}
             setIsUserManagementVisible={setIsUserManagementVisible}
             textMuted={textMuted} 
             textPrimary={textPrimary} 
@@ -263,12 +260,6 @@ export default function AdminToolsModal({
           handleScan={handleScan || (() => {})}
           connectToDevice={async (d: any) => { if (onConnectToDevice) await onConnectToDevice(d); }}
           liveDeviceConfigs={liveDeviceConfigs as any}
-        />
-      ) : isDaemonMonitorVisible ? (
-        <CulturalDaemonMonitor
-          visible={isDaemonMonitorVisible}
-          onClose={() => setIsDaemonMonitorVisible(false)}
-          bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
         />
       ) : (
         <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
