@@ -524,7 +524,6 @@ function App() {
           <div className="tab-pane phase-1">
             <div className="explainer-block" style={{marginBottom: '1rem'}}>
               <h3 style={{marginTop: 0, color: '#8a2be2'}}>The Scout: Polygon Infrastructure</h3>
-              <div className="ghost-badge">🛡️ GHOST ENCRYPTED PIPELINE ACTIVE</div>
               <p>This engine interfaces directly with OpenStreetMap's Overpass API. It extracts raw GIS locations (longitude/latitude) and establishes baseline row injection into Supabase. Real data validation occurs downstream.</p>
             </div>
 

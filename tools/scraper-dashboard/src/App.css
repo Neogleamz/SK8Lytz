@@ -428,6 +428,7 @@ body {
 .log-container.mini {
   height: 150px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
+  overflow-y: auto;
 }
 
 .log-entry.history {
