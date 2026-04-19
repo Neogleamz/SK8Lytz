@@ -195,9 +195,13 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
     try {
       setPicks(prev => prev.map(p => p.id === datePickerConfig.pickId ? { ...p, [datePickerConfig.field]: yyyyMmDd } : p));
 
+      const updatePayload = datePickerConfig.field === 'active_from' 
+        ? { active_from: yyyyMmDd } 
+        : { active_until: yyyyMmDd };
+
       const { error } = await supabase
         .from('sk8lytz_picks')
-        .update({ [datePickerConfig.field]: yyyyMmDd })
+        .update(updatePayload)
         .eq('id', datePickerConfig.pickId);
 
       if (error) throw error;
@@ -212,9 +216,13 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
     try {
       setPicks(prev => prev.map(p => p.id === pickId ? { ...p, [field]: null } : p));
 
+      const updatePayload = field === 'active_from' 
+        ? { active_from: null } 
+        : { active_until: null };
+
       const { error } = await supabase
         .from('sk8lytz_picks')
-        .update({ [field]: null })
+        .update(updatePayload)
         .eq('id', pickId);
 
       if (error) throw error;
