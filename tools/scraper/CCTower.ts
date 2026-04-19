@@ -124,11 +124,29 @@ async function runDaemonLoop() {
         config.randomize_viewport_enabled ?? true
       );
       
+      const newRetryCount = (target.retry_count || 0) + 1;
       const hasGoldStandard = culturalData.fetched_website && culturalData.phone_number;
-      const verificationStatus = hasGoldStandard ? 'VERIFIED' : 'PENDING';
+      
+      let verificationStatus = target.verification_status;
+
+      if (hasGoldStandard) {
+        verificationStatus = 'VERIFIED';
+      } else if (newRetryCount >= 10) {
+        verificationStatus = 'REJECTED';
+      } else if (
+        culturalData.fetched_website || 
+        culturalData.phone_number || 
+        culturalData.has_adult_night || 
+        culturalData.vibe_rating || 
+        culturalData.has_pro_shop
+      ) {
+        verificationStatus = 'ENRICHED'; // Got something, but not everything
+      } else {
+        verificationStatus = 'PENDING'; // Still nothing
+      }
       
       // Write back validation status
-      console.log(`   💾 Validation: ${verificationStatus} ${hasGoldStandard ? '(Gold Standard Met)' : '(Partial Data)'}`);
+      console.log(`   💾 Validation: ${verificationStatus} ${hasGoldStandard ? '(Gold Standard Met)' : `(Attempt ${newRetryCount}/10)`}`);
       
       const wins = [];
       if (culturalData.fetched_website) wins.push('Website');
@@ -151,13 +169,15 @@ async function runDaemonLoop() {
           surface_quality: culturalData.surface_quality,
           vibe_score: culturalData.vibe_score,
           verification_status: verificationStatus,
+          retry_count: newRetryCount,
           cultural_metadata: {
              ...(target.cultural_metadata || {}),
              last_deep_scan: new Date().toISOString(),
              surface_raw: culturalData.surface_quality,
              vibe_raw: culturalData.vibe_score
           },
-          last_enriched_at: new Date().toISOString()
+          last_enriched_at: new Date().toISOString(),
+          last_attempted_at: new Date().toISOString()
         })
         .eq('id', target.id);
         
@@ -210,17 +230,23 @@ async function runDaemonLoop() {
 
 // Routes
 app.get('/status', async (req, res) => {
-  const { count } = await supabase
+  const { count: totalEnriched } = await supabase
     .from('skate_spots')
     .select('*', { count: 'exact', head: true })
-    .not('verification_status', 'is', null);
+    .in('verification_status', ['ENRICHED', 'VERIFIED']);
+
+  const { count: totalVerified } = await supabase
+    .from('skate_spots')
+    .select('*', { count: 'exact', head: true })
+    .eq('verification_status', 'VERIFIED');
 
   res.json({
     isRunning,
     isHarvestingActive,
     isHeadless,
     currentTarget,
-    enrichedCount: count || 0,
+    enrichedCount: totalEnriched || 0,
+    verifiedCount: totalVerified || 0,
     errorCount,
     consecutiveErrors,
     isGated,
@@ -403,7 +429,7 @@ app.get('/api/queue', async (req, res) => {
   const { data: config } = await supabase.from('scraper_config').select('*').single();
   
   let query = supabase.from('skate_spots').select('*')
-    .or('verification_status.eq.PENDING,verification_status.is.null');
+    .or('verification_status.eq.PENDING,verification_status.eq.ENRICHED,verification_status.is.null');
 
   if (config && config.state_override && config.state_override.length > 0) {
     query = query.in('state', config.state_override);

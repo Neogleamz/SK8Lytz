@@ -120,7 +120,7 @@ function App() {
          }
       }
     } catch {
-      setStatus({ isRunning: false, currentTarget: 'API OFFLINE', enrichedCount: 0, errorCount: 0, lastError: 'Could not connect.' });
+      setStatus({ isRunning: false, currentTarget: 'API OFFLINE', enrichedCount: 0, verifiedCount: 0, errorCount: 0, lastError: 'Could not connect.' });
     }
   };
 
@@ -403,7 +403,7 @@ function App() {
                 <p className="card-value">{totalNodes.toLocaleString()}</p>
               </div>
               <div className="hero-card">
-                <h3 className="card-title">Seeded States</h3>
+                <h3 className="card-title">Enriched Nodes</h3>
                 <p className="card-value">{harvestData.seededStates.length} / 50</p>
               </div>
               <div className="hero-card" style={{ gridColumn: 'span 2' }}>
@@ -512,6 +512,10 @@ function App() {
               <p className="card-value">{status?.enrichedCount || 0}</p>
             </div>
             <div className="hero-card">
+              <h3 className="card-title">Verified (Gold)</h3>
+              <p className="card-value" style={{ color: 'var(--success)' }}>{status?.verifiedCount || 0}</p>
+            </div>
+            <div className="hero-card">
               <h3 className="card-title">Errors Encountered</h3>
               <p className="card-value" style={{ color: 'var(--danger)' }}>{status?.errorCount || 0}</p>
             </div>
@@ -599,14 +603,14 @@ function App() {
 
           <div className="grid-toolbar">
             <input className="form-input" style={{width: '250px'}} placeholder="Search Location / City / State..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-            <select className="form-input filter-dropdown" value={gridFilter} onChange={e => setGridFilter(e.target.value)}>
-               <option value="ALL">All Validations</option>
-               <option value="PENDING">Pending (Queue)</option>
-               <option value="ENRICHED">Enriched (Partial)</option>
-               <option value="VERIFIED">Verified Culturally</option>
-               <option value="DEPRECATED">Deprecated (Tombstone)</option>
-               <option value="REJECTED">Graveyard / Rejected</option>
-            </select>
+             <select className="form-input filter-dropdown" value={gridFilter} onChange={e => setGridFilter(e.target.value)}>
+                <option value="ALL">All Validations</option>
+                <option value="PENDING">Pending (Queue)</option>
+                <option value="ENRICHED">Enriched (Partial)</option>
+                <option value="VERIFIED">Verified Culturally</option>
+                <option value="REJECTED">Graveyard / Rejected</option>
+                <option value="DEPRECATED">Deprecated (Tombstone)</option>
+             </select>
             <button className="btn-primary" onClick={bulkPromote}>🚀 Bulk Promote</button>
             <div className="pagination">
               <button disabled={page === 0} onClick={() => fetchSpots(page - 1, gridFilter)}>Prev</button>
@@ -628,8 +632,9 @@ function App() {
                   <th onClick={() => toggleSort('website')} style={{cursor:'pointer'}}>Website {sortCol==='website' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                   <th onClick={() => toggleSort('phone_number')} style={{cursor:'pointer'}}>Phone {sortCol==='phone_number' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                   <th onClick={() => toggleSort('has_pro_shop')} style={{cursor:'pointer'}}>Shop {sortCol==='has_pro_shop' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                  <th onClick={() => toggleSort('has_adult_night')} style={{cursor:'pointer'}}>18+ {sortCol==='has_adult_night' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                  <th onClick={() => toggleSort('last_enriched_at')} style={{cursor:'pointer'}}>Enriched At {sortCol==='last_enriched_at' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                   <th onClick={() => toggleSort('has_adult_night')} style={{cursor:'pointer'}}>18+ {sortCol==='has_adult_night' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                   <th onClick={() => toggleSort('retry_count')} style={{cursor:'pointer'}}>Retries {sortCol==='retry_count' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                   <th onClick={() => toggleSort('last_enriched_at')} style={{cursor:'pointer'}}>Enriched At {sortCol==='last_enriched_at' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -692,8 +697,15 @@ function App() {
                           row.phone_number || '-'
                         )}
                       </td>
-                      <td>{isEditing ? <input type="checkbox" checked={editForm.has_pro_shop} onChange={e => setEditForm({...editForm, has_pro_shop: e.target.checked})} /> : (row.has_pro_shop ? '✅' : '❌')}</td>
-                      <td>{isEditing ? <input type="checkbox" checked={editForm.has_adult_night} onChange={e => setEditForm({...editForm, has_adult_night: e.target.checked})} /> : (row.has_adult_night ? '✅' : '❌')}</td>
+                       <td>{isEditing ? <input type="checkbox" checked={editForm.has_pro_shop} onChange={e => setEditForm({...editForm, has_pro_shop: e.target.checked})} /> : (row.has_pro_shop ? '✅' : '❌')}</td>
+                       <td>{isEditing ? <input type="checkbox" checked={editForm.has_adult_night} onChange={e => setEditForm({...editForm, has_adult_night: e.target.checked})} /> : (row.has_adult_night ? '✅' : '❌')}</td>
+                       <td>
+                         {isEditing ? (
+                           <input type="number" className="table-input" value={editForm.retry_count || 0} onChange={e => setEditForm({...editForm, retry_count: parseInt(e.target.value) || 0})} />
+                         ) : (
+                           <span style={{ color: row.retry_count >= 8 ? 'var(--danger)' : 'inherit' }}>{row.retry_count || 0}/10</span>
+                         )}
+                       </td>
                       <td style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>
                         {row.last_enriched_at ? new Date(row.last_enriched_at).toLocaleString() : 'Never'}
                       </td>

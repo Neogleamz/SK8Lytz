@@ -676,6 +676,7 @@ body {
 .status-pill.verified { background-color: rgba(74, 222, 128, 0.15); color: var(--success); }
 .status-pill.rejected { background-color: rgba(255, 107, 107, 0.15); color: var(--danger); }
 .status-pill.pending { background-color: rgba(255, 170, 0, 0.15); color: #ffaa00; }
+.status-pill.rejected { background-color: rgba(255, 107, 107, 0.15); color: var(--danger); }
 .status-pill.unverified { background-color: rgba(138, 150, 179, 0.15); color: var(--text-secondary); }
 
 .action-row {
