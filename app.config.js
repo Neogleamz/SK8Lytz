@@ -60,8 +60,8 @@ export default () => {
         {
           "android": {
             "enableJetifier": true,
-            "compileSdkVersion": 34,
-            "targetSdkVersion": 34
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36
           }
         }
       ],
