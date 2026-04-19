@@ -39,17 +39,15 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
     []
   );
 
-  /** Send a solid color instantly using actual LED count */
+  /** Send a solid color instantly using setSymphonyColor (15-byte protocol) to escape the MTU limit */
   const sendColor = useCallback(
     async (r: number, g: number, b: number) => {
       if (!writeToDevice) return;
-      // hwSettings.ledPoints IS the total LED count — do NOT divide by segments
-      // DO NOT apply applyColorSorting — hardware auto-remaps GRB via 0x62 EEPROM config
-      // transitionType=0x01 (FREEZE) = immediate hardware lock, no animation
-      const colors = Array(numLEDs).fill({ r, g, b });
-      await writeToDevice(ZenggeProtocol.setMultiColor(colors, 1, 1, 0x01));
+      // We use setSymphonyColor (0x41) because it generates a 15-byte payload overall.
+      // This slides perfectly underneath any 23-byte MTU failure ceilings.
+      await writeToDevice(ZenggeProtocol.setSymphonyColor(r, g, b));
     },
-    [writeToDevice, numLEDs]
+    [writeToDevice]
   );
 
   /**

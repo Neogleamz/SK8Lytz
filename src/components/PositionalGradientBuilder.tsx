@@ -56,20 +56,32 @@ export default function PositionalGradientBuilder({
       try {
           // 1. Load Local
           const localData = await AsyncStorage.getItem('@Sk8lytz_Builder_Presets');
-          const localPresets: CustomBuilderPreset[] = localData ? JSON.parse(localData) : [];
+          let localPresets: CustomBuilderPreset[] = [];
+          if (localData) {
+              try {
+                  const parsed = JSON.parse(localData);
+                  if (Array.isArray(parsed)) {
+                      // Filter out corrupted or legacy caches that don't match the new CustomBuilderPreset interface
+                      localPresets = parsed.filter(p => p && p.id && p.name && Array.isArray(p.nodes));
+                  }
+              } catch (e) {
+                  AppLogger.warn('Failed to parse local builder presets', e);
+              }
+          }
           
           // 2. Load Cloud (if logged in)
           const { data: userAuth } = await supabase.auth.getUser();
           let cloudPresets: CustomBuilderPreset[] = [];
           
-          if (userAuth.user) {
+          if (userAuth?.user) {
               const { data, error } = await supabase
                   .from('custom_builder_presets')
                   .select('*')
                   .eq('user_id', userAuth.user.id);
                   
               if (!error && data) {
-                  cloudPresets = data as any as CustomBuilderPreset[];
+                  // Ensure cloud data matches interface
+                  cloudPresets = (data as any as CustomBuilderPreset[]).filter(p => p && p.id && p.name && Array.isArray(p.nodes));
               }
           }
           
@@ -88,7 +100,7 @@ export default function PositionalGradientBuilder({
       setIsSaving(true);
       
       const newPreset: CustomBuilderPreset = {
-          id: `local_${Date.now()}`,
+          id: `local_${Date.now()}_${Math.random().toString(36).substring(2,9)}`,
           name: presetNameInput.trim(),
           nodes: nodes,
           fill_mode: fillMode,
@@ -98,9 +110,9 @@ export default function PositionalGradientBuilder({
       try {
           const { data: userAuth } = await supabase.auth.getUser();
           
-          if (userAuth.user) {
+          if (userAuth?.user) {
               // Save to Cloud
-              newPreset.id = crypto.randomUUID ? crypto.randomUUID() : `cloud_${Date.now()}`;
+              newPreset.id = `cloud_${Date.now()}_${Math.random().toString(36).substring(2,9)}`;
               newPreset.user_id = userAuth.user.id;
               
               const { error } = await supabase.from('custom_builder_presets').insert(newPreset as any);
@@ -108,7 +120,13 @@ export default function PositionalGradientBuilder({
           } else {
               // Save to Local Only
               const localData = await AsyncStorage.getItem('@Sk8lytz_Builder_Presets');
-              const localPresets: CustomBuilderPreset[] = localData ? JSON.parse(localData) : [];
+              let localPresets: CustomBuilderPreset[] = [];
+              if (localData) {
+                  try {
+                      const parsed = JSON.parse(localData);
+                      if (Array.isArray(parsed)) localPresets = parsed.filter(p => p && p.id && p.name && Array.isArray(p.nodes));
+                  } catch (e) {}
+              }
               localPresets.push(newPreset);
               await AsyncStorage.setItem('@Sk8lytz_Builder_Presets', JSON.stringify(localPresets));
           }

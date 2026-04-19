@@ -339,10 +339,30 @@ export default function useBLE(): BluetoothLowEnergyApi {
           await conn.discoverAllServicesAndCharacteristics();
 
           try {
-            const negotiated = await conn.requestMTU(512);
-            mtuMapRef.current.set(conn.id, negotiated.mtu);
-            AppLogger.log('DEVICE_CONNECTED', { context: 'mtu_negotiated', mtu: negotiated.mtu, deviceId: conn.id });
-          } catch (mtuErr: any) {}
+            let negotiatedMtu = 23;
+            // Retry MTU negotiation up to 2 times if the Android stack botches it and returns 23
+            for (let mtuAttempt = 1; mtuAttempt <= 2; mtuAttempt++) {
+              try {
+                const negotiated = await conn.requestMTU(512);
+                negotiatedMtu = negotiated.mtu;
+                if (negotiatedMtu > 23) break;
+                AppLogger.warn(`[BLE] MTU glitch (23) for ${conn.id}. Retrying...`);
+                await new Promise(res => setTimeout(res, 200));
+              } catch (e) {
+                await new Promise(res => setTimeout(res, 200));
+              }
+            }
+            if (negotiatedMtu > 23) {
+              mtuMapRef.current.set(conn.id, negotiatedMtu);
+              AppLogger.log('DEVICE_CONNECTED', { context: 'mtu_negotiated', mtu: negotiatedMtu, deviceId: conn.id });
+            } else {
+              AppLogger.warn(`[BLE] MTU stuck at 23 for ${conn.id}. Assuming Android GATT stack limit/glitch and forcing safe default 186.`);
+              mtuMapRef.current.set(conn.id, 186);
+            }
+          } catch (mtuErr: any) {
+            AppLogger.warn(`[BLE] MTU throw for ${conn.id}. Forcing default 186.`, mtuErr);
+            mtuMapRef.current.set(conn.id, 186);
+          }
 
           if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
           disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {
