@@ -6,12 +6,32 @@ module.exports = {
       args: 'CCTower.ts',
       cwd: 'C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/scraper',
       watch: false,
-      env: {
-        NODE_ENV: 'production'
-      },
+      env: { NODE_ENV: 'production' },
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
-      error_file: './logs/daemon-error.log',
-      out_file: './logs/daemon-out.log'
+      error_file: './logs/api-error.log',
+      out_file: './logs/api-out.log'
+    },
+    {
+      name: 'scraper-operator',
+      script: 'node_modules/tsx/dist/cli.cjs',
+      args: 'Operator.ts',
+      cwd: 'C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/scraper',
+      watch: false,
+      env: { NODE_ENV: 'production' },
+      log_date_format: 'YYYY-MM-DD HH:mm:ss',
+      error_file: './logs/operator-error.log',
+      out_file: './logs/operator-out.log'
+    },
+    {
+      name: 'scraper-indexer',
+      script: 'node_modules/tsx/dist/cli.cjs',
+      args: 'Indexer.ts',
+      cwd: 'C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/scraper',
+      watch: false,
+      env: { NODE_ENV: 'production' },
+      log_date_format: 'YYYY-MM-DD HH:mm:ss',
+      error_file: './logs/indexer-error.log',
+      out_file: './logs/indexer-out.log'
     }
   ]
 };

@@ -610,6 +610,8 @@ function App() {
              <select className="form-input filter-dropdown" value={gridFilter} onChange={e => setGridFilter(e.target.value)}>
                 <option value="ALL">All Validations</option>
                 <option value="PENDING">Pending (Queue)</option>
+                <option value="IDENTITY_ESTABLISHED">Identity Found</option>
+                <option value="INDEXED">Socials Indexed</option>
                 <option value="ENRICHED">Enriched (Partial)</option>
                 <option value="VERIFIED">Verified Culturally</option>
                 <option value="REJECTED">Graveyard / Rejected</option>

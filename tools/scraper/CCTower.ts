@@ -5,8 +5,9 @@ import fs from 'fs';
 import path from 'path';
 import { EventEmitter } from 'events';
 import { createClient } from '@supabase/supabase-js';
-import { scrapeCulturalDetails } from './lib/GoogleScraper';
+import { exec } from 'child_process';
 import { US_STATES, processState, startNationalHarvester, stopNationalHarvester, isHarvestingActive } from './USANationalHarvest';
+
 
  // --- Logging Infrastructure ---
 const LOG_DIR = path.resolve(__dirname, './logs');
@@ -77,207 +78,85 @@ async function fetchConfig() {
   };
 }
 
-async function runDaemonLoop() {
-  while (isRunning) {
-    try {
-      const config = await fetchConfig();
-      const sleepInterval = config.sleep_interval_ms || 10000;
-      
-      currentTarget = 'Querying Queue...';
-      const { data: spots, error: rpcError } = await supabase.rpc('get_next_spot_to_enrich');
-      
-      if (rpcError) throw new Error('RPC Failed: ' + rpcError.message);
-      
-      if (!spots || spots.length === 0) {
-        currentTarget = 'Idle - Queue Empty';
-        consecutiveErrors = 0; // Reset errors on clean idle
-        isGated = false;
-        await sleep(sleepInterval);
-        continue;
-      }
-      
-      const target = spots[0];
-      currentTarget = `[${target.facility_type}] ${target.name} (${target.city}, ${target.state})`;
-      
-      // Update targeted row so another worker doesn't pick it up
-      await supabase.from('skate_spots').update({ 
-        last_attempted_at: new Date().toISOString() 
-      }).eq('id', target.id);
-      
-      console.log(`\n🎯 Targeting: ${currentTarget}`);
-      
-      // We pass the exact address/coordinates to the scraper to satisfy "exact address" requirement from the plan
-      const searchQuery = target.street_address 
-          ? `${target.name} ${target.street_address} ${target.city} ${target.state}`
-          : `${target.name} ${target.city} ${target.state}`;
-          
-      // Graceful stop check before spin up
-      if (!isRunning) {
-         currentTarget = 'Offline';
-         break;
-      }
-
-      const culturalData = await scrapeCulturalDetails(
-        searchQuery, 
-        isHeadless,
-        config.identity_rotation_enabled ?? true,
-        config.randomize_viewport_enabled ?? true
-      );
-      
-      const newRetryCount = (target.retry_count || 0) + 1;
-      const hasGoldStandard = culturalData.fetched_website && culturalData.phone_number;
-      
-      let verificationStatus = target.verification_status;
-
-      if (hasGoldStandard) {
-        verificationStatus = 'VERIFIED';
-      } else if (newRetryCount >= 10) {
-        verificationStatus = 'REJECTED';
-      } else if (
-        culturalData.fetched_website || 
-        culturalData.phone_number || 
-        culturalData.has_adult_night || 
-        culturalData.vibe_rating || 
-        culturalData.has_pro_shop
-      ) {
-        verificationStatus = 'ENRICHED'; // Got something, but not everything
-      } else {
-        verificationStatus = 'PENDING'; // Still nothing
-      }
-      
-      // Write back validation status
-      console.log(`   💾 Validation: ${verificationStatus} ${hasGoldStandard ? '(Gold Standard Met)' : `(Attempt ${newRetryCount}/10)`}`);
-      
-      const wins = [];
-      if (culturalData.fetched_website) wins.push('Website');
-      if (culturalData.has_pro_shop) wins.push('Pro-Shop');
-      if (culturalData.has_adult_night) wins.push('Adult-Night');
-      if (culturalData.vibe_rating) wins.push('Vibe-Score');
-      if (culturalData.phone_number) wins.push('Phone');
-
-      console.log(`   ✨ Enrichment Summary: [${wins.length ? wins.join(', ') : 'No new markers found'}]`);
-      
-      const { error: updateError } = await supabase
-        .from('skate_spots')
-        .update({
-          has_pro_shop: target.has_pro_shop || culturalData.has_pro_shop,
-          has_adult_night: culturalData.has_adult_night,
-          vibe_rating: culturalData.vibe_rating,
-          socials: culturalData.socials,
-          website: target.website || culturalData.fetched_website,
-          phone_number: culturalData.phone_number,
-          surface_quality: culturalData.surface_quality,
-          vibe_score: culturalData.vibe_score,
-          verification_status: verificationStatus,
-          retry_count: newRetryCount,
-          cultural_metadata: {
-             ...(target.cultural_metadata || {}),
-             last_deep_scan: new Date().toISOString(),
-             surface_raw: culturalData.surface_quality,
-             vibe_raw: culturalData.vibe_score
-          },
-          last_enriched_at: new Date().toISOString(),
-          last_attempted_at: new Date().toISOString()
-        })
-        .eq('id', target.id);
-        
-      if (updateError) throw updateError;
-      
-      enrichedCount++;
-      consecutiveErrors = 0; // Success reset
-      isGated = false;
-      lastError = null;
-      currentTarget = 'Cooldown Phase';
-      await sleep(sleepInterval);
-
-
-    } catch (err: any) {
-      errorCount++;
-      consecutiveErrors++;
-      lastError = err.message;
-      
-      if (err.message === 'BOT_GATED') {
-        const config = await fetchConfig();
-        const cooldownBase = config.cooldown_base_ms || 300000;
-        const jitterPct = config.cooldown_jitter_pct || 20;
-        
-        // Exponential Backoff: base * (2 ^ (errors - 1))
-        const backoff = cooldownBase * Math.pow(2, Math.min(consecutiveErrors - 1, 4));
-        const jitterAmt = backoff * (jitterPct / 100) * (Math.random() * 2 - 1);
-        const totalWait = Math.max(backoff + jitterAmt, 10000);
-
-        currentTarget = `GATED - PAUSING (${Math.round(totalWait/1000)}s)`;
-        console.error(`🛑 [SECURITY] Bot Gate detected! Cooling down for ${Math.round(totalWait/1000)}s...`);
-        
-        if (consecutiveErrors >= (config.max_consecutive_errors || 3)) {
-          isGated = true;
-          currentTarget = 'CIRCUIT BREAKER - GATED';
-          console.error('⛔ [CRITICAL] Strike threshold reached. Halting engine to prevent blacklist.');
-          if (!config.auto_resume_enabled) isRunning = false;
-        }
-        
-        await sleep(totalWait);
-      } else {
-        console.error('❌ Daemon Error:', err.message);
-        currentTarget = 'Error - Backing off';
-        await sleep(30000); // Backoff on error
-      }
-    }
-  }
-  
-  currentTarget = 'Offline';
-}
-
-// Routes
 app.get('/status', async (req, res) => {
-  const { count: totalProcessed } = await supabase
-    .from('skate_spots')
-    .select('*', { count: 'exact', head: true })
-    .not('last_attempted_at', 'is', null);
+  // Let's use PM2 to check if the scrapers are actually running online
+  exec('pm2 jlist', async (err, stdout) => {
+    let running = false;
+    let operatorStatus = 'Offline';
+    let indexerStatus = 'Offline';
 
-  const { count: totalEnriched } = await supabase
-    .from('skate_spots')
-    .select('*', { count: 'exact', head: true })
-    .in('verification_status', ['ENRICHED', 'VERIFIED']);
+    if (!err && stdout) {
+      try {
+        const pm2List = JSON.parse(stdout);
+        const operator = pm2List.find((p: any) => p.name === 'scraper-operator');
+        const indexer = pm2List.find((p: any) => p.name === 'scraper-indexer');
+        if (operator?.pm2_env?.status === 'online' || indexer?.pm2_env?.status === 'online') {
+            running = true;
+        }
+        operatorStatus = operator?.pm2_env?.status || 'Offline';
+        indexerStatus = indexer?.pm2_env?.status || 'Offline';
+      } catch(e) {}
+    }
 
-  const { count: totalVerified } = await supabase
-    .from('skate_spots')
-    .select('*', { count: 'exact', head: true })
-    .eq('verification_status', 'VERIFIED');
+    const { count: totalProcessed } = await supabase
+      .from('skate_spots')
+      .select('*', { count: 'exact', head: true })
+      .not('last_attempted_at', 'is', null);
 
-  res.json({
-    isRunning,
-    isHarvestingActive,
-    isHeadless,
-    currentTarget,
-    processedCount: totalProcessed || 0,
-    enrichedCount: totalEnriched || 0,
-    verifiedCount: totalVerified || 0,
-    errorCount,
-    consecutiveErrors,
-    isGated,
-    lastError
+    const { count: totalEnriched } = await supabase
+      .from('skate_spots')
+      .select('*', { count: 'exact', head: true })
+      .in('verification_status', ['ENRICHED', 'VERIFIED']);
+
+    const { count: totalVerified } = await supabase
+      .from('skate_spots')
+      .select('*', { count: 'exact', head: true })
+      .eq('verification_status', 'VERIFIED');
+      
+    // New counts for indexer metrics
+    const { count: totalIdentified } = await supabase
+      .from('skate_spots')
+      .select('*', { count: 'exact', head: true })
+      .in('verification_status', ['IDENTITY_ESTABLISHED', 'INDEXED', 'ENRICHED', 'VERIFIED']);
+
+    res.json({
+      isRunning: running,
+      isHarvestingActive,
+      isHeadless,
+      currentTarget: `Operator: ${operatorStatus} | Indexer: ${indexerStatus}`,
+      processedCount: totalProcessed || 0,
+      enrichedCount: totalIdentified || 0, // Using identified to reflect Phase 2/3 progress
+      verifiedCount: totalVerified || 0,
+      errorCount,
+      consecutiveErrors,
+      isGated,
+      lastError
+    });
   });
 });
 
 app.post('/start', (req, res) => {
-  if (!isRunning) {
-    isRunning = true;
-    runDaemonLoop();
-    res.json({ success: true, message: 'Daemon started' });
-  } else {
-    res.json({ success: false, message: 'Already running' });
-  }
+  console.log('Orchestrating micro-scrapers start...');
+  exec('pm2 start scraper-operator scraper-indexer', (err, stdout, stderr) => {
+     if (err) {
+        console.error('Failed to start scrapers cluster:', err);
+        return res.status(500).json({ success: false, message: 'Start failed', error: err.message });
+     }
+     isRunning = true;
+     res.json({ success: true, message: 'Scrapers cluster started' });
+  });
 });
 
 app.post('/stop', (req, res) => {
-  if (isRunning) {
-    isRunning = false;
-    currentTarget = 'Stopping...';
-    res.json({ success: true, message: 'Daemon stopping' });
-  } else {
-    res.json({ success: false, message: 'Daemon is not running' });
-  }
+  console.log('Orchestrating micro-scrapers stop...');
+  exec('pm2 stop scraper-operator scraper-indexer', (err, stdout, stderr) => {
+     if (err) {
+        console.error('Failed to stop scrapers cluster:', err);
+        return res.status(500).json({ success: false, message: 'Stop failed', error: err.message });
+     }
+     isRunning = false;
+     res.json({ success: true, message: 'Scrapers cluster stopped' });
+  });
 });
 
 app.get('/config', async (req, res) => {
