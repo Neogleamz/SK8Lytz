@@ -1,7 +1,7 @@
 import { requestRecordingPermissionsAsync, getRecordingPermissionsAsync } from 'expo-audio';
 import { Camera } from 'expo-camera';
 import * as Location from 'expo-location';
-import * as Notifications from 'expo-notifications';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PermissionsAndroid, Platform, DeviceEventEmitter } from 'react-native';
 import { AppLogger } from './AppLogger';
@@ -71,6 +71,8 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
         return status === 'granted';
       }
       case 'NOTIFICATIONS': {
+        if (Platform.OS === 'web') return false;
+        const Notifications = require('expo-notifications');
         const { status } = await Notifications.requestPermissionsAsync();
         if (status === 'granted') {
           // Import inline to avoid circular dependency issues at the module level
@@ -124,6 +126,8 @@ const checkPermissionNative = async (type: PermissionType): Promise<boolean> => 
         return status === 'granted';
       }
       case 'NOTIFICATIONS': {
+        if (Platform.OS === 'web') return false;
+        const Notifications = require('expo-notifications');
         const { status } = await Notifications.getPermissionsAsync();
         return status === 'granted';
       }
