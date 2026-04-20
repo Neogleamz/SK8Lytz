@@ -1,4 +1,25 @@
+## [2.1.0] - 2026-04-20
+
+### 🐛 Bug Fixes
+- **SSOT Bypass Eliminated**: Removed `AsyncStorage` import from `useHardwareNotifications.ts`. All 3 direct `setItem('@Sk8lytz_device_configs')` calls (RF config, LED probe, hardware probe) are now routed through `DeviceRepository.updateConfig()` — eliminating split-brain corruption on every BLE connect cycle.
+- **Provisioning Schema Corruption Fixed**: Replaced the 35-line direct Supabase write loop in `runAutoProvisioning` (which used raw MAC addresses as `id`, bypassing tombstone guards) with `repo.saveGroupTransactional()`. Removed the rogue `supabase` import from `useDashboardGroups.ts`.
+- **Stale Closure in Optimistic BLE**: Added `disableOptimisticUI` and `disableHaptics` to the `useOptimisticBLE` `useCallback` dependency array — App Manager runtime toggles now take effect immediately without waiting for an unrelated re-render.
+- **DockedController Platform Import**: Added missing `Platform` import in `DockedController.tsx` (pre-existing TSC error caught by release gate).
+
+### 🔧 Maintenance
+- **Settings Table Isolation**: Migrated all SK8Lytz admin settings from the shared `app_settings` table to a new, dedicated `sk8lytz_app_settings` table with `updated_at` auto-trigger and seeded keys. The Neogleamz Inventory app is unaffected.
+- **Orphaned Constant Removed**: Removed unused `PATTERNS_KEY` constant from `DeviceRepository.ts`. The key `@Sk8lytz_last_group_patterns` is documented as an intentional UI-local concern owned by `useDashboardGroups`.
+- **TypeScript Config**: Added `scratch/` to `tsconfig.json` exclude list to prevent non-production exploratory scripts from polluting the release gate.
+
+### 🌐 Scraper Pipeline (Daemon — separate from app)
+- **Phase 3 Queue Mirroring**: Queue now mirrors the Indexer RPC, surfacing `ENRICHED + crawled=false` records for targeted re-processing.
+- **Headless Browser**: Switched Puppeteer to `headless: 'new'` mode to suppress deprecation warnings.
+- **Indexer v2**: Structured extraction pipeline for hours, adult-night schedules, pricing, and events.
+
+---
+
 ## [1.12.4] - 2026-04-19
+
 
 ### 🐛 Bug Fixes
 - **Data Sync Regression**: Resolved offline synchronization integrity regressions across the device and group pipelines, ensuring cloud connectivity does not unintentionally wipe locally cached devices or phantom groups.
