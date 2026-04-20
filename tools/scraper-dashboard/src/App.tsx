@@ -45,6 +45,8 @@ const US_STATES = [
 
 function App() {
   const [activeTab, setActiveTab] = useState<'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5' | 'phase6'>('phase1');
+  const [seedProvider, setSeedProvider] = useState<'osm'|'google'>('osm');
+
 
   // --- Sys Dashboard States ---
   const [status, setStatus] = useState<any>(null);
@@ -80,6 +82,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
+  const [isStarting, setIsStarting] = useState(false);
   const rowsPerPage = 50;
 
   useEffect(() => {
@@ -156,9 +159,13 @@ function App() {
 
   const fetchQueue = async () => {
     try {
-      const phasesToFetch = ['phase1', 'phase2', 'phase3', 'phase4', 'phase5'];
+      const phasesToFetch = ['phase1', 'phase2', 'phase3', 'phase4', 'phase5', 'recent'];
       const results = await Promise.all(
-         phasesToFetch.map(phase => fetch(`${API_BASE}/api/queue?phase=${phase}`).then(r => r.json()))
+         phasesToFetch.map(phase => 
+            phase === 'recent' 
+              ? fetch(`${API_BASE}/api/recent-spots`).then(r => r.json())
+              : fetch(`${API_BASE}/api/queue?phase=${phase}`).then(r => r.json())
+         )
       );
       
       const newQueues: Record<string, any[]> = {};
@@ -280,6 +287,7 @@ function App() {
   };
 
   const triggerHarvest = async (type: string, states: string[] = []) => {
+    setIsStarting(true);
     try {
        await fetch(`${API_BASE}/api/harvest/${type}`, {
          method: 'POST',
@@ -290,6 +298,7 @@ function App() {
     } catch (e) {
        alert('Harvest failed to start.');
     }
+    setTimeout(() => setIsStarting(false), 1000);
   };
 
   const triggerForceHarvest = async (state: string) => {
@@ -364,6 +373,17 @@ function App() {
         body: JSON.stringify(editForm)
       });
       setEditingId(null);
+      fetchSpots(page, gridFilter);
+    } catch (e) {}
+  };
+
+  const updateSpotStatus = async (id: string, status: string) => {
+    try {
+      await fetch(`${API_BASE}/api/spots/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verification_status: status })
+      });
       fetchSpots(page, gridFilter);
     } catch (e) {}
   };
@@ -534,12 +554,12 @@ function App() {
                </div>
                <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                   <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                     <button className="btn-mini start" onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive}>
-                        ▶ {stateOverride.length > 0 ? `SEED ${stateOverride.join(', ')}` : 'GLOBAL SEED'}
+                     <button className={`btn-mini start ${isStarting ? 'pulsing' : ''}`} onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive || status?.isGoogleSweepActive || isStarting}>
+                        ▶ {isStarting ? 'INITIATING...' : stateOverride.length > 0 ? `SEED ${stateOverride.join(', ')}` : 'GLOBAL SEED'}
                      </button>
-                     <button className="btn-mini stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive}>■ STOP</button>
+                     <button className="btn-mini stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive && !status?.isGoogleSweepActive}>■ STOP</button>
                   </div>
-                  {status?.isHarvestingActive && <div className="flow-animation"></div>}
+                  {(status?.isHarvestingActive || status?.isGoogleSweepActive) && <div className="flow-animation"></div>}
                </div>
                <div style={{ textAlign: 'center', minWidth: '100px' }}>
                   <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#8a2be2' }}>{status?.pendingCount || 0}</div>
@@ -566,9 +586,15 @@ function App() {
                   </div>
                   
                   <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
-                     <h4 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: '#ffb300' }}>Direct Google Discovery</h4>
-                     <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>Trigger the Google Maps "Phase 0" crawler. Scrapes business listings directly from Google for maximum fidelity.</p>
-                     <button className="btn-mini" style={{ width: '100%', borderColor: '#ffb300', color: '#ffb300' }} onClick={() => triggerDiscovery('Missouri')}>LAUNCH STALKER</button>
+                     <h4 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: '#ffb300' }}>Origin Provider</h4>
+                     <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>Switch between OpenStreetMap (Discovery) and Google Places (Premium). Affects the SEED button above.</p>
+                     <div className="provider-toggle switch-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.5)', padding: '8px', borderRadius: '6px' }}>
+                         <span style={{ fontSize: '0.8rem', fontWeight: 600, color: seedProvider === 'google' ? '#ffb300' : '#8a2be2' }}>{seedProvider === 'osm' ? 'OSM Mode' : 'Google Mode'}</span>
+                         <label className="switch">
+                            <input type="checkbox" checked={seedProvider === 'google'} onChange={e => setSeedProvider(e.target.checked ? 'google' : 'osm')} />
+                            <span className="slider round"></span>
+                         </label>
+                     </div>
                   </div>
                </div>
             </div>
@@ -599,7 +625,7 @@ function App() {
                         const count = harvestData.stateCounts[st] || 0;
                         return (
                           <button key={st} className={`state-pill mini ${stateOverride.includes(st) ? 'active' : ''}`} onClick={() => updateGlobalStrategy('state_override', st)} style={{ padding: '6px 12px', fontSize: '0.8rem', margin: '2px', background: stateOverride.includes(st) ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)', color: stateOverride.includes(st) ? '#000' : '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer' }}>
-                            {st} {count > 0 && <span className="pill-dot" style={{display:'inline-block', width:'6px', height:'6px', background:'var(--success)', borderRadius:'50%', marginLeft:'4px'}}></span>}
+                            {st} {count > 0 && <span style={{opacity: 0.6, fontSize: '0.7em', marginLeft: '4px'}}>({count})</span>}
                           </button>
                         )
                      })}
@@ -617,12 +643,16 @@ function App() {
                        const colors: Record<string, any> = {};
                        coverageStats.forEach((stat: any) => {
                           if (stat.total === 0) return;
-                          let color = '#8a2be2'; 
+                          const density = Math.min(stat.total / 30, 1);
+                          const opacity = Math.max(density, 0.3); // Min 30% visibility so 1 record is visible
+                          
+                          let color = `rgba(138,43,226,${opacity})`; 
                           const enrichedRatio = stat.enriched / stat.total;
-                          if (enrichedRatio > 0.5) color = '#ff5a00';
+                          if (enrichedRatio >= 0.5 || stat.enriched > 5) color = `rgba(255,90,0,${opacity})`;
                           const verifiedRatio = stat.verified / stat.total;
-                          if (verifiedRatio > 0.5) color = '#4caf50';
-                          colors[stat.state] = { fill: color };
+                          if (verifiedRatio >= 0.5) color = `rgba(76,175,80,${opacity})`;
+                          
+                          colors[stat.state] = { fill: color, customText: stat.total.toString() };
                        });
                        return colors;
                     })()}
@@ -656,19 +686,21 @@ function App() {
             </div>
 
             <div style={{marginTop: '2rem'}}>
-                <h4 style={{fontSize: '0.8rem', textTransform:'uppercase', color:'var(--text-secondary)', marginBottom: 0}}>Newly Spawned Targets (Unprocessed)</h4>
-                {(phaseQueues['phase1'] || []).length === 0 ? (
+                <h4 style={{fontSize: '0.8rem', textTransform:'uppercase', color:'var(--text-secondary)', marginBottom: 0}}>Recently Harvested Seeds (Live)</h4>
+                {(phaseQueues['recent'] || []).length === 0 ? (
                     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '2rem', textAlign: 'center', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic', marginTop: '10px' }}>
-                        Vault is empty. Click [START NATIONAL HARVEST] to spawn targets from OSM.
+                        Vault is empty. Click [GLOBAL SEED] to spawn targets from OSM or Google API.
                     </div>
                 ) : (
                     <div className="mini-data-bank" style={{marginTop: '10px'}}>
-                      {(phaseQueues['phase1'] || []).map(spot => (
-                        <div key={spot.id} className="queue-card active">
+                      {(phaseQueues['recent'] || []).map(spot => (
+                        <div key={spot.id} className="queue-card active" style={{ borderColor: spot.verification_status === 'ENRICHED' ? '#ff5a00' : 'rgba(255,255,255,0.1)' }}>
                           <div className="queue-card-title">{spot.name}</div>
                           <div className="queue-card-loc">{spot.city}, {spot.state}</div>
                           <div className="queue-tags">
-                            <span className="queue-badge">⏳ RAW SEED</span>
+                            <span className="queue-badge" style={{ background: spot.verification_status === 'ENRICHED' ? 'rgba(255,90,0,0.1)' : 'rgba(255,255,255,0.05)', color: spot.verification_status === 'ENRICHED' ? '#ff5a00' : 'var(--text-secondary)' }}>
+                              {spot.verification_status === 'ENRICHED' ? '✨ GOLDEN SEED' : '⏳ RAW SEED'}
+                            </span>
                           </div>
                         </div>
                       ))}
@@ -843,9 +875,28 @@ function App() {
         {/* =========== PHASE 6: DATABANK QA =========== */}
         {activeTab === 'phase6' && (
           <div className="tab-pane graveyard fade-in">
-            <div className="explainer-block" style={{marginBottom: '1rem'}}>
-              <h3 style={{marginTop: 0, color: '#4caf50'}}>Phase 6: Databank QA Staging Grid</h3>
-              <p>This is the final human-in-the-loop verification protocol. Filter by pipeline status down below to intercept spot identities parsed by the Operator/Detective heuristics. Utilize inline editing to clean Context Snippets into exact integers, delete garbage ghosts, or execute bulk promotions sending `VERIFIED` data directly into the live mobile application.</p>
+            <div className="explainer-block" style={{marginBottom: '1rem', background: 'rgba(76, 175, 80, 0.05)', border: '1px solid rgba(76, 175, 80, 0.2)'}}>
+              <h3 style={{marginTop: 0, color: '#4caf50'}}>Phase 6: Databank QA & Live Sync</h3>
+              <p>This is the final human-in-the-loop verification protocol. Filter by pipeline status down below to intercept spot identities parsed by the Operator/Detective heuristics.</p>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 2fr', gap: '10px', marginTop: '1rem', background: '#000', padding: '15px', borderRadius: '8px' }}>
+                 <div style={{marginBottom: '10px'}}>
+                    <span className="status-pill pending" style={{marginBottom: 5, display: 'inline-block'}}>PENDING (Phase 1/2)</span><br/>
+                    <span style={{fontSize: '0.8rem', color:'var(--text-secondary)'}}>Raw OpenStreetMap (OSM) extractions. Needs human or daemon review to find website/phone.</span>
+                 </div>
+                 <div style={{marginBottom: '10px'}}>
+                    <span className="status-pill enriched" style={{marginBottom: 5, display: 'inline-block', border: '1px solid #ff5a00', background:'rgba(255,90,0,0.1)'}}>ENRICHED (Google Premium)</span><br/>
+                    <span style={{fontSize: '0.8rem', color:'var(--text-secondary)'}}>Scraped directly via Google Places. Assumed high fidelity (Hours, Coordinates). "Gold Standard".</span>
+                 </div>
+                 <div>
+                    <span className="status-pill verified" style={{marginBottom: 5, display: 'inline-block'}}>VERIFIED</span><br/>
+                    <span style={{fontSize: '0.8rem', color:'var(--text-secondary)'}}>Manually inspected by a human admin and confirmed 100% accurate.</span>
+                 </div>
+                 <div>
+                    <span style={{fontSize: '0.85rem', fontWeight: 800, color:'#4caf50', border: '1px solid #4caf50', padding: '4px 8px', borderRadius: '4px', display:'inline-block', marginBottom: 5}}>LIVE APP TOGGLE</span><br/>
+                    <span style={{fontSize: '0.8rem', color:'var(--text-secondary)'}}>Toggling the <q>LIVE APP</q> Checkbox instantly pushes the record to the public-facing SK8Lytz iOS/Android app map!</span>
+                 </div>
+              </div>
             </div>
 
             <div className="grid-toolbar">
@@ -855,9 +906,9 @@ function App() {
                   <option value="PENDING">Phase 1 Pending (Queue)</option>
                   <option value="IDENTITY_ESTABLISHED">Phase 2 Identified</option>
                   <option value="INDEXED">Phase 3 Web-Crawled</option>
-                  <option value="ENRICHED">Phase 4 Deep Enriched</option>
+                  <option value="ENRICHED">Phase 4 Golden Seed (Google Premium)</option>
                   <option value="MEDIA_READY">Phase 5 Media Prepped</option>
-                  <option value="VERIFIED">Phase 6 Verified & Published</option>
+                  <option value="VERIFIED">Phase 6 Verified (Gold Standard)</option>
                   <option value="REJECTED">Graveyard / Rejected</option>
                </select>
               <button className="btn-primary" onClick={bulkPromote}>🚀 Bulk App Promote</button>
@@ -875,7 +926,7 @@ function App() {
                     <th onClick={() => toggleSort('name')} style={{cursor:'pointer'}}>Location {sortCol==='name' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                     <th onClick={() => toggleSort('street_address')} style={{cursor:'pointer'}}>Address {sortCol==='street_address' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                     <th onClick={() => toggleSort('verification_status')} style={{cursor:'pointer'}}>Current Phase {sortCol==='verification_status' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th>Vibe</th>
+                    <th onClick={() => toggleSort('rating')} style={{cursor:'pointer'}}>Rating {sortCol==='rating' ? (sortDir==='asc'?'▲':'▼') : ''}</th>
                     <th>Surface</th>
                     <th onClick={() => toggleSort('website')} style={{cursor:'pointer'}}>Website {sortCol==='website' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                     <th onClick={() => toggleSort('phone_number')} style={{cursor:'pointer'}}>Phone {sortCol==='phone_number' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
@@ -907,25 +958,27 @@ function App() {
                           {isEditing ? <input className="table-input" value={editForm.street_address || ''} onChange={e => setEditForm({...editForm, street_address: e.target.value})} placeholder="Street Address" /> : <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}>{row.street_address || '-'}</div>}
                         </td>
                         <td className="status-cell">
-                          {isEditing ? (
-                            <select className="table-input" value={editForm.verification_status || 'PENDING'} onChange={e => setEditForm({...editForm, verification_status: e.target.value})}>
-                              <option value="PENDING">PHASE 1 PENDING</option>
-                              <option value="IDENTITY_ESTABLISHED">PHASE 2 IDENTIFIED</option>
-                              <option value="INDEXED">PHASE 3 INDEXED</option>
-                              <option value="ENRICHED">PHASE 4 ENRICHED</option>
-                              <option value="MEDIA_READY">PHASE 5 MEDIA</option>
-                              <option value="VERIFIED">PHASE 6 VERIFIED</option>
-                              <option value="DEPRECATED">Tombstone (Deleted)</option>
-                              <option value="REJECTED">Graveyard (Blacklist)</option>
-                            </select>
-                          ) : (
-                            <span className={`status-pill ${row.verification_status?.toLowerCase() || 'pending'}`}>
-                              {row.verification_status || 'PHASE_1_PENDING'}
-                            </span>
-                          )}
+                           <select 
+                             className={`table-input status-pill ${row.verification_status?.toLowerCase() || 'pending'}`} 
+                             value={isEditing ? (editForm.verification_status || 'PENDING') : (row.verification_status || 'PENDING')} 
+                             onChange={e => {
+                                if (isEditing) setEditForm({...editForm, verification_status: e.target.value});
+                                else updateSpotStatus(row.id, e.target.value);
+                             }}
+                             style={{ padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', appearance: 'menulist' }}
+                           >
+                              <option value="PENDING">🕒 PENDING (PH_1)</option>
+                              <option value="IDENTITY_ESTABLISHED">🕵️ IDENTIFIED (PH_2)</option>
+                              <option value="INDEXED">🕸️ INDEXED (PH_3)</option>
+                              <option value="ENRICHED">✨ ENRICHED (Gold Standard)</option>
+                              <option value="MEDIA_READY">📸 MEDIA_READY (PH_5)</option>
+                              <option value="VERIFIED">✅ VERIFIED (Gold Standard)</option>
+                              <option value="DEPRECATED">⚰️ Deprecated</option>
+                              <option value="REJECTED">🚫 Graveyard</option>
+                           </select>
                         </td>
                         <td>
-                           {row.vibe_score ? <span style={{color: 'var(--primary-color)', fontWeight:'bold'}}>{row.vibe_score}★</span> : '-'}
+                           {row.rating ? <span style={{color: '#ffd700', fontWeight:'bold', textShadow: '0 0 5px rgba(255,215,0,0.5)'}}>{row.rating}★ <span style={{fontSize: '0.7em', color: 'gray'}}>({row.user_ratings_total || 0})</span></span> : <span style={{color:'gray'}}>-</span>}
                         </td>
                         <td>
                            {isEditing ? (
@@ -944,7 +997,14 @@ function App() {
                             row.phone_number || '-'
                           )}
                         </td>
-                        <td>{isEditing ? <input type="checkbox" checked={editForm.has_adult_night} onChange={e => setEditForm({...editForm, has_adult_night: e.target.checked})} /> : (row.has_adult_night ? '✅' : '❌')}</td>
+                        <td>
+                          {isEditing ? <input type="checkbox" checked={editForm.has_adult_night} onChange={e => setEditForm({...editForm, has_adult_night: e.target.checked})} /> : (
+                            <div style={{display:'flex', alignItems: 'center', gap: '5px', justifyContent: 'center'}}>
+                               {row.has_adult_night ? '✅' : '❌'}
+                               {row.adult_night_details && <span title={row.adult_night_details} style={{cursor: 'help'}}>ℹ️</span>}
+                            </div>
+                          )}
+                        </td>
                         <td>
                           {isEditing ? (
                             <input type="number" className="table-input" value={editForm.retry_count || 0} onChange={e => setEditForm({...editForm, retry_count: parseInt(e.target.value) || 0})} />
@@ -956,12 +1016,11 @@ function App() {
                           {row.last_attempted_at ? new Date(row.last_attempted_at).toLocaleString() : 'Never'}
                         </td>
                         <td>
-                          <div className="action-row">
-                            {row.is_published ? (
-                               <button className="btn-icon" onClick={() => promoteSpot(row.id, false)} title="Unpublish from App">🛑</button>
-                            ) : (
-                               <button className="btn-icon" onClick={() => promoteSpot(row.id, true)} disabled={row.verification_status !== 'VERIFIED'} title="Promote to Live Database">🚀</button>
-                            )}
+                          <div className="action-row" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <label className="checkbox-row" style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', background: row.is_published ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255,255,255,0.05)', padding: '5px 8px', borderRadius: '4px', border: row.is_published ? '1px solid #4caf50' : '1px solid transparent' }}>
+                               <input type="checkbox" checked={row.is_published} onChange={e => promoteSpot(row.id, e.target.checked)} />
+                               <span style={{ fontSize: '0.7rem', fontWeight: 800, color: row.is_published ? '#4caf50' : 'var(--text-secondary)', userSelect:'none' }}>APP_LIVE</span>
+                            </label>
                             {isEditing ? (
                               <button className="btn-icon btn-save-inline" onClick={saveEdit}>💾</button>
                             ) : (

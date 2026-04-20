@@ -64,7 +64,8 @@ async function runIndexer() {
       if (!target.website) {
          console.log(`   ⚠️ No website on file. Skipping social index. `);
          await supabase.from('skate_spots').update({
-             verification_status: 'INDEXED',
+             verification_status: target.verification_status === 'ENRICHED' ? 'ENRICHED' : 'INDEXED',
+             is_deep_crawled: true,
              last_attempted_at: new Date().toISOString()
          }).eq('id', target.id);
          continue;
@@ -160,7 +161,8 @@ async function runIndexer() {
         adult_night_details,
         pricing_data,
         opening_hours,
-        verification_status: 'INDEXED',
+        verification_status: target.verification_status === 'ENRICHED' ? 'ENRICHED' : 'INDEXED',
+        is_deep_crawled: true,
         retry_count: 0,
         last_attempted_at: new Date().toISOString()
       }).eq('id', target.id);

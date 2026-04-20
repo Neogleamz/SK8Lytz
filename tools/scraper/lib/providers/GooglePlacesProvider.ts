@@ -49,14 +49,19 @@ export class GooglePlacesProvider {
         const query = `${term} in ${zipcodeOrLocation}`;
         console.log(`[GooglePlaces] Initiating text search: "${query}"`);
         
-        const params: TextSearchRequest = {
-          params: {
-            query,
-            key: API_KEY
-          }
-        };
+        let pageToken = undefined;
+        let pagesFetched = 0;
 
-        const response = await googleClient.textSearch(params);
+        while (pagesFetched < 3) {
+          const params: TextSearchRequest = {
+            params: {
+              query,
+              key: API_KEY,
+              pagetoken: pageToken
+            }
+          };
+
+          const response = await googleClient.textSearch(params);
         
         if (response.data.results) {
           for (const result of response.data.results) {
@@ -72,9 +77,20 @@ export class GooglePlacesProvider {
                 console.log(`[GooglePlaces] 🚫 Anti-Skateboard Defense triggered for: "${name}"`);
             }
           }
+          
+          if (response.data.next_page_token) {
+            pageToken = response.data.next_page_token;
+            pagesFetched++;
+            // Google requires a short delay before using the next page token
+            await new Promise(r => setTimeout(r, 2000));
+          } else {
+            break; // No more pages
+          }
+          }
         }
       } catch (error: any) {
         console.error(`[GooglePlaces] Error searching for ${term}:`, error.message);
+        break;
       }
     }
 

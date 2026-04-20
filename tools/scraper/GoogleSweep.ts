@@ -61,15 +61,23 @@ export async function startGoogleSweep(targetStates: string[] = []) {
             // Attempt to derive clean city/state from formatted_address if possible.
             // Formatted address example: "201 W MacArthur Blvd, Oakland, CA 94611, USA"
             const parts = details.formatted_address?.split(',') || [];
-            let derivedCity = "Unknown";
-            let derivedState: string | undefined = stateCode;
+            let derivedState: string | undefined = undefined;
             
             if (parts.length >= 3) {
                 // Heuristic parsing
                 const stateZipStr = parts[parts.length - 2].trim(); // "CA 94611"
                 const cityStr = parts[parts.length - 3].trim(); // "Oakland"
                 derivedCity = cityStr;
+                
+                // Usually formatted like "CA 94611" or "TX 75001"
+                const splitStateZip = stateZipStr.split(' ');
+                if (splitStateZip.length > 0) {
+                    derivedState = splitStateZip[0]; // e.g. "CA"
+                }
             }
+            
+            // Fallback back to target state if it entirely failed to parse
+            if (!derivedState) derivedState = stateCode;
 
             const record = {
                 name: details.name,

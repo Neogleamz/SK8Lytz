@@ -342,14 +342,13 @@ app.post('/api/discover', async (req, res) => {
 app.get('/api/spots', async (req, res) => {
   const { status, limit = 50, offset = 0, sortCol = 'last_attempted_at', sortDir = 'desc', search = '' } = req.query;
   let query = supabase.from('skate_spots').select('*', { count: 'exact' });
-  
-  if (status && status !== 'ALL') {
-    if (status === 'UNVERIFIED') {
-       query = query.is('verification_status', null);
-    } else {
-       query = query.eq('verification_status', status);
+    if (status && status !== 'ALL') {
+      if (status === 'UNVERIFIED' || status === 'PENDING') {
+         query = query.or('verification_status.eq.PENDING,verification_status.is.null');
+      } else {
+         query = query.eq('verification_status', status);
+      }
     }
-  }
 
   if (search) {
      query = query.or(`name.ilike.%${search}%,city.ilike.%${search}%,state.ilike.%${search}%`);
@@ -375,8 +374,7 @@ app.post('/api/promote-all', async (req, res) => {
   const { error } = await supabase
     .from('skate_spots')
     .update({ is_published: true })
-    .eq('verification_status', 'VERIFIED')
-    .not('website', 'is', null);
+    .or('verification_status.eq.VERIFIED,verification_status.eq.ENRICHED');
 
   if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true, message: 'Bulk promotion successful' });
@@ -448,6 +446,17 @@ app.post('/api/harvest/stop-all', async (req, res) => {
   if (!isHarvestingActive) return res.json({ success: false, message: 'OSM Harvest Not running' });
   await stopNationalHarvester();
   res.json({ success: true, message: 'National Harvest stopping' });
+});
+
+app.get('/api/recent-spots', async (req, res) => {
+  const { data, error } = await supabase
+    .from('skate_spots')
+    .select('*')
+    .order('created_at', { ascending: false, nullsFirst: true })
+    .limit(10);
+    
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ spots: data });
 });
 
 app.get('/api/queue', async (req, res) => {
