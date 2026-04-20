@@ -284,7 +284,7 @@ function App() {
        await fetch(`${API_BASE}/api/harvest/${type}`, {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ target_facilities: targetFacilities, target_states: states })
+         body: JSON.stringify({ target_facilities: targetFacilities, target_states: states, provider: seedProvider })
        });
        fetchSystemStatus();
     } catch (e) {

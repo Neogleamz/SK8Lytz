@@ -7,6 +7,7 @@ import { EventEmitter } from 'events';
 import { createClient } from '@supabase/supabase-js';
 import { exec } from 'child_process';
 import { US_STATES, processState, startNationalHarvester, stopNationalHarvester, isHarvestingActive } from './USANationalHarvest';
+import { startGoogleSweep, stopGoogleSweep, isGoogleSweepActive } from './GoogleSweep';
 
 
  // --- Logging Infrastructure ---
@@ -170,6 +171,7 @@ app.get('/status', async (req, res) => {
       isHarvestingActive,
       isHeadless,
       currentTarget: `Operator: ${operatorStatus} | Indexer: ${indexerStatus}`,
+      isGoogleSweepActive,
       processedCount: totalProcessed || 0,
       enrichedCount: enrichedCount || 0,
       mediaReadyCount: mediaReadyCount || 0,
@@ -421,14 +423,29 @@ app.post('/api/logs/ingest', (req, res) => {
 });
 
 app.post('/api/harvest/start-all', async (req, res) => {
-  const { target_facilities, target_states } = req.body;
-  if (isHarvestingActive) return res.json({ success: false, message: 'Already running' });
+  const { target_facilities, target_states, provider } = req.body;
+  
+  if (provider === 'google') {
+    if (isGoogleSweepActive) return res.json({ success: false, message: 'Google Sweep Already running' });
+    startGoogleSweep(target_states || []).catch(e => console.error(e));
+    return res.json({ success: true, message: 'Google Golden Seed sequence started' });
+  }
+
+  // Fallback / OSM Mode
+  if (isHarvestingActive) return res.json({ success: false, message: 'OSM Harvest Already running' });
   startNationalHarvester(target_facilities || [], target_states || []).catch(e => console.error(e));
-  res.json({ success: true, message: 'Harvest sequence started' });
+  res.json({ success: true, message: 'OSM Harvest sequence started' });
 });
 
 app.post('/api/harvest/stop-all', async (req, res) => {
-  if (!isHarvestingActive) return res.json({ success: false, message: 'Not running' });
+  const { provider } = req.body;
+  if (provider === 'google') {
+      if (!isGoogleSweepActive) return res.json({ success: false, message: 'Google Sweep Not running' });
+      await stopGoogleSweep();
+      return res.json({ success: true, message: 'Google Sweep stopping' });
+  }
+
+  if (!isHarvestingActive) return res.json({ success: false, message: 'OSM Harvest Not running' });
   await stopNationalHarvester();
   res.json({ success: true, message: 'National Harvest stopping' });
 });
