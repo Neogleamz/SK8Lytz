@@ -20,18 +20,40 @@ export interface GooglePlaceResult {
   opening_hours?: any;
 }
 
-const ANTI_SKATEBOARD_KEYWORDS = [
+// Terms that disqualify a Google Places result from being a roller-skating venue.
+// Covers: skateboard shops, big-box sporting goods (Scheels), and ice/hockey rinks.
+const BLOCKED_NAME_KEYWORDS = [
+  // Skateboard-related
   "skateboard", "board shop", "snowboard", "zumiez", "vans",
-  "skateboards", "skateboarding"
+  "skateboards", "skateboarding",
+  // Big-box sporting goods that operate ice rinks
+  "scheels",
+  // Ice & hockey rinks (roller-only focus)
+  "ice rink", "ice skating", "ice arena", "ice centre", "ice center",
+  "hockey rink", "hockey arena", "hockey centre", "hockey center",
+  "curling",
 ];
 
+// Google Places `types` that belong to ice/hockey rink categories.
+const BLOCKED_PLACE_TYPES = new Set([
+  "ice_skating_rink",
+  "sporting_goods_store", // catches Scheels generically
+]);
+
 function isPolluted(name: string, types: string[]): boolean {
-  const combinedText = `${name} ${types.join(' ')}`.toLowerCase();
-  for (const keyword of ANTI_SKATEBOARD_KEYWORDS) {
-    if (combinedText.includes(keyword)) {
-      return true; // Found a skateboard-specific term
-    }
+  const lowerName = name.toLowerCase();
+  const lowerTypes = types.map(t => t.toLowerCase());
+
+  // Block by type array first (fastest path)
+  for (const t of lowerTypes) {
+    if (BLOCKED_PLACE_TYPES.has(t)) return true;
   }
+
+  // Block by keyword match on name
+  for (const keyword of BLOCKED_NAME_KEYWORDS) {
+    if (lowerName.includes(keyword)) return true;
+  }
+
   return false;
 }
 
@@ -74,7 +96,7 @@ export class GooglePlacesProvider {
                     verifiedPlaceIds.add(result.place_id);
                 }
             } else {
-                console.log(`[GooglePlaces] 🚫 Anti-Skateboard Defense triggered for: "${name}"`);
+                console.log(`[GooglePlaces] 🚫 Pollution Defense triggered — rejected: "${name}" [types: ${types.join(', ')}]`);
             }
           }
           

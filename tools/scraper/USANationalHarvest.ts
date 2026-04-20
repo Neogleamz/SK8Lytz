@@ -157,6 +157,24 @@ ${conditions}  );
     await sleep(delay);
 
     let facility_type = 'unknown';
+
+    // ── Pollution Defense: Reject non-roller venues before further processing ──
+    const rawName = (tags.name || tags.brand || '').toLowerCase();
+    const rawSport = (tags['sport'] || '').toLowerCase();
+    const rawLeisure = (tags['leisure'] || '').toLowerCase();
+    const ICE_HOCKEY_BLOCKED_NAMES = ['ice rink', 'ice skating', 'ice arena', 'ice center', 'ice centre', 'hockey', 'scheels', 'curling'];
+    const isIceOrHockey =
+      rawSport === 'ice_hockey' ||
+      (rawSport === 'skating' && !rawSport.includes('roller')) ||
+      rawLeisure === 'ice_rink' ||
+      ICE_HOCKEY_BLOCKED_NAMES.some(kw => rawName.includes(kw));
+
+    if (isIceOrHockey) {
+      console.log(`  🚫 [${stateCode}] OSM Pollution Defense: Rejected ice/hockey/Scheels venue → "${tags.name || tags.brand || '(unnamed)'}"`);
+      continue;
+    }
+    // ──────────────────────────────────────────────────────────────────────────
+
     const isSkatepark = tags['leisure'] === 'skatepark' || tags.name?.toLowerCase().includes('skatepark');
     const isRollerRink = tags['sport']?.includes('roller_skating') || tags.name?.toLowerCase().match(/rink|skateland|skate center/);
     const isProShop = tags['shop']?.includes('skate') || tags['shop']?.includes('sports') || tags.name?.toLowerCase().includes('skate shop');
