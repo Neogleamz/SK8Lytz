@@ -154,7 +154,7 @@ app.get('/status', async (req, res) => {
     const { count: indexedCount } = await supabase
       .from('skate_spots')
       .select('*', { count: 'exact', head: true })
-      .eq('verification_status', 'INDEXED');
+      .eq('is_deep_crawled', true);
 
     const { count: enrichedCount } = await supabase
       .from('skate_spots')
@@ -468,7 +468,12 @@ app.get('/api/queue', async (req, res) => {
   } else if (phase === 'phase2') {
      query = query.eq('verification_status', 'PENDING');
   } else if (phase === 'phase3') {
-     query = query.eq('verification_status', 'IDENTITY_ESTABLISHED');
+     // Mirror get_next_spot_for_indexer RPC: ENRICHED or IDENTITY_ESTABLISHED, not yet crawled, has website
+     query = query
+       .or('verification_status.eq.IDENTITY_ESTABLISHED,verification_status.eq.ENRICHED')
+       .eq('is_deep_crawled', false)
+       .not('website', 'is', null)
+       .neq('website', '');
   } else if (phase === 'phase4') {
      query = query.eq('verification_status', 'INDEXED');
   } else if (phase === 'phase5') {
