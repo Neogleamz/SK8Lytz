@@ -29,6 +29,12 @@ const STATE_NAMES: Record<string, string> = {
   'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming', 'DC': 'Washington DC'
 };
 
+const RETAIL_BLOCKLIST = [
+  "dick's sporting goods", "academy sports", "play it again sports", 
+  "cargo largo", "target", "walmart", "dunham's", "big 5", 
+  "scheels", "rei", "bass pro", "cabela", "sportsman"
+];
+
 export async function startGoogleSweep(targetStates: string[] = []) {
   if (isGoogleSweepActive) return;
   isGoogleSweepActive = true;
@@ -58,6 +64,12 @@ export async function startGoogleSweep(targetStates: string[] = []) {
         
         const details = await GooglePlacesProvider.getPlaceDetails(placeId);
         if (details) {
+            const lowerName = details.name.toLowerCase();
+            if (RETAIL_BLOCKLIST.some(block => lowerName.includes(block))) {
+                console.log(`  🚫 Blocklisted Retailer Skipped: ${details.name}`);
+                continue;
+            }
+
             // Attempt to derive clean city/state from formatted_address if possible.
             // Formatted address example: "201 W MacArthur Blvd, Oakland, CA 94611, USA"
             const parts = details.formatted_address?.split(',') || [];
