@@ -30,7 +30,7 @@ export const AppSettingsService = {
   async fetchAllSettings(): Promise<AppSettingsMap> {
     try {
       const { data, error } = await supabase
-        .from('app_settings')
+        .from('sk8lytz_app_settings')
         .select('setting_key, setting_value');
 
       if (error) throw error;
@@ -69,7 +69,7 @@ export const AppSettingsService = {
   async updateSetting(key: AppSettingKey, value: any): Promise<boolean> {
     try {
       const { error } = await supabase
-        .from('app_settings')
+        .from('sk8lytz_app_settings')
         .upsert({ 
           setting_key: key, 
           setting_value: value 

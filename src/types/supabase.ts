@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -1470,6 +1470,51 @@ export type Database = {
         }
         Relationships: []
       }
+      scraper_config: {
+        Row: {
+          auto_resume_enabled: boolean | null
+          cooldown_base_ms: number | null
+          cooldown_jitter_pct: number | null
+          id: number
+          identity_rotation_enabled: boolean | null
+          is_active: boolean | null
+          max_consecutive_errors: number | null
+          randomize_viewport_enabled: boolean | null
+          sleep_interval_ms: number | null
+          state_override: string[] | null
+          target_facilities: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_resume_enabled?: boolean | null
+          cooldown_base_ms?: number | null
+          cooldown_jitter_pct?: number | null
+          id?: number
+          identity_rotation_enabled?: boolean | null
+          is_active?: boolean | null
+          max_consecutive_errors?: number | null
+          randomize_viewport_enabled?: boolean | null
+          sleep_interval_ms?: number | null
+          state_override?: string[] | null
+          target_facilities?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_resume_enabled?: boolean | null
+          cooldown_base_ms?: number | null
+          cooldown_jitter_pct?: number | null
+          id?: number
+          identity_rotation_enabled?: boolean | null
+          is_active?: boolean | null
+          max_consecutive_errors?: number | null
+          randomize_viewport_enabled?: boolean | null
+          sleep_interval_ms?: number | null
+          state_override?: string[] | null
+          target_facilities?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       shared_scenes: {
         Row: {
           author_id: string | null
@@ -1503,6 +1548,27 @@ export type Database = {
           name?: string
           scene_payload?: Json
           upvotes?: number | null
+        }
+        Relationships: []
+      }
+      sk8lytz_app_settings: {
+        Row: {
+          created_at: string
+          setting_key: string
+          setting_value: Json | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          setting_key: string
+          setting_value?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          setting_key?: string
+          setting_value?: Json | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1660,7 +1726,10 @@ export type Database = {
           capacity: number | null
           city: string | null
           created_at: string | null
+          cultural_metadata: Json | null
+          facebook_url: string | null
           facility_type: string | null
+          google_place_id: string | null
           has_ac: boolean | null
           has_adult_night: boolean | null
           has_fee: boolean | null
@@ -1674,10 +1743,14 @@ export type Database = {
           has_wifi: boolean | null
           hosts_derby: boolean | null
           id: string
+          instagram_url: string | null
+          is_deep_crawled: boolean | null
           is_featured: boolean | null
           is_indoor: boolean | null
+          is_published: boolean | null
           is_verified: boolean | null
           is_wheelchair_accessible: boolean | null
+          last_attempted_at: string | null
           last_enriched_at: string | null
           lat: number
           lng: number
@@ -1686,17 +1759,26 @@ export type Database = {
           operator_description: string | null
           operator_name: string | null
           phone: string | null
+          phone_number: string | null
           pricing_data: Json | null
+          rating: number | null
           raw_knowledge_panel: Json | null
+          retry_count: number | null
+          schedule_url: string | null
           socials: Json | null
-          special_events: Json | null
           source: string | null
+          special_events: Json | null
           state: string | null
           street_address: string | null
+          surface_quality: string | null
           surface_type: Database["public"]["Enums"]["skate_spot_surface"] | null
+          tiktok_url: string | null
           updated_at: string | null
           updated_by: string | null
+          user_ratings_total: number | null
+          verification_status: string | null
           vibe_rating: number | null
+          vibe_score: number | null
           website: string | null
           zip: string | null
         }
@@ -1706,7 +1788,10 @@ export type Database = {
           capacity?: number | null
           city?: string | null
           created_at?: string | null
+          cultural_metadata?: Json | null
+          facebook_url?: string | null
           facility_type?: string | null
+          google_place_id?: string | null
           has_ac?: boolean | null
           has_adult_night?: boolean | null
           has_fee?: boolean | null
@@ -1720,10 +1805,14 @@ export type Database = {
           has_wifi?: boolean | null
           hosts_derby?: boolean | null
           id?: string
+          instagram_url?: string | null
+          is_deep_crawled?: boolean | null
           is_featured?: boolean | null
           is_indoor?: boolean | null
+          is_published?: boolean | null
           is_verified?: boolean | null
           is_wheelchair_accessible?: boolean | null
+          last_attempted_at?: string | null
           last_enriched_at?: string | null
           lat: number
           lng: number
@@ -1732,19 +1821,28 @@ export type Database = {
           operator_description?: string | null
           operator_name?: string | null
           phone?: string | null
+          phone_number?: string | null
           pricing_data?: Json | null
+          rating?: number | null
           raw_knowledge_panel?: Json | null
+          retry_count?: number | null
+          schedule_url?: string | null
           socials?: Json | null
-          special_events?: Json | null
           source?: string | null
+          special_events?: Json | null
           state?: string | null
           street_address?: string | null
+          surface_quality?: string | null
           surface_type?:
             | Database["public"]["Enums"]["skate_spot_surface"]
             | null
+          tiktok_url?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          user_ratings_total?: number | null
+          verification_status?: string | null
           vibe_rating?: number | null
+          vibe_score?: number | null
           website?: string | null
           zip?: string | null
         }
@@ -1754,7 +1852,10 @@ export type Database = {
           capacity?: number | null
           city?: string | null
           created_at?: string | null
+          cultural_metadata?: Json | null
+          facebook_url?: string | null
           facility_type?: string | null
+          google_place_id?: string | null
           has_ac?: boolean | null
           has_adult_night?: boolean | null
           has_fee?: boolean | null
@@ -1768,10 +1869,14 @@ export type Database = {
           has_wifi?: boolean | null
           hosts_derby?: boolean | null
           id?: string
+          instagram_url?: string | null
+          is_deep_crawled?: boolean | null
           is_featured?: boolean | null
           is_indoor?: boolean | null
+          is_published?: boolean | null
           is_verified?: boolean | null
           is_wheelchair_accessible?: boolean | null
+          last_attempted_at?: string | null
           last_enriched_at?: string | null
           lat?: number
           lng?: number
@@ -1780,19 +1885,28 @@ export type Database = {
           operator_description?: string | null
           operator_name?: string | null
           phone?: string | null
+          phone_number?: string | null
           pricing_data?: Json | null
+          rating?: number | null
           raw_knowledge_panel?: Json | null
+          retry_count?: number | null
+          schedule_url?: string | null
           socials?: Json | null
-          special_events?: Json | null
           source?: string | null
+          special_events?: Json | null
           state?: string | null
           street_address?: string | null
+          surface_quality?: string | null
           surface_type?:
             | Database["public"]["Enums"]["skate_spot_surface"]
             | null
+          tiktok_url?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          user_ratings_total?: number | null
+          verification_status?: string | null
           vibe_rating?: number | null
+          vibe_score?: number | null
           website?: string | null
           zip?: string | null
         }
@@ -2475,6 +2589,14 @@ export type Database = {
         Returns: boolean
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
+      get_closest_skate_spot: {
+        Args: { p_lat: number; p_lng: number; p_radius_meters: number }
+        Returns: {
+          distance_meters: number
+          name: string
+          spot_id: string
+        }[]
+      }
       get_email_by_username: { Args: { p_username: string }; Returns: string }
       get_nearby_push_tokens: {
         Args: { p_max_tokens?: number; p_session_id: string }
@@ -2483,7 +2605,7 @@ export type Database = {
           token: string
         }[]
       }
-      get_next_spot_to_enrich: {
+      get_next_spot_for_indexer: {
         Args: never
         Returns: {
           address: string | null
@@ -2491,7 +2613,10 @@ export type Database = {
           capacity: number | null
           city: string | null
           created_at: string | null
+          cultural_metadata: Json | null
+          facebook_url: string | null
           facility_type: string | null
+          google_place_id: string | null
           has_ac: boolean | null
           has_adult_night: boolean | null
           has_fee: boolean | null
@@ -2505,10 +2630,14 @@ export type Database = {
           has_wifi: boolean | null
           hosts_derby: boolean | null
           id: string
+          instagram_url: string | null
+          is_deep_crawled: boolean | null
           is_featured: boolean | null
           is_indoor: boolean | null
+          is_published: boolean | null
           is_verified: boolean | null
           is_wheelchair_accessible: boolean | null
+          last_attempted_at: string | null
           last_enriched_at: string | null
           lat: number
           lng: number
@@ -2517,15 +2646,168 @@ export type Database = {
           operator_description: string | null
           operator_name: string | null
           phone: string | null
+          phone_number: string | null
+          pricing_data: Json | null
+          rating: number | null
           raw_knowledge_panel: Json | null
+          retry_count: number | null
+          schedule_url: string | null
           socials: Json | null
           source: string | null
+          special_events: Json | null
           state: string | null
           street_address: string | null
+          surface_quality: string | null
           surface_type: Database["public"]["Enums"]["skate_spot_surface"] | null
+          tiktok_url: string | null
           updated_at: string | null
           updated_by: string | null
+          user_ratings_total: number | null
+          verification_status: string | null
           vibe_rating: number | null
+          vibe_score: number | null
+          website: string | null
+          zip: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "skate_spots"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_next_spot_for_operator: {
+        Args: never
+        Returns: {
+          address: string | null
+          adult_night_details: string | null
+          capacity: number | null
+          city: string | null
+          created_at: string | null
+          cultural_metadata: Json | null
+          facebook_url: string | null
+          facility_type: string | null
+          google_place_id: string | null
+          has_ac: boolean | null
+          has_adult_night: boolean | null
+          has_fee: boolean | null
+          has_food: boolean | null
+          has_lights: boolean | null
+          has_lockers: boolean | null
+          has_pro_shop: boolean | null
+          has_proshop: boolean | null
+          has_rental: boolean | null
+          has_toilets: boolean | null
+          has_wifi: boolean | null
+          hosts_derby: boolean | null
+          id: string
+          instagram_url: string | null
+          is_deep_crawled: boolean | null
+          is_featured: boolean | null
+          is_indoor: boolean | null
+          is_published: boolean | null
+          is_verified: boolean | null
+          is_wheelchair_accessible: boolean | null
+          last_attempted_at: string | null
+          last_enriched_at: string | null
+          lat: number
+          lng: number
+          name: string
+          opening_hours: Json | null
+          operator_description: string | null
+          operator_name: string | null
+          phone: string | null
+          phone_number: string | null
+          pricing_data: Json | null
+          rating: number | null
+          raw_knowledge_panel: Json | null
+          retry_count: number | null
+          schedule_url: string | null
+          socials: Json | null
+          source: string | null
+          special_events: Json | null
+          state: string | null
+          street_address: string | null
+          surface_quality: string | null
+          surface_type: Database["public"]["Enums"]["skate_spot_surface"] | null
+          tiktok_url: string | null
+          updated_at: string | null
+          updated_by: string | null
+          user_ratings_total: number | null
+          verification_status: string | null
+          vibe_rating: number | null
+          vibe_score: number | null
+          website: string | null
+          zip: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "skate_spots"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_next_spot_to_enrich: {
+        Args: never
+        Returns: {
+          address: string | null
+          adult_night_details: string | null
+          capacity: number | null
+          city: string | null
+          created_at: string | null
+          cultural_metadata: Json | null
+          facebook_url: string | null
+          facility_type: string | null
+          google_place_id: string | null
+          has_ac: boolean | null
+          has_adult_night: boolean | null
+          has_fee: boolean | null
+          has_food: boolean | null
+          has_lights: boolean | null
+          has_lockers: boolean | null
+          has_pro_shop: boolean | null
+          has_proshop: boolean | null
+          has_rental: boolean | null
+          has_toilets: boolean | null
+          has_wifi: boolean | null
+          hosts_derby: boolean | null
+          id: string
+          instagram_url: string | null
+          is_deep_crawled: boolean | null
+          is_featured: boolean | null
+          is_indoor: boolean | null
+          is_published: boolean | null
+          is_verified: boolean | null
+          is_wheelchair_accessible: boolean | null
+          last_attempted_at: string | null
+          last_enriched_at: string | null
+          lat: number
+          lng: number
+          name: string
+          opening_hours: Json | null
+          operator_description: string | null
+          operator_name: string | null
+          phone: string | null
+          phone_number: string | null
+          pricing_data: Json | null
+          rating: number | null
+          raw_knowledge_panel: Json | null
+          retry_count: number | null
+          schedule_url: string | null
+          socials: Json | null
+          source: string | null
+          special_events: Json | null
+          state: string | null
+          street_address: string | null
+          surface_quality: string | null
+          surface_type: Database["public"]["Enums"]["skate_spot_surface"] | null
+          tiktok_url: string | null
+          updated_at: string | null
+          updated_by: string | null
+          user_ratings_total: number | null
+          verification_status: string | null
+          vibe_rating: number | null
+          vibe_score: number | null
           website: string | null
           zip: string | null
         }[]
