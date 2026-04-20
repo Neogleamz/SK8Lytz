@@ -210,12 +210,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     });
 
     const writeToDevice = async (payload: number[]) => {
-      // FIX: Single canonical gate — only allow writes when hardware is READY.
-      // Previously guarded DISCONNECTING | IDLE | ERROR only, leaving CONNECTING
-      // and PROBING unguarded. During a group connect sequence, useEffect hooks
-      // (e.g. applyFixedPattern) could fire writes into a partially-initialized
-      // GATT connection, causing write errors and racing discoverAllServices.
-      if (bleState !== 'READY') return;
+      // Gate: only write if the parent BLE write function exists (same pattern as Pro Effects).
+      // Previously used `bleState !== 'READY'` which was too aggressive — the derived bleState
+      // transiently leaves 'READY' during background rescans/probing even while devices are
+      // fully connected and writable, silently dropping fixed mode, solid color, and camera writes.
+      // The BLE stack in useBLE.writeToDevice already handles connection-level safety internally.
+      if (!parentWriteToDevice) return;
       lastConfirmedStateRef.current = captureEntireState();
       setLastSentPayload([...payload]);
       await optimisticWrite(payload);
