@@ -127,12 +127,9 @@ class DeviceRepository {
 
   // ── Read Accessors ──────────────────────────────────────────────────────────
 
-  // CRITICAL: Return shallow copies so React detects state changes via reference identity.
-  // Returning the raw `this.devices` reference caused React to skip re-renders after mutations
-  // (push/index-set don't change Object.is identity), breaking group derivation and AccountModal.
-  getDevices(): RegisteredDevice[] { return [...this.devices]; }
-  getConfigs(): Record<string, DeviceSettings> { return { ...this.configs }; }
-  getGroups(): CustomGroup[] { return [...this.groups]; }
+  getDevices(): RegisteredDevice[] { return this.devices; }
+  getConfigs(): Record<string, DeviceSettings> { return this.configs; }
+  getGroups(): CustomGroup[] { return this.groups; }
   getTombstones(): string[] { return this.tombstones; }
 
   getSnapshot(): DeviceRepositorySnapshot {
@@ -188,13 +185,10 @@ class DeviceRepository {
         is_pending_sync: false,
       };
 
-      // 1. Update in-memory state (IMMUTABLE — new array reference for React change detection)
+      // 1. Update in-memory state
       const idx = this.devices.findIndex(d => d.device_mac.toUpperCase() === normalizedMac);
-      if (idx >= 0) {
-        this.devices = this.devices.map((d, i) => i === idx ? fullDevice : d);
-      } else {
-        this.devices = [...this.devices, fullDevice];
-      }
+      if (idx >= 0) this.devices[idx] = fullDevice;
+      else this.devices.push(fullDevice);
 
       // 1.5. Purge from tombstone on re-add (Fix: BUG-14 — permanent tombstone lock)
       if (this.tombstones.includes(normalizedMac)) {
