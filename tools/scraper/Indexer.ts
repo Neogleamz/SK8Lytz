@@ -265,7 +265,7 @@ async function runIndexer() {
       const identity = GHOST.generateIdentity();
 
       const browser = await puppeteer.launch({
-        headless: statusRes.isHeadless ? true : false,
+        headless: statusRes.isHeadless ? 'new' : false,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
       });
 
