@@ -10,7 +10,7 @@
  *
  * Extracted from DashboardScreen.tsx (Phase 1 — Domain-Driven Refactor).
  *
- * Depends on: AsyncStorage, useRegistration (via options), custom types
+ * Depends on: AsyncStorage (UI-local patterns only), useRegistration (via options), custom types
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
@@ -19,7 +19,7 @@ import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/Pro
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import { AppLogger } from '../services/AppLogger';
 import DeviceRepository from '../services/DeviceRepository';
-import { supabase } from '../services/supabaseClient';
+// NOTE: Direct supabase import removed — all cloud writes go through DeviceRepository SSOT.
 import type { CustomGroup, DeviceSettings, GroupModalState } from '../types/dashboard.types';
 import { getDefaultDeviceName, getDefaultGroupName } from '../utils/NamingUtils';
 
@@ -293,7 +293,7 @@ export function useDashboardGroups({
 
   /**
    * Classifies all scanned BLE devices by product type, auto-groups pairs,
-   * persists to AsyncStorage, and syncs to Supabase.
+   * persists via DeviceRepository, and syncs to Supabase via repo.saveGroupTransactional().
    * Called by DashboardScreen's handleScan after the scan timer completes.
    */
   const runAutoProvisioning = useCallback(async () => {
@@ -397,38 +397,17 @@ export function useDashboardGroups({
       customGroupsRef.current = updatedGroups;
     }
 
-    // Sync to Supabase if authenticated
-    if ((didUpdateGroups || didUpdateConfigs) && supabase) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const userId = session.user.id;
-          for (const group of updatedGroups) {
-            try {
-              await supabase.from('registered_groups').upsert({
-                id: group.id, user_id: userId, group_name: group.name,
-                type: (group as any).type || 'device-fleet',
-                created_at: new Date().toISOString(),
-              }, { onConflict: 'id' });
-            } catch (_ge) { /* best-effort */ }
-
-            for (const deviceId of group.deviceIds) {
-              const c = configs[deviceId];
-              if (c) {
-                try {
-                  await supabase.from('registered_devices').upsert({
-                    id: deviceId, user_id: userId, group_id: group.id,
-                    custom_name: c.name || 'Unknown', points: c.points || 0,
-                    segments: c.segments || 0, sorting: c.sorting || 'GRB',
-                    strip_type: c.stripType || 'UNKNOWN',
-                  }, { onConflict: 'id' });
-                } catch (_de) { /* best-effort */ }
-              }
-            }
-          }
+    // Sync new groups to Supabase via DeviceRepository SSOT.
+    // saveGroupTransactional() uses the correct {mac}-{userId} id format, respects tombstones,
+    // and queues offline for retry — replacing the previous direct supabase write that used
+    // the raw MAC as 'id' (wrong schema) and bypassed the tombstone guard.
+    if (didUpdateGroups) {
+      for (const group of updatedGroups) {
+        try {
+          await repo.saveGroupTransactional(group.id, group.name, group.deviceIds);
+        } catch (e) {
+          AppLogger.warn('[Groups] Auto-provisioning cloud sync failed', { error: String(e), groupId: group.id });
         }
-      } catch (e) {
-        AppLogger.warn('Supabase sync error during provisioning', { error: String(e) });
       }
     }
 

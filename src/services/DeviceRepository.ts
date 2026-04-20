@@ -31,7 +31,8 @@ const TOMBSTONE_KEY   = '@Sk8lytz_deleted_macs';
 const PENDING_KEY       = '@Sk8lytz_pending_sync';
 const PENDING_GROUP_KEY = '@Sk8lytz_pending_group_sync';
 const PROCESSED_KEY     = '@Sk8lytz_processed_devices';
-const PATTERNS_KEY      = '@Sk8lytz_last_group_patterns';
+// NOTE: '@Sk8lytz_last_group_patterns' is intentionally managed by useDashboardGroups
+// as a UI-local concern (last pattern picked per group). It is NOT part of this repo's SSOT.
 
 // ─── Listener Type ────────────────────────────────────────────────────────────
 type Listener = () => void;
