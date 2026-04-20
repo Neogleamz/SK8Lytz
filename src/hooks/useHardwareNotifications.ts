@@ -7,11 +7,11 @@
  * 1. Debounces duplicate packets.
  * 2. Diagnostics (Sniffer + Supabase) are locked behind isDiagnosticsMode.
  * 3. Uses pure stateless parser (BlePayloadParser).
- * 4. Checks Delta before mutating State/AsyncStorage.
+ * 4. Checks Delta before mutating state — all persistence via DeviceRepository SSOT.
  */
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef } from 'react';
 import { AppLogger } from '../services/AppLogger';
+import DeviceRepository from '../services/DeviceRepository';
 import { BlePayloadParser } from '../utils/BlePayloadParser';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -111,7 +111,8 @@ export function useHardwareNotifications({
             rfMode: rfConfig.rfMode,
             rfRemotes: rfConfig.rfRemotes
           };
-          AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify({ ...prevConfigs, [deviceId]: updated })).catch(() => {});
+          // Persist RF config update via DeviceRepository SSOT (tombstone-safe merge)
+          DeviceRepository.getInstance().updateConfig(deviceId, { rfMode: rfConfig.rfMode, rfRemotes: rfConfig.rfRemotes }).catch(() => {});
           return { ...prevConfigs, [deviceId]: updated };
         });
         return; // Handled the RF packet, exit mailroom
@@ -148,12 +149,8 @@ export function useHardwareNotifications({
           detected:         true,
         };
 
-        // Mirror securely to persistent memory
-        AsyncStorage.getItem('@Sk8lytz_device_configs').then(str => {
-          const p = JSON.parse(str || '{}');
-          p[deviceId] = { ...p[deviceId], ...newD };
-          AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(p));
-        }).catch(() => {});
+        // Mirror securely to persistent memory via DeviceRepository SSOT
+        DeviceRepository.getInstance().updateConfig(deviceId, newD).catch(() => {});
 
         setDeviceConfigs(prevConfigs => ({
           ...prevConfigs,
@@ -171,7 +168,8 @@ export function useHardwareNotifications({
       setDeviceConfigs(prev => {
         const merged = { ...(prev[deviceId] || {}), ...cfg };
         const next = { ...prev, [deviceId]: merged };
-        AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(next)).catch(() => {});
+        // Persist probe config via DeviceRepository SSOT (updateConfig merges internally)
+        DeviceRepository.getInstance().updateConfig(deviceId, cfg).catch(() => {});
         return next;
       });
       setAllDevices(prev => prev.map(d =>

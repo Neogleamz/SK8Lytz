@@ -119,7 +119,7 @@ export function useOptimisticBLE({
         }
       }, debounceMs);
     });
-  }, [writeToDevice, onReconcile, debounceMs]);
+  }, [writeToDevice, onReconcile, debounceMs, disableOptimisticUI, disableHaptics]);
 
   /**
    * directWrite — Passthrough with NO optimistic UI. Used for commands
