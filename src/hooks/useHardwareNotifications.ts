@@ -8,10 +8,14 @@
  * 2. Diagnostics (Sniffer + Supabase) are locked behind isDiagnosticsMode.
  * 3. Uses pure stateless parser (BlePayloadParser).
  * 4. Checks Delta before mutating State/AsyncStorage.
+ *
+ * fix/hw-notifications-ssot-bypass: All config persistence is now routed
+ * through DeviceRepository (the designated SSOT for @Sk8lytz_device_configs).
+ * No direct AsyncStorage writes remain in this hook.
  */
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef } from 'react';
 import { AppLogger } from '../services/AppLogger';
+import DeviceRepository from '../services/DeviceRepository';
 import { BlePayloadParser } from '../utils/BlePayloadParser';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -53,6 +57,9 @@ export function useHardwareNotifications({
   deviceConfigs,
   setLastRawNotification,
 }: UseHardwareNotificationsOptions): void {
+
+  // Singleton repo — canonical write path for @Sk8lytz_device_configs
+  const repo = DeviceRepository.getInstance();
 
   // Maintain refs to prevent dependency cycles in useEffect closures
   const deviceConfigsRef = useRef(deviceConfigs);
@@ -105,15 +112,19 @@ export function useHardwareNotifications({
       // ── [RF Remote Config] ────────────────────────────────────────────────
       const rfConfig = BlePayloadParser.parseRfPayload(payload);
       if (rfConfig && rfConfig.parsedOk) {
-        setDeviceConfigs(prevConfigs => {
-          const updated = {
-            ...(prevConfigs[deviceId] || {}),
-            rfMode: rfConfig.rfMode,
-            rfRemotes: rfConfig.rfRemotes
-          };
-          AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify({ ...prevConfigs, [deviceId]: updated })).catch(() => {});
-          return { ...prevConfigs, [deviceId]: updated };
-        });
+        const rfPatch = {
+          rfMode: rfConfig.rfMode,
+          rfRemotes: rfConfig.rfRemotes,
+        };
+        // Update React state
+        setDeviceConfigs(prevConfigs => ({
+          ...prevConfigs,
+          [deviceId]: { ...(prevConfigs[deviceId] || {}), ...rfPatch },
+        }));
+        // Persist via SSOT — DeviceRepository owns @Sk8lytz_device_configs
+        repo.updateConfig(deviceId, rfPatch).catch((e: unknown) =>
+          AppLogger.warn('[HWNotif] RF config repo write failed', { deviceId, error: String(e) })
+        );
         return; // Handled the RF packet, exit mailroom
       }
 
@@ -133,7 +144,7 @@ export function useHardwareNotifications({
 
       if (!isDirty) return; // Deduplicated — prevents 5+ disk writes per connect!
       
-      // Update state
+      // Update state and persist via SSOT
       setAllDevices((prev: any[]) => prev.map(d => {
         if (d.id !== deviceId) return d;
         const newD = {
@@ -148,12 +159,10 @@ export function useHardwareNotifications({
           detected:         true,
         };
 
-        // Mirror securely to persistent memory
-        AsyncStorage.getItem('@Sk8lytz_device_configs').then(str => {
-          const p = JSON.parse(str || '{}');
-          p[deviceId] = { ...p[deviceId], ...newD };
-          AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(p));
-        }).catch(() => {});
+        // Mirror securely to persistent memory via SSOT (replaces direct AsyncStorage write)
+        repo.updateConfig(deviceId, newD).catch((e: unknown) =>
+          AppLogger.warn('[HWNotif] LED config repo write failed', { deviceId, error: String(e) })
+        );
 
         setDeviceConfigs(prevConfigs => ({
           ...prevConfigs,
@@ -163,7 +172,7 @@ export function useHardwareNotifications({
         return newD;
       }));
     });
-  }, [setOnDataReceived, setAllDevices, setDeviceConfigs, isDiagnosticsMode]);
+  }, [setOnDataReceived, setAllDevices, setDeviceConfigs, isDiagnosticsMode, repo]);
 
   // ── 2. Hardware probe callback: merge scanned config before first connect ───
   useEffect(() => {
@@ -171,7 +180,10 @@ export function useHardwareNotifications({
       setDeviceConfigs(prev => {
         const merged = { ...(prev[deviceId] || {}), ...cfg };
         const next = { ...prev, [deviceId]: merged };
-        AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(next)).catch(() => {});
+        // Persist entire configs map via SSOT (replaces direct AsyncStorage write)
+        repo.setConfigs(next).catch((e: unknown) =>
+          AppLogger.warn('[HWNotif] Hardware probe repo write failed', { deviceId, error: String(e) })
+        );
         return next;
       });
       setAllDevices(prev => prev.map(d =>
@@ -189,5 +201,5 @@ export function useHardwareNotifications({
           : d
       ));
     });
-  }, [setOnHardwareProbed, setDeviceConfigs, setAllDevices]);
+  }, [setOnHardwareProbed, setDeviceConfigs, setAllDevices, repo]);
 }
