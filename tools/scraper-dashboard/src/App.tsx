@@ -1153,28 +1153,10 @@ function App() {
         {activeTab === 'phase6' && (
           <div className="tab-pane graveyard fade-in">
             <div className="explainer-block" style={{marginBottom: '1rem', background: 'rgba(76, 175, 80, 0.05)', border: '1px solid rgba(76, 175, 80, 0.2)'}}>
-              <h3 style={{marginTop: 0, color: '#4caf50'}}>Phase 6: Databank QA &amp; Live Publish</h3>
+              <h3 style={{marginTop: 0, color: '#4caf50'}}>Phase 4: Databank QA &amp; Live Publish</h3>
               <p>Final review before publication. Filter and inspect records, then publish state-by-state or individually. Use the view toggle to switch between Card, List, and Table views.</p>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 2fr', gap: '10px', marginTop: '1rem', background: '#000', padding: '15px', borderRadius: '8px' }}>
-                 <div style={{marginBottom: '10px'}}>
-                    <span className="status-pill enriched" style={{marginBottom: 5, display: 'inline-block', border: '1px solid #ff9800', background:'rgba(255,152,0,0.1)'}}>ENRICHED</span><br/>
-                    <span style={{fontSize: '0.8rem', color:'var(--text-secondary)'}}>Google Places data -- high-fidelity coordinates, hours, ratings. Priority publish candidates.</span>
-                 </div>
-                 <div style={{marginBottom: '10px'}}>
-                    <span className="status-pill" style={{marginBottom: 5, display: 'inline-block', border: '1px solid #e91e63', background:'rgba(233,30,99,0.1)', color: '#e91e63'}}>MEDIA_READY</span><br/>
-                    <span style={{fontSize: '0.8rem', color:'var(--text-secondary)'}}>Photos collected and uploaded to CDN. Full card view available with image preview.</span>
-                 </div>
-                 <div>
-                    <span style={{fontSize: '0.85rem', fontWeight: 800, color:'#4caf50', border: '1px solid #4caf50', padding: '4px 8px', borderRadius: '4px', display:'inline-block', marginBottom: 5}}>APP_LIVE TOGGLE</span><br/>
-                    <span style={{fontSize: '0.8rem', color:'var(--text-secondary)'}}>Toggle the APP_LIVE checkbox to instantly push or retract a record from the public SK8Lytz map.</span>
-                 </div>
-                 <div>
-                    <span style={{fontSize: '0.85rem', fontWeight: 800, color:'#8a2be2', border: '1px solid #8a2be2', padding: '4px 8px', borderRadius: '4px', display:'inline-block', marginBottom: 5}}>PENDING</span><br/>
-                    <span style={{fontSize: '0.8rem', color:'var(--text-secondary)'}}>Legacy OSM records -- lower fidelity. Review before publishing.</span>
-                 </div>
-              </div>
             </div>
+
 
             {/* =========== STATUS COVERAGE MAP =========== */}
             <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255,179,0,0.03)', border: '1px solid rgba(255,179,0,0.2)', borderRadius: '12px' }}>
@@ -1207,7 +1189,7 @@ function App() {
                 const totals: Record<string, number> = {};
                 let totalPublished = 0;
                 databankCoverage.forEach((row: any) => {
-                  ['PENDING','IDENTITY_ESTABLISHED','INDEXED','ENRICHED','MEDIA_READY','VERIFIED'].forEach(s => {
+                  ['PENDING','IDENTITY_ESTABLISHED','INDEXED','ENRICHED','MEDIA_READY'].forEach(s => {
                     if (row[s]) totals[s] = (totals[s] || 0) + row[s];
                   });
                   totalPublished += (row.published || 0);
@@ -1219,7 +1201,6 @@ function App() {
                   INDEXED:              { color: '#ff5a00', label: 'Indexed' },
                   ENRICHED:             { color: '#ff9800', label: 'Enriched' },
                   MEDIA_READY:          { color: '#e91e63', label: 'Media Ready' },
-                  VERIFIED:             { color: '#4caf50', label: 'Verified' },
                 };
                 return (
                   <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem', alignItems: 'center' }}>
@@ -1261,9 +1242,9 @@ function App() {
                     const colors: Record<string, any> = {};
 
                     if (mapMode === 'quality') {
-                      const STATUS_PRIORITY = ['VERIFIED','MEDIA_READY','ENRICHED','INDEXED','IDENTITY_ESTABLISHED','PENDING'];
+                      const STATUS_PRIORITY = ['MEDIA_READY','ENRICHED','INDEXED','IDENTITY_ESTABLISHED','PENDING'];
                       const STATUS_COLOR: Record<string, string> = {
-                        VERIFIED: '#4caf50', MEDIA_READY: '#e91e63', ENRICHED: '#ff9800',
+                        MEDIA_READY: '#e91e63', ENRICHED: '#ff9800',
                         INDEXED: '#ff5a00', IDENTITY_ESTABLISHED: '#5d78ff', PENDING: '#8a2be2',
                       };
                       databankCoverage.forEach((row: any) => {
