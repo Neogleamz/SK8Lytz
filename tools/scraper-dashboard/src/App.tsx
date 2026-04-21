@@ -1376,6 +1376,12 @@ function App() {
                         {/* =========== CARD VIEW =========== */}
             {viewMode === 'card' && (() => {
               // ---- helpers scoped to card render ----
+              const toHoursArr = (h: any): string[] | null => {
+                if (!h) return null;
+                if (Array.isArray(h)) return h;
+                if (typeof h === 'string') { try { const p = JSON.parse(h); return Array.isArray(p) ? p : null; } catch { return null; } }
+                return null;
+              };
               const isOpenNow = (hours: string[] | null): boolean | null => {
                 if (!hours || !hours.length) return null;
                 const now = new Date();
@@ -1417,7 +1423,7 @@ function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.25rem', padding: '0.5rem 0' }}>
                   {spots.map(spot => {
                     const photo = (spot.photos as any[]|null)?.[0]?.url ?? (spot.candidate_photos as any[]|null)?.[0]?.url ?? null;
-                    const openStatus = isOpenNow(spot.opening_hours as string[] | null);
+                    const openStatus = isOpenNow(toHoursArr(spot.opening_hours));
                     const ratingNum  = spot.rating ? parseFloat(String(spot.rating)) : null;
                     const proShop    = spot.has_pro_shop || (spot as any).has_proshop;
                     const adultNight = spot.has_adult_night;
@@ -1426,7 +1432,7 @@ function App() {
                     const igUrl      = (spot as any).instagram_url;
                     const fbUrl      = (spot as any).facebook_url;
                     const ttUrl      = (spot as any).tiktok_url;
-                    const hours      = spot.opening_hours as string[] | null;
+                    const hours      = toHoursArr(spot.opening_hours);
                     const adultSched = spot.adult_night_schedule;
 
                     return (
@@ -1598,6 +1604,12 @@ function App() {
 
                         {/* =========== LIST VIEW =========== */}
             {viewMode === 'list' && (() => {
+              const toHoursArr2 = (h: any): string[] | null => {
+                if (!h) return null;
+                if (Array.isArray(h)) return h;
+                if (typeof h === 'string') { try { const p = JSON.parse(h); return Array.isArray(p) ? p : null; } catch { return null; } }
+                return null;
+              };
               const isOpenNow = (hours: string[] | null): boolean | null => {
                 if (!hours || !hours.length) return null;
                 const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -1621,10 +1633,10 @@ function App() {
                 <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
                   {spots.map(spot => {
                     const photo    = (spot.photos as any[]|null)?.[0]?.url ?? (spot.candidate_photos as any[]|null)?.[0]?.url ?? null;
-                    const openSt   = isOpenNow(spot.opening_hours as string[] | null);
+                    const openSt   = isOpenNow(toHoursArr2(spot.opening_hours));
                     const ratingN  = spot.rating ? parseFloat(String(spot.rating)) : null;
                     const proShop  = spot.has_pro_shop || (spot as any).has_proshop;
-                    const hours    = spot.opening_hours as string[] | null;
+                    const hours    = toHoursArr2(spot.opening_hours);
                     const igUrl    = (spot as any).instagram_url;
                     const fbUrl    = (spot as any).facebook_url;
                     const ttUrl    = (spot as any).tiktok_url;
