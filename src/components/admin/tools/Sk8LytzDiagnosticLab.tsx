@@ -30,7 +30,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../context/ThemeContext';
-import { useDiagnosticLog } from '../../../hooks/useDiagnosticLog';
+import {
+    OpcodeStatus,
+    TRACKED_OPCODES,
+    TestVerdict,
+    useDiagnosticLog,
+} from '../../../hooks/useDiagnosticLog';
 import { useProtocolBuilder } from '../../../hooks/useProtocolBuilder';
 import { useRegistration } from '../../../hooks/useRegistration';
 import { ZenggeProtocol } from '../../../protocols/ZenggeProtocol';
@@ -62,7 +67,7 @@ interface LabProps {
   onToggleDiagnostics?: () => void;
 }
 
-type LabTab = 'DEVICES' | 'COLOR' | 'TRANSITION' | 'BUILDER' | 'SNIFFER';
+type LabTab = 'DEVICES' | 'COLOR' | 'TRANSITION' | 'BUILDER' | 'SNIFFER' | 'ORACLE';
 
 // moved to useDiagnosticLog.ts
 
@@ -143,7 +148,8 @@ export default function Sk8LytzDiagnosticLab({
 
   // Domain Hooks
   const {
-    logs, lastSent, lastNote, transmit, sendRawHex, clearLogs
+    logs, lastSent, lastNote, transmit, sendRawHex, clearLogs,
+    testLog, coverage, setVerdict, setLastVerdict, clearTestLog,
   } = useDiagnosticLog({ visible, liveRxPayload, writeToDevice, targetDeviceId });
 
   const {
@@ -808,7 +814,300 @@ export default function Sk8LytzDiagnosticLab({
     </View>
   );
 
-  // ─── Root render ───────────────────────────────────────────────────
+  // ── PROTOCOL ORACLE TAB ─────────────────────────────────────────────
+
+  /**
+   * Opcode status → display config.
+   * ⬜=UNTESTED  🟩=PASS  🟥=FAIL  🟨=AMBIGUOUS
+   */
+  const opcodeStatusConfig: Record<OpcodeStatus, { emoji: string; color: string }> = {
+    UNTESTED:  { emoji: '⬜', color: txtMuted },
+    PASS:      { emoji: '🟩', color: '#00CC88' },
+    FAIL:      { emoji: '🟥', color: '#FF4040' },
+    AMBIGUOUS: { emoji: '🟨', color: '#FF9500' },
+  };
+
+  /**
+   * Quick Test Palette — verified 0xA3 payloads.
+   * Each entry: label, opcode, the exact bytes to send, and a human note.
+   */
+  const QUICK_TESTS = [
+    {
+      group: '🔋 POWER (0x71)',
+      tests: [
+        {
+          label: '🟢 PWR ON',
+          opcode: '0x71',
+          note: '0x71 POWER ON — [71 23 0F A3]',
+          bytes: () => ZenggeProtocol.setPower(true),
+        },
+        {
+          label: '🔴 PWR OFF',
+          opcode: '0x71',
+          note: '0x71 POWER OFF — [71 24 0F A4]',
+          bytes: () => ZenggeProtocol.setPower(false),
+        },
+      ],
+    },
+    {
+      group: '🎨 RBM CEILING (0x42)',
+      tests: [
+        {
+          label: 'EFFECT #1',
+          opcode: '0x42',
+          note: '0x42 effectId=1 (min) — [42 01 32 64 D3]',
+          bytes: () => ZenggeProtocol.setCustomRbm(1, 50, 100),
+        },
+        {
+          label: 'EFFECT #50',
+          opcode: '0x42',
+          note: '0x42 effectId=50 (mid) — [42 32 32 64 04]',
+          bytes: () => ZenggeProtocol.setCustomRbm(50, 50, 100),
+        },
+        {
+          label: 'EFFECT #100',
+          opcode: '0x42',
+          note: '0x42 effectId=100 (ceiling) — should play normally',
+          bytes: () => ZenggeProtocol.setCustomRbm(100, 50, 100),
+        },
+        {
+          label: 'EFFECT #101 ⚠️',
+          opcode: '0x42',
+          note: '0x42 effectId=101 (OVER CEILING) — expect undefined/glitch',
+          bytes: () => ZenggeProtocol.setCustomRbm(101, 50, 100),
+        },
+      ],
+    },
+    {
+      group: '🎵 MIC SHOOTOUT (0x73) — SMOKING GUN A',
+      tests: [
+        {
+          label: 'MIC=0x26 ★',
+          opcode: '0x73',
+          note: '0x73 APK app mic byte — 0x26. LEDs should pulse with 0x74 streams',
+          bytes: () => [0x73, 0x01, 0x26, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64,
+            ZenggeProtocol.calculateChecksum([0x73, 0x01, 0x26, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64])],
+        },
+        {
+          label: 'MIC=0x27 ★',
+          opcode: '0x73',
+          note: '0x73 APK device mic byte — 0x27. LEDs should react to ambient sound WITHOUT 0x74',
+          bytes: () => [0x73, 0x01, 0x27, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64,
+            ZenggeProtocol.calculateChecksum([0x73, 0x01, 0x27, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64])],
+        },
+        {
+          label: 'MIC=0x00 (OLD)',
+          opcode: '0x73',
+          note: '0x73 OLD wrong mic byte — 0x00. Expect NO response to 0x74 streams (confirms wrong)',
+          bytes: () => [0x73, 0x01, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64,
+            ZenggeProtocol.calculateChecksum([0x73, 0x01, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64])],
+        },
+        {
+          label: 'isOn MISSING (12B)',
+          opcode: '0x73',
+          note: '0x73 OLD 12-byte format without isOn byte — should NOT activate music mode',
+          bytes: () => [0x73, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64,
+            ZenggeProtocol.calculateChecksum([0x73, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64])],
+        },
+        {
+          label: 'MAG 200 (0x74)',
+          opcode: '0x74',
+          note: '0x74 Send magnitude 200 — use after MIC=0x26 to test pulse response',
+          bytes: () => { const chk = ZenggeProtocol.calculateChecksum([0x74, 0xC8]); return [0x74, 0xC8, chk]; },
+        },
+      ],
+    },
+    {
+      group: '📞 SCENE FORMAT (0x51) — SMOKING GUN B',
+      tests: [
+        {
+          label: '291B SHORT (0xA2)',
+          opcode: '0x51',
+          note: '0x51 291-byte format (9B/slot) — 0xA2 old format. Observe cycle behavior',
+          bytes: () => ZenggeProtocol.setCustomMode([
+            { mode: 1, speed: 10, color1: { r:255,g:0,b:0 }, color2: { r:0,g:0,b:255 } },
+            { mode: 5, speed: 10, color1: { r:0,g:255,b:0 }, color2: { r:255,g:255,b:0 } },
+          ]),
+        },
+      ],
+    },
+    {
+      group: '📬 SCENE MGMT (0x56/57/58)',
+      tests: [
+        {
+          label: 'QUERY (0x58)',
+          opcode: '0x58',
+          note: '0x58 Scene state query — watch RX observer for response bytes',
+          bytes: () => { const chk = ZenggeProtocol.calculateChecksum([0x58, 0xF0]); return [0x58, 0xF0, chk]; },
+        },
+        {
+          label: 'ACTIVATE #0 (0x57)',
+          opcode: '0x57',
+          note: '0x57 Activate scene slot 0, speed=50, brightness=100',
+          bytes: () => { const chk = ZenggeProtocol.calculateChecksum([0x57, 0x00, 0x32, 0x64]); return [0x57, 0x00, 0x32, 0x64, chk]; },
+        },
+        {
+          label: 'DELETE #0 (0x56)',
+          opcode: '0x56',
+          note: '0x56 Delete scene slot 0 — 15 bytes',
+          bytes: () => { const pay = [0x56, 0x00, 0,0,0,0,0,0,0,0,0,0,0,0]; return [...pay, ZenggeProtocol.calculateChecksum(pay)]; },
+        },
+      ],
+    },
+    {
+      group: '📊 QUERY HW (0x63)',
+      tests: [
+        {
+          label: 'POLL 0x63',
+          opcode: '0x63',
+          note: '0x63 Hardware settings query — response parsed in RX observer',
+          bytes: () => ZenggeProtocol.queryHardwareSettings?.() ?? [],
+        },
+      ],
+    },
+  ];
+
+  const verdictConfig: Record<TestVerdict & string, { label: string; color: string; bg: string }> = {
+    PASS:      { label: '✅ PASS',      color: '#00CC88', bg: '#00CC8822' },
+    FAIL:      { label: '❌ FAIL',      color: '#FF4040', bg: '#FF404022' },
+    AMBIGUOUS: { label: '⚠️ AMBI',    color: '#FF9500', bg: '#FF950022' },
+  };
+
+  const renderOracleTab = () => (
+    <ScrollView contentContainerStyle={{ paddingBottom: Spacing.xxxl }}>
+      <Text style={[S.sectionTitle, { color: cyan }]}>🔬 PROTOCOL ORACLE</Text>
+      <Text style={[S.hint, { color: txtMuted }]}>
+        Hardware truth verification suite for 0xA3 (product_id=163).{`\n`}
+        Fire tests → observe LEDs → log verdict. Phase 1 Smoking Guns marked ★.
+      </Text>
+      {renderHwBadge()}
+
+      {/* ── Coverage Matrix ───────────────────────────── */}
+      <Text style={[S.subTitle, { color: txtMuted }]}>OPCODE COVERAGE MATRIX</Text>
+      <View style={[S.diagBox, { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, padding: Spacing.md }]}>
+        {TRACKED_OPCODES.map(op => {
+          const status = coverage[op];
+          const cfg = opcodeStatusConfig[status];
+          return (
+            <View key={op} style={{ alignItems: 'center', width: 52 }}>
+              <Text style={{ fontSize: 16 }}>{cfg.emoji}</Text>
+              <Text style={{ color: cfg.color, fontSize: 9, fontWeight: '900', marginTop: 2 }}>{op}</Text>
+            </View>
+          );
+        })}
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.xl }}>
+        {(Object.entries(opcodeStatusConfig) as [OpcodeStatus, { emoji: string; color: string }][]).map(([k, v]) => (
+          <Text key={k} style={{ color: v.color, fontSize: 10 }}>{v.emoji} {k}</Text>
+        ))}
+        <TouchableOpacity onPress={clearTestLog} style={{ marginLeft: 'auto' }}>
+          <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: '900' }}>RESET ALL</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Quick Test Groups ─────────────────────────── */}
+      {QUICK_TESTS.map((group, gi) => (
+        <View key={gi}>
+          <Text style={[S.subTitle, { color: txtMuted }]}>{group.group}</Text>
+          <View style={{ gap: Spacing.sm, marginBottom: Spacing.lg }}>
+            {group.tests.map((test, ti) => {
+              const latestEntry = testLog.find(e => e.opcode === test.opcode && e.label === test.note);
+              const currentVerdict = latestEntry?.verdict ?? null;
+              return (
+                <View key={ti} style={[S.diagBox, { padding: Spacing.md }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                        <View style={{ backgroundColor: border, paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: 4 }}>
+                          <Text style={{ color: cyan, fontSize: 9, fontWeight: '900', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{test.opcode}</Text>
+                        </View>
+                        <Text style={{ color: txtPri, fontWeight: '900', fontSize: 12 }}>{test.label}</Text>
+                      </View>
+                      <Text style={{ color: txtMuted, fontSize: 10, marginTop: Spacing.xs }}>{test.note}</Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => transmit(ZenggeProtocol.wrapCommand(test.bytes()), test.note, test.opcode)}
+                      style={{ backgroundColor: cyan + '22', borderWidth: 1, borderColor: cyan, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: 8, marginLeft: Spacing.md }}
+                    >
+                      <Text style={{ color: cyan, fontWeight: '900', fontSize: 11 }}>SEND</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {/* Verdict annotation — shows after any test with this opcode/label was fired */}
+                  <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs }}>
+                    {(['PASS', 'FAIL', 'AMBIGUOUS'] as const).map(v => {
+                      const vcfg = verdictConfig[v];
+                      const isActive = currentVerdict === v;
+                      return (
+                        <TouchableOpacity
+                          key={v}
+                          onPress={() => {
+                            if (latestEntry) setVerdict(latestEntry.id, test.opcode, v);
+                            else setLastVerdict(test.opcode, v);
+                          }}
+                          style={{
+                            flex: 1, paddingVertical: Spacing.sm, borderRadius: 6, alignItems: 'center',
+                            backgroundColor: isActive ? vcfg.bg : 'transparent',
+                            borderWidth: 1, borderColor: isActive ? vcfg.color : border,
+                          }}
+                        >
+                          <Text style={{ color: isActive ? vcfg.color : txtMuted, fontSize: 10, fontWeight: '900' }}>{vcfg.label}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      ))}
+
+      {/* ── Test Session Log ─────────────────────────── */}
+      <Text style={[S.subTitle, { color: txtMuted }]}>TEST SESSION LOG ({testLog.length}/200)</Text>
+      {testLog.length === 0 ? (
+        <Text style={[S.hint, { color: txtMuted }]}>No tests fired yet. Tap SEND on any test above.</Text>
+      ) : (
+        <View style={{ gap: Spacing.sm }}>
+          {testLog.slice(0, 30).map((entry) => {
+            const vcfg = entry.verdict ? verdictConfig[entry.verdict] : null;
+            return (
+              <View key={entry.id} style={[S.diagBox, { padding: Spacing.md, borderColor: vcfg?.color ?? border }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.xs }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                    <View style={{ backgroundColor: border, paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ color: cyan, fontSize: 9, fontWeight: '900', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{entry.opcode}</Text>
+                    </View>
+                    {vcfg && (
+                      <View style={{ backgroundColor: vcfg.bg, paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: vcfg.color }}>
+                        <Text style={{ color: vcfg.color, fontSize: 9, fontWeight: '900' }}>{vcfg.label}</Text>
+                      </View>
+                    )}
+                    {!entry.verdict && (
+                      <View style={{ backgroundColor: border, paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: 4 }}>
+                        <Text style={{ color: txtMuted, fontSize: 9, fontWeight: '900' }}>⏳ PENDING</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={{ color: txtMuted, fontSize: 9 }}>{new Date(entry.timestamp).toLocaleTimeString()}</Text>
+                </View>
+                <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs }}>{entry.label}</Text>
+                <Text style={{ color: cyan, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 9 }} numberOfLines={2}>
+                  TX: {entry.txHex}
+                </Text>
+                {entry.rxHex && (
+                  <Text style={{ color: '#00E676', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 9, marginTop: Spacing.xxs }} numberOfLines={2}>
+                    RX: {entry.rxHex}
+                  </Text>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </ScrollView>
+  );
+
+  // ── Root render ───────────────────────────────────────────────────
   return (
     <View style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
@@ -849,7 +1148,7 @@ export default function Sk8LytzDiagnosticLab({
 
         {/* Tab Bar */}
         <View style={[S.tabBar, { borderBottomColor: border, backgroundColor: bg }]}>
-          {(['DEVICES', 'COLOR', 'TRANSITION', 'BUILDER', 'SNIFFER'] as LabTab[]).map(t => {
+          {(['DEVICES', 'COLOR', 'TRANSITION', 'BUILDER', 'SNIFFER', 'ORACLE'] as LabTab[]).map(t => {
             const active = tab === t;
             return (
               <TouchableOpacity
@@ -858,7 +1157,7 @@ export default function Sk8LytzDiagnosticLab({
                 onPress={() => setTab(t)}
               >
                 <Text style={[S.tabBtnTxt, active && S.tabBtnTxtActive, { color: active ? cyan : txtMuted }]}>
-                  {t}
+                  {t === 'ORACLE' ? '🔬' : t}
                 </Text>
               </TouchableOpacity>
             );
@@ -872,6 +1171,7 @@ export default function Sk8LytzDiagnosticLab({
           {tab === 'TRANSITION' && renderTransitionTab()}
           {tab === 'BUILDER' && renderBuilderTab()}
           {tab === 'SNIFFER' && renderSnifferTab()}
+          {tab === 'ORACLE' && renderOracleTab()}
         </View>
       </SafeAreaView>
     </View>
