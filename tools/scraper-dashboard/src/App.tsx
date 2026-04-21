@@ -52,6 +52,7 @@ function App() {
   const [status, setStatus] = useState<any>(null);
   const [targetFacilities, setTargetFacilities] = useState<string[]>([]);
   const [stateOverride, setStateOverride] = useState<string[]>([]);
+  const [pipelineStats, setPipelineStats] = useState<{ summary: any; stats: any[] } | null>(null);
   const [sleepInterval, setSleepInterval] = useState<number>(5000);
   const [isHeadless, setIsHeadless] = useState<boolean>(true);
   const [identityRotation, setIdentityRotation] = useState<boolean>(true);
@@ -138,6 +139,17 @@ function App() {
   useEffect(() => {
     fetchQueue();
   }, [stateOverride]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-fetch pipeline health stats when region changes
+  const fetchPipelineStats = async () => {
+    const statesParam = stateOverride.length > 0 ? `?states=${stateOverride.join(',')}` : '';
+    try {
+      const res = await fetch(`${API_BASE}/api/pipeline-stats${statesParam}`);
+      const data = await res.json();
+      if (data.summary) setPipelineStats(data);
+    } catch (e) { console.error('pipeline-stats fetch error:', e); }
+  };
+  useEffect(() => { fetchPipelineStats(); }, [stateOverride]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   useEffect(() => {
@@ -623,6 +635,84 @@ function App() {
             </div>
          ))}
       </div>
+
+      {/* ======= REGION PULSE: live per-phase breakdown ======= */}
+      {pipelineStats && (() => {
+        const s = pipelineStats.summary;
+        const rows = pipelineStats.stats;
+        const label = stateOverride.length > 0 ? stateOverride.join(' · ') : 'NATIONWIDE';
+        const COL = { scout:'#8a2be2', detective:'#ff5a00', photographer:'#e91e63', publisher:'#4caf50' };
+        return (
+          <div style={{ margin: '0 0 1rem 0', background: 'rgba(0,0,0,0.35)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+            {/* Header row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 14px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.03)' }}>
+              <span style={{ fontSize: '0.58rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Region Pulse</span>
+              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#8a2be2' }}>{label}</span>
+              <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.2)', marginLeft: 'auto' }}>updates on region change · {s.total?.toLocaleString()} total records</span>
+            </div>
+            {/* Phase metric columns */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'rgba(255,255,255,0.04)' }}>
+              {/* Phase 1: Scout */}
+              <div style={{ background: 'rgba(12,12,20,0.95)', padding: '10px 14px' }}>
+                <div style={{ fontSize: '0.58rem', fontWeight: 800, color: COL.scout, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>① Scout</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Total Seeded</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#fff' }}>{s.total?.toLocaleString()}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Enriched</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: COL.scout }}>{s.enriched?.toLocaleString()}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Has Website</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)' }}>{s.has_website?.toLocaleString()}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Pending</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#ffb300' }}>{s.pending?.toLocaleString()}</span></div>
+                </div>
+              </div>
+              {/* Phase 2: Detective */}
+              <div style={{ background: 'rgba(12,12,20,0.95)', padding: '10px 14px' }}>
+                <div style={{ fontSize: '0.58rem', fontWeight: 800, color: COL.detective, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>② Detective</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>In Queue</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: COL.detective }}>{s.detective_queue?.toLocaleString()}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Crawled</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#fff' }}>{s.deep_crawled?.toLocaleString()}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>No Website</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)' }}>{((s.total||0)-(s.has_website||0))?.toLocaleString()}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Has Candidates</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)' }}>{s.has_candidates?.toLocaleString()}</span></div>
+                </div>
+              </div>
+              {/* Phase 3: Photographer */}
+              <div style={{ background: 'rgba(12,12,20,0.95)', padding: '10px 14px' }}>
+                <div style={{ fontSize: '0.58rem', fontWeight: 800, color: COL.photographer, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>③ Photographer</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>In Queue</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: s.photographer_queue > 0 ? COL.photographer : 'rgba(255,255,255,0.3)' }}>{s.photographer_queue?.toLocaleString()}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Photographed</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#fff' }}>{s.has_photos?.toLocaleString()}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>No Candidates</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)' }}>{((s.total||0)-(s.has_candidates||0))?.toLocaleString()}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Media Ready</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: COL.photographer }}>{s.media_ready?.toLocaleString()}</span></div>
+                </div>
+              </div>
+              {/* Phase 4: Publisher */}
+              <div style={{ background: 'rgba(12,12,20,0.95)', padding: '10px 14px' }}>
+                <div style={{ fontSize: '0.58rem', fontWeight: 800, color: COL.publisher, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>④ Publisher</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Ready to Publish</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: COL.publisher }}>{s.media_ready?.toLocaleString()}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Live on App</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#4ade80' }}>{s.published?.toLocaleString()}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Pipeline %</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)' }}>{s.total > 0 ? Math.round((s.enriched/s.total)*100) : 0}%</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Published %</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#4ade80' }}>{s.total > 0 ? Math.round((s.published/s.total)*100) : 0}%</span></div>
+                </div>
+              </div>
+            </div>
+            {/* Per-state breakdown (only shown when multiple states or nationwide) */}
+            {rows.length > 1 && (
+              <div style={{ padding: '6px 14px 8px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                <div style={{ fontSize: '0.56rem', fontWeight: 800, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '5px' }}>Per State</div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {rows.slice(0, 15).map((r: any) => (
+                    <div key={r.state} style={{ display: 'inline-flex', gap: '5px', alignItems: 'center', padding: '2px 8px', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)' }}>{r.state}</span>
+                      <span style={{ fontSize: '0.6rem', color: '#8a2be2' }} title="Total">{r.total}</span>
+                      <span style={{ fontSize: '0.6rem', color: COL.detective }} title="Detective queue">{r.detective_queue > 0 ? `🔎${r.detective_queue}` : ''}</span>
+                      <span style={{ fontSize: '0.6rem', color: COL.photographer }} title="Photographer queue">{r.photographer_queue > 0 ? `📸${r.photographer_queue}` : ''}</span>
+                      <span style={{ fontSize: '0.6rem', color: '#4ade80' }} title="Published">{r.published > 0 ? `✓${r.published}` : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="content-area fade-in">
         {/* =========== PHASE 1: GLOBAL STRATEGY & INTAKE =========== */}
