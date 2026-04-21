@@ -176,23 +176,24 @@ export function useBLEScanner({
 
     const failedIds: string[] = [];
 
+    // Parallel probe with a concurrency cap of 2.
+    // iOS/Android GATT adapters can handle 2 simultaneous connections reliably;
+    // more than that causes timeouts and auth failures on most chipsets.
+    const CONCURRENCY = 2;
     let aborted = false;
 
-    for (const device of pending) {
+    const probeOne = async (device: Device): Promise<void> => {
       if (scannerStateRef.current !== 'PROBING') {
-        AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_aborted', reason: 'scanner_cancellation' });
         aborted = true;
-        break;
+        return;
       }
       try {
         const alreadyConn = await bleManager.isDeviceConnected(device.id).catch(() => false);
         const hasHwInfo = (device as any).hwPoints != null;
-        if (alreadyConn && hasHwInfo) continue;
+        if (alreadyConn && hasHwInfo) return;
 
         AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_start', deviceName: device.name || device.id });
         
-        // FIX: Remove manual connectToDevice wrap here. Let probeDevice() handle
-        // its own connection, spec-query, and mandatory disconnection cleanly.
         const hwConfig = await probeDevice(device.id);
         if (hwConfig) {
           (device as any).hwPoints = hwConfig.ledPoints;
@@ -208,18 +209,26 @@ export function useBLEScanner({
           setAllDevices([...allDevicesRef.current]);
           classifyProbeResults([...allDevicesRef.current]);
         } else {
-          // If hwConfig is null, the 0x63 ping timed out entirely after all retries.
           AppLogger.warn(`[BLE Scanner] Device ${device.id} silently failed to yield telemetry`);
           failedIds.push(device.id);
         }
-        
-        await new Promise(r => setTimeout(r, 600));
-
       } catch (probeErr: any) {
         AppLogger.warn(`[BLE Probe] Hard crash on ${device.id}:`, probeErr?.message);
         failedIds.push(device.id);
-        try { await bleManager.cancelDeviceConnection(device.id); } catch (e) { AppLogger.warn('[Scanner] Failed to cancel probe connection', { deviceId: device.id, error: String(e) }); }
-        await new Promise(r => setTimeout(r, 500));
+        try { await bleManager.cancelDeviceConnection(device.id); } catch (e) {
+          AppLogger.warn('[Scanner] Failed to cancel probe connection', { deviceId: device.id, error: String(e) });
+        }
+      }
+    };
+
+    // Process in batches of CONCURRENCY
+    for (let i = 0; i < pending.length; i += CONCURRENCY) {
+      if (aborted || scannerStateRef.current !== 'PROBING') break;
+      const batch = pending.slice(i, i + CONCURRENCY);
+      await Promise.all(batch.map(probeOne));
+      // Inter-batch cooldown: let the GATT adapter breathe
+      if (i + CONCURRENCY < pending.length) {
+        await new Promise(r => setTimeout(r, 400));
       }
     }
 
@@ -240,6 +249,7 @@ export function useBLEScanner({
     scannerStateRef.current = 'IDLE';
     AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_all_complete' });
   };
+
 
   const stopScanner = () => {
     bleManager?.stopDeviceScan();
