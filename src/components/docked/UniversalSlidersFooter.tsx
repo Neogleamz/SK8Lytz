@@ -9,7 +9,7 @@ import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Spacing } from '../../theme/theme';
 import { hexToHue } from '../../utils/ColorUtils';
-import { ZENGGE_EFFECTS } from '../../constants/CustomEffects';
+import { SK8LYTZ_TEMPLATES } from '../../constants/CustomEffects';
 import { AppLogger } from '../../services/AppLogger';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import NeonHueStrip from '../NeonHueStrip';
@@ -192,7 +192,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
 
           {/* Fixed Pattern Mode Split Color Tracker */}
           {(activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') && (() => {
-            const selectedEffect = ZENGGE_EFFECTS.find(e => e.id === fixedPatternId);
+            const selectedEffect = SK8LYTZ_TEMPLATES.find(e => e.id === fixedPatternId);
             const showFg = selectedEffect ? selectedEffect.requiresForeground : true;
             const showBg = selectedEffect ? selectedEffect.requiresBackground : true;
             if (!showFg && !showBg) return null;

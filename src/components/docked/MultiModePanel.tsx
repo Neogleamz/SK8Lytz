@@ -10,7 +10,7 @@
  */
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { ZENGGE_EFFECTS } from '../../constants/CustomEffects';
+import { SK8LYTZ_TEMPLATES } from '../../constants/CustomEffects';
 import { AppLogger } from '../../services/AppLogger';
 import { Layout, Spacing } from '../../theme/theme';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
@@ -42,6 +42,7 @@ interface MultiModePanelProps {
   devices?: any[];
   selectedColor: string;
   writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
+  applyFixedPattern?: (patternId: number, fg: string, bg: string, spd?: number, brt?: number) => void;
   Colors: any;
 }
 
@@ -66,6 +67,7 @@ const MultiModePanel = React.memo(({
   devices,
   selectedColor,
   writeToDevice,
+  applyFixedPattern,
   Colors,
 }: MultiModePanelProps) => {
   const hexToRgb = (hex: string) => {
@@ -111,21 +113,14 @@ const MultiModePanel = React.memo(({
                 contentContainerStyle={{ padding: Spacing.sm, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}
                 showsVerticalScrollIndicator={false}
               >
-                {ZENGGE_EFFECTS.map(effect => (
+                {SK8LYTZ_TEMPLATES.map(effect => (
                   <TouchableOpacity
                     key={effect.id}
                     onPress={() => {
                       setFixedSubMode('PATTERN');
                       setFixedPatternId(effect.id);
-                      if (writeToDevice) {
-                        writeToDevice(ZenggeProtocol.setCustomModeCompact([
-                          {
-                            mode: effect.id,
-                            speed: speed,
-                            color1: hexToRgb(fixedFgColor || '#FF0000'),
-                            color2: hexToRgb(fixedBgColor || '#000000'),
-                          }
-                        ]));
+                      if (applyFixedPattern) {
+                        applyFixedPattern(effect.id, fixedFgColor || '#FF0000', fixedBgColor || '#000000', speed);
                       }
                     }}
                     style={{ width: '48%', minHeight: 40, marginBottom: Spacing.sm, flexDirection: 'column', justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}

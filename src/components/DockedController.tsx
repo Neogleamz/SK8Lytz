@@ -44,7 +44,7 @@ import UniversalSlidersFooter from './docked/UniversalSlidersFooter';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Layout, Spacing, Typography } from '../theme/theme';
 
-import { ZENGGE_EFFECTS } from '../constants/CustomEffects';
+import { SK8LYTZ_TEMPLATES } from '../constants/CustomEffects';
 import { getRbmPatternName } from '../constants/RbmPatterns';
 import { useTheme } from '../context/ThemeContext';
 import CameraTracker from './CameraTracker';
@@ -781,9 +781,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 speed={speed}
                 hwSettings={hwSettings}
                 points={points}
-                devices={devices}
                 selectedColor={selectedColor}
                 writeToDevice={writeToDevice}
+                applyFixedPattern={applyFixedPattern}
                 Colors={Colors}
               />
             )}

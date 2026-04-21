@@ -1,29 +1,18 @@
 /**
- * SK8Lytz Pattern Engine
+ * SK8Lytz Pattern Engine (Math Synthesizer)
  *
- * SINGLE SOURCE OF TRUTH for all 10 Fixed Mode patterns.
- * Both the hardware payload and the app visualizer read from this engine.
+ * SINGLE SOURCE OF TRUTH for the 28 SK8LYTZ_TEMPLATES.
+ * Synthesizes dynamic pixel arrays based on math parameters instead of legacy firmware IDs.
  *
- * Hardware animation model (APK proven 2026-04-06, confirmed on device):
+ * Hardware animation model:
  *   - The IC strip controller animates NATIVELY once a 0x59 or 0x51 packet is sent.
- *   - We send ONE command; the hardware loops it autonomously.
- *   - The app visualizer SIMULATES that animation locally using an animTick (0.0–1.0).
- *
- * HARDWARE-CONFIRMED transition byte meanings (live device testing Apr 2026):
- *   0x00 = CASCADE  — continuous scroll/loop (correct for animated patterns)
- *   0x01 = FREEZE   — locks array in place (use for solid/static)
- *   0x02 = STROBE   — intended flash, but may not differ visibly from 0x01 on all HW
- *   0x03 = TRIGGER  — fires once: renders array at NEXT offset then STOPS.
- *                     Causes "blink + new position" behavior on each command.
- *                     NOT a continuous animation — DO NOT use for animated patterns.
- *
- * Pattern split:
- *   Pattern  1         → 0x59 with FREEZE (0x01) — pixel array locked, no scroll
- *   Patterns 2–5, 9–10 → 0x59 with CASCADE (0x00) — hardware continuous scroll
- *   Patterns 6–8       → 0x51 two-step DIY (hardware fades/jumps between FG and BG)
+ *   - 0x59 CASCADE (0x00): Hardware continuous scroll/loop for math arrays
+ *   - 0x59 FREEZE (0x01): Hardware locks the array in place
+ *   - 0x51 NATIVE: Used for full-strip temporal fades/flashes (Breath/Strobe)
  */
 
 import { ZenggeProtocol } from './ZenggeProtocol';
+import { interpolateColor } from '../utils/ColorUtils'; // we'll implement a small lerp helper if needed
 
 export interface RGB {
   r: number;
@@ -31,12 +20,9 @@ export interface RGB {
   b: number;
 }
 
-export type PatternId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+export type PatternId = number; // 1 through 28
 
-// ─── PATTERN TEMPLATES ───────────────────────────────────────────────────────
-// Define the repeating tile for each pattern.
-// Each template is a function of fg and bg color.
-// Patterns 6–8 return empty arrays (they use 0x51, not pixel arrays).
+// ─── MATH HELPERS ─────────────────────────────────────────────────────────────
 
 function dim(c: RGB, factor: number): RGB {
   return {
@@ -46,44 +32,149 @@ function dim(c: RGB, factor: number): RGB {
   };
 }
 
-function getPatternTile(patternId: PatternId, fg: RGB, bg: RGB): RGB[] {
-  switch (patternId) {
-    case 1:  return [fg];                                                    // Solid: single tile, tiled to full strip
-    case 2:  return [fg, bg, bg, bg, bg, bg, bg, bg];                       // Single Dot: 1 FG in 7 BG
-    case 3:  return [fg, dim(fg, 0.5), dim(fg, 0.2), bg, bg, bg];           // Comet: FG + 2-step trail
-    case 4:  return [fg, fg, fg, fg, bg, bg, bg, bg];                       // Dashed: 4-on 4-off
-    case 5:  return [fg, fg, bg, bg];                                        // Alternating: 2-on 2-off
-    case 6:  return [];                                                       // Breath: handled by 0x51
-    case 7:  return [];                                                       // Flash: handled by 0x51
-    case 8:  return [];                                                       // Strobe: handled by 0x51
-    case 9:  return [bg, bg, fg, fg, bg, bg];                                // Wave: FG pair in BG field
-    case 10: return [fg, bg, bg, bg, bg, fg];                                // Pinch: FG ends closing in
-    default: return [fg];
-  }
+function lerpRGB(c1: RGB, c2: RGB, t: number): RGB {
+  t = Math.max(0, Math.min(1, t));
+  return {
+    r: Math.round(c1.r + (c2.r - c1.r) * t),
+    g: Math.round(c1.g + (c2.g - c1.g) * t),
+    b: Math.round(c1.b + (c2.b - c1.b) * t),
+  };
 }
 
-/**
- * Tile a pattern template to exactly `numLEDs` pixels.
- * If the template is shorter, repeat it until we have enough pixels.
- */
-function tilePattern(tile: RGB[], numLEDs: number): RGB[] {
-  if (tile.length === 0) return [];
-  if (tile.length === numLEDs) return [...tile];
+function hueToRGB(hue: number): RGB {
+  const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+  return { r: Math.round(f(5) * 255), g: Math.round(f(3) * 255), b: Math.round(f(1) * 255) };
+}
 
-  const result: RGB[] = [];
-  while (result.length < numLEDs) {
-    result.push(...tile);
+// ─── GENERATORS ───────────────────────────────────────────────────────────────
+
+function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number): RGB[] {
+  const arr: RGB[] = Array(n).fill(bg);
+
+  switch (patternId) {
+    // ── GROUP 1: SOLID & STATIC ──
+    case 1: // Solid
+      return Array(n).fill(fg);
+    case 2: // Split Colors
+      return arr.map((_, i) => (i < n / 2 ? fg : bg));
+    case 3: // Trisection
+      return arr.map((_, i) => {
+        const seg = Math.floor(i / (n / 3));
+        return seg === 1 ? bg : fg;
+      });
+    case 4: // Quartered
+      return arr.map((_, i) => {
+        const seg = Math.floor(i / (n / 4));
+        return seg % 2 === 0 ? fg : bg;
+      });
+    case 5: // Center Accent
+      return arr.map((_, i) => {
+        const mid = n / 2;
+        return Math.abs(i - mid) < n * 0.15 ? fg : bg;
+      });
+
+    // ── GROUP 2: CHASES & METEORS ──
+    case 6: // Single Dot Chase
+      arr[0] = fg; return arr;
+    case 7: // Reflected Dot Chase (Two dots spaced out)
+      arr[0] = fg;
+      arr[Math.floor(n / 2)] = fg;
+      return arr;
+    case 8: // Comet Chase
+      for (let i = 0; i < Math.min(6, n); i++) arr[i] = dim(fg, 1 - i * 0.15);
+      return arr;
+    case 9: // Meteor Shower
+      for (let i = 0; i < n; i++) {
+        if (i % 8 === 0) arr[i] = fg;
+        else if (i % 8 < 4) arr[i] = dim(fg, 1 - (i % 8) * 0.25);
+      }
+      return arr;
+
+    // ── GROUP 3: MARQUEES & BANDS ──
+    case 10: // Micro Ants
+      return arr.map((_, i) => (i % 2 === 0 ? fg : bg));
+    case 11: // Theater Chase
+      return arr.map((_, i) => (i % 3 === 0 ? fg : bg));
+    case 12: // Dashed Marquee
+      return arr.map((_, i) => ((i % 8) < 4 ? fg : bg));
+    case 13: // Barber Pole
+      return arr.map((_, i) => {
+        const mod = i % 12;
+        if (mod < 4) return fg;
+        if (mod < 8) return lerpRGB(fg, bg, 0.5); // transition
+        return bg;
+      });
+    case 14: // Bold Stripes
+      return arr.map((_, i) => ((i % 16) < 8 ? fg : bg));
+
+    // ── GROUP 4: MATH WAVES & GRADIENTS ──
+    case 15: // Sine Pulse Wave
+      return arr.map((_, i) => lerpRGB(bg, fg, (Math.sin((i / n) * Math.PI * 4) + 1) / 2));
+    case 16: // Wave Pinch
+      return arr.map((_, i) => {
+        const distToCenter = Math.abs(i - n / 2) / (n / 2); // 0 at center, 1 at ends
+        return lerpRGB(bg, fg, distToCenter);
+      });
+    case 17: // Breathing Wave (Gradient across strip)
+      return arr.map((_, i) => lerpRGB(fg, bg, i / n));
+    case 18: // Center-Out Comet
+      return arr.map((_, i) => {
+        const distToCenter = Math.abs(i - n / 2) / (n / 2);
+        return lerpRGB(fg, bg, distToCenter * distToCenter); // non-linear fade
+      });
+    case 19: // Center-Out Marquee
+      return arr.map((_, i) => {
+        const mid = n / 2;
+        const dist = Math.abs(i - mid);
+        return dist % 6 < 3 ? fg : bg;
+      });
+
+    // ── GROUP 5: TEMPORAL FULL-STRIP (0x51 handled differently, arrays just return solid for visualizer) ──
+    case 20: // Smooth Breath
+    case 21: // Hard Jump Flash
+    case 22: // Strobe
+      return Array(n).fill(fg); // Used only by visualizer's temporal logic
+    case 23: // Wipe/Fill Start to End (Simulated via gradient for 0x59)
+      return arr.map((_, i) => (i < n / 2 ? fg : bg));
+    case 24: // Wipe/Fill Center Out
+      return arr.map((_, i) => (Math.abs(i - n / 2) < n / 4 ? fg : bg));
+
+    // ── GROUP 6: GENERATIVE RAINBOWS & TRI-COLOR ──
+    case 25: // True Rainbow Flow
+      return arr.map((_, i) => hueToRGB((i / n) * 360));
+    case 26: // Rainbow Marquee
+      return arr.map((_, i) => {
+        if ((i % 8) < 4) return bg;
+        return hueToRGB((i / n) * 360);
+      });
+    case 27: // Rainbow Comet
+      return arr.map((_, i) => {
+        if (i < n / 3) return dim(hueToRGB((i / (n / 3)) * 360), 1 - (i / (n / 3)));
+        return bg;
+      });
+    case 28: // Cyberpunk Shift (Cyan/Magenta/Yellow alternate)
+      const c1 = { r: 0, g: 255, b: 255 }; // Cyan
+      const c2 = { r: 255, g: 0, b: 255 }; // Magenta
+      const c3 = { r: 255, g: 255, b: 0 }; // Yellow
+      return arr.map((_, i) => {
+        const mod = i % 15;
+        if (mod < 5) return c1;
+        if (mod < 10) return c2;
+        return c3;
+      });
+
+    default:
+      return Array(n).fill(fg);
   }
-  return result.slice(0, numLEDs);
 }
 
 /**
  * Rotate a pixel array by `offset` positions (for visualizer scroll simulation).
- * Offset 0.0 = no scroll, 1.0 = full cycle = back to original.
  */
 function rotateArray(arr: RGB[], animTick: number): RGB[] {
   if (arr.length === 0) return arr;
-  const offset = Math.floor(animTick * arr.length) % arr.length;
+  // Negate animTick so it flows visually correct
+  const offset = Math.floor((1 - animTick) * arr.length) % arr.length;
   if (offset === 0) return arr;
   return [...arr.slice(offset), ...arr.slice(0, offset)];
 }
@@ -92,15 +183,7 @@ function rotateArray(arr: RGB[], animTick: number): RGB[] {
 
 /**
  * Get the full pixel array for a pattern at a specific animation frame.
- * Used by the VISUALIZER to render the LED strip and dot pattern views.
- *
- * For patterns 6–8 (0x51 based), returns a pulsing approximation for visual purposes only.
- *
- * @param patternId  1–10
- * @param fg         Foreground color (sorted for display — do NOT apply color sorting here)
- * @param bg         Background color
- * @param numLEDs    Actual device LED count from hwSettings.ledPoints
- * @param animTick   Animation progress 0.0–1.0 (from Animated.Value or manual tick)
+ * Used by the VISUALIZER.
  */
 export function getVisualizerFrame(
   patternId: PatternId,
@@ -111,49 +194,38 @@ export function getVisualizerFrame(
 ): RGB[] {
   const n = Math.max(1, numLEDs);
 
-  // Patterns 6–8 use 0x51 (full-strip transitions), simulate visually
-  if (patternId === 6) {
-    // Breath: fade FG→BG→FG based on tick
-    const t = Math.sin(animTick * Math.PI); // 0→1→0
-    return Array(n).fill({
-      r: Math.round(fg.r * t + bg.r * (1 - t)),
-      g: Math.round(fg.g * t + bg.g * (1 - t)),
-      b: Math.round(fg.b * t + bg.b * (1 - t)),
-    });
+  // Group 5 (Temporal 0x51) -> simulate visually with full-strip changes
+  if (patternId === 20) { // Breath
+    const t = (Math.sin(animTick * Math.PI * 2) + 1) / 2; // 0→1→0
+    return Array(n).fill(lerpRGB(bg, fg, t));
   }
-  if (patternId === 7) {
-    // Flash: hard cut FG/BG at midpoint
+  if (patternId === 21) { // Jump Flash
     return Array(n).fill(animTick < 0.5 ? fg : bg);
   }
-  if (patternId === 8) {
-    // Strobe: much faster flash
-    return Array(n).fill(Math.floor(animTick * 6) % 2 === 0 ? fg : bg);
+  if (patternId === 22) { // Strobe
+    return Array(n).fill(Math.floor(animTick * 12) % 2 === 0 ? fg : bg);
   }
 
-  // Patterns 1, 2, 3, 4, 5, 9, 10 — tile and scroll
-  const tile = getPatternTile(patternId, fg, bg);
-  const tiled = tilePattern(tile, n);
+  const generated = generateArray(patternId, fg, bg, n);
 
-  // Solid doesn't scroll
-  if (patternId === 1) return tiled;
+  // Group 1 (Static) does not scroll
+  if (patternId >= 1 && patternId <= 5) return generated;
 
-  // All others scroll (simulating hardware RunningWater)
-  return rotateArray(tiled, animTick);
+  // Center-Out effects (18, 19, 24) should split scroll if true center out
+  if (patternId === 18 || patternId === 19 || patternId === 24) {
+    const mid = Math.floor(n / 2);
+    const left = rotateArray(generated.slice(0, mid).reverse(), animTick).reverse();
+    const right = rotateArray(generated.slice(mid), animTick);
+    return [...left, ...right];
+  }
+
+  // All other groups scroll natively
+  return rotateArray(generated, animTick);
 }
 
 /**
  * Get the hardware pixel array for a pattern.
  * Used by applyFixedPattern() to build the 0x59 payload.
- *
- * IMPORTANT: Pass raw RGB values — do NOT pre-sort with applyColorSorting().
- * The hardware controller auto-remaps GRB internally via 0x62 EEPROM config.
- *
- * For patterns 6–8: returns null (caller should use buildCustomModePayload instead).
- *
- * @param patternId  1–10
- * @param fg         Raw foreground RGB (no color sorting)
- * @param bg         Raw background RGB (no color sorting)
- * @param numLEDs    Actual device LED count from hwSettings.ledPoints
  */
 export function getHardwarePixelArray(
   patternId: PatternId,
@@ -161,30 +233,22 @@ export function getHardwarePixelArray(
   bg: RGB,
   numLEDs: number
 ): RGB[] | null {
-  if (patternId === 6 || patternId === 7 || patternId === 8) return null;
+  // 0x51 temporal patterns return null so they fallback to buildCustomModePayload
+  if (patternId >= 20 && patternId <= 22) return null;
 
-  const n = Math.max(1, numLEDs);
-  const tile = getPatternTile(patternId, fg, bg);
-  return tilePattern(tile, n);
+  return generateArray(patternId, fg, bg, Math.max(1, numLEDs));
 }
 
 /**
  * Get the 0x59 transition type for a pattern.
- *
- * CONFIRMED hardware meanings:
- *   0x00 = CASCADE  — hardware scrolls the array (use for animated patterns)
- *   0x01 = FREEZE   — hardware locks the array in place (use for solid/static)
  */
 export function getPatternTransitionType(patternId: PatternId): number {
-  if (patternId === 1) return 0x01; // FREEZE — solid, locked, no scrolling
-  return 0x00;                       // CASCADE — hardware continuously scrolls pixel array
-                                     // NOTE: 0x03 was tested and causes blink+jump-to-new-position
-                                     // (one-shot trigger, not continuous) — DO NOT use for animations
+  if (patternId >= 1 && patternId <= 5) return 0x01; // FREEZE
+  return 0x00; // CASCADE (Scroll)
 }
 
 /**
- * Build the full 0x59 hardware command for patterns 1–5, 9–10.
- * Returns null for patterns 6–8 (use buildCustomModePayload instead).
+ * Build the full 0x59 hardware command.
  */
 export function buildMultiColorPayload(
   patternId: PatternId,
@@ -202,8 +266,7 @@ export function buildMultiColorPayload(
 }
 
 /**
- * Build the 0x51 hardware command for patterns 6 (Breath), 7 (Flash), 8 (Strobe).
- * Returns null for patterns 1–5, 9–10 (use buildMultiColorPayload instead).
+ * Build the 0x51 hardware command for temporal patterns (20-22).
  */
 export function buildCustomModePayload(
   patternId: PatternId,
@@ -213,22 +276,19 @@ export function buildCustomModePayload(
 ): number[] | null {
   const s = Math.max(1, Math.min(100, Math.round(speed)));
 
-  if (patternId === 6) {
-    // Breath: 2-step Gradual fade FG→BG→FG (hardware loops)
+  if (patternId === 20) { // Smooth Breath
     return ZenggeProtocol.setCustomMode([
       { mode: ZenggeProtocol.STEP_GRADUAL, speed: s, color1: fg, color2: bg },
       { mode: ZenggeProtocol.STEP_GRADUAL, speed: s, color1: bg, color2: fg },
     ]);
   }
-  if (patternId === 7) {
-    // Flash: 2-step Jump cut FG↔BG (hardware loops)
+  if (patternId === 21) { // Hard Jump
     return ZenggeProtocol.setCustomMode([
       { mode: ZenggeProtocol.STEP_JUMP, speed: s, color1: fg, color2: bg },
       { mode: ZenggeProtocol.STEP_JUMP, speed: s, color1: bg, color2: fg },
     ]);
   }
-  if (patternId === 8) {
-    // Strobe: same as Flash but forced max speed
+  if (patternId === 22) { // Strobe
     return ZenggeProtocol.setCustomMode([
       { mode: ZenggeProtocol.STEP_JUMP, speed: 100, color1: fg, color2: bg },
       { mode: ZenggeProtocol.STEP_JUMP, speed: 100, color1: bg, color2: fg },
@@ -238,8 +298,7 @@ export function buildCustomModePayload(
 }
 
 /**
- * Master dispatcher — sends the correct hardware payload for any pattern ID.
- * Returns the byte array to write to device, or null if inputs are invalid.
+ * Master dispatcher — builds payload for hardware write.
  */
 export function buildPatternPayload(
   patternId: number,
@@ -249,10 +308,9 @@ export function buildPatternPayload(
   speed: number,
   direction: number = 1
 ): number[] | null {
-  const pid = patternId as PatternId;
-
-  const multiColor = buildMultiColorPayload(pid, fg, bg, numLEDs, speed, direction);
+  const multiColor = buildMultiColorPayload(patternId, fg, bg, numLEDs, speed, direction);
   if (multiColor) return multiColor;
 
-  return buildCustomModePayload(pid, fg, bg, speed);
+  return buildCustomModePayload(patternId, fg, bg, speed);
 }
+

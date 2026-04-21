@@ -26,7 +26,7 @@ import {
     Text, TouchableOpacity,
     View,
 } from 'react-native';
-import { ZENGGE_EFFECTS } from '../constants/CustomEffects';
+import { SK8LYTZ_TEMPLATES } from '../constants/CustomEffects';
 import { useTheme } from '../context/ThemeContext';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import CustomEffectVisualizer from './CustomEffectVisualizer';
@@ -61,7 +61,7 @@ function hueToHex(hue: number, sat = 1, lit = 0.5): string {
 const CARD_PULSE = new Animated.Value(1);
 
 interface EffectCardProps {
-  effect: typeof ZENGGE_EFFECTS[0];
+  effect: typeof SK8LYTZ_TEMPLATES[0];
   isSelected: boolean;
   fgColor: string;
   bgColor: string;
@@ -256,7 +256,7 @@ const EffectsPanel: React.FC<EffectsPanelProps> = ({
 
   // ── Effect selection handler ───────────────────────────────────────────────
   const handleSelectEffect = useCallback((effectId: number) => {
-    const effect = ZENGGE_EFFECTS.find(e => e.id === effectId);
+    const effect = SK8LYTZ_TEMPLATES.find(e => e.id === effectId);
     if (!effect) return;
 
     // Apply Zengge default BG color (blue for certain effects, black otherwise)
@@ -298,7 +298,7 @@ const EffectsPanel: React.FC<EffectsPanelProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const selectedEffect = ZENGGE_EFFECTS.find(e => e.id === selectedEffectId);
+  const selectedEffect = SK8LYTZ_TEMPLATES.find(e => e.id === selectedEffectId);
 
   return (
     <View style={{ flex: 1 }}>
@@ -349,7 +349,7 @@ const EffectsPanel: React.FC<EffectsPanelProps> = ({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {ZENGGE_EFFECTS.map((effect) => (
+        {SK8LYTZ_TEMPLATES.map((effect) => (
           <EffectCard
             key={effect.id}
             effect={effect}

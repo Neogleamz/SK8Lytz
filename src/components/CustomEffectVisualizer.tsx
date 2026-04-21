@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
-import { ZenggeVisualizerMath } from '../protocols/ZenggeVisualizerMath';
+import { getVisualizerFrame } from '../protocols/PatternEngine';
 import { Spacing } from '../theme/theme';
 
 interface CustomEffectVisualizerProps {
@@ -51,22 +51,13 @@ export const CustomEffectVisualizer: React.FC<CustomEffectVisualizerProps> = ({
   const displayedDots = useMemo(() => {
     const fgRgb = hexToRgb(fgColorHex);
     const bgRgb = hexToRgb(bgColorHex);
-    const base16 = ZenggeVisualizerMath.getVisualizerDots(effectId, fgRgb, bgRgb, tick, direction, segments > 1);
     
-    // Stretch the 16 native hardware visualizer buffer into the actual hardware rendering 
-    // constraints by slicing or repeating based on segments.
-    // For now we slice exactly the number of points so it fits the LED box exactly.
-    const arr: string[] = [];
-    const dotsPerSegment = Math.max(1, Math.floor(points / Math.max(1, segments)));
+    // Leverage the new PatternEngine which dynamically tiles and animates
+    // the mathematical array to match exactly the requested points.
+    const colors = getVisualizerFrame(effectId, fgRgb, bgRgb, points, tick);
     
-    for (let i = 0; i < points; i++) {
-       const segmentLocalIndex = i % dotsPerSegment;
-       const colorObj = base16[segmentLocalIndex % 16];
-       arr.push(`rgb(${colorObj.r}, ${colorObj.g}, ${colorObj.b})`);
-    }
-    
-    return arr;
-  }, [effectId, fgColorHex, bgColorHex, tick, points, segments, direction]);
+    return colors.map(c => `rgb(${c.r}, ${c.g}, ${c.b})`);
+  }, [effectId, fgColorHex, bgColorHex, tick, points]);
 
   return (
     <View style={{ flex: 1, marginRight: Spacing.sm, height: 8, overflow: 'hidden' }}>
