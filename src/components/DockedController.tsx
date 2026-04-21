@@ -636,7 +636,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
         {/* ── POWER OVERRIDE OVERLAY ────────────────────────────────────────── */}
         {isPoweredOn === false && (
-          <View style={[StyleSheet.absoluteFill, { zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', borderRadius: Layout.borderRadius }]} pointerEvents="box-only">
+          <View style={[StyleSheet.absoluteFill, { zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', borderRadius: Layout.borderRadius, pointerEvents: 'box-only' as any }]}>
             <TouchableOpacity
               onPress={() => writeToDevice && writeToDevice(ZenggeProtocol.turnOn())}
               style={[{ width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(0, 240, 255, 0.1)', borderWidth: 3, borderColor: '#00f0ff', elevation: 15, justifyContent: 'center', alignItems: 'center' }, Platform.select({
@@ -1239,10 +1239,10 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
+    ...Platform.select({
+      web: { boxShadow: `0px 4px 10px ${Colors.primary}40` } as any,
+      default: { shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10 }
+    }),
   },
   presetTitle: {
     ...Typography.body,
@@ -1469,10 +1469,10 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.sm,
     marginTop: Spacing.sm,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
+    ...Platform.select({
+      web: { boxShadow: `0px 8px 20px ${Colors.primary}99` } as any,
+      default: { shadowColor: Colors.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.6, shadowRadius: 20 }
+    }),
     elevation: 15
   },
   dockIconCont: {
@@ -1488,10 +1488,10 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   dockIconActive: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 12,
+    ...Platform.select({
+      web: { boxShadow: `0px 0px 12px ${Colors.primary}e6` } as any,
+      default: { shadowColor: Colors.primary, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 12 }
+    }),
     elevation: 8,
     transform: [{ scale: 1.15 }]
   },
@@ -1502,9 +1502,10 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     textAlign: 'center',
     letterSpacing: 4,
     textTransform: 'uppercase',
-    textShadowColor: Colors.primary,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 24,
+    ...Platform.select({
+      web: { textShadow: `0px 0px 24px ${Colors.primary}` } as any,
+      default: { textShadowColor: Colors.primary, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 24 }
+    }),
     opacity: 1.0,
     marginTop: Spacing.xs,
   }
