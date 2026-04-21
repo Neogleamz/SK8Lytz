@@ -12,7 +12,6 @@
  */
 
 import { ZenggeProtocol } from './ZenggeProtocol';
-import { interpolateColor } from '../utils/ColorUtils'; // we'll implement a small lerp helper if needed
 
 export interface RGB {
   r: number;
