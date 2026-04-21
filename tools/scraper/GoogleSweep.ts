@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
-import { GooglePlacesProvider, FacilityType } from './lib/providers/GooglePlacesProvider';
+import { GooglePlacesProvider, FacilityType, RETAIL_BLOCKLIST } from './lib/providers/GooglePlacesProvider';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const supabase = createClient(
@@ -35,11 +35,7 @@ const STATE_NAMES: Record<string, string> = {
   'DC': 'Washington DC'
 };
 
-const RETAIL_BLOCKLIST = [
-  "dick's sporting goods", "academy sports", "play it again sports",
-  "cargo largo", "target", "walmart", "dunham's", "big 5",
-  "scheels", "rei", "bass pro", "cabela", "sportsman"
-];
+// RETAIL_BLOCKLIST is imported from GooglePlacesProvider — single source of truth.
 
 /**
  * Sweeps Google Places for the given facility types and states.
@@ -54,7 +50,7 @@ export async function startGoogleSweep(
   isGoogleSweepActive = true;
 
   // Resolve which facility types to sweep. Default: roller_rink only.
-  const ALL_FACILITY_TYPES: FacilityType[] = ['roller_rink', 'skate_shop'];
+  const ALL_FACILITY_TYPES: FacilityType[] = ['roller_rink', 'skate_shop', 'skate_park'];
   const facilitiesToRun: FacilityType[] = targetFacilities.length > 0
     ? ALL_FACILITY_TYPES.filter(ft => targetFacilities.includes(ft))
     : ['roller_rink'];

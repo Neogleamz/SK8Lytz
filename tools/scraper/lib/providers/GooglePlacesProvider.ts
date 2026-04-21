@@ -1,4 +1,4 @@
-import { Client, TextSearchRequest, PlaceDetailsRequest, Place } from "@googlemaps/google-maps-services-js";
+import { Client, TextSearchRequest, PlaceDetailsRequest } from "@googlemaps/google-maps-services-js";
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -20,65 +20,134 @@ export interface GooglePlaceResult {
   opening_hours?: any;
 }
 
-// Terms that disqualify a Google Places result from being a roller-skating venue.
-// Covers: skateboard shops, big-box sporting goods (Scheels), and ice/hockey rinks.
-const BLOCKED_NAME_KEYWORDS = [
-  // Skateboard-related
-  "skateboard", "board shop", "snowboard", "zumiez", "vans",
-  "skateboards", "skateboarding",
-  // Big-box sporting goods that operate ice rinks
-  "scheels",
-  // Ice & hockey rinks (roller-only focus)
-  "ice rink", "ice skating", "ice arena", "ice centre", "ice center",
-  "hockey rink", "hockey arena", "hockey centre", "hockey center",
-  "curling",
+export type FacilityType = 'roller_rink' | 'skate_shop' | 'skate_park';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Search terms per facility type — keep these tightly scoped to avoid pollution.
+// NOTE: Broader terms like "skate shop" or "skating center" alone are intentionally
+//       omitted because they return skateboard shops and ice rinks respectively.
+// ─────────────────────────────────────────────────────────────────────────────
+const SEARCH_TERMS: Record<FacilityType, string[]> = {
+  roller_rink: [
+    "roller skating rink",
+    "roller rink",
+    "rollerdrome",
+    "roller palace",
+    "roller world",
+    "skating palace",
+    "family skating center",
+    "skating pavilion",
+  ],
+  skate_shop: [
+    "roller skate shop",
+    "roller skate store",
+    "quad skate shop",
+    "roller derby shop",
+    "roller derby gear",
+    "inline skate shop",
+    "roller skating pro shop",
+    "speed skate shop",
+    "roller skating equipment store",
+  ],
+  skate_park: [
+    "outdoor roller rink",
+    "roller skating park",
+    "community roller rink",
+    "recreation center roller skating",
+    "indoor skating facility",
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Name-based allow-list for skate_park results only.
+// Google doesn't cleanly separate roller parks from skateboard parks,
+// so we require at least one of these keywords in the venue name.
+// ─────────────────────────────────────────────────────────────────────────────
+const SKATE_PARK_NAME_ALLOWLIST = [
+  "rink", "roller", "skating", "pavilion", "plaza", "recreation",
+  "rec center", "community center", "family fun", "sport complex",
 ];
 
-// Google Places `types` that belong to ice/hockey rink categories.
+// ─────────────────────────────────────────────────────────────────────────────
+// Name keywords that disqualify ANY result regardless of facility type.
+// ─────────────────────────────────────────────────────────────────────────────
+const BLOCKED_NAME_KEYWORDS = [
+  // Skateboard-only
+  "skateboard", "skateboards", "skateboarding", "board shop", "snowboard",
+  "zumiez", "vans skate",
+  // Ice & hockey (block ice-specific only; "inline hockey" is valid — it uses roller rinks)
+  "ice rink", "ice skating", "ice arena", "ice centre", "ice center",
+  "ice complex", "ice palace", "ice house", "ice sport",
+  "polar ice", " on ice",
+  "figure skating", "figure skate",
+  "ice hockey", "hockey rink", "hockey arena", "hockey centre", "hockey center",
+  "curling",
+  // Big-box retail chains (second-line defence; Google type filter catches most)
+  "scheels", "zumiez",
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Google Places `types` array values that categorically disqualify a result.
+// ─────────────────────────────────────────────────────────────────────────────
 const BLOCKED_PLACE_TYPES = new Set([
   "ice_skating_rink",
-  "sporting_goods_store", // catches Scheels generically
+  "sporting_goods_store",   // catches big-box generics (Scheels, Dick's, REI, etc.)
 ]);
 
-function isPolluted(name: string, types: string[]): boolean {
+// ─────────────────────────────────────────────────────────────────────────────
+// Big-box retail name blocklist — catches stores that sell skates but aren't rinks/shops.
+// Applied as a secondary check in GoogleSweep.ts as well.
+// ─────────────────────────────────────────────────────────────────────────────
+export const RETAIL_BLOCKLIST = [
+  // Sporting goods chains
+  "dick's sporting goods", "dicks sporting", "academy sports", "hibbett sports",
+  "hibbett", "big 5 sporting", "big 5", "dunham's", "modell's", "sport chalet",
+  "sports authority", "play it again sports",
+  // Mass-market retail
+  "target", "walmart", "costco", "kohl's", "kohls", "amazon",
+  // Outdoor / hunting
+  "rei", "bass pro", "bass pro shop", "cabela", "cabela's", "sportsman's warehouse",
+  "sportsman", "scheels",
+  // Footwear
+  "foot locker", "footlocker",
+  // Generic catch-all — any name with "sporting goods" that isn't a specialty store
+  "sporting goods",
+  // Other
+  "cargo largo",
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pollution filter — returns true if a result SHOULD be rejected.
+// ─────────────────────────────────────────────────────────────────────────────
+function isPolluted(name: string, types: string[], facilityType: FacilityType): boolean {
   const lowerName = name.toLowerCase();
   const lowerTypes = types.map(t => t.toLowerCase());
 
-  // Block by type array first (fastest path)
+  // 1. Block by Google type array (fastest, most reliable)
   for (const t of lowerTypes) {
     if (BLOCKED_PLACE_TYPES.has(t)) return true;
   }
 
-  // Block by keyword match on name
+  // 2. Block by name keyword
   for (const keyword of BLOCKED_NAME_KEYWORDS) {
     if (lowerName.includes(keyword)) return true;
+  }
+
+  // 3. For skate_park results, require at least one allow-list keyword in the name.
+  //    This prevents pure skateboard parks from slipping through.
+  if (facilityType === 'skate_park') {
+    const passesAllowList = SKATE_PARK_NAME_ALLOWLIST.some(kw => lowerName.includes(kw));
+    if (!passesAllowList) return true; // reject if no allow-list keyword found
   }
 
   return false;
 }
 
-export type FacilityType = 'roller_rink' | 'skate_shop';
-
-/** Search terms per facility type — keep these specific to avoid pollution */
-const SEARCH_TERMS: Record<FacilityType, string[]> = {
-  roller_rink: [
-    "roller skating rink",
-    "roller rink",
-    "quad skating",
-  ],
-  skate_shop: [
-    "roller skate shop",
-    "quad skate shop",
-    "roller derby shop",
-    "inline skate shop",
-  ],
-};
-
 export class GooglePlacesProvider {
   /**
    * Sweeps a region for spots matching a specific facility type.
-   * @param location  State name or city/region string
-   * @param facilityType  Which type of venue to search for
+   * @param location     State name or city/region string passed to Google text search.
+   * @param facilityType Determines which search terms and allow-list filters to apply.
    */
   static async searchRegion(location: string, facilityType: FacilityType = 'roller_rink'): Promise<string[]> {
     const searchTerms = SEARCH_TERMS[facilityType];
@@ -87,9 +156,9 @@ export class GooglePlacesProvider {
     for (const term of searchTerms) {
       try {
         const query = `${term} in ${location}`;
-        console.log(`[GooglePlaces] Initiating text search: "${query}"`);
-        
-        let pageToken = undefined;
+        console.log(`[GooglePlaces] Querying: "${query}"`);
+
+        let pageToken: string | undefined = undefined;
         let pagesFetched = 0;
 
         while (pagesFetched < 3) {
@@ -97,39 +166,35 @@ export class GooglePlacesProvider {
             params: {
               query,
               key: API_KEY,
-              pagetoken: pageToken
+              pagetoken: pageToken,
             }
           };
 
           const response = await googleClient.textSearch(params);
-        
-        if (response.data.results) {
-          for (const result of response.data.results) {
-            const name = result.name || '';
-            const types = result.types || [];
-            
-            // Pollution Defense 2
-            if (!isPolluted(name, types)) {
-                if (result.place_id) {
-                    verifiedPlaceIds.add(result.place_id);
-                }
-            } else {
-                console.log(`[GooglePlaces] 🚫 Pollution Defense triggered — rejected: "${name}" [types: ${types.join(', ')}]`);
+
+          if (response.data.results) {
+            for (const result of response.data.results) {
+              const name = result.name || '';
+              const types = result.types || [];
+
+              if (!isPolluted(name, types, facilityType)) {
+                if (result.place_id) verifiedPlaceIds.add(result.place_id);
+              } else {
+                console.log(`[GooglePlaces] 🚫 Rejected: "${name}" [types: ${types.join(', ')}]`);
+              }
             }
           }
-          
+
           if (response.data.next_page_token) {
             pageToken = response.data.next_page_token;
             pagesFetched++;
-            // Google requires a short delay before using the next page token
-            await new Promise(r => setTimeout(r, 2000));
+            await new Promise(r => setTimeout(r, 2000)); // Google token delay
           } else {
-            break; // No more pages
-          }
+            break;
           }
         }
       } catch (error: any) {
-        console.error(`[GooglePlaces] Error searching for ${term}:`, error.message);
+        console.error(`[GooglePlaces] Error for term "${term}":`, error.message);
         break;
       }
     }
@@ -137,9 +202,9 @@ export class GooglePlacesProvider {
     return Array.from(verifiedPlaceIds);
   }
 
-
   /**
-   * Performs Place Details lookup for high-value field masks.
+   * Fetches full Place Details for a given place_id.
+   * Returns null if place has no coordinates (unusable for mapping).
    */
   static async getPlaceDetails(placeId: string): Promise<GooglePlaceResult | null> {
     try {
@@ -167,11 +232,11 @@ export class GooglePlacesProvider {
       const place = response.data.result;
 
       if (!place) return null;
-      if (!place.geometry?.location) return null; // We need coordinates
+      if (!place.geometry?.location) return null;
 
       return {
         place_id: place.place_id as string,
-        name: place.name || 'Unknown Row',
+        name: place.name || 'Unknown',
         formatted_address: place.formatted_address,
         lat: place.geometry.location.lat,
         lng: place.geometry.location.lng,
@@ -179,11 +244,10 @@ export class GooglePlacesProvider {
         user_ratings_total: place.user_ratings_total,
         website: place.website,
         formatted_phone_number: place.international_phone_number || place.formatted_phone_number,
-        opening_hours: place.opening_hours ? place.opening_hours.weekday_text : null
+        opening_hours: place.opening_hours ? place.opening_hours.weekday_text : null,
       };
-
     } catch (error: any) {
-      console.error(`[GooglePlaces] Error fetching details for ${placeId}:`, error.message);
+      console.error(`[GooglePlaces] Details error for ${placeId}:`, error.message);
       return null;
     }
   }

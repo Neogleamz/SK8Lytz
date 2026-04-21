@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -98,7 +98,7 @@ async function fetchConfig() {
   return data || { 
     sleep_interval_ms: 10000, 
     target_facilities: [], 
-    state_override: null,
+    state_override: [],        // [] = nationwide (no priority filter)
     cooldown_base_ms: 300000,
     cooldown_jitter_pct: 20,
     max_consecutive_errors: 3,
@@ -310,6 +310,32 @@ app.post('/config', async (req, res) => {
   res.json({ success: true, message: 'Config updated' });
 });
 
+// â”€â”€â”€ Priority States API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// These endpoints manage the global active region that controls which states
+// all pipeline phases prioritize. state_override = [] means nationwide.
+
+app.get('/api/priority-states', async (req, res) => {
+  const { data, error } = await supabase.from('scraper_config').select('state_override').eq('id', 1).single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ priority_states: data?.state_override || [] });
+});
+
+app.post('/api/priority-states', async (req, res) => {
+  const { states } = req.body;
+  if (!Array.isArray(states)) return res.status(400).json({ error: 'states must be an array of 2-letter codes' });
+  const valid = states.filter((s: string) => typeof s === 'string' && s.length === 2).map((s: string) => s.toUpperCase());
+  const { error } = await supabase.from('scraper_config').update({ state_override: valid }).eq('id', 1);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true, priority_states: valid, message: valid.length === 0 ? 'Nationwide (no filter)' : `Active region: ${valid.join(', ')}` });
+});
+
+app.delete('/api/priority-states', async (req, res) => {
+  const { error } = await supabase.from('scraper_config').update({ state_override: [] }).eq('id', 1);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true, priority_states: [], message: 'Region cleared â€” nationwide mode active' });
+});
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 // --- Phase 1: Harvest & Data Grid Routes ---
 
 app.get('/api/harvest/status', async (req, res) => {
@@ -392,7 +418,7 @@ app.put('/api/spots/:id', async (req, res) => {
 });
 
 app.post('/api/promote-all', async (req, res) => {
-  // Include MEDIA_READY â€” the photographer pipeline's final output status
+  // Include MEDIA_READY Ã¢â‚¬â€ the photographer pipeline's final output status
   const { error } = await supabase
     .from('skate_spots')
     .update({ is_published: true })
@@ -581,7 +607,7 @@ app.get('/api/stats/coverage', async (req, res) => {
   }
 });
 
-// --- Databank Coverage: state Ã— verification_status + is_published counts ---
+// --- Databank Coverage: state Ãƒâ€” verification_status + is_published counts ---
 app.get('/api/stats/databank-coverage', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -625,6 +651,6 @@ app.get('/api/stats/databank-coverage', async (req, res) => {
 });
 
 app.listen(5999, () => {
-  console.log('ðŸ“¡ CCTower API listening on port 5999');
+  console.log('Ã°Å¸â€œÂ¡ CCTower API listening on port 5999');
 });
 

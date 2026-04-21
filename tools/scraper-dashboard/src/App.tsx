@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import USAMap from './USMap';
 import './App.css';
 
@@ -93,7 +93,7 @@ function App() {
 
   useEffect(() => {
     fetchSystemStatus();
-    fetchQueue();          // Full initial load — all phases
+    fetchQueue();          // Full initial load â€” all phases
     fetchHarvestStatus();
     fetchHistory();
     fetchCoverage();
@@ -131,7 +131,7 @@ function App() {
 
   useEffect(() => {
     if (activeTab === 'phase1') {
-      fetchDatabankCoverage(); // Phase 1 map uses same source — Google record density per state
+      fetchDatabankCoverage(); // Phase 1 map uses same source â€” Google record density per state
     }
     if (activeTab === 'phase6') {
       fetchSpots(0, gridFilter, sortCol, sortDir, searchQuery);
@@ -244,6 +244,24 @@ function App() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  // --- Priority States (Global Active Region) ---
+  // Dedicated function that writes directly to /api/priority-states (all phases read this)
+  const setPriorityStates = async (newStates: string[]) => {
+    setStateOverride(newStates);
+    await fetch(`${API_BASE}/api/priority-states`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ states: newStates })
+    }).catch(e => console.error('Failed to set priority states:', e));
+  };
+
+  const togglePriorityState = async (st: string) => {
+    const next = stateOverride.includes(st)
+      ? stateOverride.filter(s => s !== st)
+      : [...stateOverride, st];
+    await setPriorityStates(next);
   };
 
   // --- Config Managers ---
@@ -442,7 +460,7 @@ function App() {
     try {
       const res = await fetch(`${API_BASE}/api/promote-state/${state}`, { method: 'POST' });
       const data = await res.json();
-      alert(`✅ Published ${data.promoted ?? 0} records in ${state}!`);
+      alert(`âœ… Published ${data.promoted ?? 0} records in ${state}!`);
       fetchSpots(page, gridFilter);
       fetchDatabankCoverage();
     } catch (e) {}
@@ -450,7 +468,7 @@ function App() {
 
   const unpublishState = async (state: string) => {
     if (!state || state.length !== 2) return;
-    if (!confirm(`⚠️ Retract ALL published records in ${state} from the live app map?`)) return;
+    if (!confirm(`âš ï¸ Retract ALL published records in ${state} from the live app map?`)) return;
     try {
       const res = await fetch(`${API_BASE}/api/unpublish-state/${state}`, { method: 'POST' });
       const data = await res.json();
@@ -461,28 +479,28 @@ function App() {
   };
 
   const PIPELINE_PHASES = [
-    { id: '1', title: 'The Scout', sub: 'Google Places Sweep — Nationwide Seeding', route: 'phase1', color: '#8a2be2', 
-      target: 'Google API → ENRICHED', 
+    { id: '1', title: 'The Scout', sub: 'Google Places Sweep â€” Nationwide Seeding', route: 'phase1', color: '#8a2be2', 
+      target: 'Google API â†’ ENRICHED', 
       metric: (status?.enrichedCount || 0) + (status?.pendingCount || 0), metricLabel: 'Total Seeded', isDaemon: false, 
       statusActive: status?.isHarvestingActive || status?.isGoogleSweepActive },
     { id: '2', title: 'The Operator', sub: 'Identity Resolution (Website + Phone)', route: 'phase2', color: '#5d78ff', 
-      target: 'PENDING → IDENTITY_ESTABLISHED', 
+      target: 'PENDING â†’ IDENTITY_ESTABLISHED', 
       metric: status?.identityCount || 0, metricLabel: 'Identities Resolved', isDaemon: true, 
       statusActive: status?.currentTarget?.includes('Operator: online') },
     { id: '3', title: 'The Detective', sub: 'Website Deep Crawl + Photo Candidates', route: 'phase3', color: '#ff5a00', 
-      target: 'ENRICHED → is_deep_crawled', 
+      target: 'ENRICHED â†’ is_deep_crawled', 
       metric: status?.indexedCount || 0, metricLabel: 'Websites Crawled', isDaemon: true, 
       statusActive: status?.currentTarget?.includes('Indexer: online') },
     { id: '4', title: 'The Photographer', sub: 'Free Photo Harvest (OG + Street View)', route: 'phase4', color: '#e91e63', 
-      target: 'ENRICHED → MEDIA_READY', 
+      target: 'ENRICHED â†’ MEDIA_READY', 
       metric: status?.mediaReadyCount || 0, metricLabel: 'Galleries Built', isDaemon: true, 
       statusActive: status?.currentTarget?.includes('Photographer: online') },
     { id: '5', title: 'The Publisher', sub: 'App Release Gate', route: 'phase5', color: '#4caf50', 
-      target: 'MEDIA_READY / ENRICHED → is_published', 
+      target: 'MEDIA_READY / ENRICHED â†’ is_published', 
       metric: status?.verifiedCount || 0, metricLabel: 'Live on App Map', isDaemon: false, 
       statusActive: true },
     { id: '6', title: 'Databank QA', sub: 'Master Review Grid + Coverage Map', route: 'phase6', color: '#ffb300', 
-      target: 'ALL → VERIFIED', 
+      target: 'ALL â†’ VERIFIED', 
       metric: (status?.enrichedCount || 0) + (status?.mediaReadyCount || 0) + (status?.verifiedCount || 0), 
       metricLabel: 'Total Pipeline Records', isDaemon: false, 
       statusActive: true }
@@ -496,7 +514,7 @@ function App() {
           <p style={{marginTop: 0, color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Decoupled 6-Phase Micro-Scraper Architecture</p>
         </div>
         <div className="daemon-status-header" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
-           {/* Fleet Control — always-visible per-daemon start/stop */}
+           {/* Fleet Control â€” always-visible per-daemon start/stop */}
            {[
              { id: 'operator',     label: 'Operator',     color: '#4caf50',  phase: '2', onKey: 'Operator: online' },
              { id: 'indexer',      label: 'Indexer',      color: '#ff5a00',  phase: '3', onKey: 'Indexer: online' },
@@ -511,7 +529,7 @@ function App() {
                    onClick={() => triggerSpecificDaemon(d.id, isOn ? 'stop' : 'start')}
                    style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: isOn ? 'rgba(255,60,60,0.3)' : `${d.color}33`, color: isOn ? '#ff6b6b' : d.color, letterSpacing: '0.05em', transition: 'all 0.2s' }}
                  >
-                   {isOn ? '■ STOP' : '▶ START'}
+                   {isOn ? 'â–  STOP' : 'â–¶ START'}
                  </button>
                </div>
              );
@@ -521,7 +539,7 @@ function App() {
              title="Emergency stop all daemons"
              style={{ fontSize: '0.65rem', fontWeight: 800, padding: '5px 12px', borderRadius: '20px', border: '1px solid rgba(255,60,60,0.3)', cursor: 'pointer', background: 'rgba(255,60,60,0.1)', color: '#ff6b6b', letterSpacing: '0.05em' }}
            >
-             ⛔ STOP ALL
+             â›” STOP ALL
            </button>
         </div>
       </header>
@@ -530,9 +548,9 @@ function App() {
       {/* =========== OMNI CONTROL CENTER (GLOBAL CONTROLS) =========== */}
       <div className="omni-control-center fade-in" style={{ marginBottom: '2rem', background: 'var(--surface)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--surface-highlight)' }}>
          <div className="security-control-bar" style={{ position: 'relative', background: 'transparent', padding: '0 0 1rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="ghost-badge mini" style={{position: 'absolute', top: -35, right: 0}}>🛡️ GHOST ENCRYPTED PIPELINE ACTIVE</span>
+            <span className="ghost-badge mini" style={{position: 'absolute', top: -35, right: 0}}>ðŸ›¡ï¸ GHOST ENCRYPTED PIPELINE ACTIVE</span>
             <div className="security-label">
-                <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 800}}>🛡️ UNIVERSAL TACTICS & SPOOFING</span>
+                <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 800}}>ðŸ›¡ï¸ UNIVERSAL TACTICS & SPOOFING</span>
             </div>
             <div className="security-inputs" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                 <div className="input-group-inline">
@@ -568,10 +586,10 @@ function App() {
                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) 1fr', gap: '1rem' }}>
                   <div className="btn-group-vertical" style={{ display: 'flex', gap: '0.5rem' }}>
                      <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}>
-                       🔥 BOOT ALL DAEMONS (Ph2+)
+                       ðŸ”¥ BOOT ALL DAEMONS (Ph2+)
                      </button>
                      <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}>
-                       🛑 HALT ALL
+                       ðŸ›‘ HALT ALL
                      </button>
                   </div>
                   
@@ -582,6 +600,29 @@ function App() {
                </div>
             </div>
          </div>
+          {/* =========== ACTIVE REGION - GLOBAL PRIORITY =========== */}
+          <div style={{ marginTop: '1.5rem', padding: '1rem 1.5rem', background: 'rgba(138,43,226,0.06)', borderRadius: '10px', border: '1px solid rgba(138,43,226,0.25)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800, color: '#8a2be2', letterSpacing: '0.1em' }}>
+                🎯 Active Region &nbsp;
+                <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 400, textTransform: 'none', fontSize: '0.7rem' }}>— all phases &amp; daemons prioritize selected states</span>
+              </span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {stateOverride.length > 0 && <span style={{ fontSize: '0.7rem', color: '#8a2be2', fontWeight: 700 }}>{stateOverride.length} state{stateOverride.length !== 1 ? 's' : ''} targeted</span>}
+                <button onClick={() => setPriorityStates([])} style={{ fontSize: '0.65rem', padding: '4px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)', background: stateOverride.length === 0 ? '#8a2be2' : 'transparent', color: stateOverride.length === 0 ? '#fff' : 'rgba(255,255,255,0.4)', cursor: 'pointer', fontWeight: 700 }}>🌎 NATIONWIDE</button>
+              </div>
+            </div>
+            {stateOverride.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {stateOverride.map(st => (
+                  <button key={st} onClick={() => togglePriorityState(st)} style={{ padding: '4px 12px', fontSize: '0.75rem', borderRadius: '12px', border: 'none', background: '#8a2be2', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>{st} ×</button>
+                ))}
+                <button onClick={() => { const s = prompt('Add state (2-letter):'); if (s && s.trim().length >= 2) togglePriorityState(s.trim().toUpperCase().slice(0,2)); }} style={{ padding: '4px 12px', fontSize: '0.75rem', borderRadius: '12px', border: '1px dashed rgba(138,43,226,0.5)', background: 'transparent', color: '#8a2be2', cursor: 'pointer' }}>+ Add State</button>
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>Nationwide mode — all daemons process states equally. Click a state on the Phase 1 map or leaderboard to set priority.</div>
+            )}
+          </div>
       </div>
 
       {/* =========== 6-PHASE UNIFORM PIPELINE GRID =========== */}
@@ -615,7 +656,7 @@ function App() {
           <div className="tab-pane phase-1">
             <div className="explainer-block" style={{marginBottom: '1rem'}}>
               <h3 style={{marginTop: 0, color: '#8a2be2'}}>The Scout: GIS Ingestion Engine</h3>
-              <p>Phase 1 uses the <strong style={{color:'#ffb300'}}>Google Places API</strong> to seed the entire pipeline — querying by state for roller rinks and skate shops. Each result is written directly as an <strong>ENRICHED</strong> record with full coordinates, phone, hours, rating, and website. The OSM fallback mode is available for legacy re-harvests but is <em style={{color:'rgba(255,255,255,0.4)'}}>not recommended</em> — Google data is always higher quality.</p>
+              <p>Phase 1 uses the <strong style={{color:'#ffb300'}}>Google Places API</strong> to seed the entire pipeline â€” querying by state for roller rinks and skate shops. Each result is written directly as an <strong>ENRICHED</strong> record with full coordinates, phone, hours, rating, and website. The OSM fallback mode is available for legacy re-harvests but is <em style={{color:'rgba(255,255,255,0.4)'}}>not recommended</em> â€” Google data is always higher quality.</p>
             </div>
 
             <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', marginBottom: '2rem' }}>
@@ -627,9 +668,9 @@ function App() {
                <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                   <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
                      <button className={`btn-mini start ${isStarting ? 'pulsing' : ''}`} onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive || status?.isGoogleSweepActive || isStarting}>
-                        ▶ {isStarting ? 'INITIATING...' : stateOverride.length > 0 ? `SEED ${stateOverride.join(', ')}` : 'GLOBAL SEED'}
+                        â–¶ {isStarting ? 'INITIATING...' : stateOverride.length > 0 ? `SEED ${stateOverride.join(', ')}` : 'GLOBAL SEED'}
                      </button>
-                     <button className="btn-mini stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive && !status?.isGoogleSweepActive}>■ STOP</button>
+                     <button className="btn-mini stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive && !status?.isGoogleSweepActive}>â–  STOP</button>
                   </div>
                   {(status?.isHarvestingActive || status?.isGoogleSweepActive) && <div className="flow-animation"></div>}
                </div>
@@ -643,13 +684,13 @@ function App() {
             {/* OMNI-NET DISCOVERY PANEL */}
             <div className="discovery-net-panel" style={{ background: 'linear-gradient(135deg, rgba(138,43,226,0.1) 0%, rgba(0,0,0,0.3) 100%)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(138, 43, 226, 0.3)', marginBottom: '2rem', position: 'relative' }}>
                <div style={{ position: 'absolute', top: '-10px', right: '20px', background: '#8a2be2', color: '#fff', fontSize: '0.6rem', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>STATE TARGETING</div>
-               <h3 style={{ marginTop: 0, color: '#fff', fontSize: 18 }}>📡 State Re-Sweep Controls</h3>
+               <h3 style={{ marginTop: 0, color: '#fff', fontSize: 18 }}>ðŸ“¡ State Re-Sweep Controls</h3>
                <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem' }}>Manually trigger a Google Places sweep for a specific state, or switch the seeding provider. Useful for topping up states with low record counts.</p>
                
                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
                      <h4 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: '#8a2be2' }}>Re-Sweep State</h4>
-                     <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>Force a fresh Google Places sweep for a single state. Respects the dedup logic — existing records are refreshed, not duplicated.</p>
+                     <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>Force a fresh Google Places sweep for a single state. Respects the dedup logic â€” existing records are refreshed, not duplicated.</p>
                      <div style={{ display: 'flex', gap: '8px' }}>
                        <select className="mini-input" style={{ flex: 1, background: '#1a1a1a' }} id="force-state-sel">
                          {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -688,28 +729,16 @@ function App() {
                   </div>
                </div>
                
-               <div className="state-targets-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1rem', marginTop: 0, display: 'flex', justifyContent: 'space-between' }}>
-                    Target States
-                    <span className="btn-mini" onClick={() => updateGlobalStrategy('state_override', 'ALL')} style={{ cursor: 'pointer' }}>ALL</span>
-                  </h3>
-                  <div className="state-pill-container" style={{maxHeight: '180px', overflowY: 'auto', gap: '6px', display: 'flex', flexWrap: 'wrap'}}>
-                     {US_STATES.map(st => {
-                        const count = harvestData.stateCounts[st] || 0;
-                        return (
-                          <button key={st} className={`state-pill mini ${stateOverride.includes(st) ? 'active' : ''}`} onClick={() => updateGlobalStrategy('state_override', st)} style={{ padding: '6px 12px', fontSize: '0.8rem', margin: '2px', background: stateOverride.includes(st) ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)', color: stateOverride.includes(st) ? '#000' : '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer' }}>
-                            {st} {count > 0 && <span style={{opacity: 0.6, fontSize: '0.7em', marginLeft: '4px'}}>({count})</span>}
-                          </button>
-                        )
-                     })}
-                  </div>
+               <div style={{ background: 'rgba(138,43,226,0.04)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(138,43,226,0.15)', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
+                 🎯 Active Region is set globally in the Omni Control Center above — all daemons (Ph2–Ph4) will prioritize selected states.
+                 {stateOverride.length > 0 && <span style={{ color: '#8a2be2', fontWeight: 700, display: 'block', marginTop: '6px' }}>Currently targeting: {stateOverride.join(', ')}</span>}
                </div>
             </div>
 
             {/* ========= GOOGLE COVERAGE DENSITY MAP ========= */}
             <div className="panel coverage-panel" style={{ marginTop: '2rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <h2 className="panel-header" style={{ margin: 0 }}>📡 Google Places Coverage — State Density</h2>
+                <h2 className="panel-header" style={{ margin: 0 }}>ðŸ“¡ Google Places Coverage â€” State Density</h2>
                 <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
                   {databankCoverage.reduce((a: number, r: any) => a + (r.total || 0), 0).toLocaleString()} records across {databankCoverage.filter((r: any) => r.total > 0).length} states
                 </span>
@@ -722,8 +751,8 @@ function App() {
               <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
                 {[
                   { color: 'rgba(255,255,255,0.07)', label: 'Untouched',       range: '0 records' },
-                  { color: '#f5a623cc',               label: 'Early Coverage', range: '1–49' },
-                  { color: '#ff6b00cc',               label: 'Well Seeded',    range: '50–99' },
+                  { color: '#f5a623cc',               label: 'Early Coverage', range: '1â€“49' },
+                  { color: '#ff6b00cc',               label: 'Well Seeded',    range: '50â€“99' },
                   { color: '#4caf50cc',               label: 'Saturated',      range: '100+' },
                 ].map(t => (
                   <div key={t.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.03)', padding: '5px 12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -744,7 +773,7 @@ function App() {
                       if (!row.state || row.state === 'UNKNOWN') return;
                       const n = row.total || 0;
                       if (n === 0) return;
-                      // Density tiers: amber → orange → green
+                      // Density tiers: amber â†’ orange â†’ green
                       const fill = n >= 100 ? '#4caf50cc'
                         : n >= 50  ? '#ff6b00cc'
                         : '#f5a623cc';
@@ -754,7 +783,7 @@ function App() {
                   })()}
                   onClick={(e: any) => {
                     const st = e.target?.dataset?.name || e.target?.id;
-                    if (st && st.length === 2) updateGlobalStrategy('state_override', st);
+                    if (st && st.length === 2) togglePriorityState(st);
                   }}
                 />
               </div>
@@ -778,9 +807,9 @@ function App() {
                         .filter((r: any) => r.total > 0)
                         .sort((a: any, b: any) => b.total - a.total)
                         .map((row: any) => {
-                          const tier = row.total >= 100 ? { color: '#4caf50', label: '🟢' }
-                            : row.total >= 50 ? { color: '#ff6b00', label: '🟠' }
-                            : { color: '#f5a623', label: '🟡' };
+                          const tier = row.total >= 100 ? { color: '#4caf50', label: 'ðŸŸ¢' }
+                            : row.total >= 50 ? { color: '#ff6b00', label: 'ðŸŸ ' }
+                            : { color: '#f5a623', label: 'ðŸŸ¡' };
                           return (
                             <tr key={row.state} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                               <td style={{ padding: '6px 8px', fontWeight: 700, color: tier.color }}>
@@ -793,8 +822,8 @@ function App() {
                               <td style={{ padding: '6px 8px', textAlign: 'center' }}>
                                 <button
                                   style={{ fontSize: '0.65rem', padding: '3px 10px', borderRadius: '10px', border: 'none', background: stateOverride.includes(row.state) ? '#8a2be2' : 'rgba(255,255,255,0.08)', color: stateOverride.includes(row.state) ? '#fff' : 'rgba(255,255,255,0.6)', cursor: 'pointer', fontWeight: 700 }}
-                                  onClick={() => updateGlobalStrategy('state_override', row.state)}
-                                >{stateOverride.includes(row.state) ? '✓ TARGETED' : 'TARGET'}</button>
+                                  onClick={() => togglePriorityState(row.state)}
+                                >{stateOverride.includes(row.state) ? 'âœ“ TARGETED' : 'TARGET'}</button>
                               </td>
                             </tr>
                           );
@@ -807,7 +836,7 @@ function App() {
             
             <div className="evasion-audit-card" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: '1px solid rgba(138, 43, 226, 0.2)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                 <h3 style={{ margin: 0, color: '#8a2be2', fontSize: '0.9rem', textTransform: 'uppercase' }}>🛡️ Phase 1 Evasion Audit</h3>
+                 <h3 style={{ margin: 0, color: '#8a2be2', fontSize: '0.9rem', textTransform: 'uppercase' }}>ðŸ›¡ï¸ Phase 1 Evasion Audit</h3>
                  <div className="pulse-badge">LAST: {status?.pulseRegistry?.['Phase 1']?.lastRunAt ? new Date(status.pulseRegistry['Phase 1'].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -837,7 +866,7 @@ function App() {
                           <div className="queue-card-loc">{spot.city}, {spot.state}</div>
                           <div className="queue-tags">
                             <span className="queue-badge" style={{ background: spot.verification_status === 'ENRICHED' ? 'rgba(255,90,0,0.1)' : 'rgba(255,255,255,0.05)', color: spot.verification_status === 'ENRICHED' ? '#ff5a00' : 'var(--text-secondary)' }}>
-                              {spot.verification_status === 'ENRICHED' ? '✨ ENRICHED (Google)' : '⏳ RAW SEED'}
+                              {spot.verification_status === 'ENRICHED' ? 'âœ¨ ENRICHED (Google)' : 'â³ RAW SEED'}
                             </span>
                           </div>
                         </div>
@@ -855,9 +884,9 @@ function App() {
                <h3 style={{marginTop: 0, color: PIPELINE_PHASES.find(p=>p.route===activeTab)?.color}}>
                    {PIPELINE_PHASES.find(p=>p.route===activeTab)?.title}: {PIPELINE_PHASES.find(p=>p.route===activeTab)?.sub}
                </h3>
-               {activeTab === 'phase2' && <p>Targets <strong>PENDING</strong> records and resolves their real-world identity — finding the business website and phone number via web search heuristics. Graduates records to <strong>IDENTITY_ESTABLISHED</strong> when found. <em style={{color:'rgba(255,255,255,0.4)'}}>Note: Since the pipeline now uses Google Places as the primary seeder, PENDING records are rare. This daemon handles any OSM legacy records or manually added entries.</em></p>}
+               {activeTab === 'phase2' && <p>Targets <strong>PENDING</strong> records and resolves their real-world identity â€” finding the business website and phone number via web search heuristics. Graduates records to <strong>IDENTITY_ESTABLISHED</strong> when found. <em style={{color:'rgba(255,255,255,0.4)'}}>Note: Since the pipeline now uses Google Places as the primary seeder, PENDING records are rare. This daemon handles any OSM legacy records or manually added entries.</em></p>}
                {activeTab === 'phase3' && <p>The Detective deep-crawls each spot's website using Puppeteer with GHOST identity spoofing. Extracts operating hours, 18+ adult night schedules, pricing, event listings, social links, and photo candidates (OG image, DOM images, Facebook OG). Writes <code>candidate_photos</code> for the Photographer to harvest.</p>}
-               {activeTab === 'phase4' && <p>The Photographer daemon reads <code>candidate_photos</code> written by the Indexer — downloading OG images and DOM media as binary uploads to Supabase Storage. Falls back to Google Street View Static as a guaranteed photo source. Promotes records to <strong>MEDIA_READY</strong> on success.</p>}
+               {activeTab === 'phase4' && <p>The Photographer daemon reads <code>candidate_photos</code> written by the Indexer â€” downloading OG images and DOM media as binary uploads to Supabase Storage. Falls back to Google Street View Static as a guaranteed photo source. Promotes records to <strong>MEDIA_READY</strong> on success.</p>}
                {activeTab === 'phase5' && <p>The Publisher Gate is the final human-approved release step. Only records with <strong style={{color:'#4caf50'}}>is_published = true</strong> are visible on the live SK8Lytz app map. Bulk-promote all pipeline-complete records (ENRICHED + MEDIA_READY) below, or use the Databank QA tab to approve individual spots.</p>}
              </div>
              
@@ -869,8 +898,8 @@ function App() {
                    </div>
                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('operator', 'start')} disabled={status?.currentTarget?.includes('Operator: online')}>▶ START OPERATOR</button>
-                         <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('operator', 'stop')} disabled={!status?.currentTarget?.includes('Operator: online')}>■ STOP</button>
+                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('operator', 'start')} disabled={status?.currentTarget?.includes('Operator: online')}>â–¶ START OPERATOR</button>
+                         <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('operator', 'stop')} disabled={!status?.currentTarget?.includes('Operator: online')}>â–  STOP</button>
                       </div>
                       <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
                          {status?.identityCount || 0} / {(status?.pendingCount || 0) + (status?.identityCount || 0)} Completed
@@ -902,8 +931,8 @@ function App() {
                     </div>
                     <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                        <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                          <button className="btn-mini start" onClick={() => triggerSpecificDaemon('indexer', 'start')} disabled={status?.currentTarget?.includes('Indexer: online')}>▶ START DETECTIVE</button>
-                          <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('indexer', 'stop')} disabled={!status?.currentTarget?.includes('Indexer: online')}>■ STOP</button>
+                          <button className="btn-mini start" onClick={() => triggerSpecificDaemon('indexer', 'start')} disabled={status?.currentTarget?.includes('Indexer: online')}>â–¶ START DETECTIVE</button>
+                          <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('indexer', 'stop')} disabled={!status?.currentTarget?.includes('Indexer: online')}>â–  STOP</button>
                        </div>
                        <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
                           {status?.indexedCount || 0} websites crawled (+ photo candidates)
@@ -927,11 +956,11 @@ function App() {
                    </div>
                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('photographer', 'start')} disabled={status?.currentTarget?.includes('Photographer: online')}>📸 START PHOTOGRAPHER</button>
-                         <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('photographer', 'stop')} disabled={!status?.currentTarget?.includes('Photographer: online')}>■ STOP</button>
+                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('photographer', 'start')} disabled={status?.currentTarget?.includes('Photographer: online')}>ðŸ“¸ START PHOTOGRAPHER</button>
+                         <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('photographer', 'stop')} disabled={!status?.currentTarget?.includes('Photographer: online')}>â–  STOP</button>
                       </div>
                       <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
-                         OG Image → DOM Images → Street View → Facebook OG
+                         OG Image â†’ DOM Images â†’ Street View â†’ Facebook OG
                       </div>
                       {status?.currentTarget?.includes('Photographer: online') && <div className="flow-animation"></div>}
                    </div>
@@ -960,7 +989,7 @@ function App() {
                   </div>
                   <div style={{ textAlign: 'center', padding: '1.5rem', background: 'rgba(76,175,80,0.05)', border: '1px solid rgba(76,175,80,0.3)', borderRadius: '8px' }}>
                     <p style={{ margin: '0 0 1rem', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>The Publisher Gate controls which records are visible to users on the SK8Lytz app map. Use the Databank QA tab to review individual records and toggle <strong style={{color:'#4caf50'}}>APP_LIVE</strong>, or bulk-promote all ENRICHED records below.</p>
-                    <button className="btn btn-start" style={{background: '#4caf50', border: 'none'}} onClick={bulkPromote}>🚀 BULK PUBLISH ALL ENRICHED → APP MAP</button>
+                    <button className="btn btn-start" style={{background: '#4caf50', border: 'none'}} onClick={bulkPromote}>ðŸš€ BULK PUBLISH ALL ENRICHED â†’ APP MAP</button>
                   </div>
                 </div>
              )}
@@ -970,7 +999,7 @@ function App() {
                 const queue = phaseQueues[activeTab] || [];
                 let hydratingFields: string[] = [];
                 if (activeTab === 'phase2') hydratingFields = ['Website', 'Phone Number'];
-                if (activeTab === 'phase3') hydratingFields = ['Pricing', 'Adult Night', 'Hours', '📸 Photo Candidates'];
+                if (activeTab === 'phase3') hydratingFields = ['Pricing', 'Adult Night', 'Hours', 'ðŸ“¸ Photo Candidates'];
                 if (activeTab === 'phase4') hydratingFields = ['OG Photo', 'DOM Images', 'Street View', 'Facebook OG'];
                 if (activeTab === 'phase5') hydratingFields = ['Media URLs', 'Thumbnails'];
 
@@ -981,7 +1010,7 @@ function App() {
                   <div style={{marginTop: '20px'}}>
                      <div className="evasion-audit-card" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: `1px solid ${activeColor}44` }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                           <h3 style={{ margin: 0, color: activeColor, fontSize: '0.9rem', textTransform: 'uppercase' }}>🛡️ {activeLabel} Evasion Audit</h3>
+                           <h3 style={{ margin: 0, color: activeColor, fontSize: '0.9rem', textTransform: 'uppercase' }}>ðŸ›¡ï¸ {activeLabel} Evasion Audit</h3>
                            <div className="pulse-badge" style={{fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)'}}>LAST: {status?.pulseRegistry?.[activeLabel]?.lastRunAt ? new Date(status.pulseRegistry[activeLabel].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) 1fr', gap: '1.5rem', alignItems: 'center' }}>
@@ -1017,7 +1046,7 @@ function App() {
                               <div className="queue-card-title">{spot.name}</div>
                               <div className="queue-card-loc">{spot.city}, {spot.state}</div>
                               <div className="queue-tags">
-                                {hydratingFields.map(f => <span key={f} className="queue-badge" style={{color: activeColor}}>⏳ {f}</span>)}
+                                {hydratingFields.map(f => <span key={f} className="queue-badge" style={{color: activeColor}}>â³ {f}</span>)}
                               </div>
                             </div>
                           ))}
@@ -1059,7 +1088,7 @@ function App() {
             {/* =========== STATUS COVERAGE MAP =========== */}
             <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255,179,0,0.03)', border: '1px solid rgba(255,179,0,0.2)', borderRadius: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <h3 style={{ margin: 0, color: '#ffb300', fontSize: '0.95rem', textTransform: 'uppercase' }}>📡 Pipeline Coverage Map</h3>
+                <h3 style={{ margin: 0, color: '#ffb300', fontSize: '0.95rem', textTransform: 'uppercase' }}>ðŸ“¡ Pipeline Coverage Map</h3>
                 {/* Map Mode Toggle */}
                 <div style={{ display: 'flex', gap: '6px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px' }}>
                   <button
@@ -1067,19 +1096,19 @@ function App() {
                     style={{ padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
                       background: mapMode === 'quality' ? '#ffb300' : 'transparent',
                       color: mapMode === 'quality' ? '#000' : 'rgba(255,255,255,0.5)' }}
-                  >📊 Quality</button>
+                  >ðŸ“Š Quality</button>
                   <button
                     onClick={() => setMapMode('published')}
                     style={{ padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
                       background: mapMode === 'published' ? '#4caf50' : 'transparent',
                       color: mapMode === 'published' ? '#000' : 'rgba(255,255,255,0.5)' }}
-                  >🚀 Published</button>
+                  >ðŸš€ Published</button>
                 </div>
               </div>
               <p style={{ margin: '0 0 1.5rem', color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>
                 {mapMode === 'quality'
                   ? 'Dominant pipeline status per state. Click a state to filter the grid.'
-                  : 'Live app coverage — green = fully published, grey = not yet live. Click to filter.'}
+                  : 'Live app coverage â€” green = fully published, grey = not yet live. Click to filter.'}
               </p>
               
               {/* Nationwide status totals */}
@@ -1115,7 +1144,7 @@ function App() {
                           <>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(76,175,80,0.08)', padding: '8px 16px', borderRadius: '20px', border: '1px solid #4caf5044' }}>
                               <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#4caf50', display: 'inline-block' }}></span>
-                              <span style={{ fontSize: '0.75rem', color: '#4caf50', fontWeight: 700 }}>🚀 Published</span>
+                              <span style={{ fontSize: '0.75rem', color: '#4caf50', fontWeight: 700 }}>ðŸš€ Published</span>
                               <span style={{ fontSize: '0.85rem', color: '#4caf50', fontWeight: 800 }}>{totalPublished.toLocaleString()}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', padding: '8px 16px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -1208,21 +1237,21 @@ function App() {
                   <option value="VERIFIED">Phase 6 Verified (Gold Standard)</option>
                   <option value="REJECTED">Graveyard / Rejected</option>
                </select>
-              {/* State-scoped publish / unpublish — appears when a 2-letter state filter is active */}
+              {/* State-scoped publish / unpublish â€” appears when a 2-letter state filter is active */}
               {activeStateFilter && activeStateFilter.length === 2 && (
                 <>
                   <button
                     className="btn-primary"
                     style={{ background: '#4caf50', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
                     onClick={() => promoteState(activeStateFilter)}
-                  >🚀 Publish {activeStateFilter}</button>
+                  >ðŸš€ Publish {activeStateFilter}</button>
                   <button
                     style={{ background: 'rgba(255,59,48,0.15)', border: '1px solid rgba(255,59,48,0.4)', padding: '8px 16px', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', color: '#ff3b30' }}
                     onClick={() => unpublishState(activeStateFilter)}
-                  >↩ Retract {activeStateFilter}</button>
+                  >â†© Retract {activeStateFilter}</button>
                 </>
               )}
-              <button className="btn-primary" onClick={bulkPromote}>🚀 Bulk App Promote</button>
+              <button className="btn-primary" onClick={bulkPromote}>ðŸš€ Bulk App Promote</button>
               <div className="pagination">
                 <button disabled={page === 0} onClick={() => fetchSpots(page - 1, gridFilter)}>Prev</button>
                 <span className="page-indicator">Page {page + 1} of {Math.ceil(totalSpots/rowsPerPage) || 1} ({totalSpots} total)</span>
@@ -1234,16 +1263,16 @@ function App() {
               <table className="databank-table">
                 <thead>
                   <tr>
-                    <th onClick={() => toggleSort('name')} style={{cursor:'pointer'}}>Location {sortCol==='name' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('street_address')} style={{cursor:'pointer'}}>Address {sortCol==='street_address' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('verification_status')} style={{cursor:'pointer'}}>Current Phase {sortCol==='verification_status' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('rating')} style={{cursor:'pointer'}}>Rating {sortCol==='rating' ? (sortDir==='asc'?'▲':'▼') : ''}</th>
+                    <th onClick={() => toggleSort('name')} style={{cursor:'pointer'}}>Location {sortCol==='name' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
+                    <th onClick={() => toggleSort('street_address')} style={{cursor:'pointer'}}>Address {sortCol==='street_address' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
+                    <th onClick={() => toggleSort('verification_status')} style={{cursor:'pointer'}}>Current Phase {sortCol==='verification_status' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
+                    <th onClick={() => toggleSort('rating')} style={{cursor:'pointer'}}>Rating {sortCol==='rating' ? (sortDir==='asc'?'â–²':'â–¼') : ''}</th>
                     <th>Surface</th>
-                    <th onClick={() => toggleSort('website')} style={{cursor:'pointer'}}>Website {sortCol==='website' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('phone_number')} style={{cursor:'pointer'}}>Phone {sortCol==='phone_number' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('has_adult_night')} style={{cursor:'pointer'}}>18+ {sortCol==='has_adult_night' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('retry_count')} style={{cursor:'pointer'}}>Retries {sortCol==='retry_count' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('last_attempted_at')} style={{cursor:'pointer'}}>Last Ping {sortCol==='last_attempted_at' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th onClick={() => toggleSort('website')} style={{cursor:'pointer'}}>Website {sortCol==='website' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
+                    <th onClick={() => toggleSort('phone_number')} style={{cursor:'pointer'}}>Phone {sortCol==='phone_number' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
+                    <th onClick={() => toggleSort('has_adult_night')} style={{cursor:'pointer'}}>18+ {sortCol==='has_adult_night' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
+                    <th onClick={() => toggleSort('retry_count')} style={{cursor:'pointer'}}>Retries {sortCol==='retry_count' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
+                    <th onClick={() => toggleSort('last_attempted_at')} style={{cursor:'pointer'}}>Last Ping {sortCol==='last_attempted_at' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -1278,18 +1307,18 @@ function App() {
                              }}
                              style={{ padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', appearance: 'menulist' }}
                            >
-                              <option value="PENDING">🕒 PENDING (PH_1)</option>
-                              <option value="IDENTITY_ESTABLISHED">🕵️ IDENTIFIED (PH_2)</option>
-                              <option value="INDEXED">🕸️ INDEXED (PH_3)</option>
-                              <option value="ENRICHED">✨ ENRICHED (Gold Standard)</option>
-                              <option value="MEDIA_READY">📸 MEDIA_READY (PH_5)</option>
-                              <option value="VERIFIED">✅ VERIFIED (Gold Standard)</option>
-                              <option value="DEPRECATED">⚰️ Deprecated</option>
-                              <option value="REJECTED">🚫 Graveyard</option>
+                              <option value="PENDING">ðŸ•’ PENDING (PH_1)</option>
+                              <option value="IDENTITY_ESTABLISHED">ðŸ•µï¸ IDENTIFIED (PH_2)</option>
+                              <option value="INDEXED">ðŸ•¸ï¸ INDEXED (PH_3)</option>
+                              <option value="ENRICHED">âœ¨ ENRICHED (Gold Standard)</option>
+                              <option value="MEDIA_READY">ðŸ“¸ MEDIA_READY (PH_5)</option>
+                              <option value="VERIFIED">âœ… VERIFIED (Gold Standard)</option>
+                              <option value="DEPRECATED">âš°ï¸ Deprecated</option>
+                              <option value="REJECTED">ðŸš« Graveyard</option>
                            </select>
                         </td>
                         <td>
-                           {row.rating ? <span style={{color: '#ffd700', fontWeight:'bold', textShadow: '0 0 5px rgba(255,215,0,0.5)'}}>{row.rating}★ <span style={{fontSize: '0.7em', color: 'gray'}}>({row.user_ratings_total || 0})</span></span> : <span style={{color:'gray'}}>-</span>}
+                           {row.rating ? <span style={{color: '#ffd700', fontWeight:'bold', textShadow: '0 0 5px rgba(255,215,0,0.5)'}}>{row.rating}â˜… <span style={{fontSize: '0.7em', color: 'gray'}}>({row.user_ratings_total || 0})</span></span> : <span style={{color:'gray'}}>-</span>}
                         </td>
                         <td>
                            {isEditing ? (
@@ -1300,7 +1329,7 @@ function App() {
                         </td>
                         <td>
                           {isEditing ? <input className="table-input" value={editForm.website || ''} onChange={e => setEditForm({...editForm, website: e.target.value})} /> : (
-                            row.website ? <a href={row.website} target="_blank" rel="noreferrer" style={{color: 'var(--success)', fontWeight: 600}}>Visit ↗</a> : '-'
+                            row.website ? <a href={row.website} target="_blank" rel="noreferrer" style={{color: 'var(--success)', fontWeight: 600}}>Visit â†—</a> : '-'
                           )}
                         </td>
                         <td>
@@ -1311,8 +1340,8 @@ function App() {
                         <td>
                           {isEditing ? <input type="checkbox" checked={editForm.has_adult_night} onChange={e => setEditForm({...editForm, has_adult_night: e.target.checked})} /> : (
                             <div style={{display:'flex', alignItems: 'center', gap: '5px', justifyContent: 'center'}}>
-                               {row.has_adult_night ? '✅' : '❌'}
-                               {row.adult_night_details && <span title={row.adult_night_details} style={{cursor: 'help'}}>ℹ️</span>}
+                               {row.has_adult_night ? 'âœ…' : 'âŒ'}
+                               {row.adult_night_details && <span title={row.adult_night_details} style={{cursor: 'help'}}>â„¹ï¸</span>}
                             </div>
                           )}
                         </td>
@@ -1333,11 +1362,11 @@ function App() {
                                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: row.is_published ? '#4caf50' : 'var(--text-secondary)', userSelect:'none' }}>APP_LIVE</span>
                             </label>
                             {isEditing ? (
-                              <button className="btn-icon btn-save-inline" onClick={saveEdit}>💾</button>
+                              <button className="btn-icon btn-save-inline" onClick={saveEdit}>ðŸ’¾</button>
                             ) : (
-                              <button className="btn-icon" onClick={() => startEdit(row)}>✏️</button>
+                              <button className="btn-icon" onClick={() => startEdit(row)}>âœï¸</button>
                             )}
-                            <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>🗑️</button>
+                            <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>ðŸ—‘ï¸</button>
                           </div>
                         </td>
                       </tr>

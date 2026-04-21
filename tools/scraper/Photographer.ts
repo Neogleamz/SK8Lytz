@@ -128,16 +128,26 @@ async function runPhotographerLoop() {
   let consecutiveIdle = 0;
 
   while (true) {
-    // Query: next spot with candidates not yet having final photos
-    // No status filter — pick up ANY record the Indexer has fed candidates to
-    const { data: target, error: queryError } = await supabase
+    // Fetch active region — priority states processed first
+    const configRes = await fetch('http://localhost:5999/api/priority-states').then(r => r.json()).catch(() => ({ priority_states: [] }));
+    const priorityStates: string[] = configRes.priority_states || [];
+
+    // Build query with priority state ordering
+    let photoQuery = supabase
       .from('skate_spots')
       .select('id, name, state, candidate_photos, photos, verification_status')
       .not('candidate_photos', 'is', null)
-      .is('photos', null)
-      .order('last_attempted_at', { ascending: true, nullsFirst: true })
-      .limit(1)
-      .single();
+      .is('photos', null);
+
+    // If priority states set, fetch them first via two ordered queries (Supabase doesn't support CASE in order)
+    const { data: target, error: queryError } = priorityStates.length > 0
+      ? await photoQuery.in('state', priorityStates).order('last_attempted_at', { ascending: true, nullsFirst: true }).limit(1).maybeSingle()
+        .then(async (res) => {
+          // No priority state results — fall back to any state
+          if (!res.data) return supabase.from('skate_spots').select('id, name, state, candidate_photos, photos, verification_status').not('candidate_photos', 'is', null).is('photos', null).order('last_attempted_at', { ascending: true, nullsFirst: true }).limit(1).single();
+          return res;
+        })
+      : await photoQuery.order('last_attempted_at', { ascending: true, nullsFirst: true }).limit(1).single();
 
     if (queryError || !target) {
       consecutiveIdle++;

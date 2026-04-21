@@ -50,7 +50,10 @@ async function runOperator() {
     let delay = await GHOST.getAdaptiveDelay('GOOGLE');
 
     try {
-      const { data: spots, error: rpcError } = await supabase.rpc('get_next_spot_for_operator');
+      // Fetch active region config before each pick — ensures real-time priority state changes are respected
+      const configRes = await fetch('http://localhost:5999/api/priority-states').then(r => r.json()).catch(() => ({ priority_states: [] }));
+      const priorityStates = configRes.priority_states || [];
+      const { data: spots, error: rpcError } = await supabase.rpc('get_next_spot_for_operator', { priority_states: priorityStates });
       if (rpcError) throw new Error('RPC Failed/' + rpcError.message);
 
       if (!spots || spots.length === 0) {
