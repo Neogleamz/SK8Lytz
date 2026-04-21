@@ -636,7 +636,7 @@ function App() {
                <div style={{ textAlign: 'center', minWidth: '120px' }}>
                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ff9800' }}>{status?.enrichedCount || 0}</div>
                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>ENRICHED in DB</div>
-                 <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>Golden Seeds</div>
+                 <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>Google-sourced records</div>
                </div>
             </div>
 
@@ -837,7 +837,7 @@ function App() {
                           <div className="queue-card-loc">{spot.city}, {spot.state}</div>
                           <div className="queue-tags">
                             <span className="queue-badge" style={{ background: spot.verification_status === 'ENRICHED' ? 'rgba(255,90,0,0.1)' : 'rgba(255,255,255,0.05)', color: spot.verification_status === 'ENRICHED' ? '#ff5a00' : 'var(--text-secondary)' }}>
-                              {spot.verification_status === 'ENRICHED' ? '✨ GOLDEN SEED' : '⏳ RAW SEED'}
+                              {spot.verification_status === 'ENRICHED' ? '✨ ENRICHED (Google)' : '⏳ RAW SEED'}
                             </span>
                           </div>
                         </div>
@@ -1203,7 +1203,7 @@ function App() {
                   <option value="PENDING">Phase 1 Pending (Queue)</option>
                   <option value="IDENTITY_ESTABLISHED">Phase 2 Identified</option>
                   <option value="INDEXED">Phase 3 Web-Crawled</option>
-                  <option value="ENRICHED">Phase 4 Golden Seed (Google Premium)</option>
+                  <option value="ENRICHED">Phase 4 ENRICHED (Google Places)</option>
                   <option value="MEDIA_READY">Phase 5 Media Prepped</option>
                   <option value="VERIFIED">Phase 6 Verified (Gold Standard)</option>
                   <option value="REJECTED">Graveyard / Rejected</option>

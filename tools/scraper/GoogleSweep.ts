@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+﻿import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { GooglePlacesProvider } from './lib/providers/GooglePlacesProvider';
@@ -13,7 +13,7 @@ export let isGoogleSweepActive = false;
 
 export async function stopGoogleSweep() {
   isGoogleSweepActive = false;
-  console.log('🛑 Halting Google Sweep after current batch.');
+  console.log('ðŸ›‘ Halting Google Sweep after current batch.');
 }
 
 async function sleep(ms: number) {
@@ -39,34 +39,34 @@ export async function startGoogleSweep(targetStates: string[] = []) {
   if (isGoogleSweepActive) return;
   isGoogleSweepActive = true;
   
-  console.log(`🌎 STARTING GOOGLE PLACES GOLDEN SEED 🌎 (States: ${targetStates.join(',') || 'ALL'})`);
+  console.log(`ðŸŒŽ STARTING GOOGLE PLACES SWEEP (States: ${targetStates.join(',') || 'ALL'})`);
   
   const statesToRun = targetStates.length > 0 ? targetStates : Object.keys(STATE_NAMES);
 
   for (const stateCode of statesToRun) {
     if (!isGoogleSweepActive) {
-      console.log('⛔ Google Sweep cleanly aborted.');
+      console.log('â›” Google Sweep cleanly aborted.');
       break;
     }
 
     const stateFull = STATE_NAMES[stateCode] || stateCode;
-    console.log(`\n🛹 [US-${stateCode}] Phase 1: Polling Google Places exact match...`);
+    console.log(`\nðŸ›¹ [US-${stateCode}] Phase 1: Polling Google Places exact match...`);
     
     // Grab highly relevant IDs
     const placeIds = await GooglePlacesProvider.searchRegion(stateFull);
-    console.log(`  ✅ [${stateCode}] Found ${placeIds.length} roller-skating relevant Place APIs`);
+    console.log(`  âœ… [${stateCode}] Found ${placeIds.length} roller-skating relevant Place APIs`);
 
     for (let i = 0; i < placeIds.length; i++) {
         if (!isGoogleSweepActive) break;
         
         const placeId = placeIds[i];
-        console.log(`  ⏳ Fetching High-Fidelity Details: ${placeId} (${i+1}/${placeIds.length})`);
+        console.log(`  â³ Fetching High-Fidelity Details: ${placeId} (${i+1}/${placeIds.length})`);
         
         const details = await GooglePlacesProvider.getPlaceDetails(placeId);
         if (details) {
             const lowerName = details.name.toLowerCase();
             if (RETAIL_BLOCKLIST.some(block => lowerName.includes(block))) {
-                console.log(`  🚫 Blocklisted Retailer Skipped: ${details.name}`);
+                console.log(`  ðŸš« Blocklisted Retailer Skipped: ${details.name}`);
                 continue;
             }
 
@@ -91,7 +91,7 @@ export async function startGoogleSweep(targetStates: string[] = []) {
             // Fallback back to target state if it entirely failed to parse
             if (!derivedState) derivedState = stateCode;
 
-            // metaRecord: Google-sourced factual data ONLY — no pipeline status.
+            // metaRecord: Google-sourced factual data ONLY â€” no pipeline status.
             // This is used for all UPDATE/upsert-on-conflict paths to ensure we never
             // downgrade an existing MEDIA_READY / VERIFIED record back to ENRICHED.
             const metaRecord = {
@@ -123,14 +123,14 @@ export async function startGoogleSweep(targetStates: string[] = []) {
             });
 
             if (closestSpot && closestSpot.length > 0) {
-                // Existing row found nearby — refresh Google metadata, preserve pipeline status
+                // Existing row found nearby â€” refresh Google metadata, preserve pipeline status
                 const existingId = closestSpot[0].spot_id;
-                console.log(`  🔗 Found nearby spot (${closestSpot[0].distance_meters.toFixed(1)}m away). Refreshing metadata, preserving status.`);
+                console.log(`  ðŸ”— Found nearby spot (${closestSpot[0].distance_meters.toFixed(1)}m away). Refreshing metadata, preserving status.`);
                 const { error } = await supabase.from('skate_spots').update(metaRecord).eq('id', existingId);
-                if (error) console.error(`  ❌ Supabase Update Error:`, error.message);
-                else console.log(`  💾 Updated Golden Seed: ${details.name}`);
+                if (error) console.error(`  âŒ Supabase Update Error:`, error.message);
+                else console.log(`  ðŸ’¾ Refreshed Google data: ${details.name}`);
             } else {
-                // No spatial match — upsert on google_place_id.
+                // No spatial match â€” upsert on google_place_id.
                 // On conflict (same place_id): update metadata only (metaRecord, no status).
                 // On fresh insert: set initial status to ENRICHED (freshRecord).
                 // Supabase upsert with ignoreDuplicates:false updates all provided columns on conflict.
@@ -145,8 +145,8 @@ export async function startGoogleSweep(targetStates: string[] = []) {
                     { onConflict: 'google_place_id', ignoreDuplicates: false }
                 );
 
-                if (error) console.error(`  ❌ Supabase Upsert Error for ${details.name}:`, error.message);
-                else console.log(`  💾 ${isNew ? 'NEW' : 'Refreshed'} Golden Seed: ${details.name}`);
+                if (error) console.error(`  âŒ Supabase Upsert Error for ${details.name}:`, error.message);
+                else console.log(`  ðŸ’¾ ${isNew ? 'NEW record saved' : 'Google data refreshed'}: ${details.name}`);
             }
         }
         
@@ -156,5 +156,5 @@ export async function startGoogleSweep(targetStates: string[] = []) {
   }
 
   isGoogleSweepActive = false;
-  console.log(`\n🏁 USA Google Golden Seed Sweep Complete!`);
+  console.log(`\nðŸ USA Google Places Sweep Complete!`);
 }

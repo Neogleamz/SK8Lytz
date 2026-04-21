@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -392,7 +392,7 @@ app.put('/api/spots/:id', async (req, res) => {
 });
 
 app.post('/api/promote-all', async (req, res) => {
-  // Include MEDIA_READY — the photographer pipeline's final output status
+  // Include MEDIA_READY â€” the photographer pipeline's final output status
   const { error } = await supabase
     .from('skate_spots')
     .update({ is_published: true })
@@ -479,7 +479,7 @@ app.post('/api/harvest/start-all', async (req, res) => {
   if (provider === 'google') {
     if (isGoogleSweepActive) return res.json({ success: false, message: 'Google Sweep Already running' });
     startGoogleSweep(target_states || []).catch(e => console.error(e));
-    return res.json({ success: true, message: 'Google Golden Seed sequence started' });
+    return res.json({ success: true, message: 'Google Places sweep started' });
   }
 
   // Fallback / OSM Mode
@@ -581,7 +581,7 @@ app.get('/api/stats/coverage', async (req, res) => {
   }
 });
 
-// --- Databank Coverage: state × verification_status + is_published counts ---
+// --- Databank Coverage: state Ã— verification_status + is_published counts ---
 app.get('/api/stats/databank-coverage', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -625,6 +625,6 @@ app.get('/api/stats/databank-coverage', async (req, res) => {
 });
 
 app.listen(5999, () => {
-  console.log('📡 CCTower API listening on port 5999');
+  console.log('ðŸ“¡ CCTower API listening on port 5999');
 });
 
