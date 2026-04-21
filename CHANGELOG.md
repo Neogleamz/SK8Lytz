@@ -1,4 +1,23 @@
+## [2.1.2] - 2026-04-21
+
+### ✨ Features
+- **Dual-Mode Coverage Map (Phase 6)**: The Databank QA map now has a mode toggle — **📊 Quality Mode** colors states by dominant pipeline status (existing behavior); **🚀 Published Mode** shows a green gradient by % of records `is_published = true`, giving a live per-state app coverage view.
+- **State-Scoped Publish / Retract**: Clicking any state on the map (or typing a 2-letter code in the search box) now reveals contextual **"🚀 Publish XX"** and **"↩ Retract XX"** buttons in the Databank toolbar. These call new CCTower endpoints (`POST /api/promote-state/:state` / `POST /api/unpublish-state/:state`) to promote or retract all eligible records for a single state atomically.
+- **Coverage Map Auto-Refresh**: The coverage map now refreshes after every `promoteSpot`, `bulkPromote`, `promoteState`, and `unpublishState` action — state colors update in real-time after publish operations.
+
+### 🐛 Bug Fixes
+- **GoogleSweep Status Preservation**: Re-running the Google Places sweep would overwrite `MEDIA_READY` (and any higher-phase) records with `verification_status: 'ENRICHED'`, silently downgrading them. Fixed by splitting the record into `metaRecord` (Google factual data, no status) and `freshRecord` (metaRecord + `ENRICHED` for brand-new inserts only). All update/upsert-on-conflict paths now use `metaRecord`, preserving pipeline status across re-seeds.
+
+### 🗑️ Data Operations
+- **OSM Record Purge**: Deleted 230 PENDING OSM-legacy records (`google_place_id IS NULL`). All 913 remaining records are 100% Google Places seeded (775 ENRICHED + 138 MEDIA_READY), zero null states. The Phase 1 coverage map now accurately reflects real state coverage.
+
+### 🌐 Scraper Pipeline (Daemon — separate from app)
+- All changes isolated to `tools/scraper/CCTower.ts`, `tools/scraper/GoogleSweep.ts`, and `tools/scraper-dashboard/src/App.tsx`. Zero mobile `src/` code was modified.
+
+---
+
 ## [2.1.1] - 2026-04-21
+
 
 ### 🐛 Bug Fixes
 - **Critical: Bulk Publish Skipped MEDIA_READY**: The `/api/promote-all` route only promoted `VERIFIED` and `ENRICHED` records — `MEDIA_READY` (the Photographer's final output) was excluded. 129 records were silently ineligible for promotion. Fixed by adding `MEDIA_READY` to the OR clause.
