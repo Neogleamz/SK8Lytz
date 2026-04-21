@@ -68,6 +68,7 @@ function App() {
   const [logs, setLogs] = useState<{type: string, message: string, source?: string}[]>([]);
   const logsRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef<typeof activeTab>('phase1');
+  const stateOverrideRef = useRef<string[]>([]); // mirrors stateOverride but readable in stale closures
 
   // --- Harvest Manager States ---
   const [harvestData, setHarvestData] = useState<{seededStates: string[], stateCounts: Record<string, number>, allStates: string[]}>({ seededStates: [], stateCounts: {}, allStates: [] });
@@ -134,6 +135,8 @@ function App() {
 
   // Keep activeTabRef in sync so the polling interval always reads current tab
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+  // Keep stateOverrideRef in sync so stale closures (setInterval) always read live value
+  useEffect(() => { stateOverrideRef.current = stateOverride; }, [stateOverride]);
 
   // Re-fetch queues immediately when active region priority changes
   useEffect(() => {
@@ -142,7 +145,8 @@ function App() {
 
   // Re-fetch pipeline health stats when region changes
   const fetchPipelineStats = async () => {
-    const statesParam = stateOverride.length > 0 ? `?states=${stateOverride.join(',')}` : '';
+    const activeStates = stateOverrideRef.current; // use ref — safe in stale useEffect
+    const statesParam = activeStates.length > 0 ? `?states=${activeStates.join(',')}` : '';
     try {
       const res = await fetch(`${API_BASE}/api/pipeline-stats${statesParam}`);
       const data = await res.json();
@@ -203,8 +207,9 @@ function App() {
   const fetchQueue = async (only?: string[]) => {
     // Phases now: phase1, phase3 (Detective), phase4 (Photographer), phase6 (Publisher)
     const phasesToFetch = only ?? ['phase1', 'phase3', 'phase4', 'phase6', 'recent'];
-    // Pass active priority states so queues mirror what daemons are actually targeting
-    const statesParam = stateOverride.length > 0 ? `&states=${stateOverride.join(',')}` : '';
+    // Read from ref so this always has the live value even inside stale interval closures
+    const activeStates = stateOverrideRef.current;
+    const statesParam = activeStates.length > 0 ? `&states=${activeStates.join(',')}` : '';
     try {
       const results = await Promise.all(
          phasesToFetch.map(phase =>
