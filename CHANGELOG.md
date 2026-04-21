@@ -1,3 +1,36 @@
+## [2.3.0] - 2026-04-21
+
+### ✨ Features
+- **ZENGGE Protocol Oracle Lab — Phase 2 (Diagnostic Lab)**: Added 4 new interactive accordion panels to the `🔬 Oracle` tab for hardware verification of APK-hypothesized opcodes: `0x41` Settled Mode (effectId 1–33, FG/BG colors, speed/bright, direction), `0x43` Multi-Sequence (50-button tap grid, up to 50 effect IDs), `0x53` Live Pixel Stream (gradient start/end pickers, 1–60fps loop + single-frame shot), and `0x56/57/58` Scene Management (slot 0–31 picker + QUERY/ACTIVATE/DELETE). All panels labeled `[HYPOTHESIS]` — Oracle-gated before production promotion.
+- **ZENGGE Protocol Oracle Lab — Phase 1**: Added auto-streaming 323B pixel frame tester with continuous `0x53` multi-MTU write loop for real-time hardware verification. Integrated hardware response sniffer into the Oracle tab.
+- **ZENGGE Protocol Oracle Lab — Phase 0**: Deployed the core Protocol Oracle tab with dedicated `0x59`, `0x51`, `0x62`, and `0x73` builder panels — all with live hex byte previews, TX buttons wired to BLE, and response logging.
+- **Math Synthesizer Pattern Engine**: Implemented 28 math-synthesized pattern templates replacing legacy hardcoded arrays. All pattern computation routes through the Math Synthesizer.
+
+### 🐛 Bug Fixes
+- **0x73 Builder — APK-Verified 13-Byte Format**: Rewrote the Symphony Mode `0x73` panel to use the confirmed 13-byte payload structure: `musicMode`, `micSource` (`0x26` App / `0x27` Device), `isOn` byte, C1 RGB, C2 RGB, sensitivity, brightness, checksum. Replaced the matrix-style picker with an explicit mic source button pair.
+- **FTUE — Auto BLE Permission Dialog**: Auto-triggers the native Bluetooth permission dialog on `PermissionsOnboardingScreen` mount, eliminating the manual setup step that caused user drop-off.
+- **BLE Solid/Camera Mode**: Unified `SOLID` and `CAMERA` modes to `0x59 FREEZE` command, bypassing deprecated firmware commands that caused hardware lockups.
+- **Pattern Engine Routing**: Routed `applyFixedPattern` through the Math Synthesizer pipeline, eliminating the last legacy pattern bypasses.
+- **Session Summary Modal**: Added missing `Platform` import resolving a runtime `ReferenceError` on Android.
+- **TSC Strict Mode**: Resolved TypeScript compiler errors blocking Metro bundler in strict mode.
+- **Visualizer Dead Import**: Removed lingering `ZenggeVisualizerMath` import after Math Synthesizer migration.
+- **`setMusicConfig` Caller Sync**: Updated all 4 call sites (`useMusicMode`, `useControllerDispatch`, `useProtocolBuilder`, `ZenggeAdapter`) to the new 13B APK-verified signature `(musicMode, 0x26|0x27, isOn, c1, c2, sens, bright)`. Dropped the legacy `matrixStyle` parameter.
+
+### ⚡ Performance
+- **Account Overview Mount**: Parallelized authentication and data fetching on `useAccountOverview` mount, eliminating sequential waterfalls. Added skeleton loading states for instant perceived responsiveness.
+
+### 🔧 Maintenance / Protocol
+- **`ZenggeProtocol` — New Methods**: `setSettledMode()` (0x41), `setEffectSequence()` (0x43), `streamPixelFrame()` (0x53), `setMusicConfig()` (13B APK format), `setMusicConfigLegacy()` (12B preserved for diffing).
+- **APK Protocol Audit**: Full reverse-engineering documentation of `0xA3` hardware opcodes committed to `ZENGGE_PROTOCOL_BIBLE.md` and `SK8Lytz_App_Master_Reference.md`.
+- **Web Compatibility**: Silenced React Native Web CSS `boxShadow`/`shadow*` deprecation warnings in `Sk8LytzProgrammer`.
+- **Legacy Fixed Mode Removed**: Ripped out the legacy fixed mode from DockedController navigation — replaced by the Math Synthesizer pattern system.
+- **APK Path Fix**: Corrected build tooling `APK` path to use Gradle default `app-release.apk` output name.
+
+### 📖 Documentation
+- Synced Master Reference with AsyncStorage registry and Math Synthesizer architecture updates.
+
+---
+
 ## [2.2.0] - 2026-04-21
 
 ### ✨ Features
