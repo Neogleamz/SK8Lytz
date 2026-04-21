@@ -91,7 +91,10 @@ export async function startGoogleSweep(targetStates: string[] = []) {
             // Fallback back to target state if it entirely failed to parse
             if (!derivedState) derivedState = stateCode;
 
-            const record = {
+            // metaRecord: Google-sourced factual data ONLY — no pipeline status.
+            // This is used for all UPDATE/upsert-on-conflict paths to ensure we never
+            // downgrade an existing MEDIA_READY / VERIFIED record back to ENRICHED.
+            const metaRecord = {
                 name: details.name,
                 lat: details.lat,
                 lng: details.lng,
@@ -105,11 +108,14 @@ export async function startGoogleSweep(targetStates: string[] = []) {
                 user_ratings_total: details.user_ratings_total,
                 opening_hours: details.opening_hours,
                 facility_type: 'roller_rink',
-                verification_status: 'ENRICHED', // Golden Seed is implicitly higher trust
                 last_enriched_at: new Date().toISOString()
             };
 
-            // 1. Check for spatial duplicates (e.g. from OSM Phase 1)
+            // freshRecord: used ONLY for brand-new inserts (no existing row found).
+            // Sets the initial pipeline status to ENRICHED on first-time ingestion.
+            const freshRecord = { ...metaRecord, verification_status: 'ENRICHED' };
+
+            // 1. Check for spatial duplicates (nearby OSM row or prior Google row)
             const { data: closestSpot } = await supabase.rpc('get_closest_skate_spot', {
                 p_lat: details.lat,
                 p_lng: details.lng,
@@ -117,20 +123,30 @@ export async function startGoogleSweep(targetStates: string[] = []) {
             });
 
             if (closestSpot && closestSpot.length > 0) {
+                // Existing row found nearby — refresh Google metadata, preserve pipeline status
                 const existingId = closestSpot[0].spot_id;
-                console.log(`  🔗 Found nearby Phase 1 spot (${closestSpot[0].distance_meters.toFixed(1)}m away). Upgrading row to ENRICHED.`);
-                const { error } = await supabase.from('skate_spots').update(record).eq('id', existingId);
+                console.log(`  🔗 Found nearby spot (${closestSpot[0].distance_meters.toFixed(1)}m away). Refreshing metadata, preserving status.`);
+                const { error } = await supabase.from('skate_spots').update(metaRecord).eq('id', existingId);
                 if (error) console.error(`  ❌ Supabase Update Error:`, error.message);
                 else console.log(`  💾 Updated Golden Seed: ${details.name}`);
             } else {
-                // If it's brand new, or already created by Google with the same google_place_id
-                const { error } = await supabase.from('skate_spots').upsert(record, { 
-                    onConflict: 'google_place_id', 
-                    ignoreDuplicates: false 
-                });
+                // No spatial match — upsert on google_place_id.
+                // On conflict (same place_id): update metadata only (metaRecord, no status).
+                // On fresh insert: set initial status to ENRICHED (freshRecord).
+                // Supabase upsert with ignoreDuplicates:false updates all provided columns on conflict.
+                // We use metaRecord here so a re-seed never resets status on an existing google_place_id row.
+                const isNew = !(await supabase.from('skate_spots')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('google_place_id', details.place_id)
+                    .then(r => r.count && r.count > 0));
+
+                const { error } = await supabase.from('skate_spots').upsert(
+                    isNew ? freshRecord : metaRecord,
+                    { onConflict: 'google_place_id', ignoreDuplicates: false }
+                );
 
                 if (error) console.error(`  ❌ Supabase Upsert Error for ${details.name}:`, error.message);
-                else console.log(`  💾 Saved NEW Golden Seed: ${details.name}`);
+                else console.log(`  💾 ${isNew ? 'NEW' : 'Refreshed'} Golden Seed: ${details.name}`);
             }
         }
         
