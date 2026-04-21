@@ -1,4 +1,27 @@
+## [2.1.1] - 2026-04-21
+
+### 🐛 Bug Fixes
+- **Critical: Bulk Publish Skipped MEDIA_READY**: The `/api/promote-all` route only promoted `VERIFIED` and `ENRICHED` records — `MEDIA_READY` (the Photographer's final output) was excluded. 129 records were silently ineligible for promotion. Fixed by adding `MEDIA_READY` to the OR clause.
+- **Critical: Phase 4 Queue Wrong Status**: The Photographer's processing queue (Phase 4) was querying `verification_status = INDEXED` — a dead status the current pipeline never writes. Queue now correctly filters `candidate_photos IS NOT NULL AND photos IS NULL`, matching the Photographer's actual work backlog.
+- **Critical: Phase 5 Queue Wrong Status**: The Publisher queue (Phase 5) was showing all `ENRICHED` records (784 items) instead of `MEDIA_READY` records (the correct input), misrepresenting the publication queue entirely.
+- **Phase 4 Description Stale Copy**: Phase 4 explainer block referenced "Instagram / Yelp API" — a Phase 1-era description. Now accurately describes the Photographer daemon (OG image, DOM media, Street View fallback → MEDIA_READY).
+- **Phase 5 Description Stale Copy**: Phase 5 explainer block described "WebP CDN media engine" — this is Phase 4's job. Now correctly describes the Publisher Gate.
+- **Phase 4 Flow Input Metric**: Left metric showed `enrichedCount` (800+ records, meaningless as a Photographer input). Now shows `candidatesReadyCount` — the exact count of records with `candidate_photos IS NOT NULL AND photos IS NULL`.
+- **Log Panel Filter Missing Photographer**: Phase 4 tab was falling through to `return true` (showing all logs). Now correctly filters to `source === 'Photographer'` only.
+
+### ⚡ Performance
+- **Smart Queue Polling**: `fetchQueue` was making 6 parallel API calls to CCTower every 5 seconds regardless of which tab was active. The polling interval now only re-fetches the currently active tab's phase queue (+ recent), reducing background requests by ~83% during normal dashboard use.
+
+### 🔧 Maintenance
+- **New CCTower Metric**: `/status` endpoint now returns `candidatesReadyCount` — the real-time count of Photographer candidates — used by both Phase 3 output and Phase 4 input flow visualizers.
+
+### 🌐 Scraper Pipeline (Daemon — separate from app)
+- All 8 correctness fixes are isolated to `tools/scraper/CCTower.ts` and `tools/scraper-dashboard/src/App.tsx`. Zero mobile `src/` code was modified.
+
+---
+
 ## [2.1.0] - 2026-04-20
+
 
 ### 🐛 Bug Fixes
 - **SSOT Bypass Eliminated**: Removed `AsyncStorage` import from `useHardwareNotifications.ts`. All 3 direct `setItem('@Sk8lytz_device_configs')` calls (RF config, LED probe, hardware probe) are now routed through `DeviceRepository.updateConfig()` — eliminating split-brain corruption on every BLE connect cycle.
