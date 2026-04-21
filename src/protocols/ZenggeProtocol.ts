@@ -505,12 +505,75 @@ export class ZenggeProtocol {
     return this.wrapCommand(raw);
   }
 
+  /**
+   * Build a 323-byte EXTENDED 0x51 packet required by 0xA3 hardware (product_id=163).
+   *
+   * APK source: SymphonySettingForA3.java — uses 32 fixed-slot format with 10 bytes
+   * per slot (vs 9-byte compact format used by 0xA2 hardware).
+   *
+   * Format: [0x51, slot0(10B), slot1(10B), ..., slot31(10B), 0x0F, checksum]
+   * Each slot (10 bytes): [active, mode, speed, R1, G1, B1, R2, G2, B2, dir]
+   *   active: 0xF0 = active, 0x00 = inactive (empty slot)
+   *   dir:    0x01 = forward, 0x00 = reverse (byte 9, ABSENT in 9B compact format)
+   *
+   * Total: 1 + 32×10 + 1 + 1 = 323 bytes.
+   *
+   * ⚠️ Phase 1 Smoking Gun B: if 0xA3 hardware accepts this but rejects the
+   *    291B compact format, this is the source of truth for production.
+   *
+   * @param steps Active steps (1–32). Remaining slots zero-filled as inactive.
+   * @param dir   Default direction byte for all slots. Default 0x01 (forward).
+   */
+  static setCustomModeExtended(steps: {
+    mode: number;
+    speed: number;
+    color1: { r: number; g: number; b: number };
+    color2: { r: number; g: number; b: number };
+    dir?: number;
+  }[], dir: number = 0x01): number[] {
+    const TOTAL_SLOTS = 32;
+    const raw: number[] = [0x51];
+
+    for (let i = 0; i < TOTAL_SLOTS; i++) {
+      const step = steps[i];
+      if (step) {
+        const safeSpeed = Math.max(1, Math.min(100, Math.round(step.speed)));
+        raw.push(0xF0); // active
+        raw.push(step.mode & 0xFF);
+        raw.push(safeSpeed);
+        raw.push(Math.max(0, Math.min(255, step.color1.r | 0)));
+        raw.push(Math.max(0, Math.min(255, step.color1.g | 0)));
+        raw.push(Math.max(0, Math.min(255, step.color1.b | 0)));
+        raw.push(Math.max(0, Math.min(255, step.color2.r | 0)));
+        raw.push(Math.max(0, Math.min(255, step.color2.g | 0)));
+        raw.push(Math.max(0, Math.min(255, step.color2.b | 0)));
+        raw.push((step.dir ?? dir) & 0xFF); // direction byte — absent in 9B compact
+      } else {
+        // Inactive slot — 10 bytes all zero
+        raw.push(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
+      }
+    }
+
+    raw.push(0x0F); // terminator
+    raw.push(this.calculateChecksum(raw));
+    getAppLogger().log('ZENGGE_CUSTOM_MODE_323B', { bytes: raw.length, steps: steps.length });
+    return this.wrapCommand(raw);
+  }
+
   static turnOn(): number[] {
     return this.wrapCommand([0x71, 0x23, 0x0f, 0xa3]);
   }
 
   static turnOff(): number[] {
     return this.wrapCommand([0x71, 0x24, 0x0f, 0xa4]);
+  }
+
+  /**
+   * Convenience alias — use in Diagnostic Lab and UI code for readability.
+   * Delegates to turnOn() / turnOff().
+   */
+  static setPower(on: boolean): number[] {
+    return on ? this.turnOn() : this.turnOff();
   }
 
 
