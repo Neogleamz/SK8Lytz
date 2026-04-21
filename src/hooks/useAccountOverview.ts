@@ -61,10 +61,27 @@ export function useAccountOverview(visible: boolean) {
     setLoading(true);
     try {
       AppLogger.log('ACCOUNT_MODAL_LOAD_START');
-      const { data: { user } } = await supabase.auth.getUser();
+
+      // ── Phase A: Run auth lookup + notif prefs in parallel ──────────────────
+      // Neither depends on the other, so fire both immediately.
+      const [authResult, rawNotifPrefs] = await Promise.all([
+        supabase.auth.getUser(),
+        AsyncStorage.getItem(NOTIF_PREF_KEY).catch(() => null),
+      ]);
+
+      const user = authResult.data?.user ?? null;
       if (user) setUserEmail(user.email ?? '');
 
-      // Pass the cached user/userId to avoid redundant auth token lookups
+      // Apply notif prefs as soon as they resolve (Phase A complete)
+      if (rawNotifPrefs) {
+        const prefs = JSON.parse(rawNotifPrefs);
+        setNotifCrewInvites(prefs.crewInvites ?? true);
+        setNotifSessionReminders(prefs.sessionReminders ?? true);
+        setNotifLeaderHandoff(prefs.leaderHandoff ?? true);
+      }
+
+      // ── Phase B: Fan-out all profile service calls in parallel ───────────────
+      // Pass the already-resolved user/userId to avoid redundant auth token lookups.
       const [p, c, h] = await Promise.all([
         profileService.fetchOrCreateProfile(user),
         profileService.getMyCrew(undefined, user?.id),
@@ -80,14 +97,6 @@ export function useAccountOverview(visible: boolean) {
       }
       setCrews(c);
       setHistory(h);
-
-      const raw = await AsyncStorage.getItem(NOTIF_PREF_KEY);
-      if (raw) {
-        const prefs = JSON.parse(raw);
-        setNotifCrewInvites(prefs.crewInvites ?? true);
-        setNotifSessionReminders(prefs.sessionReminders ?? true);
-        setNotifLeaderHandoff(prefs.leaderHandoff ?? true);
-      }
     } catch (e) {
       AppLogger.warn('[AccountOverview] loadData error', { error: String(e) });
     } finally {
