@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import type { PatternId, RGB } from '../protocols/PatternEngine';
 import { getVisualizerFrame } from '../protocols/PatternEngine';
 import { PositionalMathBuffer } from '../protocols/PositionalMathBuffer';
-import { ZenggeVisualizerMath } from '../protocols/ZenggeVisualizerMath';
+
 import { Spacing } from '../theme/theme';
 import { getRbmMusicFrame, getRbmVisualizerFrame, rgbToHex } from '../utils/RbmSimulator';
 
@@ -429,22 +429,8 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           // Dynamic Mirroring: generates per-segment frame; Seg2 slot is mirrored if flagged.
           const mmSegLeds = isMirrored ? Math.ceil(numLeds / 2) : numLeds;
 
-          let framePixels: RGB[];
-          if (pid <= 33) {
-            // Use the mathematically accurate 33-effect Visualizer Math (effectIds 1–33 = hardware IDs)
-            const base16 = ZenggeVisualizerMath.getVisualizerDots(pid, fgRgb, bgRgb, animTick, true, deviceSegments > 1);
-
-            // Stretch the 16 native hardware dots into the Visualizer box segment
-            framePixels = [];
-            const dotsPerSegment = Math.max(1, Math.floor(mmSegLeds / Math.max(1, deviceSegments)));
-            for (let i = 0; i < mmSegLeds; i++) {
-              const segmentLocalIndex = i % dotsPerSegment;
-              framePixels.push(base16[segmentLocalIndex % 16]);
-            }
-          } else {
-            // Legacy fallback
-            framePixels = getVisualizerFrame(pid as PatternId, fgRgb, bgRgb, mmSegLeds, animTick);
-          }
+          // ── Directly leverage PatternEngine continuous simulation ──
+          const framePixels = getVisualizerFrame(pid as PatternId, fgRgb, bgRgb, mmSegLeds, animTick);
 
           // ── Diffusion blending: blend adjacent LED colors near chip boundaries ──
           const rawLedPos = (segmentI / activeSegmentLeds) * framePixels.length;
