@@ -962,24 +962,6 @@ function App() {
                 </div>
               )}
             </div>
-            
-            <div className="evasion-audit-card" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: '1px solid rgba(138, 43, 226, 0.2)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                 <h3 style={{ margin: 0, color: '#8a2be2', fontSize: '0.9rem', textTransform: 'uppercase' }}>️ Phase 1 Evasion Audit</h3>
-                 <div className="pulse-badge">LAST: {status?.pulseRegistry?.['Phase 1']?.lastRunAt ? new Date(status.pulseRegistry['Phase 1'].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                 <div className="audit-stat">
-                    <label>SPOOFED IDENTITY</label>
-                    <div className="audit-val" style={{ fontSize: '0.75rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                       {status?.pulseRegistry?.['Phase 1']?.ghost?.userAgent || 'ROTATING...'}
-                    </div>
-                 </div>
-                 <div className="audit-stat" style={{ textAlign: 'center' }}>
-                    <PulseTimer nextRunAt={status?.pulseRegistry?.['Phase 1']?.nextRunAt} />
-                 </div>
-              </div>
-            </div>
 
             <div style={{marginTop: '2rem'}}>
                 <h4 style={{fontSize: '0.8rem', textTransform:'uppercase', color:'var(--text-secondary)', marginBottom: 0}}>Recently Harvested Seeds (Live)</h4>
@@ -1143,31 +1125,6 @@ function App() {
 
                 return (
                   <div style={{marginTop: '20px'}}>
-                     <div className="evasion-audit-card" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: `1px solid ${activeColor}44` }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                           <h3 style={{ margin: 0, color: activeColor, fontSize: '0.9rem', textTransform: 'uppercase' }}>️ {activeLabel} Evasion Audit</h3>
-                           <div className="pulse-badge" style={{fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)'}}>LAST: {status?.pulseRegistry?.[activeLabel]?.lastRunAt ? new Date(status.pulseRegistry[activeLabel].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) 1fr', gap: '1.5rem', alignItems: 'center' }}>
-                           <div className="audit-details">
-                              <div className="audit-stat" style={{marginBottom: '0.8rem'}}>
-                                 <label style={{display:'block', fontSize:'0.6rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px'}}>BROWSER FINGERPRINT</label>
-                                 <div className="audit-val" style={{ fontSize: '0.75rem', opacity: 0.8, wordBreak: 'break-all' }}>
-                                    {status?.pulseRegistry?.[activeLabel]?.ghost?.userAgent || 'STABILIZING IDENTITY...'}
-                                 </div>
-                              </div>
-                              <div className="audit-stat">
-                                 <label style={{display:'block', fontSize:'0.6rem', color:'rgba(255,255,255,0.4)', marginBottom:'4px'}}>RANDOMIZED VIEWPORT</label>
-                                 <div className="audit-val" style={{ color: activeColor, fontWeight: 700 }}>
-                                    {status?.pulseRegistry?.[activeLabel]?.ghost?.viewport ? `${status.pulseRegistry[activeLabel].ghost.viewport.width}x${status.pulseRegistry[activeLabel].ghost.viewport.height}` : 'SCALING...'}
-                                 </div>
-                              </div>
-                           </div>
-                           <div className="audit-countdown" style={{ display: 'flex', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '50%', width: '60px', height: '60px', alignItems: 'center', border: `1px solid ${activeColor}44` }}>
-                              <PulseTimer nextRunAt={status?.pulseRegistry?.[activeLabel]?.nextRunAt} />
-                           </div>
-                        </div>
-                      </div>
 
                      <h4 style={{fontSize: '0.8rem', textTransform:'uppercase', color:'var(--text-secondary)', marginBottom: 0, marginTop: '2rem'}}>Processing Queue (Top 10)</h4>
                      {queue.length === 0 ? (
