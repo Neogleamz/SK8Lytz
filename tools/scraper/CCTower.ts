@@ -639,6 +639,81 @@ app.get('/api/queue', async (req, res) => {
   res.json({ spots: data, active_states: states });
 });
 
+// --- Scraper Blocklist & Spot Deletion ---
+
+app.put('/api/skate_spots/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { error } = await supabase.from('skate_spots').update(req.body).eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/skate_spots/:id', async (req, res) => {
+  const { id } = req.params;
+  const { blacklist } = req.query;
+
+  try {
+    if (blacklist === 'true') {
+      const { data: spot } = await supabase.from('skate_spots').select('name').eq('id', id).single();
+      if (spot && spot.name) {
+        // Strip common suffixes and trim for the blocklist keyword
+        let keyword = spot.name.toLowerCase().trim();
+        // Insert into blocklist
+        await supabase.from('scraper_blocklist_keywords').upsert({ keyword });
+        console.log( `Blacklisted keyword extracted from spot: "${keyword}"`);
+      }
+    }
+    
+    const { error } = await supabase.from('skate_spots').delete().eq('id', id);
+    if (error) throw error;
+    
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/scraper/blocklist', async (req, res) => {
+  const { data, error } = await supabase.from('scraper_blocklist_keywords').select('*').order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ keywords: data });
+});
+
+app.post('/api/scraper/blocklist', async (req, res) => {
+  const { keyword } = req.body;
+  if (!keyword) return res.status(400).json({ error: 'Missing keyword' });
+  const kw = keyword.toLowerCase().trim();
+  
+  try {
+    const { error } = await supabase.from('scraper_blocklist_keywords').upsert({ keyword: kw });
+    if (error) throw error;
+    
+    // Execute SQL Guillotine: delete existing matches instantly
+    const { count, error: deleteError } = await supabase
+      .from('skate_spots')
+      .delete()
+      .ilike('name', `%${kw}%`);
+      
+    if (deleteError) throw deleteError;
+    
+    console.log( `Added "${kw}" to blocklist and purged ${count || 0} matching records.`);
+    res.json({ success: true, count: count || 0 });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/scraper/blocklist/:keyword', async (req, res) => {
+  const { keyword } = req.params;
+  const { error } = await supabase.from('scraper_blocklist_keywords').delete().eq('keyword', parseInt(keyword) ? keyword : keyword.toLowerCase().trim()); // handle params
+  // Wait, keyword is a string. Supabase eq handles string. Let's just use keyword natively
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+});
 
 app.get('/api/logs/history', (req, res) => {
   if (!fs.existsSync(LOG_FILE)) return res.json({ history: [] });

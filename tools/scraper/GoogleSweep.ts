@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
-import { GooglePlacesProvider, FacilityType, RETAIL_BLOCKLIST } from './lib/providers/GooglePlacesProvider';
+import { GooglePlacesProvider, FacilityType, RETAIL_BLOCKLIST, injectDynamicBlocklist } from './lib/providers/GooglePlacesProvider';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const supabase = createClient(
@@ -54,6 +54,16 @@ export async function startGoogleSweep(
   const facilitiesToRun: FacilityType[] = targetFacilities.length > 0
     ? ALL_FACILITY_TYPES.filter(ft => targetFacilities.includes(ft))
     : ['roller_rink'];
+
+  // --- Dynamic Blocklist Injection ---
+  try {
+    const { data: dbKeywords } = await supabase.from('scraper_blocklist_keywords').select('keyword');
+    if (dbKeywords && dbKeywords.length > 0) {
+      injectDynamicBlocklist(dbKeywords.map(k => k.keyword));
+    }
+  } catch (err) {
+    console.error('⚠️ Failed to fetch dynamic blocklist from Supabase:', err);
+  }
 
   const statesToRun = targetStates.length > 0 ? targetStates : Object.keys(STATE_NAMES);
 
