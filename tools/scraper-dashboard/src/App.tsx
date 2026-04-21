@@ -62,7 +62,27 @@ function App() {
   const [targetFacilities, setTargetFacilities] = useState<string[]>([]);
   const [stateOverride, setStateOverride] = useState<string[]>([]);
   const [pipelineStats, setPipelineStats] = useState<{ summary: any; stats: any[] } | null>(null);
-  const [isPulseCollapsed, setIsPulseCollapsed] = useState(false);
+
+  // --- Collapsible sections: persisted to localStorage ---
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem('sk8_collapsed') || '{}'); } catch { return {}; }
+  });
+  const toggleSection = (key: string) => setCollapsedSections(prev => {
+    const next = { ...prev, [key]: !prev[key] };
+    localStorage.setItem('sk8_collapsed', JSON.stringify(next));
+    return next;
+  });
+  const isCollapsed = (key: string) => collapsedSections[key] === true;
+  // Helper: clickable section header bar
+  const SectionHdr = ({ id, label, color = 'rgba(255,255,255,0.5)', right }: { id: string; label: React.ReactNode; color?: string; right?: React.ReactNode }) => (
+    <div onClick={() => toggleSection(id)} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', cursor:'pointer', userSelect:'none', padding:'6px 0', marginBottom: isCollapsed(id) ? 0 : '0.5rem' }}>
+      <span style={{ color, fontWeight:800, fontSize:'0.85rem', textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</span>
+      <span style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+        {right}
+        <span style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.25)', fontWeight:700 }}>{isCollapsed(id) ? '▼ show' : '▲ hide'}</span>
+      </span>
+    </div>
+  );
   const [sleepInterval, setSleepInterval] = useState<number>(5000);
   const [isHeadless, setIsHeadless] = useState<boolean>(true);
   const [identityRotation, setIdentityRotation] = useState<boolean>(true);
@@ -671,15 +691,15 @@ function App() {
           <div style={{ margin: '0 0 1rem 0', background: 'rgba(0,0,0,0.35)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
             {/* Header row — always visible, click to collapse */}
             <div
-              onClick={() => setIsPulseCollapsed(c => !c)}
-              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 14px', borderBottom: isPulseCollapsed ? 'none' : '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.03)', cursor: 'pointer', userSelect: 'none' }}
+              onClick={() => toggleSection('pulse')}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 14px', borderBottom: isCollapsed('pulse') ? 'none' : '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.03)', cursor: 'pointer', userSelect: 'none' }}
             >
               <span style={{ fontSize: '0.58rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Region Pulse</span>
               <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#8a2be2' }}>{label}</span>
-              <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.2)', marginLeft: 'auto' }}>{s.total?.toLocaleString()} total · {isPulseCollapsed ? '▼ expand' : '▲ collapse'}</span>
+              <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.2)', marginLeft: 'auto' }}>{s.total?.toLocaleString()} total · {isCollapsed('pulse') ? '▼ expand' : '▲ collapse'}</span>
             </div>
             {/* Collapsible body */}
-            {!isPulseCollapsed && (
+            {!isCollapsed('pulse') && (
               <>
                 {/* Phase metric columns */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'rgba(255,255,255,0.04)' }}>
@@ -752,8 +772,8 @@ function App() {
         {activeTab === 'phase1' && (
           <div className="tab-pane phase-1">
             <div className="explainer-block" style={{marginBottom: '1rem'}}>
-              <h3 style={{marginTop: 0, color: '#8a2be2'}}>The Scout: GIS Ingestion Engine</h3>
-              <p>Phase 1 uses the <strong style={{color:'#ffb300'}}>Google Places API</strong> to seed the entire pipeline — querying by state for roller rinks and skate shops. Each result is written directly as an <strong>ENRICHED</strong> record with full coordinates, phone, hours, rating, and website. The OSM fallback mode is available for legacy re-harvests but is <em style={{color:'rgba(255,255,255,0.4)'}}>not recommended</em> — Google data is always higher quality.</p>
+              <SectionHdr id="phase1_explainer" label="The Scout: GIS Ingestion Engine" color="#8a2be2" />
+              {!isCollapsed('phase1_explainer') && <p>Phase 1 uses the <strong style={{color:'#ffb300'}}>Google Places API</strong> to seed the entire pipeline — querying by state for roller rinks and skate shops. Each result is written directly as an <strong>ENRICHED</strong> record with full coordinates, phone, hours, rating, and website. The OSM fallback mode is available for legacy re-harvests but is <em style={{color:'rgba(255,255,255,0.4)'}}>not recommended</em> — Google data is always higher quality.</p>}
             </div>
 
             <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', marginBottom: '2rem' }}>
@@ -990,13 +1010,19 @@ function App() {
         {(['phase2', 'phase3', 'phase4', 'phase5'].includes(activeTab)) && (
           <div className="tab-pane daemon-center">
              <div className="explainer-block" style={{marginBottom: '1rem'}}>
-               <h3 style={{marginTop: 0, color: PIPELINE_PHASES.find(p=>p.route===activeTab)?.color}}>
-                   {PIPELINE_PHASES.find(p=>p.route===activeTab)?.title}: {PIPELINE_PHASES.find(p=>p.route===activeTab)?.sub}
-               </h3>
-               {activeTab === 'phase2' && <p>Targets <strong>PENDING</strong> records and resolves their real-world identity — finding the business website and phone number via web search heuristics. Graduates records to <strong>IDENTITY_ESTABLISHED</strong> when found. <em style={{color:'rgba(255,255,255,0.4)'}}>Note: Since the pipeline now uses Google Places as the primary seeder, PENDING records are rare. This daemon handles any OSM legacy records or manually added entries.</em></p>}
-               {activeTab === 'phase3' && <p>The Detective deep-crawls each spot's website using Puppeteer with GHOST identity spoofing. Extracts operating hours, 18+ adult night schedules, pricing, event listings, social links, and photo candidates (OG image, DOM images, Facebook OG). Writes <code>candidate_photos</code> for the Photographer to harvest.</p>}
-               {activeTab === 'phase4' && <p>The Photographer daemon reads <code>candidate_photos</code> written by the Indexer — downloading OG images and DOM media as binary uploads to Supabase Storage. Falls back to Google Street View Static as a guaranteed photo source. Promotes records to <strong>MEDIA_READY</strong> on success.</p>}
-               {activeTab === 'phase5' && <p>The Publisher Gate is the final human-approved release step. Only records with <strong style={{color:'#4caf50'}}>is_published = true</strong> are visible on the live SK8Lytz app map. Bulk-promote all pipeline-complete records (ENRICHED + MEDIA_READY) below, or use the Databank QA tab to approve individual spots.</p>}
+               <SectionHdr
+                 id={`daemon_explainer_${activeTab}`}
+                 label={`${PIPELINE_PHASES.find(p=>p.route===activeTab)?.title}: ${PIPELINE_PHASES.find(p=>p.route===activeTab)?.sub}`}
+                 color={PIPELINE_PHASES.find(p=>p.route===activeTab)?.color}
+               />
+               {!isCollapsed(`daemon_explainer_${activeTab}`) && (
+                 <>
+                   {activeTab === 'phase2' && <p>Targets <strong>PENDING</strong> records and resolves their real-world identity — finding the business website and phone number via web search heuristics. Graduates records to <strong>IDENTITY_ESTABLISHED</strong> when found. <em style={{color:'rgba(255,255,255,0.4)'}}>Note: Since the pipeline now uses Google Places as the primary seeder, PENDING records are rare. This daemon handles any OSM legacy records or manually added entries.</em></p>}
+                   {activeTab === 'phase3' && <p>The Detective deep-crawls each spot's website using Puppeteer with GHOST identity spoofing. Extracts operating hours, 18+ adult night schedules, pricing, event listings, social links, and photo candidates (OG image, DOM images, Facebook OG). Writes <code>candidate_photos</code> for the Photographer to harvest.</p>}
+                   {activeTab === 'phase4' && <p>The Photographer daemon reads <code>candidate_photos</code> written by the Indexer — downloading OG images and DOM media as binary uploads to Supabase Storage. Falls back to Google Street View Static as a guaranteed photo source. Promotes records to <strong>MEDIA_READY</strong> on success.</p>}
+                   {activeTab === 'phase5' && <p>The Publisher Gate is the final human-approved release step. Only records with <strong style={{color:'#4caf50'}}>is_published = true</strong> are visible on the live SK8Lytz app map. Bulk-promote all pipeline-complete records (ENRICHED + MEDIA_READY) below, or use the Databank QA tab to approve individual spots.</p>}
+                 </>
+               )}
              </div>
              
              {activeTab === 'phase2' && (
@@ -1176,26 +1202,19 @@ function App() {
             </div>
 
 
-            {/* =========== STATUS COVERAGE MAP =========== */}
+             {/* =========== STATUS COVERAGE MAP =========== */}
             <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255,179,0,0.03)', border: '1px solid rgba(255,179,0,0.2)', borderRadius: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <h3 style={{ margin: 0, color: '#ffb300', fontSize: '0.95rem', textTransform: 'uppercase' }}> Pipeline Coverage Map</h3>
-                {/* Map Mode Toggle */}
-                <div style={{ display: 'flex', gap: '6px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px' }}>
-                  <button
-                    onClick={() => setMapMode('quality')}
-                    style={{ padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
-                      background: mapMode === 'quality' ? '#ffb300' : 'transparent',
-                      color: mapMode === 'quality' ? '#000' : 'rgba(255,255,255,0.5)' }}
-                  > Quality</button>
-                  <button
-                    onClick={() => setMapMode('published')}
-                    style={{ padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
-                      background: mapMode === 'published' ? '#4caf50' : 'transparent',
-                      color: mapMode === 'published' ? '#000' : 'rgba(255,255,255,0.5)' }}
-                  > Published</button>
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isCollapsed('coverage_map') ? 0 : '0.5rem' }}>
+                <SectionHdr id="coverage_map" label="Pipeline Coverage Map" color="#ffb300" right={
+                  !isCollapsed('coverage_map') && (
+                    <div style={{ display: 'flex', gap: '6px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px' }} onClick={e => e.stopPropagation()}>
+                      <button onClick={() => setMapMode('quality')} style={{ padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: mapMode === 'quality' ? '#ffb300' : 'transparent', color: mapMode === 'quality' ? '#000' : 'rgba(255,255,255,0.5)' }}>Quality</button>
+                      <button onClick={() => setMapMode('published')} style={{ padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: mapMode === 'published' ? '#4caf50' : 'transparent', color: mapMode === 'published' ? '#000' : 'rgba(255,255,255,0.5)' }}>Published</button>
+                    </div>
+                  )
+                } />
               </div>
+              {!isCollapsed('coverage_map') && (<>
               <p style={{ margin: '0 0 1.5rem', color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>
                 {mapMode === 'quality'
                   ? 'Dominant pipeline status per state. Click a state to filter the grid.'
@@ -1305,10 +1324,15 @@ function App() {
                   }}
                 />
               </div>
+              </>)}
+
             </div>
 
-                        {/* ======= SMART FILTER + SORT BAR ======= */}
+            {/* ======= DATABANK GRID ======= */}
             <div style={{ marginBottom: '1rem' }}>
+              <SectionHdr id="databank_grid" label="Databank QA Grid" color="rgba(255,255,255,0.6)" />
+            </div>
+            {!isCollapsed('databank_grid') && <div>
               {/* Row 1: View toggle + Search + Status + Sort */}
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '8px' }}>
                 {/* View Mode Toggle */}
@@ -1415,7 +1439,6 @@ function App() {
                   >Clear All</button>
                 )}
               </div>
-            </div>
 
 
                         {/* =========== CARD VIEW =========== */}
@@ -1925,6 +1948,7 @@ function App() {
               </table>
             </div>
             )}
+            </div>}  {/* end databank_grid collapsible */}
           </div>
         )}
       </div>
