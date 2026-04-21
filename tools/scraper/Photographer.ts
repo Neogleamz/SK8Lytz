@@ -13,11 +13,27 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fetch from 'node-fetch';
 
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+// Load .env — try multiple path strategies to be robust regardless of CWD
+const envPaths = [
+  path.resolve(__dirname, '../../.env'),           // from tools/scraper/ → project root
+  path.resolve(process.cwd(), '.env'),             // from wherever PM2 launched
+  path.resolve(process.cwd(), '../../.env'),       // two levels up from CWD
+  'C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.env',    // absolute fallback
+];
+for (const p of envPaths) {
+  const result = dotenv.config({ path: p });
+  if (!result.error && process.env.EXPO_PUBLIC_SUPABASE_URL) break;
+}
+
+if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+  console.error('[Photographer] ❌ Failed to load .env — EXPO_PUBLIC_SUPABASE_URL is missing.');
+  process.exit(1);
+}
 
 const supabase = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  // Service role preferred for storage uploads; fall back to anon key (same as CCTower)
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''
 );
 
 const STORAGE_BUCKET = 'spot-photos';
@@ -28,7 +44,7 @@ const reportPulse = (delayMs: number) => {
   fetch('http://localhost:5999/api/pulse', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ source: 'Phase 5', delayMs })
+    body: JSON.stringify({ source: 'Photographer', delayMs })
   }).catch(() => {});
 };
 
@@ -148,8 +164,8 @@ async function runPhotographerLoop() {
       );
     }
     if (candidates.facebook_og) urlCandidates.push({ key: 'facebook_og', url: candidates.facebook_og });
-    // Street View is always last — guaranteed fallback
-    if (candidates.street_view_url) urlCandidates.push({ key: 'street_view', url: candidates.street_view_url });
+    // NOTE: Street View Static URLs require billing and return HTML on errors —
+    // we store the URL directly as a reference rather than attempting binary download.
 
     let photoIndex = 0;
     for (const candidate of urlCandidates) {
@@ -169,13 +185,13 @@ async function runPhotographerLoop() {
       }
     }
 
-    // Street View guaranteed fallback if nothing downloaded
-    if (cdnUrls.length === 0 && candidates.street_view_url && !urlCandidates.find(u => u.key === 'street_view')) {
-      cdnUrls.push(candidates.street_view_url); // Store URL directly as fallback (no download needed)
-    }
-
-    // Always store at least the Street View URL directly if photos is empty
-    const finalPhotos = cdnUrls.length > 0 ? cdnUrls : (candidates.street_view_url ? [candidates.street_view_url] : null);
+    // Street View guaranteed fallback — store URL directly (no binary download needed)
+    // Google Street View Static URLs render in <img> tags directly in the app
+    const finalPhotos: string[] | null = cdnUrls.length > 0
+      ? cdnUrls
+      : candidates.street_view_url
+        ? [candidates.street_view_url]
+        : null;
 
     if (finalPhotos) {
       await supabase.from('skate_spots').update({
@@ -184,14 +200,14 @@ async function runPhotographerLoop() {
         last_attempted_at: new Date().toISOString()
       }).eq('id', target.id);
 
-      logToTower('INFO', `✨ ${target.name} → MEDIA_READY (${finalPhotos.length} photos)`);
+      logToTower('INFO', `✨ ${target.name} → MEDIA_READY (${finalPhotos.length} photos, ${cdnUrls.length} uploaded)`);
     } else {
-      // Null out candidate_photos to skip this record next run
+      // Null out candidate_photos so this record is skipped on future runs
       await supabase.from('skate_spots').update({
         candidate_photos: null,
         last_attempted_at: new Date().toISOString()
       }).eq('id', target.id);
-      logToTower('INFO', `⚠️ ${target.name} → no photos downloadable, cleared candidates`);
+      logToTower('INFO', `⚠️ ${target.name} → no photos obtainable, cleared candidates`);
     }
 
     reportPulse(COOLDOWN_MS);
