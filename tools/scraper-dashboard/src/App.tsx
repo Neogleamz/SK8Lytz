@@ -94,6 +94,14 @@ function App() {
   // --- Phase 6 View Mode ('card' | 'list' | 'table') ---
   const [viewMode, setViewMode] = useState<'card' | 'list' | 'table'>('table');
 
+  // --- Phase 6 Filter Chips (server-side) ---
+  const [chips, setChips] = useState<Record<string,boolean>>({
+    has_photos: false, has_hours: false, has_website: false,
+    has_adult_night: false, has_pro_shop: false, is_published: false,
+    is_deep_crawled: false,
+  });
+  const [stateChip, setStateChip] = useState('');
+
   useEffect(() => {
     fetchSystemStatus();
     fetchQueue();          // Full initial load — all phases
@@ -140,7 +148,7 @@ function App() {
       fetchSpots(0, gridFilter, sortCol, sortDir, searchQuery);
       fetchDatabankCoverage();
     }
-  }, [activeTab, gridFilter, sortCol, sortDir, searchQuery]);
+  }, [activeTab, gridFilter, sortCol, sortDir, searchQuery, chips, stateChip]);
 
   // --- Data Fetchers ---
   const fetchSystemStatus = async () => {
@@ -234,10 +242,16 @@ function App() {
     } catch {}
   };
 
-  const fetchSpots = async (pageIdx: number, filter: string, col = sortCol, dir = sortDir, search = searchQuery) => {
+  const fetchSpots = async (pageIdx: number, filter: string, col = sortCol, dir = sortDir, search = searchQuery, activeChips = chips, activeState = stateChip) => {
     try {
       const offset = pageIdx * rowsPerPage;
-      const res = await fetch(`${API_BASE}/api/spots?limit=${rowsPerPage}&offset=${offset}&status=${filter}&sortCol=${col}&sortDir=${dir}&search=${search}`);
+      const chipParams = Object.entries(activeChips)
+        .filter(([, v]) => v)
+        .map(([k]) => `${k}=true`)
+        .join('&');
+      const stateParam = activeState.length === 2 ? `&state=${activeState.toUpperCase()}` : '';
+      const url = `${API_BASE}/api/spots?limit=${rowsPerPage}&offset=${offset}&status=${filter}&sortCol=${col}&sortDir=${dir}&search=${encodeURIComponent(search)}${stateParam}${chipParams ? '&' + chipParams : ''}`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setSpots(data.spots);
@@ -464,7 +478,7 @@ function App() {
     try {
       const res = await fetch(`${API_BASE}/api/promote-state/${state}`, { method: 'POST' });
       const data = await res.json();
-      alert(`✅ Published ${data.promoted ?? 0} records in ${state}!`);
+      alert(` Published ${data.promoted ?? 0} records in ${state}!`);
       fetchSpots(page, gridFilter);
       fetchDatabankCoverage();
     } catch (e) {}
@@ -472,7 +486,7 @@ function App() {
 
   const unpublishState = async (state: string) => {
     if (!state || state.length !== 2) return;
-    if (!confirm(`⚠️ Retract ALL published records in ${state} from the live app map?`)) return;
+    if (!confirm(`️ Retract ALL published records in ${state} from the live app map?`)) return;
     try {
       const res = await fetch(`${API_BASE}/api/unpublish-state/${state}`, { method: 'POST' });
       const data = await res.json();
@@ -543,7 +557,7 @@ function App() {
              title="Emergency stop all daemons"
              style={{ fontSize: '0.65rem', fontWeight: 800, padding: '5px 12px', borderRadius: '20px', border: '1px solid rgba(255,60,60,0.3)', cursor: 'pointer', background: 'rgba(255,60,60,0.1)', color: '#ff6b6b', letterSpacing: '0.05em' }}
            >
-             ⛔ STOP ALL
+              STOP ALL
            </button>
         </div>
       </header>
@@ -552,9 +566,9 @@ function App() {
       {/* =========== OMNI CONTROL CENTER (GLOBAL CONTROLS) =========== */}
       <div className="omni-control-center fade-in" style={{ marginBottom: '2rem', background: 'var(--surface)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--surface-highlight)' }}>
          <div className="security-control-bar" style={{ position: 'relative', background: 'transparent', padding: '0 0 1rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="ghost-badge mini" style={{position: 'absolute', top: -35, right: 0}}>🛡️ GHOST ENCRYPTED PIPELINE ACTIVE</span>
+            <span className="ghost-badge mini" style={{position: 'absolute', top: -35, right: 0}}>️ GHOST ENCRYPTED PIPELINE ACTIVE</span>
             <div className="security-label">
-                <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 800}}>🛡️ UNIVERSAL TACTICS & SPOOFING</span>
+                <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 800}}>️ UNIVERSAL TACTICS & SPOOFING</span>
             </div>
             <div className="security-inputs" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                 <div className="input-group-inline">
@@ -590,10 +604,10 @@ function App() {
                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) 1fr', gap: '1rem' }}>
                   <div className="btn-group-vertical" style={{ display: 'flex', gap: '0.5rem' }}>
                      <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}>
-                       🔥 BOOT ALL DAEMONS (Ph2+)
+                        BOOT ALL DAEMONS (Ph2+)
                      </button>
                      <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}>
-                       🛑 HALT ALL
+                        HALT ALL
                      </button>
                   </div>
                   
@@ -700,7 +714,7 @@ function App() {
             {/* OMNI-NET DISCOVERY PANEL */}
             <div className="discovery-net-panel" style={{ background: 'linear-gradient(135deg, rgba(138,43,226,0.1) 0%, rgba(0,0,0,0.3) 100%)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(138, 43, 226, 0.3)', marginBottom: '2rem', position: 'relative' }}>
                <div style={{ position: 'absolute', top: '-10px', right: '20px', background: '#8a2be2', color: '#fff', fontSize: '0.6rem', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>STATE TARGETING</div>
-               <h3 style={{ marginTop: 0, color: '#fff', fontSize: 18 }}>📡 State Re-Sweep Controls</h3>
+               <h3 style={{ marginTop: 0, color: '#fff', fontSize: 18 }}> State Re-Sweep Controls</h3>
                <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem' }}>Manually trigger a Google Places sweep for a specific state, or switch the seeding provider. Useful for topping up states with low record counts.</p>
                
                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -766,7 +780,7 @@ function App() {
             {/* ========= GOOGLE COVERAGE DENSITY MAP ========= */}
             <div className="panel coverage-panel" style={{ marginTop: '2rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <h2 className="panel-header" style={{ margin: 0 }}>📡 Google Places Coverage — State Density</h2>
+                <h2 className="panel-header" style={{ margin: 0 }}>Google Places Coverage — State Density</h2>
                 <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
                   {databankCoverage.reduce((a: number, r: any) => a + (r.total || 0), 0).toLocaleString()} records across {databankCoverage.filter((r: any) => r.total > 0).length} states
                 </span>
@@ -835,9 +849,9 @@ function App() {
                         .filter((r: any) => r.total > 0)
                         .sort((a: any, b: any) => b.total - a.total)
                         .map((row: any) => {
-                          const tier = row.total >= 100 ? { color: '#4caf50', label: '🟢' }
-                            : row.total >= 50 ? { color: '#ff6b00', label: '🟠' }
-                            : { color: '#f5a623', label: '🟡' };
+                          const tier = row.total >= 100 ? { color: '#4caf50', label: '' }
+                            : row.total >= 50 ? { color: '#ff6b00', label: '' }
+                            : { color: '#f5a623', label: '' };
                           return (
                             <tr key={row.state} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                               <td style={{ padding: '6px 8px', fontWeight: 700, color: tier.color }}>
@@ -851,7 +865,7 @@ function App() {
                                 <button
                                   style={{ fontSize: '0.65rem', padding: '3px 10px', borderRadius: '10px', border: 'none', background: stateOverride.includes(row.state) ? '#8a2be2' : 'rgba(255,255,255,0.08)', color: stateOverride.includes(row.state) ? '#fff' : 'rgba(255,255,255,0.6)', cursor: 'pointer', fontWeight: 700 }}
                                   onClick={() => updateGlobalStrategy('state_override', row.state)}
-                                >{stateOverride.includes(row.state) ? '✓ TARGETED' : 'TARGET'}</button>
+                                >{stateOverride.includes(row.state) ? ' TARGETED' : 'TARGET'}</button>
                               </td>
                             </tr>
                           );
@@ -864,7 +878,7 @@ function App() {
             
             <div className="evasion-audit-card" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: '1px solid rgba(138, 43, 226, 0.2)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                 <h3 style={{ margin: 0, color: '#8a2be2', fontSize: '0.9rem', textTransform: 'uppercase' }}>🛡️ Phase 1 Evasion Audit</h3>
+                 <h3 style={{ margin: 0, color: '#8a2be2', fontSize: '0.9rem', textTransform: 'uppercase' }}>️ Phase 1 Evasion Audit</h3>
                  <div className="pulse-badge">LAST: {status?.pulseRegistry?.['Phase 1']?.lastRunAt ? new Date(status.pulseRegistry['Phase 1'].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -894,7 +908,7 @@ function App() {
                           <div className="queue-card-loc">{spot.city}, {spot.state}</div>
                           <div className="queue-tags">
                             <span className="queue-badge" style={{ background: spot.verification_status === 'ENRICHED' ? 'rgba(255,90,0,0.1)' : 'rgba(255,255,255,0.05)', color: spot.verification_status === 'ENRICHED' ? '#ff5a00' : 'var(--text-secondary)' }}>
-                              {spot.verification_status === 'ENRICHED' ? '✨ ENRICHED (Google)' : '⏳ RAW SEED'}
+                              {spot.verification_status === 'ENRICHED' ? ' ENRICHED (Google)' : '⏳ RAW SEED'}
                             </span>
                           </div>
                         </div>
@@ -984,7 +998,7 @@ function App() {
                    </div>
                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('photographer', 'start')} disabled={status?.currentTarget?.includes('Photographer: online')}>📸 START PHOTOGRAPHER</button>
+                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('photographer', 'start')} disabled={status?.currentTarget?.includes('Photographer: online')}>START PHOTOGRAPHER</button>
                          <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('photographer', 'stop')} disabled={!status?.currentTarget?.includes('Photographer: online')}>■ STOP</button>
                       </div>
                       <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
@@ -1017,7 +1031,7 @@ function App() {
                   </div>
                   <div style={{ textAlign: 'center', padding: '1.5rem', background: 'rgba(76,175,80,0.05)', border: '1px solid rgba(76,175,80,0.3)', borderRadius: '8px' }}>
                     <p style={{ margin: '0 0 1rem', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>The Publisher Gate controls which records are visible to users on the SK8Lytz app map. Use the Databank QA tab to review individual records and toggle <strong style={{color:'#4caf50'}}>APP_LIVE</strong>, or bulk-promote all ENRICHED records below.</p>
-                    <button className="btn btn-start" style={{background: '#4caf50', border: 'none'}} onClick={bulkPromote}>🚀 BULK PUBLISH ALL ENRICHED → APP MAP</button>
+                    <button className="btn btn-start" style={{background: '#4caf50', border: 'none'}} onClick={bulkPromote}> BULK PUBLISH ALL ENRICHED → APP MAP</button>
                   </div>
                 </div>
              )}
@@ -1027,7 +1041,7 @@ function App() {
                 const queue = phaseQueues[activeTab] || [];
                 let hydratingFields: string[] = [];
                 if (activeTab === 'phase2') hydratingFields = ['Website', 'Phone Number'];
-                if (activeTab === 'phase3') hydratingFields = ['Pricing', 'Adult Night', 'Hours', '📸 Photo Candidates'];
+                if (activeTab === 'phase3') hydratingFields = ['Pricing', 'Adult Night', 'Hours', ' Photo Candidates'];
                 if (activeTab === 'phase4') hydratingFields = ['OG Photo', 'DOM Images', 'Street View', 'Facebook OG'];
                 if (activeTab === 'phase5') hydratingFields = ['Media URLs', 'Thumbnails'];
 
@@ -1038,7 +1052,7 @@ function App() {
                   <div style={{marginTop: '20px'}}>
                      <div className="evasion-audit-card" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: `1px solid ${activeColor}44` }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                           <h3 style={{ margin: 0, color: activeColor, fontSize: '0.9rem', textTransform: 'uppercase' }}>🛡️ {activeLabel} Evasion Audit</h3>
+                           <h3 style={{ margin: 0, color: activeColor, fontSize: '0.9rem', textTransform: 'uppercase' }}>️ {activeLabel} Evasion Audit</h3>
                            <div className="pulse-badge" style={{fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)'}}>LAST: {status?.pulseRegistry?.[activeLabel]?.lastRunAt ? new Date(status.pulseRegistry[activeLabel].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) 1fr', gap: '1.5rem', alignItems: 'center' }}>
@@ -1116,7 +1130,7 @@ function App() {
             {/* =========== STATUS COVERAGE MAP =========== */}
             <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255,179,0,0.03)', border: '1px solid rgba(255,179,0,0.2)', borderRadius: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <h3 style={{ margin: 0, color: '#ffb300', fontSize: '0.95rem', textTransform: 'uppercase' }}>📡 Pipeline Coverage Map</h3>
+                <h3 style={{ margin: 0, color: '#ffb300', fontSize: '0.95rem', textTransform: 'uppercase' }}> Pipeline Coverage Map</h3>
                 {/* Map Mode Toggle */}
                 <div style={{ display: 'flex', gap: '6px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px' }}>
                   <button
@@ -1124,13 +1138,13 @@ function App() {
                     style={{ padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
                       background: mapMode === 'quality' ? '#ffb300' : 'transparent',
                       color: mapMode === 'quality' ? '#000' : 'rgba(255,255,255,0.5)' }}
-                  >📊 Quality</button>
+                  > Quality</button>
                   <button
                     onClick={() => setMapMode('published')}
                     style={{ padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
                       background: mapMode === 'published' ? '#4caf50' : 'transparent',
                       color: mapMode === 'published' ? '#000' : 'rgba(255,255,255,0.5)' }}
-                  >🚀 Published</button>
+                  > Published</button>
                 </div>
               </div>
               <p style={{ margin: '0 0 1.5rem', color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>
@@ -1172,7 +1186,7 @@ function App() {
                           <>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(76,175,80,0.08)', padding: '8px 16px', borderRadius: '20px', border: '1px solid #4caf5044' }}>
                               <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#4caf50', display: 'inline-block' }}></span>
-                              <span style={{ fontSize: '0.75rem', color: '#4caf50', fontWeight: 700 }}>🚀 Published</span>
+                              <span style={{ fontSize: '0.75rem', color: '#4caf50', fontWeight: 700 }}> Published</span>
                               <span style={{ fontSize: '0.85rem', color: '#4caf50', fontWeight: 800 }}>{totalPublished.toLocaleString()}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', padding: '8px 16px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -1248,170 +1262,471 @@ function App() {
               </div>
             </div>
 
-            <div className="grid-toolbar">
-              {/* View Mode Toggle: Cards | List | Table */}
-              <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px', marginRight: '8px', flexShrink: 0 }}>
-                {(['card', 'list', 'table'] as const).map(mode => (
-                  <button key={mode} onClick={() => setViewMode(mode)}
-                    style={{ padding: '5px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase',
-                      background: viewMode === mode ? '#8a2be2' : 'transparent',
-                      color: viewMode === mode ? '#fff' : 'rgba(255,255,255,0.4)' }}
-                  >{mode === 'card' ? 'Cards' : mode === 'list' ? 'List' : 'Table'}</button>
-                ))}
-              </div>
-              <input
-                className="form-input search-bar"
-                placeholder="Search Location / City / State..."
-                value={searchQuery}
-                onChange={e => { setSearchQuery(e.target.value); setActiveStateFilter(e.target.value.trim().length === 2 ? e.target.value.trim().toUpperCase() : null); }}
-              />
-               <select className="form-input filter-dropdown" value={gridFilter} onChange={e => setGridFilter(e.target.value)}>
-                  <option value="ALL">All Records</option>
-                  <option value="MEDIA_READY">MEDIA_READY -- Photo Ready (Priority)</option>
-                  <option value="ENRICHED">ENRICHED -- Google Seeded</option>
-                  <option value="PENDING">PENDING -- Legacy</option>
+                        {/* ======= SMART FILTER + SORT BAR ======= */}
+            <div style={{ marginBottom: '1rem' }}>
+              {/* Row 1: View toggle + Search + Status + Sort */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '8px' }}>
+                {/* View Mode Toggle */}
+                <div style={{ display: 'flex', gap: '3px', background: 'rgba(255,255,255,0.05)', padding: '3px', borderRadius: '8px', flexShrink: 0 }}>
+                  {(['card', 'list', 'table'] as const).map(mode => (
+                    <button key={mode} onClick={() => setViewMode(mode)}
+                      style={{ padding: '5px 11px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase',
+                        background: viewMode === mode ? '#8a2be2' : 'transparent',
+                        color: viewMode === mode ? '#fff' : 'rgba(255,255,255,0.35)' }}
+                    >{mode === 'card' ? 'Cards' : mode === 'list' ? 'List' : 'Table'}</button>
+                  ))}
+                </div>
+                {/* Search */}
+                <input className="form-input search-bar" style={{ flex: 1, minWidth: '160px' }}
+                  placeholder="Search name / city / state..."
+                  value={searchQuery}
+                  onChange={e => { setSearchQuery(e.target.value); setActiveStateFilter(e.target.value.trim().length === 2 ? e.target.value.trim().toUpperCase() : null); }}
+                />
+                {/* Status filter */}
+                <select className="form-input" style={{ width: 'auto', fontSize: '0.75rem' }} value={gridFilter} onChange={e => setGridFilter(e.target.value)}>
+                  <option value="ALL">All Status</option>
+                  <option value="MEDIA_READY">MEDIA_READY</option>
+                  <option value="ENRICHED">ENRICHED</option>
+                  <option value="PENDING">PENDING</option>
                   <option value="IDENTITY_ESTABLISHED">IDENTIFIED</option>
-                  <option value="INDEXED">WEB CRAWLED</option>
-                  <option value="REJECTED">Graveyard / Rejected</option>
-               </select>
-              {/* State-scoped publish / unpublish — appears when a 2-letter state filter is active */}
-              {activeStateFilter && activeStateFilter.length === 2 && (
-                <>
+                  <option value="INDEXED">INDEXED</option>
+                  <option value="REJECTED">Rejected</option>
+                </select>
+                {/* State filter */}
+                <input className="form-input" style={{ width: '68px', fontSize: '0.75rem', textTransform: 'uppercase', textAlign: 'center' }}
+                  placeholder="State" maxLength={2}
+                  value={stateChip}
+                  onChange={e => setStateChip(e.target.value.toUpperCase())}
+                />
+                {/* Sort col */}
+                <select className="form-input" style={{ width: 'auto', fontSize: '0.75rem' }}
+                  value={sortCol}
+                  onChange={e => { setSortCol(e.target.value); fetchSpots(0, gridFilter, e.target.value, sortDir); }}
+                >
+                  <option value="last_attempted_at">Recent</option>
+                  <option value="rating">Rating DESC</option>
+                  <option value="user_ratings_total">Reviews</option>
+                  <option value="name">Name A-Z</option>
+                  <option value="state">State</option>
+                  <option value="city">City</option>
+                  <option value="verification_status">Status</option>
+                  <option value="last_enriched_at">Enriched Date</option>
+                </select>
+                <button onClick={() => { const nd = sortDir === 'asc' ? 'desc' : 'asc'; setSortDir(nd); fetchSpots(0, gridFilter, sortCol, nd); }}
+                  style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}
+                >{sortDir === 'asc' ? 'ASC ^' : 'DESC v'}</button>
+                {/* State publish actions */}
+                {activeStateFilter && activeStateFilter.length === 2 && (
+                  <>
+                    <button className="btn-primary"
+                      style={{ background: '#4caf50', border: 'none', padding: '7px 14px', borderRadius: '6px', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' }}
+                      onClick={() => promoteState(activeStateFilter)}
+                    >Publish {activeStateFilter}</button>
+                    <button style={{ background: 'rgba(255,59,48,0.15)', border: '1px solid rgba(255,59,48,0.4)', padding: '7px 14px', borderRadius: '6px', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', color: '#ff3b30' }}
+                      onClick={() => unpublishState(activeStateFilter)}
+                    >Retract {activeStateFilter}</button>
+                  </>
+                )}
+                <button className="btn-primary" onClick={bulkPromote} style={{ fontSize: '0.75rem', padding: '7px 14px', flexShrink: 0 }}>Bulk Publish</button>
+                {/* Pagination */}
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginLeft: 'auto', flexShrink: 0 }}>
+                  <button disabled={page === 0} onClick={() => fetchSpots(page - 1, gridFilter)}
+                    style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: page === 0 ? 'rgba(255,255,255,0.2)' : '#fff', cursor: page === 0 ? 'default' : 'pointer', fontSize: '0.72rem' }}>Prev</button>
+                  <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap' }}>{page + 1} / {Math.ceil(totalSpots/rowsPerPage)||1} ({totalSpots})</span>
+                  <button disabled={(page+1)*rowsPerPage >= totalSpots} onClick={() => fetchSpots(page + 1, gridFilter)}
+                    style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: (page+1)*rowsPerPage >= totalSpots ? 'rgba(255,255,255,0.2)' : '#fff', cursor: (page+1)*rowsPerPage >= totalSpots ? 'default' : 'pointer', fontSize: '0.72rem' }}>Next</button>
+                </div>
+              </div>
+              {/* Row 2: Enrichment Chip Filters */}
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginRight: '2px' }}>Filter:</span>
+                {([
+                  { key: 'has_photos',      label: 'Has Photos' },
+                  { key: 'has_hours',       label: 'Has Hours' },
+                  { key: 'has_website',     label: 'Has Website' },
+                  { key: 'has_adult_night', label: '18+ Night' },
+                  { key: 'has_pro_shop',    label: 'Pro Shop' },
+                  { key: 'is_deep_crawled', label: 'Deep Crawled' },
+                  { key: 'is_published',    label: 'Live on App' },
+                ] as const).map(({ key, label }) => (
+                  <button key={key}
+                    onClick={() => {
+                      const next = { ...chips, [key]: !chips[key] };
+                      setChips(next);
+                      fetchSpots(0, gridFilter, sortCol, sortDir, searchQuery, next, stateChip);
+                    }}
+                    style={{
+                      padding: '4px 11px', borderRadius: '20px', fontSize: '0.67rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
+                      border: chips[key] ? 'none' : '1px solid rgba(255,255,255,0.15)',
+                      background: chips[key] ? '#8a2be2' : 'transparent',
+                      color: chips[key] ? '#fff' : 'rgba(255,255,255,0.4)',
+                    }}
+                  >{label}{chips[key] ? '  x' : ''}</button>
+                ))}
+                {Object.values(chips).some(Boolean) && (
                   <button
-                    className="btn-primary"
-                    style={{ background: '#4caf50', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
-                    onClick={() => promoteState(activeStateFilter)}
-                  >🚀 Publish {activeStateFilter}</button>
-                  <button
-                    style={{ background: 'rgba(255,59,48,0.15)', border: '1px solid rgba(255,59,48,0.4)', padding: '8px 16px', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', color: '#ff3b30' }}
-                    onClick={() => unpublishState(activeStateFilter)}
-                  >↩ Retract {activeStateFilter}</button>
-                </>
-              )}
-              <button className="btn-primary" onClick={bulkPromote}>🚀 Bulk App Promote</button>
-              <div className="pagination">
-                <button disabled={page === 0} onClick={() => fetchSpots(page - 1, gridFilter)}>Prev</button>
-                <span className="page-indicator">Page {page + 1} of {Math.ceil(totalSpots/rowsPerPage) || 1} ({totalSpots} total)</span>
-                <button disabled={(page+1)*rowsPerPage >= totalSpots} onClick={() => fetchSpots(page + 1, gridFilter)}>Next</button>
+                    onClick={() => { const r = Object.fromEntries(Object.keys(chips).map(k => [k, false])) as Record<string,boolean>; setChips(r); fetchSpots(0, gridFilter, sortCol, sortDir, searchQuery, r, stateChip); }}
+                    style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '0.65rem', border: '1px solid rgba(255,59,48,0.3)', background: 'rgba(255,59,48,0.1)', color: '#ff3b30', cursor: 'pointer', fontWeight: 700 }}
+                  >Clear All</button>
+                )}
               </div>
             </div>
 
-            {/* =========== CARD VIEW =========== */}
-            {viewMode === 'card' && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem', padding: '0.5rem 0' }}>
-                {spots.map(row => {
-                  const photos: string[] = row.photos ? (typeof row.photos === 'string' ? JSON.parse(row.photos) : row.photos) : [];
-                  const hours: string[] = row.hours ? (typeof row.hours === 'string' ? JSON.parse(row.hours) : row.hours) : [];
-                  const S: Record<string,string> = { ENRICHED:'#ff9800', MEDIA_READY:'#e91e63', PENDING:'#8a2be2', IDENTITY_ESTABLISHED:'#5d78ff', INDEXED:'#ff5a00', REJECTED:'#666' };
-                  const sc = S[row.verification_status] || '#666';
-                  return (
-                    <div key={row.id} style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'16px', overflow:'hidden', display:'flex', flexDirection:'column', transition:'transform 0.2s, box-shadow 0.2s' }}
-                      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform='translateY(-3px)'; el.style.boxShadow='0 12px 40px rgba(0,0,0,0.4)'; }}
-                      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform='none'; el.style.boxShadow='none'; }}
-                    >
-                      <div style={{ height:'180px', background:'rgba(0,0,0,0.3)', position:'relative', overflow:'hidden' }}>
-                        {photos.length > 0
-                          ? <img src={photos[0]} alt={row.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                          : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.15)', fontSize:'2rem' }}>No Photo</div>
-                        }
-                        <div style={{ position:'absolute', top:'10px', left:'10px', background:sc, color:'#fff', padding:'3px 10px', borderRadius:'20px', fontSize:'0.6rem', fontWeight:800 }}>{row.verification_status||'PENDING'}</div>
-                        {row.is_published && <div style={{ position:'absolute', top:'10px', right:'10px', background:'#4caf50', color:'#fff', padding:'3px 10px', borderRadius:'20px', fontSize:'0.6rem', fontWeight:800 }}>LIVE</div>}
-                        {photos.length > 1 && <div style={{ position:'absolute', bottom:'8px', right:'10px', background:'rgba(0,0,0,0.7)', color:'#fff', padding:'2px 8px', borderRadius:'10px', fontSize:'0.6rem' }}>{photos.length} photos</div>}
-                      </div>
-                      <div style={{ padding:'1rem', flex:1, display:'flex', flexDirection:'column', gap:'0.5rem' }}>
-                        <div>
-                          <div style={{ fontWeight:800, fontSize:'1rem', color:'#fff', marginBottom:'2px' }}>{row.name}</div>
-                          <div style={{ fontSize:'0.8rem', color:'rgba(255,255,255,0.5)' }}>{row.street_address||'No address'} &bull; {row.city}, {row.state}</div>
-                        </div>
-                        {row.rating && (
-                          <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                            <span style={{ color:'#ffd700', fontWeight:800 }}>{row.rating}</span>
-                            <span style={{ color:'#ffd700', fontSize:'0.8rem' }}>{'★'.repeat(Math.round(row.rating))}{'☆'.repeat(5-Math.round(row.rating))}</span>
-                            <span style={{ color:'rgba(255,255,255,0.4)', fontSize:'0.75rem' }}>({(row.user_ratings_total||0).toLocaleString()})</span>
-                          </div>
-                        )}
-                        <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
-                          {row.facility_type && <span style={{ background:'rgba(138,43,226,0.2)', border:'1px solid rgba(138,43,226,0.3)', color:'#b06bff', padding:'2px 8px', borderRadius:'10px', fontSize:'0.65rem', fontWeight:700 }}>{row.facility_type.replace(/_/g,' ').toUpperCase()}</span>}
-                          {row.has_adult_night && <span style={{ background:'rgba(233,30,99,0.15)', border:'1px solid #e91e63', color:'#e91e63', padding:'2px 8px', borderRadius:'10px', fontSize:'0.65rem', fontWeight:700 }}>18+ NIGHT</span>}
-                          {row.surface_quality && <span style={{ background:'rgba(255,152,0,0.1)', border:'1px solid rgba(255,152,0,0.3)', color:'#ff9800', padding:'2px 8px', borderRadius:'10px', fontSize:'0.65rem' }}>{row.surface_quality}</span>}
-                        </div>
-                        {hours.length > 0 && <div style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.4)', borderTop:'1px solid rgba(255,255,255,0.06)', paddingTop:'0.5rem' }}>{hours[0]}</div>}
-                        <div style={{ display:'flex', gap:'8px', fontSize:'0.75rem', marginTop:'auto' }}>
-                          {row.website && <a href={row.website} target="_blank" rel="noreferrer" style={{ color:'#8a2be2', fontWeight:600 }}>Website</a>}
-                          {row.phone_number && <span style={{ color:'rgba(255,255,255,0.5)' }}>{row.phone_number}</span>}
-                        </div>
-                      </div>
-                      <div style={{ padding:'0.75rem 1rem', borderTop:'1px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(0,0,0,0.2)' }}>
-                        <label style={{ display:'flex', alignItems:'center', gap:'6px', cursor:'pointer' }}>
-                          <input type="checkbox" checked={row.is_published} onChange={e => promoteSpot(row.id, e.target.checked)} />
-                          <span style={{ fontSize:'0.7rem', fontWeight:800, color:row.is_published?'#4caf50':'rgba(255,255,255,0.4)' }}>{row.is_published?'LIVE ON APP':'PUBLISH'}</span>
-                        </label>
-                        <div style={{ display:'flex', gap:'6px' }}>
-                          <button onClick={() => startEdit(row)} style={{ padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,255,255,0.1)', background:'transparent', color:'rgba(255,255,255,0.6)', cursor:'pointer', fontSize:'0.7rem' }}>Edit</button>
-                          <button onClick={() => deleteSpot(row.id, row.name)} style={{ padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,59,48,0.3)', background:'rgba(255,59,48,0.1)', color:'#ff3b30', cursor:'pointer', fontSize:'0.7rem' }}>Delete</button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
 
-            {/* =========== LIST VIEW (eBay-style) =========== */}
-            {viewMode === 'list' && (
-              <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
-                {spots.map(row => {
-                  const photos: string[] = row.photos ? (typeof row.photos === 'string' ? JSON.parse(row.photos) : row.photos) : [];
-                  const S: Record<string,string> = { ENRICHED:'#ff9800', MEDIA_READY:'#e91e63', PENDING:'#8a2be2', IDENTITY_ESTABLISHED:'#5d78ff', INDEXED:'#ff5a00', REJECTED:'#444' };
-                  const sc = S[row.verification_status] || '#666';
-                  return (
-                    <div key={row.id} style={{ display:'flex', background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'12px', overflow:'hidden', transition:'background 0.2s', alignItems:'stretch' }}
-                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background='rgba(255,255,255,0.045)'}
-                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background='rgba(255,255,255,0.025)'}
-                    >
-                      <div style={{ width:'120px', minWidth:'120px', background:'rgba(0,0,0,0.3)', position:'relative', flexShrink:0 }}>
-                        {photos.length > 0
-                          ? <img src={photos[0]} alt={row.name} style={{ width:'120px', height:'100%', objectFit:'cover', display:'block' }} />
-                          : <div style={{ width:'100%', height:'100%', minHeight:'80px', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.15)', fontSize:'1.5rem' }}>?</div>
-                        }
-                        <div style={{ position:'absolute', bottom:0, left:0, right:0, background:sc, padding:'2px 0', textAlign:'center', fontSize:'0.5rem', fontWeight:800, color:'#fff' }}>{row.verification_status||'PENDING'}</div>
+                        {/* =========== CARD VIEW =========== */}
+            {viewMode === 'card' && (() => {
+              // ---- helpers scoped to card render ----
+              const isOpenNow = (hours: string[] | null): boolean | null => {
+                if (!hours || !hours.length) return null;
+                const now = new Date();
+                const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+                const todayName = days[now.getDay()];
+                const todayEntry = hours.find(h => h.startsWith(todayName));
+                if (!todayEntry) return null;
+                if (todayEntry.includes('Closed')) return false;
+                const match = todayEntry.match(/(\d+:\d+ (?:AM|PM)) . (\d+:\d+ (?:AM|PM))/);
+                if (!match) return null;
+                const parseTime = (s: string) => {
+                  const [t, period] = s.split(' ');
+                  let [h, m] = t.split(':').map(Number);
+                  if (period === 'PM' && h !== 12) h += 12;
+                  if (period === 'AM' && h === 12) h = 0;
+                  return h * 60 + m;
+                };
+                const cur = now.getHours() * 60 + now.getMinutes();
+                return cur >= parseTime(match[1]) && cur <= parseTime(match[2]);
+              };
+              const stars = (r: number) => {
+                const full = Math.floor(r); const half = r - full >= 0.5;
+                return Array.from({length:5},(_,i)=>
+                  i < full ? '&#9733;' : (i === full && half ? '&#11240;' : '&#9734;')
+                ).join('');
+              };
+              const todayHours = (hours: string[] | null): string => {
+                if (!hours) return '';
+                const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+                const entry = hours.find(h => h.startsWith(days[new Date().getDay()]));
+                return entry ? entry.split(': ').slice(1).join(': ') : '';
+              };
+              const domain = (url: string | null) => {
+                if (!url) return null;
+                try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
+              };
+
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.25rem', padding: '0.5rem 0' }}>
+                  {spots.map(spot => {
+                    const photo = (spot.photos as any[]|null)?.[0]?.url ?? (spot.candidate_photos as any[]|null)?.[0]?.url ?? null;
+                    const openStatus = isOpenNow(spot.opening_hours as string[] | null);
+                    const ratingNum  = spot.rating ? parseFloat(String(spot.rating)) : null;
+                    const proShop    = spot.has_pro_shop || (spot as any).has_proshop;
+                    const adultNight = spot.has_adult_night;
+                    const photoCount = ((spot.photos as any[]|null)?.length ?? 0);
+                    const candCount  = ((spot.candidate_photos as any[]|null)?.length ?? 0);
+                    const igUrl      = (spot as any).instagram_url;
+                    const fbUrl      = (spot as any).facebook_url;
+                    const ttUrl      = (spot as any).tiktok_url;
+                    const hours      = spot.opening_hours as string[] | null;
+                    const adultSched = spot.adult_night_schedule;
+
+                    return (
+                      <div key={spot.id} style={{
+                        background: 'rgba(30,30,40,0.95)', borderRadius: '14px', overflow: 'hidden',
+                        border: `1px solid ${spot.is_published ? 'rgba(76,175,80,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                        display: 'flex', flexDirection: 'column', transition: 'transform 0.18s, box-shadow 0.18s',
+                      }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 12px 40px rgba(0,0,0,0.5)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow=''; }}
+                      >
+                        {/* Hero image */}
+                        <div style={{ position: 'relative', height: '180px', background: 'rgba(255,255,255,0.03)', flexShrink: 0 }}>
+                          {photo
+                            ? <img src={photo} alt={spot.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                            : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'6px' }}>
+                                <span style={{ fontSize:'2rem', opacity:0.15 }}>[ IMG ]</span>
+                                <span style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.2)' }}>{candCount > 0 ? `${candCount} candidate(s) queued` : 'No photo'}</span>
+                              </div>
+                          }
+                          {/* Status badge */}
+                          <span style={{ position:'absolute', top:10, left:10, padding:'3px 8px', borderRadius:'6px', fontSize:'0.6rem', fontWeight:800, letterSpacing:'0.05em',
+                            background: spot.verification_status === 'MEDIA_READY' ? '#e91e63' : spot.verification_status === 'ENRICHED' ? '#ff9800' : spot.verification_status === 'INDEXED' ? '#2196f3' : 'rgba(0,0,0,0.6)',
+                            color: '#fff' }}>{spot.verification_status || 'PENDING'}</span>
+                          {/* Open Now badge */}
+                          {openStatus !== null && (
+                            <span style={{ position:'absolute', top:10, right:10, padding:'3px 8px', borderRadius:'6px', fontSize:'0.6rem', fontWeight:800,
+                              background: openStatus ? 'rgba(76,175,80,0.9)' : 'rgba(244,67,54,0.85)', color:'#fff' }}>
+                              {openStatus ? 'OPEN NOW' : 'CLOSED'}
+                            </span>
+                          )}
+                          {/* Photo count */}
+                          {photoCount > 0 && (
+                            <span style={{ position:'absolute', bottom:8, right:8, padding:'2px 7px', borderRadius:'4px', fontSize:'0.58rem', fontWeight:700, background:'rgba(0,0,0,0.65)', color:'#fff' }}>
+                              {photoCount} photo{photoCount > 1 ? 's' : ''}
+                            </span>
+                          )}
+                          {/* LIVE badge */}
+                          {spot.is_published && (
+                            <span style={{ position:'absolute', bottom:8, left:8, padding:'2px 8px', borderRadius:'4px', fontSize:'0.58rem', fontWeight:800, background:'#4caf50', color:'#fff', letterSpacing:'0.06em' }}>LIVE</span>
+                          )}
+                        </div>
+
+                        {/* Card body */}
+                        <div style={{ padding:'14px 16px', flex:1, display:'flex', flexDirection:'column', gap:'10px' }}>
+
+                          {/* Name + location */}
+                          <div>
+                            <div style={{ fontWeight:800, fontSize:'1rem', lineHeight:1.2, marginBottom:'3px' }}>{spot.name}</div>
+                            <div style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.45)' }}>
+                              {[spot.street_address || spot.address, spot.city, spot.state, spot.zip].filter(Boolean).join(', ')}
+                            </div>
+                          </div>
+
+                          {/* Rating row */}
+                          {ratingNum && (
+                            <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                              <span style={{ color:'#ffc107', fontSize:'0.85rem' }} dangerouslySetInnerHTML={{ __html: stars(ratingNum) }} />
+                              <span style={{ fontWeight:700, fontSize:'0.82rem' }}>{ratingNum.toFixed(1)}</span>
+                              {spot.user_ratings_total && <span style={{ fontSize:'0.68rem', color:'rgba(255,255,255,0.35)' }}>({spot.user_ratings_total.toLocaleString()} reviews)</span>}
+                            </div>
+                          )}
+
+                          {/* Facility chips */}
+                          <div style={{ display:'flex', gap:'5px', flexWrap:'wrap' }}>
+                            {spot.facility_type && <span style={{ padding:'2px 8px', borderRadius:'12px', fontSize:'0.6rem', fontWeight:700, background:'rgba(138,43,226,0.2)', border:'1px solid rgba(138,43,226,0.4)', color:'#c084fc' }}>{spot.facility_type}</span>}
+                            {adultNight && <span style={{ padding:'2px 8px', borderRadius:'12px', fontSize:'0.6rem', fontWeight:700, background:'rgba(233,30,99,0.15)', border:'1px solid rgba(233,30,99,0.35)', color:'#f48fb1' }}>18+ Night</span>}
+                            {proShop && <span style={{ padding:'2px 8px', borderRadius:'12px', fontSize:'0.6rem', fontWeight:700, background:'rgba(255,152,0,0.15)', border:'1px solid rgba(255,152,0,0.35)', color:'#ffcc80' }}>Pro Shop</span>}
+                            {spot.has_rental && <span style={{ padding:'2px 8px', borderRadius:'12px', fontSize:'0.6rem', fontWeight:700, background:'rgba(33,150,243,0.15)', border:'1px solid rgba(33,150,243,0.3)', color:'#90caf9' }}>Rentals</span>}
+                            {(spot as any).hosts_derby && <span style={{ padding:'2px 8px', borderRadius:'12px', fontSize:'0.6rem', fontWeight:700, background:'rgba(76,175,80,0.15)', border:'1px solid rgba(76,175,80,0.3)', color:'#a5d6a7' }}>Derby</span>}
+                            {spot.surface_type && <span style={{ padding:'2px 8px', borderRadius:'12px', fontSize:'0.6rem', fontWeight:700, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.5)' }}>{String(spot.surface_type)}</span>}
+                          </div>
+
+                          {/* Today's hours + Open Now */}
+                          {hours && (
+                            <div style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.55)' }}>
+                              <span style={{ color:'rgba(255,255,255,0.3)', marginRight:'4px' }}>Today:</span>
+                              <span style={{ color: openStatus === true ? '#4caf50' : openStatus === false ? '#f44336' : 'rgba(255,255,255,0.55)', fontWeight:600 }}>{todayHours(hours) || 'Hours available'}</span>
+                            </div>
+                          )}
+
+                          {/* Full hours (collapsed by default - show on card if small list, else skip) */}
+                          {hours && hours.length > 0 && (
+                            <details style={{ fontSize:'0.68rem' }}>
+                              <summary style={{ color:'rgba(255,255,255,0.3)', cursor:'pointer', fontSize:'0.65rem', userSelect:'none', marginBottom:'4px' }}>All hours ({hours.length} days)</summary>
+                              {hours.map((h, i) => (
+                                <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'1px 0', color:'rgba(255,255,255,0.45)' }}>
+                                  <span style={{ color:'rgba(255,255,255,0.25)', marginRight:'8px' }}>{h.split(':')[0]}</span>
+                                  <span>{h.split(': ').slice(1).join(': ')}</span>
+                                </div>
+                              ))}
+                            </details>
+                          )}
+
+                          {/* Adult night schedule */}
+                          {adultSched && (
+                            <div style={{ padding:'8px', borderRadius:'6px', background:'rgba(233,30,99,0.08)', border:'1px solid rgba(233,30,99,0.2)', fontSize:'0.68rem' }}>
+                              <span style={{ color:'#f48fb1', fontWeight:700, display:'block', marginBottom:'3px' }}>18+ / Adult Night:</span>
+                              <span style={{ color:'rgba(255,255,255,0.5)' }}>{typeof adultSched === 'object' ? JSON.stringify(adultSched) : String(adultSched)}</span>
+                            </div>
+                          )}
+                          {spot.adult_night_details && (
+                            <div style={{ padding:'6px 8px', borderRadius:'6px', background:'rgba(233,30,99,0.06)', fontSize:'0.67rem', color:'rgba(255,255,255,0.45)', borderLeft:'2px solid rgba(233,30,99,0.3)' }}>
+                              {(spot as any).adult_night_details}
+                            </div>
+                          )}
+
+                          {/* Website */}
+                          {spot.website && (
+                            <a href={spot.website} target="_blank" rel="noreferrer"
+                              style={{ fontSize:'0.7rem', color:'#64b5f6', textDecoration:'none', wordBreak:'break-all', display:'block' }}
+                              title={spot.website}
+                            >{spot.website}</a>
+                          )}
+
+                          {/* Phone */}
+                          {(spot.phone || (spot as any).phone_number) && (
+                            <div style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.45)' }}>
+                              <span style={{ color:'rgba(255,255,255,0.25)', marginRight:'4px' }}>Ph:</span>
+                              {spot.phone || (spot as any).phone_number}
+                            </div>
+                          )}
+
+                          {/* Social links */}
+                          {(igUrl || fbUrl || ttUrl) && (
+                            <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+                              {igUrl && <a href={igUrl} target="_blank" rel="noreferrer" style={{ fontSize:'0.65rem', color:'#c13584', textDecoration:'none', padding:'2px 8px', borderRadius:'10px', border:'1px solid rgba(193,53,132,0.35)', background:'rgba(193,53,132,0.1)' }}>Instagram</a>}
+                              {fbUrl && <a href={fbUrl} target="_blank" rel="noreferrer" style={{ fontSize:'0.65rem', color:'#1877f2', textDecoration:'none', padding:'2px 8px', borderRadius:'10px', border:'1px solid rgba(24,119,242,0.35)', background:'rgba(24,119,242,0.1)' }}>Facebook</a>}
+                              {ttUrl && <a href={ttUrl} target="_blank" rel="noreferrer" style={{ fontSize:'0.65rem', color:'#ff0050', textDecoration:'none', padding:'2px 8px', borderRadius:'10px', border:'1px solid rgba(255,0,80,0.35)', background:'rgba(255,0,80,0.1)' }}>TikTok</a>}
+                            </div>
+                          )}
+
+                          {/* Pipeline health row */}
+                          <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', marginTop:'auto', paddingTop:'8px', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+                            <span style={{ fontSize:'0.58rem', fontWeight:700, padding:'2px 6px', borderRadius:'4px',
+                              background: spot.is_deep_crawled ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.05)',
+                              border: `1px solid ${spot.is_deep_crawled ? 'rgba(76,175,80,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                              color: spot.is_deep_crawled ? '#81c784' : 'rgba(255,255,255,0.25)' }}>
+                              {spot.is_deep_crawled ? 'DEEP CRAWLED' : 'NOT CRAWLED'}
+                            </span>
+                            {photoCount > 0 && <span style={{ fontSize:'0.58rem', fontWeight:700, padding:'2px 6px', borderRadius:'4px', background:'rgba(233,30,99,0.1)', border:'1px solid rgba(233,30,99,0.25)', color:'#f48fb1' }}>{photoCount} Photo{photoCount>1?'s':''}</span>}
+                            {spot.google_place_id && <span style={{ fontSize:'0.58rem', fontWeight:700, padding:'2px 6px', borderRadius:'4px', background:'rgba(66,133,244,0.1)', border:'1px solid rgba(66,133,244,0.25)', color:'#90caf9' }}>Google ID</span>}
+                            {spot.last_enriched_at && <span style={{ fontSize:'0.56rem', color:'rgba(255,255,255,0.2)', marginLeft:'auto' }}>Enriched: {new Date(spot.last_enriched_at).toLocaleDateString()}</span>}
+                          </div>
+
+                          {/* Publish toggle + quick actions */}
+                          <div style={{ display:'flex', gap:'8px', alignItems:'center', marginTop:'4px' }}>
+                            <label style={{ display:'flex', alignItems:'center', gap:'6px', cursor:'pointer', fontSize:'0.7rem', fontWeight:700,
+                              color: spot.is_published ? '#4caf50' : 'rgba(255,255,255,0.4)' }}>
+                              <input type="checkbox" checked={!!spot.is_published}
+                                onChange={async () => {
+                                  await fetch(`${API_BASE}/api/spots/${spot.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ is_published: !spot.is_published }) });
+                                  fetchSpots(page, gridFilter);
+                                }} style={{ accentColor:'#4caf50', width:'14px', height:'14px' }} />
+                              {spot.is_published ? 'LIVE' : 'Publish'}
+                            </label>
+                            <button onClick={() => { setEditingId(spot.id); setEditForm(spot); }}
+                              style={{ marginLeft:'auto', padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,255,255,0.15)', background:'transparent', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:'0.65rem' }}>Edit</button>
+                            <button onClick={async () => { if(confirm(`Delete ${spot.name}?`)) { await fetch(`${API_BASE}/api/spots/${spot.id}`,{method:'DELETE'}); fetchSpots(page,gridFilter); } }}
+                              style={{ padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,59,48,0.25)', background:'transparent', color:'rgba(255,59,48,0.6)', cursor:'pointer', fontSize:'0.65rem' }}>Del</button>
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ flex:1, padding:'0.75rem', display:'flex', gap:'1rem', alignItems:'center', flexWrap:'wrap' }}>
-                        <div style={{ minWidth:'180px', flex:2 }}>
-                          <div style={{ fontWeight:700, fontSize:'0.9rem', color:'#fff' }}>{row.name}</div>
-                          <div style={{ fontSize:'0.75rem', color:'rgba(255,255,255,0.45)' }}>{row.city}, {row.state}</div>
-                          {row.street_address && <div style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.3)', marginTop:'2px' }}>{row.street_address}</div>}
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+                        {/* =========== LIST VIEW =========== */}
+            {viewMode === 'list' && (() => {
+              const isOpenNow = (hours: string[] | null): boolean | null => {
+                if (!hours || !hours.length) return null;
+                const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+                const todayEntry = hours.find(h => h.startsWith(days[new Date().getDay()]));
+                if (!todayEntry) return null;
+                if (todayEntry.includes('Closed')) return false;
+                const match = todayEntry.match(/(\d+:\d+ (?:AM|PM)) . (\d+:\d+ (?:AM|PM))/);
+                if (!match) return null;
+                const p = (s: string) => { const [t,per]=s.split(' '); let [h,m]=t.split(':').map(Number); if(per==='PM'&&h!==12)h+=12; if(per==='AM'&&h===12)h=0; return h*60+m; };
+                const cur = new Date().getHours()*60+new Date().getMinutes();
+                return cur >= p(match[1]) && cur <= p(match[2]);
+              };
+              const todayHours = (hours: string[] | null) => {
+                if (!hours) return null;
+                const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+                const e = hours.find(h => h.startsWith(days[new Date().getDay()]));
+                return e ? e.split(': ').slice(1).join(': ') : null;
+              };
+
+              return (
+                <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+                  {spots.map(spot => {
+                    const photo    = (spot.photos as any[]|null)?.[0]?.url ?? (spot.candidate_photos as any[]|null)?.[0]?.url ?? null;
+                    const openSt   = isOpenNow(spot.opening_hours as string[] | null);
+                    const ratingN  = spot.rating ? parseFloat(String(spot.rating)) : null;
+                    const proShop  = spot.has_pro_shop || (spot as any).has_proshop;
+                    const hours    = spot.opening_hours as string[] | null;
+                    const igUrl    = (spot as any).instagram_url;
+                    const fbUrl    = (spot as any).facebook_url;
+                    const ttUrl    = (spot as any).tiktok_url;
+                    const photoCount = (spot.photos as any[]|null)?.length ?? 0;
+                    const STATUS_COLOR: Record<string,string> = {
+                      MEDIA_READY:'#e91e63', ENRICHED:'#ff9800', INDEXED:'#2196f3',
+                      IDENTITY_ESTABLISHED:'#9c27b0', PENDING:'rgba(255,255,255,0.3)', REJECTED:'#f44336'
+                    };
+                    const sColor = STATUS_COLOR[spot.verification_status ?? 'PENDING'] ?? 'rgba(255,255,255,0.3)';
+
+                    return (
+                      <div key={spot.id} style={{
+                        display:'grid', gridTemplateColumns: '88px 1fr auto',
+                        background:'rgba(25,25,35,0.98)', borderRadius:'10px', overflow:'hidden',
+                        border:`1px solid ${spot.is_published ? 'rgba(76,175,80,0.3)' : 'rgba(255,255,255,0.07)'}`,
+                        borderLeft:`4px solid ${sColor}`,
+                        transition:'background 0.15s',
+                      }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background='rgba(40,40,55,0.98)'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background='rgba(25,25,35,0.98)'}
+                      >
+                        {/* Thumbnail */}
+                        <div style={{ position:'relative', height:'88px',  background:'rgba(255,255,255,0.03)', flexShrink:0 }}>
+                          {photo
+                            ? <img src={photo} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                            : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.6rem', color:'rgba(255,255,255,0.15)' }}>NO IMG</div>
+                          }
+                          {/* Open now dot */}
+                          {openSt !== null && (
+                            <span style={{ position:'absolute', bottom:4, right:4, width:9, height:9, borderRadius:'50%', background: openSt ? '#4caf50' : '#f44336', display:'block', boxShadow: openSt ? '0 0 6px #4caf50' : 'none' }} title={openSt ? 'Open Now' : 'Closed'} />
+                          )}
                         </div>
-                        <div style={{ display:'flex', gap:'1rem', flex:3, flexWrap:'wrap', alignItems:'center' }}>
-                          <div style={{ minWidth:'90px', textAlign:'center' }}>
-                            {row.rating
-                              ? <><div style={{ color:'#ffd700', fontWeight:800, fontSize:'1rem' }}>{row.rating}</div><div style={{ color:'#ffd700', fontSize:'0.65rem' }}>{'★'.repeat(Math.round(row.rating))}{'☆'.repeat(5-Math.round(row.rating))}</div><div style={{ color:'rgba(255,255,255,0.3)', fontSize:'0.65rem' }}>{(row.user_ratings_total||0).toLocaleString()} reviews</div></>
-                              : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:'0.75rem' }}>No rating</span>
-                            }
+
+                        {/* Main content */}
+                        <div style={{ padding:'8px 12px', overflow:'hidden', display:'flex', flexDirection:'column', gap:'4px' }}>
+                          {/* Name row */}
+                          <div style={{ display:'flex', alignItems:'baseline', gap:'8px', flexWrap:'wrap' }}>
+                            <span style={{ fontWeight:800, fontSize:'0.88rem', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:'260px' }}>{spot.name}</span>
+                            {spot.is_published && <span style={{ fontSize:'0.55rem', fontWeight:800, color:'#4caf50', border:'1px solid rgba(76,175,80,0.5)', padding:'1px 5px', borderRadius:'4px', flexShrink:0 }}>LIVE</span>}
+                            <span style={{ fontSize:'0.6rem', fontWeight:700, color:sColor, flexShrink:0 }}>{spot.verification_status || 'PENDING'}</span>
                           </div>
-                          <div style={{ display:'flex', flexDirection:'column', gap:'4px', minWidth:'100px' }}>
-                            {row.facility_type && <span style={{ fontSize:'0.65rem', color:'#b06bff', fontWeight:700 }}>{row.facility_type.replace(/_/g,' ').toUpperCase()}</span>}
-                            {row.has_adult_night && <span style={{ fontSize:'0.65rem', color:'#e91e63', fontWeight:700 }}>18+ NIGHT</span>}
-                            {row.phone_number && <span style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.4)' }}>{row.phone_number}</span>}
+
+                          {/* Address */}
+                          <div style={{ fontSize:'0.68rem', color:'rgba(255,255,255,0.35)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                            {[spot.city, spot.state].filter(Boolean).join(', ')}
+                            {spot.street_address ? ` — ${spot.street_address}` : ''}
                           </div>
-                          <div style={{ minWidth:'80px' }}>
-                            {row.website ? <a href={row.website} target="_blank" rel="noreferrer" style={{ color:'#8a2be2', fontWeight:600, fontSize:'0.75rem' }}>Website</a> : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:'0.75rem' }}>No website</span>}
+
+                          {/* Data row: rating | hours | website | socials */}
+                          <div style={{ display:'flex', gap:'10px', alignItems:'center', flexWrap:'wrap', marginTop:'2px' }}>
+                            {ratingN && (
+                              <span style={{ fontSize:'0.68rem', color:'#ffc107', fontWeight:700 }}>
+                                {'*'.repeat(Math.round(ratingN))} {ratingN.toFixed(1)}
+                                {spot.user_ratings_total && <span style={{ color:'rgba(255,255,255,0.25)', fontWeight:400 }}> ({spot.user_ratings_total.toLocaleString()})</span>}
+                              </span>
+                            )}
+                            {hours && (
+                              <span style={{ fontSize:'0.65rem', color: openSt === true ? '#4caf50' : openSt === false ? '#f44336' : 'rgba(255,255,255,0.35)', fontWeight: openSt !== null ? 700 : 400 }}>
+                                {openSt === true ? 'Open: ' : openSt === false ? 'Closed ' : ''}{todayHours(hours) || 'Hours on file'}
+                              </span>
+                            )}
+                            {spot.website && (
+                              <a href={spot.website} target="_blank" rel="noreferrer"
+                                style={{ fontSize:'0.65rem', color:'#64b5f6', textDecoration:'none', maxWidth:'180px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'block' }}
+                                title={spot.website}>{spot.website.replace(/^https?:\/\/(www\.)?/,'')}</a>
+                            )}
+                          </div>
+
+                          {/* Badges row */}
+                          <div style={{ display:'flex', gap:'4px', flexWrap:'wrap', alignItems:'center' }}>
+                            {spot.has_adult_night && <span style={{ fontSize:'0.56rem', fontWeight:700, padding:'1px 6px', borderRadius:'8px', background:'rgba(233,30,99,0.15)', color:'#f48fb1', border:'1px solid rgba(233,30,99,0.25)' }}>18+ Night</span>}
+                            {proShop && <span style={{ fontSize:'0.56rem', fontWeight:700, padding:'1px 6px', borderRadius:'8px', background:'rgba(255,152,0,0.12)', color:'#ffcc80', border:'1px solid rgba(255,152,0,0.25)' }}>Pro Shop</span>}
+                            {spot.is_deep_crawled && <span style={{ fontSize:'0.56rem', fontWeight:700, padding:'1px 6px', borderRadius:'8px', background:'rgba(76,175,80,0.1)', color:'#81c784', border:'1px solid rgba(76,175,80,0.2)' }}>Deep Crawled</span>}
+                            {photoCount > 0 && <span style={{ fontSize:'0.56rem', fontWeight:700, padding:'1px 6px', borderRadius:'8px', background:'rgba(233,30,99,0.1)', color:'#f06292', border:'1px solid rgba(233,30,99,0.2)' }}>{photoCount} Photo{photoCount>1?'s':''}</span>}
+                            {/* Social indicators */}
+                            {igUrl && <span style={{ fontSize:'0.56rem', fontWeight:700, padding:'1px 6px', borderRadius:'8px', background:'rgba(193,53,132,0.12)', color:'#c13584', border:'1px solid rgba(193,53,132,0.25)' }}>IG</span>}
+                            {fbUrl && <span style={{ fontSize:'0.56rem', fontWeight:700, padding:'1px 6px', borderRadius:'8px', background:'rgba(24,119,242,0.12)', color:'#1877f2', border:'1px solid rgba(24,119,242,0.25)' }}>FB</span>}
+                            {ttUrl && <span style={{ fontSize:'0.56rem', fontWeight:700, padding:'1px 6px', borderRadius:'8px', background:'rgba(255,0,80,0.1)', color:'#ff0050', border:'1px solid rgba(255,0,80,0.2)' }}>TT</span>}
                           </div>
                         </div>
-                        <div style={{ display:'flex', flexDirection:'column', gap:'6px', alignItems:'flex-end', minWidth:'90px' }}>
-                          <label style={{ display:'flex', alignItems:'center', gap:'4px', cursor:'pointer' }}>
-                            <input type="checkbox" checked={row.is_published} onChange={e => promoteSpot(row.id, e.target.checked)} />
-                            <span style={{ fontSize:'0.65rem', fontWeight:800, color:row.is_published?'#4caf50':'rgba(255,255,255,0.35)' }}>{row.is_published?'LIVE':'PUBLISH'}</span>
+
+                        {/* Actions column */}
+                        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'6px', padding:'0 12px', borderLeft:'1px solid rgba(255,255,255,0.05)', flexShrink:0 }}>
+                          <label style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'2px', cursor:'pointer', fontSize:'0.55rem', fontWeight:800, color: spot.is_published ? '#4caf50' : 'rgba(255,255,255,0.3)' }}>
+                            <input type="checkbox" checked={!!spot.is_published}
+                              onChange={async () => {
+                                await fetch(`${API_BASE}/api/spots/${spot.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({is_published:!spot.is_published})});
+                                fetchSpots(page,gridFilter);
+                              }} style={{ accentColor:'#4caf50', width:'16px', height:'16px' }} />
+                            {spot.is_published ? 'LIVE' : 'Publish'}
                           </label>
-                          <button onClick={() => startEdit(row)} style={{ padding:'3px 8px', borderRadius:'5px', border:'1px solid rgba(255,255,255,0.1)', background:'transparent', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:'0.65rem' }}>Edit</button>
-                          <button onClick={() => deleteSpot(row.id, row.name)} style={{ padding:'3px 8px', borderRadius:'5px', border:'1px solid rgba(255,59,48,0.2)', background:'transparent', color:'#ff3b30', cursor:'pointer', fontSize:'0.65rem' }}>Del</button>
+                          <button onClick={() => { setEditingId(spot.id); setEditForm(spot); }}
+                            style={{ padding:'3px 10px', borderRadius:'5px', border:'1px solid rgba(255,255,255,0.12)', background:'transparent', color:'rgba(255,255,255,0.45)', cursor:'pointer', fontSize:'0.6rem' }}>Edit</button>
+                          <button onClick={async () => { if(confirm(`Delete ${spot.name}?`)) { await fetch(`${API_BASE}/api/spots/${spot.id}`,{method:'DELETE'}); fetchSpots(page,gridFilter); } }}
+                            style={{ padding:'3px 10px', borderRadius:'5px', border:'1px solid rgba(255,59,48,0.2)', background:'transparent', color:'rgba(255,59,48,0.5)', cursor:'pointer', fontSize:'0.6rem' }}>Del</button>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {/* =========== TABLE VIEW =========== */}
             {viewMode === 'table' && (
@@ -1463,17 +1778,17 @@ function App() {
                              }}
                              style={{ padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', appearance: 'menulist' }}
                            >
-                              <option value="PENDING">🕒 PENDING (PH_1)</option>
-                              <option value="IDENTITY_ESTABLISHED">🕵️ IDENTIFIED (PH_2)</option>
-                              <option value="INDEXED">🕸️ INDEXED (PH_3)</option>
-                              <option value="ENRICHED">✨ ENRICHED (Gold Standard)</option>
-                              <option value="MEDIA_READY">📸 MEDIA_READY (PH_5)</option>
-                              <option value="DEPRECATED">⚰️ Deprecated</option>
-                              <option value="REJECTED">🚫 Graveyard</option>
+                              <option value="PENDING"> PENDING (PH_1)</option>
+                              <option value="IDENTITY_ESTABLISHED">️ IDENTIFIED (PH_2)</option>
+                              <option value="INDEXED">️ INDEXED (PH_3)</option>
+                              <option value="ENRICHED"> ENRICHED (Gold Standard)</option>
+                              <option value="MEDIA_READY"> MEDIA_READY (PH_5)</option>
+                              <option value="DEPRECATED">️ Deprecated</option>
+                              <option value="REJECTED"> Graveyard</option>
                            </select>
                         </td>
                         <td>
-                           {row.rating ? <span style={{color: '#ffd700', fontWeight:'bold', textShadow: '0 0 5px rgba(255,215,0,0.5)'}}>{row.rating}★ <span style={{fontSize: '0.7em', color: 'gray'}}>({row.user_ratings_total || 0})</span></span> : <span style={{color:'gray'}}>-</span>}
+                           {row.rating ? <span style={{color: '#ffd700', fontWeight:'bold', textShadow: '0 0 5px rgba(255,215,0,0.5)'}}>{row.rating} <span style={{fontSize: '0.7em', color: 'gray'}}>({row.user_ratings_total || 0})</span></span> : <span style={{color:'gray'}}>-</span>}
                         </td>
                         <td>
                            {isEditing ? (
@@ -1495,7 +1810,7 @@ function App() {
                         <td>
                           {isEditing ? <input type="checkbox" checked={editForm.has_adult_night} onChange={e => setEditForm({...editForm, has_adult_night: e.target.checked})} /> : (
                             <div style={{display:'flex', alignItems: 'center', gap: '5px', justifyContent: 'center'}}>
-                               {row.has_adult_night ? '✅' : '❌'}
+                               {row.has_adult_night ? '' : ''}
                                {row.adult_night_details && <span title={row.adult_night_details} style={{cursor: 'help'}}>ℹ️</span>}
                             </div>
                           )}
@@ -1517,11 +1832,11 @@ function App() {
                                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: row.is_published ? '#4caf50' : 'var(--text-secondary)', userSelect:'none' }}>APP_LIVE</span>
                             </label>
                             {isEditing ? (
-                              <button className="btn-icon btn-save-inline" onClick={saveEdit}>💾</button>
+                              <button className="btn-icon btn-save-inline" onClick={saveEdit}></button>
                             ) : (
-                              <button className="btn-icon" onClick={() => startEdit(row)}>✏️</button>
+                              <button className="btn-icon" onClick={() => startEdit(row)}>️</button>
                             )}
-                            <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>🗑️</button>
+                            <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>️</button>
                           </div>
                         </td>
                       </tr>

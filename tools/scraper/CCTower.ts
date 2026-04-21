@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -385,23 +385,45 @@ app.post('/api/discover', async (req, res) => {
 });
 
 app.get('/api/spots', async (req, res) => {
-  const { status, limit = 50, offset = 0, sortCol = 'last_attempted_at', sortDir = 'desc', search = '' } = req.query;
-  let query = supabase.from('skate_spots').select('*', { count: 'exact' });
-    if (status && status !== 'ALL') {
-      if (status === 'UNVERIFIED' || status === 'PENDING') {
-         query = query.or('verification_status.eq.PENDING,verification_status.is.null');
-      } else {
-         query = query.eq('verification_status', status);
-      }
-    }
+  const {
+    status, limit = 50, offset = 0,
+    sortCol = 'last_attempted_at', sortDir = 'desc', search = '',
+    has_photos, has_hours, has_website, has_adult_night,
+    has_pro_shop: filterProShop, is_published: filterPublished,
+    state: stateFilter, is_deep_crawled,
+  } = req.query;
 
-  if (search) {
-     query = query.or(`name.ilike.%${search}%,city.ilike.%${search}%,state.ilike.%${search}%`);
+  let query = supabase.from('skate_spots').select('*', { count: 'exact' });
+
+  if (status && status !== 'ALL') {
+    if (status === 'UNVERIFIED' || status === 'PENDING') {
+      query = query.or('verification_status.eq.PENDING,verification_status.is.null');
+    } else {
+      query = query.eq('verification_status', status);
+    }
   }
-  
-  query = query.order(String(sortCol), { ascending: sortDir === 'asc', nullsFirst: false })
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,city.ilike.%${search}%,state.ilike.%${search}%`);
+  }
+  if (stateFilter && String(stateFilter).length === 2) {
+    query = query.eq('state', String(stateFilter).toUpperCase());
+  }
+  if (has_photos === 'true')        query = query.not('photos', 'is', null);
+  if (has_hours === 'true')         query = query.not('opening_hours', 'is', null);
+  if (has_website === 'true')       query = query.not('website', 'is', null);
+  if (has_adult_night === 'true')   query = query.eq('has_adult_night', true);
+  if (filterProShop === 'true')     query = query.or('has_pro_shop.eq.true,has_proshop.eq.true');
+  if (filterPublished === 'true')   query = query.eq('is_published', true);
+  if (filterPublished === 'false')  query = query.or('is_published.eq.false,is_published.is.null');
+  if (is_deep_crawled === 'true')   query = query.eq('is_deep_crawled', true);
+
+  const ALLOWED_SORT = ['last_attempted_at','last_enriched_at','name','rating',
+    'user_ratings_total','state','city','verification_status','created_at'];
+  const safeSort = ALLOWED_SORT.includes(String(sortCol)) ? String(sortCol) : 'last_attempted_at';
+
+  query = query.order(safeSort, { ascending: sortDir === 'asc', nullsFirst: false })
                .range(Number(offset), Number(offset) + Number(limit) - 1);
-               
+
   const { data, error, count } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ spots: data, total: count });
