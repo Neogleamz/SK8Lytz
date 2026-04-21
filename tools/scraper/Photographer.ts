@@ -129,12 +129,12 @@ async function runPhotographerLoop() {
 
   while (true) {
     // Query: next spot with candidates not yet having final photos
+    // No status filter — pick up ANY record the Indexer has fed candidates to
     const { data: target, error: queryError } = await supabase
       .from('skate_spots')
       .select('id, name, state, candidate_photos, photos, verification_status')
       .not('candidate_photos', 'is', null)
       .is('photos', null)
-      .in('verification_status', ['ENRICHED', 'IDENTITY_ESTABLISHED', 'INDEXED'])
       .order('last_attempted_at', { ascending: true, nullsFirst: true })
       .limit(1)
       .single();

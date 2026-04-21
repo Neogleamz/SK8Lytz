@@ -266,7 +266,8 @@ async function runIndexer() {
 
       const browser = await puppeteer.launch({
         headless: statusRes.isHeadless ? 'new' : false,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        protocolTimeout: 60000,  // 60s max for any CDP protocol call (default: 180s)
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
       });
 
       const page = await browser.newPage();
