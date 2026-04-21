@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import USAMap from './USMap';
 import './App.css';
 
@@ -21,106 +21,576 @@ const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
       setTimeLeft(diff);
     }, 1000);
 
-    return (
+    return () => clearInterval(interval);
+  }, [nextRunAt]);
+
+  if (timeLeft === null) return <div style={{color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem'}}>IDLE</div>;
+  if (timeLeft === 0) return <div style={{color: 'var(--success)', fontWeight: 800, fontSize: '0.8rem'}}>RUNNING...</div>;
+
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff' }}>{timeLeft}s</div>
+      <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>Next Run</div>
+    </div>
+  );
+};
+
+const US_STATES = [
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'
+];
+
+function App() {
+  const [activeTab, setActiveTab] = useState<'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5' | 'phase6'>('phase1');
+  const [seedProvider, setSeedProvider] = useState<'osm'|'google'>('google');
+
+
+  // --- Sys Dashboard States ---
+  const [status, setStatus] = useState<any>(null);
+  const [targetFacilities, setTargetFacilities] = useState<string[]>([]);
+  const [stateOverride, setStateOverride] = useState<string[]>([]);
+  const [sleepInterval, setSleepInterval] = useState<number>(5000);
+  const [isHeadless, setIsHeadless] = useState<boolean>(true);
+  const [identityRotation, setIdentityRotation] = useState<boolean>(true);
+  const [randomizeViewport, setRandomizeViewport] = useState<boolean>(true);
+  
+  // --- Evasion Tactics States ---
+  const [cooldownBase, setCooldownBase] = useState<number>(300000);
+  const [cooldownJitter, setCooldownJitter] = useState<number>(20);
+  const [maxStrikes, setMaxStrikes] = useState<number>(3);
+  const [autoResume, setAutoResume] = useState<boolean>(true);
+
+  // --- Logs & Queue States ---
+  const [logs, setLogs] = useState<{type: string, message: string, source?: string}[]>([]);
+  const logsRef = useRef<HTMLDivElement>(null);
+  const activeTabRef = useRef<typeof activeTab>('phase1');
+
+  // --- Harvest Manager States ---
+  const [harvestData, setHarvestData] = useState<{seededStates: string[], stateCounts: Record<string, number>, allStates: string[]}>({ seededStates: [], stateCounts: {}, allStates: [] });
+  const [coverageStats, setCoverageStats] = useState<any[]>([]);
+  const [databankCoverage, setDatabankCoverage] = useState<any[]>([]);
+  const [historyLogs, setHistoryLogs] = useState<string[]>([]);
+
+  // --- Databank Map Mode ---
+  const [mapMode, setMapMode] = useState<'quality' | 'published'>('quality');
+  const [activeStateFilter, setActiveStateFilter] = useState<string | null>(null);
+
+  // --- Graveyard Grid States ---
+  const [spots, setSpots] = useState<any[]>([]);
+  const [totalSpots, setTotalSpots] = useState(0);
+  const [page, setPage] = useState(0);
+  const [gridFilter, setGridFilter] = useState('ALL');
+  const [sortCol, setSortCol] = useState('last_attempted_at');
+  const [sortDir, setSortDir] = useState<'asc'|'desc'>('desc');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<any>({});
+  const [isStarting, setIsStarting] = useState(false);
+  const rowsPerPage = 50;
+
+  // --- Phase 6 View Mode ('card' | 'list' | 'table') ---
+  const [viewMode, setViewMode] = useState<'card' | 'list' | 'table'>('table');
+
+  // --- Phase 6 Filter Chips (server-side) ---
+  const [chips, setChips] = useState<Record<string,boolean>>({
+    has_photos: false, has_hours: false, has_website: false,
+    has_adult_night: false, has_pro_shop: false, is_published: false,
+    is_deep_crawled: false,
+  });
+  const [stateChip, setStateChip] = useState('');
+
+  useEffect(() => {
+    fetchSystemStatus();
+    fetchQueue();          // Full initial load — all phases
+    fetchHarvestStatus();
+    fetchHistory();
+    fetchCoverage();
+    
+    const interval = setInterval(() => {
+      fetchSystemStatus();
+      fetchCoverage();
+      // Only re-fetch queue for the currently visible tab (not all 6 every 5s)
+      fetchQueue([activeTabRef.current, 'recent']);
+    }, 5000);
+
+    const es = new EventSource(`${API_BASE}/api/logs/stream`);
+    es.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      setLogs(prev => {
+        const newLogs = [...prev, data];
+        return newLogs.slice(-50); 
+      });
+    };
+
+    return () => {
+      clearInterval(interval);
+      es.close();
+    };
+  }, []);
+
+  // Keep activeTabRef in sync so the polling interval always reads current tab
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+
+  useEffect(() => {
+    if (logsRef.current) {
+      logsRef.current.scrollTop = logsRef.current.scrollHeight;
+    }
+  }, [logs]);
+
+  useEffect(() => {
+    if (activeTab === 'phase1') {
+      fetchDatabankCoverage(); // Phase 1 map uses same source — Google record density per state
+    }
+    if (activeTab === 'phase6') {
+      fetchSpots(0, gridFilter, sortCol, sortDir, searchQuery);
+      fetchDatabankCoverage();
+    }
+  }, [activeTab, gridFilter, sortCol, sortDir, searchQuery, chips, stateChip]);
+
+  // --- Data Fetchers ---
+  const fetchSystemStatus = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/status`);
+      if (res.ok) {
+        const data = await res.json();
+        setStatus(data);
+        setIsHeadless(data.isHeadless ?? true);
+      }
+      
+      const configRes = await fetch(`${API_BASE}/config`);
+      if (configRes.ok) {
+         const { config } = await configRes.json();
+         if (config) {
+            setTargetFacilities(config.target_facilities || []);
+            setStateOverride(Array.isArray(config.state_override) ? config.state_override : (config.state_override ? [config.state_override] : []));
+            setSleepInterval(config.sleep_interval_ms || 10000);
+            setCooldownBase(config.cooldown_base_ms || 300000);
+            setCooldownJitter(config.cooldown_jitter_pct || 20);
+            setMaxStrikes(config.max_consecutive_errors || 3);
+            setAutoResume(config.auto_resume_enabled ?? true);
+            setIdentityRotation(config.identity_rotation_enabled ?? true);
+            setRandomizeViewport(config.randomize_viewport_enabled ?? true);
+         }
+      }
+    } catch {
+      setStatus({ isRunning: false, currentTarget: 'API OFFLINE', processedCount: 0, enrichedCount: 0, verifiedCount: 0, errorCount: 0, lastError: 'Could not connect.' });
+    }
+  };
+
+  const [phaseQueues, setPhaseQueues] = useState<Record<string, any[]>>({});
+
+  const fetchQueue = async (only?: string[]) => {
+    // If `only` is provided, fetch just those phases; otherwise fetch all (initial load)
+    const phasesToFetch = only ?? ['phase1', 'phase2', 'phase3', 'phase4', 'phase5', 'recent'];
+    try {
+      const results = await Promise.all(
+         phasesToFetch.map(phase => 
+            phase === 'recent' 
+              ? fetch(`${API_BASE}/api/recent-spots`).then(r => r.json())
+              : fetch(`${API_BASE}/api/queue?phase=${phase}`).then(r => r.json())
+         )
+      );
+      
+      // Merge into existing state so unloaded phases retain their last known values
+      const updates: Record<string, any[]> = {};
+      phasesToFetch.forEach((phase, idx) => {
+         updates[phase] = results[idx]?.spots || [];
+      });
+      setPhaseQueues(prev => ({ ...prev, ...updates }));
+    } catch (e) {
+      console.error('Queue fetch error:', e);
+    }
+  }
+
+  const fetchHarvestStatus = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/harvest/status`);
+      if (res.ok) setHarvestData(await res.json());
+    } catch {}
+  };
+
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/logs/history`);
+      if (res.ok) {
+        const data = await res.json();
+        setHistoryLogs(data.history || []);
+      }
+    } catch {}
+  };
+
+  const fetchCoverage = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/stats/coverage`);
+      if (res.ok) {
+        const data = await res.json();
+        setCoverageStats(data.stats || []);
+      }
+    } catch {}
+  };
+
+  const fetchDatabankCoverage = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/stats/databank-coverage`);
+      if (res.ok) {
+        const data = await res.json();
+        setDatabankCoverage(data.rows || []);
+      }
+    } catch {}
+  };
+
+  const fetchSpots = async (pageIdx: number, filter: string, col = sortCol, dir = sortDir, search = searchQuery, activeChips = chips, activeState = stateChip) => {
+    try {
+      const offset = pageIdx * rowsPerPage;
+      const chipParams = Object.entries(activeChips)
+        .filter(([, v]) => v)
+        .map(([k]) => `${k}=true`)
+        .join('&');
+      const stateParam = activeState.length === 2 ? `&state=${activeState.toUpperCase()}` : '';
+      const url = `${API_BASE}/api/spots?limit=${rowsPerPage}&offset=${offset}&status=${filter}&sortCol=${col}&sortDir=${dir}&search=${encodeURIComponent(search)}${stateParam}${chipParams ? '&' + chipParams : ''}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setSpots(data.spots);
+        setTotalSpots(data.total);
+        setPage(pageIdx);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // --- Priority States: Global Active Region ---
+  // All daemon phases (Ph2-Ph5) read this via /api/priority-states.
+  // Empty array = nationwide (no filter).
+  const setPriorityStates = async (newStates: string[]) => {
+    setStateOverride(newStates);
+    await fetch(`${API_BASE}/api/priority-states`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ states: newStates })
+    }).catch(e => console.error('Priority state write failed:', e));
+  };
+
+  const togglePriorityState = async (st: string) => {
+    const next = stateOverride.includes(st)
+      ? stateOverride.filter(s => s !== st)
+      : [...stateOverride, st];
+    await setPriorityStates(next);
+  };
+
+  // --- Config Managers ---
+  const updateGlobalStrategy = async (field: string, value: any) => {
+     let newOverride = stateOverride;
+     let newFacilities = [...targetFacilities];
+     let newSleep = sleepInterval;
+     let newCooldown = cooldownBase;
+     let newJitter = cooldownJitter;
+     let newStrikes = maxStrikes;
+     let newAutoResume = autoResume;
+
+     if (field === 'state_override') {
+       if (value === 'ALL') {
+         newOverride = [];
+       } else {
+         if (newOverride.includes(value)) {
+           newOverride = newOverride.filter(s => s !== value);
+         } else {
+           newOverride = [...newOverride, value];
+         }
+       }
+       setStateOverride(newOverride);
+     } else if (field === 'sleep_interval') {
+       newSleep = value;
+       setSleepInterval(value);
+     } else if (field === 'facility' || field === 'target_facilities') {
+       if (newFacilities.includes(value)) {
+         newFacilities = newFacilities.filter(f => f !== value);
+       } else {
+         newFacilities.push(value);
+       }
+       setTargetFacilities(newFacilities);
+     } else if (field === 'cooldown_base_ms') {
+       newCooldown = value;
+       setCooldownBase(value);
+     } else if (field === 'cooldown_jitter_pct') {
+       newJitter = value;
+       setCooldownJitter(value);
+     } else if (field === 'max_consecutive_errors') {
+       newStrikes = value;
+       setMaxStrikes(value);
+     } else if (field === 'auto_resume_enabled') {
+       newAutoResume = value;
+       setAutoResume(value);
+     } else if (field === 'identity_rotation_enabled') {
+       setIdentityRotation(value);
+     } else if (field === 'randomize_viewport_enabled') {
+       setRandomizeViewport(value);
+     }
+
+     await fetch(`${API_BASE}/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          state_override: newOverride, 
+          target_facilities: newFacilities, 
+          sleep_interval_ms: newSleep,
+          cooldown_base_ms: newCooldown,
+          cooldown_jitter_pct: newJitter,
+          max_consecutive_errors: newStrikes,
+          auto_resume_enabled: newAutoResume,
+          identity_rotation_enabled: field === 'identity_rotation_enabled' ? value : identityRotation,
+          randomize_viewport_enabled: field === 'randomize_viewport_enabled' ? value : randomizeViewport
+        })
+     });
+  };
+
+  const triggerHarvest = async (type: string, states: string[] = []) => {
+    setIsStarting(true);
+    try {
+       await fetch(`${API_BASE}/api/harvest/${type}`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ target_facilities: targetFacilities, target_states: states, provider: seedProvider })
+       });
+       fetchSystemStatus();
+    } catch (e) {
+       alert('Harvest failed to start.');
+    }
+    setTimeout(() => setIsStarting(false), 1000);
+  };
+
+  const triggerForceHarvest = async (state: string) => {
+    if (!confirm(`FORCE re-harvest of US-${state}? This will bypass the local cache.`)) return;
+    try {
+      await fetch(`${API_BASE}/api/harvest/force`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state })
+      });
+      alert(`Forced re-harvest initiated for ${state}.`);
+    } catch (e) {
+      alert('Failed to trigger force harvest.');
+    }
+  };
+
+  const triggerDiscovery = async (state: string) => {
+    const stateFull = prompt('Enter FULL state name for Google Maps discovery (e.g., "Missouri"):');
+    if (!stateFull) return;
+    try {
+      await fetch(`${API_BASE}/api/discover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stateFull })
+      });
+      alert(`Direct Discovery initiated for ${stateFull}. Check logs.`);
+    } catch (e) {
+      alert('Discovery failed to start.');
+    }
+  };
+
+  const handleSysStart = async () => { await fetch(`${API_BASE}/start`, { method: 'POST' }); fetchSystemStatus(); };
+  const handleSysStop = async () => { await fetch(`${API_BASE}/stop`, { method: 'POST' }); fetchSystemStatus(); };
+  
+  const triggerSpecificDaemon = async (name: string, action: 'start' | 'stop') => {
+    try {
+      await fetch(`${API_BASE}/api/daemons/${name}/${action}`, { method: 'POST' });
+      fetchSystemStatus();
+    } catch (e) {
+      alert(`Failed to ${action} ${name} daemon.`);
+    }
+  };
+  
+  const toggleHeadless = async (newVal: boolean) => {
+    setIsHeadless(newVal);
+    await fetch(`${API_BASE}/api/headless`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isHeadless: newVal })
+    });
+  };
+
+  const toggleSort = (col: string) => {
+     if (sortCol === col) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+     else { setSortCol(col); setSortDir('asc'); }
+  };
+
+  const deleteSpot = async (id: string, name: string) => {
+    if (!confirm(`PERMANENTLY delete record "${name}"?`)) return;
+    try {
+      await fetch(`${API_BASE}/api/spots/${id}`, { method: 'DELETE' });
+      fetchSpots(page, gridFilter);
+    } catch (e) {}
+  };
+
+  const startEdit = (spot: any) => { setEditingId(spot.id); setEditForm({ ...spot }); };
+  const saveEdit = async () => {
+    try {
+      await fetch(`${API_BASE}/api/spots/${editingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      });
+      setEditingId(null);
+      fetchSpots(page, gridFilter);
+    } catch (e) {}
+  };
+
+  const updateSpotStatus = async (id: string, status: string) => {
+    try {
+      await fetch(`${API_BASE}/api/spots/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verification_status: status })
+      });
+      fetchSpots(page, gridFilter);
+    } catch (e) {}
+  };
+
+  const promoteSpot = async (id: string, published: boolean) => {
+    try {
+      await fetch(`${API_BASE}/api/spots/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_published: published })
+      });
+      fetchSpots(page, gridFilter);
+      fetchDatabankCoverage();
+    } catch (e) {}
+  };
+
+  const bulkPromote = async () => {
+    if (!confirm('Promote ALL ENRICHED and MEDIA_READY records to the public Skate Map?')) return;
+    try {
+      await fetch(`${API_BASE}/api/promote-all`, { method: 'POST' });
+      alert('Bulk promotion complete!');
+      fetchSpots(page, gridFilter);
+      fetchDatabankCoverage();
+    } catch (e) {}
+  };
+
+  const promoteState = async (state: string) => {
+    if (!state || state.length !== 2) return;
+    if (!confirm(`Publish ALL eligible records in ${state} to the live app map?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/promote-state/${state}`, { method: 'POST' });
+      const data = await res.json();
+      alert(` Published ${data.promoted ?? 0} records in ${state}!`);
+      fetchSpots(page, gridFilter);
+      fetchDatabankCoverage();
+    } catch (e) {}
+  };
+
+  const unpublishState = async (state: string) => {
+    if (!state || state.length !== 2) return;
+    if (!confirm(`️ Retract ALL published records in ${state} from the live app map?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/unpublish-state/${state}`, { method: 'POST' });
+      const data = await res.json();
+      alert(`Retracted ${data.unpublished ?? 0} records in ${state}.`);
+      fetchSpots(page, gridFilter);
+      fetchDatabankCoverage();
+    } catch (e) {}
+  };
+
+  const PIPELINE_PHASES = [
+    { id: '1', title: 'The Scout', sub: 'Google Places — Nationwide Seeding', route: 'phase1', color: '#8a2be2',
+      target: 'Google API -> ENRICHED',
+      metric: (status?.enrichedCount || 0) + (status?.pendingCount || 0), metricLabel: 'Total Seeded', isDaemon: false,
+      statusActive: status?.isHarvestingActive || status?.isGoogleSweepActive },
+    { id: '2', title: 'The Detective', sub: 'Website Deep Crawl + Photo Candidates', route: 'phase3', color: '#ff5a00',
+      target: 'ENRICHED -> is_deep_crawled',
+      metric: status?.indexedCount || 0, metricLabel: 'Sites Crawled', isDaemon: true,
+      statusActive: status?.currentTarget?.includes('Indexer: online') },
+    { id: '3', title: 'The Photographer', sub: 'Photo Harvest (OG + Street View)', route: 'phase4', color: '#e91e63',
+      target: 'ENRICHED -> MEDIA_READY',
+      metric: status?.mediaReadyCount || 0, metricLabel: 'Galleries Built', isDaemon: true,
+      statusActive: status?.currentTarget?.includes('Photographer: online') },
+    { id: '4', title: 'Publisher', sub: 'QA Review + Live App Gate', route: 'phase6', color: '#4caf50',
+      target: 'Review -> is_published',
+      metric: status?.verifiedCount || 0, metricLabel: 'Live on App', isDaemon: false,
+      statusActive: true },
+  ];
+
+  return (
     <div className="dashboard-container">
-      {/* ======= UNIFIED COMMAND BAR ======= */}
-      <header style={{
-        display: 'grid',
-        gridTemplateColumns: 'auto 1fr auto',
-        alignItems: 'center',
-        gap: '16px',
-        padding: '10px 24px',
-        background: 'rgba(12,12,20,0.97)',
-        borderBottom: '1px solid rgba(138,43,226,0.25)',
-        position: 'sticky', top: 0, zIndex: 100,
-        backdropFilter: 'blur(12px)',
-      }}>
+      {/* ======= COMPACT STICKY COMMAND BAR ======= */}
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', padding: '8px 20px', background: 'rgba(12,12,20,0.97)', borderBottom: '1px solid rgba(138,43,226,0.2)', position: 'sticky', top: 0, zIndex: 50, backdropFilter: 'blur(10px)' }}>
         {/* Logo */}
-        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, flexShrink: 0 }}>
-          <span style={{ fontSize: '1.05rem', fontWeight: 900, background: 'linear-gradient(90deg,#8a2be2,#e91e63)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.02em' }}>
-            SK8Lytz
-          </span>
-          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-            SK8Spotz Pipeline
-          </span>
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, flexShrink: 0, marginRight: '6px' }}>
+          <span style={{ fontSize: '0.95rem', fontWeight: 900, background: 'linear-gradient(90deg,#8a2be2,#e91e63)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.02em' }}>SK8Lytz</span>
+          <span style={{ fontSize: '0.52rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>SK8Spotz</span>
         </div>
-
-        {/* Centre: Active Region chips + stealth settings inline */}
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', minWidth: 0 }}>
-          {/* Active Region */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(138,43,226,0.08)', padding: '4px 10px', borderRadius: '20px', border: '1px solid rgba(138,43,226,0.2)', flexShrink: 0 }}>
-            <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#8a2be2', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Region:</span>
-            <button onClick={() => setPriorityStates([])}
-              style={{ fontSize: '0.62rem', fontWeight: 700, padding: '1px 7px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-                background: stateOverride.length === 0 ? '#8a2be2' : 'rgba(255,255,255,0.08)',
-                color: stateOverride.length === 0 ? '#fff' : 'rgba(255,255,255,0.4)' }}
-            >NATIONWIDE</button>
-            {stateOverride.map(st => (
-              <button key={st} onClick={() => togglePriorityState(st)}
-                style={{ fontSize: '0.62rem', fontWeight: 800, padding: '1px 8px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#8a2be2', color: '#fff' }}
-              >{st} x</button>
-            ))}
-            <button
-              onClick={() => { const s = prompt('State code (2-letter):'); if (s?.trim().length >= 2) togglePriorityState(s.trim().toUpperCase().slice(0,2)); }}
-              style={{ fontSize: '0.6rem', padding: '1px 6px', borderRadius: '10px', border: '1px dashed rgba(138,43,226,0.4)', background: 'transparent', color: '#8a2be2', cursor: 'pointer' }}
-            >+</button>
-          </div>
-
-          {/* Divider */}
-          <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
-
-          {/* Stealth toggles */}
-          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', flexShrink: 0 }}>
-            <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>Headless</span>
-            <label className="switch mini"><input type="checkbox" checked={isHeadless} onChange={e => toggleHeadless(e.target.checked)} /><span className="slider round" /></label>
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', flexShrink: 0 }}>
-            <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>Spoofing</span>
-            <label className="switch mini"><input type="checkbox" checked={identityRotation} onChange={e => updateGlobalStrategy('identity_rotation_enabled', e.target.checked)} /><span className="slider round" /></label>
-          </label>
-
-          {/* Divider */}
-          <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
-
-          {/* Timing */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-            <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', fontWeight: 700 }}>Cooldown</span>
-            <input type="number" className="mini-input" style={{ width: '64px' }} value={cooldownBase} onChange={e => updateGlobalStrategy('cooldown_base_ms', parseInt(e.target.value))} />
-            <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.2)' }}>ms</span>
-            <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', fontWeight: 700 }}>Jitter</span>
-            <input type="number" className="mini-input" style={{ width: '48px' }} value={cooldownJitter} onChange={e => updateGlobalStrategy('cooldown_jitter_pct', parseInt(e.target.value))} />
-            <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.2)' }}>%</span>
-          </div>
-
-          {/* Power buttons */}
-          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-            <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}
-              style={{ padding: '4px 12px', fontSize: '0.65rem', fontWeight: 800 }}>BOOT ALL</button>
-            <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}
-              style={{ padding: '4px 12px', fontSize: '0.65rem', fontWeight: 800 }}>HALT ALL</button>
-          </div>
+        <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+        {/* Daemon pills */}
+        {[
+          { id: 'indexer',      label: 'Detective',    color: '#ff5a00', onKey: 'Indexer: online' },
+          { id: 'photographer', label: 'Photographer', color: '#e91e63', onKey: 'Photographer: online' },
+        ].map(d => {
+          const isOn = status?.currentTarget?.includes(d.onKey);
+          return (
+            <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: isOn ? `${d.color}12` : 'rgba(255,255,255,0.03)', padding: '3px 8px', borderRadius: '20px', border: `1px solid ${isOn ? d.color + '55' : 'rgba(255,255,255,0.08)'}`, flexShrink: 0 }}>
+              <div className={`status-dot ${isOn ? 'online' : 'offline'}`} style={{ background: isOn ? d.color : '', boxShadow: isOn ? `0 0 5px ${d.color}` : '', width: '6px', height: '6px' }} />
+              <span style={{ fontSize: '0.6rem', color: isOn ? d.color : 'rgba(255,255,255,0.25)', fontWeight: 700 }}>{d.label.toUpperCase()}</span>
+              <button onClick={() => triggerSpecificDaemon(d.id, isOn ? 'stop' : 'start')}
+                style={{ fontSize: '0.58rem', fontWeight: 800, padding: '1px 5px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: isOn ? 'rgba(255,60,60,0.25)' : `${d.color}33`, color: isOn ? '#ff6b6b' : d.color }}>
+                {isOn ? 'STOP' : 'GO'}
+              </button>
+            </div>
+          );
+        })}
+        <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+        {/* Active Region chips */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+          <span style={{ fontSize: '0.56rem', fontWeight: 800, color: '#8a2be2', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Region:</span>
+          <button onClick={() => setPriorityStates([])}
+            style={{ fontSize: '0.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+              background: stateOverride.length === 0 ? '#8a2be2' : 'rgba(255,255,255,0.06)',
+              color: stateOverride.length === 0 ? '#fff' : 'rgba(255,255,255,0.3)' }}>ALL</button>
+          {stateOverride.map(st => (
+            <button key={st} onClick={() => togglePriorityState(st)}
+              style={{ fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#8a2be2', color: '#fff' }}
+            >{st} x</button>
+          ))}
+          <button
+            onClick={() => { const s = prompt('State (2-letter):'); if (s && s.trim().length >= 2) togglePriorityState(s.trim().toUpperCase().slice(0, 2)); }}
+            style={{ fontSize: '0.58rem', padding: '2px 5px', borderRadius: '10px', border: '1px dashed rgba(138,43,226,0.4)', background: 'transparent', color: '#8a2be2', cursor: 'pointer' }}>+</button>
         </div>
-
-        {/* Right: Daemon fleet pills */}
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
-          {[
-            { id: 'indexer',      label: 'Detective',    color: '#ff5a00', onKey: 'Indexer: online' },
-            { id: 'photographer', label: 'Photographer', color: '#e91e63', onKey: 'Photographer: online' },
-          ].map(d => {
-            const isOn = status?.currentTarget?.includes(d.onKey);
-            return (
-              <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: isOn ? `${d.color}15` : 'rgba(255,255,255,0.04)', padding: '4px 10px', borderRadius: '20px', border: `1px solid ${isOn ? d.color + '55' : 'rgba(255,255,255,0.08)'}` }}>
-                <div className={`status-dot ${isOn ? 'online' : 'offline'}`} style={{ background: isOn ? d.color : '', boxShadow: isOn ? `0 0 6px ${d.color}` : '' }} />
-                <span style={{ fontSize: '0.62rem', color: isOn ? d.color : 'rgba(255,255,255,0.3)', fontWeight: 700 }}>{d.label.toUpperCase()}</span>
-                <button onClick={() => triggerSpecificDaemon(d.id, isOn ? 'stop' : 'start')}
-                  style={{ fontSize: '0.6rem', fontWeight: 800, padding: '1px 6px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: isOn ? 'rgba(255,60,60,0.25)' : `${d.color}33`, color: isOn ? '#ff6b6b' : d.color }}>
-                  {isOn ? 'STOP' : 'START'}
-                </button>
-              </div>
-            );
-          })}
+        <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+        {/* Stealth toggles */}
+        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', flexShrink: 0 }}>
+          <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700 }}>Headless</span>
+          <label className="switch mini"><input type="checkbox" checked={isHeadless} onChange={e => toggleHeadless(e.target.checked)} /><span className="slider round" /></label>
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', flexShrink: 0 }}>
+          <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700 }}>Spoof</span>
+          <label className="switch mini"><input type="checkbox" checked={identityRotation} onChange={e => updateGlobalStrategy('identity_rotation_enabled', e.target.checked)} /><span className="slider round" /></label>
+        </label>
+        <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+        {/* Timing */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+          <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.3)' }}>Cooldown</span>
+          <input type="number" className="mini-input" style={{ width: '58px' }} value={cooldownBase} onChange={e => updateGlobalStrategy('cooldown_base_ms', parseInt(e.target.value))} />
+          <span style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.18)' }}>ms</span>
+          <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.3)', marginLeft: '3px' }}>Jitter</span>
+          <input type="number" className="mini-input" style={{ width: '40px' }} value={cooldownJitter} onChange={e => updateGlobalStrategy('cooldown_jitter_pct', parseInt(e.target.value))} />
+          <span style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.18)' }}>%</span>
+          <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.3)', marginLeft: '3px' }}>Throttle</span>
+          <input type="number" className="mini-input" style={{ width: '58px' }} value={sleepInterval} onChange={e => updateGlobalStrategy('sleep_interval', parseInt(e.target.value))} />
+          <span style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.18)' }}>ms</span>
         </div>
-      </header>
+        {/* Power — pushed right */}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', flexShrink: 0 }}>
+          <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}
+            style={{ padding: '4px 12px', fontSize: '0.62rem', fontWeight: 800 }}>BOOT ALL</button>
+          <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}
+            style={{ padding: '4px 12px', fontSize: '0.62rem', fontWeight: 800 }}>HALT ALL</button>
+        </div>
+      </div>
+
 
       {/* =========== 6-PHASE UNIFORM PIPELINE GRID =========== */}
       <div className="pipeline-grid fade-in">
@@ -387,14 +857,16 @@ const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
         )}
 
         {/* =========== DAEMON CONTROL CENTER (PHASE 2-5) =========== */}
-        {(['phase3', 'phase4'].includes(activeTab)) && (
+        {(['phase2', 'phase3', 'phase4', 'phase5'].includes(activeTab)) && (
           <div className="tab-pane daemon-center">
              <div className="explainer-block" style={{marginBottom: '1rem'}}>
                <h3 style={{marginTop: 0, color: PIPELINE_PHASES.find(p=>p.route===activeTab)?.color}}>
                    {PIPELINE_PHASES.find(p=>p.route===activeTab)?.title}: {PIPELINE_PHASES.find(p=>p.route===activeTab)?.sub}
                </h3>
+               {activeTab === 'phase2' && <p>Targets <strong>PENDING</strong> records and resolves their real-world identity — finding the business website and phone number via web search heuristics. Graduates records to <strong>IDENTITY_ESTABLISHED</strong> when found. <em style={{color:'rgba(255,255,255,0.4)'}}>Note: Since the pipeline now uses Google Places as the primary seeder, PENDING records are rare. This daemon handles any OSM legacy records or manually added entries.</em></p>}
                {activeTab === 'phase3' && <p>The Detective deep-crawls each spot's website using Puppeteer with GHOST identity spoofing. Extracts operating hours, 18+ adult night schedules, pricing, event listings, social links, and photo candidates (OG image, DOM images, Facebook OG). Writes <code>candidate_photos</code> for the Photographer to harvest.</p>}
                {activeTab === 'phase4' && <p>The Photographer daemon reads <code>candidate_photos</code> written by the Indexer — downloading OG images and DOM media as binary uploads to Supabase Storage. Falls back to Google Street View Static as a guaranteed photo source. Promotes records to <strong>MEDIA_READY</strong> on success.</p>}
+               {activeTab === 'phase5' && <p>The Publisher Gate is the final human-approved release step. Only records with <strong style={{color:'#4caf50'}}>is_published = true</strong> are visible on the live SK8Lytz app map. Bulk-promote all pipeline-complete records (ENRICHED + MEDIA_READY) below, or use the Databank QA tab to approve individual spots.</p>}
              </div>
              
              {activeTab === 'phase2' && (
@@ -495,14 +967,14 @@ const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
                     </div>
                   </div>
                   <div style={{ textAlign: 'center', padding: '1.5rem', background: 'rgba(76,175,80,0.05)', border: '1px solid rgba(76,175,80,0.3)', borderRadius: '8px' }}>
-                    <p style={{ margin: '0 0 1rem', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>The Publisher Gate controls which records are visible to users on the SK8Lytz app map. Use the Publisher tab to review individual records and toggle <strong style={{color:'#4caf50'}}>APP_LIVE</strong>, or bulk-promote all ENRICHED records below.</p>
+                    <p style={{ margin: '0 0 1rem', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>The Publisher Gate controls which records are visible to users on the SK8Lytz app map. Use the Databank QA tab to review individual records and toggle <strong style={{color:'#4caf50'}}>APP_LIVE</strong>, or bulk-promote all ENRICHED records below.</p>
                     <button className="btn btn-start" style={{background: '#4caf50', border: 'none'}} onClick={bulkPromote}> BULK PUBLISH ALL ENRICHED → APP MAP</button>
                   </div>
                 </div>
              )}
 
              {/* Mini Data Bank & Evasion Audit */}
-             {(['phase3', 'phase4'].includes(activeTab)) && (() => {
+             {(['phase2', 'phase3', 'phase4', 'phase5'].includes(activeTab)) && (() => {
                 const queue = phaseQueues[activeTab] || [];
                 let hydratingFields: string[] = [];
                 if (activeTab === 'phase2') hydratingFields = ['Website', 'Phone Number'];
@@ -565,11 +1037,11 @@ const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
           </div>
         )}
 
-        {/* =========== PHASE 6: Publisher =========== */}
+        {/* =========== PHASE 6: DATABANK QA =========== */}
         {activeTab === 'phase6' && (
           <div className="tab-pane graveyard fade-in">
             <div className="explainer-block" style={{marginBottom: '1rem', background: 'rgba(76, 175, 80, 0.05)', border: '1px solid rgba(76, 175, 80, 0.2)'}}>
-              <h3 style={{marginTop: 0, color: '#4caf50'}}>Phase 6: Publisher &amp; Live Publish</h3>
+              <h3 style={{marginTop: 0, color: '#4caf50'}}>Phase 6: Databank QA &amp; Live Publish</h3>
               <p>Final review before publication. Filter and inspect records, then publish state-by-state or individually. Use the view toggle to switch between Card, List, and Table views.</p>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 2fr', gap: '10px', marginTop: '1rem', background: '#000', padding: '15px', borderRadius: '8px' }}>
@@ -854,7 +1326,6 @@ const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
                 const todayEntry = hours.find(h => h.startsWith(todayName));
                 if (!todayEntry) return null;
                 if (todayEntry.toLowerCase().includes('closed')) return false;
-                // Parse all time ranges on the day (handles multi-session: "12:00 – 3:00 PM, 7:00 – 10:00 PM")
                 const p = (s: string): number => {
                   const m = s.trim().match(/(\d+):(\d+)\s*(AM|PM)?/i);
                   if (!m) return 0;
@@ -865,16 +1336,12 @@ const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
                   return h * 60 + min;
                 };
                 const cur = new Date().getHours() * 60 + new Date().getMinutes();
-                // Split on comma for multi-session, then extract each range (handles en-dash and em-dash)
                 const segments = todayEntry.replace(/^[^:]+:\s*/, '').split(',');
                 return segments.some(seg => {
-                  const rng = seg.match(/(.+?)\s*[–\-\u2013\u2014]\s*(.+)/);
+                  const rng = seg.match(/(.+?)\s*[\u2013\u2014\-]\s*(.+)/);
                   if (!rng) return false;
                   return cur >= p(rng[1]) && cur <= p(rng[2]);
                 });
-              };
-                const cur = now.getHours() * 60 + now.getMinutes();
-                return cur >= parseTime(match[1]) && cur <= parseTime(match[2]);
               };
               const stars = (r: number) => {
                 const full = Math.floor(r); const half = r - full >= 0.5;
@@ -896,16 +1363,14 @@ const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
               return (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.25rem', padding: '0.5rem 0' }}>
                   {spots.map(spot => {
-                    const _photos = spot.photos as any[] | null;
-                    const _cand   = spot.candidate_photos as any;
-                    const photo   = (typeof _photos?.[0] === "string" ? _photos[0] : _photos?.[0]?.url) ??
-                                    (_cand?.street_view_url ?? (_cand?.[0]?.url ?? null));
+              const _ph = spot.photos as any[] | null; const _cd = spot.candidate_photos as any;
+              const photo = (typeof _ph?.[0] === 'string' ? _ph[0] : _ph?.[0]?.url) ?? (_cd?.street_view_url ?? (_cd?.[0]?.url ?? null));
                     const openStatus = isOpenNow(toHoursArr(spot.opening_hours));
                     const ratingNum  = spot.rating ? parseFloat(String(spot.rating)) : null;
                     const proShop    = spot.has_pro_shop || (spot as any).has_proshop;
                     const adultNight = spot.has_adult_night;
-                    const photoCount = ((spot.photos as any[]|null)?.length ?? 0);
-                    const candCount  = ((spot.candidate_photos as any[]|null)?.length ?? 0);
+                    const photoCount = (_ph?.length ?? 0);
+                    const candCount  = (_cd?.street_view_url ? 1 : 0);
                     const igUrl      = (spot as any).instagram_url;
                     const fbUrl      = (spot as any).facebook_url;
                     const ttUrl      = (spot as any).tiktok_url;
@@ -1004,17 +1469,17 @@ const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
                             </details>
                           )}
 
-                          {/* Adult night — show whenever flag is set */}
+                          {/* Adult night — show on flag or details */}
                           {(spot.has_adult_night || adultSched || (spot as any).adult_night_details) && (
-                            <div style={{ borderRadius:'6px', background:'rgba(233,30,99,0.08)', border:'1px solid rgba(233,30,99,0.2)', fontSize:'0.68rem', overflow:'hidden' }}>
-                              <div style={{ padding:'6px 8px', background:'rgba(233,30,99,0.12)', display:'flex', alignItems:'center', gap:'6px' }}>
-                                <span style={{ color:'#f48fb1', fontWeight:800, fontSize:'0.65rem', letterSpacing:'0.05em' }}>18+ ADULT NIGHT</span>
+                            <div style={{ borderRadius: '6px', background: 'rgba(233,30,99,0.08)', border: '1px solid rgba(233,30,99,0.2)', overflow: 'hidden' }}>
+                              <div style={{ padding: '5px 8px', background: 'rgba(233,30,99,0.14)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{ color: '#f48fb1', fontWeight: 800, fontSize: '0.63rem', letterSpacing: '0.05em' }}>18+ ADULT NIGHT</span>
                               </div>
                               {(spot as any).adult_night_details && (
-                                <div style={{ padding:'6px 8px', color:'rgba(255,255,255,0.55)', lineHeight:1.4 }}>{(spot as any).adult_night_details}</div>
+                                <div style={{ padding: '5px 8px', color: 'rgba(255,255,255,0.5)', fontSize: '0.66rem', lineHeight: 1.4 }}>{(spot as any).adult_night_details}</div>
                               )}
                               {adultSched && !(spot as any).adult_night_details && (
-                                <div style={{ padding:'6px 8px', color:'rgba(255,255,255,0.45)' }}>{typeof adultSched === 'object' ? JSON.stringify(adultSched) : String(adultSched)}</div>
+                                <div style={{ padding: '5px 8px', color: 'rgba(255,255,255,0.4)', fontSize: '0.66rem' }}>{typeof adultSched === 'object' ? JSON.stringify(adultSched) : String(adultSched)}</div>
                               )}
                             </div>
                           )}
@@ -1096,7 +1561,6 @@ const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
                 const todayEntry = hours.find(h => h.startsWith(todayName));
                 if (!todayEntry) return null;
                 if (todayEntry.toLowerCase().includes('closed')) return false;
-                // Parse all time ranges on the day (handles multi-session: "12:00 – 3:00 PM, 7:00 – 10:00 PM")
                 const p = (s: string): number => {
                   const m = s.trim().match(/(\d+):(\d+)\s*(AM|PM)?/i);
                   if (!m) return 0;
@@ -1107,10 +1571,9 @@ const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
                   return h * 60 + min;
                 };
                 const cur = new Date().getHours() * 60 + new Date().getMinutes();
-                // Split on comma for multi-session, then extract each range (handles en-dash and em-dash)
                 const segments = todayEntry.replace(/^[^:]+:\s*/, '').split(',');
                 return segments.some(seg => {
-                  const rng = seg.match(/(.+?)\s*[–\-\u2013\u2014]\s*(.+)/);
+                  const rng = seg.match(/(.+?)\s*[\u2013\u2014\-]\s*(.+)/);
                   if (!rng) return false;
                   return cur >= p(rng[1]) && cur <= p(rng[2]);
                 });
@@ -1125,10 +1588,8 @@ const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
               return (
                 <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
                   {spots.map(spot => {
-                    const _photos2 = spot.photos as any[] | null;
-                    const _cand2   = spot.candidate_photos as any;
-                    const photo    = (typeof _photos2?.[0] === "string" ? _photos2[0] : _photos2?.[0]?.url) ??
-                                     (_cand2?.street_view_url ?? (_cand2?.[0]?.url ?? null));
+                    const _ph = spot.photos as any[] | null; const _cd = spot.candidate_photos as any;
+                    const photo = (typeof _ph?.[0] === 'string' ? _ph[0] : _ph?.[0]?.url) ?? (_cd?.street_view_url ?? (_cd?.[0]?.url ?? null));
                     const openSt   = isOpenNow(toHoursArr2(spot.opening_hours));
                     const ratingN  = spot.rating ? parseFloat(String(spot.rating)) : null;
                     const proShop  = spot.has_pro_shop || (spot as any).has_proshop;
@@ -1136,7 +1597,7 @@ const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
                     const igUrl    = (spot as any).instagram_url;
                     const fbUrl    = (spot as any).facebook_url;
                     const ttUrl    = (spot as any).tiktok_url;
-                    const photoCount = (spot.photos as any[]|null)?.length ?? 0;
+                    const photoCount = (_ph?.length ?? 0);
                     const STATUS_COLOR: Record<string,string> = {
                       MEDIA_READY:'#e91e63', ENRICHED:'#ff9800', INDEXED:'#2196f3',
                       IDENTITY_ESTABLISHED:'#9c27b0', PENDING:'rgba(255,255,255,0.3)', REJECTED:'#f44336'
@@ -1361,9 +1822,9 @@ const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
       <div className="log-panel panel">
         <div className="log-header">
            <h2 className="panel-header" style={{margin:0}}>
-             {activeTab === 'phase1' ? 'Phase 1 — Scout Logs' :
-              activeTab === 'phase2' ? 'Phase 2 — Detective Logs' :
-              activeTab === 'phase3' ? 'Phase 3 — Photographer Logs' :
+             {activeTab === 'phase1' ? 'Phase 1: Seed Engine Logs' :
+              activeTab === 'phase2' ? 'Phase 2: Operator Logs' :
+              activeTab === 'phase3' ? 'Phase 3: Indexer Logs' :
               'Omni-Terminal (Restricted Access)'}
            </h2>
            <button className="btn-mini" onClick={fetchHistory}>PERSISTENT HISTORY</button>
@@ -1372,7 +1833,7 @@ const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
           {logs
              .filter(log => {
                 if (activeTab === 'phase1') return log.source === 'Phase 1' || log.source === 'System';
-                
+                if (activeTab === 'phase2') return log.source === 'Phase 2' || log.source === 'System';
                 if (activeTab === 'phase3') return log.source === 'Phase 3' || log.source === 'System';
                 if (activeTab === 'phase4') return log.source === 'Photographer' || log.source === 'System';
                 return true; 
@@ -1388,7 +1849,7 @@ const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
           ))}
           {logs.filter(log => {
              if (activeTab === 'phase1') return log.source === 'Phase 1' || log.source === 'System';
-             
+             if (activeTab === 'phase2') return log.source === 'Phase 2' || log.source === 'System';
              if (activeTab === 'phase3') return log.source === 'Phase 3' || log.source === 'System';
              if (activeTab === 'phase4') return log.source === 'Photographer' || log.source === 'System';
              return true;
