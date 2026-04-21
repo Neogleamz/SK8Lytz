@@ -186,6 +186,17 @@ export default function Sk8LytzDiagnosticLab({
     if (bldResult?.hex) setBldHexOverride(bldResult.hex);
   }, [bldResult]);
 
+  // ── Oracle: 0x74 auto-stream state ───────────────────────────────────
+  /** Auto-stream 0x74 magnitude 200 every 100ms when active (for mic shootout). */
+  const [streamActive, setStreamActive] = useState(false);
+  useEffect(() => {
+    if (!streamActive) return;
+    const id = setInterval(() => {
+      transmit(ZenggeProtocol.sendMusicMagnitude(200), '0x74 AUTO-STREAM mag=200', '0x74');
+    }, 100);
+    return () => clearInterval(id);
+  }, [streamActive, transmit]);
+
   // ─── Solid color test helper ────────────────────────────────────────────────
   const sendSolid = (r: number, g: number, b: number, pts: number, trans: number, note: string) => {
     const pixels = Array(pts).fill({ r, g, b });
@@ -828,8 +839,8 @@ export default function Sk8LytzDiagnosticLab({
   };
 
   /**
-   * Quick Test Palette — verified 0xA3 payloads.
-   * Each entry: label, opcode, the exact bytes to send, and a human note.
+   * Quick Test Palette — all bytes() return FULLY WRAPPED BLE packets.
+   * SEND button must NOT call wrapCommand(). bytes() handles wrapping internally.
    */
   const QUICK_TESTS = [
     {
@@ -838,13 +849,13 @@ export default function Sk8LytzDiagnosticLab({
         {
           label: '🟢 PWR ON',
           opcode: '0x71',
-          note: '0x71 POWER ON — [71 23 0F A3]',
+          note: '0x71 POWER ON — [71 23 0F A3] wrapped. LEDs/device should power on.',
           bytes: () => ZenggeProtocol.setPower(true),
         },
         {
           label: '🔴 PWR OFF',
           opcode: '0x71',
-          note: '0x71 POWER OFF — [71 24 0F A4]',
+          note: '0x71 POWER OFF — [71 24 0F A4] wrapped. Device should cut power.',
           bytes: () => ZenggeProtocol.setPower(false),
         },
       ],
@@ -855,25 +866,25 @@ export default function Sk8LytzDiagnosticLab({
         {
           label: 'EFFECT #1',
           opcode: '0x42',
-          note: '0x42 effectId=1 (min) — [42 01 32 64 D3]',
+          note: '0x42 effectId=1 (min) — [42 01 32 64 D3]. Should play first RBM effect.',
           bytes: () => ZenggeProtocol.setCustomRbm(1, 50, 100),
         },
         {
           label: 'EFFECT #50',
           opcode: '0x42',
-          note: '0x42 effectId=50 (mid) — [42 32 32 64 04]',
+          note: '0x42 effectId=50 (mid) — [42 32 32 64 04]. Mid-range effect.',
           bytes: () => ZenggeProtocol.setCustomRbm(50, 50, 100),
         },
         {
           label: 'EFFECT #100',
           opcode: '0x42',
-          note: '0x42 effectId=100 (ceiling) — should play normally',
+          note: '0x42 effectId=100 (ceiling). Should play normally — last valid ID.',
           bytes: () => ZenggeProtocol.setCustomRbm(100, 50, 100),
         },
         {
           label: 'EFFECT #101 ⚠️',
           opcode: '0x42',
-          note: '0x42 effectId=101 (OVER CEILING) — expect undefined/glitch',
+          note: '0x42 effectId=101 (OVER CEILING). Expect glitch/undefined behavior.',
           bytes: () => ZenggeProtocol.setCustomRbm(101, 50, 100),
         },
       ],
@@ -884,36 +895,53 @@ export default function Sk8LytzDiagnosticLab({
         {
           label: 'MIC=0x26 ★',
           opcode: '0x73',
-          note: '0x73 APK app mic byte — 0x26. LEDs should pulse with 0x74 streams',
-          bytes: () => [0x73, 0x01, 0x26, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64,
-            ZenggeProtocol.calculateChecksum([0x73, 0x01, 0x26, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64])],
+          note: '0x73 APK app mic byte — 0x26, isOn=0x01. Send then enable AUTO-STREAM ⇓',
+          bytes: () => {
+            const raw = [0x73, 0x01, 0x26, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64];
+            return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
+          },
         },
         {
           label: 'MIC=0x27 ★',
           opcode: '0x73',
-          note: '0x73 APK device mic byte — 0x27. LEDs should react to ambient sound WITHOUT 0x74',
-          bytes: () => [0x73, 0x01, 0x27, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64,
-            ZenggeProtocol.calculateChecksum([0x73, 0x01, 0x27, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64])],
+          note: '0x73 APK device mic byte — 0x27, isOn=0x01. Reacts to ambient sound WITHOUT 0x74.',
+          bytes: () => {
+            const raw = [0x73, 0x01, 0x27, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64];
+            return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
+          },
         },
         {
-          label: 'MIC=0x00 (OLD)',
+          label: 'isOn=0x00 (OFF)',
           opcode: '0x73',
-          note: '0x73 OLD wrong mic byte — 0x00. Expect NO response to 0x74 streams (confirms wrong)',
-          bytes: () => [0x73, 0x01, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64,
-            ZenggeProtocol.calculateChecksum([0x73, 0x01, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64])],
+          note: '0x73 isOn byte set to 0x00 — LEDs should DEACTIVATE music mode. Confirms isOn is live.',
+          bytes: () => {
+            const raw = [0x73, 0x01, 0x26, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64];
+            return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
+          },
+        },
+        {
+          label: 'MIC=0x00 (OLD ❌)',
+          opcode: '0x73',
+          note: '0x73 OLD wrong mic byte — 0x00. With auto-stream ON, LEDs should NOT pulse (confirms bug).',
+          bytes: () => {
+            const raw = [0x73, 0x01, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64];
+            return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
+          },
         },
         {
           label: 'isOn MISSING (12B)',
           opcode: '0x73',
-          note: '0x73 OLD 12-byte format without isOn byte — should NOT activate music mode',
-          bytes: () => [0x73, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64,
-            ZenggeProtocol.calculateChecksum([0x73, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64])],
+          note: '0x73 OLD 12-byte format without isOn byte — should NOT activate music mode.',
+          bytes: () => {
+            const raw = [0x73, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64];
+            return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
+          },
         },
         {
-          label: 'MAG 200 (0x74)',
+          label: 'MAG ×1 (0x74)',
           opcode: '0x74',
-          note: '0x74 Send magnitude 200 — use after MIC=0x26 to test pulse response',
-          bytes: () => { const chk = ZenggeProtocol.calculateChecksum([0x74, 0xC8]); return [0x74, 0xC8, chk]; },
+          note: '0x74 Single magnitude=200. Fire once after MIC=0x26 to see one pulse.',
+          bytes: () => ZenggeProtocol.sendMusicMagnitude(200),
         },
       ],
     },
@@ -921,10 +949,19 @@ export default function Sk8LytzDiagnosticLab({
       group: '📞 SCENE FORMAT (0x51) — SMOKING GUN B',
       tests: [
         {
-          label: '291B SHORT (0xA2)',
+          label: '9B COMPACT ★',
           opcode: '0x51',
-          note: '0x51 291-byte format (9B/slot) — 0xA2 old format. Observe cycle behavior',
+          note: '0x51 compact 9B/slot variable-length — 0xA2 format. Observe if 0xA3 hardware cycles.',
           bytes: () => ZenggeProtocol.setCustomMode([
+            { mode: 1, speed: 10, color1: { r:255,g:0,b:0 }, color2: { r:0,g:0,b:255 } },
+            { mode: 5, speed: 10, color1: { r:0,g:255,b:0 }, color2: { r:255,g:255,b:0 } },
+          ]),
+        },
+        {
+          label: '10B EXTENDED ★',
+          opcode: '0x51',
+          note: '0x51 323B fixed 10B/slot ×32 — APK-verified 0xA3 format. Should cycle cleanly.',
+          bytes: () => ZenggeProtocol.setCustomModeExtended([
             { mode: 1, speed: 10, color1: { r:255,g:0,b:0 }, color2: { r:0,g:0,b:255 } },
             { mode: 5, speed: 10, color1: { r:0,g:255,b:0 }, color2: { r:255,g:255,b:0 } },
           ]),
@@ -937,20 +974,29 @@ export default function Sk8LytzDiagnosticLab({
         {
           label: 'QUERY (0x58)',
           opcode: '0x58',
-          note: '0x58 Scene state query — watch RX observer for response bytes',
-          bytes: () => { const chk = ZenggeProtocol.calculateChecksum([0x58, 0xF0]); return [0x58, 0xF0, chk]; },
+          note: '0x58 Scene state query — watch RX observer for response bytes.',
+          bytes: () => {
+            const raw = [0x58, 0xF0];
+            return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
+          },
         },
         {
           label: 'ACTIVATE #0 (0x57)',
           opcode: '0x57',
-          note: '0x57 Activate scene slot 0, speed=50, brightness=100',
-          bytes: () => { const chk = ZenggeProtocol.calculateChecksum([0x57, 0x00, 0x32, 0x64]); return [0x57, 0x00, 0x32, 0x64, chk]; },
+          note: '0x57 Activate scene slot 0, speed=50, brightness=100.',
+          bytes: () => {
+            const raw = [0x57, 0x00, 0x32, 0x64];
+            return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
+          },
         },
         {
           label: 'DELETE #0 (0x56)',
           opcode: '0x56',
-          note: '0x56 Delete scene slot 0 — 15 bytes',
-          bytes: () => { const pay = [0x56, 0x00, 0,0,0,0,0,0,0,0,0,0,0,0]; return [...pay, ZenggeProtocol.calculateChecksum(pay)]; },
+          note: '0x56 Delete scene slot 0 — 15-byte payload.',
+          bytes: () => {
+            const raw = [0x56, 0x00, 0,0,0,0,0,0,0,0,0,0,0,0];
+            return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
+          },
         },
       ],
     },
@@ -960,7 +1006,7 @@ export default function Sk8LytzDiagnosticLab({
         {
           label: 'POLL 0x63',
           opcode: '0x63',
-          note: '0x63 Hardware settings query — response parsed in RX observer',
+          note: '0x63 Hardware settings query — response parsed live in RX observer (DEVICES tab).',
           bytes: () => ZenggeProtocol.queryHardwareSettings?.() ?? [],
         },
       ],
@@ -1026,7 +1072,7 @@ export default function Sk8LytzDiagnosticLab({
                       <Text style={{ color: txtMuted, fontSize: 10, marginTop: Spacing.xs }}>{test.note}</Text>
                     </View>
                     <TouchableOpacity
-                      onPress={() => transmit(ZenggeProtocol.wrapCommand(test.bytes()), test.note, test.opcode)}
+                      onPress={() => transmit(test.bytes(), test.note, test.opcode)}
                       style={{ backgroundColor: cyan + '22', borderWidth: 1, borderColor: cyan, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: 8, marginLeft: Spacing.md }}
                     >
                       <Text style={{ color: cyan, fontWeight: '900', fontSize: 11 }}>SEND</Text>
@@ -1062,7 +1108,43 @@ export default function Sk8LytzDiagnosticLab({
         </View>
       ))}
 
-      {/* ── Test Session Log ─────────────────────────── */}
+      {/* ── 0x74 Auto-Stream Toggle ────────────────────────── */}
+      <Text style={[S.subTitle, { color: '#FF9500' }]}>⚡ 0x74 AUTO-STREAM (MIC SHOOTOUT TOOL)</Text>
+      <View style={[S.diagBox, { borderColor: streamActive ? '#FF9500' : border, borderWidth: streamActive ? 2 : 1, padding: Spacing.md }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: streamActive ? '#FF9500' : txtPri, fontWeight: '900', fontSize: 13 }}>
+              {streamActive ? '🟠 STREAMING magnitude=200 @ 10Hz' : '○ Stream stopped'}
+            </Text>
+            <Text style={{ color: txtMuted, fontSize: 10, marginTop: Spacing.xs }}>
+              Step 1: Send MIC=0x26 ★ above. Step 2: Toggle ON. Observe LED pulse pattern.
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setStreamActive(prev => !prev)}
+            style={{
+              paddingHorizontal: Spacing.xl, paddingVertical: Spacing.lg, borderRadius: 10,
+              backgroundColor: streamActive ? '#FF9500' : border,
+              borderWidth: 1, borderColor: streamActive ? '#FF9500' : border,
+              marginLeft: Spacing.md,
+            }}
+          >
+            <Text style={{ color: streamActive ? '#000' : txtPri, fontWeight: '900', fontSize: 12 }}>
+              {streamActive ? 'STOP' : 'START'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        {streamActive && (
+          <View style={{ marginTop: Spacing.sm, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF9500' }} />
+            <Text style={{ color: '#FF9500', fontSize: 10, fontWeight: 'bold' }}>
+              Firing 0x74 0xC8 every 100ms — check SNIFFER tab for TX rate
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* ── Test Session Log ────────────────────────── */}
       <Text style={[S.subTitle, { color: txtMuted }]}>TEST SESSION LOG ({testLog.length}/200)</Text>
       {testLog.length === 0 ? (
         <Text style={[S.hint, { color: txtMuted }]}>No tests fired yet. Tap SEND on any test above.</Text>
