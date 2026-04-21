@@ -39,15 +39,15 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
     []
   );
 
-  /** Send a solid color instantly using setSymphonyColor (15-byte protocol) to escape the MTU limit */
+  /** Send a solid color instantly using setMultiColor (0x59 FREEZE) to bypass physical payload limits */
   const sendColor = useCallback(
     async (r: number, g: number, b: number) => {
       if (!writeToDevice) return;
-      // We use setSymphonyColor (0x41) because it generates a 15-byte payload overall.
-      // This slides perfectly underneath any 23-byte MTU failure ceilings.
-      await writeToDevice(ZenggeProtocol.setSymphonyColor(r, g, b));
+      // 0x59 FREEZE is the true architectural ghost standard for Solid Replication without glitching/failing
+      const arr = Array.from({ length: numLEDs }, () => ({ r, g, b }));
+      await writeToDevice(ZenggeProtocol.setMultiColor(arr, 31, 1, 0x01)); // 0x01 = FREEZE
     },
-    [writeToDevice]
+    [writeToDevice, numLEDs]
   );
 
   /**
@@ -69,6 +69,14 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       const fgRaw = hexToRgb(fg);
       const bgRaw = hexToRgb(bg);
 
+      // Solid Mode (Pattern 1) Override: Use standard 0x59 FREEZE array to avoid triggering Symphony loops
+      if (patternId === 1) {
+        sendColor(fgRaw.r, fgRaw.g, fgRaw.b);
+        return;
+      }
+
+      // 0x51 Custom Engines expect pure, unmodified hexadecimal parameters.
+      // The hardware engines interpret brightness separately natively.
       // Use compact format: only 1 active step (12 bytes raw, 20 bytes wrapped).
       // Fits in any BLE MTU.
       const payload = ZenggeProtocol.setCustomModeCompact([
@@ -77,7 +85,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
 
       if (payload) writeToDevice(payload);
     },
-    [writeToDevice]
+    [writeToDevice, sendColor]
   );
 
   /** Apply static/strobe/blink mode pattern */

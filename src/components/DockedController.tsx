@@ -29,7 +29,7 @@ import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
 import { useSessionTracking } from '../hooks/useSessionTracking';
 import { useStreetMode } from '../hooks/useStreetMode';
 import type { BleConnectionState, IDeviceState, IFavoriteState, ModeType } from '../types/dashboard.types';
-import { getColorName, hexToHue } from '../utils/ColorUtils';
+import { getColorName, hexToHue, hueToHex, hexToRgb } from '../utils/ColorUtils';
 import AnalogGauge from './docked/AnalogGauge';
 import FavoritesPanel from './docked/FavoritesPanel';
 import MusicPanel from './docked/MusicPanel';
@@ -822,10 +822,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             {activeMode === 'CAMERA' && (
               <CameraPanel
                 onColorDetected={(hex: string) => {
-                  setSelectedColor(hex);
-                  const r = parseInt(hex.slice(1, 3), 16);
-                  const g = parseInt(hex.slice(3, 5), 16);
-                  const b = parseInt(hex.slice(5, 7), 16);
+                  // Boost camera's dark/washed-out pixels to 100% pure neon saturation
+                  const hue = hexToHue(hex);
+                  const neonHex = hueToHex(hue);
+                  setSelectedColor(neonHex);
+                  const { r, g, b } = hexToRgb(neonHex);
                   sendColor(r, g, b);
                 }}
               />

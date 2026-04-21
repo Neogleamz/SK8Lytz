@@ -431,7 +431,7 @@ export class ZenggeProtocol {
     
     // Pad the physical array out to numPoints internally if the caller under-filled it
     const paddedColors = new Array(numPoints).fill(colors[0] || {r:0, g:0, b:0});
-    for(let i=0; i<numPoints; i++) paddedColors[i] = colors[i];
+    for(let i=0; i < Math.min(numPoints, colors.length); i++) paddedColors[i] = colors[i];
 
     // Speed mapping: user-facing 0–100 → hardware 1–31.
     // Previously 0x00 (CASCADE) was HARDCODED to speed=1 — that was wrong, made animations look frozen.
