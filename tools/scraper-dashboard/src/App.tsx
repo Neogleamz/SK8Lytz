@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import USAMap from './USMap';
 import './App.css';
 
@@ -91,12 +91,12 @@ function App() {
   const [isStarting, setIsStarting] = useState(false);
   const rowsPerPage = 50;
 
-  // --- Phase 6 View Mode ---
+  // --- Phase 6 View Mode ('card' | 'list' | 'table') ---
   const [viewMode, setViewMode] = useState<'card' | 'list' | 'table'>('table');
 
   useEffect(() => {
     fetchSystemStatus();
-    fetchQueue();          // Full initial load ΓÇö all phases
+    fetchQueue();          // Full initial load — all phases
     fetchHarvestStatus();
     fetchHistory();
     fetchCoverage();
@@ -134,7 +134,7 @@ function App() {
 
   useEffect(() => {
     if (activeTab === 'phase1') {
-      fetchDatabankCoverage(); // Phase 1 map uses same source ΓÇö Google record density per state
+      fetchDatabankCoverage(); // Phase 1 map uses same source — Google record density per state
     }
     if (activeTab === 'phase6') {
       fetchSpots(0, gridFilter, sortCol, sortDir, searchQuery);
@@ -249,15 +249,16 @@ function App() {
     }
   };
 
-  // --- Priority States (Global Active Region) ---
-  // Writes directly to /api/priority-states — all phases (Ph1-Ph5 daemons) read this.
+  // --- Priority States: Global Active Region ---
+  // All daemon phases (Ph2-Ph5) read this via /api/priority-states.
+  // Empty array = nationwide (no filter).
   const setPriorityStates = async (newStates: string[]) => {
     setStateOverride(newStates);
     await fetch(`${API_BASE}/api/priority-states`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ states: newStates })
-    }).catch(e => console.error('Failed to set priority states:', e));
+    }).catch(e => console.error('Priority state write failed:', e));
   };
 
   const togglePriorityState = async (st: string) => {
@@ -463,7 +464,7 @@ function App() {
     try {
       const res = await fetch(`${API_BASE}/api/promote-state/${state}`, { method: 'POST' });
       const data = await res.json();
-      alert(`Γ£à Published ${data.promoted ?? 0} records in ${state}!`);
+      alert(`✅ Published ${data.promoted ?? 0} records in ${state}!`);
       fetchSpots(page, gridFilter);
       fetchDatabankCoverage();
     } catch (e) {}
@@ -471,7 +472,7 @@ function App() {
 
   const unpublishState = async (state: string) => {
     if (!state || state.length !== 2) return;
-    if (!confirm(`ΓÜá∩╕Å Retract ALL published records in ${state} from the live app map?`)) return;
+    if (!confirm(`⚠️ Retract ALL published records in ${state} from the live app map?`)) return;
     try {
       const res = await fetch(`${API_BASE}/api/unpublish-state/${state}`, { method: 'POST' });
       const data = await res.json();
@@ -482,25 +483,25 @@ function App() {
   };
 
   const PIPELINE_PHASES = [
-    { id: '1', title: 'The Scout', sub: 'Google Places Sweep ΓÇö Nationwide Seeding', route: 'phase1', color: '#8a2be2', 
-      target: 'Google API ΓåÆ ENRICHED', 
+    { id: '1', title: 'The Scout', sub: 'Google Places Sweep — Nationwide Seeding', route: 'phase1', color: '#8a2be2', 
+      target: 'Google API → ENRICHED', 
       metric: (status?.enrichedCount || 0) + (status?.pendingCount || 0), metricLabel: 'Total Seeded', isDaemon: false, 
       statusActive: status?.isHarvestingActive || status?.isGoogleSweepActive },
     { id: '2', title: 'The Operator', sub: 'Identity Resolution (Website + Phone)', route: 'phase2', color: '#5d78ff', 
-      target: 'PENDING ΓåÆ IDENTITY_ESTABLISHED', 
+      target: 'PENDING → IDENTITY_ESTABLISHED', 
       metric: status?.identityCount || 0, metricLabel: 'Identities Resolved', isDaemon: true, 
       statusActive: status?.currentTarget?.includes('Operator: online') },
     { id: '3', title: 'The Detective', sub: 'Website Deep Crawl + Photo Candidates', route: 'phase3', color: '#ff5a00', 
-      target: 'ENRICHED ΓåÆ is_deep_crawled', 
+      target: 'ENRICHED → is_deep_crawled', 
       metric: status?.indexedCount || 0, metricLabel: 'Websites Crawled', isDaemon: true, 
       statusActive: status?.currentTarget?.includes('Indexer: online') },
     { id: '4', title: 'The Photographer', sub: 'Free Photo Harvest (OG + Street View)', route: 'phase4', color: '#e91e63', 
-      target: 'ENRICHED ΓåÆ MEDIA_READY', 
+      target: 'ENRICHED → MEDIA_READY', 
       metric: status?.mediaReadyCount || 0, metricLabel: 'Galleries Built', isDaemon: true, 
       statusActive: status?.currentTarget?.includes('Photographer: online') },
     { id: '5', title: 'The Publisher', sub: 'App Release Gate', route: 'phase5', color: '#4caf50', 
-      target: 'MEDIA_READY / ENRICHED -> is_published',
-      metric: status?.verifiedCount || 0, metricLabel: 'Live on App Map', isDaemon: false,
+      target: 'MEDIA_READY / ENRICHED → is_published', 
+      metric: status?.verifiedCount || 0, metricLabel: 'Live on App Map', isDaemon: false, 
       statusActive: true },
     { id: '6', title: 'Databank QA', sub: 'Master Review Grid + Coverage Map', route: 'phase6', color: '#ffb300',
       target: 'QA Review -> Selective Publish',
@@ -517,7 +518,7 @@ function App() {
           <p style={{marginTop: 0, color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Decoupled 6-Phase Micro-Scraper Architecture</p>
         </div>
         <div className="daemon-status-header" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
-           {/* Fleet Control ΓÇö always-visible per-daemon start/stop */}
+           {/* Fleet Control — always-visible per-daemon start/stop */}
            {[
              { id: 'operator',     label: 'Operator',     color: '#4caf50',  phase: '2', onKey: 'Operator: online' },
              { id: 'indexer',      label: 'Indexer',      color: '#ff5a00',  phase: '3', onKey: 'Indexer: online' },
@@ -532,7 +533,7 @@ function App() {
                    onClick={() => triggerSpecificDaemon(d.id, isOn ? 'stop' : 'start')}
                    style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: isOn ? 'rgba(255,60,60,0.3)' : `${d.color}33`, color: isOn ? '#ff6b6b' : d.color, letterSpacing: '0.05em', transition: 'all 0.2s' }}
                  >
-                   {isOn ? 'Γûá STOP' : 'Γû╢ START'}
+                   {isOn ? '■ STOP' : '▶ START'}
                  </button>
                </div>
              );
@@ -542,7 +543,7 @@ function App() {
              title="Emergency stop all daemons"
              style={{ fontSize: '0.65rem', fontWeight: 800, padding: '5px 12px', borderRadius: '20px', border: '1px solid rgba(255,60,60,0.3)', cursor: 'pointer', background: 'rgba(255,60,60,0.1)', color: '#ff6b6b', letterSpacing: '0.05em' }}
            >
-             Γ¢ö STOP ALL
+             ⛔ STOP ALL
            </button>
         </div>
       </header>
@@ -551,9 +552,9 @@ function App() {
       {/* =========== OMNI CONTROL CENTER (GLOBAL CONTROLS) =========== */}
       <div className="omni-control-center fade-in" style={{ marginBottom: '2rem', background: 'var(--surface)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--surface-highlight)' }}>
          <div className="security-control-bar" style={{ position: 'relative', background: 'transparent', padding: '0 0 1rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="ghost-badge mini" style={{position: 'absolute', top: -35, right: 0}}>≡ƒ¢í∩╕Å GHOST ENCRYPTED PIPELINE ACTIVE</span>
+            <span className="ghost-badge mini" style={{position: 'absolute', top: -35, right: 0}}>🛡️ GHOST ENCRYPTED PIPELINE ACTIVE</span>
             <div className="security-label">
-                <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 800}}>≡ƒ¢í∩╕Å UNIVERSAL TACTICS & SPOOFING</span>
+                <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 800}}>🛡️ UNIVERSAL TACTICS & SPOOFING</span>
             </div>
             <div className="security-inputs" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                 <div className="input-group-inline">
@@ -589,10 +590,10 @@ function App() {
                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) 1fr', gap: '1rem' }}>
                   <div className="btn-group-vertical" style={{ display: 'flex', gap: '0.5rem' }}>
                      <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}>
-                       ≡ƒöÑ BOOT ALL DAEMONS (Ph2+)
+                       🔥 BOOT ALL DAEMONS (Ph2+)
                      </button>
                      <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}>
-                       ≡ƒ¢æ HALT ALL
+                       🛑 HALT ALL
                      </button>
                   </div>
                   
@@ -603,42 +604,42 @@ function App() {
                </div>
             </div>
          </div>
+      </div>
 
-          {/* =========== ACTIVE REGION - GLOBAL PRIORITY =========== */}
-          <div style={{ marginTop: '1.5rem', padding: '1rem 1.5rem', background: 'rgba(138,43,226,0.06)', borderRadius: '10px', border: '1px solid rgba(138,43,226,0.25)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800, color: '#8a2be2', letterSpacing: '0.1em' }}>
-                ACTIVE REGION
-                <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 400, textTransform: 'none', fontSize: '0.7rem', marginLeft: '6px' }}>-- all phases &amp; daemons prioritize selected states</span>
-              </span>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                {stateOverride.length > 0 && (
-                  <span style={{ fontSize: '0.7rem', color: '#8a2be2', fontWeight: 700 }}>{stateOverride.length} state{stateOverride.length !== 1 ? 's' : ''} targeted</span>
-                )}
-                <button onClick={() => setPriorityStates([])}
-                  style={{ fontSize: '0.65rem', padding: '4px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)', background: stateOverride.length === 0 ? '#8a2be2' : 'transparent', color: stateOverride.length === 0 ? '#fff' : 'rgba(255,255,255,0.4)', cursor: 'pointer', fontWeight: 700 }}
-                >NATIONWIDE</button>
-              </div>
-            </div>
-            {stateOverride.length > 0 ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {stateOverride.map(st => (
-                  <button key={st} onClick={() => togglePriorityState(st)}
-                    style={{ padding: '4px 12px', fontSize: '0.75rem', borderRadius: '12px', border: 'none', background: '#8a2be2', color: '#fff', cursor: 'pointer', fontWeight: 700 }}
-                  >{st} x</button>
-                ))}
-                <button
-                  onClick={() => { const s = prompt('Add state (2-letter code):'); if (s && s.trim().length >= 2) togglePriorityState(s.trim().toUpperCase().slice(0, 2)); }}
-                  style={{ padding: '4px 12px', fontSize: '0.75rem', borderRadius: '12px', border: '1px dashed rgba(138,43,226,0.5)', background: 'transparent', color: '#8a2be2', cursor: 'pointer' }}
-                >+ Add State</button>
-              </div>
-            ) : (
-              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
-                Nationwide mode -- all daemons process states equally. Click a state on the Phase 1 density map or leaderboard to set a priority region.
-              </div>
+      {/* === ACTIVE REGION: Global Priority Filter === */}
+      <div style={{ marginBottom: '2rem', padding: '1rem 1.5rem', background: 'rgba(138,43,226,0.06)', borderRadius: '10px', border: '1px solid rgba(138,43,226,0.25)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+          <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800, color: '#8a2be2', letterSpacing: '0.1em' }}>
+            ACTIVE REGION
+            <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 400, textTransform: 'none', fontSize: '0.7rem', marginLeft: '6px' }}>-- all daemon phases prioritize selected states</span>
+          </span>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {stateOverride.length > 0 && (
+              <span style={{ fontSize: '0.7rem', color: '#8a2be2', fontWeight: 700 }}>{stateOverride.length} state{stateOverride.length !== 1 ? 's' : ''} targeted</span>
             )}
+            <button onClick={() => setPriorityStates([])}
+              style={{ fontSize: '0.65rem', padding: '4px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)', background: stateOverride.length === 0 ? '#8a2be2' : 'transparent', color: stateOverride.length === 0 ? '#fff' : 'rgba(255,255,255,0.4)', cursor: 'pointer', fontWeight: 700 }}
+            >NATIONWIDE</button>
           </div>
-       </div>
+        </div>
+        {stateOverride.length > 0 ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {stateOverride.map(st => (
+              <button key={st} onClick={() => togglePriorityState(st)}
+                style={{ padding: '4px 12px', fontSize: '0.75rem', borderRadius: '12px', border: 'none', background: '#8a2be2', color: '#fff', cursor: 'pointer', fontWeight: 700 }}
+              >{st} x</button>
+            ))}
+            <button
+              onClick={() => { const s = prompt('Add state (2-letter code):'); if (s && s.trim().length >= 2) togglePriorityState(s.trim().toUpperCase().slice(0, 2)); }}
+              style={{ padding: '4px 12px', fontSize: '0.75rem', borderRadius: '12px', border: '1px dashed rgba(138,43,226,0.5)', background: 'transparent', color: '#8a2be2', cursor: 'pointer' }}
+            >+ Add State</button>
+          </div>
+        ) : (
+          <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
+            Nationwide -- all daemons process states equally. Click a state on the Phase 1 map or leaderboard to target a region.
+          </div>
+        )}
+      </div>
 
       {/* =========== 6-PHASE UNIFORM PIPELINE GRID =========== */}
       <div className="pipeline-grid fade-in">
@@ -671,7 +672,7 @@ function App() {
           <div className="tab-pane phase-1">
             <div className="explainer-block" style={{marginBottom: '1rem'}}>
               <h3 style={{marginTop: 0, color: '#8a2be2'}}>The Scout: GIS Ingestion Engine</h3>
-              <p>Phase 1 uses the <strong style={{color:'#ffb300'}}>Google Places API</strong> to seed the entire pipeline ΓÇö querying by state for roller rinks and skate shops. Each result is written directly as an <strong>ENRICHED</strong> record with full coordinates, phone, hours, rating, and website. The OSM fallback mode is available for legacy re-harvests but is <em style={{color:'rgba(255,255,255,0.4)'}}>not recommended</em> ΓÇö Google data is always higher quality.</p>
+              <p>Phase 1 uses the <strong style={{color:'#ffb300'}}>Google Places API</strong> to seed the entire pipeline — querying by state for roller rinks and skate shops. Each result is written directly as an <strong>ENRICHED</strong> record with full coordinates, phone, hours, rating, and website. The OSM fallback mode is available for legacy re-harvests but is <em style={{color:'rgba(255,255,255,0.4)'}}>not recommended</em> — Google data is always higher quality.</p>
             </div>
 
             <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', marginBottom: '2rem' }}>
@@ -683,9 +684,9 @@ function App() {
                <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                   <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
                      <button className={`btn-mini start ${isStarting ? 'pulsing' : ''}`} onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive || status?.isGoogleSweepActive || isStarting}>
-                        Γû╢ {isStarting ? 'INITIATING...' : stateOverride.length > 0 ? `SEED ${stateOverride.join(', ')}` : 'GLOBAL SEED'}
+                        ▶ {isStarting ? 'INITIATING...' : stateOverride.length > 0 ? `SEED ${stateOverride.join(', ')}` : 'GLOBAL SEED'}
                      </button>
-                     <button className="btn-mini stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive && !status?.isGoogleSweepActive}>Γûá STOP</button>
+                     <button className="btn-mini stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive && !status?.isGoogleSweepActive}>■ STOP</button>
                   </div>
                   {(status?.isHarvestingActive || status?.isGoogleSweepActive) && <div className="flow-animation"></div>}
                </div>
@@ -699,13 +700,13 @@ function App() {
             {/* OMNI-NET DISCOVERY PANEL */}
             <div className="discovery-net-panel" style={{ background: 'linear-gradient(135deg, rgba(138,43,226,0.1) 0%, rgba(0,0,0,0.3) 100%)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(138, 43, 226, 0.3)', marginBottom: '2rem', position: 'relative' }}>
                <div style={{ position: 'absolute', top: '-10px', right: '20px', background: '#8a2be2', color: '#fff', fontSize: '0.6rem', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>STATE TARGETING</div>
-               <h3 style={{ marginTop: 0, color: '#fff', fontSize: 18 }}>≡ƒôí State Re-Sweep Controls</h3>
+               <h3 style={{ marginTop: 0, color: '#fff', fontSize: 18 }}>📡 State Re-Sweep Controls</h3>
                <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem' }}>Manually trigger a Google Places sweep for a specific state, or switch the seeding provider. Useful for topping up states with low record counts.</p>
                
                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
                      <h4 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: '#8a2be2' }}>Re-Sweep State</h4>
-                     <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>Force a fresh Google Places sweep for a single state. Respects the dedup logic ΓÇö existing records are refreshed, not duplicated.</p>
+                     <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>Force a fresh Google Places sweep for a single state. Respects the dedup logic — existing records are refreshed, not duplicated.</p>
                      <div style={{ display: 'flex', gap: '8px' }}>
                        <select className="mini-input" style={{ flex: 1, background: '#1a1a1a' }} id="force-state-sel">
                          {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -765,7 +766,7 @@ function App() {
             {/* ========= GOOGLE COVERAGE DENSITY MAP ========= */}
             <div className="panel coverage-panel" style={{ marginTop: '2rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <h2 className="panel-header" style={{ margin: 0 }}>≡ƒôí Google Places Coverage ΓÇö State Density</h2>
+                <h2 className="panel-header" style={{ margin: 0 }}>📡 Google Places Coverage — State Density</h2>
                 <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
                   {databankCoverage.reduce((a: number, r: any) => a + (r.total || 0), 0).toLocaleString()} records across {databankCoverage.filter((r: any) => r.total > 0).length} states
                 </span>
@@ -778,8 +779,8 @@ function App() {
               <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
                 {[
                   { color: 'rgba(255,255,255,0.07)', label: 'Untouched',       range: '0 records' },
-                  { color: '#f5a623cc',               label: 'Early Coverage', range: '1ΓÇô49' },
-                  { color: '#ff6b00cc',               label: 'Well Seeded',    range: '50ΓÇô99' },
+                  { color: '#f5a623cc',               label: 'Early Coverage', range: '1–49' },
+                  { color: '#ff6b00cc',               label: 'Well Seeded',    range: '50–99' },
                   { color: '#4caf50cc',               label: 'Saturated',      range: '100+' },
                 ].map(t => (
                   <div key={t.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.03)', padding: '5px 12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -800,7 +801,7 @@ function App() {
                       if (!row.state || row.state === 'UNKNOWN') return;
                       const n = row.total || 0;
                       if (n === 0) return;
-                      // Density tiers: amber ΓåÆ orange ΓåÆ green
+                      // Density tiers: amber → orange → green
                       const fill = n >= 100 ? '#4caf50cc'
                         : n >= 50  ? '#ff6b00cc'
                         : '#f5a623cc';
@@ -834,9 +835,9 @@ function App() {
                         .filter((r: any) => r.total > 0)
                         .sort((a: any, b: any) => b.total - a.total)
                         .map((row: any) => {
-                          const tier = row.total >= 100 ? { color: '#4caf50', label: '≡ƒƒó' }
-                            : row.total >= 50 ? { color: '#ff6b00', label: '≡ƒƒá' }
-                            : { color: '#f5a623', label: '≡ƒƒí' };
+                          const tier = row.total >= 100 ? { color: '#4caf50', label: '🟢' }
+                            : row.total >= 50 ? { color: '#ff6b00', label: '🟠' }
+                            : { color: '#f5a623', label: '🟡' };
                           return (
                             <tr key={row.state} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                               <td style={{ padding: '6px 8px', fontWeight: 700, color: tier.color }}>
@@ -850,7 +851,7 @@ function App() {
                                 <button
                                   style={{ fontSize: '0.65rem', padding: '3px 10px', borderRadius: '10px', border: 'none', background: stateOverride.includes(row.state) ? '#8a2be2' : 'rgba(255,255,255,0.08)', color: stateOverride.includes(row.state) ? '#fff' : 'rgba(255,255,255,0.6)', cursor: 'pointer', fontWeight: 700 }}
                                   onClick={() => updateGlobalStrategy('state_override', row.state)}
-                                >{stateOverride.includes(row.state) ? 'Γ£ô TARGETED' : 'TARGET'}</button>
+                                >{stateOverride.includes(row.state) ? '✓ TARGETED' : 'TARGET'}</button>
                               </td>
                             </tr>
                           );
@@ -863,7 +864,7 @@ function App() {
             
             <div className="evasion-audit-card" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: '1px solid rgba(138, 43, 226, 0.2)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                 <h3 style={{ margin: 0, color: '#8a2be2', fontSize: '0.9rem', textTransform: 'uppercase' }}>≡ƒ¢í∩╕Å Phase 1 Evasion Audit</h3>
+                 <h3 style={{ margin: 0, color: '#8a2be2', fontSize: '0.9rem', textTransform: 'uppercase' }}>🛡️ Phase 1 Evasion Audit</h3>
                  <div className="pulse-badge">LAST: {status?.pulseRegistry?.['Phase 1']?.lastRunAt ? new Date(status.pulseRegistry['Phase 1'].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -893,7 +894,7 @@ function App() {
                           <div className="queue-card-loc">{spot.city}, {spot.state}</div>
                           <div className="queue-tags">
                             <span className="queue-badge" style={{ background: spot.verification_status === 'ENRICHED' ? 'rgba(255,90,0,0.1)' : 'rgba(255,255,255,0.05)', color: spot.verification_status === 'ENRICHED' ? '#ff5a00' : 'var(--text-secondary)' }}>
-                              {spot.verification_status === 'ENRICHED' ? 'Γ£¿ ENRICHED (Google)' : 'ΓÅ│ RAW SEED'}
+                              {spot.verification_status === 'ENRICHED' ? '✨ ENRICHED (Google)' : '⏳ RAW SEED'}
                             </span>
                           </div>
                         </div>
@@ -911,9 +912,9 @@ function App() {
                <h3 style={{marginTop: 0, color: PIPELINE_PHASES.find(p=>p.route===activeTab)?.color}}>
                    {PIPELINE_PHASES.find(p=>p.route===activeTab)?.title}: {PIPELINE_PHASES.find(p=>p.route===activeTab)?.sub}
                </h3>
-               {activeTab === 'phase2' && <p>Targets <strong>PENDING</strong> records and resolves their real-world identity ΓÇö finding the business website and phone number via web search heuristics. Graduates records to <strong>IDENTITY_ESTABLISHED</strong> when found. <em style={{color:'rgba(255,255,255,0.4)'}}>Note: Since the pipeline now uses Google Places as the primary seeder, PENDING records are rare. This daemon handles any OSM legacy records or manually added entries.</em></p>}
+               {activeTab === 'phase2' && <p>Targets <strong>PENDING</strong> records and resolves their real-world identity — finding the business website and phone number via web search heuristics. Graduates records to <strong>IDENTITY_ESTABLISHED</strong> when found. <em style={{color:'rgba(255,255,255,0.4)'}}>Note: Since the pipeline now uses Google Places as the primary seeder, PENDING records are rare. This daemon handles any OSM legacy records or manually added entries.</em></p>}
                {activeTab === 'phase3' && <p>The Detective deep-crawls each spot's website using Puppeteer with GHOST identity spoofing. Extracts operating hours, 18+ adult night schedules, pricing, event listings, social links, and photo candidates (OG image, DOM images, Facebook OG). Writes <code>candidate_photos</code> for the Photographer to harvest.</p>}
-               {activeTab === 'phase4' && <p>The Photographer daemon reads <code>candidate_photos</code> written by the Indexer ΓÇö downloading OG images and DOM media as binary uploads to Supabase Storage. Falls back to Google Street View Static as a guaranteed photo source. Promotes records to <strong>MEDIA_READY</strong> on success.</p>}
+               {activeTab === 'phase4' && <p>The Photographer daemon reads <code>candidate_photos</code> written by the Indexer — downloading OG images and DOM media as binary uploads to Supabase Storage. Falls back to Google Street View Static as a guaranteed photo source. Promotes records to <strong>MEDIA_READY</strong> on success.</p>}
                {activeTab === 'phase5' && <p>The Publisher Gate is the final human-approved release step. Only records with <strong style={{color:'#4caf50'}}>is_published = true</strong> are visible on the live SK8Lytz app map. Bulk-promote all pipeline-complete records (ENRICHED + MEDIA_READY) below, or use the Databank QA tab to approve individual spots.</p>}
              </div>
              
@@ -925,8 +926,8 @@ function App() {
                    </div>
                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('operator', 'start')} disabled={status?.currentTarget?.includes('Operator: online')}>Γû╢ START OPERATOR</button>
-                         <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('operator', 'stop')} disabled={!status?.currentTarget?.includes('Operator: online')}>Γûá STOP</button>
+                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('operator', 'start')} disabled={status?.currentTarget?.includes('Operator: online')}>▶ START OPERATOR</button>
+                         <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('operator', 'stop')} disabled={!status?.currentTarget?.includes('Operator: online')}>■ STOP</button>
                       </div>
                       <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
                          {status?.identityCount || 0} / {(status?.pendingCount || 0) + (status?.identityCount || 0)} Completed
@@ -958,8 +959,8 @@ function App() {
                     </div>
                     <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                        <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                          <button className="btn-mini start" onClick={() => triggerSpecificDaemon('indexer', 'start')} disabled={status?.currentTarget?.includes('Indexer: online')}>Γû╢ START DETECTIVE</button>
-                          <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('indexer', 'stop')} disabled={!status?.currentTarget?.includes('Indexer: online')}>Γûá STOP</button>
+                          <button className="btn-mini start" onClick={() => triggerSpecificDaemon('indexer', 'start')} disabled={status?.currentTarget?.includes('Indexer: online')}>▶ START DETECTIVE</button>
+                          <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('indexer', 'stop')} disabled={!status?.currentTarget?.includes('Indexer: online')}>■ STOP</button>
                        </div>
                        <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
                           {status?.indexedCount || 0} websites crawled (+ photo candidates)
@@ -983,11 +984,11 @@ function App() {
                    </div>
                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('photographer', 'start')} disabled={status?.currentTarget?.includes('Photographer: online')}>≡ƒô╕ START PHOTOGRAPHER</button>
-                         <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('photographer', 'stop')} disabled={!status?.currentTarget?.includes('Photographer: online')}>Γûá STOP</button>
+                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('photographer', 'start')} disabled={status?.currentTarget?.includes('Photographer: online')}>📸 START PHOTOGRAPHER</button>
+                         <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('photographer', 'stop')} disabled={!status?.currentTarget?.includes('Photographer: online')}>■ STOP</button>
                       </div>
                       <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
-                         OG Image ΓåÆ DOM Images ΓåÆ Street View ΓåÆ Facebook OG
+                         OG Image → DOM Images → Street View → Facebook OG
                       </div>
                       {status?.currentTarget?.includes('Photographer: online') && <div className="flow-animation"></div>}
                    </div>
@@ -1016,7 +1017,7 @@ function App() {
                   </div>
                   <div style={{ textAlign: 'center', padding: '1.5rem', background: 'rgba(76,175,80,0.05)', border: '1px solid rgba(76,175,80,0.3)', borderRadius: '8px' }}>
                     <p style={{ margin: '0 0 1rem', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>The Publisher Gate controls which records are visible to users on the SK8Lytz app map. Use the Databank QA tab to review individual records and toggle <strong style={{color:'#4caf50'}}>APP_LIVE</strong>, or bulk-promote all ENRICHED records below.</p>
-                    <button className="btn btn-start" style={{background: '#4caf50', border: 'none'}} onClick={bulkPromote}>≡ƒÜÇ BULK PUBLISH ALL ENRICHED ΓåÆ APP MAP</button>
+                    <button className="btn btn-start" style={{background: '#4caf50', border: 'none'}} onClick={bulkPromote}>🚀 BULK PUBLISH ALL ENRICHED → APP MAP</button>
                   </div>
                 </div>
              )}
@@ -1026,7 +1027,7 @@ function App() {
                 const queue = phaseQueues[activeTab] || [];
                 let hydratingFields: string[] = [];
                 if (activeTab === 'phase2') hydratingFields = ['Website', 'Phone Number'];
-                if (activeTab === 'phase3') hydratingFields = ['Pricing', 'Adult Night', 'Hours', '≡ƒô╕ Photo Candidates'];
+                if (activeTab === 'phase3') hydratingFields = ['Pricing', 'Adult Night', 'Hours', '📸 Photo Candidates'];
                 if (activeTab === 'phase4') hydratingFields = ['OG Photo', 'DOM Images', 'Street View', 'Facebook OG'];
                 if (activeTab === 'phase5') hydratingFields = ['Media URLs', 'Thumbnails'];
 
@@ -1037,7 +1038,7 @@ function App() {
                   <div style={{marginTop: '20px'}}>
                      <div className="evasion-audit-card" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: `1px solid ${activeColor}44` }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                           <h3 style={{ margin: 0, color: activeColor, fontSize: '0.9rem', textTransform: 'uppercase' }}>≡ƒ¢í∩╕Å {activeLabel} Evasion Audit</h3>
+                           <h3 style={{ margin: 0, color: activeColor, fontSize: '0.9rem', textTransform: 'uppercase' }}>🛡️ {activeLabel} Evasion Audit</h3>
                            <div className="pulse-badge" style={{fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)'}}>LAST: {status?.pulseRegistry?.[activeLabel]?.lastRunAt ? new Date(status.pulseRegistry[activeLabel].lastRunAt).toLocaleTimeString() : 'NEVER'}</div>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) 1fr', gap: '1.5rem', alignItems: 'center' }}>
@@ -1073,7 +1074,7 @@ function App() {
                               <div className="queue-card-title">{spot.name}</div>
                               <div className="queue-card-loc">{spot.city}, {spot.state}</div>
                               <div className="queue-tags">
-                                {hydratingFields.map(f => <span key={f} className="queue-badge" style={{color: activeColor}}>ΓÅ│ {f}</span>)}
+                                {hydratingFields.map(f => <span key={f} className="queue-badge" style={{color: activeColor}}>⏳ {f}</span>)}
                               </div>
                             </div>
                           ))}
@@ -1095,11 +1096,11 @@ function App() {
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 2fr', gap: '10px', marginTop: '1rem', background: '#000', padding: '15px', borderRadius: '8px' }}>
                  <div style={{marginBottom: '10px'}}>
                     <span className="status-pill enriched" style={{marginBottom: 5, display: 'inline-block', border: '1px solid #ff9800', background:'rgba(255,152,0,0.1)'}}>ENRICHED</span><br/>
-                    <span style={{fontSize: '0.8rem', color:'var(--text-secondary)'}}>Google Places data. High-fidelity coordinates, hours, ratings. Ready for publish review.</span>
+                    <span style={{fontSize: '0.8rem', color:'var(--text-secondary)'}}>Google Places data -- high-fidelity coordinates, hours, ratings. Priority publish candidates.</span>
                  </div>
                  <div style={{marginBottom: '10px'}}>
                     <span className="status-pill" style={{marginBottom: 5, display: 'inline-block', border: '1px solid #e91e63', background:'rgba(233,30,99,0.1)', color: '#e91e63'}}>MEDIA_READY</span><br/>
-                    <span style={{fontSize: '0.8rem', color:'var(--text-secondary)'}}>Photos collected and uploaded to CDN. Priority publish candidates -- full card view available.</span>
+                    <span style={{fontSize: '0.8rem', color:'var(--text-secondary)'}}>Photos collected and uploaded to CDN. Full card view available with image preview.</span>
                  </div>
                  <div>
                     <span style={{fontSize: '0.85rem', fontWeight: 800, color:'#4caf50', border: '1px solid #4caf50', padding: '4px 8px', borderRadius: '4px', display:'inline-block', marginBottom: 5}}>APP_LIVE TOGGLE</span><br/>
@@ -1107,7 +1108,7 @@ function App() {
                  </div>
                  <div>
                     <span style={{fontSize: '0.85rem', fontWeight: 800, color:'#8a2be2', border: '1px solid #8a2be2', padding: '4px 8px', borderRadius: '4px', display:'inline-block', marginBottom: 5}}>PENDING</span><br/>
-                    <span style={{fontSize: '0.8rem', color:'var(--text-secondary)'}}>Legacy OSM records. Low-fidelity. Review before publishing -- most can be ignored in favor of ENRICHED records.</span>
+                    <span style={{fontSize: '0.8rem', color:'var(--text-secondary)'}}>Legacy OSM records -- lower fidelity. Review before publishing.</span>
                  </div>
               </div>
             </div>
@@ -1115,7 +1116,7 @@ function App() {
             {/* =========== STATUS COVERAGE MAP =========== */}
             <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255,179,0,0.03)', border: '1px solid rgba(255,179,0,0.2)', borderRadius: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <h3 style={{ margin: 0, color: '#ffb300', fontSize: '0.95rem', textTransform: 'uppercase' }}>≡ƒôí Pipeline Coverage Map</h3>
+                <h3 style={{ margin: 0, color: '#ffb300', fontSize: '0.95rem', textTransform: 'uppercase' }}>📡 Pipeline Coverage Map</h3>
                 {/* Map Mode Toggle */}
                 <div style={{ display: 'flex', gap: '6px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px' }}>
                   <button
@@ -1123,19 +1124,19 @@ function App() {
                     style={{ padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
                       background: mapMode === 'quality' ? '#ffb300' : 'transparent',
                       color: mapMode === 'quality' ? '#000' : 'rgba(255,255,255,0.5)' }}
-                  >≡ƒôè Quality</button>
+                  >📊 Quality</button>
                   <button
                     onClick={() => setMapMode('published')}
                     style={{ padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
                       background: mapMode === 'published' ? '#4caf50' : 'transparent',
                       color: mapMode === 'published' ? '#000' : 'rgba(255,255,255,0.5)' }}
-                  >≡ƒÜÇ Published</button>
+                  >🚀 Published</button>
                 </div>
               </div>
               <p style={{ margin: '0 0 1.5rem', color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>
                 {mapMode === 'quality'
                   ? 'Dominant pipeline status per state. Click a state to filter the grid.'
-                  : 'Live app coverage ΓÇö green = fully published, grey = not yet live. Click to filter.'}
+                  : 'Live app coverage — green = fully published, grey = not yet live. Click to filter.'}
               </p>
               
               {/* Nationwide status totals */}
@@ -1171,7 +1172,7 @@ function App() {
                           <>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(76,175,80,0.08)', padding: '8px 16px', borderRadius: '20px', border: '1px solid #4caf5044' }}>
                               <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#4caf50', display: 'inline-block' }}></span>
-                              <span style={{ fontSize: '0.75rem', color: '#4caf50', fontWeight: 700 }}>≡ƒÜÇ Published</span>
+                              <span style={{ fontSize: '0.75rem', color: '#4caf50', fontWeight: 700 }}>🚀 Published</span>
                               <span style={{ fontSize: '0.85rem', color: '#4caf50', fontWeight: 800 }}>{totalPublished.toLocaleString()}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', padding: '8px 16px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -1248,8 +1249,8 @@ function App() {
             </div>
 
             <div className="grid-toolbar">
-              {/* View Mode Toggle */}
-              <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px', marginRight: '8px' }}>
+              {/* View Mode Toggle: Cards | List | Table */}
+              <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px', marginRight: '8px', flexShrink: 0 }}>
                 {(['card', 'list', 'table'] as const).map(mode => (
                   <button key={mode} onClick={() => setViewMode(mode)}
                     style={{ padding: '5px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase',
@@ -1268,26 +1269,26 @@ function App() {
                   <option value="ALL">All Records</option>
                   <option value="MEDIA_READY">MEDIA_READY -- Photo Ready (Priority)</option>
                   <option value="ENRICHED">ENRICHED -- Google Seeded</option>
-                  <option value="PENDING">PENDING -- Legacy Queue</option>
+                  <option value="PENDING">PENDING -- Legacy</option>
                   <option value="IDENTITY_ESTABLISHED">IDENTIFIED</option>
                   <option value="INDEXED">WEB CRAWLED</option>
                   <option value="REJECTED">Graveyard / Rejected</option>
                </select>
-              {/* State-scoped publish / unpublish ΓÇö appears when a 2-letter state filter is active */}
+              {/* State-scoped publish / unpublish — appears when a 2-letter state filter is active */}
               {activeStateFilter && activeStateFilter.length === 2 && (
                 <>
                   <button
                     className="btn-primary"
                     style={{ background: '#4caf50', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
                     onClick={() => promoteState(activeStateFilter)}
-                  >≡ƒÜÇ Publish {activeStateFilter}</button>
+                  >🚀 Publish {activeStateFilter}</button>
                   <button
                     style={{ background: 'rgba(255,59,48,0.15)', border: '1px solid rgba(255,59,48,0.4)', padding: '8px 16px', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', color: '#ff3b30' }}
                     onClick={() => unpublishState(activeStateFilter)}
-                  >Γå⌐ Retract {activeStateFilter}</button>
+                  >↩ Retract {activeStateFilter}</button>
                 </>
               )}
-              <button className="btn-primary" onClick={bulkPromote}>≡ƒÜÇ Bulk App Promote</button>
+              <button className="btn-primary" onClick={bulkPromote}>🚀 Bulk App Promote</button>
               <div className="pagination">
                 <button disabled={page === 0} onClick={() => fetchSpots(page - 1, gridFilter)}>Prev</button>
                 <span className="page-indicator">Page {page + 1} of {Math.ceil(totalSpots/rowsPerPage) || 1} ({totalSpots} total)</span>
@@ -1301,84 +1302,53 @@ function App() {
                 {spots.map(row => {
                   const photos: string[] = row.photos ? (typeof row.photos === 'string' ? JSON.parse(row.photos) : row.photos) : [];
                   const hours: string[] = row.hours ? (typeof row.hours === 'string' ? JSON.parse(row.hours) : row.hours) : [];
-                  const statusColors: Record<string, string> = { ENRICHED: '#ff9800', MEDIA_READY: '#e91e63', PENDING: '#8a2be2', IDENTITY_ESTABLISHED: '#5d78ff', INDEXED: '#ff5a00', REJECTED: '#666' };
-                  const statusColor = statusColors[row.verification_status] || '#666';
+                  const S: Record<string,string> = { ENRICHED:'#ff9800', MEDIA_READY:'#e91e63', PENDING:'#8a2be2', IDENTITY_ESTABLISHED:'#5d78ff', INDEXED:'#ff5a00', REJECTED:'#666' };
+                  const sc = S[row.verification_status] || '#666';
                   return (
-                    <div key={row.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s, box-shadow 0.2s' }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 40px rgba(0,0,0,0.4)'; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
+                    <div key={row.id} style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'16px', overflow:'hidden', display:'flex', flexDirection:'column', transition:'transform 0.2s, box-shadow 0.2s' }}
+                      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform='translateY(-3px)'; el.style.boxShadow='0 12px 40px rgba(0,0,0,0.4)'; }}
+                      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform='none'; el.style.boxShadow='none'; }}
                     >
-                      {/* Photo */}
-                      <div style={{ height: '180px', background: 'rgba(0,0,0,0.3)', position: 'relative', overflow: 'hidden' }}>
-                        {photos.length > 0 ? (
-                          <img src={photos[0]} alt={row.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.2)', fontSize: '2.5rem' }}>No Photo</div>
-                        )}
-                        {/* Status badge */}
-                        <div style={{ position: 'absolute', top: '10px', left: '10px', background: statusColor, color: '#fff', padding: '3px 10px', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 800 }}>
-                          {row.verification_status || 'PENDING'}
-                        </div>
-                        {/* Published badge */}
-                        {row.is_published && (
-                          <div style={{ position: 'absolute', top: '10px', right: '10px', background: '#4caf50', color: '#fff', padding: '3px 10px', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 800 }}>LIVE</div>
-                        )}
-                        {/* Photo count */}
-                        {photos.length > 1 && (
-                          <div style={{ position: 'absolute', bottom: '8px', right: '10px', background: 'rgba(0,0,0,0.7)', color: '#fff', padding: '2px 8px', borderRadius: '10px', fontSize: '0.65rem' }}>{photos.length} photos</div>
-                        )}
+                      <div style={{ height:'180px', background:'rgba(0,0,0,0.3)', position:'relative', overflow:'hidden' }}>
+                        {photos.length > 0
+                          ? <img src={photos[0]} alt={row.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                          : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.15)', fontSize:'2rem' }}>No Photo</div>
+                        }
+                        <div style={{ position:'absolute', top:'10px', left:'10px', background:sc, color:'#fff', padding:'3px 10px', borderRadius:'20px', fontSize:'0.6rem', fontWeight:800 }}>{row.verification_status||'PENDING'}</div>
+                        {row.is_published && <div style={{ position:'absolute', top:'10px', right:'10px', background:'#4caf50', color:'#fff', padding:'3px 10px', borderRadius:'20px', fontSize:'0.6rem', fontWeight:800 }}>LIVE</div>}
+                        {photos.length > 1 && <div style={{ position:'absolute', bottom:'8px', right:'10px', background:'rgba(0,0,0,0.7)', color:'#fff', padding:'2px 8px', borderRadius:'10px', fontSize:'0.6rem' }}>{photos.length} photos</div>}
                       </div>
-
-                      {/* Body */}
-                      <div style={{ padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{ padding:'1rem', flex:1, display:'flex', flexDirection:'column', gap:'0.5rem' }}>
                         <div>
-                          <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff', marginBottom: '2px' }}>{row.name}</div>
-                          <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>{row.street_address || 'No address'} &bull; {row.city}, {row.state}</div>
+                          <div style={{ fontWeight:800, fontSize:'1rem', color:'#fff', marginBottom:'2px' }}>{row.name}</div>
+                          <div style={{ fontSize:'0.8rem', color:'rgba(255,255,255,0.5)' }}>{row.street_address||'No address'} &bull; {row.city}, {row.state}</div>
                         </div>
-
-                        {/* Rating */}
                         {row.rating && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ color: '#ffd700', fontWeight: 800, fontSize: '0.9rem' }}>{row.rating}</span>
-                            <span style={{ color: '#ffd700', letterSpacing: '1px', fontSize: '0.8rem' }}>
-                              {'★'.repeat(Math.round(row.rating))}{'☆'.repeat(5 - Math.round(row.rating))}
-                            </span>
-                            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>({(row.user_ratings_total || 0).toLocaleString()})</span>
+                          <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                            <span style={{ color:'#ffd700', fontWeight:800 }}>{row.rating}</span>
+                            <span style={{ color:'#ffd700', fontSize:'0.8rem' }}>{'★'.repeat(Math.round(row.rating))}{'☆'.repeat(5-Math.round(row.rating))}</span>
+                            <span style={{ color:'rgba(255,255,255,0.4)', fontSize:'0.75rem' }}>({(row.user_ratings_total||0).toLocaleString()})</span>
                           </div>
                         )}
-
-                        {/* Info chips */}
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          {row.facility_type && <span style={{ background: 'rgba(138,43,226,0.2)', border: '1px solid rgba(138,43,226,0.3)', color: '#b06bff', padding: '2px 8px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 700 }}>{row.facility_type.replace('_', ' ').toUpperCase()}</span>}
-                          {row.has_adult_night && <span style={{ background: 'rgba(233,30,99,0.15)', border: '1px solid #e91e63', color: '#e91e63', padding: '2px 8px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 700 }}>18+ NIGHT</span>}
-                          {row.surface_quality && <span style={{ background: 'rgba(255,152,0,0.1)', border: '1px solid rgba(255,152,0,0.3)', color: '#ff9800', padding: '2px 8px', borderRadius: '10px', fontSize: '0.65rem' }}>{row.surface_quality}</span>}
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+                          {row.facility_type && <span style={{ background:'rgba(138,43,226,0.2)', border:'1px solid rgba(138,43,226,0.3)', color:'#b06bff', padding:'2px 8px', borderRadius:'10px', fontSize:'0.65rem', fontWeight:700 }}>{row.facility_type.replace(/_/g,' ').toUpperCase()}</span>}
+                          {row.has_adult_night && <span style={{ background:'rgba(233,30,99,0.15)', border:'1px solid #e91e63', color:'#e91e63', padding:'2px 8px', borderRadius:'10px', fontSize:'0.65rem', fontWeight:700 }}>18+ NIGHT</span>}
+                          {row.surface_quality && <span style={{ background:'rgba(255,152,0,0.1)', border:'1px solid rgba(255,152,0,0.3)', color:'#ff9800', padding:'2px 8px', borderRadius:'10px', fontSize:'0.65rem' }}>{row.surface_quality}</span>}
                         </div>
-
-                        {/* Hours preview */}
-                        {hours.length > 0 && (
-                          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.5rem' }}>
-                            {hours[0]}
-                          </div>
-                        )}
-
-                        {/* Links */}
-                        <div style={{ display: 'flex', gap: '8px', fontSize: '0.75rem', marginTop: 'auto' }}>
-                          {row.website && <a href={row.website} target="_blank" rel="noreferrer" style={{ color: '#8a2be2', fontWeight: 600 }}>Website</a>}
-                          {row.phone_number && <span style={{ color: 'rgba(255,255,255,0.5)' }}>{row.phone_number}</span>}
+                        {hours.length > 0 && <div style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.4)', borderTop:'1px solid rgba(255,255,255,0.06)', paddingTop:'0.5rem' }}>{hours[0]}</div>}
+                        <div style={{ display:'flex', gap:'8px', fontSize:'0.75rem', marginTop:'auto' }}>
+                          {row.website && <a href={row.website} target="_blank" rel="noreferrer" style={{ color:'#8a2be2', fontWeight:600 }}>Website</a>}
+                          {row.phone_number && <span style={{ color:'rgba(255,255,255,0.5)' }}>{row.phone_number}</span>}
                         </div>
                       </div>
-
-                      {/* Footer actions */}
-                      <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.2)' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                      <div style={{ padding:'0.75rem 1rem', borderTop:'1px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(0,0,0,0.2)' }}>
+                        <label style={{ display:'flex', alignItems:'center', gap:'6px', cursor:'pointer' }}>
                           <input type="checkbox" checked={row.is_published} onChange={e => promoteSpot(row.id, e.target.checked)} />
-                          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: row.is_published ? '#4caf50' : 'rgba(255,255,255,0.4)' }}>
-                            {row.is_published ? 'LIVE ON APP' : 'PUBLISH'}
-                          </span>
+                          <span style={{ fontSize:'0.7rem', fontWeight:800, color:row.is_published?'#4caf50':'rgba(255,255,255,0.4)' }}>{row.is_published?'LIVE ON APP':'PUBLISH'}</span>
                         </label>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button onClick={() => startEdit(row)} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '0.7rem' }}>Edit</button>
-                          <button onClick={() => deleteSpot(row.id, row.name)} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(255,59,48,0.3)', background: 'rgba(255,59,48,0.1)', color: '#ff3b30', cursor: 'pointer', fontSize: '0.7rem' }}>Delete</button>
+                        <div style={{ display:'flex', gap:'6px' }}>
+                          <button onClick={() => startEdit(row)} style={{ padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,255,255,0.1)', background:'transparent', color:'rgba(255,255,255,0.6)', cursor:'pointer', fontSize:'0.7rem' }}>Edit</button>
+                          <button onClick={() => deleteSpot(row.id, row.name)} style={{ padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,59,48,0.3)', background:'rgba(255,59,48,0.1)', color:'#ff3b30', cursor:'pointer', fontSize:'0.7rem' }}>Delete</button>
                         </div>
                       </div>
                     </div>
@@ -1389,69 +1359,52 @@ function App() {
 
             {/* =========== LIST VIEW (eBay-style) =========== */}
             {viewMode === 'list' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
                 {spots.map(row => {
                   const photos: string[] = row.photos ? (typeof row.photos === 'string' ? JSON.parse(row.photos) : row.photos) : [];
-                  const statusColors: Record<string, string> = { ENRICHED: '#ff9800', MEDIA_READY: '#e91e63', PENDING: '#8a2be2', IDENTITY_ESTABLISHED: '#5d78ff', INDEXED: '#ff5a00', REJECTED: '#444' };
-                  const statusColor = statusColors[row.verification_status] || '#666';
+                  const S: Record<string,string> = { ENRICHED:'#ff9800', MEDIA_READY:'#e91e63', PENDING:'#8a2be2', IDENTITY_ESTABLISHED:'#5d78ff', INDEXED:'#ff5a00', REJECTED:'#444' };
+                  const sc = S[row.verification_status] || '#666';
                   return (
-                    <div key={row.id} style={{ display: 'flex', gap: '1rem', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', overflow: 'hidden', transition: 'background 0.2s', alignItems: 'stretch' }}
-                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.045)'}
-                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.025)'}
+                    <div key={row.id} style={{ display:'flex', background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'12px', overflow:'hidden', transition:'background 0.2s', alignItems:'stretch' }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background='rgba(255,255,255,0.045)'}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background='rgba(255,255,255,0.025)'}
                     >
-                      {/* Thumbnail */}
-                      <div style={{ width: '120px', minWidth: '120px', background: 'rgba(0,0,0,0.3)', position: 'relative', flexShrink: 0 }}>
-                        {photos.length > 0 ? (
-                          <img src={photos[0]} alt={row.name} style={{ width: '120px', height: '100%', objectFit: 'cover', display: 'block' }} />
-                        ) : (
-                          <div style={{ width: '100%', height: '100%', minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.15)', fontSize: '1.5rem' }}>?</div>
-                        )}
-                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: statusColor, padding: '2px 0', textAlign: 'center', fontSize: '0.55rem', fontWeight: 800, color: '#fff' }}>
-                          {row.verification_status || 'PENDING'}
-                        </div>
+                      <div style={{ width:'120px', minWidth:'120px', background:'rgba(0,0,0,0.3)', position:'relative', flexShrink:0 }}>
+                        {photos.length > 0
+                          ? <img src={photos[0]} alt={row.name} style={{ width:'120px', height:'100%', objectFit:'cover', display:'block' }} />
+                          : <div style={{ width:'100%', height:'100%', minHeight:'80px', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.15)', fontSize:'1.5rem' }}>?</div>
+                        }
+                        <div style={{ position:'absolute', bottom:0, left:0, right:0, background:sc, padding:'2px 0', textAlign:'center', fontSize:'0.5rem', fontWeight:800, color:'#fff' }}>{row.verification_status||'PENDING'}</div>
                       </div>
-
-                      {/* Info */}
-                      <div style={{ flex: 1, padding: '0.75rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                        <div style={{ minWidth: '180px', flex: 2 }}>
-                          <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fff' }}>{row.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>{row.city}, {row.state}</div>
-                          {row.street_address && <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>{row.street_address}</div>}
+                      <div style={{ flex:1, padding:'0.75rem', display:'flex', gap:'1rem', alignItems:'center', flexWrap:'wrap' }}>
+                        <div style={{ minWidth:'180px', flex:2 }}>
+                          <div style={{ fontWeight:700, fontSize:'0.9rem', color:'#fff' }}>{row.name}</div>
+                          <div style={{ fontSize:'0.75rem', color:'rgba(255,255,255,0.45)' }}>{row.city}, {row.state}</div>
+                          {row.street_address && <div style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.3)', marginTop:'2px' }}>{row.street_address}</div>}
                         </div>
-
-                        <div style={{ display: 'flex', gap: '1rem', flex: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-                          {/* Rating */}
-                          <div style={{ minWidth: '90px', textAlign: 'center' }}>
-                            {row.rating ? (
-                              <>
-                                <div style={{ color: '#ffd700', fontWeight: 800, fontSize: '1rem' }}>{row.rating}</div>
-                                <div style={{ color: '#ffd700', fontSize: '0.65rem', letterSpacing: '1px' }}>{'★'.repeat(Math.round(row.rating))}{'☆'.repeat(5 - Math.round(row.rating))}</div>
-                                <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem' }}>{(row.user_ratings_total || 0).toLocaleString()} reviews</div>
-                              </>
-                            ) : <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.75rem' }}>No rating</span>}
+                        <div style={{ display:'flex', gap:'1rem', flex:3, flexWrap:'wrap', alignItems:'center' }}>
+                          <div style={{ minWidth:'90px', textAlign:'center' }}>
+                            {row.rating
+                              ? <><div style={{ color:'#ffd700', fontWeight:800, fontSize:'1rem' }}>{row.rating}</div><div style={{ color:'#ffd700', fontSize:'0.65rem' }}>{'★'.repeat(Math.round(row.rating))}{'☆'.repeat(5-Math.round(row.rating))}</div><div style={{ color:'rgba(255,255,255,0.3)', fontSize:'0.65rem' }}>{(row.user_ratings_total||0).toLocaleString()} reviews</div></>
+                              : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:'0.75rem' }}>No rating</span>
+                            }
                           </div>
-
-                          {/* Facility + type */}
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '100px' }}>
-                            {row.facility_type && <span style={{ fontSize: '0.65rem', color: '#b06bff', fontWeight: 700 }}>{row.facility_type.replace(/_/g, ' ').toUpperCase()}</span>}
-                            {row.has_adult_night && <span style={{ fontSize: '0.65rem', color: '#e91e63', fontWeight: 700 }}>18+ NIGHT</span>}
-                            {row.phone_number && <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)' }}>{row.phone_number}</span>}
+                          <div style={{ display:'flex', flexDirection:'column', gap:'4px', minWidth:'100px' }}>
+                            {row.facility_type && <span style={{ fontSize:'0.65rem', color:'#b06bff', fontWeight:700 }}>{row.facility_type.replace(/_/g,' ').toUpperCase()}</span>}
+                            {row.has_adult_night && <span style={{ fontSize:'0.65rem', color:'#e91e63', fontWeight:700 }}>18+ NIGHT</span>}
+                            {row.phone_number && <span style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.4)' }}>{row.phone_number}</span>}
                           </div>
-
-                          {/* Website */}
-                          <div style={{ minWidth: '80px' }}>
-                            {row.website ? <a href={row.website} target="_blank" rel="noreferrer" style={{ color: '#8a2be2', fontWeight: 600, fontSize: '0.75rem' }}>Website</a> : <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.75rem' }}>No website</span>}
+                          <div style={{ minWidth:'80px' }}>
+                            {row.website ? <a href={row.website} target="_blank" rel="noreferrer" style={{ color:'#8a2be2', fontWeight:600, fontSize:'0.75rem' }}>Website</a> : <span style={{ color:'rgba(255,255,255,0.2)', fontSize:'0.75rem' }}>No website</span>}
                           </div>
                         </div>
-
-                        {/* Actions */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end', minWidth: '90px' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <div style={{ display:'flex', flexDirection:'column', gap:'6px', alignItems:'flex-end', minWidth:'90px' }}>
+                          <label style={{ display:'flex', alignItems:'center', gap:'4px', cursor:'pointer' }}>
                             <input type="checkbox" checked={row.is_published} onChange={e => promoteSpot(row.id, e.target.checked)} />
-                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: row.is_published ? '#4caf50' : 'rgba(255,255,255,0.35)' }}>{row.is_published ? 'LIVE' : 'PUBLISH'}</span>
+                            <span style={{ fontSize:'0.65rem', fontWeight:800, color:row.is_published?'#4caf50':'rgba(255,255,255,0.35)' }}>{row.is_published?'LIVE':'PUBLISH'}</span>
                           </label>
-                          <button onClick={() => startEdit(row)} style={{ padding: '3px 8px', borderRadius: '5px', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '0.65rem' }}>Edit</button>
-                          <button onClick={() => deleteSpot(row.id, row.name)} style={{ padding: '3px 8px', borderRadius: '5px', border: '1px solid rgba(255,59,48,0.2)', background: 'transparent', color: '#ff3b30', cursor: 'pointer', fontSize: '0.65rem' }}>Del</button>
+                          <button onClick={() => startEdit(row)} style={{ padding:'3px 8px', borderRadius:'5px', border:'1px solid rgba(255,255,255,0.1)', background:'transparent', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:'0.65rem' }}>Edit</button>
+                          <button onClick={() => deleteSpot(row.id, row.name)} style={{ padding:'3px 8px', borderRadius:'5px', border:'1px solid rgba(255,59,48,0.2)', background:'transparent', color:'#ff3b30', cursor:'pointer', fontSize:'0.65rem' }}>Del</button>
                         </div>
                       </div>
                     </div>
@@ -1466,16 +1419,16 @@ function App() {
               <table className="databank-table">
                 <thead>
                   <tr>
-                    <th onClick={() => toggleSort('name')} style={{cursor:'pointer'}}>Location {sortCol==='name' ? (sortDir==='asc'?'Γåæ':'Γåô') : ''}</th>
-                    <th onClick={() => toggleSort('street_address')} style={{cursor:'pointer'}}>Address {sortCol==='street_address' ? (sortDir==='asc'?'Γåæ':'Γåô') : ''}</th>
-                    <th onClick={() => toggleSort('verification_status')} style={{cursor:'pointer'}}>Current Phase {sortCol==='verification_status' ? (sortDir==='asc'?'Γåæ':'Γåô') : ''}</th>
-                    <th onClick={() => toggleSort('rating')} style={{cursor:'pointer'}}>Rating {sortCol==='rating' ? (sortDir==='asc'?'Γû▓':'Γû╝') : ''}</th>
+                    <th onClick={() => toggleSort('name')} style={{cursor:'pointer'}}>Location {sortCol==='name' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th onClick={() => toggleSort('street_address')} style={{cursor:'pointer'}}>Address {sortCol==='street_address' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th onClick={() => toggleSort('verification_status')} style={{cursor:'pointer'}}>Current Phase {sortCol==='verification_status' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th onClick={() => toggleSort('rating')} style={{cursor:'pointer'}}>Rating {sortCol==='rating' ? (sortDir==='asc'?'▲':'▼') : ''}</th>
                     <th>Surface</th>
-                    <th onClick={() => toggleSort('website')} style={{cursor:'pointer'}}>Website {sortCol==='website' ? (sortDir==='asc'?'Γåæ':'Γåô') : ''}</th>
-                    <th onClick={() => toggleSort('phone_number')} style={{cursor:'pointer'}}>Phone {sortCol==='phone_number' ? (sortDir==='asc'?'Γåæ':'Γåô') : ''}</th>
-                    <th onClick={() => toggleSort('has_adult_night')} style={{cursor:'pointer'}}>18+ {sortCol==='has_adult_night' ? (sortDir==='asc'?'Γåæ':'Γåô') : ''}</th>
-                    <th onClick={() => toggleSort('retry_count')} style={{cursor:'pointer'}}>Retries {sortCol==='retry_count' ? (sortDir==='asc'?'Γåæ':'Γåô') : ''}</th>
-                    <th onClick={() => toggleSort('last_attempted_at')} style={{cursor:'pointer'}}>Last Ping {sortCol==='last_attempted_at' ? (sortDir==='asc'?'Γåæ':'Γåô') : ''}</th>
+                    <th onClick={() => toggleSort('website')} style={{cursor:'pointer'}}>Website {sortCol==='website' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th onClick={() => toggleSort('phone_number')} style={{cursor:'pointer'}}>Phone {sortCol==='phone_number' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th onClick={() => toggleSort('has_adult_night')} style={{cursor:'pointer'}}>18+ {sortCol==='has_adult_night' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th onClick={() => toggleSort('retry_count')} style={{cursor:'pointer'}}>Retries {sortCol==='retry_count' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th onClick={() => toggleSort('last_attempted_at')} style={{cursor:'pointer'}}>Last Ping {sortCol==='last_attempted_at' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -1510,18 +1463,17 @@ function App() {
                              }}
                              style={{ padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', appearance: 'menulist' }}
                            >
-                              <option value="PENDING">PENDING (PH_1)</option>
-                              <option value="IDENTITY_ESTABLISHED">IDENTIFIED (PH_2)</option>
-                              <option value="INDEXED">INDEXED (PH_3)</option>
-                              <option value="ENRICHED">ENRICHED (Gold Standard)</option>
-                              <option value="MEDIA_READY">MEDIA_READY (PH_5)</option>
-                              <option value="VERIFIED">VERIFIED (Gold Standard)</option>
-                              <option value="DEPRECATED">Deprecated</option>
-                              <option value="REJECTED">Graveyard</option>
+                              <option value="PENDING">🕒 PENDING (PH_1)</option>
+                              <option value="IDENTITY_ESTABLISHED">🕵️ IDENTIFIED (PH_2)</option>
+                              <option value="INDEXED">🕸️ INDEXED (PH_3)</option>
+                              <option value="ENRICHED">✨ ENRICHED (Gold Standard)</option>
+                              <option value="MEDIA_READY">📸 MEDIA_READY (PH_5)</option>
+                              <option value="DEPRECATED">⚰️ Deprecated</option>
+                              <option value="REJECTED">🚫 Graveyard</option>
                            </select>
                         </td>
                         <td>
-                           {row.rating ? <span style={{color: '#ffd700', fontWeight:'bold', textShadow: '0 0 5px rgba(255,215,0,0.5)'}}>{row.rating}Γÿà <span style={{fontSize: '0.7em', color: 'gray'}}>({row.user_ratings_total || 0})</span></span> : <span style={{color:'gray'}}>-</span>}
+                           {row.rating ? <span style={{color: '#ffd700', fontWeight:'bold', textShadow: '0 0 5px rgba(255,215,0,0.5)'}}>{row.rating}★ <span style={{fontSize: '0.7em', color: 'gray'}}>({row.user_ratings_total || 0})</span></span> : <span style={{color:'gray'}}>-</span>}
                         </td>
                         <td>
                            {isEditing ? (
@@ -1532,7 +1484,7 @@ function App() {
                         </td>
                         <td>
                           {isEditing ? <input className="table-input" value={editForm.website || ''} onChange={e => setEditForm({...editForm, website: e.target.value})} /> : (
-                            row.website ? <a href={row.website} target="_blank" rel="noreferrer" style={{color: 'var(--success)', fontWeight: 600}}>Visit Γåù</a> : '-'
+                            row.website ? <a href={row.website} target="_blank" rel="noreferrer" style={{color: 'var(--success)', fontWeight: 600}}>Visit ↗</a> : '-'
                           )}
                         </td>
                         <td>
@@ -1543,8 +1495,8 @@ function App() {
                         <td>
                           {isEditing ? <input type="checkbox" checked={editForm.has_adult_night} onChange={e => setEditForm({...editForm, has_adult_night: e.target.checked})} /> : (
                             <div style={{display:'flex', alignItems: 'center', gap: '5px', justifyContent: 'center'}}>
-                               {row.has_adult_night ? 'Γ£à' : 'Γ¥î'}
-                               {row.adult_night_details && <span title={row.adult_night_details} style={{cursor: 'help'}}>Γä╣∩╕Å</span>}
+                               {row.has_adult_night ? '✅' : '❌'}
+                               {row.adult_night_details && <span title={row.adult_night_details} style={{cursor: 'help'}}>ℹ️</span>}
                             </div>
                           )}
                         </td>
@@ -1565,11 +1517,11 @@ function App() {
                                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: row.is_published ? '#4caf50' : 'var(--text-secondary)', userSelect:'none' }}>APP_LIVE</span>
                             </label>
                             {isEditing ? (
-                              <button className="btn-icon btn-save-inline" onClick={saveEdit}>Save</button>
+                              <button className="btn-icon btn-save-inline" onClick={saveEdit}>💾</button>
                             ) : (
-                              <button className="btn-icon" onClick={() => startEdit(row)}>Edit</button>
+                              <button className="btn-icon" onClick={() => startEdit(row)}>✏️</button>
                             )}
-                            <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>Del</button>
+                            <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>🗑️</button>
                           </div>
                         </td>
                       </tr>
