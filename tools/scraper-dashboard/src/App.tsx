@@ -69,6 +69,7 @@ function App() {
   const logsRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef<typeof activeTab>('phase1');
   const stateOverrideRef = useRef<string[]>([]); // mirrors stateOverride but readable in stale closures
+  const fetchPipelineStatsRef = useRef<() => void>(() => {}); // ref to latest fetchPipelineStats
 
   // --- Harvest Manager States ---
   const [harvestData, setHarvestData] = useState<{seededStates: string[], stateCounts: Record<string, number>, allStates: string[]}>({ seededStates: [], stateCounts: {}, allStates: [] });
@@ -110,6 +111,7 @@ function App() {
     fetchHarvestStatus();
     fetchHistory();
     fetchCoverage();
+    fetchPipelineStatsRef.current(); // Initial Region Pulse load
     
     const interval = setInterval(() => {
       fetchSystemStatus();
@@ -117,6 +119,11 @@ function App() {
       // Only re-fetch queue for the currently visible tab (not all 6 every 5s)
       fetchQueue([activeTabRef.current, 'recent']);
     }, 5000);
+
+    // Region Pulse refreshes on a slower 15s cycle (heavier query)
+    const statsInterval = setInterval(() => {
+      fetchPipelineStatsRef.current();
+    }, 15000);
 
     const es = new EventSource(`${API_BASE}/api/logs/stream`);
     es.onmessage = (event) => {
@@ -129,6 +136,7 @@ function App() {
 
     return () => {
       clearInterval(interval);
+      clearInterval(statsInterval);
       es.close();
     };
   }, []);
@@ -153,6 +161,8 @@ function App() {
       if (data.summary) setPipelineStats(data);
     } catch (e) { console.error('pipeline-stats fetch error:', e); }
   };
+  // Keep fetchPipelineStatsRef in sync so the polling interval always calls the latest version
+  useEffect(() => { fetchPipelineStatsRef.current = fetchPipelineStats; });
   useEffect(() => { fetchPipelineStats(); }, [stateOverride]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
