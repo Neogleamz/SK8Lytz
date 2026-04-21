@@ -1,6 +1,6 @@
 $ProjectRoot = Get-Location
 $AdbPath = "C:\Neogleamz\AG_SK8Lytz_App\Sk8Lytz\.local-builder\android-sdk\platform-tools\adb.exe"
-$ApkPath = Join-Path $ProjectRoot "android\app\build\outputs\apk\release\SK8Lytz.apk"
+$ApkPath = Join-Path $ProjectRoot "android\app\build\outputs\apk\release\app-release.apk"
 $PackageName = "com.neogleamz.sk8lytz"
 
 # Preferred device if available, otherwise use any connected device
