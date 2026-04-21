@@ -402,6 +402,37 @@ app.post('/api/promote-all', async (req, res) => {
   res.json({ success: true, message: 'Bulk promotion successful' });
 });
 
+// State-scoped publish: promote all eligible records in a single state
+app.post('/api/promote-state/:state', async (req, res) => {
+  const { state } = req.params;
+  if (!state || state.length !== 2) return res.status(400).json({ error: 'Invalid state abbreviation' });
+
+  const { error, count } = await supabase
+    .from('skate_spots')
+    .update({ is_published: true })
+    .eq('state', state.toUpperCase())
+    .or('verification_status.eq.VERIFIED,verification_status.eq.ENRICHED,verification_status.eq.MEDIA_READY')
+    .select('id', { count: 'exact', head: true });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true, state: state.toUpperCase(), promoted: count ?? 0 });
+});
+
+// State-scoped unpublish: retract all records in a single state
+app.post('/api/unpublish-state/:state', async (req, res) => {
+  const { state } = req.params;
+  if (!state || state.length !== 2) return res.status(400).json({ error: 'Invalid state abbreviation' });
+
+  const { error, count } = await supabase
+    .from('skate_spots')
+    .update({ is_published: false })
+    .eq('state', state.toUpperCase())
+    .select('id', { count: 'exact', head: true });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true, state: state.toUpperCase(), unpublished: count ?? 0 });
+});
+
 app.delete('/api/spots/:id', async (req, res) => {
   const { id } = req.params;
   const { error } = await supabase.from('skate_spots').delete().eq('id', id);
@@ -550,31 +581,44 @@ app.get('/api/stats/coverage', async (req, res) => {
   }
 });
 
-// --- Databank Coverage: state × verification_status grouped counts ---
+// --- Databank Coverage: state × verification_status + is_published counts ---
 app.get('/api/stats/databank-coverage', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('skate_spots')
-      .select('state, verification_status');
+      .select('state, verification_status, is_published');
 
     if (error) throw error;
 
-    // Group client-side to avoid needing a new RPC
-    const grouped: Record<string, Record<string, number>> = {};
+    // Group client-side: per state, count by status AND count published
+    const grouped: Record<string, Record<string, number> & { published: number }> = {};
     (data || []).forEach((row: any) => {
       const st = row.state || 'UNKNOWN';
       const vs = row.verification_status || 'PENDING';
-      if (!grouped[st]) grouped[st] = {};
+      if (!grouped[st]) grouped[st] = { published: 0 };
       grouped[st][vs] = (grouped[st][vs] || 0) + 1;
+      if (row.is_published) grouped[st].published = (grouped[st].published || 0) + 1;
     });
 
     const rows = Object.entries(grouped).map(([state, statuses]) => ({
       state,
       ...statuses,
-      total: Object.values(statuses).reduce((a, b) => a + b, 0)
+      total: Object.values(statuses)
+        .filter((v): v is number => typeof v === 'number')
+        .reduce((a, b) => a + b, 0) - (statuses.published || 0), // total = record count, not double-counting published
     }));
 
-    res.json({ rows });
+    // Fix: total should be count of records, not including the published counter
+    const fixedRows = (data || []).reduce((acc: Record<string, any>, row: any) => {
+      const st = row.state || 'UNKNOWN';
+      if (!acc[st]) acc[st] = { state: st, published: 0, total: 0 };
+      acc[st].total++;
+      acc[st][row.verification_status || 'PENDING'] = (acc[st][row.verification_status || 'PENDING'] || 0) + 1;
+      if (row.is_published) acc[st].published++;
+      return acc;
+    }, {});
+
+    res.json({ rows: Object.values(fixedRows) });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

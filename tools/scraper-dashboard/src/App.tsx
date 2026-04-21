@@ -74,6 +74,10 @@ function App() {
   const [databankCoverage, setDatabankCoverage] = useState<any[]>([]);
   const [historyLogs, setHistoryLogs] = useState<string[]>([]);
 
+  // --- Databank Map Mode ---
+  const [mapMode, setMapMode] = useState<'quality' | 'published'>('quality');
+  const [activeStateFilter, setActiveStateFilter] = useState<string | null>(null);
+
   // --- Graveyard Grid States ---
   const [spots, setSpots] = useState<any[]>([]);
   const [totalSpots, setTotalSpots] = useState(0);
@@ -415,6 +419,7 @@ function App() {
         body: JSON.stringify({ is_published: published })
       });
       fetchSpots(page, gridFilter);
+      fetchDatabankCoverage();
     } catch (e) {}
   };
 
@@ -424,6 +429,31 @@ function App() {
       await fetch(`${API_BASE}/api/promote-all`, { method: 'POST' });
       alert('Bulk promotion complete!');
       fetchSpots(page, gridFilter);
+      fetchDatabankCoverage();
+    } catch (e) {}
+  };
+
+  const promoteState = async (state: string) => {
+    if (!state || state.length !== 2) return;
+    if (!confirm(`Publish ALL eligible records in ${state} to the live app map?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/promote-state/${state}`, { method: 'POST' });
+      const data = await res.json();
+      alert(`✅ Published ${data.promoted ?? 0} records in ${state}!`);
+      fetchSpots(page, gridFilter);
+      fetchDatabankCoverage();
+    } catch (e) {}
+  };
+
+  const unpublishState = async (state: string) => {
+    if (!state || state.length !== 2) return;
+    if (!confirm(`⚠️ Retract ALL published records in ${state} from the live app map?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/unpublish-state/${state}`, { method: 'POST' });
+      const data = await res.json();
+      alert(`Retracted ${data.unpublished ?? 0} records in ${state}.`);
+      fetchSpots(page, gridFilter);
+      fetchDatabankCoverage();
     } catch (e) {}
   };
 
@@ -958,17 +988,41 @@ function App() {
 
             {/* =========== STATUS COVERAGE MAP =========== */}
             <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255,179,0,0.03)', border: '1px solid rgba(255,179,0,0.2)', borderRadius: '12px' }}>
-              <h3 style={{ margin: '0 0 0.5rem', color: '#ffb300', fontSize: '0.95rem', textTransform: 'uppercase' }}>📡 Pipeline Coverage Map</h3>
-              <p style={{ margin: '0 0 1.5rem', color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>Spot status distribution by state. Click a state to filter the grid below. Color shows the dominant verification status in that state.</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <h3 style={{ margin: 0, color: '#ffb300', fontSize: '0.95rem', textTransform: 'uppercase' }}>📡 Pipeline Coverage Map</h3>
+                {/* Map Mode Toggle */}
+                <div style={{ display: 'flex', gap: '6px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px' }}>
+                  <button
+                    onClick={() => setMapMode('quality')}
+                    style={{ padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
+                      background: mapMode === 'quality' ? '#ffb300' : 'transparent',
+                      color: mapMode === 'quality' ? '#000' : 'rgba(255,255,255,0.5)' }}
+                  >📊 Quality</button>
+                  <button
+                    onClick={() => setMapMode('published')}
+                    style={{ padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700,
+                      background: mapMode === 'published' ? '#4caf50' : 'transparent',
+                      color: mapMode === 'published' ? '#000' : 'rgba(255,255,255,0.5)' }}
+                  >🚀 Published</button>
+                </div>
+              </div>
+              <p style={{ margin: '0 0 1.5rem', color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>
+                {mapMode === 'quality'
+                  ? 'Dominant pipeline status per state. Click a state to filter the grid.'
+                  : 'Live app coverage — green = fully published, grey = not yet live. Click to filter.'}
+              </p>
               
               {/* Nationwide status totals */}
               {(() => {
                 const totals: Record<string, number> = {};
+                let totalPublished = 0;
                 databankCoverage.forEach((row: any) => {
                   ['PENDING','IDENTITY_ESTABLISHED','INDEXED','ENRICHED','MEDIA_READY','VERIFIED'].forEach(s => {
                     if (row[s]) totals[s] = (totals[s] || 0) + row[s];
                   });
+                  totalPublished += (row.published || 0);
                 });
+                const totalRecords = databankCoverage.reduce((a: number, r: any) => a + (r.total || 0), 0);
                 const STATUS_META: Record<string, {color: string; label: string}> = {
                   PENDING:              { color: '#8a2be2', label: 'Pending' },
                   IDENTITY_ESTABLISHED: { color: '#5d78ff', label: 'Identified' },
@@ -978,14 +1032,33 @@ function App() {
                   VERIFIED:             { color: '#4caf50', label: 'Verified' },
                 };
                 return (
-                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-                    {Object.entries(STATUS_META).map(([s, meta]) => (
-                      <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.04)', padding: '6px 12px', borderRadius: '20px', border: `1px solid ${meta.color}44` }}>
-                        <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: meta.color, display: 'inline-block' }}></span>
-                        <span style={{ fontSize: '0.75rem', color: meta.color, fontWeight: 700 }}>{meta.label}</span>
-                        <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>{(totals[s] || 0).toLocaleString()}</span>
-                      </div>
-                    ))}
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem', alignItems: 'center' }}>
+                    {mapMode === 'quality'
+                      ? Object.entries(STATUS_META).map(([s, meta]) => (
+                          <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.04)', padding: '6px 12px', borderRadius: '20px', border: `1px solid ${meta.color}44` }}>
+                            <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: meta.color, display: 'inline-block' }}></span>
+                            <span style={{ fontSize: '0.75rem', color: meta.color, fontWeight: 700 }}>{meta.label}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>{(totals[s] || 0).toLocaleString()}</span>
+                          </div>
+                        ))
+                      : (
+                          <>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(76,175,80,0.08)', padding: '8px 16px', borderRadius: '20px', border: '1px solid #4caf5044' }}>
+                              <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#4caf50', display: 'inline-block' }}></span>
+                              <span style={{ fontSize: '0.75rem', color: '#4caf50', fontWeight: 700 }}>🚀 Published</span>
+                              <span style={{ fontSize: '0.85rem', color: '#4caf50', fontWeight: 800 }}>{totalPublished.toLocaleString()}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', padding: '8px 16px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                              <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'rgba(255,255,255,0.2)', display: 'inline-block' }}></span>
+                              <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontWeight: 700 }}>Unpublished</span>
+                              <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', fontWeight: 800 }}>{(totalRecords - totalPublished).toLocaleString()}</span>
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginLeft: 'auto' }}>
+                              {totalRecords > 0 ? `${Math.round((totalPublished / totalRecords) * 100)}% live` : '0% live'}
+                            </div>
+                          </>
+                        )
+                    }
                   </div>
                 );
               })()}
@@ -996,41 +1069,65 @@ function App() {
                   defaultFill="rgba(255,255,255,0.05)"
                   customize={(() => {
                     const colors: Record<string, any> = {};
-                    const STATUS_PRIORITY = ['VERIFIED','MEDIA_READY','ENRICHED','INDEXED','IDENTITY_ESTABLISHED','PENDING'];
-                    const STATUS_COLOR: Record<string, string> = {
-                      VERIFIED: '#4caf50',
-                      MEDIA_READY: '#e91e63',
-                      ENRICHED: '#ff9800',
-                      INDEXED: '#ff5a00',
-                      IDENTITY_ESTABLISHED: '#5d78ff',
-                      PENDING: '#8a2be2',
-                    };
-                    databankCoverage.forEach((row: any) => {
-                      if (!row.state || row.state === 'UNKNOWN') return;
-                      const total = row.total || 0;
-                      if (total === 0) return;
-                      // Dominant status = highest-trust status with >0 records
-                      const dominant = STATUS_PRIORITY.find(s => (row[s] || 0) > 0) || 'PENDING';
-                      const baseColor = STATUS_COLOR[dominant] || '#8a2be2';
-                      const density = Math.min(total / 40, 1);
-                      const opacity = Math.max(density, 0.35);
-                      colors[row.state] = {
-                        fill: baseColor + Math.round(opacity * 255).toString(16).padStart(2, '0'),
-                        customText: total.toString()
+
+                    if (mapMode === 'quality') {
+                      const STATUS_PRIORITY = ['VERIFIED','MEDIA_READY','ENRICHED','INDEXED','IDENTITY_ESTABLISHED','PENDING'];
+                      const STATUS_COLOR: Record<string, string> = {
+                        VERIFIED: '#4caf50', MEDIA_READY: '#e91e63', ENRICHED: '#ff9800',
+                        INDEXED: '#ff5a00', IDENTITY_ESTABLISHED: '#5d78ff', PENDING: '#8a2be2',
                       };
-                    });
+                      databankCoverage.forEach((row: any) => {
+                        if (!row.state || row.state === 'UNKNOWN') return;
+                        const total = row.total || 0;
+                        if (total === 0) return;
+                        const dominant = STATUS_PRIORITY.find(s => (row[s] || 0) > 0) || 'PENDING';
+                        const baseColor = STATUS_COLOR[dominant] || '#8a2be2';
+                        const density = Math.min(total / 40, 1);
+                        const opacity = Math.max(density, 0.35);
+                        colors[row.state] = {
+                          fill: baseColor + Math.round(opacity * 255).toString(16).padStart(2, '0'),
+                          customText: total.toString()
+                        };
+                      });
+                    } else {
+                      // Published mode: green gradient by % published
+                      databankCoverage.forEach((row: any) => {
+                        if (!row.state || row.state === 'UNKNOWN') return;
+                        const total = row.total || 0;
+                        const published = row.published || 0;
+                        if (total === 0) return;
+                        const pct = published / total;
+                        // 0% = faint purple, 100% = vivid green
+                        const color = pct === 0 ? '#ffffff14'
+                          : pct < 0.25 ? '#ff980060'
+                          : pct < 0.75 ? '#4caf5088'
+                          : '#4caf50dd';
+                        colors[row.state] = {
+                          fill: color,
+                          customText: `${published}/${total}`
+                        };
+                      });
+                    }
                     return colors;
                   })()}
                   onClick={(e: any) => {
                     const st = e.target?.dataset?.name || e.target?.id;
-                    if (st) setSearchQuery(st);
+                    if (st && st.length === 2) {
+                      setSearchQuery(st);
+                      setActiveStateFilter(st);
+                    }
                   }}
                 />
               </div>
             </div>
 
             <div className="grid-toolbar">
-              <input className="form-input search-bar" placeholder="Search Location / City / State..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+              <input
+                className="form-input search-bar"
+                placeholder="Search Location / City / State..."
+                value={searchQuery}
+                onChange={e => { setSearchQuery(e.target.value); setActiveStateFilter(e.target.value.trim().length === 2 ? e.target.value.trim().toUpperCase() : null); }}
+              />
                <select className="form-input filter-dropdown" value={gridFilter} onChange={e => setGridFilter(e.target.value)}>
                   <option value="ALL">All Grid Records</option>
                   <option value="PENDING">Phase 1 Pending (Queue)</option>
@@ -1041,6 +1138,20 @@ function App() {
                   <option value="VERIFIED">Phase 6 Verified (Gold Standard)</option>
                   <option value="REJECTED">Graveyard / Rejected</option>
                </select>
+              {/* State-scoped publish / unpublish — appears when a 2-letter state filter is active */}
+              {activeStateFilter && activeStateFilter.length === 2 && (
+                <>
+                  <button
+                    className="btn-primary"
+                    style={{ background: '#4caf50', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+                    onClick={() => promoteState(activeStateFilter)}
+                  >🚀 Publish {activeStateFilter}</button>
+                  <button
+                    style={{ background: 'rgba(255,59,48,0.15)', border: '1px solid rgba(255,59,48,0.4)', padding: '8px 16px', borderRadius: '6px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', color: '#ff3b30' }}
+                    onClick={() => unpublishState(activeStateFilter)}
+                  >↩ Retract {activeStateFilter}</button>
+                </>
+              )}
               <button className="btn-primary" onClick={bulkPromote}>🚀 Bulk App Promote</button>
               <div className="pagination">
                 <button disabled={page === 0} onClick={() => fetchSpots(page - 1, gridFilter)}>Prev</button>
