@@ -210,26 +210,34 @@ app.post('/api/pulse', (req, res) => {
 });
 
 app.post('/start', (req, res) => {
-  console.log('Orchestrating micro-scrapers start...');
-  exec('pm2 start ecosystem.config.js --only scraper-operator,scraper-indexer', { cwd: __dirname, windowsHide: true }, (err, stdout, stderr) => {
+  const { daemons } = req.body as { daemons?: string[] };
+  const target = (daemons && daemons.length > 0)
+    ? daemons.map(d => `scraper-${d}`).join(',')
+    : 'scraper-operator,scraper-indexer,scraper-photographer';
+  console.log(`Orchestrating start: ${target}`);
+  exec(`pm2 start ecosystem.config.js --only ${target}`, { cwd: __dirname, windowsHide: true }, (err) => {
      if (err) {
         console.error('Failed to start scrapers cluster:', err);
         return res.status(500).json({ success: false, message: 'Start failed', error: err.message });
      }
      isRunning = true;
-     res.json({ success: true, message: 'Scrapers cluster started' });
+     res.json({ success: true, message: `Started: ${target}` });
   });
 });
 
 app.post('/stop', (req, res) => {
-  console.log('Orchestrating micro-scrapers stop...');
-  exec('pm2 stop scraper-operator scraper-indexer', { cwd: __dirname, windowsHide: true }, (err, stdout, stderr) => {
+  const { daemons } = req.body as { daemons?: string[] };
+  const target = (daemons && daemons.length > 0)
+    ? daemons.map(d => `scraper-${d}`).join(' ')
+    : 'scraper-operator scraper-indexer scraper-photographer';
+  console.log(`Orchestrating stop: ${target}`);
+  exec(`pm2 stop ${target}`, { cwd: __dirname, windowsHide: true }, (err) => {
      if (err) {
         console.error('Failed to stop scrapers cluster:', err);
         return res.status(500).json({ success: false, message: 'Stop failed', error: err.message });
      }
      isRunning = false;
-     res.json({ success: true, message: 'Scrapers cluster stopped' });
+     res.json({ success: true, message: `Stopped: ${target}` });
   });
 });
 

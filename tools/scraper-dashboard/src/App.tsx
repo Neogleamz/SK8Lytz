@@ -455,21 +455,37 @@ function App() {
           <h1 className="title">SK8Lytz Global Extraction Pipeline</h1>
           <p style={{marginTop: 0, color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Decoupled 6-Phase Micro-Scraper Architecture</p>
         </div>
-        <div className="daemon-status-header" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-           <div style={{ background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px', border: `1px solid ${status?.currentTarget?.includes('Operator: online') ? '#4caf50' : 'rgba(255,255,255,0.1)'}` }}>
-              <div className={`status-dot ${status?.currentTarget?.includes('Operator: online') ? 'online' : 'offline'}`}></div>
-              <span style={{color: 'var(--text-secondary)'}}>Operator:</span> <strong style={{color: status?.currentTarget?.includes('Operator: online') ? '#4caf50' : 'var(--text-secondary)'}}>{status?.currentTarget?.includes('Operator: online') ? 'ONLINE' : 'OFFLINE'}</strong>
-           </div>
-           <div style={{ background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px', border: `1px solid ${status?.currentTarget?.includes('Indexer: online') ? '#ff5a00' : 'rgba(255,255,255,0.1)'}` }}>
-              <div className={`status-dot ${status?.currentTarget?.includes('Indexer: online') ? 'online' : 'offline'}`} style={{ background: status?.currentTarget?.includes('Indexer: online') ? '#ff5a00' : '', boxShadow: status?.currentTarget?.includes('Indexer: online') ? '0 0 8px #ff5a00' : '' }}></div>
-              <span style={{color: 'var(--text-secondary)'}}>Indexer:</span> <strong style={{color: status?.currentTarget?.includes('Indexer: online') ? '#ff5a00' : 'var(--text-secondary)'}}>{status?.currentTarget?.includes('Indexer: online') ? 'ONLINE' : 'OFFLINE'}</strong>
-           </div>
-           <div style={{ background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px', border: `1px solid ${status?.currentTarget?.includes('Photographer: online') ? '#e91e63' : 'rgba(255,255,255,0.1)'}` }}>
-              <div className={`status-dot ${status?.currentTarget?.includes('Photographer: online') ? 'online' : 'offline'}`} style={{ background: status?.currentTarget?.includes('Photographer: online') ? '#e91e63' : '', boxShadow: status?.currentTarget?.includes('Photographer: online') ? '0 0 8px #e91e63' : '' }}></div>
-              <span style={{color: 'var(--text-secondary)'}}>Photographer:</span> <strong style={{color: status?.currentTarget?.includes('Photographer: online') ? '#e91e63' : 'var(--text-secondary)'}}>{status?.currentTarget?.includes('Photographer: online') ? 'ONLINE' : 'OFFLINE'}</strong>
-           </div>
+        <div className="daemon-status-header" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+           {/* Fleet Control — always-visible per-daemon start/stop */}
+           {[
+             { id: 'operator',     label: 'Operator',     color: '#4caf50',  phase: '2', onKey: 'Operator: online' },
+             { id: 'indexer',      label: 'Indexer',      color: '#ff5a00',  phase: '3', onKey: 'Indexer: online' },
+             { id: 'photographer', label: 'Photographer', color: '#e91e63',  phase: '4', onKey: 'Photographer: online' },
+           ].map(d => {
+             const isOn = status?.currentTarget?.includes(d.onKey);
+             return (
+               <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: isOn ? `${d.color}15` : 'rgba(255,255,255,0.04)', padding: '5px 10px', borderRadius: '20px', border: `1px solid ${isOn ? d.color + '66' : 'rgba(255,255,255,0.1)'}`, transition: 'all 0.3s' }}>
+                 <div className={`status-dot ${isOn ? 'online' : 'offline'}`} style={{ background: isOn ? d.color : '', boxShadow: isOn ? `0 0 8px ${d.color}` : '' }}></div>
+                 <span style={{ fontSize: '0.7rem', color: isOn ? d.color : 'var(--text-secondary)', fontWeight: 700 }}>PH{d.phase} {d.label.toUpperCase()}</span>
+                 <button
+                   onClick={() => triggerSpecificDaemon(d.id, isOn ? 'stop' : 'start')}
+                   style={{ fontSize: '0.65rem', fontWeight: 800, padding: '2px 8px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: isOn ? 'rgba(255,60,60,0.3)' : `${d.color}33`, color: isOn ? '#ff6b6b' : d.color, letterSpacing: '0.05em', transition: 'all 0.2s' }}
+                 >
+                   {isOn ? '■ STOP' : '▶ START'}
+                 </button>
+               </div>
+             );
+           })}
+           <button
+             onClick={handleSysStop}
+             title="Emergency stop all daemons"
+             style={{ fontSize: '0.65rem', fontWeight: 800, padding: '5px 12px', borderRadius: '20px', border: '1px solid rgba(255,60,60,0.3)', cursor: 'pointer', background: 'rgba(255,60,60,0.1)', color: '#ff6b6b', letterSpacing: '0.05em' }}
+           >
+             ⛔ STOP ALL
+           </button>
         </div>
       </header>
+
 
       {/* =========== OMNI CONTROL CENTER (GLOBAL CONTROLS) =========== */}
       <div className="omni-control-center fade-in" style={{ marginBottom: '2rem', background: 'var(--surface)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--surface-highlight)' }}>
