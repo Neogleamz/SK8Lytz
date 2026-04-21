@@ -73,6 +73,7 @@ Sk8Lytz caters to a diverse, family-oriented community of dedicated roller skate
 | :---------------------------------- | :------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@sk8lytz_logs`                     | AppLogger                       | Compact telemetry event buffer array                                                                                                            |
 | `@Sk8lytz_auth_username`            | DashboardScreen                 | Local cache of Supabase display_name for instant UI feedback. Synced via Reactive Context Pattern (Load Cache -> Hydrate Profile -> Update UI). |
+| `@Sk8lytz_registered_devices`       | DeviceRepository                | Primary SSOT ledger of all claimed/bound hardware keyed by BLE MAC. Supersedes ad-hoc device configurations.                                    |
 | `@Sk8lytz_device_configs`           | useDashboardGroups / AppLogger  | Dict keyed by **BLE MAC** containing `{ name, type, points, segments, sorting, stripType, groupId }`                                           |
 | `@Sk8lytz_custom_groups`            | useDashboardGroups              | Array of `{ id, name, isGroup, deviceIds }` — group memberships                                                                                |
 | `@sk8_hw_<deviceId>`                | Sk8LytzProgrammerModal          | Per-device EEPROM hardware settings cache                                                                                                       |
@@ -232,41 +233,34 @@ The dashboard auto-connect observer watches `allDevices` for registered peripher
 
 ---
 
-### LED Modes & Pattern Library
+### LED Modes & Math Synthesizer Engine
 
-_Source of Truth: `src/protocols/PatternEngine.ts` (Fixed Mode), `src/utils/RbmDictionary.ts` (RBM), `src/utils/MusicDictionary.ts` (Music)_
+> [!IMPORTANT]
+> **Math Synthesizer Refactor (2026-04-21)**: The legacy "Fixed Mode" (10 hardcoded behaviors) and firmware-dependent RBM logic have been entirely superseded by a deterministic, client-side mathematical synthesizer. All lighting visualizations and sub-protocols are now driven by 28 customizable `SK8LYTZ_TEMPLATES`.
+
+_Source of Truth: `src/protocols/PatternEngine.ts` (`SK8LYTZ_TEMPLATES`), `src/utils/MusicDictionary.ts` (Music)_
 
 #### User-Facing Mode Taxonomy
 
 | ModeType (FSM) | UI Tab | Protocol Family | Key Hook |
 |:---|:---|:---|:---|
 | `FAVORITES` | Quick Presets | `0x59` / `0x51` (replays saved state) | `useFavorites` |
-| `MULTIMODE` | Color Picker / Fixed Patterns | `0x59` / `0x51` | `useDockedControllerState` |
-| `PROGRAMS` | RBM Built-in Effects | `0x42` / `0x61` (`setCustomRbm`) | `useDockedControllerState` |
+| `MULTIMODE` | Pattern Synth / Color Picker | `0x59` / `0x51` | `useDockedControllerState` |
 | `MUSIC` | Music Reactive | `0x73` (`setMusicConfig`) | `useMusicMode` |
 | `STREET` | Motion Reactive | `0x59` (solid dispatches on accelerometer) | `useStreetMode` |
 | `CAMERA` | Camera Color Capture | `0x59` | `useDockedControllerState` |
 
-#### Fixed Mode Patterns (IDs 1–10)
+#### The Mathematical Pattern Registry (`SK8LYTZ_TEMPLATES`)
 
-10 curated lighting behaviors using foreground (FG) and background (BG) colors.
-Dispatch chain: `useControllerDispatch.ts` → `PatternEngine.ts` → `ZenggeProtocol.ts`.
+28 mathematical schemas define the structure (Comet, Breathing, Double Meteor) using a primary foreground (`FG`) and secondary background (`BG`) palette.
+Dispatch chain: `useControllerDispatch.ts` → `PatternEngine.ts` (Synthesizer) → `ZenggeProtocol.ts` (BLE bytes).
 
-| ID | Name | Protocol | Pixel Tile (FG/BG) | Transition |
-|:---|:---|:---|:---|:---|
-| 1 | **Solid** | `0x59` | `[FG]` tiled to `numLEDs` | `0x01` FREEZE |
-| 2 | **Single Dot** | `0x59` | `[FG, BG×7]` | `0x00` CASCADE |
-| 3 | **Comet** | `0x59` | `[FG, 50%FG, 20%FG, BG×3]` | `0x00` CASCADE |
-| 4 | **Dashed** | `0x59` | `[FG×4, BG×4]` | `0x00` CASCADE |
-| 5 | **Alternating** | `0x59` | `[FG×2, BG×2]` | `0x00` CASCADE |
-| 6 | **Breath** | `0x51` | 2-step Gradual (`0x3B`) FG↔BG | N/A |
-| 7 | **Flash** | `0x51` | 2-step Jump (`0x3A`) FG↔BG | N/A |
-| 8 | **Strobe** | `0x51` | 2-step Jump (`0x3A`) @ Speed 100 | N/A |
-| 9 | **Wave** | `0x59` | `[BG×2, FG×2, BG×2]` | `0x00` CASCADE |
-| 10 | **Pinch** | `0x59` | `[FG, BG×4, FG]` | `0x00` CASCADE |
+**Archetypes & Auto-Routing:**
+- **Spatial Mode (`0x59` CASCADE/FREEZE):** Synthesizes full 300-pixel RGB arrays client-side using waveform math (sine waves, pulse trains, alternating grids). Automatically routed to `<ProductVisualizer>` and `<CustomEffectVisualizer>` without duplicative business logic.
+- **Temporal Mode (`0x51` STEP_JUMP/GRADUAL):** For patterns that require sub-millisecond fade interpolations (e.g., `Breath`, `Strobe`), the engine automatically routes to the `0x51` 32-step hardware scheduler to prevent BLE bus saturation.
 
-> [!IMPORTANT]
-> Patterns 1–5, 9–10 use the **`0x59`** pixel-array command. Patterns 6–8 use the **`0x51`** step-based command. The `PatternEngine.buildPatternPayload()` master dispatcher selects the correct protocol automatically.
+> [!NOTE]
+> The legacy `Fixed` UI tab was completely eliminated. The `MULTIMODE` hub now acts as a unified portal for the 28 spatial/temporal mathematical templates.
 
 #### RBM Built-in Patterns (100 Modes)
 
