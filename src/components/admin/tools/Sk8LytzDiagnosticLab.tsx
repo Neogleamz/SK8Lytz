@@ -197,6 +197,51 @@ export default function Sk8LytzDiagnosticLab({
     return () => clearInterval(id);
   }, [streamActive, transmit]);
 
+  // ── Phase 2 Oracle panel states ─────────────────────────────────────
+  // 0x41 Settled Mode panel
+  const [p41EffectId, setP41EffectId]   = useState(1);
+  const [p41Speed, setP41Speed]         = useState(50);
+  const [p41Bright, setP41Bright]       = useState(100);
+  const [p41Dir, setP41Dir]             = useState(0x01);
+  const [p41Color1, setP41Color1]       = useState<{r:number;g:number;b:number}>({r:255,g:0,b:0});
+  const [p41Color2, setP41Color2]       = useState<{r:number;g:number;b:number}>({r:0,g:0,b:255});
+  // 0x43 Multi-Sequence panel
+  const [p43Ids, setP43Ids]             = useState<number[]>([1,5,10]);
+  const [p43Speed, setP43Speed]         = useState(50);
+  const [p43Bright, setP43Bright]       = useState(100);
+  // 0x53 Live Pixel Stream panel
+  const [p53Active, setP53Active]       = useState(false);
+  const [p53Fps, setP53Fps]             = useState(24);
+  const [p53GradStart, setP53GradStart] = useState<{r:number;g:number;b:number}>({r:255,g:0,b:0});
+  const [p53GradEnd, setP53GradEnd]     = useState<{r:number;g:number;b:number}>({r:0,g:0,b:255});
+  // 0x73 isOn state for builder + Oracle fix
+  const [bldMusicIsOn, setBldMusicIsOn] = useState(true);
+  // Scene management panel
+  const [sceneSlot, setSceneSlot]       = useState(0);
+  // Accordion: which Phase 2 panel is expanded
+  const [expandedP2, setExpandedP2]     = useState<string | null>(null);
+
+  // 0x53 auto-frame-stream via setInterval
+  useEffect(() => {
+    if (!p53Active) return;
+    const buildGradient = () => {
+      const pixels = Array.from({length: hwPts}, (_, i) => {
+        const t = hwPts > 1 ? i / (hwPts - 1) : 0;
+        return {
+          r: Math.round(p53GradStart.r + (p53GradEnd.r - p53GradStart.r) * t),
+          g: Math.round(p53GradStart.g + (p53GradEnd.g - p53GradStart.g) * t),
+          b: Math.round(p53GradStart.b + (p53GradEnd.b - p53GradStart.b) * t),
+        };
+      });
+      return pixels;
+    };
+    const ms = Math.max(33, Math.round(1000 / Math.max(1, Math.min(60, p53Fps))));
+    const id = setInterval(() => {
+      transmit(ZenggeProtocol.streamPixelFrame(buildGradient()), `0x53 frame @ ${p53Fps}fps`, '0x53');
+    }, ms);
+    return () => clearInterval(id);
+  }, [p53Active, p53Fps, p53GradStart, p53GradEnd, hwPts, transmit]);
+
   // ─── Solid color test helper ────────────────────────────────────────────────
   const sendSolid = (r: number, g: number, b: number, pts: number, trans: number, note: string) => {
     const pixels = Array(pts).fill({ r, g, b });
@@ -642,8 +687,12 @@ export default function Sk8LytzDiagnosticLab({
       )}
 
       {bldProtocol === '0x73' && (
-        <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
-          <Text style={[S.subTitle, { color: txtPri, marginTop: 0 }]}>SYMPHONY MODE (0x73)</Text>
+        <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: '#FF4040', borderWidth: 1 }]}>
+          <Text style={[S.subTitle, { color: '#FF9500', marginTop: 0 }]}>SYMPHONY MODE (0x73) — APK 13B FORMAT</Text>
+          <Text style={{ color: '#FF4040', fontSize: 10, marginBottom: Spacing.md, fontWeight: '700' }}>
+            ⚠️ APK-VERIFIED: 13B format · mic=0x26 (APP) / 0x27 (DEVICE) · isOn byte at position [3]
+          </Text>
+
           <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>MUSIC MODE (1–13)</Text>
@@ -658,33 +707,38 @@ export default function Sk8LytzDiagnosticLab({
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>MIC SRC</Text>
-              <TouchableOpacity style={[S.chip, bldMic && { backgroundColor: cyan + '22', borderColor: cyan }, {paddingVertical: Spacing.md, height: 40}]} onPress={() => setBldMic(!bldMic)}>
-                 <Text style={{ color: bldMic ? cyan : txtMuted, textAlign: 'center', fontSize: 11, fontWeight: '900' }}>{bldMic ? 'DEVICE' : 'APP'}</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>isOn [BYTE 3]</Text>
+              <TouchableOpacity
+                style={[S.chip, bldMusicIsOn && { backgroundColor: '#00E67633', borderColor: '#00E676' }, { paddingVertical: Spacing.md, height: 40 }]}
+                onPress={() => setBldMusicIsOn(!bldMusicIsOn)}
+              >
+                <Text style={{ color: bldMusicIsOn ? '#00E676' : '#FF4040', textAlign: 'center', fontSize: 11, fontWeight: '900' }}>
+                  {bldMusicIsOn ? '0x01 ON' : '0x00 OFF'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Matrix Style — Light Screen vs Light Bar */}
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, fontWeight: '900' }}>MATRIX STYLE</Text>
+          {/* MIC SOURCE: 0x26 (APP) vs 0x27 (DEVICE) */}
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, fontWeight: '900' }}>MIC SOURCE [BYTE 2] — APK TRUTH</Text>
           <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
             <TouchableOpacity
-              onPress={() => setBldMatrixStyle(0x27)}
+              onPress={() => setBldMic(false)}
               style={{ flex: 1, paddingVertical: Spacing.md, borderRadius: 8, alignItems: 'center',
-                backgroundColor: bldMatrixStyle === 0x27 ? '#00E67633' : border,
-                borderWidth: 1.5, borderColor: bldMatrixStyle === 0x27 ? '#00E676' : border }}
+                backgroundColor: !bldMic ? '#00f0ff22' : border,
+                borderWidth: 1.5, borderColor: !bldMic ? cyan : border }}
             >
-              <Text style={{ color: bldMatrixStyle === 0x27 ? '#00E676' : txtMuted, fontWeight: '900', fontSize: 11 }}>LIGHT SCREEN</Text>
-              <Text style={{ color: bldMatrixStyle === 0x27 ? '#00E676' : txtMuted, fontSize: 9, opacity: 0.6 }}>0x27</Text>
+              <Text style={{ color: !bldMic ? cyan : txtMuted, fontWeight: '900', fontSize: 11 }}>APP MIC</Text>
+              <Text style={{ color: !bldMic ? cyan : txtMuted, fontSize: 9, opacity: 0.8 }}>0x26</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => setBldMatrixStyle(0x26)}
+              onPress={() => setBldMic(true)}
               style={{ flex: 1, paddingVertical: Spacing.md, borderRadius: 8, alignItems: 'center',
-                backgroundColor: bldMatrixStyle === 0x26 ? '#FF950033' : border,
-                borderWidth: 1.5, borderColor: bldMatrixStyle === 0x26 ? '#FF9500' : border }}
+                backgroundColor: bldMic ? '#FF950033' : border,
+                borderWidth: 1.5, borderColor: bldMic ? '#FF9500' : border }}
             >
-              <Text style={{ color: bldMatrixStyle === 0x26 ? '#FF9500' : txtMuted, fontWeight: '900', fontSize: 11 }}>LIGHT BAR</Text>
-              <Text style={{ color: bldMatrixStyle === 0x26 ? '#FF9500' : txtMuted, fontSize: 9, opacity: 0.6 }}>0x26</Text>
+              <Text style={{ color: bldMic ? '#FF9500' : txtMuted, fontWeight: '900', fontSize: 11 }}>DEVICE MIC</Text>
+              <Text style={{ color: bldMic ? '#FF9500' : txtMuted, fontSize: 9, opacity: 0.8 }}>0x27</Text>
             </TouchableOpacity>
           </View>
 
@@ -701,9 +755,43 @@ export default function Sk8LytzDiagnosticLab({
 
           <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, fontWeight: '900' }}>COLOR 1 (PRIMARY)</Text>
           <QuickColorGrid activeColor={bldColors[0]} onSelect={c => setBldColors([c])} />
-          
+
           <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, fontWeight: '900' }}>COLOR 2 (SECONDARY)</Text>
           <QuickColorGrid activeColor={bldC2} onSelect={setBldC2} />
+
+          {/* Byte preview */}
+          <View style={{ backgroundColor: isDark ? '#05070a' : '#f9fafb', borderRadius: 8, padding: Spacing.md, marginTop: Spacing.md, borderColor: border, borderWidth: 1 }}>
+            <Text style={{ color: cyan, fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+              {'[0x73, '}
+              {`0x${(parseInt(bldMusicMode)||1).toString(16).padStart(2,'0').toUpperCase()}, `}
+              {`${bldMic ? '0x27' : '0x26'}, `}
+              {`${bldMusicIsOn ? '0x01' : '0x00'}, `}
+              {'R1, G1, B1, R2, G2, B2, SENS, BRIGHT, CS]'}
+            </Text>
+            <Text style={{ color: txtMuted, fontSize: 9, marginTop: Spacing.xs }}>13 bytes (APK 0xA3 format) — was 12B (broken, no isOn)</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[S.txBtn, { backgroundColor: '#FF9500', borderColor: '#FF9500', marginTop: Spacing.md }]}
+            onPress={() => {
+              const mic: 0x26 | 0x27 = bldMic ? 0x27 : 0x26;
+              transmit(
+                ZenggeProtocol.setMusicConfig(
+                  parseInt(bldMusicMode) || 1,
+                  mic,
+                  bldMusicIsOn,
+                  bldColors[0] || {r:255,g:0,b:0},
+                  bldC2 || {r:0,g:0,b:255},
+                  parseInt(bldSens) || 128,
+                  parseInt(bldBright) || 100
+                ),
+                `0x73 mode=${bldMusicMode} mic=${bldMic?'0x27':'0x26'} isOn=${bldMusicIsOn}`,
+                '0x73'
+              );
+            }}
+          >
+            <Text style={{ color: '#000', fontWeight: '900', fontSize: 12 }}>TX 0x73 (13B APK FORMAT)</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -1107,6 +1195,232 @@ export default function Sk8LytzDiagnosticLab({
           </View>
         </View>
       ))}
+
+      {/* ════════════════════════════════════════════════════ */}
+      {/* PHASE 2 — EXTENDED PANELS (APK Hypothesis) */}
+      {/* ════════════════════════════════════════════════════ */}
+      <Text style={[S.subTitle, { color: '#9D4EFF' }]}>🧪 PHASE 2 EXTENDED PANELS</Text>
+      <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.md }}>
+        APK-inferred builders for opcodes not yet confirmed. Tap header to expand. All are labeled [HYPOTHESIS].
+      </Text>
+
+      {/* ── 0x41 Settled Mode Panel ───────────────────────── */}
+      <TouchableOpacity
+        onPress={() => setExpandedP2(expandedP2 === '0x41' ? null : '0x41')}
+        style={[S.diagBox, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderColor: expandedP2 === '0x41' ? '#9D4EFF' : border, borderWidth: expandedP2 === '0x41' ? 1.5 : 1 }]}
+      >
+        <View>
+          <Text style={{ color: '#9D4EFF', fontWeight: '900', fontSize: 13 }}>🎨 0x41 Settled Mode [HYPOTHESIS]</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginTop: 2 }}>effectId 1–33 · FG/BG colors · speed · dir</Text>
+        </View>
+        <Text style={{ color: '#9D4EFF', fontSize: 18 }}>{expandedP2 === '0x41' ? '▲' : '▼'}</Text>
+      </TouchableOpacity>
+      {expandedP2 === '0x41' && (
+        <View style={[S.diagBox, { borderColor: '#9D4EFF', borderWidth: 1 }]}>
+          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>EFFECT ID (1–33)</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                <TouchableOpacity onPress={() => setP41EffectId(Math.max(1, p41EffectId - 1))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>‒</Text>
+                </TouchableOpacity>
+                <TextInput
+                  style={[S.numInput, { flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri, textAlign: 'center' }]}
+                  value={String(p41EffectId)} keyboardType="numeric"
+                  onChangeText={v => setP41EffectId(Math.max(1, Math.min(33, parseInt(v)||1)))}
+                />
+                <TouchableOpacity onPress={() => setP41EffectId(Math.min(33, p41EffectId + 1))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>SPEED (1–100)</Text>
+              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={String(p41Speed)} keyboardType="numeric" onChangeText={v => setP41Speed(Math.max(1, Math.min(100, parseInt(v)||1)))} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>BRIGHT</Text>
+              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={String(p41Bright)} keyboardType="numeric" onChangeText={v => setP41Bright(Math.max(1, Math.min(100, parseInt(v)||1)))} />
+            </View>
+          </View>
+          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>DIRECTION</Text>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md }}>
+            {[{ v: 0x01, l: 'FORWARD (0x01)' }, { v: 0x00, l: 'REVERSE (0x00)' }].map(d => (
+              <TouchableOpacity key={d.v} onPress={() => setP41Dir(d.v)}
+                style={{ flex: 1, paddingVertical: Spacing.md, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: p41Dir === d.v ? '#9D4EFF' : border, backgroundColor: p41Dir === d.v ? '#9D4EFF22' : 'transparent' }}
+              >
+                <Text style={{ color: p41Dir === d.v ? '#9D4EFF' : txtMuted, fontSize: 11, fontWeight: '900' }}>{d.l}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>FG COLOR (COLOR 1)</Text>
+          <QuickColorGrid activeColor={p41Color1} onSelect={setP41Color1} />
+          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>BG COLOR (COLOR 2)</Text>
+          <QuickColorGrid activeColor={p41Color2} onSelect={setP41Color2} />
+          <View style={{ backgroundColor: isDark ? '#05070a' : '#f9fafb', borderRadius: 8, padding: Spacing.md, marginBottom: Spacing.md, borderColor: border, borderWidth: 1 }}>
+            <Text style={{ color: '#9D4EFF', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+              {`[0x41, 0x${p41EffectId.toString(16).padStart(2,'0')}, 0x${p41Speed.toString(16).padStart(2,'0')}, 0x${p41Bright.toString(16).padStart(2,'0')},\n R1, G1, B1, R2, G2, B2, 0x${p41Dir.toString(16).padStart(2,'0')}, 0xF0, CS]`}
+            </Text>
+            <Text style={{ color: txtMuted, fontSize: 9, marginTop: Spacing.xs }}>13 bytes — APK HYPOTHESIS · not yet hardware-verified</Text>
+          </View>
+          <TouchableOpacity
+            style={[S.txBtn, { backgroundColor: '#9D4EFF', borderColor: '#9D4EFF' }]}
+            onPress={() => transmit(ZenggeProtocol.setSettledMode(p41EffectId, p41Speed, p41Bright, p41Color1, p41Color2, p41Dir), `0x41 effectId=${p41EffectId} speed=${p41Speed}`, '0x41')}
+          >
+            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>TX 0x41 SETTLED MODE</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ── 0x43 Multi-Sequence Panel ─────────────────────── */}
+      <TouchableOpacity
+        onPress={() => setExpandedP2(expandedP2 === '0x43' ? null : '0x43')}
+        style={[S.diagBox, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderColor: expandedP2 === '0x43' ? '#FF69B4' : border, borderWidth: expandedP2 === '0x43' ? 1.5 : 1 }]}
+      >
+        <View>
+          <Text style={{ color: '#FF69B4', fontWeight: '900', fontSize: 13 }}>🎞️ 0x43 Multi-Sequence [HYPOTHESIS]</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginTop: 2 }}>tap up to 50 effect IDs · speed · brightness</Text>
+        </View>
+        <Text style={{ color: '#FF69B4', fontSize: 18 }}>{expandedP2 === '0x43' ? '▲' : '▼'}</Text>
+      </TouchableOpacity>
+      {expandedP2 === '0x43' && (
+        <View style={[S.diagBox, { borderColor: '#FF69B4', borderWidth: 1 }]}>
+          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.sm }}>EFFECT IDs (tap to toggle, max 50)</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, marginBottom: Spacing.lg }}>
+            {Array.from({length: 50}, (_, i) => i + 1).map(id => {
+              const sel = p43Ids.includes(id);
+              return (
+                <TouchableOpacity key={id} onPress={() => {
+                  if (sel) setP43Ids(p43Ids.filter(x => x !== id));
+                  else if (p43Ids.length < 50) setP43Ids([...p43Ids, id]);
+                }}
+                  style={{ width: 36, height: 36, borderRadius: 6, alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: sel ? '#FF69B422' : border, borderWidth: 1, borderColor: sel ? '#FF69B4' : border }}
+                >
+                  <Text style={{ color: sel ? '#FF69B4' : txtMuted, fontSize: 10, fontWeight: sel ? '900' : '400' }}>{id}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <Text style={{ color: '#FF69B4', fontSize: 11, fontWeight: '700', marginBottom: Spacing.md }}>
+            Selected: [{p43Ids.join(', ')}] ({p43Ids.length} IDs)
+          </Text>
+          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>SPEED</Text>
+              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={String(p43Speed)} keyboardType="numeric" onChangeText={v => setP43Speed(Math.max(1, Math.min(100, parseInt(v)||1)))} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>BRIGHTNESS</Text>
+              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={String(p43Bright)} keyboardType="numeric" onChangeText={v => setP43Bright(Math.max(1, Math.min(100, parseInt(v)||1)))} />
+            </View>
+          </View>
+          <TouchableOpacity
+            style={[S.txBtn, { backgroundColor: p43Ids.length === 0 ? border : '#FF69B4', borderColor: '#FF69B4', opacity: p43Ids.length === 0 ? 0.4 : 1 }]}
+            disabled={p43Ids.length === 0}
+            onPress={() => transmit(ZenggeProtocol.setEffectSequence(p43Ids, p43Speed, p43Bright), `0x43 ${p43Ids.length} IDs speed=${p43Speed}`, '0x43')}
+          >
+            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>TX 0x43 MULTI-SEQUENCE</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ── 0x53 Live Pixel Stream Panel ─────────────────── */}
+      <TouchableOpacity
+        onPress={() => setExpandedP2(expandedP2 === '0x53' ? null : '0x53')}
+        style={[S.diagBox, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderColor: expandedP2 === '0x53' ? '#00CC88' : border, borderWidth: expandedP2 === '0x53' ? 1.5 : 1 }]}
+      >
+        <View>
+          <Text style={{ color: '#00CC88', fontWeight: '900', fontSize: 13 }}>🎬 0x53 Live Pixel Stream [HYPOTHESIS]</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginTop: 2 }}>gradient frame loop · configurable FPS · start/stop</Text>
+        </View>
+        <Text style={{ color: '#00CC88', fontSize: 18 }}>{expandedP2 === '0x53' ? '▲' : '▼'}</Text>
+      </TouchableOpacity>
+      {expandedP2 === '0x53' && (
+        <View style={[S.diagBox, { borderColor: p53Active ? '#00CC88' : border, borderWidth: p53Active ? 2 : 1 }]}>
+          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.sm }}>GRADIENT START COLOR</Text>
+          <QuickColorGrid activeColor={p53GradStart} onSelect={setP53GradStart} />
+          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.sm }}>GRADIENT END COLOR</Text>
+          <QuickColorGrid activeColor={p53GradEnd} onSelect={setP53GradEnd} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.md }}>
+            <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900' }}>FPS (1–60):</Text>
+            <TextInput style={[S.numInput, { flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={String(p53Fps)} keyboardType="numeric" onChangeText={v => setP53Fps(Math.max(1, Math.min(60, parseInt(v)||1)))} />
+            <Text style={{ color: txtMuted, fontSize: 10 }}>= {Math.round(1000 / Math.max(1, p53Fps))}ms/frame</Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+            <TouchableOpacity onPress={() => {transmit(ZenggeProtocol.streamPixelFrame(Array.from({length:hwPts},(_,i)=>{const t=hwPts>1?i/(hwPts-1):0;return {r:Math.round(p53GradStart.r+(p53GradEnd.r-p53GradStart.r)*t),g:Math.round(p53GradStart.g+(p53GradEnd.g-p53GradStart.g)*t),b:Math.round(p53GradStart.b+(p53GradEnd.b-p53GradStart.b)*t)}})), '0x53 single frame', '0x53');}}
+              style={[S.txBtn, { flex: 1, backgroundColor: border, borderColor: '#00CC88' }]}>
+              <Text style={{ color: '#00CC88', fontWeight: '900', fontSize: 11 }}>SINGLE FRAME</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setP53Active(!p53Active)}
+              style={[S.txBtn, { flex: 1, backgroundColor: p53Active ? '#00CC88' : border, borderColor: '#00CC88' }]}>
+              <Text style={{ color: p53Active ? '#000' : '#00CC88', fontWeight: '900', fontSize: 11 }}>
+                {p53Active ? `STOP (${p53Fps}fps)` : `START ${p53Fps}fps`}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {p53Active && (
+            <Text style={{ color: '#00CC88', fontSize: 10, marginTop: Spacing.sm, fontWeight: 'bold' }}>
+              ● Streaming 0x53 frames @ {p53Fps}fps — observe LED rendering latency
+            </Text>
+          )}
+        </View>
+      )}
+
+      {/* ── 0x56/57/58 Scene Management Panel ────────────── */}
+      <TouchableOpacity
+        onPress={() => setExpandedP2(expandedP2 === 'SCENE' ? null : 'SCENE')}
+        style={[S.diagBox, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderColor: expandedP2 === 'SCENE' ? '#FFD700' : border, borderWidth: expandedP2 === 'SCENE' ? 1.5 : 1 }]}
+      >
+        <View>
+          <Text style={{ color: '#FFD700', fontWeight: '900', fontSize: 13 }}>📁 0x56/57/58 Scene Management</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginTop: 2 }}>slot picker · delete · activate · query</Text>
+        </View>
+        <Text style={{ color: '#FFD700', fontSize: 18 }}>{expandedP2 === 'SCENE' ? '▲' : '▼'}</Text>
+      </TouchableOpacity>
+      {expandedP2 === 'SCENE' && (
+        <View style={[S.diagBox, { borderColor: '#FFD700', borderWidth: 1 }]}>
+          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.sm }}>SCENE SLOT (0–31)</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.lg }}>
+            <TouchableOpacity onPress={() => setSceneSlot(Math.max(0, sceneSlot - 1))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>‒</Text>
+            </TouchableOpacity>
+            <TextInput style={[S.numInput, { flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri, textAlign: 'center' }]} value={String(sceneSlot)} keyboardType="numeric" onChangeText={v => setSceneSlot(Math.max(0, Math.min(31, parseInt(v)||0)))} />
+            <TouchableOpacity onPress={() => setSceneSlot(Math.min(31, sceneSlot + 1))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>+</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={{ gap: Spacing.sm }}>
+            <TouchableOpacity
+              style={[S.txBtn, { backgroundColor: '#FFD70022', borderColor: '#FFD700' }]}
+              onPress={() => {
+                const raw = [0x58, 0xF0];
+                transmit(ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]), `0x58 QUERY scene state`, '0x58');
+              }}
+            >
+              <Text style={{ color: '#FFD700', fontWeight: '900', fontSize: 12 }}>0x58 QUERY — watch RX for state bytes</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[S.txBtn, { backgroundColor: '#00CC8822', borderColor: '#00CC88' }]}
+              onPress={() => {
+                const raw = [0x57, sceneSlot & 0xFF, 0x32, 0x64];
+                transmit(ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]), `0x57 ACTIVATE slot=${sceneSlot}`, '0x57');
+              }}
+            >
+              <Text style={{ color: '#00CC88', fontWeight: '900', fontSize: 12 }}>0x57 ACTIVATE slot {sceneSlot} (speed=50, bright=100)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[S.txBtn, { backgroundColor: '#FF404022', borderColor: '#FF4040' }]}
+              onPress={() => {
+                const raw = [0x56, sceneSlot & 0xFF, 0,0,0,0,0,0,0,0,0,0,0,0];
+                transmit(ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]), `0x56 DELETE slot=${sceneSlot}`, '0x56');
+              }}
+            >
+              <Text style={{ color: '#FF4040', fontWeight: '900', fontSize: 12 }}>0x56 DELETE slot {sceneSlot}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* ── 0x74 Auto-Stream Toggle ────────────────────────── */}
       <Text style={[S.subTitle, { color: '#FF9500' }]}>⚡ 0x74 AUTO-STREAM (MIC SHOOTOUT TOOL)</Text>
