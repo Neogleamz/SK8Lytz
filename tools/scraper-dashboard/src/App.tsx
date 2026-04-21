@@ -134,6 +134,12 @@ function App() {
   // Keep activeTabRef in sync so the polling interval always reads current tab
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
+  // Re-fetch queues immediately when active region priority changes
+  useEffect(() => {
+    fetchQueue();
+  }, [stateOverride]); // eslint-disable-line react-hooks/exhaustive-deps
+
+
   useEffect(() => {
     if (logsRef.current) {
       logsRef.current.scrollTop = logsRef.current.scrollHeight;
@@ -183,18 +189,19 @@ function App() {
   const [phaseQueues, setPhaseQueues] = useState<Record<string, any[]>>({});
 
   const fetchQueue = async (only?: string[]) => {
-    // If `only` is provided, fetch just those phases; otherwise fetch all (initial load)
-    const phasesToFetch = only ?? ['phase1', 'phase2', 'phase3', 'phase4', 'phase5', 'recent'];
+    // Phases now: phase1, phase3 (Detective), phase4 (Photographer), phase6 (Publisher)
+    const phasesToFetch = only ?? ['phase1', 'phase3', 'phase4', 'phase6', 'recent'];
+    // Pass active priority states so queues mirror what daemons are actually targeting
+    const statesParam = stateOverride.length > 0 ? `&states=${stateOverride.join(',')}` : '';
     try {
       const results = await Promise.all(
-         phasesToFetch.map(phase => 
-            phase === 'recent' 
-              ? fetch(`${API_BASE}/api/recent-spots`).then(r => r.json())
-              : fetch(`${API_BASE}/api/queue?phase=${phase}`).then(r => r.json())
+         phasesToFetch.map(phase =>
+            phase === 'recent'
+              ? fetch(`${API_BASE}/api/recent-spots${statesParam ? '?' + statesParam.slice(1) : ''}`).then(r => r.json())
+              : fetch(`${API_BASE}/api/queue?phase=${phase}${statesParam}`).then(r => r.json())
          )
       );
-      
-      // Merge into existing state so unloaded phases retain their last known values
+      // Merge into existing state so unloaded phases retain last known values
       const updates: Record<string, any[]> = {};
       phasesToFetch.forEach((phase, idx) => {
          updates[phase] = results[idx]?.spots || [];

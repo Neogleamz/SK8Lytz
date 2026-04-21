@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -548,50 +548,65 @@ app.post('/api/harvest/stop-all', async (req, res) => {
 });
 
 app.get('/api/recent-spots', async (req, res) => {
-  const { data, error } = await supabase
+  const statesRaw = (req.query.states as string) || '';
+  const states = statesRaw ? statesRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
+
+  let query = supabase
     .from('skate_spots')
     .select('*')
     .order('created_at', { ascending: false, nullsFirst: true })
-    .limit(10);
-    
+    .limit(20); // fetch more so priority sort has room to filter
+
+  if (states.length > 0) {
+    query = query.in('state', states);
+  }
+
+  const { data, error } = await query.limit(10);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ spots: data });
 });
 
+
 app.get('/api/queue', async (req, res) => {
   const { phase } = req.query;
-  
+  const statesRaw = (req.query.states as string) || '';
+  const states = statesRaw ? statesRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
+
   let query = supabase.from('skate_spots').select('*');
   if (phase === 'phase1') {
      query = query.or('verification_status.eq.PENDING,verification_status.is.null');
-  } else if (phase === 'phase2') {
-     query = query.eq('verification_status', 'PENDING');
   } else if (phase === 'phase3') {
-     // Mirror get_next_spot_for_indexer RPC: ENRICHED or IDENTITY_ESTABLISHED, not yet crawled, has website
+     // Detective queue: ENRICHED/IDENTITY_ESTABLISHED, not yet crawled, has website
      query = query
        .or('verification_status.eq.IDENTITY_ESTABLISHED,verification_status.eq.ENRICHED')
        .eq('is_deep_crawled', false)
        .not('website', 'is', null)
        .neq('website', '');
   } else if (phase === 'phase4') {
-     // Photographer queue: records with candidates that haven't been downloaded yet
+     // Photographer queue: has candidate_photos but no photos yet
      query = query
        .not('candidate_photos', 'is', null)
        .is('photos', null);
-  } else if (phase === 'phase5') {
-     // Publisher queue: records with photos ready to go live
-     query = query.eq('verification_status', 'MEDIA_READY');
+  } else if (phase === 'phase6') {
+     // Publisher queue: MEDIA_READY, not yet published
+     query = query.eq('verification_status', 'MEDIA_READY').eq('is_published', false);
   } else {
      query = query.or('verification_status.eq.PENDING,verification_status.eq.IDENTITY_ESTABLISHED,verification_status.eq.INDEXED,verification_status.eq.ENRICHED,verification_status.is.null');
+  }
+
+  // Apply state filter if priority regions are active
+  if (states.length > 0) {
+    query = query.in('state', states);
   }
 
   const { data, error } = await query
     .order('last_attempted_at', { ascending: true, nullsFirst: true })
     .limit(10);
-    
+
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ spots: data });
+  res.json({ spots: data, active_states: states });
 });
+
 
 app.get('/api/logs/history', (req, res) => {
   if (!fs.existsSync(LOG_FILE)) return res.json({ history: [] });
