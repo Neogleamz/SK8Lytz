@@ -37,6 +37,23 @@ const SEARCH_TERMS: Record<FacilityType, string[]> = {
     "skating palace",
     "family skating center",
     "skating pavilion",
+    "skate center",
+    "skate arena",
+    "skate complex",
+    "skate plaza",
+    "skate park",
+    "skate world",
+    "skate palace",
+    "skate land",
+    "skate zone",
+    "skate city",
+    "skate town",
+    "skate world",
+    "skate palace",
+    "skate land",
+    "skate zone",
+    "skate city",
+    "skate town",
   ],
   skate_shop: [
     "roller skate shop",
@@ -65,22 +82,22 @@ const SEARCH_TERMS: Record<FacilityType, string[]> = {
 // ─────────────────────────────────────────────────────────────────────────────
 const SKATE_PARK_NAME_ALLOWLIST = [
   "rink", "roller", "skating", "pavilion", "plaza", "recreation",
-  "rec center", "community center", "family fun", "sport complex",
+  "rec center", "community center", "skating rink", "skate center",
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Name keywords that disqualify ANY result regardless of facility type.
 // ─────────────────────────────────────────────────────────────────────────────
 const BLOCKED_NAME_KEYWORDS = [
-  // Skateboard-only
-  "skateboard", "skateboards", "skateboarding", "board shop", "snowboard",
-  "zumiez", "vans skate",
+  // Skateboard-only and other sports
+  "skateboard", "skateboards", "skateboarding", "board shop", "boardshop", "snowboard",
+  "zumiez", "vans skate", "surf shop", "ski shop", "bicycle", "bike shop",
   // Ice & hockey (block ice-specific only; "inline hockey" is valid — it uses roller rinks)
   "ice rink", "ice skating", "ice arena", "ice centre", "ice center",
   "ice complex", "ice palace", "ice house", "ice sport",
   "polar ice", " on ice",
   "figure skating", "figure skate",
-  "ice hockey", "hockey rink", "hockey arena", "hockey centre", "hockey center",
+  "ice hockey", "hockey rink", "hockey arena", "hockey centre", "hockey center", "hockey equipment", "pure hockey",
   "curling",
   // Big-box retail chains (second-line defence; Google type filter catches most)
   "scheels", "zumiez",
@@ -92,6 +109,7 @@ const BLOCKED_NAME_KEYWORDS = [
 const BLOCKED_PLACE_TYPES = new Set([
   "ice_skating_rink",
   "sporting_goods_store",   // catches big-box generics (Scheels, Dick's, REI, etc.)
+  "bicycle_store",          // catches Trek, Eriks
 ]);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -102,16 +120,18 @@ export const RETAIL_BLOCKLIST = [
   // Sporting goods chains
   "dick's sporting goods", "dicks sporting", "academy sports", "hibbett sports",
   "hibbett", "big 5 sporting", "big 5", "dunham's", "modell's", "sport chalet",
-  "sports authority", "play it again sports",
+  "sports authority", "play it again sports", "pure hockey", "perani's hockey",
   // Mass-market retail
   "target", "walmart", "costco", "kohl's", "kohls", "amazon",
-  // Outdoor / hunting
+  // Outdoor / hunting / rv
   "rei", "bass pro", "bass pro shop", "cabela", "cabela's", "sportsman's warehouse",
-  "sportsman", "scheels",
+  "sportsman", "scheels", "camping world", "gander mountain",
+  // Bike shops (frequently sell inline skates but aren't skate shops)
+  "trek bicycle", "trek store", "erik's bike", "eriks bike", "specialized", "performance bicycle",
   // Footwear
   "foot locker", "footlocker",
   // Generic catch-all — any name with "sporting goods" that isn't a specialty store
-  "sporting goods",
+  "sporting goods", "boardshop",
   // Other
   "cargo largo",
 ];
