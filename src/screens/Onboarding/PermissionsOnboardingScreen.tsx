@@ -1,9 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
-import { checkPermission, PermissionType, requestPermission } from '../../services/PermissionService';
+import { requestPermission } from '../../services/PermissionService';
 import { Layout, Spacing, ThemePalette } from '../../theme/theme';
 import { AppLogger } from '../../services/AppLogger';
 
@@ -19,10 +19,28 @@ export default function PermissionsOnboardingScreen({ onComplete }: PermissionsO
   const styles = createStyles(Colors, insets);
 
   const [allRequiredGranted, setAllRequiredGranted] = useState(false);
+  // Ref used to trigger a re-check in GranularPermissionsList after auto-grant
+  const [bleAutoRequestKey, setBleAutoRequestKey] = useState(0);
+  const bleAutoFired = useRef(false);
 
-  // ── Screen Navigation Telemetry ────────────────────────────────────────────
+  // ── Screen Navigation Telemetry + BLE Auto-Request ─────────────────────────
   useEffect(() => {
     AppLogger.log('SCREEN_OPENED', { screen: 'PermissionsOnboarding' });
+
+    // Auto-fire the native BLE permission dialog on first mount.
+    // BLE is the core required permission — removing manual friction is critical.
+    if (!bleAutoFired.current) {
+      bleAutoFired.current = true;
+      requestPermission('BLUETOOTH')
+        .then((granted) => {
+          AppLogger.log('BLE_AUTO_REQUEST_RESULT', { granted });
+          // Bump the key so GranularPermissionsList re-checks all statuses.
+          setBleAutoRequestKey((k) => k + 1);
+        })
+        .catch(() => {
+          // Silently fail — the list will show the manual CTA as fallback.
+        });
+    }
   }, []);
 
   return (
@@ -45,7 +63,10 @@ export default function PermissionsOnboardingScreen({ onComplete }: PermissionsO
           </View>
         </View>
 
-        <GranularPermissionsList onAllRequiredGranted={setAllRequiredGranted} />
+        <GranularPermissionsList
+          onAllRequiredGranted={setAllRequiredGranted}
+          refreshKey={bleAutoRequestKey}
+        />
 
       </ScrollView>
 
