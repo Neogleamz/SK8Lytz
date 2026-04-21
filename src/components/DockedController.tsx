@@ -916,7 +916,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             {[
               { id: 'HOME',      icon: 'home-outline'         },
               { id: 'FAVORITES', icon: 'cards-heart-outline'  },
-              { id: 'FIXED',     icon: 'record-circle-outline'},
               { id: 'MULTI',     icon: 'palette'              },
               { id: 'PROGRAMS',  icon: 'animation-play'       },
               { id: 'MUSIC',     icon: 'music'                },
