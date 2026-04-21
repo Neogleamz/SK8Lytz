@@ -60,9 +60,11 @@ export const PERMISSIONS_LIST: PermissionItem[] = [
 interface GranularPermissionsListProps {
   onAllRequiredGranted?: (granted: boolean) => void;
   readOnly?: boolean;
+  /** Bump this integer to trigger a full permission status re-check (e.g. after auto-request). */
+  refreshKey?: number;
 }
 
-export default function GranularPermissionsList({ onAllRequiredGranted, readOnly = false }: GranularPermissionsListProps) {
+export default function GranularPermissionsList({ onAllRequiredGranted, readOnly = false, refreshKey = 0 }: GranularPermissionsListProps) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
 
@@ -76,10 +78,14 @@ export default function GranularPermissionsList({ onAllRequiredGranted, readOnly
 
   const [loading, setLoading] = useState(true);
 
+  // Re-check all permissions when refreshKey changes (e.g. after auto-BLE request)
   useEffect(() => {
     let active = true;
     const init = async () => {
-      const results: Record<PermissionType, boolean | null> = { ...statuses };
+      setLoading(true);
+      const results: Record<PermissionType, boolean | null> = {
+        BLUETOOTH: null, NOTIFICATIONS: null, LOCATION: null, CAMERA: null, MIC: null,
+      };
       for (const item of PERMISSIONS_LIST) {
         results[item.id] = await checkPermission(item.id);
       }
@@ -90,7 +96,7 @@ export default function GranularPermissionsList({ onAllRequiredGranted, readOnly
     };
     init();
     return () => { active = false; };
-  }, []);
+  }, [refreshKey]);
 
   useEffect(() => {
     if (onAllRequiredGranted && !loading) {
@@ -143,12 +149,24 @@ export default function GranularPermissionsList({ onAllRequiredGranted, readOnly
     <View style={styles.listContainer}>
       {PERMISSIONS_LIST.map((item) => {
         const granted = statuses[item.id] === true;
-        
+        const isDeniedRequired = item.required && !granted;
+
         return (
-          <View key={item.id} style={[styles.card, granted && styles.cardGranted]}>
+          <View
+            key={item.id}
+            style={[
+              styles.card,
+              granted && styles.cardGranted,
+              isDeniedRequired && styles.cardDeniedRequired,
+            ]}
+          >
             <View style={styles.cardHeader}>
-              <View style={styles.iconBox}>
-                <MaterialCommunityIcons name={item.icon} size={24} color={granted ? Colors.primary : Colors.text} />
+              <View style={[styles.iconBox, isDeniedRequired && styles.iconBoxRequired]}>
+                <MaterialCommunityIcons
+                  name={item.icon}
+                  size={24}
+                  color={granted ? Colors.primary : isDeniedRequired ? '#FF6B6B' : Colors.text}
+                />
               </View>
               <View style={styles.cardInfo}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
@@ -161,23 +179,39 @@ export default function GranularPermissionsList({ onAllRequiredGranted, readOnly
                     <MaterialCommunityIcons name="minus-circle-outline" size={10} /> Opting out disables: {item.disabledFeature}
                   </Text>
                 )}
+                {isDeniedRequired && (
+                  <Text style={styles.requiredWarning}>
+                    ⚠ Required to use SK8Lytz. Tap Grant Access below.
+                  </Text>
+                )}
               </View>
             </View>
-            
-            <View style={styles.toggleRow}>
-              <Text style={[styles.toggleBtnText, granted && styles.toggleBtnTextGranted]}>
-                {granted ? '✓ GRANTED' : 'ALLOW ACCESS'}
-              </Text>
-              
-              <Switch
-                trackColor={{ false: Colors.surfaceHighlight, true: Colors.primary }}
-                thumbColor={granted ? '#fff' : '#f4f3f4'}
-                ios_backgroundColor={Colors.surfaceHighlight}
-                onValueChange={(val) => handleToggle(item.id, val)}
-                value={granted}
-                disabled={readOnly || (item.required && granted)} // Prevent turning off required
-              />
-            </View>
+
+            {/* Required + not granted → prominent CTA button */}
+            {item.required && !granted && !readOnly ? (
+              <TouchableOpacity
+                style={styles.grantButton}
+                activeOpacity={0.8}
+                onPress={() => handleToggle(item.id, true)}
+              >
+                <MaterialCommunityIcons name="lock-open-outline" size={16} color="#000" />
+                <Text style={styles.grantButtonText}>Grant Access</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.toggleRow}>
+                <Text style={[styles.toggleBtnText, granted && styles.toggleBtnTextGranted]}>
+                  {granted ? '✓ GRANTED' : 'ALLOW ACCESS'}
+                </Text>
+                <Switch
+                  trackColor={{ false: Colors.surfaceHighlight, true: Colors.primary }}
+                  thumbColor={granted ? '#fff' : '#f4f3f4'}
+                  ios_backgroundColor={Colors.surfaceHighlight}
+                  onValueChange={(val) => handleToggle(item.id, val)}
+                  value={granted}
+                  disabled={readOnly || (item.required && granted)}
+                />
+              </View>
+            )}
           </View>
         );
       })}
@@ -199,12 +233,19 @@ const createStyles = (Colors: ThemePalette) => StyleSheet.create({
     borderColor: 'rgba(74, 222, 128, 0.3)',
     backgroundColor: 'rgba(74, 222, 128, 0.03)',
   },
+  cardDeniedRequired: {
+    borderColor: 'rgba(255, 107, 107, 0.4)',
+    backgroundColor: 'rgba(255, 107, 107, 0.04)',
+  },
   cardHeader: { flexDirection: 'row', gap: Spacing.lg, marginBottom: Spacing.md },
   iconBox: {
     width: 48, height: 48,
     borderRadius: 24,
     backgroundColor: 'rgba(255,255,255,0.05)',
     justifyContent: 'center', alignItems: 'center'
+  },
+  iconBoxRequired: {
+    backgroundColor: 'rgba(255, 107, 107, 0.12)',
   },
   cardInfo: { flex: 1 },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: Colors.text, marginBottom: Spacing.xs },
@@ -216,6 +257,22 @@ const createStyles = (Colors: ThemePalette) => StyleSheet.create({
   },
   disabledWarning: {
     fontSize: 11, color: '#FFB86C', fontStyle: 'italic',
+  },
+  requiredWarning: {
+    fontSize: 11, color: '#FF6B6B', fontWeight: '600', marginTop: Spacing.xs,
+  },
+  grantButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: '#FF6B6B',
+    paddingVertical: Spacing.md,
+    borderRadius: 8,
+    marginTop: Spacing.xs,
+  },
+  grantButtonText: {
+    fontSize: 14, fontWeight: '800', color: '#000', letterSpacing: 0.5,
   },
   toggleRow: {
     flexDirection: 'row',
