@@ -18,10 +18,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useCallback } from 'react';
 import {
     Modal,
+    Platform,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import type { ISessionSnapshot } from '../services/SpeedTrackingService';
