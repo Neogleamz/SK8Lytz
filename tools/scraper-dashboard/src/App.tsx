@@ -461,16 +461,16 @@ function App() {
   };
 
   const PIPELINE_PHASES = [
-    { id: '1', title: 'The Scout', sub: 'Google Places (Primary) / OSM (Fallback)', route: 'phase1', color: '#8a2be2', 
-      target: 'Nationwide → ENRICHED / PENDING', 
+    { id: '1', title: 'The Scout', sub: 'Google Places Sweep — Nationwide Seeding', route: 'phase1', color: '#8a2be2', 
+      target: 'Google API → ENRICHED', 
       metric: (status?.enrichedCount || 0) + (status?.pendingCount || 0), metricLabel: 'Total Seeded', isDaemon: false, 
       statusActive: status?.isHarvestingActive || status?.isGoogleSweepActive },
-    { id: '2', title: 'The Operator', sub: 'Identity & Contact (OSM Fallback only)', route: 'phase2', color: '#5d78ff', 
+    { id: '2', title: 'The Operator', sub: 'Identity Resolution (Website + Phone)', route: 'phase2', color: '#5d78ff', 
       target: 'PENDING → IDENTITY_ESTABLISHED', 
       metric: status?.identityCount || 0, metricLabel: 'Identities Resolved', isDaemon: true, 
       statusActive: status?.currentTarget?.includes('Operator: online') },
     { id: '3', title: 'The Detective', sub: 'Website Deep Crawl + Photo Candidates', route: 'phase3', color: '#ff5a00', 
-      target: 'ENRICHED / IDENTITY_ESTABLISHED → is_deep_crawled', 
+      target: 'ENRICHED → is_deep_crawled', 
       metric: status?.indexedCount || 0, metricLabel: 'Websites Crawled', isDaemon: true, 
       statusActive: status?.currentTarget?.includes('Indexer: online') },
     { id: '4', title: 'The Photographer', sub: 'Free Photo Harvest (OG + Street View)', route: 'phase4', color: '#e91e63', 
@@ -484,7 +484,7 @@ function App() {
     { id: '6', title: 'Databank QA', sub: 'Master Review Grid + Coverage Map', route: 'phase6', color: '#ffb300', 
       target: 'ALL → VERIFIED', 
       metric: (status?.enrichedCount || 0) + (status?.mediaReadyCount || 0) + (status?.verifiedCount || 0), 
-      metricLabel: 'Gold Standard', isDaemon: false, 
+      metricLabel: 'Total Pipeline Records', isDaemon: false, 
       statusActive: true }
   ];
 
@@ -615,7 +615,7 @@ function App() {
           <div className="tab-pane phase-1">
             <div className="explainer-block" style={{marginBottom: '1rem'}}>
               <h3 style={{marginTop: 0, color: '#8a2be2'}}>The Scout: GIS Ingestion Engine</h3>
-              <p>Dual-mode Phase 1 seeder. <strong style={{color:'#ffb300'}}>Google Places (Primary)</strong> writes <strong>ENRICHED</strong> records directly — high-fidelity data including coordinates, phone, hours, rating, and website. Toggle to <strong>OSM Mode</strong> to fall back to OpenStreetMap Overpass API, which writes raw <strong>PENDING</strong> skeletons for the Operator to resolve. Google Mode is recommended for all new harvests.</p>
+              <p>Phase 1 uses the <strong style={{color:'#ffb300'}}>Google Places API</strong> to seed the entire pipeline — querying by state for roller rinks and skate shops. Each result is written directly as an <strong>ENRICHED</strong> record with full coordinates, phone, hours, rating, and website. The OSM fallback mode is available for legacy re-harvests but is <em style={{color:'rgba(255,255,255,0.4)'}}>not recommended</em> — Google data is always higher quality.</p>
             </div>
 
             <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', marginBottom: '2rem' }}>
@@ -642,14 +642,14 @@ function App() {
 
             {/* OMNI-NET DISCOVERY PANEL */}
             <div className="discovery-net-panel" style={{ background: 'linear-gradient(135deg, rgba(138,43,226,0.1) 0%, rgba(0,0,0,0.3) 100%)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(138, 43, 226, 0.3)', marginBottom: '2rem', position: 'relative' }}>
-               <div style={{ position: 'absolute', top: '-10px', right: '20px', background: '#8a2be2', color: '#fff', fontSize: '0.6rem', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>OMNI-NET DISCOVERY v2.0</div>
-               <h3 style={{ marginTop: 0, color: '#fff', fontSize: 18 }}>📡 Omni-Net Discovery & Re-seeding</h3>
-               <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem' }}>Use these controls to bypass OpenStreetMap limitations or manually target "Stealth" rinks that are under-mapped in GIS datasets.</p>
+               <div style={{ position: 'absolute', top: '-10px', right: '20px', background: '#8a2be2', color: '#fff', fontSize: '0.6rem', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>STATE TARGETING</div>
+               <h3 style={{ marginTop: 0, color: '#fff', fontSize: 18 }}>📡 State Re-Sweep Controls</h3>
+               <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem' }}>Manually trigger a Google Places sweep for a specific state, or switch the seeding provider. Useful for topping up states with low record counts.</p>
                
                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
-                     <h4 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: '#8a2be2' }}>Wide-Net Re-harvest</h4>
-                     <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>Force-refresh OSM GIS data using the new naming heuristic net. Captures rinks tagged only as generic buildings.</p>
+                     <h4 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: '#8a2be2' }}>Re-Sweep State</h4>
+                     <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>Force a fresh Google Places sweep for a single state. Respects the dedup logic — existing records are refreshed, not duplicated.</p>
                      <div style={{ display: 'flex', gap: '8px' }}>
                        <select className="mini-input" style={{ flex: 1, background: '#1a1a1a' }} id="force-state-sel">
                          {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -660,7 +660,7 @@ function App() {
                   
                   <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
                      <h4 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: '#ffb300' }}>Origin Provider</h4>
-                     <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>Switch between OpenStreetMap (Discovery) and Google Places (Premium). Affects the SEED button above.</p>
+                     <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>Select the data source for the GLOBAL SEED button. Google Places is the primary source and writes ENRICHED records directly. OSM is a legacy fallback that writes PENDING skeletons.</p>
                      <div className="provider-toggle switch-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.5)', padding: '8px', borderRadius: '6px' }}>
                          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: seedProvider === 'google' ? '#ffb300' : '#8a2be2' }}>{seedProvider === 'osm' ? 'OSM Mode' : 'Google Mode'}</span>
                          <label className="switch">
@@ -827,7 +827,7 @@ function App() {
                 <h4 style={{fontSize: '0.8rem', textTransform:'uppercase', color:'var(--text-secondary)', marginBottom: 0}}>Recently Harvested Seeds (Live)</h4>
                 {(phaseQueues['recent'] || []).length === 0 ? (
                     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '2rem', textAlign: 'center', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic', marginTop: '10px' }}>
-                        Vault is empty. Click [GLOBAL SEED] to spawn targets from OSM or Google API.
+                        No records harvested yet. Click [GLOBAL SEED] to run the Google Places sweep.
                     </div>
                 ) : (
                     <div className="mini-data-bank" style={{marginTop: '10px'}}>
@@ -855,7 +855,7 @@ function App() {
                <h3 style={{marginTop: 0, color: PIPELINE_PHASES.find(p=>p.route===activeTab)?.color}}>
                    {PIPELINE_PHASES.find(p=>p.route===activeTab)?.title}: {PIPELINE_PHASES.find(p=>p.route===activeTab)?.sub}
                </h3>
-               {activeTab === 'phase2' && <p>Targets <strong>PENDING</strong> OSM-sourced records and resolves their real-world identity — finding the business website and phone number via web search heuristics. Graduates records to <strong>IDENTITY_ESTABLISHED</strong> when found.</p>}
+               {activeTab === 'phase2' && <p>Targets <strong>PENDING</strong> records and resolves their real-world identity — finding the business website and phone number via web search heuristics. Graduates records to <strong>IDENTITY_ESTABLISHED</strong> when found. <em style={{color:'rgba(255,255,255,0.4)'}}>Note: Since the pipeline now uses Google Places as the primary seeder, PENDING records are rare. This daemon handles any OSM legacy records or manually added entries.</em></p>}
                {activeTab === 'phase3' && <p>The Detective deep-crawls each spot's website using Puppeteer with GHOST identity spoofing. Extracts operating hours, 18+ adult night schedules, pricing, event listings, social links, and photo candidates (OG image, DOM images, Facebook OG). Writes <code>candidate_photos</code> for the Photographer to harvest.</p>}
                {activeTab === 'phase4' && <p>The Photographer daemon reads <code>candidate_photos</code> written by the Indexer — downloading OG images and DOM media as binary uploads to Supabase Storage. Falls back to Google Street View Static as a guaranteed photo source. Promotes records to <strong>MEDIA_READY</strong> on success.</p>}
                {activeTab === 'phase5' && <p>The Publisher Gate is the final human-approved release step. Only records with <strong style={{color:'#4caf50'}}>is_published = true</strong> are visible on the live SK8Lytz app map. Bulk-promote all pipeline-complete records (ENRICHED + MEDIA_READY) below, or use the Databank QA tab to approve individual spots.</p>}
