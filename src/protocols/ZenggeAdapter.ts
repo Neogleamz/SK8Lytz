@@ -73,9 +73,9 @@ export class ZenggeAdapter implements IControllerProtocol {
 
   buildMusicConfig(config: MusicConfig): number[] {
     return ZenggeProtocol.setMusicConfig(
-      false, // Always use app mic (phone) by default — caller can override via raw write
-      config.matrixStyle,
       config.patternId,
+      0x26,                // APP mic by default — caller can override via raw write
+      true,                // isOn
       config.color1,
       config.color2,
       config.micSensitivity,

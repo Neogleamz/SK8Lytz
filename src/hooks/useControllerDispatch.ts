@@ -179,9 +179,9 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       AppLogger.log("MUSIC_CONFIG_REQUESTED", { patternId, c1Hex: color1Hex, c2Hex: color2Hex, matrix });
 
       writeToDevice(ZenggeProtocol.setMusicConfig(
-        isDeviceMic,
-        matrix,
-        patternId,
+        patternId,               // musicMode 1-13
+        isDeviceMic ? 0x27 : 0x26, // micSource byte
+        true,                    // isOn
         c1,
         c2,
         sens,
