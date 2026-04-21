@@ -22,7 +22,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DeviceItem from '../components/DeviceItem';
 import { useTheme } from '../context/ThemeContext';
 import useBLE from '../hooks/useBLE';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { Layout, Typography, Spacing } from '../theme/theme';
 
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
@@ -487,12 +486,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   const openSettings = (device: any) => {
     setSelectedDeviceForSettingsId(device.id);
-    
-    // Query hardware settings with correct 0x63 command (not legacy 0x10)
-    if (connectedDevices.some(d => d.id === device.id)) {
-       setTimeout(() => writeToDevice(ZenggeProtocol.queryHardwareSettings(false), device.id), 300);
-    }
-    
+    // NOTE: Hardware probe (0x63) intentionally NOT fired here.
+    // Probe runs only during setup wizard (new device) or explicit on-demand user action.
+    // Firing on every settings open created an async race against the stored deviceConfigs.
     setIsSettingsVisible(true);
   };
 
@@ -644,8 +640,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           }
           // connectToDevices (gated) — additive connection, preserves existing group members.
           await connectToDevices([bleDevice]);
-          // Query hardware settings immediately after connect to populate deviceConfigs correctly
-          writeToDevice(ZenggeProtocol.queryHardwareSettings(false), bleDevice.id);
+          // NOTE: Hardware probe (0x63) intentionally NOT fired here.
+          // hwSettings are loaded from DeviceRepository on mount — registered devices
+          // already have their ledPoints/segments persisted from setup wizard.
+          // Probing on every tap created an async race that corrupted deviceLedCount.
         }}
         onLongPress={() => {
           openSettings(mergedItem);

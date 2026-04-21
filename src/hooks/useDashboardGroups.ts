@@ -182,7 +182,11 @@ export function useDashboardGroups({
   // ─── Device configs — 0x63 probe results + user overrides ────────────────
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, DeviceSettings>>({});
 
-  // Load persisted configs from DeviceRepository on mount
+  // Load persisted configs from DeviceRepository on mount, then subscribe to
+  // all future repo emissions (e.g. from useHardwareNotifications probe writes).
+  // This is the canonical subscriber pattern — repo is the SSOT, React state is
+  // a read-only mirror. Eliminates the dual-write race between probe callbacks
+  // and the mount-time load from AsyncStorage.
   useEffect(() => {
     repo.initialize().then(() => {
       const configs = repo.getConfigs();
@@ -190,6 +194,23 @@ export function useDashboardGroups({
         setDeviceConfigs(configs);
       }
     }).catch(() => {});
+
+    // Subscribe: re-read configs on every repo mutation (saveDevice, updateConfig, etc.)
+    const unsubscribe = repo.subscribe(() => {
+      const fresh = repo.getConfigs();
+      setDeviceConfigs(prev => {
+        // Identity check: only trigger re-render if something actually changed
+        const prevKeys = Object.keys(prev);
+        const freshKeys = Object.keys(fresh);
+        if (prevKeys.length !== freshKeys.length) return fresh;
+        for (const k of freshKeys) {
+          if (prev[k] !== fresh[k]) return fresh;
+        }
+        return prev;
+      });
+    });
+
+    return unsubscribe;
   }, []);
 
   // ─── Power states map ──────────────────────────────────────────────────────
