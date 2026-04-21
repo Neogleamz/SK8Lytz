@@ -10,6 +10,7 @@
 import { useCallback } from 'react';
 import { getLocalProfileById } from '../constants/ProductCatalog';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { buildPatternPayload } from '../protocols/PatternEngine';
 import { AppLogger } from '../services/AppLogger';
 import { hexToRgb } from '../utils/ColorUtils';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
@@ -52,7 +53,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
 
   /**
    * Apply a fixed/custom pattern to devices.
-   * Delegates to ZenggeProtocol.setCustomModeCompact — single source of truth.
+   * Delegates to PatternEngine to bridge the Math Synthesizer logic with the hardware.
    */
   const applyFixedPattern = useCallback(
     async (
@@ -64,28 +65,30 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
     ) => {
       if (!writeToDevice) return;
 
-      // 0x51 Custom Engines expect pure, unmodified hexadecimal parameters.
-      // The hardware engines interpret brightness separately natively.
       const fgRaw = hexToRgb(fg);
       const bgRaw = hexToRgb(bg);
 
-      // Solid Mode (Pattern 1) Override: Use standard 0x59 FREEZE array to avoid triggering Symphony loops
+      // Solid Mode (Pattern 1) Override: Use standard 0x59 FREEZE
       if (patternId === 1) {
         sendColor(fgRaw.r, fgRaw.g, fgRaw.b);
         return;
       }
 
-      // 0x51 Custom Engines expect pure, unmodified hexadecimal parameters.
-      // The hardware engines interpret brightness separately natively.
-      // Use compact format: only 1 active step (12 bytes raw, 20 bytes wrapped).
-      // Fits in any BLE MTU.
-      const payload = ZenggeProtocol.setCustomModeCompact([
-        { mode: patternId, speed: currentSpeed ?? 50, color1: fgRaw, color2: bgRaw },
-      ]);
+      // Instead of bypassing the Math Synthesizer directly to hardware, we use the
+      // PatternEngine to derive identically matched 0x59 Temporal Array Payloads
+      // for Spatial Patterns, OR 0x51 Temporal payloads for full-strip Temporal patterns.
+      const payload = buildPatternPayload(
+        patternId,
+        fgRaw,
+        bgRaw,
+        numLEDs, // Ensure actual LEDs are used for the array generation
+        clampSpeed(currentSpeed ?? 50),
+        1
+      );
 
       if (payload) writeToDevice(payload);
     },
-    [writeToDevice, sendColor]
+    [writeToDevice, sendColor, clampSpeed, numLEDs]
   );
 
   /** Apply static/strobe/blink mode pattern */

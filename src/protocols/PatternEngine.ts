@@ -242,8 +242,8 @@ export function getHardwarePixelArray(
  * Get the 0x59 transition type for a pattern.
  */
 export function getPatternTransitionType(patternId: PatternId): number {
-  if (patternId >= 1 && patternId <= 5) return 0x01; // FREEZE
-  return 0x00; // CASCADE (Scroll)
+  if (patternId >= 1 && patternId <= 5) return 0x00; // STATIC (Hardware holds array in place)
+  return 0x03; // NATIVE SCROLL (RunningWater - Hardware dynamically scrolls the array)
 }
 
 /**
