@@ -171,6 +171,13 @@ app.get('/status', async (req, res) => {
       .select('*', { count: 'exact', head: true })
       .eq('verification_status', 'MEDIA_READY');
 
+    // Photographer input pool: candidate_photos collected, photos not yet downloaded
+    const { count: candidatesCount } = await supabase
+      .from('skate_spots')
+      .select('*', { count: 'exact', head: true })
+      .not('candidate_photos', 'is', null)
+      .is('photos', null);
+
     res.json({
       isRunning: running,
       isHarvestingActive,
@@ -180,6 +187,7 @@ app.get('/status', async (req, res) => {
       processedCount: totalProcessed || 0,
       enrichedCount: enrichedCount || 0,
       mediaReadyCount: mediaReadyCount || 0,
+      candidatesReadyCount: candidatesCount || 0,
       verifiedCount: totalVerified || 0,
       
       // New Micro-Scraper Metrics
@@ -384,10 +392,11 @@ app.put('/api/spots/:id', async (req, res) => {
 });
 
 app.post('/api/promote-all', async (req, res) => {
+  // Include MEDIA_READY — the photographer pipeline's final output status
   const { error } = await supabase
     .from('skate_spots')
     .update({ is_published: true })
-    .or('verification_status.eq.VERIFIED,verification_status.eq.ENRICHED');
+    .or('verification_status.eq.VERIFIED,verification_status.eq.ENRICHED,verification_status.eq.MEDIA_READY');
 
   if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true, message: 'Bulk promotion successful' });
@@ -488,9 +497,13 @@ app.get('/api/queue', async (req, res) => {
        .not('website', 'is', null)
        .neq('website', '');
   } else if (phase === 'phase4') {
-     query = query.eq('verification_status', 'INDEXED');
+     // Photographer queue: records with candidates that haven't been downloaded yet
+     query = query
+       .not('candidate_photos', 'is', null)
+       .is('photos', null);
   } else if (phase === 'phase5') {
-     query = query.eq('verification_status', 'ENRICHED');
+     // Publisher queue: records with photos ready to go live
+     query = query.eq('verification_status', 'MEDIA_READY');
   } else {
      query = query.or('verification_status.eq.PENDING,verification_status.eq.IDENTITY_ESTABLISHED,verification_status.eq.INDEXED,verification_status.eq.ENRICHED,verification_status.is.null');
   }

@@ -66,6 +66,7 @@ function App() {
   // --- Logs & Queue States ---
   const [logs, setLogs] = useState<{type: string, message: string, source?: string}[]>([]);
   const logsRef = useRef<HTMLDivElement>(null);
+  const activeTabRef = useRef<typeof activeTab>('phase1');
 
   // --- Harvest Manager States ---
   const [harvestData, setHarvestData] = useState<{seededStates: string[], stateCounts: Record<string, number>, allStates: string[]}>({ seededStates: [], stateCounts: {}, allStates: [] });
@@ -88,15 +89,16 @@ function App() {
 
   useEffect(() => {
     fetchSystemStatus();
-    fetchQueue();
+    fetchQueue();          // Full initial load — all phases
     fetchHarvestStatus();
     fetchHistory();
     fetchCoverage();
     
     const interval = setInterval(() => {
       fetchSystemStatus();
-      fetchQueue();
-      fetchCoverage(); 
+      fetchCoverage();
+      // Only re-fetch queue for the currently visible tab (not all 6 every 5s)
+      fetchQueue([activeTabRef.current, 'recent']);
     }, 5000);
 
     const es = new EventSource(`${API_BASE}/api/logs/stream`);
@@ -113,6 +115,9 @@ function App() {
       es.close();
     };
   }, []);
+
+  // Keep activeTabRef in sync so the polling interval always reads current tab
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
   useEffect(() => {
     if (logsRef.current) {
@@ -159,9 +164,10 @@ function App() {
 
   const [phaseQueues, setPhaseQueues] = useState<Record<string, any[]>>({});
 
-  const fetchQueue = async () => {
+  const fetchQueue = async (only?: string[]) => {
+    // If `only` is provided, fetch just those phases; otherwise fetch all (initial load)
+    const phasesToFetch = only ?? ['phase1', 'phase2', 'phase3', 'phase4', 'phase5', 'recent'];
     try {
-      const phasesToFetch = ['phase1', 'phase2', 'phase3', 'phase4', 'phase5', 'recent'];
       const results = await Promise.all(
          phasesToFetch.map(phase => 
             phase === 'recent' 
@@ -170,11 +176,12 @@ function App() {
          )
       );
       
-      const newQueues: Record<string, any[]> = {};
+      // Merge into existing state so unloaded phases retain their last known values
+      const updates: Record<string, any[]> = {};
       phasesToFetch.forEach((phase, idx) => {
-         newQueues[phase] = results[idx]?.spots || [];
+         updates[phase] = results[idx]?.spots || [];
       });
-      setPhaseQueues(newQueues);
+      setPhaseQueues(prev => ({ ...prev, ...updates }));
     } catch (e) {
       console.error('Queue fetch error:', e);
     }
@@ -748,10 +755,10 @@ function App() {
                <h3 style={{marginTop: 0, color: PIPELINE_PHASES.find(p=>p.route===activeTab)?.color}}>
                    {PIPELINE_PHASES.find(p=>p.route===activeTab)?.title}: {PIPELINE_PHASES.find(p=>p.route===activeTab)?.sub}
                </h3>
-               {activeTab === 'phase2' && <p>Combats Google's Captcha to establish physical existence via search queries. Injects legitimate websites and phone numbers, resolving PENDING data debris.</p>}
-               {activeTab === 'phase3' && <p>Autonomous Heuristic Search algorithm. Bypasses Google entirely; crawls targeted websites searching context strings for 18+ Adult Nights, Operating Hours, and Schedule structures to extract real Roller Rink economy data.</p>}
-               {activeTab === 'phase4' && <p>Cluster of specialized scrapers (Instagram, Yelp API). Fetches live Vibe Ratings, user engagement reviews, and secondary source verifications.</p>}
-               {activeTab === 'phase5' && <p>A high-throughput media engine mapping Google Place photos and social gallery artifacts directly into our automated WebP CDN to power client-side mobile rendering.</p>}
+               {activeTab === 'phase2' && <p>Targets <strong>PENDING</strong> OSM-sourced records and resolves their real-world identity — finding the business website and phone number via web search heuristics. Graduates records to <strong>IDENTITY_ESTABLISHED</strong> when found.</p>}
+               {activeTab === 'phase3' && <p>The Detective deep-crawls each spot's website using Puppeteer with GHOST identity spoofing. Extracts operating hours, 18+ adult night schedules, pricing, event listings, social links, and photo candidates (OG image, DOM images, Facebook OG). Writes <code>candidate_photos</code> for the Photographer to harvest.</p>}
+               {activeTab === 'phase4' && <p>The Photographer daemon reads <code>candidate_photos</code> written by the Indexer — downloading OG images and DOM media as binary uploads to Supabase Storage. Falls back to Google Street View Static as a guaranteed photo source. Promotes records to <strong>MEDIA_READY</strong> on success.</p>}
+               {activeTab === 'phase5' && <p>The Publisher Gate is the final human-approved release step. Only records with <strong style={{color:'#4caf50'}}>is_published = true</strong> are visible on the live SK8Lytz app map. Bulk-promote all pipeline-complete records (ENRICHED + MEDIA_READY) below, or use the Databank QA tab to approve individual spots.</p>}
              </div>
              
              {activeTab === 'phase2' && (
@@ -804,9 +811,9 @@ function App() {
                        {status?.currentTarget?.includes('Indexer: online') && <div className="flow-animation"></div>}
                     </div>
                     <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                       <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ff5a00' }}>{status?.indexedCount || 0}</div>
-                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>DEEP CRAWLED</div>
-                       <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>Status unchanged</div>
+                       <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#e91e63' }}>{status?.candidatesReadyCount || 0}</div>
+                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>PHOTO CANDIDATES</div>
+                       <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>Awaiting harvest</div>
                     </div>
                   </div>
                 </div>
@@ -815,9 +822,8 @@ function App() {
              {activeTab === 'phase4' && (
                 <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
                    <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ff5a00' }}>{status?.enrichedCount || 0}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>WITH WEBSITE</div>
-                      <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>Candidate pool</div>
+                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#e91e63' }}>{status?.candidatesReadyCount || 0}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>CANDIDATES</div>
                    </div>
                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
@@ -1179,6 +1185,7 @@ function App() {
                 if (activeTab === 'phase1') return log.source === 'Phase 1' || log.source === 'System';
                 if (activeTab === 'phase2') return log.source === 'Phase 2' || log.source === 'System';
                 if (activeTab === 'phase3') return log.source === 'Phase 3' || log.source === 'System';
+                if (activeTab === 'phase4') return log.source === 'Photographer' || log.source === 'System';
                 return true; 
              })
              .map((log, i) => (
@@ -1194,6 +1201,7 @@ function App() {
              if (activeTab === 'phase1') return log.source === 'Phase 1' || log.source === 'System';
              if (activeTab === 'phase2') return log.source === 'Phase 2' || log.source === 'System';
              if (activeTab === 'phase3') return log.source === 'Phase 3' || log.source === 'System';
+             if (activeTab === 'phase4') return log.source === 'Photographer' || log.source === 'System';
              return true;
           }).length === 0 && (
              <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', padding: '1rem' }}>No active telemetry signals detected for this phase.</div>
