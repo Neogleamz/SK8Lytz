@@ -547,57 +547,31 @@ app.post('/api/harvest/stop-all', async (req, res) => {
   res.json({ success: true, message: 'National Harvest stopping' });
 });
 
-// ─── Pipeline Stats: full per-state breakdown across all 4 phases ───────────
+// ─── Pipeline Stats: server-side aggregation via RPC (no row-cap) ────────────
 app.get('/api/pipeline-stats', async (req, res) => {
   const statesRaw = (req.query.states as string) || '';
   const states = statesRaw ? statesRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
 
-  let query = supabase.from('skate_spots').select(
-    'state, verification_status, is_deep_crawled, is_published, website, candidate_photos, photos'
-  );
-  if (states.length > 0) query = query.in('state', states);
-
-  const { data, error } = await query;
-  if (error) return res.status(500).json({ error: error.message });
-
-  const agg: Record<string, any> = {};
-  const addState = (st: string) => {
-    if (!agg[st]) agg[st] = {
-      state: st, total: 0,
-      enriched: 0, pending: 0, identity_established: 0, media_ready: 0, published: 0,
-      deep_crawled: 0, has_website: 0,
-      detective_queue: 0, has_candidates: 0, photographer_queue: 0, has_photos: 0,
-    };
-  };
-
-  (data || []).forEach((row: any) => {
-    const st = row.state || 'UNK'; addState(st);
-    const r = agg[st]; r.total++;
-    const vs = row.verification_status;
-    if (vs === 'ENRICHED')             r.enriched++;
-    if (vs === 'PENDING')              r.pending++;
-    if (vs === 'IDENTITY_ESTABLISHED') r.identity_established++;
-    if (vs === 'MEDIA_READY')          r.media_ready++;
-    if (row.is_published)              r.published++;
-    if (row.is_deep_crawled)           r.deep_crawled++;
-    const hasWeb  = row.website && row.website.trim() !== '';
-    if (hasWeb)                        r.has_website++;
-    const hasCand = row.candidate_photos != null;
-    if (hasCand)                       r.has_candidates++;
-    const hasPhoto = row.photos != null;
-    if (hasPhoto)                      r.has_photos++;
-    if ((vs === 'ENRICHED' || vs === 'IDENTITY_ESTABLISHED') && !row.is_deep_crawled && hasWeb) r.detective_queue++;
-    if (hasCand && !hasPhoto)          r.photographer_queue++;
+  // Use RPC for server-side COUNTs — bypasses PostgREST's 1000-row default cap
+  const { data, error } = await supabase.rpc('get_pipeline_stats', {
+    p_states: states.length > 0 ? states : null,
   });
 
-  const rows = Object.values(agg).sort((a: any, b: any) => b.total - a.total);
+  if (error) return res.status(500).json({ error: error.message });
+
+  const rows = (data || []) as any[];
+
+  // Sum across all returned states for the summary row
   const summary = rows.reduce((acc: any, r: any) => {
-    Object.keys(r).forEach(k => { if (k !== 'state') acc[k] = (acc[k] || 0) + r[k]; });
+    const keys = ['total','enriched','pending','identity_established','media_ready','published',
+                  'deep_crawled','has_website','detective_queue','has_candidates','photographer_queue','has_photos'];
+    keys.forEach(k => { acc[k] = (acc[k] || 0) + Number(r[k] || 0); });
     return acc;
   }, { state: states.length > 0 ? states.join('+') : 'ALL' });
 
   res.json({ stats: rows, summary, active_states: states });
 });
+
 
 app.get('/api/recent-spots', async (req, res) => {
 
