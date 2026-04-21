@@ -533,7 +533,7 @@ function App() {
   const PIPELINE_PHASES = [
     { id: '1', title: 'The Scout', sub: 'Google Places — Nationwide Seeding', route: 'phase1', color: '#8a2be2',
       target: 'Google API -> ENRICHED',
-      metric: (status?.enrichedCount || 0) + (status?.pendingCount || 0), metricLabel: 'Total Seeded', isDaemon: false,
+      metric: status?.totalCount || 0, metricLabel: 'Total Seeded', isDaemon: false,
       statusActive: status?.isHarvestingActive || status?.isGoogleSweepActive },
     { id: '2', title: 'The Detective', sub: 'Website Deep Crawl + Photo Candidates', route: 'phase3', color: '#ff5a00',
       target: 'ENRICHED -> is_deep_crawled',

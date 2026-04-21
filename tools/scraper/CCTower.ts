@@ -131,6 +131,10 @@ app.get('/status', async (req, res) => {
       } catch(e) {}
     }
 
+    const { count: totalCount } = await supabase
+      .from('skate_spots')
+      .select('*', { count: 'exact', head: true });
+
     const { count: totalProcessed } = await supabase
       .from('skate_spots')
       .select('*', { count: 'exact', head: true })
@@ -184,6 +188,7 @@ app.get('/status', async (req, res) => {
       isHeadless,
       currentTarget: `Operator: ${operatorStatus} | Indexer: ${indexerStatus} | Photographer: ${photographerStatus}`,
       isGoogleSweepActive,
+      totalCount: totalCount || 0,          // COUNT(*) — true total seeded
       processedCount: totalProcessed || 0,
       enrichedCount: enrichedCount || 0,
       mediaReadyCount: mediaReadyCount || 0,
