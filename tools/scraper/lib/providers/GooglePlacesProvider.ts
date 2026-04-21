@@ -98,6 +98,8 @@ const BLOCKED_NAME_KEYWORDS = [
   "polar ice", " on ice",
   "figure skating", "figure skate",
   "ice hockey", "hockey rink", "hockey arena", "hockey centre", "hockey center", "hockey equipment", "pure hockey",
+  "ice rink", "ice skating", "iceplex", "icehouse", "ice den", "ice arena", "ice garden", "ice palace",
+  "minor league hockey", "thunder hockey", "hockey shop", "hockey supply",
   "curling",
   // Big-box retail chains (second-line defence; Google type filter catches most)
   "scheels", "zumiez",
@@ -110,6 +112,11 @@ const BLOCKED_PLACE_TYPES = new Set([
   "ice_skating_rink",
   "sporting_goods_store",   // catches big-box generics (Scheels, Dick's, REI, etc.)
   "bicycle_store",          // catches Trek, Eriks
+  "shopping_mall",          // catches Town Center Plaza, Tanger, etc.
+  "shoe_store",             // catches Shoe Carnival, Vans
+  "clothing_store",         // catches mall clothing shops
+  "home_goods_store",       // catches Michaels, Ollie's
+  "department_store",
 ]);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -122,19 +129,35 @@ export const RETAIL_BLOCKLIST = [
   "hibbett", "big 5 sporting", "big 5", "dunham's", "modell's", "sport chalet",
   "sports authority", "play it again sports", "pure hockey", "perani's hockey",
   // Mass-market retail
-  "target", "walmart", "costco", "kohl's", "kohls", "amazon",
+  "target", "walmart", "costco", "kohl's", "kohls", "amazon", "hobby lobby", "five below", "barnes & noble", "dillons",
   // Outdoor / hunting / rv
   "rei", "bass pro", "bass pro shop", "cabela", "cabela's", "sportsman's warehouse",
   "sportsman", "scheels", "camping world", "gander mountain",
   // Bike shops (frequently sell inline skates but aren't skate shops)
   "trek bicycle", "trek store", "erik's bike", "eriks bike", "specialized", "performance bicycle",
-  // Footwear
-  "foot locker", "footlocker",
+  // Footwear & Clothing
+  "foot locker", "footlocker", "vans", "shoe carnival", "zumiez",
+  // Malls & Plazas
+  "town center", "plaza", "tanger", "outlet", "bargain", "michaels", "resort", "casino",
   // Generic catch-all — any name with "sporting goods" that isn't a specialty store
-  "sporting goods", "boardshop",
-  // Other
-  "cargo largo",
+  "sporting goods", "boardshop", "play it again",
+  // Other Non-Skate
+  "cargo largo", "speedway", "pickle", "fun city", "worlds of fun", "family fun",
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dynamic Blocklist Injection
+// Call this from the orchestrator (GoogleSweep) before running the sweep.
+// ─────────────────────────────────────────────────────────────────────────────
+export function injectDynamicBlocklist(keywords: string[]) {
+  for (const kw of keywords) {
+    const kwLower = kw.toLowerCase().trim();
+    if (!RETAIL_BLOCKLIST.includes(kwLower) && kwLower !== '') {
+      RETAIL_BLOCKLIST.push(kwLower);
+    }
+  }
+}
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pollution filter — returns true if a result SHOULD be rejected.
@@ -153,7 +176,36 @@ function isPolluted(name: string, types: string[], facilityType: FacilityType): 
     if (lowerName.includes(keyword)) return true;
   }
 
-  // 3. For skate_park results, require at least one allow-list keyword in the name.
+  // 3. Ultra-Aggressive Retail Name Filter (to catch Malls, Bargain Outlets, Vans)
+  for (const block of RETAIL_BLOCKLIST) {
+     if (lowerName.includes(block)) return true;
+  }
+
+  // 4. Heuristic Generic Park Filter
+  // Drops generic parks that happen to get wrapped up in 'roller skating rink in X' results.
+  // Preserves actual skate parks, amusement parks, and valid rinks inside parks (e.g. Branch Brook Park Roller Skating Center)
+  if (lowerName.endsWith('park') || lowerName.includes(' park ')) {
+    if (!lowerName.includes('skate') && !lowerName.includes('skateland') && !lowerName.includes('rink') && !lowerName.includes('roller') && !lowerName.includes('arena') && !lowerName.includes('amusement')) {
+       return true;
+    }
+  }
+
+  // 5. Heuristic Generic Facility Filter (Community Centers, Halls, Plazas, Squares, Fairgrounds)
+  const genericFacilityRegex = /(community center|recreation center|rec center|youth center|meeting hall|memorial hall|fairgrounds| square|plaza|watersports|shutters| skis| ski shop|lodge|resort|funplex|family fun|eat & play|water park)/;
+  if (genericFacilityRegex.test(lowerName)) {
+    if (!lowerName.includes('skate') && !lowerName.includes('skateland') && !lowerName.includes('rink') && !lowerName.includes('roller') && !lowerName.includes('arena') && !lowerName.includes('rollerblade')) {
+       return true;
+    }
+  }
+
+  // 4. Cross-contamination: Prevent Google from returning Skate Parks when searching for Rinks/Shops
+  if (facilityType !== 'skate_park') {
+     if (lowerName.includes('skate park') || lowerName.includes('skatepark')) {
+        return true;
+     }
+  }
+
+  // 5. For skate_park results, require at least one allow-list keyword in the name.
   //    This prevents pure skateboard parks from slipping through.
   if (facilityType === 'skate_park') {
     const passesAllowList = SKATE_PARK_NAME_ALLOWLIST.some(kw => lowerName.includes(kw));

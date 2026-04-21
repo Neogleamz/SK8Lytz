@@ -111,6 +111,10 @@ function App() {
   const [mapMode, setMapMode] = useState<'quality' | 'published'>('quality');
   const [activeStateFilter, setActiveStateFilter] = useState<string | null>(null);
 
+  // --- Dynamic Blocklist UI ---
+  const [uiBlocklist, setUiBlocklist] = useState<any[]>([]);
+  const [newKeyword, setNewKeyword] = useState('');
+
   // --- Graveyard Grid States ---
   const [spots, setSpots] = useState<any[]>([]);
   const [totalSpots, setTotalSpots] = useState(0);
@@ -137,6 +141,7 @@ function App() {
 
   useEffect(() => {
     fetchSystemStatus();
+    fetchBlocklist();      // Initial load of keywords
     fetchQueue();          // Full initial load — all phases
     fetchHarvestStatus();
     fetchHistory();
@@ -240,6 +245,51 @@ function App() {
     } catch {
       setStatus({ isRunning: false, currentTarget: 'API OFFLINE', processedCount: 0, enrichedCount: 0, verifiedCount: 0, errorCount: 0, lastError: 'Could not connect.' });
     }
+  };
+
+  const fetchBlocklist = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/scraper/blocklist`);
+      const data = await res.json();
+      if (data.keywords) setUiBlocklist(data.keywords);
+    } catch (e) {}
+  };
+
+  const addKeyword = async () => {
+    console.log('[DEBUG] addKeyword clicked. newKeyword:', newKeyword);
+    if (!newKeyword.trim()) {
+      alert('Please enter a keyword to block.');
+      return;
+    }
+    console.log('[DEBUG] Sending fetch request for:', newKeyword);
+    try {
+      const res = await fetch(`${API_BASE}/api/scraper/blocklist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword: newKeyword })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNewKeyword('');
+        fetchBlocklist();
+        // Immediately refresh the grid to show records were dropped
+        fetchSpots(page, gridFilter);
+        fetchPipelineStatsRef.current();
+        alert(`Successfully blocked "${newKeyword}" and purged ${data.count} matching records from the database!`);
+      } else {
+        alert('Failed to add keyword: ' + JSON.stringify(data));
+      }
+    } catch (e: any) {
+      alert('Error connecting to CCTower: ' + e.message);
+    }
+  };
+
+  const removeKeyword = async (kw: string) => {
+    if (!confirm(`Remove "${kw}" from blocklist?`)) return;
+    try {
+      await fetch(`${API_BASE}/api/scraper/blocklist/${encodeURIComponent(kw)}`, { method: 'DELETE' });
+      fetchBlocklist();
+    } catch (e) {}
   };
 
   const [phaseQueues, setPhaseQueues] = useState<Record<string, any[]>>({});
@@ -827,6 +877,36 @@ function App() {
                          </label>
                      </div>
                   </div>
+               </div>
+            </div>
+
+            {/* DYNAMIC BLOCKLIST UI */}
+            <div className="dynamic-blocklist-panel" style={{ background: 'linear-gradient(135deg, rgba(233,30,99,0.1) 0%, rgba(0,0,0,0.3) 100%)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(233, 30, 99, 0.3)', marginBottom: '2rem', position: 'relative', zIndex: 50 }}>
+               <div style={{ position: 'absolute', top: '-10px', right: '20px', background: '#e91e63', color: '#fff', fontSize: '0.6rem', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>LIVE GUILLOTINE</div>
+               <h3 style={{ marginTop: 0, color: '#fff', fontSize: 18 }}>Dynamic Retail Blocklist</h3>
+               <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem' }}>Add toxic keywords here. Submitting instantly blacklists the term for future Google Sweeps AND executes a SQL Guillotine to delete any currently matching records in the database.</p>
+               
+               <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem' }}>
+                 <input className="form-input" placeholder="e.g. 'trek', 'hockey', 'camping'"
+                   value={newKeyword} onChange={e => setNewKeyword(e.target.value)}
+                   onKeyDown={e => e.key === 'Enter' && addKeyword()}
+                   style={{ flex: 1, zIndex: 50 }} />
+                 <button className="btn-primary" style={{ background: '#e91e63', border: 'none', cursor: 'pointer', zIndex: 50 }} onClick={addKeyword}>Block & Purge Database</button>
+               </div>
+
+               <div style={{ background: 'rgba(0,0,0,0.4)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', padding: '1rem', maxHeight: '180px', overflowY: 'auto' }}>
+                 {uiBlocklist.length === 0 ? (
+                   <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>No dynamic keywords configured.</div>
+                 ) : (
+                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                     {uiBlocklist.map((item: any) => (
+                       <div key={item.keyword} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(233,30,99,0.15)', border: '1px solid rgba(233,30,99,0.3)', padding: '4px 10px', borderRadius: '20px' }}>
+                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f48fb1' }}>{item.keyword}</span>
+                         <button onClick={() => removeKeyword(item.keyword)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '0.7rem', padding: '0 4px' }}>x</button>
+                       </div>
+                     ))}
+                   </div>
+                 )}
                </div>
             </div>
 
@@ -1617,15 +1697,15 @@ function App() {
                               color: spot.is_published ? '#4caf50' : 'rgba(255,255,255,0.4)' }}>
                               <input type="checkbox" checked={!!spot.is_published}
                                 onChange={async () => {
-                                  await fetch(`${API_BASE}/api/spots/${spot.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ is_published: !spot.is_published }) });
+                                  await fetch(`${API_BASE}/api/skate_spots/${spot.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ is_published: !spot.is_published }) });
                                   fetchSpots(page, gridFilter);
                                 }} style={{ accentColor:'#4caf50', width:'14px', height:'14px' }} />
                               {spot.is_published ? 'LIVE' : 'Publish'}
                             </label>
                             <button onClick={() => { setEditingId(spot.id); setEditForm(spot); }}
                               style={{ marginLeft:'auto', padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,255,255,0.15)', background:'transparent', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:'0.65rem' }}>Edit</button>
-                            <button onClick={async () => { if(confirm(`Delete ${spot.name}?`)) { await fetch(`${API_BASE}/api/spots/${spot.id}`,{method:'DELETE'}); fetchSpots(page,gridFilter); } }}
-                              style={{ padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,59,48,0.25)', background:'transparent', color:'rgba(255,59,48,0.6)', cursor:'pointer', fontSize:'0.65rem' }}>Del</button>
+                            <button onClick={async () => { if(confirm(`Purge AND permanently block ${spot.name}?`)) { await fetch(`${API_BASE}/api/skate_spots/${spot.id}?blacklist=true`,{method:'DELETE'}); fetchSpots(page,gridFilter); } }}
+                              style={{ padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,59,48,0.25)', background:'rgba(255,59,48,0.1)', color:'rgba(255,59,48,0.8)', cursor:'pointer', fontSize:'0.65rem', fontWeight:700 }}>Purge</button>
                           </div>
                         </div>
                       </div>
@@ -1770,15 +1850,15 @@ function App() {
                           <label style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'2px', cursor:'pointer', fontSize:'0.55rem', fontWeight:800, color: spot.is_published ? '#4caf50' : 'rgba(255,255,255,0.3)' }}>
                             <input type="checkbox" checked={!!spot.is_published}
                               onChange={async () => {
-                                await fetch(`${API_BASE}/api/spots/${spot.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({is_published:!spot.is_published})});
+                                await fetch(`${API_BASE}/api/skate_spots/${spot.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({is_published:!spot.is_published})});
                                 fetchSpots(page,gridFilter);
                               }} style={{ accentColor:'#4caf50', width:'16px', height:'16px' }} />
                             {spot.is_published ? 'LIVE' : 'Publish'}
                           </label>
                           <button onClick={() => { setEditingId(spot.id); setEditForm(spot); }}
                             style={{ padding:'3px 10px', borderRadius:'5px', border:'1px solid rgba(255,255,255,0.12)', background:'transparent', color:'rgba(255,255,255,0.45)', cursor:'pointer', fontSize:'0.6rem' }}>Edit</button>
-                          <button onClick={async () => { if(confirm(`Delete ${spot.name}?`)) { await fetch(`${API_BASE}/api/spots/${spot.id}`,{method:'DELETE'}); fetchSpots(page,gridFilter); } }}
-                            style={{ padding:'3px 10px', borderRadius:'5px', border:'1px solid rgba(255,59,48,0.2)', background:'transparent', color:'rgba(255,59,48,0.5)', cursor:'pointer', fontSize:'0.6rem' }}>Del</button>
+                          <button onClick={async () => { if(confirm(`Purge AND permanently block ${spot.name}?`)) { await fetch(`${API_BASE}/api/skate_spots/${spot.id}?blacklist=true`,{method:'DELETE'}); fetchSpots(page,gridFilter); } }}
+                            style={{ padding:'3px 10px', borderRadius:'5px', border:'1px solid rgba(255,59,48,0.2)', background:'rgba(255,59,48,0.1)', color:'rgba(255,59,48,0.8)', cursor:'pointer', fontSize:'0.6rem', fontWeight:700 }}>Purge</button>
                         </div>
                       </div>
                     );

@@ -12,6 +12,35 @@ const supabase = createClient(
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// ─── Toxicity Bouncer: Eliminates known false-positives ─────────────────────
+function checkToxicity(text: string): string | null {
+  const t = text.toLowerCase();
+  
+  // Severe instant-kill keywords (specialty shops that aren't skates)
+  if (/\b(?:bicycle repair|trek bikes|specialized bicycles|ice hockey equipment|pure hockey)\b/.test(t)) {
+    return 'Severe non-skate retail signature detected.';
+  }
+
+  // Density-based keyword checks
+  const bikeMentions = (t.match(/\b(?:bike|bikes|bicycle|bicycles|ebike)\b/g) || []).length;
+  // If it's a bike shop disguised as a skate shop, the word bike will appear everywhere.
+  if (bikeMentions > 6 && !t.includes('roller skate')) {
+    return 'Exceeds bicycle mention threshold (Likely a bike shop).';
+  }
+
+  const hockeyMentions = (t.match(/\b(?:ice hockey|puck|stick repair|skate sharpening for hockey)\b/g) || []).length;
+  if (hockeyMentions > 4 && !t.includes('inline') && !t.includes('quad')) {
+    return 'Exceeds ice hockey mention threshold (Likely an Ice Rink or Ice shop).';
+  }
+
+  const rvMentions = (t.match(/\b(?:camper|rv sales|motorhome)\b/g) || []).length;
+  if (rvMentions > 3) {
+    return 'Exceeds RV/Camper mention threshold (Likely Camping World).';
+  }
+
+  return null;
+}
+
 // ─── Telemetry Hook to CCTower ─────────────────────────────────────────────
 const _log = console.log;
 const _err = console.error;
@@ -322,6 +351,18 @@ async function runIndexer() {
 
       const text = pageData.bodyText;
 
+      // ── Healer/Toxicity Bouncer Check ──────────────────────────────────────
+      const toxicityReason = checkToxicity(text);
+      if (toxicityReason) {
+        console.log(`   🚫 HEALER ABORT: ${toxicityReason}`);
+        pushLog('INFO', `Phase 2 Healer rejected ${target.name}: ${toxicityReason}`);
+        await supabase.from('skate_spots').update({
+          is_deep_crawled: true,
+          verification_status: 'REJECTED',
+          last_attempted_at: new Date().toISOString()
+        }).eq('id', target.id);
+        continue;
+      }
       // ── Social Links ──────────────────────────────────────────────────────
       let instagram_url = target.instagram_url || null;
       let facebook_url = target.facebook_url || null;
