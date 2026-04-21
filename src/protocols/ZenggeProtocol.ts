@@ -353,10 +353,59 @@ export class ZenggeProtocol {
   // ─── EXISTING COMMANDS ─────────────────────────────────────────────────────
 
 
+  /**
+   * Set a single legacy solid color via 0x41.
+   * @deprecated For production use setSettledMode(). This 7-byte form
+   * may not activate effects on 0xA3 hardware.
+   */
   static setSymphonyColor(r: number, g: number, b: number): number[] {
     const cmd = [0x41, r, g, b, 0x01, 0x01, 0xf0];
     const checksum = this.calculateChecksum(cmd);
     return this.wrapCommand([...cmd, checksum]);
+  }
+
+  /**
+   * [APK HYPOTHESIS] Build a 0x41 Settled Mode / Custom Effect packet.
+   *
+   * Inferred from SymphonySettingForA3.java analysis — not yet
+   * hardware-verified. Use in Oracle Phase 2 panel to confirm byte positions.
+   *
+   * Hypothesis format (13 bytes):
+   *   [0x41, effectId, speed, brightness,
+   *    R1, G1, B1, R2, G2, B2,
+   *    dir, 0xF0, checksum]
+   *
+   * @param effectId  1–33 (Effect IDs for Custom Effects panel)
+   * @param speed     1–100
+   * @param brightness 1–100
+   * @param color1    Foreground (primary) color
+   * @param color2    Background (secondary) color
+   * @param dir       0x01=forward, 0x00=reverse
+   */
+  static setSettledMode(
+    effectId: number,
+    speed: number,
+    brightness: number,
+    color1: { r: number; g: number; b: number },
+    color2: { r: number; g: number; b: number },
+    dir: number = 0x01
+  ): number[] {
+    const safeId = Math.max(1, Math.min(33, effectId));
+    const safeSpeed = Math.max(1, Math.min(100, speed));
+    const safeBright = Math.max(1, Math.min(100, brightness));
+    const cmd = [
+      0x41, safeId, safeSpeed, safeBright,
+      Math.max(0, Math.min(255, color1.r | 0)),
+      Math.max(0, Math.min(255, color1.g | 0)),
+      Math.max(0, Math.min(255, color1.b | 0)),
+      Math.max(0, Math.min(255, color2.r | 0)),
+      Math.max(0, Math.min(255, color2.g | 0)),
+      Math.max(0, Math.min(255, color2.b | 0)),
+      dir & 0xFF, 0xF0,
+    ];
+    cmd.push(this.calculateChecksum(cmd));
+    getAppLogger().log('ZENGGE_SETTLED_MODE_0x41', { effectId: safeId, speed: safeSpeed });
+    return this.wrapCommand(cmd);
   }
 
   static setCustomRbm(patternId: number, speed: number, brightness: number): number[] {
@@ -365,6 +414,33 @@ export class ZenggeProtocol {
     const cmd = [0x42, patternId, speedHex, brightnessHex];
     const checksum = this.calculateChecksum(cmd);
     return this.wrapCommand([...cmd, checksum]);
+  }
+
+  /**
+   * [APK HYPOTHESIS] Build a 0x43 Multi-Effect Sequence packet.
+   *
+   * Inferred from AppSymphonySettings analysis. Hardware-verify via
+   * Oracle Phase 2 to confirm format before production use.
+   *
+   * Hypothesis format:
+   *   [0x43, count, effectId1, effectId2, ..., effectIdN, 0x00, speed, brightness, checksum]
+   *
+   * @param effectIds  Array of effect IDs (1–100). Max 50 per packet.
+   * @param speed      1–100
+   * @param brightness 1–100
+   */
+  static setEffectSequence(
+    effectIds: number[],
+    speed: number,
+    brightness: number
+  ): number[] {
+    const safeIds = effectIds.slice(0, 50).map(id => Math.max(1, Math.min(100, id | 0)));
+    const safeSpeed = Math.max(1, Math.min(100, speed));
+    const safeBright = Math.max(1, Math.min(100, brightness));
+    const cmd = [0x43, safeIds.length, ...safeIds, 0x00, safeSpeed, safeBright];
+    cmd.push(this.calculateChecksum(cmd));
+    getAppLogger().log('ZENGGE_EFFECT_SEQ_0x43', { count: safeIds.length, speed: safeSpeed });
+    return this.wrapCommand(cmd);
   }
 
   public static setCandleMode(r: number, g: number, b: number, speed: number, brightness: number, amplitude: number): number[] {
@@ -379,26 +455,111 @@ export class ZenggeProtocol {
     return this.wrapCommand([...cmd, checksum]);
   }
 
-  static setMusicConfig(
+  /**
+   * ⚠️  LEGACY / WRONG FORMAT  ⚠️
+   * Preserved for diff-comparison in Oracle Phase 2 tests.
+   * DO NOT USE in production — bytes incorrect for 0xA3 hardware.
+   *
+   * Old broken format (12 bytes, no isOn byte, wrong mic source bytes):
+   *   [0x73, isDeviceMic(0x01/0x00), matrixStyle, patternId, R1, G1, B1, R2, G2, B2, 0x20, sensitivity, brightness, checksum]
+   */
+  static setMusicConfigLegacy(
     isDeviceMic: boolean, matrixStyle: number, patternId: number,
-    color1: {r: number, g: number, b: number},
-    color2: {r: number, g: number, b: number},
+    color1: { r: number; g: number; b: number },
+    color2: { r: number; g: number; b: number },
     sensitivity: number, brightness: number
   ): number[] {
     const payload = [0x73, isDeviceMic ? 0x01 : 0x00, matrixStyle, patternId,
       color1.r, color1.g, color1.b, color2.r, color2.g, color2.b, 0x20, sensitivity, brightness];
-      
-    // Protocol debug: log music config params for hardware correlation
-    getAppLogger().log('ZENGGE_MUSIC_CONFIG', { patternId, matrixStyle, c1: `${color1.r},${color1.g},${color1.b}`, c2: `${color2.r},${color2.g},${color2.b}` });
-    
     const checksum = this.calculateChecksum(payload);
     return this.wrapCommand([...payload, checksum]);
   }
 
+  /**
+   * Build 0x73 Music Config packet — APK-verified 13-byte format for 0xA3 hardware.
+   *
+   * APK source: ZenggeProtocol.java / MusicActivity.java (April 2026 decompile).
+   * Byte positions confirmed via APK hex dump of live traffic.
+   *
+   * Format (13 bytes + checksum):
+   *   [0x73, musicMode(1–13), micSource, isOn, R1, G1, B1, R2, G2, B2, sensitivity, brightness, checksum]
+   *
+   *   musicMode:  1–13 (music pattern ID)
+   *   micSource:  0x26 = phone/app microphone (APK truth)
+   *               0x27 = device built-in mic
+   *   isOn:       0x01 = activate music mode, 0x00 = deactivate
+   *
+   * ⚠️ Phase 1 Smoking Gun A verdict required before enabling in production.
+   *    Gate: hw-test/0x73-mic-source-shootout + hw-test/0x73-ison-byte-presence
+   */
+  static setMusicConfig(
+    musicMode: number,
+    micSource: 0x26 | 0x27,
+    isOn: boolean,
+    color1: { r: number; g: number; b: number },
+    color2: { r: number; g: number; b: number },
+    sensitivity: number,
+    brightness: number
+  ): number[] {
+    const payload = [
+      0x73,
+      Math.max(1, Math.min(13, musicMode | 0)),
+      micSource,
+      isOn ? 0x01 : 0x00,
+      Math.max(0, Math.min(255, color1.r | 0)),
+      Math.max(0, Math.min(255, color1.g | 0)),
+      Math.max(0, Math.min(255, color1.b | 0)),
+      Math.max(0, Math.min(255, color2.r | 0)),
+      Math.max(0, Math.min(255, color2.g | 0)),
+      Math.max(0, Math.min(255, color2.b | 0)),
+      Math.max(0, Math.min(255, sensitivity | 0)),
+      Math.max(0, Math.min(255, brightness | 0)),
+    ];
+    getAppLogger().log('ZENGGE_MUSIC_CONFIG_13B', {
+      musicMode, micSource: `0x${micSource.toString(16)}`, isOn,
+      c1: `${color1.r},${color1.g},${color1.b}`,
+    });
+    payload.push(this.calculateChecksum(payload));
+    return this.wrapCommand(payload);
+  }
+
   static sendMusicMagnitude(magnitude: number): number[] {
-    const payload = [0x74, magnitude];
+    const payload = [0x74, magnitude & 0xFF];
     const checksum = this.calculateChecksum(payload);
     return this.wrapCommand([...payload, checksum]);
+  }
+
+  /**
+   * [APK HYPOTHESIS] Stream a single pixel frame via 0x53.
+   *
+   * Used for real-time per-frame animation rendering. Sends one complete
+   * frame of pixel data at the current FPS rate.
+   *
+   * Hypothesis format:
+   *   [0x53, dataLen_hi, dataLen_lo, R1, G1, B1, R2, G2, B2, ..., checksum]
+   *   dataLen = pixelCount * 3
+   *
+   * Analogous to 0x59 but without animation footer bytes.
+   * Hardware-verify via Oracle Phase 2 panel.
+   *
+   * @param pixels  Array of RGB pixels. Max 54 (safe MTU limit).
+   */
+  static streamPixelFrame(pixels: { r: number; g: number; b: number }[]): number[] {
+    const MAX_PX = 54;
+    const safePx = pixels.slice(0, MAX_PX);
+    const dataLen = safePx.length * 3;
+    const raw: number[] = [
+      0x53,
+      (dataLen >> 8) & 0xFF,
+      dataLen & 0xFF,
+    ];
+    for (const px of safePx) {
+      raw.push(Math.max(0, Math.min(255, px.r | 0)));
+      raw.push(Math.max(0, Math.min(255, px.g | 0)));
+      raw.push(Math.max(0, Math.min(255, px.b | 0)));
+    }
+    raw.push(this.calculateChecksum(raw));
+    return this.wrapCommand(raw);
   }
 
   /**
