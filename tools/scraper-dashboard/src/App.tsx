@@ -45,7 +45,7 @@ const US_STATES = [
 
 function App() {
   const [activeTab, setActiveTab] = useState<'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5' | 'phase6'>('phase1');
-  const [seedProvider, setSeedProvider] = useState<'osm'|'google'>('osm');
+  const [seedProvider, setSeedProvider] = useState<'osm'|'google'>('google');
 
 
   // --- Sys Dashboard States ---
@@ -130,6 +130,9 @@ function App() {
   }, [logs]);
 
   useEffect(() => {
+    if (activeTab === 'phase1') {
+      fetchDatabankCoverage(); // Phase 1 map uses same source — Google record density per state
+    }
     if (activeTab === 'phase6') {
       fetchSpots(0, gridFilter, sortCol, sortDir, searchQuery);
       fetchDatabankCoverage();
@@ -616,9 +619,10 @@ function App() {
             </div>
 
             <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', marginBottom: '2rem' }}>
-               <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#8a2be2' }}>∞</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>OSM Dataset</div>
+               <div style={{ textAlign: 'center', minWidth: '120px' }}>
+                 <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ffb300' }}>Google</div>
+                 <div style={{ fontSize: '0.75rem', color: '#ffb300', textTransform: 'uppercase', fontWeight: 700 }}>Places API (Primary)</div>
+                 <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>writes ENRICHED directly</div>
                </div>
                <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                   <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
@@ -629,9 +633,10 @@ function App() {
                   </div>
                   {(status?.isHarvestingActive || status?.isGoogleSweepActive) && <div className="flow-animation"></div>}
                </div>
-               <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#8a2be2' }}>{status?.pendingCount || 0}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>PENDING DB</div>
+               <div style={{ textAlign: 'center', minWidth: '120px' }}>
+                 <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ff9800' }}>{status?.enrichedCount || 0}</div>
+                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>ENRICHED in DB</div>
+                 <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>Golden Seeds</div>
                </div>
             </div>
 
@@ -701,38 +706,103 @@ function App() {
                </div>
             </div>
 
-            <div className="panel coverage-panel" style={{marginTop: '2rem', textAlign: 'center'}}>
-              <h2 className="panel-header">GIS Intake Leaderboard (State Coverage)</h2>
-              <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '800px', margin: '0 auto' }}>
-                 {/* @ts-ignore */}
-                 <USAMap 
-                    defaultFill="rgba(255,255,255,0.05)"
-                    customize={(() => {
-                       const colors: Record<string, any> = {};
-                       coverageStats.forEach((stat: any) => {
-                          if (stat.total === 0) return;
-                          const density = Math.min(stat.total / 30, 1);
-                          const opacity = Math.max(density, 0.3); // Min 30% visibility so 1 record is visible
-                          
-                          let color = `rgba(138,43,226,${opacity})`; 
-                          const enrichedRatio = stat.enriched / stat.total;
-                          if (enrichedRatio >= 0.5 || stat.enriched > 5) color = `rgba(255,90,0,${opacity})`;
-                          const verifiedRatio = stat.verified / stat.total;
-                          if (verifiedRatio >= 0.5) color = `rgba(76,175,80,${opacity})`;
-                          
-                          colors[stat.state] = { fill: color, customText: stat.total.toString() };
-                       });
-                       return colors;
-                    })()}
-                    onClick={(e: any) => updateGlobalStrategy('state_override', e.target.dataset.name)}
-                 />
+            {/* ========= GOOGLE COVERAGE DENSITY MAP ========= */}
+            <div className="panel coverage-panel" style={{ marginTop: '2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <h2 className="panel-header" style={{ margin: 0 }}>📡 Google Places Coverage — State Density</h2>
+                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
+                  {databankCoverage.reduce((a: number, r: any) => a + (r.total || 0), 0).toLocaleString()} records across {databankCoverage.filter((r: any) => r.total > 0).length} states
+                </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px' }}></span> Empty / No Target</div>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: '#8a2be2', borderRadius: '2px' }}></span> In Processing Pipeline</div>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: '#ff5a00', borderRadius: '2px' }}></span> Deep Enriched</div>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ width: '12px', height: '12px', background: '#4caf50', borderRadius: '2px' }}></span> Final Verified</div>
+              <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', margin: '0 0 1rem' }}>
+                Record density per state from Google Places. Click any state to target it for the next sweep.
+              </p>
+
+              {/* Density legend */}
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                {[
+                  { color: 'rgba(255,255,255,0.07)', label: 'Untouched',       range: '0 records' },
+                  { color: '#f5a623cc',               label: 'Early Coverage', range: '1–49' },
+                  { color: '#ff6b00cc',               label: 'Well Seeded',    range: '50–99' },
+                  { color: '#4caf50cc',               label: 'Saturated',      range: '100+' },
+                ].map(t => (
+                  <div key={t.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.03)', padding: '5px 12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: t.color, display: 'inline-block', border: '1px solid rgba(255,255,255,0.15)' }}></span>
+                    <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', fontWeight: 700 }}>{t.label}</span>
+                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)' }}>{t.range}</span>
+                  </div>
+                ))}
               </div>
+
+              <div style={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '800px', margin: '0 auto' }}>
+                {/* @ts-ignore */}
+                <USAMap
+                  defaultFill="rgba(255,255,255,0.05)"
+                  customize={(() => {
+                    const colors: Record<string, any> = {};
+                    databankCoverage.forEach((row: any) => {
+                      if (!row.state || row.state === 'UNKNOWN') return;
+                      const n = row.total || 0;
+                      if (n === 0) return;
+                      // Density tiers: amber → orange → green
+                      const fill = n >= 100 ? '#4caf50cc'
+                        : n >= 50  ? '#ff6b00cc'
+                        : '#f5a623cc';
+                      colors[row.state] = { fill, customText: n.toString() };
+                    });
+                    return colors;
+                  })()}
+                  onClick={(e: any) => {
+                    const st = e.target?.dataset?.name || e.target?.id;
+                    if (st && st.length === 2) updateGlobalStrategy('state_override', st);
+                  }}
+                />
+              </div>
+
+              {/* State leaderboard table */}
+              {databankCoverage.length > 0 && (
+                <div style={{ marginTop: '2rem', maxHeight: '260px', overflowY: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontSize: '0.7rem' }}>
+                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>State</th>
+                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>Records</th>
+                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>ENRICHED</th>
+                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>MEDIA_READY</th>
+                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>Published</th>
+                        <th style={{ textAlign: 'center', padding: '6px 8px' }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...databankCoverage]
+                        .filter((r: any) => r.total > 0)
+                        .sort((a: any, b: any) => b.total - a.total)
+                        .map((row: any) => {
+                          const tier = row.total >= 100 ? { color: '#4caf50', label: '🟢' }
+                            : row.total >= 50 ? { color: '#ff6b00', label: '🟠' }
+                            : { color: '#f5a623', label: '🟡' };
+                          return (
+                            <tr key={row.state} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                              <td style={{ padding: '6px 8px', fontWeight: 700, color: tier.color }}>
+                                {tier.label} {row.state}
+                              </td>
+                              <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 800 }}>{(row.total || 0).toLocaleString()}</td>
+                              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#ff9800' }}>{(row.ENRICHED || 0).toLocaleString()}</td>
+                              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#e91e63' }}>{(row.MEDIA_READY || 0).toLocaleString()}</td>
+                              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#4caf50' }}>{(row.published || 0).toLocaleString()}</td>
+                              <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                                <button
+                                  style={{ fontSize: '0.65rem', padding: '3px 10px', borderRadius: '10px', border: 'none', background: stateOverride.includes(row.state) ? '#8a2be2' : 'rgba(255,255,255,0.08)', color: stateOverride.includes(row.state) ? '#fff' : 'rgba(255,255,255,0.6)', cursor: 'pointer', fontWeight: 700 }}
+                                  onClick={() => updateGlobalStrategy('state_override', row.state)}
+                                >{stateOverride.includes(row.state) ? '✓ TARGETED' : 'TARGET'}</button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
             
             <div className="evasion-audit-card" style={{ marginTop: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: '1px solid rgba(138, 43, 226, 0.2)' }}>
