@@ -699,6 +699,30 @@ app.get('/api/stats/databank-coverage', async (req, res) => {
   }
 });
 
+// --- Image Proxy: pipes external photo URLs server-side to bypass referrer/CORS restrictions ---
+// Used by the dashboard so Street View Static and other CDN images render from localhost.
+app.get('/api/img-proxy', async (req, res) => {
+  const url = req.query.url as string;
+  if (!url || !url.startsWith('http')) {
+    res.status(400).send('Missing or invalid url param');
+    return;
+  }
+  try {
+    const nodeFetch = (await import('node-fetch')).default as any;
+    const upstream = await nodeFetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SK8LytzBot/1.0)' },
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!upstream.ok) { res.status(upstream.status).send('Upstream error'); return; }
+    const ct = upstream.headers.get('content-type') || 'image/jpeg';
+    res.set('Content-Type', ct);
+    res.set('Cache-Control', 'public, max-age=86400');
+    (upstream.body as any).pipe(res);
+  } catch (err: any) {
+    res.status(502).send('Proxy fetch error: ' + err.message);
+  }
+});
+
 app.listen(5999, () => {
   console.log('[CCTower] API listening on port 5999');
 });

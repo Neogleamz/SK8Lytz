@@ -174,8 +174,8 @@ async function runPhotographerLoop() {
       );
     }
     if (candidates.facebook_og) urlCandidates.push({ key: 'facebook_og', url: candidates.facebook_og });
-    // NOTE: Street View Static URLs require billing and return HTML on errors —
-    // we store the URL directly as a reference rather than attempting binary download.
+    // Street View is the guaranteed fallback — attempt binary download & upload to Storage
+    if (candidates.street_view_url) urlCandidates.push({ key: 'street_view', url: candidates.street_view_url });
 
     let photoIndex = 0;
     for (const candidate of urlCandidates) {
@@ -195,13 +195,8 @@ async function runPhotographerLoop() {
       }
     }
 
-    // Street View guaranteed fallback — store URL directly (no binary download needed)
-    // Google Street View Static URLs render in <img> tags directly in the app
-    const finalPhotos: string[] | null = cdnUrls.length > 0
-      ? cdnUrls
-      : candidates.street_view_url
-        ? [candidates.street_view_url]
-        : null;
+    // All photos are Supabase CDN URLs — no raw external URLs stored.
+    const finalPhotos: string[] | null = cdnUrls.length > 0 ? cdnUrls : null;
 
     if (finalPhotos) {
       await supabase.from('skate_spots').update({

@@ -4,6 +4,15 @@ import './App.css';
 
 const API_BASE = 'http://localhost:5999';
 
+// Route external photo URLs through CCTower proxy to avoid referrer/CORS blocks on localhost
+const proxyImg = (url: string | null) => {
+  if (!url) return null;
+  // Supabase CDN URLs are already ours — serve directly
+  if (url.includes('supabase')) return url;
+  // Everything else (googleapis Street View, etc.) goes through the proxy
+  return `${API_BASE}/api/img-proxy?url=${encodeURIComponent(url)}`;
+};
+
 // --- Countdown Timer Component ---
 const PulseTimer = ({ nextRunAt }: { nextRunAt: string | null }) => {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -1463,7 +1472,8 @@ function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.25rem', padding: '0.5rem 0' }}>
                   {spots.map(spot => {
               const _ph = spot.photos as any[] | null; const _cd = spot.candidate_photos as any;
-              const photo = (typeof _ph?.[0] === 'string' ? _ph[0] : _ph?.[0]?.url) ?? (_cd?.street_view_url ?? (_cd?.[0]?.url ?? null));
+              const rawPhoto = (typeof _ph?.[0] === 'string' ? _ph[0] : _ph?.[0]?.url) ?? (_cd?.street_view_url ?? (_cd?.[0]?.url ?? null));
+              const photo = proxyImg(rawPhoto);
                     const openStatus = isOpenNow(toHoursArr(spot.opening_hours));
                     const ratingNum  = spot.rating ? parseFloat(String(spot.rating)) : null;
                     const proShop    = spot.has_pro_shop || (spot as any).has_proshop;
@@ -1688,7 +1698,8 @@ function App() {
                 <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
                   {spots.map(spot => {
                     const _ph = spot.photos as any[] | null; const _cd = spot.candidate_photos as any;
-                    const photo = (typeof _ph?.[0] === 'string' ? _ph[0] : _ph?.[0]?.url) ?? (_cd?.street_view_url ?? (_cd?.[0]?.url ?? null));
+                    const rawPhoto = (typeof _ph?.[0] === 'string' ? _ph[0] : _ph?.[0]?.url) ?? (_cd?.street_view_url ?? (_cd?.[0]?.url ?? null));
+                    const photo = proxyImg(rawPhoto);
                     const openSt   = isOpenNow(toHoursArr2(spot.opening_hours));
                     const ratingN  = spot.rating ? parseFloat(String(spot.rating)) : null;
                     const proShop  = spot.has_pro_shop || (spot as any).has_proshop;
