@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -478,7 +478,7 @@ app.post('/api/harvest/start-all', async (req, res) => {
   
   if (provider === 'google') {
     if (isGoogleSweepActive) return res.json({ success: false, message: 'Google Sweep Already running' });
-    startGoogleSweep(target_states || []).catch(e => console.error(e));
+    startGoogleSweep(target_states || [], target_facilities || []).catch(e => console.error(e));
     return res.json({ success: true, message: 'Google Places sweep started' });
   }
 

@@ -1,7 +1,7 @@
-﻿import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
-import { GooglePlacesProvider } from './lib/providers/GooglePlacesProvider';
+import { GooglePlacesProvider, FacilityType } from './lib/providers/GooglePlacesProvider';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const supabase = createClient(
@@ -13,7 +13,7 @@ export let isGoogleSweepActive = false;
 
 export async function stopGoogleSweep() {
   isGoogleSweepActive = false;
-  console.log('ðŸ›‘ Halting Google Sweep after current batch.');
+  console.log('🛑 Halting Google Sweep after current batch.');
 }
 
 async function sleep(ms: number) {
@@ -22,139 +22,154 @@ async function sleep(ms: number) {
 
 // Convert state abbreviation to full name for better Google Search matches
 const STATE_NAMES: Record<string, string> = {
-  'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 'FL': 'Florida', 'GA': 'Georgia',
-  'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
-  'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi', 'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada', 'NH': 'New Hampshire', 'NJ': 'New Jersey',
-  'NM': 'New Mexico', 'NY': 'New York', 'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma', 'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
-  'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming', 'DC': 'Washington DC'
+  'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',
+  'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 'FL': 'Florida', 'GA': 'Georgia',
+  'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa',
+  'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+  'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi', 'MO': 'Missouri',
+  'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada', 'NH': 'New Hampshire', 'NJ': 'New Jersey',
+  'NM': 'New Mexico', 'NY': 'New York', 'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio',
+  'OK': 'Oklahoma', 'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+  'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont',
+  'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming',
+  'DC': 'Washington DC'
 };
 
 const RETAIL_BLOCKLIST = [
-  "dick's sporting goods", "academy sports", "play it again sports", 
-  "cargo largo", "target", "walmart", "dunham's", "big 5", 
+  "dick's sporting goods", "academy sports", "play it again sports",
+  "cargo largo", "target", "walmart", "dunham's", "big 5",
   "scheels", "rei", "bass pro", "cabela", "sportsman"
 ];
 
-export async function startGoogleSweep(targetStates: string[] = []) {
+/**
+ * Sweeps Google Places for the given facility types and states.
+ * @param targetStates     2-letter state codes. Empty = all states.
+ * @param targetFacilities Facility types to sweep. Empty = roller_rink only.
+ */
+export async function startGoogleSweep(
+  targetStates: string[] = [],
+  targetFacilities: string[] = []
+) {
   if (isGoogleSweepActive) return;
   isGoogleSweepActive = true;
-  
-  console.log(`ðŸŒŽ STARTING GOOGLE PLACES SWEEP (States: ${targetStates.join(',') || 'ALL'})`);
-  
+
+  // Resolve which facility types to sweep. Default: roller_rink only.
+  const ALL_FACILITY_TYPES: FacilityType[] = ['roller_rink', 'skate_shop'];
+  const facilitiesToRun: FacilityType[] = targetFacilities.length > 0
+    ? ALL_FACILITY_TYPES.filter(ft => targetFacilities.includes(ft))
+    : ['roller_rink'];
+
   const statesToRun = targetStates.length > 0 ? targetStates : Object.keys(STATE_NAMES);
+
+  console.log(`\n🌐 GOOGLE PLACES SWEEP STARTING`);
+  console.log(`   Facilities : ${facilitiesToRun.join(', ')}`);
+  console.log(`   States     : ${statesToRun.join(', ') || 'ALL (${statesToRun.length})'}\n`);
 
   for (const stateCode of statesToRun) {
     if (!isGoogleSweepActive) {
-      console.log('â›” Google Sweep cleanly aborted.');
+      console.log('⛔ Google Sweep cleanly aborted.');
       break;
     }
 
     const stateFull = STATE_NAMES[stateCode] || stateCode;
-    console.log(`\nðŸ›¹ [US-${stateCode}] Phase 1: Polling Google Places exact match...`);
-    
-    // Grab highly relevant IDs
-    const placeIds = await GooglePlacesProvider.searchRegion(stateFull);
-    console.log(`  âœ… [${stateCode}] Found ${placeIds.length} roller-skating relevant Place APIs`);
 
-    for (let i = 0; i < placeIds.length; i++) {
+    // ---- Iterate over each facility type for this state ----
+    for (const facilityType of facilitiesToRun) {
+      if (!isGoogleSweepActive) break;
+
+      console.log(`\n📡 [${stateCode}] Sweeping: ${facilityType}`);
+
+      const placeIds = await GooglePlacesProvider.searchRegion(stateFull, facilityType);
+      console.log(`  ✅ [${stateCode}/${facilityType}] Found ${placeIds.length} candidates`);
+
+      for (let i = 0; i < placeIds.length; i++) {
         if (!isGoogleSweepActive) break;
-        
+
         const placeId = placeIds[i];
-        console.log(`  â³ Fetching High-Fidelity Details: ${placeId} (${i+1}/${placeIds.length})`);
-        
+        console.log(`  ⏳ Fetching details: ${placeId} (${i + 1}/${placeIds.length})`);
+
         const details = await GooglePlacesProvider.getPlaceDetails(placeId);
-        if (details) {
-            const lowerName = details.name.toLowerCase();
-            if (RETAIL_BLOCKLIST.some(block => lowerName.includes(block))) {
-                console.log(`  ðŸš« Blocklisted Retailer Skipped: ${details.name}`);
-                continue;
-            }
+        if (!details) continue;
 
-            // Attempt to derive clean city/state from formatted_address if possible.
-            // Formatted address example: "201 W MacArthur Blvd, Oakland, CA 94611, USA"
-            const parts = details.formatted_address?.split(',') || [];
-            let derivedState: string | undefined = undefined;
-            
-            if (parts.length >= 3) {
-                // Heuristic parsing
-                const stateZipStr = parts[parts.length - 2].trim(); // "CA 94611"
-                const cityStr = parts[parts.length - 3].trim(); // "Oakland"
-                derivedCity = cityStr;
-                
-                // Usually formatted like "CA 94611" or "TX 75001"
-                const splitStateZip = stateZipStr.split(' ');
-                if (splitStateZip.length > 0) {
-                    derivedState = splitStateZip[0]; // e.g. "CA"
-                }
-            }
-            
-            // Fallback back to target state if it entirely failed to parse
-            if (!derivedState) derivedState = stateCode;
-
-            // metaRecord: Google-sourced factual data ONLY â€” no pipeline status.
-            // This is used for all UPDATE/upsert-on-conflict paths to ensure we never
-            // downgrade an existing MEDIA_READY / VERIFIED record back to ENRICHED.
-            const metaRecord = {
-                name: details.name,
-                lat: details.lat,
-                lng: details.lng,
-                city: derivedCity,
-                state: derivedState,
-                street_address: details.formatted_address,
-                phone_number: details.formatted_phone_number,
-                website: details.website,
-                google_place_id: details.place_id,
-                rating: details.rating,
-                user_ratings_total: details.user_ratings_total,
-                opening_hours: details.opening_hours,
-                facility_type: 'roller_rink',
-                last_enriched_at: new Date().toISOString()
-            };
-
-            // freshRecord: used ONLY for brand-new inserts (no existing row found).
-            // Sets the initial pipeline status to ENRICHED on first-time ingestion.
-            const freshRecord = { ...metaRecord, verification_status: 'ENRICHED' };
-
-            // 1. Check for spatial duplicates (nearby OSM row or prior Google row)
-            const { data: closestSpot } = await supabase.rpc('get_closest_skate_spot', {
-                p_lat: details.lat,
-                p_lng: details.lng,
-                p_radius_meters: 150 // 150 meters to be safe
-            });
-
-            if (closestSpot && closestSpot.length > 0) {
-                // Existing row found nearby â€” refresh Google metadata, preserve pipeline status
-                const existingId = closestSpot[0].spot_id;
-                console.log(`  ðŸ”— Found nearby spot (${closestSpot[0].distance_meters.toFixed(1)}m away). Refreshing metadata, preserving status.`);
-                const { error } = await supabase.from('skate_spots').update(metaRecord).eq('id', existingId);
-                if (error) console.error(`  âŒ Supabase Update Error:`, error.message);
-                else console.log(`  ðŸ’¾ Refreshed Google data: ${details.name}`);
-            } else {
-                // No spatial match â€” upsert on google_place_id.
-                // On conflict (same place_id): update metadata only (metaRecord, no status).
-                // On fresh insert: set initial status to ENRICHED (freshRecord).
-                // Supabase upsert with ignoreDuplicates:false updates all provided columns on conflict.
-                // We use metaRecord here so a re-seed never resets status on an existing google_place_id row.
-                const isNew = !(await supabase.from('skate_spots')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('google_place_id', details.place_id)
-                    .then(r => r.count && r.count > 0));
-
-                const { error } = await supabase.from('skate_spots').upsert(
-                    isNew ? freshRecord : metaRecord,
-                    { onConflict: 'google_place_id', ignoreDuplicates: false }
-                );
-
-                if (error) console.error(`  âŒ Supabase Upsert Error for ${details.name}:`, error.message);
-                else console.log(`  ðŸ’¾ ${isNew ? 'NEW record saved' : 'Google data refreshed'}: ${details.name}`);
-            }
+        // Retail blocklist check
+        const lowerName = details.name.toLowerCase();
+        if (RETAIL_BLOCKLIST.some(block => lowerName.includes(block))) {
+          console.log(`  🚫 Blocked: ${details.name}`);
+          continue;
         }
-        
-        // Cooldown between detail queries to avoid QPS spike
-        await sleep(500);
+
+        // Parse city/state from formatted_address
+        // e.g. "201 W MacArthur Blvd, Oakland, CA 94611, USA"
+        const parts = details.formatted_address?.split(',') || [];
+        let derivedState: string | undefined;
+        let derivedCity: string | undefined;
+
+        if (parts.length >= 3) {
+          const stateZipStr = parts[parts.length - 2].trim(); // "CA 94611"
+          derivedCity = parts[parts.length - 3].trim();       // "Oakland"
+          const splitStateZip = stateZipStr.split(' ');
+          if (splitStateZip.length > 0) derivedState = splitStateZip[0]; // "CA"
+        }
+        if (!derivedState) derivedState = stateCode; // fallback
+
+        // metaRecord: factual Google data ONLY — no pipeline status.
+        // Used on all update/conflict paths so MEDIA_READY is never downgraded to ENRICHED.
+        const metaRecord = {
+          name: details.name,
+          lat: details.lat,
+          lng: details.lng,
+          city: derivedCity,
+          state: derivedState,
+          street_address: details.formatted_address,
+          phone_number: details.formatted_phone_number,
+          website: details.website,
+          google_place_id: details.place_id,
+          rating: details.rating,
+          user_ratings_total: details.user_ratings_total,
+          opening_hours: details.opening_hours,
+          facility_type: facilityType,           // ← correct per-type value
+          last_enriched_at: new Date().toISOString()
+        };
+
+        // freshRecord: only for brand-new inserts — adds initial ENRICHED status
+        const freshRecord = { ...metaRecord, verification_status: 'ENRICHED' };
+
+        // 1. Spatial dedup (150m radius) — catches nearby rows regardless of google_place_id
+        const { data: closestSpot } = await supabase.rpc('get_closest_skate_spot', {
+          p_lat: details.lat,
+          p_lng: details.lng,
+          p_radius_meters: 150
+        });
+
+        if (closestSpot && closestSpot.length > 0) {
+          // Existing nearby row — refresh metadata, preserve pipeline status
+          const existingId = closestSpot[0].spot_id;
+          console.log(`  🔗 Nearby match (${closestSpot[0].distance_meters.toFixed(1)}m) — refreshing metadata.`);
+          const { error } = await supabase.from('skate_spots').update(metaRecord).eq('id', existingId);
+          if (error) console.error(`  ❌ Update Error:`, error.message);
+          else console.log(`  💾 Refreshed: ${details.name}`);
+        } else {
+          // 2. Upsert on google_place_id — new rows get ENRICHED, existing get metadata refresh
+          const isNew = !(await supabase.from('skate_spots')
+            .select('id', { count: 'exact', head: true })
+            .eq('google_place_id', details.place_id)
+            .then(r => r.count && r.count > 0));
+
+          const { error } = await supabase.from('skate_spots').upsert(
+            isNew ? freshRecord : metaRecord,
+            { onConflict: 'google_place_id', ignoreDuplicates: false }
+          );
+
+          if (error) console.error(`  ❌ Upsert Error for ${details.name}:`, error.message);
+          else console.log(`  💾 ${isNew ? 'NEW' : 'Refreshed'} [${facilityType}]: ${details.name}`);
+        }
+
+        await sleep(500); // QPS cooldown between detail fetches
+      }
     }
+    // ---- End facility type loop ----
   }
 
   isGoogleSweepActive = false;
-  console.log(`\nðŸ USA Google Places Sweep Complete!`);
+  console.log(`\n🏁 Google Places Sweep Complete! (${facilitiesToRun.join(', ')}, ${statesToRun.length} states)`);
 }

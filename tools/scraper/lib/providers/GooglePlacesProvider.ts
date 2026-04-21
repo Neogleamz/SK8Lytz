@@ -57,18 +57,36 @@ function isPolluted(name: string, types: string[]): boolean {
   return false;
 }
 
+export type FacilityType = 'roller_rink' | 'skate_shop';
+
+/** Search terms per facility type — keep these specific to avoid pollution */
+const SEARCH_TERMS: Record<FacilityType, string[]> = {
+  roller_rink: [
+    "roller skating rink",
+    "roller rink",
+    "quad skating",
+  ],
+  skate_shop: [
+    "roller skate shop",
+    "quad skate shop",
+    "roller derby shop",
+    "inline skate shop",
+  ],
+};
+
 export class GooglePlacesProvider {
   /**
-   * Sweeps a region for roller skating relevant spots.
-   * Pollution Defense 1 specifies strict search terms.
+   * Sweeps a region for spots matching a specific facility type.
+   * @param location  State name or city/region string
+   * @param facilityType  Which type of venue to search for
    */
-  static async searchRegion(zipcodeOrLocation: string): Promise<string[]> {
-    const searchTerms = ["roller skating rink", "quad skate shop", "roller derby shop"];
+  static async searchRegion(location: string, facilityType: FacilityType = 'roller_rink'): Promise<string[]> {
+    const searchTerms = SEARCH_TERMS[facilityType];
     const verifiedPlaceIds = new Set<string>();
 
     for (const term of searchTerms) {
       try {
-        const query = `${term} in ${zipcodeOrLocation}`;
+        const query = `${term} in ${location}`;
         console.log(`[GooglePlaces] Initiating text search: "${query}"`);
         
         let pageToken = undefined;
@@ -118,6 +136,7 @@ export class GooglePlacesProvider {
 
     return Array.from(verifiedPlaceIds);
   }
+
 
   /**
    * Performs Place Details lookup for high-value field masks.
