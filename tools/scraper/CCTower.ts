@@ -582,4 +582,5 @@ app.get('/api/stats/databank-coverage', async (req, res) => {
 
 app.listen(5999, () => {
   console.log('📡 CCTower API listening on port 5999');
+});
 
