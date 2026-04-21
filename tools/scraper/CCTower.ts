@@ -677,41 +677,23 @@ app.get('/api/stats/coverage', async (req, res) => {
 // --- Databank Coverage: state x verification_status + is_published counts ---
 app.get('/api/stats/databank-coverage', async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('skate_spots')
-      .select('state, verification_status, is_published');
-
+    // Server-side COUNT FILTER via RPC — no PostgREST 1000-row cap
+    const { data, error } = await supabase.rpc('get_databank_coverage');
     if (error) throw error;
 
-    // Group client-side: per state, count by status AND count published
-    const grouped: Record<string, Record<string, number> & { published: number }> = {};
-    (data || []).forEach((row: any) => {
-      const st = row.state || 'UNKNOWN';
-      const vs = row.verification_status || 'PENDING';
-      if (!grouped[st]) grouped[st] = { published: 0 };
-      grouped[st][vs] = (grouped[st][vs] || 0) + 1;
-      if (row.is_published) grouped[st].published = (grouped[st].published || 0) + 1;
-    });
-
-    const rows = Object.entries(grouped).map(([state, statuses]) => ({
-      state,
-      ...statuses,
-      total: Object.values(statuses)
-        .filter((v): v is number => typeof v === 'number')
-        .reduce((a, b) => a + b, 0) - (statuses.published || 0), // total = record count, not double-counting published
+    // RPC returns bigint columns — cast to number for JSON serialisation
+    const rows = (data || []).map((r: any) => ({
+      state:                 r.state,
+      total:                 Number(r.total || 0),
+      published:             Number(r.published || 0),
+      PENDING:               Number(r.PENDING || 0),
+      ENRICHED:              Number(r.ENRICHED || 0),
+      IDENTITY_ESTABLISHED:  Number(r.IDENTITY_ESTABLISHED || 0),
+      INDEXED:               Number(r.INDEXED || 0),
+      MEDIA_READY:           Number(r.MEDIA_READY || 0),
     }));
 
-    // Fix: total should be count of records, not including the published counter
-    const fixedRows = (data || []).reduce((acc: Record<string, any>, row: any) => {
-      const st = row.state || 'UNKNOWN';
-      if (!acc[st]) acc[st] = { state: st, published: 0, total: 0 };
-      acc[st].total++;
-      acc[st][row.verification_status || 'PENDING'] = (acc[st][row.verification_status || 'PENDING'] || 0) + 1;
-      if (row.is_published) acc[st].published++;
-      return acc;
-    }, {});
-
-    res.json({ rows: Object.values(fixedRows) });
+    res.json({ rows });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
