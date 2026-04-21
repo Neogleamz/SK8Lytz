@@ -1,6 +1,20 @@
-## [2.1.2] - 2026-04-21
+## [2.2.0] - 2026-04-21
 
 ### ✨ Features
+- **Scraper Guillotine REST API**: Fully functionalized the `/api/scraper/blocklist` and `/api/scraper/spots/:id/purge` endpoints across the CCTower. Adding keywords to the Phase 1 Blocklist GUI now instantly triggers a multi-table database purge via programmatic SQL drops.
+- **Dynamic Orchestrator Injection**: The master Google Sweep orchestrator now intercepts internal blocklist keywords natively, syncing to the database at launch to prevent historical re-ingestion.
+
+### 🛡️ Pipeline Defenses
+- **Positive Heuristic Sieve (Phase 1)**: Deployed a dual-verification regex inside `GooglePlacesProvider.ts`. Generic municipal venues (Community Centers, Meeting Halls, Plazas, Fairgrounds) and open "Parks" natively returned by Google Places are now instantly vaporized *before* queue insertion unless the title explicitly guarantees roller-rink vernacular (`Skate`, `Rink`, `Roller`, `Arena`). 
+- **Corporate Exclusion Net**: Dramatically expanded the native Google `RETAIL_BLOCKLIST` array to actively identify and drop Ice Rinks, professional Hockey Arenas, Mega-Casinos, and big-box mega-chains (Hobby Lobby, Barnes & Noble, Dillons). Total Phase 1 queue fidelity is now operating at unprecedented validation thresholds.
+
+### 🐛 Bug Fixes
+- **Dashboard Guillotine Soft-Lock**: Re-wired CSS index layers and React button states that previously blocked the "Block & Purge" execution on Phase 1 data rows.
+- **API Crash Loop Rescue**: Hunted down and eradicated a legacy `pushLog()` logging dependency crash that was terminating SQL `DELETE` sequences mid-flight, successfully restoring end-to-end Guillotine operations.
+
+---
+
+## [2.1.2] - 2026-04-21### ✨ Features
 - **Dual-Mode Coverage Map (Phase 6)**: The Databank QA map now has a mode toggle — **📊 Quality Mode** colors states by dominant pipeline status (existing behavior); **🚀 Published Mode** shows a green gradient by % of records `is_published = true`, giving a live per-state app coverage view.
 - **State-Scoped Publish / Retract**: Clicking any state on the map (or typing a 2-letter code in the search box) now reveals contextual **"🚀 Publish XX"** and **"↩ Retract XX"** buttons in the Databank toolbar. These call new CCTower endpoints (`POST /api/promote-state/:state` / `POST /api/unpublish-state/:state`) to promote or retract all eligible records for a single state atomically.
 - **Coverage Map Auto-Refresh**: The coverage map now refreshes after every `promoteSpot`, `bulkPromote`, `promoteState`, and `unpublishState` action — state colors update in real-time after publish operations.
