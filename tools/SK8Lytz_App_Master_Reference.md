@@ -1,6 +1,6 @@
 # SK8Lytz App Master Reference
 
-_Last Updated: 2026-04-17 | LED Modes & Pattern Library added, BLE Pipeline Overhaul | Source of Truth: `src/protocols/ZenggeProtocol.ts`, `src/protocols/PatternEngine.ts`_
+_Last Updated: 2026-04-21 | APK Decompile Protocol Audit — 0x73 micSource corrected, 0x51 323B format for 0xA3, 6 missing opcodes added | Source of Truth: `src/protocols/ZenggeProtocol.ts`, `ZENGGE_PROTOCOL_BIBLE.md`_
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
 
@@ -181,6 +181,18 @@ For testing App Sync behavior vs. Offline mode offline fallbacks, you can authen
 
 All byte definitions below represent the inner payload _before_ the V2 BLE packet wrapper is applied.
 
+### Confirmed Hardware Identity (APK-Verified 2026-04-21)
+
+> [!IMPORTANT]
+> All 3 physical SK8Lytz devices confirmed as **`Ctrl_Mini_RGB_Symphony_new_0xA3`** (product_id: **163 = 0xA3**). Confirmed from `discovered_devices_telemetry` across MACs `08:65:F0:9A:C2:3C`, `08:65:F0:9A:5E:06`, `08:65:F0:5F:03:B1`. Firmware: v45–46, BLE: 5, LED version: 3.
+>
+> **Key implications of 0xA3 vs 0xA2:**
+> - `0x59` Static Colorful tab **IS available** on 0xA3 (not available on 0xA2) ✅
+> - `0x51` Custom Scene **requires 323-byte extended format** (10B/slot) on 0xA3 — NOT the 291-byte (9B/slot) short format
+> - `0x42` effect ceiling: **1–100** (same as 0xA2)
+> - Source: `C7787x.m20864c()` (0xA3 path) vs `m20865b()` (0xA2 path), decompiled ZENGGE 1.5.0 APK
+> - Full protocol authority: `tools/ZENGGE_PROTOCOL_BIBLE.md`
+
 ### BLE Stability Constraints & GATT Error Prevention
 
 > [!CAUTION]
@@ -318,11 +330,19 @@ _Primary command for all IC-strip patterns. Sends a per-pixel RGB array that the
 
 _Sends up to 32 animation steps. Hardware loops through active steps autonomously._
 
-- **Full Format (291 Bytes):** `[0x51, Step0(9)...Step31(9), 0x0F_Terminator, checksum]`
-- **Compact Format (Variable):** `[0x51, Step0(9)...StepN(9), 0x0F_Terminator, checksum]` — only active steps, no 32-slot padding.
-- **Step Structure (9 Bytes):** `[ACTIVE_FLAG, transMode, speed, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b]`
-  - `ACTIVE_FLAG:` `0xF0` = active step, `0x0F` = inactive (skip).
-- **Step Transition Mode Bytes:**
+> [!CAUTION]
+> **0xA3 HARDWARE REQUIRES EXTENDED FORMAT (323 BYTES).** The 291-byte short format is for 0xA2 only. Using the wrong format on 0xA3 will cause scene corruption. Source: `C7787x.m20864c()` (0xA3) vs `m20865b()` (0xA2), decompiled ZENGGE 1.5.0 APK.
+
+- **Extended Format — 0xA3 CONFIRMED (323 Bytes):** `[0x51, Step0(10B)...Step31(10B), 0x0F_Terminator, checksum]`
+- **Short Format — 0xA2 ONLY (291 Bytes):** `[0x51, Step0(9B)...Step31(9B), 0x0F_Terminator, checksum]`
+
+**Step Structure — Extended (10 Bytes, 0xA3):** `[ACTIVE_FLAG, effectId, colorId, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b, directionFlags]`
+- `ACTIVE_FLAG`: `0xF0` = active step, `0x0F` = inactive (skip).
+- `directionFlags`: `(mirror ? 128 : 0) | effectVariant` — encodes mirror and direction bits.
+
+**Step Structure — Short (9 Bytes, 0xA2):** `[ACTIVE_FLAG, transMode, speed, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b]`
+
+- **Step Transition Mode Bytes (for short format):**
 
 | Byte | Constant | Behavior |
 |:---|:---|:---|
@@ -332,14 +352,33 @@ _Sends up to 32 animation steps. Hardware loops through active steps autonomousl
 | `0x01`–`0x21` | Custom Effects 1–33 | Hardware `SymphonyEffect` IDs (advanced per-pixel effects) |
 
 - **Speed:** Full 1–100 range valid (unlike `0x59` which is capped at 31).
-- **Source of Truth:** `ZenggeProtocol.setCustomMode()` (full format), `ZenggeProtocol.setCustomModeCompact()` (compact format).
+- **Max slots:** 32 active steps. Terminator: `0x0F` after last slot.
+- **Source of Truth:** `ZenggeProtocol.setCustomMode()` — **must be updated to emit 323B for 0xA3.**
 
 ---
 
 ### Basic Control Commands
 
-- **Power ON (0x71):** `[0x71, 0x23, 0x0F, 0xA3]`
-- **Power OFF (0x71):** `[0x71, 0x24, 0x0F, 0xA4]`
+- **Power ON (0x71):** `[0x71, 0x23, 0x0F, 0xA3]` — checksum `0xA3` = sum of first 3 bytes ✅
+- **Power OFF (0x71):** `[0x71, 0x24, 0x0F, 0xA4]` — checksum `0xA4` = sum of first 3 bytes ✅
+- **Source:** `C14184b.m4796M()` via `C7780q.m20873a()` — 0xA3 is NOT a legacy device → always uses `0x71`, never `0x3B`.
+
+### Command: Settled Mode — FG + BG Dual Color (0x41)
+
+_Triggers one of 33 Symphony effects with explicit foreground and background colors._
+
+- **Format:** `[0x41, effectId, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b, speed, direction, 0x00, 0xF0, checksum]` (13 bytes)
+- **effectId range:** 1–33 (SymphonyEffect IDs)
+- **direction:** `0x00` = forward, `0x01` = reverse
+- **Source:** `C7775l.java` → `m20877a()`, called by `SettledModeFragment`
+
+### Command: Multi-Effect Sequence (0x43)
+
+_Sends up to 50 effect IDs that hardware cycles through automatically. Useful for auto-rotating patterns without BLE re-sends._
+
+- **Format:** `[0x43, effectId[0]...effectId[49], speed, brightness, checksum]` (54 bytes total)
+- **Padding:** If fewer than 50 effects, pad remaining slots with `0x00`
+- **Source:** `C7778o.java` → `m20874a()`, called by `FunctionModeFragment` when no single effect is selected
 
 ### Command: Set RBM Built-in Pattern (0x42)
 
@@ -361,19 +400,58 @@ _Legacy/alternative opcode for triggering RBM patterns. Present in Zengge APK co
 
 _Configures the hardware's music-reactive mode with mic source, pattern, and dual colors._
 
-- **Format:** `[0x73, micSource, matrixStyle, patternId, C1.r, C1.g, C1.b, C2.r, C2.g, C2.b, 0x20, sensitivity, brightness, checksum]`
-- **micSource:** `0x01` = Device mic, `0x00` = App mic (magnitude sent via `0x74`).
-- **matrixStyle:** Visual animation archetype ID (mapped in `MusicDictionary.ts`).
-- **patternId:** 1–13 music-reactive patterns.
-- **Source of Truth:** `ZenggeProtocol.setMusicConfig()`
+> [!CAUTION]
+> **micSource byte values were previously documented incorrectly.** APK-verified values from `MusicModeFragment` line 752 and `C7789z.java`:
+> - `0x26` (38) = **App/phone mic** (magnitude driven by `0x74` commands)
+> - `0x27` (39) = **Device mic** (hardware processes audio autonomously)
+> The old `0x00`/`0x01` values are WRONG and must not be used.
+
+- **Format (13 bytes):** `[0x73, isOn, micSource, effectId, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b, sensitivity, brightness, checksum]`
+- **isOn:** `0x01` = music mode on, `0x00` = off
+- **micSource:** `0x26` = App mic (phone), `0x27` = Device mic (hardware)
+- **effectId:** 1–13 music-reactive pattern IDs (mapped in `MusicDictionary.ts`)
+- **sensitivity / brightness:** 0–255
+- **Source of Truth:** `ZenggeProtocol.setMusicConfig()` — **must be updated to use `0x26`/`0x27` and include `isOn` byte.**
+- **APK Source:** `C7789z.java`,  `MusicModeFragment.java` line 752
 
 ### Command: App Mic Magnitude (0x74)
 
 _Streams real-time audio magnitude from the app's microphone to drive hardware music-reactive LEDs._
 
-- **Format:** `[0x74, magnitude(0–255), checksum]`
-- **Used when:** `micSource = APP` (0x00) in the `0x73` music config.
-- **Source of Truth:** `useAppMicrophone.ts` → `ZenggeProtocol.sendMusicMagnitude()`
+- **Format:** `[0x74, magnitude(0–255), checksum]` (3 bytes)
+- **Used when:** `micSource = 0x26` (App mic) in the `0x73` music config.
+- **Source:** `C7788y.java` → `m20863a()`, `useAppMicrophone.ts` → `ZenggeProtocol.sendMusicMagnitude()`
+
+### Command: Live Pixel Stream — Frame-by-Frame (0x53)
+
+_Streams one row of real-time pixel data per call. Used for live bitmap/image projection onto LEDs._
+
+- **Format (variable):** `[0x53, totalLen_hi, totalLen_lo, R, G, B, ...(numLEDs × RGB)..., numLEDs_hi, numLEDs_lo, checksum]`
+- **totalLen:** `(numLEDs × 3) + 6`
+- **Rate-limited:** Hardware uses AtomicBoolean gate — must wait for ACK before next frame.
+- **Behavior:** Sends one bitmap row. Call repeatedly in a loop to stream animation frames.
+- **APK Source:** Built inline `SceneModeFragment.m18748Z2(int[] iArr)` — no dedicated Protocol class.
+
+### Command: Scene Slot Management (0x56 / 0x57 / 0x58)
+
+_EEPROM-based scene storage and playback control._
+
+**Delete Scene Slot (0x56) — 15 bytes:**
+```
+[0x56, slotIndex(0-9), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, checksum]
+```
+
+**Activate Scene + Set Speed/Brightness (0x57) — 5 bytes:**
+```
+[0x57, sceneIndex, speed, brightness, checksum]
+// sceneIndex: 0–9 for specific slot, 0xFF (-1 as byte) to replay ALL
+```
+
+**Scene State Query (0x58) — 3 bytes:**
+```
+[0x58, 0xF0 (query active) | 0x0F (query inactive), checksum]
+```
+- **APK Source:** `SceneModeFragment.m18778K2()`, `m18750Y2()`, `C14184b.m4769g0()`
 
 ### Proactive Battery Management System (Architectural Skill)
 
