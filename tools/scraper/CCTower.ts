@@ -29,9 +29,11 @@ function writeToLogFile(type: 'INFO' | 'ERROR', message: string) {
 }
 
 const autoTagSource = (msg: string) => {
-  if (msg.includes('[Harvester]') || msg.includes('[GIS]')) return 'Phase 1';
+  if (msg.includes('[Harvester]') || msg.includes('[GIS]') || msg.includes('[GHOST]') ||
+      msg.includes('Golden Seed') || msg.includes('GoogleSweep') || msg.includes('[GoogleSweep]')) return 'Phase 1';
   if (msg.includes('[Operator]') || msg.includes('Google Captcha') || msg.includes('Overpass')) return 'Phase 2';
   if (msg.includes('[Indexer]')) return 'Phase 3';
+  if (msg.includes('[Photographer]')) return 'Phase 5';
   return 'System';
 }
 
@@ -112,17 +114,20 @@ app.get('/status', async (req, res) => {
     let running = false;
     let operatorStatus = 'Offline';
     let indexerStatus = 'Offline';
+    let photographerStatus = 'Offline';
 
     if (!err && stdout) {
       try {
         const pm2List = JSON.parse(stdout);
         const operator = pm2List.find((p: any) => p.name === 'scraper-operator');
         const indexer = pm2List.find((p: any) => p.name === 'scraper-indexer');
+        const photographer = pm2List.find((p: any) => p.name === 'scraper-photographer');
         if (operator?.pm2_env?.status === 'online' || indexer?.pm2_env?.status === 'online') {
             running = true;
         }
         operatorStatus = operator?.pm2_env?.status || 'Offline';
         indexerStatus = indexer?.pm2_env?.status || 'Offline';
+        photographerStatus = photographer?.pm2_env?.status || 'Offline';
       } catch(e) {}
     }
 
@@ -170,7 +175,7 @@ app.get('/status', async (req, res) => {
       isRunning: running,
       isHarvestingActive,
       isHeadless,
-      currentTarget: `Operator: ${operatorStatus} | Indexer: ${indexerStatus}`,
+      currentTarget: `Operator: ${operatorStatus} | Indexer: ${indexerStatus} | Photographer: ${photographerStatus}`,
       isGoogleSweepActive,
       processedCount: totalProcessed || 0,
       enrichedCount: enrichedCount || 0,
@@ -524,7 +529,36 @@ app.get('/api/stats/coverage', async (req, res) => {
   }
 });
 
+// --- Databank Coverage: state × verification_status grouped counts ---
+app.get('/api/stats/databank-coverage', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('skate_spots')
+      .select('state, verification_status');
+
+    if (error) throw error;
+
+    // Group client-side to avoid needing a new RPC
+    const grouped: Record<string, Record<string, number>> = {};
+    (data || []).forEach((row: any) => {
+      const st = row.state || 'UNKNOWN';
+      const vs = row.verification_status || 'PENDING';
+      if (!grouped[st]) grouped[st] = {};
+      grouped[st][vs] = (grouped[st][vs] || 0) + 1;
+    });
+
+    const rows = Object.entries(grouped).map(([state, statuses]) => ({
+      state,
+      ...statuses,
+      total: Object.values(statuses).reduce((a, b) => a + b, 0)
+    }));
+
+    res.json({ rows });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(5999, () => {
   console.log('📡 CCTower API listening on port 5999');
-});
 

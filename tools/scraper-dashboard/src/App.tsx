@@ -70,6 +70,7 @@ function App() {
   // --- Harvest Manager States ---
   const [harvestData, setHarvestData] = useState<{seededStates: string[], stateCounts: Record<string, number>, allStates: string[]}>({ seededStates: [], stateCounts: {}, allStates: [] });
   const [coverageStats, setCoverageStats] = useState<any[]>([]);
+  const [databankCoverage, setDatabankCoverage] = useState<any[]>([]);
   const [historyLogs, setHistoryLogs] = useState<string[]>([]);
 
   // --- Graveyard Grid States ---
@@ -122,6 +123,7 @@ function App() {
   useEffect(() => {
     if (activeTab === 'phase6') {
       fetchSpots(0, gridFilter, sortCol, sortDir, searchQuery);
+      fetchDatabankCoverage();
     }
   }, [activeTab, gridFilter, sortCol, sortDir, searchQuery]);
 
@@ -201,6 +203,16 @@ function App() {
       if (res.ok) {
         const data = await res.json();
         setCoverageStats(data.stats || []);
+      }
+    } catch {}
+  };
+
+  const fetchDatabankCoverage = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/stats/databank-coverage`);
+      if (res.ok) {
+        const data = await res.json();
+        setDatabankCoverage(data.rows || []);
       }
     } catch {}
   };
@@ -409,23 +421,30 @@ function App() {
   };
 
   const PIPELINE_PHASES = [
-    { id: '1', title: 'The Scout', sub: 'GIS Ingestion / OSM', route: 'phase1', color: '#8a2be2', target: 'Nationwide -> PENDING', 
-      metric: status?.processedCount || harvestData.seededStates?.length || 0, metricLabel: 'Extracted Nodes', isDaemon: false, 
-      statusActive: status?.isHarvestingActive },
-    { id: '2', title: 'The Operator', sub: 'Identity & Contact', route: 'phase2', color: '#5d78ff', target: 'PENDING -> IDENTIFIED', 
-      metric: status?.identityCount || 0, metricLabel: 'Identities Found', isDaemon: true, 
+    { id: '1', title: 'The Scout', sub: 'Google Places (Primary) / OSM (Fallback)', route: 'phase1', color: '#8a2be2', 
+      target: 'Nationwide → ENRICHED / PENDING', 
+      metric: (status?.enrichedCount || 0) + (status?.pendingCount || 0), metricLabel: 'Total Seeded', isDaemon: false, 
+      statusActive: status?.isHarvestingActive || status?.isGoogleSweepActive },
+    { id: '2', title: 'The Operator', sub: 'Identity & Contact (OSM Fallback only)', route: 'phase2', color: '#5d78ff', 
+      target: 'PENDING → IDENTITY_ESTABLISHED', 
+      metric: status?.identityCount || 0, metricLabel: 'Identities Resolved', isDaemon: true, 
       statusActive: status?.currentTarget?.includes('Operator: online') },
-    { id: '3', title: 'The Detective', sub: 'Hours & Pricing Engine', route: 'phase3', color: '#ff5a00', target: 'IDENTIFIED -> INDEXED', 
-      metric: status?.indexedCount || 0, metricLabel: 'Websites Indexed', isDaemon: true, 
+    { id: '3', title: 'The Detective', sub: 'Website Deep Crawl + Photo Candidates', route: 'phase3', color: '#ff5a00', 
+      target: 'ENRICHED / IDENTITY_ESTABLISHED → is_deep_crawled', 
+      metric: status?.indexedCount || 0, metricLabel: 'Websites Crawled', isDaemon: true, 
       statusActive: status?.currentTarget?.includes('Indexer: online') },
-    { id: '4', title: 'Specialist Daemons', sub: 'Yelp & Social APIs', route: 'phase4', color: '#ffb300', target: 'INDEXED -> ENRICHED', 
-      metric: status?.enrichedCount || 0, metricLabel: 'Enriched Spots', isDaemon: true, 
-      statusActive: false },
-    { id: '5', title: 'The Photographer', sub: 'Media Storage Pipeline', route: 'phase5', color: '#e91e63', target: 'ENRICHED -> MEDIA_READY', 
+    { id: '4', title: 'The Photographer', sub: 'Free Photo Harvest (OG + Street View)', route: 'phase4', color: '#e91e63', 
+      target: 'ENRICHED → MEDIA_READY', 
       metric: status?.mediaReadyCount || 0, metricLabel: 'Galleries Built', isDaemon: true, 
-      statusActive: false },
-    { id: '6', title: 'Databank QA', sub: 'Master Review Grid', route: 'phase6', color: '#4caf50', target: 'ALL -> VERIFIED', 
-      metric: status?.verifiedCount || 0, metricLabel: 'Gold Standard', isDaemon: false, 
+      statusActive: status?.currentTarget?.includes('Photographer: online') },
+    { id: '5', title: 'The Publisher', sub: 'App Release Gate', route: 'phase5', color: '#4caf50', 
+      target: 'MEDIA_READY / ENRICHED → is_published', 
+      metric: status?.verifiedCount || 0, metricLabel: 'Live on App Map', isDaemon: false, 
+      statusActive: true },
+    { id: '6', title: 'Databank QA', sub: 'Master Review Grid + Coverage Map', route: 'phase6', color: '#ffb300', 
+      target: 'ALL → VERIFIED', 
+      metric: (status?.enrichedCount || 0) + (status?.mediaReadyCount || 0) + (status?.verifiedCount || 0), 
+      metricLabel: 'Gold Standard', isDaemon: false, 
       statusActive: true }
   ];
 
@@ -445,13 +464,9 @@ function App() {
               <div className={`status-dot ${status?.currentTarget?.includes('Indexer: online') ? 'online' : 'offline'}`} style={{ background: status?.currentTarget?.includes('Indexer: online') ? '#ff5a00' : '', boxShadow: status?.currentTarget?.includes('Indexer: online') ? '0 0 8px #ff5a00' : '' }}></div>
               <span style={{color: 'var(--text-secondary)'}}>Indexer:</span> <strong style={{color: status?.currentTarget?.includes('Indexer: online') ? '#ff5a00' : 'var(--text-secondary)'}}>{status?.currentTarget?.includes('Indexer: online') ? 'ONLINE' : 'OFFLINE'}</strong>
            </div>
-           <div style={{ background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px', opacity: 0.5 }}>
-              <div className="status-dot offline"></div>
-              <span style={{color: 'var(--text-secondary)'}}>Specialists:</span> <strong>MOCKED</strong>
-           </div>
-           <div style={{ background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px', opacity: 0.5 }}>
-              <div className="status-dot offline"></div>
-              <span style={{color: 'var(--text-secondary)'}}>Photographer:</span> <strong>MOCKED</strong>
+           <div style={{ background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px', border: `1px solid ${status?.currentTarget?.includes('Photographer: online') ? '#e91e63' : 'rgba(255,255,255,0.1)'}` }}>
+              <div className={`status-dot ${status?.currentTarget?.includes('Photographer: online') ? 'online' : 'offline'}`} style={{ background: status?.currentTarget?.includes('Photographer: online') ? '#e91e63' : '', boxShadow: status?.currentTarget?.includes('Photographer: online') ? '0 0 8px #e91e63' : '' }}></div>
+              <span style={{color: 'var(--text-secondary)'}}>Photographer:</span> <strong style={{color: status?.currentTarget?.includes('Photographer: online') ? '#e91e63' : 'var(--text-secondary)'}}>{status?.currentTarget?.includes('Photographer: online') ? 'ONLINE' : 'OFFLINE'}</strong>
            </div>
         </div>
       </header>
@@ -543,8 +558,8 @@ function App() {
         {activeTab === 'phase1' && (
           <div className="tab-pane phase-1">
             <div className="explainer-block" style={{marginBottom: '1rem'}}>
-              <h3 style={{marginTop: 0, color: '#8a2be2'}}>The Scout: Polygon Infrastructure</h3>
-              <p>This engine interfaces directly with OpenStreetMap's Overpass API. It extracts raw GIS locations (longitude/latitude) and establishes baseline row injection into Supabase. Real data validation occurs downstream.</p>
+              <h3 style={{marginTop: 0, color: '#8a2be2'}}>The Scout: GIS Ingestion Engine</h3>
+              <p>Dual-mode Phase 1 seeder. <strong style={{color:'#ffb300'}}>Google Places (Primary)</strong> writes <strong>ENRICHED</strong> records directly — high-fidelity data including coordinates, phone, hours, rating, and website. Toggle to <strong>OSM Mode</strong> to fall back to OpenStreetMap Overpass API, which writes raw <strong>PENDING</strong> skeletons for the Operator to resolve. Google Mode is recommended for all new harvests.</p>
             </div>
 
             <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', marginBottom: '2rem' }}>
@@ -747,59 +762,56 @@ function App() {
              )}
 
              {activeTab === 'phase3' && (
-                <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
-                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#5d78ff' }}>{status?.identityCount || 0}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>IDENTIFIED</div>
-                   </div>
-                   <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
-                      <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('indexer', 'start')} disabled={status?.currentTarget?.includes('Indexer: online')}>▶ START DETECTIVE</button>
-                         <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('indexer', 'stop')} disabled={!status?.currentTarget?.includes('Indexer: online')}>■ STOP</button>
+                <div className="flow-visualizer" style={{ padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
+                    {/* Dual input: both ENRICHED and IDENTITY_ESTABLISHED feed into Indexer */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-end', minWidth: '120px' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#ff5a00' }}>{status?.enrichedCount || 0}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>ENRICHED</div>
+                        <div style={{ fontSize: '0.6rem', color: 'rgba(255,90,0,0.6)' }}>Google Primary</div>
                       </div>
-                      <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
-                         {status?.indexedCount || 0} / {(status?.identityCount || 0) + (status?.indexedCount || 0)} Completed
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#5d78ff' }}>{status?.identityCount || 0}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>IDENTITY_EST.</div>
+                        <div style={{ fontSize: '0.6rem', color: 'rgba(93,120,255,0.6)' }}>OSM Fallback</div>
                       </div>
-                      {status?.currentTarget?.includes('Indexer: online') && <div className="flow-animation"></div>}
-                   </div>
-                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ff5a00' }}>{status?.indexedCount || 0}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>INDEXED</div>
-                   </div>
+                    </div>
+                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
+                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
+                          <button className="btn-mini start" onClick={() => triggerSpecificDaemon('indexer', 'start')} disabled={status?.currentTarget?.includes('Indexer: online')}>▶ START DETECTIVE</button>
+                          <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('indexer', 'stop')} disabled={!status?.currentTarget?.includes('Indexer: online')}>■ STOP</button>
+                       </div>
+                       <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
+                          {status?.indexedCount || 0} websites crawled (+ photo candidates)
+                       </div>
+                       {status?.currentTarget?.includes('Indexer: online') && <div className="flow-animation"></div>}
+                    </div>
+                    <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                       <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ff5a00' }}>{status?.indexedCount || 0}</div>
+                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>DEEP CRAWLED</div>
+                       <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>Status unchanged</div>
+                    </div>
+                  </div>
                 </div>
              )}
 
              {activeTab === 'phase4' && (
-                <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', opacity: 0.5 }}>
+                <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
                    <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ff5a00' }}>{status?.indexedCount || 0}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>INDEXED</div>
+                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ff5a00' }}>{status?.enrichedCount || 0}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>WITH WEBSITE</div>
+                      <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>Candidate pool</div>
                    </div>
                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini stop" disabled>MOCKED</button>
+                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('photographer', 'start')} disabled={status?.currentTarget?.includes('Photographer: online')}>📸 START PHOTOGRAPHER</button>
+                         <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('photographer', 'stop')} disabled={!status?.currentTarget?.includes('Photographer: online')}>■ STOP</button>
                       </div>
                       <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
-                         {status?.enrichedCount || 0} / {(status?.indexedCount || 0) + (status?.enrichedCount || 0)} Completed
+                         OG Image → DOM Images → Street View → Facebook OG
                       </div>
-                   </div>
-                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ffb300' }}>{status?.enrichedCount || 0}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>ENRICHED</div>
-                   </div>
-                </div>
-             )}
-
-             {activeTab === 'phase5' && (
-                <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', opacity: 0.5 }}>
-                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ffb300' }}>{status?.enrichedCount || 0}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>ENRICHED</div>
-                   </div>
-                   <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
-                      <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini stop" disabled>MOCKED</button>
-                      </div>
+                      {status?.currentTarget?.includes('Photographer: online') && <div className="flow-animation"></div>}
                    </div>
                    <div style={{ textAlign: 'center', minWidth: '100px' }}>
                       <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#e91e63' }}>{status?.mediaReadyCount || 0}</div>
@@ -808,13 +820,36 @@ function App() {
                 </div>
              )}
 
+             {activeTab === 'phase5' && (
+                <div style={{ padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4rem', marginBottom: '2rem' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '3rem', fontWeight: 800, color: '#e91e63' }}>{status?.mediaReadyCount || 0}</div>
+                      <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>MEDIA_READY</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '3rem', fontWeight: 800, color: '#ff5a00' }}>{status?.enrichedCount || 0}</div>
+                      <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>ENRICHED</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '3rem', fontWeight: 800, color: '#4caf50' }}>{status?.verifiedCount || 0}</div>
+                      <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>LIVE ON MAP</div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '1.5rem', background: 'rgba(76,175,80,0.05)', border: '1px solid rgba(76,175,80,0.3)', borderRadius: '8px' }}>
+                    <p style={{ margin: '0 0 1rem', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>The Publisher Gate controls which records are visible to users on the SK8Lytz app map. Use the Databank QA tab to review individual records and toggle <strong style={{color:'#4caf50'}}>APP_LIVE</strong>, or bulk-promote all ENRICHED records below.</p>
+                    <button className="btn btn-start" style={{background: '#4caf50', border: 'none'}} onClick={bulkPromote}>🚀 BULK PUBLISH ALL ENRICHED → APP MAP</button>
+                  </div>
+                </div>
+             )}
+
              {/* Mini Data Bank & Evasion Audit */}
-             {(() => {
+             {(['phase2', 'phase3', 'phase4', 'phase5'].includes(activeTab)) && (() => {
                 const queue = phaseQueues[activeTab] || [];
                 let hydratingFields: string[] = [];
                 if (activeTab === 'phase2') hydratingFields = ['Website', 'Phone Number'];
-                if (activeTab === 'phase3') hydratingFields = ['Pricing', 'Adult Night', 'Hours'];
-                if (activeTab === 'phase4') hydratingFields = ['Vibe Score', 'Description'];
+                if (activeTab === 'phase3') hydratingFields = ['Pricing', 'Adult Night', 'Hours', '📸 Photo Candidates'];
+                if (activeTab === 'phase4') hydratingFields = ['OG Photo', 'DOM Images', 'Street View', 'Facebook OG'];
                 if (activeTab === 'phase5') hydratingFields = ['Media URLs', 'Thumbnails'];
 
                 const activeLabel = `Phase ${activeTab.replace('phase','')}`;
@@ -896,6 +931,79 @@ function App() {
                     <span style={{fontSize: '0.85rem', fontWeight: 800, color:'#4caf50', border: '1px solid #4caf50', padding: '4px 8px', borderRadius: '4px', display:'inline-block', marginBottom: 5}}>LIVE APP TOGGLE</span><br/>
                     <span style={{fontSize: '0.8rem', color:'var(--text-secondary)'}}>Toggling the <q>LIVE APP</q> Checkbox instantly pushes the record to the public-facing SK8Lytz iOS/Android app map!</span>
                  </div>
+              </div>
+            </div>
+
+            {/* =========== STATUS COVERAGE MAP =========== */}
+            <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255,179,0,0.03)', border: '1px solid rgba(255,179,0,0.2)', borderRadius: '12px' }}>
+              <h3 style={{ margin: '0 0 0.5rem', color: '#ffb300', fontSize: '0.95rem', textTransform: 'uppercase' }}>📡 Pipeline Coverage Map</h3>
+              <p style={{ margin: '0 0 1.5rem', color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>Spot status distribution by state. Click a state to filter the grid below. Color shows the dominant verification status in that state.</p>
+              
+              {/* Nationwide status totals */}
+              {(() => {
+                const totals: Record<string, number> = {};
+                databankCoverage.forEach((row: any) => {
+                  ['PENDING','IDENTITY_ESTABLISHED','INDEXED','ENRICHED','MEDIA_READY','VERIFIED'].forEach(s => {
+                    if (row[s]) totals[s] = (totals[s] || 0) + row[s];
+                  });
+                });
+                const STATUS_META: Record<string, {color: string; label: string}> = {
+                  PENDING:              { color: '#8a2be2', label: 'Pending' },
+                  IDENTITY_ESTABLISHED: { color: '#5d78ff', label: 'Identified' },
+                  INDEXED:              { color: '#ff5a00', label: 'Indexed' },
+                  ENRICHED:             { color: '#ff9800', label: 'Enriched' },
+                  MEDIA_READY:          { color: '#e91e63', label: 'Media Ready' },
+                  VERIFIED:             { color: '#4caf50', label: 'Verified' },
+                };
+                return (
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                    {Object.entries(STATUS_META).map(([s, meta]) => (
+                      <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.04)', padding: '6px 12px', borderRadius: '20px', border: `1px solid ${meta.color}44` }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: meta.color, display: 'inline-block' }}></span>
+                        <span style={{ fontSize: '0.75rem', color: meta.color, fontWeight: 700 }}>{meta.label}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>{(totals[s] || 0).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              <div style={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '800px', margin: '0 auto' }}>
+                {/* @ts-ignore */}
+                <USAMap
+                  defaultFill="rgba(255,255,255,0.05)"
+                  customize={(() => {
+                    const colors: Record<string, any> = {};
+                    const STATUS_PRIORITY = ['VERIFIED','MEDIA_READY','ENRICHED','INDEXED','IDENTITY_ESTABLISHED','PENDING'];
+                    const STATUS_COLOR: Record<string, string> = {
+                      VERIFIED: '#4caf50',
+                      MEDIA_READY: '#e91e63',
+                      ENRICHED: '#ff9800',
+                      INDEXED: '#ff5a00',
+                      IDENTITY_ESTABLISHED: '#5d78ff',
+                      PENDING: '#8a2be2',
+                    };
+                    databankCoverage.forEach((row: any) => {
+                      if (!row.state || row.state === 'UNKNOWN') return;
+                      const total = row.total || 0;
+                      if (total === 0) return;
+                      // Dominant status = highest-trust status with >0 records
+                      const dominant = STATUS_PRIORITY.find(s => (row[s] || 0) > 0) || 'PENDING';
+                      const baseColor = STATUS_COLOR[dominant] || '#8a2be2';
+                      const density = Math.min(total / 40, 1);
+                      const opacity = Math.max(density, 0.35);
+                      colors[row.state] = {
+                        fill: baseColor + Math.round(opacity * 255).toString(16).padStart(2, '0'),
+                        customText: total.toString()
+                      };
+                    });
+                    return colors;
+                  })()}
+                  onClick={(e: any) => {
+                    const st = e.target?.dataset?.name || e.target?.id;
+                    if (st) setSearchQuery(st);
+                  }}
+                />
               </div>
             </div>
 

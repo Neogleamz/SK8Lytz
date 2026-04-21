@@ -388,12 +388,69 @@ async function runIndexer() {
       // ── Pricing ───────────────────────────────────────────────────────────
       const pricing_data = parsePricing(text) || target.pricing_data || null;
 
+      // ── Photo Candidates (free harvest — no API cost) ─────────────────────
+      // Only collect if we don't already have photos
+      let candidate_photos: Record<string, any> | null = target.candidate_photos || null;
+      if (!target.photos && !candidate_photos) {
+        const candidateMap: Record<string, any> = {};
+
+        // Tier 1: OG image — site's intentional hero photo
+        const ogImage = await page.evaluate(() =>
+          document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null
+        ).catch(() => null);
+        if (ogImage && !ogImage.includes('placeholder') && !ogImage.includes('default')) {
+          candidateMap.og_image = ogImage;
+        }
+
+        // Tier 2: DOM large images (naturalWidth >= 400, naturalHeight >= 300)
+        const domImages = await page.evaluate(() => {
+          return Array.from(document.querySelectorAll('img'))
+            .filter((img: any) => {
+              const w = img.naturalWidth || img.width || 0;
+              const h = img.naturalHeight || img.height || 0;
+              const src = (img.src || '').toLowerCase();
+              // Exclude icons, logos, tracking pixels, placeholder gifs
+              return w >= 400 && h >= 300 &&
+                !src.includes('logo') && !src.includes('icon') &&
+                !src.includes('pixel') && !src.includes('gif') &&
+                (src.startsWith('http') || src.startsWith('//'));
+            })
+            .map((img: any) => img.src)
+            .slice(0, 3);
+        }).catch(() => [] as string[]);
+        if (domImages.length > 0) candidateMap.dom_images = domImages;
+
+        // Tier 3: Street View Static (deterministic from lat/lng — free tier 25k/month)
+        const MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_PLACES_API_KEY || '';
+        if (target.lat && target.lng && MAPS_KEY) {
+          candidateMap.street_view_url = `https://maps.googleapis.com/maps/api/streetview?size=800x600&location=${target.lat},${target.lng}&heading=auto&fov=80&key=${MAPS_KEY}`;
+        }
+
+        // Tier 4: Facebook cover photo via OG (lightweight fetch — no browser)
+        if (facebook_url && facebook_url.includes('facebook.com')) {
+          try {
+            const fbRes = await fetch(facebook_url, {
+              headers: { 'User-Agent': 'facebookexternalhit/1.1' },
+              signal: AbortSignal.timeout(5000)
+            });
+            const fbHtml = await fbRes.text();
+            const ogMatch = fbHtml.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/);
+            if (ogMatch?.[1]) candidateMap.facebook_og = ogMatch[1];
+          } catch { /* Facebook fetch failed — non-critical */ }
+        }
+
+        if (Object.keys(candidateMap).length > 0) {
+          candidate_photos = candidateMap;
+          console.log(`   📸 Photo candidates collected: ${Object.keys(candidateMap).join(', ')}`);
+        }
+      }
+
       // ── Log Result ────────────────────────────────────────────────────────
       const hoursFound = Object.keys(opening_hours || {}).length;
       const scheduleFound = adultNightSchedule ? Object.keys(adultNightSchedule).length : 0;
       const eventsFound = newEvents?.length || 0;
       const pricingFound = Object.keys(pricing_data || {}).length;
-      console.log(`   ✓ Hours[${hoursFound}/7] AdultNight[${has_adult_night ? 'Y' : 'N'}, ${scheduleFound} days] Events[${eventsFound}] Pricing[${pricingFound}] Socials[IG:${instagram_url ? 'Y' : 'N'} FB:${facebook_url ? 'Y' : 'N'}]`);
+      console.log(`   ✓ Hours[${hoursFound}/7] AdultNight[${has_adult_night ? 'Y' : 'N'}, ${scheduleFound} days] Events[${eventsFound}] Pricing[${pricingFound}] Socials[IG:${instagram_url ? 'Y' : 'N'} FB:${facebook_url ? 'Y' : 'N'}] Photos[${candidate_photos ? Object.keys(candidate_photos).length : 0} candidates]`);
 
       // ── Write to DB ───────────────────────────────────────────────────────
       const { error: updateError } = await supabase.from('skate_spots').update({
@@ -411,7 +468,11 @@ async function runIndexer() {
         // Events & Pricing
         special_events,
         pricing_data,
+        // Photos (candidates written here; Photographer daemon downloads + uploads)
+        ...(candidate_photos ? { candidate_photos } : {}),
         // Pipeline flags
+        // IMPORTANT: Never downgrade ENRICHED. ENRICHED + deep_crawled = still ENRICHED.
+        // Only promote IDENTITY_ESTABLISHED to INDEXED after deep crawl.
         verification_status: target.verification_status === 'ENRICHED' ? 'ENRICHED' : 'INDEXED',
         is_deep_crawled: true,
         retry_count: 0,
