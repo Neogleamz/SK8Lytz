@@ -598,4 +598,50 @@ Run at **390px width (iPhone 14)** and **412px width (Pixel 7)**:
 
 ---
 
-_Last updated: 2026-04-17 | Maintained by: AG + Andy_
+
+_Last updated: 2026-04-22 | Maintained by: AG + Andy_
+
+---
+
+## 18. Emergency Pattern Hardware Correctness (`fix/led-count-segments-consistency`)
+
+> [!IMPORTANT]
+> **Requires:** Physical HALOZ device connected via BLE. Test 18.1 is the hardware gate for confirming segment mirror behavior — results must be recorded in `ZENGGE_PROTOCOL_BIBLE.md` before considering this fix complete.
+
+### 18.1 HALOZ — Segment Mirror Verification (Hardware Gate)
+
+| #      | Step                                                                       | Expected                                                                                 |
+| ------ | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 18.1.1 | Connect HALOZ device. Open Admin Tools → LAB → 0x59 builder                | Lab panel opens with numPoints field                                                     |
+| 18.1.2 | Set `numPoints = 8`, fill first 4 as RED `FF0000`, last 4 as BLUE `0000FF` | 8-element array set up                                                                   |
+| 18.1.3 | Set `transitionType = 0x01` (FREEZE), send to device                       | **Both** physical segments show [R,R,R,R,B,B,B,B] — identical, mirrored pattern          |
+| 18.1.4 | If segment 2 shows different colors from segment 1                          | FAIL — auto-mirror assumption is wrong. Halt and re-open `PLAN-led-count-segments-consistency.md` |
+
+**Results:** `[ ][ ][ ][ ]`
+
+---
+
+### 18.2 HALOZ — Emergency Pattern (After 18.1 confirmed)
+
+| #      | Step                                                                 | Expected                                                                   |
+| ------ | -------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 18.2.1 | Connect HALOZ device. Trigger Emergency Pattern button in controller  | Hardware receives exactly **8 elements** via `0x59`                        |
+| 18.2.2 | Observe physical hardware                                            | Both left + right wheel rings show **identical** hazard pattern            |
+| 18.2.3 | Verify pattern content: first 2 LEDs red, mid yellow/off, last white | [R,R,Y,_,Y,_,W,W] pattern visible on the 8-LED canvas                     |
+| 18.2.4 | Adjust brightness slider to 50%                                      | All colors scale proportionally, pattern shape unchanged                   |
+
+**Results:** `[ ][ ][ ][ ]`
+
+---
+
+### 18.3 SOULZ — Emergency Pattern (Scaled to ledPoints)
+
+| #      | Step                                                                                     | Expected                                                    |
+| ------ | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| 18.3.1 | Connect SOULZ device (default `ledPoints = 43`). Trigger Emergency Pattern               | Pattern fills all 43 LEDs proportionally in 3 zones         |
+| 18.3.2 | In HW Settings, reduce `ledPoints` to 24 (simulating cut strip). Trigger pattern again   | Pattern fills exactly 24 LEDs — rear RED, mid YELLOW/OFF, front WHITE |
+| 18.3.3 | Reduce `ledPoints` to 9 (minimum viable). Trigger pattern                                | Pattern still renders — zone minimum protection (Math.max(1, floor)) prevents zero-length zones |
+| 18.3.4 | Restore `ledPoints` to 43                                                                | Pattern returns to full 43-LED fill                         |
+
+**Results:** `[ ][ ][ ][ ]`
+
