@@ -310,7 +310,7 @@ export function useBLEScanner({
                  color_sorting: device.sorting ?? 'GRB',
                  rssi: device.rssi ?? -50,
                  firmware_ver: 200,
-                 product_id: 115,
+                 product_id: 163,
                } as PendingRegistration;
             });
             setPendingRegistrations(pendingMocks);

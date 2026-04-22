@@ -4,7 +4,7 @@
  * Owns: 0x73 music config dispatch, pattern names, pattern navigation.
  * Extracted from DockedController.tsx to isolate music-specific BLE logic.
  */
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 import type { ModeType } from '../types/dashboard.types';
@@ -86,6 +86,44 @@ export function useMusicMode({
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
+
+  /**
+   * Track previous activeMode to detect MUSIC → other transitions.
+   * useRef so changes don't cause re-renders.
+   */
+  const previousActiveModeRef = useRef<ModeType>(activeMode);
+
+  /**
+   * Fix 3: Music Mode Exit Packet.
+   * When the user switches away from MUSIC, send isOn=false to tell the hardware
+   * to stop reacting to ambient sound. Without this, the device stays in
+   * music-reactive mode indefinitely even though the UI has moved on.
+   *
+   * APK truth: 0x73 packet with isOn=0x00 is the correct exit signal.
+   */
+  useEffect(() => {
+    const prev = previousActiveModeRef.current;
+    previousActiveModeRef.current = activeMode;
+
+    if (prev === 'MUSIC' && activeMode !== 'MUSIC' && writeToDevice) {
+      const c1 = hexToRgb(musicPrimaryColor);
+      const c2 = hexToRgb(musicSecondaryColor);
+      const isDeviceMic = micSource === 'DEVICE';
+      AppLogger.log('MUSIC_MODE_EXIT', { from: prev, to: activeMode });
+      writeToDevice(ZenggeProtocol.setMusicConfig(
+        musicPatternId,
+        isDeviceMic ? 0x27 : 0x26,
+        false, // isOn=false — exit music reactive mode
+        c1,
+        c2,
+        micSensitivity,
+        brightness
+      ));
+    }
+  }, [activeMode]);
+  // Note: intentionally omitting music params from deps — we want to fire
+  // exactly once on mode transition, not re-fire when colors change.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 
   return { handleMusicChange };
 }
