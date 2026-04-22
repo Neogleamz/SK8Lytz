@@ -232,8 +232,10 @@ export default function PositionalGradientBuilder({
 
   const activeNode = nodes.find(n => n.id === activeNodeId);
 
-  // Generates physical RGB preview arrays so the UI bar matches string output visually
-  const previewLeds = PositionalMathBuffer.generateArray(nodes, 100, fillMode === 'GRADIENT');
+  // Generates physical RGB preview arrays so the UI bar matches actual device LED count.
+  // BUG FIX: was hardcoded 100 — the preview bar now reflects deviceLedCount correctly.
+  const maxPins = Math.min(deviceLedCount, 32);
+  const previewLeds = PositionalMathBuffer.generateArray(nodes, deviceLedCount, fillMode === 'GRADIENT');
 
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.03)', borderRadius: 12, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'transparent', padding: Spacing.sm }}>
@@ -302,7 +304,7 @@ export default function PositionalGradientBuilder({
 
       {/* 1. TOP HEADER - LAYOUT & SAVE */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xxs }}>
-         <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold' }}>LAYOUT (MAX 16)</Text>
+         <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold' }}>LAYOUT (MAX {maxPins})</Text>
          <TouchableOpacity 
             onPress={() => setSaveModalVisible(true)}
             style={{ paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xxs, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, flexDirection: 'row', alignItems: 'center' }}
@@ -337,7 +339,7 @@ export default function PositionalGradientBuilder({
                    {activeNodeId === n.id && <MaterialCommunityIcons name="map-marker-down" size={12} color={['#FFFFFF', '#FFF', '#FFFF00', '#00FF00'].includes(n.colorHex.toUpperCase()) ? '#000' : '#FFF'} />}
                 </TouchableOpacity>
             ))}
-            {nodes.length < 16 && (
+            {nodes.length < maxPins && (
                 <TouchableOpacity 
                    onPress={addNode}
                    style={{
@@ -412,17 +414,21 @@ export default function PositionalGradientBuilder({
       <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold', marginBottom: Spacing.xxs }}>ANIMATION</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
           {[
-              { id: 1, label: 'STATIC' },
-              { id: 2, label: 'GRADUAL' },
-              { id: 3, label: 'STROBE' },
-              { id: 4, label: 'WATER' },
-              { id: 5, label: 'JUMP' }
+              // BUG FIX: IDs now match ZenggeProtocol transitionType bytes directly.
+              // Old mapping (1-5) was off-by-one — STATIC sent Gradual, STROBE sent Water, etc.
+              // Ground truth @ ZenggeProtocol.ts:577: 0x00=Static, 0x01=Gradual, 0x02=Strobe, 0x03=RunningWater
+              { id: 0x00, label: 'STATIC', icon: 'led-strip' as const },
+              { id: 0x01, label: 'FADE',   icon: 'gradient-horizontal' as const },
+              { id: 0x02, label: 'STROBE', icon: 'lightning-bolt' as const },
+              { id: 0x03, label: 'SCROLL', icon: 'arrow-right-bold' as const },
+              { id: 0x04, label: 'JUMP',   icon: 'swap-vertical' as const },
           ].map(t => (
               <TouchableOpacity 
                   key={t.id}
                   onPress={() => onTransitionTypeChange(t.id)}
-                  style={{ paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xxs, borderRadius: 6, borderWidth: 1, borderColor: transitionType === t.id ? Colors.primary : 'rgba(255,255,255,0.1)', backgroundColor: transitionType === t.id ? 'rgba(0,240,255,0.1)' : 'transparent' }}
+                  style={{ paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xxs, borderRadius: 6, borderWidth: 1, borderColor: transitionType === t.id ? Colors.primary : 'rgba(255,255,255,0.1)', backgroundColor: transitionType === t.id ? 'rgba(0,240,255,0.1)' : 'transparent', flexDirection: 'row', alignItems: 'center', gap: 3 }}
               >
+                  <MaterialCommunityIcons name={t.icon} size={9} color={transitionType === t.id ? Colors.primary : Colors.textMuted} />
                   <Text style={{ color: transitionType === t.id ? Colors.primary : Colors.textMuted, fontSize: 9, fontWeight: 'bold' }}>{t.label}</Text>
               </TouchableOpacity>
           ))}
