@@ -123,7 +123,16 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
     [writeToDevice, sendColor]
   );
 
-  /** Emergency (hazard) lighting pattern — red/yellow/white for HALOZ and SOULZ */
+  /**
+   * Emergency (hazard) lighting pattern — red/yellow/white for HALOZ and SOULZ.
+   *
+   * Hardware truth (confirmed 2026-04-22, Master Reference §1):
+   * - HALOZ: ledPoints=8, segments=2. Send 8 elements — hardware auto-mirrors to segment 2.
+   *   Sending 16 elements bypasses the segment mirror engine (each segment gets its own
+   *   independent half), which is NOT a mirror. Fixed: send numLEDs (8) elements only.
+   * - SOULZ: ledPoints=43 (user-adjustable for cut strips). All zones scale proportionally.
+   *   Fixed: no hardcoded counts — use numLEDs throughout.
+   */
   const applyEmergencyPattern = useCallback(
     (spd: number, bright: number) => {
       if (!writeToDevice) return;
@@ -132,31 +141,36 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       const isRingShape = profile?.vizShape === 'RING';
       const hwSpd = Math.min(spd, ZenggeProtocol.ANIM_SPEED_MAX);
 
-      const red = { r: Math.round(255 * factor), g: 0, b: 0 };
-      const white = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: Math.round(255 * factor) };
-      const yellow = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: 0 };
-      const off = { r: 0, g: 0, b: 0 };
+      const red    = { r: Math.round(255 * factor), g: 0,                      b: 0                      };
+      const white  = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: Math.round(255 * factor) };
+      const yellow = { r: Math.round(255 * factor), g: Math.round(255 * factor), b: 0                      };
+      const off    = { r: 0,                         g: 0,                      b: 0                      };
 
       let arr: { r: number; g: number; b: number }[];
 
       if (isRingShape) {
-        // ── HALOZ 2-segment: 8-LED frame mirrored to 16 ──
-        const frame8 = [red, red, yellow, off, yellow, off, white, white];
-        const mirror8 = [...frame8].reverse();
-        arr = [...frame8, ...mirror8];
+        // HALOZ: send exactly ledPoints (8) elements.
+        // The hardware segment engine mirrors this 8-point canvas to both physical segments.
+        // BUG FIXED: old code sent 16 elements (frame8 + mirror8), bypassing segment mirror.
+        arr = [red, red, yellow, off, yellow, off, white, white].slice(0, numLEDs);
       } else {
-        // ── SOULZ linear: [rear RED×4][mid flash×8][front WHITE×4] ──
+        // SOULZ / linear strips: three-zone hazard pattern scaled to any ledPoints value.
+        // [rear RED zone | mid alternating YELLOW/OFF | front WHITE zone]
+        // BUG FIXED: old code hardcoded 16 elements; cut-to-length users got wrong pattern.
+        const n = numLEDs;
+        const zone = Math.max(1, Math.floor(n / 3));
+        const midLen = n - zone * 2; // absorbs rounding remainder in mid zone
         arr = [
-          red, red, red, red,
-          yellow, off, yellow, off, yellow, off, yellow, off,
-          white, white, white, white,
+          ...Array(zone).fill(red),
+          ...Array.from({ length: midLen }, (_, i) => (i % 2 === 0 ? yellow : off)),
+          ...Array(zone).fill(white),
         ];
       }
 
-      // 0x03 = RunningWater: hardware scrolls mid section natively
+      // 0x03 = RunningWater: hardware scrolls the mid section natively
       writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpd, 1, 0x03));
     },
-    [writeToDevice, hwSettings]
+    [writeToDevice, hwSettings, numLEDs]
   );
 
   /** Send music mode configuration to hardware */
