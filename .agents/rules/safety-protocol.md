@@ -12,6 +12,7 @@ trigger: always_on
 **⛔ CRITICAL SAFETY RULE 6: NEVER run `git checkout -b`, `git checkout <branch>`, `git switch`, or ANY branch-changing command in the main repository directory (`C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`). The main directory MUST always stay on `master`. All feature work MUST use `git worktree` to create an isolated directory. See the Worktree Isolation Protocol below.**
 **⛔ CRITICAL SAFETY RULE 7: NEVER push code to the remote repository (i.e. 'release') without first explicitly executing the `/health-sweep` workflow to run the MCP Database Scanner and npm audit.**
 **⛔ CRITICAL SAFETY RULE 8: The Core Fortress Mandate. NEVER perform unsolicited architectural refactors, hook extractions, or "Boy-Scout" cleanups on core stability systems (e.g., DashboardScreen.tsx, useBLE.ts, or the BLE/Group architecture). Unless explicitly commanded by the user, you are strictly prohibited from reorganizing working core logic. If it works, DO NOT TOUCH IT.**
+**⛔ CRITICAL SAFETY RULE 9: Worktree Commit Is NOT Done. After committing the final change in a worktree branch, you MUST immediately merge to master, remove the worktree, and delete the branch — in that order — before reporting completion or asking the user anything else. A committed-but-open worktree is an incomplete task. No exceptions.**
 
 
 ### Worktree Isolation Protocol (Mandatory)
@@ -39,17 +40,22 @@ cd C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\<slug>
 cd C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\<slug>
 ```
 
-**To merge and clean up when done:**
+**To merge and clean up when done — MANDATORY FINAL STEP (RULE 9):**
 ```powershell
 # Return to master fortress:
 cd C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz
-git merge <slug>
-# Only after explicit user approval to push:
-git push origin master
-# Clean up the worktree:
+# Try fast-forward first; fall back to --no-ff if branches diverged:
+git merge <slug> --ff-only || git merge <slug> --no-ff -m "chore(merge): <slug> -> master"
+# Clean up immediately — do NOT leave open:
 git worktree remove ../SK8Lytz-worktrees/<slug>
 git branch -d <slug>
+# Confirm clean:
+git worktree list
+# Only after explicit user approval to push:
+# git push origin master
 ```
+
+> ⛔ **RULE 9 CHECKPOINT**: After running these commands, `git worktree list` must show ONLY the master fortress. If any worktree remains, the task is NOT complete.
 
 **Why this is safe**: Multiple conversations can work on different branches simultaneously because each has its own physical directory. No conversation can ever clobber another's uncommitted work.
 
