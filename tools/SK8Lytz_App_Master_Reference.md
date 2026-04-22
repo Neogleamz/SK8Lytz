@@ -1,6 +1,6 @@
 # SK8Lytz App Master Reference
 
-_Last Updated: 2026-04-22 | Oracle Hardware Validation Session + Live BLE Sniff — 0x51 slot structure confirmed from hardware capture, 0x43 debunked on our firmware, ZENGGE app UI→protocol mapping documented | Source of Truth: `src/protocols/ZenggeProtocol.ts`, `ZENGGE_PROTOCOL_BIBLE.md`_
+_Last Updated: 2026-04-22 | BATCH:PR-A/B/C shipped — protocol correctness, 0x10 session time sync, writeChunked 0x51 framing, product_id chip in HW Settings modal. DB: `product_id_confirmed_at` column added. | Source of Truth: `src/protocols/ZenggeProtocol.ts`, `ZENGGE_PROTOCOL_BIBLE.md`_
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
 
@@ -325,6 +325,28 @@ All byte definitions below represent the inner payload _before_ the V2 BLE packe
 > - `0x43` Multi-Sequence: **DO NOT USE** — Oracle test caused hardware LED shutoff (state machine crash). ZENGGE app uses `0x51` for multi-step effects, not `0x43`.
 > - `0x41` Settled Mode, `0x53` Live Pixel Stream: **Unconfirmed** — our wrapper format appears wrong for these opcodes.
 > - Source: Oracle Lab + live BLE HCI sniff (2026-04-22), `ZENGGE_PROTOCOL_BIBLE.md` Section 11
+
+### BLE Connection Handshake (2026-04-22)
+
+Every GATT connection fires this sequence before the device is added to React state:
+
+1. **MTU Negotiation** — `requestMTUForDevice(conn.id, 512)`
+2. **0x10 Session Time Sync** — `ZenggeProtocol.setSessionTime()` → written directly to `ZENGGE_CHARACTERISTIC_UUID`. Format: `[0x10, year-2000, month(1-12), day, hour, min, sec, weekday(0=Sun), checksum]`. Source: `TimeControllerFragment.java` APK decompile. Non-fatal — wrapped in try/catch.
+3. **React state update** — `setConnectedDevices()` fires _after_ GATT is booted to prevent UI from blasting payloads during MTU queries.
+
+> [!IMPORTANT]
+> `setSessionTime()` was missing from `ZenggeProtocol.ts` entirely (line 742 was `queryHardwareConfig` — the plan was stale). The method was implemented from scratch (commit `fdc0ff3`).
+
+### writeChunked — 0x51 Extended Payload Framing
+
+Required for 323-byte 0x51 Extended Scene Builder payloads (32 steps × 10B + 3B header).
+
+- **Function**: `useBLE.writeChunked(payload: number[], chunkSize = 20): Promise<void>`
+- **Framing**: `[0x40, seqByte, 0x00, 0x00, 0x01, 0x43, 0xBD, 0x0B, ...data]`
+- **12 bytes data per 20-byte BLE chunk** (8-byte header overhead)
+- **20ms inter-chunk delay** — prevents BLE TX buffer overflow on Android
+- **⚠️ Framing signature `[0x01, 0x43, 0xBD, 0x0B]` needs Oracle Lab HCI sniff** before wiring to production Scene Builder UI
+- Exported in `BluetoothLowEnergyApi` interface (commit `fdc0ff3`)
 
 ### BLE Stability Constraints & GATT Error Prevention
 
@@ -710,16 +732,30 @@ All FSM states and shared interfaces live in **`src/types/dashboard.types.ts`**.
 
 _Project ID:_ `qefmeivpjyaukbwadgaz`
 
-#### **`registered_devices`** (Hardened Schema)
+#### **`registered_devices`** (Hardened Schema — Updated 2026-04-22)
 
-| Column         | Type      | Purpose                  |
-| :------------- | :-------- | :----------------------- |
-| `id`           | TEXT (PK) | Unique system identifier |
-| `device_mac`   | TEXT      | Unique hardware address  |
-| `user_id`      | UUID      | Owner ID                 |
-| `device_name`  | TEXT      | Custom alias             |
-| `product_type` | TEXT      | HALOZ / SOULZ / RAILZ    |
-| `led_points`   | INT       | Physical pixel count     |
+| Column                      | Type       | Purpose                                              |
+| :-------------------------- | :--------- | :--------------------------------------------------- |
+| `id`                        | TEXT (PK)  | Unique system identifier (MAC+userId composite)      |
+| `device_mac`                | TEXT       | Unique hardware address (UPPERCASE)                  |
+| `user_id`                   | UUID       | Owner ID                                             |
+| `device_name`               | TEXT       | Custom alias                                         |
+| `product_type`              | TEXT       | HALOZ / SOULZ / RAILZ                                |
+| `led_points`                | INT        | Physical pixel count                                 |
+| `segments`                  | INT        | Hardware mirror segments                             |
+| `ic_type`                   | TEXT       | LED chipset (WS2812B, SK6812, etc.)                  |
+| `color_sorting`             | TEXT       | RGB channel order (GRB, RGB, etc.)                   |
+| `firmware_ver`              | INT        | Firmware version integer from BLE advertisement      |
+| `led_version`               | INT        | LED version from BLE advertisement                   |
+| `product_id`                | INT        | ZENGGE hardware product ID (0xA3=163 for all SK8Lytz)|
+| `product_id_confirmed_at`   | TIMESTAMPTZ| When product_id was confirmed via BLE (added 2026-04-22)|
+| `rf_mode`                   | TEXT       | RF remote auth policy                                |
+| `rf_paired_count`           | INT        | Number of paired RF remotes                          |
+| `group_id`                  | TEXT       | Fleet group assignment                               |
+| `group_name`                | TEXT       | Human-readable group name                            |
+| `registered_at`             | TIMESTAMPTZ| First registration timestamp                         |
+| `updated_at`                | TIMESTAMPTZ| Last modification timestamp                          |
+| `rssi_at_register`          | INT        | Signal strength at registration                      |
 
 #### **`product_catalog`** (Dynamic Hardware Definitions)
 
