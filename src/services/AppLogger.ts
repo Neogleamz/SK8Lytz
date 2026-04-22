@@ -141,7 +141,11 @@ export type EventType =
   | 'SCREEN_ERROR'
   | 'PROMISE_REJECTION'
   // ── Music Mode ─────────────────────────────────────────────────────────
-  | 'MUSIC_MODE_EXIT';
+  | 'MUSIC_MODE_EXIT'
+  // ── BLE Hardening (PR-B) ───────────────────────────────────────────────
+  | 'BLE_TIME_SYNC'
+  | 'BLE_CHUNKED_WRITE';
+
 
 
 

@@ -38,6 +38,8 @@ export interface BluetoothLowEnergyApi {
   connectToDevices: (devices: Device[]) => Promise<void>;
   disconnectFromDevice: () => void;
   writeToDevice: (payload: number[], targetDeviceId?: string) => Promise<boolean | 'partial'>;
+  /** Send large payloads (>MTU) via sequential ZENGGE-framed BLE chunks. Required for 0x51 extended Scene Builder payloads. */
+  writeChunked: (payload: number[], chunkSize?: number) => Promise<void>;
   probeDevice: (mac: string) => Promise<void>;
   connectedDevices: Device[];
   allDevices: Device[];
@@ -377,6 +379,20 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
           AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name });
 
+          // FIX: Send 0x10 session time sync immediately after GATT handshake.
+          // ZENGGE app does this before any other write — hardware clock starts from
+          // epoch 0 without it, causing timing-sensitive effects to drift.
+          try {
+            const timeSyncPayload = ZenggeProtocol.setSessionTime();
+            const b64TimeSync = Buffer.from(timeSyncPayload).toString('base64');
+            await conn.writeCharacteristicWithoutResponseForService(
+              ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64TimeSync
+            );
+            AppLogger.log('BLE_TIME_SYNC', { deviceId: conn.id, timestamp: Date.now() });
+          } catch (timeSyncErr: any) {
+            AppLogger.warn('[BLE] Time sync write failed (non-fatal)', { error: String(timeSyncErr), deviceId: conn.id });
+          }
+
           // FIX: Add to React state ONLY AFTER GATT is fully booted to block the UI from blasting animation payloads during MTU queries
           setConnectedDevices(prev => {
             if (!prev.find(c => c.id === conn.id)) return [...prev, conn];
@@ -464,6 +480,57 @@ export default function useBLE(): BluetoothLowEnergyApi {
     return currentWrite;
   };
 
+  /**
+   * Send a large payload to BLE device using ZENGGE chunked framing.
+   * Required for 0x51 Extended Scene Builder payloads (323 bytes total).
+   *
+   * Each chunk: [0x40, seqByte, 0x00, 0x00, 0x01, 0x43, 0xBD, 0x0B, ...data]
+   * Max 20 bytes per chunk (BLE 4.x MTU). 8-byte header = 12 bytes data per chunk.
+   *
+   * ⚠️ Framing signature [0x01, 0x43, 0xBD, 0x0B] from APK HCI sniff — verify
+   *    against live hardware before using in Scene Builder production UI.
+   *
+   * @param payload   Full raw payload bytes (e.g. 323-byte 0x51 extended packet)
+   * @param chunkSize Max bytes per BLE write (default 20 = BLE 4.x MTU)
+   */
+  const writeChunked = async (payload: number[], chunkSize: number = 20): Promise<void> => {
+    if (connectedDevicesRef.current.length === 0 || Platform.OS === 'web') return;
+
+    const HEADER_SIZE = 8;
+    const dataPerChunk = chunkSize - HEADER_SIZE; // 12 bytes data per 20-byte chunk
+
+    let seqByte = 0x00;
+    const chunks: number[][] = [];
+    for (let i = 0; i < payload.length; i += dataPerChunk) {
+      const slice = payload.slice(i, i + dataPerChunk);
+      chunks.push([
+        0x40,                    // ZENGGE chunk marker
+        seqByte,                 // sequence counter
+        0x00, 0x00,              // reserved
+        0x01, 0x43, 0xBD, 0x0B, // framing signature (APK HCI sniff — verify before prod)
+        ...slice,
+      ]);
+      seqByte = (seqByte + 1) & 0xFF;
+    }
+
+    AppLogger.log('BLE_CHUNKED_WRITE', { payloadLen: payload.length, numChunks: chunks.length });
+
+    for (const chunk of chunks) {
+      const b64 = Buffer.from(chunk).toString('base64');
+      for (const device of connectedDevicesRef.current) {
+        try {
+          await device.writeCharacteristicWithoutResponseForService(
+            ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
+          );
+        } catch (e: any) {
+          AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: String(e) });
+        }
+      }
+      // 20ms inter-chunk delay — prevents BLE TX buffer overflow on Android
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+  };
+
 
   const disconnectFromDevice = async () => {
     // ── CONNECTION GATE: Acquire DISCONNECTING phase ─────────────────────────
@@ -515,6 +582,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     scanForPeripherals: scanner.scanForPeripherals,
     connectToDevices,
     writeToDevice,
+    writeChunked,
     allDevices,
     setAllDevices,
     connectedDevices,

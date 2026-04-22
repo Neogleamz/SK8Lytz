@@ -758,6 +758,33 @@ export class ZenggeProtocol {
   }
 
   /**
+   * Build a 0x10 session time sync packet.
+   * ZENGGE app sends this on EVERY successful BLE connection handshake,
+   * before any pattern commands. Without it, the hardware session clock
+   * starts from epoch 0 — timing-sensitive effects may drift or misfire.
+   *
+   * Source: TimeControllerFragment.java (APK analysis)
+   * Format (8 bytes + checksum):
+   *   [0x10, year-2000, month(1-12), day(1-31), hour(0-23), min(0-59), sec(0-59), weekday(0=Sun), checksum]
+   */
+  static setSessionTime(): number[] {
+    const now = new Date();
+    const raw = [
+      0x10,
+      (now.getFullYear() - 2000) & 0xFF, // year offset from 2000
+      now.getMonth() + 1,                 // 1–12
+      now.getDate(),                      // 1–31
+      now.getHours(),                     // 0–23
+      now.getMinutes(),                   // 0–59
+      now.getSeconds(),                   // 0–59
+      now.getDay(),                       // 0=Sun, 1=Mon, ..., 6=Sat
+    ];
+    raw.push(this.calculateChecksum(raw));
+    return this.wrapCommand(raw);
+  }
+
+
+  /**
    * @deprecated Use parseHardwareSettingsResponse() for 0x63 responses.
    * Legacy parser kept for backward compatibility with older command responses.
    */
