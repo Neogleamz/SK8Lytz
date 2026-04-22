@@ -869,8 +869,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               grouped: !!dCfg?.groupId || sDef?.grouped || false,
               groupId: dCfg?.groupId || sDef?.groupId,
               groupName: customGroups.find(g => g.id === (dCfg?.groupId || sDef?.groupId))?.name || getDefaultGroupName(sDef?.product_type || sDef?.type),
-              firmware: dCfg?.firmware || sDef?.firmware || (sDef?.id?.startsWith('sim-') ? 'v2.0.1.DEMO' : 'Unknown')
+              firmware: dCfg?.firmware || sDef?.firmware || (sDef?.id?.startsWith('sim-') ? 'v2.0.1.DEMO' : 'Unknown'),
+              // Thread product_id through: BLE peripheral may carry it directly post-scan;
+              // fall back to the registered_devices record which always has it after a cloud sync.
+              productId: sDef?.productId || registeredDevices.find(
+                (r: any) => r.device_mac.toUpperCase() === targetMac
+              )?.product_id ?? undefined,
             };
+
           })()}
           groups={customGroups}
           deviceName={(() => {

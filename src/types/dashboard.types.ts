@@ -55,7 +55,10 @@ export interface DeviceSettings {
   userConfiguredAt?: string;
   rfMode?: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED';
   rfRemotes?: string[];
+  /** ZENGGE hardware product ID reported during BLE pairing (0xA3 = 163 for all SK8Lytz hardware). */
+  productId?: number;
 }
+
 
 
 export interface CustomGroup {

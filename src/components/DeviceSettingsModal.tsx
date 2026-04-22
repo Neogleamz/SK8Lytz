@@ -446,6 +446,26 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
               />
             </View>
 
+            {/* PRODUCT ID chip — read-only, shown only when available from BLE pairing */}
+            {initialSettings.productId != null && (
+              <View style={[styles.inputGroup, { marginTop: 0, marginBottom: Spacing.lg }]}>
+                <Text style={styles.label}>Hardware Product ID</Text>
+                <View style={styles.productIdChip}>
+                  <Text style={styles.productIdChipText}>
+                    {'⬡ '}
+                    <Text style={{ fontWeight: '900' }}>
+                      0x{initialSettings.productId.toString(16).toUpperCase().padStart(2, '0')}
+                    </Text>
+                    {'  '}
+                    <Text style={{ color: Colors.textMuted }}>
+                      ({initialSettings.productId})
+                    </Text>
+                  </Text>
+                  <Text style={styles.productIdSubtext}>Confirmed via BLE advertisement</Text>
+                </View>
+              </View>
+            )}
+
           </ScrollView>
 
           <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
@@ -547,5 +567,24 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 4,
-  }
+  },
+  productIdChip: {
+    backgroundColor: 'rgba(0, 240, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 255, 0.25)',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  productIdChipText: {
+    color: '#00f0ff',
+    fontSize: 15,
+    letterSpacing: 0.5,
+  },
+  productIdSubtext: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 10,
+    marginTop: 4,
+    letterSpacing: 0.3,
+  },
 });
