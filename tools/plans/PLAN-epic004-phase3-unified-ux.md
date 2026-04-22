@@ -14,11 +14,13 @@
 
 ## Overview
 
-Phase 3 brings everything together into one cohesive, world-class LED control UI. Three deliverables ship together:
+Phase 2 brings everything together into one cohesive, world-class LED control UI. Three deliverables ship together:
 
-1. **`<LEDStripPreview>`** — reusable animated LED strip React component
-2. **Unified Pattern Picker** — replaces the fragmented current pickers with one tabbed UI
-3. **32-Slot Scene Builder** — the finish line: compose HD light shows from all 45 patterns + 33 symphony effects
+1. **`<LEDStripPreview>`** — reusable animated LED strip React component (PatternEngine only)
+2. **Unified Pattern Picker** — replaces fragmented pickers with one tabbed UI: PATTERNS | BUILDER | SCENES
+3. **32-Slot Scene Builder** — the finish line: compose HD light shows from all 45 patterns
+
+**Architecture mandate**: Every tab sends a PatternEngine pixel array via `0x59`. The ProductVisualizer runs the exact same math. Visualizer = Skates. Always. No exceptions.
 
 ---
 
@@ -30,9 +32,8 @@ A reusable animated component that renders a strip of N colored dots, driven by 
 ### Props Interface
 ```typescript
 interface LEDStripPreviewProps {
-  // Source: either PatternEngine or Symphony
-  mode: 'pattern' | 'symphony';
-  effectId: number;              // patternId (1-45) or symphonyId (1-33)
+  // Source: PatternEngine only
+  patternId: number;             // 1–45
 
   // Colors
   fg: string;                   // hex color
@@ -56,23 +57,17 @@ interface LEDStripPreviewProps {
 ### Implementation
 ```typescript
 // src/components/LEDStripPreview.tsx
-export const LEDStripPreview = React.memo(({ mode, effectId, fg, bg, numLEDs, speed, autoPlay = true, dotSize = 6, height = 16 }: LEDStripPreviewProps) => {
-  const animRef = useRef(new Animated.Value(0)).current;
+export const LEDStripPreview = React.memo(({ patternId, fg, bg, numLEDs, speed, autoPlay = true, dotSize = 6, height = 16 }: LEDStripPreviewProps) => {
   const [frame, setFrame] = useState<RGB[]>([]);
 
   useEffect(() => {
     if (!autoPlay) return;
     const interval = setInterval(() => {
       const tick = (Date.now() % (1000 / (speed || 50) * 100)) / (1000 / (speed || 50) * 100);
-      if (mode === 'pattern') {
-        setFrame(getVisualizerFrame(effectId, hexToRgb(fg), hexToRgb(bg), numLEDs, tick));
-      } else {
-        const ticker = SYMPHONY_EFFECTS[effectId];
-        if (ticker) setFrame(ticker(tick, hexToRgb(fg), hexToRgb(bg), numLEDs, speed || 50));
-      }
-    }, 50); // 20fps — enough for smooth previews
+      setFrame(getVisualizerFrame(patternId, hexToRgb(fg), hexToRgb(bg), numLEDs, tick));
+    }, 50); // 20fps
     return () => clearInterval(interval);
-  }, [mode, effectId, fg, bg, numLEDs, speed, autoPlay]);
+  }, [patternId, fg, bg, numLEDs, speed, autoPlay]);
 
   return (
     <View style={{ height, flexDirection: 'row', borderRadius: 4, overflow: 'hidden' }}>
@@ -96,42 +91,41 @@ Replace the current fragmented pickers (EffectsPanel, MultiModePanel each has ow
 ### Three Tabs
 ```
 ┌──────────────────────────────────────┐
-│  [ PATTERNS (45) ] [ SYMPHONY (33) ] [ SCENES ] │
+│  [ PATTERNS (45) ] [ BUILDER ] [ SCENES ]   │
 └──────────────────────────────────────┘
 ```
 
 ### Tab 1: Math Patterns (45 effects)
 - Grid of cards, 2 columns
-- Each card: pattern name + `<LEDStripPreview mode="pattern" effectId={id} />` animated live
+- Each card: pattern name + `<LEDStripPreview patternId={id} />` animated live
 - FG/BG color pickers at top (persistent across card selection)
 - Tap card → fires `applyFixedPattern(id, fg, bg, speed)` immediately
 - Speed slider at bottom
 
-### Tab 2: Symphony Effects (33 effects)
-- Same grid layout as patterns
-- `<LEDStripPreview mode="symphony" effectId={id} />` for each card
-- Color pickers respect `getSymphonyColorGate(id)` — show FG+BG, FG only, or hidden
-- Tap → fires `ZenggeProtocol.setSettledMode(id, fg, bg, speed, direction)`
-- Direction toggle visible only for `supportsDirection: true` effects
+### Tab 2: Gradient Builder
+- Opens `PositionalGradientBuilder` inline (existing component)
+- All pins use PatternEngine math—parity guaranteed
+- `<LEDStripPreview>` shows live builder output
 
 ### Tab 3: Scenes
 - Empty state with "Create New Scene" CTA → opens Scene Builder modal
-- Saved scenes listed with `<LEDStripPreview>` preview of first step
+- Saved scenes listed with `<LEDStripPreview>` preview of first step's pattern
 - Tap → loads scene, fires it to hardware
 
 ### Component Structure
 ```
 src/components/patterns/
-  UnifiedPatternPicker.tsx      [NEW] — top-level with tabs
-  PatternPickerTab.tsx          [NEW] — grid for patterns
-  SymphonyPickerTab.tsx         [NEW] — grid for symphony
+  UnifiedPatternPicker.tsx      [NEW] — top-level with 3 tabs
+  PatternPickerTab.tsx          [NEW] — 45-pattern grid
+  GradientBuilderTab.tsx        [NEW] — inline PositionalGradientBuilder
   ScenePickerTab.tsx            [NEW] — saved scenes list
   PatternCard.tsx               [NEW] — individual card with LEDStripPreview
 ```
 
 ### Integration Points
-- `DockedController.tsx` → replace current `EffectsPanel` + `MultiModePanel` references with `<UnifiedPatternPicker>`
-- State passed in: `fg`, `bg`, `speed`, `direction`, `currentPatternId`, `currentMode`
+- `DockedController.tsx` → replace current `EffectsPanel` + `MultiModePanel` with `<UnifiedPatternPicker>`
+- State passed in: `fg`, `bg`, `speed`, `direction`, `currentPatternId`
+- PROGRAMS mode and Symphony mode are no longer needed — their removal is tracked in `refactor/retire-programs-tab`
 
 ---
 
