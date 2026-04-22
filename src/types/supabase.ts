@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -1189,6 +1189,7 @@ export type Database = {
           points: number
           position: string | null
           product_id: number | null
+          product_id_confirmed_at: string | null
           product_type: string | null
           registered_at: string | null
           rf_mode: string | null
@@ -1220,6 +1221,7 @@ export type Database = {
           points: number
           position?: string | null
           product_id?: number | null
+          product_id_confirmed_at?: string | null
           product_type?: string | null
           registered_at?: string | null
           rf_mode?: string | null
@@ -1251,6 +1253,7 @@ export type Database = {
           points?: number
           position?: string | null
           product_id?: number | null
+          product_id_confirmed_at?: string | null
           product_type?: string | null
           registered_at?: string | null
           rf_mode?: string | null
@@ -1467,6 +1470,24 @@ export type Database = {
           total?: number | null
           transaction_fees?: number | null
           transaction_type?: string | null
+        }
+        Relationships: []
+      }
+      scraper_blocklist_keywords: {
+        Row: {
+          added_by: string | null
+          created_at: string | null
+          keyword: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string | null
+          keyword: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string | null
+          keyword?: string
         }
         Relationships: []
       }
@@ -1723,6 +1744,8 @@ export type Database = {
         Row: {
           address: string | null
           adult_night_details: string | null
+          adult_night_schedule: Json | null
+          candidate_photos: Json | null
           capacity: number | null
           city: string | null
           created_at: string | null
@@ -1760,6 +1783,7 @@ export type Database = {
           operator_name: string | null
           phone: string | null
           phone_number: string | null
+          photos: Json | null
           pricing_data: Json | null
           rating: number | null
           raw_knowledge_panel: Json | null
@@ -1785,6 +1809,8 @@ export type Database = {
         Insert: {
           address?: string | null
           adult_night_details?: string | null
+          adult_night_schedule?: Json | null
+          candidate_photos?: Json | null
           capacity?: number | null
           city?: string | null
           created_at?: string | null
@@ -1822,6 +1848,7 @@ export type Database = {
           operator_name?: string | null
           phone?: string | null
           phone_number?: string | null
+          photos?: Json | null
           pricing_data?: Json | null
           rating?: number | null
           raw_knowledge_panel?: Json | null
@@ -1849,6 +1876,8 @@ export type Database = {
         Update: {
           address?: string | null
           adult_night_details?: string | null
+          adult_night_schedule?: Json | null
+          candidate_photos?: Json | null
           capacity?: number | null
           city?: string | null
           created_at?: string | null
@@ -1886,6 +1915,7 @@ export type Database = {
           operator_name?: string | null
           phone?: string | null
           phone_number?: string | null
+          photos?: Json | null
           pricing_data?: Json | null
           rating?: number | null
           raw_knowledge_panel?: Json | null
@@ -2597,6 +2627,19 @@ export type Database = {
           spot_id: string
         }[]
       }
+      get_databank_coverage: {
+        Args: never
+        Returns: {
+          ENRICHED: number
+          IDENTITY_ESTABLISHED: number
+          INDEXED: number
+          MEDIA_READY: number
+          PENDING: number
+          published: number
+          state: string
+          total: number
+        }[]
+      }
       get_email_by_username: { Args: { p_username: string }; Returns: string }
       get_nearby_push_tokens: {
         Args: { p_max_tokens?: number; p_session_id: string }
@@ -2606,10 +2649,12 @@ export type Database = {
         }[]
       }
       get_next_spot_for_indexer: {
-        Args: never
+        Args: { priority_states?: string[] }
         Returns: {
           address: string | null
           adult_night_details: string | null
+          adult_night_schedule: Json | null
+          candidate_photos: Json | null
           capacity: number | null
           city: string | null
           created_at: string | null
@@ -2647,6 +2692,7 @@ export type Database = {
           operator_name: string | null
           phone: string | null
           phone_number: string | null
+          photos: Json | null
           pricing_data: Json | null
           rating: number | null
           raw_knowledge_panel: Json | null
@@ -2677,10 +2723,12 @@ export type Database = {
         }
       }
       get_next_spot_for_operator: {
-        Args: never
+        Args: { priority_states?: string[] }
         Returns: {
           address: string | null
           adult_night_details: string | null
+          adult_night_schedule: Json | null
+          candidate_photos: Json | null
           capacity: number | null
           city: string | null
           created_at: string | null
@@ -2718,6 +2766,7 @@ export type Database = {
           operator_name: string | null
           phone: string | null
           phone_number: string | null
+          photos: Json | null
           pricing_data: Json | null
           rating: number | null
           raw_knowledge_panel: Json | null
@@ -2747,76 +2796,23 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      get_next_spot_to_enrich: {
-        Args: never
+      get_pipeline_stats: {
+        Args: { p_states?: string[] }
         Returns: {
-          address: string | null
-          adult_night_details: string | null
-          capacity: number | null
-          city: string | null
-          created_at: string | null
-          cultural_metadata: Json | null
-          facebook_url: string | null
-          facility_type: string | null
-          google_place_id: string | null
-          has_ac: boolean | null
-          has_adult_night: boolean | null
-          has_fee: boolean | null
-          has_food: boolean | null
-          has_lights: boolean | null
-          has_lockers: boolean | null
-          has_pro_shop: boolean | null
-          has_proshop: boolean | null
-          has_rental: boolean | null
-          has_toilets: boolean | null
-          has_wifi: boolean | null
-          hosts_derby: boolean | null
-          id: string
-          instagram_url: string | null
-          is_deep_crawled: boolean | null
-          is_featured: boolean | null
-          is_indoor: boolean | null
-          is_published: boolean | null
-          is_verified: boolean | null
-          is_wheelchair_accessible: boolean | null
-          last_attempted_at: string | null
-          last_enriched_at: string | null
-          lat: number
-          lng: number
-          name: string
-          opening_hours: Json | null
-          operator_description: string | null
-          operator_name: string | null
-          phone: string | null
-          phone_number: string | null
-          pricing_data: Json | null
-          rating: number | null
-          raw_knowledge_panel: Json | null
-          retry_count: number | null
-          schedule_url: string | null
-          socials: Json | null
-          source: string | null
-          special_events: Json | null
-          state: string | null
-          street_address: string | null
-          surface_quality: string | null
-          surface_type: Database["public"]["Enums"]["skate_spot_surface"] | null
-          tiktok_url: string | null
-          updated_at: string | null
-          updated_by: string | null
-          user_ratings_total: number | null
-          verification_status: string | null
-          vibe_rating: number | null
-          vibe_score: number | null
-          website: string | null
-          zip: string | null
+          deep_crawled: number
+          detective_queue: number
+          enriched: number
+          has_candidates: number
+          has_photos: number
+          has_website: number
+          identity_established: number
+          media_ready: number
+          pending: number
+          photographer_queue: number
+          published: number
+          state: string
+          total: number
         }[]
-        SetofOptions: {
-          from: "*"
-          to: "skate_spots"
-          isOneToOne: false
-          isSetofReturn: true
-        }
       }
       gettransactionid: { Args: never; Returns: unknown }
       increment_scene_download: {
@@ -3623,4 +3619,3 @@ export const Constants = {
     },
   },
 } as const
-

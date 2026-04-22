@@ -41,6 +41,10 @@ When my prompt includes "good night", "wrapping up", "wind down", "done for the 
    - List any "Traps & Landmines": Technical debt, half-finished refactors, or bugs encountered that need immediate attention next time.
    - State the current active branch and the last commit hash.
 
+4.5. **Database Backup**:
+   - Execute `powershell.exe -ExecutionPolicy Bypass -File .\tools\backup_database.ps1` via the terminal.
+   - Verify the script completes successfully and report the backup file sizes in the Final SITREP.
+
 5. **Hard Freeze**:
    - Close all background terminal processes (dev servers, etc.) if applicable.
    - Output a final, thematic SK8Lytz-style sign-off (e.g., "Skates docked. Lights dimmed. See you on the next session.").

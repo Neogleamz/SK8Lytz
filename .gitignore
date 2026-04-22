@@ -111,3 +111,6 @@ tools/btreport_extracted/
 
 # Temporary agent recovery / working files (local only)
 tools/RECOVERED_TASKS.md
+
+# Local Database Backups
+backups/
