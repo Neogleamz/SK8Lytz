@@ -872,9 +872,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               firmware: dCfg?.firmware || sDef?.firmware || (sDef?.id?.startsWith('sim-') ? 'v2.0.1.DEMO' : 'Unknown'),
               // Thread product_id through: BLE peripheral may carry it directly post-scan;
               // fall back to the registered_devices record which always has it after a cloud sync.
-              productId: sDef?.productId || registeredDevices.find(
+              productId: (sDef?.productId || registeredDevices.find(
                 (r: any) => r.device_mac.toUpperCase() === targetMac
-              )?.product_id ?? undefined,
+              )?.product_id) ?? undefined,
             };
 
           })()}
