@@ -25,17 +25,25 @@ export const LOCAL_PRODUCT_CATALOG: ProductProfile[] = [
     id: 'HALOZ',
     displayName: 'HALOZ™',
 
-    defaultLedPoints: 16,
-    defaultSegments: 1,
+    // ── HARDWARE TRUTH (confirmed 2026-04-22) ──────────────────────────────
+    // Layer 1 (canvas):  ledPoints=8  → 8 addressable LEDs per segment
+    // Layer 2 (mirror):  segments=2   → hardware auto-mirrors pattern to 2nd segment
+    // Layer 3 (physics): 16 total physical LEDs (8 × 2)
+    // ⚠️  NEVER build a 16-element pixel array and send it to HALOZ.
+    //     Build an 8-element array. The hardware duplicates it automatically.
+    // ⚠️  Previous code had defaultLedPoints:16, segments:1 which is WRONG.
+    //     It resulted in bypassing the hardware segment mirror engine.
+    defaultLedPoints: 8,
+    defaultSegments: 2,
     defaultIcType: 1,      // WS2812B
     defaultColorSorting: 2, // GRB
-    hardwareAllowsCustomPoints: false,
+    hardwareAllowsCustomPoints: false, // HALOZ ring is fixed geometry
 
     detectMinPoints: 10,
     detectMaxPoints: 27,
 
     vizShape: 'RING',
-    vizDefaultPoints: 16,
+    vizDefaultPoints: 16, // visualizer renders 16 dots (8 × 2 segments) for accurate preview
     vizBlobDiameterMm: 7.6,
     vizBaseWidth: 60,
     vizBaseHeight: 90,
@@ -48,11 +56,23 @@ export const LOCAL_PRODUCT_CATALOG: ProductProfile[] = [
     id: 'SOULZ',
     displayName: 'SOULZ™',
 
+    // ── HARDWARE TRUTH (confirmed 2026-04-22) ──────────────────────────────
+    // Layer 1 (canvas):  ledPoints=43 (user-adjustable after cutting strips to length)
+    // Layer 2 (mirror):  segments=1   → no hardware mirroring
+    // Layer 3 (physics): 86 total physical LEDs across BOTH skate boots
+    //   → 43 LEDs on LEFT skate (outside of boot)
+    //   → 43 LEDs on RIGHT skate (inside of boot)
+    //   → Both strips are Y-wired to the SAME controller output.
+    //     The controller is oblivious to the doubling — it drives one 43-point canvas.
+    //     The wiring handles physical duplication transparently.
+    // ⚠️  IF the user cuts strips shorter they MUST adjust ledPoints in HW Setup
+    //     (e.g. cut to 36 per skate → set ledPoints=36). The controller must match reality.
+    //     hardwareAllowsCustomPoints=true enables the LED Points adjuster in setup wizard.
     defaultLedPoints: 43,
     defaultSegments: 1,
     defaultIcType: 2,      // SM16703
     defaultColorSorting: 2, // GRB
-    hardwareAllowsCustomPoints: true,
+    hardwareAllowsCustomPoints: true, // User can trim strips to custom length
 
     detectMinPoints: 28,
     detectMaxPoints: 300,

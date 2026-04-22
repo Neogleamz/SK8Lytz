@@ -1,6 +1,6 @@
 # SK8Lytz App Master Reference
 
-_Last Updated: 2026-04-21 | APK Decompile Protocol Audit — 0x73 micSource corrected, 0x51 323B format for 0xA3, 6 missing opcodes added | Source of Truth: `src/protocols/ZenggeProtocol.ts`, `ZENGGE_PROTOCOL_BIBLE.md`_
+_Last Updated: 2026-04-22 | Oracle Hardware Validation Session + Live BLE Sniff — 0x51 slot structure confirmed from hardware capture, 0x43 debunked on our firmware, ZENGGE app UI→protocol mapping documented | Source of Truth: `src/protocols/ZenggeProtocol.ts`, `ZENGGE_PROTOCOL_BIBLE.md`_
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
 
@@ -49,6 +49,49 @@ Sk8Lytz caters to a diverse, family-oriented community of dedicated roller skate
 - **Performance**: Integrated 4-6+ hour run time.
 - **Charging**: 90 min (USB-C).
 - **Control**: Integrated Bluetooth/RF + High-sensitivity integrated microphone.
+
+### Hardware Truth Table — Confirmed 2026-04-22
+
+> [!IMPORTANT]
+> This is the **canonical source of truth** for all LED count math, pixel array sizing, and EEPROM provisioning. The three-layer model below governs ALL protocol and UI decisions. `ProductCatalog.ts` code comments cite this table. See `ZENGGE_PROTOCOL_BIBLE.md` §3 for `0x62`/`0x63` EEPROM command details.
+
+#### The Three-Layer LED Model
+
+Every product has three distinct LED "counts" that mean different things:
+
+| Layer | Name | What it represents | Code field |
+|:------|:-----|:-------------------|:-----------|
+| **1** | `ledPoints` | Addressable LEDs **per segment** — the design canvas | `hwSettings.ledPoints` |
+| **2** | `segments` | Number of hardware mirrors of Layer 1 | `hwSettings.segments` |
+| **3** | Physical LEDs | Total real LEDs in the world (`ledPoints × segments`, or × wiring factor) | Not stored — derived only |
+
+> **Golden Rule**: All pixel arrays (`0x59`, `0x31`) MUST be built using `ledPoints` (Layer 1). Segments and wiring are the hardware's job, not the app's.
+
+#### Confirmed Product Defaults
+
+| Product | `ledPoints` | `segments` | Physical LEDs | Adjustable? | Architecture |
+|:--------|:-----------:|:----------:|:-------------:|:-----------:|:-------------|
+| **HALOZ** | **8** | **2** | 16 | ❌ Fixed | Ring. Hardware **auto-mirrors** the 8-point pattern to a 2nd segment. Always send 8-element arrays. |
+| **SOULZ** | **43** | **1** | 86* | ✅ Yes | Strip. No hardware mirroring. Controller drives one 43-point canvas. Physical doubling from Y-wire is transparent. |
+| **RAILZ** | **30** | **2** | 60 | ✅ Yes | Dual rail. Placeholder — confirm with hardware before shipping. |
+
+*SOULZ physical reality: 43 LEDs on LEFT skate (outside boot) + 43 LEDs on RIGHT skate (inside boot), both Y-wired to the same controller output. The controller is **oblivious to the doubling**.
+
+#### SOULZ — User-Adjustable `ledPoints`
+
+SOULZ strips are cut-to-length. If a user physically cuts the strip shorter, they **must** update `ledPoints` in the HW Setup Wizard to match the physical count. Example: cut from 43→36 → set `ledPoints=36`. The LED Points adjuster in the wizard (`hardwareAllowsCustomPoints: true`) exists for exactly this reason.
+
+Every pixel array builder (`PatternEngine`, `applyEmergencyPattern`, etc.) must read `hwSettings.ledPoints` dynamically — NEVER hardcode 43.
+
+#### ⚠️ Previous Bug (Fixed 2026-04-22)
+
+`ProductCatalog.ts` previously had `HALOZ.defaultLedPoints = 16, segments = 1`. This was **wrong** — it caused:
+1. `applyEmergencyPattern` sending 16-element arrays to an 8-point device, bypassing the hardware segment mirror engine
+2. Any EEPROM probe (`0x63`) returning `ledPoints=8` would have caused a mismatch with stored defaults
+
+Fixed: `HALOZ.defaultLedPoints = 8, segments = 2`.
+
+---
 
 **Core Philosophies (The 3 Pillars):**
 
@@ -188,10 +231,12 @@ All byte definitions below represent the inner payload _before_ the V2 BLE packe
 >
 > **Key implications of 0xA3 vs 0xA2:**
 > - `0x59` Static Colorful tab **IS available** on 0xA3 (not available on 0xA2) ✅
-> - `0x51` Custom Scene **requires 323-byte extended format** (10B/slot) on 0xA3 — NOT the 291-byte (9B/slot) short format
-> - `0x42` effect ceiling: **1–100** (same as 0xA2)
-> - Source: `C7787x.m20864c()` (0xA3 path) vs `m20865b()` (0xA2 path), decompiled ZENGGE 1.5.0 APK
-> - Full protocol authority: `tools/ZENGGE_PROTOCOL_BIBLE.md`
+> - `0x51` Custom Scene — **9B compact format (291B) WORKS** on 0xA3 via our standard `wrapCommand` ✅
+> - `0x51` 10B extended format (323B) does NOT work via our wrapper — requires ZENGGE chunked framing header (see Protocol Bible Section 11)
+> - `0x42` effect ceiling: **1–100** (same as 0xA2). Effect 101 plays an undocumented effect (ceiling is soft).
+> - `0x43` Multi-Sequence: **DO NOT USE** — Oracle test caused hardware LED shutoff (state machine crash). ZENGGE app uses `0x51` for multi-step effects, not `0x43`.
+> - `0x41` Settled Mode, `0x53` Live Pixel Stream: **Unconfirmed** — our wrapper format appears wrong for these opcodes.
+> - Source: Oracle Lab + live BLE HCI sniff (2026-04-22), `ZENGGE_PROTOCOL_BIBLE.md` Section 11
 
 ### BLE Stability Constraints & GATT Error Prevention
 
@@ -302,11 +347,25 @@ _Writes custom segments, IC type, and max LED points permanently to the controll
 - **Format:** `[0x62, ptsHigh, ptsLow, segHigh, segLow, icType, sorting, micPts, micSegs, 0xF0, checksum]`
 - **CRITICAL ENDIANNESS:** Uses **Big-Endian format**: `ptsHigh = (points >> 8) & 0xFF`, `ptsLow = points & 0xFF`.
 
+> [!NOTE]
+> **`points` ≠ total LEDs.** `points` = LEDs per segment. `segments` = number of parallel mirrors.
+> Total physical LEDs = `points × segments`. The hardware's segment engine mirrors the pattern automatically.
+> **HALOZ example**: 22 bulbs = 11 points × 2 segments. All pattern commands use 11, not 22.
+> The `0x51` slot `flags=0x80` byte enables segment mirroring ("section toggle"). `flags=0x00` disables it.
+> Full model documented in `ZENGGE_PROTOCOL_BIBLE.md` under `0x62`.
+
 ---
 
 ### Command: Segmented Multi-Color Layout Array (0x59)
 
 _Primary command for all IC-strip patterns. Sends a per-pixel RGB array that the hardware loops autonomously._
+
+> [!IMPORTANT]
+> **SEGMENT MODEL — Array Length Must Use `ledPoints`, NOT Total LEDs.**
+> The ZENGGE hardware segment engine automatically mirrors the `ledPoints` pattern across all segments.
+> For HALOZ (22 bulbs = 11 points × 2 segments), send an array of **11** pixels, not 22.
+> Sending `ledPoints × segments` pixels bypasses the hardware mirror and fills both segments manually.
+> Source: BLE sniff observation (2026-04-22) — ZENGGE Multi-Color creator uses `points` exclusively.
 
 - **Format:** `[0x59, totalLenHi, totalLenLo, [R1,G1,B1...], numLEDsHi, numLEDsLo, transitionType, speed, direction, checksum]`
 - **Source of Truth:** `ZenggeProtocol.setMultiColor()` — _do NOT replicate this logic elsewhere._
@@ -328,21 +387,31 @@ _Primary command for all IC-strip patterns. Sends a per-pixel RGB array that the
 
 ### Command: DIY Custom Animation Sequences (0x51)
 
-_Sends up to 32 animation steps. Hardware loops through active steps autonomously._
+_Sends up to 32 animation steps. Hardware loops through active steps autonomously. Steps are stored in device EEPROM._
 
-> [!CAUTION]
-> **0xA3 HARDWARE REQUIRES EXTENDED FORMAT (323 BYTES).** The 291-byte short format is for 0xA2 only. Using the wrong format on 0xA3 will cause scene corruption. Source: `C7787x.m20864c()` (0xA3) vs `m20865b()` (0xA2), decompiled ZENGGE 1.5.0 APK.
+> [!IMPORTANT]
+> **ORACLE + BLE SNIFF CONFIRMED (2026-04-22)**: The 9B compact format (291B) fired by our current `setCustomMode()` **works correctly** on 0xA3 hardware. The 10B extended format via our `wrapCommand` does nothing. The ZENGGE app sends 10B slots using a different chunked BLE framing header. Full evidence in `ZENGGE_PROTOCOL_BIBLE.md` Section 11.
 
-- **Extended Format — 0xA3 CONFIRMED (323 Bytes):** `[0x51, Step0(10B)...Step31(10B), 0x0F_Terminator, checksum]`
-- **Short Format — 0xA2 ONLY (291 Bytes):** `[0x51, Step0(9B)...Step31(9B), 0x0F_Terminator, checksum]`
+- **Format (current working):** `[0x51, Step0(9B)...Step31(9B), 0x0F_Terminator, checksum]` (291 bytes)
+- **Format (ZENGGE app, requires chunked framing):** `[0x51, Step0(10B)...Step31(10B), checksum]` (via `[40 seq 00 00 01 43 BD 0B]` header)
 
-**Step Structure — Extended (10 Bytes, 0xA3):** `[ACTIVE_FLAG, effectId, colorId, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b, directionFlags]`
+**Step Structure — Hardware-Confirmed 10-Byte (from live BLE sniff):**
+```
+[ACTIVE_FLAG, effectId, speed, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b, flags]
+```
 - `ACTIVE_FLAG`: `0xF0` = active step, `0x0F` = inactive (skip).
-- `directionFlags`: `(mirror ? 128 : 0) | effectVariant` — encodes mirror and direction bits.
+- `effectId`: SymphonyEffect ID 1–33
+- `speed`: 0–100 (direct, no scaling)
+- `FG.RGB`: Foreground color (ignored for NO_COLOR/rainbow effects)
+- `BG.RGB`: Background color (ignored for NO_COLOR/rainbow effects)
+- `flags`: `0x80` = forward + section toggle enabled, `0x00` = reverse
 
-**Step Structure — Short (9 Bytes, 0xA2):** `[ACTIVE_FLAG, transMode, speed, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b]`
+**Step Structure — Current Production 9-Byte (works via our wrapper):**
+```
+[ACTIVE_FLAG, transMode, speed, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b]
+```
 
-- **Step Transition Mode Bytes (for short format):**
+- **Step Transition Mode Bytes (for 9B format):**
 
 | Byte | Constant | Behavior |
 |:---|:---|:---|
@@ -352,8 +421,8 @@ _Sends up to 32 animation steps. Hardware loops through active steps autonomousl
 | `0x01`–`0x21` | Custom Effects 1–33 | Hardware `SymphonyEffect` IDs (advanced per-pixel effects) |
 
 - **Speed:** Full 1–100 range valid (unlike `0x59` which is capped at 31).
-- **Max slots:** 32 active steps. Terminator: `0x0F` after last slot.
-- **Source of Truth:** `ZenggeProtocol.setCustomMode()` — **must be updated to emit 323B for 0xA3.**
+- **Max slots:** 32 active steps.
+- **Source of Truth:** `ZenggeProtocol.setCustomMode()` — current 9B format is production-safe.
 
 ---
 
@@ -374,10 +443,11 @@ _Triggers one of 33 Symphony effects with explicit foreground and background col
 
 ### Command: Multi-Effect Sequence (0x43)
 
-_Sends up to 50 effect IDs that hardware cycles through automatically. Useful for auto-rotating patterns without BLE re-sends._
+> [!CAUTION]
+> **DO NOT USE IN PRODUCTION.** Oracle Lab test (2026-04-22) confirmed that our `0x43` payload causes the hardware's **LEDs to shut off completely** (state machine crash). The ZENGGE app's "Customize Tab" actually uses `0x51` with 10-byte slots for multi-step effects — NOT `0x43`. This opcode is either unused in our firmware revision or requires a completely different BLE framing to activate safely.
 
+_APK-documented format below is preserved for reference only:_
 - **Format:** `[0x43, effectId[0]...effectId[49], speed, brightness, checksum]` (54 bytes total)
-- **Padding:** If fewer than 50 effects, pad remaining slots with `0x00`
 - **Source:** `C7778o.java` → `m20874a()`, called by `FunctionModeFragment` when no single effect is selected
 
 ### Command: Set RBM Built-in Pattern (0x42)
