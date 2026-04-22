@@ -57,9 +57,16 @@ export function useCrewHub(visible: boolean, step: string) {
     });
   }, [visible, step, myCrews]);
 
-  // Refresh Nearby Sessions
+  useEffect(() => {
+    // Attempt to silently grab location if permission exists so map knows where to center initially
+    locationService.getSilentLocation().then(coords => {
+      if (coords) setLocationCoords(coords);
+    });
+  }, []);
+
   const refreshNearby = useCallback(() => {
     setIsLoadingNearby(true);
+    
     Promise.all([
       locationService.getNearbyPublicSessions(discoverRadiusMi),
       locationService.getNearbySkateSpots(discoverRadiusMi)
