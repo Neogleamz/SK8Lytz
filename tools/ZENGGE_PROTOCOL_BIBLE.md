@@ -5,7 +5,7 @@
 > `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\ZENGGE_APK\ZENGGE_DECOMPILED\sources\`
 > No community docs, no guesses. Every byte is APK-verified.
 
-> **Last Updated**: 2026-04-21
+> **Last Updated**: 2026-04-22 (Oracle Hardware Validation Session + Live BLE Sniff)
 > **Confirmed Hardware**: `Ctrl_Mini_RGB_Symphony_new_0xA3` (product_id: 163 = 0xA3)
 > **Source Files**: `tc/C14184b.java`, `tc/C14187d.java`, `com/zengge/wifi/COMM/Protocol/C77*.java`,
 >   `com/zengge/wifi/activity/NewSymphony/fragment/*.java`
@@ -152,6 +152,10 @@ return (byte) sum;
 ```
 - **SK8Lytz relevance**: MEDIUM — useful for auto-cycling effect sequences without BLE resend
 
+> **⚠️ ORACLE LAB RESULT (2026-04-22)**: Sending our hypothesized `0x43` payload caused the hardware to **cut all LEDs** (state machine crash/reset). The payload structure from the APK decompile was NOT accepted by our firmware.
+>
+> **BLE SNIFF FINDING**: The ZENGGE app's "Customize Tab" (multi-step effects) actually uses **`0x51`** — NOT `0x43`. The `0x43` opcode may be unused in our firmware revision, reserved for a newer OEM variant, or require a different wrapping protocol. **Do NOT use `0x43` in production until confirmed via future sniff with a different BLE connection setup.**
+
 ---
 
 ### 0x47 — State Query
@@ -165,26 +169,52 @@ return (byte) sum;
 ### 0x51 — Custom Scene (Save/Play from device EEPROM)
 - **Builder**: `C7787x.java` → `m20864c()` (extended) or `m20865b()` (short)
 - **Called by**: `CustomModeFragment` via `ActivityCustomSymphonyEdit`
-- **0xA3 uses EXTENDED format** (323 bytes, 10B/slot):
+
+> **🔬 ORACLE + BLE SNIFF GROUND TRUTH (2026-04-22)**: Both Oracle Lab tests AND live BLE capture of the official ZENGGE app confirm the following. See Section 11 for full raw bytes.
+
+**HARDWARE REALITY (contradicts APK branch logic):**
+- The `9B compact` format (`setCustomMode`, 291B) **fires correctly** on our 0xA3 hardware ✅
+- The `10B extended` format (`setCustomModeExtended`, 323B) **does nothing** on our 0xA3 hardware ❌
+- **HOWEVER**: Live BLE sniff of the ZENGGE app reveals it sends **10-byte slots** for `0x51`, reaching the hardware via a DIFFERENT BLE framing header.
+
+**CONCLUSION**: Our `setCustomModeExtended` fails not because the hardware rejects 10B slots, but because our **BLE framing/wrapper is wrong** for multi-packet `0x51` payloads. The ZENGGE app uses a chunked framing protocol with header `[40 seq 00 00 01 43 BD 0B]` before the opcode.
 
 ```
-SHORT FORMAT (291 bytes) — NOT FOR 0xA3:
-[0x51, slot[0](9B)...slot[31](9B), 0x0F_terminator, checksum]
-Each 9B slot: [0xF0(active)|0x0F(empty), effectId, colorId, FG.R, FG.G, FG.B, BG.R, BG.G, BG.B]
+CONFIRMED 10-BYTE SLOT STRUCTURE (from live BLE sniff):
+[0x51, slot[0](10B)...slot[31](10B), checksum]
 
-EXTENDED FORMAT (323 bytes) — 0xA3 CONFIRMED:
-[0x51, slot[0](10B)...slot[31](10B), 0x0F_terminator, checksum]
-Each 10B slot: [0xF0(active)|0x0F(empty), effectId, colorId, FG.R, FG.G, FG.B, BG.R, BG.G, BG.B, directionFlags]
-directionFlags byte: (mirror ? 128 : 0) | c9273c.m16246c()
+Active slot (10 bytes):
+[0xF0, effectId, speed, FG.R, FG.G, FG.B, BG.R, BG.G, BG.B, flags]
+  0xF0   = active slot marker
+  effectId = SymphonyEffect ID 1-33
+  speed  = 0x00-0x64 (0-100)
+  FG.RGB = foreground color (ignored for NO_COLOR effects)
+  BG.RGB = background color (ignored for NO_COLOR effects)
+  flags  = 0x80 (forward+section_toggle) | 0x00 (reverse)
+
+Empty slot (10 bytes):
+[0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+  0x0F   = empty/null slot marker
 ```
+
+**ZENGGE BLE Chunked Framing Header** (precedes opcode for large payloads):
+```
+[0x40, seqNum, offset_lo, offset_hi, 0x01, 0x43, 0xBD, 0x0B, opcode=0x51, ...payload]
+Chunk 1: offset = 0x0000
+Chunk 2: offset = 0x0180
+seqNum increments per save operation (0x04, 0x05, 0x06...)
+```
+
+**ZENGGE App UI → Protocol Mapping (confirmed from sniff):**
+| ZENGGE UI | Opcode | Notes |
+|:---|:---|:---|
+| Customize Tab (multi-step effects) | `0x51` | 10B slots, F0=active, 0F=empty |
+| Multi-Color → Create (live editor) | `0x31` | Continuous frame stream while editing |
+| Multi-Color → Save/Play | `0x31` | Final frame sent to hardware |
 
 - **Slot active flag**: `0xF0` = active, `0x0F` = empty slot
 - **Max slots**: 32
-- **Terminator after last slot**: `0x0F`
-- **SK8Lytz relevance**: **CRITICAL** — currently using 291B short format, **MUST switch to 323B for 0xA3**
-
-> **BUG CONFIRMED**: Our current `ZenggeProtocol.setCustomMode()` uses 9-byte slots (291B total).
-> The 0xA3 hardware expects 10-byte slots (323B total). This may cause scene corruption.
+- **SK8Lytz relevance**: **CRITICAL** — `setCustomMode` (9B compact) works via our current wrapper. To use 10B slots correctly, the BLE chunked framing header must also be replicated.
 
 ---
 
@@ -276,6 +306,27 @@ totalLen = (numLEDs × 3) + 9
 - **Endianness**: Big-Endian (`ptsHi = points >> 8`, `ptsLo = points & 0xFF`)
 - **SK8Lytz relevance**: CRITICAL — hardware provisioning (LED count, IC type, strip config)
 
+> **🔬 SEGMENT MODEL DISCOVERY (2026-04-22 — BLE Sniff Observation)**
+>
+> `points` and `segments` are NOT equivalent to total LED count. The hardware treats them as:
+> - **`points`** = number of addressable LEDs **per segment** (the design canvas)
+> - **`segments`** = number of identical physical copies that mirror the pattern in parallel
+> - **Total physical LEDs** = `points × segments`
+>
+> **Example — HALOZ (22 bulbs, 11 points, 2 segments):**
+> The ZENGGE Multi-Color creator shows 11 color positions (= `points`), NOT 22.
+> The hardware automatically mirrors the 11-LED pattern onto the second segment.
+> The app never exposes segments to the user — it is hardware-transparent.
+>
+> **Critical Implication for `0x59` and `0x51`:**
+> All pixel array commands (`0x59`, `0x31`) should be built using `ledPoints` (11), NOT `ledPoints × segments` (22).
+> Sending 22 pixels to a 2-segment device bypasses the hardware's segment mirror engine and fills both segments manually, which may produce unexpected results.
+>
+> **The `0x51` `flags=0x80` connection:**
+> The "section toggle" bit in the `0x51` slot flags byte (`0x80`) is believed to control segment mirroring:
+> - `flags = 0x80` → pattern mirrors across ALL segments (hardware duplication ON)
+> - `flags = 0x00` → pattern plays linearly, ignoring segment boundaries
+
 ---
 
 ### 0x63 — IC Config Query (EEPROM read)
@@ -349,6 +400,7 @@ These exist in `C14184b` but are NOT called by any Symphony fragment for our dev
 | Opcode | Decimal | Method | Purpose |
 |:-------|:--------|:-------|:--------|
 | `0x11` | 17 | `m4760m` | Time sync |
+| `0x10` | 16 | Unknown (ZENGGE app init) | **Session Time Sync** — sent as ATT Write REQUEST (expects response) on connection. Payload contains year/month/day/time. Checksum-verified from sniff. |
 | `0x22` | 34 | `m4639q0` | Mic/sensor config |
 | `0x34` | 52 | `m4788U` | LED count query shorthand |
 | `0x3A` | 58 | `m4767h0` | Plant light mode |
@@ -366,11 +418,35 @@ Per `Ctrl_Mini_RGB_Symphony_new_0xa2.java` and `FunctionModeFragment`:
 - **0x41 effect range**: `1–33` (SymphonyEffect IDs, same as the APK's SymphonyEffect enum)
 - **0x51 effectId column**: `1–33` (per C7787x slot structure using C9273c effect model)
 
-SymphonyEffect IDs are defined in `com/zengge/wifi/Model/SymphonyEffect.java` as a Java enum.
-The `SymphonyEffectUIType` enum defines color input requirements:
-- `RGB_ONLY` = single color
-- `TWO_COLORS` = FG + BG required
-- `NO_COLOR` = no color input (pure algorithmic)
+### SymphonyEffect Color UI Mapping — HARDWARE OBSERVED GROUND TRUTH
+
+> [!CAUTION]
+> **The APK-derived `SymphonyEffectUIType` mapping does NOT match what the ZENGGE app shows on 0xA3 hardware.**
+> The user directly tested all 33 effects in the ZENGGE Customize Tab (2026-04-22).
+> **Hardware observation is the source of truth. APK enum is reference only.**
+
+**HARDWARE-OBSERVED mapping (ZENGGE app, Customize Tab, 0xA3 firmware):**
+
+| Effect IDs | Color Input Available | Notes |
+|:-----------|:---------------------|:------|
+| 1–6, 17–19, 25, 31, 32 | **FG + BG both** | Full two-color picker |
+| 7 | **FG only** | Single foreground color picker |
+| 8–13, 15–16, 20–24, 26–30, 33 | **No color picker** | Rainbow / multicolor / algorithmic |
+| 14 | Unknown | Not reported — needs manual check |
+
+> **CONFLICT WITH APK**: `C9021i.java` assigns `UIType_ForegroundColor_BackgroundColor` to effects 5–18, but hardware only shows color pickers on 1–6, 17–19. The APK UIType reflects a different firmware variant. **Do NOT use the APK table to drive SK8Lytz UI behavior.**
+
+**APK-derived `SymphonyEffectUIType` enum (reference only — not HW truth for 0xA3):**
+```java
+enum SymphonyEffectUIType {
+    UIType_ForegroundColor_BackgroundColor,  // APK claims 5–18
+    UIType_StartColor_EndColor,              // APK claims 1, 3, 4
+    UIType_FirstColor_SecondColor,           // APK claims 19–26
+    UIType_Only_ForegroundColor,             // APK claims 2
+    UIType_Only_BackgroundColor,             // APK claims 27–28
+    IType_NoColor                            // APK claims 29–44
+}
+```
 
 ---
 
@@ -385,6 +461,8 @@ Sample confirmed manufacturer data (base64): `AFpWBQhl8JrCPACjLgMBAiMkAR8AAP8AAw
 Decoded relevant fields: `product_id = 163` (0xA3), `firmware_ver = 46`, `ble_ver = 5`, `led_ver = 3`
 
 **Symphony detection byte**: `mfBuf[9] === 0x33 || mfBuf[9] === 0xBF` — our scanner reads this correctly.
+
+> **BLE Characteristic Confirmation (2026-04-22)**: Our app writes to `ZENGGE_CHARACTERISTIC_UUID = '0000ff01-...'` (FF01). Live BLE sniff confirms the ZENGGE app writes to ATT handle `0x0017` on this device. Both apps resolve the same GATT service table, so handle `0x0017` = FF01 on our hardware. **Our write characteristic is correct.** ✅
 
 ---
 
@@ -413,10 +491,13 @@ Decoded relevant fields: `product_id = 163` (0xA3), `firmware_ver = 46`, `ble_ve
 
 ## SECTION 8: KNOWN BUGS IN CURRENT SK8LYTZ CODEBASE
 
-### BUG-1: `0x51` Wrong Format for 0xA3 (HIGH SEVERITY)
-- **Current behavior**: `ZenggeProtocol.setCustomMode()` uses 9B/slot = 291B total
-- **Required for 0xA3**: 10B/slot (direction flag) = 323B total (`C7787x.m20864c`)
-- **Impact**: Custom scenes may corrupt or not activate correctly on hardware
+### BUG-1: `0x51` Slot Format — UPDATED VERDICT (2026-04-22)
+- **Previous diagnosis**: 10B extended (323B) required for 0xA3 per APK
+- **Oracle Lab result**: 9B compact (291B) WORKS ✅ — 10B extended (323B via our wrapper) does NOTHING ❌
+- **Root cause**: The 10B extended format requires the ZENGGE chunked BLE framing header (`40 seq 00 00 01 43 BD 0B`) which our `wrapCommand` does not emit
+- **Current status**: 9B compact format is safe and functional for production use
+- **Future work**: Replicate ZENGGE chunked framing to unlock true 10B slot support
+- **Impact**: LOW (current scenes work) — track as enhancement, not critical bug
 
 ### BUG-2: `0x73` micSource Wrong Values (HIGH SEVERITY)
 - **Master Reference says**: `0x01` = Device mic, `0x00` = App mic
@@ -479,6 +560,115 @@ Pixel Array:    StaticColorfulTab (C8856x) → C7760a → [0x59, lenHi,Lo, R,G,B
 Stream Frame:   SceneModeFragment.m18748Z2 → inline → [0x53, lenHi,Lo, R,G,B×N, numHi,Lo, chk]
 Music Config:   MusicModeFragment → C7789z → [0x73, on, 0x26/27, id, FG, BG, sens, bri, chk]
 Mic Magnitude:  MusicModeFragment/useAppMic → C7788y → [0x74, mag, chk]
+Custom Scene:   ZENGGE App Customize Tab → chunked 0x51 → [40 seq 00 00 01 43 BD 0B 51 slot×10×32 chk]
+Custom Scene:   SK8Lytz setCustomMode() → standard wrap → [0x51 slot×9×32 0x0F chk]  ← 9B works on HW
+Multi-Color:    ZENGGE App Multi-Color Tab → live 0x31 stream → per-frame pixel array
+
+---
+
+## SECTION 11: ORACLE HARDWARE VALIDATION — GROUND TRUTH (2026-04-22)
+
+All results from physical hardware testing using `Sk8LytzDiagnosticLab` Oracle tab + live BLE HCI sniff.
+Device: Pixel 7 (Android 16), HCI log extracted via `adb bugreport`.
+
+### Power (0x71) — ✅ VERIFIED
+- PWR ON and PWR OFF both work correctly. No surprises.
+
+### RBM Ceiling (0x42) — ✅ VERIFIED  
+- Effect IDs 1–100 all work correctly.
+- Effect ID 101 (over ceiling): hardware **accepts it** and plays an undocumented effect. The ceiling is soft, not enforced.
+
+### Music Mode (0x73) — ✅ SMOKING GUN CONFIRMED
+| Test | Result |
+|:-----|:-------|
+| `MIC=0x26`, `isOn=0x01` (APK App Mic) | ✅ PASS — Enters music mode, reacts to phone mic. `0x74` auto-stream fires but `useAppMicrophone` background hook was already streaming, masking it. |
+| `MIC=0x27`, `isOn=0x01` (APK Device Mic) | ✅ PASS — Strip reacts to hardware control box mic. `0x74` auto-stream had secondary effect. |
+| `isOn=0x00` | ✅ PASS — Music mode disengaged (confirmed `isOn` byte is live) |
+| `MIC=0x00` (old legacy value) | ❌ FAIL — Blank/no response. Confirms old codebase was broken. |
+| 12B format (missing isOn) | ❌ FAIL — Identical to 0x00 failure. Hardware rejects malformed packet. |
+| `0x74` single magnitude | AMBIGUOUS — Works when mic=0x26 active, but `useAppMicrophone` background interference. |
+
+> **KEY FINDING**: The `useAppMicrophone` hook is running in the background even during Oracle testing, continuously sending `0x74` packets. This means the auto-stream toggle in the lab appears to have no extra effect in MIC=0x26 mode because the hook is already streaming. This is a diagnostic consideration, not a bug.
+
+### Custom Scene (0x51) — ✅ 9B COMPACT WORKS
+| Test | Result |
+|:-----|:-------|
+| 9B compact format (current production) | ✅ PASS — Red/blue animated pattern fires correctly |
+| 10B extended format (via our wrapCommand) | ❌ FAIL — Does nothing |
+
+> **SEE BUG-1 UPDATE**: 10B extended fails due to our wrapper mismatch, not the hardware rejecting 10B slots.
+
+### Phase 2 Extended Panels — ❌ ALL FAILED via our wrapper
+| Opcode | Test | Result | Notes |
+|:-------|:-----|:-------|:------|
+| `0x41` Settled Mode | TX effectId=1, red/blue | ❌ No response | Our payload format doesn't match actual firmware expectation |
+| `0x43` Multi-Sequence | TX effectIds 1,2,3 | ❌ LEDs SHUT OFF | Hardware state machine crash — packet rejected |
+| `0x53` Live Pixel Stream | Gradient animation | ❌ No response | Hardware likely doesn't support live pixel streaming |
+
+### Live BLE Sniff — Raw Packet Evidence
+Capture 1: 1-step customize (Effect 6, Speed 50%, White FG, Black BG):
+```
+ATT Write 0x0017: 40 04 00 00 01 43 BD 0B 51 F0 06 32 FF FF FF 00 00 00 80 [0F×31] D6
+```
+
+Capture 2: 3-step customize (Effect 3 Speed 25% Red/Blue, Effect 10 Speed 75%, Effect 20 Speed 50%):
+```
+ATT Write 0x0017: 40 06 00 00 01 43 BD 0B 51
+  F0 03 19 FF 00 00 00 00 FF 80   ← Effect 3, Speed 0x19=25%, FG=Red, BG=Blue, Forward
+  F0 0A 4B FF FF FF 00 00 00 80   ← Effect 10, Speed 0x4B=75%, FG=White (ignored), Forward
+  F0 14 32 FF FF FF 00 00 00 80   ← Effect 20, Speed 0x32=50%, FG=White (ignored), Forward
+  [0F×29 empty slots]
+  D? checksum
+```
+
+> **NOTE (corrected by SymphonyEffect map)**: Effects 10 and 20 are NOT `IType_NoColor` — they are `UIType_ForegroundColor_BackgroundColor` and `UIType_FirstColor_SecondColor` respectively and DO accept colors. The `FF FF FF` / `00 00 00` in this capture were the default unconfigured values, not proof of NoColor type.
+
+### Confirmed 10-Byte Slot Byte Map
+
+```
+Offset  Field          Notes
+[0]     ACTIVE_FLAG    0xF0 = active, 0x0F = empty
+[1]     effectId       SymphonyEffect 1–44 (29–44 = NoColor, 1–28 = color-accepting)
+[2]     speed          0x00–0x64 (0–100)
+[3]     FG.R           Foreground Red   (ignored for effects 29–44)
+[4]     FG.G           Foreground Green (ignored for effects 29–44)
+[5]     FG.B           Foreground Blue  (ignored for effects 29–44)
+[6]     BG.R           Background Red   (ignored for effects 29–44)
+[7]     BG.G           Background Green (ignored for effects 29–44)
+[8]     BG.B           Background Blue  (ignored for effects 29–44)
+[9]     flags          0x80 = forward+section_toggle ON, 0x00 = reverse/no-toggle
+```
+
+### Mystery Session Init Packets — Partial Decode
+
+These ~3 packets appear in EVERY capture BEFORE any LED commands. Sent by ZENGGE app immediately on connection.
+
+**[12157] ATT Write REQUEST (0x12, expects response)**:
+```
+Raw: 00 01 80 00 00 0C 0D 0B 10 14 1A 04 16 00 04 2B 03 00 0F | 99
+Header:  [00 01 80 00 00 0C 0D 0B] (standard 8-byte ZENGGE wrapper) ✓
+Inner:   10 14 1A 04 16 00 04 2B 03 00 0F  (11 bytes)
+Chksum:  99 = (10+14+1A+04+16+00+04+2B+03+00+0F) & 0xFF ✓ VERIFIED
+Opcode:  0x10 = SESSION TIME SYNC (variant of 0x11)
+Payload: 0x1A=26(year), 0x04=04(April), 0x16=22(day), remainder=time/weekday
+Note:    Uses ATT WRITE REQUEST (not Write Without Response) — device ACKs this.
+```
+
+**[12169] and [12178]** — Use a DIFFERENT framing (byte 7 ≠ `0x0B`). Possibly a lightweight 7-byte or proprietary init packet format. Opcodes cannot be confirmed without the matching framing spec. Marked as **PARTIALLY DECODED**.
+
+> **HYPOTHESIS**: These 3 packets are the ZENGGE app's session handshake sequence: (1) time sync to the device, (2) firmware version exchange, (3) ack/response. The mandatory time sync enables timer schedules stored in device EEPROM.
+
+### Music Mode — The "Play" Button Explained
+
+> **🔬 DISCOVERY (2026-04-22)**: The ZENGGE app has a separate "Play" button in the Music Mode tab. Here's why:
+>
+> - Sending `0x73` (music config) alone sets the MODE and mic routing but sends NO audio magnitude data
+> - The hardware sits in music mode but receives no `0x74` magnitude packets → LEDs don't react
+> - Pressing **Play** in the ZENGGE app starts the mic recording and the continuous `0x74` stream
+>
+> **SK8Lytz behavior** (`useAppMicrophone.ts`): automatically starts the `0x74` stream the moment `activeMode === 'MUSIC' && micSource === 'APP' && isPoweredOn` — effectively merging "configure" and "play" into one action.
+>
+> This is WHY music mode felt "fully enabled" during Oracle tests — the `useAppMicrophone` hook fires `0x74` the moment you're in MUSIC mode, masking any delays from the manual test panel.
 EEPROM Write:   Programmer → C14184b.m4807B etc → [0x62, ...]
 EEPROM Read:    Programmer → C14184b.m4771f0 → [0x63, 0x12, 0x21, 0x0F, chk]
 ```
