@@ -139,7 +139,10 @@ export type EventType =
   | 'AUTO_RECOVERY_GATE_WAIT'
   // ── Telemetry Hardening ─────────────────────────────────────────
   | 'SCREEN_ERROR'
-  | 'PROMISE_REJECTION';
+  | 'PROMISE_REJECTION'
+  // ── Music Mode ─────────────────────────────────────────────────────────
+  | 'MUSIC_MODE_EXIT';
+
 
 
 export interface LogEntry {
