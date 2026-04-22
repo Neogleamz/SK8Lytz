@@ -222,6 +222,7 @@ class LocationService {
     const { data } = await supabase
       .from('skate_spots')
       .select('*')
+      .eq('is_published', true)
       .limit(500); // For MVP, grab a reasonable chunk. (Requires PostGIS bounding box for scale)
 
     if (!data || data.length === 0) return [];
