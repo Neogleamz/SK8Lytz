@@ -167,8 +167,18 @@ Use the `mcp_supabase-mcp-server_get_logs` MCP tool with `service: "api"` or `se
 ### TypeScript check (no compile)
 
 ```powershell
+# ALWAYS run from master directory — it has node_modules
+# Cwd: C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz
 npx tsc --noEmit 2>&1 | Select-String "error TS" | Select-Object -First 30
 ```
+
+> ⛔ **TSC Discipline (RULE 10)**: TSC is a READ tool — always run from master (`SK8Lytz/`).
+> When it reports errors, fix them in the **worktree** (`SK8Lytz-worktrees/<slug>/`), NEVER in master.
+> The correct write target is always the worktree file path:
+> ```
+> ✅ SK8Lytz-worktrees/<slug>/src/services/AppLogger.ts
+> ❌ SK8Lytz/src/services/AppLogger.ts  ← causes branch divergence
+> ```
 
 ### Expo start (clean cache)
 

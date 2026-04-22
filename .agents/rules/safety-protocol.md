@@ -13,6 +13,7 @@ trigger: always_on
 **⛔ CRITICAL SAFETY RULE 7: NEVER push code to the remote repository (i.e. 'release') without first explicitly executing the `/health-sweep` workflow to run the MCP Database Scanner and npm audit.**
 **⛔ CRITICAL SAFETY RULE 8: The Core Fortress Mandate. NEVER perform unsolicited architectural refactors, hook extractions, or "Boy-Scout" cleanups on core stability systems (e.g., DashboardScreen.tsx, useBLE.ts, or the BLE/Group architecture). Unless explicitly commanded by the user, you are strictly prohibited from reorganizing working core logic. If it works, DO NOT TOUCH IT.**
 **⛔ CRITICAL SAFETY RULE 9: Worktree Commit Is NOT Done. After committing the final change in a worktree branch, you MUST immediately merge to master, remove the worktree, and delete the branch — in that order — before reporting completion or asking the user anything else. A committed-but-open worktree is an incomplete task. No exceptions.**
+**⛔ CRITICAL SAFETY RULE 10: Master Fortress File Lock. While ANY worktree is active, you are STRICTLY FORBIDDEN from editing, writing, or modifying ANY source file (`src/`, `tools/`, `.agents/`) under the master fortress directory (`C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`). ALL code edits MUST target the worktree path (`C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\<slug>\`). Violating this causes branch divergence and forces a cherry-pick instead of a clean fast-forward merge. The only exception is `tools/SK8Lytz_Bucket_List.md` (gitignored). If you discover a bug in a file that is NOT part of the current worktree's scope, add it to the worktree's commit anyway — do NOT directly edit master.**
 
 
 ### Worktree Isolation Protocol (Mandatory)
@@ -57,7 +58,19 @@ git worktree list
 
 > ⛔ **RULE 9 CHECKPOINT**: After running these commands, `git worktree list` must show ONLY the master fortress. If any worktree remains, the task is NOT complete.
 
+> ⛔ **RULE 10 COROLLARY — TSC Discipline**: `npx tsc --noEmit` MUST be run from the master directory (it has `node_modules`). When TSC reports errors in worktree files, **fix them inside the worktree directory**, then re-run TSC from master to verify. NEVER fix a TSC error by directly editing the master copy of a file while the worktree branch is still open. The mental model: TSC is a **read** tool run from master; all **writes** go to the worktree.
+
+> ❌ **What NEVER to do (the exact PR-C mistake)**:
+> ```
+> # ✅ Correct: edit the worktree file
+> write_to_file("SK8Lytz-worktrees/<slug>/src/services/AppLogger.ts")
+>
+> # ❌ WRONG: editing master while worktree is active — causes divergence
+> write_to_file("SK8Lytz/src/services/AppLogger.ts")  # ← DO NOT DO THIS
+> ```
+
 **Why this is safe**: Multiple conversations can work on different branches simultaneously because each has its own physical directory. No conversation can ever clobber another's uncommitted work.
+
 
 ### Pre-Flight Checks (Before ANY worktree creation)
 
