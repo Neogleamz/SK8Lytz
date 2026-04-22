@@ -106,6 +106,94 @@ Fixed: `HALOZ.defaultLedPoints = 8, segments = 2`.
 - **Hardware-Cloud Gating:** We never lock essential local hardware features behind an internet authentication wall.
 - **Hardcoded Hardware Heuristics:** The UI layer must NEVER use explicit string literals (e.g. `type === 'HALOZ'`) or hardcoded binary logic to render products. All hardware metadata (shape, icons, colors) must be dynamically derived from `LOCAL_PRODUCT_CATALOG` (`src/constants/ProductCatalog.ts`) to ensure scalable, zero-code support for new OEM devices.
 
+### ❌ Condemned Opcodes — Never Use in Production
+
+> [!CAUTION]
+> The following BLE opcodes are PERMANENTLY CONDEMNED for production UI use.
+> They cause a fundamental visualizer-parity gap: the hardware controls the animation internally,
+> so the ProductVisualizer cannot know what the hardware is showing. This breaks our core parity promise.
+
+| Opcode | Name | Why Condemned | What Replaced It |
+|:-------|:-----|:--------------|:-----------------|
+| **`0x41`** | Settled Mode (Symphony Effects) | Hardware runs one of 33 `ge.*` animations internally. App cannot know the pixel state. | 33 `ge.*` effects reverse-engineered as PatternEngine TypeScript, fired via `0x59` |
+| **`0x42`** | RBM Programs Mode | Hardware runs one of 100 baked-in Programs internally. App cannot know the pixel state. | All Programs effects reimplemented as PatternEngine TypeScript, fired via `0x59` |
+
+**Architecture decision 2026-04-22**: Every LED effect in SK8Lytz is computed in TypeScript,
+sent as a pixel array via `0x59`, and rendered identically in the ProductVisualizer.
+`0x41` and `0x42` are available in DiagnosticLab only (guarded by `__DEV__`).
+
+---
+
+### SK8Lytz Pattern Architecture (Canonical Reference)
+
+#### The One Law
+
+```
+PatternEngine (TypeScript math) → getVisualizerFrame() → pixel array → 0x59
+ProductVisualizer               → getVisualizerFrame() → same pixel array → rendered on screen
+Visualizer = Skates. Always. No exceptions.
+```
+
+#### Three-Tier Pattern Library
+
+Every pattern belongs to one of three tiers:
+
+| Tier | Source | Count | Description |
+|:-----|:-------|:-----:|:------------|
+| **Tier 1** | ge.* Java class reversal | 33 | Settled Mode effects. Each `ge.*` class is read for its math → reimplemented in TypeScript. `0x41` is NEVER called. |
+| **Tier 2** | Programs Mode reversal | ~28 | Standard LED strip effects. Each Programs effect is reimplemented in TypeScript. `0x42` is NEVER called. |
+| **Tier 3** | SK8Lytz originals | ∞ | Effects only possible because we own the payload. Positional gradients, reactive splits, sport sequences, etc. |
+
+**Total target**: ~75+ patterns across all tiers, all in one unified picker.
+
+#### Pattern Template Schema
+
+Every pattern in `CustomEffects.ts` has this structure:
+
+```typescript
+interface SK8LytzTemplate {
+  id: number;                          // Unique, never reuse. 1-28 = existing. 29+ = new.
+  name: string;                        // User-facing name in picker
+  icon: string;                        // Emoji icon for picker card
+  colorMode: 'FG_BG' | 'FG_ONLY' | 'GENERATIVE';  // Which color pickers to show
+  supportsDirection: boolean;          // Show direction toggle in UI?
+  tier: 1 | 2 | 3;                    // Source tier (ge.* | Programs | Original)
+  sourceRef?: string;                  // e.g. 'ge.OceanWaveEffect' or 'Programs:CometChase'
+  group?: string;                      // UI grouping label in picker
+}
+```
+
+#### Universal Controls (All Patterns Support All)
+
+| Control | Implementation | Notes |
+|:--------|:---------------|:------|
+| **FG Color** (RGB) | `fg: RGB` passed to `getVisualizerFrame()` | Always active |
+| **BG Color** (RGB) | `bg: RGB` passed to `getVisualizerFrame()` | UI hidden if `colorMode !== 'FG_BG'` |
+| **Speed** | Controls `tick` rate + `0x59` scroll param | Always active |
+| **Brightness** | `0x55` packet — independent of pixel array | Always active, global |
+| **Direction** | `direction: 0\|1` → `getVisualizerFrame()` + `0x59` dir byte | UI shown only if `supportsDirection: true` |
+
+#### colorMode Gate
+
+Controls which color pickers the UI renders for a given pattern:
+
+- `FG_BG` — Both FG and BG pickers shown (e.g. Comet: FG=trail, BG=background color)
+- `FG_ONLY` — Only FG shown (e.g. Breathing: single color fade, BG irrelevant)
+- `GENERATIVE` — Neither picker shown (e.g. Rainbow Flow: hue is computed by math, not user-set)
+
+> Note: The pattern ALWAYS receives both `fg` and `bg` arguments — the gate is purely a UI affordance.
+
+#### Implementation Contract for Every New Pattern
+
+```
+1. Read source math (ge.* Java class, or Programs effect behavior)
+2. Write TypeScript: buildXyz(fg, bg, numLEDs, tick, direction): RGB[]
+3. Add case to PatternEngine.ts getVisualizerFrame()
+4. Add entry to CustomEffects.ts SK8LYTZ_TEMPLATES with correct colorMode/tier/sourceRef
+5. Verify: ProductVisualizer shows the effect ← identical to hardware via 0x59
+6. Hardware test on HALOZ: tap pattern → LED ring matches visualizer
+```
+
 ---
 
 ## 2. System Architecture & Local Storage
