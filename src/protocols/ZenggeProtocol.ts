@@ -100,6 +100,13 @@ export class ZenggeProtocol {
 
   private static messageCounter = 0;
 
+  /**
+   * Diagnostic mode gate — must be set to true by Sk8LytzDiagnosticLab before
+   * calling any condemned opcode (e.g. 0x43). Resets to false on lab unmount.
+   * NEVER set this to true in production code paths.
+   */
+  public static DIAGNOSTIC_MODE_ENABLED = false;
+
   private static getSequenceCounter(): number {
     this.messageCounter = (this.messageCounter + 1) % 256;
     return this.messageCounter;
@@ -365,81 +372,89 @@ export class ZenggeProtocol {
   }
 
   /**
-   * [APK HYPOTHESIS] Build a 0x41 Settled Mode / Custom Effect packet.
+   * 0x41 Settled Mode — dual-color animated Symphony effects.
+   * Used by the Symphony tab (33 built-in hardware effects).
    *
-   * Inferred from SymphonySettingForA3.java analysis — not yet
-   * hardware-verified. Use in Oracle Phase 2 panel to confirm byte positions.
+   * Hardware truth from C7775l.java (APK 2026-04-21):
+   * Format (13 bytes): [0x41, effectId, FG.R, FG.G, FG.B, BG.R, BG.G, BG.B, speed, dir, 0x00, 0xF0, checksum]
    *
-   * Hypothesis format (13 bytes):
-   *   [0x41, effectId, speed, brightness,
-   *    R1, G1, B1, R2, G2, B2,
-   *    dir, 0xF0, checksum]
+   * @DEPRECATED — not wired to any production UI. DiagnosticLab only.
+   * Verify via Oracle Lab before enabling in production.
    *
-   * @param effectId  1–33 (Effect IDs for Custom Effects panel)
-   * @param speed     1–100
-   * @param brightness 1–100
-   * @param color1    Foreground (primary) color
-   * @param color2    Background (secondary) color
-   * @param dir       0x01=forward, 0x00=reverse
+   * @param effectId  1–33 (Symphony effect ID)
+   * @param fg        Foreground color
+   * @param bg        Background color
+   * @param speed     1–255 (hardware native range)
+   * @param direction 0=forward, 1=reverse
    */
   static setSettledMode(
     effectId: number,
+    fg: { r: number; g: number; b: number },
+    bg: { r: number; g: number; b: number },
     speed: number,
-    brightness: number,
-    color1: { r: number; g: number; b: number },
-    color2: { r: number; g: number; b: number },
-    dir: number = 0x01
+    direction: 0 | 1 = 0
   ): number[] {
-    const safeId = Math.max(1, Math.min(33, effectId));
-    const safeSpeed = Math.max(1, Math.min(100, speed));
-    const safeBright = Math.max(1, Math.min(100, brightness));
-    const cmd = [
-      0x41, safeId, safeSpeed, safeBright,
-      Math.max(0, Math.min(255, color1.r | 0)),
-      Math.max(0, Math.min(255, color1.g | 0)),
-      Math.max(0, Math.min(255, color1.b | 0)),
-      Math.max(0, Math.min(255, color2.r | 0)),
-      Math.max(0, Math.min(255, color2.g | 0)),
-      Math.max(0, Math.min(255, color2.b | 0)),
-      dir & 0xFF, 0xF0,
+    const raw = [
+      0x41,
+      Math.max(1, Math.min(33, effectId | 0)),
+      Math.min(255, Math.max(0, fg.r | 0)),
+      Math.min(255, Math.max(0, fg.g | 0)),
+      Math.min(255, Math.max(0, fg.b | 0)),
+      Math.min(255, Math.max(0, bg.r | 0)),
+      Math.min(255, Math.max(0, bg.g | 0)),
+      Math.min(255, Math.max(0, bg.b | 0)),
+      Math.max(1, Math.min(255, speed | 0)),
+      direction & 0x01,
+      0x00, // static trailer byte 1 — DO NOT CHANGE (APK confirmed)
+      0xF0, // static trailer byte 2 — DO NOT CHANGE (APK confirmed)
     ];
-    cmd.push(this.calculateChecksum(cmd));
-    getAppLogger().log('ZENGGE_SETTLED_MODE_0x41', { effectId: safeId, speed: safeSpeed });
-    return this.wrapCommand(cmd);
+    raw.push(this.calculateChecksum(raw));
+    getAppLogger().log('ZENGGE_SETTLED_MODE_0x41', { effectId, speed, direction });
+    return this.wrapCommand(raw);
   }
 
   static setCustomRbm(patternId: number, speed: number, brightness: number): number[] {
+    // FIX: Clamp effectId to confirmed 0xA3 hardware range (1–100).
+    // IDs >100 are outside verified range — behavior is undefined on 0xA3.
+    const clampedId = Math.min(100, Math.max(1, Math.round(patternId)));
+    if (clampedId !== patternId) {
+      getAppLogger().warn('ZenggeProtocol.setCustomRbm: effectId clamped to valid range', { original: patternId, clamped: clampedId });
+    }
     const speedHex = Math.max(1, Math.min(100, speed));
     const brightnessHex = Math.max(1, Math.min(100, brightness));
-    const cmd = [0x42, patternId, speedHex, brightnessHex];
+    const cmd = [0x42, clampedId, speedHex, brightnessHex];
     const checksum = this.calculateChecksum(cmd);
     return this.wrapCommand([...cmd, checksum]);
   }
 
   /**
-   * [APK HYPOTHESIS] Build a 0x43 Multi-Effect Sequence packet.
+   * @HARDWARE-DANGER: 0x43 CONDEMNED for 0xA3 hardware.
+   * Oracle Lab confirmed 2026-04-22: sending 0x43 causes the LED strip to go
+   * dark immediately and requires a POWER CYCLE to recover. DO NOT SEND IN PRODUCTION.
    *
-   * Inferred from AppSymphonySettings analysis. Hardware-verify via
-   * Oracle Phase 2 to confirm format before production use.
+   * This method is ONLY callable from Sk8LytzDiagnosticLab when
+   * ZenggeProtocol.DIAGNOSTIC_MODE_ENABLED = true.
    *
-   * Hypothesis format:
-   *   [0x43, count, effectId1, effectId2, ..., effectIdN, 0x00, speed, brightness, checksum]
-   *
-   * @param effectIds  Array of effect IDs (1–100). Max 50 per packet.
-   * @param speed      1–100
-   * @param brightness 1–100
+   * @see tools/ZENGGE_PROTOCOL_BIBLE.md — 0x43 condemned section
    */
   static setEffectSequence(
     effectIds: number[],
     speed: number,
     brightness: number
   ): number[] {
+    if (!ZenggeProtocol.DIAGNOSTIC_MODE_ENABLED) {
+      throw new Error(
+        '[HARDWARE-DANGER] 0x43 is a condemned opcode on 0xA3 hardware. ' +
+        'It causes firmware fault and requires power cycle to recover. ' +
+        'Set ZenggeProtocol.DIAGNOSTIC_MODE_ENABLED = true to use in DiagnosticLab only.'
+      );
+    }
     const safeIds = effectIds.slice(0, 50).map(id => Math.max(1, Math.min(100, id | 0)));
     const safeSpeed = Math.max(1, Math.min(100, speed));
     const safeBright = Math.max(1, Math.min(100, brightness));
     const cmd = [0x43, safeIds.length, ...safeIds, 0x00, safeSpeed, safeBright];
     cmd.push(this.calculateChecksum(cmd));
-    getAppLogger().log('ZENGGE_EFFECT_SEQ_0x43', { count: safeIds.length, speed: safeSpeed });
+    getAppLogger().log('ZENGGE_EFFECT_SEQ_0x43_DIAGNOSTIC_ONLY', { count: safeIds.length, speed: safeSpeed });
     return this.wrapCommand(cmd);
   }
 

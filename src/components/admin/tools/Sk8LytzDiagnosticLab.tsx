@@ -197,6 +197,12 @@ export default function Sk8LytzDiagnosticLab({
     return () => clearInterval(id);
   }, [streamActive, transmit]);
 
+  // Enable condemned opcode gate for this lab — MUST reset on unmount
+  useEffect(() => {
+    ZenggeProtocol.DIAGNOSTIC_MODE_ENABLED = true;
+    return () => { ZenggeProtocol.DIAGNOSTIC_MODE_ENABLED = false; };
+  }, []);
+
   // ── Phase 2 Oracle panel states ─────────────────────────────────────
   // 0x41 Settled Mode panel
   const [p41EffectId, setP41EffectId]   = useState(1);
@@ -1265,7 +1271,7 @@ export default function Sk8LytzDiagnosticLab({
           </View>
           <TouchableOpacity
             style={[S.txBtn, { backgroundColor: '#9D4EFF', borderColor: '#9D4EFF' }]}
-            onPress={() => transmit(ZenggeProtocol.setSettledMode(p41EffectId, p41Speed, p41Bright, p41Color1, p41Color2, p41Dir), `0x41 effectId=${p41EffectId} speed=${p41Speed}`, '0x41')}
+            onPress={() => transmit(ZenggeProtocol.setSettledMode(p41EffectId, p41Color1, p41Color2, p41Speed, p41Dir as 0 | 1), `0x41 effectId=${p41EffectId} speed=${p41Speed}`, '0x41')}
           >
             <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>TX 0x41 SETTLED MODE</Text>
           </TouchableOpacity>
