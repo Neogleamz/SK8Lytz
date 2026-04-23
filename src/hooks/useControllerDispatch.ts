@@ -167,8 +167,8 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
         ];
       }
 
-      // 0x03 = RunningWater: hardware scrolls the mid section natively
-      writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpd, 1, 0x03));
+      // 0x00 = CASCADE: hardware scrolls the mid section natively
+      writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpd, 1, 0x00));
     },
     [writeToDevice, hwSettings, numLEDs]
   );

@@ -416,11 +416,9 @@ export default function PositionalGradientBuilder({
           {[
               // BUG FIX: IDs now match ZenggeProtocol transitionType bytes directly.
               // Old mapping (1-5) was off-by-one — STATIC sent Gradual, STROBE sent Water, etc.
-              // Ground truth @ ZenggeProtocol.ts:577: 0x00=Static, 0x01=Gradual, 0x02=Strobe, 0x03=RunningWater
-              { id: 0x00, label: 'STATIC', icon: 'led-strip' as const },
-              { id: 0x01, label: 'FADE',   icon: 'gradient-horizontal' as const },
-              { id: 0x02, label: 'STROBE', icon: 'lightning-bolt' as const },
-              { id: 0x03, label: 'SCROLL', icon: 'arrow-right-bold' as const },
+              // Ground truth @ ZenggeProtocol.ts:577: 0x00=Cascade, 0x01=Freeze, 0x02=Strobe, 0x03=Trigger
+              { id: 0x01, label: 'FREEZE', icon: 'stop' as const },
+              { id: 0x00, label: 'CASCADE', icon: 'arrow-right-bold' as const },
               { id: 0x04, label: 'JUMP',   icon: 'swap-vertical' as const },
           ].map(t => (
               <TouchableOpacity 
