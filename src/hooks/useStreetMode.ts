@@ -28,7 +28,6 @@ import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 import { crewService } from '../services/CrewService';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
-import { getStreetVisualizerFrame } from '../protocols/PatternEngine';
 
 export type MotionState = 'STOPPED' | 'ACCELERATING' | 'CRUISING' | 'SLOWING_DOWN' | 'HARD_BRAKING';
 
@@ -143,25 +142,60 @@ export function useStreetMode({
     const cr = parseInt(cruiseHex.slice(1, 3), 16);
     const cg = parseInt(cruiseHex.slice(3, 5), 16);
     const cb = parseInt(cruiseHex.slice(5, 7), 16);
+
+    // Tail lights: ABSOLUTE brightness — 100% (255) braking, 50% (127) cruising.
+    // Street Mode has no brightness slider — these are fixed car safety values.
     const tailR = isBraking ? 255 : 127;
+    const tail = { r: tailR, g: 0, b: 0 };
 
+    // Headlights: warm white, always steady
+    const headVal = Math.round(255 * factor);
+    const head = { r: headVal, g: Math.round(headVal * 0.95), b: Math.round(headVal * 0.85) };
+
+    // Dashboard Cruise Color
+    const crR = Math.round(cr * factor);
+    const crG = Math.round(cg * factor);
+    const crB = Math.round(cb * factor);
+    const crDim = { r: Math.round(crR * 0.3), g: Math.round(crG * 0.3), b: Math.round(crB * 0.3) };
+    const cruise = { r: crR, g: crG, b: crB };
+
+    // DO NOT apply applyColorSorting here.
+    // Hardware auto-remaps GRB internally via 0x62 EEPROM config. Send pure RGB.
+    let arr: { r: number; g: number; b: number }[];
+
+    // #9 — Cruise bounce chase animation (triangle wave 0→1→0)
     const isCruising = currMotionState === 'CRUISING' || currMotionState === 'ACCELERATING';
-    if (isCruising) cruiseChaseRef.current = (cruiseChaseRef.current + 0.07) % 2;
-    else cruiseChaseRef.current = 0;
-    
-    const chaseTick = cruiseChaseRef.current <= 1 ? cruiseChaseRef.current : 2 - cruiseChaseRef.current;
+    if (isCruising) {
+      cruiseChaseRef.current = (cruiseChaseRef.current + 0.07) % 2;
+    } else {
+      cruiseChaseRef.current = 0;
+    }
+    const chaseTick = cruiseChaseRef.current <= 1
+      ? cruiseChaseRef.current
+      : 2 - cruiseChaseRef.current;
 
-    // Replaced manual logic with Single Source of Truth
-    const { pixels, transType } = getStreetVisualizerFrame(
-      currMotionState,
-      hwSettings?.ledPoints || pts || 8,
-      hwSettings?.segments || 1,
-      chaseTick,
-      { r: Math.round(cr * factor), g: Math.round(cg * factor), b: Math.round(cb * factor) },
-      { r: tailR, g: 0, b: 0 } // Brake color
-    );
+    const ledCount = hwSettings?.ledPoints || pts || 8;
+    const rearCount = Math.max(1, Math.round(ledCount * 0.3));
+    const frontCount = Math.max(1, Math.round(ledCount * 0.3));
+    const midCount = Math.max(1, ledCount - rearCount - frontCount);
+    const chasePos = Math.round(chaseTick * (midCount - 1));
+    const midSection = Array.from({ length: midCount }, (_, i) => {
+      const dist = Math.abs(i - chasePos);
+      if (dist === 0) return cruise;
+      if (dist === 1) return { r: Math.round(crR * 0.6), g: Math.round(crG * 0.6), b: Math.round(crB * 0.6) };
+      return crDim;
+    });
+    arr = [
+      ...Array(rearCount).fill(tail),
+      ...midSection,
+      ...Array(frontCount).fill(head),
+    ];
 
-    writeToDevice(ZenggeProtocol.setMultiColor(pixels, hwSpeed, 1, transType));
+    // 0x01 = FREEZE (hardware locks array in place — static car lights, no scrolling)
+    // 0x02 = STROBE (urgent flashing for hard braking)
+    // NOTE: 0x00 is CASCADE (scrolling) — NOT static. Never use 0x00 for car lights.
+    const transType = currMotionState === 'HARD_BRAKING' ? 0x02 : 0x01;
+    writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpeed, 1, transType));
   }, [writeToDevice, hwSettings, points, activeProduct, streetCruiseColor, brightness, speed, clampSpeed]);
 
   /** Transition motion state and trigger pattern update */

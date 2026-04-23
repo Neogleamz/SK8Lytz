@@ -3,7 +3,7 @@ import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 're
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { useTheme } from '../context/ThemeContext';
 import type { PatternId, RGB } from '../protocols/PatternEngine';
-import { getVisualizerFrame, getMusicVisualizerFrame, getStreetVisualizerFrame } from '../protocols/PatternEngine';
+import { getVisualizerFrame, getMusicVisualizerFrame } from '../protocols/PatternEngine';
 import { PositionalMathBuffer } from '../protocols/PositionalMathBuffer';
 import { Spacing } from '../theme/theme';
 
@@ -253,37 +253,42 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           dotColor = `#${mPx.r.toString(16).padStart(2, '0')}${mPx.g.toString(16).padStart(2, '0')}${mPx.b.toString(16).padStart(2, '0')}`;
           dotOpacity = isPoweredOn ? (musicFrame.opacities[mSlot] ?? 1.0) * (brightness / 100) : 0;
         } else if (mode === 'STREET') {
-          // ── Street Mode: Single Source of Truth from PatternEngine ──
+          // ── Street Mode: zone-based car-light layout ──
+          // fract 0.0–0.3  → TAIL  (red: 50% cruising, 100% braking) [#10]
+          // fract 0.3–0.7  → CRUISE (user color or amber if slowing, animated bounce) [#9,#11]
+          // fract 0.7–1.0  → HEAD  (warm white, always steady)
           const isActiveBraking = motionState === 'HARD_BRAKING' || motionState === 'STOPPED' || isStreetBraking;
-          const currMotion = isActiveBraking && motionState !== 'HARD_BRAKING' ? 'STOPPED' : motionState;
-          
-          const crRgb: RGB = {
-            r: parseInt(streetCruiseColor.slice(1, 3), 16) || 0,
-            g: parseInt(streetCruiseColor.slice(3, 5), 16) || 0,
-            b: parseInt(streetCruiseColor.slice(5, 7), 16) || 0,
-          };
-          
-          const sFrame = getStreetVisualizerFrame(
-             currMotion as any,
-             numLeds,
-             deviceSegments,
-             animTick * 2, // scale animTick to create 0->1->0 triangle wave matching chaseTick
-             crRgb,
-             { r: 255, g: 0, b: 0 }
-          );
-          
-          // Map linearly across the entire path to consume the full palindrome array
-          const fullRawFract = i / renderLeds; 
-          const sRawPos = fullRawFract * sFrame.pixels.length;
-          const sSlot = Math.floor(sRawPos) % Math.max(1, sFrame.pixels.length);
-          const sPx = sFrame.pixels[sSlot] || { r: 0, g: 0, b: 0 };
-          
-          dotColor = `#${sPx.r.toString(16).padStart(2, '0')}${sPx.g.toString(16).padStart(2, '0')}${sPx.b.toString(16).padStart(2, '0')}`;
-          dotOpacity = isPoweredOn ? (brightness / 100) : 0;
-          
-          if (sFrame.transType === 0x02) { // STROBE
-             const strobeOn = animTick < 0.5 ? 1 : 0;
-             dotOpacity = isPoweredOn ? Math.max(0.01, strobeOn) * (brightness / 100) : 0;
+          const isSlowing = motionState === 'SLOWING_DOWN';
+          // Cruise zone color: amber when slowing, user color when cruising/accelerating
+          const vizCruiseColor = isSlowing ? '#FFAA00' : streetCruiseColor;
+
+          if (fract < 0.3) {
+            // Taillights: ABSOLUTE — 100% braking, 50% cruising (no brightness slider in street mode)
+            dotColor = '#FF2200';
+            dotOpacity = isActiveBraking ? 1.0 : 0.5;
+          } else if (fract >= 0.7) {
+            dotColor = '#FFF5E0';
+            dotOpacity = brightness / 100;
+          } else {
+            dotColor = vizCruiseColor;
+            const cruiseFract = (fract - 0.3) / 0.4;
+
+            // Only animate bounce during CRUISING/ACCELERATING; freeze dim otherwise
+            const shouldBounce = motionState === 'CRUISING' || motionState === 'ACCELERATING';
+            if (shouldBounce) {
+              // Triangle wave: goes 0 to 1 back to 0, creating a bouncing pulse [#9]
+              const bounceT = animTick <= 0.5 ? animTick * 2 : (1 - animTick) * 2;
+              const dist = Math.abs(cruiseFract - bounceT);
+              if (dist < 0.18) {
+                const glow = 1 - (dist / 0.18);
+                dotOpacity = 0.3 + glow * ((brightness / 100) - 0.3);
+              } else {
+                dotOpacity = 0.3;
+              }
+            } else {
+              // Stopped or slowing — steady dim amber/red
+              dotOpacity = (brightness / 100) * 0.6;
+            }
           }
         } else if (mode === 'MULTIMODE') {
           const fgHex = fixedFgColor || color;
