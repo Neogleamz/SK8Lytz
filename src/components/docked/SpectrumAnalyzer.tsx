@@ -13,20 +13,10 @@ interface SpectrumAnalyzerProps {
   isPoweredOn?: boolean;
 }
 
-const BARS_COUNT = 30;
+const BARS_COUNT = 16;
 const BAR_MIN_H = 6;
 const BAR_MAX_H = 60;
-const BAR_WIDTH = 5;
-
-// Interpolates between two hex colors based on ratio 0..1
-const interpolateColor = (c1: string, c2: string, ratio: number) => {
-  const rgb1 = hexToRgb(c1);
-  const rgb2 = hexToRgb(c2);
-  const r = Math.round(rgb1.r + (rgb2.r - rgb1.r) * ratio);
-  const g = Math.round(rgb1.g + (rgb2.g - rgb1.g) * ratio);
-  const b = Math.round(rgb1.b + (rgb2.b - rgb1.b) * ratio);
-  return `rgb(${r}, ${g}, ${b})`;
-};
+const BAR_WIDTH = 12; // Wider bars for fewer points
 
 export default function SpectrumAnalyzer({
   audioMagnitude,
@@ -180,10 +170,6 @@ export default function SpectrumAnalyzer({
             outputRange: [BAR_MIN_H, BAR_MAX_H],
           });
 
-          // Interpolate color across the 30 bars
-          const ratio = index / (BARS_COUNT - 1);
-          const barColor = interpolateColor(color1, color2, ratio);
-
           return (
             <View key={index} style={styles.barContainer}>
               <Animated.View
@@ -191,11 +177,11 @@ export default function SpectrumAnalyzer({
                   styles.bar,
                   {
                     height,
-                    backgroundColor: barColor,
+                    backgroundColor: color1,
                     opacity: isPoweredOn ? 1.0 : 0.2,
-                    shadowColor: barColor,
+                    shadowColor: color1,
                     shadowOpacity: isPoweredOn ? 0.7 : 0,
-                    shadowRadius: 4,
+                    shadowRadius: 6,
                     shadowOffset: { width: 0, height: 0 },
                     elevation: isPoweredOn ? 4 : 0,
                   },
@@ -208,8 +194,11 @@ export default function SpectrumAnalyzer({
                   {
                     // translateY pushes the peak dot to sit on top of the bar
                     transform: [{ translateY: animValue.interpolate({ inputRange: [0, 1], outputRange: [0, -(BAR_MAX_H - 8)] }) }],
-                    backgroundColor: barColor,
-                    opacity: isPoweredOn ? 0.9 : 0.2,
+                    backgroundColor: color2,
+                    opacity: isPoweredOn ? 1.0 : 0.2,
+                    shadowColor: color2,
+                    shadowOpacity: isPoweredOn ? 0.8 : 0,
+                    shadowRadius: 4,
                   },
                 ]}
               />
@@ -256,7 +245,7 @@ const styles = StyleSheet.create({
     height: BAR_MAX_H,
     width: '100%',
     justifyContent: 'center',
-    gap: Spacing.xxs,
+    gap: Spacing.sm,
     marginTop: 20, // Pushes it down below the absolute badge
   },
   barContainer: {
@@ -265,13 +254,13 @@ const styles = StyleSheet.create({
   },
   bar: {
     width: BAR_WIDTH,
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
   },
   peak: {
     width: BAR_WIDTH,
-    height: 2,
-    borderRadius: 1,
+    height: 3,
+    borderRadius: 2,
     position: 'absolute',
     top: 2,
   },
