@@ -196,7 +196,6 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
         ? Math.max(numLeds * 2, 60)
         : Math.max(numLeds * 2, 86);
     for (let i = 0; i < renderLeds; i++) {
-      const isMirroredSeg2 = isMirrored && deviceSegments > 1 && i >= (renderLeds / 2);
       let left = 0;
       let top = 0;
       const outerDiam = productProfile.vizBlobDiameterMm > 6 ? 16 : 12;
@@ -223,14 +222,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
 
       const segmentI = i % (renderLeds / 2);
       const activeSegmentLeds = renderLeds / 2;
-      // HALOZ 2-segment mirror: Segment 2 (i >= renderLeds/2) runs the same pattern
-      // in REVERSE relative to its own start point (front of box → back of box).
-      // This mirrors Segment 1 (back→front) creating bilateral symmetry on the ring.
-      // RING Seg2 mirrors Seg1 for bilateral symmetry on the ring frame.
-      const isRingSeg2 = vizShape === 'RING' && (i >= renderLeds / 2);
-      const mirrorSlot = (slot: number, segLen: number) =>
-        isRingSeg2 ? Math.max(0, segLen - 1 - slot) : slot;
-
+      
       // Raw smooth path interval
       const rawFract = (segmentI / activeSegmentLeds);
 
@@ -254,12 +246,9 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
         } else if (mode === 'MUSIC') {
           // ── Hardware-accurate music mode simulation ──
-          // Dynamic Mirroring: generates per-segment frame; Seg2 mirrors it reversed if flagged.
-          const musicSegLeds = isMirrored ? Math.ceil(numLeds / 2) : numLeds;
-          const musicFrame = getMusicVisualizerFrame(patternId || 1, musicSegLeds, animTick, audioMagnitude, color);
+          const musicFrame = getMusicVisualizerFrame(patternId || 1, numLeds, animTick, audioMagnitude, color);
           const mRawPos = (segmentI / activeSegmentLeds) * musicFrame.pixels.length;
-          const mSlotRaw = Math.floor(mRawPos) % Math.max(1, musicFrame.pixels.length);
-          const mSlot = mirrorSlot(mSlotRaw, musicFrame.pixels.length);
+          const mSlot = Math.floor(mRawPos) % Math.max(1, musicFrame.pixels.length);
           const mPx = musicFrame.pixels[mSlot] || { r: 255, g: 255, b: 255 };
           dotColor = `#${mPx.r.toString(16).padStart(2, '0')}${mPx.g.toString(16).padStart(2, '0')}${mPx.b.toString(16).padStart(2, '0')}`;
           dotOpacity = isPoweredOn ? (musicFrame.opacities[mSlot] ?? 1.0) * (brightness / 100) : 0;
@@ -319,27 +308,18 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           };
 
           // Get the full per-LED pixel array from the pattern engines at the current animation tick
-          // Dynamic Mirroring: generates per-segment frame; Seg2 slot is mirrored if flagged.
-          const mmSegLeds = isMirrored ? Math.ceil(numLeds / 2) : numLeds;
-
           // ── Directly leverage PatternEngine continuous simulation ──
-          const framePixels = getVisualizerFrame(pid as PatternId, fgRgb, bgRgb, mmSegLeds, animTick, fixedDirection as 0 | 1);
+          const framePixels = getVisualizerFrame(pid as PatternId, fgRgb, bgRgb, numLeds, animTick, fixedDirection as 0 | 1);
 
           // ── Diffusion blending: blend adjacent LED colors near chip boundaries ──
           const rawLedPos = (segmentI / activeSegmentLeds) * framePixels.length;
-          const slot0Raw = Math.floor(rawLedPos) % Math.max(1, framePixels.length);
-          const slot0 = mirrorSlot(slot0Raw, framePixels.length);
+          const slot0 = Math.floor(rawLedPos) % Math.max(1, framePixels.length);
           const slotT = rawLedPos - Math.floor(rawLedPos);
           const DIFF = 0.35;
           const boundaryProx = Math.pow(Math.abs(slotT - 0.5) * 2, 2);
           const blendAmt = DIFF * boundaryProx;
           const pCurr = framePixels[slot0] || fgRgb;
-          const adjIdx = mirrorSlot(
-            isMirroredSeg2
-              ? Math.max(0, slot0Raw - 1)
-              : (slot0Raw + 1) % framePixels.length,
-            framePixels.length
-          );
+          const adjIdx = (slot0 + 1) % framePixels.length;
           const pAdj = framePixels[Math.min(framePixels.length - 1, Math.max(0, adjIdx))] || fgRgb;
           const pr = Math.round(pCurr.r * (1 - blendAmt) + pAdj.r * blendAmt);
           const pg = Math.round(pCurr.g * (1 - blendAmt) + pAdj.g * blendAmt);
@@ -369,19 +349,13 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           }
 
           const rawLedPos = (segmentI / activeSegmentLeds) * builderPixels.length;
-          const slot0Raw = Math.floor(rawLedPos) % Math.max(1, builderPixels.length);
-          const slot0 = mirrorSlot(slot0Raw, builderPixels.length);
+          const slot0 = Math.floor(rawLedPos) % Math.max(1, builderPixels.length);
           const slotT = rawLedPos - Math.floor(rawLedPos);
           const DIFF = 0.35;
           const boundaryProx = Math.pow(Math.abs(slotT - 0.5) * 2, 2);
           const blendAmt = DIFF * boundaryProx;
           const pCurr = builderPixels[slot0] || { r: 0, g: 0, b: 0 };
-          const adjIdx = mirrorSlot(
-            isMirroredSeg2
-              ? Math.max(0, slot0Raw - 1)
-              : (slot0Raw + 1) % builderPixels.length,
-            builderPixels.length
-          );
+          const adjIdx = (slot0 + 1) % builderPixels.length;
           const pAdj = builderPixels[Math.min(builderPixels.length - 1, Math.max(0, adjIdx))] || pCurr;
           const pr = Math.round(pCurr.r * (1 - blendAmt) + pAdj.r * blendAmt);
           const pg = Math.round(pCurr.g * (1 - blendAmt) + pAdj.g * blendAmt);

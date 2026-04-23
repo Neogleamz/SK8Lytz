@@ -133,7 +133,7 @@ return (byte) sum;
 [0x42, effectId(1-100), speed(1-100), brightness(1-100), checksum]
 ```
 - **effectId range for 0xA3**: 1–100 (confirmed from `Ctrl_Mini_RGB_Symphony_new_0xa2`)
-- **Speed range**: 0–100 (full range, different from 0x59 which caps at 31)
+- **Speed range**: 0–100 (full range, same as 0x59 — both accept 1–100)
 - **SK8Lytz relevance**: **CRITICAL** — this is the primary RBM effect command. Our `setCustomRbm()` calls this. ✅ CORRECT in current codebase.
 
 > **CORRECTION FROM EARLIER SESSION**: `0x38` is NOT used by our device for effects.
@@ -289,7 +289,7 @@ totalLen = (numLEDs × 3) + 9
 | `0x02` | STROBE | Flash (implementation varies) |
 | `0x03` | RUNNING_WATER | One-shot trigger, hard jump marquee |
 
-- **Speed**: 0–100 UI → 1–31 HW. Formula: `max(1, min(31, round(uiSpeed/100 × 30) + 1))`
+- **Speed**: 0–100 UI → 1–100 HW. Pass UI speed directly (clamped to 1–100). ⚠️ **ORACLE-CONFIRMED 2026-04-23**: The APK's `Protocol/n.java: ad.e.a(f, 1, 31)` clamp is for 0x51, NOT 0x59. Physical hardware responds to the full 1–100 range on the 0x59 speed byte. Setting speed=31 while UI slider is at 100 produced exactly 31%-speed animation on physical 0xA3 hardware.
 - **Direction**: `0x01` = forward, `0x00` = reverse
 - **Minimum pixels**: 12 (hardware glitches below 10)
 - **LED count branch** in `C7760a` line 23: `if (mo20320T() == 167)` → different LED count constant (for 0xA7 variant). Our 0xA3 (163) takes the ELSE branch = standard LED count path.
