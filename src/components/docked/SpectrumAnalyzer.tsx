@@ -3,6 +3,7 @@ import { Animated, StyleSheet, View, Text } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
+import { hexToRgb } from '../../utils/ColorUtils';
 
 interface SpectrumAnalyzerProps {
   audioMagnitude: number;
@@ -12,7 +13,20 @@ interface SpectrumAnalyzerProps {
   isPoweredOn?: boolean;
 }
 
-const BAR_COUNT = 7;
+const BARS_COUNT = 30;
+const BAR_MIN_H = 6;
+const BAR_MAX_H = 60;
+const BAR_WIDTH = 5;
+
+// Interpolates between two hex colors based on ratio 0..1
+const interpolateColor = (c1: string, c2: string, ratio: number) => {
+  const rgb1 = hexToRgb(c1);
+  const rgb2 = hexToRgb(c2);
+  const r = Math.round(rgb1.r + (rgb2.r - rgb1.r) * ratio);
+  const g = Math.round(rgb1.g + (rgb2.g - rgb1.g) * ratio);
+  const b = Math.round(rgb1.b + (rgb2.b - rgb1.b) * ratio);
+  return `rgb(${r}, ${g}, ${b})`;
+};
 
 export default function SpectrumAnalyzer({
   audioMagnitude,
@@ -23,9 +37,9 @@ export default function SpectrumAnalyzer({
 }: SpectrumAnalyzerProps) {
   const { isDark } = useTheme();
   
-  // Create an Animated.Value for each bar
+  // Create an Animated.Value for each bar, initialized at a low floor
   const animatedValues = useRef(
-    Array.from({ length: BAR_COUNT }).map(() => new Animated.Value(0))
+    Array.from({ length: BARS_COUNT }).map(() => new Animated.Value(0.15))
   ).current;
 
   // Track the continuous ambient animation for Device Mic
@@ -33,7 +47,6 @@ export default function SpectrumAnalyzer({
 
   useEffect(() => {
     if (!isPoweredOn) {
-      // If powered off, flatten all bars
       if (ambientAnimationRef.current) {
         ambientAnimationRef.current.stop();
         ambientAnimationRef.current = null;
@@ -42,6 +55,7 @@ export default function SpectrumAnalyzer({
         Animated.spring(val, {
           toValue: 0.1,
           useNativeDriver: false,
+          speed: 12,
         }).start();
       });
       return;
@@ -49,28 +63,53 @@ export default function SpectrumAnalyzer({
 
     if (micSource === 'DEVICE') {
       // ── Device Mic (No telemetry): Ambient Pulse Animation ──
-      // Create a continuous, slightly offset sine-wave-like bounce
-      const animations = animatedValues.map((val, index) => {
-        const delay = index * 100;
-        return Animated.sequence([
+      // Smooth, continuous sine-wave-like bounce across the 30 bars
+      const runAnimation = (anim: Animated.Value, delay: number) => {
+        Animated.sequence([
           Animated.delay(delay),
           Animated.loop(
             Animated.sequence([
-              Animated.timing(val, {
-                toValue: 0.8,
-                duration: 400,
+              Animated.timing(anim, {
+                toValue: 0.3 + Math.random() * 0.5,
+                duration: 600 + Math.random() * 400,
                 useNativeDriver: false,
               }),
-              Animated.timing(val, {
-                toValue: 0.2,
-                duration: 600,
+              Animated.timing(anim, {
+                toValue: 0.15 + Math.random() * 0.2,
+                duration: 600 + Math.random() * 400,
                 useNativeDriver: false,
               }),
             ])
-          ),
+          )
+        ]).start();
+      };
+      
+      animatedValues.forEach((val, i) => runAnimation(val, i * 40));
+      // We don't store the loop in ambientAnimationRef because it's a bunch of independent loops.
+      // We can just rely on the effect cleanup or power off to stop them.
+      // Wait, we need to stop them if switching to APP mic!
+      // Actually, calling stopAnimation or just letting the next effect override them works.
+      // But to be clean, let's just use parallel.
+      const loops = animatedValues.map((val, i) => {
+        return Animated.sequence([
+          Animated.delay(i * 30),
+          Animated.loop(
+            Animated.sequence([
+              Animated.timing(val, {
+                toValue: 0.4 + Math.random() * 0.4,
+                duration: 500 + Math.random() * 300,
+                useNativeDriver: false,
+              }),
+              Animated.timing(val, {
+                toValue: 0.15 + Math.random() * 0.2,
+                duration: 500 + Math.random() * 300,
+                useNativeDriver: false,
+              }),
+            ])
+          )
         ]);
       });
-      ambientAnimationRef.current = Animated.parallel(animations);
+      ambientAnimationRef.current = Animated.parallel(loops);
       ambientAnimationRef.current.start();
 
     } else {
@@ -80,23 +119,26 @@ export default function SpectrumAnalyzer({
         ambientAnimationRef.current = null;
       }
       
-      // Magnitude is 0-255. Normalize to 0.1 - 1.0.
-      const normalizedMag = Math.max(0.1, Math.min(1.0, audioMagnitude / 255));
+      // Magnitude is 0-255. Normalize to 0.0 - 1.0.
+      const normalizedMag = Math.max(0, Math.min(1.0, audioMagnitude / 255));
       
-      animatedValues.forEach((val, index) => {
-        // Add some random variation per bar so it looks like an EQ
-        const randomFactor = 0.5 + Math.random() * 0.5; // 0.5 - 1.0
-        // Middle bars should generally be taller
-        const centerDist = Math.abs(index - Math.floor(BAR_COUNT / 2));
-        const curveFactor = 1 - (centerDist * 0.15); // e.g. 1.0 for center, 0.85, 0.7...
+      animatedValues.forEach((anim, index) => {
+        // Lift the floor: even at magnitude=0 we show a little activity
+        const floor = 0.15;
+        // Randomize the response per bar so it looks like an EQ
+        const randomness = Math.random() * 0.4 + 0.6; // 0.6–1.0
+        // Middle bars should generally peak higher
+        const centerDist = Math.abs(index - (BARS_COUNT / 2));
+        const curveFactor = 1 - (centerDist / (BARS_COUNT / 2)) * 0.3; // 1.0 at center, 0.7 at edges
         
-        let targetHeight = normalizedMag * randomFactor * curveFactor;
-        targetHeight = Math.max(0.1, Math.min(1.0, targetHeight));
+        let toValue = floor + ((1 - floor) * normalizedMag * randomness * curveFactor);
+        toValue = Math.max(0.1, Math.min(1.0, toValue));
         
-        Animated.timing(val, {
-          toValue: targetHeight,
-          duration: 100, // Very fast reactive timing
-          useNativeDriver: false, // We are animating height (layout property)
+        Animated.spring(anim, {
+          toValue,
+          useNativeDriver: false,
+          speed: 28,
+          bounciness: 6,
         }).start();
       });
     }
@@ -131,35 +173,47 @@ export default function SpectrumAnalyzer({
       </View>
 
       {/* ── EQ Bars ── */}
-      <View style={styles.eqContainer}>
+      <View style={styles.visualizerArea}>
         {animatedValues.map((animValue, index) => {
-          // Interpolate the height from 10% to 100% of the container
-          const heightInterpolate = animValue.interpolate({
+          const height = animValue.interpolate({
             inputRange: [0, 1],
-            outputRange: ['10%', '100%'],
+            outputRange: [BAR_MIN_H, BAR_MAX_H],
           });
 
-          // Mix colors based on position
-          const isLeft = index < BAR_COUNT / 2;
-          const barColor = isLeft ? color1 : color2;
+          // Interpolate color across the 30 bars
+          const ratio = index / (BARS_COUNT - 1);
+          const barColor = interpolateColor(color1, color2, ratio);
 
           return (
-            <Animated.View
-              key={index}
-              style={[
-                styles.bar,
-                {
-                  height: heightInterpolate,
-                  backgroundColor: barColor,
-                  opacity: isPoweredOn ? 0.9 : 0.2,
-                  shadowColor: barColor,
-                  shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: isPoweredOn ? 0.8 : 0,
-                  shadowRadius: 8,
-                  elevation: isPoweredOn ? 5 : 0,
-                }
-              ]}
-            />
+            <View key={index} style={styles.barContainer}>
+              <Animated.View
+                style={[
+                  styles.bar,
+                  {
+                    height,
+                    backgroundColor: barColor,
+                    opacity: isPoweredOn ? 1.0 : 0.2,
+                    shadowColor: barColor,
+                    shadowOpacity: isPoweredOn ? 0.7 : 0,
+                    shadowRadius: 4,
+                    shadowOffset: { width: 0, height: 0 },
+                    elevation: isPoweredOn ? 4 : 0,
+                  },
+                ]}
+              />
+              {/* Peak dot */}
+              <Animated.View
+                style={[
+                  styles.peak,
+                  {
+                    // translateY pushes the peak dot to sit on top of the bar
+                    transform: [{ translateY: animValue.interpolate({ inputRange: [0, 1], outputRange: [0, -(BAR_MAX_H - 8)] }) }],
+                    backgroundColor: barColor,
+                    opacity: isPoweredOn ? 0.9 : 0.2,
+                  },
+                ]}
+              />
+            </View>
           );
         })}
       </View>
@@ -169,10 +223,10 @@ export default function SpectrumAnalyzer({
 
 const styles = StyleSheet.create({
   container: {
-    padding: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    backgroundColor: '#000000',
+    justifyContent: 'center',
     borderRadius: 20,
     borderWidth: 1,
     minHeight: 110,
@@ -196,16 +250,29 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 0.5,
   },
-  eqContainer: {
+  visualizerArea: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    width: '60%',
-    height: 60, // Fixed max height for the bars
-    marginBottom: 10,
+    height: BAR_MAX_H,
+    width: '100%',
+    justifyContent: 'center',
+    gap: Spacing.xxs,
+    marginTop: 20, // Pushes it down below the absolute badge
+  },
+  barContainer: {
+    width: BAR_WIDTH,
+    alignItems: 'center',
   },
   bar: {
-    width: 12,
-    borderRadius: 6,
+    width: BAR_WIDTH,
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 2,
+  },
+  peak: {
+    width: BAR_WIDTH,
+    height: 2,
+    borderRadius: 1,
+    position: 'absolute',
+    top: 2,
   },
 });
