@@ -29,7 +29,7 @@ import {
 } from 'react-native';
 import { SK8LYTZ_TEMPLATES } from '../constants/CustomEffects';
 import { useTheme } from '../context/ThemeContext';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { buildPatternPayload } from '../protocols/PatternEngine';
 import CustomEffectVisualizer from './CustomEffectVisualizer';
 
 // ─── Effect default BG colours (from kd/t0.java line 142) ────────────────────
@@ -233,7 +233,9 @@ const EffectsPanel: React.FC<EffectsPanelProps> = ({
   const devicePoints = hwSettings?.ledPoints || points || 16;
   const deviceSegments = hwSettings?.segments || segments || 1;
 
-  // ── Dispatch 0x51 on state change ─────────────────────────────────────────
+  // ── Dispatch 0x59 via PatternEngine on state change ────────────────────────
+  // buildPatternPayload() generates math-synthesized pixel arrays wrapped in
+  // the correct 0x59 opcode. Do NOT use 0x51 setCustomModeCompact here.
   const dispatchEffect = useCallback((
     effectId: number,
     fg: string,
@@ -243,17 +245,13 @@ const EffectsPanel: React.FC<EffectsPanelProps> = ({
     if (!writeToDevice) return;
     const fgRgb = hexToRgb(fg);
     const bgRgb = hexToRgb(bg);
-    // Use compact format (1 active step = 20 bytes wrapped) to test if hardware
-    // accepts variable-length 0x51 vs requiring the full 32-slot 291-byte format.
-    const payload = ZenggeProtocol.setCustomModeCompact([{
-      mode: effectId,
-      speed: Math.max(1, Math.min(100, Math.round(spd))),
-      color1: fgRgb,
-      color2: bgRgb,
-    }]);
-    writeToDevice(payload);
+    const payload = buildPatternPayload(
+      effectId, fgRgb, bgRgb, devicePoints,
+      Math.max(1, Math.min(100, Math.round(spd))), 1
+    );
+    if (payload) writeToDevice(payload);
     onStateChange?.(effectId, fg, bg);
-  }, [writeToDevice, onStateChange]);
+  }, [writeToDevice, onStateChange, devicePoints]);
 
   // ── Effect selection handler ───────────────────────────────────────────────
   const handleSelectEffect = useCallback((effectId: number) => {

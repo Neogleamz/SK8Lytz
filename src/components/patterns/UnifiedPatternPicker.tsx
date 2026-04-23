@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SK8LYTZ_TEMPLATES } from '../../constants/CustomEffects';
 import { BuilderNode } from '../../protocols/PositionalMathBuffer';
-import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
+import { buildPatternPayload } from '../../protocols/PatternEngine';
 import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
 import { hexToRgb } from '../../utils/ColorUtils';
@@ -47,20 +47,22 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
 
   const devicePoints = hwSettings?.ledPoints || points || 16;
 
-  // Dispatch logic for PATTERNS tab
+  // Dispatch logic for PATTERNS tab — uses PatternEngine → 0x59 pipeline.
+  // buildPatternPayload() generates our math-synthesized pixel arrays and
+  // wraps them in the correct 0x59 opcode with transition type (FREEZE/CASCADE).
+  // This is the ONLY correct dispatch path. Do NOT use 0x51 setCustomModeCompact
+  // here — that sends firmware symphony effect IDs, not our pixel math.
   const dispatchEffect = useCallback((effectId: number, fg: string, bg: string, spd: number) => {
     if (!writeToDevice) return;
     const fgRgb = hexToRgb(fg);
     const bgRgb = hexToRgb(bg);
-    const payload = ZenggeProtocol.setCustomModeCompact([{
-      mode: effectId,
-      speed: Math.max(1, Math.min(100, Math.round(spd))),
-      color1: fgRgb,
-      color2: bgRgb,
-    }]);
-    writeToDevice(payload);
+    const payload = buildPatternPayload(
+      effectId, fgRgb, bgRgb, devicePoints,
+      Math.max(1, Math.min(100, Math.round(spd))), 1
+    );
+    if (payload) writeToDevice(payload);
     onStateChange?.(effectId);
-  }, [writeToDevice, onStateChange]);
+  }, [writeToDevice, onStateChange, devicePoints]);
 
   const handleSelectPattern = useCallback((effectId: number) => {
     setSelectedEffectId(effectId);
