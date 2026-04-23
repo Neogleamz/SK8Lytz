@@ -1,8 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { hexToRgb } from '../utils/ColorUtils';
+import { supabase } from '../services/supabaseClient';
 import { ScenesService, Scene } from '../services/ScenesService';
-import { useAuth } from './useAuth';
 
 export interface SceneStep {
   id: string;
@@ -20,8 +20,13 @@ export function useSceneBuilder(writeToDevice?: (payload: number[]) => Promise<v
   const [sceneName, setSceneName] = useState<string>('New Scene');
   const [sceneId, setSceneId] = useState<string | null>(null);
   
-  const { session } = useAuth();
-  const userId = session?.user?.id;
+  const [userId, setUserId] = useState<string | undefined>();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user?.id);
+    });
+  }, []);
 
   const addStep = useCallback((step: Omit<SceneStep, 'id'>) => {
     if (steps.length >= 32) return;

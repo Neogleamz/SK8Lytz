@@ -975,64 +975,47 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: 
     case 10: return buildMicroAnts(fg, bg, n, tick, direction);
     case 11: return buildTheaterChase(fg, bg, n, tick, direction);
     case 12: return buildDashedMarquee(fg, bg, n, tick, direction);
-    case 13: return buildBarberPole(fg, bg, n, tick, direction);
-    case 14: return buildBoldStripes(fg, bg, n, tick, direction);
+    case 13: return buildBoldStripes(fg, bg, n, tick, direction);     // ID 13 = BoldStripes (BarberPole was removed)
 
-    // ── GROUP 4: MATH WAVES & GRADIENTS ──
-    case 15: return buildSinePulseWave(fg, bg, n, tick, direction);
-    case 16: return buildWavePinch(fg, bg, n, tick);
-    case 17: return buildBreathingWave(fg, bg, n, tick, direction);
-    case 18: return buildCenterOutComet(fg, bg, n, tick);
-    case 19: return buildCenterOutMarquee(fg, bg, n, tick);
+    // ── GROUP 4: MATH WAVES ──
+    case 14: return buildSinePulseWave(fg, bg, n, tick, direction);   // was 15
+    case 15: return buildWavePinch(fg, bg, n, tick);                  // was 16
+    case 16: return buildBreathingWave(fg, bg, n, tick, direction);   // was 17
 
-    // ── GROUP 5: TEMPORAL FULL-STRIP ──
-    case 20: return buildSmoothBreath(fg, n, tick);
-    case 21: return buildHardJumpFlash(fg, bg, n, tick);
-    case 22: return buildTemporalStrobe(fg, n, tick);
-    case 23: return buildWipeFill(fg, bg, n, tick, direction);
-    case 24: return buildWipeCenterOut(fg, bg, n, tick);
+    // ── GROUP 5a: TEMPORAL FULL-STRIP (0x51) ──
+    case 17: return buildSmoothBreath(fg, n, tick);                   // was 20
 
-    // ── GROUP 6: GENERATIVE RAINBOWS & TRI-COLOR ──
-    case 25: return buildTrueRainbowFlow(n, tick, direction);
-    case 26: return buildRainbowMarquee(n, tick, direction);
-    case 27: return buildRainbowComet(n, tick, direction);
-    case 28: return buildCyberpunkShift(fg, bg, n, tick, direction);
+    // ── GROUP 5b: WIPE / FILL ──
+    case 18: return buildWipeFill(fg, bg, n, tick, direction);        // was 23
 
-    // ── GROUP 7: ge.* HARDWARE-NATIVE EFFECTS (IDs 29-61) ──
-    // All patterns have dedicated tick-based builders — no fallback.
-    case 29: return buildColorFlow(n, tick, direction);
-    case 30: return buildColorBreathing(fg, n, tick);
-    case 31: return buildColorJump(fg, bg, n, tick);
-    case 32: return buildRunningWater(fg, bg, n, tick, direction);
-    case 33: return buildStrobe(fg, n, tick);
-    case 34: return buildColorWipe(fg, bg, n, tick, direction);
-    case 35: return buildFireworks(fg, bg, n, tick);
-    case 36: return buildOceanWave(fg, bg, n, tick, direction);
-    case 37: return buildLightning(fg, n, tick);
-    case 38: return buildSnowfall(fg, bg, n, tick);
-    case 39: return buildCandle(fg, n, tick);
-    case 40: return buildHeartbeat(fg, n, tick);
-    case 41: return buildMeteor(fg, bg, n, tick, direction);
-    case 42: return buildAurora(n, tick, direction);
-    case 43: return buildLava(fg, bg, n, tick);
-    case 44: return buildPlasma(fg, bg, n, tick, direction);
-    case 45: return buildStarCluster(fg, bg, n, tick);
-    case 46: return buildPoliceLights(n, tick);
-    case 47: return buildRainbowBreathing(n, tick);
-    case 48: return buildColorBurst(fg, bg, n, tick);
-    case 49: return buildTwinkle(fg, bg, n, tick);
-    case 50: return buildCrystalShimmer(n, tick);
-    case 51: return buildGradientChase(fg, bg, n, tick, direction);
-    case 52: return buildCometDuo(fg, bg, n, tick);
-    case 53: return buildFireFlame(fg, bg, n, tick);
-    case 54: return buildCyberGlitch(n, tick);
-    case 55: return buildNeonPulse(fg, bg, n, tick);
-    case 56: return buildRainbowChaser(n, tick, direction);
-    case 57: return buildMatrixRain(fg, bg, n, tick, direction);
-    case 58: return buildSparkleFade(fg, bg, n, tick);
-    case 59: return buildDualScan(fg, bg, n, tick);
-    case 60: return buildStarlight(fg, bg, n, tick);
-    case 61: return buildHyperspace(fg, bg, n, tick);
+    // ── GROUP 6: GENERATIVE RAINBOWS ──
+    case 19: return buildTrueRainbowFlow(n, tick, direction);         // was 25
+    case 20: return buildRainbowMarquee(n, tick, direction);          // was 26
+    case 21: return buildRainbowComet(n, tick, direction);            // was 27
+    case 22: return buildCyberpunkShift(fg, bg, n, tick, direction);  // was 28
+
+    // ── GROUP 7: ge.* PHASE 1A REVERSALS ──
+    case 23: return buildColorFlow(n, tick, direction);               // ge.ColorFlowEffect — was 29
+    case 24: return buildColorBreathing(fg, n, tick);                 // ge.BreathEffect    — was 30
+    case 25: return buildRunningWater(fg, bg, n, tick, direction);    // ge.RunningWaterEffect — was 32
+    case 26: return buildStrobe(fg, n, tick);                         // ge.StrobeEffect    — was 33
+    case 27: return buildOceanWave(fg, bg, n, tick, direction);       // ge.OceanWaveEffect — was 36
+    case 28: return buildLightning(fg, n, tick);                      // ge.LightningEffect — was 37
+    case 29: return buildSnowfall(fg, bg, n, tick);                   // ge.SnowfallEffect  — was 38
+    case 30: return buildHeartbeat(fg, n, tick);                      // ge.HeartbeatEffect — was 40
+    case 31: return buildMeteor(fg, bg, n, tick, direction);          // ge.MeteorEffect    — was 41
+    case 32: return buildAurora(n, tick, direction);                  // ge.AuroraEffect    — was 42
+    case 33: return buildLava(fg, bg, n, tick);                       // ge.LavaEffect      — was 43
+    case 34: return buildPlasma(fg, bg, n, tick, direction);          // ge.PlasmaEffect    — was 44
+    case 35: return buildStarCluster(fg, bg, n, tick);               // ge.StarClusterEffect — was 45
+    case 36: return buildRainbowBreathing(n, tick);                   // was 47
+    case 37: return buildCrystalShimmer(n, tick);                    // was 50
+    case 38: return buildGradientChase(fg, bg, n, tick, direction);   // was 51
+    case 39: return buildFireFlame(fg, bg, n, tick);                  // was 53
+    case 40: return buildNeonPulse(fg, bg, n, tick);                  // was 55
+    case 41: return buildRainbowChaser(n, tick, direction);           // was 56
+    case 42: return buildMatrixRain(fg, bg, n, tick, direction);      // was 57
+    case 43: return buildStarlight(fg, bg, n, tick);                  // was 60
 
     // ── GROUP 8: STREET MODES ──
     case 101:
@@ -1046,6 +1029,8 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: 
       return Array(n).fill(fg);
   }
 }
+
+
 
 /**
  * Rotate a pixel array by `offset` positions (for visualizer scroll simulation).
