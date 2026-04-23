@@ -46,8 +46,8 @@ export const GradientLibraryTab: React.FC<GradientLibraryTabProps> = ({ Colors, 
         onPress={() => onApplyGradient(preset)}
       >
         <View style={styles.cardGradient}>
-          {previewColors.map((hex, i) => (
-             <View key={i} style={{ flex: 1, backgroundColor: hex }} />
+          {previewColors.map((color, i) => (
+             <View key={i} style={{ flex: 1, backgroundColor: `rgb(${color.r}, ${color.g}, ${color.b})` }} />
           ))}
         </View>
         <View style={[StyleSheet.absoluteFill, styles.cardOverlay]}>
