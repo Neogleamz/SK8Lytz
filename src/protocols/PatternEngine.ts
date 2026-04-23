@@ -6,9 +6,29 @@
  *
  * Hardware animation model:
  *   - The IC strip controller animates NATIVELY once a 0x59 or 0x51 packet is sent.
- *   - 0x59 CASCADE (0x00): Hardware continuous scroll/loop for math arrays
- *   - 0x59 FREEZE (0x01): Hardware locks the array in place
- *   - 0x51 NATIVE: Used for full-strip temporal fades/flashes (Breath/Strobe)
+ *   - 0x59 transitionType=0x00: Hardware holds array static (Group 1)
+ *   - 0x59 transitionType=0x03: Hardware continuously scrolls the array (Groups 2–4, 5b, 6)
+ *   - 0x51 NATIVE: Used for full-strip temporal fades/flashes (Group 5a: IDs 20–22)
+ *
+ * @wiring-audit Verified 2026-04-23 [BATCH:P0] — all 28 IDs accounted for:
+ *
+ *   Group 1 — Static & Solid     (IDs  1– 5): generateArray → 0x59 type=0x00
+ *   Group 2 — Chases & Meteors   (IDs  6– 9): generateArray → 0x59 type=0x03
+ *   Group 3 — Marquees & Bands   (IDs 10–14): generateArray → 0x59 type=0x03
+ *   Group 4 — Math Waves         (IDs 15–19): generateArray → 0x59 type=0x03 (18/19 center-split)
+ *   Group 5 — Temporal           (IDs 20–22): getVisualizerFrame simulates → 0x51 (buildCustomModePayload)
+ *   Group 5b— Wipe/Fill          (IDs 23–24): generateArray → 0x59 type=0x03 (center-split scroll)
+ *   Group 6 — Generative Rainbow (IDs 25–28): generateArray → 0x59 type=0x03
+ *
+ *   Dispatch entry points:
+ *     Hardware: buildPatternPayload() → buildMultiColorPayload() | buildCustomModePayload()
+ *     Visualizer: getVisualizerFrame() (ProductVisualizer.tsx + CustomEffectVisualizer.tsx)
+ *
+ *   Known gaps (logged as tech debt for BATCH:P1):
+ *     TODO[BATCH:P1]: ProductVisualizer PROGRAMS branch (line ~343) passes hardcoded red fg/bg
+ *       to getVisualizerFrame — user-selected colors are ignored in that branch.
+ *     TODO[BATCH:P1]: getPatternTransitionType returns only 0x00 or 0x03. Groups 3/4 may
+ *       benefit from 0x01 (Gradual) for smoother hardware animation.
  */
 
 import { ZenggeProtocol } from './ZenggeProtocol';
