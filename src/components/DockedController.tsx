@@ -725,19 +725,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             >
               <MaterialCommunityIcons name="heart-plus-outline" size={22} color={Colors.primary} />
             </TouchableOpacity>
-            {activeMode === 'MUSIC' ? (
-              <SpectrumAnalyzer 
-                audioMagnitude={audioMagnitude}
-                micSource={micSource}
-                color1={musicPrimaryColor}
-                color2={musicSecondaryColor}
-                isPoweredOn={isPoweredOn}
-                hasMicPermission={hasMicPermission}
-                onRequestMicPermission={requestMicPermission}
-              />
-            ) : (
-              <ProductVisualizer
-                product={activeProduct}
+            <ProductVisualizer
+              product={activeProduct}
               color={visualizerColor}
               mode={activeMode === 'FAVORITES' ? (lastOperatingMode === 'MULTIMODE' ? (fixedSubMode === 'BUILDER' ? 'BUILDER' : 'MULTIMODE') : lastOperatingMode) : activeMode === 'MULTIMODE' ? (fixedSubMode === 'BUILDER' ? 'BUILDER' : 'MULTIMODE') : activeMode}
               patternId={activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' ? fixedPatternId : selectedPatternId}
@@ -763,6 +752,16 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               fixedDirection={fixedDirection}
               streetDistribution={streetDistribution}
             />
+            {activeMode === 'MUSIC' && (
+              <SpectrumAnalyzer 
+                audioMagnitude={audioMagnitude}
+                micSource={micSource}
+                color1={musicPrimaryColor}
+                color2={musicSecondaryColor}
+                isPoweredOn={isPoweredOn}
+                hasMicPermission={hasMicPermission}
+                onRequestMicPermission={requestMicPermission}
+              />
             )}
           </View>
         </View>

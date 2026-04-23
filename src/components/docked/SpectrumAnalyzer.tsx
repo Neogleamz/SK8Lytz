@@ -228,16 +228,14 @@ export default function SpectrumAnalyzer({
 
 const styles = StyleSheet.create({
   container: {
+    ...StyleSheet.absoluteFillObject,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     alignItems: 'center',
     justifyContent: 'flex-end', // Align bars to bottom
     borderRadius: 20,
     borderWidth: 1,
-    minHeight: 210,
-    width: '100%',
     overflow: 'hidden',
-    position: 'relative',
   },
   statusBadge: {
     position: 'absolute',
