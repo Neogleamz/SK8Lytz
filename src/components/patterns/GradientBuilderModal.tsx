@@ -81,7 +81,7 @@ export const GradientBuilderModal: React.FC<GradientBuilderModalProps> = ({
         <TouchableOpacity style={styles.peekThroughArea} onPress={onClose} activeOpacity={1} />
         
         {/* Bottom 80% workspace */}
-        <View style={[styles.bottomSheet, { backgroundColor: Colors.card }]}>
+        <View style={[styles.bottomSheet, { backgroundColor: isDark ? '#121212' : '#F5F5F5' }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: Colors.border }]}>
             <TouchableOpacity onPress={onClose} style={styles.headerBtn}>

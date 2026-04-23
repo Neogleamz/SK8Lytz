@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { BuilderNode, PositionalMathBuffer } from '../protocols/PositionalMathBuffer';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import CustomSlider from './CustomSlider';
+import { COLOR_PRESET_PALETTE, hexToHue, hueToHex } from '../utils/ColorUtils';
 
 interface Props {
   nodes: BuilderNode[];
@@ -33,16 +34,7 @@ export default function PositionalGradientBuilder({
 
   const [activeNodeId, setActiveNodeId] = useState<string | null>(nodes[0]?.id || null);
 
-  // Auto-sync universal color picker changes to the active pin
-  useEffect(() => {
-     if (activeNodeId) {
-         const current = nodes.find(n => n.id === activeNodeId);
-         if (current && current.colorHex !== selectedColor) {
-             const updated = nodes.map(n => n.id === activeNodeId ? { ...n, colorHex: selectedColor } : n);
-             onNodesChange(updated);
-         }
-     }
-  }, [selectedColor]);
+  // Internal color state is now directly managed via activeNode instead of external sync
 
   // Dispatch payloads whenever parameters change
   useEffect(() => {
@@ -145,18 +137,45 @@ export default function PositionalGradientBuilder({
 
       {/* 4. ACTIVE PIN EDITOR */}
       {activeNode && (
-         <View style={{ backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 6, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xxs, marginBottom: Spacing.xs, flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 10, width: 36 }}>@{activeNode.position}%</Text>
-            <CustomSlider 
-                value={activeNode.position}
-                onValueChange={(val) => updateNode(activeNode.id, { position: Math.round(val) })}
-                minimumValue={0}
-                maximumValue={100}
-                style={{ flex: 1, transform: [{ scale: 0.95 }], height: 30 }}
-            />
-            <TouchableOpacity onPress={() => removeNode(activeNode.id)} disabled={nodes.length <= 1} style={{ marginLeft: Spacing.sm }}>
-                <MaterialCommunityIcons name="trash-can-outline" size={16} color={nodes.length <= 1 ? 'rgba(255,255,255,0.2)' : '#FF4444'} />
-            </TouchableOpacity>
+         <View style={{ backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: Spacing.sm, marginBottom: Spacing.xs }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm }}>
+               <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 10, width: 36 }}>@{activeNode.position}%</Text>
+               <CustomSlider 
+                   value={activeNode.position}
+                   onValueChange={(val) => updateNode(activeNode.id, { position: Math.round(val) })}
+                   minimumValue={0}
+                   maximumValue={100}
+                   style={{ flex: 1, transform: [{ scale: 0.95 }], height: 30 }}
+               />
+               <TouchableOpacity onPress={() => removeNode(activeNode.id)} disabled={nodes.length <= 1} style={{ marginLeft: Spacing.sm }}>
+                   <MaterialCommunityIcons name="trash-can-outline" size={16} color={nodes.length <= 1 ? 'rgba(255,255,255,0.2)' : '#FF4444'} />
+               </TouchableOpacity>
+            </View>
+
+            {/* COLOR CONTROLS FOR ACTIVE PIN */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.xs }}>
+               {COLOR_PRESET_PALETTE.map((color) => (
+                  <TouchableOpacity
+                     key={color}
+                     onPress={() => updateNode(activeNode.id, { colorHex: color })}
+                     style={{
+                        width: 22, height: 22, borderRadius: 11, backgroundColor: color,
+                        borderWidth: 2, borderColor: activeNode.colorHex.toUpperCase() === color.toUpperCase() ? '#00F0FF' : 'rgba(255,255,255,0.2)'
+                     }}
+                  />
+               ))}
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+               <MaterialCommunityIcons name="palette" size={16} color={activeNode.colorHex} style={{ marginRight: Spacing.xs }} />
+               <CustomSlider
+                  value={hexToHue(activeNode.colorHex)}
+                  onValueChange={(val) => updateNode(activeNode.id, { colorHex: hueToHex(val) })}
+                  minimumValue={0}
+                  maximumValue={360}
+                  trackColor={activeNode.colorHex}
+                  style={{ flex: 1, transform: [{ scale: 0.95 }], height: 30 }}
+               />
+            </View>
          </View>
       )}
 
