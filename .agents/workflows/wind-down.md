@@ -17,11 +17,11 @@ When my prompt includes "good night", "wrapping up", "wind down", "done for the 
 
 - Use `get_logs` for `api`, `auth`, and `postgres` services for the last 2 hours.
 - Analyze logs specifically for 4xx/5xx errors, RLS violations, or foreign key constraints.
-- If critical production errors are found, autonomously add them as prioritized `fix/...` entries to the top of the `tools/SK8Lytz_Bucket_List.md`.
+- If critical production errors are found, autonomously add them as prioritized `fix/...` entries to the top of the `tools/SK8Lytz_Bucket_List.md` in the `🚑 TRIAGE QUEUE`, strictly following the nested multi-line Task Schema defined in the AI AGENT DIRECTIVES.
 
 1. **Nightly Testing Execution**:
    - Explicitly spawn the `browser_subagent` and instruct it to execute `tools/SK8Lytz_TEST_PLAN.md` against the local expo server.
-   - If regressions are found by the agent, you MUST autonomously add them to `tools/SK8Lytz_Bucket_List.md` as new `fix/...` tasks under the **🔴 CRITICAL** section.
+   - If regressions are found by the agent, you MUST autonomously add them to `tools/SK8Lytz_Bucket_List.md` as new `fix/...` tasks under the `🚑 TRIAGE QUEUE`, strictly following the nested multi-line Task Schema defined in the AI AGENT DIRECTIVES.
    - Explicitly list them in the "Traps & Landmines" section of the Final SITREP.
 
 2. **Knowledge Persistence (Master Reference Sync)**:
