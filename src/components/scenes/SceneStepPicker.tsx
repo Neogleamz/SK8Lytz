@@ -31,9 +31,12 @@ export const SceneStepPicker: React.FC<SceneStepPickerProps> = ({ visible, onClo
             {SK8LYTZ_TEMPLATES.map((pattern) => (
               <PatternCard
                 key={pattern.id}
-                id={pattern.id}
-                name={pattern.name}
+                effect={pattern}
                 isSelected={false}
+                fgColor="#00F0FF"
+                bgColor="#000000"
+                speed={50}
+                points={16}
                 onSelect={() => onSelect(pattern.id)}
                 Colors={Colors}
               />

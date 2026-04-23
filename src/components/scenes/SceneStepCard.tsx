@@ -5,7 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
 import { LEDStripPreview } from '../LEDStripPreview';
 import { SK8LYTZ_TEMPLATES } from '../../constants/CustomEffects';
-import Slider from '@react-native-community/slider';
+import CustomSlider from '../CustomSlider';
 
 interface SceneStepCardProps {
   step: SceneStep;
@@ -39,24 +39,22 @@ export const SceneStepCard: React.FC<SceneStepCardProps> = ({ step, index, onUpd
       <View style={styles.controlsRow}>
         <Text style={[styles.patternName, { color: Colors.text }]}>{pattern?.name || 'Unknown Pattern'}</Text>
         <View style={styles.colorRow}>
-          <Text style={{ color: Colors.textSecondary, marginRight: 4 }}>FG:</Text>
+          <Text style={{ color: Colors.textMuted, marginRight: 4 }}>FG:</Text>
           <View style={[styles.colorBox, { backgroundColor: step.fg }]} />
-          <Text style={{ color: Colors.textSecondary, marginLeft: 8, marginRight: 4 }}>BG:</Text>
+          <Text style={{ color: Colors.textMuted, marginLeft: 8, marginRight: 4 }}>BG:</Text>
           <View style={[styles.colorBox, { backgroundColor: step.bg }]} />
         </View>
       </View>
 
       <View style={styles.sliderRow}>
-        <Text style={{ color: Colors.textSecondary, width: 40 }}>⏱ {step.duration}s</Text>
-        <Slider
+        <Text style={{ color: Colors.textMuted, width: 40 }}>⏱ {step.duration}s</Text>
+        <CustomSlider
           style={{ flex: 1 }}
           minimumValue={1}
           maximumValue={60}
           step={1}
           value={step.duration}
-          onValueChange={(val) => onUpdate(step.id, { duration: val })}
-          minimumTrackTintColor="#00F0FF"
-          maximumTrackTintColor="rgba(255,255,255,0.2)"
+          onValueChange={(val: number) => onUpdate(step.id, { duration: val })}
           thumbTintColor="#00F0FF"
         />
       </View>

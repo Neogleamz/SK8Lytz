@@ -123,7 +123,7 @@ export default function CommunityModal({ isVisible, onClose, onApplyScene }: Pro
   };
 
   const renderItem = useCallback(({ item }: { item: ICloudScene }) => {
-    const p = item.scene_payload || {};
+    const p: any = item.scene_payload || {};
     const mode: string = p.activeMode || p.fixedSubMode || 'UNKNOWN';
     const isOwner = activeTab === 'PERSONAL';
 

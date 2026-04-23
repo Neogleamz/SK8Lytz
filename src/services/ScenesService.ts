@@ -40,7 +40,7 @@ class ScenesServiceClass {
         .range(offset, offset + limit - 1);
 
       if (error) throw error;
-      return data as ICloudScene[];
+      return data as unknown as ICloudScene[];
     } catch (e) {
       console.error('[ScenesService] getPublicScenes error:', e);
       return [];
@@ -62,7 +62,7 @@ class ScenesServiceClass {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as ICloudScene[];
+      return data as unknown as ICloudScene[];
     } catch (e) {
       console.error('[ScenesService] getMyScenes error:', e);
       return [];
