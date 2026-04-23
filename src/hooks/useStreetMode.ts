@@ -174,37 +174,22 @@ export function useStreetMode({
       ? cruiseChaseRef.current
       : 2 - cruiseChaseRef.current;
 
-    if (isMirrored) {
-      const segLeds = Math.ceil(pts / 2);
-      const frameHalf = Array.from({ length: segLeds }, (_, i) => {
-        const fract = i / segLeds;
-        if (fract < 0.3) return tail;
-        if (fract > 0.7) return head;
-        const midZoneI = i - Math.round(segLeds * 0.3);
-        const midZoneSize = Math.round(segLeds * 0.4);
-        const dist = Math.abs(midZoneI - Math.round(chaseTick * midZoneSize));
-        if (dist === 0) return cruise;
-        return crDim;
-      });
-      arr = [...frameHalf, ...[...frameHalf].reverse()];
-    } else {
-      const ledCount = Math.max(10, hwSettings?.ledPoints || pts);
-      const rearCount = Math.max(1, Math.round(ledCount * 0.3));
-      const frontCount = Math.max(1, Math.round(ledCount * 0.3));
-      const midCount = Math.max(1, ledCount - rearCount - frontCount);
-      const chasePos = Math.round(chaseTick * (midCount - 1));
-      const midSection = Array.from({ length: midCount }, (_, i) => {
-        const dist = Math.abs(i - chasePos);
-        if (dist === 0) return cruise;
-        if (dist === 1) return { r: Math.round(crR * 0.6), g: Math.round(crG * 0.6), b: Math.round(crB * 0.6) };
-        return crDim;
-      });
-      arr = [
-        ...Array(rearCount).fill(tail),
-        ...midSection,
-        ...Array(frontCount).fill(head),
-      ];
-    }
+    const ledCount = hwSettings?.ledPoints || pts || 8;
+    const rearCount = Math.max(1, Math.round(ledCount * 0.3));
+    const frontCount = Math.max(1, Math.round(ledCount * 0.3));
+    const midCount = Math.max(1, ledCount - rearCount - frontCount);
+    const chasePos = Math.round(chaseTick * (midCount - 1));
+    const midSection = Array.from({ length: midCount }, (_, i) => {
+      const dist = Math.abs(i - chasePos);
+      if (dist === 0) return cruise;
+      if (dist === 1) return { r: Math.round(crR * 0.6), g: Math.round(crG * 0.6), b: Math.round(crB * 0.6) };
+      return crDim;
+    });
+    arr = [
+      ...Array(rearCount).fill(tail),
+      ...midSection,
+      ...Array(frontCount).fill(head),
+    ];
 
     // 0x01 = FREEZE (hardware locks array in place — static car lights, no scrolling)
     // 0x02 = STROBE (urgent flashing for hard braking)
