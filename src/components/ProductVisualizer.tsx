@@ -94,8 +94,8 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
   const deviceSegments = device?.segments || 1;
   const numLeds = Math.floor(devicePoints / deviceSegments); // 16 or 43
 
-  const leds = useMemo(() => {
-    const list = [];
+  // ── PATH GEOMETRY (expensive) — only recomputes on shape/product change, NEVER on animTick ──
+  const pathGeometry = useMemo(() => {
     const numSamples = 5000;
     const pathSamples: any[] = [];
     let totalLength = 0;
@@ -181,7 +181,12 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
       }
       pathSamples.push({ top, left, length: totalLength });
     }
+    return { pathSamples, totalLength };
+  }, [product, vizShape, numLeds, deviceSegments, productProfile]);
 
+  const leds = useMemo(() => {
+    const { pathSamples, totalLength } = pathGeometry;
+    const list = [];
     let lastSampleIdx = 0;
     // We strictly use dense rendering (64 points) to draw the perfectly smooth physical silicone casing, 
     // but the `isHotspot` flag ensures ONLY the true 16 LEDs actually fire inside it!
@@ -338,8 +343,9 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
             // ── All other RBM patterns: hardware-accurate pixel simulation ──
             // Dynamic Mirroring: generates per-segment frame; Seg2 mirrors it reversed if flagged.
             const rbmSegLeds = isMirrored ? Math.ceil(numLeds / 2) : numLeds;
-            // Migrated from getRbmVisualizerFrame → PatternEngine.getVisualizerFrame (BATCH:P0)
-            const fgRgbProg: RGB = { r: 255, g: 0, b: 0 };
+            // Use user-selected color (parsed from `color` prop) for fg; bg = dark contrast
+            const _fgHex = color || '#FF0000';
+            const fgRgbProg: RGB = { r: parseInt(_fgHex.slice(1,3),16)||255, g: parseInt(_fgHex.slice(3,5),16)||0, b: parseInt(_fgHex.slice(5,7),16)||0 };
             const bgRgbProg: RGB = { r: 0, g: 0, b: 0 };
             const rbmFrame = getVisualizerFrame(pid as PatternId, fgRgbProg, bgRgbProg, rbmSegLeds, animTick);
             const rawLedPos = (segmentI / activeSegmentLeds) * rbmFrame.length;
@@ -462,13 +468,11 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
             builderPixels = PositionalMathBuffer.generateArray(builderNodes, activeSegmentLeds, builderFillMode === 'GRADIENT');
           }
 
-          if (builderTransitionType === 4 || builderTransitionType === 5) {
+          // 0x01=FLOW, 0x03=WATER → scroll the pixel array using animTick
+          if (builderTransitionType === 0x01 || builderTransitionType === 0x03) {
             const steps = activeSegmentLeds;
             const directionMultiplier = builderDirection === 0 ? -1 : 1;
-            let shiftAmount = animTick * steps * directionMultiplier;
-            if (builderTransitionType === 5) {
-              shiftAmount = Math.floor(shiftAmount);
-            }
+            const shiftAmount = animTick * steps * directionMultiplier;
             const newArr = [];
             for (let k = 0; k < steps; k++) {
               let sourceIdx = Math.floor(k - shiftAmount) % steps;
@@ -498,14 +502,16 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           const pb = Math.round(pCurr.b * (1 - blendAmt) + pAdj.b * blendAmt);
           dotColor = `#${pr.toString(16).padStart(2, '0')}${pg.toString(16).padStart(2, '0')}${pb.toString(16).padStart(2, '00')}`;
 
-          if (builderTransitionType === 1) { // Static
+          if (builderTransitionType === 0x00) { // STATIC — freeze, no animation
             dotOpacity = isPoweredOn ? (brightness / 100) : 0;
-          } else if (builderTransitionType === 2) { // Gradual breath
-            const t = animTick < 0.5 ? animTick * 2 : (1 - animTick) * 2; // Triangle wave 0-1
-            dotOpacity = isPoweredOn ? (0.2 + t * 0.8) * (brightness / 100) : 0;
-          } else if (builderTransitionType === 3) { // Strobe
-            const t = animTick < 0.5 ? 1 : 0; // Hard step
-            dotOpacity = isPoweredOn ? Math.max(0.01, t) * (brightness / 100) : 0;
+          } else if (builderTransitionType === 0x01) { // FLOW — scrolling (opacity stays solid)
+            dotOpacity = isPoweredOn ? (brightness / 100) : 0;
+          } else if (builderTransitionType === 0x02) { // STROBE — hard on/off flash
+            const strobeOn = animTick < 0.5 ? 1 : 0;
+            dotOpacity = isPoweredOn ? Math.max(0.01, strobeOn) * (brightness / 100) : 0;
+          } else if (builderTransitionType === 0x03) { // WATER — scrolling + opacity wave
+            const wave = 0.5 + 0.5 * Math.sin(animTick * Math.PI * 2 + fract * Math.PI * 4);
+            dotOpacity = isPoweredOn ? (0.3 + wave * 0.7) * (brightness / 100) : 0;
           } else {
             dotOpacity = isPoweredOn ? (brightness / 100) : 0;
           }
@@ -528,7 +534,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
       });
     }
     return list;
-  }, [product, mode, color, numLeds, patternId, isPoweredOn, audioMagnitude, fixedFgColor, fixedBgColor, multiColors, multiTransition, brightness, speed, animTick, isStreetBraking, motionState, streetCruiseColor, builderNodes, builderFillMode, builderTransitionType, builderDirection]);
+  }, [pathGeometry, mode, color, numLeds, patternId, isPoweredOn, audioMagnitude, fixedFgColor, fixedBgColor, multiColors, multiTransition, brightness, speed, animTick, isStreetBraking, motionState, streetCruiseColor, builderNodes, builderFillMode, builderTransitionType, builderDirection]);
 
   return (
     <TouchableOpacity
