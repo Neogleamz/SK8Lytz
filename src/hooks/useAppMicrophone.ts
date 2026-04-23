@@ -2,7 +2,7 @@
  * useAppMicrophone.ts — App-side audio recording bridge.
  *
  * Manages the expo-av Audio.Recording lifecycle for APP MIC mode.
- * Streams normalized magnitude (0–1) and dispatches 0x74 Symphony
+ * Streams normalized magnitude (0–1) and dispatches 0x74 music magnitude
  * commands to hardware.
  *
  * Extracted from DockedController.tsx to isolate platform-specific
@@ -70,7 +70,7 @@ export function useAppMicrophone({
           const normalized = Math.max(0, Math.min(1, (metering + 60) / 60));
           setAudioMagnitude(normalized);
 
-          // Send to physical device (Symphony 0x74 command expects 0-255)
+          // Send to physical device (0x74 music magnitude command expects 0-255)
           const deviceMag = Math.floor(normalized * 255);
           writeToDevice(ZenggeProtocol.sendMusicMagnitude(deviceMag));
         }

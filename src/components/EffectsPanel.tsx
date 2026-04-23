@@ -2,10 +2,11 @@ import { Spacing } from '../theme/theme';
 /**
  * EffectsPanel.tsx — SK8Lytz Pro Effects Panel
  *
- * A complete, standalone Effects mode panel inspired by the Zengge APK's
- * "Customize Mode" step editor (ActivityCustomSymphonyEdit + kd/t0.java).
+ * A complete, standalone Effects mode panel for the 33 built-in custom effects.
+ * Inspired by the Zengge APK's step editor (kd/t0.java).
+ * Fires 0x51 payloads — NOT 0x41 Symphony (0x41 is deprecated for production use).
  *
- * Displays all 33 Symphony effects in a scrollable grid. Each card shows:
+ * Displays all 33 custom effects in a scrollable grid. Each card shows:
  *  - Animated LED strip preview (StripView equivalent via CustomEffectVisualizer)
  *  - Effect name + ID badge
  *  - FG/BG color capability indicators
@@ -221,7 +222,7 @@ const EffectsPanel: React.FC<EffectsPanelProps> = ({
 }) => {
   const { Colors } = useTheme();
 
-  // ── State — mirrors Zengge's ActivityCustomSymphonyEdit step state ──────────
+  // ── State — mirrors Zengge's step editor (kd/t0.java) ──────────────────────
   const [selectedEffectId, setSelectedEffectId] = useState<number>(1);
   const [fgHue, setFgHue] = useState<number>(180);
   const [bgHue, setBgHue] = useState<number>(240);

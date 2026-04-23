@@ -12,7 +12,80 @@
  * to audio-reactive pixel arrays using the same motion primitives.
  */
 
-import { BG_HEX, getRbmPattern, PALETTE, type RbmColorPalette, type RbmMotion } from './RbmDictionary';
+// ── Inlined from retired RbmDictionary.ts [BATCH:P0] ────────────────────────
+// RbmDictionary.ts was deleted in refactor/retire-rbm-simulator. All required
+// types and constants are inlined here. Remove when RbmSimulator is retired in BATCH:P1.
+
+export type RbmMotion =
+  | 'SCROLL_FWD' | 'SCROLL_REV' | 'PING_PONG'
+  | 'MID_OUT' | 'ENDS_IN'
+  | 'OVERLAY_FWD' | 'OVERLAY_REV' | 'OVERLAY_PING' | 'OVERLAY_MID' | 'OVERLAY_ENDS'
+  | 'FADE' | 'JUMP' | 'STROBE' | 'BREATHE'
+  | 'COMET' | 'COMET_PING' | 'STATIC' | 'ALL';
+
+export type RbmColorPalette =
+  | 'RAINBOW7' | 'WHITE7'
+  | 'RED' | 'GREEN' | 'BLUE' | 'YELLOW' | 'CYAN' | 'PURPLE' | 'WHITE' | 'BLACK'
+  | 'RG' | 'RB' | 'GB';
+
+type RbmBg = 'BLACK' | 'RED' | 'GREEN' | 'BLUE' | 'YELLOW' | 'PURPLE' | 'CYAN' | 'WHITE';
+
+interface RbmPattern {
+  id: number; name: string; motion: RbmMotion;
+  colors: RbmColorPalette; bg: RbmBg; points: 'SINGLE' | 'MULTI';
+}
+
+const PALETTE: Record<RbmColorPalette, string[]> = {
+  RAINBOW7: ['#FF0000','#FF6600','#FFFF00','#00FF00','#00FFFF','#0066FF','#AA00FF'],
+  WHITE7:   ['#FFFFFF','#FF0000','#FF6600','#FFFF00','#00FF00','#00FFFF','#0066FF'],
+  RED:['#FF0000'], GREEN:['#00FF00'], BLUE:['#0066FF'], YELLOW:['#FFFF00'],
+  CYAN:['#00FFFF'], PURPLE:['#AA00FF'], WHITE:['#FFFFFF'], BLACK:['#000000'],
+  RG:['#FF0000','#00FF00'], RB:['#FF0000','#0066FF'], GB:['#00FF00','#0066FF'],
+};
+
+const BG_HEX: Record<RbmBg, string> = {
+  BLACK:'#000000', RED:'#FF0000', GREEN:'#00FF00', BLUE:'#0066FF',
+  YELLOW:'#FFFF00', PURPLE:'#AA00FF', CYAN:'#00FFFF', WHITE:'#FFFFFF',
+};
+
+const RBM_PATTERNS: RbmPattern[] = [
+  { id:1,  name:'Static',           motion:'STATIC',      colors:'RED',      bg:'BLACK', points:'MULTI' },
+  { id:2,  name:'Rainbow Jump',     motion:'JUMP',        colors:'RAINBOW7', bg:'BLACK', points:'MULTI' },
+  { id:3,  name:'7 Color Jump',     motion:'JUMP',        colors:'RAINBOW7', bg:'BLACK', points:'MULTI' },
+  { id:4,  name:'Red Green Jump',   motion:'JUMP',        colors:'RG',       bg:'BLACK', points:'MULTI' },
+  { id:5,  name:'Red Blue Jump',    motion:'JUMP',        colors:'RB',       bg:'BLACK', points:'MULTI' },
+  { id:6,  name:'Green Blue Jump',  motion:'JUMP',        colors:'GB',       bg:'BLACK', points:'MULTI' },
+  { id:7,  name:'Rainbow Gradual',  motion:'FADE',        colors:'RAINBOW7', bg:'BLACK', points:'MULTI' },
+  { id:8,  name:'7 Color Gradual',  motion:'FADE',        colors:'RAINBOW7', bg:'BLACK', points:'MULTI' },
+  { id:9,  name:'Red Green Gradual',motion:'FADE',        colors:'RG',       bg:'BLACK', points:'MULTI' },
+  { id:10, name:'Red Blue Gradual', motion:'PING_PONG',   colors:'RAINBOW7', bg:'BLACK', points:'MULTI' },
+  { id:11, name:'Green Blue Gradual',motion:'BREATHE',    colors:'RAINBOW7', bg:'BLACK', points:'MULTI' },
+  { id:12, name:'7 Color Strobe',   motion:'STROBE',      colors:'RAINBOW7', bg:'BLACK', points:'MULTI' },
+  { id:13, name:'Red Strobe',       motion:'BREATHE',     colors:'RED',      bg:'BLACK', points:'MULTI' },
+  { id:14, name:'Green Strobe',     motion:'SCROLL_FWD',  colors:'RAINBOW7', bg:'BLACK',  points:'SINGLE' },
+  { id:15, name:'Blue Strobe',      motion:'SCROLL_FWD',  colors:'RAINBOW7', bg:'RED',    points:'SINGLE' },
+  { id:16, name:'Yellow Strobe',    motion:'SCROLL_FWD',  colors:'RAINBOW7', bg:'GREEN',  points:'SINGLE' },
+  { id:17, name:'Cyan Strobe',      motion:'SCROLL_FWD',  colors:'RAINBOW7', bg:'BLUE',   points:'SINGLE' },
+  { id:18, name:'Purple Strobe',    motion:'SCROLL_FWD',  colors:'RAINBOW7', bg:'YELLOW', points:'SINGLE' },
+  { id:19, name:'White Strobe',     motion:'SCROLL_FWD',  colors:'RAINBOW7', bg:'PURPLE', points:'SINGLE' },
+  { id:20, name:'7 Color Flow',     motion:'SCROLL_FWD',  colors:'RAINBOW7', bg:'CYAN',   points:'SINGLE' },
+  { id:21, name:'7 Color Chase',    motion:'SCROLL_FWD',  colors:'RAINBOW7', bg:'WHITE',  points:'SINGLE' },
+  { id:22, name:'7 Color Marquee',  motion:'SCROLL_REV',  colors:'RAINBOW7', bg:'BLACK',  points:'SINGLE' },
+  { id:23, name:'7 Color Comet',    motion:'COMET',       colors:'RAINBOW7', bg:'BLACK',  points:'SINGLE' },
+  { id:24, name:'7 Color Breathe',  motion:'BREATHE',     colors:'RAINBOW7', bg:'BLACK',  points:'MULTI'  },
+  { id:25, name:'7 Color Overlay',  motion:'OVERLAY_FWD', colors:'RAINBOW7', bg:'BLACK',  points:'MULTI'  },
+  { id:26, name:'7 Color PingPong', motion:'PING_PONG',   colors:'RAINBOW7', bg:'BLACK',  points:'SINGLE' },
+  { id:27, name:'7 Color MidOut',   motion:'MID_OUT',     colors:'RAINBOW7', bg:'BLACK',  points:'SINGLE' },
+  { id:28, name:'7 Color EndsIn',   motion:'ENDS_IN',     colors:'RAINBOW7', bg:'BLACK',  points:'SINGLE' },
+  { id:29, name:'7 Color CometPing',motion:'COMET_PING',  colors:'RAINBOW7', bg:'BLACK',  points:'SINGLE' },
+  // IDs 30–100: fallback to rainbow fade for any unrecognised pattern
+];
+
+function getRbmPattern(id: number): RbmPattern {
+  return RBM_PATTERNS.find(p => p.id === id) ?? { id, name:'Unknown', motion:'FADE', colors:'RAINBOW7', bg:'BLACK', points:'MULTI' };
+}
+
+
 
 // ── Internal RGB type (matches PatternEngine for compatibility) ──────────────
 export interface RGB { r: number; g: number; b: number; }
