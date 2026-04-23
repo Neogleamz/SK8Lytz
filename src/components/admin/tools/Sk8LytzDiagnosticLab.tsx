@@ -106,12 +106,16 @@ const QuickColorGrid = ({ onSelect, activeColor }: { onSelect: (c: {r:number,g:n
   );
 };
 
-// ─── Transition type reference (hardware-confirmed live testing Apr 2026) ────
+// ─── Transition type reference (0x00–0x06 full APK range for Oracle sweep) ───
+// Sources confirmed vs non-confirmed per ZENGGE_PROTOCOL_BIBLE.md §3 / 0x59
 const TRANSITION_TYPES = [
-  { byte: 0x00, label: 'CASCADE',  color: '#FF9500', desc: '✅ Continuous scroll — hardware loops array around strip. Use for animated patterns.' },
-  { byte: 0x01, label: 'FREEZE',   color: '#00CC88', desc: '✅ Static lock — array is held in place, no movement. Use for solid/street lights.' },
-  { byte: 0x02, label: 'STROBE',   color: '#FF4040', desc: '⚠️ Intended flash — visually similar to FREEZE on some firmware. Use for hard brake alert.' },
-  { byte: 0x03, label: 'TRIGGER',  color: '#FF69B4', desc: '🔴 One-shot trigger — renders array at NEXT offset then stops. Causes blink+new-position on each send. NOT continuous animation.' },
+  { byte: 0x00, label: 'CASCADE',       color: '#FF9500', confirmed: true,  desc: '✅ CONFIRMED — Continuous scroll. Hardware loops array around strip.' },
+  { byte: 0x01, label: 'FREEZE',        color: '#00CC88', confirmed: true,  desc: '✅ CONFIRMED — Static lock. Array held in place, no movement.' },
+  { byte: 0x02, label: 'STROBE',        color: '#FF4040', confirmed: true,  desc: '✅ CONFIRMED — Flash effect. Visually confirmed on 0xA3 hardware.' },
+  { byte: 0x03, label: 'RUNNING WATER', color: '#FF69B4', confirmed: true,  desc: '✅ CONFIRMED — One-shot marquee trigger per command send.' },
+  { byte: 0x04, label: 'JUMP?',         color: '#C084FC', confirmed: false, desc: '❓ HYPOTHESIS — APK StaticColorfulMode.java entry. Hardware response unknown.' },
+  { byte: 0x05, label: 'BREATHE?',      color: '#38BDF8', confirmed: false, desc: '❓ HYPOTHESIS — APK StaticColorfulMode.java entry. Hardware response unknown.' },
+  { byte: 0x06, label: 'TWINKLE?',      color: '#FBBF24', confirmed: false, desc: '❓ KEY TARGET — 6 Tier-3 patterns use 0x02 fallback until this is confirmed.' },
 ];
 
 // moved to useProtocolBuilder.ts
@@ -226,6 +230,14 @@ export default function Sk8LytzDiagnosticLab({
   const [sceneSlot, setSceneSlot]       = useState(0);
   // Accordion: which Phase 2 panel is expanded
   const [expandedP2, setExpandedP2]     = useState<string | null>(null);
+
+  // ── Oracle Sweep result maps ─────────────────────────────────────────
+  // Keys for 0x59: transition byte as hex string e.g. '0x00'
+  // Keys for 0x41: effectId as string e.g. '1'
+  // Values: 'WORKS' | 'NO_EFFECT' | 'CRASHED' | null (untested)
+  type SweepResult = 'WORKS' | 'NO_EFFECT' | 'CRASHED' | null;
+  const [ttSweepResults, setTtSweepResults] = useState<Record<string, SweepResult>>({});
+  const [p41SweepResults, setP41SweepResults] = useState<Record<string, SweepResult>>({});
 
   // 0x53 auto-frame-stream via setInterval
   useEffect(() => {
@@ -1210,70 +1222,205 @@ export default function Sk8LytzDiagnosticLab({
         APK-inferred builders for opcodes not yet confirmed. Tap header to expand. All are labeled [HYPOTHESIS].
       </Text>
 
-      {/* ── 0x41 Settled Mode Panel ───────────────────────── */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* 🔬 0x59 TRANSITION TYPE SWEEP — 0x00 through 0x06           */}
+      {/* ══════════════════════════════════════════════════════════════ */}
       <TouchableOpacity
-        onPress={() => setExpandedP2(expandedP2 === '0x41' ? null : '0x41')}
-        style={[S.diagBox, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderColor: expandedP2 === '0x41' ? '#9D4EFF' : border, borderWidth: expandedP2 === '0x41' ? 1.5 : 1 }]}
+        onPress={() => setExpandedP2(expandedP2 === 'TT_SWEEP' ? null : 'TT_SWEEP')}
+        style={[S.diagBox, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+          borderColor: expandedP2 === 'TT_SWEEP' ? '#FBBF24' : border,
+          borderWidth: expandedP2 === 'TT_SWEEP' ? 1.5 : 1 }]}
       >
         <View>
-          <Text style={{ color: '#9D4EFF', fontWeight: '900', fontSize: 13 }}>🎨 0x41 Settled Mode [HYPOTHESIS]</Text>
-          <Text style={{ color: txtMuted, fontSize: 10, marginTop: 2 }}>effectId 1–33 · FG/BG colors · speed · dir</Text>
+          <Text style={{ color: '#FBBF24', fontWeight: '900', fontSize: 13 }}>🔬 0x59 TransitionType Sweep (0x00–0x06)</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginTop: 2 }}>
+            Fire each byte · log result · confirm or deny 0x06 Twinkle
+          </Text>
+        </View>
+        <Text style={{ color: '#FBBF24', fontSize: 18 }}>{expandedP2 === 'TT_SWEEP' ? '▲' : '▼'}</Text>
+      </TouchableOpacity>
+      {expandedP2 === 'TT_SWEEP' && (
+        <View style={[S.diagBox, { borderColor: '#FBBF24', borderWidth: 1 }]}>
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm }}>
+            Sends a solid RED 0x59 array ({hwPts} LEDs) with each transitionType byte.{'\n'}
+            Tap SEND → observe hardware → log result. 0x06 is the key unknown.
+          </Text>
+          {/* Summary grid */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.md }}>
+            {TRANSITION_TYPES.map(tt => {
+              const key = `0x0${tt.byte.toString(16).toUpperCase()}`;
+              const res = ttSweepResults[key];
+              const cellColor = res === 'WORKS' ? '#00CC88' : res === 'NO_EFFECT' ? '#FF9500' : res === 'CRASHED' ? '#FF4040' : border;
+              return (
+                <View key={tt.byte} style={{ alignItems: 'center', width: 44 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: cellColor + '33', borderWidth: 1.5, borderColor: cellColor, justifyContent: 'center', alignItems: 'center' }}>
+                    <Text style={{ color: cellColor, fontSize: 9, fontWeight: '900', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{key}</Text>
+                  </View>
+                  <Text style={{ color: cellColor, fontSize: 8, marginTop: 2 }}>{res ?? '—'}</Text>
+                </View>
+              );
+            })}
+          </View>
+          <Text style={{ color: '#FBBF24', fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>FG COLOR FOR SWEEP</Text>
+          <QuickColorGrid activeColor={p41Color1} onSelect={setP41Color1} />
+          {TRANSITION_TYPES.map(tt => {
+            const key = `0x0${tt.byte.toString(16).toUpperCase()}`;
+            const res = ttSweepResults[key];
+            const setByte = (r: 'WORKS' | 'NO_EFFECT' | 'CRASHED') =>
+              setTtSweepResults(prev => ({ ...prev, [key]: r }));
+            return (
+              <View key={tt.byte} style={[S.diagBox, { borderColor: tt.color, borderWidth: 1, marginBottom: Spacing.sm }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
+                  <View>
+                    <Text style={{ color: tt.color, fontWeight: '900', fontSize: 12 }}>
+                      {key}  {tt.label}  {tt.confirmed ? '✅' : '❓'}
+                    </Text>
+                    <Text style={{ color: txtMuted, fontSize: 10, marginTop: 2 }}>{tt.desc}</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      const numPoints = hwPts;
+                      const totalLen = numPoints * 3 + 9;
+                      const raw = new Array(totalLen).fill(0);
+                      raw[0] = 0x59; raw[1] = (totalLen >> 8) & 0xFF; raw[2] = totalLen & 0xFF;
+                      let idx = 3;
+                      for (let i = 0; i < numPoints; i++) {
+                        raw[idx++] = p41Color1.r; raw[idx++] = p41Color1.g; raw[idx++] = p41Color1.b;
+                      }
+                      raw[idx++] = (numPoints >> 8) & 0xFF; raw[idx++] = numPoints & 0xFF;
+                      raw[idx++] = tt.byte & 0xFF; raw[idx++] = 50; raw[idx++] = 1;
+                      raw[idx] = ZenggeProtocol.calculateChecksum(raw.slice(0, totalLen - 1));
+                      transmit(ZenggeProtocol.wrapCommand(raw), `0x59 transType=${key} ${tt.label}`, '0x59');
+                    }}
+                    style={{ backgroundColor: tt.color + '22', borderWidth: 1, borderColor: tt.color, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderRadius: 8 }}
+                  >
+                    <Text style={{ color: tt.color, fontWeight: '900', fontSize: 11 }}>SEND</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+                  {(['WORKS', 'NO_EFFECT', 'CRASHED'] as const).map(r => (
+                    <TouchableOpacity key={r} onPress={() => setByte(r)}
+                      style={{ flex: 1, paddingVertical: Spacing.sm, borderRadius: 6, alignItems: 'center',
+                        backgroundColor: res === r ? (r === 'WORKS' ? '#00CC8822' : r === 'CRASHED' ? '#FF404022' : '#FF950022') : 'transparent',
+                        borderWidth: 1, borderColor: res === r ? (r === 'WORKS' ? '#00CC88' : r === 'CRASHED' ? '#FF4040' : '#FF9500') : border }}
+                    >
+                      <Text style={{ color: res === r ? (r === 'WORKS' ? '#00CC88' : r === 'CRASHED' ? '#FF4040' : '#FF9500') : txtMuted, fontSize: 9, fontWeight: '900' }}>
+                        {r === 'WORKS' ? '✅ WORKS' : r === 'NO_EFFECT' ? '⚠️ NO FX' : '💀 CRASH'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            );
+          })}
+          <TouchableOpacity onPress={() => setTtSweepResults({})} style={{ alignSelf: 'flex-end', marginTop: Spacing.sm }}>
+            <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: '900' }}>RESET RESULTS</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* 🎨 0x41 SETTLED MODE — Effect ID Sweep (1–33)                */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      <TouchableOpacity
+        onPress={() => setExpandedP2(expandedP2 === '0x41' ? null : '0x41')}
+        style={[S.diagBox, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+          borderColor: expandedP2 === '0x41' ? '#9D4EFF' : border,
+          borderWidth: expandedP2 === '0x41' ? 1.5 : 1 }]}
+      >
+        <View>
+          <Text style={{ color: '#9D4EFF', fontWeight: '900', fontSize: 13 }}>🎨 0x41 Settled Mode — Effect ID Sweep (1–33)</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginTop: 2 }}>
+            FG/BG · speed · dir · tap each ID · log verdict
+          </Text>
         </View>
         <Text style={{ color: '#9D4EFF', fontSize: 18 }}>{expandedP2 === '0x41' ? '▲' : '▼'}</Text>
       </TouchableOpacity>
       {expandedP2 === '0x41' && (
         <View style={[S.diagBox, { borderColor: '#9D4EFF', borderWidth: 1 }]}>
-          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
+          <Text style={{ color: '#FF9500', fontSize: 10, fontWeight: '700', marginBottom: Spacing.md }}>
+            ⚠️ LAB ONLY — 0x41 is a condemned production opcode. Oracle use only.{'\n'}
+            APK truth: [0x41, id, FG.R,G,B, BG.R,G,B, speed, dir, 0x00, 0xF0, CS] — 13 bytes
+          </Text>
+
+          {/* Summary grid — 33 cells */}
+          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>RESULT GRID</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: Spacing.lg }}>
+            {Array.from({ length: 33 }, (_, i) => i + 1).map(id => {
+              const res = p41SweepResults[String(id)];
+              const cellColor = res === 'WORKS' ? '#00CC88' : res === 'NO_EFFECT' ? '#FF9500' : res === 'CRASHED' ? '#FF4040' : border;
+              return (
+                <View key={id} style={{ width: 36, height: 36, borderRadius: 6, backgroundColor: cellColor + '33', borderWidth: 1, borderColor: cellColor, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: cellColor, fontSize: 10, fontWeight: '900' }}>{id}</Text>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Controls row */}
+          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>EFFECT ID (1–33)</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                <TouchableOpacity onPress={() => setP41EffectId(Math.max(1, p41EffectId - 1))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>‒</Text>
-                </TouchableOpacity>
-                <TextInput
-                  style={[S.numInput, { flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri, textAlign: 'center' }]}
-                  value={String(p41EffectId)} keyboardType="numeric"
-                  onChangeText={v => setP41EffectId(Math.max(1, Math.min(33, parseInt(v)||1)))}
-                />
-                <TouchableOpacity onPress={() => setP41EffectId(Math.min(33, p41EffectId + 1))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>+</Text>
-                </TouchableOpacity>
+              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>SPEED (1–255)</Text>
+              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]}
+                value={String(p41Speed)} keyboardType="numeric"
+                onChangeText={v => setP41Speed(Math.max(1, Math.min(255, parseInt(v) || 1)))} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>DIRECTION</Text>
+              <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
+                {[{ v: 0x00, l: 'FWD' }, { v: 0x01, l: 'REV' }].map(d => (
+                  <TouchableOpacity key={d.v} onPress={() => setP41Dir(d.v)}
+                    style={[S.chip, p41Dir === d.v && { backgroundColor: '#9D4EFF22', borderColor: '#9D4EFF' }, { flex: 1, height: 40 }]}>
+                    <Text style={{ color: p41Dir === d.v ? '#9D4EFF' : txtMuted, fontSize: 11, textAlign: 'center', fontWeight: '900' }}>{d.l}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>SPEED (1–100)</Text>
-              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={String(p41Speed)} keyboardType="numeric" onChangeText={v => setP41Speed(Math.max(1, Math.min(100, parseInt(v)||1)))} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>BRIGHT</Text>
-              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={String(p41Bright)} keyboardType="numeric" onChangeText={v => setP41Bright(Math.max(1, Math.min(100, parseInt(v)||1)))} />
-            </View>
           </View>
-          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>DIRECTION</Text>
-          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md }}>
-            {[{ v: 0x01, l: 'FORWARD (0x01)' }, { v: 0x00, l: 'REVERSE (0x00)' }].map(d => (
-              <TouchableOpacity key={d.v} onPress={() => setP41Dir(d.v)}
-                style={{ flex: 1, paddingVertical: Spacing.md, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: p41Dir === d.v ? '#9D4EFF' : border, backgroundColor: p41Dir === d.v ? '#9D4EFF22' : 'transparent' }}
-              >
-                <Text style={{ color: p41Dir === d.v ? '#9D4EFF' : txtMuted, fontSize: 11, fontWeight: '900' }}>{d.l}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>FG COLOR (COLOR 1)</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>FG COLOR</Text>
           <QuickColorGrid activeColor={p41Color1} onSelect={setP41Color1} />
-          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>BG COLOR (COLOR 2)</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>BG COLOR</Text>
           <QuickColorGrid activeColor={p41Color2} onSelect={setP41Color2} />
-          <View style={{ backgroundColor: isDark ? '#05070a' : '#f9fafb', borderRadius: 8, padding: Spacing.md, marginBottom: Spacing.md, borderColor: border, borderWidth: 1 }}>
-            <Text style={{ color: '#9D4EFF', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
-              {`[0x41, 0x${p41EffectId.toString(16).padStart(2,'0')}, 0x${p41Speed.toString(16).padStart(2,'0')}, 0x${p41Bright.toString(16).padStart(2,'0')},\n R1, G1, B1, R2, G2, B2, 0x${p41Dir.toString(16).padStart(2,'0')}, 0xF0, CS]`}
-            </Text>
-            <Text style={{ color: txtMuted, fontSize: 9, marginTop: Spacing.xs }}>13 bytes — APK HYPOTHESIS · not yet hardware-verified</Text>
-          </View>
-          <TouchableOpacity
-            style={[S.txBtn, { backgroundColor: '#9D4EFF', borderColor: '#9D4EFF' }]}
-            onPress={() => transmit(ZenggeProtocol.setSettledMode(p41EffectId, p41Color1, p41Color2, p41Speed, p41Dir as 0 | 1), `0x41 effectId=${p41EffectId} speed=${p41Speed}`, '0x41')}
-          >
-            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>TX 0x41 SETTLED MODE</Text>
+
+          {/* 33-ID grid — tap to send + verdict buttons inline */}
+          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginTop: Spacing.md, marginBottom: Spacing.xs }}>TAP TO SEND EACH EFFECT</Text>
+          {Array.from({ length: 33 }, (_, i) => i + 1).map(id => {
+            const res = p41SweepResults[String(id)];
+            const setRes = (r: 'WORKS' | 'NO_EFFECT' | 'CRASHED') =>
+              setP41SweepResults(prev => ({ ...prev, [String(id)]: r }));
+            const resColor = res === 'WORKS' ? '#00CC88' : res === 'NO_EFFECT' ? '#FF9500' : res === 'CRASHED' ? '#FF4040' : border;
+            return (
+              <View key={id} style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm,
+                borderBottomWidth: 1, borderBottomColor: border, paddingBottom: Spacing.sm }}>
+                {/* ID badge + send */}
+                <TouchableOpacity
+                  onPress={() => transmit(
+                    ZenggeProtocol.setSettledMode(id, p41Color1, p41Color2, p41Speed, p41Dir as 0 | 1),
+                    `0x41 id=${id} spd=${p41Speed} dir=${p41Dir}`, '0x41'
+                  )}
+                  style={{ width: 48, height: 40, borderRadius: 8, backgroundColor: resColor + '22',
+                    borderWidth: 1.5, borderColor: resColor, justifyContent: 'center', alignItems: 'center' }}
+                >
+                  <Text style={{ color: resColor, fontWeight: '900', fontSize: 12 }}>{id}</Text>
+                  <Text style={{ color: resColor, fontSize: 8 }}>SEND</Text>
+                </TouchableOpacity>
+                {/* Verdict buttons */}
+                {(['WORKS', 'NO_EFFECT', 'CRASHED'] as const).map(r => (
+                  <TouchableOpacity key={r} onPress={() => setRes(r)}
+                    style={{ flex: 1, paddingVertical: Spacing.sm, borderRadius: 6, alignItems: 'center',
+                      backgroundColor: res === r ? (r === 'WORKS' ? '#00CC8822' : r === 'CRASHED' ? '#FF404022' : '#FF950022') : 'transparent',
+                      borderWidth: 1, borderColor: res === r ? (r === 'WORKS' ? '#00CC88' : r === 'CRASHED' ? '#FF4040' : '#FF9500') : border }}
+                  >
+                    <Text style={{ color: res === r ? (r === 'WORKS' ? '#00CC88' : r === 'CRASHED' ? '#FF4040' : '#FF9500') : txtMuted, fontSize: 9, fontWeight: '900' }}>
+                      {r === 'WORKS' ? '✅' : r === 'NO_EFFECT' ? '⚠️' : '💀'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            );
+          })}
+          <TouchableOpacity onPress={() => setP41SweepResults({})} style={{ alignSelf: 'flex-end', marginTop: Spacing.sm }}>
+            <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: '900' }}>RESET RESULTS</Text>
           </TouchableOpacity>
         </View>
       )}
