@@ -38,7 +38,6 @@ import CameraPanel from './docked/CameraPanel';
 import StreetPanel from './docked/StreetPanel';
 import FavoritePromptModal from './docked/FavoritePromptModal';
 import UniversalSlidersFooter from './docked/UniversalSlidersFooter';
-import FloatingDock from './docked/FloatingDock';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Layout, Spacing, Typography } from '../theme/theme';
@@ -863,16 +862,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           )}
         </View>
 
-        {/* THE FLOATING DOCK */}
-        <FloatingDock
-          activeMode={activeMode}
-          onModeChange={setActiveMode}
-          onSetLastOperatingMode={setLastOperatingMode}
-          onSetFixedSubMode={setFixedSubMode}
-          onDisconnect={onDisconnect}
-          Colors={Colors}
-          styles={styles}
-        />
+
 
         {/* Quick Preset Prompt Modal */}
         <Modal visible={promptState === 'NAMING_PRESET'} transparent animationType="fade">
