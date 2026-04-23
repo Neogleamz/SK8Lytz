@@ -179,6 +179,13 @@ export interface IFavoriteState {
   micSensitivity?: number;
   micSource?: MicSource;
   musicMatrixStyle?: number;
+  // ── BUILDER mode persistence (feat/pattern-favorites-v2) ─────────────
+  /** Saved gradient node array — each node: { id, position 0–100, colorHex } */
+  builderNodes?: Array<{ id: string; position: number; colorHex: string }>;
+  builderFillMode?: 'GRADIENT' | 'SOLID';
+  /** TransitionType byte: 0x00=STATIC, 0x01=FLOW, 0x02=STROBE, 0x03=WATER */
+  builderTransitionType?: number;
+  builderDirection?: number;
 }
 
 /** A quick color preset for the Builder sub-mode. */

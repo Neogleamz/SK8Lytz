@@ -425,7 +425,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         brightness,
         fixedColorMode, fixedFgColor, fixedBgColor, fixedHue,
         multiColors, multiTransition, multiLength,
-        musicPrimaryColor, musicSecondaryColor, micSensitivity, micSource, musicMatrixStyle
+        musicPrimaryColor, musicSecondaryColor, micSensitivity, micSource, musicMatrixStyle,
+        // Builder persistence (feat/pattern-favorites-v2)
+        builderNodes, builderFillMode, builderTransitionType, builderDirection,
       };
 
       saveFavorite(capturedState, name);
@@ -479,7 +481,20 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         setFixedFgColor(favRaw.fixedFgColor ?? '#FFFFFF');
         setFixedBgColor(favRaw.fixedBgColor ?? '#000000');
         applyFixedPattern(favRaw.patternId ?? 0, favRaw.fixedFgColor ?? '#FFFFFF', favRaw.fixedBgColor ?? '#000000', favRaw.speed, favRaw.brightness);
+      } else if (legacyMode === 'BUILDER') {
+        setActiveMode('MULTIMODE');
+        setFixedSubMode('BUILDER');
+        if (favRaw.builderNodes && favRaw.builderNodes.length > 0) {
+          setBuilderNodes(favRaw.builderNodes);
+        }
+        if (favRaw.builderFillMode) setBuilderFillMode(favRaw.builderFillMode);
+        if (favRaw.builderTransitionType !== undefined) setBuilderTransitionType(favRaw.builderTransitionType);
+        if (favRaw.builderDirection !== undefined) setBuilderDirection(favRaw.builderDirection);
+        // Note: hardware dispatch is not auto-triggered for BUILDER restores.
+        // The gradient is re-sent when the user opens Builder tab and taps Send.
+        // Auto-dispatch tracked in: refactor/docked-controller-decomposition
       } else if (legacyMode === 'MULTI' || legacyMode === 'DIY' || legacyMode === 'MULTICOLOR') {
+
         setActiveMode('MULTIMODE');
         setFixedSubMode('BUILDER');
         setMultiColors(favRaw.multiColors || []);
