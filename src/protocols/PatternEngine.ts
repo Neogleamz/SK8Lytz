@@ -80,12 +80,15 @@
  *   └──────────┴──────────────────────────────────────────────────────────┘
  *
  *   Dispatch entry points:
- *     Hardware:   buildPatternPayload() → buildMultiColorPayload() | buildCustomModePayload()
+ *     Hardware:   buildPatternPayload() → buildMultiColorPayload() → 0x59 (ALL patterns)
  *     Visualizer: getVisualizerFrame() (ProductVisualizer.tsx + CustomEffectVisualizer.tsx)
  *
- *   Known gaps (logged as tech debt for BATCH:P1):
- *     TODO[BATCH:P1]: getPatternTransitionType returns only 0x01 or 0x00. Groups 3/4 may
- *       benefit from 0x01 (Gradual) for smoother hardware animation.
+ *   commandType per group (APK-PROVEN StaticColorfulMode.java):
+ *     IDs 1–5  → 0x01 Static   (freeze)
+ *     IDs 20   → 0x05 Breathe  (hardware pulses)
+ *     IDs 21   → 0x04 Jump     (hardware hard-jump)
+ *     IDs 22   → 0x03 Strobe   (hardware flash)
+ *     All else → 0x02 Running  (continuous scroll)
  */
 
 import { ZenggeProtocol } from './ZenggeProtocol';
@@ -1037,8 +1040,8 @@ export function getHardwarePixelArray(
   bg: RGB,
   numLEDs: number
 ): RGB[] | null {
-  // 0x51 temporal patterns return null so they fallback to buildCustomModePayload
-  if (patternId >= 20 && patternId <= 22) return null;
+  // All 61 patterns now use 0x59. commandType selects the hardware behavior:
+  //   IDs 20-22 use Breathe/Jump/Strobe commandTypes — pixel array is sent, hardware animates it.
 
   // Phase 1A ge.* native patterns evaluate at tick=0 to create the base hardware frame
   const phase1a = generatePhase1aArray(patternId, fg, bg, Math.max(1, numLEDs), 0);
@@ -1069,10 +1072,16 @@ export function getHardwarePixelArray(
  * commandType — it maps to nothing. Hardware received undefined byte → no animation.
  */
 export function getPatternTransitionType(patternId: PatternId): number {
-  // Group 1 (IDs 1–5): Solid & Static — send once, hardware freezes it
+  // Group 1 (IDs 1–5): Solid & Static — freeze in place
   if (patternId >= 1 && patternId <= 5) return 0x01; // Static
 
-  // All animated groups (2–7, IDs 6–61): Running = continuous hardware scroll
+  // Group 5a (IDs 20–22): Hardware-native effects — pixel array sent, hardware does the animation
+  // APK source: StaticColorfulMode.java — commandType enum
+  if (patternId === 20) return 0x05; // Breathe  — hardware pulses the array in/out
+  if (patternId === 21) return 0x04; // Jump     — hardware hard-jumps between states
+  if (patternId === 22) return 0x03; // Strobe   — hardware flashes the array on/off
+
+  // All other animated groups (2–4, 5b, 6, 7 — IDs 6–19, 23–61): Running = continuous scroll
   return 0x02; // Running
 }
 
@@ -1095,39 +1104,8 @@ export function buildMultiColorPayload(
 }
 
 /**
- * Build the 0x51 hardware command for temporal patterns (20-22).
- */
-export function buildCustomModePayload(
-  patternId: PatternId,
-  fg: RGB,
-  bg: RGB,
-  speed: number
-): number[] | null {
-  const s = Math.max(1, Math.min(100, Math.round(speed)));
-
-  if (patternId === 20) { // Smooth Breath
-    return ZenggeProtocol.setCustomMode([
-      { mode: ZenggeProtocol.STEP_GRADUAL, speed: s, color1: fg, color2: bg },
-      { mode: ZenggeProtocol.STEP_GRADUAL, speed: s, color1: bg, color2: fg },
-    ]);
-  }
-  if (patternId === 21) { // Hard Jump
-    return ZenggeProtocol.setCustomMode([
-      { mode: ZenggeProtocol.STEP_JUMP, speed: s, color1: fg, color2: bg },
-      { mode: ZenggeProtocol.STEP_JUMP, speed: s, color1: bg, color2: fg },
-    ]);
-  }
-  if (patternId === 22) { // Strobe
-    return ZenggeProtocol.setCustomMode([
-      { mode: ZenggeProtocol.STEP_JUMP, speed: 100, color1: fg, color2: bg },
-      { mode: ZenggeProtocol.STEP_JUMP, speed: 100, color1: bg, color2: fg },
-    ]);
-  }
-  return null;
-}
-
-/**
- * Master dispatcher — builds payload for hardware write.
+ * Master dispatcher — ALL patterns use 0x59. No 0x51.
+ * commandType is determined by getPatternTransitionType() for each ID.
  */
 export function buildPatternPayload(
   patternId: number,
@@ -1137,10 +1115,7 @@ export function buildPatternPayload(
   speed: number,
   direction: number = 1
 ): number[] | null {
-  const multiColor = buildMultiColorPayload(patternId, fg, bg, numLEDs, speed, direction);
-  if (multiColor) return multiColor;
-
-  return buildCustomModePayload(patternId, fg, bg, speed);
+  return buildMultiColorPayload(patternId, fg, bg, numLEDs, speed, direction);
 }
 
 // ─── MUSIC MODE VISUALIZER ────────────────────────────────────────────────────
