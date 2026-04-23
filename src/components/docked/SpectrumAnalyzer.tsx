@@ -6,7 +6,7 @@ import { Spacing } from '../../theme/theme';
 
 interface SpectrumAnalyzerProps {
   audioMagnitude: number;
-  micSource: 0x26 | 0x27; // 0x26 = App, 0x27 = Device
+  micSource: 'APP' | 'DEVICE';
   color1?: string;
   color2?: string;
   isPoweredOn?: boolean;
@@ -47,7 +47,7 @@ export default function SpectrumAnalyzer({
       return;
     }
 
-    if (micSource === 0x27) {
+    if (micSource === 'DEVICE') {
       // ── Device Mic (No telemetry): Ambient Pulse Animation ──
       // Create a continuous, slightly offset sine-wave-like bounce
       const animations = animatedValues.map((val, index) => {
@@ -120,13 +120,13 @@ export default function SpectrumAnalyzer({
       {/* ── Status Badge ── */}
       <View style={styles.statusBadge}>
         <MaterialCommunityIcons 
-          name={micSource === 0x27 ? "microphone-variant" : "microphone"} 
+          name={micSource === 'DEVICE' ? "microphone-variant" : "microphone"} 
           size={14} 
           color={isPoweredOn ? color1 : '#666'} 
           style={{ marginRight: 4 }}
         />
         <Text style={[styles.statusText, { color: isPoweredOn ? (isDark ? '#AAA' : '#666') : '#555' }]}>
-          {micSource === 0x27 ? "HARDWARE MIC ACTIVE" : "APP MIC ACTIVE"}
+          {micSource === 'DEVICE' ? "HARDWARE MIC ACTIVE" : "APP MIC ACTIVE"}
         </Text>
       </View>
 
