@@ -603,45 +603,7 @@ function buildHyperspace(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[]
   return frame;
 }
 
-function generatePhase1aArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: number): RGB[] | null {
-  const direction = 1; // Default to 1 (forward) if not dynamically provided by visualizer caller yet
-  switch (patternId) {
-    case 29: return buildColorFlow(n, tick, direction);
-    case 30: return buildColorBreathing(fg, n, tick);
-    case 31: return buildColorJump(fg, bg, n, tick);
-    case 32: return buildRunningWater(fg, bg, n, tick, direction);
-    case 33: return buildStrobe(fg, n, tick);
-    case 34: return buildColorWipe(fg, bg, n, tick, direction);
-    case 35: return buildFireworks(fg, bg, n, tick);
-    case 36: return buildOceanWave(fg, bg, n, tick, direction);
-    case 37: return buildLightning(fg, n, tick);
-    case 38: return buildSnowfall(fg, bg, n, tick);
-    case 39: return buildCandle(fg, n, tick);
-    case 40: return buildHeartbeat(fg, n, tick);
-    case 41: return buildMeteor(fg, bg, n, tick, direction);
-    case 42: return buildAurora(n, tick, direction);
-    case 43: return buildLava(fg, bg, n, tick);
-    case 44: return buildPlasma(fg, bg, n, tick, direction);
-    case 45: return buildStarCluster(fg, bg, n, tick);
-    case 46: return buildPoliceLights(n, tick);
-    case 47: return buildRainbowBreathing(n, tick);
-    case 48: return buildColorBurst(fg, bg, n, tick);
-    case 49: return buildTwinkle(fg, bg, n, tick);
-    case 50: return buildCrystalShimmer(n, tick);
-    case 51: return buildGradientChase(fg, bg, n, tick, direction);
-    case 52: return buildCometDuo(fg, bg, n, tick);
-    case 53: return buildFireFlame(fg, bg, n, tick);
-    case 54: return buildCyberGlitch(n, tick);
-    case 55: return buildNeonPulse(fg, bg, n, tick);
-    case 56: return buildRainbowChaser(n, tick, direction);
-    case 57: return buildMatrixRain(fg, bg, n, tick, direction);
-    case 58: return buildSparkleFade(fg, bg, n, tick);
-    case 59: return buildDualScan(fg, bg, n, tick);
-    case 60: return buildStarlight(fg, bg, n, tick);
-    case 61: return buildHyperspace(fg, bg, n, tick);
-    default: return null;
-  }
-}
+
 
 
 // ─── PHASE 1B BUILDERS (PROGRAMS REVERSAL) ────────────────────────────────────
@@ -973,6 +935,42 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: 
     case 27: return buildRainbowComet(n, tick, direction);
     case 28: return buildCyberpunkShift(fg, bg, n, tick, direction);
 
+    // ── GROUP 7: ge.* HARDWARE-NATIVE EFFECTS (IDs 29-61) ──
+    // All patterns have dedicated tick-based builders — no fallback.
+    case 29: return buildColorFlow(n, tick, direction);
+    case 30: return buildColorBreathing(fg, n, tick);
+    case 31: return buildColorJump(fg, bg, n, tick);
+    case 32: return buildRunningWater(fg, bg, n, tick, direction);
+    case 33: return buildStrobe(fg, n, tick);
+    case 34: return buildColorWipe(fg, bg, n, tick, direction);
+    case 35: return buildFireworks(fg, bg, n, tick);
+    case 36: return buildOceanWave(fg, bg, n, tick, direction);
+    case 37: return buildLightning(fg, n, tick);
+    case 38: return buildSnowfall(fg, bg, n, tick);
+    case 39: return buildCandle(fg, n, tick);
+    case 40: return buildHeartbeat(fg, n, tick);
+    case 41: return buildMeteor(fg, bg, n, tick, direction);
+    case 42: return buildAurora(n, tick, direction);
+    case 43: return buildLava(fg, bg, n, tick);
+    case 44: return buildPlasma(fg, bg, n, tick, direction);
+    case 45: return buildStarCluster(fg, bg, n, tick);
+    case 46: return buildPoliceLights(n, tick);
+    case 47: return buildRainbowBreathing(n, tick);
+    case 48: return buildColorBurst(fg, bg, n, tick);
+    case 49: return buildTwinkle(fg, bg, n, tick);
+    case 50: return buildCrystalShimmer(n, tick);
+    case 51: return buildGradientChase(fg, bg, n, tick, direction);
+    case 52: return buildCometDuo(fg, bg, n, tick);
+    case 53: return buildFireFlame(fg, bg, n, tick);
+    case 54: return buildCyberGlitch(n, tick);
+    case 55: return buildNeonPulse(fg, bg, n, tick);
+    case 56: return buildRainbowChaser(n, tick, direction);
+    case 57: return buildMatrixRain(fg, bg, n, tick, direction);
+    case 58: return buildSparkleFade(fg, bg, n, tick);
+    case 59: return buildDualScan(fg, bg, n, tick);
+    case 60: return buildStarlight(fg, bg, n, tick);
+    case 61: return buildHyperspace(fg, bg, n, tick);
+
     default:
       return Array(n).fill(fg);
   }
@@ -1005,10 +1003,6 @@ export function getVisualizerFrame(
 ): RGB[] {
   const n = Math.max(1, numLEDs);
 
-  // Phase 1A ge.* native pattern builder overrides (IDs 29-40)
-  const phase1a = generatePhase1aArray(patternId, fg, bg, n, animTick);
-  if (phase1a) return phase1a;
-
   const generated = generateArray(patternId, fg, bg, n, animTick, direction);
 
   // Group 1 (Static) does not scroll
@@ -1026,6 +1020,9 @@ export function getVisualizerFrame(
   // Group 5 & 6 (Temporal & Generative) all use internal tick offset!
   if (patternId >= 20 && patternId <= 28) return generated;
 
+  // Group 7 (ge.*) — all 33 builders handle tick internally. No external rotation needed.
+  if (patternId >= 29 && patternId <= 61) return generated;
+
   // All other groups scroll natively
   return rotateArray(generated, animTick);
 }
@@ -1041,18 +1038,15 @@ export function getHardwarePixelArray(
   numLEDs: number
 ): RGB[] | null {
   // All 61 patterns now use 0x59. commandType selects the hardware behavior:
-  //   IDs 20-22 use Breathe/Jump/Strobe commandTypes — pixel array is sent, hardware animates it.
-
-  // Phase 1A ge.* native patterns evaluate at tick=0 to create the base hardware frame
-  const phase1a = generatePhase1aArray(patternId, fg, bg, Math.max(1, numLEDs), 0);
-  if (phase1a) return phase1a;
-
+  //   IDs 20-22, 30-31, 33, 37, 39-40, 46-47, 54-55 use Breathe/Jump/Strobe commandTypes.
+  //   The pixel array is the color seed; hardware animates it autonomously.
+  //
   // Use tick=0.33 (not 0.0) so the initial frame is visually rich.
   // tick=0 produces degenerate frames for most patterns:
   //   - DotChase: dot at pixel 0 (looks solid)
   //   - CometChase: comet off-screen (all BG)
   //   - RainbowComet: head at -TAIL, strip is all black
-  // Hardware CASCADE scrolls this array forever. A boring starting frame = boring animation.
+  // Hardware scrolls/breathes/flashes this array forever. A boring frame = boring animation.
   // 0.33 puts every pattern mid-cycle where the visual is most distinct.
   return generateArray(patternId, fg, bg, Math.max(1, numLEDs), 0.33);
 }
