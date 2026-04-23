@@ -1072,17 +1072,44 @@ export function getHardwarePixelArray(
  * commandType — it maps to nothing. Hardware received undefined byte → no animation.
  */
 export function getPatternTransitionType(patternId: PatternId): number {
-  // Group 1 (IDs 1–5): Solid & Static — freeze in place
-  if (patternId >= 1 && patternId <= 5) return 0x01; // Static
+  // ── GROUP 1: STATIC (IDs 1–5) ──────────────────────────────────────────────
+  if (patternId >= 1 && patternId <= 5) return 0x01; // Static — hardware freezes array
 
-  // Group 5a (IDs 20–22): Hardware-native effects — pixel array sent, hardware does the animation
-  // APK source: StaticColorfulMode.java — commandType enum
-  if (patternId === 20) return 0x05; // Breathe  — hardware pulses the array in/out
-  if (patternId === 21) return 0x04; // Jump     — hardware hard-jumps between states
-  if (patternId === 22) return 0x03; // Strobe   — hardware flashes the array on/off
+  // ── GROUP 5a: HARDWARE TEMPORAL (IDs 20–22) ────────────────────────────────
+  // APK source: StaticColorfulMode.java — verified commandType enum
+  if (patternId === 20) return 0x05; // Breathe  — hardware pulses brightness
+  if (patternId === 21) return 0x04; // Jump     — hardware hard-cuts between states
+  if (patternId === 22) return 0x03; // Strobe   — hardware flashes on/off
 
-  // All other animated groups (2–4, 5b, 6, 7 — IDs 6–19, 23–61): Running = continuous scroll
-  return 0x02; // Running
+  // ── GROUP 7: ge.* BREATHE EFFECTS (IDs 30, 39, 40, 47, 55) ───────────────
+  // Hardware receives the pixel array and pulses its brightness autonomously.
+  // Visualizer uses buildColorBreathing / buildSmoothBreath / buildRainbowBreathing / buildNeonPulse at animTick.
+  if (patternId === 30) return 0x05; // Color Breathing   — FG_ONLY
+  if (patternId === 39) return 0x05; // Candle Flicker    — FG_ONLY (breathe ≈ flicker)
+  if (patternId === 40) return 0x05; // Heartbeat Pulse   — FG_ONLY (breathe pulse)
+  if (patternId === 47) return 0x05; // Rainbow Breathing — GENERATIVE
+  if (patternId === 55) return 0x05; // Neon Pulse        — FG_BG (NeonPulse math uses buildNeonPulse)
+
+  // ── GROUP 7: ge.* JUMP EFFECTS (IDs 31, 46, 54) ──────────────────────────
+  // Hardware receives the pixel array and hard-cuts states autonomously.
+  // Visualizer uses buildColorJump / buildPoliceLights / buildCyberGlitch at animTick.
+  if (patternId === 31) return 0x04; // Color Jump        — FG_BG hard cut
+  if (patternId === 46) return 0x04; // Police Lights     — GENERATIVE, hardcoded red/blue
+  if (patternId === 54) return 0x04; // Cyber Glitch      — GENERATIVE, hardcoded cyan/magenta
+
+  // ── GROUP 7: ge.* STROBE EFFECTS (IDs 33, 37) ────────────────────────────
+  // Hardware receives the pixel array and flashes it on/off autonomously.
+  // Visualizer uses buildStrobe / buildLightning at animTick.
+  if (patternId === 33) return 0x03; // Strobe Flash      — FG_ONLY
+  if (patternId === 37) return 0x03; // Lightning Strike  — FG_ONLY (random flash)
+
+  // ── ALL OTHER ge.* SCROLL EFFECTS (IDs 29, 32, 34–36, 38, 41–45, 48–53, 56–61) ──
+  // Hardware scrolls the pre-computed pixel array continuously via 0x02 Running.
+  // Visualizer generates tick-based frames matching the scroll animation.
+  // NOTE: Twinkle-style patterns (35, 45, 49, 50, 58, 60) intentionally use 0x02 (Running)
+  // because 0x06 (Twinkle) is NOT yet confirmed from APK decompile.
+  // Log this for Oracle validation: fix/oracle-confirm-0x06-twinkle
+  return 0x02; // Running — continuous hardware scroll
 }
 
 /**
