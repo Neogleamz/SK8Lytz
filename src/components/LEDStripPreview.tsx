@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, ViewStyle } from 'react-native';
 import { getVisualizerFrame, RGB } from '../protocols/PatternEngine';
 import { hexToRgb } from '../utils/ColorUtils';
@@ -28,12 +28,24 @@ interface LEDStripPreviewProps {
 export const LEDStripPreview = React.memo(({ patternId, fg, bg, numLEDs, speed, direction = 1, autoPlay = true, dotSize = 6, height = 16, style }: LEDStripPreviewProps) => {
   const [frame, setFrame] = useState<RGB[]>([]);
 
+  // Frame-diff guard: prevents calling setFrame when the pixel array is identical.
+  // Without this, on React-DOM (web) the Animated TimingAnimation loop causes each
+  // setState to trigger a re-render which re-registers animation listeners, creating
+  // an infinite "Maximum update depth exceeded" loop. Safe on native too.
+  const prevFrameRef = useRef<string>('');
+
   useEffect(() => {
     if (!autoPlay) return;
     const interval = setInterval(() => {
       const currentSpeed = speed || 50;
       const tick = (Date.now() % (1000 / currentSpeed * 100)) / (1000 / currentSpeed * 100);
-      setFrame(getVisualizerFrame(patternId, hexToRgb(fg), hexToRgb(bg), numLEDs, tick, direction));
+      const nextFrame = getVisualizerFrame(patternId, hexToRgb(fg), hexToRgb(bg), numLEDs, tick, direction);
+      // Only commit to React state if pixels actually changed this tick
+      const serialized = nextFrame.map(c => `${c.r},${c.g},${c.b}`).join('|');
+      if (serialized !== prevFrameRef.current) {
+        prevFrameRef.current = serialized;
+        setFrame(nextFrame);
+      }
     }, 50); // 20fps
     return () => clearInterval(interval);
   }, [patternId, fg, bg, numLEDs, speed, direction, autoPlay]);

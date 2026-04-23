@@ -67,12 +67,19 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
     dispatchEffect(effectId, fgColor, bgColor, speed);
   }, [dispatchEffect, fgColor, bgColor, speed]);
 
-  // Sync speed changes for PATTERNS tab
+  // Sync speed/color changes to PATTERNS tab hardware.
+  // NOTE: dispatchEffect is intentionally omitted from deps — it is stable via useCallback
+  // ([writeToDevice, onStateChange]). Including it causes an infinite loop because
+  // DockedController passes onStateChange as an inline arrow (new ref every render),
+  // which recreates dispatchEffect, which re-fires this effect, which calls writeToDevice,
+  // which calls setLastSentPayload in DockedController, which re-renders, which ... loops.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (activeTab === 'PATTERNS' && selectedEffectId) {
       dispatchEffect(selectedEffectId, fgColor, bgColor, speed);
     }
-  }, [speed, activeTab, selectedEffectId, fgColor, bgColor, dispatchEffect]);
+  }, [speed, activeTab, selectedEffectId, fgColor, bgColor]);
+
 
   // UI helpers
   const renderTabButton = (tab: 'PATTERNS' | 'BUILDER' | 'SCENES', label: string) => {
