@@ -33,8 +33,8 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
   
   // Shared state for BUILDER
   const [builderNodes, setBuilderNodes] = useState<BuilderNode[]>([
-    { id: '1', position: 0, r: 255, g: 0, b: 0 },
-    { id: '2', position: 100, r: 0, g: 0, b: 255 }
+    { id: '1', position: 0, colorHex: '#FF0000' },
+    { id: '2', position: 100, colorHex: '#0000FF' }
   ]);
   const [builderFillMode, setBuilderFillMode] = useState<'GRADIENT' | 'SOLID'>('GRADIENT');
   const [builderTransitionType, setBuilderTransitionType] = useState<number>(0);
