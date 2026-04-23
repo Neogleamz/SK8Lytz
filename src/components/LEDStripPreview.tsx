@@ -33,7 +33,7 @@ export const LEDStripPreview = React.memo(({ patternId, fg, bg, numLEDs, speed, 
     const interval = setInterval(() => {
       const currentSpeed = speed || 50;
       const tick = (Date.now() % (1000 / currentSpeed * 100)) / (1000 / currentSpeed * 100);
-      setFrame(getVisualizerFrame(patternId, hexToRgb(fg), hexToRgb(bg), numLEDs, tick));
+      setFrame(getVisualizerFrame(patternId, hexToRgb(fg), hexToRgb(bg), numLEDs, tick, direction));
     }, 50); // 20fps
     return () => clearInterval(interval);
   }, [patternId, fg, bg, numLEDs, speed, direction, autoPlay]);

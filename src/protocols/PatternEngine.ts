@@ -842,27 +842,16 @@ export function getVisualizerFrame(
   fg: RGB,
   bg: RGB,
   numLEDs: number,
-  animTick: number
+  animTick: number,
+  direction: 0 | 1 = 1
 ): RGB[] {
   const n = Math.max(1, numLEDs);
-
-  // Group 5 (Temporal 0x51) -> simulate visually with full-strip changes
-  if (patternId === 20) { // Breath
-    const t = (Math.sin(animTick * Math.PI * 2) + 1) / 2; // 0→1→0
-    return Array(n).fill(lerpRGB(bg, fg, t));
-  }
-  if (patternId === 21) { // Jump Flash
-    return Array(n).fill(animTick < 0.5 ? fg : bg);
-  }
-  if (patternId === 22) { // Strobe
-    return Array(n).fill(Math.floor(animTick * 12) % 2 === 0 ? fg : bg);
-  }
 
   // Phase 1A ge.* native pattern builder overrides (IDs 29-40)
   const phase1a = generatePhase1aArray(patternId, fg, bg, n, animTick);
   if (phase1a) return phase1a;
 
-  const generated = generateArray(patternId, fg, bg, n, animTick, 1);
+  const generated = generateArray(patternId, fg, bg, n, animTick, direction);
 
   // Group 1 (Static) does not scroll
   if (patternId >= 1 && patternId <= 5) return generated;
