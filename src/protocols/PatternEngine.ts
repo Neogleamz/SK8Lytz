@@ -729,10 +729,12 @@ function buildBarberPole(fg: RGB, bg: RGB, numLEDs: number, tick: number, direct
   });
 }
 
-function buildBoldStripes(fg: RGB, bg: RGB, numLEDs: number): RGB[] {
+function buildBoldStripes(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
   const STRIPE = Math.max(3, Math.floor(numLEDs / 5));
+  const t = direction === 0 ? tick : 1 - tick;
+  const offset = Math.floor(t * STRIPE * 2) % (STRIPE * 2); // scroll one full period
   return Array.from({ length: numLEDs }, (_, i) =>
-    Math.floor(i / STRIPE) % 2 === 0 ? fg : bg
+    Math.floor((i + offset) / STRIPE) % 2 === 0 ? fg : bg
   );
 }
 
@@ -913,7 +915,7 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: 
     case 11: return buildTheaterChase(fg, bg, n, tick, direction);
     case 12: return buildDashedMarquee(fg, bg, n, tick, direction);
     case 13: return buildBarberPole(fg, bg, n, tick, direction);
-    case 14: return buildBoldStripes(fg, bg, n);
+    case 14: return buildBoldStripes(fg, bg, n, tick, direction);
 
     // ── GROUP 4: MATH WAVES & GRADIENTS ──
     case 15: return buildSinePulseWave(fg, bg, n, tick, direction);
@@ -1006,9 +1008,6 @@ export function getVisualizerFrame(
   const generated = generateArray(patternId, fg, bg, n, animTick, direction);
 
   // All 61 builders manage their own tick-based animation internally.
-  // Exception: ID 14 (Bold Stripes) is a static array; hardware scrolls it via 0x02 Running.
-  // rotateArray simulates that scroll in the visualizer to maintain parity.
-  if (patternId === 14) return rotateArray(generated, animTick);
   return generated;
 }
 
