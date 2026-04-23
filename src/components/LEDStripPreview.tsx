@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, ViewStyle } from 'react-native';
-import { getVisualizerFrame, RGB } from '../../protocols/PatternEngine';
-import { hexToRgb } from '../../utils/ColorUtils';
+import { getVisualizerFrame, RGB } from '../protocols/PatternEngine';
+import { hexToRgb } from '../utils/ColorUtils';
 
 interface LEDStripPreviewProps {
   // Source: PatternEngine only
