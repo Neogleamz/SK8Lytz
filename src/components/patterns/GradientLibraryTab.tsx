@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Spacing } from '../../theme/theme';
@@ -30,14 +30,11 @@ export const GradientLibraryTab: React.FC<GradientLibraryTabProps> = ({ Colors, 
     const isBuiltin = preset.id.startsWith('builtin_');
     
     // Generate a 50-pixel block preview string using the hardware math buffer logic
-    const previewColors = useMemo(() => {
-      const generated = PositionalMathBuffer.generateArray(
-        preset.nodes,
-        50, // 50 blocks is enough for preview
-        preset.fill_mode === 'GRADIENT'
-      );
-      return generated;
-    }, [preset]);
+    const previewColors = PositionalMathBuffer.generateArray(
+      preset.nodes,
+      50, // 50 blocks is enough for preview
+      preset.fill_mode === 'GRADIENT'
+    );
 
     return (
       <TouchableOpacity
