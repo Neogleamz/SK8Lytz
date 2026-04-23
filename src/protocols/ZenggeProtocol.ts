@@ -352,10 +352,12 @@ export class ZenggeProtocol {
   static readonly STEP_GRADUAL = 0x3B; // Smooth cross-fade between colors
   static readonly STEP_STROBE  = 0x3C; // Rapid flash between colors
 
-  // 0x59 animated pattern speed range (proven from Protocol/n.java: ad.e.a(f, 1, 31))
+  // 0x59 animated pattern speed range (ORACLE-CONFIRMED 2026-04-23: 1-100, NOT 1-31)
+  // The APK's Protocol/n.java: ad.e.a(f, 1, 31) clamp applies to 0x51, not 0x59.
+  // Physical hardware (0xA3) responds to the full 1-100 range on the 0x59 speed byte.
   static readonly ANIM_SPEED_MIN = 1;
-  static readonly ANIM_SPEED_MAX = 31; // Hardware confirmed range from APK Protocol/n.java: ad.e.a(f,1,31)
-  // User-facing speed slider is 0–100. Map to hardware 1–31 via: hw = Math.round((userSpeed/100)*30)+1
+  static readonly ANIM_SPEED_MAX = 100; // Hardware confirmed via Oracle lab 2026-04-23
+  // User-facing speed slider is 0–100. Pass directly to hardware (clamped to 1–100).
 
   // ─── EXISTING COMMANDS ─────────────────────────────────────────────────────
 
