@@ -12,18 +12,74 @@
  *   - 0x51 Custom Mode        : Hardware crossfades temporal states (Group 5a)
  * 
  * ==============================================================================
- * GROUP TAXONOMY & HARDWARE DISPATCH MAP
+ * GROUP TAXONOMY & HARDWARE DISPATCH MAP  (IDs 1–61, all routes 0x59/0x51)
  * ==============================================================================
- *   Group 1 - Solid & Static     (IDs  1- 5): generateArray   0x59 type=0x01
- *   Group 2 - Chases & Meteors   (IDs  6- 9): generateArray   0x59 type=0x00
- *   Group 3 - Marquees & Bands   (IDs 10-14): generateArray   0x59 type=0x00
- *   Group 4 - Math Waves         (IDs 15-19): generateArray   0x59 type=0x00 (18/19 center-split)
- *   Group 5a- Temporal Fades     (IDs 20-22): buildCustomMode 0x51
- *   Group 5b- Wipe/Fill          (IDs 23-24): generateArray   0x59 type=0x00 (center-split scroll)
- *   Group 6 - Generative Rainbow (IDs 25-28): generateArray   0x59 type=0x00
+ *
+ *   ┌─────────────────────────────────────────────────────────────────────┐
+ *   │  PHASE 1B — Programs Reversal & SK8Lytz Originals (IDs 1–28)       │
+ *   ├──────────┬──────────────────────────────┬───────────────────────────┤
+ *   │ Group 1  │ Solid & Static   (IDs  1– 5) │ 0x59 type=0x01  FREEZE   │
+ *   │          │  1-Solid  2-Split  3-Tri      │                           │
+ *   │          │  4-Quartered  5-CenterAccent  │                           │
+ *   ├──────────┼──────────────────────────────┼───────────────────────────┤
+ *   │ Group 2  │ Chases & Meteors (IDs  6– 9) │ 0x59 type=0x00  CASCADE  │
+ *   │          │  6-DotChase  7-ReflectedDot   │                           │
+ *   │          │  8-CometChase  9-MeteorShower │                           │
+ *   ├──────────┼──────────────────────────────┼───────────────────────────┤
+ *   │ Group 3  │ Marquees & Bands (IDs 10–14) │ 0x59 type=0x00  CASCADE  │
+ *   │          │  10-MicroAnts  11-Theater     │                           │
+ *   │          │  12-Dashed  13-Barber  14-Bold│                           │
+ *   ├──────────┼──────────────────────────────┼───────────────────────────┤
+ *   │ Group 4  │ Math Waves       (IDs 15–19) │ 0x59 type=0x00  CASCADE  │
+ *   │          │  15-SinePulse  16-WavePinch   │ (18/19 center-split)     │
+ *   │          │  17-Breathing  18-CoOut        │                           │
+ *   │          │  19-CenterOutMarquee           │                           │
+ *   ├──────────┼──────────────────────────────┼───────────────────────────┤
+ *   │ Group 5a │ Temporal Fades   (IDs 20–22) │ 0x51  STEP_GRADUAL/JUMP  │
+ *   │          │  20-SmoothBreath 21-HardJump   │ Hardware crossfade       │
+ *   │          │  22-Strobe                     │                           │
+ *   ├──────────┼──────────────────────────────┼───────────────────────────┤
+ *   │ Group 5b │ Wipe / Fill      (IDs 23–24) │ 0x59 type=0x00  CASCADE  │
+ *   │          │  23-WipeFill  24-WipeCenterOut│                           │
+ *   ├──────────┼──────────────────────────────┼───────────────────────────┤
+ *   │ Group 6  │ Generative Rainbow(IDs 25–28)│ 0x59 type=0x00  CASCADE  │
+ *   │          │  25-RainbowFlow  26-RainbowMq │ HSV math, no FG/BG       │
+ *   │          │  27-RainbowComet 28-Cyberpunk │                           │
+ *   └──────────┴──────────────────────────────┴───────────────────────────┘
+ *
+ *   ┌─────────────────────────────────────────────────────────────────────┐
+ *   │  PHASE 1A — ge.* Java Class Reversals (IDs 29–61)                  │
+ *   ├──────────┬──────────────────────────────┬───────────────────────────┤
+ *   │ Group 7  │ ge.* Reversals   (IDs 29–61) │ 0x59 type=0x00  CASCADE  │
+ *   │          │  29-ColorFlow    (ge.ColorFlowEffect)                    │
+ *   │          │  30-ColorBreath  (ge.BreathEffect)                       │
+ *   │          │  31-ColorJump    (ge.JumpEffect)                         │
+ *   │          │  32-RunningWater (ge.RunningWaterEffect)                 │
+ *   │          │  33-StrobeFlash  (ge.StrobeEffect)                       │
+ *   │          │  34-ColorWipe    (ge.ColorWipeEffect)                    │
+ *   │          │  35-Fireworks    (ge.FireworksEffect)                    │
+ *   │          │  36-OceanWave    (ge.OceanWaveEffect)                    │
+ *   │          │  37-Lightning    (ge.LightningEffect)                    │
+ *   │          │  38-Snowfall     (ge.SnowfallEffect)                     │
+ *   │          │  39-Candle       (ge.CandleEffect)                       │
+ *   │          │  40-Heartbeat    (ge.HeartbeatEffect)                    │
+ *   │          │  41-Meteor       (ge.MeteorEffect)                       │
+ *   │          │  42-Aurora       (ge.AuroraEffect)                       │
+ *   │          │  43-LavaLamp     (ge.LavaEffect)                         │
+ *   │          │  44-PlasmaWave   (ge.PlasmaEffect)                       │
+ *   │          │  45-StarCluster  (ge.StarClusterEffect)                  │
+ *   │          │  46-PoliceLights  47-RainbowBreathing                    │
+ *   │          │  48-ColorBurst    49-Twinkle                             │
+ *   │          │  50-CrystalShimmer 51-GradientChase                      │
+ *   │          │  52-CometDuo      53-FireFlame                           │
+ *   │          │  54-CyberGlitch   55-NeonPulse                           │
+ *   │          │  56-RainbowChaser 57-MatrixRain                          │
+ *   │          │  58-SparkleFade   59-DualScan                            │
+ *   │          │  60-Starlight     61-Hyperspace                          │
+ *   └──────────┴──────────────────────────────────────────────────────────┘
  *
  *   Dispatch entry points:
- *     Hardware: buildPatternPayload() → buildMultiColorPayload() | buildCustomModePayload()
+ *     Hardware:   buildPatternPayload() → buildMultiColorPayload() | buildCustomModePayload()
  *     Visualizer: getVisualizerFrame() (ProductVisualizer.tsx + CustomEffectVisualizer.tsx)
  *
  *   Known gaps (logged as tech debt for BATCH:P1):
