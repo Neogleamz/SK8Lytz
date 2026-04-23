@@ -17,7 +17,7 @@ interface SpectrumAnalyzerProps {
 
 const BARS_COUNT = 16;
 const BAR_MIN_H = 6;
-const BAR_MAX_H = 60;
+const BAR_MAX_H = 100;
 const BAR_WIDTH = 12; // Wider bars for fewer points
 
 export default function SpectrumAnalyzer({
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 20,
     borderWidth: 1,
-    minHeight: 110,
+    minHeight: 145,
     width: '100%',
     overflow: 'hidden',
     position: 'relative',
