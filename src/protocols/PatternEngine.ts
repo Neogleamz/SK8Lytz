@@ -194,6 +194,149 @@ function buildHeartbeat(fg: RGB, numLEDs: number, tick: number): RGB[] {
   return Array(numLEDs).fill({ r: Math.round(fg.r * b), g: Math.round(fg.g * b), b: Math.round(fg.b * b) });
 }
 
+function buildMeteor(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const TAIL = Math.floor(numLEDs * 0.25);
+  const head = Math.floor((direction === 0 ? tick : 1 - tick) * (numLEDs + TAIL)) - TAIL;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const dist = head - i;
+    if (dist < 0 || dist > TAIL) return bg;
+    const brightness = 1 - (dist / TAIL);
+    return blendRGB(fg, bg, Math.pow(brightness, 2));
+  });
+}
+
+function buildAurora(numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? tick : 1 - tick;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const hue = (i / numLEDs * 0.4 + phase * 0.5 + 0.5) % 1;
+    const brightness = (Math.sin(i / numLEDs * Math.PI * 3 + phase * Math.PI * 4) * 0.4 + 0.6);
+    return hsvToRgb(hue, 0.8, brightness);
+  });
+}
+
+function buildLava(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const blob1 = Math.sin(i / numLEDs * Math.PI * 2 + tick * Math.PI * 1.3);
+    const blob2 = Math.sin(i / numLEDs * Math.PI * 3.7 + tick * Math.PI * 0.8 + 1.2);
+    const combined = (blob1 + blob2) * 0.5 * 0.5 + 0.5;
+    return blendRGB(fg, bg, combined);
+  });
+}
+
+function buildPlasma(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? tick : 1 - tick;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const v = Math.sin(i / numLEDs * Math.PI * 4 + phase * Math.PI * 6) * 
+              Math.cos(i / numLEDs * Math.PI * 2 - phase * Math.PI * 2);
+    return blendRGB(fg, bg, Math.abs(v));
+  });
+}
+
+function buildStarCluster(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const frame = Array(numLEDs).fill(bg);
+  for (let j = 0; j < 4; j++) {
+    const center = Math.floor(((tick * 0.5 + j * 0.25) % 1) * numLEDs);
+    for (let i = -2; i <= 2; i++) {
+      const pos = center + i;
+      if (pos >= 0 && pos < numLEDs) {
+        const brightness = 1 - Math.abs(i) / 3;
+        frame[pos] = blendRGB(fg, frame[pos], brightness);
+      }
+    }
+  }
+  return frame;
+}
+
+function buildPoliceLights(numLEDs: number, tick: number): RGB[] {
+  const red = { r: 255, g: 0, b: 0 };
+  const blue = { r: 0, g: 0, b: 255 };
+  const flashPhase = (tick * 8) % 1;
+  const isOn = flashPhase < 0.5;
+  const isRedTurn = (tick * 2) % 1 < 0.5;
+  
+  return Array.from({ length: numLEDs }, (_, i) => {
+    if (!isOn) return { r: 0, g: 0, b: 0 };
+    const isLeftHalf = i < numLEDs / 2;
+    if (isRedTurn) return isLeftHalf ? red : { r: 0, g: 0, b: 0 };
+    return !isLeftHalf ? blue : { r: 0, g: 0, b: 0 };
+  });
+}
+
+function buildRainbowBreathing(numLEDs: number, tick: number): RGB[] {
+  const hue = tick % 1;
+  const brightness = (Math.sin(tick * Math.PI * 4) * 0.5 + 0.5);
+  const baseColor = hsvToRgb(hue, 1.0, 1.0);
+  return Array(numLEDs).fill({
+    r: Math.round(baseColor.r * brightness),
+    g: Math.round(baseColor.g * brightness),
+    b: Math.round(baseColor.b * brightness)
+  });
+}
+
+function buildColorBurst(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const burstPhase = tick % 1;
+  const center = Math.floor(numLEDs / 2);
+  const radius = Math.floor(burstPhase * numLEDs);
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const dist = Math.abs(i - center);
+    if (dist < radius && dist > radius - 3) return fg;
+    return bg;
+  });
+}
+
+function buildTwinkle(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const frame = Array(numLEDs).fill(bg);
+  for (let i = 0; i < numLEDs; i++) {
+    const noise = Math.sin(i * 12.9898 + tick * 10) * 43758.5453;
+    const val = noise - Math.floor(noise);
+    if (val > 0.95) {
+       const brightness = Math.sin(tick * 20 + i) * 0.5 + 0.5;
+       frame[i] = blendRGB(fg, bg, brightness);
+    }
+  }
+  return frame;
+}
+
+function buildCrystalShimmer(numLEDs: number, tick: number): RGB[] {
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const noise = Math.sin(i * 7.1 + tick * 15) * 0.5 + 0.5;
+    const brightness = Math.pow(noise, 3);
+    return {
+      r: Math.round(150 * brightness),
+      g: Math.round(200 * brightness),
+      b: Math.round(255 * brightness)
+    };
+  });
+}
+
+function buildGradientChase(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? tick : 1 - tick;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const pos = (i / numLEDs + phase) % 1;
+    return blendRGB(fg, bg, Math.sin(pos * Math.PI));
+  });
+}
+
+function buildCometDuo(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const TAIL = Math.floor(numLEDs * 0.2);
+  const head1 = Math.floor(tick * (numLEDs + TAIL)) - TAIL;
+  const head2 = Math.floor((1 - tick) * (numLEDs + TAIL)) - TAIL;
+  
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const dist1 = head1 - i;
+    const dist2 = i - head2;
+    
+    let c = bg;
+    if (dist1 >= 0 && dist1 <= TAIL) {
+      c = blendRGB(fg, c, 1 - (dist1 / TAIL));
+    }
+    if (dist2 >= 0 && dist2 <= TAIL) {
+      c = blendRGB(fg, c, 1 - (dist2 / TAIL)); 
+    }
+    return c;
+  });
+}
+
 function generatePhase1aArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: number): RGB[] | null {
   const direction = 1; // Default to 1 (forward) if not dynamically provided by visualizer caller yet
   switch (patternId) {
@@ -209,6 +352,18 @@ function generatePhase1aArray(patternId: PatternId, fg: RGB, bg: RGB, n: number,
     case 38: return buildSnowfall(fg, bg, n, tick);
     case 39: return buildCandle(fg, n, tick);
     case 40: return buildHeartbeat(fg, n, tick);
+    case 41: return buildMeteor(fg, bg, n, tick, direction);
+    case 42: return buildAurora(n, tick, direction);
+    case 43: return buildLava(fg, bg, n, tick);
+    case 44: return buildPlasma(fg, bg, n, tick, direction);
+    case 45: return buildStarCluster(fg, bg, n, tick);
+    case 46: return buildPoliceLights(n, tick);
+    case 47: return buildRainbowBreathing(n, tick);
+    case 48: return buildColorBurst(fg, bg, n, tick);
+    case 49: return buildTwinkle(fg, bg, n, tick);
+    case 50: return buildCrystalShimmer(n, tick);
+    case 51: return buildGradientChase(fg, bg, n, tick, direction);
+    case 52: return buildCometDuo(fg, bg, n, tick);
     default: return null;
   }
 }
