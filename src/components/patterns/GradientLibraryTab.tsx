@@ -1,10 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Spacing } from '../../theme/theme';
 import { useGradients } from '../../hooks/useGradients';
-import { CustomBuilderPreset } from '../../protocols/PositionalMathBuffer';
-import { LinearGradient } from 'expo-linear-gradient';
+import { CustomBuilderPreset, PositionalMathBuffer } from '../../protocols/PositionalMathBuffer';
 
 interface GradientLibraryTabProps {
   Colors: any;
@@ -29,17 +28,16 @@ export const GradientLibraryTab: React.FC<GradientLibraryTabProps> = ({ Colors, 
 
   const renderGradientCard = (preset: CustomBuilderPreset) => {
     const isBuiltin = preset.id.startsWith('builtin_');
-    // Sort nodes to make the preview gradient
-    const sortedNodes = [...preset.nodes].sort((a, b) => a.position - b.position);
     
-    // Expo LinearGradient requires at least 2 colors. If user saved 1 or 0, fallback.
-    let colors: [string, string, ...string[]] = ['#333333', '#666666'];
-    let locations: [number, number, ...number[]] = [0, 1];
-    
-    if (sortedNodes.length >= 2) {
-       colors = sortedNodes.map(n => n.colorHex) as [string, string, ...string[]];
-       locations = sortedNodes.map(n => n.position / 100) as [number, number, ...number[]];
-    }
+    // Generate a 50-pixel block preview string using the hardware math buffer logic
+    const previewColors = useMemo(() => {
+      const generated = PositionalMathBuffer.generateArray(
+        preset.nodes,
+        50, // 50 blocks is enough for preview
+        preset.fill_mode === 'GRADIENT'
+      );
+      return generated;
+    }, [preset]);
 
     return (
       <TouchableOpacity
@@ -47,32 +45,29 @@ export const GradientLibraryTab: React.FC<GradientLibraryTabProps> = ({ Colors, 
         style={styles.cardContainer}
         onPress={() => onApplyGradient(preset)}
       >
-        <LinearGradient
-          colors={colors}
-          locations={locations}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.cardGradient}
-        >
-          <View style={styles.cardOverlay}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle} numberOfLines={1}>{preset.name}</Text>
-              {isBuiltin && <Text style={styles.builtinBadge}>BUILT-IN</Text>}
-            </View>
-            <View style={styles.cardActions}>
-              {!isBuiltin && (
-                <TouchableOpacity onPress={() => onOpenBuilder(preset)} style={styles.actionButton}>
-                  <MaterialCommunityIcons name="pencil" size={20} color="#FFF" />
-                </TouchableOpacity>
-              )}
-              {!isBuiltin && (
-                <TouchableOpacity onPress={() => handleDelete(preset)} style={styles.actionButton}>
-                  <MaterialCommunityIcons name="delete" size={20} color="#FF4444" />
-                </TouchableOpacity>
-              )}
-            </View>
+        <View style={styles.cardGradient}>
+          {previewColors.map((hex, i) => (
+             <View key={i} style={{ flex: 1, backgroundColor: hex }} />
+          ))}
+        </View>
+        <View style={[StyleSheet.absoluteFill, styles.cardOverlay]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.cardTitle} numberOfLines={1}>{preset.name}</Text>
+            {isBuiltin && <Text style={styles.builtinBadge}>BUILT-IN</Text>}
           </View>
-        </LinearGradient>
+          <View style={styles.cardActions}>
+            {!isBuiltin && (
+              <TouchableOpacity onPress={() => onOpenBuilder(preset)} style={styles.actionButton}>
+                <MaterialCommunityIcons name="pencil" size={20} color="#FFF" />
+              </TouchableOpacity>
+            )}
+            {!isBuiltin && (
+              <TouchableOpacity onPress={() => handleDelete(preset)} style={styles.actionButton}>
+                <MaterialCommunityIcons name="delete" size={20} color="#FF4444" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -145,6 +140,7 @@ const styles = StyleSheet.create({
   },
   cardGradient: {
     flex: 1,
+    flexDirection: 'row',
   },
   cardOverlay: {
     flex: 1,

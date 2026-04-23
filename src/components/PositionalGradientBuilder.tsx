@@ -172,7 +172,7 @@ export default function PositionalGradientBuilder({
                   onValueChange={(val) => updateNode(activeNode.id, { colorHex: hueToHex(val) })}
                   minimumValue={0}
                   maximumValue={360}
-                  trackColor={activeNode.colorHex}
+                  minimumTrackTintColor={activeNode.colorHex}
                   style={{ flex: 1, transform: [{ scale: 0.95 }], height: 30 }}
                />
             </View>

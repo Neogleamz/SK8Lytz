@@ -6,6 +6,7 @@ import PositionalGradientBuilder from '../PositionalGradientBuilder';
 import { useGradients } from '../../hooks/useGradients';
 import { BuilderNode, CustomBuilderPreset } from '../../protocols/PositionalMathBuffer';
 import { Spacing } from '../../theme/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 interface GradientBuilderModalProps {
   visible: boolean;
@@ -33,6 +34,7 @@ export const GradientBuilderModal: React.FC<GradientBuilderModalProps> = ({
   Colors,
   ...builderProps
 }) => {
+  const { isDark } = useTheme();
   const { saveGradient } = useGradients();
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [presetNameInput, setPresetNameInput] = useState(preset?.name || '');

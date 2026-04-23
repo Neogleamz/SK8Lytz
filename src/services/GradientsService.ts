@@ -23,10 +23,10 @@ export const BUILT_IN_GRADIENTS: CustomBuilderPreset[] = [
     name: 'USA',
     nodes: [
       { id: '1', colorHex: '#FF0000', position: 0 },
-      { id: '2', colorHex: '#FFFFFF', position: 50 },
-      { id: '3', colorHex: '#0000FF', position: 100 }
+      { id: '2', colorHex: '#FFFFFF', position: 33 },
+      { id: '3', colorHex: '#0000FF', position: 66 }
     ],
-    fill_mode: 'GRADIENT',
+    fill_mode: 'SOLID',
     transition_type: 0
   },
   {
