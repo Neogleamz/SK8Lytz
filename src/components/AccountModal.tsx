@@ -287,8 +287,7 @@ export default function AccountModal({
     );
   };
 
-  const loading = accountLoading; // Aliased for legacy UI
-  const setSavingNotifs = (_val: boolean) => {}; // Legacy shim
+
 
   // Security state (Kept local for now as per Phase 3 scope)
   const [_currentPwd, setCurrentPwd] = useState('');
@@ -1075,7 +1074,7 @@ export default function AccountModal({
             ))}
           </View>
 
-          {loading
+          {accountLoading
             ? <AccountModalSkeleton />
             : tab === 'profile'  ? renderProfile()
             : tab === 'security' ? renderSecurity()
