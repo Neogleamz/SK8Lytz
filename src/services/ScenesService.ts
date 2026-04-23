@@ -1,4 +1,14 @@
 import { supabase } from './supabaseClient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SceneStep } from '../hooks/useSceneBuilder';
+
+export interface Scene {
+  id: string;
+  name: string;
+  steps: SceneStep[];
+  user_id?: string;
+  created_at: string;
+}
 
 export interface ICloudScene {
   id: string;
@@ -6,11 +16,13 @@ export interface ICloudScene {
   author_id: string;
   author_username: string;
   name: string;
-  scene_payload: any;
+  scene_payload: Scene;
   downloads: number;
   upvotes: number;
   is_public: boolean;
 }
+
+const LOCAL_SCENES_KEY = '@Sk8lytz_Scenes';
 
 class ScenesServiceClass {
   
@@ -132,6 +144,54 @@ class ScenesServiceClass {
        console.error('[ScenesService] downloadScene error:', e);
        return false;
      }
+  }
+
+  /**
+   * Save a scene locally.
+   */
+  async saveLocalScene(scene: Scene): Promise<boolean> {
+    try {
+      const existing = await this.getLocalScenes();
+      const idx = existing.findIndex(s => s.id === scene.id);
+      if (idx >= 0) {
+        existing[idx] = scene;
+      } else {
+        existing.push(scene);
+      }
+      await AsyncStorage.setItem(LOCAL_SCENES_KEY, JSON.stringify(existing));
+      return true;
+    } catch (e) {
+      console.error('[ScenesService] saveLocalScene error:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Get all local scenes.
+   */
+  async getLocalScenes(): Promise<Scene[]> {
+    try {
+      const data = await AsyncStorage.getItem(LOCAL_SCENES_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error('[ScenesService] getLocalScenes error:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Delete a local scene.
+   */
+  async deleteLocalScene(sceneId: string): Promise<boolean> {
+    try {
+      const existing = await this.getLocalScenes();
+      const filtered = existing.filter(s => s.id !== sceneId);
+      await AsyncStorage.setItem(LOCAL_SCENES_KEY, JSON.stringify(filtered));
+      return true;
+    } catch (e) {
+      console.error('[ScenesService] deleteLocalScene error:', e);
+      return false;
+    }
   }
 }
 

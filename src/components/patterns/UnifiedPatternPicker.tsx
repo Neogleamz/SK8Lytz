@@ -9,6 +9,7 @@ import { hexToRgb } from '../../utils/ColorUtils';
 import { GradientBuilderTab } from './GradientBuilderTab';
 import { PatternPickerTab } from './PatternPickerTab';
 import { ScenePickerTab } from './ScenePickerTab';
+import { SceneBuilderModal } from '../scenes/SceneBuilderModal';
 
 interface UnifiedPatternPickerProps {
   writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
@@ -25,6 +26,7 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
   const { Colors } = useTheme();
   
   const [activeTab, setActiveTab] = useState<'PATTERNS' | 'BUILDER' | 'SCENES'>('PATTERNS');
+  const [sceneBuilderVisible, setSceneBuilderVisible] = useState(false);
 
   // Shared state for PATTERNS
   const [selectedEffectId, setSelectedEffectId] = useState<number>(1);
@@ -123,12 +125,16 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
         {activeTab === 'SCENES' && (
           <ScenePickerTab
             Colors={Colors}
-            onOpenBuilder={() => {
-              // TODO: Implement in Scene Builder task
-            }}
+            onOpenBuilder={() => setSceneBuilderVisible(true)}
           />
         )}
       </View>
+
+      <SceneBuilderModal
+        visible={sceneBuilderVisible}
+        onClose={() => setSceneBuilderVisible(false)}
+        writeToDevice={writeToDevice}
+      />
     </View>
   );
 };
