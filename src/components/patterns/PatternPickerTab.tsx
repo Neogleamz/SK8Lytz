@@ -10,12 +10,13 @@ interface PatternPickerTabProps {
   bgColor: string;
   speed: number;
   points: number;
+  direction: number;
   onSelect: (id: number) => void;
   Colors: any;
 }
 
 export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
-  selectedEffectId, fgColor, bgColor, speed, points, onSelect, Colors
+  selectedEffectId, fgColor, bgColor, speed, points, direction, onSelect, Colors
 }) => {
   return (
     <ScrollView
@@ -38,6 +39,7 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
           fgColor={fgColor}
           bgColor={bgColor}
           speed={speed}
+          direction={direction}
           points={points}
           onSelect={() => onSelect(effect.id)}
           Colors={Colors}

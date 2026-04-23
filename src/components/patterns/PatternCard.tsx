@@ -10,13 +10,14 @@ interface PatternCardProps {
   fgColor: string;
   bgColor: string;
   speed: number;
+  direction: number;
   points: number;
   onSelect: () => void;
   Colors: any;
 }
 
 export const PatternCard: React.FC<PatternCardProps> = React.memo(({
-  effect, isSelected, fgColor, bgColor, speed, points, onSelect, Colors
+  effect, isSelected, fgColor, bgColor, speed, direction, points, onSelect, Colors
 }) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -84,7 +85,7 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
             bg={effect.requiresBackground ? bgColor : '#000000'}
             numLEDs={points}
             speed={speed}
-            direction={effect.supportsDirection ? 1 : 0} // Could be driven by state, default 1
+            direction={effect.supportsDirection ? (direction as 0 | 1) : 1}
             autoPlay={true}
             height={9}
           />
