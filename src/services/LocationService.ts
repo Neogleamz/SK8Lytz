@@ -95,7 +95,7 @@ class LocationService {
    */
   async getNearbyPublicSessions(radiusMi?: number | null): Promise<NearbySession[]> {
 
-    const SESSION_SELECT = 'id, name, invite_code, location_label, location_coords, scheduled_at, created_at, is_public, crew_members(count), crews(name)';
+    const SESSION_SELECT = 'id, name, invite_code, location_label, location_coords, scheduled_at, created_at, is_public, crew_id, crew_members(count), crews(name, avatar_url, avatar_icon, avatar_color)';
 
     // ── Query 1: All active PUBLIC sessions (visible to everyone in radius) ──
     const { data: publicData } = await supabase
@@ -183,15 +183,18 @@ class LocationService {
       }
 
       return {
-        id:            s.id,
-        name:          s.name,
-        inviteCode:    s.invite_code,
-        locationLabel: s.location_label ?? 'Unknown Location',
-        leaderName:    'Unknown',
-        crewName:      s.crews?.name ?? null,
-        memberCount:   s.crew_members?.[0]?.count ?? 0,
-        scheduledAt:   s.scheduled_at,
-        isPublic:      s.is_public ?? true,
+        id:              s.id,
+        name:            s.name,
+        inviteCode:      s.invite_code,
+        locationLabel:   s.location_label ?? 'Unknown Location',
+        leaderName:      'Unknown',
+        crewName:        s.crews?.name        ?? null,
+        crewAvatarUrl:   s.crews?.avatar_url   ?? null,
+        crewAvatarIcon:  s.crews?.avatar_icon  ?? null,
+        crewAvatarColor: s.crews?.avatar_color ?? null,
+        memberCount:     s.crew_members?.[0]?.count ?? 0,
+        scheduledAt:     s.scheduled_at,
+        isPublic:        s.is_public ?? true,
         distanceMi,
         distanceLabel,
         lat: coords?.lat ?? null,
@@ -260,6 +263,7 @@ class LocationService {
         state: spot.state,
         zip: spot.zip,
         phone: spot.phone,
+        facility_type: spot.facility_type ?? null,
         surface_type: spot.surface_type,
         is_indoor: spot.is_indoor,
         vibe_rating: spot.vibe_rating,
@@ -320,19 +324,22 @@ class LocationService {
 }
 
 export interface NearbySession {
-  id:            string;
-  name:          string;
-  inviteCode:    string;
-  locationLabel: string;
-  leaderName:    string;
-  crewName:      string | null;
-  memberCount:   number;
-  scheduledAt:   string | null;
-  isPublic:      boolean;  // whether this session is publicly discoverable
-  distanceMi:    number | null;
-  distanceLabel: string;
-  lat:           number | null;
-  lng:           number | null;
+  id:              string;
+  name:            string;
+  inviteCode:      string;
+  locationLabel:   string;
+  leaderName:      string;
+  crewName:        string | null;
+  crewAvatarUrl:   string | null;
+  crewAvatarIcon:  string | null;
+  crewAvatarColor: string | null;
+  memberCount:     number;
+  scheduledAt:     string | null;
+  isPublic:        boolean;  // whether this session is publicly discoverable
+  distanceMi:      number | null;
+  distanceLabel:   string;
+  lat:             number | null;
+  lng:             number | null;
 }
 
 export interface NearbySkateSpot {
@@ -344,6 +351,7 @@ export interface NearbySkateSpot {
   state: string | null;
   zip: string | null;
   phone: string | null;
+  facility_type: string | null;
   surface_type: 'wood' | 'concrete' | 'asphalt' | 'sport_court' | 'unknown' | null;
   is_indoor: boolean | null;
   vibe_rating: number | null;

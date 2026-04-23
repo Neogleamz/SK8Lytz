@@ -34,6 +34,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
   
   const [inviteCode, setInviteCode] = useState('');
   const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
+  const [showRadiusPicker, setShowRadiusPicker] = useState(false);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -542,17 +543,52 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
         <View
           style={{ width: '100%', marginBottom: Spacing.sm, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           
-          {/* Radius Dropdown Switcher */}
-          <TouchableOpacity 
-            style={[styles.radiusPill, { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', paddingVertical: 6, paddingHorizontal: 10 }]} 
-            onPress={() => {
-                const rads = [20, 50, 100, 250, null] as (number | null)[];
-                const next = rads[(rads.indexOf(discoverRadiusMi) + 1) % rads.length];
-                setDiscoverRadiusMi(next);
-            }}>
-            <MaterialCommunityIcons name="radar" size={14} color="#FFF" style={{ marginRight: 4 }} />
-            <Text style={[styles.radiusPillTextActive, { fontSize: 11, fontWeight: '700' }]}>{discoverRadiusMi === null ? 'All' : `${discoverRadiusMi} mi`} ▾</Text>
-          </TouchableOpacity>
+          {/* Radius Dropdown — Option C: inline absolute dropdown */}
+          <View style={{ position: 'relative' }}>
+            <TouchableOpacity 
+              style={[styles.radiusPill, { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', paddingVertical: 6, paddingHorizontal: 10, gap: 4 }]} 
+              onPress={() => setShowRadiusPicker(p => !p)}>
+              <MaterialCommunityIcons name="radar" size={14} color="#FFF" />
+              <Text style={[styles.radiusPillTextActive, { fontSize: 11, fontWeight: '700' }]}>
+                {discoverRadiusMi === null ? 'All' : `${discoverRadiusMi} mi`}
+              </Text>
+              <MaterialCommunityIcons name={showRadiusPicker ? 'chevron-up' : 'chevron-down'} size={11} color="#FFAA00" />
+            </TouchableOpacity>
+
+            {showRadiusPicker && (
+              <View style={{
+                position: 'absolute',
+                top: 38,
+                left: 0,
+                backgroundColor: '#1A1A1A',
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: 'rgba(255,170,0,0.35)',
+                zIndex: 200,
+                minWidth: 110,
+                overflow: 'hidden',
+              }}>
+                {([20, 50, 100, 250, null] as (number | null)[]).map((r, idx) => {
+                  const isActive = discoverRadiusMi === r;
+                  const label = r != null ? `${r} mi` : 'All';
+                  return (
+                    <TouchableOpacity
+                      key={String(r)}
+                      style={[
+                        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 9 },
+                        isActive && { backgroundColor: 'rgba(255,170,0,0.1)' },
+                        idx < 4 && { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+                      ]}
+                      onPress={() => { setDiscoverRadiusMi(r); setShowRadiusPicker(false); }}
+                    >
+                      <Text style={{ color: isActive ? '#FFAA00' : '#CCC', fontSize: 13, fontWeight: '600' }}>{label}</Text>
+                      {isActive && <MaterialCommunityIcons name="check" size={12} color="#FFAA00" />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </View>
           
           {/* Map Filters */}
           <MapFiltersTray filters={filters} toggleFilter={toggleFilter} />
@@ -568,7 +604,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
             <>
               <CrewLandingMap
                  nearbySpots={applyFilters(nearbySpots)}
-                 nearbySessions={nearbySessions}
+                 nearbySessions={filters.showCrewSessions ? nearbySessions : []}
                  pulseAnim={pulseAnim}
                  handleJoinById={handleJoinById}
                  locationCoords={locationCoords}

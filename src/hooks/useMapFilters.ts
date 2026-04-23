@@ -8,14 +8,14 @@ export type MapFilterMatrix = {
   showRinks: boolean;
   showParks: boolean;
   showShops: boolean;
-  requireIndoor: boolean;
+  showCrewSessions: boolean;
 };
 
 const DEFAULT_FILTERS: MapFilterMatrix = {
   showRinks: true,
   showParks: true,
   showShops: true,
-  requireIndoor: false,
+  showCrewSessions: true,
 };
 
 export function useMapFilters() {
@@ -29,7 +29,11 @@ export function useMapFilters() {
         setStatus('loading');
         const cached = await AsyncStorage.getItem(FILTER_PERSIST_KEY);
         if (cached && isMounted) {
-          setFilters({ ...DEFAULT_FILTERS, ...JSON.parse(cached) });
+          const parsed = JSON.parse(cached);
+          // Migration guard: strip legacy requireIndoor, inject showCrewSessions default
+          delete parsed.requireIndoor;
+          if (parsed.showCrewSessions === undefined) parsed.showCrewSessions = true;
+          setFilters({ ...DEFAULT_FILTERS, ...parsed });
         }
         if (isMounted) setStatus('ready');
       } catch (err) {
@@ -53,28 +57,12 @@ export function useMapFilters() {
 
   const applyFilters = (spots: any[]) => {
     return spots.filter(spot => {
-      // 1. Indoor strict constraint
-      if (filters.requireIndoor && !spot.is_indoor) return false;
-
-      // 2. Facility constraints
-      let allowed = false;
       const t = spot.facility_type;
-      
-      if (t === 'roller_rink' || t === 'hybrid') {
-        if (filters.showRinks) allowed = true;
-      }
-      if (t === 'skatepark' || t === 'hybrid') {
-        if (filters.showParks) allowed = true;
-      }
-      if (t === 'pro_shop' || spot.has_pro_shop) {
-        if (filters.showShops) allowed = true;
-      }
-      
-      // Keep legacy spots that might not have facility_type populated falling back to their old heuristic
-      if (!t && filters.showRinks && spot.is_indoor) allowed = true;
-      if (!t && filters.showParks && !spot.is_indoor) allowed = true;
-
-      return allowed;
+      if (t === 'roller_rink') return filters.showRinks;
+      if (t === 'skatepark')   return filters.showParks;
+      if (t === 'skate_shop')  return filters.showShops;
+      // No facility_type = legacy fallback: always show
+      return true;
     });
   };
 

@@ -12,12 +12,12 @@ interface Props {
 export function MapFiltersTray({ filters, toggleFilter }: Props) {
   const { Colors } = useTheme();
 
-  // Active colors precisely matched to MapMarkers rendering logic
+  // Active colors precisely matched to CrewLandingMap marker rendering logic
   const FILTER_OPTS = [
-    { key: 'showRinks', label: 'Rinks', icon: 'roller-skate', activeColor: '#3B82F6' },
-    { key: 'showParks', label: 'Parks', icon: 'flag-triangle', activeColor: '#A16207' },
-    { key: 'showShops', label: 'Shops', icon: 'storefront-outline', activeColor: '#8B5CF6' },
-    { key: 'requireIndoor', label: 'Indoor', icon: 'home-roof', activeColor: '#10B981' },
+    { key: 'showRinks',        label: 'Rinks', icon: 'roller-skate',         activeColor: '#3B82F6' },
+    { key: 'showParks',        label: 'Parks', icon: 'flag-triangle',         activeColor: '#92400E' },
+    { key: 'showShops',        label: 'Shops', icon: 'storefront-outline',    activeColor: '#8B5CF6' },
+    { key: 'showCrewSessions', label: 'Crews', icon: 'account-group-outline', activeColor: '#F97316' },
   ] as const;
 
   return (

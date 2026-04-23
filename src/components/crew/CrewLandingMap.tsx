@@ -1,9 +1,18 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, Platform, Animated } from 'react-native';
+import React from 'react';
+import { View, Text, Image, Platform, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
 import MapViewCluster from 'react-native-map-clustering';
 import { useTheme } from '../../context/ThemeContext';
+import { NearbySession, NearbySkateSpot } from '../../services/LocationService';
+
+// ── Color SSOT: must match MapFiltersTray.tsx FILTER_OPTS activeColor exactly ──
+function getSpotMarker(spot: NearbySkateSpot): { hex: string; icon: string } {
+  if (spot.facility_type === 'roller_rink') return { hex: '#3B82F6', icon: 'roller-skate' };
+  if (spot.facility_type === 'skate_shop')  return { hex: '#8B5CF6', icon: 'storefront-outline' };
+  if (spot.facility_type === 'skatepark')   return { hex: '#92400E', icon: 'flag-triangle' };
+  return { hex: '#555555', icon: 'map-marker' }; // legacy: no facility_type
+}
 
 export function CrewLandingMap({ 
   nearbySpots, 
@@ -12,11 +21,18 @@ export function CrewLandingMap({
   handleJoinById, 
   locationCoords,
   discoverRadiusMi
-}: any) {
+}: {
+  nearbySpots: NearbySkateSpot[];
+  nearbySessions: NearbySession[];
+  pulseAnim: Animated.Value;
+  handleJoinById: (id: string) => void;
+  locationCoords: { lat: number; lng: number } | null;
+  discoverRadiusMi: number | null;
+}) {
   const { Colors } = useTheme();
-  const mapRef = useRef<any>(null);
+  const mapRef = React.useRef<any>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (mapRef.current && locationCoords) {
       // Default USA-wide zoom out when radius is "ALL" (discoverRadiusMi === null)
       let latDelta = 30;
@@ -54,32 +70,39 @@ export function CrewLandingMap({
       showsUserLocation
       showsMyLocationButton
     >
-      {/* Static Spots */}
-      {nearbySpots.map((spot: any) => {
-        let pin = spot.is_indoor ? 'blue' : 'brown';
-        if (spot.facility_type === 'roller_rink') pin = 'blue';
-        if (spot.facility_type === 'pro_shop' || spot.has_pro_shop) pin = 'purple';
-        
-        let desc = `${spot.city || ''} ${spot.state || ''}`;
-        const tags = [];
-        if (spot.is_indoor) tags.push('Indoor');
-        else tags.push('Outdoor');
-        if (spot.has_pro_shop) tags.push('Has Pro Shop');
-        if (spot.has_adult_night) tags.push('Adult Night');
-
+      {/* ── Static Skate Spots — color-coded by facility_type ── */}
+      {nearbySpots.map((spot: NearbySkateSpot) => {
+        const { hex, icon } = getSpotMarker(spot);
+        const descParts = [spot.city, spot.state].filter(Boolean).join(' ');
         return (
           <Marker
             key={`spot-${spot.id}`}
             coordinate={{ latitude: spot.lat, longitude: spot.lng }}
-            pinColor={pin}
             title={spot.name}
-            description={`${desc} (${tags.join(' • ')})`}
-          />
+            description={descParts}
+          >
+            <View style={{
+              width: 28,
+              height: 28,
+              borderRadius: 14,
+              backgroundColor: hex,
+              borderWidth: 2,
+              borderColor: '#FFFFFF',
+              justifyContent: 'center',
+              alignItems: 'center',
+              shadowColor: hex,
+              shadowRadius: 6,
+              shadowOpacity: 0.6,
+              elevation: 4,
+            }}>
+              <MaterialCommunityIcons name={icon as any} size={14} color="#FFF" />
+            </View>
+          </Marker>
         );
       })}
 
-      {/* Active Remote Sessions (Glowing Beacons) */}
-      {nearbySessions.map((s: any) => {
+      {/* ── Active Crew Sessions — orange-ringed crew avatar beacons ── */}
+      {nearbySessions.map((s: NearbySession) => {
         if (!s.lat || !s.lng) return null;
         return (
           <Marker
@@ -87,20 +110,59 @@ export function CrewLandingMap({
             coordinate={{ latitude: s.lat, longitude: s.lng }}
             onPress={() => handleJoinById(s.id)}
           >
-            <Animated.View style={{
-               width: 24, height: 24, borderRadius: 12,
-               backgroundColor: 'rgba(255,0,0,0.8)',
-               borderWidth: 2, borderColor: '#FFF',
-               shadowColor: '#F00', shadowRadius: 10, shadowOpacity: 1,
-               opacity: pulseAnim,
-               justifyContent: 'center', alignItems: 'center'
-            }}>
-              <MaterialCommunityIcons name="lightning-bolt" size={12} color="#FFF" />
+            <Animated.View style={{ opacity: pulseAnim, alignItems: 'center' }}>
+              {/* Crew avatar bubble with orange border */}
+              <View style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                borderWidth: 3,
+                borderColor: '#F97316',
+                overflow: 'hidden',
+                shadowColor: '#F97316',
+                shadowRadius: 8,
+                shadowOpacity: 0.85,
+                elevation: 6,
+              }}>
+                {s.crewAvatarUrl ? (
+                  <Image
+                    source={{ uri: s.crewAvatarUrl }}
+                    style={{ width: '100%', height: '100%' }}
+                  />
+                ) : (
+                  <View style={{
+                    flex: 1,
+                    backgroundColor: s.crewAvatarColor || '#F97316',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}>
+                    <MaterialCommunityIcons
+                      name={(s.crewAvatarIcon as any) || 'account-group'}
+                      size={18}
+                      color="#FFF"
+                    />
+                  </View>
+                )}
+              </View>
+
+              {/* Crew name + member count callout below pin */}
+              <View style={{
+                backgroundColor: 'rgba(0,0,0,0.85)',
+                paddingHorizontal: 6,
+                paddingVertical: 3,
+                borderRadius: 5,
+                marginTop: 4,
+                alignItems: 'center',
+                minWidth: 80,
+              }}>
+                <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '700' }} numberOfLines={1}>
+                  {s.crewName || s.name}
+                </Text>
+                <Text style={{ color: '#F97316', fontSize: 9 }}>
+                  {s.memberCount} Skater{s.memberCount !== 1 ? 's' : ''}
+                </Text>
+              </View>
             </Animated.View>
-            <View style={{ backgroundColor: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 4, position: 'absolute', top: 30, alignSelf: 'center', minWidth: 80, alignItems: 'center' }}>
-              <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '700' }}>{s.crewName || s.name}</Text>
-              <Text style={{ color: Colors.primary, fontSize: 9 }}>{s.memberCount} Skaters</Text>
-            </View>
           </Marker>
         );
       })}
