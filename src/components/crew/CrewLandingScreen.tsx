@@ -607,7 +607,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
                  nearbySessions={filters.showCrewSessions ? nearbySessions : []}
                  pulseAnim={pulseAnim}
                  handleJoinById={handleJoinById}
-                 locationCoords={locationCoords}
+                 locationCoords={locationCoords ?? null}
                  discoverRadiusMi={discoverRadiusMi}
                />
             </>

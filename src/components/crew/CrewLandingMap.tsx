@@ -74,28 +74,59 @@ export function CrewLandingMap({
       {nearbySpots.map((spot: NearbySkateSpot) => {
         const { hex, icon } = getSpotMarker(spot);
         const descParts = [spot.city, spot.state].filter(Boolean).join(' ');
+
+        // Count active sessions within ~100m of this spot (0.001 degrees)
+        const activeSessionsHere = nearbySessions.filter(s => 
+          s.lat && s.lng && 
+          Math.abs(s.lat - spot.lat) < 0.001 && 
+          Math.abs(s.lng - spot.lng) < 0.001
+        ).length;
+
         return (
           <Marker
             key={`spot-${spot.id}`}
             coordinate={{ latitude: spot.lat, longitude: spot.lng }}
             title={spot.name}
             description={descParts}
+            style={{ zIndex: activeSessionsHere > 0 ? 10 : 1 }}
           >
-            <View style={{
-              width: 28,
-              height: 28,
-              borderRadius: 14,
-              backgroundColor: hex,
-              borderWidth: 2,
-              borderColor: '#FFFFFF',
-              justifyContent: 'center',
-              alignItems: 'center',
-              shadowColor: hex,
-              shadowRadius: 6,
-              shadowOpacity: 0.6,
-              elevation: 4,
-            }}>
-              <MaterialCommunityIcons name={icon as any} size={14} color="#FFF" />
+            <View style={{ alignItems: 'center' }}>
+              <View style={{
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                backgroundColor: hex,
+                borderWidth: 2,
+                borderColor: '#FFFFFF',
+                justifyContent: 'center',
+                alignItems: 'center',
+                shadowColor: hex,
+                shadowRadius: 6,
+                shadowOpacity: 0.6,
+                elevation: 4,
+              }}>
+                <MaterialCommunityIcons name={icon as any} size={14} color="#FFF" />
+              </View>
+
+              {/* Spot name + optional live sessions callout below pin */}
+              <View style={{
+                backgroundColor: 'rgba(0,0,0,0.85)',
+                paddingHorizontal: 6,
+                paddingVertical: 3,
+                borderRadius: 5,
+                marginTop: 4,
+                alignItems: 'center',
+                minWidth: 70,
+              }}>
+                <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '700' }} numberOfLines={1}>
+                  {spot.name}
+                </Text>
+                {activeSessionsHere > 0 && (
+                  <Text style={{ color: '#F97316', fontSize: 9, marginTop: 1, fontWeight: '600' }}>
+                    {activeSessionsHere} Live Session{activeSessionsHere !== 1 ? 's' : ''}
+                  </Text>
+                )}
+              </View>
             </View>
           </Marker>
         );

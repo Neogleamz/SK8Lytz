@@ -186,6 +186,8 @@ export interface IFavoriteState {
   /** commandType byte (APK-PROVEN StaticColorfulMode.java): 0x01=Static, 0x02=Running(scroll), 0x03=Strobe, 0x04=Jump */
   builderTransitionType?: number;
   builderDirection?: number;
+  // ── SCENE mode persistence ─────────────
+  sceneSteps?: any[];
 }
 
 /** A quick color preset for the Builder sub-mode. */

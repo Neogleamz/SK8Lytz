@@ -121,6 +121,7 @@ export function CrewCreateScreen() {
         isGettingLocation={isGettingLocation}
         onDetectLocation={handleDetectLocation}
         searchRadiusMi={discoverRadiusMi || undefined}
+        curatedSpots={nearbySpots.filter(s => s.facility_type === 'roller_rink' || s.facility_type === 'skatepark')}
       />
 
       {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
