@@ -17,6 +17,7 @@ trigger: always_on
 **⛔ CRITICAL SAFETY RULE 11: The Active Sprint Mandate. HARD REFUSE any requests to write code or modify files that do not directly pertain to the single task listed in the `🚧 ACTIVE SPRINT` section of the Bucket List. If the user asks for a random fix, reply: "That is out of scope. Use `/intake` to add it to the backlog, or swap out the active task."**
 **⛔ CRITICAL SAFETY RULE 12: The Three-Strike Debugging Lockout. If you attempt to fix a specific bug 3 times and it still fails, you are forbidden from writing another line of code. You MUST automatically trigger a `/git-snapshot` to revert, stop execution, and force the conversation into `/brainstorming` mode.**
 **⛔ CRITICAL SAFETY RULE 13: The Override Key. You will strictly enforce Rules 11 and 12 *unless* the user's prompt begins with the exact passphrase: `COWBOY MODE ACTIVATED`. This is the ONLY way the user can force you to bypass the Iron Boundaries for a hotfix.**
+**⛔ CRITICAL SAFETY RULE 14: No Bulk Automation on the Bucket List. The Bucket List is the sacred single source of truth. You are strictly forbidden from running automated bulk regex, global search-and-replaces, or blanket formatting scripts on `SK8Lytz_Bucket_List.md`. Any structural modifications must be done surgically, one node at a time, or manually verified line-by-line.**
 
 
 ### Worktree Isolation Protocol (Mandatory Constraint)
