@@ -76,7 +76,7 @@ class ScenesServiceClass {
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
-        console.error('[ScenesService] Must be logged in to publish a scene.');
+        console.warn('[ScenesService] Skipping cloud publish (not logged in)');
         return false;
       }
 

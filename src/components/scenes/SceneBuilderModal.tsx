@@ -107,7 +107,7 @@ export const SceneBuilderModal: React.FC<SceneBuilderModalProps> = ({ visible, o
 
       <Modal visible={saveModalVisible} transparent animationType="fade">
         <View style={styles.saveModalOverlay}>
-           <View style={[styles.saveModalCard, { backgroundColor: Colors.card, borderColor: Colors.border }]}>
+           <View style={[styles.saveModalCard, { backgroundColor: Colors.surface, borderColor: 'rgba(255,255,255,0.1)' }]}>
                <Text style={[styles.saveModalTitle, { color: Colors.text }]}>Save Custom Scene</Text>
                <Text style={[styles.saveModalDesc, { color: Colors.textMuted }]}>Give your scene a name. It will be saved securely to the cloud if you are logged in, otherwise it will save locally to this device.</Text>
                
