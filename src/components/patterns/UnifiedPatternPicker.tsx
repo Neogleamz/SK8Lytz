@@ -16,6 +16,8 @@ interface UnifiedPatternPickerProps {
   points?: number;
   segments?: number;
   speed: number;
+  brightness?: number;
+  direction?: number;
   hwSettings?: any;
   /** FG color — owned by DockedController via fixedFgColor. Do NOT shadow with local state. */
   fgColor: string;
@@ -25,8 +27,8 @@ interface UnifiedPatternPickerProps {
 }
 
 export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
-  writeToDevice, points = 16, segments = 1, speed, hwSettings, onStateChange,
-  fgColor, bgColor,
+  writeToDevice, points = 16, segments = 1, speed, brightness = 100, direction = 1,
+  hwSettings, onStateChange, fgColor, bgColor,
 }) => {
   const { Colors } = useTheme();
   
@@ -52,13 +54,13 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
   // wraps them in the correct 0x59 opcode with transition type (FREEZE/CASCADE).
   // This is the ONLY correct dispatch path. Do NOT use 0x51 setCustomModeCompact
   // here — that sends firmware symphony effect IDs, not our pixel math.
-  const dispatchEffect = useCallback((effectId: number, fg: string, bg: string, spd: number) => {
+  const dispatchEffect = useCallback((effectId: number, fg: string, bg: string, spd: number, dir: number, brt: number) => {
     if (!writeToDevice) return;
     const fgRgb = hexToRgb(fg);
     const bgRgb = hexToRgb(bg);
     const payload = buildPatternPayload(
       effectId, fgRgb, bgRgb, devicePoints,
-      Math.max(1, Math.min(100, Math.round(spd))), 1
+      Math.max(1, Math.min(100, Math.round(spd))), dir, brt
     );
     if (payload) writeToDevice(payload);
     onStateChange?.(effectId);
@@ -66,8 +68,8 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
 
   const handleSelectPattern = useCallback((effectId: number) => {
     setSelectedEffectId(effectId);
-    dispatchEffect(effectId, fgColor, bgColor, speed);
-  }, [dispatchEffect, fgColor, bgColor, speed]);
+    dispatchEffect(effectId, fgColor, bgColor, speed, direction, brightness);
+  }, [dispatchEffect, fgColor, bgColor, speed, direction, brightness]);
 
   // Sync speed/color changes to PATTERNS tab hardware.
   // NOTE: dispatchEffect is intentionally omitted from deps — it is stable via useCallback
@@ -78,9 +80,9 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (activeTab === 'PATTERNS' && selectedEffectId) {
-      dispatchEffect(selectedEffectId, fgColor, bgColor, speed);
+      dispatchEffect(selectedEffectId, fgColor, bgColor, speed, direction, brightness);
     }
-  }, [speed, activeTab, selectedEffectId, fgColor, bgColor]);
+  }, [speed, brightness, direction, activeTab, selectedEffectId, fgColor, bgColor]);
 
 
   // UI helpers

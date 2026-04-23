@@ -70,6 +70,8 @@ export interface UniversalSlidersFooterProps {
   setSpeed: (v: number) => void;
   setMicSensitivity: (v: number) => void;
   setStreetSensitivity: (v: number) => void;
+  fixedDirection?: number;
+  setFixedDirection?: (dir: number) => void;
 
   // ── Dispatch functions ──────────────────────────────────────────────────
   sendColor: (r: number, g: number, b: number) => void;
@@ -127,6 +129,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
     setMusicPrimaryColor, setMusicSecondaryColor, setMusicHue, setMusicSecondaryHue,
     setSelectedHue, setMusicColorFocus, setFixedColorMode, setStreetCruiseColor,
     setBrightness, setSpeed, setMicSensitivity, setStreetSensitivity,
+    fixedDirection, setFixedDirection,
     sendColor, applyFixedPattern, applyStaticModePattern, applyEmergencyPattern,
     applyStreetPattern, handleMusicChange, clampSpeed, brtFactor,
     writeToDevice, hwSettings, motionStateRef,
@@ -372,6 +375,36 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
             }}
           />
         )}
+
+        {/* DIRECTION TOGGLE — shown only when active pattern supports it */}
+        {activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' && (() => {
+          const effect = SK8LYTZ_TEMPLATES.find(e => e.id === fixedPatternId);
+          if (!effect?.supportsDirection || !setFixedDirection) return null;
+          const isForward = (fixedDirection ?? 1) === 1;
+          return (
+            <View style={{ flexDirection: 'row', alignSelf: 'flex-end', marginBottom: 2, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
+              <TouchableOpacity
+                onPress={() => {
+                  setFixedDirection(0);
+                  if (applyFixedPattern) applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed);
+                }}
+                style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: !isForward ? 'rgba(0,240,255,0.2)' : 'transparent' }}
+              >
+                <Text style={{ color: !isForward ? '#00F0FF' : 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '800' }}>◀ REV</Text>
+              </TouchableOpacity>
+              <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.15)' }} />
+              <TouchableOpacity
+                onPress={() => {
+                  setFixedDirection(1);
+                  if (applyFixedPattern) applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed);
+                }}
+                style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: isForward ? 'rgba(0,240,255,0.2)' : 'transparent' }}
+              >
+                <Text style={{ color: isForward ? '#00F0FF' : 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '800' }}>FWD ▶</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })()}
 
         {activeMode === 'MUSIC' && (
           <TacticalSlider

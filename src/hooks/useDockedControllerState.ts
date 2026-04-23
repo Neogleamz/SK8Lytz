@@ -61,6 +61,7 @@ export function useDockedControllerState(initialProduct: ProductType = 'HALOZ') 
   const [fixedFgColor, setFixedFgColor] = useState<string>('#00FF00');
   const [fixedBgColor, setFixedBgColor] = useState<string>('#000000');
   const [fixedHue, setFixedHue] = useState<number>(120);
+  const [fixedDirection, setFixedDirection] = useState<number>(1); // 1=forward, 0=reverse
 
   // Cloud Scene UI States
   const [isCommunityModalVisible, setIsCommunityModalVisible] = useState<boolean>(false);
@@ -163,6 +164,7 @@ export function useDockedControllerState(initialProduct: ProductType = 'HALOZ') 
     fixedFgColor, setFixedFgColor,
     fixedBgColor, setFixedBgColor,
     fixedHue, setFixedHue,
+    fixedDirection, setFixedDirection,
     isCommunityModalVisible, setIsCommunityModalVisible,
     isPublishingCloud, setIsPublishingCloud,
     cloudPublicToggle, setCloudPublicToggle,

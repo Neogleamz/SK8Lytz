@@ -253,6 +253,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       fixedFgColor, setFixedFgColor,
       fixedBgColor, setFixedBgColor,
       fixedHue, setFixedHue,
+      fixedDirection, setFixedDirection,
       isCommunityModalVisible, setIsCommunityModalVisible,
       isPublishingCloud, setIsPublishingCloud,
       cloudPublicToggle, setCloudPublicToggle,
@@ -740,10 +741,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             {activeMode === 'MULTIMODE' && (
               <UnifiedPatternPicker
                 speed={speed}
+                brightness={brightness}
                 hwSettings={hwSettings}
                 points={points}
                 fgColor={fixedFgColor}
                 bgColor={fixedBgColor}
+                direction={fixedDirection}
                 writeToDevice={writeToDevice}
                 onStateChange={(id) => {
                   setFixedPatternId(id);
@@ -857,6 +860,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               writeToDevice={writeToDevice}
               hwSettings={hwSettings}
               motionStateRef={motionStateRef}
+              fixedDirection={fixedDirection}
+              setFixedDirection={setFixedDirection}
               styles={styles}
             />
           )}
