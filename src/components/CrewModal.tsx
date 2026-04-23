@@ -4,6 +4,7 @@ import { CrewProvider, useCrewContext } from '../context/CrewContext';
 import { useTheme } from '../context/ThemeContext';
 import { CrewRole, CrewSession } from '../services/CrewService';
 import { supabase } from '../services/supabaseClient';
+import { profileService } from '../services/ProfileService';
 import { createStyles } from './crew/CrewStyles';
 
 import { useCrewHub } from '../hooks/useCrewHub';
