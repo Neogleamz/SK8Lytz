@@ -333,3 +333,171 @@ export function buildPatternPayload(
   return buildCustomModePayload(patternId, fg, bg, speed);
 }
 
+// ─── MUSIC MODE VISUALIZER ────────────────────────────────────────────────────
+
+/**
+ * Private helpers for music mode — migrated from RbmSimulator.ts [BATCH:P1].
+ */
+function hexToRgb(hex: string): RGB {
+  const h = hex.replace('#', '');
+  return { r: parseInt(h.slice(0, 2), 16) || 0, g: parseInt(h.slice(2, 4), 16) || 0, b: parseInt(h.slice(4, 6), 16) || 0 };
+}
+
+function lerpRGBMusic(a: RGB, b: RGB, t: number): RGB {
+  t = Math.max(0, Math.min(1, t));
+  return { r: Math.round(a.r + (b.r - a.r) * t), g: Math.round(a.g + (b.g - a.g) * t), b: Math.round(a.b + (b.b - a.b) * t) };
+}
+
+function getMusicPaletteAt(palette: RGB[], tick: number): RGB {
+  if (palette.length === 0) return { r: 0, g: 0, b: 0 };
+  return palette[Math.floor(tick * palette.length) % palette.length];
+}
+
+function getMusicPaletteSmooth(palette: RGB[], tick: number): RGB {
+  if (palette.length <= 1) return palette[0] ?? { r: 0, g: 0, b: 0 };
+  const pos = (tick * palette.length) % palette.length;
+  return lerpRGBMusic(palette[Math.floor(pos) % palette.length], palette[(Math.floor(pos) + 1) % palette.length], pos - Math.floor(pos));
+}
+
+const MUSIC_RAINBOW7: RGB[] = ['#FF0000','#FF6600','#FFFF00','#00FF00','#00FFFF','#0066FF','#AA00FF'].map(hexToRgb);
+
+/**
+ * Get a hardware-accurate pixel + opacity array for MUSIC mode patterns 1–13.
+ *
+ * Audio-reactive: `magnitude` (0.0–1.0) gates intensity, fill depth, and flash thresholds.
+ * The visualizer applies `opacities[i]` as per-LED brightness multiplier.
+ *
+ * Migrated from RbmSimulator.getRbmMusicFrame [BATCH:P1]. PatternEngine is now SSOT.
+ *
+ * @param musicPatternId - Music pattern ID 1–13
+ * @param numLEDs        - LED count for the segment
+ * @param animTick       - Animation tick 0.0–1.0 (looping)
+ * @param magnitude      - Live audio amplitude 0.0–1.0
+ * @param baseColorHex   - User-selected base color e.g. '#FF0000'
+ */
+export function getMusicVisualizerFrame(
+  musicPatternId: number,
+  numLEDs: number,
+  animTick: number,
+  magnitude: number,
+  baseColorHex: string
+): { pixels: RGB[]; opacities: number[] } {
+  const n = Math.max(1, numLEDs);
+  const base = hexToRgb(baseColorHex);
+  const white: RGB = { r: 255, g: 255, b: 255 };
+  const black: RGB = { r: 0, g: 0, b: 0 };
+  const mag = Math.max(0, Math.min(1, magnitude));
+
+  const pixels: RGB[] = Array(n).fill(null).map(() => ({ ...base }));
+  const opacities: number[] = Array(n).fill(1.0);
+
+  switch (musicPatternId) {
+    case 1: { // Soft — whole strip breathe, depth = magnitude
+      const breathe = 0.2 + mag * 0.8;
+      const color = lerpRGBMusic(black, base, breathe);
+      for (let i = 0; i < n; i++) { pixels[i] = { ...color }; opacities[i] = breathe; }
+      break;
+    }
+    case 2: { // Cheerful — sparkle white on peaks
+      for (let i = 0; i < n; i++) {
+        if (mag > 0.7 && (i + Math.floor(animTick * 7)) % 3 === 0) {
+          pixels[i] = { ...white }; opacities[i] = 1.0;
+        } else { pixels[i] = { ...base }; opacities[i] = 0.3 + mag * 0.5; }
+      }
+      break;
+    }
+    case 3: { // Energy — magnitude-gated strobe flash
+      const on = mag > 0.5 && Math.floor(animTick * 10) % 2 === 0;
+      const c = getMusicPaletteAt(MUSIC_RAINBOW7, animTick);
+      for (let i = 0; i < n; i++) { pixels[i] = { ...c }; opacities[i] = on ? 1.0 : 0.05; }
+      break;
+    }
+    case 4: { // Relax — slow smooth rainbow fade
+      const c = getMusicPaletteSmooth(MUSIC_RAINBOW7, animTick * 0.3);
+      for (let i = 0; i < n; i++) { pixels[i] = { ...c }; opacities[i] = 0.5 + mag * 0.5; }
+      break;
+    }
+    case 5: { // Passion — overlay expand center→ends; fill level = magnitude
+      const center = Math.floor(n / 2);
+      const reach = Math.floor(mag * center);
+      for (let i = 0; i < n; i++) {
+        pixels[i] = { ...base };
+        opacities[i] = Math.abs(i - center) <= reach ? 1.0 : 0.05;
+      }
+      break;
+    }
+    case 6: { // Brisk — alternating segments jump on beat
+      const step = Math.floor(animTick * 4) % 2;
+      for (let i = 0; i < n; i++) {
+        pixels[i] = { ...base };
+        opacities[i] = ((Math.floor(i / 3) % 2) === step) && mag > 0.3 ? 1.0 : 0.1;
+      }
+      break;
+    }
+    case 7: { // Rhythm — VU meter bottom→top, fill = magnitude
+      for (let i = 0; i < n; i++) {
+        const fract = i / n;
+        opacities[i] = fract < mag ? 1.0 : 0.05;
+        pixels[i] = fract > 0.85 ? { r: 255, g: 0, b: 0 } : fract > 0.65 ? { r: 255, g: 200, b: 0 } : { ...base };
+      }
+      break;
+    }
+    case 8: { // Rolling — rainbow flow, magnitude controls opacity
+      for (let i = 0; i < n; i++) {
+        pixels[i] = getMusicPaletteSmooth(MUSIC_RAINBOW7, ((i / n) + animTick) % 1);
+        opacities[i] = 0.2 + mag * 0.8;
+      }
+      break;
+    }
+    case 9: { // Flicker — deterministic twinkling dots on magnitude
+      for (let i = 0; i < n; i++) {
+        const seed = Math.sin(i * 127.1 + animTick * 311.7) * 43758.5;
+        opacities[i] = (seed - Math.floor(seed)) < mag ? 1.0 : 0.05;
+        pixels[i] = { ...base };
+      }
+      break;
+    }
+    case 10: { // Accumulate — overlay from both ends to center, fill = magnitude
+      const reach = Math.floor(mag * (n / 2));
+      for (let i = 0; i < n; i++) {
+        opacities[i] = Math.min(i, n - 1 - i) < reach ? 1.0 : 0.05;
+        pixels[i] = { ...base };
+      }
+      break;
+    }
+    case 11: { // Shuttle — bright dot bouncing in sync with animTick
+      const bouncedPos = animTick < 0.5 ? animTick * 2 : (1 - animTick) * 2;
+      const head = Math.floor(bouncedPos * n);
+      for (let i = 0; i < n; i++) {
+        const dist = Math.abs(i - head);
+        opacities[i] = dist === 0 ? 1.0 : dist === 1 ? 0.4 * mag : 0.05;
+        pixels[i] = { ...base };
+      }
+      break;
+    }
+    case 12: { // Fireworks — expand from center, burst flash on peak
+      const center = Math.floor(n / 2);
+      const burst = mag > 0.8;
+      const reach = burst ? n : Math.floor(animTick * (n / 2));
+      for (let i = 0; i < n; i++) {
+        const dist = Math.abs(i - center);
+        if (burst) { pixels[i] = { ...white }; opacities[i] = 1.0; }
+        else { pixels[i] = { ...base }; opacities[i] = dist <= reach ? (1 - dist / (n / 2)) * mag : 0.02; }
+      }
+      break;
+    }
+    case 13: { // Snow — drifting dots falling end→start
+      for (let i = 0; i < n; i++) {
+        const snowflake = Math.abs(Math.sin(i * 47.3 + Math.floor(animTick * 3) * 1234.5)) > (1 - mag * 0.7);
+        pixels[i] = snowflake ? { ...white } : { ...base };
+        opacities[i] = snowflake ? 1.0 : 0.1;
+      }
+      break;
+    }
+    default: {
+      for (let i = 0; i < n; i++) { pixels[i] = { ...base }; opacities[i] = mag; }
+    }
+  }
+
+  return { pixels, opacities };
+}

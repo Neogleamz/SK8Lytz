@@ -3,11 +3,9 @@ import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 're
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { useTheme } from '../context/ThemeContext';
 import type { PatternId, RGB } from '../protocols/PatternEngine';
-import { getVisualizerFrame } from '../protocols/PatternEngine';
+import { getVisualizerFrame, getMusicVisualizerFrame } from '../protocols/PatternEngine';
 import { PositionalMathBuffer } from '../protocols/PositionalMathBuffer';
-
 import { Spacing } from '../theme/theme';
-import { getRbmMusicFrame } from '../utils/RbmSimulator'; // TODO[BATCH:P1]: migrate MUSIC mode off RbmSimulator once PatternEngine music equivalent exists
 
 interface DeviceConfig {
   id?: string;
@@ -366,7 +364,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           // ── Hardware-accurate music mode simulation ──
           // Dynamic Mirroring: generates per-segment frame; Seg2 mirrors it reversed if flagged.
           const musicSegLeds = isMirrored ? Math.ceil(numLeds / 2) : numLeds;
-          const musicFrame = getRbmMusicFrame(patternId || 1, musicSegLeds, animTick, audioMagnitude, color);
+          const musicFrame = getMusicVisualizerFrame(patternId || 1, musicSegLeds, animTick, audioMagnitude, color);
           const mRawPos = (segmentI / activeSegmentLeds) * musicFrame.pixels.length;
           const mSlotRaw = Math.floor(mRawPos) % Math.max(1, musicFrame.pixels.length);
           const mSlot = mirrorSlot(mSlotRaw, musicFrame.pixels.length);
