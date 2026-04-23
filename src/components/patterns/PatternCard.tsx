@@ -24,8 +24,8 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
     if (isSelected) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.04, duration: 600, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1.04, duration: 600, useNativeDriver: false }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: false }),
         ])
       ).start();
     } else {
