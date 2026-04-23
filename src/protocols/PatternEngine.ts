@@ -529,9 +529,56 @@ function buildCenterAccent(fg: RGB, bg: RGB, numLEDs: number): RGB[] {
   ];
 }
 
+// GROUP B: Chases & Meteors
+function buildSingleDotChase(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const t = direction === 0 ? tick : 1 - tick;
+  const pos = Math.floor(t * numLEDs) % numLEDs;
+  return Array.from({ length: numLEDs }, (_, i) => i === pos ? fg : bg);
+}
+
+function buildReflectedDotChase(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  // Two dots start at opposite ends and meet in the middle
+  const posA = Math.floor(tick * (numLEDs / 2)) % Math.ceil(numLEDs / 2);
+  const posB = numLEDs - 1 - posA;
+  return Array.from({ length: numLEDs }, (_, i) =>
+    (i === posA || i === posB) ? fg : bg
+  );
+}
+
+function buildCometChase(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const TAIL = Math.max(3, Math.floor(numLEDs * 0.2));
+  const t = direction === 0 ? tick : 1 - tick;
+  const head = Math.floor(t * (numLEDs + TAIL)) - TAIL;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const dist = head - i;
+    if (dist < 0 || dist >= TAIL) return bg;
+    const brightness = 1 - (dist / TAIL);
+    return blendRGB(fg, bg, Math.pow(brightness, 1.5));
+  });
+}
+
+function buildMeteorShower(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const METEOR_COUNT = 3;
+  const TAIL = Math.floor(numLEDs * 0.15);
+  const frame = Array(numLEDs).fill(bg);
+  for (let m = 0; m < METEOR_COUNT; m++) {
+    const offset = (m / METEOR_COUNT); // stagger start
+    const t = direction === 0 ? (tick + offset) % 1 : 1 - ((tick + offset) % 1);
+    const head = Math.floor(t * (numLEDs + TAIL)) - TAIL;
+    for (let i = 0; i < numLEDs; i++) {
+      const dist = head - i;
+      if (dist >= 0 && dist < TAIL) {
+        const brightness = 1 - (dist / TAIL);
+        frame[i] = blendRGB(fg, frame[i], Math.pow(brightness, 2));
+      }
+    }
+  }
+  return frame;
+}
+
 // ─── GENERATORS ───────────────────────────────────────────────────────────────
 
-function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number): RGB[] {
+function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: number = 0, direction: 0 | 1 = 1): RGB[] {
   const arr: RGB[] = Array(n).fill(bg);
 
   switch (patternId) {
@@ -543,21 +590,10 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number): RGB[]
     case 5: return buildCenterAccent(fg, bg, n);
 
     // ── GROUP 2: CHASES & METEORS ──
-    case 6: // Single Dot Chase
-      arr[0] = fg; return arr;
-    case 7: // Reflected Dot Chase (Two dots spaced out)
-      arr[0] = fg;
-      arr[Math.floor(n / 2)] = fg;
-      return arr;
-    case 8: // Comet Chase
-      for (let i = 0; i < Math.min(6, n); i++) arr[i] = dim(fg, 1 - i * 0.15);
-      return arr;
-    case 9: // Meteor Shower
-      for (let i = 0; i < n; i++) {
-        if (i % 8 === 0) arr[i] = fg;
-        else if (i % 8 < 4) arr[i] = dim(fg, 1 - (i % 8) * 0.25);
-      }
-      return arr;
+    case 6: return buildSingleDotChase(fg, bg, n, tick, direction);
+    case 7: return buildReflectedDotChase(fg, bg, n, tick);
+    case 8: return buildCometChase(fg, bg, n, tick, direction);
+    case 9: return buildMeteorShower(fg, bg, n, tick, direction);
 
     // ── GROUP 3: MARQUEES & BANDS ──
     case 10: // Micro Ants
@@ -679,10 +715,13 @@ export function getVisualizerFrame(
   const phase1a = generatePhase1aArray(patternId, fg, bg, n, animTick);
   if (phase1a) return phase1a;
 
-  const generated = generateArray(patternId, fg, bg, n);
+  const generated = generateArray(patternId, fg, bg, n, animTick, 1);
 
   // Group 1 (Static) does not scroll
   if (patternId >= 1 && patternId <= 5) return generated;
+
+  // Group 2 (Chases) uses its own mathematical tick rotation
+  if (patternId >= 6 && patternId <= 9) return generated;
 
   // Center-Out effects (18, 19, 24) should split scroll if true center out
   if (patternId === 18 || patternId === 19 || patternId === 24) {
@@ -720,8 +759,8 @@ export function getHardwarePixelArray(
  * Get the 0x59 transition type for a pattern.
  */
 export function getPatternTransitionType(patternId: PatternId): number {
-  if (patternId >= 1 && patternId <= 5) return 0x00; // STATIC (Hardware holds array in place)
-  return 0x03; // NATIVE SCROLL (RunningWater - Hardware dynamically scrolls the array)
+  if (patternId >= 1 && patternId <= 5) return 0x01; // FREEZE (Hardware holds array in place)
+  return 0x00; // CASCADE (Continuous hardware scroll)
 }
 
 /**
