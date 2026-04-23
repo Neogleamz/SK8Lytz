@@ -1,3 +1,80 @@
+## [3.0.0] - 2026-04-23
+
+### ✨ Features
+- feat(scenes): implement 32-slot Scene Builder UI per EPIC-004 Phase 3 plan
+- feat(ui): implement UnifiedPatternPicker and integrate into DockedController
+- feat(favorites): full BUILDER state persistence in favorites v2
+- feat(led-strip): add LEDStripPreview and fix PatternEngine buildStrobe duplicate
+- feat(pattern-engine): migrate phase1b temporal and generative patterns
+- feat(pattern-engine): migrate phase1b math waves to autonomous builders
+- feat(pattern-engine): migrate phase1b marquees to math builders
+- feat(pattern-engine): complete feat/pattern-engine-phase1b-static
+- feat(patterns): implement Batch 3 native effects (25-33) via synthesized math
+- feat(patterns): implement Batch 2 native effects (13-24) via synthesized math
+- feat(patterns): implement Phase 1A Batch 1 ge.* effects (IDs 29-40)
+- feat(pattern-engine): implement Group B Chases and Meteors math
+- feat(hw-screen): display product_id chip in DeviceSettingsModal
+- feat(tools): add automated database backup daemon and integrate into agent workflows
+
+### 🐛 Bug Fixes
+- fix(web): silence useNativeDriver warning spam in PatternCard
+- fix(web): resolve Maximum update depth loop in LEDStripPreview + UnifiedPatternPicker
+- fix(programs): minimal surgical fixes for Metro 500 - zero collateral damage
+- fix(programs): wire FloatingDock into DockedController render tree
+- fix(programs): remove residual PROGRAMS syntax artifacts causing Metro 500
+- fix(pattern-picker): resolve color snap-back regression
+- fix(visualizer): restore animation parity between app and hardware
+- fix(scene-builder): resolve all TSC errors across SceneBuilder components
+- fix(gradient-builder): correct animation chips to APK-proven transitionType 0x00-0x03
+- fix(ui): correct BuilderNode init payload in UnifiedPatternPicker
+- fix(pattern-engine): audit parity - remove visualizer overrides and pass direction
+- fix(led-strip): remove invalid direction arg
+- fix(led-strip): correct import paths
+- fix(map): auto-zoom map camera to selected radius bounds by populating silent location
+- fix(map): filter out unpublished skate spots from live map
+- fix(hw-screen): wrap productId || ?? chain in parens (TS5076)
+- fix(pr-b)!: BLE hardening — session time sync + chunked write framing
+- fix(pr-c)!: protocol guards — 0x43 condemned, 0x42 clamp, 0x41 correct format, EventType fix
+- fix(telemetry): add MUSIC_MODE_EXIT to EventType union (missed in PR-A)
+- fix(pr-a)!: protocol correctness — product_id, mic source, music exit packet
+- fix(gradient-builder): correct LED count, pin cap, transition IDs + label icons
+- fix(emergency-pattern)!: correct HALOZ segment mirror + SOULZ ledPoints scaling
+- fix(hardware): correct HALOZ ledPoints 16/1-seg to 8/2-seg and document three-layer LED model
+
+### 🔧 Maintenance & Refactoring
+- chore(programs)!: retire PROGRAMS mode and 0x42 RBM architecture
+- refactor(account-modal): remove dead legacy shims
+- refactor(visualizer): gut simMode legacy engine and dead mode branches
+- chore(pattern-engine): purge condemned 0x03 opcodes from entire codebase
+- chore(cleanup): sync uncommitted master changes after epic merge
+- refactor(protocols): migrate MUSIC mode off RbmSimulator → PatternEngine, delete RbmSimulator.ts
+- refactor(protocols): deprecate Symphony/0x41 branding, inline RbmDictionary into RbmSimulator
+- chore(agents): enforce clean slate rule in Release Manager persona and Phase 6 pipeline
+- refactor(utils): retire RbmDictionary, migrate ProductVisualizer off getRbmVisualizerFrame/rgbToHex
+- chore(agents): inject battle-hardened constraints into lifecycle personas
+- chore(agents): add rule 14 to ban automated scripts from mangling the bucket list
+- chore(agents): execute The Great Consolidation to unify and harden the architecture
+- chore(wind-down): sync Master Reference + archive BATCH:PR-A/B/C in bucket list
+- refactor(epic004): reframe Phase 1 as complete hardware parity reversal
+- refactor(epic004): delete Symphony Phase 2 — PatternEngine owns all payloads
+- chore(repo): clean gitignore and commit protocol bible + scraper stack update
+
+### 📖 Documentation
+- docs(audit): fix ModeType table in Master Reference + remove stale PROGRAMS TODO
+- docs(master-ref): update header — BATCH:P2 complete, v2.7.0
+- docs(workflows): revert shared worktree batch architecture in favor of isolated per-task worktrees
+- docs(workflows): upgrade /start-task engine to fully support batch execution, sequential worktrees, and completion stamps
+- docs(plans): commit AI-First audit plan for verify-pattern-engine-wiring [BATCH:P0]
+- docs(protocols): add wiring audit to PatternEngine JSDoc — all 28 IDs verified [BATCH:P0]
+- docs(workflows): upgrade /intake with batch eligibility gates and group assignment logic
+- docs(plans): commit upgraded AI-First plan for delete-symphony-arch [BATCH:P0]
+- docs(plans): commit upgraded AI-First plan for retire-rbm-simulator [BATCH:P0]
+- docs(plans): complete 100% plan coverage for all tonight's tasks
+- docs(plans): backfill plan files for all tonight's EPIC-004 tasks
+- docs(plans): add task plan files and wire links into Bucket List
+
+---
+
 ## [2.3.0] - 2026-04-21
 
 ### ✨ Features
