@@ -60,10 +60,30 @@ export function useSceneBuilder(writeToDevice?: (payload: number[]) => Promise<v
     writeToDevice(payload);
   }, [steps, writeToDevice]);
 
-  const saveScene = useCallback(async () => {
-    // Implementation for saving to Supabase / AsyncStorage
-    // This will be wired up to ScenesService
-  }, [steps, sceneName]);
+  const saveScene = useCallback(async (nameToSave: string, isPublic: boolean = false) => {
+    try {
+      const newId = sceneId || Math.random().toString(36).substring(2, 15);
+      const scenePayload: Scene = {
+        id: newId,
+        name: nameToSave,
+        steps,
+        created_at: new Date().toISOString()
+      };
+
+      // 1. Save Locally
+      await ScenesService.saveLocalScene(scenePayload);
+
+      // 2. Publish to Cloud
+      await ScenesService.publishScene(nameToSave, scenePayload, isPublic);
+
+      setSceneId(newId);
+      setSceneName(nameToSave);
+      return true;
+    } catch (err) {
+      console.error('[useSceneBuilder] Save failed:', err);
+      return false;
+    }
+  }, [steps, sceneId]);
 
   const loadScene = useCallback((scene: Scene) => {
     setSceneId(scene.id);

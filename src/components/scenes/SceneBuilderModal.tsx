@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Modal, TouchableOpacity, Text, ScrollView, SafeAreaView } from 'react-native';
+import { View, StyleSheet, Modal, TouchableOpacity, Text, ScrollView, SafeAreaView, TextInput } from 'react-native';
 import { useSceneBuilder, SceneStep } from '../../hooks/useSceneBuilder';
 import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
@@ -14,8 +14,30 @@ interface SceneBuilderModalProps {
 
 export const SceneBuilderModal: React.FC<SceneBuilderModalProps> = ({ visible, onClose, writeToDevice }) => {
   const { Colors } = useTheme();
-  const { steps, addStep, updateStep, removeStep, fireToSkates } = useSceneBuilder(writeToDevice);
+  const { steps, addStep, updateStep, removeStep, fireToSkates, saveScene, sceneName } = useSceneBuilder(writeToDevice);
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [saveModalVisible, setSaveModalVisible] = useState(false);
+  const [sceneNameInput, setSceneNameInput] = useState(sceneName || '');
+  const [isSaving, setIsSaving] = useState(false);
+
+  React.useEffect(() => {
+    if (visible) {
+      setSceneNameInput(sceneName || '');
+    }
+  }, [visible, sceneName]);
+
+  const handleSaveScene = async () => {
+    if (!sceneNameInput.trim()) return;
+    setIsSaving(true);
+    try {
+      await saveScene(sceneNameInput.trim(), false);
+      setSaveModalVisible(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleAddStep = (effectId: number) => {
     addStep({
@@ -36,7 +58,7 @@ export const SceneBuilderModal: React.FC<SceneBuilderModalProps> = ({ visible, o
         <View style={styles.header}>
           <Text style={[styles.title, { color: Colors.text }]}>SCENE BUILDER</Text>
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.saveBtn}>
+            <TouchableOpacity style={styles.saveBtn} onPress={() => setSaveModalVisible(true)}>
               <Text style={{ color: '#00F0FF' }}>SAVE</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -67,9 +89,7 @@ export const SceneBuilderModal: React.FC<SceneBuilderModalProps> = ({ visible, o
         </ScrollView>
 
         <View style={[styles.footer, { borderTopColor: 'rgba(255,255,255,0.1)' }]}>
-          <TouchableOpacity style={[styles.footerBtn, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
-            <Text style={{ color: Colors.text }}>PREVIEW ALL</Text>
-          </TouchableOpacity>
+
           <TouchableOpacity 
             style={[styles.footerBtn, { backgroundColor: '#00F0FF' }]}
             onPress={fireToSkates}
@@ -84,6 +104,36 @@ export const SceneBuilderModal: React.FC<SceneBuilderModalProps> = ({ visible, o
         onClose={() => setPickerVisible(false)}
         onSelect={handleAddStep}
       />
+
+      <Modal visible={saveModalVisible} transparent animationType="fade">
+        <View style={styles.saveModalOverlay}>
+           <View style={[styles.saveModalCard, { backgroundColor: Colors.card, borderColor: Colors.border }]}>
+               <Text style={[styles.saveModalTitle, { color: Colors.text }]}>Save Custom Scene</Text>
+               <Text style={[styles.saveModalDesc, { color: Colors.textMuted }]}>Give your scene a name. It will be saved securely to the cloud if you are logged in, otherwise it will save locally to this device.</Text>
+               
+               <TextInput 
+                  value={sceneNameInput}
+                  onChangeText={setSceneNameInput}
+                  placeholder="e.g. Hyperspace Run"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  style={styles.textInput}
+               />
+               
+               <View style={styles.saveModalActions}>
+                   <TouchableOpacity onPress={() => !isSaving && setSaveModalVisible(false)} style={styles.actionBtn}>
+                       <Text style={{ color: Colors.textMuted, fontWeight: 'bold' }}>CANCEL</Text>
+                   </TouchableOpacity>
+                   <TouchableOpacity 
+                      onPress={handleSaveScene}
+                      disabled={isSaving || !sceneNameInput.trim()}
+                      style={[styles.saveBtnUI, { backgroundColor: Colors.primary, opacity: (!sceneNameInput.trim() || isSaving) ? 0.5 : 1 }]}
+                   >
+                       <Text style={{ color: '#000', fontWeight: 'bold' }}>SAVE</Text>
+                   </TouchableOpacity>
+               </View>
+           </View>
+        </View>
+      </Modal>
     </Modal>
   );
 };
@@ -137,4 +187,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: Spacing.xs,
   },
+  saveModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  saveModalCard: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 16,
+    padding: Spacing.xl,
+    borderWidth: 1,
+  },
+  saveModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: Spacing.md,
+  },
+  saveModalDesc: {
+    fontSize: 14,
+    marginBottom: Spacing.lg,
+  },
+  textInput: {
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    color: '#FFF',
+    padding: Spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    marginBottom: Spacing.xl,
+  },
+  saveModalActions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    justifyContent: 'flex-end',
+  },
+  actionBtn: {
+    padding: Spacing.md,
+  },
+  saveBtnUI: {
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  }
 });
