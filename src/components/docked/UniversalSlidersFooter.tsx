@@ -384,20 +384,14 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
           return (
             <View style={{ flexDirection: 'row', alignSelf: 'flex-end', marginBottom: 2, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
               <TouchableOpacity
-                onPress={() => {
-                  setFixedDirection(0);
-                  if (applyFixedPattern) applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed);
-                }}
+                onPress={() => { setFixedDirection(0); }}
                 style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: !isForward ? 'rgba(0,240,255,0.2)' : 'transparent' }}
               >
                 <Text style={{ color: !isForward ? '#00F0FF' : 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '800' }}>◀ REV</Text>
               </TouchableOpacity>
               <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.15)' }} />
               <TouchableOpacity
-                onPress={() => {
-                  setFixedDirection(1);
-                  if (applyFixedPattern) applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed);
-                }}
+                onPress={() => { setFixedDirection(1); }}
                 style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: isForward ? 'rgba(0,240,255,0.2)' : 'transparent' }}
               >
                 <Text style={{ color: isForward ? '#00F0FF' : 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '800' }}>FWD ▶</Text>
