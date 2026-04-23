@@ -1,3 +1,22 @@
+## [3.1.0] - 2026-04-23
+
+### 🚀 Features
+- feat(street-mode): implement pattern engine parity and dynamic distribution slider
+- feat(ui): direction toggle pill in UniversalSlidersFooter for animated patterns
+
+### 🐛 Bug Fixes
+- fix(street-mode): correct HALOZ physical geometry rendering and drop software palindrome
+- fix(street-mode): migrate hardware array math to PatternEngine for perfect parity
+- fix(street): align Street Mode payload with hardware sequential repeat
+- fix(visualizer): align HALOZ mirroring parity with hardware sequential repeat
+- fix(ui): thread fixedDirection into ProductVisualizer — product shape now flips on REV/FWD toggle
+- fix(ui): remove direction race — rely on UnifiedPatternPicker useEffect for dispatch
+- fix(ui): thread direction through PatternPickerTab→PatternCard→LEDStripPreview so visualizers flip on REV/FWD toggle
+
+### 🛠 Maintenance
+- chore(release): v3.1.0
+- Revert massive visualizer overrides, keeping visualizer unmodified
+
 ## [3.0.0] - 2026-04-23
 
 ### ✨ Features
