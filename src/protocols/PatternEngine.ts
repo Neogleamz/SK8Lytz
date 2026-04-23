@@ -677,6 +677,98 @@ function buildCenterOutMarquee(fg: RGB, bg: RGB, numLEDs: number, tick: number):
   });
 }
 
+// ---------------------------------------------
+// Group E: Temporal (IDs 20-24)
+// ---------------------------------------------
+
+function buildSmoothBreath(fg: RGB, numLEDs: number, tick: number): RGB[] {
+  const brightness = Math.sin(tick * Math.PI) ** 2; // smooth power curve
+  return Array(numLEDs).fill({
+    r: Math.round(fg.r * brightness),
+    g: Math.round(fg.g * brightness),
+    b: Math.round(fg.b * brightness),
+  });
+}
+
+function buildHardJumpFlash(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  // Hard binary alternation - no crossfade
+  return Array(numLEDs).fill(tick < 0.5 ? fg : bg);
+}
+
+function buildStrobe(fg: RGB, numLEDs: number, tick: number): RGB[] {
+  // High-frequency flash (10x per cycle)
+  const on = (tick * 10) % 1 < 0.2; // 20% duty cycle = sharp strobe
+  return Array(numLEDs).fill(on ? fg : { r: 0, g: 0, b: 0 });
+}
+
+function buildWipeFill(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const t = direction === 0 ? tick : 1 - tick;
+  // Fill from one end, then wipe back - forward half fills, back half wipes
+  const progress = t < 0.5 ? t * 2 : (1 - t) * 2;
+  const fillCount = Math.floor(progress * numLEDs);
+  return Array.from({ length: numLEDs }, (_, i) => i < fillCount ? fg : bg);
+}
+
+function buildWipeCenterOut(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const center = Math.floor(numLEDs / 2);
+  // progress from 0 to 1 back to 0
+  const progress = tick < 0.5 ? tick * 2 : (1 - tick) * 2;
+  const radius = Math.floor(progress * center);
+  return Array.from({ length: numLEDs }, (_, i) =>
+    Math.abs(i - center) <= radius ? fg : bg
+  );
+}
+
+// ---------------------------------------------
+// Group F: Generative / Rainbow (IDs 25-28)
+// ---------------------------------------------
+
+function buildTrueRainbowFlow(numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? tick : 1 - tick;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const hue = ((i / numLEDs) + phase) % 1.0;
+    return hsvToRgb(hue, 1.0, 1.0);
+  });
+}
+
+function buildRainbowMarquee(numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const PERIOD = 3; // grouped blocks with rainbow hue
+  const t = direction === 0 ? tick : 1 - tick;
+  const offset = Math.floor(t * PERIOD) % PERIOD;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    if ((i + offset) % PERIOD !== 0) return { r: 0, g: 0, b: 0 }; // gap
+    const hue = (i / numLEDs + t) % 1.0;
+    return hsvToRgb(hue, 1.0, 1.0);
+  });
+}
+
+function buildRainbowComet(numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const TAIL = Math.floor(numLEDs * 0.3);
+  const t = direction === 0 ? tick : 1 - tick;
+  const head = Math.floor(t * (numLEDs + TAIL)) - TAIL;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const dist = head - i;
+    if (dist < 0 || dist >= TAIL) return { r: 0, g: 0, b: 0 };
+    const brightness = 1 - (dist / TAIL);
+    const hue = (i / numLEDs + t) % 1.0; // rainbow position along strip
+    return hsvToRgb(hue, 1.0, brightness);
+  });
+}
+
+function buildCyberpunkShift(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? tick : 1 - tick;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const posNorm = i / numLEDs;
+    // Sharp digital glitch band scrolling
+    const band = (posNorm + phase * 2) % 1;
+    if (band < 0.08) return fg; // bright FG slice
+    if (band < 0.12) return { r: 255, g: 255, b: 255 }; // white edge flash
+    // Sub-bands of bg with slight brightness modulation
+    const bgBrightness = 0.3 + Math.sin(posNorm * Math.PI * 8 + phase * Math.PI * 4) * 0.2;
+    return blendRGB(bg, { r: 0, g: 0, b: 0 }, bgBrightness);
+  });
+}
+
 // ─── GENERATORS ───────────────────────────────────────────────────────────────
 
 function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: number = 0, direction: 0 | 1 = 1): RGB[] {
@@ -710,39 +802,18 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: 
     case 18: return buildCenterOutComet(fg, bg, n, tick);
     case 19: return buildCenterOutMarquee(fg, bg, n, tick);
 
-    // ── GROUP 5: TEMPORAL FULL-STRIP (0x51 handled differently, arrays just return solid for visualizer) ──
-    case 20: // Smooth Breath
-    case 21: // Hard Jump Flash
-    case 22: // Strobe
-      return Array(n).fill(fg); // Used only by visualizer's temporal logic
-    case 23: // Wipe/Fill Start to End (Simulated via gradient for 0x59)
-      return arr.map((_, i) => (i < n / 2 ? fg : bg));
-    case 24: // Wipe/Fill Center Out
-      return arr.map((_, i) => (Math.abs(i - n / 2) < n / 4 ? fg : bg));
+    // ── GROUP 5: TEMPORAL FULL-STRIP ──
+    case 20: return buildSmoothBreath(fg, n, tick);
+    case 21: return buildHardJumpFlash(fg, bg, n, tick);
+    case 22: return buildStrobe(fg, n, tick);
+    case 23: return buildWipeFill(fg, bg, n, tick, direction);
+    case 24: return buildWipeCenterOut(fg, bg, n, tick);
 
     // ── GROUP 6: GENERATIVE RAINBOWS & TRI-COLOR ──
-    case 25: // True Rainbow Flow
-      return arr.map((_, i) => hueToRGB((i / n) * 360));
-    case 26: // Rainbow Marquee
-      return arr.map((_, i) => {
-        if ((i % 8) < 4) return bg;
-        return hueToRGB((i / n) * 360);
-      });
-    case 27: // Rainbow Comet
-      return arr.map((_, i) => {
-        if (i < n / 3) return dim(hueToRGB((i / (n / 3)) * 360), 1 - (i / (n / 3)));
-        return bg;
-      });
-    case 28: // Cyberpunk Shift (Cyan/Magenta/Yellow alternate)
-      const c1 = { r: 0, g: 255, b: 255 }; // Cyan
-      const c2 = { r: 255, g: 0, b: 255 }; // Magenta
-      const c3 = { r: 255, g: 255, b: 0 }; // Yellow
-      return arr.map((_, i) => {
-        const mod = i % 15;
-        if (mod < 5) return c1;
-        if (mod < 10) return c2;
-        return c3;
-      });
+    case 25: return buildTrueRainbowFlow(n, tick, direction);
+    case 26: return buildRainbowMarquee(n, tick, direction);
+    case 27: return buildRainbowComet(n, tick, direction);
+    case 28: return buildCyberpunkShift(fg, bg, n, tick, direction);
 
     default:
       return Array(n).fill(fg);
@@ -805,13 +876,8 @@ export function getVisualizerFrame(
   // Group 4 (Math Waves) uses internal tick offset for 15, 16, 17, 18, 19
   if (patternId >= 15 && patternId <= 19) return generated;
 
-  // Center-Out effects (24) should split scroll if true center out
-  if (patternId === 24) {
-    const mid = Math.floor(n / 2);
-    const left = rotateArray(generated.slice(0, mid).reverse(), animTick).reverse();
-    const right = rotateArray(generated.slice(mid), animTick);
-    return [...left, ...right];
-  }
+  // Group 5 & 6 (Temporal & Generative) all use internal tick offset!
+  if (patternId >= 20 && patternId <= 28) return generated;
 
   // All other groups scroll natively
   return rotateArray(generated, animTick);
