@@ -40,6 +40,7 @@ interface ProductVisualizerProps {
   builderFillMode?: 'GRADIENT' | 'SOLID';
   builderTransitionType?: number;
   builderDirection?: number;
+  fixedDirection?: number;
 }
 
 // Convert HSL to Hex manually as React Native Interpolate handles strict string maps better
@@ -66,7 +67,7 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1 }: any) => {
+const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1, fixedDirection = 1 }: any) => {
   const { isDark } = useTheme();
   const product = String(device.type || fallbackProduct);
 
@@ -322,7 +323,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           const mmSegLeds = isMirrored ? Math.ceil(numLeds / 2) : numLeds;
 
           // ── Directly leverage PatternEngine continuous simulation ──
-          const framePixels = getVisualizerFrame(pid as PatternId, fgRgb, bgRgb, mmSegLeds, animTick);
+          const framePixels = getVisualizerFrame(pid as PatternId, fgRgb, bgRgb, mmSegLeds, animTick, fixedDirection as 0 | 1);
 
           // ── Diffusion blending: blend adjacent LED colors near chip boundaries ──
           const rawLedPos = (segmentI / activeSegmentLeds) * framePixels.length;
@@ -534,7 +535,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
   );
 });
 
-const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 0x01, builderDirection = 1 }: ProductVisualizerProps) => {
+const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 0x01, builderDirection = 1, fixedDirection = 1 }: ProductVisualizerProps) => {
   const { isDark } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
 
@@ -597,6 +598,7 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
             builderFillMode={builderFillMode}
             builderTransitionType={builderTransitionType}
             builderDirection={builderDirection}
+            fixedDirection={fixedDirection}
           />
         ))}
       </View>

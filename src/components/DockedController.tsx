@@ -706,6 +706,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               builderFillMode={builderFillMode}
               builderTransitionType={builderTransitionType}
               builderDirection={builderDirection}
+              fixedDirection={fixedDirection}
             />
           </View>
         </View>
