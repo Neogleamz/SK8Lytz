@@ -13,6 +13,7 @@ import { crewService } from '../../services/CrewService';
 import { Spacing } from '../../theme/theme';
 import type { MotionState } from '../../types/dashboard.types';
 import AnalogGauge from './AnalogGauge';
+import StreetModeDistributionSlider from './StreetModeDistributionSlider';
 
 interface StreetPanelProps {
   isStreetBraking: boolean;
@@ -20,6 +21,8 @@ interface StreetPanelProps {
   gpsSpeed: number;
   peakGForce: number;
   streetCruiseColor: string;
+  streetDistribution: [number, number, number];
+  setStreetDistribution: (dist: [number, number, number]) => void;
   sessionActive: boolean;
   startSession: () => void;
   stopSessionRecording: () => void;
@@ -32,6 +35,8 @@ const StreetPanel = React.memo(({
   gpsSpeed,
   peakGForce,
   streetCruiseColor,
+  streetDistribution,
+  setStreetDistribution,
   sessionActive,
   startSession,
   stopSessionRecording,
@@ -49,18 +54,15 @@ const StreetPanel = React.memo(({
       bounces={false}
     >
       {/* Car-light zone bar */}
-      <View style={{ marginBottom: isShort ? Spacing.sm : Spacing.md }}>
-        <View style={{ flexDirection: 'row', height: isShort ? 22 : 26, borderRadius: 13, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-          <View style={{ flex: 3, backgroundColor: isStreetBraking ? '#FF0000' : '#660000', justifyContent: 'center', alignItems: 'center' }}>
-            <Text allowFontScaling={false} style={{ color: '#FFF', fontSize: 9, fontWeight: '800' }}>TAIL (30%)</Text>
-          </View>
-          <View style={{ flex: 4, backgroundColor: streetCruiseColor, justifyContent: 'center', alignItems: 'center', opacity: 0.9 }}>
-            <Text allowFontScaling={false} style={{ color: '#000', fontSize: 9, fontWeight: '800' }}>CRUISE (40%)</Text>
-          </View>
-          <View style={{ flex: 3, backgroundColor: '#FFF5E0', justifyContent: 'center', alignItems: 'center' }}>
-            <Text allowFontScaling={false} style={{ color: '#333', fontSize: 9, fontWeight: '800' }}>HEAD (30%)</Text>
-          </View>
-        </View>
+      <View style={{ marginBottom: isShort ? Spacing.sm : Spacing.md, paddingHorizontal: 10 }}>
+        <StreetModeDistributionSlider
+          distribution={streetDistribution}
+          onChange={setStreetDistribution}
+          tailColor={isStreetBraking ? '#FF0000' : '#660000'}
+          cruiseColor={streetCruiseColor}
+          headColor="#FFF5E0"
+          isShort={isShort}
+        />
       </View>
 
       {/* Status Bar */}

@@ -312,6 +312,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       gpsSpeed,
       peakGForce,
       applyStreetPattern,
+      streetDistribution,
+      setStreetDistribution,
     } = useStreetMode({
       activeMode,
       writeToDevice: parentWriteToDevice,
@@ -707,6 +709,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               builderTransitionType={builderTransitionType}
               builderDirection={builderDirection}
               fixedDirection={fixedDirection}
+              streetDistribution={streetDistribution}
             />
           </View>
         </View>
@@ -796,6 +799,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 gpsSpeed={gpsSpeed}
                 peakGForce={peakGForce}
                 streetCruiseColor={streetCruiseColor}
+                streetDistribution={streetDistribution}
+                setStreetDistribution={setStreetDistribution}
                 sessionActive={sessionActive}
                 startSession={startSession}
                 stopSessionRecording={stopSessionRecording}

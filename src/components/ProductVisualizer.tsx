@@ -252,48 +252,23 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           const mPx = musicFrame.pixels[mSlot] || { r: 255, g: 255, b: 255 };
           dotColor = `#${mPx.r.toString(16).padStart(2, '0')}${mPx.g.toString(16).padStart(2, '0')}${mPx.b.toString(16).padStart(2, '0')}`;
           dotOpacity = isPoweredOn ? (musicFrame.opacities[mSlot] ?? 1.0) * (brightness / 100) : 0;
-        } else if (mode === 'STREET') {
-          // ── Street Mode: zone-based car-light layout ──
-          // fract 0.0–0.3  → TAIL  (red: 50% cruising, 100% braking) [#10]
-          // fract 0.3–0.7  → CRUISE (user color or amber if slowing, animated bounce) [#9,#11]
-          // fract 0.7–1.0  → HEAD  (warm white, always steady)
-          const isActiveBraking = motionState === 'HARD_BRAKING' || motionState === 'STOPPED' || isStreetBraking;
-          const isSlowing = motionState === 'SLOWING_DOWN';
-          // Cruise zone color: amber when slowing, user color when cruising/accelerating
-          const vizCruiseColor = isSlowing ? '#FFAA00' : streetCruiseColor;
+        } else if (mode === 'STREET' || mode === 'MULTIMODE') {
+          let fgHex = fixedFgColor || color;
+          let bgHex = fixedBgColor || '#000000';
+          let pid = Math.max(1, patternId || 1);
 
-          if (fract < 0.3) {
-            // Taillights: ABSOLUTE — 100% braking, 50% cruising (no brightness slider in street mode)
-            dotColor = '#FF2200';
-            dotOpacity = isActiveBraking ? 1.0 : 0.5;
-          } else if (fract >= 0.7) {
-            dotColor = '#FFF5E0';
-            dotOpacity = brightness / 100;
-          } else {
-            dotColor = vizCruiseColor;
-            const cruiseFract = (fract - 0.3) / 0.4;
-
-            // Only animate bounce during CRUISING/ACCELERATING; freeze dim otherwise
-            const shouldBounce = motionState === 'CRUISING' || motionState === 'ACCELERATING';
-            if (shouldBounce) {
-              // Triangle wave: goes 0 to 1 back to 0, creating a bouncing pulse [#9]
-              const bounceT = animTick <= 0.5 ? animTick * 2 : (1 - animTick) * 2;
-              const dist = Math.abs(cruiseFract - bounceT);
-              if (dist < 0.18) {
-                const glow = 1 - (dist / 0.18);
-                dotOpacity = 0.3 + glow * ((brightness / 100) - 0.3);
-              } else {
-                dotOpacity = 0.3;
-              }
-            } else {
-              // Stopped or slowing — steady dim amber/red
-              dotOpacity = (brightness / 100) * 0.6;
-            }
+          if (mode === 'STREET') {
+            const isActiveBraking = motionState === 'HARD_BRAKING' || motionState === 'STOPPED' || isStreetBraking;
+            const isSlowing = motionState === 'SLOWING_DOWN';
+            fgHex = '#FF2200';
+            bgHex = isSlowing ? '#FFAA00' : streetCruiseColor;
+            
+            if (isActiveBraking || motionState === 'HARD_BRAKING') pid = 103;
+            else if (motionState === 'STOPPED') pid = 101;
+            else if (motionState === 'SLOWING_DOWN') pid = 104;
+            else if (motionState === 'ACCELERATING') pid = 105;
+            else pid = 102; // CRUISING
           }
-        } else if (mode === 'MULTIMODE') {
-          const fgHex = fixedFgColor || color;
-          const bgHex = fixedBgColor || '#000000';
-          const pid = Math.max(1, patternId || 1);
 
           // Parse fg/bg hex strings to RGB objects for PatternEngine
           const fgRgb: RGB = {
@@ -309,7 +284,15 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
 
           // Get the full per-LED pixel array from the pattern engines at the current animation tick
           // ── Directly leverage PatternEngine continuous simulation ──
-          const framePixels = getVisualizerFrame(pid as PatternId, fgRgb, bgRgb, numLeds, animTick, fixedDirection as 0 | 1);
+          const framePixels = getVisualizerFrame(
+            pid as PatternId,
+            fgRgb,
+            bgRgb,
+            activeSegmentLeds,
+            animTick,
+            fixedDirection as 0 | 1,
+            mode === 'STREET' ? { distribution: streetDistribution } : undefined
+          );
 
           // ── Diffusion blending: blend adjacent LED colors near chip boundaries ──
           const rawLedPos = (segmentI / activeSegmentLeds) * framePixels.length;
@@ -318,14 +301,32 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           const DIFF = 0.35;
           const boundaryProx = Math.pow(Math.abs(slotT - 0.5) * 2, 2);
           const blendAmt = DIFF * boundaryProx;
-          const pCurr = framePixels[slot0] || fgRgb;
-          const adjIdx = (slot0 + 1) % framePixels.length;
+          
+          // PatternEngine handles its own segment mirroring math for visualizer
+          const template = SK8LYTZ_TEMPLATES.find(t => t.id === pid);
+          const applySymmetry = template?.supportsSegment && deviceSegments > 1 && productProfile.isMirrored;
+          
+          let pSlot0 = slot0;
+          if (applySymmetry) {
+            // Re-map index for mirrored geometry (e.g. HALOZ inner ring)
+            pSlot0 = Math.floor(mirroredFract * framePixels.length);
+            pSlot0 = Math.min(pSlot0, framePixels.length - 1);
+          }
+          
+          const pCurr = framePixels[pSlot0] || fgRgb;
+          const adjIdx = (pSlot0 + 1) % framePixels.length;
           const pAdj = framePixels[Math.min(framePixels.length - 1, Math.max(0, adjIdx))] || fgRgb;
           const pr = Math.round(pCurr.r * (1 - blendAmt) + pAdj.r * blendAmt);
           const pg = Math.round(pCurr.g * (1 - blendAmt) + pAdj.g * blendAmt);
           const pb = Math.round(pCurr.b * (1 - blendAmt) + pAdj.b * blendAmt);
           dotColor = `#${pr.toString(16).padStart(2, '0')}${pg.toString(16).padStart(2, '0')}${pb.toString(16).padStart(2, '00')}`;
-          dotOpacity = isPoweredOn ? (brightness / 100) : 0;
+          
+          // Special exception: Street Mode taillights stay fully bright, head and cruise dim with brightness slider
+          if (mode === 'STREET' && pSlot0 < framePixels.length * streetDistribution[0]) {
+            dotOpacity = (pid === 101 || pid === 103) ? 1.0 : 0.5; // Taillights max bright on brake, dim otherwise
+          } else {
+            dotOpacity = isPoweredOn ? (brightness / 100) : 0;
+          }
         } else if (mode === 'BUILDER') {
           let builderPixels: RGB[];
           if (!builderNodes || builderNodes.length === 0) {

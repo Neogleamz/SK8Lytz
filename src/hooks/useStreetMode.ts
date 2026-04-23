@@ -57,6 +57,8 @@ export interface UseStreetModeResult {
   setStreetCruiseColor: (v: string) => void;
   streetBrakeColor: string;
   setStreetBrakeColor: (v: string) => void;
+  streetDistribution: [number, number, number];
+  setStreetDistribution: (v: [number, number, number]) => void;
   isStreetBraking: boolean;
   motionState: MotionState;
   /** Ref to current motion state — safe for use inside callbacks without stale closures */
@@ -85,6 +87,7 @@ export function useStreetMode({
   const [streetSensitivity, setStreetSensitivity] = useState<number>(30);
   const [streetCruiseColor, setStreetCruiseColor] = useState<string>('#FF8C00');
   const [streetBrakeColor, setStreetBrakeColor] = useState<string>('#FF0000');
+  const [streetDistribution, setStreetDistribution] = useState<[number, number, number]>([0.3, 0.4, 0.3]);
   const [isStreetBraking, setIsStreetBraking] = useState<boolean>(false);
   const [motionState, setMotionState] = useState<MotionState>('STOPPED');
   const [gpsSpeed, setGpsSpeed] = useState<number>(0);
@@ -124,79 +127,49 @@ export function useStreetMode({
   ) => {
     if (!writeToDevice) return;
 
-    const factor = brtFactor(brt);
     const pts = hwSettings?.ledPoints || points || 16;
-
-    // Resolve product profile for mirroring logic (replaces legacy isHalozRing heuristic)
     const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === activeProduct) || LOCAL_PRODUCT_CATALOG[0];
-    const isMirrored = profile.vizIsMirrored;
-    const hwSpeed = clampSpeed(spd);
+    const segments = profile.vizIsMirrored && hwSettings?.segments ? hwSettings.segments : 1;
 
     let cruiseHex = streetCruiseColor;
     if (currMotionState === 'STOPPED') cruiseHex = '#FF0000';
     else if (currMotionState === 'SLOWING_DOWN') cruiseHex = '#FFFF00';
     else if (currMotionState === 'HARD_BRAKING') cruiseHex = '#FF0000';
 
-    const isBraking = currMotionState === 'HARD_BRAKING' || currMotionState === 'STOPPED';
+    let pid = 102; // CRUISING
+    if (currMotionState === 'HARD_BRAKING' || isStreetBraking) pid = 103;
+    else if (currMotionState === 'STOPPED') pid = 101;
+    else if (currMotionState === 'SLOWING_DOWN') pid = 104;
+    else if (currMotionState === 'ACCELERATING') pid = 105;
 
-    const cr = parseInt(cruiseHex.slice(1, 3), 16);
-    const cg = parseInt(cruiseHex.slice(3, 5), 16);
-    const cb = parseInt(cruiseHex.slice(5, 7), 16);
+    const fgRgb = { r: 255, g: 34, b: 0 }; // #FF2200 Tail
+    const bgRgb = {
+      r: parseInt(cruiseHex.slice(1, 3), 16) || 0,
+      g: parseInt(cruiseHex.slice(3, 5), 16) || 0,
+      b: parseInt(cruiseHex.slice(5, 7), 16) || 0,
+    };
 
-    // Tail lights: ABSOLUTE brightness — 100% (255) braking, 50% (127) cruising.
-    // Street Mode has no brightness slider — these are fixed car safety values.
-    const tailR = isBraking ? 255 : 127;
-    const tail = { r: tailR, g: 0, b: 0 };
+    // Lazy load the PatternEngine payload builder to avoid circular dependency issues
+    const { buildPatternPayload } = require('../protocols/PatternEngine');
+    
+    // We only pass pts/segments as activeSegmentLeds. buildPatternPayload will automatically duplicate/mirror 
+    // the payload across the segments based on the options.segments value.
+    const activeSegmentLeds = Math.max(1, Math.floor(pts / segments));
+    const payload = buildPatternPayload(
+      pid,
+      fgRgb,
+      bgRgb,
+      activeSegmentLeds,
+      spd,
+      1,
+      brt,
+      { distribution: streetDistribution, segments: segments }
+    );
 
-    // Headlights: warm white, always steady
-    const headVal = Math.round(255 * factor);
-    const head = { r: headVal, g: Math.round(headVal * 0.95), b: Math.round(headVal * 0.85) };
-
-    // Dashboard Cruise Color
-    const crR = Math.round(cr * factor);
-    const crG = Math.round(cg * factor);
-    const crB = Math.round(cb * factor);
-    const crDim = { r: Math.round(crR * 0.3), g: Math.round(crG * 0.3), b: Math.round(crB * 0.3) };
-    const cruise = { r: crR, g: crG, b: crB };
-
-    // DO NOT apply applyColorSorting here.
-    // Hardware auto-remaps GRB internally via 0x62 EEPROM config. Send pure RGB.
-    let arr: { r: number; g: number; b: number }[];
-
-    // #9 — Cruise bounce chase animation (triangle wave 0→1→0)
-    const isCruising = currMotionState === 'CRUISING' || currMotionState === 'ACCELERATING';
-    if (isCruising) {
-      cruiseChaseRef.current = (cruiseChaseRef.current + 0.07) % 2;
-    } else {
-      cruiseChaseRef.current = 0;
+    if (payload) {
+      writeToDevice(payload);
     }
-    const chaseTick = cruiseChaseRef.current <= 1
-      ? cruiseChaseRef.current
-      : 2 - cruiseChaseRef.current;
-
-    const ledCount = hwSettings?.ledPoints || pts || 8;
-    const rearCount = Math.max(1, Math.round(ledCount * 0.3));
-    const frontCount = Math.max(1, Math.round(ledCount * 0.3));
-    const midCount = Math.max(1, ledCount - rearCount - frontCount);
-    const chasePos = Math.round(chaseTick * (midCount - 1));
-    const midSection = Array.from({ length: midCount }, (_, i) => {
-      const dist = Math.abs(i - chasePos);
-      if (dist === 0) return cruise;
-      if (dist === 1) return { r: Math.round(crR * 0.6), g: Math.round(crG * 0.6), b: Math.round(crB * 0.6) };
-      return crDim;
-    });
-    arr = [
-      ...Array(rearCount).fill(tail),
-      ...midSection,
-      ...Array(frontCount).fill(head),
-    ];
-
-    // 0x01 = FREEZE (hardware locks array in place — static car lights, no scrolling)
-    // 0x02 = STROBE (urgent flashing for hard braking)
-    // NOTE: 0x00 is CASCADE (scrolling) — NOT static. Never use 0x00 for car lights.
-    const transType = currMotionState === 'HARD_BRAKING' ? 0x02 : 0x01;
-    writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpeed, 1, transType));
-  }, [writeToDevice, hwSettings, points, activeProduct, streetCruiseColor, brightness, speed, clampSpeed]);
+  }, [writeToDevice, hwSettings, points, activeProduct, streetCruiseColor, brightness, speed, streetDistribution, isStreetBraking]);
 
   /** Transition motion state and trigger pattern update */
   const updateMotion = useCallback((newState: MotionState) => {
@@ -365,5 +338,7 @@ export function useStreetMode({
     gpsSpeed,
     peakGForce,
     applyStreetPattern,
+    streetDistribution,
+    setStreetDistribution,
   };
 }

@@ -198,6 +198,13 @@ export const SK8LYTZ_TEMPLATES: SK8LytzTemplate[] = [
   { id: 59, name: 'Dual Scan',          icon: '↔️', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'ge.*' },
   { id: 60, name: 'Starlight',          icon: '🌟', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'ge.*' },
   { id: 61, name: 'Hyperspace',         icon: '🚀', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'ge.*' },
+
+  // ── GROUP 8: STREET MODES (HIDDEN FROM NORMAL PICKER) ───────────────────
+  { id: 101, name: 'Street Stopped',      icon: '🛑', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: true, tier: 3, group: 'Street' },
+  { id: 102, name: 'Street Cruising',     icon: '🚘', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: true, tier: 3, group: 'Street' },
+  { id: 103, name: 'Street Braking',      icon: '🚨', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: true, tier: 3, group: 'Street' },
+  { id: 104, name: 'Street Slowing',      icon: '⚠️', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: true, tier: 3, group: 'Street' },
+  { id: 105, name: 'Street Accelerating', icon: '💨', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: true, tier: 3, group: 'Street' },
 ];
 
 // ─── MATH HELPERS ─────────────────────────────────────────────────────────────
@@ -893,7 +900,79 @@ function buildCyberpunkShift(fg: RGB, bg: RGB, numLEDs: number, tick: number, di
 
 // ─── GENERATORS ───────────────────────────────────────────────────────────────
 
-function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: number = 0, direction: 0 | 1 = 1): RGB[] {
+export interface PatternOptions {
+  distribution?: [number, number, number]; // [tail, cruise, head]
+  segments?: number;
+}
+
+function buildStreetMode(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: number, options?: PatternOptions): RGB[] {
+  const segments = Math.max(1, options?.segments || 1);
+  const physicalLength = n * segments;
+
+  const dist = options?.distribution || [0.3, 0.4, 0.3];
+  const tailCount = Math.max(1, Math.round(n * dist[0]));
+  const headCount = Math.max(1, Math.round(n * dist[2]));
+  const midCount = Math.max(1, n - tailCount - headCount);
+  
+  const tailColor = fg; // Brake/Tail
+  const cruiseColor = bg; // Cruise dot
+  const headColor = { r: 255, g: 255, b: 255 }; // Headlights
+  
+  const rightSide: RGB[] = [];
+
+  if (patternId === 101 || patternId === 104) {
+    // STOPPED (101) or SLOWING DOWN (104)
+    const dimBrake = { r: Math.round(tailColor.r * 0.5), g: Math.round(tailColor.g * 0.5), b: Math.round(tailColor.b * 0.5) };
+    const tailPixels = Array(tailCount).fill(patternId === 104 ? dimBrake : tailColor);
+    const midColor = patternId === 104 ? { r: 255, g: 100, b: 0 } : { r: 0, g: 0, b: 0 };
+    const midPixels = Array(midCount).fill(midColor);
+    const headPixels = Array(headCount).fill(headColor);
+    rightSide.push(...tailPixels, ...midPixels, ...headPixels);
+    
+  } else if (patternId === 103) {
+    // HARD BRAKING (103)
+    const tailPixels = Array(tailCount).fill(tailColor);
+    const midPixels = Array(midCount).fill(tailColor);
+    const headPixels = Array(headCount).fill(headColor);
+    rightSide.push(...tailPixels, ...midPixels, ...headPixels);
+    
+  } else {
+    // CRUISING (102) or ACCELERATING (105)
+    const dimBrake = { r: Math.round(tailColor.r * 0.5), g: Math.round(tailColor.g * 0.5), b: Math.round(tailColor.b * 0.5) };
+    const tailPixels = Array(tailCount).fill(dimBrake);
+    const headPixels = Array(headCount).fill(headColor);
+    
+    // Bouncing dot in the gap using tick (0 to 2)
+    const bouncePhase = tick <= 1 ? tick : 2 - tick; // 0 to 1 to 0
+    const dotPos = Math.round(bouncePhase * (midCount - 1));
+    
+    const dimCruise = { r: Math.round(cruiseColor.r * 0.2), g: Math.round(cruiseColor.g * 0.2), b: Math.round(cruiseColor.b * 0.2) };
+    const midPixels = Array.from({ length: midCount }, (_, i) => {
+      const d = Math.abs(i - dotPos);
+      if (d === 0) return cruiseColor;
+      if (d === 1) return { r: Math.round(cruiseColor.r * 0.6), g: Math.round(cruiseColor.g * 0.6), b: Math.round(cruiseColor.b * 0.6) };
+      return dimCruise;
+    });
+    
+    rightSide.push(...tailPixels, ...midPixels, ...headPixels);
+  }
+
+  // Palindrome bypass logic: If segments > 1 (e.g. HALOZ ring), we build the full physical array
+  // by appending the reversed left side. If segments === 1 (e.g. SOULZ Y-split), we just return rightSide.
+  if (segments === 1) {
+    return rightSide;
+  }
+
+  const leftSide = [...rightSide].reverse();
+  const fullPayload: RGB[] = [];
+  for (let i = 0; i < segments; i++) {
+    if (i % 2 === 0) fullPayload.push(...rightSide);
+    else fullPayload.push(...leftSide);
+  }
+  return fullPayload.slice(0, physicalLength);
+}
+
+function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: number = 0, direction: 0 | 1 = 1, options?: PatternOptions): RGB[] {
   const arr: RGB[] = Array(n).fill(bg);
 
   switch (patternId) {
@@ -973,6 +1052,14 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: 
     case 60: return buildStarlight(fg, bg, n, tick);
     case 61: return buildHyperspace(fg, bg, n, tick);
 
+    // ── GROUP 8: STREET MODES ──
+    case 101:
+    case 102:
+    case 103:
+    case 104:
+    case 105:
+      return buildStreetMode(patternId, fg, bg, n, tick, options);
+
     default:
       return Array(n).fill(fg);
   }
@@ -1001,11 +1088,15 @@ export function getVisualizerFrame(
   bg: RGB,
   numLEDs: number,
   animTick: number,
-  direction: 0 | 1 = 1
+  direction: 0 | 1 = 1,
+  options?: PatternOptions
 ): RGB[] {
   const n = Math.max(1, numLEDs);
 
-  const generated = generateArray(patternId, fg, bg, n, animTick, direction);
+  // For visualizer, we only generate ONE segment of data (segments=1),
+  // since ProductVisualizer's 'isMirrored' will automatically handle the physical geometry mapping.
+  const visualizerOptions = { ...options, segments: 1 };
+  const generated = generateArray(patternId, fg, bg, n, animTick, direction, visualizerOptions);
 
   // All 61 builders manage their own tick-based animation internally.
   return generated;
@@ -1019,7 +1110,8 @@ export function getHardwarePixelArray(
   patternId: PatternId,
   fg: RGB,
   bg: RGB,
-  numLEDs: number
+  numLEDs: number,
+  options?: PatternOptions
 ): RGB[] | null {
   // All 61 patterns now use 0x59. commandType selects the hardware behavior:
   //   IDs 20-22, 30-31, 33, 37, 39-40, 46-47, 54-55 use Breathe/Jump/Strobe commandTypes.
@@ -1032,7 +1124,7 @@ export function getHardwarePixelArray(
   // we need a fully-lit seed. tick=0.0 guarantees all these builders return visible colors.
   const JUMP_STROBE_IDS = new Set([31, 33, 37, 46, 54]);
   const seedTick = JUMP_STROBE_IDS.has(patternId) ? 0.0 : 0.33;
-  return generateArray(patternId, fg, bg, Math.max(1, numLEDs), seedTick);
+  return generateArray(patternId, fg, bg, Math.max(1, numLEDs), seedTick, 1, options);
 
 }
 
@@ -1084,10 +1176,16 @@ export function getPatternTransitionType(patternId: PatternId): number {
 
   // ── ALL OTHER ge.* SCROLL EFFECTS (IDs 29, 32, 34–36, 38, 41–45, 48–53, 56–61) ──
   // Hardware scrolls the pre-computed pixel array continuously via 0x02 Running.
-  // Visualizer generates tick-based frames matching the scroll animation.
   // NOTE: Twinkle-style patterns (35, 45, 49, 50, 58, 60) intentionally use 0x02 (Running)
   // because 0x06 (Twinkle) is NOT yet confirmed from APK decompile.
-  // Log this for Oracle validation: fix/oracle-confirm-0x06-twinkle
+  
+  // ── GROUP 8: STREET MODES (101-105) ──────────────────────────────────────
+  if (patternId === 101 || patternId === 104) return 0x01; // STOPPED/SLOWING — STATIC
+  if (patternId === 103) return 0x02; // HARD BRAKING — FLASH/STROBE
+  // CRUISING (102) & ACCELERATING (105) use 0x01 because the hardware cannot 
+  // autonomously bounce the dot. It is just a static array we update periodically.
+  if (patternId >= 100) return 0x01; 
+
   return 0x02; // Running — continuous hardware scroll
 }
 
@@ -1101,9 +1199,10 @@ export function buildMultiColorPayload(
   numLEDs: number,
   speed: number,
   direction: number = 1,
-  brightness: number = 100
+  brightness: number = 100,
+  options?: PatternOptions
 ): number[] | null {
-  const pixels = getHardwarePixelArray(patternId, fg, bg, numLEDs);
+  const pixels = getHardwarePixelArray(patternId, fg, bg, numLEDs, options);
   if (!pixels) return null;
 
   // Bake brightness into the pixel array before sending.
@@ -1130,9 +1229,10 @@ export function buildPatternPayload(
   numLEDs: number,
   speed: number,
   direction: number = 1,
-  brightness: number = 100
+  brightness: number = 100,
+  options?: PatternOptions
 ): number[] | null {
-  return buildMultiColorPayload(patternId, fg, bg, numLEDs, speed, direction, brightness);
+  return buildMultiColorPayload(patternId, fg, bg, numLEDs, speed, direction, brightness, options);
 }
 
 // ─── MUSIC MODE VISUALIZER ────────────────────────────────────────────────────
