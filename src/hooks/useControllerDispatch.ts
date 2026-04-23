@@ -7,13 +7,13 @@
  *
  * Depends on: ZenggeProtocol, AppLogger, NormalizationUtils
  */
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { getLocalProfileById } from '../constants/ProductCatalog';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
-import { buildPatternPayload } from '../protocols/PatternEngine';
-import { AppLogger } from '../services/AppLogger';
+import { startPatternAnimation, stopPatternAnimation } from '../protocols/PatternEngine';
 import { hexToRgb } from '../utils/ColorUtils';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
+import { AppLogger } from '../services/AppLogger';
 
 type WriteFn = (payload: number[]) => Promise<boolean | 'partial' | void>;
 
@@ -30,6 +30,18 @@ interface UseControllerDispatchParams {
 export function useControllerDispatch({ writeToDevice, hwSettings, points }: UseControllerDispatchParams) {
   /** Resolve LED count from hw config or fallback */
   const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
+
+  /**
+   * Keep a ref to writeToDevice so the animation pump interval always uses
+   * the latest function reference without needing to restart the loop.
+   */
+  const writeRef = useRef(writeToDevice);
+  useEffect(() => { writeRef.current = writeToDevice; }, [writeToDevice]);
+
+  /** Stop pump on unmount / device disconnect */
+  useEffect(() => {
+    return () => { stopPatternAnimation(); };
+  }, []);
 
   /**
    * Maps UI speed slider (0–100) to Zengge hardware speed range (1–31).
@@ -52,8 +64,13 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
   );
 
   /**
-   * Apply a fixed/custom pattern to devices.
-   * Delegates to PatternEngine to bridge the Math Synthesizer logic with the hardware.
+   * Apply a pattern to the hardware via the animation pump.
+   *
+   * - Static patterns (1–5): one-shot 0x59 FREEZE, no loop.
+   * - Temporal patterns (20–22): one-shot 0x51, no loop.
+   * - All others (6–19, 23–61): starts 15fps frame pump via startPatternAnimation().
+   *
+   * Always stops the previous pump before starting a new one.
    */
   const applyFixedPattern = useCallback(
     async (
@@ -61,32 +78,32 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       fg: string,
       bg: string,
       currentSpeed?: number,
-      currentBrightness?: number
+      _currentBrightness?: number
     ) => {
       if (!writeToDevice) return;
 
       const fgRaw = hexToRgb(fg);
       const bgRaw = hexToRgb(bg);
+      const speed = clampSpeed(currentSpeed ?? 50);
 
-      // Solid Mode (Pattern 1) Override: Use standard 0x59 FREEZE
+      // Solid Mode (Pattern 1) Override: Use standard 0x59 FREEZE via sendColor
       if (patternId === 1) {
+        stopPatternAnimation();
         sendColor(fgRaw.r, fgRaw.g, fgRaw.b);
         return;
       }
 
-      // Instead of bypassing the Math Synthesizer directly to hardware, we use the
-      // PatternEngine to derive identically matched 0x59 Temporal Array Payloads
-      // for Spatial Patterns, OR 0x51 Temporal payloads for full-strip Temporal patterns.
-      const payload = buildPatternPayload(
+      // startPatternAnimation handles static (2-5), temporal (20-22), and animated (6-19, 23-61)
+      // It also calls stopPatternAnimation() internally before starting a new loop.
+      startPatternAnimation(
         patternId,
         fgRaw,
         bgRaw,
-        numLEDs, // Ensure actual LEDs are used for the array generation
-        clampSpeed(currentSpeed ?? 50),
-        1
+        numLEDs,
+        speed,
+        1, // direction
+        (payload) => { writeRef.current?.(payload); }
       );
-
-      if (payload) writeToDevice(payload);
     },
     [writeToDevice, sendColor, clampSpeed, numLEDs]
   );
@@ -109,12 +126,15 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       const tSpd = normalizeUISpeedToHardware(spd !== undefined ? spd : speed);
 
       if (pat === 'STATIC') {
+        stopPatternAnimation();
         sendColor(tR, tG, tB);
       } else if (pat === 'STROBE') {
+        stopPatternAnimation();
         writeToDevice(ZenggeProtocol.setCustomModeCompact([
           { mode: ZenggeProtocol.STEP_STROBE, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }
         ]));
       } else if (pat === 'BLINK') {
+        stopPatternAnimation();
         writeToDevice(ZenggeProtocol.setCustomModeCompact([
           { mode: ZenggeProtocol.STEP_JUMP, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }
         ]));
@@ -136,6 +156,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
   const applyEmergencyPattern = useCallback(
     (spd: number, bright: number) => {
       if (!writeToDevice) return;
+      stopPatternAnimation();
       const factor = bright / 100;
       const profile = getLocalProfileById(hwSettings?.type || '');
       const isRingShape = profile?.vizShape === 'RING';
@@ -149,17 +170,11 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       let arr: { r: number; g: number; b: number }[];
 
       if (isRingShape) {
-        // HALOZ: send exactly ledPoints (8) elements.
-        // The hardware segment engine mirrors this 8-point canvas to both physical segments.
-        // BUG FIXED: old code sent 16 elements (frame8 + mirror8), bypassing segment mirror.
         arr = [red, red, yellow, off, yellow, off, white, white].slice(0, numLEDs);
       } else {
-        // SOULZ / linear strips: three-zone hazard pattern scaled to any ledPoints value.
-        // [rear RED zone | mid alternating YELLOW/OFF | front WHITE zone]
-        // BUG FIXED: old code hardcoded 16 elements; cut-to-length users got wrong pattern.
         const n = numLEDs;
         const zone = Math.max(1, Math.floor(n / 3));
-        const midLen = n - zone * 2; // absorbs rounding remainder in mid zone
+        const midLen = n - zone * 2;
         arr = [
           ...Array(zone).fill(red),
           ...Array.from({ length: midLen }, (_, i) => (i % 2 === 0 ? yellow : off)),

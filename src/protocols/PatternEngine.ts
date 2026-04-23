@@ -1034,16 +1034,17 @@ export function getHardwarePixelArray(
   patternId: PatternId,
   fg: RGB,
   bg: RGB,
-  numLEDs: number
+  numLEDs: number,
+  tick: number = 0
 ): RGB[] | null {
   // 0x51 temporal patterns return null so they fallback to buildCustomModePayload
   if (patternId >= 20 && patternId <= 22) return null;
 
-  // Phase 1A ge.* native patterns evaluate at tick=0 to create the base hardware frame
-  const phase1a = generatePhase1aArray(patternId, fg, bg, Math.max(1, numLEDs), 0);
+  // Phase 1A ge.* patterns — math-synthesized with advancing tick
+  const phase1a = generatePhase1aArray(patternId, fg, bg, Math.max(1, numLEDs), tick);
   if (phase1a) return phase1a;
 
-  return generateArray(patternId, fg, bg, Math.max(1, numLEDs));
+  return generateArray(patternId, fg, bg, Math.max(1, numLEDs), tick);
 }
 
 /**
@@ -1063,9 +1064,10 @@ export function buildMultiColorPayload(
   bg: RGB,
   numLEDs: number,
   speed: number,
-  direction: number = 1
+  direction: number = 1,
+  tick: number = 0
 ): number[] | null {
-  const pixels = getHardwarePixelArray(patternId, fg, bg, numLEDs);
+  const pixels = getHardwarePixelArray(patternId, fg, bg, numLEDs, tick);
   if (!pixels) return null;
 
   const transitionType = getPatternTransitionType(patternId);
@@ -1105,7 +1107,8 @@ export function buildCustomModePayload(
 }
 
 /**
- * Master dispatcher — builds payload for hardware write.
+ * Master dispatcher — builds a single hardware payload frame at a given tick.
+ * tick: 0.0–1.0, loops over ANIM_CYCLE_MS milliseconds in the animation pump.
  */
 export function buildPatternPayload(
   patternId: number,
@@ -1113,12 +1116,76 @@ export function buildPatternPayload(
   bg: RGB,
   numLEDs: number,
   speed: number,
-  direction: number = 1
+  direction: number = 1,
+  tick: number = 0
 ): number[] | null {
-  const multiColor = buildMultiColorPayload(patternId, fg, bg, numLEDs, speed, direction);
+  const multiColor = buildMultiColorPayload(patternId, fg, bg, numLEDs, speed, direction, tick);
   if (multiColor) return multiColor;
 
   return buildCustomModePayload(patternId, fg, bg, speed);
+}
+
+// ─── HARDWARE ANIMATION PUMP ──────────────────────────────────────────────────
+// Module-level singleton. At most ONE animation plays at a time.
+// Calling startPatternAnimation() always stops the previous loop first.
+
+const ANIM_CYCLE_MS = 3000; // Full 0→1 tick cycle in milliseconds
+const ANIM_FPS      = 15;   // BLE-safe frame rate
+
+let _animTimer: ReturnType<typeof setInterval> | null = null;
+
+/** Stop any running pattern animation immediately. */
+export function stopPatternAnimation(): void {
+  if (_animTimer !== null) {
+    clearInterval(_animTimer);
+    _animTimer = null;
+  }
+}
+
+/**
+ * Start the hardware animation pump for a pattern.
+ *
+ * - Static patterns (IDs 1–5):  sends ONE frame at tick=0 (0x59 FREEZE) and returns.
+ * - Temporal patterns (IDs 20–22): sends ONE 0x51 payload and returns.
+ * - All others (IDs 6–19, 23–61): starts a 15fps setInterval that advances
+ *   tick via Date.now() and re-sends the 0x59 CASCADE frame each tick.
+ *
+ * Returns a stop() function. Always call it on unmount / pattern change.
+ */
+export function startPatternAnimation(
+  patternId: number,
+  fg: RGB,
+  bg: RGB,
+  numLEDs: number,
+  speed: number,
+  direction: number,
+  writeFn: (payload: number[]) => void
+): () => void {
+  stopPatternAnimation(); // always clear previous loop
+
+  const isStatic   = patternId >= 1  && patternId <= 5;
+  const isTemporal = patternId >= 20 && patternId <= 22;
+
+  if (isStatic || isTemporal) {
+    // One-shot send — hardware handles display from here
+    const payload = buildPatternPayload(patternId, fg, bg, numLEDs, speed, direction, 0);
+    if (payload) writeFn(payload);
+    return stopPatternAnimation; // no-op cleanup
+  }
+
+  // Send first frame immediately (no stutter waiting for first interval)
+  const firstTick = (Date.now() % ANIM_CYCLE_MS) / ANIM_CYCLE_MS;
+  const firstPayload = buildPatternPayload(patternId, fg, bg, numLEDs, speed, direction, firstTick);
+  if (firstPayload) writeFn(firstPayload);
+
+  // Start advancing pump
+  _animTimer = setInterval(() => {
+    const tick = (Date.now() % ANIM_CYCLE_MS) / ANIM_CYCLE_MS;
+    const payload = buildPatternPayload(patternId, fg, bg, numLEDs, speed, direction, tick);
+    if (payload) writeFn(payload);
+  }, Math.round(1000 / ANIM_FPS));
+
+  return stopPatternAnimation;
 }
 
 // ─── MUSIC MODE VISUALIZER ────────────────────────────────────────────────────
