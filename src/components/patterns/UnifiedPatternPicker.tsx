@@ -6,10 +6,13 @@ import { buildPatternPayload } from '../../protocols/PatternEngine';
 import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
 import { hexToRgb } from '../../utils/ColorUtils';
-import { GradientBuilderTab } from './GradientBuilderTab';
 import { PatternPickerTab } from './PatternPickerTab';
 import { ScenePickerTab } from './ScenePickerTab';
 import { SceneBuilderModal } from '../scenes/SceneBuilderModal';
+import { GradientLibraryTab } from './GradientLibraryTab';
+import { GradientBuilderModal } from './GradientBuilderModal';
+import { PositionalMathBuffer, CustomBuilderPreset } from '../../protocols/PositionalMathBuffer';
+import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 
 interface UnifiedPatternPickerProps {
   writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
@@ -38,6 +41,9 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
   // Shared state for PATTERNS (fgColor/bgColor are PROPS — owned by DockedController)
   const [selectedEffectId, setSelectedEffectId] = useState<number>(1);
   
+  // Shared state for BUILDER Modal
+  const [gradientModalVisible, setGradientModalVisible] = useState(false);
+  const [editingPreset, setEditingPreset] = useState<CustomBuilderPreset | undefined>();
   // Shared state for BUILDER
   const [builderNodes, setBuilderNodes] = useState<BuilderNode[]>([
     { id: '1', position: 0, colorHex: '#FF0000' },
@@ -70,6 +76,27 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
     setSelectedEffectId(effectId);
     dispatchEffect(effectId, fgColor, bgColor, speed, direction, brightness);
   }, [dispatchEffect, fgColor, bgColor, speed, direction, brightness]);
+
+  const dispatchGradient = useCallback((preset: CustomBuilderPreset) => {
+    if (!writeToDevice) return;
+    const generatedRgbArray = PositionalMathBuffer.generateArray(preset.nodes, devicePoints, preset.fill_mode === 'GRADIENT');
+    const mappedSpeed = Math.max(1, Math.min(31, Math.round((speed / 100) * 31)));
+    const payload = ZenggeProtocol.setMultiColor(generatedRgbArray, mappedSpeed, direction, preset.transition_type);
+    writeToDevice(payload);
+  }, [writeToDevice, devicePoints, speed, direction]);
+
+  const openGradientBuilder = (preset?: CustomBuilderPreset) => {
+    if (preset) {
+      setEditingPreset(preset);
+      setBuilderNodes(preset.nodes);
+      setBuilderFillMode(preset.fill_mode);
+      setBuilderTransitionType(preset.transition_type);
+    } else {
+      setEditingPreset(undefined);
+      // Optional: don't reset nodes if they want to continue from where they left off
+    }
+    setGradientModalVisible(true);
+  };
 
   // Sync speed/color changes to PATTERNS tab hardware.
   // NOTE: dispatchEffect is intentionally omitted from deps — it is stable via useCallback
@@ -123,19 +150,10 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
           />
         )}
         {activeTab === 'BUILDER' && (
-          <GradientBuilderTab
-            nodes={builderNodes}
-            onNodesChange={setBuilderNodes}
-            fillMode={builderFillMode}
-            onFillModeChange={setBuilderFillMode}
-            transitionType={builderTransitionType}
-            onTransitionTypeChange={setBuilderTransitionType}
-            direction={builderDirection}
-            onDirectionChange={setBuilderDirection}
-            speed={speed}
-            deviceLedCount={devicePoints}
-            selectedColor={fgColor}
-            writeToDevice={writeToDevice}
+          <GradientLibraryTab
+            Colors={Colors}
+            onOpenBuilder={openGradientBuilder}
+            onApplyGradient={dispatchGradient}
           />
         )}
         {activeTab === 'SCENES' && (
@@ -150,6 +168,25 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
         visible={sceneBuilderVisible}
         onClose={() => setSceneBuilderVisible(false)}
         writeToDevice={writeToDevice}
+      />
+
+      <GradientBuilderModal
+        visible={gradientModalVisible}
+        onClose={() => setGradientModalVisible(false)}
+        preset={editingPreset}
+        nodes={builderNodes}
+        onNodesChange={setBuilderNodes}
+        fillMode={builderFillMode}
+        onFillModeChange={setBuilderFillMode}
+        transitionType={builderTransitionType}
+        onTransitionTypeChange={setBuilderTransitionType}
+        direction={builderDirection}
+        onDirectionChange={setBuilderDirection}
+        speed={speed}
+        deviceLedCount={devicePoints}
+        selectedColor={fgColor}
+        writeToDevice={writeToDevice}
+        Colors={Colors}
       />
     </View>
   );
