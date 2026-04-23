@@ -1025,14 +1025,15 @@ export function getHardwarePixelArray(
   //   IDs 20-22, 30-31, 33, 37, 39-40, 46-47, 54-55 use Breathe/Jump/Strobe commandTypes.
   //   The pixel array is the color seed; hardware animates it autonomously.
   //
-  // Use tick=0.33 (not 0.0) so the initial frame is visually rich.
-  // tick=0 produces degenerate frames for most patterns:
-  //   - DotChase: dot at pixel 0 (looks solid)
-  //   - CometChase: comet off-screen (all BG)
-  //   - RainbowComet: head at -TAIL, strip is all black
-  // Hardware scrolls/breathes/flashes this array forever. A boring frame = boring animation.
-  // 0.33 puts every pattern mid-cycle where the visual is most distinct.
-  return generateArray(patternId, fg, bg, Math.max(1, numLEDs), 0.33);
+  // Use tick=0.33 for most patterns so the initial hardware seed frame is visually rich.
+  // EXCEPTION: Jump (0x04) and Strobe (0x03) patterns — IDs 31, 33, 37, 46, 54.
+  // These builders include an isOn phase-gate that can return all-black at tick=0.33.
+  // Since hardware handles flash/jump autonomously once the array is received,
+  // we need a fully-lit seed. tick=0.0 guarantees all these builders return visible colors.
+  const JUMP_STROBE_IDS = new Set([31, 33, 37, 46, 54]);
+  const seedTick = JUMP_STROBE_IDS.has(patternId) ? 0.0 : 0.33;
+  return generateArray(patternId, fg, bg, Math.max(1, numLEDs), seedTick);
+
 }
 
 /**
