@@ -695,7 +695,7 @@ function buildHardJumpFlash(fg: RGB, bg: RGB, numLEDs: number, tick: number): RG
   return Array(numLEDs).fill(tick < 0.5 ? fg : bg);
 }
 
-function buildStrobe(fg: RGB, numLEDs: number, tick: number): RGB[] {
+function buildTemporalStrobe(fg: RGB, numLEDs: number, tick: number): RGB[] {
   // High-frequency flash (10x per cycle)
   const on = (tick * 10) % 1 < 0.2; // 20% duty cycle = sharp strobe
   return Array(numLEDs).fill(on ? fg : { r: 0, g: 0, b: 0 });
@@ -805,7 +805,7 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: 
     // ── GROUP 5: TEMPORAL FULL-STRIP ──
     case 20: return buildSmoothBreath(fg, n, tick);
     case 21: return buildHardJumpFlash(fg, bg, n, tick);
-    case 22: return buildStrobe(fg, n, tick);
+    case 22: return buildTemporalStrobe(fg, n, tick);
     case 23: return buildWipeFill(fg, bg, n, tick, direction);
     case 24: return buildWipeCenterOut(fg, bg, n, tick);
 
