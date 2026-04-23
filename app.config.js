@@ -9,7 +9,7 @@ export default () => {
     "name": "SK8Lytz",
     "slug": "sk8lytz",
     "scheme": "sk8lytz",
-    "version": "3.0.0",
+    "version": "3.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -23,13 +23,13 @@ export default () => {
       "infoPlist": {
         "NSMicrophoneUsageDescription": "SK8Lytz needs microphone access to synchronize your lights to ambient music."
       },
-      "buildNumber": "9",
+      "buildNumber": "10",
       "config": {
         "googleMapsApiKey": googleMapsApiKey
       }
     },
     "android": {
-      "versionCode": 31,
+      "versionCode": 32,
       "predictiveBackGestureEnabled": false,
       "allowBackup": false,
       "permissions": [
