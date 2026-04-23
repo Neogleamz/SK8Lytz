@@ -42,7 +42,7 @@ import UniversalSlidersFooter from './docked/UniversalSlidersFooter';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Layout, Spacing, Typography } from '../theme/theme';
 
-import { SK8LYTZ_TEMPLATES } from '../constants/CustomEffects';
+import { SK8LYTZ_TEMPLATES } from '../protocols/PatternEngine';
 import { useTheme } from '../context/ThemeContext';
 import CameraTracker from './CameraTracker';
 import { UnifiedPatternPicker } from './patterns/UnifiedPatternPicker';
@@ -1457,3 +1457,4 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     marginTop: Spacing.xs,
   }
 });
+

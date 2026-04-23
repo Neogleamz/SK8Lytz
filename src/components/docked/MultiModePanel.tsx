@@ -10,7 +10,7 @@
  */
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SK8LYTZ_TEMPLATES } from '../../constants/CustomEffects';
+import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { AppLogger } from '../../services/AppLogger';
 import { Layout, Spacing } from '../../theme/theme';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
@@ -168,3 +168,4 @@ const MultiModePanel = React.memo(({
 });
 
 export default MultiModePanel;
+

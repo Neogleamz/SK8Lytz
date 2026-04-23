@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, Modal, TouchableOpacity, Text } from 'react-native';
-import { SK8LYTZ_TEMPLATES } from '../../constants/CustomEffects';
+import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { Spacing } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
 import { PatternCard } from '../patterns/PatternCard';
@@ -83,3 +83,4 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xxl,
   },
 });
+

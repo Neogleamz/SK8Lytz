@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SK8LYTZ_TEMPLATES } from '../../constants/CustomEffects';
+import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { BuilderNode } from '../../protocols/PositionalMathBuffer';
 import { buildPatternPayload } from '../../protocols/PatternEngine';
 import { useTheme } from '../../context/ThemeContext';
@@ -174,3 +174,4 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 });
+

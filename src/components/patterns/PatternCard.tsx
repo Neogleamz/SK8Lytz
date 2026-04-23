@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SK8LYTZ_TEMPLATES } from '../../constants/CustomEffects';
+import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { Spacing } from '../../theme/theme';
 import { LEDStripPreview } from '../LEDStripPreview';
 
@@ -142,3 +142,4 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 });
+

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { SK8LYTZ_TEMPLATES } from '../../constants/CustomEffects';
+import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { Spacing } from '../../theme/theme';
 import { PatternCard } from './PatternCard';
 
@@ -46,3 +46,4 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
     </ScrollView>
   );
 };
+

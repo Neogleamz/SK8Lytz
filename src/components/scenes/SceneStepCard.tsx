@@ -4,7 +4,7 @@ import { SceneStep } from '../../hooks/useSceneBuilder';
 import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
 import { LEDStripPreview } from '../LEDStripPreview';
-import { SK8LYTZ_TEMPLATES } from '../../constants/CustomEffects';
+import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import CustomSlider from '../CustomSlider';
 
 interface SceneStepCardProps {
@@ -105,3 +105,4 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
 });
+

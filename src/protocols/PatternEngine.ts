@@ -1,7 +1,8 @@
 /**
  * SK8Lytz Pattern Engine (Math Synthesizer)
  *
- * SINGLE SOURCE OF TRUTH for the 28 SK8LYTZ_TEMPLATES.
+ * SINGLE SOURCE OF TRUTH for all 61 SK8LYTZ_TEMPLATES — registry + math builders + dispatch.
+ * DO NOT import SK8LYTZ_TEMPLATES from anywhere else. CustomEffects.ts is DELETED.
  * Synthesizes dynamic pixel arrays based on math parameters instead of legacy firmware IDs.
  *
  * Hardware animation model:
@@ -38,7 +39,113 @@ export interface RGB {
   b: number;
 }
 
-export type PatternId = number; // 1 through 28
+export type PatternId = number; // 1 through 61
+
+// ─── PATTERN REGISTRY ─────────────────────────────────────────────────────────
+// Per Master Reference §1 SK8LytzTemplate schema. This is the SSOT for all
+// pattern metadata. UI components import from here — NOT from CustomEffects.ts.
+
+export type ColorMode = 'FG_BG' | 'FG_ONLY' | 'GENERATIVE';
+
+export interface SK8LytzTemplate {
+  id: number;                 // Unique. Never reuse. 1-28=P1B, 29-61=P1A ge.*
+  name: string;               // User-facing label in picker
+  icon: string;               // Emoji for picker card
+  colorMode: ColorMode;       // Which color pickers to show: FG_BG | FG_ONLY | GENERATIVE
+  supportsDirection: boolean; // Show direction toggle in UI?
+  supportsSegment: boolean;   // Segment-mirroring compatible?
+  tier: 1 | 2 | 3;           // 1=ge.* reversal, 2=Programs reversal, 3=SK8Lytz original
+  group: string;              // UI grouping label in picker
+  sourceRef?: string;         // e.g. 'ge.OceanWaveEffect' or 'Programs:CometChase'
+}
+
+// Convenience alias — true when colorMode includes foreground picker
+export function requiresForeground(t: SK8LytzTemplate): boolean {
+  return t.colorMode !== 'GENERATIVE';
+}
+// Convenience alias — true when colorMode is FG_BG
+export function requiresBackground(t: SK8LytzTemplate): boolean {
+  return t.colorMode === 'FG_BG';
+}
+
+export const SK8LYTZ_TEMPLATES: SK8LytzTemplate[] = [
+  // ── GROUP 1: SOLID & STATIC (0x59 FREEZE) ───────────────────────────────
+  { id: 1,  name: 'Solid',              icon: '⬛', colorMode: 'FG_ONLY',  supportsDirection: false, supportsSegment: false, tier: 2, group: 'Static' },
+  { id: 2,  name: 'Split Colors',       icon: '🔲', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 2, group: 'Static' },
+  { id: 3,  name: 'Trisection',         icon: '🟦', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 2, group: 'Static' },
+  { id: 4,  name: 'Quartered',          icon: '🔳', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 2, group: 'Static' },
+  { id: 5,  name: 'Center Accent',      icon: '🎯', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 2, group: 'Static' },
+
+  // ── GROUP 2: CHASES & METEORS (0x59 CASCADE) ────────────────────────────
+  { id: 6,  name: 'Single Dot Chase',   icon: '💫', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 2, group: 'Chase', sourceRef: 'Programs:DotChase' },
+  { id: 7,  name: 'Reflected Dot Chase',icon: '↔️', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 2, group: 'Chase' },
+  { id: 8,  name: 'Comet Chase',        icon: '☄️', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 2, group: 'Chase', sourceRef: 'Programs:CometChase' },
+  { id: 9,  name: 'Meteor Shower',      icon: '🌠', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 2, group: 'Chase' },
+
+  // ── GROUP 3: MARQUEES & BANDS (0x59 CASCADE) ────────────────────────────
+  { id: 10, name: 'Micro Ants',         icon: '🐜', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 2, group: 'Marquee' },
+  { id: 11, name: 'Theater Chase',      icon: '🎭', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 2, group: 'Marquee' },
+  { id: 12, name: 'Dashed Marquee',     icon: '➖', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 2, group: 'Marquee' },
+  { id: 13, name: 'Barber Pole',        icon: '💈', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 2, group: 'Marquee' },
+  { id: 14, name: 'Bold Stripes',       icon: '🟥', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 2, group: 'Marquee' },
+
+  // ── GROUP 4: MATH WAVES (0x59 CASCADE) ──────────────────────────────────
+  { id: 15, name: 'Sine Pulse Wave',    icon: '〰️', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Wave' },
+  { id: 16, name: 'Wave Pinch',         icon: '🌊', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'Wave' },
+  { id: 17, name: 'Breathing Wave',     icon: '💨', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Wave' },
+  { id: 18, name: 'Center-Out Comet',   icon: '💥', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'Wave' },
+  { id: 19, name: 'Center-Out Marquee', icon: '📡', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'Wave' },
+
+  // ── GROUP 5: TEMPORAL FULL-STRIP (0x51 STEP_GRADUAL/JUMP) ───────────────
+  { id: 20, name: 'Smooth Breath',      icon: '🫁', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: false, tier: 1, group: 'Temporal', sourceRef: 'ge.BreathEffect' },
+  { id: 21, name: 'Hard Jump Flash',    icon: '⚡', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: false, tier: 1, group: 'Temporal', sourceRef: 'ge.JumpEffect' },
+  { id: 22, name: 'Strobe',             icon: '🔦', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: false, tier: 1, group: 'Temporal', sourceRef: 'ge.StrobeEffect' },
+
+  // ── GROUP 5b: WIPE / FILL (0x59 CASCADE) ────────────────────────────────
+  { id: 23, name: 'Wipe / Fill',        icon: '▶️', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Wipe' },
+  { id: 24, name: 'Wipe Center-Out',    icon: '⬅️', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'Wipe' },
+
+  // ── GROUP 6: GENERATIVE RAINBOW (0x59 CASCADE HSV MATH) ─────────────────
+  { id: 25, name: 'True Rainbow Flow',  icon: '🌈', colorMode: 'GENERATIVE',supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Rainbow' },
+  { id: 26, name: 'Rainbow Marquee',    icon: '🎆', colorMode: 'GENERATIVE',supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Rainbow' },
+  { id: 27, name: 'Rainbow Comet',      icon: '🌠', colorMode: 'GENERATIVE',supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Rainbow' },
+  { id: 28, name: 'Cyberpunk Shift',    icon: '🤖', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Rainbow' },
+
+  // ── GROUP 7: ge.* PHASE 1A REVERSALS (0x59 CASCADE) ─────────────────────
+  { id: 29, name: 'Color Flow',         icon: '🎨', colorMode: 'GENERATIVE',supportsDirection: true,  supportsSegment: true,  tier: 1, group: 'ge.*', sourceRef: 'ge.ColorFlowEffect' },
+  { id: 30, name: 'Color Breathing',    icon: '🫧', colorMode: 'FG_ONLY',  supportsDirection: false, supportsSegment: false, tier: 1, group: 'ge.*', sourceRef: 'ge.BreathEffect' },
+  { id: 31, name: 'Color Jump',         icon: '🔀', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: false, tier: 1, group: 'ge.*', sourceRef: 'ge.JumpEffect' },
+  { id: 32, name: 'Running Water',      icon: '💧', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 1, group: 'ge.*', sourceRef: 'ge.RunningWaterEffect' },
+  { id: 33, name: 'Strobe Flash',       icon: '⚡', colorMode: 'FG_ONLY',  supportsDirection: false, supportsSegment: false, tier: 1, group: 'ge.*', sourceRef: 'ge.StrobeEffect' },
+  { id: 34, name: 'Color Wipe',         icon: '🖌️', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 1, group: 'ge.*', sourceRef: 'ge.ColorWipeEffect' },
+  { id: 35, name: 'Fireworks',          icon: '🎇', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: false, tier: 1, group: 'ge.*', sourceRef: 'ge.FireworksEffect' },
+  { id: 36, name: 'Ocean Wave',         icon: '🌊', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 1, group: 'ge.*', sourceRef: 'ge.OceanWaveEffect' },
+  { id: 37, name: 'Lightning Strike',   icon: '🌩️', colorMode: 'FG_ONLY',  supportsDirection: false, supportsSegment: false, tier: 1, group: 'ge.*', sourceRef: 'ge.LightningEffect' },
+  { id: 38, name: 'Snowfall',           icon: '❄️', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: false, tier: 1, group: 'ge.*', sourceRef: 'ge.SnowfallEffect' },
+  { id: 39, name: 'Candle Flicker',     icon: '🕯️', colorMode: 'FG_ONLY',  supportsDirection: false, supportsSegment: false, tier: 1, group: 'ge.*', sourceRef: 'ge.CandleEffect' },
+  { id: 40, name: 'Heartbeat Pulse',    icon: '❤️', colorMode: 'FG_ONLY',  supportsDirection: false, supportsSegment: false, tier: 1, group: 'ge.*', sourceRef: 'ge.HeartbeatEffect' },
+  { id: 41, name: 'Meteor',             icon: '☄️', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 1, group: 'ge.*', sourceRef: 'ge.MeteorEffect' },
+  { id: 42, name: 'Aurora Borealis',    icon: '🌌', colorMode: 'GENERATIVE',supportsDirection: true,  supportsSegment: true,  tier: 1, group: 'ge.*', sourceRef: 'ge.AuroraEffect' },
+  { id: 43, name: 'Lava Lamp',          icon: '🫠', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 1, group: 'ge.*', sourceRef: 'ge.LavaEffect' },
+  { id: 44, name: 'Plasma Wave',        icon: '🔮', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 1, group: 'ge.*', sourceRef: 'ge.PlasmaEffect' },
+  { id: 45, name: 'Star Cluster',       icon: '✨', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 1, group: 'ge.*', sourceRef: 'ge.StarClusterEffect' },
+  { id: 46, name: 'Police Lights',      icon: '🚨', colorMode: 'GENERATIVE',supportsDirection: false, supportsSegment: true,  tier: 3, group: 'ge.*' },
+  { id: 47, name: 'Rainbow Breathing',  icon: '🌈', colorMode: 'GENERATIVE',supportsDirection: false, supportsSegment: false, tier: 3, group: 'ge.*' },
+  { id: 48, name: 'Color Burst',        icon: '💥', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'ge.*' },
+  { id: 49, name: 'Twinkle',            icon: '⭐', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'ge.*' },
+  { id: 50, name: 'Crystal Shimmer',    icon: '💎', colorMode: 'GENERATIVE',supportsDirection: false, supportsSegment: true,  tier: 3, group: 'ge.*' },
+  { id: 51, name: 'Gradient Chase',     icon: '🌅', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'ge.*' },
+  { id: 52, name: 'Comet Duo',          icon: '💫', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'ge.*' },
+  { id: 53, name: 'Fire Flame',         icon: '🔥', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'ge.*' },
+  { id: 54, name: 'Cyber Glitch',       icon: '👾', colorMode: 'GENERATIVE',supportsDirection: false, supportsSegment: true,  tier: 3, group: 'ge.*' },
+  { id: 55, name: 'Neon Pulse',         icon: '💜', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'ge.*' },
+  { id: 56, name: 'Rainbow Chaser',     icon: '🌈', colorMode: 'GENERATIVE',supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'ge.*' },
+  { id: 57, name: 'Matrix Rain',        icon: '🟩', colorMode: 'FG_BG',    supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'ge.*' },
+  { id: 58, name: 'Sparkle Fade',       icon: '✨', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'ge.*' },
+  { id: 59, name: 'Dual Scan',          icon: '↔️', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'ge.*' },
+  { id: 60, name: 'Starlight',          icon: '🌟', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'ge.*' },
+  { id: 61, name: 'Hyperspace',         icon: '🚀', colorMode: 'FG_BG',    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'ge.*' },
+];
 
 // ─── MATH HELPERS ─────────────────────────────────────────────────────────────
 

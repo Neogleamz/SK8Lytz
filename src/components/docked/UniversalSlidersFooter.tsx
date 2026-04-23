@@ -9,7 +9,7 @@ import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Spacing } from '../../theme/theme';
 import { hexToHue } from '../../utils/ColorUtils';
-import { SK8LYTZ_TEMPLATES } from '../../constants/CustomEffects';
+import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { AppLogger } from '../../services/AppLogger';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import NeonHueStrip from '../NeonHueStrip';
@@ -480,3 +480,4 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
 });
 
 export default UniversalSlidersFooter;
+

@@ -30,7 +30,7 @@ import {
     Text, TouchableOpacity,
     View,
 } from 'react-native';
-import { SK8LYTZ_TEMPLATES } from '../constants/CustomEffects';
+import { SK8LYTZ_TEMPLATES } from '../protocols/PatternEngine';
 import { useTheme } from '../context/ThemeContext';
 import { buildPatternPayload } from '../protocols/PatternEngine';
 import CustomEffectVisualizer from './CustomEffectVisualizer';
@@ -428,3 +428,4 @@ const styles = StyleSheet.create({
 });
 
 export default EffectsPanel;
+
