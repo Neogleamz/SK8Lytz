@@ -21,9 +21,8 @@ You must execute this pipeline sequentially. **DO NOT BYPASS ANY GATES.** You mu
    - **Pulling a Batch**: Find the TOP batch group that is UNBLOCKED (no `⏳ BLOCKED BY` or the prerequisite is already merged). Move the **ENTIRE batch group header and ALL its nested tasks** into `## 🚧 ACTIVE SPRINT`. Update the header to indicate it is `(Active)`.
    - Your target is the first incomplete task in the active batch.
 2. **Worktree Isolation**: You are strictly forbidden from coding on `master`.
-   - Read the worktree slug from the active batch header (`> **Worktree**: <slug>`).
-   - Navigate to or create the worktree: `git worktree add ../SK8Lytz-worktrees/<worktree-slug> -b <worktree-slug>`
-   - *Note: All tasks in a sequential batch share this single worktree.*
+   - The worktree is ALWAYS named after the specific target task slug: `git worktree add ../SK8Lytz-worktrees/<task-slug> -b <task-slug>`
+   - *Note: Even within sequential batches, every task gets its own isolated worktree based on its slug.*
 
 ### Phase 2: The Systems Architect (Brainstorming & Theory)
 - **Mandatory Brainstorming**: Drop into a read-only consultative mode. Present your understanding of the task and ask the user to chat through the approach. Do not proceed until the user says "what's next" or asks for a plan.
@@ -39,7 +38,7 @@ You must execute this pipeline sequentially. **DO NOT BYPASS ANY GATES.** You mu
 
 ### Phase 4: The Senior Developer (Execution)
 - Once the user types "proceed", adopt the Developer persona.
-- Execute the code strictly according to the TPM's plan within the isolated worktree.
+- Execute the code strictly according to the TPM's plan within the isolated task worktree.
 - Do not perform unsolicited refactors outside the scope of the plan.
 
 ### Phase 5: The QA Engineer (Edge-Case Hunter)
@@ -47,20 +46,19 @@ You must execute this pipeline sequentially. **DO NOT BYPASS ANY GATES.** You mu
 - List 5 weird, rare edge cases (e.g., backgrounding the app, BLE drops, null states).
 - Verify the code explicitly handles these edge cases.
 
-### Phase 6: The Release Manager (Commit & Batch Clean)
+### Phase 6: The Release Manager (Commit & Clean)
 - Run tests and self-review (e.g., `npx tsc --noEmit` from master).
-- Commit within worktree: `git add .` then `git commit -m "feat: complete <slug>"`.
+- Commit within worktree: `git add .` then `git commit -m "feat: complete <task-slug>"`.
+- Merge to master: `git checkout master` then `git merge <task-slug> --ff-only`
+- **Clean Slate Check**: Run `git status -s` on master immediately after merge.
+  - Any modified plan files (`tools/plans/*.md`) → stage and commit as `docs(plans): commit AI-First plan for <task-slug>`
+  - Any temp scripts (`*.py`, `*.js` in root or `tools/`) → DELETE them, do not commit
+- Push to remote ONLY after `git status -s` returns empty output.
+- Remove worktree: `git worktree remove ../SK8Lytz-worktrees/<task-slug>`
+- Delete branch: `git branch -d <task-slug>`
 - **Apply Completion Stamp**: Mark the task `[x]` in `SK8Lytz_Bucket_List.md` with the commit hash (`git log -1 --format="%h"`) and a one-line outcome summary per Law 7.
-- **Batch Completion Check**:
+- **Batch Progression Check**:
   - IF there are MORE uncompleted tasks in the active batch:
-    - Do NOT merge yet. The worktree stays open.
-    - Ask the user: "Task complete. Shall I start the next task in the batch?"
+    - Ask the user: "Task complete. Shall I spin up the worktree for the next task in the batch?"
   - IF this was the LAST task in the active batch:
-    - Merge to master: `git checkout master` then `git merge <worktree-branch> --ff-only`
-    - **Clean Slate Check**: Run `git status -s` on master immediately after merge.
-      - Any modified plan files (`tools/plans/*.md`) → stage and commit as `docs(plans): commit AI-First plan for <batch-slug>`
-      - Any temp scripts (`*.py`, `*.js` in root or `tools/`) → DELETE them, do not commit
-    - Push to remote ONLY after `git status -s` returns empty output.
-    - Remove worktree: `git worktree remove ../SK8Lytz-worktrees/<worktree-slug>`
-    - Delete branch: `git branch -d <worktree-slug>`
     - Move the completed batch header and tasks to `## 🚂 RELEASE TRAIN` or `📦 ARCHIVE`.
