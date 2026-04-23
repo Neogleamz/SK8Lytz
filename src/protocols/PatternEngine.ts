@@ -194,6 +194,256 @@ function buildHeartbeat(fg: RGB, numLEDs: number, tick: number): RGB[] {
   return Array(numLEDs).fill({ r: Math.round(fg.r * b), g: Math.round(fg.g * b), b: Math.round(fg.b * b) });
 }
 
+function buildMeteor(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const TAIL = Math.floor(numLEDs * 0.25);
+  const head = Math.floor((direction === 0 ? tick : 1 - tick) * (numLEDs + TAIL)) - TAIL;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const dist = head - i;
+    if (dist < 0 || dist > TAIL) return bg;
+    const brightness = 1 - (dist / TAIL);
+    return blendRGB(fg, bg, Math.pow(brightness, 2));
+  });
+}
+
+function buildAurora(numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? tick : 1 - tick;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const hue = (i / numLEDs * 0.4 + phase * 0.5 + 0.5) % 1;
+    const brightness = (Math.sin(i / numLEDs * Math.PI * 3 + phase * Math.PI * 4) * 0.4 + 0.6);
+    return hsvToRgb(hue, 0.8, brightness);
+  });
+}
+
+function buildLava(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const blob1 = Math.sin(i / numLEDs * Math.PI * 2 + tick * Math.PI * 1.3);
+    const blob2 = Math.sin(i / numLEDs * Math.PI * 3.7 + tick * Math.PI * 0.8 + 1.2);
+    const combined = (blob1 + blob2) * 0.5 * 0.5 + 0.5;
+    return blendRGB(fg, bg, combined);
+  });
+}
+
+function buildPlasma(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? tick : 1 - tick;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const v = Math.sin(i / numLEDs * Math.PI * 4 + phase * Math.PI * 6) * 
+              Math.cos(i / numLEDs * Math.PI * 2 - phase * Math.PI * 2);
+    return blendRGB(fg, bg, Math.abs(v));
+  });
+}
+
+function buildStarCluster(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const frame = Array(numLEDs).fill(bg);
+  for (let j = 0; j < 4; j++) {
+    const center = Math.floor(((tick * 0.5 + j * 0.25) % 1) * numLEDs);
+    for (let i = -2; i <= 2; i++) {
+      const pos = center + i;
+      if (pos >= 0 && pos < numLEDs) {
+        const brightness = 1 - Math.abs(i) / 3;
+        frame[pos] = blendRGB(fg, frame[pos], brightness);
+      }
+    }
+  }
+  return frame;
+}
+
+function buildPoliceLights(numLEDs: number, tick: number): RGB[] {
+  const red = { r: 255, g: 0, b: 0 };
+  const blue = { r: 0, g: 0, b: 255 };
+  const flashPhase = (tick * 8) % 1;
+  const isOn = flashPhase < 0.5;
+  const isRedTurn = (tick * 2) % 1 < 0.5;
+  
+  return Array.from({ length: numLEDs }, (_, i) => {
+    if (!isOn) return { r: 0, g: 0, b: 0 };
+    const isLeftHalf = i < numLEDs / 2;
+    if (isRedTurn) return isLeftHalf ? red : { r: 0, g: 0, b: 0 };
+    return !isLeftHalf ? blue : { r: 0, g: 0, b: 0 };
+  });
+}
+
+function buildRainbowBreathing(numLEDs: number, tick: number): RGB[] {
+  const hue = tick % 1;
+  const brightness = (Math.sin(tick * Math.PI * 4) * 0.5 + 0.5);
+  const baseColor = hsvToRgb(hue, 1.0, 1.0);
+  return Array(numLEDs).fill({
+    r: Math.round(baseColor.r * brightness),
+    g: Math.round(baseColor.g * brightness),
+    b: Math.round(baseColor.b * brightness)
+  });
+}
+
+function buildColorBurst(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const burstPhase = tick % 1;
+  const center = Math.floor(numLEDs / 2);
+  const radius = Math.floor(burstPhase * numLEDs);
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const dist = Math.abs(i - center);
+    if (dist < radius && dist > radius - 3) return fg;
+    return bg;
+  });
+}
+
+function buildTwinkle(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const frame = Array(numLEDs).fill(bg);
+  for (let i = 0; i < numLEDs; i++) {
+    const noise = Math.sin(i * 12.9898 + tick * 10) * 43758.5453;
+    const val = noise - Math.floor(noise);
+    if (val > 0.95) {
+       const brightness = Math.sin(tick * 20 + i) * 0.5 + 0.5;
+       frame[i] = blendRGB(fg, bg, brightness);
+    }
+  }
+  return frame;
+}
+
+function buildCrystalShimmer(numLEDs: number, tick: number): RGB[] {
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const noise = Math.sin(i * 7.1 + tick * 15) * 0.5 + 0.5;
+    const brightness = Math.pow(noise, 3);
+    return {
+      r: Math.round(150 * brightness),
+      g: Math.round(200 * brightness),
+      b: Math.round(255 * brightness)
+    };
+  });
+}
+
+function buildGradientChase(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? tick : 1 - tick;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const pos = (i / numLEDs + phase) % 1;
+    return blendRGB(fg, bg, Math.sin(pos * Math.PI));
+  });
+}
+
+function buildCometDuo(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const TAIL = Math.floor(numLEDs * 0.2);
+  const head1 = Math.floor(tick * (numLEDs + TAIL)) - TAIL;
+  const head2 = Math.floor((1 - tick) * (numLEDs + TAIL)) - TAIL;
+  
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const dist1 = head1 - i;
+    const dist2 = i - head2;
+    
+    let c = bg;
+    if (dist1 >= 0 && dist1 <= TAIL) {
+      c = blendRGB(fg, c, 1 - (dist1 / TAIL));
+    }
+    if (dist2 >= 0 && dist2 <= TAIL) {
+      c = blendRGB(fg, c, 1 - (dist2 / TAIL)); 
+    }
+    return c;
+  });
+}
+
+function buildFireFlame(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const noise1 = Math.sin(i * 0.5 + tick * 15);
+    const noise2 = Math.sin(i * 1.3 - tick * 22 + 4.5);
+    const noise3 = Math.sin(i * 3.7 + tick * 33);
+    const flicker = (noise1 + noise2 + noise3) / 3 * 0.5 + 0.5;
+    const heightGradient = 1 - (i / numLEDs); 
+    const brightness = flicker * heightGradient * 1.5;
+    return blendRGB(fg, bg, Math.min(1, brightness));
+  });
+}
+
+function buildCyberGlitch(numLEDs: number, tick: number): RGB[] {
+  const c1 = { r: 0, g: 255, b: 255 };
+  const c2 = { r: 255, g: 0, b: 255 };
+  const frame = Array(numLEDs).fill({ r: 0, g: 0, b: 0 });
+  const glitchBlockSize = Math.floor(Math.sin(tick * 50) * 4) + 1;
+  const glitchPos = Math.floor(Math.sin(tick * 80) * numLEDs + numLEDs) % numLEDs;
+  for (let i = 0; i < glitchBlockSize; i++) {
+    if (glitchPos + i < numLEDs) {
+      frame[glitchPos + i] = Math.random() > 0.5 ? c1 : c2;
+    }
+  }
+  return frame;
+}
+
+function buildNeonPulse(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  let pulse = Math.pow(Math.sin(tick * Math.PI * 2), 4);
+  if (tick % 1 < 0.1) pulse = Math.random() * 0.5 + 0.5;
+  return Array(numLEDs).fill(blendRGB(fg, bg, pulse));
+}
+
+function buildRainbowChaser(numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? tick : 1 - tick;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const hue = ((i / numLEDs) * 3 + phase * 2) % 1.0;
+    const brightness = Math.sin(i * 0.5 + phase * 10) * 0.5 + 0.5;
+    const c = hsvToRgb(hue, 1.0, 1.0);
+    return dim(c, brightness);
+  });
+}
+
+function buildMatrixRain(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? tick : 1 - tick;
+  const frame = Array(numLEDs).fill(bg);
+  const tailLength = Math.max(3, Math.floor(numLEDs / 4));
+  for (let d = 0; d < 3; d++) {
+    const dropPhase = (phase + d * 0.33) % 1;
+    const head = Math.floor(dropPhase * (numLEDs + tailLength)) - tailLength;
+    for (let i = 0; i <= tailLength; i++) {
+      const pos = head + i;
+      if (pos >= 0 && pos < numLEDs) {
+        const brightness = i / tailLength;
+        frame[pos] = blendRGB(fg, frame[pos], Math.pow(brightness, 2));
+      }
+    }
+  }
+  return frame;
+}
+
+function buildSparkleFade(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const frame = Array(numLEDs).fill(bg);
+  for (let i = 0; i < numLEDs; i++) {
+    const noise = Math.sin(i * 45.2 + tick * 2.1) * 43758.5453;
+    const rand = noise - Math.floor(noise);
+    if (rand > 0.98) frame[i] = fg;
+    else if (rand > 0.90) frame[i] = blendRGB(fg, bg, 0.5);
+  }
+  return frame;
+}
+
+function buildDualScan(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const phase = (Math.sin(tick * Math.PI * 2) * 0.5 + 0.5);
+  const pos1 = Math.floor(phase * (numLEDs - 1));
+  const pos2 = numLEDs - 1 - pos1;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const dist1 = Math.abs(i - pos1);
+    const dist2 = Math.abs(i - pos2);
+    if (dist1 === 0 || dist2 === 0) return fg;
+    if (dist1 === 1 || dist2 === 1) return blendRGB(fg, bg, 0.4);
+    return bg;
+  });
+}
+
+function buildStarlight(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const twinkle = Math.sin(tick * 5 + i * 2.3) * Math.sin(tick * 2.1 + i * 1.1);
+    const brightness = Math.max(0, twinkle);
+    return blendRGB(fg, bg, Math.pow(brightness, 3));
+  });
+}
+
+function buildHyperspace(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const frame = Array(numLEDs).fill(bg);
+  const center = Math.floor(numLEDs / 2);
+  const speed = 4;
+  const phase = (tick * speed) % 1;
+  const dist = Math.floor(Math.pow(phase, 2) * center); 
+  const p1 = center - dist;
+  const p2 = center + dist;
+  if (p1 >= 0 && p1 < numLEDs) frame[p1] = fg;
+  if (p2 >= 0 && p2 < numLEDs) frame[p2] = fg;
+  if (p1 + 1 < center) frame[p1 + 1] = blendRGB(fg, bg, 0.3);
+  if (p2 - 1 > center) frame[p2 - 1] = blendRGB(fg, bg, 0.3);
+  return frame;
+}
+
 function generatePhase1aArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: number): RGB[] | null {
   const direction = 1; // Default to 1 (forward) if not dynamically provided by visualizer caller yet
   switch (patternId) {
@@ -209,6 +459,27 @@ function generatePhase1aArray(patternId: PatternId, fg: RGB, bg: RGB, n: number,
     case 38: return buildSnowfall(fg, bg, n, tick);
     case 39: return buildCandle(fg, n, tick);
     case 40: return buildHeartbeat(fg, n, tick);
+    case 41: return buildMeteor(fg, bg, n, tick, direction);
+    case 42: return buildAurora(n, tick, direction);
+    case 43: return buildLava(fg, bg, n, tick);
+    case 44: return buildPlasma(fg, bg, n, tick, direction);
+    case 45: return buildStarCluster(fg, bg, n, tick);
+    case 46: return buildPoliceLights(n, tick);
+    case 47: return buildRainbowBreathing(n, tick);
+    case 48: return buildColorBurst(fg, bg, n, tick);
+    case 49: return buildTwinkle(fg, bg, n, tick);
+    case 50: return buildCrystalShimmer(n, tick);
+    case 51: return buildGradientChase(fg, bg, n, tick, direction);
+    case 52: return buildCometDuo(fg, bg, n, tick);
+    case 53: return buildFireFlame(fg, bg, n, tick);
+    case 54: return buildCyberGlitch(n, tick);
+    case 55: return buildNeonPulse(fg, bg, n, tick);
+    case 56: return buildRainbowChaser(n, tick, direction);
+    case 57: return buildMatrixRain(fg, bg, n, tick, direction);
+    case 58: return buildSparkleFade(fg, bg, n, tick);
+    case 59: return buildDualScan(fg, bg, n, tick);
+    case 60: return buildStarlight(fg, bg, n, tick);
+    case 61: return buildHyperspace(fg, bg, n, tick);
     default: return null;
   }
 }
