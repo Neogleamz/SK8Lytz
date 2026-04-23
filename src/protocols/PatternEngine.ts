@@ -1043,7 +1043,14 @@ export function getHardwarePixelArray(
   const phase1a = generatePhase1aArray(patternId, fg, bg, Math.max(1, numLEDs), 0);
   if (phase1a) return phase1a;
 
-  return generateArray(patternId, fg, bg, Math.max(1, numLEDs));
+  // Use tick=0.33 (not 0.0) so the initial frame is visually rich.
+  // tick=0 produces degenerate frames for most patterns:
+  //   - DotChase: dot at pixel 0 (looks solid)
+  //   - CometChase: comet off-screen (all BG)
+  //   - RainbowComet: head at -TAIL, strip is all black
+  // Hardware CASCADE scrolls this array forever. A boring starting frame = boring animation.
+  // 0.33 puts every pattern mid-cycle where the visual is most distinct.
+  return generateArray(patternId, fg, bg, Math.max(1, numLEDs), 0.33);
 }
 
 /**
