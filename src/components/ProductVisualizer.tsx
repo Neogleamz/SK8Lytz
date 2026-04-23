@@ -353,8 +353,8 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
             builderPixels = PositionalMathBuffer.generateArray(builderNodes, activeSegmentLeds, builderFillMode === 'GRADIENT');
           }
 
-          // 0x01=FLOW, 0x03=WATER → scroll the pixel array using animTick
-          if (builderTransitionType === 0x01 || builderTransitionType === 0x03) {
+          // 0x02=Running, 0x04=Jump → scroll the pixel array using animTick
+          if (builderTransitionType === 0x02 || builderTransitionType === 0x04) {
             const steps = activeSegmentLeds;
             const directionMultiplier = builderDirection === 0 ? -1 : 1;
             const shiftAmount = animTick * steps * directionMultiplier;
@@ -387,14 +387,15 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           const pb = Math.round(pCurr.b * (1 - blendAmt) + pAdj.b * blendAmt);
           dotColor = `#${pr.toString(16).padStart(2, '0')}${pg.toString(16).padStart(2, '0')}${pb.toString(16).padStart(2, '00')}`;
 
-          if (builderTransitionType === 0x00) { // STATIC — freeze, no animation
+          // APK-PROVEN commandType — StaticColorfulMode.java:
+          if (builderTransitionType === 0x01) {        // Static — freeze, no animation
             dotOpacity = isPoweredOn ? (brightness / 100) : 0;
-          } else if (builderTransitionType === 0x01) { // FLOW — scrolling (opacity stays solid)
+          } else if (builderTransitionType === 0x02) { // Running — scrolling (opacity stays solid)
             dotOpacity = isPoweredOn ? (brightness / 100) : 0;
-          } else if (builderTransitionType === 0x02) { // STROBE — hard on/off flash
+          } else if (builderTransitionType === 0x03) { // Strobe — hard on/off flash
             const strobeOn = animTick < 0.5 ? 1 : 0;
             dotOpacity = isPoweredOn ? Math.max(0.01, strobeOn) * (brightness / 100) : 0;
-          } else if (builderTransitionType === 0x03) { // WATER — scrolling + opacity wave
+          } else if (builderTransitionType === 0x04) { // Jump — scrolling + opacity wave
             const wave = 0.5 + 0.5 * Math.sin(animTick * Math.PI * 2 + fract * Math.PI * 4);
             dotOpacity = isPoweredOn ? (0.3 + wave * 0.7) * (brightness / 100) : 0;
           } else {
@@ -533,7 +534,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
   );
 });
 
-const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 0x00, builderDirection = 1 }: ProductVisualizerProps) => {
+const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 0x01, builderDirection = 1 }: ProductVisualizerProps) => {
   const { isDark } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
 
@@ -544,7 +545,7 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
       animValue.setValue(0);
       const baseDuration =
         mode === 'MUSIC'    ? 800  :
-        mode === 'BUILDER'  ? (builderTransitionType === 0x02 ? 350 : 1500) :
+        mode === 'BUILDER'  ? (builderTransitionType === 0x03 ? 350 : 1500) :
         mode === 'MULTIMODE'? 1500 :
         mode === 'STREET'   ? 1400 : 3000;
       const duration = baseDuration / (0.4 + (speed / 100) * 2.1);

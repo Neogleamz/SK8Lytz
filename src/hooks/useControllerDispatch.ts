@@ -167,8 +167,8 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
         ];
       }
 
-      // 0x00 = CASCADE: hardware scrolls the mid section natively
-      writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpd, 1, 0x00));
+      // 0x02 = Running: hardware scrolls the array natively (APK: StaticColorfulMode.Running)
+      writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSpd, 1, 0x02));
     },
     [writeToDevice, hwSettings, numLEDs]
   );

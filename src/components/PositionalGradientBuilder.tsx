@@ -414,12 +414,12 @@ export default function PositionalGradientBuilder({
       <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold', marginBottom: Spacing.xxs }}>ANIMATION</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
           {[
-              // APK-proven transitionType bytes (ZenggeProtocol.ts:592 — setMultiColor JSDoc):
-              // 0x00=Static (freeze), 0x01=Gradual (flow/scroll), 0x02=Strobe (flash), 0x03=RunningWater (scroll)
-              { id: 0x00, label: 'STATIC',  icon: 'pause-circle-outline' as const },
-              { id: 0x01, label: 'FLOW',    icon: 'arrow-right-bold' as const },
-              { id: 0x02, label: 'STROBE',  icon: 'flash' as const },
-              { id: 0x03, label: 'WATER',   icon: 'water' as const },
+              // APK-PROVEN commandType bytes — StaticColorfulMode.java (ZENGGE_DECOMPILED 2026-04-23):
+              // 0x01=Static (freeze)  0x02=Running (scroll)  0x03=Strobe  0x04=Jump
+              { id: 0x01, label: 'STATIC',  icon: 'pause-circle-outline' as const },
+              { id: 0x02, label: 'FLOW',    icon: 'arrow-right-bold' as const },
+              { id: 0x03, label: 'STROBE',  icon: 'flash' as const },
+              { id: 0x04, label: 'JUMP',    icon: 'skip-forward' as const },
           ].map(t => (
               <TouchableOpacity 
                   key={t.id}

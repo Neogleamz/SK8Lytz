@@ -183,7 +183,7 @@ export interface IFavoriteState {
   /** Saved gradient node array — each node: { id, position 0–100, colorHex } */
   builderNodes?: Array<{ id: string; position: number; colorHex: string }>;
   builderFillMode?: 'GRADIENT' | 'SOLID';
-  /** TransitionType byte: 0x00=STATIC, 0x01=FLOW, 0x02=STROBE, 0x03=WATER */
+  /** commandType byte (APK-PROVEN StaticColorfulMode.java): 0x01=Static, 0x02=Running(scroll), 0x03=Strobe, 0x04=Jump */
   builderTransitionType?: number;
   builderDirection?: number;
 }

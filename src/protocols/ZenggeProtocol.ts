@@ -591,16 +591,22 @@ export class ZenggeProtocol {
    *
    * @param colors       Full per-pixel array. Length = actual device LED count.
    *                     NO 32-pixel cap — hardware supports up to 300 LEDs.
-   * @param speed        For animated types (transitionType > 0): clamp to 1–31.
-   *                     For Static (0x00): speed is unused, send 1.
+   * @param speed        Clamp to 1–31 (hardware range). Unused for Static (0x01), send 1.
    * @param direction    1 = forward, 0 = reverse
-   * @param transitionType  0x00=Static, 0x01=Gradual, 0x02=Strobe, 0x03=RunningWater
+   * @param transitionType  APK-PROVEN (StaticColorfulMode.java):
+   *   0x01 = Static  — freeze in place (Group 1 solid patterns)
+   *   0x02 = Running — continuous hardware scroll (ALL animated patterns)
+   *   0x03 = Strobe  — flash
+   *   0x04 = Jump    — hard color jump
+   *   0x05 = Breathe — breathe fade
+   *   0x06 = Twinkly — twinkle
+   *   ⚠️ 0x00 is NOT valid — sends undefined commandType to hardware.
    */
   static setMultiColor(
     colors: {r: number, g: number, b: number}[],
     speed: number,
     direction: number,
-    transitionType: number = 0x00
+    transitionType: number = 0x01  // Default: Static/freeze (safest fallback)
   ): number[] {
     // Determine how many pixels we can safely send in a single default MTU write packet.
     // Assuming default safe MTU of ~180 bytes, wrapper + 0x59 headers = 16 bytes.
