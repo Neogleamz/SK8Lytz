@@ -32,7 +32,11 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
     <View style={{ flex: 1 }}>
       {/* Horizontal Category Wheel */}
       <View style={styles.wheelContainer}>
-        <View style={styles.wheelContent}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.wheelContent}
+        >
           {CATEGORIES.map((cat) => {
             const isActive = activeCategory === cat;
             return (
@@ -50,7 +54,7 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
 
       <ScrollView
@@ -86,21 +90,21 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
 
 const styles = StyleSheet.create({
   wheelContainer: {
+    height: 48,
     marginBottom: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   wheelContent: {
-    paddingHorizontal: Spacing.xs,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    paddingHorizontal: Spacing.sm,
+    alignItems: 'center',
     gap: Spacing.xs,
   },
   categoryPill: {
-    flexGrow: 1,
-    flexShrink: 0,
-    flexBasis: '23%',
+    minWidth: 90,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     backgroundColor: 'rgba(255,255,255,0.02)',
