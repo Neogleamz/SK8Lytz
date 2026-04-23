@@ -4,6 +4,8 @@ import { BlurView } from 'expo-blur';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import PositionalGradientBuilder from '../PositionalGradientBuilder';
 import { useGradients } from '../../hooks/useGradients';
+import { useFavorites } from '../../hooks/useFavorites';
+import FavoritePromptModal from '../docked/FavoritePromptModal';
 import { BuilderNode, CustomBuilderPreset } from '../../protocols/PositionalMathBuffer';
 import { Spacing } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
@@ -36,9 +38,30 @@ export const GradientBuilderModal: React.FC<GradientBuilderModalProps> = ({
 }) => {
   const { isDark } = useTheme();
   const { saveGradient } = useGradients();
+  const { openFavoritePrompt, saveFavorite, promptState, promptName, setPromptName, closePrompt } = useFavorites();
+  const [suggestionChips, setSuggestionChips] = useState<string[]>([]);
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [presetNameInput, setPresetNameInput] = useState(preset?.name || '');
   const [isSaving, setIsSaving] = useState(false);
+
+  const handleHeartClick = () => {
+    setSuggestionChips(['Custom Wash', 'Neon Fade', 'Builder Vibe']);
+    openFavoritePrompt(undefined, presetNameInput.trim() || 'Custom Gradient');
+  };
+
+  const handleConfirmFavorite = () => {
+    const name = promptName.trim() || 'Custom Gradient';
+    saveFavorite({
+        mode: 'BUILDER',
+        speed: builderProps.speed,
+        brightness: 100, // builder does not locally manage brightness
+        builderNodes: builderProps.nodes,
+        builderFillMode: builderProps.fillMode,
+        builderTransitionType: builderProps.transitionType,
+        builderDirection: builderProps.direction,
+    }, name);
+    closePrompt();
+  };
 
   // Sync input name when preset changes
   React.useEffect(() => {
@@ -94,9 +117,14 @@ export const GradientBuilderModal: React.FC<GradientBuilderModalProps> = ({
               {preset && !preset.id.startsWith('builtin_') ? 'Edit Gradient' : 'Create Gradient'}
             </Text>
             
-            <TouchableOpacity onPress={() => setSaveModalVisible(true)} style={styles.headerBtn}>
-              <Text style={[styles.headerBtnText, { color: Colors.primary }]}>Save</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity onPress={handleHeartClick} style={styles.headerBtn}>
+                <MaterialCommunityIcons name="heart-plus-outline" size={24} color={Colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setSaveModalVisible(true)} style={styles.headerBtn}>
+                <Text style={[styles.headerBtnText, { color: Colors.primary }]}>Save</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           
           {/* Main Builder UI */}
@@ -105,6 +133,18 @@ export const GradientBuilderModal: React.FC<GradientBuilderModalProps> = ({
           </View>
         </View>
       </View>
+
+      <FavoritePromptModal
+        visible={promptState === 'NAMING_FAVORITE'}
+        Colors={Colors}
+        promptName={promptName}
+        onChangePromptName={setPromptName}
+        favPromptTargetId={null}
+        suggestionChips={suggestionChips}
+        onDelete={() => {}}
+        onCancel={closePrompt}
+        onSave={handleConfirmFavorite}
+      />
 
       {/* SAVE MODAL */}
       <Modal visible={saveModalVisible} transparent animationType="fade">

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import { AppLogger } from '../services/AppLogger';
+import { supabase } from '../services/supabaseClient';
 import type { IFavoriteState, IQuickPreset } from '../types/dashboard.types';
 
 // Shared Storage Prefix constant
@@ -29,35 +30,62 @@ export function useFavorites() {
   const [quickPromptTargetIndex, setQuickPromptTargetIndex] = useState(-1);
   const [activeQuickPresetIndex, setActiveQuickPresetIndex] = useState<number | null>(null);
 
-  // Initialize from AsyncStorage
+  // Initialize from AsyncStorage and Cloud
   useEffect(() => {
-    // Note: getRbmPatternName(3) logic was here. To keep this hook pure,
-    // we use a generic default if none exists, or the caller can inject logic.
+    let localFavorites: IFavoriteState[] = [];
+
+    // 1. Fetch Local
     AsyncStorage.getItem(`${STORAGE_PREFIX}Favorites`).then((saved) => {
       if (saved) {
         try {
           const parsed: IFavoriteState[] = JSON.parse(saved);
           if (parsed && parsed.length > 0) {
-            let needsMigration = false;
-            const migrated = parsed.map(f => {
-              if (f.mode === 'DIY' || f.mode === 'MULTI' || f.mode === 'MULTICOLOR') {
-                needsMigration = true; return { ...f, mode: 'BUILDER' };
+            localFavorites = parsed.map(f => {
+              let nf = { ...f };
+              if (nf.mode === 'DIY' || nf.mode === 'MULTI' || nf.mode === 'MULTICOLOR') {
+                nf.mode = 'BUILDER';
               }
-              if (f.mode === 'RBM' || f.mode === 'PROGRAMS') {
-                // Silently migrate retired PROGRAMS/RBM favorites to PATTERN (v2.8.0)
-                needsMigration = true; return { ...f, mode: 'PATTERN', patternId: Math.min(f.patternId ?? 1, 28) };
+              if (nf.mode === 'RBM' || nf.mode === 'PROGRAMS') {
+                nf.mode = 'PATTERN';
+                nf.patternId = Math.min(nf.patternId ?? 1, 28);
               }
-              return f;
+              return nf;
             });
-            if (needsMigration) {
-              AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(migrated));
-            }
-            setFavorites(migrated);
-          } else {
-            setFavorites([]);
+            setFavorites(localFavorites);
           }
         } catch (e) { AppLogger.warn('[Favorites] Failed to parse saved favorites', { error: String(e) }); }
       }
+    }).finally(() => {
+      // 2. Fetch Cloud and merge
+      supabase.auth.getUser().then(async ({ data: userData }) => {
+        if (!userData?.user) return;
+        try {
+          const { data, error } = await supabase
+            .from('user_saved_presets')
+            .select('*')
+            .eq('user_id', userData.user.id)
+            .eq('fill_mode', 'FAVORITE');
+
+          if (!error && data) {
+            const cloudFavs = (data as any[]).map(d => ({
+              id: d.id,
+              name: d.name,
+              ...(typeof d.nodes === 'string' ? JSON.parse(d.nodes) : d.nodes)
+            })) as IFavoriteState[];
+
+            // Merge local and cloud (cloud wins on ID collision)
+            const mergedMap = new Map<string, IFavoriteState>();
+            localFavorites.forEach(f => mergedMap.set(f.id, f));
+            cloudFavs.forEach(f => mergedMap.set(f.id, f));
+            
+            const finalFavs = Array.from(mergedMap.values());
+            setFavorites(finalFavs);
+            await AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(finalFavs));
+          }
+        } catch (err) {
+          AppLogger.warn('[Favorites] Failed to fetch cloud favorites', { error: String(err) });
+        }
+      });
     });
 
     AsyncStorage.getItem(`${STORAGE_PREFIX}QuickPresets`).then((saved) => {
@@ -90,8 +118,9 @@ export function useFavorites() {
   }, []);
 
   const saveFavorite = useCallback(async (capturedState: Partial<IFavoriteState>, name: string) => {
+    const id = favPromptTargetId || `fav_${Date.now()}_${Math.random().toString(36).substring(2,9)}`;
     const newFav = {
-      id: favPromptTargetId || Date.now().toString(),
+      id,
       name,
       ...capturedState
     } as IFavoriteState;
@@ -103,8 +132,30 @@ export function useFavorites() {
       newFavorites = [...favorites, newFav];
     }
 
+    // 1. Save Local
     setFavorites(newFavorites);
     await AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(newFavorites));
+    
+    // 2. Save Cloud
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Strip out id/name from capturedState so we just store the pure payload in nodes
+        const { id: _id, name: _name, ...payload } = newFav;
+        await supabase.from('user_saved_presets').upsert({
+          id,
+          user_id: user.id,
+          name,
+          fill_mode: 'FAVORITE',
+          transition_type: 0,
+          nodes: payload as any,
+          created_at: new Date().toISOString()
+        } as any);
+      }
+    } catch (err) {
+      AppLogger.warn('[Favorites] Cloud save failed', { error: String(err) });
+    }
+
     closePrompt();
   }, [favorites, favPromptTargetId, closePrompt]);
 
@@ -112,7 +163,19 @@ export function useFavorites() {
     const newFavorites = favorites.filter(f => f.id !== id);
     setFavorites(newFavorites);
     if (activeFavoriteId === id) setActiveFavoriteId(null);
+    
+    // 1. Delete Local
     await AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(newFavorites));
+    
+    // 2. Delete Cloud
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('user_saved_presets').delete().eq('id', id).eq('user_id', user.id);
+      }
+    } catch (err) {
+      AppLogger.warn('[Favorites] Cloud delete failed', { error: String(err) });
+    }
   }, [favorites, activeFavoriteId]);
 
   const saveQuickPreset = useCallback(async (index: number, preset: IQuickPreset) => {

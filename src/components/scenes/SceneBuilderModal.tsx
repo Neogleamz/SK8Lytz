@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Modal, TouchableOpacity, Text, ScrollView, SafeAreaView, TextInput } from 'react-native';
 import { useSceneBuilder, SceneStep } from '../../hooks/useSceneBuilder';
+import { useFavorites } from '../../hooks/useFavorites';
+import FavoritePromptModal from '../docked/FavoritePromptModal';
 import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
 import { SceneStepCard } from './SceneStepCard';
 import { SceneStepPicker } from './SceneStepPicker';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface SceneBuilderModalProps {
   visible: boolean;
@@ -15,6 +18,8 @@ interface SceneBuilderModalProps {
 export const SceneBuilderModal: React.FC<SceneBuilderModalProps> = ({ visible, onClose, writeToDevice }) => {
   const { Colors } = useTheme();
   const { steps, addStep, updateStep, removeStep, fireToSkates, saveScene, sceneName } = useSceneBuilder(writeToDevice);
+  const { openFavoritePrompt, saveFavorite, promptState, promptName, setPromptName, closePrompt } = useFavorites();
+  const [suggestionChips, setSuggestionChips] = useState<string[]>([]);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [sceneNameInput, setSceneNameInput] = useState(sceneName || '');
@@ -25,6 +30,22 @@ export const SceneBuilderModal: React.FC<SceneBuilderModalProps> = ({ visible, o
       setSceneNameInput(sceneName || '');
     }
   }, [visible, sceneName]);
+
+  const handleHeartClick = () => {
+    setSuggestionChips(['Custom Scene', 'Action Sequence', 'Hyperspace']);
+    openFavoritePrompt(undefined, sceneNameInput.trim() || 'Custom Scene');
+  };
+
+  const handleConfirmFavorite = () => {
+    const name = promptName.trim() || 'Custom Scene';
+    saveFavorite({
+        mode: 'SCENE',
+        speed: 50, // Scene steps have their own speeds
+        brightness: 100, 
+        sceneSteps: steps, // DockedController will need to know what to do with mode: SCENE
+    }, name);
+    closePrompt();
+  };
 
   const handleSaveScene = async () => {
     if (!sceneNameInput.trim()) return;
@@ -58,6 +79,9 @@ export const SceneBuilderModal: React.FC<SceneBuilderModalProps> = ({ visible, o
         <View style={styles.header}>
           <Text style={[styles.title, { color: Colors.text }]}>SCENE BUILDER</Text>
           <View style={styles.headerRight}>
+            <TouchableOpacity onPress={handleHeartClick} style={[styles.saveBtn, { marginRight: Spacing.lg }]}>
+              <MaterialCommunityIcons name="heart-plus-outline" size={24} color={Colors.primary} />
+            </TouchableOpacity>
             <TouchableOpacity style={styles.saveBtn} onPress={() => setSaveModalVisible(true)}>
               <Text style={{ color: '#00F0FF' }}>SAVE</Text>
             </TouchableOpacity>
@@ -103,6 +127,18 @@ export const SceneBuilderModal: React.FC<SceneBuilderModalProps> = ({ visible, o
         visible={pickerVisible}
         onClose={() => setPickerVisible(false)}
         onSelect={handleAddStep}
+      />
+
+      <FavoritePromptModal
+        visible={promptState === 'NAMING_FAVORITE'}
+        Colors={Colors}
+        promptName={promptName}
+        onChangePromptName={setPromptName}
+        favPromptTargetId={null}
+        suggestionChips={suggestionChips}
+        onDelete={() => {}}
+        onCancel={closePrompt}
+        onSave={handleConfirmFavorite}
       />
 
       <Modal visible={saveModalVisible} transparent animationType="fade">

@@ -17,6 +17,7 @@ interface FavoritePromptModalProps {
   onDelete: () => void;
   onCancel: () => void;
   onSave: () => void;
+  suggestionChips?: string[];
 }
 
 export default function FavoritePromptModal({
@@ -28,6 +29,7 @@ export default function FavoritePromptModal({
   onDelete,
   onCancel,
   onSave,
+  suggestionChips = []
 }: FavoritePromptModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -40,13 +42,33 @@ export default function FavoritePromptModal({
             {favPromptTargetId ? 'Rename your preset or delete it.' : 'Name your preset. Leave blank to use the default name.'}
           </Text>
           <TextInput
-            style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: Spacing.md, borderRadius: 8, fontSize: 16, marginBottom: Spacing.xl, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
+            style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: Spacing.md, borderRadius: 8, fontSize: 16, marginBottom: suggestionChips.length > 0 ? Spacing.sm : Spacing.xl, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
             placeholder="Custom Preset Name..."
             placeholderTextColor="rgba(255,255,255,0.3)"
             value={promptName}
             onChangeText={onChangePromptName}
             autoFocus
           />
+          {suggestionChips.length > 0 && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.xl, justifyContent: 'center' }}>
+              {suggestionChips.map(chip => (
+                <TouchableOpacity
+                  key={chip}
+                  onPress={() => onChangePromptName(chip)}
+                  style={{
+                    backgroundColor: promptName === chip ? Colors.primary : 'rgba(255,255,255,0.1)',
+                    paddingHorizontal: Spacing.md,
+                    paddingVertical: Spacing.sm,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: promptName === chip ? Colors.primary : 'rgba(255,255,255,0.2)'
+                  }}
+                >
+                  <Text style={{ color: promptName === chip ? '#000' : '#FFF', fontSize: 12, fontWeight: promptName === chip ? 'bold' : 'normal' }}>{chip}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
           <View style={{ flexDirection: 'row', gap: Spacing.md }}>
             {favPromptTargetId && (
               <TouchableOpacity style={{ flex: 1, padding: Spacing.lg, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={onDelete}>
