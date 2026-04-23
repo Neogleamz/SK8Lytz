@@ -147,51 +147,149 @@ class ScenesServiceClass {
   }
 
   /**
-   * Save a scene locally.
+   * Get all user and global saved scenes.
    */
-  async saveLocalScene(scene: Scene): Promise<boolean> {
+  async getSavedScenes(userId?: string): Promise<Scene[]> {
+    let globalScenes: Scene[] = [];
+    let userCloudScenes: Scene[] = [];
+    
+    // 1. Fetch Globals (custom_builder_presets)
     try {
-      const existing = await this.getLocalScenes();
-      const idx = existing.findIndex(s => s.id === scene.id);
-      if (idx >= 0) {
-        existing[idx] = scene;
-      } else {
-        existing.push(scene);
+      const { data, error } = await supabase
+        .from('custom_builder_presets')
+        .select('*')
+        .eq('fill_mode', 'SCENE');
+        
+      if (!error && data) {
+        globalScenes = (data as any[]).map(p => ({
+          id: p.id,
+          name: p.name,
+          steps: Array.isArray(p.nodes) ? p.nodes : [],
+          created_at: p.created_at,
+          user_id: p.user_id
+        }));
       }
-      await AsyncStorage.setItem(LOCAL_SCENES_KEY, JSON.stringify(existing));
-      return true;
+    } catch (err) {
+      console.warn('[ScenesService] Global sync fail:', err);
+    }
+
+    // 2. Fetch User Cloud (user_saved_presets)
+    if (userId) {
+      try {
+        const { data, error } = await supabase
+          .from('user_saved_presets')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('fill_mode', 'SCENE');
+          
+        if (!error && data) {
+          userCloudScenes = (data as any[]).map(p => ({
+            id: p.id,
+            name: p.name,
+            steps: Array.isArray(p.nodes) ? p.nodes : [],
+            created_at: p.created_at,
+            user_id: p.user_id
+          }));
+        }
+      } catch (err) {
+        console.warn('[ScenesService] User cloud sync fail:', err);
+      }
+    }
+
+    // 3. Read Local (only the user's private saves)
+    let localScenes: Scene[] = [];
+    try {
+      const localData = await AsyncStorage.getItem(LOCAL_SCENES_KEY);
+      if (localData) {
+        const parsed = JSON.parse(localData);
+        if (Array.isArray(parsed)) {
+          localScenes = parsed;
+        }
+      }
+    } catch (e) {
+      console.error('[ScenesService] Local read fail:', e);
+    }
+
+    // 4. Merge deduplicating by ID 
+    const mergedMap = new Map<string, Scene>();
+    localScenes.forEach(s => mergedMap.set(s.id, s));
+    userCloudScenes.forEach(s => mergedMap.set(s.id, s)); // User cloud wins over local
+    
+    // Update Local cache with merged user results
+    const finalUserSaved = Array.from(mergedMap.values());
+    try {
+      await AsyncStorage.setItem(LOCAL_SCENES_KEY, JSON.stringify(finalUserSaved));
+    } catch (e) {}
+
+    // Globals are appended to the top but NOT cached to local storage
+    return [...globalScenes, ...finalUserSaved];
+  }
+
+  /**
+   * Save a scene locally and to user_saved_presets cloud.
+   */
+  async saveScene(scene: Scene, userId?: string): Promise<boolean> {
+    // 1. Save Local
+    try {
+      const localData = await AsyncStorage.getItem(LOCAL_SCENES_KEY);
+      let userScenes: Scene[] = localData ? JSON.parse(localData) : [];
+      
+      const idx = userScenes.findIndex(s => s.id === scene.id);
+      if (idx >= 0) {
+        userScenes[idx] = scene;
+      } else {
+        userScenes.push(scene);
+      }
+      await AsyncStorage.setItem(LOCAL_SCENES_KEY, JSON.stringify(userScenes));
     } catch (e) {
       console.error('[ScenesService] saveLocalScene error:', e);
-      return false;
     }
+
+    // 2. Save Cloud (user_saved_presets)
+    if (userId) {
+      try {
+        const { error } = await supabase.from('user_saved_presets').upsert({
+          id: scene.id,
+          name: scene.name,
+          nodes: scene.steps,
+          fill_mode: 'SCENE',
+          transition_type: 0,
+          user_id: userId,
+          created_at: scene.created_at || new Date().toISOString()
+        } as any);
+        if (error) throw error;
+      } catch (err) {
+        console.warn('[ScenesService] Cloud save fail:', err);
+      }
+    }
+
+    return true;
   }
 
   /**
-   * Get all local scenes.
+   * Delete a saved scene.
    */
-  async getLocalScenes(): Promise<Scene[]> {
+  async deleteSavedScene(sceneId: string, userId?: string): Promise<boolean> {
+    // 1. Delete Local
     try {
-      const data = await AsyncStorage.getItem(LOCAL_SCENES_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch (e) {
-      console.error('[ScenesService] getLocalScenes error:', e);
-      return [];
-    }
-  }
-
-  /**
-   * Delete a local scene.
-   */
-  async deleteLocalScene(sceneId: string): Promise<boolean> {
-    try {
-      const existing = await this.getLocalScenes();
-      const filtered = existing.filter(s => s.id !== sceneId);
-      await AsyncStorage.setItem(LOCAL_SCENES_KEY, JSON.stringify(filtered));
-      return true;
+      const localData = await AsyncStorage.getItem(LOCAL_SCENES_KEY);
+      let userScenes: Scene[] = localData ? JSON.parse(localData) : [];
+      userScenes = userScenes.filter(s => s.id !== sceneId);
+      await AsyncStorage.setItem(LOCAL_SCENES_KEY, JSON.stringify(userScenes));
     } catch (e) {
       console.error('[ScenesService] deleteLocalScene error:', e);
-      return false;
     }
+
+    // 2. Delete Cloud (user_saved_presets)
+    if (userId) {
+      try {
+        await supabase.from('user_saved_presets').delete().eq('id', sceneId);
+      } catch (err) {
+        console.warn('[ScenesService] Cloud delete fail:', err);
+      }
+    }
+
+    return true;
   }
 }
 

@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { hexToRgb } from '../utils/ColorUtils';
 import { ScenesService, Scene } from '../services/ScenesService';
+import { useAuth } from './useAuth';
 
 export interface SceneStep {
   id: string;
@@ -18,6 +19,9 @@ export function useSceneBuilder(writeToDevice?: (payload: number[]) => Promise<v
   const [steps, setSteps] = useState<SceneStep[]>([]);
   const [sceneName, setSceneName] = useState<string>('New Scene');
   const [sceneId, setSceneId] = useState<string | null>(null);
+  
+  const { session } = useAuth();
+  const userId = session?.user?.id;
 
   const addStep = useCallback((step: Omit<SceneStep, 'id'>) => {
     if (steps.length >= 32) return;
@@ -67,14 +71,17 @@ export function useSceneBuilder(writeToDevice?: (payload: number[]) => Promise<v
         id: newId,
         name: nameToSave,
         steps,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        user_id: userId
       };
 
-      // 1. Save Locally
-      await ScenesService.saveLocalScene(scenePayload);
+      // 1. Save Locally and to User Cloud
+      await ScenesService.saveScene(scenePayload, userId);
 
-      // 2. Publish to Cloud
-      await ScenesService.publishScene(nameToSave, scenePayload, isPublic);
+      // 2. Publish to Community Cloud
+      if (isPublic) {
+        await ScenesService.publishScene(nameToSave, scenePayload, isPublic);
+      }
 
       setSceneId(newId);
       setSceneName(nameToSave);
@@ -83,7 +90,7 @@ export function useSceneBuilder(writeToDevice?: (payload: number[]) => Promise<v
       console.error('[useSceneBuilder] Save failed:', err);
       return false;
     }
-  }, [steps, sceneId]);
+  }, [steps, sceneId, userId]);
 
   const loadScene = useCallback((scene: Scene) => {
     setSceneId(scene.id);
