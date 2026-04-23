@@ -485,6 +485,50 @@ function generatePhase1aArray(patternId: PatternId, fg: RGB, bg: RGB, n: number,
 }
 
 
+// ─── PHASE 1B BUILDERS (PROGRAMS REVERSAL) ────────────────────────────────────
+
+// GROUP A: Static Placement
+function buildSolid(fg: RGB, numLEDs: number): RGB[] {
+  return Array(numLEDs).fill(fg);
+}
+
+function buildSplitColors(fg: RGB, bg: RGB, numLEDs: number): RGB[] {
+  const half = Math.floor(numLEDs / 2);
+  return [
+    ...Array(half).fill(fg),
+    ...Array(numLEDs - half).fill(bg),
+  ];
+}
+
+function buildTrisection(fg: RGB, bg: RGB, numLEDs: number): RGB[] {
+  const third = Math.floor(numLEDs / 3);
+  return [
+    ...Array(third).fill(fg),
+    ...Array(third).fill(bg),
+    ...Array(numLEDs - third * 2).fill(fg),
+  ];
+}
+
+function buildQuartered(fg: RGB, bg: RGB, numLEDs: number): RGB[] {
+  const quarter = Math.floor(numLEDs / 4);
+  return [
+    ...Array(quarter).fill(fg),
+    ...Array(quarter).fill(bg),
+    ...Array(quarter).fill(fg),
+    ...Array(numLEDs - quarter * 3).fill(bg),
+  ];
+}
+
+function buildCenterAccent(fg: RGB, bg: RGB, numLEDs: number): RGB[] {
+  const accentSize = Math.max(1, Math.floor(numLEDs * 0.25));
+  const sideSize = Math.floor((numLEDs - accentSize) / 2);
+  return [
+    ...Array(sideSize).fill(bg),
+    ...Array(accentSize).fill(fg),
+    ...Array(numLEDs - sideSize - accentSize).fill(bg),
+  ];
+}
+
 // ─── GENERATORS ───────────────────────────────────────────────────────────────
 
 function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number): RGB[] {
@@ -492,25 +536,11 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number): RGB[]
 
   switch (patternId) {
     // ── GROUP 1: SOLID & STATIC ──
-    case 1: // Solid
-      return Array(n).fill(fg);
-    case 2: // Split Colors
-      return arr.map((_, i) => (i < n / 2 ? fg : bg));
-    case 3: // Trisection
-      return arr.map((_, i) => {
-        const seg = Math.floor(i / (n / 3));
-        return seg === 1 ? bg : fg;
-      });
-    case 4: // Quartered
-      return arr.map((_, i) => {
-        const seg = Math.floor(i / (n / 4));
-        return seg % 2 === 0 ? fg : bg;
-      });
-    case 5: // Center Accent
-      return arr.map((_, i) => {
-        const mid = n / 2;
-        return Math.abs(i - mid) < n * 0.15 ? fg : bg;
-      });
+    case 1: return buildSolid(fg, n);
+    case 2: return buildSplitColors(fg, bg, n);
+    case 3: return buildTrisection(fg, bg, n);
+    case 4: return buildQuartered(fg, bg, n);
+    case 5: return buildCenterAccent(fg, bg, n);
 
     // ── GROUP 2: CHASES & METEORS ──
     case 6: // Single Dot Chase
