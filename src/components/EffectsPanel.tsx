@@ -2,16 +2,19 @@ import { Spacing } from '../theme/theme';
 /**
  * EffectsPanel.tsx — SK8Lytz Pro Effects Panel
  *
- * A complete, standalone Effects mode panel for the 33 built-in custom effects.
+ * A complete, standalone Effects mode panel for all SK8LYTZ_TEMPLATES.
  * Inspired by the Zengge APK's step editor (kd/t0.java).
- * Fires 0x51 payloads — NOT 0x41 Symphony (0x41 is deprecated for production use).
  *
- * Displays all 33 custom effects in a scrollable grid. Each card shows:
+ * Dispatches via PatternEngine.buildPatternPayload() → 0x59 pixel arrays.
+ * The PatternEngine generates math-synthesized pixel arrays and wraps them
+ * in the correct 0x59 opcode with transition type (FREEZE/CASCADE).
+ * Condemned opcodes (0x41, 0x42) are NEVER used here — see Master Reference §1.
+ *
+ * Displays all effects in a scrollable grid. Each card shows:
  *  - Animated LED strip preview (StripView equivalent via CustomEffectVisualizer)
  *  - Effect name + ID badge
  *  - FG/BG color capability indicators
  *
- * Fires 0x51 payload via ZenggeProtocol.setCustomMode() on selection.
  * FG/BG color pickers are conditionally shown per effect capability.
  *
  * Protocol source: com/zengge/wifi/COMM/Protocol/x.java
