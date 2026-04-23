@@ -30,9 +30,7 @@ interface ProductVisualizerProps {
   brightness?: number;
   speed?: number;
   isPoweredOn?: boolean;
-  statusText?: string;
   audioMagnitude?: number;
-  rawHexPayload?: number[];
   multiColors?: string[];
   multiTransition?: number;
   isStreetBraking?: boolean;
@@ -250,69 +248,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
         dotColor = '#111111';
         dotOpacity = Math.max(0.1, (brightness / 100) * 0.3);
       } else if (isPoweredOn) {
-        if (mode === 'CANDLE') {
-          dotColor = color;
-          const offset = (i * 0.15) % 1;
-          dotOpacity = animValue.interpolate({
-            inputRange: [0, 0.25, 0.5, 0.75, 1],
-            outputRange: [
-              (brightness / 100) * (0.6 + (Math.sin(offset * Math.PI) * 0.1)),
-              (brightness / 100) * (0.8 + (Math.cos(offset * Math.PI) * 0.2)),
-              (brightness / 100) * 0.4,
-              (brightness / 100) * 0.9,
-              (brightness / 100) * 0.6
-            ],
-          });
-        } else if (mode === 'MULTICOLOR') {
-
-          if (multiTransition === 0) { // Static
-            const segmentIdx = Math.floor(mirroredFract * multiColors.length);
-            const safeIdx = Math.min(Math.max(0, segmentIdx), multiColors.length - 1);
-            dotColor = multiColors[safeIdx];
-            dotOpacity = 1.0;
-          } else if (multiTransition === 1) { // Gradual crossfade
-            const inputR = multiColors.map((_: string, i: number) => i / Math.max(1, multiColors.length - 1));
-            if (multiColors.length === 1) {
-              dotColor = multiColors[0];
-            } else {
-              dotColor = animValue.interpolate({ inputRange: inputR, outputRange: multiColors });
-            }
-            dotOpacity = 1.0;
-          } else if (multiTransition === 2) { // Strobe
-            const segmentIdx = Math.floor(mirroredFract * multiColors.length);
-            const safeIdx = Math.min(Math.max(0, segmentIdx), multiColors.length - 1);
-            dotColor = multiColors[safeIdx];
-            dotOpacity = animValue.interpolate({ inputRange: [0, 0.49, 0.5, 0.99, 1], outputRange: [1, 1, 0.1, 0.1, 1] });
-          } else if (multiTransition === 3 || multiTransition === undefined) { // Running Water
-            // We create a shifting offset using animValue mapped from 0 to 1
-            // We calculate a virtual position for each LED based on fract and animValue offset
-            if (multiColors.length === 1) {
-              dotColor = multiColors[0];
-            } else {
-              // Create an infinite loop array wrapping
-              const doubleColors = [...multiColors, ...multiColors, ...multiColors];
-              const maxLenStr = doubleColors.length - 1;
-              const _pointsArr = Array.from({ length: maxLenStr + 1 }, (_, idx) => idx / maxLenStr);
-
-              // Fract controls spatial shift, animValue controls temporal shift
-              // We want spatial gradients that physically slide over time
-              // Since React Native Animated doesn't allow `+` easily within interpolate without creating new Animated.add nodes globally,
-              // we can simulate running water using an explicit mathematical gradient fallback
-              dotColor = animValue.interpolate({
-                inputRange: [0, 1],
-                outputRange: [
-                  multiColors[Math.min(multiColors.length - 1, Math.floor(((mirroredFract + 0) % 1) * multiColors.length))],
-                  multiColors[Math.min(multiColors.length - 1, Math.floor(((mirroredFract + 0.99) % 1) * multiColors.length))]
-                ]
-              });
-            }
-            // To simulate running water properly, we use native opacity fading mimicking waves
-            dotOpacity = animValue.interpolate({
-              inputRange: [0, Math.max(0, mirroredFract - 0.2), mirroredFract, Math.min(1, mirroredFract + 0.2), 1],
-              outputRange: [0.2, 0.2, 1, 0.2, 0.2]
-            });
-          }
-        } else if (mode === 'FAVORITES') {
+        if (mode === 'FAVORITES') {
           const rainbowColors = [0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6, 1].map(v => HSLToHex((v - mirroredFract + 1) % 1 * 360, 100, 50));
           dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
         } else if (mode === 'PROGRAMS') {
@@ -647,105 +583,23 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
     </TouchableOpacity>
   );
 });
-const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, statusText: _statusText, audioMagnitude = 0, rawHexPayload, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1 }: ProductVisualizerProps) => {
+
+const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 0x00, builderDirection = 1 }: ProductVisualizerProps) => {
   const { isDark } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
-
-  // VISUALIZER PROTOCOL SYNCHRONIZATION ENGINE
-  // Derive 1:1 hardware simulation states natively out of raw Bluetooth Payload Hex
-  let simMode = mode;
-  let simPatternId = patternId;
-  let simSpeed = speed;
-  let simBrightness = brightness;
-  let simColor = color;
-  let simAudioMag = audioMagnitude;
-  let simMultiColors: string[] = multiColors || [];
-  let simMultiTransition = multiTransition || 0;
-
-  const activeDevice = devices && devices.length > 0 ? devices[0] : null;
-  const hwSorting = (activeDevice as any)?.sorting || 'GRB';
-
-  const applySorting = (rBytes: number, gBytes: number, bBytes: number) => {
-    const order = hwSorting.toUpperCase();
-    let shiftR = rBytes, shiftG = gBytes, shiftB = bBytes;
-    if (order === 'GRB') { shiftR = gBytes; shiftG = rBytes; shiftB = bBytes; }
-    else if (order === 'GBR') { shiftR = bBytes; shiftG = rBytes; shiftB = gBytes; }
-    else if (order === 'BRG') { shiftR = gBytes; shiftG = bBytes; shiftB = rBytes; }
-    else if (order === 'BGR') { shiftR = bBytes; shiftG = gBytes; shiftB = rBytes; }
-    else if (order === 'RBG') { shiftR = rBytes; shiftG = bBytes; shiftB = gBytes; }
-    return { r: shiftR, g: shiftG, b: shiftB };
-  };
-
-  if (rawHexPayload && rawHexPayload.length > 5 && isPoweredOn) {
-    let payloadOffset = 0;
-    let op = rawHexPayload[0];
-
-    // Auto-strip Symphony V2 Protocol Wrapping (00 XX 80 00 ...)
-    if (rawHexPayload[0] === 0x00 && rawHexPayload[2] === 0x80 && rawHexPayload.length > 8) {
-      op = rawHexPayload[8];
-      payloadOffset = 8;
-    }
-
-    if (op === 0x59) {
-      simMode = mode === 'MULTICOLOR' ? 'MULTICOLOR' : mode === 'BUILDER' ? 'BUILDER' : mode === 'STREET' ? 'STREET' : 'MULTIMODE';
-      if (mode === 'MULTICOLOR') {
-        simPatternId = 1;
-
-        // BLE MTU drops payloads > 20 bytes into chunks, so rawHexPayload may literally only be the first 20 bytes.
-        // If we already have the complete array from our props Native React State, DO NOT overwrite it with a truncated hex parse!
-        if (!multiColors || multiColors.length === 0) {
-          // 0x59 format: [opcode(1), totalLen(2), R,G,B × numPixels, numPts(2), transType(1), speed(1), dir(1), checksum(1)]
-          // Pixel data: indices [3+offset .. length-7] (7 tail bytes: numPts×2, transType, speed, dir, checksum)
-          // After wrapping: header is 8 bytes so payloadOffset=8 for wrapped packets.
-          const pixelEnd = rawHexPayload.length - 7;
-          const colors = [];
-          for (let i = 3 + payloadOffset; i + 2 <= pixelEnd; i += 3) {
-            const rRaw = rawHexPayload[i] || 0;
-            const gRaw = rawHexPayload[i + 1] || 0;
-            const bRaw = rawHexPayload[i + 2] || 0;
-            const { r, g, b } = applySorting(rRaw, gRaw, bRaw);
-            colors.push(`#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`);
-          }
-          simMultiColors = colors;
-          simColor = colors[0] || color;
-        }
-      }
-      simSpeed = rawHexPayload[rawHexPayload.length - 3] || speed;
-    } else if (op === 0x42) {
-      simMode = 'PROGRAMS';
-      simPatternId = rawHexPayload[1 + payloadOffset] || patternId;
-      simSpeed = rawHexPayload[2 + payloadOffset] || speed;
-      simBrightness = rawHexPayload[3 + payloadOffset] || brightness;
-    } else if (op === 0x73) {
-      simMode = 'MUSIC';
-      simPatternId = rawHexPayload[3 + payloadOffset] || patternId;
-      simAudioMag = audioMagnitude;
-      simSpeed = rawHexPayload[11 + payloadOffset] || speed;
-      simBrightness = rawHexPayload[12 + payloadOffset] || brightness;
-      const rRaw = rawHexPayload[4 + payloadOffset] || 0, gRaw = rawHexPayload[5 + payloadOffset] || 0, bRaw = rawHexPayload[6 + payloadOffset] || 0;
-      const { r, g, b } = applySorting(rRaw, gRaw, bRaw);
-      simColor = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-    } else if (op === 0x39 && rawHexPayload[1 + payloadOffset] === 0xD1) {
-      simMode = 'CANDLE';
-      simPatternId = 1;
-      const rRaw = rawHexPayload[2 + payloadOffset] || 0, gRaw = rawHexPayload[3 + payloadOffset] || 0, bRaw = rawHexPayload[4 + payloadOffset] || 0;
-      const { r, g, b } = applySorting(rRaw, gRaw, bRaw);
-      simColor = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-      simBrightness = rawHexPayload[6 + payloadOffset] || 100;
-      // Candle Amplitude stored at index 7 controls visualizer flicker speed natively
-      const candleAmp = rawHexPayload[7 + payloadOffset] || 2;
-      simSpeed = candleAmp === 1 ? -9 : (candleAmp === 2 ? 40 : 100);
-    }
-  }
 
   useEffect(() => {
     animValue.stopAnimation();
 
-    if (isPoweredOn && (simMode === 'BUILDER' || simMode === 'STREET' || simMode === 'MULTICOLOR' || simMode === 'FAVORITES' || simMode === 'PROGRAMS' || simMode === 'MUSIC' || simMode === 'MULTIMODE' || simMode === 'CANDLE')) {
+    if (isPoweredOn && (mode === 'BUILDER' || mode === 'STREET' || mode === 'FAVORITES' || mode === 'PROGRAMS' || mode === 'MUSIC' || mode === 'MULTIMODE')) {
       animValue.setValue(0);
-      const baseDuration = (simMode === 'MUSIC') ? 800 : (simMode === 'PROGRAMS' ? 2000 : (simMode === 'MULTICOLOR' || simMode === 'BUILDER' ? (simMultiTransition === 2 || builderTransitionType === 3 ? 350 : 1500) : (simMode === 'MULTIMODE' ? 1500 : (simMode === 'CANDLE' ? 400 : (simMode === 'STREET' ? 1400 : 3000)))));
-      // Speed 0 = 5x slower, Speed 100 = 0.4x faster
-      const duration = baseDuration / (0.4 + (simSpeed / 100) * 2.1);
+      const baseDuration =
+        mode === 'MUSIC'    ? 800  :
+        mode === 'PROGRAMS' ? 2000 :
+        mode === 'BUILDER'  ? (builderTransitionType === 0x02 ? 350 : 1500) :
+        mode === 'MULTIMODE'? 1500 :
+        mode === 'STREET'   ? 1400 : 3000;
+      const duration = baseDuration / (0.4 + (speed / 100) * 2.1);
 
       Animated.loop(
         Animated.timing(animValue, {
@@ -757,7 +611,7 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
     } else {
       animValue.setValue(1);
     }
-  }, [product, simMode, simColor, simPatternId, simSpeed, isPoweredOn, rawHexPayload, JSON.stringify(simMultiColors), simMultiTransition]);
+  }, [product, mode, color, patternId, speed, isPoweredOn, JSON.stringify(multiColors), multiTransition, builderTransitionType]);
 
   // Fallback if no specific devices array is provided: construct one or two devices based on isPaired flag
   const renderDevices = (devices && devices.length > 0) ? devices : (
@@ -773,20 +627,20 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
           <VisualizerUnit
             key={dev.id || index.toString()}
             device={dev}
-            color={simColor}
-            mode={simMode}
-            patternId={simPatternId}
+            color={color}
+            mode={mode}
+            patternId={patternId}
             animValue={animValue}
             fallbackProduct={product}
             fallbackPoints={points}
             fixedFgColor={fixedFgColor}
             fixedBgColor={fixedBgColor}
             onLongPress={onLongPressDevice}
-            brightness={simBrightness}
+            brightness={brightness}
             isPoweredOn={isPoweredOn}
-            audioMagnitude={simAudioMag}
-            multiColors={simMultiColors}
-            multiTransition={simMultiTransition}
+            audioMagnitude={audioMagnitude}
+            multiColors={multiColors || []}
+            multiTransition={multiTransition || 0}
             isStreetBraking={isStreetBraking}
             streetCruiseColor={streetCruiseColor}
             motionState={motionState}
@@ -824,44 +678,7 @@ const styles = StyleSheet.create({
     // RAILZ: dual vertical strips — wider canvas to hold two separated rails
     width: 80, height: 120,
   },
-  ledDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 1,
-        shadowRadius: 24,
-      },
-      android: {
-        elevation: 12,
-      },
-      web: {
-        // @ts-ignore
-        boxShadow: '0px 0px 24px rgba(255, 255, 255, 0.8)'
-      }
-    })
-  },
-  ledDotSmall: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 1,
-        shadowRadius: 18,
-      },
-      android: {
-        elevation: 10,
-      },
-      web: {
-        // @ts-ignore
-        boxShadow: '0px 0px 18px rgba(255, 255, 255, 0.8)'
-      }
-    })
-  }
+
 });
 
 export default React.memo(ProductVisualizer);
