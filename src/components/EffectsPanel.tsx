@@ -30,8 +30,9 @@ import {
     Text, TouchableOpacity,
     View,
 } from 'react-native';
-import { SK8LYTZ_TEMPLATES, startPatternAnimation, stopPatternAnimation } from '../protocols/PatternEngine';
+import { SK8LYTZ_TEMPLATES } from '../protocols/PatternEngine';
 import { useTheme } from '../context/ThemeContext';
+import { buildPatternPayload } from '../protocols/PatternEngine';
 import CustomEffectVisualizer from './CustomEffectVisualizer';
 
 // ─── Effect default BG colours (from kd/t0.java line 142) ────────────────────
@@ -247,16 +248,13 @@ const EffectsPanel: React.FC<EffectsPanelProps> = ({
     if (!writeToDevice) return;
     const fgRgb = hexToRgb(fg);
     const bgRgb = hexToRgb(bg);
-    startPatternAnimation(
+    const payload = buildPatternPayload(
       effectId, fgRgb, bgRgb, devicePoints,
-      Math.max(1, Math.min(100, Math.round(spd))), 1,
-      (payload) => { writeToDevice(payload); }
+      Math.max(1, Math.min(100, Math.round(spd))), 1
     );
+    if (payload) writeToDevice(payload);
     onStateChange?.(effectId, fg, bg);
   }, [writeToDevice, onStateChange, devicePoints]);
-
-  // Cleanup pump when component unmounts
-  useEffect(() => () => { stopPatternAnimation(); }, []);
 
   // ── Effect selection handler ───────────────────────────────────────────────
   const handleSelectEffect = useCallback((effectId: number) => {

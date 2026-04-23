@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { BuilderNode } from '../../protocols/PositionalMathBuffer';
-import { startPatternAnimation, stopPatternAnimation } from '../../protocols/PatternEngine';
+import { buildPatternPayload } from '../../protocols/PatternEngine';
 import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
 import { hexToRgb } from '../../utils/ColorUtils';
@@ -56,16 +56,13 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
     if (!writeToDevice) return;
     const fgRgb = hexToRgb(fg);
     const bgRgb = hexToRgb(bg);
-    startPatternAnimation(
+    const payload = buildPatternPayload(
       effectId, fgRgb, bgRgb, devicePoints,
-      Math.max(1, Math.min(100, Math.round(spd))), 1,
-      (payload) => { writeToDevice(payload); }
+      Math.max(1, Math.min(100, Math.round(spd))), 1
     );
+    if (payload) writeToDevice(payload);
     onStateChange?.(effectId);
   }, [writeToDevice, onStateChange, devicePoints]);
-
-  // Cleanup pump when component unmounts
-  useEffect(() => () => { stopPatternAnimation(); }, []);
 
   const handleSelectPattern = useCallback((effectId: number) => {
     setSelectedEffectId(effectId);
