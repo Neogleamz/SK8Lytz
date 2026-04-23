@@ -243,7 +243,7 @@ function hsvToRgb(h: number, s: number, v: number): RGB {
   return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
 }
 
-// ─── GE.* PHASE 1A BUILDERS ───────────────────────────────────────────────────
+// ─── GROUP 7 BUILDERS (ge.* HARDWARE-NATIVE EFFECTS) ────────────────────────────
 
 function buildColorFlow(numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
   const phaseOffset = direction === 0 ? tick : 1 - tick;
@@ -606,7 +606,7 @@ function buildHyperspace(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[]
 
 
 
-// ─── PHASE 1B BUILDERS (PROGRAMS REVERSAL) ────────────────────────────────────
+// ─── GROUP 1–6 BUILDERS ──────────────────────────────────────────────────────────
 
 // GROUP A: Static Placement
 function buildSolid(fg: RGB, numLEDs: number): RGB[] {
@@ -1005,26 +1005,11 @@ export function getVisualizerFrame(
 
   const generated = generateArray(patternId, fg, bg, n, animTick, direction);
 
-  // Group 1 (Static) does not scroll
-  if (patternId >= 1 && patternId <= 5) return generated;
-
-  // Group 2 (Chases) uses its own mathematical tick rotation
-  if (patternId >= 6 && patternId <= 9) return generated;
-
-  // Group 3 (Marquees) uses internal tick offset (Except Bold Stripes which is static)
-  if (patternId >= 10 && patternId <= 13) return generated;
-
-  // Group 4 (Math Waves) uses internal tick offset for 15, 16, 17, 18, 19
-  if (patternId >= 15 && patternId <= 19) return generated;
-
-  // Group 5 & 6 (Temporal & Generative) all use internal tick offset!
-  if (patternId >= 20 && patternId <= 28) return generated;
-
-  // Group 7 (ge.*) — all 33 builders handle tick internally. No external rotation needed.
-  if (patternId >= 29 && patternId <= 61) return generated;
-
-  // All other groups scroll natively
-  return rotateArray(generated, animTick);
+  // All 61 builders manage their own tick-based animation internally.
+  // Exception: ID 14 (Bold Stripes) is a static array; hardware scrolls it via 0x02 Running.
+  // rotateArray simulates that scroll in the visualizer to maintain parity.
+  if (patternId === 14) return rotateArray(generated, animTick);
+  return generated;
 }
 
 /**
