@@ -763,11 +763,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 speed={speed}
                 hwSettings={hwSettings}
                 points={points}
+                fgColor={fixedFgColor}
+                bgColor={fixedBgColor}
                 writeToDevice={writeToDevice}
-                onStateChange={(id, fg, bg) => {
+                onStateChange={(id) => {
                   setFixedPatternId(id);
-                  setFixedFgColor(fg);
-                  setFixedBgColor(bg);
                 }}
               />
             )}

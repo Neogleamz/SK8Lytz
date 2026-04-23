@@ -17,21 +17,24 @@ interface UnifiedPatternPickerProps {
   segments?: number;
   speed: number;
   hwSettings?: any;
-  onStateChange?: (id: number, fg: string, bg: string) => void;
+  /** FG color — owned by DockedController via fixedFgColor. Do NOT shadow with local state. */
+  fgColor: string;
+  /** BG color — owned by DockedController via fixedBgColor. Do NOT shadow with local state. */
+  bgColor: string;
+  onStateChange?: (id: number) => void;
 }
 
 export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
-  writeToDevice, points = 16, segments = 1, speed, hwSettings, onStateChange
+  writeToDevice, points = 16, segments = 1, speed, hwSettings, onStateChange,
+  fgColor, bgColor,
 }) => {
   const { Colors } = useTheme();
   
   const [activeTab, setActiveTab] = useState<'PATTERNS' | 'BUILDER' | 'SCENES'>('PATTERNS');
   const [sceneBuilderVisible, setSceneBuilderVisible] = useState(false);
 
-  // Shared state for PATTERNS
+  // Shared state for PATTERNS (fgColor/bgColor are PROPS — owned by DockedController)
   const [selectedEffectId, setSelectedEffectId] = useState<number>(1);
-  const [fgColor, setFgColor] = useState<string>('#00FFFF');
-  const [bgColor, setBgColor] = useState<string>('#000000');
   
   // Shared state for BUILDER
   const [builderNodes, setBuilderNodes] = useState<BuilderNode[]>([
@@ -56,7 +59,7 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
       color2: bgRgb,
     }]);
     writeToDevice(payload);
-    onStateChange?.(effectId, fg, bg);
+    onStateChange?.(effectId);
   }, [writeToDevice, onStateChange]);
 
   const handleSelectPattern = useCallback((effectId: number) => {
