@@ -26,8 +26,6 @@
  *     Visualizer: getVisualizerFrame() (ProductVisualizer.tsx + CustomEffectVisualizer.tsx)
  *
  *   Known gaps (logged as tech debt for BATCH:P1):
- *     TODO[BATCH:P1]: ProductVisualizer PROGRAMS branch (line ~343) passes hardcoded red fg/bg
- *       to getVisualizerFrame — user-selected colors are ignored in that branch.
  *     TODO[BATCH:P1]: getPatternTransitionType returns only 0x01 or 0x00. Groups 3/4 may
  *       benefit from 0x01 (Gradual) for smoother hardware animation.
  */

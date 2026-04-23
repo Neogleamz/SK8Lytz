@@ -710,7 +710,7 @@ All FSM states and shared interfaces live in **`src/types/dashboard.types.ts`**.
 
 | Type                  | Values                                                                        |
 | :-------------------- | :---------------------------------------------------------------------------- |
-| `ModeType`            | `'FAVORITES' \| 'MULTIMODE' \| 'PROGRAMS' \| 'MUSIC' \| 'STREET' \| 'CAMERA'` |
+| `ModeType`            | `'FAVORITES' \| 'FIXED' \| 'MULTIMODE' \| 'MUSIC' \| 'STREET' \| 'CAMERA'` |
 | `FixedSubMode`        | `'PATTERN' \| 'BUILDER'`                                                      |
 | `MicSource`           | `'APP' \| 'DEVICE'`                                                           |
 | `MusicColorFocus`     | `'PRIMARY' \| 'SECONDARY'`                                                    |
