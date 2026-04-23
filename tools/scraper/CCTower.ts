@@ -140,16 +140,11 @@ app.get('/status', async (req, res) => {
       .select('*', { count: 'exact', head: true })
       .not('last_attempted_at', 'is', null);
 
-    const { count: totalEnriched } = await supabase
+    const { count: publishedCount } = await supabase
       .from('skate_spots')
       .select('*', { count: 'exact', head: true })
-      .in('verification_status', ['ENRICHED', 'VERIFIED']);
+      .eq('is_published', true);
 
-    const { count: totalVerified } = await supabase
-      .from('skate_spots')
-      .select('*', { count: 'exact', head: true })
-      .eq('verification_status', 'VERIFIED');
-      
     const { count: pendingCount } = await supabase
       .from('skate_spots')
       .select('*', { count: 'exact', head: true })
@@ -193,7 +188,7 @@ app.get('/status', async (req, res) => {
       enrichedCount: enrichedCount || 0,
       mediaReadyCount: mediaReadyCount || 0,
       candidatesReadyCount: candidatesCount || 0,
-      verifiedCount: totalVerified || 0,
+      publishedCount: publishedCount || 0,
       
       // New Micro-Scraper Metrics
       pendingCount: pendingCount || 0,
@@ -728,15 +723,15 @@ app.get('/api/stats/coverage', async (req, res) => {
     if (error) {
       const { data: rawData, error: rawError } = await supabase
         .from('skate_spots')
-        .select('state, verification_status')
+        .select('state, verification_status, is_published')
         .then(result => {
            if (result.error) return result;
            const stats: Record<string, any> = {};
            result.data.forEach((row: any) => {
-             if (!stats[row.state]) stats[row.state] = { state: row.state, total: 0, enriched: 0, verified: 0 };
+             if (!stats[row.state]) stats[row.state] = { state: row.state, total: 0, enriched: 0, published: 0 };
              stats[row.state].total++;
              if (row.verification_status === 'ENRICHED') stats[row.state].enriched++;
-             if (row.verification_status === 'VERIFIED') stats[row.state].verified++;
+             if (row.is_published === true) stats[row.state].published++;
            });
            return { data: Object.values(stats).sort((a: any,b: any) => b.total - a.total), error: null };
         });

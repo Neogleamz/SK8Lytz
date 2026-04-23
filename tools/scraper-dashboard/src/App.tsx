@@ -243,7 +243,7 @@ function App() {
          }
       }
     } catch {
-      setStatus({ isRunning: false, currentTarget: 'API OFFLINE', processedCount: 0, enrichedCount: 0, verifiedCount: 0, errorCount: 0, lastError: 'Could not connect.' });
+      setStatus({ isRunning: false, currentTarget: 'API OFFLINE', processedCount: 0, enrichedCount: 0, publishedCount: 0, errorCount: 0, lastError: 'Could not connect.' });
     }
   };
 
@@ -573,6 +573,7 @@ function App() {
       });
       fetchSpots(page, gridFilter);
       fetchDatabankCoverage();
+      fetchPipelineStatsRef.current();
     } catch (e) {}
   };
 
@@ -583,6 +584,7 @@ function App() {
       alert('Bulk promotion complete!');
       fetchSpots(page, gridFilter);
       fetchDatabankCoverage();
+      fetchPipelineStatsRef.current();
     } catch (e) {}
   };
 
@@ -595,6 +597,7 @@ function App() {
       alert(` Published ${data.promoted ?? 0} records in ${state}!`);
       fetchSpots(page, gridFilter);
       fetchDatabankCoverage();
+      fetchPipelineStatsRef.current();
     } catch (e) {}
   };
 
@@ -607,6 +610,7 @@ function App() {
       alert(`Retracted ${data.unpublished ?? 0} records in ${state}.`);
       fetchSpots(page, gridFilter);
       fetchDatabankCoverage();
+      fetchPipelineStatsRef.current();
     } catch (e) {}
   };
 
@@ -625,7 +629,7 @@ function App() {
       statusActive: status?.currentTarget?.includes('Photographer: online') },
     { id: '4', title: 'Publisher', sub: 'QA Review + Live App Gate', route: 'phase6', color: '#4caf50',
       target: 'Review -> is_published',
-      metric: status?.verifiedCount || 0, metricLabel: 'Live on App', isDaemon: false,
+      metric: status?.publishedCount || 0, metricLabel: 'Live on App', isDaemon: false,
       statusActive: true },
   ];
 
