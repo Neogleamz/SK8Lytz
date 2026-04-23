@@ -29,7 +29,7 @@ const StreetModeDistributionSlider: React.FC<StreetModeDistributionSliderProps> 
   const [t1Pos, setT1Pos] = useState(thumb1Ref.current);
   const [t2Pos, setT2Pos] = useState(thumb2Ref.current);
 
-  const panResponder1 = useMemo() => PanResponder.create({
+  const panResponder1 = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: () => {},
@@ -50,7 +50,7 @@ const StreetModeDistributionSlider: React.FC<StreetModeDistributionSliderProps> 
     },
   }), [width, t2Pos, onChange]);
 
-  const panResponder2 = useMemo() => PanResponder.create({
+  const panResponder2 = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: () => {},

@@ -3,7 +3,7 @@ import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 're
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { useTheme } from '../context/ThemeContext';
 import type { PatternId, RGB } from '../protocols/PatternEngine';
-import { getVisualizerFrame, getMusicVisualizerFrame } from '../protocols/PatternEngine';
+import { getVisualizerFrame, getMusicVisualizerFrame, SK8LYTZ_TEMPLATES } from '../protocols/PatternEngine';
 import { PositionalMathBuffer } from '../protocols/PositionalMathBuffer';
 import { Spacing } from '../theme/theme';
 
@@ -41,6 +41,7 @@ interface ProductVisualizerProps {
   builderTransitionType?: number;
   builderDirection?: number;
   fixedDirection?: number;
+  streetDistribution?: [number, number, number];
 }
 
 // Convert HSL to Hex manually as React Native Interpolate handles strict string maps better
@@ -67,7 +68,7 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1, fixedDirection = 1 }: any) => {
+const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1, fixedDirection = 1, streetDistribution = [0.3, 0.4, 0.3] }: any) => {
   const { isDark } = useTheme();
   const product = String(device.type || fallbackProduct);
 
@@ -116,7 +117,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           angle = (Math.PI / 2) - fraction * Math.PI;
         } else {
           const fraction = (i - half) / Math.max(1, (numSamples - half) - 1);
-          angle = -(Math.PI / 2) - fraction * Math.PI;
+          angle = (Math.PI / 2) + fraction * Math.PI; // Bottom to Top (physical mirror fix)
         }
         const n = 4;
         const power = 2 / n;
@@ -224,7 +225,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
       const activeSegmentLeds = renderLeds / 2;
       
       // Raw smooth path interval
-      const rawFract = (segmentI / activeSegmentLeds);
+      let rawFract = (segmentI / activeSegmentLeds); if (vizShape === 'RING' && i >= renderLeds / 2) { rawFract = 1 - rawFract - 0.0001; }
 
       // QUANTIZATION: Forces the perfectly smooth line to illuminate in exactly 16 discrete hardware blocks!
       // Instead of lighting sliding across the shape fluidly, it snaps instantly inside the boundaries of the physical LED chip.
@@ -304,7 +305,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           
           // PatternEngine handles its own segment mirroring math for visualizer
           const template = SK8LYTZ_TEMPLATES.find(t => t.id === pid);
-          const applySymmetry = template?.supportsSegment && deviceSegments > 1 && productProfile.isMirrored;
+          const isStreetMode = pid >= 101 && pid <= 105; const applySymmetry = template?.supportsSegment && deviceSegments > 1 && productProfile.vizIsMirrored && !isStreetMode;
           
           let pSlot0 = slot0;
           if (applySymmetry) {
@@ -510,7 +511,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
   );
 });
 
-const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 0x01, builderDirection = 1, fixedDirection = 1 }: ProductVisualizerProps) => {
+const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 0x01, builderDirection = 1, fixedDirection = 1, streetDistribution = [0.3, 0.4, 0.3] }: ProductVisualizerProps) => {
   const { isDark } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
 
@@ -574,6 +575,7 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
             builderTransitionType={builderTransitionType}
             builderDirection={builderDirection}
             fixedDirection={fixedDirection}
+            streetDistribution={streetDistribution}
           />
         ))}
       </View>

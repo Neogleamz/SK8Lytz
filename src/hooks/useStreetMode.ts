@@ -154,7 +154,7 @@ export function useStreetMode({
     
     // We only pass pts/segments as activeSegmentLeds. buildPatternPayload will automatically duplicate/mirror 
     // the payload across the segments based on the options.segments value.
-    const activeSegmentLeds = Math.max(1, Math.floor(pts / segments));
+    const activeSegmentLeds = pts;
     const payload = buildPatternPayload(
       pid,
       fgRgb,
