@@ -251,57 +251,6 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
         if (mode === 'FAVORITES') {
           const rainbowColors = [0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6, 1].map(v => HSLToHex((v - mirroredFract + 1) % 1 * 360, 100, 50));
           dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
-        } else if (mode === 'PROGRAMS') {
-          const pid = patternId || 1;
-
-          if (pid === 100) {
-            // ── Emergency pattern: 3-zone layout (custom SK8Lytz protocol) ──
-            // Zone 0–20%: Red (heel zone)
-            // Zone 20–80%: Bouncing yellow dot in middle
-            // Zone 80–100%: White (toe zone)
-            if (mirroredFract > 0.8) {
-              dotColor = '#FFFFFF'; dotOpacity = 1.0;
-            } else if (mirroredFract < 0.2) {
-              dotColor = '#FF0000'; dotOpacity = 1.0;
-            } else {
-              const target = (mirroredFract - 0.2) / 0.6;
-              const t1 = (1 + target) / 2;
-              const t2 = (1 - target) / 2;
-              const rawInputs = [0, Math.max(0, t2 - 0.08), t2, Math.min(1, t2 + 0.08), Math.max(0, t1 - 0.08), t1, Math.min(1, t1 + 0.08), 1].sort((a, b) => a - b);
-              const safeInputs = [rawInputs[0]];
-              for (let k = 1; k < rawInputs.length; k++) {
-                if (rawInputs[k] > safeInputs[safeInputs.length - 1] + 0.001) safeInputs.push(rawInputs[k]);
-              }
-              dotOpacity = animValue.interpolate({ inputRange: safeInputs, outputRange: safeInputs.map(v => (Math.abs(v - t2) < 0.005 || Math.abs(v - t1) < 0.005) ? 1.0 : 0.1) });
-              dotColor = animValue.interpolate({ inputRange: safeInputs, outputRange: safeInputs.map(v => (Math.abs(v - t2) < 0.005 || Math.abs(v - t1) < 0.005) ? '#FFFF00' : '#111111') });
-            }
-          } else {
-            // ── All other RBM patterns: hardware-accurate pixel simulation ──
-            // Dynamic Mirroring: generates per-segment frame; Seg2 mirrors it reversed if flagged.
-            const rbmSegLeds = isMirrored ? Math.ceil(numLeds / 2) : numLeds;
-            // Use user-selected color (parsed from `color` prop) for fg; bg = dark contrast
-            const _fgHex = color || '#FF0000';
-            const fgRgbProg: RGB = { r: parseInt(_fgHex.slice(1,3),16)||255, g: parseInt(_fgHex.slice(3,5),16)||0, b: parseInt(_fgHex.slice(5,7),16)||0 };
-            const bgRgbProg: RGB = { r: 0, g: 0, b: 0 };
-            const rbmFrame = getVisualizerFrame(pid as PatternId, fgRgbProg, bgRgbProg, rbmSegLeds, animTick);
-            const rawLedPos = (segmentI / activeSegmentLeds) * rbmFrame.length;
-            const rSlot0Raw = Math.floor(rawLedPos) % Math.max(1, rbmFrame.length);
-            const rSlot0 = mirrorSlot(rSlot0Raw, rbmFrame.length);
-            const rSlotT = rawLedPos - Math.floor(rawLedPos);
-            const RDIFF = 0.30;
-            const rBoundary = Math.pow(Math.abs(rSlotT - 0.5) * 2, 2);
-            const rBlend = RDIFF * rBoundary;
-            const rCurr = rbmFrame[rSlot0] || rbmFrame[0] || { r: 255, g: 0, b: 0 };
-            const rAdjIdx = mirrorSlot(
-              isMirroredSeg2
-                ? Math.max(0, rSlot0Raw - 1)   // mirrored: adjacent is previous in raw
-                : (rSlot0Raw + 1) % rbmFrame.length,
-              rbmFrame.length
-            );
-            const rAdj = rbmFrame[Math.min(rbmFrame.length - 1, Math.max(0, rAdjIdx))] || rCurr;
-            dotColor = `#${Math.round(rCurr.r * (1 - rBlend) + rAdj.r * rBlend).toString(16).padStart(2, '0')}${Math.round(rCurr.g * (1 - rBlend) + rAdj.g * rBlend).toString(16).padStart(2, '0')}${Math.round(rCurr.b * (1 - rBlend) + rAdj.b * rBlend).toString(16).padStart(2, '0')}`;
-            dotOpacity = isPoweredOn ? Math.max(0.02, brightness / 100) : 0;
-          }
         } else if (mode === 'MUSIC') {
           // ── Hardware-accurate music mode simulation ──
           // Dynamic Mirroring: generates per-segment frame; Seg2 mirrors it reversed if flagged.
@@ -591,11 +540,10 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
   useEffect(() => {
     animValue.stopAnimation();
 
-    if (isPoweredOn && (mode === 'BUILDER' || mode === 'STREET' || mode === 'FAVORITES' || mode === 'PROGRAMS' || mode === 'MUSIC' || mode === 'MULTIMODE')) {
+      if (isPoweredOn && (mode === 'BUILDER' || mode === 'STREET' || mode === 'FAVORITES' || mode === 'MUSIC' || mode === 'MULTIMODE')) {
       animValue.setValue(0);
       const baseDuration =
         mode === 'MUSIC'    ? 800  :
-        mode === 'PROGRAMS' ? 2000 :
         mode === 'BUILDER'  ? (builderTransitionType === 0x02 ? 350 : 1500) :
         mode === 'MULTIMODE'? 1500 :
         mode === 'STREET'   ? 1400 : 3000;

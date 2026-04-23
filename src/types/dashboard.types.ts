@@ -113,10 +113,10 @@ export type ModeType =
   | 'FAVORITES'
   | 'FIXED'
   | 'MULTIMODE'
-  | 'PROGRAMS'
   | 'MUSIC'
   | 'STREET'
   | 'CAMERA';
+
 
 /** Sub-mode for the consolidated MultiMode / Fixed tab in DockedController. */
 export type FixedSubMode = 'PATTERN' | 'BUILDER';

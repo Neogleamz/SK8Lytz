@@ -5,7 +5,7 @@
  * Renders as a bottom sheet overlay on DashboardScreen.
  *
  * Responsibilities:
- *  - Mode switching: MultiMode, Music, Camera, Pattern (RBM), Street (Accelerometer), DIY Array
+ *  - Mode switching: MultiMode, Music, Camera, Street (Accelerometer), DIY Array
  *  - Color picker, RGB sliders, brightness & speed knobs
  *  - Pattern wheel (ArcPatternWheel / VerticalPatternDrum)
  *  - Music mic source controls (APP MIC / DEVICE MIC)
@@ -35,7 +35,6 @@ import FavoritesPanel from './docked/FavoritesPanel';
 import MusicPanel from './docked/MusicPanel';
 import FixedPanel from './docked/FixedPanel';
 import CameraPanel from './docked/CameraPanel';
-import ProgramsPanel from './docked/ProgramsPanel';
 import StreetPanel from './docked/StreetPanel';
 import FavoritePromptModal from './docked/FavoritePromptModal';
 import UniversalSlidersFooter from './docked/UniversalSlidersFooter';
@@ -44,7 +43,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Layout, Spacing, Typography } from '../theme/theme';
 
 import { SK8LYTZ_TEMPLATES } from '../constants/CustomEffects';
-import { getRbmPatternName } from '../constants/RbmPatterns';
 import { useTheme } from '../context/ThemeContext';
 import CameraTracker from './CameraTracker';
 import { UnifiedPatternPicker } from './patterns/UnifiedPatternPicker';
@@ -157,7 +155,6 @@ export type DockedControllerHandle = {
   setActiveMode: (mode: ModeType) => void;
   setBrightness: (val: number) => void;
   setSpeed: (val: number) => void;
-  handleRbmChange: (id: number) => void;
   applySpatialSegments: (segments: any[]) => void;
   replayStateToDevice: (deviceId: string) => void;
 };
@@ -352,10 +349,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       setActiveMode,
       setBrightness,
       setSpeed,
-      handleRbmChange: (id: number) => {
-        setSelectedPatternId(id);
-        if (writeToDevice) writeToDevice(ZenggeProtocol.setCustomRbm(id, speed, brightness));
-      },
       applySpatialSegments,
       replayStateToDevice: (deviceId: string) => {
         if (!lastSentPayload || lastSentPayload.length === 0) return;
@@ -457,14 +450,19 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       if (favRaw.color) setSelectedColor(favRaw.color);
 
       // Normalize legacy mode names to new taxonomy
-      const legacyMode = (favRaw.mode === 'RBM' || favRaw.mode === 'PROGRAMS') ? 'PROGRAMS'
+      // PROGRAMS/RBM → silently migrate to MULTIMODE/PATTERN (retired in v2.8.0)
+      const legacyMode = (favRaw.mode === 'RBM' || favRaw.mode === 'PROGRAMS') ? 'PATTERN'
         : (favRaw.mode === 'FAVORITES' || favRaw.mode === 'PRESETS') ? 'FAVORITES'
           : favRaw.mode;
 
-      if (legacyMode === 'PROGRAMS') {
-        setActiveMode('PROGRAMS');
-        setSelectedPatternId(favRaw.patternId ?? 0);
-        if (writeToDevice) writeToDevice(ZenggeProtocol.setCustomRbm(favRaw.patternId ?? 0, favRaw.speed, favRaw.brightness));
+      if (legacyMode === 'PATTERN' || legacyMode === 'MULTIMODE') {
+        setActiveMode('MULTIMODE');
+        setFixedSubMode('PATTERN');
+        setFixedPatternId(favRaw.patternId ?? 0);
+        setFixedColorMode(favRaw.fixedColorMode ?? 'FOREGROUND');
+        setFixedFgColor(favRaw.fixedFgColor ?? '#FF6600');
+        setFixedBgColor(favRaw.fixedBgColor ?? '#000000');
+        applyFixedPattern(favRaw.patternId ?? 0, favRaw.fixedFgColor ?? '#FF6600', favRaw.fixedBgColor ?? '#000000', favRaw.speed, favRaw.brightness);
       } else if (legacyMode === 'MUSIC') {
         setActiveMode('MUSIC');
         setMusicPatternId(favRaw.patternId ?? 0);
@@ -473,15 +471,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         setActiveMode('CAMERA');
       } else if (legacyMode === 'FAVORITES') {
         setActiveMode('FAVORITES');
-      } else if (legacyMode === 'MULTIMODE' || legacyMode === 'PATTERN') {
-        setActiveMode('MULTIMODE');
-        setFixedSubMode('PATTERN');
-        setFixedPatternId(favRaw.patternId ?? 0);
-        setFixedColorMode(favRaw.fixedColorMode ?? 'FOREGROUND');
-        setFixedFgColor(favRaw.fixedFgColor ?? '#FFFFFF');
-        setFixedBgColor(favRaw.fixedBgColor ?? '#000000');
-        applyFixedPattern(favRaw.patternId ?? 0, favRaw.fixedFgColor ?? '#FFFFFF', favRaw.fixedBgColor ?? '#000000', favRaw.speed, favRaw.brightness);
       } else if (legacyMode === 'BUILDER') {
+
         setActiveMode('MULTIMODE');
         setFixedSubMode('BUILDER');
         if (favRaw.builderNodes && favRaw.builderNodes.length > 0) {
@@ -530,28 +521,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     // CRITICAL: parentWriteToDevice MUST be in deps so this effect re-fires when BLE connects.
     // Without it, applyFixedPattern is a stale closure with parentWriteToDevice=undefined.
     const applyFixedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    useEffect(() => {
-      if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
-        if (applyFixedRef.current) clearTimeout(applyFixedRef.current);
-        applyFixedRef.current = setTimeout(() => {
-          applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness);
-        }, 50);
-      } else if (activeMode === 'PROGRAMS') {
-        if (applyFixedRef.current) clearTimeout(applyFixedRef.current);
-        applyFixedRef.current = setTimeout(() => {
-          if (selectedPatternId === 100) {
-            applyEmergencyPattern(speed, brightness);
-          } else {
-            if (parentWriteToDevice) {
-              optimisticWrite(ZenggeProtocol.setCustomRbm(selectedPatternId, speed, brightness)).catch(() => {});
-            }
-          }
-        }, 50);
-      }
-      return () => {
-        if (applyFixedRef.current) clearTimeout(applyFixedRef.current);
-      }
-    }, [fixedPatternId, fixedFgColor, fixedBgColor, selectedPatternId, speed, brightness, activeMode, fixedSubMode, parentWriteToDevice]);
+    }, [fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, activeMode, fixedSubMode, parentWriteToDevice]);
 
     // -- Curated Presets (SK8Lytz Picks) — now owned by useCuratedPicks hook --
     const { curatedPresets, picksLoading } = useCuratedPicks();
@@ -614,8 +584,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         case 'MULTIMODE':
           const fixedClr = fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
           return `MultiMode - ${getColorName(fixedClr)}`;
-        case 'PROGRAMS':
-          return `Programs - ${getRbmPatternName(selectedPatternId)}`;
         case 'MUSIC':
           const patternName = MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`;
           return `Music - ${patternName}`;
@@ -784,17 +752,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 onStateChange={(id) => {
                   setFixedPatternId(id);
                 }}
-              />
-            )}
-            {/* ── PROGRAMS MODE UI ──────────────────────────────────────────────── */}
-            {activeMode === 'PROGRAMS' && (
-              <ProgramsPanel
-                selectedPatternId={selectedPatternId}
-                setSelectedPatternId={setSelectedPatternId}
-                speed={speed}
-                brightness={brightness}
-                writeToDevice={writeToDevice}
-                applyEmergencyPattern={applyEmergencyPattern}
               />
             )}
 

@@ -1,7 +1,7 @@
 /**
  * FloatingDock.tsx — Bottom navigation dock for DockedController modes.
  *
- * Renders the 7 dock items: HOME, FAVORITES, MULTI, PROGRAMS, MUSIC, STREET, CAMERA.
+ * Renders the 6 dock items: HOME, FAVORITES, MULTI, MUSIC, STREET, CAMERA.
  *
  * Extracted from DockedController.tsx (Phase 3).
  */
@@ -15,7 +15,6 @@ const DOCK_ITEMS = [
   { id: 'HOME',      icon: 'home-outline'        },
   { id: 'FAVORITES', icon: 'cards-heart-outline'  },
   { id: 'MULTI',     icon: 'palette'              },
-  { id: 'PROGRAMS',  icon: 'animation-play'       },
   { id: 'MUSIC',     icon: 'music'                },
   { id: 'STREET',    icon: 'run-fast'             },
   { id: 'CAMERA',    icon: 'camera'               },
@@ -52,9 +51,6 @@ const FloatingDock = React.memo(({
     } else if (dockId === 'STREET') {
       onModeChange('STREET');
       onSetLastOperatingMode('STREET');
-    } else if (dockId === 'PROGRAMS') {
-      onModeChange('PROGRAMS');
-      onSetLastOperatingMode('PROGRAMS');
     } else if (dockId === 'MUSIC') {
       onModeChange('MUSIC');
       onSetLastOperatingMode('MUSIC');

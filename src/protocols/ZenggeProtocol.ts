@@ -413,6 +413,11 @@ export class ZenggeProtocol {
     return this.wrapCommand(raw);
   }
 
+  /**
+   * @deprecated Since v2.8.0 — PROGRAMS mode retired. The 0x42 opcode (RBM channel player)
+   * has been superseded by 0x59 PatternEngine. Kept for DiagnosticLab forensic use only.
+   * Do NOT call from any production UI path.
+   */
   static setCustomRbm(patternId: number, speed: number, brightness: number): number[] {
     // FIX: Clamp effectId to confirmed 0xA3 hardware range (1–100).
     // IDs >100 are outside verified range — behavior is undefined on 0xA3.

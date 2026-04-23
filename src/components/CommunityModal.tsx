@@ -24,7 +24,7 @@ interface Props {
 // --- Animated LED Strip Preview ---
 function LedStripPreview({ colors, mode }: { colors: string[], mode: string }) {
   const anim = useRef(new Animated.Value(0)).current;
-  const isAnimated = ['MULTI', 'PROGRAMS', 'MUSIC', 'MULTIMODE'].includes(mode);
+  const isAnimated = ['MULTI', 'MUSIC', 'MULTIMODE'].includes(mode);
 
   useEffect(() => {
     if (!isAnimated || colors.length === 0) return;

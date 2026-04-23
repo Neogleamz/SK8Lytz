@@ -49,7 +49,7 @@ const resolveGradientColors = (fav: IFavoriteState, glow: string): string[] => {
 /** Resolves the mode icon name for the preset. */
 const resolveModeIcon = (mode: string): string => {
   if (mode === 'MUSIC') return 'microphone-outline';
-  if (mode === 'RBM' || mode === 'PROGRAMS') return 'animation-play';
+  if (mode === 'RBM') return 'animation-play';
   if (mode === 'MULTI' || mode === 'BUILDER') return 'shape-square-plus';
   return 'speedometer';
 };

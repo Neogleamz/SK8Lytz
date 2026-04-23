@@ -43,8 +43,9 @@ export function useFavorites() {
               if (f.mode === 'DIY' || f.mode === 'MULTI' || f.mode === 'MULTICOLOR') {
                 needsMigration = true; return { ...f, mode: 'BUILDER' };
               }
-              if (f.mode === 'RBM') {
-                needsMigration = true; return { ...f, mode: 'PROGRAMS' };
+              if (f.mode === 'RBM' || f.mode === 'PROGRAMS') {
+                // Silently migrate retired PROGRAMS/RBM favorites to PATTERN (v2.8.0)
+                needsMigration = true; return { ...f, mode: 'PATTERN', patternId: Math.min(f.patternId ?? 1, 28) };
               }
               return f;
             });

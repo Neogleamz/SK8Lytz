@@ -136,7 +136,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
   return (
     <View style={[styles.sceneSlidersContainer, { marginTop: Spacing.sm, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: Spacing.sm, paddingBottom: 0, flexShrink: 0 }]}>
       {/* Color Grid wrappers */}
-      {!(activeMode === 'PROGRAMS') && (
+      {!(activeMode === 'CAMERA') && (
         <View style={{ marginBottom: Spacing.xs }}>
           {/* Dynamic Selected Color Bar */}
           {!(activeMode === 'MUSIC' || (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN')) && (() => {
@@ -291,7 +291,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
       )}
 
       {/* Hue Slider */}
-      {!(activeMode === 'PROGRAMS' || activeMode === 'CAMERA') && (
+      {!(activeMode === 'CAMERA') && (
         <View style={[styles.controlRow, { marginTop: Spacing.xs, marginBottom: Spacing.xs, flexShrink: 0, minHeight: 40 }]}>
           <NeonHueStrip
             value={activeMode === 'MUSIC' ? (musicColorFocus === 'PRIMARY' ? musicHue : musicSecondaryHue) : activeMode === 'MULTIMODE' ? fixedHue : selectedHue}
@@ -360,9 +360,6 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
               if (writeToDevice) {
                 if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
                   applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
-                } else if (activeMode === 'PROGRAMS') {
-                  if (selectedPatternId === 100) applyEmergencyPattern(speed, val);
-                  else writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, speed, val));
                 } else {
                   const factor = brtFactor(val);
                   const hex = selectedColor;
@@ -435,9 +432,6 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                     });
                     writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(val), 1, multiTransition));
                   }
-                } else if (activeMode === 'PROGRAMS') {
-                  if (selectedPatternId === 100) applyEmergencyPattern(val, brightness);
-                  else writeToDevice(ZenggeProtocol.setCustomRbm(selectedPatternId, val, brightness));
                 } else if (activeMode === 'STREET') {
                   applyStreetPattern(motionStateRef.current, brightness, val);
                 }
