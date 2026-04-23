@@ -222,7 +222,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
 
 
           {/* 9 Preset Colors Grid */}
-          {!(activeMode === 'CAMERA') && (
+          {(
             <View style={[styles.colorGrid, { paddingHorizontal: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
               {PRESET_COLORS.map((color, index) => {
                 let dynamicColor = selectedColor;

@@ -517,11 +517,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     }, [writeToDevice, handleMusicChange, applyFixedPattern, sendColor, clampSpeed, micSensitivity, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle]);
 
 
-    // --- PRO EFFECTS REACTIVITY LOGIC ---
-    // CRITICAL: parentWriteToDevice MUST be in deps so this effect re-fires when BLE connects.
-    // Without it, applyFixedPattern is a stale closure with parentWriteToDevice=undefined.
-    const applyFixedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    }, [fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, activeMode, fixedSubMode, parentWriteToDevice]);
+
 
     // -- Curated Presets (SK8Lytz Picks) — now owned by useCuratedPicks hook --
     const { curatedPresets, picksLoading } = useCuratedPicks();
@@ -873,7 +869,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               { id: 'HOME',      icon: 'home-outline'         },
               { id: 'FAVORITES', icon: 'cards-heart-outline'  },
               { id: 'MULTI',     icon: 'palette'              },
-              { id: 'PROGRAMS',  icon: 'animation-play'       },
               { id: 'MUSIC',     icon: 'music'                },
               { id: 'STREET',    icon: 'run-fast'             },
               { id: 'CAMERA',    icon: 'camera'               },
@@ -896,9 +891,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     } else if (dockItem.id === 'STREET') {
                       setActiveMode('STREET');
                       setLastOperatingMode('STREET');
-                    } else if (dockItem.id === 'PROGRAMS') {
-                      setActiveMode('PROGRAMS');
-                      setLastOperatingMode('PROGRAMS');
                     } else if (dockItem.id === 'MUSIC') {
                       setActiveMode('MUSIC');
                       setLastOperatingMode('MUSIC');
