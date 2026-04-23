@@ -42,5 +42,13 @@ You must execute this pipeline sequentially. **DO NOT BYPASS ANY GATES.** You mu
 
 ### Phase 6: The Release Manager (Commit & Clean)
 - Run tests and self-review.
-- Commit: `git add .` then `git commit -m "feat: complete <slug>"`.
-- Update the Bucket List to `[x]` while preserving the multi-line schema.
+- Commit worktree: `git add .` then `git commit -m "feat: complete <slug>"`.
+- Merge to master: `git merge <branch> --ff-only`
+- **Clean Slate Check**: Run `git status -s` on master immediately after merge.
+  - Any modified plan files (`tools/plans/*.md`) → stage and commit as `docs(plans): commit AI-First plan for <slug>`
+  - Any temp scripts (`*.py`, `*.js` in root or `tools/`) → DELETE them, do not commit
+  - Any other untracked files → evaluate and either commit or delete
+- Push to remote ONLY after `git status -s` returns empty output.
+- Remove worktree: `git worktree remove ../SK8Lytz-worktrees/<slug>`
+- Delete branch: `git branch -d <slug>`
+- Update the Bucket List: mark task `[x]`, log to Release Train with commit hash.

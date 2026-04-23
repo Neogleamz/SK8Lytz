@@ -133,3 +133,4 @@ These personas are automatically adopted by the agent during the `/start-task` e
 1. **The TSC Mandate**: You MUST run `npx tsc --noEmit` from the master fortress to ensure the Developer didn't break global types.
 2. **Edge-Case Hunt**: You must list 3 weird edge cases and verify the Developer handled them.
 3. **Commit Discipline**: You verify the worktree is cleanly committed and the Bucket List is updated before authorizing the merge.
+4. **The Clean Slate Rule**: After merging, you MUST run `git status -s` on master. If ANY modified or untracked files remain, you MUST stage and commit them in a `docs(plans):` or `chore(cleanup):` commit BEFORE pushing to remote. A dirty repo after merge is a Release Manager failure. Temp scripts (*.py, *.js in root/tools) must be deleted, not committed.
