@@ -37,7 +37,8 @@ export const SceneStepPicker: React.FC<SceneStepPickerProps> = ({ visible, onClo
                 bgColor="#000000"
                 speed={50}
                 direction={1}
-                points={16}
+                brightness={100}
+                points={3}
                 onSelect={() => onSelect(pattern.id)}
                 Colors={Colors}
               />

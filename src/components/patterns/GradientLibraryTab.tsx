@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Spacing, BorderRadius } from '../../theme/theme';
+import { Spacing } from '../../theme/theme';
 import { useGradients } from '../../hooks/useGradients';
 import { CustomBuilderPreset } from '../../protocols/PositionalMathBuffer';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -30,10 +30,16 @@ export const GradientLibraryTab: React.FC<GradientLibraryTabProps> = ({ Colors, 
   const renderGradientCard = (preset: CustomBuilderPreset) => {
     const isBuiltin = preset.id.startsWith('builtin_');
     // Sort nodes to make the preview gradient
-    const sortedNodes = [...preset.nodes].sort((a, b) => a.pos - b.pos);
+    const sortedNodes = [...preset.nodes].sort((a, b) => a.position - b.position);
+    
     // Expo LinearGradient requires at least 2 colors. If user saved 1 or 0, fallback.
-    const colors = sortedNodes.length >= 2 ? sortedNodes.map(n => n.color) : ['#333', '#666'];
-    const locations = sortedNodes.length >= 2 ? sortedNodes.map(n => n.pos) : [0, 1];
+    let colors: [string, string, ...string[]] = ['#333333', '#666666'];
+    let locations: number[] = [0, 1];
+    
+    if (sortedNodes.length >= 2) {
+       colors = sortedNodes.map(n => n.colorHex) as [string, string, ...string[]];
+       locations = sortedNodes.map(n => n.position / 100);
+    }
 
     return (
       <TouchableOpacity

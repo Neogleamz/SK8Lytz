@@ -5,7 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import PositionalGradientBuilder from '../PositionalGradientBuilder';
 import { useGradients } from '../../hooks/useGradients';
 import { BuilderNode, CustomBuilderPreset } from '../../protocols/PositionalMathBuffer';
-import { Spacing, BorderRadius } from '../../theme/theme';
+import { Spacing} from '../../theme/theme';
 
 interface GradientBuilderModalProps {
   visible: boolean;
@@ -152,8 +152,8 @@ const styles = StyleSheet.create({
   bottomSheet: {
     flex: 0.8, // ~80% of screen height
     width: '100%',
-    borderTopLeftRadius: BorderRadius.xl,
-    borderTopRightRadius: BorderRadius.xl,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -5 },
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   saveModalCard: {
     width: '100%',
     maxWidth: 340,
-    borderRadius: BorderRadius.lg,
+    : 16,
     padding: Spacing.xl,
     borderWidth: 1,
   },
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.2)',
     color: '#FFF',
     padding: Spacing.md,
-    borderRadius: BorderRadius.md,
+    : 12,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     marginBottom: Spacing.xl,
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   saveBtn: {
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    : 12,
     flexDirection: 'row',
     alignItems: 'center',
   }
