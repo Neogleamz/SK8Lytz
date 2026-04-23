@@ -1,6 +1,6 @@
 # SK8Lytz App Master Reference
 
-_Last Updated: 2026-04-22 | BATCH:PR-A/B/C shipped — protocol correctness, 0x10 session time sync, writeChunked 0x51 framing, product_id chip in HW Settings modal. DB: `product_id_confirmed_at` column added. | Source of Truth: `src/protocols/ZenggeProtocol.ts`_
+_Last Updated: 2026-04-23 | **BATCH:P2 COMPLETE** — UnifiedPatternPicker, Scene Builder (32-slot), GradientBuilder corrections, LEDStripPreview, pattern-favorites-v2 (full BUILDER state persistence). Hotfix: color-picker snap-back (stale-closure regression). Visualizer simMode engine removed. TSC clean. v2.7.0 | Source of Truth: `src/protocols/ZenggeProtocol.ts`_
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
 
@@ -405,6 +405,9 @@ The dashboard auto-connect observer watches `allDevices` for registered peripher
 > [!IMPORTANT]
 > **Math Synthesizer Refactor (2026-04-21)**: The legacy "Fixed Mode" (10 hardcoded behaviors) and firmware-dependent RBM logic have been entirely superseded by a deterministic, client-side mathematical synthesizer. All lighting visualizations and sub-protocols are now driven by 28 customizable `SK8LYTZ_TEMPLATES`.
 
+> [!NOTE]
+> **ProductVisualizer Architecture (2026-04-23)**: The legacy `simMode` Protocol Synchronization Engine (~120 lines) was removed. `ProductVisualizer` now passes props **directly** to `VisualizerUnit` with no intermediate state override layer. React state is the ground truth. The `rawHexPayload` BLE decoder, `applySorting()` color swapper, and dead `CANDLE`/`MULTICOLOR` branches were deleted. The `ledDot`/`ledDotSmall` unused StyleSheet entries were also purged. Visualizer animation now correctly fires on all `BUILDER`/`PROGRAMS`/`MUSIC`/`STREET`/`MULTIMODE` modes.
+
 _Source of Truth: `src/protocols/PatternEngine.ts` (`SK8LYTZ_TEMPLATES`), `src/utils/MusicDictionary.ts` (Music)_
 
 #### User-Facing Mode Taxonomy
@@ -482,12 +485,15 @@ _Primary command for all IC-strip patterns. Sends a per-pixel RGB array that the
 - **Minimum Payload:** 12 pixels. Payloads <10 cause **hardware memory lock glitching**.
 - **TransitionType Bytes (Hardware-Confirmed Apr 2026):**
 
-| Byte | Label | Behavior |
-|:---|:---|:---|
-| `0x00` | CASCADE | Continuous hardware scroll — use for animated patterns |
-| `0x01` | FREEZE | Pixel array locked in place — solid/static |
-| `0x02` | STROBE | Flashing segments (may not differ from FREEZE on all HW) |
-| `0x03` | Running Water | Hard jumping marquee — one-shot trigger per command. **DO NOT use for continuous animations.** |
+| Byte | HW Label | Builder Chip Name | Behavior |
+|:---|:---|:---|:---|
+| `0x00` | CASCADE | **STATIC** (freeze) | Pixel array locked in place — solid/static |
+| `0x01` | FREEZE | **FLOW** (scroll) | Continuous hardware scroll — use for animated patterns |
+| `0x02` | STROBE | **STROBE** (flash) | Flashing segments |
+| `0x03` | Running Water | **WATER** (wave) | Hard jumping marquee — one-shot trigger per command |
+
+> [!IMPORTANT]
+> Builder chip IDs (0x00–0x03) corrected 2026-04-23 to match APK-proven `PositionalGradientBuilder.tsx` output. The HW label "CASCADE" = byte `0x00` = UI chip **STATIC**. The mapping is intentional — both represent the same hardware freeze behavior. Source of truth: commit `423f45e`.
 
 - **Speed:** UI 0–100 → HW 1–31. Formula: `max(1, min(31, round(uiSpeed / 100 × 30) + 1))`. Source: APK `Protocol/n.java: ad.e.a(f, 1, 31)`.
 - **Direction:** `0x01` Forward, `0x00` Reverse.
