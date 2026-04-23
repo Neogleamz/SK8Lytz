@@ -34,7 +34,6 @@ import AnalogGauge from './docked/AnalogGauge';
 import FavoritesPanel from './docked/FavoritesPanel';
 import MusicPanel from './docked/MusicPanel';
 import FixedPanel from './docked/FixedPanel';
-import MultiModePanel from './docked/MultiModePanel';
 import CameraPanel from './docked/CameraPanel';
 import ProgramsPanel from './docked/ProgramsPanel';
 import StreetPanel from './docked/StreetPanel';
@@ -48,6 +47,7 @@ import { SK8LYTZ_TEMPLATES } from '../constants/CustomEffects';
 import { getRbmPatternName } from '../constants/RbmPatterns';
 import { useTheme } from '../context/ThemeContext';
 import CameraTracker from './CameraTracker';
+import { UnifiedPatternPicker } from './patterns/UnifiedPatternPicker';
 import CustomEffectVisualizer from './CustomEffectVisualizer';
 import NeonHueStrip from './NeonHueStrip';
 import ProductVisualizer from './ProductVisualizer';
@@ -761,30 +761,16 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             )}
 
             {activeMode === 'MULTIMODE' && (
-              <MultiModePanel
-                fixedSubMode={fixedSubMode}
-                setFixedSubMode={setFixedSubMode}
-                fixedPatternId={fixedPatternId}
-                setFixedPatternId={setFixedPatternId}
-                fixedFgColor={fixedFgColor}
-                setFixedFgColor={setFixedFgColor}
-                fixedBgColor={fixedBgColor}
-                setFixedBgColor={setFixedBgColor}
-                builderNodes={builderNodes}
-                setBuilderNodes={setBuilderNodes}
-                builderFillMode={builderFillMode}
-                setBuilderFillMode={setBuilderFillMode}
-                builderTransitionType={builderTransitionType}
-                setBuilderTransitionType={setBuilderTransitionType}
-                builderDirection={builderDirection}
-                setBuilderDirection={setBuilderDirection}
+              <UnifiedPatternPicker
                 speed={speed}
                 hwSettings={hwSettings}
                 points={points}
-                selectedColor={selectedColor}
                 writeToDevice={writeToDevice}
-                applyFixedPattern={applyFixedPattern}
-                Colors={Colors}
+                onStateChange={(id, fg, bg) => {
+                  setFixedPatternId(id);
+                  setFixedFgColor(fg);
+                  setFixedBgColor(bg);
+                }}
               />
             )}
             {/* ── PROGRAMS MODE UI ──────────────────────────────────────────────── */}

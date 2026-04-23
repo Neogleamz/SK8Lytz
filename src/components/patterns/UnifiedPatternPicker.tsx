@@ -1,0 +1,158 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SK8LYTZ_TEMPLATES } from '../../constants/CustomEffects';
+import { BuilderNode } from '../../protocols/PositionalMathBuffer';
+import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
+import { useTheme } from '../../context/ThemeContext';
+import { Spacing } from '../../theme/theme';
+import { hexToRgb } from '../../utils/ColorUtils';
+import { GradientBuilderTab } from './GradientBuilderTab';
+import { PatternPickerTab } from './PatternPickerTab';
+import { ScenePickerTab } from './ScenePickerTab';
+
+interface UnifiedPatternPickerProps {
+  writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
+  points?: number;
+  segments?: number;
+  speed: number;
+  hwSettings?: any;
+  onStateChange?: (id: number, fg: string, bg: string) => void;
+}
+
+export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
+  writeToDevice, points = 16, segments = 1, speed, hwSettings, onStateChange
+}) => {
+  const { Colors } = useTheme();
+  
+  const [activeTab, setActiveTab] = useState<'PATTERNS' | 'BUILDER' | 'SCENES'>('PATTERNS');
+
+  // Shared state for PATTERNS
+  const [selectedEffectId, setSelectedEffectId] = useState<number>(1);
+  const [fgColor, setFgColor] = useState<string>('#00FFFF');
+  const [bgColor, setBgColor] = useState<string>('#000000');
+  
+  // Shared state for BUILDER
+  const [builderNodes, setBuilderNodes] = useState<BuilderNode[]>([
+    { id: '1', position: 0, r: 255, g: 0, b: 0 },
+    { id: '2', position: 100, r: 0, g: 0, b: 255 }
+  ]);
+  const [builderFillMode, setBuilderFillMode] = useState<'GRADIENT' | 'SOLID'>('GRADIENT');
+  const [builderTransitionType, setBuilderTransitionType] = useState<number>(0);
+  const [builderDirection, setBuilderDirection] = useState<number>(1);
+
+  const devicePoints = hwSettings?.ledPoints || points || 16;
+
+  // Dispatch logic for PATTERNS tab
+  const dispatchEffect = useCallback((effectId: number, fg: string, bg: string, spd: number) => {
+    if (!writeToDevice) return;
+    const fgRgb = hexToRgb(fg);
+    const bgRgb = hexToRgb(bg);
+    const payload = ZenggeProtocol.setCustomModeCompact([{
+      mode: effectId,
+      speed: Math.max(1, Math.min(100, Math.round(spd))),
+      color1: fgRgb,
+      color2: bgRgb,
+    }]);
+    writeToDevice(payload);
+    onStateChange?.(effectId, fg, bg);
+  }, [writeToDevice, onStateChange]);
+
+  const handleSelectPattern = useCallback((effectId: number) => {
+    setSelectedEffectId(effectId);
+    dispatchEffect(effectId, fgColor, bgColor, speed);
+  }, [dispatchEffect, fgColor, bgColor, speed]);
+
+  // Sync speed changes for PATTERNS tab
+  useEffect(() => {
+    if (activeTab === 'PATTERNS' && selectedEffectId) {
+      dispatchEffect(selectedEffectId, fgColor, bgColor, speed);
+    }
+  }, [speed, activeTab, selectedEffectId, fgColor, bgColor, dispatchEffect]);
+
+  // UI helpers
+  const renderTabButton = (tab: 'PATTERNS' | 'BUILDER' | 'SCENES', label: string) => {
+    const isActive = activeTab === tab;
+    return (
+      <TouchableOpacity
+        style={[styles.tabButton, isActive && { backgroundColor: 'rgba(0,240,255,0.1)', borderColor: '#00F0FF' }]}
+        onPress={() => setActiveTab(tab)}
+      >
+        <Text style={[styles.tabText, isActive && { color: '#00F0FF' }]}>{label}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      {/* Tab Navigation */}
+      <View style={styles.tabContainer}>
+        {renderTabButton('PATTERNS', 'PATTERNS')}
+        {renderTabButton('BUILDER', 'BUILDER')}
+        {renderTabButton('SCENES', 'SCENES')}
+      </View>
+
+      {/* Tab Content */}
+      <View style={{ flex: 1 }}>
+        {activeTab === 'PATTERNS' && (
+          <PatternPickerTab
+            selectedEffectId={selectedEffectId}
+            fgColor={fgColor}
+            bgColor={bgColor}
+            speed={speed}
+            points={devicePoints}
+            onSelect={handleSelectPattern}
+            Colors={Colors}
+          />
+        )}
+        {activeTab === 'BUILDER' && (
+          <GradientBuilderTab
+            nodes={builderNodes}
+            onNodesChange={setBuilderNodes}
+            fillMode={builderFillMode}
+            onFillModeChange={setBuilderFillMode}
+            transitionType={builderTransitionType}
+            onTransitionTypeChange={setBuilderTransitionType}
+            direction={builderDirection}
+            onDirectionChange={setBuilderDirection}
+            speed={speed}
+            deviceLedCount={devicePoints}
+            selectedColor={fgColor}
+            writeToDevice={writeToDevice}
+          />
+        )}
+        {activeTab === 'SCENES' && (
+          <ScenePickerTab
+            Colors={Colors}
+            onOpenBuilder={() => {
+              // TODO: Implement in Scene Builder task
+            }}
+          />
+        )}
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  tabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.xs,
+    marginBottom: Spacing.md,
+    gap: Spacing.xs,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  tabText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+});
