@@ -7,7 +7,6 @@
  * Extracted from DockedController.tsx to isolate analytics side-effects.
  */
 import { useEffect, useRef } from 'react';
-import { getRbmPatternName } from '../constants/RbmPatterns';
 import { AppLogger } from '../services/AppLogger';
 import type { ModeType } from '../types/dashboard.types';
 
@@ -50,7 +49,7 @@ export function useControllerAnalytics({
 
   // Pattern change logger
   useEffect(() => {
-    const name = getRbmPatternName(selectedPatternId);
+    const name = `Pattern ${selectedPatternId}`;
     AppLogger.log('PATTERN_CHANGED', {
       pattern: `ID:${selectedPatternId}`,
       name,
