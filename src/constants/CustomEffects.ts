@@ -73,4 +73,13 @@ export const SK8LYTZ_TEMPLATES: CustomEffectMetadata[] = [
   { id: 50, name: "Crystal Shimmer", requiresForeground: false, requiresBackground: false, supportsSegment: true, supportsDirection: false },
   { id: 51, name: "Gradient Chase", requiresForeground: true, requiresBackground: true, supportsSegment: true, supportsDirection: true },
   { id: 52, name: "Comet Duo", requiresForeground: true, requiresBackground: true, supportsSegment: true, supportsDirection: false },
+  { id: 53, name: "Fire Flame", requiresForeground: true, requiresBackground: true, supportsSegment: true, supportsDirection: false },
+  { id: 54, name: "Cyber Glitch", requiresForeground: false, requiresBackground: false, supportsSegment: true, supportsDirection: false },
+  { id: 55, name: "Neon Pulse", requiresForeground: true, requiresBackground: true, supportsSegment: true, supportsDirection: false },
+  { id: 56, name: "Rainbow Chaser", requiresForeground: false, requiresBackground: false, supportsSegment: true, supportsDirection: true },
+  { id: 57, name: "Matrix Rain", requiresForeground: true, requiresBackground: true, supportsSegment: true, supportsDirection: true },
+  { id: 58, name: "Sparkle Fade", requiresForeground: true, requiresBackground: true, supportsSegment: true, supportsDirection: false },
+  { id: 59, name: "Dual Scan", requiresForeground: true, requiresBackground: true, supportsSegment: true, supportsDirection: false },
+  { id: 60, name: "Starlight", requiresForeground: true, requiresBackground: true, supportsSegment: true, supportsDirection: false },
+  { id: 61, name: "Hyperspace", requiresForeground: true, requiresBackground: true, supportsSegment: true, supportsDirection: false },
 ];
