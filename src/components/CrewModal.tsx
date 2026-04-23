@@ -87,10 +87,11 @@ export function CrewModal({
   const [joiningCrewId, setJoiningCrewId] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then((res: any) => {
+    supabase.auth.getUser().then(async (res: any) => {
       if (res?.data?.user) {
         setCurrentUserId(res.data.user.id);
-        setDisplayName(res.data.user.user_metadata?.display_name || '?');
+        const profile = await profileService.fetchOrCreateProfile(res.data.user);
+        setDisplayName(profile?.display_name || res.data.user.user_metadata?.display_name || 'Skater');
       }
     });
   }, []);
