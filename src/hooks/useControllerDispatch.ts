@@ -81,9 +81,10 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
         patternId,
         fgRaw,
         bgRaw,
-        numLEDs, // Ensure actual LEDs are used for the array generation
+        numLEDs,
         clampSpeed(currentSpeed ?? 50),
-        1
+        1,
+        currentBrightness ?? 100
       );
 
       if (payload) writeToDevice(payload);

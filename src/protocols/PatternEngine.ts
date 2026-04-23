@@ -1100,13 +1100,23 @@ export function buildMultiColorPayload(
   bg: RGB,
   numLEDs: number,
   speed: number,
-  direction: number = 1
+  direction: number = 1,
+  brightness: number = 100
 ): number[] | null {
   const pixels = getHardwarePixelArray(patternId, fg, bg, numLEDs);
   if (!pixels) return null;
 
+  // Bake brightness into the pixel array before sending.
+  // 0x37 global brightness is unreliable while 0x59 engine is active.
+  const brt = Math.max(0, Math.min(100, brightness)) / 100;
+  const scaledPixels = brt >= 1.0 ? pixels : pixels.map(p => ({
+    r: Math.round(p.r * brt),
+    g: Math.round(p.g * brt),
+    b: Math.round(p.b * brt),
+  }));
+
   const transitionType = getPatternTransitionType(patternId);
-  return ZenggeProtocol.setMultiColor(pixels, speed, direction, transitionType);
+  return ZenggeProtocol.setMultiColor(scaledPixels, speed, direction, transitionType);
 }
 
 /**
@@ -1119,9 +1129,10 @@ export function buildPatternPayload(
   bg: RGB,
   numLEDs: number,
   speed: number,
-  direction: number = 1
+  direction: number = 1,
+  brightness: number = 100
 ): number[] | null {
-  return buildMultiColorPayload(patternId, fg, bg, numLEDs, speed, direction);
+  return buildMultiColorPayload(patternId, fg, bg, numLEDs, speed, direction, brightness);
 }
 
 // ─── MUSIC MODE VISUALIZER ────────────────────────────────────────────────────
