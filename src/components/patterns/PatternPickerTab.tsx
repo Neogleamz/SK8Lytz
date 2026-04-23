@@ -15,7 +15,7 @@ interface PatternPickerTabProps {
   Colors: any;
 }
 
-const CATEGORIES = ['All', 'Static', 'Breathe', 'Chase', 'Marquee', 'Wave', 'Rainbow', 'Sparkle & Flash'];
+const CATEGORIES = ['All', 'Solid', 'Breathe', 'Chase', 'Marquee', 'Wave', 'Rainbow', 'Sparkle & Flash'];
 
 export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
   selectedEffectId, fgColor, bgColor, speed, points, direction, onSelect, Colors
@@ -32,11 +32,7 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
     <View style={{ flex: 1 }}>
       {/* Horizontal Category Wheel */}
       <View style={styles.wheelContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.wheelContent}
-        >
+        <View style={styles.wheelContent}>
           {CATEGORIES.map((cat) => {
             const isActive = activeCategory === cat;
             return (
@@ -54,7 +50,7 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
       </View>
 
       <ScrollView
@@ -90,20 +86,21 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
 
 const styles = StyleSheet.create({
   wheelContainer: {
-    height: 48,
     marginBottom: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   wheelContent: {
-    paddingHorizontal: Spacing.sm,
-    alignItems: 'center',
+    paddingHorizontal: Spacing.xs,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: Spacing.xs,
   },
   categoryPill: {
-    paddingHorizontal: Spacing.md,
+    flexGrow: 1,
+    flexShrink: 0,
+    flexBasis: '23%',
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     backgroundColor: 'rgba(255,255,255,0.02)',
