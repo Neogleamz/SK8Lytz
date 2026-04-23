@@ -1304,4 +1304,81 @@ export function getMusicVisualizerFrame(
   return { pixels, opacities };
 }
 
+/**
+ * Generates the full physical array for Street Mode (car light simulation).
+ * Forces perfect horizontal symmetry across the left and right segments by
+ * bypassing the hardware's sequential repeat engine and constructing a 
+ * reversed palindrome array for the entire physical LED strip.
+ */
+export function getStreetVisualizerFrame(
+  motionState: 'STOPPED' | 'CRUISING' | 'ACCELERATING' | 'HARD_BRAKING' | 'SLOWING_DOWN',
+  numLEDs: number, // hwSettings.ledPoints
+  segments: number, // hwSettings.segments
+  tick: number,
+  cruiseColor: RGB,
+  brakeColor: RGB
+): { pixels: RGB[], transType: number } {
+  // Total physical length = points * segments
+  const physicalLength = Math.max(1, numLEDs) * Math.max(1, segments); 
+  const rightSide: RGB[] = [];
 
+  // Zone breakdown per segment: 30% Tail, 40% Cruise Gap, 30% Head
+  const tailCount = Math.max(1, Math.round(numLEDs * 0.3));
+  const headCount = Math.max(1, Math.round(numLEDs * 0.3));
+  const midCount = Math.max(1, numLEDs - tailCount - headCount);
+  const headColor: RGB = { r: 255, g: 255, b: 255 }; // Warm White headlights
+  
+  let transType = 0x00; // STATIC (hardware locks array in place)
+  
+  if (motionState === 'STOPPED' || motionState === 'SLOWING_DOWN') {
+    // Solid red tail, OFF or dim amber mid
+    const tailPixels = Array(tailCount).fill(brakeColor);
+    const midColor = motionState === 'SLOWING_DOWN' 
+      ? { r: 255, g: 100, b: 0 } 
+      : { r: 0, g: 0, b: 0 };
+    const midPixels = Array(midCount).fill(midColor);
+    const headPixels = Array(headCount).fill(headColor);
+    rightSide.push(...tailPixels, ...midPixels, ...headPixels);
+    
+  } else if (motionState === 'HARD_BRAKING') {
+    // Entire segment flashes intense Red (Headlights stay white)
+    const flashColor = brakeColor;
+    const tailPixels = Array(tailCount).fill(flashColor);
+    const midPixels = Array(midCount).fill(flashColor);
+    const headPixels = Array(headCount).fill(headColor);
+    rightSide.push(...tailPixels, ...midPixels, ...headPixels);
+    transType = 0x02; // STROBE (0x02 on Zengge hardware flashes)
+    
+  } else {
+    // CRUISING or ACCELERATING
+    const dimBrake = { r: Math.round(brakeColor.r * 0.5), g: Math.round(brakeColor.g * 0.5), b: Math.round(brakeColor.b * 0.5) };
+    const tailPixels = Array(tailCount).fill(dimBrake);
+    const headPixels = Array(headCount).fill(headColor);
+    
+    // Bouncing dot in the gap using chaseTick (0 to 2)
+    const bouncePhase = tick <= 1 ? tick : 2 - tick; // 0 to 1 to 0
+    const dotPos = Math.round(bouncePhase * (midCount - 1));
+    
+    const dimCruise = { r: Math.round(cruiseColor.r * 0.2), g: Math.round(cruiseColor.g * 0.2), b: Math.round(cruiseColor.b * 0.2) };
+    const midPixels = Array.from({ length: midCount }, (_, i) => {
+      const dist = Math.abs(i - dotPos);
+      if (dist === 0) return cruiseColor;
+      if (dist === 1) return { r: Math.round(cruiseColor.r * 0.6), g: Math.round(cruiseColor.g * 0.6), b: Math.round(cruiseColor.b * 0.6) };
+      return dimCruise;
+    });
+    
+    rightSide.push(...tailPixels, ...midPixels, ...headPixels);
+  }
+  
+  // Left side is mathematically reversed to ensure symmetry
+  const leftSide = [...rightSide].reverse();
+  
+  const pixels: RGB[] = [];
+  for (let i = 0; i < segments; i++) {
+    if (i % 2 === 0) pixels.push(...rightSide);
+    else pixels.push(...leftSide);
+  }
+  
+  // Clamp to exact physical size
+  return { pixels: pixels.slice(0, physicalLength), transType };
+}
