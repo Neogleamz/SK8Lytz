@@ -7,9 +7,10 @@
  *
  * Hardware animation model:
  *   - The IC strip controller animates NATIVELY once a 0x59 or 0x51 packet is sent.
- *   - 0x59 transitionType=0x01: Hardware freezes the array statically (Group 1)
- *   - 0x59 transitionType=0x00: Hardware continuously scrolls the array (Groups 2-4, 5b, 6)
- *   - 0x51 Custom Mode        : Hardware crossfades temporal states (Group 5a)
+ *   - 0x59 commandType=0x01 (Static):  Hardware freezes the array in place (Group 1)
+ *   - 0x59 commandType=0x02 (Running): Hardware continuously scrolls the array (Groups 2-4, 5b, 6, 7)
+ *   - 0x51 Custom Mode              : Hardware crossfades temporal states (Group 5a)
+ *   APK source: StaticColorfulMode.java — commandType 1=Static,2=Running,3=Strobe,4=Jump,5=Breathe,6=Twinkly
  * 
  * ==============================================================================
  * GROUP TAXONOMY & HARDWARE DISPATCH MAP  (IDs 1–61, all routes 0x59/0x51)
@@ -18,19 +19,19 @@
  *   ┌─────────────────────────────────────────────────────────────────────┐
  *   │  PHASE 1B — Programs Reversal & SK8Lytz Originals (IDs 1–28)       │
  *   ├──────────┬──────────────────────────────┬───────────────────────────┤
- *   │ Group 1  │ Solid & Static   (IDs  1– 5) │ 0x59 type=0x01  FREEZE   │
+ *   │ Group 1  │ Solid & Static   (IDs  1– 5) │ 0x59 cmd=0x01  STATIC    │
  *   │          │  1-Solid  2-Split  3-Tri      │                           │
  *   │          │  4-Quartered  5-CenterAccent  │                           │
  *   ├──────────┼──────────────────────────────┼───────────────────────────┤
- *   │ Group 2  │ Chases & Meteors (IDs  6– 9) │ 0x59 type=0x00  CASCADE  │
+ *   │ Group 2  │ Chases & Meteors (IDs  6– 9) │ 0x59 cmd=0x02  RUNNING   │
  *   │          │  6-DotChase  7-ReflectedDot   │                           │
  *   │          │  8-CometChase  9-MeteorShower │                           │
  *   ├──────────┼──────────────────────────────┼───────────────────────────┤
- *   │ Group 3  │ Marquees & Bands (IDs 10–14) │ 0x59 type=0x00  CASCADE  │
+ *   │ Group 3  │ Marquees & Bands (IDs 10–14) │ 0x59 cmd=0x02  RUNNING   │
  *   │          │  10-MicroAnts  11-Theater     │                           │
  *   │          │  12-Dashed  13-Barber  14-Bold│                           │
  *   ├──────────┼──────────────────────────────┼───────────────────────────┤
- *   │ Group 4  │ Math Waves       (IDs 15–19) │ 0x59 type=0x00  CASCADE  │
+ *   │ Group 4  │ Math Waves       (IDs 15–19) │ 0x59 cmd=0x02  RUNNING   │
  *   │          │  15-SinePulse  16-WavePinch   │ (18/19 center-split)     │
  *   │          │  17-Breathing  18-CoOut        │                           │
  *   │          │  19-CenterOutMarquee           │                           │
@@ -39,10 +40,10 @@
  *   │          │  20-SmoothBreath 21-HardJump   │ Hardware crossfade       │
  *   │          │  22-Strobe                     │                           │
  *   ├──────────┼──────────────────────────────┼───────────────────────────┤
- *   │ Group 5b │ Wipe / Fill      (IDs 23–24) │ 0x59 type=0x00  CASCADE  │
+ *   │ Group 5b │ Wipe / Fill      (IDs 23–24) │ 0x59 cmd=0x02  RUNNING   │
  *   │          │  23-WipeFill  24-WipeCenterOut│                           │
  *   ├──────────┼──────────────────────────────┼───────────────────────────┤
- *   │ Group 6  │ Generative Rainbow(IDs 25–28)│ 0x59 type=0x00  CASCADE  │
+ *   │ Group 6  │ Generative Rainbow(IDs 25–28)│ 0x59 cmd=0x02  RUNNING   │
  *   │          │  25-RainbowFlow  26-RainbowMq │ HSV math, no FG/BG       │
  *   │          │  27-RainbowComet 28-Cyberpunk │                           │
  *   └──────────┴──────────────────────────────┴───────────────────────────┘
@@ -50,7 +51,7 @@
  *   ┌─────────────────────────────────────────────────────────────────────┐
  *   │  PHASE 1A — ge.* Java Class Reversals (IDs 29–61)                  │
  *   ├──────────┬──────────────────────────────┬───────────────────────────┤
- *   │ Group 7  │ ge.* Reversals   (IDs 29–61) │ 0x59 type=0x00  CASCADE  │
+ *   │ Group 7  │ ge.* Reversals   (IDs 29–61) │ 0x59 cmd=0x02  RUNNING   │
  *   │          │  29-ColorFlow    (ge.ColorFlowEffect)                    │
  *   │          │  30-ColorBreath  (ge.BreathEffect)                       │
  *   │          │  31-ColorJump    (ge.JumpEffect)                         │
@@ -1054,11 +1055,25 @@ export function getHardwarePixelArray(
 }
 
 /**
- * Get the 0x59 transition type for a pattern.
+ * Get the 0x59 transition (commandType) byte for a pattern.
+ *
+ * APK GROUND TRUTH — StaticColorfulMode.java (ZENGGE_DECOMPILED):
+ *   Static(1)  → 0x01 — Freeze array in place
+ *   Running(2) → 0x02 — Continuous hardware scroll (ANIMATION)
+ *   Strobe(3)  → 0x03 — Strobe flash
+ *   Jump(4)    → 0x04 — Hard jump
+ *   Breathe(5) → 0x05 — Breathe
+ *   Twinkly(6) → 0x06 — Twinkle
+ *
+ * Previous bug: was returning 0x00 for animated patterns. 0x00 is NOT a valid
+ * commandType — it maps to nothing. Hardware received undefined byte → no animation.
  */
 export function getPatternTransitionType(patternId: PatternId): number {
-  if (patternId >= 1 && patternId <= 5) return 0x01; // FREEZE (Hardware holds array in place)
-  return 0x00; // CASCADE (Continuous hardware scroll)
+  // Group 1 (IDs 1–5): Solid & Static — send once, hardware freezes it
+  if (patternId >= 1 && patternId <= 5) return 0x01; // Static
+
+  // All animated groups (2–7, IDs 6–61): Running = continuous hardware scroll
+  return 0x02; // Running
 }
 
 /**
