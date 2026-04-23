@@ -5,7 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import PositionalGradientBuilder from '../PositionalGradientBuilder';
 import { useGradients } from '../../hooks/useGradients';
 import { BuilderNode, CustomBuilderPreset } from '../../protocols/PositionalMathBuffer';
-import { Spacing} from '../../theme/theme';
+import { Spacing } from '../../theme/theme';
 
 interface GradientBuilderModalProps {
   visible: boolean;
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   saveModalCard: {
     width: '100%',
     maxWidth: 340,
-    : 16,
+    borderRadius: 16,
     padding: Spacing.xl,
     borderWidth: 1,
   },
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.2)',
     color: '#FFF',
     padding: Spacing.md,
-    : 12,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     marginBottom: Spacing.xl,
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   saveBtn: {
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
-    : 12,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
   }
