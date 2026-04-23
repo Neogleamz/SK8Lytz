@@ -16,6 +16,7 @@ interface LEDStripPreviewProps {
 
   // Animation
   speed?: number;               // 1-100
+  brightness?: number;          // 0-100
   direction?: 0 | 1;
   autoPlay?: boolean;           // default true
 
@@ -25,13 +26,10 @@ interface LEDStripPreviewProps {
   style?: ViewStyle;
 }
 
-export const LEDStripPreview = React.memo(({ patternId, fg, bg, numLEDs, speed, direction = 1, autoPlay = true, dotSize = 6, height = 16, style }: LEDStripPreviewProps) => {
+export const LEDStripPreview = React.memo(({ patternId, fg, bg, numLEDs, speed, brightness = 100, direction = 1, autoPlay = true, dotSize = 6, height = 16, style }: LEDStripPreviewProps) => {
   const [frame, setFrame] = useState<RGB[]>([]);
 
   // Frame-diff guard: prevents calling setFrame when the pixel array is identical.
-  // Without this, on React-DOM (web) the Animated TimingAnimation loop causes each
-  // setState to trigger a re-render which re-registers animation listeners, creating
-  // an infinite "Maximum update depth exceeded" loop. Safe on native too.
   const prevFrameRef = useRef<string>('');
 
   useEffect(() => {
@@ -39,7 +37,15 @@ export const LEDStripPreview = React.memo(({ patternId, fg, bg, numLEDs, speed, 
     const interval = setInterval(() => {
       const currentSpeed = speed || 50;
       const tick = (Date.now() % (1000 / currentSpeed * 100)) / (1000 / currentSpeed * 100);
-      const nextFrame = getVisualizerFrame(patternId, hexToRgb(fg), hexToRgb(bg), numLEDs, tick, direction);
+      const rawFrame = getVisualizerFrame(patternId, hexToRgb(fg), hexToRgb(bg), numLEDs, tick, direction);
+      
+      const bFactor = brightness / 100;
+      const nextFrame = bFactor < 1 ? rawFrame.map(c => ({
+        r: Math.round(c.r * bFactor),
+        g: Math.round(c.g * bFactor),
+        b: Math.round(c.b * bFactor)
+      })) : rawFrame;
+
       // Only commit to React state if pixels actually changed this tick
       const serialized = nextFrame.map(c => `${c.r},${c.g},${c.b}`).join('|');
       if (serialized !== prevFrameRef.current) {
@@ -48,7 +54,7 @@ export const LEDStripPreview = React.memo(({ patternId, fg, bg, numLEDs, speed, 
       }
     }, 50); // 20fps
     return () => clearInterval(interval);
-  }, [patternId, fg, bg, numLEDs, speed, direction, autoPlay]);
+  }, [patternId, fg, bg, numLEDs, speed, brightness, direction, autoPlay]);
 
   return (
     <View style={[{ height, flexDirection: 'row', borderRadius: 4, overflow: 'hidden' }, style]}>

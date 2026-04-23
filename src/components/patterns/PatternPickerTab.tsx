@@ -9,16 +9,17 @@ interface PatternPickerTabProps {
   fgColor: string;
   bgColor: string;
   speed: number;
+  brightness: number;
   points: number;
   direction: number;
   onSelect: (id: number) => void;
   Colors: any;
 }
 
-const CATEGORIES = ['All', 'Solid', 'Breathe', 'Chase', 'Marquee', 'Wave', 'Rainbow', 'Sparkle & Flash'];
+const CATEGORIES = ['Solid', 'Rainbow', 'Sparkle', 'Chase', 'Marquee', 'Wave', 'Breathe', 'All'];
 
 export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
-  selectedEffectId, fgColor, bgColor, speed, points, direction, onSelect, Colors
+  selectedEffectId, fgColor, bgColor, speed, brightness, points, direction, onSelect, Colors
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('All');
 
@@ -77,6 +78,7 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
             fgColor={fgColor}
             bgColor={bgColor}
             speed={speed}
+            brightness={brightness}
             direction={direction}
             points={points}
             onSelect={() => onSelect(effect.id)}

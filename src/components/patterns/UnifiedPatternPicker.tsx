@@ -115,6 +115,7 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
             fgColor={fgColor}
             bgColor={bgColor}
             speed={speed}
+            brightness={brightness ?? 100}
             direction={direction}
             points={devicePoints}
             onSelect={handleSelectPattern}

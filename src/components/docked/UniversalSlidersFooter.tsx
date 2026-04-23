@@ -471,21 +471,6 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
           <View style={{ flexDirection: 'row', width: '100%', gap: Spacing.sm }}>
             <TacticalSlider
               style={{ flex: 1 }}
-              iconName="microphone-outline"
-              label="SENSITIVITY"
-              fillColor="#FF00FF"
-              dynamicMode="SENSITIVITY"
-              value={micSensitivity}
-              onValueChange={setMicSensitivity}
-              minimumValue={0}
-              maximumValue={100}
-              onSlidingComplete={(val: number) => {
-                AppLogger.log('MIC_SENSITIVITY_CHANGED', { value: val, mode: activeMode });
-                handleMusicChange(musicPatternId, val, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
-              }}
-            />
-            <TacticalSlider
-              style={{ flex: 1 }}
               iconName="white-balance-sunny"
               label="BRIGHTNESS"
               fillColor="#00F0FF"
@@ -497,6 +482,21 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
               onSlidingComplete={(val: number) => {
                 AppLogger.log('BRIGHTNESS_CHANGED', { value: val, mode: activeMode });
                 handleMusicChange(musicPatternId, micSensitivity, val, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
+              }}
+            />
+            <TacticalSlider
+              style={{ flex: 1 }}
+              iconName="microphone-outline"
+              label="SENSITIVITY"
+              fillColor="#FF00FF"
+              dynamicMode="SENSITIVITY"
+              value={micSensitivity}
+              onValueChange={setMicSensitivity}
+              minimumValue={0}
+              maximumValue={100}
+              onSlidingComplete={(val: number) => {
+                AppLogger.log('MIC_SENSITIVITY_CHANGED', { value: val, mode: activeMode });
+                handleMusicChange(musicPatternId, val, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
               }}
             />
           </View>
