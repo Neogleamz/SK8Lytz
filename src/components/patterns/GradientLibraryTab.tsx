@@ -34,11 +34,11 @@ export const GradientLibraryTab: React.FC<GradientLibraryTabProps> = ({ Colors, 
     
     // Expo LinearGradient requires at least 2 colors. If user saved 1 or 0, fallback.
     let colors: [string, string, ...string[]] = ['#333333', '#666666'];
-    let locations: number[] = [0, 1];
+    let locations: [number, number, ...number[]] = [0, 1];
     
     if (sortedNodes.length >= 2) {
        colors = sortedNodes.map(n => n.colorHex) as [string, string, ...string[]];
-       locations = sortedNodes.map(n => n.position / 100);
+       locations = sortedNodes.map(n => n.position / 100) as [number, number, ...number[]];
     }
 
     return (
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.md,
-    borderRadius: BorderRadius.md,
+    borderRadius: 12,
     marginBottom: Spacing.md,
   },
   createButtonText: {
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     height: 70,
-    borderRadius: BorderRadius.md,
+    borderRadius: 12,
     marginBottom: Spacing.sm,
     overflow: 'hidden',
   },
@@ -175,6 +175,6 @@ const styles = StyleSheet.create({
   actionButton: {
     padding: Spacing.xs,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: BorderRadius.sm,
+    borderRadius: 8,
   }
 });

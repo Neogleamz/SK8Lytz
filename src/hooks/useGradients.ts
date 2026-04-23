@@ -1,12 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { supabase } from '../services/supabaseClient';
 import { GradientsService } from '../services/GradientsService';
 import { CustomBuilderPreset } from '../protocols/PositionalMathBuffer';
 import { AppLogger } from '../services/AppLogger';
 
 export function useGradients() {
-  const { session } = useAuth();
-  const userId = session?.user?.id;
+  const [userId, setUserId] = useState<string | undefined>();
+  
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user?.id);
+    });
+  }, []);
   
   const [gradients, setGradients] = useState<CustomBuilderPreset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
