@@ -2242,6 +2242,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_saved_presets: {
+        Row: {
+          created_at: string | null
+          fill_mode: string
+          id: string
+          name: string
+          nodes: Json
+          transition_type: number
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          fill_mode: string
+          id: string
+          name: string
+          nodes: Json
+          transition_type: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          fill_mode?: string
+          id?: string
+          name?: string
+          nodes?: Json
+          transition_type?: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       work_orders: {
         Row: {
           completed_at: string | null
