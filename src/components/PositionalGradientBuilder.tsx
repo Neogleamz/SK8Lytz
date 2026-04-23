@@ -414,12 +414,12 @@ export default function PositionalGradientBuilder({
       <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold', marginBottom: Spacing.xxs }}>ANIMATION</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
           {[
-              // BUG FIX: IDs now match ZenggeProtocol transitionType bytes directly.
-              // Old mapping (1-5) was off-by-one — STATIC sent Gradual, STROBE sent Water, etc.
-              // Ground truth @ ZenggeProtocol.ts:577: 0x00=Cascade, 0x01=Freeze, 0x02=Strobe, 0x03=Trigger
-              { id: 0x01, label: 'FREEZE', icon: 'stop' as const },
-              { id: 0x00, label: 'CASCADE', icon: 'arrow-right-bold' as const },
-              { id: 0x04, label: 'JUMP',   icon: 'swap-vertical' as const },
+              // APK-proven transitionType bytes (ZenggeProtocol.ts:592 — setMultiColor JSDoc):
+              // 0x00=Static (freeze), 0x01=Gradual (flow/scroll), 0x02=Strobe (flash), 0x03=RunningWater (scroll)
+              { id: 0x00, label: 'STATIC',  icon: 'pause-circle-outline' as const },
+              { id: 0x01, label: 'FLOW',    icon: 'arrow-right-bold' as const },
+              { id: 0x02, label: 'STROBE',  icon: 'flash' as const },
+              { id: 0x03, label: 'WATER',   icon: 'water' as const },
           ].map(t => (
               <TouchableOpacity 
                   key={t.id}
