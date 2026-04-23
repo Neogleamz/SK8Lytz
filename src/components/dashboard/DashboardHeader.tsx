@@ -100,23 +100,8 @@ const DashboardHeader = React.memo(({
             })()}
           </TouchableOpacity>
 
-          {/* RIGHT: power / support / theme */}
+          {/* RIGHT: support / theme */}
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: Spacing.sm }}>
-            {!isTestModeActive && (
-              <TouchableOpacity
-                style={{
-                  width: 34, height: 34, borderRadius: 17,
-                  backgroundColor: allOn ? 'rgba(0,240,255,0.15)' : 'rgba(255,255,255,0.07)',
-                  justifyContent: 'center', alignItems: 'center',
-                  borderWidth: 1,
-                  borderColor: allOn ? 'rgba(0,240,255,0.3)' : 'rgba(255,255,255,0.15)',
-                }}
-                onPress={() => handlePowerToggle(displayConnectedDevices.map(d => (d as any).id))}
-                activeOpacity={0.6}
-              >
-                <MaterialCommunityIcons name="power" size={18} color={allOn ? Colors.primary : Colors.textMuted} />
-              </TouchableOpacity>
-            )}
             <TouchableOpacity
               onPress={onPressSupport}
               style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}

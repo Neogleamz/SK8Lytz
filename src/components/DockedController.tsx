@@ -137,8 +137,9 @@ interface Sk8lytzControllerProps {
   points?: number;
   devices?: IDeviceState[];
   onLongPressDevice?: (device: IDeviceState) => void;
-  writeToDevice?: (payload: number[]) => Promise<boolean | 'partial'>;
+  writeToDevice?: (payload: number[], targetDeviceId?: string) => Promise<boolean | 'partial'>;
   isPoweredOn?: boolean;
+  onPowerToggle?: () => void;
   onDisconnect?: () => void;
   /** 'leader' = broadcast changes, 'member' = receive changes, null = solo */
   crewRole?: 'leader' | 'member' | null;
@@ -164,7 +165,7 @@ export type DockedControllerHandle = {
 // MarqueeText moved to standalone component MarqueeText.tsx
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
-  function DockedController({ hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {} }: Sk8lytzControllerProps, ref) {
+  function DockedController({ hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onPowerToggle, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {} }: Sk8lytzControllerProps, ref) {
     const { Colors, isDark } = useTheme();
     const { height: windowHeight } = useWindowDimensions();
     const isShort = windowHeight < 720;
@@ -653,7 +654,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         {isPoweredOn === false && (
           <View style={[StyleSheet.absoluteFill, { zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', borderRadius: Layout.borderRadius, pointerEvents: 'box-only' as any }]}>
             <TouchableOpacity
-              onPress={() => writeToDevice && writeToDevice(ZenggeProtocol.turnOn())}
+              onPress={() => {
+                if (onPowerToggle) onPowerToggle();
+                else if (writeToDevice) writeToDevice(ZenggeProtocol.turnOn());
+              }}
               style={[{ width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(0, 240, 255, 0.1)', borderWidth: 3, borderColor: '#00f0ff', elevation: 15, justifyContent: 'center', alignItems: 'center' }, Platform.select({
                 ios: { shadowColor: '#00f0ff', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 30 },
                 web: { boxShadow: '0px 0px 30px rgba(0, 240, 255, 1)' } as any
@@ -705,7 +709,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             {/* Power Toggle Button (Left) */}
             <TouchableOpacity
               style={{ position: 'absolute', top: 12, left: 16, zIndex: 100, backgroundColor: 'rgba(255,255,255,0.06)', padding: Spacing.sm, borderRadius: 20 }}
-              onPress={() => writeToDevice && writeToDevice(ZenggeProtocol.turnOff())}
+              onPress={() => {
+                if (onPowerToggle) onPowerToggle();
+                else if (writeToDevice) writeToDevice(ZenggeProtocol.turnOff());
+              }}
             >
               <MaterialCommunityIcons name="power" size={22} color="#00f0ff" />
             </TouchableOpacity>

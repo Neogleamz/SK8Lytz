@@ -569,6 +569,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             onLongPressDevice={openSettings}
             writeToDevice={writeToDevice}
             isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
+            onPowerToggle={() => handlePowerToggle(displayConnectedDevices.map(d => d.id))}
             onDisconnect={handleDisconnect}
             crewRole={crewRole}
             appSettings={appSettings}
