@@ -41,14 +41,17 @@ export function useAppMicrophone({
   }), []);
   const recorder = useAudioRecorder(recorderConfig);
   const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
+  const [hasMicPermission, setHasMicPermission] = useState<boolean>(true);
   const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
 
   const startRecording = async () => {
     try {
       const isGranted = await checkPermission('MIC');
+      setHasMicPermission(isGranted);
       if (!isGranted) {
         await openGlobalPermissionsModal();
         const reG = await checkPermission('MIC');
+        setHasMicPermission(reG);
         if (!reG) return;
       }
 
@@ -107,5 +110,14 @@ export function useAppMicrophone({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeMode, micSource, isPoweredOn]);
 
-  return { audioMagnitude, recording: recorder.isRecording ? recorder : null };
+  const requestMicPermission = async () => {
+    await openGlobalPermissionsModal();
+    const reG = await checkPermission('MIC');
+    setHasMicPermission(reG);
+    if (reG && activeMode === 'MUSIC' && micSource === 'APP' && isPoweredOn) {
+      startRecording();
+    }
+  };
+
+  return { audioMagnitude, hasMicPermission, requestMicPermission, recording: recorder.isRecording ? recorder : null };
 }

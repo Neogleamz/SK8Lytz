@@ -561,7 +561,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const { curatedPresets, picksLoading } = useCuratedPicks();
 
     // -- App Microphone — now owned by useAppMicrophone hook --
-    const { audioMagnitude } = useAppMicrophone({
+    const { audioMagnitude, hasMicPermission, requestMicPermission } = useAppMicrophone({
       writeToDevice,
       activeMode,
       micSource,
@@ -732,6 +732,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 color1={musicPrimaryColor}
                 color2={musicSecondaryColor}
                 isPoweredOn={isPoweredOn}
+                hasMicPermission={hasMicPermission}
+                onRequestMicPermission={requestMicPermission}
               />
             ) : (
               <ProductVisualizer

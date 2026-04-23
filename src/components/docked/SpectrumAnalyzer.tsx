@@ -11,6 +11,8 @@ interface SpectrumAnalyzerProps {
   color1?: string;
   color2?: string;
   isPoweredOn?: boolean;
+  hasMicPermission?: boolean;
+  onRequestMicPermission?: () => void;
 }
 
 const BARS_COUNT = 16;
@@ -24,6 +26,8 @@ export default function SpectrumAnalyzer({
   color1 = '#00F0FF',
   color2 = '#FF0055',
   isPoweredOn = true,
+  hasMicPermission = true,
+  onRequestMicPermission,
 }: SpectrumAnalyzerProps) {
   const { isDark } = useTheme();
   
@@ -162,8 +166,20 @@ export default function SpectrumAnalyzer({
         </Text>
       </View>
 
+      {/* ── Mic Permission Overlay ── */}
+      {micSource === 'APP' && !hasMicPermission && (
+        <View style={styles.permissionOverlay}>
+          <MaterialCommunityIcons name="microphone-off" size={24} color="#FF4444" style={{ marginBottom: 4 }} />
+          <Text style={styles.permissionText}>Microphone Access Required</Text>
+          <Text style={styles.permissionSubText}>Enable in settings to use App Mic</Text>
+          <View style={styles.permissionButton} onTouchEnd={onRequestMicPermission}>
+            <Text style={styles.permissionButtonText}>ENABLE MIC</Text>
+          </View>
+        </View>
+      )}
+
       {/* ── EQ Bars ── */}
-      <View style={styles.visualizerArea}>
+      <View style={[styles.visualizerArea, { opacity: (micSource === 'APP' && !hasMicPermission) ? 0.1 : 1.0 }]}>
         {animatedValues.map((animValue, index) => {
           const height = animValue.interpolate({
             inputRange: [0, 1],
@@ -239,6 +255,36 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 0.5,
   },
+  permissionOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    zIndex: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+  },
+  permissionText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  permissionSubText: {
+    color: '#AAA',
+    fontSize: 11,
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  permissionButton: {
+    backgroundColor: '#FF4444',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  permissionButtonText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
   visualizerArea: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -249,16 +295,16 @@ const styles = StyleSheet.create({
     marginTop: 20, // Pushes it down below the absolute badge
   },
   barContainer: {
-    width: BAR_WIDTH,
+    flex: 1,
     alignItems: 'center',
   },
   bar: {
-    width: BAR_WIDTH,
+    width: '100%',
     borderTopLeftRadius: 4,
     borderTopRightRadius: 4,
   },
   peak: {
-    width: BAR_WIDTH,
+    width: '100%',
     height: 3,
     borderRadius: 2,
     position: 'absolute',
