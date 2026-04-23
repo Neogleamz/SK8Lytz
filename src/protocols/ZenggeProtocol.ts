@@ -525,9 +525,9 @@ export class ZenggeProtocol {
   ): number[] {
     const payload = [
       0x73,
-      Math.max(1, Math.min(13, musicMode | 0)),
-      micSource,
       isOn ? 0x01 : 0x00,
+      micSource,
+      Math.max(1, Math.min(13, musicMode | 0)),
       Math.max(0, Math.min(255, color1.r | 0)),
       Math.max(0, Math.min(255, color1.g | 0)),
       Math.max(0, Math.min(255, color1.b | 0)),

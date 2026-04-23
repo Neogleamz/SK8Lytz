@@ -49,6 +49,7 @@ import { UnifiedPatternPicker } from './patterns/UnifiedPatternPicker';
 import CustomEffectVisualizer from './CustomEffectVisualizer';
 import NeonHueStrip from './NeonHueStrip';
 import ProductVisualizer from './ProductVisualizer';
+import SpectrumAnalyzer from './docked/SpectrumAnalyzer';
 import TacticalSlider from './TacticalSlider';
 import VerticalPatternDrum from './VerticalPatternDrum';
 
@@ -724,8 +725,17 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             >
               <MaterialCommunityIcons name="heart-plus-outline" size={22} color={Colors.primary} />
             </TouchableOpacity>
-            <ProductVisualizer
-              product={activeProduct}
+            {activeMode === 'MUSIC' ? (
+              <SpectrumAnalyzer 
+                audioMagnitude={audioMagnitude}
+                micSource={micSource}
+                color1={musicPrimaryColor}
+                color2={musicSecondaryColor}
+                isPoweredOn={isPoweredOn}
+              />
+            ) : (
+              <ProductVisualizer
+                product={activeProduct}
               color={visualizerColor}
               mode={activeMode === 'FAVORITES' ? (lastOperatingMode === 'MULTIMODE' ? (fixedSubMode === 'BUILDER' ? 'BUILDER' : 'MULTIMODE') : lastOperatingMode) : activeMode === 'MULTIMODE' ? (fixedSubMode === 'BUILDER' ? 'BUILDER' : 'MULTIMODE') : activeMode}
               patternId={activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' ? fixedPatternId : selectedPatternId)}
@@ -751,6 +761,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               fixedDirection={fixedDirection}
               streetDistribution={streetDistribution}
             />
+            )}
           </View>
         </View>
 
