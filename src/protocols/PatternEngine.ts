@@ -65,6 +65,155 @@ function hueToRGB(hue: number): RGB {
   return { r: Math.round(f(5) * 255), g: Math.round(f(3) * 255), b: Math.round(f(1) * 255) };
 }
 
+function blendRGB(a: RGB, b: RGB, t: number): RGB {
+  t = Math.max(0, Math.min(1, t));
+  return {
+    r: Math.round(a.r * t + b.r * (1 - t)),
+    g: Math.round(a.g * t + b.g * (1 - t)),
+    b: Math.round(a.b * t + b.b * (1 - t)),
+  };
+}
+
+function hsvToRgb(h: number, s: number, v: number): RGB {
+  const i = Math.floor(h * 6);
+  const f = h * 6 - i;
+  const p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+  const [r, g, b] = [
+    [v, q, p, p, t, v], [t, v, v, q, p, p], [p, p, t, v, v, q]
+  ].map(ch => ch[i % 6]);
+  return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+}
+
+// ─── GE.* PHASE 1A BUILDERS ───────────────────────────────────────────────────
+
+function buildColorFlow(numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phaseOffset = direction === 0 ? tick : 1 - tick;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const hue = ((i / numLEDs) + phaseOffset) % 1.0;
+    return hsvToRgb(hue, 1.0, 1.0);
+  });
+}
+
+function buildColorBreathing(fg: RGB, numLEDs: number, tick: number): RGB[] {
+  const brightness = (Math.sin(tick * Math.PI * 2) * 0.5 + 0.5);
+  const color = { r: Math.round(fg.r * brightness), g: Math.round(fg.g * brightness), b: Math.round(fg.b * brightness) };
+  return Array(numLEDs).fill(color);
+}
+
+function buildColorJump(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const color = tick < 0.5 ? fg : bg;
+  return Array(numLEDs).fill(color);
+}
+
+function buildRunningWater(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const BLOCK = 3;
+  const offset = Math.floor((direction === 0 ? tick : 1 - tick) * numLEDs);
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const pos = (i + offset) % numLEDs;
+    return pos < BLOCK ? fg : bg;
+  });
+}
+
+function buildStrobe(fg: RGB, numLEDs: number, tick: number): RGB[] {
+  const on = (tick * 10) % 1 < 0.3;
+  const color = on ? fg : { r: 0, g: 0, b: 0 };
+  return Array(numLEDs).fill(color);
+}
+
+function buildColorWipe(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const t = direction === 0 ? tick : 1 - tick;
+  const fillCount = Math.floor(t * numLEDs);
+  return Array.from({ length: numLEDs }, (_, i) => i < fillCount ? fg : bg);
+}
+
+function buildFireworks(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const seed = Math.floor(tick * 8);
+  const frame = Array(numLEDs).fill(bg);
+  const center = Math.abs(Math.sin(seed * 1.618) * numLEDs) | 0;
+  const spreadRadius = Math.floor((tick * 8 % 1) * (numLEDs / 4));
+  for (let i = 0; i < spreadRadius; i++) {
+    const brightness = 1 - (i / spreadRadius);
+    const c = blendRGB(fg, bg, brightness);
+    const posL = Math.max(0, center - i);
+    const posR = Math.min(numLEDs - 1, center + i);
+    if (posL >= 0) frame[posL] = c;
+    if (posR < numLEDs) frame[posR] = c;
+  }
+  return frame;
+}
+
+function buildOceanWave(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? tick : 1 - tick;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const wave1 = Math.sin(i / numLEDs * Math.PI * 4 + phase * Math.PI * 2);
+    const wave2 = Math.sin(i / numLEDs * Math.PI * 6 + phase * Math.PI * 3 + 0.7);
+    const combined = (wave1 + wave2) / 2 * 0.5 + 0.5;
+    return blendRGB(fg, bg, combined);
+  });
+}
+
+function buildLightning(fg: RGB, numLEDs: number, tick: number): RGB[] {
+  const flashSeed = Math.floor(tick * 20);
+  const frame: RGB[] = Array(numLEDs).fill({ r: 0, g: 0, b: 0 });
+  for (let j = 0; j < 3; j++) {
+    const pos = Math.abs(Math.sin((flashSeed + j) * 2.718) * numLEDs) | 0;
+    const brightness = Math.abs(Math.cos((flashSeed + j) * 1.414));
+    frame[pos] = { r: Math.round(fg.r * brightness), g: Math.round(fg.g * brightness), b: Math.round(fg.b * brightness) };
+  }
+  return frame;
+}
+
+function buildSnowfall(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const frame = Array(numLEDs).fill(bg);
+  for (let j = 0; j < 5; j++) {
+    const speed = 0.3 + j * 0.15;
+    const pos = Math.floor(((tick * speed + j * 0.2) % 1) * numLEDs);
+    const brightness = 0.6 + Math.sin(tick * 5 + j) * 0.4;
+    frame[pos] = blendRGB(fg, bg, brightness);
+    if (pos + 1 < numLEDs) frame[pos + 1] = blendRGB(fg, bg, brightness * 0.3);
+  }
+  return frame;
+}
+
+function buildCandle(fg: RGB, numLEDs: number, tick: number): RGB[] {
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const noise = Math.sin(tick * 7 + i * 1.3) * Math.cos(tick * 11 + i * 0.7);
+    const brightness = 0.5 + noise * 0.3 + Math.sin(tick * 3) * 0.2;
+    const b = Math.max(0, Math.min(1, brightness));
+    return { r: Math.round(fg.r * b), g: Math.round(fg.g * b * 0.7), b: Math.round(fg.b * b * 0.3) };
+  });
+}
+
+function buildHeartbeat(fg: RGB, numLEDs: number, tick: number): RGB[] {
+  const t = tick % 1;
+  let brightness: number;
+  if (t < 0.1) brightness = Math.sin((t / 0.1) * Math.PI);
+  else if (t < 0.3) brightness = Math.sin(((t - 0.15) / 0.15) * Math.PI) * 0.6;
+  else brightness = 0;
+  const b = Math.max(0, brightness);
+  return Array(numLEDs).fill({ r: Math.round(fg.r * b), g: Math.round(fg.g * b), b: Math.round(fg.b * b) });
+}
+
+function generatePhase1aArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: number): RGB[] | null {
+  const direction = 1; // Default to 1 (forward) if not dynamically provided by visualizer caller yet
+  switch (patternId) {
+    case 29: return buildColorFlow(n, tick, direction);
+    case 30: return buildColorBreathing(fg, n, tick);
+    case 31: return buildColorJump(fg, bg, n, tick);
+    case 32: return buildRunningWater(fg, bg, n, tick, direction);
+    case 33: return buildStrobe(fg, n, tick);
+    case 34: return buildColorWipe(fg, bg, n, tick, direction);
+    case 35: return buildFireworks(fg, bg, n, tick);
+    case 36: return buildOceanWave(fg, bg, n, tick, direction);
+    case 37: return buildLightning(fg, n, tick);
+    case 38: return buildSnowfall(fg, bg, n, tick);
+    case 39: return buildCandle(fg, n, tick);
+    case 40: return buildHeartbeat(fg, n, tick);
+    default: return null;
+  }
+}
+
+
 // ─── GENERATORS ───────────────────────────────────────────────────────────────
 
 function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number): RGB[] {
@@ -225,6 +374,10 @@ export function getVisualizerFrame(
     return Array(n).fill(Math.floor(animTick * 12) % 2 === 0 ? fg : bg);
   }
 
+  // Phase 1A ge.* native pattern builder overrides (IDs 29-40)
+  const phase1a = generatePhase1aArray(patternId, fg, bg, n, animTick);
+  if (phase1a) return phase1a;
+
   const generated = generateArray(patternId, fg, bg, n);
 
   // Group 1 (Static) does not scroll
@@ -254,6 +407,10 @@ export function getHardwarePixelArray(
 ): RGB[] | null {
   // 0x51 temporal patterns return null so they fallback to buildCustomModePayload
   if (patternId >= 20 && patternId <= 22) return null;
+
+  // Phase 1A ge.* native patterns evaluate at tick=0 to create the base hardware frame
+  const phase1a = generatePhase1aArray(patternId, fg, bg, Math.max(1, numLEDs), 0);
+  if (phase1a) return phase1a;
 
   return generateArray(patternId, fg, bg, Math.max(1, numLEDs));
 }

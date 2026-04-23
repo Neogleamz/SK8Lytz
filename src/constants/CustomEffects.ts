@@ -47,4 +47,18 @@ export const SK8LYTZ_TEMPLATES: CustomEffectMetadata[] = [
   { id: 26, name: "Rainbow Marquee", requiresForeground: false, requiresBackground: true, supportsSegment: true, supportsDirection: true },
   { id: 27, name: "Rainbow Comet", requiresForeground: false, requiresBackground: true, supportsSegment: true, supportsDirection: true },
   { id: 28, name: "Cyberpunk Shift", requiresForeground: true, requiresBackground: true, supportsSegment: true, supportsDirection: true },
+
+  // ── GROUP 7: NATIVE HARDWARE REVERSALS (Phase 1A) ──
+  { id: 29, name: "Color Flow", requiresForeground: false, requiresBackground: false, supportsSegment: true, supportsDirection: true },
+  { id: 30, name: "Color Breathing", requiresForeground: true, requiresBackground: false, supportsSegment: false, supportsDirection: false },
+  { id: 31, name: "Color Jump", requiresForeground: true, requiresBackground: true, supportsSegment: false, supportsDirection: false },
+  { id: 32, name: "Running Water", requiresForeground: true, requiresBackground: true, supportsSegment: true, supportsDirection: true },
+  { id: 33, name: "Strobe Flash", requiresForeground: true, requiresBackground: false, supportsSegment: false, supportsDirection: false },
+  { id: 34, name: "Color Wipe", requiresForeground: true, requiresBackground: true, supportsSegment: true, supportsDirection: true },
+  { id: 35, name: "Fireworks", requiresForeground: true, requiresBackground: true, supportsSegment: false, supportsDirection: false },
+  { id: 36, name: "Ocean Wave", requiresForeground: true, requiresBackground: true, supportsSegment: true, supportsDirection: true },
+  { id: 37, name: "Lightning Strike", requiresForeground: true, requiresBackground: false, supportsSegment: false, supportsDirection: false },
+  { id: 38, name: "Snowfall", requiresForeground: true, requiresBackground: true, supportsSegment: false, supportsDirection: false },
+  { id: 39, name: "Candle Flicker", requiresForeground: true, requiresBackground: false, supportsSegment: false, supportsDirection: false },
+  { id: 40, name: "Heartbeat Pulse", requiresForeground: true, requiresBackground: false, supportsSegment: false, supportsDirection: false },
 ];
