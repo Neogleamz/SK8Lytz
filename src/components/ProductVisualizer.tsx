@@ -7,7 +7,7 @@ import { getVisualizerFrame } from '../protocols/PatternEngine';
 import { PositionalMathBuffer } from '../protocols/PositionalMathBuffer';
 
 import { Spacing } from '../theme/theme';
-import { getRbmMusicFrame, getRbmVisualizerFrame, rgbToHex } from '../utils/RbmSimulator';
+import { getRbmMusicFrame } from '../utils/RbmSimulator'; // TODO[BATCH:P1]: migrate MUSIC mode off RbmSimulator once PatternEngine music equivalent exists
 
 interface DeviceConfig {
   id?: string;
@@ -340,7 +340,10 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
             // ── All other RBM patterns: hardware-accurate pixel simulation ──
             // Dynamic Mirroring: generates per-segment frame; Seg2 mirrors it reversed if flagged.
             const rbmSegLeds = isMirrored ? Math.ceil(numLeds / 2) : numLeds;
-            const rbmFrame = getRbmVisualizerFrame(pid, rbmSegLeds, animTick);
+            // Migrated from getRbmVisualizerFrame → PatternEngine.getVisualizerFrame (BATCH:P0)
+            const fgRgbProg: RGB = { r: 255, g: 0, b: 0 };
+            const bgRgbProg: RGB = { r: 0, g: 0, b: 0 };
+            const rbmFrame = getVisualizerFrame(pid as PatternId, fgRgbProg, bgRgbProg, rbmSegLeds, animTick);
             const rawLedPos = (segmentI / activeSegmentLeds) * rbmFrame.length;
             const rSlot0Raw = Math.floor(rawLedPos) % Math.max(1, rbmFrame.length);
             const rSlot0 = mirrorSlot(rSlot0Raw, rbmFrame.length);
@@ -368,7 +371,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
           const mSlotRaw = Math.floor(mRawPos) % Math.max(1, musicFrame.pixels.length);
           const mSlot = mirrorSlot(mSlotRaw, musicFrame.pixels.length);
           const mPx = musicFrame.pixels[mSlot] || { r: 255, g: 255, b: 255 };
-          dotColor = rgbToHex(mPx);
+          dotColor = `#${mPx.r.toString(16).padStart(2, '0')}${mPx.g.toString(16).padStart(2, '0')}${mPx.b.toString(16).padStart(2, '0')}`;
           dotOpacity = isPoweredOn ? (musicFrame.opacities[mSlot] ?? 1.0) * (brightness / 100) : 0;
         } else if (mode === 'STREET') {
           // ── Street Mode: zone-based car-light layout ──
