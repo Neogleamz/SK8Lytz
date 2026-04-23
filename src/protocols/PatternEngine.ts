@@ -577,6 +577,45 @@ function buildMeteorShower(fg: RGB, bg: RGB, numLEDs: number, tick: number, dire
   return frame;
 }
 
+// GROUP C: Marquees & Bands
+function buildMicroAnts(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const t = direction === 0 ? tick : 1 - tick;
+  const offset = Math.floor(t * 2) % 2; // alternates every half-tick
+  return Array.from({ length: numLEDs }, (_, i) => (i + offset) % 2 === 0 ? fg : bg);
+}
+
+function buildTheaterChase(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const PERIOD = 3; // every 3rd LED lights
+  const t = direction === 0 ? tick : 1 - tick;
+  const offset = Math.floor(t * PERIOD) % PERIOD;
+  return Array.from({ length: numLEDs }, (_, i) => (i + offset) % PERIOD === 0 ? fg : bg);
+}
+
+function buildDashedMarquee(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const DASH = 4; const GAP = 3; // 4 on, 3 off
+  const PERIOD = DASH + GAP;
+  const t = direction === 0 ? tick : 1 - tick;
+  const offset = Math.floor(t * PERIOD) % PERIOD;
+  return Array.from({ length: numLEDs }, (_, i) => (i + offset) % PERIOD < DASH ? fg : bg);
+}
+
+function buildBarberPole(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const STRIPE = Math.max(2, Math.floor(numLEDs / 6));
+  const t = direction === 0 ? tick : 1 - tick;
+  const offset = Math.floor(t * STRIPE * 2) % (STRIPE * 2);
+  return Array.from({ length: numLEDs }, (_, i) => {
+    // Diagonal stripe: position + offset mod period
+    return (i + offset) % (STRIPE * 2) < STRIPE ? fg : bg;
+  });
+}
+
+function buildBoldStripes(fg: RGB, bg: RGB, numLEDs: number): RGB[] {
+  const STRIPE = Math.max(3, Math.floor(numLEDs / 5));
+  return Array.from({ length: numLEDs }, (_, i) =>
+    Math.floor(i / STRIPE) % 2 === 0 ? fg : bg
+  );
+}
+
 // ─── GENERATORS ───────────────────────────────────────────────────────────────
 
 function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: number = 0, direction: 0 | 1 = 1): RGB[] {
@@ -597,21 +636,11 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: 
     case 9: return buildMeteorShower(fg, bg, n, tick, direction);
 
     // ── GROUP 3: MARQUEES & BANDS ──
-    case 10: // Micro Ants
-      return arr.map((_, i) => (i % 2 === 0 ? fg : bg));
-    case 11: // Theater Chase
-      return arr.map((_, i) => (i % 3 === 0 ? fg : bg));
-    case 12: // Dashed Marquee
-      return arr.map((_, i) => ((i % 8) < 4 ? fg : bg));
-    case 13: // Barber Pole
-      return arr.map((_, i) => {
-        const mod = i % 12;
-        if (mod < 4) return fg;
-        if (mod < 8) return lerpRGB(fg, bg, 0.5); // transition
-        return bg;
-      });
-    case 14: // Bold Stripes
-      return arr.map((_, i) => ((i % 16) < 8 ? fg : bg));
+    case 10: return buildMicroAnts(fg, bg, n, tick, direction);
+    case 11: return buildTheaterChase(fg, bg, n, tick, direction);
+    case 12: return buildDashedMarquee(fg, bg, n, tick, direction);
+    case 13: return buildBarberPole(fg, bg, n, tick, direction);
+    case 14: return buildBoldStripes(fg, bg, n);
 
     // ── GROUP 4: MATH WAVES & GRADIENTS ──
     case 15: // Sine Pulse Wave
@@ -723,6 +752,9 @@ export function getVisualizerFrame(
 
   // Group 2 (Chases) uses its own mathematical tick rotation
   if (patternId >= 6 && patternId <= 9) return generated;
+
+  // Group 3 (Marquees) uses internal tick offset (Except Bold Stripes which is static)
+  if (patternId >= 10 && patternId <= 13) return generated;
 
   // Center-Out effects (18, 19, 24) should split scroll if true center out
   if (patternId === 18 || patternId === 19 || patternId === 24) {
