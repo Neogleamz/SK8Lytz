@@ -616,6 +616,67 @@ function buildBoldStripes(fg: RGB, bg: RGB, numLEDs: number): RGB[] {
   );
 }
 
+// ---------------------------------------------
+// Group D: Math Waves (IDs 15-19)
+// ---------------------------------------------
+
+function buildSinePulseWave(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? tick : 1 - tick;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const wave = Math.sin((i / numLEDs) * Math.PI * 4 + phase * Math.PI * 2) * 0.5 + 0.5;
+    return blendRGB(fg, bg, wave);
+  });
+}
+
+function buildWavePinch(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const posNorm = i / (numLEDs - 1);
+    const waveL = Math.sin(posNorm * Math.PI * 3 + tick * Math.PI * 2);
+    const waveR = Math.sin((1 - posNorm) * Math.PI * 3 + tick * Math.PI * 2);
+    const combined = (waveL + waveR) / 2 * 0.5 + 0.5;
+    return blendRGB(fg, bg, combined);
+  });
+}
+
+function buildBreathingWave(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? tick : 1 - tick;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const wave = Math.sin((i / numLEDs) * Math.PI * 2 + phase * Math.PI * 2) * 0.5 + 0.5;
+    return blendRGB(fg, bg, wave);
+  });
+}
+
+function buildCenterOutComet(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const center = Math.floor(numLEDs / 2);
+  const TAIL = Math.floor(numLEDs * 0.15);
+  const head = Math.floor(tick * (center + TAIL));
+  return Array.from({ length: numLEDs }, (_, i) => {
+    // Mirror: two comets going from center to edges
+    const distL = head - (center - i);
+    const distR = head - (i - center);
+    const dist = Math.min(Math.abs(distL), Math.abs(distR));
+    if (i < center) {
+      return (head - (center - i) >= 0 && head - (center - i) < TAIL)
+        ? blendRGB(fg, bg, 1 - dist / TAIL)
+        : bg;
+    } else {
+      return (head - (i - center) >= 0 && head - (i - center) < TAIL)
+        ? blendRGB(fg, bg, 1 - dist / TAIL)
+        : bg;
+    }
+  });
+}
+
+function buildCenterOutMarquee(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const center = Math.floor(numLEDs / 2);
+  const PERIOD = 6;
+  const offset = Math.floor(tick * PERIOD) % PERIOD;
+  return Array.from({ length: numLEDs }, (_, i) => {
+    const distFromCenter = Math.abs(i - center);
+    return (distFromCenter + offset) % PERIOD < 3 ? fg : bg;
+  });
+}
+
 // ─── GENERATORS ───────────────────────────────────────────────────────────────
 
 function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: number = 0, direction: 0 | 1 = 1): RGB[] {
@@ -643,26 +704,11 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: 
     case 14: return buildBoldStripes(fg, bg, n);
 
     // ── GROUP 4: MATH WAVES & GRADIENTS ──
-    case 15: // Sine Pulse Wave
-      return arr.map((_, i) => lerpRGB(bg, fg, (Math.sin((i / n) * Math.PI * 4) + 1) / 2));
-    case 16: // Wave Pinch
-      return arr.map((_, i) => {
-        const distToCenter = Math.abs(i - n / 2) / (n / 2); // 0 at center, 1 at ends
-        return lerpRGB(bg, fg, distToCenter);
-      });
-    case 17: // Breathing Wave (Gradient across strip)
-      return arr.map((_, i) => lerpRGB(fg, bg, i / n));
-    case 18: // Center-Out Comet
-      return arr.map((_, i) => {
-        const distToCenter = Math.abs(i - n / 2) / (n / 2);
-        return lerpRGB(fg, bg, distToCenter * distToCenter); // non-linear fade
-      });
-    case 19: // Center-Out Marquee
-      return arr.map((_, i) => {
-        const mid = n / 2;
-        const dist = Math.abs(i - mid);
-        return dist % 6 < 3 ? fg : bg;
-      });
+    case 15: return buildSinePulseWave(fg, bg, n, tick, direction);
+    case 16: return buildWavePinch(fg, bg, n, tick);
+    case 17: return buildBreathingWave(fg, bg, n, tick, direction);
+    case 18: return buildCenterOutComet(fg, bg, n, tick);
+    case 19: return buildCenterOutMarquee(fg, bg, n, tick);
 
     // ── GROUP 5: TEMPORAL FULL-STRIP (0x51 handled differently, arrays just return solid for visualizer) ──
     case 20: // Smooth Breath
@@ -756,8 +802,11 @@ export function getVisualizerFrame(
   // Group 3 (Marquees) uses internal tick offset (Except Bold Stripes which is static)
   if (patternId >= 10 && patternId <= 13) return generated;
 
-  // Center-Out effects (18, 19, 24) should split scroll if true center out
-  if (patternId === 18 || patternId === 19 || patternId === 24) {
+  // Group 4 (Math Waves) uses internal tick offset for 15, 16, 17, 18, 19
+  if (patternId >= 15 && patternId <= 19) return generated;
+
+  // Center-Out effects (24) should split scroll if true center out
+  if (patternId === 24) {
     const mid = Math.floor(n / 2);
     const left = rotateArray(generated.slice(0, mid).reverse(), animTick).reverse();
     const right = rotateArray(generated.slice(mid), animTick);
