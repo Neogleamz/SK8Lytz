@@ -407,14 +407,24 @@ export default function useBLE(): BluetoothLowEnergyApi {
           });
 
         } catch (deviceError: any) {
-          AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${device.id}`, deviceError);
-          AppLogger.log('BLE_CONNECTION_ERROR', { error: deviceError?.message || String(deviceError), deviceId: device.id, context: 'group_sync_fail' });
+          const errMsg = deviceError?.message || String(deviceError);
+          if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
+             AppLogger.warn(`[BLE] Connection dropout for ${device.id} (ignoring VIP error)`);
+          } else {
+             AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${device.id}`, deviceError);
+             AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, deviceId: device.id, context: 'group_sync_fail' });
+          }
         }
       }
       setGate('IDLE');
     } catch (e: any) {
-      AppLogger.error('FAILED TO CONNECT TO GROUP', e);
-      AppLogger.log('BLE_CONNECTION_ERROR', { error: e?.message || String(e), context: 'group' });
+      const errMsg = e?.message || String(e);
+      if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
+         AppLogger.warn(`[BLE] Group connection dropout (ignoring VIP error)`);
+      } else {
+         AppLogger.error('FAILED TO CONNECT TO GROUP', e);
+         AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, context: 'group' });
+      }
       setGate('IDLE');
     }
   };
