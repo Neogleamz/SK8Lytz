@@ -651,26 +651,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     return (
       <View style={styles.container}>
 
-        {/* ── POWER OVERRIDE OVERLAY ────────────────────────────────────────── */}
-        {isPoweredOn === false && (
-          <View style={[StyleSheet.absoluteFill, { zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', borderRadius: Layout.borderRadius, pointerEvents: 'box-only' as any }]}>
-            <TouchableOpacity
-              onPress={() => {
-                if (onPowerToggle) onPowerToggle();
-                else if (writeToDevice) writeToDevice(ZenggeProtocol.turnOn());
-              }}
-              style={[{ width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(0, 240, 255, 0.1)', borderWidth: 3, borderColor: '#00f0ff', elevation: 15, justifyContent: 'center', alignItems: 'center' }, Platform.select({
-                ios: { shadowColor: '#00f0ff', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 30 },
-                web: { boxShadow: '0px 0px 30px rgba(0, 240, 255, 1)' } as any
-              })]}
-            >
-              <MaterialCommunityIcons name="power" size={64} color="#00f0ff" />
-            </TouchableOpacity>
-            <Text style={{ color: '#00f0ff', fontSize: 28, fontFamily: 'Righteous', marginTop: Spacing.xl, letterSpacing: 6 }}>STANDBY</Text>
-            <Text style={{ color: Colors.textMuted, fontSize: 13, marginTop: Spacing.sm, letterSpacing: 1 }}>Hardware is in low-power idle mode.</Text>
-            <Text style={{ color: Colors.textMuted, fontSize: 12, position: 'absolute', bottom: 40, opacity: 0.5 }}>Tap to Wake</Text>
-          </View>
-        )}
 
         {/* Product Selector - Only show if NO lockedProduct is provided */}
         {!lockedProduct && (
@@ -709,13 +689,13 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           <View style={{ marginBottom: Spacing.sm, width: '100%' }}>
             {/* Power Toggle Button (Left) */}
             <TouchableOpacity
-              style={{ position: 'absolute', top: 12, left: 16, zIndex: 100, backgroundColor: 'rgba(255,255,255,0.06)', padding: Spacing.sm, borderRadius: 20 }}
+              style={{ position: 'absolute', top: 12, left: 16, zIndex: 100, backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 68, 68, 0.15)', padding: Spacing.sm, borderRadius: 20, borderWidth: 1, borderColor: isPoweredOn ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255, 68, 68, 0.3)' }}
               onPress={() => {
                 if (onPowerToggle) onPowerToggle();
-                else if (writeToDevice) writeToDevice(ZenggeProtocol.turnOff());
+                else if (writeToDevice) writeToDevice(isPoweredOn ? ZenggeProtocol.turnOff() : ZenggeProtocol.turnOn());
               }}
             >
-              <MaterialCommunityIcons name="power" size={22} color="#00f0ff" />
+              <MaterialCommunityIcons name="power" size={22} color={isPoweredOn ? "#00f0ff" : "#ff4444"} />
             </TouchableOpacity>
 
             {/* Favorite Button (Right) */}

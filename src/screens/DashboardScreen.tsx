@@ -55,6 +55,7 @@ import type { DashboardViewState, DeviceSettings, CustomGroup } from '../types/d
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
 // — migrated as part of Phase 1 Domain-Driven Refactor
 
+import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { SkateGroupCard } from '../components/dashboard/SkateGroupCard';
 import CrewHubSlab from '../components/dashboard/CrewHubSlab';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
@@ -446,7 +447,17 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   ).current;
 
   const handlePowerToggle = async (deviceIds: string[], forceState?: boolean) => {
-    setPowerState(deviceIds, forceState);
+    // 1. Determine target state (if not forced, toggle based on first device)
+    const targetState = forceState !== undefined ? forceState : !(powerStates[deviceIds[0]] ?? true);
+    
+    // 2. Set React State
+    setPowerState(deviceIds, targetState);
+
+    // 3. Dispatch BLE command to each device
+    const payload = ZenggeProtocol.setPower(targetState);
+    for (const mac of deviceIds) {
+      if (writeToDevice) await writeToDevice(payload, mac);
+    }
   };
 
   const handleDeviceTap = (id: string) => {
