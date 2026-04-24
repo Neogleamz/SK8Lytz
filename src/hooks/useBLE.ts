@@ -39,7 +39,7 @@ export interface BluetoothLowEnergyApi {
   disconnectFromDevice: () => void;
   writeToDevice: (payload: number[], targetDeviceId?: string) => Promise<boolean | 'partial'>;
   /** Send large payloads (>MTU) via sequential ZENGGE-framed BLE chunks. Required for 0x51 extended Scene Builder payloads. */
-  writeChunked: (payload: number[], chunkSize?: number) => Promise<void>;
+  writeChunked: (payload: number[], targetDeviceId?: string) => Promise<void>;
   probeDevice: (mac: string) => Promise<void>;
   connectedDevices: Device[];
   allDevices: Device[];
@@ -432,6 +432,11 @@ export default function useBLE(): BluetoothLowEnergyApi {
     const maxSafeSize = targetDeviceId ? getDeviceMtu(targetDeviceId) - 3 : Math.min(...targets.map(d => getDeviceMtu(d.id))) - 3;
     
     if (payload.length > maxSafeSize) {
+      if (payload[0] === 0x51) {
+        AppLogger.log('[BLE] 0x51 Payload exceeds safe MTU. Routing to writeChunked automatically.');
+        await writeChunked(payload, targetDeviceId);
+        return true;
+      }
       AppLogger.warn(`[BLE] PAYLOAD TOO LARGE: ${payload.length} bytes exceeds safe MTU window of ${maxSafeSize} bytes. Rejecting to prevent hardware lockup.`);
       return false;
     }

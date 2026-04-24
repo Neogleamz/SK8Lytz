@@ -81,7 +81,7 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
     if (!writeToDevice) return;
     const generatedRgbArray = PositionalMathBuffer.generateArray(preset.nodes, devicePoints, preset.fill_mode === 'GRADIENT');
     const mappedSpeed = Math.max(1, Math.min(31, Math.round((speed / 100) * 31)));
-    const payload = ZenggeProtocol.setMultiColor(generatedRgbArray, mappedSpeed, direction, preset.transition_type);
+    const payload = ZenggeProtocol.setMultiColor(generatedRgbArray, devicePoints, mappedSpeed, direction, preset.transition_type);
     writeToDevice(payload);
   }, [writeToDevice, devicePoints, speed, direction]);
 

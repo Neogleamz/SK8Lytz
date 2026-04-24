@@ -535,7 +535,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             g: parseInt(h.slice(3, 5), 16) || 0,
             b: parseInt(h.slice(5, 7), 16) || 0,
           }));
-          writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(favRaw.speed), 1, favRaw.multiTransition));
+          writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(favRaw.speed), 1, favRaw.multiTransition));
         }
       } else {
         // Unknown/legacy mode — best-effort color dispatch

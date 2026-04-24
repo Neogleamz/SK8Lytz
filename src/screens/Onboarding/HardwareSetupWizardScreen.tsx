@@ -107,7 +107,7 @@ export default function HardwareSetupWizardScreen({
 
       // 0x59 static multi-color mode: Green. 
       const colorArray = Array(blinkPoints).fill({ r: 0, g: 255, b: 0 });
-      const blinkPayload = ZenggeProtocol.setMultiColor(colorArray, 1, 1, 0x00); 
+      const blinkPayload = ZenggeProtocol.setMultiColor(colorArray, blinkPoints, 1, 1, 0x00); 
       await writeToDevice(blinkPayload, deviceMac);
       
       // Keep it solid green for 10 seconds based on user request, then send Off command

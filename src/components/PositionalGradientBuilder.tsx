@@ -42,7 +42,7 @@ export default function PositionalGradientBuilder({
          const generatedRgbArray = PositionalMathBuffer.generateArray(nodes, deviceLedCount, fillMode === 'GRADIENT');
          // Normalize speed 0-100 to 0x01-0x1F (1-31)
          const mappedSpeed = Math.max(1, Math.min(31, Math.round((speed / 100) * 31)));
-         const payload = ZenggeProtocol.setMultiColor(generatedRgbArray, mappedSpeed, direction, transitionType);
+         const payload = ZenggeProtocol.setMultiColor(generatedRgbArray, deviceLedCount, mappedSpeed, direction, transitionType);
          writeToDevice(payload);
      }
   }, [nodes, fillMode, transitionType, direction, speed, deviceLedCount]);

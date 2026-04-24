@@ -516,7 +516,7 @@ export class ZenggeProtocol {
    */
   static setMusicConfig(
     musicMode: number,
-    micSource: 0x26 | 0x27,
+    modeType: 0x26 | 0x27,
     isOn: boolean,
     color1: { r: number; g: number; b: number },
     color2: { r: number; g: number; b: number },
@@ -526,8 +526,8 @@ export class ZenggeProtocol {
     const payload = [
       0x73,
       isOn ? 0x01 : 0x00,
-      micSource,
-      Math.max(1, Math.min(13, musicMode | 0)),
+      modeType,
+      Math.max(1, Math.min(30, musicMode | 0)),
       Math.max(0, Math.min(255, color1.r | 0)),
       Math.max(0, Math.min(255, color1.g | 0)),
       Math.max(0, Math.min(255, color1.b | 0)),
@@ -538,7 +538,7 @@ export class ZenggeProtocol {
       Math.max(0, Math.min(255, brightness | 0)),
     ];
     getAppLogger().log('ZENGGE_MUSIC_CONFIG_13B', {
-      musicMode, micSource: `0x${micSource.toString(16)}`, isOn,
+      musicMode, modeType: `0x${modeType.toString(16)}`, isOn,
       c1: `${color1.r},${color1.g},${color1.b}`,
     });
     payload.push(this.calculateChecksum(payload));
@@ -606,6 +606,7 @@ export class ZenggeProtocol {
    */
   static setMultiColor(
     colors: {r: number, g: number, b: number}[],
+    hardwareLedPoints: number,
     speed: number,
     direction: number,
     transitionType: number = 0x01  // Default: Static/freeze (safest fallback)
@@ -617,6 +618,7 @@ export class ZenggeProtocol {
     
     // Enforce an absolute minimum matrix length of 12! Master Reference explicitly warns that 0x59 payloads < 10 cause hardware memory lock glitching!
     const numPoints = Math.max(12, Math.min(MAX_PIXELS, colors.length));
+    const safeLedPoints = Math.max(12, hardwareLedPoints);
     
     // Pad the physical array out to numPoints internally if the caller under-filled it
     const paddedColors = new Array(numPoints).fill(colors[0] || {r:0, g:0, b:0});
@@ -638,8 +640,8 @@ export class ZenggeProtocol {
       payload[idx++] = Math.max(0, Math.min(255, c.g | 0));
       payload[idx++] = Math.max(0, Math.min(255, c.b | 0));
     }
-    payload[idx++] = (numPoints >> 8) & 0xFF;
-    payload[idx++] = numPoints & 0xFF;
+    payload[idx++] = (safeLedPoints >> 8) & 0xFF;
+    payload[idx++] = safeLedPoints & 0xFF;
     payload[idx++] = transitionType & 0xFF;
     payload[idx++] = safeSpeed;
     payload[idx++] = direction & 0xFF;
@@ -719,7 +721,7 @@ export class ZenggeProtocol {
     color1: { r: number; g: number; b: number };
     color2: { r: number; g: number; b: number };
     dir?: number;
-  }[], dir: number = 0x01): number[] {
+  }[], dir: number = 0x80): number[] { // 0x80 = forward + segment mirroring, 0x00 = reverse
     const TOTAL_SLOTS = 32;
     const raw: number[] = [0x51];
 
@@ -736,7 +738,7 @@ export class ZenggeProtocol {
         raw.push(Math.max(0, Math.min(255, step.color2.r | 0)));
         raw.push(Math.max(0, Math.min(255, step.color2.g | 0)));
         raw.push(Math.max(0, Math.min(255, step.color2.b | 0)));
-        raw.push((step.dir ?? dir) & 0xFF); // direction byte — absent in 9B compact
+        raw.push((step.dir ?? dir) & 0xFF); // direction byte — required in 10B format
       } else {
         // Inactive slot — 10 bytes all zero
         raw.push(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
@@ -746,7 +748,7 @@ export class ZenggeProtocol {
     raw.push(0x0F); // terminator
     raw.push(this.calculateChecksum(raw));
     getAppLogger().log('ZENGGE_CUSTOM_MODE_323B', { bytes: raw.length, steps: steps.length });
-    return this.wrapCommand(raw);
+    return raw; // Do NOT wrap - writeChunked handles the 0x40 chunk framing envelope
   }
 
   static turnOn(): number[] {
