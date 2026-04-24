@@ -6,6 +6,8 @@ import { STORAGE_PREFIX } from '../constants/AppConstants';
 import { AppLogger } from '../services/AppLogger';
 import { PermanentCrew, profileService, SessionHistoryItem, UserProfile } from '../services/ProfileService';
 import { supabase } from '../services/supabaseClient';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 
 const NOTIF_PREF_KEY = `${STORAGE_PREFIX}notif_prefs`;
 
@@ -149,14 +151,14 @@ export function useAccountOverview(visible: boolean) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
       const ext = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
       const path = `${user.id}/avatar.${ext}`;
 
+      const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' });
+
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(path, blob, { contentType: `image/${ext}`, upsert: true });
+        .upload(path, decode(base64), { contentType: `image/${ext}`, upsert: true });
 
       if (uploadError) throw uploadError;
 
