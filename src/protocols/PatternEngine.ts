@@ -187,6 +187,11 @@ export const SK8LYTZ_TEMPLATES: SK8LytzTemplate[] = [
   { id: 103, name: 'Street Braking',      icon: '🚨', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: true, tier: 3, group: 'Street' },
   { id: 104, name: 'Street Slowing',      icon: '⚠️', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: true, tier: 3, group: 'Street' },
   { id: 105, name: 'Street Accelerating', icon: '💨', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: true, tier: 3, group: 'Street' },
+
+  // ── GROUP 9: NATIVE TEMPORAL (0x51 EXTENDED) ────────────────────────────
+  { id: 70, name: 'Native Breathe',       icon: '🫁', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Breathe' },
+  { id: 71, name: 'Native Sweep',         icon: '🌊', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Marquee' },
+  { id: 72, name: 'Native Center-Out',    icon: '🎆', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Marquee' },
 ];
 
 // ─── MATH HELPERS ─────────────────────────────────────────────────────────────
@@ -880,6 +885,24 @@ function buildCyberpunkShift(fg: RGB, bg: RGB, numLEDs: number, tick: number, di
   });
 }
 
+// ─── GROUP 9 BUILDERS (NATIVE TEMPORAL VISUALIZERS) ─────────────────────────
+function buildNativeBreathe(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const brightness = Math.sin(tick * Math.PI) ** 2; // smooth power curve
+  return Array(numLEDs).fill(blendRGB(fg, bg, brightness));
+}
+
+function buildNativeSweep(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const t = direction === 0 ? tick : 1 - tick;
+  const pos = Math.floor(t * numLEDs);
+  return Array.from({ length: numLEDs }, (_, i) => i < pos ? fg : bg);
+}
+
+function buildNativeCenterOut(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const center = Math.floor(numLEDs / 2);
+  const spread = Math.floor(tick * center);
+  return Array.from({ length: numLEDs }, (_, i) => Math.abs(i - center) <= spread ? fg : bg);
+}
+
 // ─── GENERATORS ───────────────────────────────────────────────────────────────
 
 export interface PatternOptions {
@@ -958,6 +981,11 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: 
   const arr: RGB[] = Array(n).fill(bg);
 
   switch (patternId) {
+    // ── GROUP 9: NATIVE TEMPORAL ──
+    case 70: return buildNativeBreathe(fg, bg, n, tick);
+    case 71: return buildNativeSweep(fg, bg, n, tick, direction);
+    case 72: return buildNativeCenterOut(fg, bg, n, tick);
+
     // ── GROUP 1: SOLID & STATIC ──
     case 1: return buildSolid(fg, n);
     case 2: return buildSplitColors(fg, bg, n);
@@ -1193,6 +1221,25 @@ export function buildPatternPayload(
   brightness: number = 100,
   options?: PatternOptions
 ): number[] | null {
+  // ── GROUP 9: NATIVE TEMPORAL (0x51 INTERCEPTION) ──
+  if (patternId >= 70 && patternId <= 72) {
+    let modeId = 1; // Default to Breathe
+    if (patternId === 70) modeId = 1; // Change gradually (Breathe)
+    if (patternId === 71) modeId = 5; // Running, 1point from start to end (Sweep)
+    if (patternId === 72) modeId = 7; // Running, from middle to both ends (Center-Out)
+
+    // Hardware expects direction logic via the 10th byte (0x80 = forward, 0x00 = reverse)
+    const hardwareDir = direction === 1 ? 0x80 : 0x00;
+
+    return ZenggeProtocol.setCustomModeExtended([{
+      mode: modeId,
+      speed,
+      color1: fg,
+      color2: bg,
+      dir: hardwareDir
+    }]);
+  }
+
   return buildMultiColorPayload(patternId, fg, bg, numLEDs, speed, direction, brightness, options);
 }
 

@@ -481,43 +481,73 @@ export default function useBLE(): BluetoothLowEnergyApi {
   };
 
   /**
-   * Send a large payload to BLE device using ZENGGE chunked framing.
-   * Required for 0x51 Extended Scene Builder payloads (323 bytes total).
+   * Send a large payload to BLE device using ZENGGE chunked framing (LowerTransportLayerEncoder).
+   * Required for 0x51 Extended Scene Builder payloads (323 bytes total) and long 0x59 spatial arrays.
    *
-   * Each chunk: [0x40, seqByte, 0x00, 0x00, 0x01, 0x43, 0xBD, 0x0B, ...data]
-   * Max 20 bytes per chunk (BLE 4.x MTU). 8-byte header = 12 bytes data per chunk.
-   *
-   * ⚠️ Framing signature [0x01, 0x43, 0xBD, 0x0B] from APK HCI sniff — verify
-   *    against live hardware before using in Scene Builder production UI.
+   * Automatically calculates chunks based on the negotiated MTU (default 20 bytes data max for BLE 4.x).
    *
    * @param payload   Full raw payload bytes (e.g. 323-byte 0x51 extended packet)
-   * @param chunkSize Max bytes per BLE write (default 20 = BLE 4.x MTU)
+   * @param targetDeviceId Optional. If provided, sends only to that device using its negotiated MTU.
    */
-  const writeChunked = async (payload: number[], chunkSize: number = 20): Promise<void> => {
+  const writeChunked = async (payload: number[], targetDeviceId?: string): Promise<void> => {
     if (connectedDevicesRef.current.length === 0 || Platform.OS === 'web') return;
 
-    const HEADER_SIZE = 8;
-    const dataPerChunk = chunkSize - HEADER_SIZE; // 12 bytes data per 20-byte chunk
+    const targets = targetDeviceId
+      ? connectedDevicesRef.current.filter(d => d.id === targetDeviceId)
+      : connectedDevicesRef.current;
 
-    let seqByte = 0x00;
+    if (targets.length === 0) return;
+
+    const safeMtu = targetDeviceId ? getDeviceMtu(targetDeviceId) - 3 : Math.min(...targets.map(d => getDeviceMtu(d.id))) - 3;
+    
+    // Fallback if safeMtu is too small to even hold a header
+    const chunkSize = Math.max(20, safeMtu); 
+
+    const totalLen = payload.length;
+    const seqByte = Math.floor(Math.random() * 256) & 0xFF; // Random sequence per transaction
+
     const chunks: number[][] = [];
-    for (let i = 0; i < payload.length; i += dataPerChunk) {
-      const slice = payload.slice(i, i + dataPerChunk);
-      chunks.push([
-        0x40,                    // ZENGGE chunk marker
-        seqByte,                 // sequence counter
-        0x00, 0x00,              // reserved
-        0x01, 0x43, 0xBD, 0x0B, // framing signature (APK HCI sniff — verify before prod)
-        ...slice,
-      ]);
-      seqByte = (seqByte + 1) & 0xFF;
+    let offset = 0;
+    let segIdx = 0;
+
+    while (offset < totalLen) {
+      const isFirst = offset === 0;
+      const headerSize = isFirst ? 8 : 5;
+      let dataLen = Math.min(chunkSize - headerSize, totalLen - offset);
+      const isLast = (offset + dataLen) >= totalLen;
+
+      const chunk = [0x40, seqByte];
+      
+      let currentSegIdx = segIdx;
+      if (isLast) {
+        currentSegIdx |= 0x8000; // MSB flag for EOF Terminator
+      }
+
+      chunk.push((currentSegIdx >> 8) & 0xFF);
+      chunk.push(currentSegIdx & 0xFF);
+
+      if (isFirst) {
+        chunk.push((totalLen >> 8) & 0xFF);
+        chunk.push(totalLen & 0xFF);
+        chunk.push(dataLen & 0xFF);
+        chunk.push(0x0B); // Command ID for Control/Write
+      } else {
+        chunk.push(dataLen & 0xFF);
+      }
+
+      chunk.push(...payload.slice(offset, offset + dataLen));
+      chunks.push(chunk);
+
+      offset += dataLen;
+      segIdx++;
     }
 
-    AppLogger.log('BLE_CHUNKED_WRITE', { payloadLen: payload.length, numChunks: chunks.length });
+    AppLogger.log('BLE_CHUNKED_WRITE', { payloadLen: totalLen, numChunks: chunks.length, chunkSize });
 
     for (const chunk of chunks) {
       const b64 = Buffer.from(chunk).toString('base64');
-      for (const device of connectedDevicesRef.current) {
+      for (const device of targets) {
+        if (autoRecovery.ghostedDeviceIds.includes(device.id)) continue;
         try {
           await device.writeCharacteristicWithoutResponseForService(
             ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
@@ -526,8 +556,8 @@ export default function useBLE(): BluetoothLowEnergyApi {
           AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: String(e) });
         }
       }
-      // 20ms inter-chunk delay — prevents BLE TX buffer overflow on Android
-      await new Promise(resolve => setTimeout(resolve, 20));
+      // Inter-chunk delay to prevent BLE TX buffer overflow
+      await new Promise(resolve => setTimeout(resolve, Platform.OS === 'ios' ? 30 : 20));
     }
   };
 
