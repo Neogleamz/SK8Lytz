@@ -60,11 +60,11 @@ export class ZenggeAdapter implements IControllerProtocol {
   // ─── LED Commands ──────────────────────────────────────────────────
   buildSolidColor(r: number, g: number, b: number): number[] {
     // Single solid color = setMultiColor with 1 pixel, FREEZE transition
-    return ZenggeProtocol.setMultiColor([{ r, g, b }], 1, 1, 0x01);
+    return ZenggeProtocol.setMultiColor([{ r, g, b }], 12, 1, 1, 0x01);
   }
 
   buildMultiColor(colors: RGB[], speed: number, direction: number, transition: number): number[] {
-    return ZenggeProtocol.setMultiColor(colors, speed, direction, transition);
+    return ZenggeProtocol.setMultiColor(colors, colors.length, speed, direction, transition);
   }
 
   buildCustomMode(steps: CustomModeStep[]): number[] {

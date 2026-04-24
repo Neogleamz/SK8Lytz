@@ -1204,7 +1204,7 @@ export function buildMultiColorPayload(
   }));
 
   const transitionType = getPatternTransitionType(patternId);
-  return ZenggeProtocol.setMultiColor(scaledPixels, speed, direction, transitionType);
+  return ZenggeProtocol.setMultiColor(scaledPixels, numLEDs, speed, direction, transitionType);
 }
 
 /**

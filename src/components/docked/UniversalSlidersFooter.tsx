@@ -457,7 +457,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                       const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
                       return { r: rawR, g: rawG, b: rawB };
                     });
-                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, clampSpeed(val), 1, multiTransition));
+                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, multiTransition));
                   }
                 } else if (activeMode === 'STREET') {
                   applyStreetPattern(motionStateRef.current, brightness, val);
