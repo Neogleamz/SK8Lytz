@@ -11,14 +11,15 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useTheme } from '../context/ThemeContext';
+import { Spacing } from '../theme/theme';
 import { AppLogger } from '../services/AppLogger';
-import { useAuthStyles } from './auth/AuthStyles';
-import { AuthHeader } from './auth/AuthHeader';
-import { AuthFormSignIn } from './auth/AuthFormSignIn';
-import { AuthFormSignUp } from './auth/AuthFormSignUp';
-import { AuthFormForgotPassword } from './auth/AuthFormForgotPassword';
-import { AuthFooterActions } from './auth/AuthFooterActions';
-import { AuthSandboxToggle } from './auth/AuthSandboxToggle';
+import { useAuthStyles } from '../components/auth/AuthStyles';
+import { AuthHeader } from '../components/auth/AuthHeader';
+import { AuthFormSignIn } from '../components/auth/AuthFormSignIn';
+import { AuthFormSignUp } from '../components/auth/AuthFormSignUp';
+import { AuthFormForgotPassword } from '../components/auth/AuthFormForgotPassword';
+import { AuthFooterActions } from '../components/auth/AuthFooterActions';
+import { AuthSandboxToggle } from '../components/auth/AuthSandboxToggle';
 
 const STORAGE_LAST_EMAIL    = '@Sk8lytz_auth_last_email';
 const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';

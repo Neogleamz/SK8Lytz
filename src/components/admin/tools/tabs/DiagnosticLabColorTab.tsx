@@ -3,7 +3,7 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Spacing } from '../../../../theme/theme';
 import { useDiagnosticLabStyles } from './DiagnosticLabStyles';
 import { DiagnosticLabHwBadge } from './DiagnosticLabHwBadge';
-import { ZenggeProtocol } from '../../../../utils/ZenggeProtocol';
+import { ZenggeProtocol } from '../../../../protocols/ZenggeProtocol';
 
 interface ColorTabProps {
   targetDeviceId: string | null;

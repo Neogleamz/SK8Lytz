@@ -308,6 +308,10 @@ export default function Sk8LytzDiagnosticLab({
             connectedDevices={connectedDevices}
             hwSettings={hwSettings}
             hwPts={hwPts}
+            bldColors={bldColors}
+            bldSpeed={bldSpeed}
+            lastSent={lastSent}
+            lastNote={lastNote}
             transmit={transmit}
           />}
           {tab === 'BUILDER' && <DiagnosticLabBuilderTab 

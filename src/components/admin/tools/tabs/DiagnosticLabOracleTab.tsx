@@ -5,7 +5,7 @@ import { useDiagnosticLabStyles } from './DiagnosticLabStyles';
 import { DiagnosticLabHwBadge } from './DiagnosticLabHwBadge';
 import { TRANSITION_TYPES } from './DiagnosticLabConstants';
 import { QuickColorGrid } from './DiagnosticLabQuickColorGrid';
-import { ZenggeProtocol } from '../../../../utils/ZenggeProtocol';
+import { ZenggeProtocol } from '../../../../protocols/ZenggeProtocol';
 import { OpcodeStatus, TRACKED_OPCODES, TestVerdict } from '../../../../hooks/useDiagnosticLog';
 
 interface OracleTabProps {
@@ -772,7 +772,7 @@ export function DiagnosticLabOracleTab({
       ) : (
         <View style={{ gap: Spacing.sm }}>
           {testLog.slice(0, 30).map((entry) => {
-            const vcfg = entry.verdict ? verdictConfig[entry.verdict] : null;
+            const vcfg = entry.verdict ? verdictConfig[entry.verdict as keyof typeof verdictConfig] : null;
             return (
               <View key={entry.id} style={[S.diagBox, { padding: Spacing.md, borderColor: vcfg?.color ?? border }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.xs }}>

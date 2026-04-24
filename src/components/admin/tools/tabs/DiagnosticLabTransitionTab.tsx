@@ -5,7 +5,7 @@ import { Spacing } from '../../../../theme/theme';
 import { useDiagnosticLabStyles } from './DiagnosticLabStyles';
 import { DiagnosticLabHwBadge } from './DiagnosticLabHwBadge';
 import { TRANSITION_TYPES } from './DiagnosticLabConstants';
-import { ZenggeProtocol } from '../../../../utils/ZenggeProtocol';
+import { ZenggeProtocol } from '../../../../protocols/ZenggeProtocol';
 
 interface TransitionTabProps {
   targetDeviceId: string | null;

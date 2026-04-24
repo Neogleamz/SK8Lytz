@@ -6,7 +6,7 @@ import { useDiagnosticLabStyles } from './DiagnosticLabStyles';
 import { DiagnosticLabHwBadge } from './DiagnosticLabHwBadge';
 import { TRANSITION_TYPES } from './DiagnosticLabConstants';
 import { QuickColorGrid } from './DiagnosticLabQuickColorGrid';
-import { ZenggeProtocol } from '../../../../utils/ZenggeProtocol';
+import { ZenggeProtocol } from '../../../../protocols/ZenggeProtocol';
 import CustomEffectVisualizer from '../../../CustomEffectVisualizer';
 
 interface BuilderTabProps {
@@ -180,7 +180,7 @@ export function DiagnosticLabBuilderTab({
                 <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={c.r.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].r = parseInt(v)||0; setBldColors(cur); }} placeholder="R" placeholderTextColor={txtMuted} />
                 <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={c.g.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].g = parseInt(v)||0; setBldColors(cur); }} placeholder="G" placeholderTextColor={txtMuted} />
                 <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={c.b.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].b = parseInt(v)||0; setBldColors(cur); }} placeholder="B" placeholderTextColor={txtMuted} />
-                <TouchableOpacity onPress={() => setBldColors(bldColors.filter((_, idx)=>idx!==i))} style={{ padding: Spacing.sm }}>
+                <TouchableOpacity onPress={() => setBldColors(bldColors.filter((_: any, idx: number)=>idx!==i))} style={{ padding: Spacing.sm }}>
                   <MaterialCommunityIcons name="delete" color="#ff4040" size={18} />
                 </TouchableOpacity>
              </View>

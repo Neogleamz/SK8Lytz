@@ -12,6 +12,7 @@ interface DevicesTabProps {
   registeredDevices: any[];
   targetDeviceId: string | null;
   setTargetDeviceId: (id: string | null) => void;
+  liveRxPayload?: any;
   connectToDevice?: (device: any) => void;
   hwSettings: any;
 }
