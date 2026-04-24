@@ -189,9 +189,8 @@ export const SK8LYTZ_TEMPLATES: SK8LytzTemplate[] = [
   { id: 105, name: 'Street Accelerating', icon: '💨', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: true, tier: 3, group: 'Street' },
 
   // ── GROUP 9: NATIVE TEMPORAL (0x51 EXTENDED) ────────────────────────────
-  { id: 70, name: 'Native Breathe',       icon: '🫁', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Breathe' },
-  { id: 71, name: 'Native Sweep',         icon: '🌊', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Marquee' },
-  { id: 72, name: 'Native Center-Out',    icon: '🎆', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Marquee' },
+  // (Note: Smooth Breath (17), Wipe/Fill (18), and Strobe Flash (26) natively intercept via 0x51 in buildPatternPayload)
+  { id: 72, name: 'Center-Out Marquee',   icon: '🎆', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Marquee' },
 ];
 
 // ─── MATH HELPERS ─────────────────────────────────────────────────────────────
@@ -1238,10 +1237,12 @@ export function buildPatternPayload(
   hardwareLedPoints?: number
 ): number[] | null {
   // ── GROUP 9: NATIVE TEMPORAL (0x51 INTERCEPTION) ──
-  if (patternId === 18 || (patternId >= 70 && patternId <= 72)) {
+  const is0x51Target = [17, 18, 24, 26, 72].includes(patternId);
+  if (is0x51Target) {
     let modeId = 1; // Default to Breathe
-    if (patternId === 70) modeId = 1; // Change gradually (Breathe)
-    if (patternId === 71 || patternId === 18) modeId = 5; // Running, 1point from start to end (Sweep/Wipe)
+    if (patternId === 17 || patternId === 24) modeId = 1; // Change gradually (Breathe)
+    if (patternId === 18) modeId = 5; // Running, 1point from start to end (Sweep/Wipe)
+    if (patternId === 26) modeId = 4; // Strobe-flash
     if (patternId === 72) modeId = 7; // Running, from middle to both ends (Center-Out)
 
     // Hardware expects direction logic via the 10th byte (0x80 = forward, 0x00 = reverse)
