@@ -501,7 +501,7 @@ const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, 
       </View>
       <View style={{ marginTop: Spacing.lg, alignItems: 'center', zIndex: 10, width: 100 }}>
         <Text
-          style={{ color: isPoweredOn ? (isDark ? 'white' : 'black') : (isDark ? '#888' : '#666'), fontWeight: 'bold', fontSize: 11, textAlign: 'center', opacity: isPoweredOn ? 1.0 : 0.4 }}
+          style={{ color: isPoweredOn ? 'white' : '#888', fontWeight: 'bold', fontSize: 11, textAlign: 'center', opacity: isPoweredOn ? 1.0 : 0.4 }}
           numberOfLines={2}
         >
           {device.name || product}
@@ -547,7 +547,7 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? '#000000' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)' }]}>
+    <View style={[styles.container, { backgroundColor: '#000000', borderColor: 'rgba(255,255,255,0.12)' }]}>
       <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', paddingTop: Spacing.xl }}>
         {renderDevices.map((dev, index) => (
           <VisualizerUnit
