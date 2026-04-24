@@ -5,7 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
 import { IC_TYPE_NAMES, COLOR_SORTING_RGB, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import CustomSlider from '../CustomSlider';
-import { useBLE } from '../../hooks/useBLE';
+import useBLE from '../../hooks/useBLE';
 
 export interface AdvancedHardwareModalProps {
   visible: boolean;

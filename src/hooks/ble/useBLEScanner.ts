@@ -36,10 +36,11 @@ export function useBLEScanner({
   const scannerStateRef = useRef<'IDLE' | 'SCANNING' | 'PROBING'>('IDLE');
   const rejectedMacsRef = useRef<Set<string>>(new Set());
 
-  // Ambient Telemetry Cache
   const telemetryCacheRef = useRef<Map<string, number>>(new Map());
   const telemetryBatchRef = useRef<any[]>([]);
   const telemetryTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const knownMacsRef = useRef<Set<string>>(new Set());
 
   const flushTelemetry = () => {
     if (telemetryBatchRef.current.length === 0) return;
@@ -193,7 +194,7 @@ export function useBLEScanner({
         
         // --- PASSIVE TELEMETRY BYPASS ---
         // If we don't have HW info, try to reconstruct it from the registry cache.
-        if (!hasHwInfo && knownMacs.has(device.id)) {
+        if (!hasHwInfo && knownMacsRef.current.has(device.id)) {
            try {
               const cachedStr = await AsyncStorage.getItem('@Sk8lytz_registered_devices');
               if (cachedStr) {
@@ -204,7 +205,7 @@ export function useBLEScanner({
                     (device as any).hwSegments = cachedData.segments;
                     (device as any).hwStripType = cachedData.ic_type;
                     (device as any).hwSorting = cachedData.color_sorting;
-                    AppLogger.log('[Scanner] Restored passive hardware limits from cache', { deviceId: device.id });
+                    AppLogger.log('DEVICE_DISCOVERED', { context: 'restored_passive', deviceId: device.id });
                     setAllDevices([...allDevicesRef.current]);
                     classifyProbeResults([...allDevicesRef.current]);
                     return; // BYPASS active probe
@@ -296,12 +297,12 @@ export function useBLEScanner({
 
     const skipProbing = options?.disableProbing ?? disableProbing;
 
-    const knownMacs = new Set<string>();
+    knownMacsRef.current.clear();
 
     AsyncStorage.getItem('@Sk8lytz_registered_devices').then(cached => {
       if (cached) {
         try {
-          JSON.parse(cached).forEach((d: any) => knownMacs.add(d.device_mac));
+          JSON.parse(cached).forEach((d: any) => knownMacsRef.current.add(d.device_mac));
         } catch (e) { AppLogger.warn('[Scanner] Failed to parse registered_devices cache', { error: String(e) }); }
       }
     }).catch(() => {});
@@ -379,7 +380,7 @@ export function useBLEScanner({
         }
 
         const isKnownPrefix = nameLower.startsWith('lednet') || nameLower.startsWith('sk8') || nameLower.startsWith('zg') || nameLower.startsWith('halo') || nameLower.startsWith('soul');
-        const isMatch = isSymphony || isKnownPrefix || hasZenggeService || knownMacs.has(device.id);
+        const isMatch = isSymphony || isKnownPrefix || hasZenggeService || knownMacsRef.current.has(device.id);
         
         const logData = { id: device.id, name: device.name || 'Unknown', rssi: device.rssi, isSymphony, isKnownPrefix, hasZenggeService, serviceUUIDs: device.serviceUUIDs || [], manufacturerData: manufacturerData ? 'presents' : 'none' };
 
