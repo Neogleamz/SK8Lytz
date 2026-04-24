@@ -3,6 +3,7 @@ import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { hexToRgb } from '../utils/ColorUtils';
 import { supabase } from '../services/supabaseClient';
 import { ScenesService, Scene } from '../services/ScenesService';
+import { AppLogger } from '../services/AppLogger';
 
 export interface SceneStep {
   id: string;
@@ -90,6 +91,10 @@ export function useSceneBuilder(writeToDevice?: (payload: number[]) => Promise<v
 
       setSceneId(newId);
       setSceneName(nameToSave);
+      
+      // Log event
+      AppLogger.log('SCENE_CREATED', { sceneId: newId, isPublic, stepCount: steps.length });
+      
       return true;
     } catch (err) {
       console.error('[useSceneBuilder] Save failed:', err);

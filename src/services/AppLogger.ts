@@ -448,6 +448,26 @@ class AppLoggerService {
     if (this.buffer.length === 0) return;
 
     try {
+      // ── [TELEMETRY MASTER GATE] ─────────────────────────────────────────────
+      const settingsStr = await AsyncStorage.getItem('@sk8lytz_app_settings');
+      let telemetryEnabled = true;
+      if (settingsStr) {
+        try {
+          const settings = JSON.parse(settingsStr);
+          if (settings.global_telemetry_enabled === false || settings.global_telemetry_enabled === 'false') {
+            telemetryEnabled = false;
+          }
+        } catch(e) {}
+      }
+
+      if (!telemetryEnabled) {
+        if (__DEV__) console.log('[AppLogger] Global telemetry is DISABLED. Wiping buffer and aborting upload.');
+        this.buffer = [];
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+        return;
+      }
+      // ────────────────────────────────────────────────────────────────────────
+
       const deviceId = Device.osInternalBuildId || Device.modelId || 'unknown';
       const sessionId = this.sessionId;
       

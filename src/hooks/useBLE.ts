@@ -414,7 +414,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
   const writeToDevice = async (payload: number[], targetDeviceId?: string): Promise<boolean | 'partial'> => {
     const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
-    AppLogger.log('RAW_PAYLOAD', { bytes: payload.length, targetDeviceId: targetDeviceId?.slice(-4), hex: hexString.substring(0, 80) });
     AppLogger.setLastTxPayload(hexString);
 
     // Web / no-op path: return true so optimisticWrite sees success
