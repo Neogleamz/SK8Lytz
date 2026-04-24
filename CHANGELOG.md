@@ -1,5 +1,14 @@
-## [3.2.0] - 2026-04-24
+## [3.2.1] - 2026-04-24
 
+### 🐛 Bug Fixes
+- **core**: prevent session abandonment during crew deletion (`5871dc4`)
+
+### 📖 Documentation
+- **plans**: commit AI-First plans for sk8lytz picks and session abandonment fix (`6a0b3e9`)
+
+---
+
+## [3.2.0] - 2026-04-24
 ### ✨ Features
 - **admin**: Rebuild App Manager as a registry-driven tabbed controls hub (`fc756d9`)
 - **ui**: Apply dashboard and pattern UI polish, fix group creation duplication bug (`ab61434`)
