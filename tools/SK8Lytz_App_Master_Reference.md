@@ -439,11 +439,11 @@ Source of truth: `src/utils/RbmDictionary.ts` — IDs 1–100, mapped 1:1 to Zen
 Visualizer: `src/utils/RbmSimulator.ts` (pixel-perfect frame generation).
 Protocol: `0x42` (`setCustomRbm`) or `0x61` (legacy APK path — same pattern table).
 
-#### Music Mode Patterns (13 Profiles)
+#### Music Mode Patterns (46 Profiles)
 
-Source of truth: `src/utils/MusicDictionary.ts` — 13 music-reactive patterns keyed to protocol IDs.
+Source of truth: `src/utils/MusicDictionary.ts` — music-reactive patterns keyed to protocol IDs depending on Mode Type (Light Bar = 16, Light Screen = 30).
 Visualizer: `src/utils/RbmSimulator.ts` → `getRbmMusicFrame()`.
-Protocol: `0x73` (`setMusicConfig`) + `0x74` (App Mic magnitude stream).
+Protocol: `0x73` (`setMusicConfig` with `0x26`/`0x27` Mode Type) + `0x74` (App Mic magnitude stream when `0x73` isOn = 0).
 
 ---
 
@@ -484,17 +484,19 @@ _Primary command for all IC-strip patterns. Sends a per-pixel RGB array that the
 - **Format:** `[0x59, totalLenHi, totalLenLo, [R1,G1,B1...], numLEDsHi, numLEDsLo, transitionType, speed, direction, checksum]`
 - **Source of Truth:** `ZenggeProtocol.setMultiColor()` — _do NOT replicate this logic elsewhere._
 - **Minimum Payload:** 12 pixels. Payloads <10 cause **hardware memory lock glitching**.
-- **TransitionType Bytes (Hardware-Confirmed Apr 2026):**
+- **TransitionType Bytes (APK Verified Truth: `StaticColorfulMode.java`):**
 
-| Byte | HW Label | Builder Chip Name | Behavior |
-|:---|:---|:---|:---|
-| `0x00` | CASCADE | **STATIC** (freeze) | Pixel array locked in place — solid/static |
-| `0x01` | FREEZE | **FLOW** (scroll) | Continuous hardware scroll — use for animated patterns |
-| `0x02` | STROBE | **STROBE** (flash) | Flashing segments |
-| `0x03` | Running Water | **WATER** (wave) | Hard jumping marquee — one-shot trigger per command |
+| Byte | Name | Behavior |
+|:---|:---|:---|
+| `0x01` | Static | Freeze in place |
+| `0x02` | Running Water | Continuous hardware scroll |
+| `0x03` | Strobe | Flash effect |
+| `0x04` | Jump | Hard color jump |
+| `0x05` | Breathe | Breathe fade effect |
+| `0x06` | Twinkly | Twinkle effect |
 
 > [!IMPORTANT]
-> Builder chip IDs (0x00–0x03) corrected 2026-04-23 to match APK-proven `PositionalGradientBuilder.tsx` output. The HW label "CASCADE" = byte `0x00` = UI chip **STATIC**. The mapping is intentional — both represent the same hardware freeze behavior. Source of truth: commit `423f45e`.
+> **Tick Settings (Point Count) Mismatch Flaw**: The `numLEDsHi` and `numLEDsLo` bytes at the end of the `0x59` payload dictate the **physical hardware strip length** that the transition effect will span across. Our previous implementation clamped this value to the RGB array length (max 54). If the hardware has 150 LEDs, clamping this to 54 causes transitions like Strobe, Jump, Breathe, and Twinkly to malfunction (freeze/truncate) because the hardware thinks the spatial size is only 54! To bypass MTU limits while preserving spatial effects, we must decouple the RGB array length from the hardware point count sent in the payload.
 
 - **Speed:** UI 0–100 → HW 1–31. Formula: `max(1, min(31, round(uiSpeed / 100 × 30) + 1))`. Source: APK `Protocol/n.java: ad.e.a(f, 1, 31)`.
 - **Direction:** `0x01` Forward, `0x00` Reverse.
@@ -585,20 +587,18 @@ _Legacy/alternative opcode for triggering RBM patterns. Present in Zengge APK co
 
 ### Command: Music Configuration (0x73)
 
-_Configures the hardware's music-reactive mode with mic source, pattern, and dual colors._
+_Configures the hardware's music-reactive mode with mode type (Bar vs Screen), pattern, and dual colors._
 
 > [!CAUTION]
-> **micSource byte values were previously documented incorrectly.** APK-verified values from `MusicModeFragment` line 752 and `C7789z.java`:
-> - `0x26` (38) = **App/phone mic** (magnitude driven by `0x74` commands)
-> - `0x27` (39) = **Device mic** (hardware processes audio autonomously)
-> The old `0x00`/`0x01` values are WRONG and must not be used.
+> **The `0x73` structure does NOT contain a trailing micSource byte.** The `0x26` and `0x27` values dictate the Matrix Style (Light Bar vs Light Screen), NOT the microphone source.
+> Microphone Source is toggled implicitly via the `isOn` byte.
 
-- **Format (13 bytes):** `[0x73, isOn, micSource, effectId, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b, sensitivity, brightness, checksum]`
-- **isOn:** `0x01` = music mode on, `0x00` = off
-- **micSource:** `0x26` = App mic (phone), `0x27` = Device mic (hardware)
-- **effectId:** 1–13 music-reactive pattern IDs (mapped in `MusicDictionary.ts`)
+- **Format (13 bytes):** `[0x73, isOn, modeType, effectId, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b, sensitivity, brightness, checksum]`
+- **isOn:** `0x01` = Device Mic Active (Hardware processes audio). `0x00` = App Mic Active (Hardware mic OFF, waits for `0x74` magnitude streams).
+- **modeType:** `0x26` (38) = Light Bar Mode (16 built-in patterns). `0x27` (39) = Light Screen Mode (30 built-in patterns).
+- **effectId:** 1–30 music-reactive pattern IDs (mapped in `MusicDictionary.ts`)
 - **sensitivity / brightness:** 0–255
-- **Source of Truth:** `ZenggeProtocol.setMusicConfig()` — **must be updated to use `0x26`/`0x27` and include `isOn` byte.**
+- **Source of Truth:** `ZenggeProtocol.setMusicConfig()` — **must be updated to remove the trailing hallucinated micSource byte and accurately map `0x26`/`0x27` to modeType.**
 - **APK Source:** `C7789z.java`,  `MusicModeFragment.java` line 752
 
 ### Command: App Mic Magnitude (0x74)
@@ -606,7 +606,7 @@ _Configures the hardware's music-reactive mode with mic source, pattern, and dua
 _Streams real-time audio magnitude from the app's microphone to drive hardware music-reactive LEDs._
 
 - **Format:** `[0x74, magnitude(0–255), checksum]` (3 bytes)
-- **Used when:** `micSource = 0x26` (App mic) in the `0x73` music config.
+- **Used when:** `isOn = 0x00` (App mic) in the `0x73` music config.
 - **Source:** `C7788y.java` → `m20863a()`, `useAppMicrophone.ts` → `ZenggeProtocol.sendMusicMagnitude()`
 
 ### Command: Live Pixel Stream — Frame-by-Frame (0x53)

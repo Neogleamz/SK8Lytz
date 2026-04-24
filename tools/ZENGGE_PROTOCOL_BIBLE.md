@@ -280,18 +280,21 @@ totalLen = (numLEDs × 3) + 6
 
 totalLen = (numLEDs × 3) + 9
 ```
-- **Transition Types** (hardware-confirmed):
+- **Transition Types** (`StaticColorfulMode.java`):
 
 | Byte | Name | Behavior |
 |:-----|:-----|:---------|
-| `0x00` | CASCADE | Continuous hardware scroll |
-| `0x01` | FREEZE | Static locked in place |
-| `0x02` | STROBE | Flash (implementation varies) |
-| `0x03` | RUNNING_WATER | One-shot trigger, hard jump marquee |
+| `0x01` | Static | Freeze in place |
+| `0x02` | Running Water | Continuous hardware scroll |
+| `0x03` | Strobe | Flash effect |
+| `0x04` | Jump | Hard color jump |
+| `0x05` | Breathe | Breathe fade effect |
+| `0x06` | Twinkly | Twinkle effect |
 
 - **Speed**: 0–100 UI → 1–100 HW. Pass UI speed directly (clamped to 1–100). ⚠️ **ORACLE-CONFIRMED 2026-04-23**: The APK's `Protocol/n.java: ad.e.a(f, 1, 31)` clamp is for 0x51, NOT 0x59. Physical hardware responds to the full 1–100 range on the 0x59 speed byte. Setting speed=31 while UI slider is at 100 produced exactly 31%-speed animation on physical 0xA3 hardware.
 - **Direction**: `0x01` = forward, `0x00` = reverse
 - **Minimum pixels**: 12 (hardware glitches below 10)
+- **Tick Settings (Point Count)**: The `numLEDs_hi` and `numLEDs_lo` bytes represent the **physical length of the hardware strip** that the effect will span across, NOT the length of the RGB byte array sent! If clamped to `MAX_PIXELS = 54` for MTU reasons, the transition effects (Strobe, Jump, Breathe) will only animate on the first 54 LEDs of the strip and freeze/truncate the rest.
 - **LED count branch** in `C7760a` line 23: `if (mo20320T() == 167)` → different LED count constant (for 0xA7 variant). Our 0xA3 (163) takes the ELSE branch = standard LED count path.
 - **SK8Lytz relevance**: **CRITICAL** — primary pixel array command. ✅ Available on 0xA3.
 
@@ -359,18 +362,16 @@ Power OFF: [0x71, 0x24, 0x0F, checksum]  → checksum = 0x71+0x24+0x0F = 0xA4 �
 ### 0x73 — Music Mode Configuration ✅ OUR DEVICE
 - **Builder**: `C7789z.java` (full 13B), `C7774k.java` (5B short form)
 - **Called by**: `MusicModeFragment`, confirmed for 0xA2 and 0xA3
-- **Format (13 bytes)**:
-```
-[0x73, isOn(1=on/0=off), micSource, effectId,
- FG.R, FG.G, FG.B, BG.R, BG.G, BG.B,
- sensitivity, brightness, checksum]
-```
-- **micSource**: `0x26` (38) = phone/app mic, `0x27` (39) = device mic
-- **Confirmed from MusicModeFragment line 752**: `bool z2 = bArr[2] == 38` (38=phone, 39=device)
+- **Format (13 bytes)**: `[0x73, isOn, modeType, effectId, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b, sensitivity, brightness, checksum]`
+- **isOn**: `0x01` = Device Mic Active (Hardware processes audio). `0x00` = App Mic Active (Hardware mic OFF, waits for `0x74` magnitude streams).
+- **modeType**: `0x26` (38) = Light Bar Mode (16 built-in patterns). `0x27` (39) = Light Screen Mode (30 built-in patterns).
+- **effectId**: 1–30 music-reactive pattern IDs (mapped in `MusicDictionary.ts`)
+- **FG/BG Colors:** Dependent on `modeType` and `effectId`.
+  - **Light Bar (`0x26`)**: Only IDs 11, 14, 15 support a color picker. The selected color populates BOTH FG and BG bytes simultaneously.
+  - **Light Screen (`0x27`)**: ALL 30 IDs support a Foreground (Sound Column) color. Only IDs 19-24 and 28-30 support a Background (Drop) color.
+- **sensitivity / brightness**: 0–255
 
-> **CORRECTION FROM MASTER REFERENCE**: The Master Reference lists `micSource: 0x01 = Device, 0x00 = App`.
-> **APK TRUTH**: `0x26` (38) = app/phone mic, `0x27` (39) = device mic.
-> The 0x00/0x01 values are WRONG in the current codebase/reference.
+
 
 ---
 
@@ -380,7 +381,7 @@ Power OFF: [0x71, 0x24, 0x0F, checksum]  → checksum = 0x71+0x24+0x0F = 0xA4 �
 ```
 [0x74, magnitude(0-255), checksum]
 ```
-- **Used when**: micSource = `0x26` (app mic) in the `0x73` config
+- **Used when**: micSource in the `0x73` config
 - **SK8Lytz relevance**: **CRITICAL** ✅ Used by `useAppMicrophone.ts`
 
 ---
