@@ -1,3 +1,37 @@
+## [3.2.0] - 2026-04-24
+
+### ✨ Features
+- **admin**: Rebuild App Manager as a registry-driven tabbed controls hub (`fc756d9`)
+- **ui**: Apply dashboard and pattern UI polish, fix group creation duplication bug (`ab61434`)
+- **ble**: Overhaul useBLEScanner for passive telemetry and add AdvancedHardwareModal (`354a869`)
+- **hardware**: Achieve 0xA3 protocol parity for spatial arrays and extended sequences (`c343568`)
+- **pattern-engine**: Implement 0x51 MTU chunking and Native Temporal modes (`bae8df9`)
+- **ui**: Controller power button refactor and group sync fix (`eb7ec94`)
+- **ui**: Batch UI snacks - map radius, crewz rename, minimalist sliders, hide scenes (`8ab74ab`)
+- **ui**: Implement spectrum analyzer and fix music mode 0x73 byte order (`b4f7718`, `d391dce`, `f68771d`, `51ed2f5`)
+- **map**: Add spot labels, session clustering, and smart location picker (`0f11e6f`)
+
+### 🐛 Bug Fixes
+- **pattern**: Recalibrate math visualizers and resolve BLE blackout (`26ca458`)
+- **ble**: Resolve tsc errors in useBLEScanner and AdvancedHardwareModal (`584fedc`)
+- **ui**: Deduplicate power buttons by removing header button (`73d9c3b`)
+- **ui**: Use actual profile display name instead of auth metadata fallback in CrewModal (`0748a0a`)
+- **tsc**: Resolve undefined nearbySpots from context destructuring (`c978609`)
+- **ui**: Lock ProductVisualizer to dark background in all themes (`c126c25`)
+
+### 🔧 Maintenance & Refactoring
+- **refactor**: Decompose AccountModal god object into domain tabs (`ae2ebf1`)
+- **refactor**: Finalize GodObject extraction into standalone tab components for Diagnostic Lab (`d551a26`)
+- **refactor**: Decompose AuthScreen into domain-specific form components (`a6ab7a1`)
+- **refactor**: Extract VisualizerUnit from ProductVisualizer (`c07bce2`)
+- **chore**: Fix missing imports and TS type regressions from god object decomposition (`8ade3b9`, `7bcfac8`)
+
+### 📖 Documentation
+- **protocol**: Update bible and master reference with deep dive findings (`a5184c9`)
+- **protocol**: Update 0x59 payload specs and transition types (`c28804e`)
+
+---
+
 ## [3.1.0] - 2026-04-23
 
 ### 🚀 Features
