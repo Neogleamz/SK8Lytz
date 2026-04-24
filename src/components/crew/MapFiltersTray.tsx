@@ -17,7 +17,7 @@ export function MapFiltersTray({ filters, toggleFilter }: Props) {
     { key: 'showRinks',        label: 'Rinks', icon: 'roller-skate',         activeColor: '#3B82F6' },
     { key: 'showParks',        label: 'Parks', icon: 'flag-triangle',         activeColor: '#92400E' },
     { key: 'showShops',        label: 'Shops', icon: 'storefront-outline',    activeColor: '#8B5CF6' },
-    { key: 'showCrewSessions', label: 'Crews', icon: 'account-group-outline', activeColor: '#F97316' },
+    { key: 'showCrewSessions', label: 'Crewz', icon: 'account-group-outline', activeColor: '#F97316' },
   ] as const;
 
   return (

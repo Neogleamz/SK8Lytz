@@ -131,7 +131,7 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
       <View style={styles.tabContainer}>
         {renderTabButton('PATTERNS', 'PATTERNS')}
         {renderTabButton('BUILDER', 'BUILDER')}
-        {renderTabButton('SCENES', 'SCENES')}
+        {/* {renderTabButton('SCENES', 'SCENES')} */}
       </View>
 
       {/* Tab Content */}

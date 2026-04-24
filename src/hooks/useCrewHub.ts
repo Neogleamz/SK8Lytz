@@ -8,7 +8,7 @@ import { AppLogger } from '../services/AppLogger';
 const RADIUS_STORAGE_KEY = '@Sk8lytz_RadiusPreference';
 
 export function useCrewHub(visible: boolean, step: string) {
-  const [discoverRadiusMi, _setDiscoverRadiusMi] = useState<number | null>(50);
+  const [discoverRadiusMi, _setDiscoverRadiusMi] = useState<number | null>(20);
 
   useEffect(() => {
     AsyncStorage.getItem(RADIUS_STORAGE_KEY).then(val => {

@@ -150,10 +150,7 @@ const TacticalSlider = ({
          {/* Left Anchored Large Icon */}
          <MaterialCommunityIcons name={iconName} size={32} color="rgba(255,255,255,0.5)" style={{ position: 'absolute', left: 8, top: 6 }} />
 
-         {/* Centered Label */}
-         <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
-            {label && <Text style={styles.labelText}>{label}</Text>}
-         </View>
+
          
          {/* Value locked to right */}
          <View style={{ flex: 1 }} />
