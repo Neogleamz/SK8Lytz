@@ -486,17 +486,19 @@ _Primary command for all IC-strip patterns. Sends a per-pixel RGB array that the
 - **Minimum Payload:** 12 pixels. Payloads <10 cause **hardware memory lock glitching**.
 - **TransitionType Bytes (APK Verified Truth: `StaticColorfulMode.java`):**
 
-| Byte | Name | Behavior |
-|:---|:---|:---|
-| `0x01` | Static | Freeze in place |
-| `0x02` | Running Water | Continuous hardware scroll |
-| `0x03` | Strobe | Flash effect |
-| `0x04` | Jump | Hard color jump |
-| `0x05` | Breathe | Breathe fade effect |
-| `0x06` | Twinkly | Twinkle effect |
+> ⚠️ **0xA3 HARDWARE LIMITATION:** The `0x59` command is a spatial payload. The ZENGGE app explicitly *hides* Breathe and Twinkly from the `0x59` UI for the `0xA3` chip because the hardware cannot calculate temporal math over a 450-byte custom array. Strobe and Jump are also known to fail. **For temporal transitions (Breathe, Jump, Strobe), use the `0x51` Scene Sequencer instead!**
+
+| Byte | Name | Behavior | 0xA3 Status |
+|:---|:---|:---|:---|
+| `0x01` | Static | Freeze in place | ✅ **Fully Supported** |
+| `0x02` | Running Water | Continuous hardware scroll | ✅ **Fully Supported** |
+| `0x03` | Strobe | Flash effect | ❌ Fails (Requires `0x51`) |
+| `0x04` | Jump | Hard color jump | ❌ Fails (Requires `0x51`) |
+| `0x05` | Breathe | Breathe fade effect | ⛔ **Firmware Locked/Hidden** (Use `0x51`) |
+| `0x06` | Twinkly | Twinkle effect | ⛔ **Firmware Locked/Hidden** |
 
 > [!IMPORTANT]
-> **Tick Settings (Point Count) Mismatch Flaw**: The `numLEDsHi` and `numLEDsLo` bytes at the end of the `0x59` payload dictate the **physical hardware strip length** that the transition effect will span across. Our previous implementation clamped this value to the RGB array length (max 54). If the hardware has 150 LEDs, clamping this to 54 causes transitions like Strobe, Jump, Breathe, and Twinkly to malfunction (freeze/truncate) because the hardware thinks the spatial size is only 54! To bypass MTU limits while preserving spatial effects, we must decouple the RGB array length from the hardware point count sent in the payload.
+> **Tick Settings (Point Count) Mismatch Flaw**: The `numLEDsHi` and `numLEDsLo` bytes at the end of the `0x59` payload dictate the **physical hardware strip length** that the transition effect will span across. Our previous implementation clamped this value to the RGB array length (max 54). If the hardware has 150 LEDs, clamping this to 54 causes transitions to truncate because the hardware thinks the spatial size is only 54! To bypass MTU limits while preserving spatial effects, we must decouple the RGB array length from the hardware point count sent in the payload.
 
 - **Speed:** UI 0–100 → HW 1–31. Formula: `max(1, min(31, round(uiSpeed / 100 × 30) + 1))`. Source: APK `Protocol/n.java: ad.e.a(f, 1, 31)`.
 - **Direction:** `0x01` Forward, `0x00` Reverse.
@@ -1240,14 +1242,48 @@ totalLen = (numLEDs × 3) + 9
 
 ---
 
+### 0xFF — Passive Telemetry (Manufacturer Specific Data)
+ZENGGE hardware constantly broadcasts its identity in BLE Advertisement packets (`type 0xFF`), enabling passive identification without an active connection.
+- **Source of Truth**: [ZGHBDevice.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/com/zengge/hagallbjarkan/device/ZGHBDevice.java) (`setDeviceInfo`)
+- **Format**:
+  - `bArr[3]`: BLE Version (Typically `5`)
+  - `bArr[4]` to `bArr[9]`: MAC Address
+  - `bArr[10]` & `bArr[11]`: Product ID (Big-Endian `(bArr[10] << 8) | bArr[11]`). SK8Lytz is `163` (`0xA3`).
+  - `bArr[12]` & `bArr[14]`: Firmware Version
+  - `bArr[13]`: LED Version
+
+---
+
+### RF Remote Configuration
+RF Remotes are completely decoupled from the native `C14184b` Java protocol layer.
+- **Source of Truth**: [FlutterNewControlPlugin.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/com/zengge/wifi/flutter/plugin/FlutterNewControlPlugin.java)
+- **Mechanism**: The "Allow All / Allow Paired / Allow None" logic is sent via JSON payloads over Flutter `MethodChannel`. It does not use standard hex `0x64` opcodes.
+- **SK8Lytz relevance**: We must intercept these Flutter events via logcat to replicate remote pairing.
+
+---
+
 ### 0x62 — IC Config Write (EEPROM)
-- **Builder**: `C14184b.m4807B()`, `m4806C()`, `m4804E()`
-- **Format (full, 13 bytes)**:
+
+- **Source of Truth**: [C14184b.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/tc/C14184b.java) (`m4806C()`) and [C9021i.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/p067dd/C9021i.java)
+- **Format (11 bytes)**:
+
 ```
 [0x62, ptsHi, ptsLo, segHi, segLo, icType, sorting, micPts, micSegs, 0xF0, checksum]
 ```
+
 - **Endianness**: Big-Endian (`ptsHi = points >> 8`, `ptsLo = points & 0xFF`)
 - **SK8Lytz relevance**: CRITICAL — hardware provisioning (LED count, IC type, strip config)
+
+> **🔬 EXTREME DETAIL: THE 0x62 BYTE MAPPINGS**
+>
+> 1. **`ptsHi` / `ptsLo`**: The number of addressable LEDs **per segment** (Big-Endian).
+> 2. **`segHi` / `segLo`**: The number of identical physical copies that mirror the pattern in parallel (Big-Endian). Total physical LEDs = `points × segments`.
+> 3. **`icType`**: Defines the hardware chip. Mapped directly from [C9021i.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/p067dd/C9021i.java):
+>    - `1` = UCS1903, `2` = SM16703, `3` = WS2811, `4` = WS2812B, `5` = SK6812, `6` = INK1003, `7` = WS2801, `8` = LB1914.
+>    *(SK8Lytz defaults to `4` / WS2812B)*
+> 4. **`sorting`**: The RGB color order. 
+>    - `1` = RGB, `2` = RBG, `3` = GRB, `4` = GBR, `5` = BRG, `6` = BGR.
+> 5. **`micPts` / `micSegs`**: Same segment logic, but specifically sets the bounds for when `0x73` Music Mode is active.
 
 > **🔬 SEGMENT MODEL DISCOVERY (2026-04-22 — BLE Sniff Observation)**
 >
@@ -1304,16 +1340,12 @@ Power OFF: [0x71, 0x24, 0x0F, checksum]  → checksum = 0x71+0x24+0x0F = 0xA4 �
 - **Called by**: `MusicModeFragment`, confirmed for 0xA2 and 0xA3
 - **Format (13 bytes)**:
 ```
-[0x73, isOn(1=on/0=off), micSource, effectId,
+[0x73, isOn(1=on/0=off), modeType, effectId,
  FG.R, FG.G, FG.B, BG.R, BG.G, BG.B,
  sensitivity, brightness, checksum]
 ```
-- **micSource**: `0x26` (38) = phone/app mic, `0x27` (39) = device mic
-- **Confirmed from MusicModeFragment line 752**: `bool z2 = bArr[2] == 38` (38=phone, 39=device)
-
-> **CORRECTION FROM MASTER REFERENCE**: The Master Reference lists `micSource: 0x01 = Device, 0x00 = App`.
-> **APK TRUTH**: `0x26` (38) = app/phone mic, `0x27` (39) = device mic.
-> The 0x00/0x01 values are WRONG in the current codebase/reference.
+- **modeType**: `0x26` (38) = Light Bar Matrix (16 modes) vs `0x27` (39) = Light Screen Matrix (30 modes)
+- **Mic Behavior**: The device microphone is *always* active when a `0x73` mode is running, *unless* the app starts sending a rapid stream of `0x74` magnitude packets (which overrides the hardware mic with the app/phone mic).
 
 ---
 
@@ -1502,7 +1534,7 @@ Scene Query:    SceneModeFragment.m18781I2 → C14184b.m4769g0 → [0x58, 0xF0/0
 Pixel Array:    StaticColorfulTab (C8856x) → C7760a → [0x59, lenHi,Lo, R,G,B×N, numHi,Lo, trans, spd, dir, chk]
 Stream Frame:   SceneModeFragment.m18748Z2 → inline → [0x53, lenHi,Lo, R,G,B×N, numHi,Lo, chk]
 Music Config:   MusicModeFragment → C7789z → [0x73, on, 0x26/27, id, FG, BG, sens, bri, chk]
-Mic Magnitude:  MusicModeFragment/useAppMic → C7788y → [0x74, mag, chk]
+Mic Magnitude:  RecordService → C7788y → [0x74, magnitude, chk]
 Custom Scene:   ZENGGE App Customize Tab → chunked 0x51 → [40 seq 00 00 01 43 BD 0B 51 slot×10×32 chk]
 Custom Scene:   SK8Lytz setCustomMode() → standard wrap → [0x51 slot×9×32 0x0F chk]  ← 9B works on HW
 Multi-Color:    ZENGGE App Multi-Color Tab → live 0x31 stream → per-frame pixel array
@@ -1521,17 +1553,50 @@ Device: Pixel 7 (Android 16), HCI log extracted via `adb bugreport`.
 - Effect IDs 1–100 all work correctly.
 - Effect ID 101 (over ceiling): hardware **accepts it** and plays an undocumented effect. The ceiling is soft, not enforced.
 
-### Music Mode (0x73) — ✅ SMOKING GUN CONFIRMED
-| Test | Result |
-|:-----|:-------|
-| `MIC=0x26`, `isOn=0x01` (APK App Mic) | ✅ PASS — Enters music mode, reacts to phone mic. `0x74` auto-stream fires but `useAppMicrophone` background hook was already streaming, masking it. |
-| `MIC=0x27`, `isOn=0x01` (APK Device Mic) | ✅ PASS — Strip reacts to hardware control box mic. `0x74` auto-stream had secondary effect. |
-| `isOn=0x00` | ✅ PASS — Music mode disengaged (confirmed `isOn` byte is live) |
-| `MIC=0x00` (old legacy value) | ❌ FAIL — Blank/no response. Confirms old codebase was broken. |
-| 12B format (missing isOn) | ❌ FAIL — Identical to 0x00 failure. Hardware rejects malformed packet. |
-| `0x74` single magnitude | AMBIGUOUS — Works when mic=0x26 active, but `useAppMicrophone` background interference. |
+### Music Mode (0x73) — ✅ TRUE-UP COMPLETED
 
-> **KEY FINDING**: The `useAppMicrophone` hook is running in the background even during Oracle testing, continuously sending `0x74` packets. This means the auto-stream toggle in the lab appears to have no extra effect in MIC=0x26 mode because the hook is already streaming. This is a diagnostic consideration, not a bug.
+**The `0x73` payload is strictly a 13-byte configuration command.** It dictates the active music visualization mode, its colors, and whether the hardware microphone is active. It does **not** transmit magnitude data (that is `0x74`).
+
+**Format (13 Bytes)**: `[0x73, isOn, modeType, modeId, fgR, fgG, fgB, bgR, bgG, bgB, sensitivity, brightness, checksum]`
+
+- **`isOn` (Byte 1)**: `0x01` activates music mode. `0x00` disables it.
+- **`modeType` (Byte 2)**: Defines the hardware pattern matrix.
+  - `0x26`: Light Bar Matrix (16 modes)
+  - `0x27`: Light Screen Matrix (30 modes)
+- **`modeId` (Byte 3)**: The specific effect ID (1-16 or 1-30).
+- **`fg` and `bg` (Bytes 4-9)**: Foreground (Sound Column) and Background (Drop) colors. Ignored by generative modes.
+- **`sensitivity` (Byte 10)**: 0-100 (hardware range).
+- **`brightness` (Byte 11)**: 0-100 (hardware range).
+
+> ⚠️ **The "micSource" Hallucination:** Previous documentation incorrectly assumed `modeType` was `micSource`. In reality, the device mic *always* listens when a `0x27` or `0x26` mode is active *unless* it is overridden by rapid `0x74` magnitude streams from the app mic.
+
+### 🚨 Live Audio Streaming Protocol (0x74) — NEW DISCOVERY
+When the user toggles "App Mic" in the ZENGGE app, it uses the phone's microphone to analyze the audio spectrum and continuously firehoses a rapid **3-byte** volume magnitude stream directly to the hardware.
+
+**Format (3 Bytes)**: `[0x74, magnitude, checksum]`
+- `magnitude` (Byte 2): Scaled volume/frequency value from 0-150.
+
+This allows the hardware to respond instantly to high-quality audio captured directly by the mobile device, bypassing the cheap built-in microphone on the `0xA3` controller.
+
+
+#### Light Bar Modes (`0x26`) — 16 Total
+| ID | Mode Name | FG (Sound) | BG (Drop) | Banner Image Asset |
+|:---|:---|:---:|:---:|:---|
+| 1-10, 12, 13, 16 | Generative / Spectrum | ❌ | ❌ | `music_ic_[ID].png` |
+| 11, 14, 15 | Monochromatic Rhythm | ✅ | ❌ | `music_ic_[ID].png` |
+
+#### Light Screen Modes (`0x27`) — 30 Total
+| ID | Mode Name | FG (Sound) | BG (Drop) | Banner Image Asset |
+|:---|:---|:---:|:---:|:---|
+| 1-18, 25-27 | Advanced Spectrum | ❌ | ❌ | `banner_[ID]_1.png` / `banner_[ID]_2.png` |
+| 19-24, 28-30 | Custom Matrix Rhythm | ✅ | ✅ | `banner_[ID]_1.png` / `banner_[ID]_2.png` |
+
+### The Parity Bridge (0x59 vs 0x51) — ARCHITECTURAL MANDATES
+1. **The Spatial-Temporal Fallacy:** `0x59` is mathematically locked out of temporal effects (Breathe, Jump, Twinkly). We cannot send a custom 150-pixel segment array and ask the hardware to "Breathe" it natively. The hardware firmware rejects it and forces Static (`0x01`) or Running (`0x02`).
+2. **The "Software Ticking" Imperative:** To achieve custom sub-segment temporal effects, the App's `PatternEngine` must act as a Software Sequencer, manually calculating frames and streaming `0x59` spatial payloads at 15-30 FPS over BLE.
+3. **The 512-Byte MTU Mandate:** To fix spatial truncation (where `0x59` freezes on strips longer than the MTU constraint), we MUST negotiate a 512-byte MTU (`device.requestMTU(512)`) in React Native BLE Plx. The previous `numPoints=54` tiling hack has been proven mathematically invalid for the `0xA3` controller.
+4. **Scene Sequencer (0x51) is King:** For whole-strip temporal transitions (Breathe/Jump/Strobe), the `PatternEngine` MUST bypass `0x59` and route the request to a 9-byte `0x51` Scene Sequence.
+5. **The MTU Chunking Protocol (Reverse-Engineered 2026-04-24):** Any payload larger than `MTU - 3` bytes MUST be chunked using the ZENGGE `LowerTransportLayerEncoder` algorithm. The first chunk requires an 8-byte header (`0x40`, sequence, `0x00 0x00`, total length, chunk length, `0x0B`). Subsequent chunks require a 5-byte header, with the final chunk setting the `0x8000` bitmask on the index to trigger execution. Hardcoded chunk signatures (e.g., `0x01, 0x43, 0xBD, 0x0B`) will instantly crash the hardware state machine if the device negotiated a smaller MTU (like 23). See `ZENGGE_PROTOCOL_BIBLE.md` for the exact binary structure.
 
 ### Custom Scene (0x51) — ✅ 9B COMPACT WORKS
 | Test | Result |
@@ -1540,6 +1605,48 @@ Device: Pixel 7 (Android 16), HCI log extracted via `adb bugreport`.
 | 10B extended format (via our wrapCommand) | ❌ FAIL — Does nothing |
 
 > **SEE BUG-1 UPDATE**: 10B extended fails due to our wrapper mismatch, not the hardware rejecting 10B slots.
+
+#### 0x51 Sequence Modes (The 34 Baked Hardware Effects / SymphonyEffects)
+The ZENGGE `0x51` sequence editor (`ActivityCustomSymphonyEdit.java`) relies on 34 baked-in hardware effects (known internally as `SymphonyEffect` 1-34). 
+
+We extracted the actual English string translations for the first 10 modes from the APK's `strings.xml`:
+1. **Change gradually** *(Crossfade/Breathe between FG and BG)*
+2. **Bright up and Fade gradually** *(Pulse to black)*
+3. **Change quickly** *(Hard Jump)*
+4. **Strobe-flash**
+5. **Running, 1point from start to end**
+6. **Running, 1point from end to start**
+7. **Running, 1point from the middle to the both ends**
+8. **Running, 1point from the both ends to the middle**
+9. **Overlay, from start to end**
+10. **Overlay, from end to start**
+
+Below is the definitive UI gating logic (`C9273c.java`) dictating which features each effect supports:
+
+If a feature is ❌, the hardware ignores that byte in the `0x51` slot.
+
+| Effect ID (1-44) | Foreground Color | Background Color | Direction | Segment / Section |
+|:---|:---:|:---:|:---:|:---:|
+| 1, 2, 3, 6, 17, 18, 19, 31 | ✅ | ✅ | ✅ | ✅ |
+| 4, 5 | ✅ | ✅ | ❌ | ✅ |
+| 7, 14 | ✅ | ❌ | ❌ | ❌ |
+| 8, 9, 10, 11, 12, 13, 15, 16 | ❌ | ❌ | ❌ | ❌ |
+| 20, 21, 22 | ❌ | ❌ | ✅ | ❌ |
+| 23, 26, 30 | ❌ | ❌ | ❌ | ✅ |
+| 24, 28, 29 | ❌ | ❌ | ✅ | ✅ |
+| 25, 32 | ✅ | ✅ | ✅ | ❌ |
+| 27 | ❌ | ❌ | ✅ | ❌ |
+| 33, 34 | ❌ | ✅ | ✅ | ✅ |
+| 35-44 (IType_NoColor) | ❌ | ❌ | ✅ | ✅ |
+
+*Note: Speed is supported by ALL 44 effects.*
+
+### Parity Bridge Implementation Strategy
+To achieve perfect visualizer-to-hardware parity for temporal effects (Breathe, Jump, Strobe) without triggering `0x59` MTU lag, `PatternEngine.ts` must intercept these specific selections and route them through `0x51` instead:
+- **Color Breathing**: Intercept `PatternEngine` ID 24 -> Route to `0x51` `SymphonyEffect` ID **1** (Change gradually)
+- **Strobe Flash**: Intercept `PatternEngine` ID 26 -> Route to `0x51` `SymphonyEffect` ID **4** (Strobe-flash)
+- **Jump**: Re-add to `PatternEngine` -> Route to `0x51` `SymphonyEffect` ID **3** (Change quickly)
+
 
 ### Phase 2 Extended Panels — ❌ ALL FAILED via our wrapper
 | Opcode | Test | Result | Notes |
