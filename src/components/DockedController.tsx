@@ -480,7 +480,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
     /** Restore a saved favorite — dispatches mode switch + BLE commands */
     const loadFavorite = React.useCallback((favRaw: IFavoriteState, context: 'FAVORITE' | 'PICK' | 'COMMUNITY' = 'FAVORITE') => {
-      AppLogger.log(context === 'PICK' ? 'PICK_LOADED' : 'FAVORITE_LOADED', { name: favRaw.name, mode: favRaw.mode });
+      AppLogger.log(context === 'PICK' ? 'PICK_SELECTED' : 'FAVORITE_LOADED', { name: favRaw.name, mode: favRaw.mode });
       setActiveFavoriteId(favRaw.id);
       setSpeed(favRaw.speed);
       setBrightness(favRaw.brightness);

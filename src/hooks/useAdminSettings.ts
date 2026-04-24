@@ -33,6 +33,8 @@ export function useAdminSettings(visible: boolean) {
       if (!success) {
         // Simple rollback if failed
         loadSettings();
+      } else {
+        AppLogger.log('HARDWARE_CONFIG_CHANGED', { key, value });
       }
     } catch (err) {
       AppLogger.warn(`[AdminSettings] Failed to update setting ${key}`, { error: String(err) });

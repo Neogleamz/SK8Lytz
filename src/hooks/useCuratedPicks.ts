@@ -57,6 +57,7 @@ export function useCuratedPicks() {
         }
 
         if (data && Array.isArray(data)) {
+          AppLogger.log('PICK_LOADED', { source: 'supabase', count: data.length });
           // Map snake_case DB columns → IFavoriteState camelCase
           const mapped: IFavoriteState[] = data.map((row: any) => ({
             id: row.id,
