@@ -18,7 +18,6 @@ import {
     ActivityIndicator, Alert,
     Animated,
     Image,
-    KeyboardAvoidingView,
     Modal,
     Platform,
     ScrollView,
@@ -457,10 +456,7 @@ export default function AccountModal({
           isViewOnly={true} 
         />
       )}
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
+      <View style={styles.overlay}>
         <View style={styles.sheet}>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
             <MaterialCommunityIcons name="close" size={22} color={Colors.textMuted} />
@@ -516,7 +512,7 @@ export default function AccountModal({
             }
           })()}
         </View>
-      </KeyboardAvoidingView>
+      </View>
 
       {/* Child Modals */}
       <AdvancedHardwareModal 

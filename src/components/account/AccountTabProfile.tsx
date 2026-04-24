@@ -3,7 +3,6 @@ import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, ActivityInd
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import CustomSlider from '../CustomSlider';
 import { Spacing } from '../../theme/theme';
-import { profileService } from '../../services/ProfileService';
 
 function initials(name: string | null) {
   if (!name) return '?';
@@ -83,12 +82,8 @@ export default function AccountTabProfile({
             const newHex = rgb2hex(f(5), f(3), f(1));
             setProfile((p: any) => p ? { ...p, avatar_color: newHex } : p);
           }}
-          onSlidingComplete={async (hue) => {
-            const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-            const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
-            const newHex = rgb2hex(f(5), f(3), f(1));
-            await profileService.updateProfile({ avatar_color: newHex });
-          }}
+          // onSlidingComplete: no-op — color is already staged in profile.avatar_color
+          // via onValueChange → setProfile above. Persisted to Supabase on "Save Profile" press.
           minimumValue={0}
           maximumValue={360}
           step={1}

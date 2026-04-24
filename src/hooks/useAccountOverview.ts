@@ -116,6 +116,8 @@ export function useAccountOverview(visible: boolean) {
     try {
       const updates: Partial<UserProfile> = { display_name: editName.trim() };
       if (editUsername.trim()) updates.username = editUsername.trim().toLowerCase();
+      // Persist staged avatar_color from the slider (set locally via setProfile during drag)
+      if (profile?.avatar_color) updates.avatar_color = profile.avatar_color;
       await profileService.updateProfile(updates);
       setProfile(p => p ? { ...p, ...updates } : p);
       AppLogger.log('PROFILE_UPDATED', { fields: Object.keys(updates) });
@@ -126,6 +128,7 @@ export function useAccountOverview(visible: boolean) {
       setSavingProfile(false);
     }
   };
+
 
   const handlePickProfilePhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();

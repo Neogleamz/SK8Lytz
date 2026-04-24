@@ -248,12 +248,12 @@ export class ZenggeProtocol {
     };
   }
 
-  // ─── BLE ADVERTISEMENT PASSIVE PARSER (0xFF Manufacturer Specific Data) ────
   /**
-   * Parse ZENGGE Manufacturer Specific Data (type 0xFF) from a BLE advertisement.
+   * Parse ZENGGE Manufacturer Specific Data (type 0xFF) from raw byte array.
    *
-   * This data is broadcast continuously by the device without any GATT connection.
-   * Parsing it instantly yields firmware/product identity without the 3.5s probe timeout.
+   * This is the low-level decoder used when manufacturerData arrives as a
+   * number[] from the BLE scanner's advertisement callback.
+   * For base64-encoded strings (from the GATT probe path), use parseFirmwareFromAdvertisement.
    *
    * Byte map (confirmed from ZENGGE APK BLE advertisement format — April 2026 decompile):
    *   [0]  = 0xA8 (ZENGGE vendor prefix high byte)
@@ -266,28 +266,19 @@ export class ZenggeProtocol {
    *   [12] = Firmware Version major
    *   [13] = reserved / sub-build
    *   [14] = Firmware Version minor
-   *
-   * @param manufacturerData - Raw bytes from the device's 0xFF advertisement payload.
-   * @returns Partial HardwareSettings with firmwareVer, bleVersion, and productId,
-   *          or null if the payload is not a valid ZENGGE manufacturer advertisement.
    */
-  public static parseFirmwareFromAdvertisement(
+  public static parseFirmwareFromManufacturerBytes(
     manufacturerData: number[]
   ): Pick<HardwareSettings, 'firmwareVer' | 'bleVersion'> & { productId?: number; macAddress?: string } | null {
-    // Minimum 15 bytes for the full map. Reject anything shorter.
     if (!manufacturerData || manufacturerData.length < 15) return null;
-
-    // Validate ZENGGE vendor prefix: first two bytes must be 0xA8, 0x01
     if (manufacturerData[0] !== 0xA8 || manufacturerData[1] !== 0x01) return null;
 
     const bleVersion   = manufacturerData[3] & 0xFF;
     const productId    = ((manufacturerData[10] & 0xFF) << 8) | (manufacturerData[11] & 0xFF);
     const firmwareMaj  = manufacturerData[12] & 0xFF;
     const firmwareMin  = manufacturerData[14] & 0xFF;
-    // Encode as a single integer e.g. major=2, minor=1 → 201
     const firmwareVer  = firmwareMaj * 100 + firmwareMin;
 
-    // MAC address: bytes 4–9 in Big-Endian
     const macAddress = manufacturerData
       .slice(4, 10)
       .map(b => b.toString(16).toUpperCase().padStart(2, '0'))
