@@ -437,7 +437,7 @@ export class ZenggeProtocol {
   ): number[] {
     const raw = [
       0x41,
-      Math.max(1, Math.min(33, effectId | 0)),
+      Math.max(1, Math.min(44, effectId | 0)),
       Math.min(255, Math.max(0, fg.r | 0)),
       Math.min(255, Math.max(0, fg.g | 0)),
       Math.min(255, Math.max(0, fg.b | 0)),

@@ -125,13 +125,13 @@ export function DiagnosticLabBuilderTab({
 
           <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>EFFECT ID (1–33)</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>EFFECT ID (1-44)</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                 <TouchableOpacity onPress={() => setBld51Mode(String(Math.max(1, (parseInt(bld51Mode)||1) - 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>‒</Text>
+                  <Text style={{ color: txtPri, fontSize: 16 }}>-</Text>
                 </TouchableOpacity>
-                <TextInput style={[S.numInput, { flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri, textAlign: 'center' }]} value={bld51Mode} keyboardType="numeric" onChangeText={v => setBld51Mode(String(Math.max(1, Math.min(33, parseInt(v)||1))))} />
-                <TouchableOpacity onPress={() => setBld51Mode(String(Math.min(33, (parseInt(bld51Mode)||1) + 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                <TextInput style={[S.numInput, { flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri, textAlign: 'center' }]} value={bld51Mode} keyboardType="numeric" onChangeText={v => setBld51Mode(String(Math.max(1, Math.min(44, parseInt(v)||1))))} />
+                <TouchableOpacity onPress={() => setBld51Mode(String(Math.min(44, (parseInt(bld51Mode)||1) + 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
                   <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>+</Text>
                 </TouchableOpacity>
               </View>

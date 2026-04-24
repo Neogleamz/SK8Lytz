@@ -477,7 +477,7 @@ export function DiagnosticLabOracleTab({
         </View>
       )}
 
-      {/* 🎨 0x41 SETTLED MODE — Effect ID Sweep (1–33) */}
+      {/* 🎨 0x41 SETTLED MODE — Effect ID Sweep (1–44) */}
       <TouchableOpacity
         onPress={() => setExpandedP2(expandedP2 === '0x41' ? null : '0x41')}
         style={[S.diagBox, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -485,7 +485,7 @@ export function DiagnosticLabOracleTab({
           borderWidth: expandedP2 === '0x41' ? 1.5 : 1 }]}
       >
         <View>
-          <Text style={{ color: '#9D4EFF', fontWeight: '900', fontSize: 13 }}>🎨 0x41 Settled Mode — Effect ID Sweep (1–33)</Text>
+          <Text style={{ color: '#9D4EFF', fontWeight: '900', fontSize: 13 }}>🎨 0x41 Settled Mode — Effect ID Sweep (1–44)</Text>
           <Text style={{ color: txtMuted, fontSize: 10, marginTop: 2 }}>
             FG/BG · speed · dir · tap each ID · log verdict
           </Text>
@@ -499,10 +499,10 @@ export function DiagnosticLabOracleTab({
             APK truth: [0x41, id, FG.R,G,B, BG.R,G,B, speed, dir, 0x00, 0xF0, CS] — 13 bytes
           </Text>
 
-          {/* Summary grid — 33 cells */}
+          {/* Summary grid — 44 cells */}
           <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>RESULT GRID</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: Spacing.lg }}>
-            {Array.from({ length: 33 }, (_, i) => i + 1).map(id => {
+            {Array.from({ length: 44 }, (_, i) => i + 1).map(id => {
               const res = p41SweepResults[String(id)];
               const cellColor = res === 'WORKS' ? '#00CC88' : res === 'NO_EFFECT' ? '#FF9500' : res === 'CRASHED' ? '#FF4040' : border;
               return (
@@ -538,9 +538,9 @@ export function DiagnosticLabOracleTab({
           <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>BG COLOR</Text>
           <QuickColorGrid activeColor={p41Color2} onSelect={setP41Color2} />
 
-          {/* 33-ID grid — tap to send + verdict buttons inline */}
+          {/* 44-ID grid — tap to send + verdict buttons inline */}
           <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginTop: Spacing.md, marginBottom: Spacing.xs }}>TAP TO SEND EACH EFFECT</Text>
-          {Array.from({ length: 33 }, (_, i) => i + 1).map(id => {
+          {Array.from({ length: 44 }, (_, i) => i + 1).map(id => {
             const res = p41SweepResults[String(id)];
             const setRes = (r: 'WORKS' | 'NO_EFFECT' | 'CRASHED') =>
               setP41SweepResults(prev => ({ ...prev, [String(id)]: r }));
