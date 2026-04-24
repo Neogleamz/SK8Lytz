@@ -204,10 +204,10 @@ export default function HardwareSetupWizardScreen({
                   <MaterialCommunityIcons 
                     name="shield-sun" 
                     size={18} 
-                    color={isBlinking === device.device_mac ? '#000' : Colors.text} 
+                    color={isBlinking === device.device_mac ? '#000' : '#00F0FF'} 
                   />
                   <Text style={[styles.blinkBtnText, isBlinking === device.device_mac && { color: '#000' }]}>
-                    {isBlinking === device.device_mac ? 'BLINKING' : 'BLINK'}
+                    {isBlinking === device.device_mac ? '✦ BLINKING' : 'BLINK'}
                   </Text>
                 </TouchableOpacity>
               </TouchableOpacity>
@@ -291,10 +291,10 @@ export default function HardwareSetupWizardScreen({
                     <MaterialCommunityIcons 
                       name="shield-sun" 
                       size={14} 
-                      color={isBlinking === device.device_mac ? '#000' : Colors.text} 
+                      color={isBlinking === device.device_mac ? '#000' : '#00F0FF'} 
                     />
                     <Text style={[styles.blinkBtnText, isBlinking === device.device_mac && { color: '#000' }]}>
-                      {isBlinking === device.device_mac ? 'BLINKING' : 'BLINK'}
+                      {isBlinking === device.device_mac ? '✦ BLINKING' : 'BLINK'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -598,11 +598,17 @@ function createStyles(Colors: any) {
     deviceMeta: { color: Colors.textMuted || '#888', fontSize: 11, marginBottom: Spacing.xxs },
     blinkBtn: {
       flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-      backgroundColor: Colors.surfaceHighlight, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-      borderRadius: 8, borderWidth: 1, borderColor: Colors.surfaceHighlight
+      backgroundColor: 'rgba(0,240,255,0.08)',
+      paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+      borderRadius: 10, borderWidth: 1.5, borderColor: 'rgba(0,240,255,0.4)',
+      shadowColor: '#00F0FF', shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 0 },
+      elevation: 4,
     },
-    blinkBtnActive: { backgroundColor: '#4ade80', borderColor: '#4ade80' },
-    blinkBtnText: { color: Colors.text || '#fff', fontSize: 12, fontWeight: '800' },
+    blinkBtnActive: {
+      backgroundColor: '#4ade80', borderColor: '#4ade80',
+      shadowColor: '#4ade80', shadowOpacity: 0.6, shadowRadius: 10,
+    },
+    blinkBtnText: { color: '#00F0FF', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
     
     // Step 3 Styles
     label: { color: Colors.textMuted || '#888', fontSize: 11, fontWeight: 'bold', letterSpacing: 1, marginBottom: Spacing.sm, marginLeft: Spacing.xs },

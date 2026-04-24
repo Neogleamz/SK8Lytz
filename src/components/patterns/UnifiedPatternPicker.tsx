@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { BuilderNode } from '../../protocols/PositionalMathBuffer';
 import { buildPatternPayload } from '../../protocols/PatternEngine';
@@ -127,12 +127,17 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
+      {/* Tab Navigation — horizontal scroll for future tab growth */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabScrollContainer}
+        contentContainerStyle={styles.tabScrollContent}
+      >
         {renderTabButton('PATTERNS', 'PATTERNS')}
         {renderTabButton('BUILDER', 'BUILDER')}
         {/* {renderTabButton('SCENES', 'SCENES')} */}
-      </View>
+      </ScrollView>
 
       {/* Tab Content */}
       <View style={{ flex: 1 }}>
@@ -193,15 +198,20 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
 };
 
 const styles = StyleSheet.create({
-  tabContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.xs,
+  tabScrollContainer: {
+    flexGrow: 0,
     marginBottom: Spacing.md,
+  },
+  tabScrollContent: {
+    paddingHorizontal: Spacing.xs,
     gap: Spacing.xs,
+    flexDirection: 'row',
   },
   tabButton: {
-    flex: 1,
+    flex: 0,
+    minWidth: 100,
     paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
     alignItems: 'center',
     borderRadius: 8,
     borderWidth: 1,
@@ -215,4 +225,3 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 });
-
