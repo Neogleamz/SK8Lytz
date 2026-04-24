@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { Spacing } from '../../theme/theme';
 import { LEDStripPreview } from '../LEDStripPreview';
@@ -46,7 +47,6 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
           styles.effectCard,
           isSelected && {
             borderColor: '#00F0FF',
-            backgroundColor: 'rgba(0,240,255,0.08)',
             shadowColor: '#00F0FF',
             shadowOpacity: 0.6,
             shadowRadius: 12,
@@ -54,6 +54,16 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
           }
         ]}
       >
+        <LinearGradient
+          colors={isSelected ? ['rgba(0,240,255,0.15)', 'rgba(0,240,255,0.05)'] : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.02)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        
+        {/* Glassmorphism Refraction */}
+        <View style={styles.cardRefraction} />
+
         {/* Header row: ID badge + FG/BG dots */}
         <View style={styles.cardHeader}>
           <View style={[styles.idBadge, isSelected && { backgroundColor: '#00F0FF' }]}>
@@ -132,17 +142,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   effectName: {
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 13,
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
+    fontWeight: '800',
+    lineHeight: 14,
     marginBottom: Spacing.xs,
-    minHeight: 26,
+    minHeight: 28,
+    letterSpacing: 0.5,
   },
   stripWrapper: {
     height: 9,
     borderRadius: 5,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  cardRefraction: {
+    position: 'absolute',
+    top: -30,
+    left: -30,
+    width: 100,
+    height: 100,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    transform: [{ rotate: '45deg' }],
   },
 });
 

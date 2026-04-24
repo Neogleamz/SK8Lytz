@@ -17,9 +17,13 @@ interface GroupSettingsModalProps {
 export default function GroupSettingsModal({ isVisible, onClose, onSave, onDelete, initialName = '', initialDeviceIds = [], allDevices = [] }: GroupSettingsModalProps) {
   const [name, setName] = useState(initialName);
   const [selectedIds, setSelectedIds] = useState<string[]>(initialDeviceIds);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (isVisible) AppLogger.log('SCREEN_OPENED', { screenName: 'Group Settings' });
+    if (isVisible) {
+      AppLogger.log('SCREEN_OPENED', { screenName: 'Group Settings' });
+      setIsSaving(false);
+    }
     setName(initialName);
     setSelectedIds(initialDeviceIds);
   }, [initialName, initialDeviceIds, isVisible]);
@@ -85,15 +89,18 @@ export default function GroupSettingsModal({ isVisible, onClose, onSave, onDelet
               <Text style={styles.cancelText}>CANCEL</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.saveBtn}
+              style={[styles.saveBtn, isSaving && { opacity: 0.7 }]}
+              disabled={isSaving}
               onPress={() => {
-                if (name.trim()) {
+                if (name.trim() && !isSaving) {
+                  setIsSaving(true);
                   onSave(name.trim(), selectedIds);
+                  // Modal will unmount soon, no need to reset isSaving here
                   onClose();
                 }
               }}
             >
-              <Text style={styles.saveText}>SAVE</Text>
+              <Text style={styles.saveText}>{isSaving ? 'SAVING...' : 'SAVE'}</Text>
             </TouchableOpacity>
           </View>
         </View>
