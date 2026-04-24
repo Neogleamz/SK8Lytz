@@ -37,6 +37,7 @@ import { supabase } from '../services/supabaseClient';
 import EulaModal from './modals/EulaModal';
 import GranularPermissionsList from './permissions/GranularPermissionsList';
 import { HardwareStatusPills } from './dashboard/HardwareStatusPills';
+import { AdvancedHardwareModal } from './admin/AdvancedHardwareModal';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -228,6 +229,9 @@ export default function AccountModal({
   const [deviceNewName, setDeviceNewName] = useState('');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [groupNewName, setGroupNewName] = useState('');
+  
+  const [advancedModalVisible, setAdvancedModalVisible] = useState(false);
+  const [advancedModalDevice, setAdvancedModalDevice] = useState<StoredDevice | null>(null);
 
   const groupedDevices = React.useMemo(() => {
     const groups: { [key: string]: StoredDevice[] } = { "_Ungrouped": [] };
@@ -810,6 +814,12 @@ export default function AccountModal({
                         }}>
                           <MaterialCommunityIcons name="pencil" size={16} color={Colors.textMuted} />
                         </TouchableOpacity>
+                        <TouchableOpacity style={styles.deviceIconBtn} onPress={() => {
+                          setAdvancedModalDevice(device);
+                          setAdvancedModalVisible(true);
+                        }}>
+                          <MaterialCommunityIcons name="chip" size={16} color={Colors.primary} />
+                        </TouchableOpacity>
                         <TouchableOpacity style={styles.deviceIconBtn} onPress={() => handleForgetDevice(device)}>
                           <MaterialCommunityIcons name="trash-can-outline" size={16} color="#FF4444" />
                         </TouchableOpacity>
@@ -1085,6 +1095,17 @@ export default function AccountModal({
           }
         </View>
       </KeyboardAvoidingView>
+
+      {/* Child Modals */}
+      <AdvancedHardwareModal 
+        visible={advancedModalVisible}
+        onClose={() => setAdvancedModalVisible(false)}
+        targetDeviceId={advancedModalDevice?.mac || advancedModalDevice?.id || null}
+        currentPoints={advancedModalDevice?.led_points}
+        currentSegments={advancedModalDevice?.segments}
+        currentIcType={advancedModalDevice?.ic_type}
+        currentSorting={advancedModalDevice?.color_sorting}
+      />
     </Modal>
   );
 }

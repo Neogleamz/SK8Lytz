@@ -190,7 +190,30 @@ export function useBLEScanner({
       try {
         const alreadyConn = await bleManager.isDeviceConnected(device.id).catch(() => false);
         const hasHwInfo = (device as any).hwPoints != null;
-        if (alreadyConn && hasHwInfo) return;
+        
+        // --- PASSIVE TELEMETRY BYPASS ---
+        // If we don't have HW info, try to reconstruct it from the registry cache.
+        if (!hasHwInfo && knownMacs.has(device.id)) {
+           try {
+              const cachedStr = await AsyncStorage.getItem('@Sk8lytz_registered_devices');
+              if (cachedStr) {
+                 const cachedList = JSON.parse(cachedStr);
+                 const cachedData = cachedList.find((d: any) => d.device_mac === device.id);
+                 if (cachedData) {
+                    (device as any).hwPoints = cachedData.led_points;
+                    (device as any).hwSegments = cachedData.segments;
+                    (device as any).hwStripType = cachedData.ic_type;
+                    (device as any).hwSorting = cachedData.color_sorting;
+                    AppLogger.log('[Scanner] Restored passive hardware limits from cache', { deviceId: device.id });
+                    setAllDevices([...allDevicesRef.current]);
+                    classifyProbeResults([...allDevicesRef.current]);
+                    return; // BYPASS active probe
+                 }
+              }
+           } catch(e) {}
+        }
+
+        if (alreadyConn && ((device as any).hwPoints != null)) return;
 
         AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_start', deviceName: device.name || device.id });
         

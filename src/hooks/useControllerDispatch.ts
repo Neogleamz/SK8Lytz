@@ -46,7 +46,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       if (!writeToDevice) return;
       // 0x59 FREEZE is the true architectural ghost standard for Solid Replication without glitching/failing
       const arr = Array.from({ length: numLEDs }, () => ({ r, g, b }));
-      await writeToDevice(ZenggeProtocol.setMultiColor(arr, hardwareSettings.ledPoints, 31, 1, 0x01)); // 0x01 = FREEZE
+      await writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSettings?.ledPoints || points || 16, 31, 1, 0x01)); // 0x01 = FREEZE
     },
     [writeToDevice, numLEDs]
   );
@@ -169,7 +169,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       }
 
       // 0x02 = Running: hardware scrolls the array natively (APK: StaticColorfulMode.Running)
-      writeToDevice(ZenggeProtocol.setMultiColor(arr, hardwareSettings.ledPoints, hwSpd, 1, 0x02));
+      writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSettings?.ledPoints || numLEDs, hwSpd, 1, 0x02));
     },
     [writeToDevice, hwSettings, numLEDs]
   );
