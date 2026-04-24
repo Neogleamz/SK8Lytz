@@ -96,6 +96,7 @@ export const useProtocolBuilder = (hwPts: number = 16) => {
   const [bldMusicMode, setBldMusicMode] = useState('1');
   const [bldSens, setBldSens] = useState('100');
   const [bldC2, setBldC2] = useState({r:0, g:0, b:255});
+  const [bldMusicIsOn, setBldMusicIsOn] = useState(true);
   const [bldMatrixStyle, setBldMatrixStyle] = useState<0x26 | 0x27>(0x27);
 
   // Builder 0x62
@@ -130,7 +131,7 @@ export const useProtocolBuilder = (hwPts: number = 16) => {
         const c1 = bldColors[0] || {r:255,g:0,b:0};
         const s = safeParseInt(bldSens, 100);
         const br = safeParseInt(bldBright, 100);
-        const wrapped = ZenggeProtocol.setMusicConfig(id, bldMic ? 0x27 : 0x26, true, c1, bldC2, s, br);
+        const wrapped = ZenggeProtocol.setMusicConfig(id, bldMic ? 0x27 : 0x26, bldMusicIsOn, c1, bldC2, s, br);
         const matrixLabel = bldMatrixStyle === 0x27 ? 'Light Screen (0x27)' : 'Light Bar (0x26)';
         setBldResult({ raw: wrapped, wrapped, hex: wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' '), annotations: ['[0x73] Symphony/Music Config', `Mode: ${id} | Matrix: ${matrixLabel}`, `Mic: ${bldMic ? 'DEVICE' : 'APP'} | Sens: ${s} | Bright: ${br}`, `C1 RGB(${c1.r},${c1.g},${c1.b}) | C2 RGB(${bldC2.r},${bldC2.g},${bldC2.b})`] });
       } else if (bldProtocol === '0x62') {
@@ -161,6 +162,7 @@ export const useProtocolBuilder = (hwPts: number = 16) => {
     bld51Seg, setBld51Seg,
     bldMic, setBldMic,
     bldMusicMode, setBldMusicMode,
+    bldMusicIsOn, setBldMusicIsOn,
     bldSens, setBldSens,
     bldC2, setBldC2,
     bldMatrixStyle, setBldMatrixStyle,
