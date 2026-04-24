@@ -776,6 +776,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
             {activeMode === 'MULTIMODE' && (
               <UnifiedPatternPicker
+                selectedPatternId={fixedPatternId}
                 speed={speed}
                 brightness={brightness}
                 hwSettings={hwSettings}

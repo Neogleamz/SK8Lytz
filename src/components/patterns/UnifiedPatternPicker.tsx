@@ -26,21 +26,20 @@ interface UnifiedPatternPickerProps {
   fgColor: string;
   /** BG color — owned by DockedController via fixedBgColor. Do NOT shadow with local state. */
   bgColor: string;
-  onStateChange?: (id: number) => void;
+  /** The active pattern selected by the user. Owned by DockedController. */
+  selectedPatternId?: number;
 }
 
 export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
   writeToDevice, points = 16, segments = 1, speed, brightness = 100, direction = 1,
   hwSettings, onStateChange, fgColor, bgColor,
+  selectedPatternId = 1,
 }) => {
   const { Colors } = useTheme();
   
   const [activeTab, setActiveTab] = useState<'PATTERNS' | 'BUILDER' | 'SCENES'>('PATTERNS');
   const [sceneBuilderVisible, setSceneBuilderVisible] = useState(false);
 
-  // Shared state for PATTERNS (fgColor/bgColor are PROPS — owned by DockedController)
-  const [selectedEffectId, setSelectedEffectId] = useState<number>(1);
-  
   // Shared state for BUILDER Modal
   const [gradientModalVisible, setGradientModalVisible] = useState(false);
   const [editingPreset, setEditingPreset] = useState<CustomBuilderPreset | undefined>();
@@ -73,7 +72,6 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
   }, [writeToDevice, onStateChange, devicePoints]);
 
   const handleSelectPattern = useCallback((effectId: number) => {
-    setSelectedEffectId(effectId);
     dispatchEffect(effectId, fgColor, bgColor, speed, direction, brightness);
   }, [dispatchEffect, fgColor, bgColor, speed, direction, brightness]);
 
@@ -106,10 +104,10 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
   // which calls setLastSentPayload in DockedController, which re-renders, which ... loops.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (activeTab === 'PATTERNS' && selectedEffectId) {
-      dispatchEffect(selectedEffectId, fgColor, bgColor, speed, direction, brightness);
+    if (activeTab === 'PATTERNS' && selectedPatternId) {
+      dispatchEffect(selectedPatternId, fgColor, bgColor, speed, direction, brightness);
     }
-  }, [speed, brightness, direction, activeTab, selectedEffectId, fgColor, bgColor]);
+  }, [speed, brightness, direction, activeTab, selectedPatternId, fgColor, bgColor]);
 
 
   // UI helpers
@@ -143,7 +141,7 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
       <View style={{ flex: 1 }}>
         {activeTab === 'PATTERNS' && (
           <PatternPickerTab
-            selectedEffectId={selectedEffectId}
+            selectedEffectId={selectedPatternId}
             fgColor={fgColor}
             bgColor={bgColor}
             speed={speed}
