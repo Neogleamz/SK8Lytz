@@ -1182,6 +1182,11 @@ export function getPatternTransitionType(patternId: PatternId): number {
 
 /**
  * Build the full 0x59 hardware command.
+ *
+ * @param numLEDs           - Number of pixels in the math array (may be capped by MAX_PIXELS).
+ * @param hardwareLedPoints - Actual LED count on the physical strip. Written into the 0x59
+ *                            spatial footer so the controller maps pixels to the full strip.
+ *                            Defaults to numLEDs if not provided (backwards-compatible).
  */
 export function buildMultiColorPayload(
   patternId: PatternId,
@@ -1191,7 +1196,8 @@ export function buildMultiColorPayload(
   speed: number,
   direction: number = 1,
   brightness: number = 100,
-  options?: PatternOptions
+  options?: PatternOptions,
+  hardwareLedPoints?: number
 ): number[] | null {
   const pixels = getHardwarePixelArray(patternId, fg, bg, numLEDs, options);
   if (!pixels) return null;
@@ -1205,13 +1211,20 @@ export function buildMultiColorPayload(
     b: Math.round(p.b * brt),
   }));
 
+  // Pass hardwareLedPoints separately so the 0x59 footer correctly encodes the
+  // physical strip length — decoupled from the BLE-safe pixel array cap (MAX_PIXELS=54).
   const transitionType = getPatternTransitionType(patternId);
-  return ZenggeProtocol.setMultiColor(scaledPixels, numLEDs, speed, direction, transitionType);
+  return ZenggeProtocol.setMultiColor(scaledPixels, hardwareLedPoints ?? numLEDs, speed, direction, transitionType);
 }
 
 /**
  * Master dispatcher — ALL patterns use 0x59. No 0x51.
  * commandType is determined by getPatternTransitionType() for each ID.
+ *
+ * @param numLEDs           - Pixel array math size (capped at MAX_PIXELS internally).
+ * @param hardwareLedPoints - Actual physical LED count. Encoded in the 0x59 footer
+ *                            so the hardware scales the pattern to the full strip.
+ *                            If omitted, falls back to numLEDs (backwards-compatible).
  */
 export function buildPatternPayload(
   patternId: number,
@@ -1221,7 +1234,8 @@ export function buildPatternPayload(
   speed: number,
   direction: number = 1,
   brightness: number = 100,
-  options?: PatternOptions
+  options?: PatternOptions,
+  hardwareLedPoints?: number
 ): number[] | null {
   // ── GROUP 9: NATIVE TEMPORAL (0x51 INTERCEPTION) ──
   if (patternId === 18 || (patternId >= 70 && patternId <= 72)) {
@@ -1242,7 +1256,7 @@ export function buildPatternPayload(
     }]);
   }
 
-  return buildMultiColorPayload(patternId, fg, bg, numLEDs, speed, direction, brightness, options);
+  return buildMultiColorPayload(patternId, fg, bg, numLEDs, speed, direction, brightness, options, hardwareLedPoints);
 }
 
 // ─── MUSIC MODE VISUALIZER ────────────────────────────────────────────────────

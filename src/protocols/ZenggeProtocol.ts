@@ -248,6 +248,54 @@ export class ZenggeProtocol {
     };
   }
 
+  // ─── BLE ADVERTISEMENT PASSIVE PARSER (0xFF Manufacturer Specific Data) ────
+  /**
+   * Parse ZENGGE Manufacturer Specific Data (type 0xFF) from a BLE advertisement.
+   *
+   * This data is broadcast continuously by the device without any GATT connection.
+   * Parsing it instantly yields firmware/product identity without the 3.5s probe timeout.
+   *
+   * Byte map (confirmed from ZENGGE APK BLE advertisement format — April 2026 decompile):
+   *   [0]  = 0xA8 (ZENGGE vendor prefix high byte)
+   *   [1]  = 0x01 (ZENGGE vendor prefix low byte)
+   *   [2]  = flags / device class
+   *   [3]  = BLE Protocol Version (e.g. 0x04 = v4)
+   *   [4]–[9]  = MAC Address (6 bytes, Big-Endian)
+   *   [10] = Product ID high byte
+   *   [11] = Product ID low byte
+   *   [12] = Firmware Version major
+   *   [13] = reserved / sub-build
+   *   [14] = Firmware Version minor
+   *
+   * @param manufacturerData - Raw bytes from the device's 0xFF advertisement payload.
+   * @returns Partial HardwareSettings with firmwareVer, bleVersion, and productId,
+   *          or null if the payload is not a valid ZENGGE manufacturer advertisement.
+   */
+  public static parseFirmwareFromAdvertisement(
+    manufacturerData: number[]
+  ): Pick<HardwareSettings, 'firmwareVer' | 'bleVersion'> & { productId?: number; macAddress?: string } | null {
+    // Minimum 15 bytes for the full map. Reject anything shorter.
+    if (!manufacturerData || manufacturerData.length < 15) return null;
+
+    // Validate ZENGGE vendor prefix: first two bytes must be 0xA8, 0x01
+    if (manufacturerData[0] !== 0xA8 || manufacturerData[1] !== 0x01) return null;
+
+    const bleVersion   = manufacturerData[3] & 0xFF;
+    const productId    = ((manufacturerData[10] & 0xFF) << 8) | (manufacturerData[11] & 0xFF);
+    const firmwareMaj  = manufacturerData[12] & 0xFF;
+    const firmwareMin  = manufacturerData[14] & 0xFF;
+    // Encode as a single integer e.g. major=2, minor=1 → 201
+    const firmwareVer  = firmwareMaj * 100 + firmwareMin;
+
+    // MAC address: bytes 4–9 in Big-Endian
+    const macAddress = manufacturerData
+      .slice(4, 10)
+      .map(b => b.toString(16).toUpperCase().padStart(2, '0'))
+      .join(':');
+
+    return { firmwareVer, bleVersion, productId, macAddress };
+  }
+
   // ─── HARDWARE SETTINGS: WRITE (0x62) ───────────────────────────────────────
   /**
    * Build 11-byte write packet to set hardware config on device.

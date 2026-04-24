@@ -27,6 +27,12 @@ interface UseMusicModeParams {
   musicPatternId: number;
   micSensitivity: number;
   brightness: number;
+  /**
+   * Controls the `modeType` byte in the 0x73 packet (Protocol Bible §0x73).
+   *  'APP'    → 0x26 — phone/app microphone (reacts to ambient audio via the phone speaker)
+   *  'DEVICE' → 0x27 — device built-in mic (hardware reacts to direct contact sound)
+   * DO NOT confuse with `isOn` — this byte selects the mic SOURCE, not on/off state.
+   */
   micSource: 'APP' | 'DEVICE';
   musicPrimaryColor: string;
   musicSecondaryColor: string;
