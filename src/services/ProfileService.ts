@@ -441,11 +441,47 @@ class ProfileService {
 
   /**
    * Delete a crew — owner only. Cascades memberships via DB FK.
+   * Safely drops any active Realtime sessions tied to this crew before deletion.
    */
   async deleteCrew(crewId: string): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
+    // 1. Proactively end any active sessions for this crew so users aren't left in a ghost state
+    const { data: activeSessions } = await supabase
+      .from('crew_sessions')
+      .select('id')
+      .eq('crew_id', crewId)
+      .eq('is_active', true);
+
+    if (activeSessions && activeSessions.length > 0) {
+      for (const s of activeSessions) {
+        // Broadcast session_ended to force all connected clients to revert to solo mode
+        const tempChannel = supabase.channel(`crew:${s.id}`, { config: { broadcast: { self: true } } });
+        await tempChannel.subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await tempChannel.send({
+              type: 'broadcast',
+              event: 'session_ended',
+              payload: { sessionId: s.id },
+            });
+            setTimeout(() => supabase.removeChannel(tempChannel), 500);
+          }
+        });
+
+        // Mark the session as ended in the database
+        await supabase
+          .from('crew_sessions')
+          .update({
+            is_active: false,
+            status: 'ended',
+            ended_at: new Date().toISOString(),
+          })
+          .eq('id', s.id);
+      }
+    }
+
+    // 2. Delete the crew
     const { error } = await supabase
       .from('crews')
       .delete()

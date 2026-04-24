@@ -28,6 +28,8 @@ interface UnifiedPatternPickerProps {
   bgColor: string;
   /** The active pattern selected by the user. Owned by DockedController. */
   selectedPatternId?: number;
+  /** Callback fired when an effect is successfully dispatched. */
+  onStateChange?: (id: number) => void;
 }
 
 export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({

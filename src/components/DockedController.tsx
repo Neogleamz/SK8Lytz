@@ -785,7 +785,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 bgColor={fixedBgColor}
                 direction={fixedDirection}
                 writeToDevice={writeToDevice}
-                onStateChange={(id) => {
+                onStateChange={(id: number) => {
                   setFixedPatternId(id);
                 }}
               />
