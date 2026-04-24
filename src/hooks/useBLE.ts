@@ -115,8 +115,15 @@ export default function useBLE(): BluetoothLowEnergyApi {
 
   const handleNotification = (error: any, characteristic: any, deviceId: string) => {
     if (error) {
+      const errMsg = error?.message || String(error);
+      // Suppress normal organic dropouts from flooding the VIP error telemetry
+      if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('Device disconnected') || errMsg.includes('not connected')) {
+        AppLogger.warn(`[BLE] Organic notification disconnect for ${deviceId}`);
+        return;
+      }
+      
       AppLogger.warn('Notification Error', error);
-      AppLogger.log('PROTOCOL_ERROR', { error: error?.message || String(error), deviceId, context: 'notification' });
+      AppLogger.log('PROTOCOL_ERROR', { error: errMsg, deviceId, context: 'notification' });
       return;
     }
     if (characteristic?.value) {
