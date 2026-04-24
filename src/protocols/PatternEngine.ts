@@ -651,10 +651,11 @@ function buildSingleDotChase(fg: RGB, bg: RGB, numLEDs: number, tick: number, di
   return Array.from({ length: numLEDs }, (_, i) => i === pos ? fg : bg);
 }
 
-function buildReflectedDotChase(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
-  // Two dots start at opposite ends and meet in the middle
-  const posA = Math.floor(tick * (numLEDs / 2)) % Math.ceil(numLEDs / 2);
-  const posB = numLEDs - 1 - posA;
+function buildTwinDotChase(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  // Double dots spaced evenly moving in the same direction (hardware compatible circular shift)
+  const t = direction === 0 ? tick : 1 - tick;
+  const posA = Math.floor(t * numLEDs) % numLEDs;
+  const posB = (posA + Math.floor(numLEDs / 2)) % numLEDs;
   return Array.from({ length: numLEDs }, (_, i) =>
     (i === posA || i === posB) ? fg : bg
   );
@@ -995,7 +996,7 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: 
 
     // ── GROUP 2: CHASES & METEORS ──
     case 6: return buildSingleDotChase(fg, bg, n, tick, direction);
-    case 7: return buildReflectedDotChase(fg, bg, n, tick);
+    case 7: return buildTwinDotChase(fg, bg, n, tick, direction);
     case 8: return buildCometChase(fg, bg, n, tick, direction);
     case 9: return buildMeteorShower(fg, bg, n, tick, direction);
 
@@ -1113,12 +1114,13 @@ export function getHardwarePixelArray(
   //   The pixel array is the color seed; hardware animates it autonomously.
   //
   // Use tick=0.33 for most patterns so the initial hardware seed frame is visually rich.
-  // EXCEPTION: Jump (0x04) and Strobe (0x03) patterns — IDs 31, 33, 37, 46, 54.
+  // EXCEPTION: Jump (0x04) and Strobe (0x03) patterns, plus some Breathe patterns
   // These builders include an isOn phase-gate that can return all-black at tick=0.33.
   // Since hardware handles flash/jump autonomously once the array is received,
-  // we need a fully-lit seed. tick=0.0 guarantees all these builders return visible colors.
-  const JUMP_STROBE_IDS = new Set([31, 33, 37, 46, 54]);
-  const seedTick = JUMP_STROBE_IDS.has(patternId) ? 0.0 : 0.33;
+  // we need a fully-lit seed. We use tick=0.0 for strobes/jumps, and tick=0.25 for breathe.
+  const ZERO_TICK_IDS = new Set([26, 28, 31, 46, 54]); // Strobe/Jump
+  const QUARTER_TICK_IDS = new Set([24, 30, 36, 40]); // Breathe (sin wave peak at PI/2)
+  const seedTick = ZERO_TICK_IDS.has(patternId) ? 0.0 : (QUARTER_TICK_IDS.has(patternId) ? 0.25 : 0.33);
   return generateArray(patternId, fg, bg, Math.max(1, numLEDs), seedTick, 1, options);
 
 }
@@ -1222,10 +1224,10 @@ export function buildPatternPayload(
   options?: PatternOptions
 ): number[] | null {
   // ── GROUP 9: NATIVE TEMPORAL (0x51 INTERCEPTION) ──
-  if (patternId >= 70 && patternId <= 72) {
+  if (patternId === 18 || (patternId >= 70 && patternId <= 72)) {
     let modeId = 1; // Default to Breathe
     if (patternId === 70) modeId = 1; // Change gradually (Breathe)
-    if (patternId === 71) modeId = 5; // Running, 1point from start to end (Sweep)
+    if (patternId === 71 || patternId === 18) modeId = 5; // Running, 1point from start to end (Sweep/Wipe)
     if (patternId === 72) modeId = 7; // Running, from middle to both ends (Center-Out)
 
     // Hardware expects direction logic via the 10th byte (0x80 = forward, 0x00 = reverse)

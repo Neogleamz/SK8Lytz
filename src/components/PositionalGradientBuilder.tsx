@@ -36,15 +36,18 @@ export default function PositionalGradientBuilder({
 
   // Internal color state is now directly managed via activeNode instead of external sync
 
-  // Dispatch payloads whenever parameters change
+  // Dispatch payloads whenever parameters change (with throttle to prevent hardware blackout from BLE flood)
   useEffect(() => {
-     if (writeToDevice) {
-         const generatedRgbArray = PositionalMathBuffer.generateArray(nodes, deviceLedCount, fillMode === 'GRADIENT');
-         // Normalize speed 0-100 to 0x01-0x1F (1-31)
-         const mappedSpeed = Math.max(1, Math.min(31, Math.round((speed / 100) * 31)));
-         const payload = ZenggeProtocol.setMultiColor(generatedRgbArray, deviceLedCount, mappedSpeed, direction, transitionType);
-         writeToDevice(payload);
-     }
+     const timeout = setTimeout(() => {
+         if (writeToDevice) {
+             const generatedRgbArray = PositionalMathBuffer.generateArray(nodes, deviceLedCount, fillMode === 'GRADIENT');
+             // Normalize speed 0-100 to 0x01-0x1F (1-31)
+             const mappedSpeed = Math.max(1, Math.min(31, Math.round((speed / 100) * 31)));
+             const payload = ZenggeProtocol.setMultiColor(generatedRgbArray, deviceLedCount, mappedSpeed, direction, transitionType);
+             writeToDevice(payload);
+         }
+     }, 100);
+     return () => clearTimeout(timeout);
   }, [nodes, fillMode, transitionType, direction, speed, deviceLedCount]);
 
   const addNode = () => {
