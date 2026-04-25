@@ -41,11 +41,14 @@ export function useControllerAnalytics({
   deviceContext,
 }: UseControllerAnalyticsParams) {
   const logTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // Fix 6: Serialize deviceContext to a stable string key so useEffect deps don't
+  // fire spuriously when the devices[] array reference changes without content change.
+  const deviceContextKey = JSON.stringify(deviceContext);
 
   // Mode change logger
   useEffect(() => {
     AppLogger.log('MODE_CHANGED', { mode: activeMode, ...deviceContext });
-  }, [activeMode, deviceContext]);
+  }, [activeMode, deviceContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pattern change logger
   useEffect(() => {
@@ -57,12 +60,12 @@ export function useControllerAnalytics({
       color: selectedColor,
       ...deviceContext
     });
-  }, [selectedPatternId, deviceContext]);
+  }, [selectedPatternId, deviceContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Color change logger
   useEffect(() => {
     AppLogger.log('COLOR_CHANGED', { hex: selectedColor, ...deviceContext });
-  }, [selectedColor, deviceContext]);
+  }, [selectedColor, deviceContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Brightness change logger (debounced 600ms)
   useEffect(() => {
@@ -70,7 +73,7 @@ export function useControllerAnalytics({
     logTimers.current['brightness'] = setTimeout(() => {
       AppLogger.log('BRIGHTNESS_CHANGED', { value: brightness, mode: activeMode, ...deviceContext });
     }, 600);
-  }, [brightness, activeMode, deviceContext]);
+  }, [brightness, activeMode, deviceContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Speed change logger (debounced 600ms)
   useEffect(() => {
@@ -78,7 +81,7 @@ export function useControllerAnalytics({
     logTimers.current['speed'] = setTimeout(() => {
       AppLogger.log('SPEED_CHANGED', { value: speed, mode: activeMode, ...deviceContext });
     }, 600);
-  }, [speed, activeMode, deviceContext]);
+  }, [speed, activeMode, deviceContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Street sensitivity change logger (debounced 800ms)
   useEffect(() => {
@@ -87,5 +90,5 @@ export function useControllerAnalytics({
     logTimers.current['streetSens'] = setTimeout(() => {
       AppLogger.log('STREET_SENSITIVITY_CHANGED', { sensitivity: streetSensitivity, ...deviceContext });
     }, 800);
-  }, [streetSensitivity, activeMode, deviceContext]);
+  }, [streetSensitivity, activeMode, deviceContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
 }

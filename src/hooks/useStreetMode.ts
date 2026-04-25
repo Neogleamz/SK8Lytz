@@ -28,6 +28,9 @@ import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 import { crewService } from '../services/CrewService';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
+// Fix 4: Static import replaces the dynamic require() inside applyStreetPattern callback.
+// Dynamic require() triggers a CommonJS module registry lookup on every invocation.
+import { buildPatternPayload } from '../protocols/PatternEngine';
 
 export type MotionState = 'STOPPED' | 'ACCELERATING' | 'CRUISING' | 'SLOWING_DOWN' | 'HARD_BRAKING';
 
@@ -100,6 +103,9 @@ export function useStreetMode({
   const lastGpsTimeRef = useRef<number | null>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
   const cruiseChaseRef = useRef(0);
+  // Fix 5: prevGRef stores the exponential decay accumulator so setPeakGForce is only
+  // called when the value changes by >0.05, preventing 12.5 re-renders/sec at idle.
+  const prevGRef = useRef(1.0);
 
   /** Maps UI speed slider (0–100) to Zengge hardware speed range (1–31) */
   const clampSpeed = useCallback((uiSpeed: number): number =>
@@ -149,8 +155,7 @@ export function useStreetMode({
       b: parseInt(cruiseHex.slice(5, 7), 16) || 0,
     };
 
-    // Lazy load the PatternEngine payload builder to avoid circular dependency issues
-    const { buildPatternPayload } = require('../protocols/PatternEngine');
+    // buildPatternPayload is now a static import at the top of this file (Fix 4).
     
     // We only pass pts/segments as activeSegmentLeds. buildPatternPayload will automatically duplicate/mirror 
     // the payload across the segments based on the options.segments value.
@@ -279,10 +284,16 @@ export function useStreetMode({
       const gMag = Math.sqrt(x * x + y * y + z * z);
 
       // Update peak G-Force display with exponential decay back to 1.0
-      setPeakGForce(prevG => {
-        if (gMag > prevG) return parseFloat(gMag.toFixed(2));
-        return parseFloat((prevG * 0.95 + 1.0 * 0.05).toFixed(2));
-      });
+      // Fix 5: Use ref-based accumulator + delta guard to avoid 12.5 re-renders/sec at rest.
+      const newG = Math.sqrt(x * x + y * y + z * z);
+      const decayed = newG > prevGRef.current
+        ? parseFloat(newG.toFixed(2))
+        : parseFloat((prevGRef.current * 0.95 + 1.0 * 0.05).toFixed(2));
+      prevGRef.current = decayed;
+      // Only trigger a React re-render if the display value changed materially (>0.05)
+      if (Math.abs(decayed - peakGForce) > 0.05) {
+        setPeakGForce(decayed);
+      }
 
       const jerkMag = Math.sqrt(
         Math.pow(x - prev.x, 2) + Math.pow(y - prev.y, 2) + Math.pow(z - prev.z, 2)

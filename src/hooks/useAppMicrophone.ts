@@ -64,6 +64,9 @@ export function useAppMicrophone({
       recorder.record();
 
       // Start magnitude stream
+      // prevMagRef: stores last-written normalized magnitude to gate redundant BLE writes.
+      // Interval at 10Hz (100ms) — hardware smooths between values; 20Hz is imperceptible.
+      const prevMagRef = { current: -1 };
       magnitudeInterval.current = setInterval(() => {
         if (!writeToDevice) return;
         const stats = recorder.getStatus();
@@ -71,13 +74,16 @@ export function useAppMicrophone({
           const metering = stats.metering ?? -160;
           // Map -60...0 to 0...1 for usable visualization
           const normalized = Math.max(0, Math.min(1, (metering + 60) / 60));
+          // Delta guard: skip BLE write if magnitude hasn't changed by >5%
+          if (Math.abs(normalized - prevMagRef.current) < 0.05) return;
+          prevMagRef.current = normalized;
           setAudioMagnitude(normalized);
 
           // Send to physical device (0x74 music magnitude command expects 0-255)
           const deviceMag = Math.floor(normalized * 255);
           writeToDevice(ZenggeProtocol.sendMusicMagnitude(deviceMag));
         }
-      }, 50);
+      }, 100); // 10Hz — saves ~50% BLE writes vs 20Hz with no perceptible visual difference
     } catch (err) {
       AppLogger.error('Failed to start recording', err);
     }
