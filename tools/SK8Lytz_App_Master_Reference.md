@@ -91,6 +91,47 @@ Every pixel array builder (`PatternEngine`, `applyEmergencyPattern`, etc.) must 
 
 Fixed: `HALOZ.defaultLedPoints = 8, segments = 2`.
 
+#### ✅ HALOZ Ring Topology — Confirmed Physical LED Map (2026-04-25)
+
+```
+              ╔══════════╗
+              ║   TOP    ║
+  L-pSlot 0 ══╬══════════╬══ R-pSlot 7    ← Left TOP = pSlot 0, Right TOP = pSlot 7
+  L-pSlot 1 ══╬          ╬══ R-pSlot 6
+  L-pSlot 2 ══╬          ╬══ R-pSlot 5
+  L-pSlot 3 ══╬  CENTER  ╬══ R-pSlot 4
+  L-pSlot 4 ══╬          ╬══ R-pSlot 3
+  L-pSlot 5 ══╬          ╬══ R-pSlot 2
+  L-pSlot 6 ══╬          ╬══ R-pSlot 1
+  L-pSlot 7 ══╬══════════╬══ R-pSlot 0    ← Left BOTTOM = pSlot 7, Right BOTTOM = pSlot 0
+              ║  BOTTOM  ║
+              ╚══════════╝
+  LEFT side: ↓ top→bottom     RIGHT side: ↑ bottom→top
+  pSlot: 0,1,2,3,4,5,6,7      pSlot: 0,1,2,3,4,5,6,7
+```
+
+**Rule:** Hardware auto-mirrors the 8-pixel pattern to both segments simultaneously.
+- Seg 1 (RIGHT): LED 0 at physical BOTTOM, LED 7 at physical TOP.
+- Seg 2 (LEFT): Hardware mirror places LED 0 at physical TOP, LED 7 at physical BOTTOM.
+- If pixel[0] = RED → **Right BOTTOM = RED, Left TOP = RED**. True horseshoe symmetry.
+
+#### VisualizerUnit Rendering Rules (HALOZ RING only)
+
+These rules govern `src/components/VisualizerUnit.tsx`. **Do NOT apply to SOULZ (OVAL) or RAILZ (DUAL_STRIP).**
+
+| Rule | Correct Value | Wrong (causes bugs) |
+|:-----|:-------------|:--------------------|
+| `numLeds` formula | `Math.floor(devicePoints)` — `ledPoints` IS the per-segment canvas | `Math.floor(devicePoints / deviceSegments)` — causes 4 LEDs, not 8 |
+| `devicePoints` fallback | `productProfile.defaultLedPoints` (8) | `productProfile.vizDefaultPoints` (was 16) — causes 16-color arcs |
+| `deviceSegments` fallback | `productProfile.defaultSegments` (2) | Hard-coded `1` — kills gap rendering |
+| `getVisualizerFrame` numLeds arg | `numLeds` (8) | `activeSegmentLedsHoisted` (32) — 4× oversampled palette |
+| Product lookup guard | Guard `device.type !== 'undefined'` before `String()` | `String(undefined)` = `"undefined"` → SOULZ fallback → `vizShape='OVAL'` → RING inversion never fires |
+| Left arc pSlot direction | `rawFract` (inverted for i ≥ renderLeds/2 when `vizShape==='RING'`) | `segmentI / activeSegmentLeds` (never inverted) → both arcs identical |
+
+> **SOULZ Safety:** `rawFract` for SOULZ (`vizShape='OVAL'`) is NEVER inverted. Changing slot lookups to use `rawFract` instead of `segmentI/activeSegmentLeds` is identical for SOULZ — zero regression risk.
+
+
+
 ---
 
 **Core Philosophies (The 3 Pillars):**

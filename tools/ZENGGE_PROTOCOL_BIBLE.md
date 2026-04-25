@@ -384,7 +384,7 @@ RF Remotes are completely decoupled from the native `C14184b` Java protocol laye
 >    - `1` = RGB, `2` = RBG, `3` = GRB, `4` = GBR, `5` = BRG, `6` = BGR.
 > 5. **`micPts` / `micSegs`**: Same segment logic, but specifically sets the bounds for when `0x73` Music Mode is active.
 
-> **🔬 SEGMENT MODEL DISCOVERY (2026-04-22 — BLE Sniff Observation)**
+> **🔬 SEGMENT MODEL DISCOVERY (2026-04-22 — BLE Sniff Observation, updated 2026-04-25)**
 >
 > `points` and `segments` are NOT equivalent to total LED count. The hardware treats them as:
 >
@@ -392,20 +392,48 @@ RF Remotes are completely decoupled from the native `C14184b` Java protocol laye
 > - **`segments`** = number of identical physical copies that mirror the pattern in parallel
 > - **Total physical LEDs** = `points × segments`
 >
-> **Example — HALOZ (16 bulbs, 8 points, 2 segments):**
-> The ZENGGE Multi-Color creator shows 11 color positions (= `points`), NOT 22.
-> The hardware automatically mirrors the 11-LED pattern onto the second segment.
+> **Example — HALOZ (16 physical LEDs, 8 points, 2 segments):**
+> The ZENGGE Multi-Color creator shows 8 color positions (= `points`), NOT 16.
+> The hardware automatically mirrors the 8-LED pattern onto the second segment.
 > The app never exposes segments to the user — it is hardware-transparent.
 >
 > **Critical Implication for `0x59` and `0x51`:**
-> All pixel array commands (`0x59`, `0x31`) should be built using `ledPoints` (11), NOT `ledPoints × segments` (22).
-> Sending 22 pixels to a 2-segment device bypasses the hardware's segment mirror engine and fills both segments manually, which may produce unexpected results.
+> All pixel array commands (`0x59`, `0x31`) should be built using `ledPoints` (8), NOT `ledPoints × segments` (16).
+> Sending 16 pixels to a 2-segment device bypasses the hardware's segment mirror engine and fills both segments manually.
 >
 > **The `0x51` `flags=0x80` connection:**
 > The "section toggle" bit in the `0x51` slot flags byte (`0x80`) is believed to control segment mirroring:
 >
 > - `flags = 0x80` → pattern mirrors across ALL segments (hardware duplication ON)
 > - `flags = 0x00` → pattern plays linearly, ignoring segment boundaries
+
+> **✅ HALOZ Physical LED Topology — Confirmed (2026-04-25)**
+>
+> The hardware auto-mirrors the 8-pixel pattern to BOTH segments simultaneously.
+> Seg 1 (RIGHT arc): LED 0 at BOTTOM, LED 7 at TOP — counts bottom→top.
+> Seg 2 (LEFT arc):  LED 0 at TOP,    LED 7 at BOTTOM — mirror starts adjacent to seg1's LED 7 at top.
+>
+> ```
+>               ╔══════════╗
+>               ║   TOP    ║
+>   L-pSlot 0 ══╬══════════╬══ R-pSlot 7
+>   L-pSlot 1 ══╬          ╬══ R-pSlot 6
+>   L-pSlot 2 ══╬          ╬══ R-pSlot 5
+>   L-pSlot 3 ══╬  CENTER  ╬══ R-pSlot 4
+>   L-pSlot 4 ══╬          ╬══ R-pSlot 3
+>   L-pSlot 5 ══╬          ╬══ R-pSlot 2
+>   L-pSlot 6 ══╬          ╬══ R-pSlot 1
+>   L-pSlot 7 ══╬══════════╬══ R-pSlot 0
+>               ║  BOTTOM  ║
+>               ╚══════════╝
+>   LEFT:  ↓ top→bottom     RIGHT: ↑ bottom→top
+>   pSlot: 0,1,2,3,4,5,6,7  pSlot: 0,1,2,3,4,5,6,7
+> ```
+>
+> If pixel[0] = RED → Right BOTTOM = RED AND Left TOP = RED. Horseshoe symmetry.
+> The VisualizerUnit achieves this via `rawFract` inversion: `if (vizShape === 'RING' && i >= renderLeds/2) { rawFract = 1 - rawFract - 0.0001; }`
+
+
 
 ---
 
