@@ -110,7 +110,6 @@ const MusicPanel = React.memo(({
     <View style={{ flex: 1, paddingHorizontal: Spacing.xs, paddingTop: Spacing.xs, overflow: 'hidden' }}>
 
       {/* ── Pattern Navigator (Pill) with Matrix Toggles ───────────────── */}
-      <View style={{ flex: 1, justifyContent: 'space-evenly' }}>
 
         <View style={[styles.musicToggleHeader, { justifyContent: 'space-between', paddingHorizontal: Spacing.sm }]}>
           
