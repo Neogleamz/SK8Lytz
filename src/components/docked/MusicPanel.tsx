@@ -109,59 +109,59 @@ const MusicPanel = React.memo(({
   return (
     <View style={{ flex: 1, paddingHorizontal: Spacing.xs, paddingTop: Spacing.xs, overflow: 'hidden' }}>
 
-      {/* ── Inline Matrix & Pattern Navigator ─────────────────────── */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xs, marginTop: Spacing.xxs, marginBottom: Spacing.sm, flexShrink: 0 }}>
-        
-        {/* Light Screen Toggle */}
-        <TouchableOpacity
-          onPress={() => onMatrixSwitch(0x27)}
-          style={{
-            paddingVertical: Spacing.sm, paddingHorizontal: Spacing.sm, borderRadius: 8, alignItems: 'center',
-            backgroundColor: musicMatrixStyle === 0x27 ? Colors.primary + '33' : 'rgba(255,255,255,0.05)',
-            borderWidth: 1.5, borderColor: musicMatrixStyle === 0x27 ? Colors.primary : 'rgba(255,255,255,0.1)',
-            minWidth: 70
-          }}
-        >
-          <MaterialCommunityIcons name="monitor" size={16} color={musicMatrixStyle === 0x27 ? '#FFF' : Colors.textMuted} />
-          <Text style={{ color: musicMatrixStyle === 0x27 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 9, marginTop: 4 }}>SCREEN</Text>
-        </TouchableOpacity>
+      {/* ── Pattern Navigator (Pill) with Matrix Toggles ───────────────── */}
+      <View style={{ flex: 1, justifyContent: 'space-evenly' }}>
 
-        {/* Pattern Navigator */}
-        <View style={[styles.musicModeIndicator, { alignItems: 'center', flex: 1, marginHorizontal: Spacing.sm }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity onPress={onPrev} style={{ paddingHorizontal: Spacing.sm }}>
-              <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'<'}</Text>
-            </TouchableOpacity>
-            <View style={[styles.musicModeCircle, { width: 32, height: 32, borderRadius: 16 }]}>
-              <Text style={[styles.musicModeNumber, { fontSize: 14 }]}>{musicPatternId}</Text>
+        <View style={[styles.musicToggleHeader, { justifyContent: 'space-between', paddingHorizontal: Spacing.sm }]}>
+          
+          {/* Light Screen Toggle */}
+          <TouchableOpacity
+            onPress={() => onMatrixSwitch(0x27)}
+            style={{
+              paddingVertical: Spacing.xs, paddingHorizontal: Spacing.xs, borderRadius: 12, alignItems: 'center',
+              backgroundColor: musicMatrixStyle === 0x27 ? Colors.primary + '33' : 'transparent',
+              minWidth: 55
+            }}
+          >
+            <MaterialCommunityIcons name="monitor" size={22} color={musicMatrixStyle === 0x27 ? '#FFF' : Colors.textMuted} />
+            <Text style={{ color: musicMatrixStyle === 0x27 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 8, marginTop: 2 }}>SCREEN</Text>
+          </TouchableOpacity>
+
+          {/* Pattern Navigator */}
+          <View style={[styles.musicModeIndicator, { alignItems: 'center', flex: 1, marginHorizontal: Spacing.xs }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity onPress={onPrev} style={{ paddingHorizontal: Spacing.md }}>
+                <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'<'}</Text>
+              </TouchableOpacity>
+              <View style={[styles.musicModeCircle, { width: 32, height: 32, borderRadius: 16 }]}>
+                <Text style={[styles.musicModeNumber, { fontSize: 14 }]}>{musicPatternId}</Text>
+              </View>
+              <TouchableOpacity onPress={onNext} style={{ paddingHorizontal: Spacing.md }}>
+                <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'>'}</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={onNext} style={{ paddingHorizontal: Spacing.sm }}>
-              <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'>'}</Text>
-            </TouchableOpacity>
+            <Text style={[Typography.caption, { marginTop: Spacing.xs, color: Colors.primary, fontWeight: 'bold', fontSize: 11, textAlign: 'center' }]} numberOfLines={1}>
+              {getMusicPatternLabel(musicMatrixStyle, musicPatternId)}
+            </Text>
+            <Text style={{ color: Colors.textMuted, fontSize: 9, marginTop: 2, opacity: 0.6 }}>
+              {musicPatternId} / {patternMax}
+            </Text>
           </View>
-          <Text style={[Typography.caption, { marginTop: Spacing.xs, color: Colors.primary, fontWeight: 'bold', fontSize: 11, textAlign: 'center' }]} numberOfLines={1}>
-            {getMusicPatternLabel(musicMatrixStyle, musicPatternId)}
-          </Text>
-          <Text style={{ color: Colors.textMuted, fontSize: 9, marginTop: 2, opacity: 0.6 }}>
-            {musicPatternId} / {patternMax}
-          </Text>
-        </View>
 
-        {/* Light Bar Toggle */}
-        <TouchableOpacity
-          onPress={() => onMatrixSwitch(0x26)}
-          style={{
-            paddingVertical: Spacing.sm, paddingHorizontal: Spacing.sm, borderRadius: 8, alignItems: 'center',
-            backgroundColor: musicMatrixStyle === 0x26 ? Colors.accent + '33' : 'rgba(255,255,255,0.05)',
-            borderWidth: 1.5, borderColor: musicMatrixStyle === 0x26 ? Colors.accent : 'rgba(255,255,255,0.1)',
-            minWidth: 70
-          }}
-        >
-          <MaterialCommunityIcons name="led-strip-variant" size={16} color={musicMatrixStyle === 0x26 ? '#FFF' : Colors.textMuted} />
-          <Text style={{ color: musicMatrixStyle === 0x26 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 9, marginTop: 4 }}>BAR</Text>
-        </TouchableOpacity>
-        
-      </View>
+          {/* Light Bar Toggle */}
+          <TouchableOpacity
+            onPress={() => onMatrixSwitch(0x26)}
+            style={{
+              paddingVertical: Spacing.xs, paddingHorizontal: Spacing.xs, borderRadius: 12, alignItems: 'center',
+              backgroundColor: musicMatrixStyle === 0x26 ? Colors.accent + '33' : 'transparent',
+              minWidth: 55
+            }}
+          >
+            <MaterialCommunityIcons name="led-strip-variant" size={22} color={musicMatrixStyle === 0x26 ? '#FFF' : Colors.textMuted} />
+            <Text style={{ color: musicMatrixStyle === 0x26 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 8, marginTop: 2 }}>BAR</Text>
+          </TouchableOpacity>
+          
+        </View>
 
       <View style={{ flex: 1, justifyContent: 'space-evenly' }}>
 
