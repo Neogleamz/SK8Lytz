@@ -111,7 +111,7 @@ const StreetPanel = React.memo(({
       bounces={false}
     >
       {/* ── Header row: Motion State (centered) + REC indicator (absolute right) ── */}
-      <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm, paddingHorizontal: 4, minHeight: 28 }}>
+      <View style={{ position: 'relative', width: '100%', alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm, paddingHorizontal: 4, minHeight: 28 }}>
         <Text
           allowFontScaling={false}
           style={{ color: stateColor, fontSize: 13, fontWeight: '900', letterSpacing: 3, textAlign: 'center' }}
