@@ -2,14 +2,21 @@
  * MusicPanel.tsx — Music mode control panel.
  *
  * Renders the matrix style selector (Light Screen / Light Bar),
- * pattern navigator, mic source toggle (APP/DEVICE), and play button.
+ * pattern navigator (16 or 30 patterns depending on matrix),
+ * conditional FG/BG color pickers (per MusicDictionary colorMode gate),
+ * mic source toggle (APP/DEVICE), and play button.
  *
  * Extracted from DockedController.tsx (Phase 3).
+ * Updated: Full 46-profile support (16 Light Bar + 30 Light Screen).
  */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { getMusicPatternLabel, MUSIC_PATTERNS } from '../../hooks/useMusicMode';
+import {
+  getActiveMusicProfile,
+  getMusicPatternLabel,
+  getMusicPatternMax,
+} from '../../hooks/useMusicMode';
 import { Spacing, Typography } from '../../theme/theme';
 
 interface MusicPanelProps {
@@ -22,11 +29,38 @@ interface MusicPanelProps {
   micSensitivity: number;
   brightness: number;
   musicPrimaryColor: string;
+  setMusicPrimaryColor: (hex: string) => void;
   musicSecondaryColor: string;
+  setMusicSecondaryColor: (hex: string) => void;
+  speed: number;
+  setSpeed: (v: number) => void;
   handleMusicChange: (...args: any[]) => void;
   Colors: any;
   styles: any;
 }
+
+const ColorSwatch = React.memo(({
+  color, label, onPress, Colors,
+}: { color: string; label: string; onPress: () => void; Colors: any }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    style={{
+      flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
+      backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 10,
+      paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md,
+      flex: 1, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    }}
+  >
+    <View style={{
+      width: 22, height: 22, borderRadius: 11,
+      backgroundColor: color,
+      borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)',
+    }} />
+    <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>
+      {label}
+    </Text>
+  </TouchableOpacity>
+));
 
 const MusicPanel = React.memo(({
   musicPatternId,
@@ -38,75 +72,139 @@ const MusicPanel = React.memo(({
   micSensitivity,
   brightness,
   musicPrimaryColor,
+  setMusicPrimaryColor,
   musicSecondaryColor,
+  setMusicSecondaryColor,
+  speed,
+  setSpeed,
   handleMusicChange,
   Colors,
   styles,
 }: MusicPanelProps) => {
+
+  // Active profile — resolves colorMode, name, etc.
+  const activeProfile = getActiveMusicProfile(musicMatrixStyle, musicPatternId);
+  const patternMax = getMusicPatternMax(musicMatrixStyle);
+
+  const onPrev = useCallback(() => {
+    const pid = musicPatternId > 1 ? musicPatternId - 1 : patternMax;
+    setMusicPatternId(pid);
+    handleMusicChange(pid);
+  }, [musicPatternId, patternMax, setMusicPatternId, handleMusicChange]);
+
+  const onNext = useCallback(() => {
+    const pid = musicPatternId < patternMax ? musicPatternId + 1 : 1;
+    setMusicPatternId(pid);
+    handleMusicChange(pid);
+  }, [musicPatternId, patternMax, setMusicPatternId, handleMusicChange]);
+
+  const onMatrixSwitch = useCallback((matrix: number) => {
+    // Reset to ID 1 when switching matrices to prevent out-of-range sends.
+    // Light Bar max = 16, Light Screen max = 30. IDs > 16 are invalid on 0x26.
+    setMusicMatrixStyle(matrix);
+    setMusicPatternId(1);
+    handleMusicChange(1, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, matrix);
+  }, [setMusicMatrixStyle, setMusicPatternId, handleMusicChange, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor]);
+
   return (
     <View style={{ flex: 1, paddingHorizontal: Spacing.xs, paddingTop: Spacing.xs, overflow: 'hidden' }}>
-      {/* Matrix Style Selector: Light Screen (0x27) vs Light Bar (0x26) */}
-      <View style={{ flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.xs, marginTop: Spacing.xxs, marginBottom: Spacing.md, flexShrink: 0 }}>
+
+      {/* ── Matrix Style Selector ────────────────────────────────────── */}
+      <View style={{ flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.xs, marginTop: Spacing.xxs, marginBottom: Spacing.sm, flexShrink: 0 }}>
         <TouchableOpacity
-          onPress={() => {
-            setMusicMatrixStyle(0x27);
-            handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 0x27);
-          }}
+          onPress={() => onMatrixSwitch(0x27)}
           style={{
             flex: 1, paddingVertical: Spacing.md, borderRadius: 10, alignItems: 'center',
             backgroundColor: musicMatrixStyle === 0x27 ? Colors.primary + '33' : 'rgba(255,255,255,0.05)',
-            borderWidth: 1.5, borderColor: musicMatrixStyle === 0x27 ? Colors.primary : 'rgba(255,255,255,0.1)'
+            borderWidth: 1.5, borderColor: musicMatrixStyle === 0x27 ? Colors.primary : 'rgba(255,255,255,0.1)',
           }}
         >
           <Text style={{ color: musicMatrixStyle === 0x27 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>LIGHT SCREEN</Text>
-          <Text style={{ color: musicMatrixStyle === 0x27 ? Colors.primary : Colors.textMuted, fontSize: 8, opacity: 0.8 }}>0x27 (DENSE)</Text>
+          <Text style={{ color: musicMatrixStyle === 0x27 ? Colors.primary : Colors.textMuted, fontSize: 8, opacity: 0.8 }}>30 PATTERNS</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => {
-            setMusicMatrixStyle(0x26);
-            handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, 0x26);
-          }}
+          onPress={() => onMatrixSwitch(0x26)}
           style={{
             flex: 1, paddingVertical: Spacing.md, borderRadius: 10, alignItems: 'center',
             backgroundColor: musicMatrixStyle === 0x26 ? Colors.accent + '33' : 'rgba(255,255,255,0.05)',
-            borderWidth: 1.5, borderColor: musicMatrixStyle === 0x26 ? Colors.accent : 'rgba(255,255,255,0.1)'
+            borderWidth: 1.5, borderColor: musicMatrixStyle === 0x26 ? Colors.accent : 'rgba(255,255,255,0.1)',
           }}
         >
           <Text style={{ color: musicMatrixStyle === 0x26 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>LIGHT BAR</Text>
-          <Text style={{ color: musicMatrixStyle === 0x26 ? Colors.accent : Colors.textMuted, fontSize: 8, opacity: 0.8 }}>0x26 (BAR)</Text>
+          <Text style={{ color: musicMatrixStyle === 0x26 ? Colors.accent : Colors.textMuted, fontSize: 8, opacity: 0.8 }}>16 PATTERNS</Text>
         </TouchableOpacity>
       </View>
 
       <View style={{ flex: 1, justifyContent: 'space-evenly' }}>
-        {/* Pattern navigator */}
+
+        {/* ── Pattern Navigator ─────────────────────────────────────── */}
         <View style={[styles.musicToggleHeader, { justifyContent: 'center' }]}>
           <View style={[styles.musicModeIndicator, { alignItems: 'center' }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity onPress={() => {
-                const pid = musicPatternId > 1 ? musicPatternId - 1 : MUSIC_PATTERNS.length;
-                setMusicPatternId(pid);
-                handleMusicChange(pid);
-              }} style={{ paddingHorizontal: Spacing.md }}>
+              <TouchableOpacity onPress={onPrev} style={{ paddingHorizontal: Spacing.md }}>
                 <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'<'}</Text>
               </TouchableOpacity>
               <View style={[styles.musicModeCircle, { width: 32, height: 32, borderRadius: 16 }]}>
                 <Text style={[styles.musicModeNumber, { fontSize: 14 }]}>{musicPatternId}</Text>
               </View>
-              <TouchableOpacity onPress={() => {
-                const pid = musicPatternId < MUSIC_PATTERNS.length ? musicPatternId + 1 : 1;
-                setMusicPatternId(pid);
-                handleMusicChange(pid);
-              }} style={{ paddingHorizontal: Spacing.md }}>
+              <TouchableOpacity onPress={onNext} style={{ paddingHorizontal: Spacing.md }}>
                 <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'>'}</Text>
               </TouchableOpacity>
             </View>
             <Text style={[Typography.caption, { marginTop: Spacing.xs, color: Colors.primary, fontWeight: 'bold', fontSize: 13 }]}>
-              {getMusicPatternLabel(musicPatternId)}
+              {getMusicPatternLabel(musicMatrixStyle, musicPatternId)}
+            </Text>
+            {/* Pattern count badge */}
+            <Text style={{ color: Colors.textMuted, fontSize: 9, marginTop: 2, opacity: 0.6 }}>
+              {musicPatternId} / {patternMax}
             </Text>
           </View>
         </View>
 
-        {/* Mic source toggle */}
+        {/* ── Conditional Color Pickers ─────────────────────────────── */}
+        {activeProfile.colorMode !== 'NONE' ? (
+          <View style={{ flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.xs }}>
+            {/* FG picker — shown for FG_ONLY and FG_BG */}
+            <ColorSwatch
+              color={musicPrimaryColor}
+              label="SOUND COLOR"
+              onPress={() => {
+                // Tap to open color picker — DockedController listens to setMusicColorFocus
+                // and opens the existing color wheel modal. This swatch acts as the trigger.
+                handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
+              }}
+              Colors={Colors}
+            />
+            {/* BG picker — only shown for FG_BG */}
+            {activeProfile.colorMode === 'FG_BG' && (
+              <ColorSwatch
+                color={musicSecondaryColor}
+                label="DROP COLOR"
+                onPress={() => {
+                  handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
+                }}
+                Colors={Colors}
+              />
+            )}
+          </View>
+        ) : (
+          /* Auto Color badge for generative profiles */
+          <View style={{ alignItems: 'center', paddingVertical: Spacing.xs }}>
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
+              backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20,
+              paddingVertical: 5, paddingHorizontal: Spacing.md,
+              borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+            }}>
+              <MaterialCommunityIcons name="auto-fix" size={12} color={Colors.textMuted} />
+              <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>
+                AUTO COLOR
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* ── Mic Source Toggle ─────────────────────────────────────── */}
         <View style={styles.micControlSection}>
           <TouchableOpacity
             style={[styles.micIconBtn, micSource === 'APP' && styles.micBtnActive]}
@@ -143,6 +241,7 @@ const MusicPanel = React.memo(({
             <Text style={[styles.micSubText, micSource === 'DEVICE' && { color: Colors.primary, fontWeight: 'bold' }]}>DEVICE MIC</Text>
           </TouchableOpacity>
         </View>
+
       </View>
     </View>
   );

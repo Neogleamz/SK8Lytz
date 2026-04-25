@@ -24,7 +24,7 @@ import { useDockedControllerState } from '../hooks/useDockedControllerState';
 import { useControllerPersistence } from '../hooks/useControllerPersistence';
 import { useControllerDispatch } from '../hooks/useControllerDispatch';
 import { useFavorites } from '../hooks/useFavorites';
-import { MUSIC_PATTERNS } from '../hooks/useMusicMode';
+import { getMusicPatternMax } from '../hooks/useMusicMode';
 import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
 import { useSessionTracking } from '../hooks/useSessionTracking';
 import { useStreetMode } from '../hooks/useStreetMode';
@@ -75,7 +75,7 @@ import SessionSummaryModal from './SessionSummaryModal';
 
 type ProductType = string;
 
-// MUSIC_PATTERNS — now imported from '../hooks/useMusicMode'
+// Pattern labels resolved via getMusicPatternLabel(modeType, patternId) from '../hooks/useMusicMode'
 
 const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segments = 1 }: { baseDots: string[], patternId: number, speed: number, points?: number, segments?: number }) => {
   const [offset, setOffset] = React.useState(0);
@@ -619,7 +619,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           const fixedClr = fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
           return `MultiMode - ${getColorName(fixedClr)}`;
         case 'MUSIC':
-          const patternName = MUSIC_PATTERNS[musicPatternId - 1] || `Effect ${musicPatternId}`;
+          const patternName = getMusicPatternLabel(musicMatrixStyle, musicPatternId);
           return `Music - ${patternName}`;
         case 'STREET': return isStreetBraking ? '🔴 BRAKING' : '🟠 CRUISING';
         case 'CAMERA': return 'Camera';
@@ -804,7 +804,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 micSensitivity={micSensitivity}
                 brightness={brightness}
                 musicPrimaryColor={musicPrimaryColor}
+                setMusicPrimaryColor={setMusicPrimaryColor}
                 musicSecondaryColor={musicSecondaryColor}
+                setMusicSecondaryColor={setMusicSecondaryColor}
+                speed={speed}
+                setSpeed={setSpeed}
                 handleMusicChange={handleMusicChange}
                 Colors={Colors}
                 styles={styles}

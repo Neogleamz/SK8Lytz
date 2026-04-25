@@ -3,23 +3,25 @@
  *
  * Owns: 0x73 music config dispatch, pattern names, pattern navigation.
  * Extracted from DockedController.tsx to isolate music-specific BLE logic.
+ *
+ * Pattern data source: MusicDictionary.ts (46 profiles across 2 matrices)
+ *  - 0x26 (Light Bar):    16 profiles  →  LIGHT_BAR_PROFILES
+ *  - 0x27 (Light Screen): 30 profiles  →  LIGHT_SCREEN_PROFILES
  */
 import { useCallback, useEffect, useRef } from 'react';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 import type { ModeType } from '../types/dashboard.types';
 import { hexToRgb } from '../utils/ColorUtils';
+import {
+  getActiveMusicProfile,
+  getMusicPatternMax,
+  getMusicProfiles,
+  getMusicPatternLabel,
+} from '../utils/MusicDictionary';
 
-/** The 13 built-in Zengge music reactive patterns. */
-export const MUSIC_PATTERNS = [
-  'Soft', 'Cheerful', 'Energy', 'Relax', 'Passion',
-  'Brisk', 'Rhythm', 'Rolling', 'Flicker', 'Accumulation',
-  'Shuttle', 'Fireworks', 'Snow'
-] as const;
-
-/** Derive a human-readable label for a music pattern by ID. */
-export const getMusicPatternLabel = (patternId: number): string =>
-  MUSIC_PATTERNS[patternId - 1] || `Effect ${patternId}`;
+// Re-export helpers so consumers can import from a single location.
+export { getMusicProfiles, getMusicPatternMax, getActiveMusicProfile, getMusicPatternLabel };
 
 interface UseMusicModeParams {
   activeMode: ModeType;
@@ -29,9 +31,9 @@ interface UseMusicModeParams {
   brightness: number;
   /**
    * Controls the `modeType` byte in the 0x73 packet (Protocol Bible §0x73).
-   *  'APP'    → 0x26 — phone/app microphone (reacts to ambient audio via the phone speaker)
-   *  'DEVICE' → 0x27 — device built-in mic (hardware reacts to direct contact sound)
-   * DO NOT confuse with `isOn` — this byte selects the mic SOURCE, not on/off state.
+   *  'APP'    → 0x26 — Light Bar matrix  (16 patterns)
+   *  'DEVICE' → 0x27 — Light Screen matrix (30 patterns)
+   * DO NOT confuse with `isOn` — this byte selects the matrix style, not the mic source.
    */
   micSource: 'APP' | 'DEVICE';
   musicPrimaryColor: string;
@@ -42,6 +44,10 @@ interface UseMusicModeParams {
 /**
  * Encapsulates the music config dispatch logic (0x73 protocol).
  * Fires `handleMusicChange` to send the current music state to hardware.
+ *
+ * patternId valid ranges:
+ *  - 1–16 when musicMatrixStyle === 0x26 (Light Bar)
+ *  - 1–30 when musicMatrixStyle === 0x27 (Light Screen)
  */
 export function useMusicMode({
   activeMode,
@@ -70,12 +76,22 @@ export function useMusicMode({
     const c1 = hexToRgb(color1Hex);
     const c2 = hexToRgb(color2Hex);
 
-    AppLogger.log("MUSIC_CONFIG_REQUESTED", { patternId, c1Hex: color1Hex, c2Hex: color2Hex, matrix });
+    // Clamp patternId to the valid range for this matrix so we never send
+    // an out-of-range effectId byte to the hardware.
+    const maxId = getMusicPatternMax(matrix);
+    const safePatternId = Math.max(1, Math.min(patternId, maxId));
+
+    AppLogger.log('MUSIC_CONFIG_REQUESTED', {
+      patternId: safePatternId,
+      matrix: matrix === 0x27 ? 'LIGHT_SCREEN' : 'LIGHT_BAR',
+      c1Hex: color1Hex,
+      c2Hex: color2Hex,
+    });
 
     writeToDevice(ZenggeProtocol.setMusicConfig(
-      patternId,          // musicMode 1-13
-      isDeviceMic ? 0x27 : 0x26,  // micSource byte
-      true,               // isOn — always sending to enable music mode
+      safePatternId,                        // effectId — 1–16 or 1–30
+      isDeviceMic ? 0x27 : 0x26,           // modeType byte (matrix style)
+      true,                                 // isOn — always true when entering music mode
       c1,
       c2,
       sens,
@@ -100,7 +116,7 @@ export function useMusicMode({
   const previousActiveModeRef = useRef<ModeType>(activeMode);
 
   /**
-   * Fix 3: Music Mode Exit Packet.
+   * Music Mode Exit Packet.
    * When the user switches away from MUSIC, send isOn=false to tell the hardware
    * to stop reacting to ambient sound. Without this, the device stays in
    * music-reactive mode indefinitely even though the UI has moved on.
