@@ -33,7 +33,8 @@ function HSLToHex(h: number, s: number, l: number) {
 
 export const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, hwSettings, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1, fixedDirection = 1, streetDistribution = [0.3, 0.4, 0.3] }: any) => {
   const { isDark } = useTheme();
-  const product = String(device.type || fallbackProduct);
+  // Guard against String(undefined)='undefined' which causes silent SOULZ fallback for HALOZ devices
+  const product = (device?.type && device.type !== 'undefined') ? String(device.type) : String(fallbackProduct || 'SOULZ');
 
   // Resolve product profile from catalog — drives all geometry decisions.
   // Falls back to LOCAL_PRODUCT_CATALOG so this works fully offline.
@@ -69,10 +70,11 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
 
   // ── hwSettings-first LED geometry ────────────────────────────────────────
   // Priority order: authoritative probed hwSettings > device object fields > catalog fallback.
-  // This ensures HALOZ always uses ledPoints=8, segments=2 even if device.segments is missing.
-  const devicePoints   = hwSettings?.ledPoints || device?.points || fallbackPoints || productProfile.vizDefaultPoints;
-  const deviceSegments = hwSettings?.segments  || device?.segments || 1;
-  const numLeds = Math.floor(devicePoints / deviceSegments); // 16→8 (HALOZ) or 43 (SOULZ)
+  // devicePoints = LEDs PER SEGMENT (the protocol canvas). HALOZ=8, SOULZ=43.
+  // NEVER divide by segments here — ledPoints already represents the per-segment canvas.
+  const devicePoints   = hwSettings?.ledPoints || device?.points || fallbackPoints || productProfile.defaultLedPoints;
+  const deviceSegments = hwSettings?.segments  || device?.segments || productProfile.defaultSegments;
+  const numLeds = Math.floor(devicePoints); // Protocol canvas: HALOZ=8 (hardware mirrors to seg2), SOULZ=43
 
   // ── PATH GEOMETRY (expensive) — only recomputes on shape/product change, NEVER on animTick ──
   const pathGeometry = useMemo(() => {
@@ -176,7 +178,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
       : vizShape === 'DUAL_STRIP'
         ? Math.max(numLeds * 2, 60)
         : Math.max(numLeds * 2, 86);
-    const activeSegmentLedsHoisted = renderLeds / 2;
+    // activeSegmentLeds per arc (render dots, not hardware LEDs). Used for path fraction math only.
 
     // ── PRE-COMPUTE FRAME DATA ONCE (hoisted out of per-LED loop) ────────────────────
     // BEFORE: getVisualizerFrame() was called once per rendered dot (64× per memo eval at 60fps).
@@ -210,7 +212,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
         hoistedPid as PatternId,
         hoistedFgRgb,
         hoistedBgRgb,
-        activeSegmentLedsHoisted,
+        numLeds, // Must match protocol canvas (8 for HALOZ, 43 for SOULZ)
         animTick,
         fixedDirection as 0 | 1,
         mode === 'STREET' ? { distribution: streetDistribution } : undefined
@@ -271,7 +273,8 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
         } else if (mode === 'MUSIC') {
           // ── Hardware-accurate music mode simulation — uses pre-computed frame ──
           const musicFrame = hoistedMusicFrame || getMusicVisualizerFrame(patternId || 1, numLeds, animTick, audioMagnitude, color);
-          const mRawPos = (segmentI / activeSegmentLeds) * musicFrame.pixels.length;
+          // rawFract is inverted for HALOZ left arc (vizShape=RING). For SOULZ (OVAL) rawFract = segmentI/activeSegmentLeds — identical result.
+          const mRawPos = rawFract * musicFrame.pixels.length;
           const mSlot = Math.floor(mRawPos) % Math.max(1, musicFrame.pixels.length);
           const mPx = musicFrame.pixels[mSlot] || { r: 255, g: 255, b: 255 };
           dotColor = `#${mPx.r.toString(16).padStart(2, '0')}${mPx.g.toString(16).padStart(2, '0')}${mPx.b.toString(16).padStart(2, '0')}`;
@@ -284,6 +287,8 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
           const framePixels = hoistedFramePixels || [];
 
           // ── Diffusion blending: blend adjacent LED colors near chip boundaries ──
+          // NOTE: Street mode slot mapping is intentionally using segmentI (not rawFract).
+          // HALOZ street mode symmetry fix is tracked as a separate task.
           const rawLedPos = (segmentI / activeSegmentLeds) * framePixels.length;
           const slot0 = Math.floor(rawLedPos) % Math.max(1, framePixels.length);
           const slotT = rawLedPos - Math.floor(rawLedPos);
@@ -338,7 +343,8 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
             builderPixels = newArr;
           }
 
-          const rawLedPos = (segmentI / activeSegmentLeds) * builderPixels.length;
+          // rawFract is inverted for HALOZ left arc. SOULZ: rawFract = segmentI/activeSegmentLeds — identical.
+          const rawLedPos = rawFract * builderPixels.length;
           const slot0 = Math.floor(rawLedPos) % Math.max(1, builderPixels.length);
           const slotT = rawLedPos - Math.floor(rawLedPos);
           const DIFF = 0.35;
