@@ -16,7 +16,7 @@
  * Platform: React Native (Android + Web)
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Dimensions, FlatList, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Alert, Dimensions, FlatList, Modal, PanResponder, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useAppMicrophone } from '../hooks/useAppMicrophone';
 import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
 import { useCuratedPicks } from '../hooks/useCuratedPicks';
@@ -648,6 +648,48 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       }
     }, [currentStatusText, onPatternChanged]);
 
+    // ── GESTURE NAVIGATION: Horizontal swipe to change modes ──
+    const MODE_ORDER = ['HOME', 'FAVORITES', 'MULTIMODE', 'MUSIC', 'STREET', 'CAMERA'] as const;
+    const swipePanResponder = React.useRef(
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (evt, gestureState) => {
+          // Capture horizontal swipes that are deliberate (>30px) and mostly horizontal
+          // We don't use Capture phase so child sliders can grab touches first
+          if (Math.abs(gestureState.dx) > 30 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.5) {
+            return true;
+          }
+          return false;
+        },
+        onPanResponderRelease: (evt, gestureState) => {
+          const currentModeStr = activeMode === 'MULTI' as any ? 'MULTIMODE' : activeMode;
+          const currentModeIdx = MODE_ORDER.indexOf(currentModeStr as any);
+          if (currentModeIdx === -1) return;
+
+          if (gestureState.dx > 50) {
+            // Swipe Right (Left-to-Right): Go to previous mode
+            if (currentModeIdx > 0) {
+              const prevMode = MODE_ORDER[currentModeIdx - 1];
+              if (prevMode === 'HOME') {
+                if (onDisconnect) onDisconnect();
+              } else {
+                setActiveMode(prevMode as any);
+                if (prevMode !== 'FAVORITES') setLastOperatingMode(prevMode as any);
+                if (prevMode === 'MULTIMODE') setFixedSubMode('PATTERN');
+              }
+            }
+          } else if (gestureState.dx < -50) {
+            // Swipe Left (Right-to-Left): Go to next mode
+            if (currentModeIdx < MODE_ORDER.length - 1) {
+              const nextMode = MODE_ORDER[currentModeIdx + 1];
+              setActiveMode(nextMode as any);
+              if (nextMode !== 'FAVORITES') setLastOperatingMode(nextMode as any);
+              if (nextMode === 'MULTIMODE') setFixedSubMode('PATTERN');
+            }
+          }
+        },
+      })
+    ).current;
+
     return (
       <View style={styles.container}>
 
@@ -749,7 +791,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
         {/* Removed Active Mode Header to save vertical space */}
 
-        <View style={[styles.controlsContainer, { padding: Spacing.xs, overflow: 'hidden' }]}>
+        <View {...swipePanResponder.panHandlers} style={[styles.controlsContainer, { padding: Spacing.xs, overflow: 'hidden' }]}>
           <View style={[styles.activeModeContainer, { flex: 1, justifyContent: 'space-evenly' }]}>
             {activeMode === 'FAVORITES' && (
               <FavoritesPanel

@@ -64,14 +64,29 @@ const DashboardHeader = React.memo(({
       {isActuallyConnected ? (
         /* ── Connected: Unified Header Layout ── */
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {/* LEFT: Back button */}
+          {/* LEFT: user pill */}
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity
-              onPress={handleDisconnect}
-              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, borderRadius: 20, gap: Spacing.xxs }}
+              onPress={onPressAccount}
+              style={{
+                flexDirection: 'row', alignItems: 'center',
+                paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
+                borderRadius: 16, borderWidth: 1, gap: Spacing.xs,
+                borderColor: isOfflineMode ? 'rgba(255,170,0,0.35)' : 'rgba(0,240,255,0.25)',
+                backgroundColor: isOfflineMode ? 'rgba(255,170,0,0.08)' : 'rgba(0,240,255,0.06)',
+              }}
             >
-              <MaterialCommunityIcons name="chevron-left" size={24} color={Colors.primary} />
-              <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '800', letterSpacing: 0.5 }}>Back</Text>
+              <View style={[{
+                width: 6, height: 6, borderRadius: 3,
+                backgroundColor: isOfflineMode ? '#FFA500' : Colors.success,
+              }, Platform.OS === 'web' 
+                ? { boxShadow: `0px 0px 4px ${isOfflineMode ? '#FFA500' : Colors.success}` } as any
+                : { shadowColor: isOfflineMode ? '#FFA500' : Colors.success, shadowOpacity: 0.8, shadowRadius: 4, elevation: 2 }
+              ]} />
+              <Text style={{ color: Colors.text, fontSize: 10, fontWeight: '700', maxWidth: 55, fontFamily: 'Righteous' }} numberOfLines={1}>
+                {authUsername || 'GUEST'}
+              </Text>
+              <MaterialCommunityIcons name="account-cog" size={12} color={Colors.textMuted} style={{ opacity: 0.8 }} />
             </TouchableOpacity>
           </View>
 
