@@ -12,6 +12,7 @@ import { hexToHue } from '../../utils/ColorUtils';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { AppLogger } from '../../services/AppLogger';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
+import { getActiveMusicProfile } from '../../hooks/useMusicMode';
 import NeonHueStrip from '../NeonHueStrip';
 import TacticalSlider from '../TacticalSlider';
 import type { FixedModePattern, ModeType, MotionState } from '../../types/dashboard.types';
@@ -173,22 +174,32 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
 
           {/* Music Mode Split Color Tracker */}
           {(activeMode === 'MUSIC') && (() => {
+            const profile = getActiveMusicProfile(musicMatrixStyle, musicPatternId);
+            if (profile.colorMode === 'NONE') {
+              return (
+                <View style={{ flexDirection: 'row', width: '100%', height: 18, borderRadius: 9, marginBottom: Spacing.xs, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center' }}>
+                   <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 9, fontWeight: '900', letterSpacing: 1 }}>AUTO COLOR (HARDWARE CONTROLLED)</Text>
+                </View>
+              );
+            }
             return (
               <View style={{ flexDirection: 'row', width: '100%', height: 18, borderRadius: 9, marginBottom: Spacing.xs, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'transparent' }}>
                 <TouchableOpacity
                   activeOpacity={0.9}
                   onPress={() => setMusicColorFocus('PRIMARY')}
-                  style={{ flex: 1, backgroundColor: musicPrimaryColor, justifyContent: 'center', alignItems: 'center', opacity: musicColorFocus === 'PRIMARY' ? 1.0 : 0.4, borderTopLeftRadius: 8, borderBottomLeftRadius: 8, shadowColor: musicPrimaryColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
+                  style={{ flex: 1, backgroundColor: musicPrimaryColor, justifyContent: 'center', alignItems: 'center', opacity: musicColorFocus === 'PRIMARY' ? 1.0 : 0.4, borderTopLeftRadius: 8, borderBottomLeftRadius: 8, borderTopRightRadius: profile.colorMode === 'FG_ONLY' ? 8 : 0, borderBottomRightRadius: profile.colorMode === 'FG_ONLY' ? 8 : 0, shadowColor: musicPrimaryColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
                 >
                   <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>SOUND COLUMN</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={() => setMusicColorFocus('SECONDARY')}
-                  style={{ flex: 1, backgroundColor: musicSecondaryColor, justifyContent: 'center', alignItems: 'center', opacity: musicColorFocus === 'SECONDARY' ? 1.0 : 0.4, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.4)', borderTopRightRadius: 8, borderBottomRightRadius: 8, shadowColor: musicSecondaryColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
-                >
-                  <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>DROP COLOR</Text>
-                </TouchableOpacity>
+                {profile.colorMode === 'FG_BG' && (
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => setMusicColorFocus('SECONDARY')}
+                    style={{ flex: 1, backgroundColor: musicSecondaryColor, justifyContent: 'center', alignItems: 'center', opacity: musicColorFocus === 'SECONDARY' ? 1.0 : 0.4, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.4)', borderTopRightRadius: 8, borderBottomRightRadius: 8, shadowColor: musicSecondaryColor, shadowOpacity: 1, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 12 }}
+                  >
+                    <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 }}>DROP COLOR</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             );
           })()}

@@ -24,7 +24,7 @@ import { useDockedControllerState } from '../hooks/useDockedControllerState';
 import { useControllerPersistence } from '../hooks/useControllerPersistence';
 import { useControllerDispatch } from '../hooks/useControllerDispatch';
 import { useFavorites } from '../hooks/useFavorites';
-import { getMusicPatternMax } from '../hooks/useMusicMode';
+import { getMusicPatternMax, getMusicPatternLabel } from '../hooks/useMusicMode';
 import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
 import { useSessionTracking } from '../hooks/useSessionTracking';
 import { useStreetMode } from '../hooks/useStreetMode';

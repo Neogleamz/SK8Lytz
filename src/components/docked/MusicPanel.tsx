@@ -109,100 +109,63 @@ const MusicPanel = React.memo(({
   return (
     <View style={{ flex: 1, paddingHorizontal: Spacing.xs, paddingTop: Spacing.xs, overflow: 'hidden' }}>
 
-      {/* ── Matrix Style Selector ────────────────────────────────────── */}
-      <View style={{ flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.xs, marginTop: Spacing.xxs, marginBottom: Spacing.sm, flexShrink: 0 }}>
+      {/* ── Inline Matrix & Pattern Navigator ─────────────────────── */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xs, marginTop: Spacing.xxs, marginBottom: Spacing.sm, flexShrink: 0 }}>
+        
+        {/* Light Screen Toggle */}
         <TouchableOpacity
           onPress={() => onMatrixSwitch(0x27)}
           style={{
-            flex: 1, paddingVertical: Spacing.md, borderRadius: 10, alignItems: 'center',
+            paddingVertical: Spacing.sm, paddingHorizontal: Spacing.sm, borderRadius: 8, alignItems: 'center',
             backgroundColor: musicMatrixStyle === 0x27 ? Colors.primary + '33' : 'rgba(255,255,255,0.05)',
             borderWidth: 1.5, borderColor: musicMatrixStyle === 0x27 ? Colors.primary : 'rgba(255,255,255,0.1)',
+            minWidth: 70
           }}
         >
-          <Text style={{ color: musicMatrixStyle === 0x27 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>LIGHT SCREEN</Text>
-          <Text style={{ color: musicMatrixStyle === 0x27 ? Colors.primary : Colors.textMuted, fontSize: 8, opacity: 0.8 }}>30 PATTERNS</Text>
+          <MaterialCommunityIcons name="monitor" size={16} color={musicMatrixStyle === 0x27 ? '#FFF' : Colors.textMuted} />
+          <Text style={{ color: musicMatrixStyle === 0x27 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 9, marginTop: 4 }}>SCREEN</Text>
         </TouchableOpacity>
+
+        {/* Pattern Navigator */}
+        <View style={[styles.musicModeIndicator, { alignItems: 'center', flex: 1, marginHorizontal: Spacing.sm }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={onPrev} style={{ paddingHorizontal: Spacing.sm }}>
+              <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'<'}</Text>
+            </TouchableOpacity>
+            <View style={[styles.musicModeCircle, { width: 32, height: 32, borderRadius: 16 }]}>
+              <Text style={[styles.musicModeNumber, { fontSize: 14 }]}>{musicPatternId}</Text>
+            </View>
+            <TouchableOpacity onPress={onNext} style={{ paddingHorizontal: Spacing.sm }}>
+              <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'>'}</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={[Typography.caption, { marginTop: Spacing.xs, color: Colors.primary, fontWeight: 'bold', fontSize: 11, textAlign: 'center' }]} numberOfLines={1}>
+            {getMusicPatternLabel(musicMatrixStyle, musicPatternId)}
+          </Text>
+          <Text style={{ color: Colors.textMuted, fontSize: 9, marginTop: 2, opacity: 0.6 }}>
+            {musicPatternId} / {patternMax}
+          </Text>
+        </View>
+
+        {/* Light Bar Toggle */}
         <TouchableOpacity
           onPress={() => onMatrixSwitch(0x26)}
           style={{
-            flex: 1, paddingVertical: Spacing.md, borderRadius: 10, alignItems: 'center',
+            paddingVertical: Spacing.sm, paddingHorizontal: Spacing.sm, borderRadius: 8, alignItems: 'center',
             backgroundColor: musicMatrixStyle === 0x26 ? Colors.accent + '33' : 'rgba(255,255,255,0.05)',
             borderWidth: 1.5, borderColor: musicMatrixStyle === 0x26 ? Colors.accent : 'rgba(255,255,255,0.1)',
+            minWidth: 70
           }}
         >
-          <Text style={{ color: musicMatrixStyle === 0x26 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 10, letterSpacing: 1 }}>LIGHT BAR</Text>
-          <Text style={{ color: musicMatrixStyle === 0x26 ? Colors.accent : Colors.textMuted, fontSize: 8, opacity: 0.8 }}>16 PATTERNS</Text>
+          <MaterialCommunityIcons name="led-strip-variant" size={16} color={musicMatrixStyle === 0x26 ? '#FFF' : Colors.textMuted} />
+          <Text style={{ color: musicMatrixStyle === 0x26 ? '#FFF' : Colors.textMuted, fontWeight: '900', fontSize: 9, marginTop: 4 }}>BAR</Text>
         </TouchableOpacity>
+        
       </View>
 
       <View style={{ flex: 1, justifyContent: 'space-evenly' }}>
 
-        {/* ── Pattern Navigator ─────────────────────────────────────── */}
-        <View style={[styles.musicToggleHeader, { justifyContent: 'center' }]}>
-          <View style={[styles.musicModeIndicator, { alignItems: 'center' }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity onPress={onPrev} style={{ paddingHorizontal: Spacing.md }}>
-                <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'<'}</Text>
-              </TouchableOpacity>
-              <View style={[styles.musicModeCircle, { width: 32, height: 32, borderRadius: 16 }]}>
-                <Text style={[styles.musicModeNumber, { fontSize: 14 }]}>{musicPatternId}</Text>
-              </View>
-              <TouchableOpacity onPress={onNext} style={{ paddingHorizontal: Spacing.md }}>
-                <Text style={{ color: '#FFF', fontSize: 20, fontWeight: 'bold' }}>{'>'}</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={[Typography.caption, { marginTop: Spacing.xs, color: Colors.primary, fontWeight: 'bold', fontSize: 13 }]}>
-              {getMusicPatternLabel(musicMatrixStyle, musicPatternId)}
-            </Text>
-            {/* Pattern count badge */}
-            <Text style={{ color: Colors.textMuted, fontSize: 9, marginTop: 2, opacity: 0.6 }}>
-              {musicPatternId} / {patternMax}
-            </Text>
-          </View>
-        </View>
 
-        {/* ── Conditional Color Pickers ─────────────────────────────── */}
-        {activeProfile.colorMode !== 'NONE' ? (
-          <View style={{ flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.xs }}>
-            {/* FG picker — shown for FG_ONLY and FG_BG */}
-            <ColorSwatch
-              color={musicPrimaryColor}
-              label="SOUND COLOR"
-              onPress={() => {
-                // Tap to open color picker — DockedController listens to setMusicColorFocus
-                // and opens the existing color wheel modal. This swatch acts as the trigger.
-                handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
-              }}
-              Colors={Colors}
-            />
-            {/* BG picker — only shown for FG_BG */}
-            {activeProfile.colorMode === 'FG_BG' && (
-              <ColorSwatch
-                color={musicSecondaryColor}
-                label="DROP COLOR"
-                onPress={() => {
-                  handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
-                }}
-                Colors={Colors}
-              />
-            )}
-          </View>
-        ) : (
-          /* Auto Color badge for generative profiles */
-          <View style={{ alignItems: 'center', paddingVertical: Spacing.xs }}>
-            <View style={{
-              flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
-              backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20,
-              paddingVertical: 5, paddingHorizontal: Spacing.md,
-              borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
-            }}>
-              <MaterialCommunityIcons name="auto-fix" size={12} color={Colors.textMuted} />
-              <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>
-                AUTO COLOR
-              </Text>
-            </View>
-          </View>
-        )}
 
         {/* ── Mic Source Toggle ─────────────────────────────────────── */}
         <View style={styles.micControlSection}>
