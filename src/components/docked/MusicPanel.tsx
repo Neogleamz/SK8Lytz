@@ -117,9 +117,9 @@ const MusicPanel = React.memo(({
           <TouchableOpacity
             onPress={() => onMatrixSwitch(0x27)}
             style={{
-              paddingVertical: Spacing.xs, paddingHorizontal: Spacing.xs, borderRadius: 12, alignItems: 'center',
+              paddingVertical: Spacing.xs, paddingHorizontal: Spacing.sm, borderRadius: 12, alignItems: 'center',
               backgroundColor: musicMatrixStyle === 0x27 ? Colors.primary + '33' : 'transparent',
-              minWidth: 55
+              minWidth: 75
             }}
           >
             <MaterialCommunityIcons name="monitor" size={24} color={musicMatrixStyle === 0x27 ? '#FFF' : Colors.textMuted} />
@@ -151,9 +151,9 @@ const MusicPanel = React.memo(({
           <TouchableOpacity
             onPress={() => onMatrixSwitch(0x26)}
             style={{
-              paddingVertical: Spacing.xs, paddingHorizontal: Spacing.xs, borderRadius: 12, alignItems: 'center',
+              paddingVertical: Spacing.xs, paddingHorizontal: Spacing.sm, borderRadius: 12, alignItems: 'center',
               backgroundColor: musicMatrixStyle === 0x26 ? Colors.accent + '33' : 'transparent',
-              minWidth: 55
+              minWidth: 75
             }}
           >
             <MaterialCommunityIcons name="led-strip-variant" size={24} color={musicMatrixStyle === 0x26 ? '#FFF' : Colors.textMuted} />
