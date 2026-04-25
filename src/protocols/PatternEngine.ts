@@ -139,11 +139,11 @@ export const SK8LYTZ_TEMPLATES: SK8LytzTemplate[] = [
   { id: 10, name: 'Micro Ants',         icon: '🐜', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 2, group: 'Marquee' },
   { id: 11, name: 'Theater Chase',      icon: '🎭', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 2, group: 'Marquee' },
   { id: 12, name: 'Dashed Marquee',     icon: '➖', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 2, group: 'Marquee' },
-  { id: 13, name: 'Bold Stripes',       icon: '🟥', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: false, supportsSegment: true,  tier: 2, group: 'Marquee' },
+  { id: 13, name: 'Bold Stripes',       icon: '🟥', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 2, group: 'Marquee' },
 
   // ── GROUP 4: MATH WAVES (0x59 CASCADE) ──────────────────────────────────
   { id: 14, name: 'Sine Pulse Wave',    icon: '〰️', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Wave' },
-  { id: 15, name: 'Wave Pinch',         icon: '🌊', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'Wave' },
+  { id: 15, name: 'Wave Pinch',         icon: '🌊', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Wave' },
   { id: 16, name: 'Breathing Wave',     icon: '💨', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Breathe' },
 
   // ── GROUP 5: TEMPORAL FULL-STRIP (0x51 STEP_GRADUAL/JUMP) ───────────────
@@ -165,21 +165,21 @@ export const SK8LYTZ_TEMPLATES: SK8LytzTemplate[] = [
   { id: 26, name: 'Strobe Flash',       icon: '⚡', colorMode: 'FG_ONLY',  requiresForeground: true,  requiresBackground: false,  supportsDirection: false, supportsSegment: false, tier: 1, group: 'Sparkle', sourceRef: 'ge.StrobeEffect' },
   { id: 27, name: 'Ocean Wave',         icon: '🌊', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 1, group: 'Wave', sourceRef: 'ge.OceanWaveEffect' },
   { id: 28, name: 'Lightning Strike',   icon: '🌩️', colorMode: 'FG_ONLY',  requiresForeground: true,  requiresBackground: false,  supportsDirection: false, supportsSegment: false, tier: 1, group: 'Sparkle', sourceRef: 'ge.LightningEffect' },
-  { id: 29, name: 'Snowfall',           icon: '❄️', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: false, supportsSegment: false, tier: 1, group: 'Chase', sourceRef: 'ge.SnowfallEffect' },
+  { id: 29, name: 'Snowfall',           icon: '❄️', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: false, tier: 1, group: 'Chase', sourceRef: 'ge.SnowfallEffect' },
   { id: 30, name: 'Heartbeat Pulse',    icon: '❤️', colorMode: 'FG_ONLY',  requiresForeground: true,  requiresBackground: false,  supportsDirection: false, supportsSegment: false, tier: 1, group: 'Breathe', sourceRef: 'ge.HeartbeatEffect' },
   { id: 31, name: 'Meteor',             icon: '☄️', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 1, group: 'Chase', sourceRef: 'ge.MeteorEffect' },
   { id: 32, name: 'Aurora Borealis',    icon: '🌌', colorMode: 'GENERATIVE',requiresForeground: false, requiresBackground: false,supportsDirection: true,  supportsSegment: true,  tier: 1, group: 'Rainbow', sourceRef: 'ge.AuroraEffect' },
-  { id: 33, name: 'Lava Lamp',          icon: '🫠', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: false, supportsSegment: true,  tier: 1, group: 'Wave', sourceRef: 'ge.LavaEffect' },
+  { id: 33, name: 'Lava Lamp',          icon: '🫠', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 1, group: 'Wave', sourceRef: 'ge.LavaEffect' },
   { id: 34, name: 'Plasma Wave',        icon: '🔮', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 1, group: 'Wave', sourceRef: 'ge.PlasmaEffect' },
-  { id: 35, name: 'Star Cluster',       icon: '✨', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: false, supportsSegment: true,  tier: 1, group: 'Sparkle', sourceRef: 'ge.StarClusterEffect' },
+  { id: 35, name: 'Star Cluster',       icon: '✨', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 1, group: 'Sparkle', sourceRef: 'ge.StarClusterEffect' },
   { id: 36, name: 'Rainbow Breathing',  icon: '🌈', colorMode: 'GENERATIVE',requiresForeground: false, requiresBackground: false,supportsDirection: false, supportsSegment: false, tier: 3, group: 'Breathe' },
-  { id: 37, name: 'Crystal Shimmer',    icon: '💎', colorMode: 'GENERATIVE',requiresForeground: false, requiresBackground: false,supportsDirection: false, supportsSegment: true,  tier: 3, group: 'Sparkle' },
+  { id: 37, name: 'Crystal Shimmer',    icon: '💎', colorMode: 'GENERATIVE',requiresForeground: false, requiresBackground: false,supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Sparkle' },
   { id: 38, name: 'Gradient Chase',     icon: '🌅', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Chase' },
-  { id: 39, name: 'Fire Flame',         icon: '🔥', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'Wave' },
+  { id: 39, name: 'Fire Flame',         icon: '🔥', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Wave' },
   { id: 40, name: 'Neon Pulse',         icon: '💜', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'Breathe' },
   { id: 41, name: 'Rainbow Chaser',     icon: '🌈', colorMode: 'GENERATIVE',requiresForeground: false, requiresBackground: false,supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Rainbow' },
   { id: 42, name: 'Matrix Rain',        icon: '🟩', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Chase' },
-  { id: 43, name: 'Starlight',          icon: '🌟', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'Sparkle' },
+  { id: 43, name: 'Starlight',          icon: '🌟', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: true,  supportsSegment: true,  tier: 3, group: 'Sparkle' },
 
   // ── GROUP 8: STREET MODES (HIDDEN FROM NORMAL PICKER) ───────────────────
   { id: 101, name: 'Street Stopped',      icon: '🛑', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: true, tier: 3, group: 'Street' },
@@ -315,12 +315,13 @@ function buildLightning(fg: RGB, numLEDs: number, tick: number): RGB[] {
   return frame;
 }
 
-function buildSnowfall(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+function buildSnowfall(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? 1 - tick : tick;
   const frame = Array(numLEDs).fill(bg);
   for (let j = 0; j < 5; j++) {
     const speed = 0.3 + j * 0.15;
-    const pos = Math.floor(((tick * speed + j * 0.2) % 1) * numLEDs);
-    const brightness = 0.6 + Math.sin(tick * 5 + j) * 0.4;
+    const pos = Math.floor((((phase * speed + j * 0.2) % 1) + 1) % 1 * numLEDs);
+    const brightness = 0.6 + Math.sin(phase * 5 + j) * 0.4;
     frame[pos] = blendRGB(fg, bg, brightness);
     if (pos + 1 < numLEDs) frame[pos + 1] = blendRGB(fg, bg, brightness * 0.3);
   }
@@ -366,10 +367,11 @@ function buildAurora(numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
   });
 }
 
-function buildLava(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+function buildLava(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? 1 - tick : tick;
   return Array.from({ length: numLEDs }, (_, i) => {
-    const blob1 = Math.sin(i / numLEDs * Math.PI * 2 + tick * Math.PI * 1.3);
-    const blob2 = Math.sin(i / numLEDs * Math.PI * 3.7 + tick * Math.PI * 0.8 + 1.2);
+    const blob1 = Math.sin(i / numLEDs * Math.PI * 2 + phase * Math.PI * 1.3);
+    const blob2 = Math.sin(i / numLEDs * Math.PI * 3.7 + phase * Math.PI * 0.8 + 1.2);
     const combined = (blob1 + blob2) * 0.5 * 0.5 + 0.5;
     return blendRGB(fg, bg, combined);
   });
@@ -384,10 +386,11 @@ function buildPlasma(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction:
   });
 }
 
-function buildStarCluster(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+function buildStarCluster(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? 1 - tick : tick;
   const frame = Array(numLEDs).fill(bg);
   for (let j = 0; j < 4; j++) {
-    const center = Math.floor(((tick * 0.5 + j * 0.25) % 1) * numLEDs);
+    const center = Math.floor((((phase * 0.5 + j * 0.25) % 1) + 1) % 1 * numLEDs);
     for (let i = -2; i <= 2; i++) {
       const pos = center + i;
       if (pos >= 0 && pos < numLEDs) {
@@ -449,9 +452,10 @@ function buildTwinkle(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
   return frame;
 }
 
-function buildCrystalShimmer(numLEDs: number, tick: number): RGB[] {
+function buildCrystalShimmer(numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? 1 - tick : tick;
   return Array.from({ length: numLEDs }, (_, i) => {
-    const noise = Math.sin(i * 7.1 + tick * 15) * 0.5 + 0.5;
+    const noise = Math.sin(i * 7.1 + phase * 15) * 0.5 + 0.5;
     const brightness = Math.pow(noise, 3);
     return {
       r: Math.round(150 * brightness),
@@ -489,11 +493,12 @@ function buildCometDuo(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
   });
 }
 
-function buildFireFlame(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+function buildFireFlame(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? 1 - tick : tick;
   return Array.from({ length: numLEDs }, (_, i) => {
-    const noise1 = Math.sin(i * 0.5 + tick * 15);
-    const noise2 = Math.sin(i * 1.3 - tick * 22 + 4.5);
-    const noise3 = Math.sin(i * 3.7 + tick * 33);
+    const noise1 = Math.sin(i * 0.5 + phase * 15);
+    const noise2 = Math.sin(i * 1.3 - phase * 22 + 4.5);
+    const noise3 = Math.sin(i * 3.7 + phase * 33);
     const flicker = (noise1 + noise2 + noise3) / 3 * 0.5 + 0.5;
     const heightGradient = 1 - (i / numLEDs); 
     const brightness = flicker * heightGradient * 1.5;
@@ -573,9 +578,10 @@ function buildDualScan(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
   });
 }
 
-function buildStarlight(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+function buildStarlight(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? 1 - tick : tick;
   return Array.from({ length: numLEDs }, (_, i) => {
-    const twinkle = Math.sin(tick * 5 + i * 2.3) * Math.sin(tick * 2.1 + i * 1.1);
+    const twinkle = Math.sin(phase * 5 + i * 2.3) * Math.sin(phase * 2.1 + i * 1.1);
     const brightness = Math.max(0, twinkle);
     return blendRGB(fg, bg, Math.pow(brightness, 3));
   });
@@ -744,11 +750,12 @@ function buildSinePulseWave(fg: RGB, bg: RGB, numLEDs: number, tick: number, dir
   });
 }
 
-function buildWavePinch(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+function buildWavePinch(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = direction === 0 ? 1 - tick : tick;
   return Array.from({ length: numLEDs }, (_, i) => {
     const posNorm = i / (numLEDs - 1);
-    const waveL = Math.sin(posNorm * Math.PI * 3 + tick * Math.PI * 2);
-    const waveR = Math.sin((1 - posNorm) * Math.PI * 3 + tick * Math.PI * 2);
+    const waveL = Math.sin(posNorm * Math.PI * 3 + phase * Math.PI * 2);
+    const waveR = Math.sin((1 - posNorm) * Math.PI * 3 + phase * Math.PI * 2);
     const combined = (waveL + waveR) / 2 * 0.5 + 0.5;
     return blendRGB(fg, bg, combined);
   });
@@ -1007,7 +1014,7 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: 
 
     // ── GROUP 4: MATH WAVES ──
     case 14: return buildSinePulseWave(fg, bg, n, tick, direction);   // was 15
-    case 15: return buildWavePinch(fg, bg, n, tick);                  // was 16
+    case 15: return buildWavePinch(fg, bg, n, tick, direction);                  // was 16
     case 16: return buildBreathingWave(fg, bg, n, tick, direction);   // was 17
 
     // ── GROUP 5a: TEMPORAL FULL-STRIP (0x51) ──
@@ -1029,21 +1036,21 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: 
     case 26: return buildStrobe(fg, n, tick);                         // ge.StrobeEffect    — was 33
     case 27: return buildOceanWave(fg, bg, n, tick, direction);       // ge.OceanWaveEffect — was 36
     case 28: return buildLightning(fg, n, tick);                      // ge.LightningEffect — was 37
-    case 29: return buildSnowfall(fg, bg, n, tick);                   // ge.SnowfallEffect  — was 38
+    case 29: return buildSnowfall(fg, bg, n, tick, direction);                   // ge.SnowfallEffect  — was 38
     case 30: return buildHeartbeat(fg, n, tick);                      // ge.HeartbeatEffect — was 40
     case 31: return buildMeteor(fg, bg, n, tick, direction);          // ge.MeteorEffect    — was 41
     case 32: return buildAurora(n, tick, direction);                  // ge.AuroraEffect    — was 42
-    case 33: return buildLava(fg, bg, n, tick);                       // ge.LavaEffect      — was 43
+    case 33: return buildLava(fg, bg, n, tick, direction);                       // ge.LavaEffect      — was 43
     case 34: return buildPlasma(fg, bg, n, tick, direction);          // ge.PlasmaEffect    — was 44
-    case 35: return buildStarCluster(fg, bg, n, tick);               // ge.StarClusterEffect — was 45
+    case 35: return buildStarCluster(fg, bg, n, tick, direction);               // ge.StarClusterEffect — was 45
     case 36: return buildRainbowBreathing(n, tick);                   // was 47
-    case 37: return buildCrystalShimmer(n, tick);                    // was 50
+    case 37: return buildCrystalShimmer(n, tick, direction);                    // was 50
     case 38: return buildGradientChase(fg, bg, n, tick, direction);   // was 51
-    case 39: return buildFireFlame(fg, bg, n, tick);                  // was 53
+    case 39: return buildFireFlame(fg, bg, n, tick, direction);                  // was 53
     case 40: return buildNeonPulse(fg, bg, n, tick);                  // was 55
     case 41: return buildRainbowChaser(n, tick, direction);           // was 56
     case 42: return buildMatrixRain(fg, bg, n, tick, direction);      // was 57
-    case 43: return buildStarlight(fg, bg, n, tick);                  // was 60
+    case 43: return buildStarlight(fg, bg, n, tick, direction);                  // was 60
 
     // ── GROUP 8: STREET MODES ──
     case 101:
