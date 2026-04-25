@@ -837,9 +837,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 sessionActive={sessionActive}
                 startSession={startSession}
                 stopSessionRecording={stopSessionRecording}
+                sessionStartTimeRef={sessionStartTimeRef}
+                sessionSpeedSamplesRef={sessionSpeedSamplesRef}
                 Colors={Colors}
               />
             )}
+
 
           </View>
 
