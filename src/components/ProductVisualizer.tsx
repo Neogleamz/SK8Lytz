@@ -23,6 +23,8 @@ interface ProductVisualizerProps {
   patternId: number | null;
   isPaired?: boolean;
   points?: number;
+  /** Authoritative hardware settings from DashboardScreen — drives segment/ledPoints geometry */
+  hwSettings?: { ledPoints?: number; segments?: number };
   devices?: DeviceConfig[];
   onLongPressDevice?: (device: any) => void;
   fixedFgColor?: string;
@@ -46,7 +48,7 @@ interface ProductVisualizerProps {
 
 import { VisualizerUnit } from './VisualizerUnit';
 
-const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 0x01, builderDirection = 1, fixedDirection = 1, streetDistribution = [0.3, 0.4, 0.3] }: ProductVisualizerProps) => {
+const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, hwSettings, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 0x01, builderDirection = 1, fixedDirection = 1, streetDistribution = [0.3, 0.4, 0.3] }: ProductVisualizerProps) => {
   const { isDark } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
 
@@ -93,7 +95,8 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
             patternId={patternId}
             animValue={animValue}
             fallbackProduct={product}
-            fallbackPoints={points}
+            fallbackPoints={hwSettings?.ledPoints || points}
+            hwSettings={hwSettings}
             fixedFgColor={fixedFgColor}
             fixedBgColor={fixedBgColor}
             onLongPress={onLongPressDevice}

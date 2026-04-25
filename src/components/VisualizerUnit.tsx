@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { useTheme } from '../context/ThemeContext';
@@ -31,7 +31,7 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-export const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1, fixedDirection = 1, streetDistribution = [0.3, 0.4, 0.3] }: any) => {
+export const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, hwSettings, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1, fixedDirection = 1, streetDistribution = [0.3, 0.4, 0.3] }: any) => {
   const { isDark } = useTheme();
   const product = String(device.type || fallbackProduct);
 
@@ -44,18 +44,35 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
   const vizShape = productProfile.vizShape;
   const isMirrored = productProfile.vizIsMirrored;
 
-  // Track animValue tick (0.0–1.0) for PatternEngine frame generation
+  // ── Animation tick — stored in a ref to avoid driving React re-renders ──
+  // We still need a state value to trigger re-renders for pattern changes, but the
+  // tick value itself is kept in a ref. requestAnimationFrame batches the updates.
   const [animTick, setAnimTick] = useState(0);
+  const tickRef = useRef(0);
+  const rafPendingRef = useRef<number | null>(null);
   useEffect(() => {
-    const id = animValue.addListener(({ value }: { value: number }) => setAnimTick(value));
-    return () => animValue.removeListener(id);
+    const id = animValue.addListener(({ value }: { value: number }) => {
+      tickRef.current = value;
+      // Batch tick updates through RAF — prevents flooding the React reconciler at 60fps
+      if (!rafPendingRef.current) {
+        rafPendingRef.current = requestAnimationFrame(() => {
+          setAnimTick(tickRef.current);
+          rafPendingRef.current = null;
+        });
+      }
+    });
+    return () => {
+      animValue.removeListener(id);
+      if (rafPendingRef.current) cancelAnimationFrame(rafPendingRef.current);
+    };
   }, [animValue]);
 
-  // Resolve default LED count from catalog profile.
-  // Legacy path: if still binary, catalog provides the same numbers (16 / 43).
-  const devicePoints = device?.points || fallbackPoints || productProfile.vizDefaultPoints;
-  const deviceSegments = device?.segments || 1;
-  const numLeds = Math.floor(devicePoints / deviceSegments); // 16 or 43
+  // ── hwSettings-first LED geometry ────────────────────────────────────────
+  // Priority order: authoritative probed hwSettings > device object fields > catalog fallback.
+  // This ensures HALOZ always uses ledPoints=8, segments=2 even if device.segments is missing.
+  const devicePoints   = hwSettings?.ledPoints || device?.points || fallbackPoints || productProfile.vizDefaultPoints;
+  const deviceSegments = hwSettings?.segments  || device?.segments || 1;
+  const numLeds = Math.floor(devicePoints / deviceSegments); // 16→8 (HALOZ) or 43 (SOULZ)
 
   // ── PATH GEOMETRY (expensive) — only recomputes on shape/product change, NEVER on animTick ──
   const pathGeometry = useMemo(() => {
@@ -159,6 +176,49 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
       : vizShape === 'DUAL_STRIP'
         ? Math.max(numLeds * 2, 60)
         : Math.max(numLeds * 2, 86);
+    const activeSegmentLedsHoisted = renderLeds / 2;
+
+    // ── PRE-COMPUTE FRAME DATA ONCE (hoisted out of per-LED loop) ────────────────────
+    // BEFORE: getVisualizerFrame() was called once per rendered dot (64× per memo eval at 60fps).
+    // AFTER:  called once per memo eval. All LEDs read from the cached result by index.
+    let hoistedFramePixels: RGB[] | null = null;
+    let hoistedMusicFrame: { pixels: RGB[]; opacities: number[] } | null = null;
+    let hoistedFgRgb: RGB = { r: 0, g: 0, b: 0 };
+    let hoistedBgRgb: RGB = { r: 0, g: 0, b: 0 };
+    let hoistedPid = Math.max(1, patternId || 1);
+
+    if (isPoweredOn && (mode === 'STREET' || mode === 'MULTIMODE')) {
+      let fgHex = fixedFgColor || color;
+      let bgHex = fixedBgColor || '#000000';
+      hoistedPid = Math.max(1, patternId || 1);
+      if (mode === 'STREET') {
+        const isActiveBraking = motionState === 'HARD_BRAKING' || motionState === 'STOPPED' || isStreetBraking;
+        const isSlowing = motionState === 'SLOWING_DOWN';
+        fgHex = '#FF2200';
+        bgHex = isSlowing ? '#FFAA00' : streetCruiseColor;
+        if (isActiveBraking || motionState === 'HARD_BRAKING') hoistedPid = 103;
+        else if (motionState === 'STOPPED') hoistedPid = 101;
+        else if (motionState === 'SLOWING_DOWN') hoistedPid = 104;
+        else if (motionState === 'ACCELERATING') hoistedPid = 105;
+        else hoistedPid = 102;
+      }
+      // Hex→RGB parsed ONCE per memo (not once per LED per tick)
+      hoistedFgRgb = { r: parseInt(fgHex.slice(1, 3), 16) || 0, g: parseInt(fgHex.slice(3, 5), 16) || 0, b: parseInt(fgHex.slice(5, 7), 16) || 0 };
+      hoistedBgRgb = { r: parseInt(bgHex.slice(1, 3), 16) || 0, g: parseInt(bgHex.slice(3, 5), 16) || 0, b: parseInt(bgHex.slice(5, 7), 16) || 0 };
+      // PatternEngine called ONCE per frame — result shared across all LED dots
+      hoistedFramePixels = getVisualizerFrame(
+        hoistedPid as PatternId,
+        hoistedFgRgb,
+        hoistedBgRgb,
+        activeSegmentLedsHoisted,
+        animTick,
+        fixedDirection as 0 | 1,
+        mode === 'STREET' ? { distribution: streetDistribution } : undefined
+      );
+    } else if (isPoweredOn && mode === 'MUSIC') {
+      // MusicVisualizerFrame also hoisted out of per-LED loop
+      hoistedMusicFrame = getMusicVisualizerFrame(patternId || 1, numLeds, animTick, audioMagnitude, color);
+    }
     for (let i = 0; i < renderLeds; i++) {
       let left = 0;
       let top = 0;
@@ -209,54 +269,19 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
           const rainbowColors = [0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6, 1].map(v => HSLToHex((v - mirroredFract + 1) % 1 * 360, 100, 50));
           dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
         } else if (mode === 'MUSIC') {
-          // ── Hardware-accurate music mode simulation ──
-          const musicFrame = getMusicVisualizerFrame(patternId || 1, numLeds, animTick, audioMagnitude, color);
+          // ── Hardware-accurate music mode simulation — uses pre-computed frame ──
+          const musicFrame = hoistedMusicFrame || getMusicVisualizerFrame(patternId || 1, numLeds, animTick, audioMagnitude, color);
           const mRawPos = (segmentI / activeSegmentLeds) * musicFrame.pixels.length;
           const mSlot = Math.floor(mRawPos) % Math.max(1, musicFrame.pixels.length);
           const mPx = musicFrame.pixels[mSlot] || { r: 255, g: 255, b: 255 };
           dotColor = `#${mPx.r.toString(16).padStart(2, '0')}${mPx.g.toString(16).padStart(2, '0')}${mPx.b.toString(16).padStart(2, '0')}`;
           dotOpacity = isPoweredOn ? (musicFrame.opacities[mSlot] ?? 1.0) * (brightness / 100) : 0;
         } else if (mode === 'STREET' || mode === 'MULTIMODE') {
-          let fgHex = fixedFgColor || color;
-          let bgHex = fixedBgColor || '#000000';
-          let pid = Math.max(1, patternId || 1);
-
-          if (mode === 'STREET') {
-            const isActiveBraking = motionState === 'HARD_BRAKING' || motionState === 'STOPPED' || isStreetBraking;
-            const isSlowing = motionState === 'SLOWING_DOWN';
-            fgHex = '#FF2200';
-            bgHex = isSlowing ? '#FFAA00' : streetCruiseColor;
-            
-            if (isActiveBraking || motionState === 'HARD_BRAKING') pid = 103;
-            else if (motionState === 'STOPPED') pid = 101;
-            else if (motionState === 'SLOWING_DOWN') pid = 104;
-            else if (motionState === 'ACCELERATING') pid = 105;
-            else pid = 102; // CRUISING
-          }
-
-          // Parse fg/bg hex strings to RGB objects for PatternEngine
-          const fgRgb: RGB = {
-            r: parseInt(fgHex.slice(1, 3), 16) || 0,
-            g: parseInt(fgHex.slice(3, 5), 16) || 0,
-            b: parseInt(fgHex.slice(5, 7), 16) || 0,
-          };
-          const bgRgb: RGB = {
-            r: parseInt(bgHex.slice(1, 3), 16) || 0,
-            g: parseInt(bgHex.slice(3, 5), 16) || 0,
-            b: parseInt(bgHex.slice(5, 7), 16) || 0,
-          };
-
-          // Get the full per-LED pixel array from the pattern engines at the current animation tick
-          // ── Directly leverage PatternEngine continuous simulation ──
-          const framePixels = getVisualizerFrame(
-            pid as PatternId,
-            fgRgb,
-            bgRgb,
-            activeSegmentLeds,
-            animTick,
-            fixedDirection as 0 | 1,
-            mode === 'STREET' ? { distribution: streetDistribution } : undefined
-          );
+          // ── Uses pre-computed hoistedFramePixels and hoistedFgRgb/BgRgb from above ──
+          const fgRgb = hoistedFgRgb;
+          const bgRgb = hoistedBgRgb;
+          const pid = hoistedPid;
+          const framePixels = hoistedFramePixels || [];
 
           // ── Diffusion blending: blend adjacent LED colors near chip boundaries ──
           const rawLedPos = (segmentI / activeSegmentLeds) * framePixels.length;

@@ -575,7 +575,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               getLocalProfileByPoints((displayConnectedDevices[0] as any)?.points ?? 0).id
             }
             isPaired={isGrouped}
-            points={(displayConnectedDevices[0] as any).points}
+            points={activeHwSettings.ledPoints}
             devices={displayConnectedDevices as any}
             onLongPressDevice={openSettings}
             writeToDevice={writeToDevice}

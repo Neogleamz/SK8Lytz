@@ -712,6 +712,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               patternId={activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' ? fixedPatternId : selectedPatternId}
               isPaired={isPaired}
               points={points}
+              hwSettings={hwSettings}
               devices={devices}
               onLongPressDevice={onLongPressDevice}
               brightness={brightness}
