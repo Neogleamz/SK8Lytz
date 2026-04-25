@@ -110,23 +110,23 @@ const StreetPanel = React.memo(({
       showsVerticalScrollIndicator={false}
       bounces={false}
     >
-      {/* ── Header row: Motion State (left) + REC indicator (right) ── */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm, paddingHorizontal: 4 }}>
+      {/* ── Header row: Motion State (centered) + REC indicator (absolute right) ── */}
+      <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm, paddingHorizontal: 4, minHeight: 28 }}>
         <Text
           allowFontScaling={false}
-          style={{ color: stateColor, fontSize: 13, fontWeight: '900', letterSpacing: 3 }}
+          style={{ color: stateColor, fontSize: 13, fontWeight: '900', letterSpacing: 3, textAlign: 'center' }}
         >
           {stateLabel}
         </Text>
 
-        {/* REC dot indicator */}
+        {/* REC dot — absolutely pinned to right edge so it never shifts the centered text */}
         <TouchableOpacity
           onPress={() => { if (!sessionActive) startSession(); else stopSessionRecording(); }}
           activeOpacity={0.7}
-          style={{ alignItems: 'center', paddingHorizontal: 6, paddingVertical: 2 }}
+          style={{ position: 'absolute', right: 0, alignItems: 'center', paddingHorizontal: 6, paddingVertical: 2 }}
         >
           <Text style={{ color: '#FF3D00', fontSize: 8, fontWeight: '900', letterSpacing: 1, marginBottom: 3 }}>
-            {sessionActive ? 'REC' : 'REC'}
+            REC
           </Text>
           <Animated.View style={{
             width: 13, height: 13, borderRadius: 7,
@@ -139,6 +139,7 @@ const StreetPanel = React.memo(({
           }} />
         </TouchableOpacity>
       </View>
+
 
       {/* ── Stoplight + Gauges row ── */}
       <View style={{
