@@ -11,6 +11,8 @@ interface CustomEffectVisualizerProps {
   points?: number;
   segments?: number;
   direction?: boolean;
+  /** When false, animation loop is suspended (no setInterval started). Default true. */
+  autoPlay?: boolean;
 }
 
 const hexToRgb = (hex: string) => {
@@ -29,11 +31,15 @@ export const CustomEffectVisualizer: React.FC<CustomEffectVisualizerProps> = ({
   bgColorHex = '#000000',
   points = 16,
   segments = 1,
-  direction = true
+  direction = true,
+  autoPlay = true,
 }) => {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
+    // autoPlay gate: when false (e.g. card is off-screen), no interval is created.
+    // This completely suspends the animation budget for hidden cards.
+    if (!autoPlay) return;
     // 0x51 and 0x59 modes both map 1-100 speed slider differently natively,
     // but visually we approximate it as:
     const frameRate = Math.max(16, 200 - (speed * 1.8)); 
@@ -46,7 +52,7 @@ export const CustomEffectVisualizer: React.FC<CustomEffectVisualizerProps> = ({
     }, frameRate);
     
     return () => clearInterval(interval);
-  }, [speed]);
+  }, [speed, autoPlay]);
 
   const displayedDots = useMemo(() => {
     const fgRgb = hexToRgb(fgColorHex);

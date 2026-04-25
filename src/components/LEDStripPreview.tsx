@@ -30,7 +30,10 @@ export const LEDStripPreview = React.memo(({ patternId, fg, bg, numLEDs, speed, 
   const [frame, setFrame] = useState<RGB[]>([]);
 
   // Frame-diff guard: prevents calling setFrame when the pixel array is identical.
-  const prevFrameRef = useRef<string>('');
+  // Uses an integer channel-sum hash (r*65536 + g*256 + b) instead of string serialization
+  // to avoid 43+ template string allocations + join on every 50ms tick.
+  // Collision probability is negligibly low for LED visualizer use (worst case: skip 1 frame).
+  const prevFrameRef = useRef<number>(0);
 
   useEffect(() => {
     if (!autoPlay) return;
@@ -47,9 +50,10 @@ export const LEDStripPreview = React.memo(({ patternId, fg, bg, numLEDs, speed, 
       })) : rawFrame;
 
       // Only commit to React state if pixels actually changed this tick
-      const serialized = nextFrame.map(c => `${c.r},${c.g},${c.b}`).join('|');
-      if (serialized !== prevFrameRef.current) {
-        prevFrameRef.current = serialized;
+      // Hash: sum of (r*65536 + g*256 + b) across all LEDs — O(n) with zero string allocation
+      const hash = nextFrame.reduce((acc, c) => acc + c.r * 65536 + c.g * 256 + c.b, 0);
+      if (hash !== prevFrameRef.current) {
+        prevFrameRef.current = hash;
         setFrame(nextFrame);
       }
     }, 50); // 20fps

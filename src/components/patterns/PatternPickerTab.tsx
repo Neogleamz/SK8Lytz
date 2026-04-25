@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { Spacing } from '../../theme/theme';
@@ -22,6 +22,30 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
   selectedEffectId, fgColor, bgColor, speed, brightness, points, direction, onSelect, Colors
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('All');
+
+  // ── Visibility gate: tracks which cards are in the viewport ─────────────────
+  // scrollYRef: current scroll offset. viewportHeightRef: measured ScrollView height.
+  // cardYPositions: map of effectId → Y position (set on first layout per card).
+  // On each scroll event we derive a Set of visible effectIds and pass autoPlay=true
+  // only to those cards, suspending setInterval for all off-screen cards.
+  const scrollYRef = useRef(0);
+  const viewportHeightRef = useRef(600); // conservative default; overwritten on layout
+  const cardYPositions = useRef<Record<number, number>>({});
+  const [visibleIds, setVisibleIds] = useState<Set<number>>(new Set());
+
+  const updateVisibility = useCallback(() => {
+    const scrollY = scrollYRef.current;
+    const viewH = viewportHeightRef.current;
+    // 80px vertical buffer above and below viewport for pre-warm on near-miss cards
+    const visTop = scrollY - 80;
+    const visBot = scrollY + viewH + 80;
+    const positions = cardYPositions.current;
+    const next = new Set<number>();
+    for (const [idStr, y] of Object.entries(positions)) {
+      if (y >= visTop && y <= visBot) next.add(Number(idStr));
+    }
+    setVisibleIds(next);
+  }, []);
 
   const filteredTemplates = SK8LYTZ_TEMPLATES.filter((effect) => {
     if (effect.group === 'Street') return false;
@@ -69,21 +93,46 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
         }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onLayout={(e) => {
+          // Capture the rendered height of the ScrollView for visibility math
+          viewportHeightRef.current = e.nativeEvent.layout.height;
+          updateVisibility();
+        }}
+        onScroll={(e) => {
+          scrollYRef.current = e.nativeEvent.contentOffset.y;
+          updateVisibility();
+        }}
+        scrollEventThrottle={100}  // fire at most every 100ms — matches 10Hz sensor budget
       >
         {filteredTemplates.map((effect) => (
-          <PatternCard
+          <View
             key={effect.id}
-            effect={effect}
-            isSelected={selectedEffectId === effect.id}
-            fgColor={fgColor}
-            bgColor={bgColor}
-            speed={speed}
-            brightness={brightness}
-            direction={direction}
-            points={points}
-            onSelect={() => onSelect(effect.id)}
-            Colors={Colors}
-          />
+            onLayout={(e) => {
+              // Register this card's Y-position on first render; stable for the card's lifetime
+              cardYPositions.current[effect.id] = e.nativeEvent.layout.y;
+              updateVisibility();
+            }}
+            style={{ width: '48%', marginBottom: Spacing.sm }}
+          >
+            <PatternCard
+              effect={effect}
+              isSelected={selectedEffectId === effect.id}
+              fgColor={fgColor}
+              bgColor={bgColor}
+              speed={speed}
+              brightness={brightness}
+              direction={direction}
+              points={points}
+              onSelect={() => onSelect(effect.id)}
+              Colors={Colors}
+              autoPlay={
+                // Always animate the selected card + any card in the visible window.
+                // Cards that haven't reported layout yet (visibleIds empty) default to true
+                // to avoid a flash of frozen previews on first open.
+                visibleIds.size === 0 || visibleIds.has(effect.id) || selectedEffectId === effect.id
+              }
+            />
+          </View>
         ))}
       </ScrollView>
     </View>

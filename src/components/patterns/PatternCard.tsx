@@ -16,10 +16,13 @@ interface PatternCardProps {
   points: number;
   onSelect: () => void;
   Colors: any;
+  /** Controls whether the LEDStripPreview animation is running (visibility gate) */
+  autoPlay?: boolean;
 }
 
 export const PatternCard: React.FC<PatternCardProps> = React.memo(({
-  effect, isSelected, fgColor, bgColor, speed, brightness, direction, points, onSelect, Colors
+  effect, isSelected, fgColor, bgColor, speed, brightness, direction, points, onSelect, Colors,
+  autoPlay = true,
 }) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -38,7 +41,7 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
   }, [isSelected, pulseAnim]);
 
   return (
-    <Animated.View style={{ transform: [{ scale: pulseAnim }], width: '48%', marginBottom: Spacing.sm }}>
+    <Animated.View style={{ transform: [{ scale: pulseAnim }], flex: 1 }}>
       <TouchableOpacity
         id={`fx-card-${effect.id}`}
         activeOpacity={0.75}
@@ -98,7 +101,7 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
             speed={speed}
             brightness={brightness}
             direction={effect.supportsDirection ? (direction as 0 | 1) : 1}
-            autoPlay={true}
+            autoPlay={autoPlay}  // ← visibility-gated from PatternPickerTab scroll tracker
             height={9}
           />
         </View>
