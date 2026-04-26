@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { BuilderNode } from '../../protocols/PositionalMathBuffer';
@@ -56,22 +56,30 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
 
   const devicePoints = hwSettings?.ledPoints || points || 16;
 
+  // Track volatile callbacks in refs to avoid breaking React.memo downstream
+  const onStateChangeRef = useRef(onStateChange);
+  const writeToDeviceRef = useRef(writeToDevice);
+  useEffect(() => {
+    onStateChangeRef.current = onStateChange;
+    writeToDeviceRef.current = writeToDevice;
+  }, [onStateChange, writeToDevice]);
+
   // Dispatch logic for PATTERNS tab — uses PatternEngine → 0x59 pipeline.
   // buildPatternPayload() generates our math-synthesized pixel arrays and
   // wraps them in the correct 0x59 opcode with transition type (FREEZE/CASCADE).
   // This is the ONLY correct dispatch path. Do NOT use 0x51 setCustomModeCompact
   // here — that sends firmware symphony effect IDs, not our pixel math.
   const dispatchEffect = useCallback((effectId: number, fg: string, bg: string, spd: number, dir: number, brt: number) => {
-    if (!writeToDevice) return;
+    if (!writeToDeviceRef.current) return;
     const fgRgb = hexToRgb(fg);
     const bgRgb = hexToRgb(bg);
     const payload = buildPatternPayload(
       effectId, fgRgb, bgRgb, devicePoints,
       Math.max(1, Math.min(100, Math.round(spd))), dir, brt
     );
-    if (payload) writeToDevice(payload);
-    onStateChange?.(effectId);
-  }, [writeToDevice, onStateChange, devicePoints]);
+    if (payload) writeToDeviceRef.current(payload);
+    onStateChangeRef.current?.(effectId);
+  }, [devicePoints]);
 
   const handleSelectPattern = useCallback((effectId: number) => {
     dispatchEffect(effectId, fgColor, bgColor, speed, direction, brightness);
