@@ -29,6 +29,8 @@ interface BeltProps {
   onDaemonStop?: () => void;
   hasDaemon?: boolean; // false = manual phase (Publisher)
   daemonStatus?: string; // live status string e.g. "PROCESSING: target.com"
+  inputStatus: string;
+  outputStatus: string;
 }
 
 // Shared card dimensions
@@ -85,7 +87,7 @@ const DataCard: React.FC<{
 
 export const BeltNode: React.FC<BeltProps> = ({
   id, name, color, rgb, job, daemon, target, inQ, status, gatekeeper, attempting, outCards,
-  onPhaseNav, daemonActive = false, onDaemonStart, onDaemonStop, hasDaemon = true, daemonStatus
+  onPhaseNav, daemonActive = false, onDaemonStart, onDaemonStop, hasDaemon = true, daemonStatus, inputStatus, outputStatus
 }) => {
   const [isConfigOpen, setConfigOpen] = useState(false);
   const successCards = outCards.filter(c => c.type === 'success').slice(0, 2);
@@ -254,18 +256,18 @@ export const BeltNode: React.FC<BeltProps> = ({
           {pendingSlots.map((iq, i) => (
             <div key={`p${i}`} style={{
               width: PENDING_W, minHeight: 72,
-              background: 'rgba(10,10,15,0.85)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: iq ? 'rgba(20,20,35,0.95)' : 'rgba(10,10,15,0.85)',
+              border: iq ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(255,255,255,0.06)',
               borderRadius: 8, padding: '0 12px',
               display: 'flex', flexDirection: 'column', justifyContent: 'center',
-              opacity: iq ? 0.5 : 0.15,
+              opacity: iq ? 0.92 : 0.18,
               flexShrink: 0,
             }}>
-              <div style={{ fontSize: '0.55rem', fontWeight: 900, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'JetBrains Mono, monospace' }}>
-                {iq ? 'PENDING' : '— IDLE —'}
+              <div style={{ fontSize: '0.55rem', fontWeight: 900, color: iq ? '#aaffdd' : '#fff', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'JetBrains Mono, monospace' }}>
+                {iq ? 'QUEUED' : '— IDLE —'}
               </div>
               {iq && (
-                <div style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.38)', marginTop: 4, fontFamily: 'JetBrains Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.72)', marginTop: 4, fontFamily: 'JetBrains Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
                   {iq}
                 </div>
               )}
@@ -307,12 +309,17 @@ export const BeltNode: React.FC<BeltProps> = ({
         {/* ═══ COL 2, ROW 1: ARROW → into machine ═══ */}
         <div style={{
           gridColumn: 2, gridRow: 1,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1,
-          fontSize: '1.3rem', color: colVar,
-          textShadow: `0 0 12px ${colVar}`,
-          animation: 'beltFlowRight 1.5s infinite linear',
-        }}>▶</div>
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1, gap: 2
+        }}>
+          <div style={{ fontSize: '0.45rem', fontWeight: 900, color: colVar, textTransform: 'uppercase', fontFamily: 'JetBrains Mono, monospace', textAlign: 'center', lineHeight: 1 }}>{inputStatus}</div>
+          <div style={{
+            fontSize: '1.3rem', color: colVar,
+            textShadow: `0 0 12px ${colVar}`,
+            animation: 'beltFlowRight 1.5s infinite linear',
+            lineHeight: 0.8
+          }}>▶</div>
+        </div>
 
         {/* ═══ COL 2, ROW 2: ARROW ◀ reject out of machine ═══ */}
         {rejectedSlots && (
@@ -409,12 +416,17 @@ export const BeltNode: React.FC<BeltProps> = ({
         {/* ═══ COL 4, ROW 1: ARROW → out of machine ═══ */}
         <div style={{
           gridColumn: 4, gridRow: 1,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1,
-          fontSize: '1.3rem', color: colVar,
-          textShadow: `0 0 12px ${colVar}`,
-          animation: 'beltFlowRight 1.5s infinite linear',
-        }}>▶</div>
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1, gap: 2
+        }}>
+          <div style={{ fontSize: '0.45rem', fontWeight: 900, color: colVar, textTransform: 'uppercase', fontFamily: 'JetBrains Mono, monospace', textAlign: 'center', lineHeight: 1 }}>{outputStatus}</div>
+          <div style={{
+            fontSize: '1.3rem', color: colVar,
+            textShadow: `0 0 12px ${colVar}`,
+            animation: 'beltFlowRight 1.5s infinite linear',
+            lineHeight: 0.8
+          }}>▶</div>
+        </div>
 
         {/* ═══ COL 5, ROW 1: SUCCESS CARDS ═══ */}
         <div style={{

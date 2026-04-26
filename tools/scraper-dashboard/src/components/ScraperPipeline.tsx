@@ -281,9 +281,9 @@ export const ScraperPipeline: React.FC<{
         if (liveData) {
             return {
                 ...belt,
-                job: liveData.active_job ? 'PROCESSING LIVE...' : 'IDLE',
-                target: liveData.target || 'WAITING...',
-                status: liveData.active_job ? 'PROCESSING' : 'WAITING',
+                job: liveData.active_job || 'IDLE',
+                target: liveData.target || (liveData.in_q?.[0] ? `Next: ${liveData.in_q[0]}` : 'WAITING...'),
+                status: liveData.active_job ? 'PROCESSING' : (liveData.alive ? 'WAITING' : 'OFFLINE'),
                 inQ: liveData.in_q && liveData.in_q.length > 0 ? liveData.in_q.slice(0, 3) : belt.inQ,
                 outCards: dynamicCards.length > 0 ? dynamicCards : belt.outCards
             };
