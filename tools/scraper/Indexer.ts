@@ -167,7 +167,7 @@ async function runIndexer() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'llama3',
+            model: 'llama3.1',
             prompt: prompt,
             format: 'json',
             stream: false

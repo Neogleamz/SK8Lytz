@@ -350,7 +350,7 @@ app.post('/api/sandbox', async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama3', // Adjust based on your local model, e.g., llama3.1
+        model: 'llama3.1', // Adjust based on your local model, e.g., llama3.1
         prompt: prompt,
         format: 'json',
         stream: false
