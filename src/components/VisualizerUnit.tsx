@@ -260,7 +260,9 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
       let dotColor: any = isPoweredOn ? color : '#333333';
       let dotOpacity: any = isPoweredOn ? 1 : 0.2;
 
-      const segmentBoundary = (rawFract * deviceSegments) % 1;
+      // RING: use rawFract directly — (rawFract * deviceSegments) % 1 creates phantom gaps at arc midpoints for HALOZ (deviceSegments=2).
+      // SOULZ: deviceSegments=1 so isGap is always false regardless — no impact.
+      const segmentBoundary = vizShape === 'RING' ? rawFract : (rawFract * deviceSegments) % 1;
       const isGap = deviceSegments > 1 && (segmentBoundary < 0.015 || segmentBoundary > 0.985);
 
       if (isPoweredOn && isGap) {
@@ -268,7 +270,11 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
         dotOpacity = Math.max(0.1, (brightness / 100) * 0.3);
       } else if (isPoweredOn) {
         if (mode === 'FAVORITES') {
-          const rainbowColors = [0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6, 1].map(v => HSLToHex((v - mirroredFract + 1) % 1 * 360, 100, 50));
+          // RING (HALOZ): use fract (linear 0→1 per arc) so each arc shows a full spectrum sweep.
+          // mirroredFract (ping-pong 0→1→0) would fold each arc back at its midpoint = 4 apparent segments.
+          // SOULZ/DUAL_STRIP: keep mirroredFract for the U-shape symmetric rainbow.
+          const rainbowShift = vizShape === 'RING' ? fract : mirroredFract;
+          const rainbowColors = [0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6, 1].map(v => HSLToHex((v - rainbowShift + 1) % 1 * 360, 100, 50));
           dotColor = animValue.interpolate({ inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1], outputRange: rainbowColors });
         } else if (mode === 'MUSIC') {
           // ── Hardware-accurate music mode simulation — uses pre-computed frame ──
