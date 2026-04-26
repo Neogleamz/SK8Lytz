@@ -328,8 +328,8 @@ async function runIndexer() {
         ...(candidate_photos ? { candidate_photos } : {}),
         // AI dump
         ai_metadata: Object.keys(aiMetadata).length > 0 ? aiMetadata : (target.ai_metadata || null),
-        // Pipeline — IDENTITY_ESTABLISHED → INDEXED
-        verification_status: 'INDEXED',
+        // Pipeline — ENRICHED → DEEP_CRAWLED
+        verification_status: 'DEEP_CRAWLED',
         is_deep_crawled: true,
         retry_count: 0,
         last_attempted_at: new Date().toISOString()

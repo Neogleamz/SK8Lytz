@@ -151,26 +151,21 @@ app.get('/status', async (req, res) => {
       .select('*', { count: 'exact', head: true })
       .or('verification_status.eq.PENDING,verification_status.is.null');
 
-    const { count: identityCount } = await supabase
+    const { count: seededCount } = await supabase
       .from('skate_spots')
       .select('*', { count: 'exact', head: true })
-      .eq('verification_status', 'IDENTITY_ESTABLISHED');
-
-    const { count: indexedCount } = await supabase
-      .from('skate_spots')
-      .select('*', { count: 'exact', head: true })
-      .eq('verification_status', 'INDEXED');
-
-    const { count: missingWebsiteCount } = await supabase
-      .from('skate_spots')
-      .select('*', { count: 'exact', head: true })
-      .eq('verification_status', 'MISSING_WEBSITE');
+      .eq('verification_status', 'SEEDED');
 
     const { count: enrichedCount } = await supabase
       .from('skate_spots')
       .select('*', { count: 'exact', head: true })
       .eq('verification_status', 'ENRICHED');
-      
+
+    const { count: deepCrawledCount } = await supabase
+      .from('skate_spots')
+      .select('*', { count: 'exact', head: true })
+      .eq('verification_status', 'DEEP_CRAWLED');
+
     const { count: mediaReadyCount } = await supabase
       .from('skate_spots')
       .select('*', { count: 'exact', head: true })
@@ -198,9 +193,9 @@ app.get('/status', async (req, res) => {
       
       // Pipeline stage counts (matches real verification_status values)
       pendingCount: pendingCount || 0,
-      identityCount: identityCount || 0,
-      indexedCount: indexedCount || 0,
-      missingWebsiteCount: missingWebsiteCount || 0,
+      seededCount: seededCount || 0,
+      enrichedCount: enrichedCount || 0,
+      deepCrawledCount: deepCrawledCount || 0,
       
       errorCount,
       consecutiveErrors,
@@ -688,8 +683,8 @@ app.get('/api/pipeline-stats', async (req, res) => {
 
   // Sum across all returned states for the summary row
   const summary = rows.reduce((acc: any, r: any) => {
-    const keys = ['total','enriched','pending','identity_established','media_ready','published',
-                  'deep_crawled','has_website','detective_queue','has_candidates','photographer_queue','has_photos'];
+    const keys = ['total','seeded','enriched','deep_crawled_count','media_ready','published',
+                  'has_website','spider_queue','detective_queue','has_candidates','photographer_queue','has_photos'];
     keys.forEach(k => { acc[k] = (acc[k] || 0) + Number(r[k] || 0); });
     return acc;
   }, { state: states.length > 0 ? states.join('+') : 'ALL' });
@@ -728,26 +723,27 @@ app.get('/api/queue', async (req, res) => {
   if (phase === 'phase1') {
      query = query.or('verification_status.eq.PENDING,verification_status.is.null');
   } else if (phase === 'phase2') {
-     // Spider queue: ENRICHED records with website — what Operator processes
+     // Spider queue: SEEDED with website — what Operator processes
      query = query
-       .eq('verification_status', 'ENRICHED')
+       .eq('verification_status', 'SEEDED')
        .not('website', 'is', null)
        .neq('website', '');
   } else if (phase === 'phase3') {
-     // Detective queue: IDENTITY_ESTABLISHED with candidate_links — what Indexer processes
+     // Detective queue: ENRICHED with candidate_links — what Indexer processes
      query = query
-       .eq('verification_status', 'IDENTITY_ESTABLISHED')
+       .eq('verification_status', 'ENRICHED')
        .not('candidate_links', 'is', null);
   } else if (phase === 'phase4') {
-     // Photographer queue: has candidate_photos but no photos yet
+     // Photographer queue: DEEP_CRAWLED with candidate_photos but no photos yet
      query = query
+       .eq('verification_status', 'DEEP_CRAWLED')
        .not('candidate_photos', 'is', null)
        .is('photos', null);
   } else if (phase === 'phase6') {
      // Publisher queue: MEDIA_READY, not yet published
      query = query.eq('verification_status', 'MEDIA_READY').eq('is_published', false);
   } else {
-     query = query.or('verification_status.eq.PENDING,verification_status.eq.IDENTITY_ESTABLISHED,verification_status.eq.INDEXED,verification_status.eq.ENRICHED,verification_status.is.null');
+     query = query.or('verification_status.eq.PENDING,verification_status.eq.SEEDED,verification_status.eq.ENRICHED,verification_status.eq.DEEP_CRAWLED,verification_status.is.null');
   }
 
   // Apply state filter if priority regions are active

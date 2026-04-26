@@ -668,8 +668,7 @@ function App() {
         <span style={{ fontSize: '0.7rem', fontWeight: 800, color }}>{typeof v === 'number' ? v.toLocaleString() : v}</span>
       </div>
     );
-    const crawlDone    = s.deep_crawled    || 0;
-    const crawlWaiting = Math.max(0, (s.has_website || 0) - crawlDone);
+    const crawlWaiting = s.spider_queue || 0;
     return (
       <div style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
         <div onClick={() => toggleSection('pulse')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 14px', borderBottom: isCollapsed('pulse') ? 'none' : '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.03)', cursor: 'pointer', userSelect: 'none' as const }}>
@@ -685,7 +684,7 @@ function App() {
                 <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.scout, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.scout}33`, paddingBottom: '4px' }}>① Scout</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
                   {row('Total Seeded', s.total, '#fff')}
-                  {row('Enriched', s.enriched, C.scout)}
+                  {row('SEEDED (waiting)', s.seeded, C.scout)}
                   {row('Has Website', s.has_website, 'rgba(255,255,255,0.6)')}
                   {row('No Website', (s.total||0)-(s.has_website||0), 'rgba(255,255,255,0.25)')}
                 </div>
@@ -695,9 +694,9 @@ function App() {
                 <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.crawl, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.crawl}33`, paddingBottom: '4px' }}>② Crawl</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
                   {row('Eligible', s.has_website, 'rgba(255,255,255,0.6)')}
-                  {row('Deep Crawled', s.deep_crawled, C.crawl)}
+                  {row('Spider Done', s.enriched, C.crawl)}
                   {row('Awaiting', crawlWaiting, crawlWaiting > 0 ? '#ffb300' : 'rgba(255,255,255,0.3)')}
-                  {row('Skipped', (s.total||0)-(s.has_website||0), 'rgba(255,255,255,0.2)')}
+                  {row('No Website', (s.total||0)-(s.has_website||0), 'rgba(255,255,255,0.2)')}
                 </div>
               </div>
               {/* ③ DETECTIVE */}
@@ -705,9 +704,9 @@ function App() {
                 <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.detective, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.detective}33`, paddingBottom: '4px' }}>③ Detective</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
                   {row('AI In Queue', s.detective_queue, s.detective_queue > 0 ? '#ffb300' : 'rgba(255,255,255,0.3)')}
-                  {row('AI Processed', s.deep_crawled, C.detective)}
+                  {row('AI Processed', s.deep_crawled_count, C.detective)}
                   {row('Has Candidates', s.has_candidates, 'rgba(255,255,255,0.6)')}
-                  {row('No Candidates', (s.deep_crawled||0)-(s.has_candidates||0), 'rgba(255,255,255,0.25)')}
+                  {row('No Candidates', (s.deep_crawled_count||0)-(s.has_candidates||0), 'rgba(255,255,255,0.25)')}
                 </div>
               </div>
               {/* ④ PHOTOGRAPHER */}
@@ -726,7 +725,7 @@ function App() {
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
                   {row('Ready', s.media_ready, C.pub)}
                   {row('Live on App', s.published, '#4ade80')}
-                  {row('Pipeline %', `${s.total > 0 ? Math.round((s.enriched/s.total)*100) : 0}%`, 'rgba(255,255,255,0.5)')}
+                  {row('Pipeline %', `${s.total > 0 ? Math.round((s.seeded/s.total)*100) : 0}%`, 'rgba(255,255,255,0.5)')}
                   {row('Published %', `${s.total > 0 ? Math.round((s.published/s.total)*100) : 0}%`, '#4ade80')}
                 </div>
               </div>

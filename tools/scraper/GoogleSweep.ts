@@ -119,7 +119,7 @@ export async function startGoogleSweep(
         if (!derivedState) derivedState = stateCode; // fallback
 
         // metaRecord: factual Google data ONLY — no pipeline status.
-        // Used on all update/conflict paths so MEDIA_READY is never downgraded to ENRICHED.
+        // Used on all update/conflict paths so MEDIA_READY is never downgraded to SEEDED.
         const metaRecord = {
           name: details.name,
           lat: details.lat,
@@ -137,8 +137,8 @@ export async function startGoogleSweep(
           last_enriched_at: new Date().toISOString()
         };
 
-        // freshRecord: only for brand-new inserts — adds initial ENRICHED status
-        const freshRecord = { ...metaRecord, verification_status: 'ENRICHED' };
+        // freshRecord: only for brand-new inserts — Scout outputs SEEDED status
+        const freshRecord = { ...metaRecord, verification_status: 'SEEDED' };
 
         // 1. Spatial dedup (150m radius) — catches nearby rows regardless of google_place_id
         const { data: closestSpot } = await supabase.rpc('get_closest_skate_spot', {
@@ -155,7 +155,7 @@ export async function startGoogleSweep(
           if (error) console.error(`  ❌ Update Error:`, error.message);
           else console.log(`  💾 Refreshed: ${details.name}`);
         } else {
-          // 2. Upsert on google_place_id — new rows get ENRICHED, existing get metadata refresh
+          // 2. Upsert on google_place_id — new rows get SEEDED, existing get metadata refresh
           const isNew = !(await supabase.from('skate_spots')
             .select('id', { count: 'exact', head: true })
             .eq('google_place_id', details.place_id)
