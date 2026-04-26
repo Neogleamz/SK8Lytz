@@ -101,13 +101,15 @@ export const ScraperPipeline: React.FC<{
 }> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest }) => {
     const { telemetry, config, loading } = useScraperTelemetry(2000);
 
+    // outCards show OUTPUT (completed) records for each belt.
+    // The output of phase N = the input of phase N+1, so we read the next phase queue.
     const getSpotsForPhase = (beltId: number, count: number = 2) => {
-        let spots = [];
-        if (beltId === 1) spots = phaseQueues?.phase1 || [];
-        else if (beltId === 2) spots = phaseQueues?.phase2 || []; // Spider: ENRICHED + website
-        else if (beltId === 3) spots = phaseQueues?.phase3 || []; // Detective: IDENTITY_ESTABLISHED + candidate_links
-        else if (beltId === 4) spots = phaseQueues?.phase4 || []; // Photographer: candidate_photos queued
-        else if (beltId === 5) spots = phaseQueues?.phase6 || []; // Publisher: MEDIA_READY
+        let spots: any[] = [];
+        if (beltId === 1) spots = phaseQueues?.phase2 || [];   // Scout output = SEEDED records (Spider input)
+        else if (beltId === 2) spots = phaseQueues?.phase3 || [];   // Spider output = ENRICHED records (Detective input)
+        else if (beltId === 3) spots = phaseQueues?.phase4 || [];   // Detective output = DEEP_CRAWLED (Photographer input)
+        else if (beltId === 4) spots = phaseQueues?.phase6 || [];   // Photographer output = MEDIA_READY (Publisher input)
+        else if (beltId === 5) spots = phaseQueues?.recent || [];   // Publisher output = recently published
         return spots.slice(0, count);
     };
 
