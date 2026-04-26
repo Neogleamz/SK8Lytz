@@ -2,7 +2,6 @@ import puppeteer from 'puppeteer';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
-import { GHOST } from './lib/GHOST';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const supabase = createClient(
@@ -88,8 +87,7 @@ async function runIndexer() {
         .catch(() => ({ config: {} }));
       const aiConfig = configResGlobal.config || {};
 
-      const identity = GHOST.generateIdentity();
-
+      // No GHOST stealth needed — targeting small business websites, not Google
       browser = await puppeteer.launch({
         headless: statusRes.isHeadless ? 'new' : false,
         protocolTimeout: 60000,
@@ -97,8 +95,8 @@ async function runIndexer() {
       });
 
       const page = await browser.newPage();
-      await page.setUserAgent(identity.userAgent);
-      await page.setViewport(identity.viewport);
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+      await page.setViewport({ width: 1280, height: 800 });
 
       // ── Use candidate_links from Spider (Phase 2) ──────────────────────────
       // candidate_links is a JSONB object: { root: url, hours: url, pricing: url, ... }
@@ -373,8 +371,8 @@ async function runIndexer() {
 
       if (updateError) throw updateError;
 
-      const delay = 8000 + Math.random() * 7000; // 8–15s — small business sites, no Google-level stealth needed
-      reportPulse(delay, identity);
+      const delay = 2000 + Math.random() * 2000; // 2-4s — small business sites, no stealth needed
+      reportPulse(delay);
       await sleep(delay);
 
     } catch (err: any) {

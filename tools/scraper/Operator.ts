@@ -2,7 +2,6 @@ import puppeteer from 'puppeteer';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
-import { GHOST } from './lib/GHOST';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const supabase = createClient(
@@ -42,7 +41,7 @@ async function runOperator() {
   while (true) {
     let target: any = null;
     let browser: any = null;
-    let delay = 8000 + Math.random() * 7000; // 8–15s — small business sites, no Google-level stealth needed
+    let delay = 2000 + Math.random() * 2000; // 2-4s — small business sites, no stealth needed
 
     try {
       const configRes = await fetch('http://localhost:5999/api/priority-states').then(r => r.json()).catch(() => ({ priority_states: [] }));
@@ -84,8 +83,8 @@ async function runOperator() {
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
       });
       const page = await browser.newPage();
-      await page.setUserAgent(identity.userAgent);
-      await page.setViewport(identity.viewport);
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+      await page.setViewport({ width: 1280, height: 800 });
 
       console.log(`   [Spider] → ${target.website}`);
       try {
@@ -156,7 +155,7 @@ async function runOperator() {
       }).eq('id', target.id);
       if (updateError) throw updateError;
 
-      reportPulse(delay, identity);
+      reportPulse(delay);
 
     } catch (err: any) {
       console.error('[Operator Error]', err.message);
