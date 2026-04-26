@@ -2,6 +2,8 @@ import React from 'react';
 import BeltNode from './BeltNode';
 import { useScraperTelemetry } from '../hooks/useScraperTelemetry';
 
+const CCTOWER = 'http://localhost:5999';
+
 const STYLES = `
 /* ... styles remain the same ... */
 .pipeline-dashboard-container {
@@ -98,7 +100,8 @@ export const ScraperPipeline: React.FC<{
     status?: any;
     triggerSpecificDaemon?: (name: string, action: 'start' | 'stop') => void;
     triggerHarvest?: (type: string, states?: string[]) => void;
-}> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest }) => {
+    onBlockSpot?: () => void; // optional refresh callback after block
+}> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot }) => {
     const { telemetry, config, loading } = useScraperTelemetry(2000);
 
     // outCards show OUTPUT (completed) records for each belt.
@@ -208,6 +211,8 @@ export const ScraperPipeline: React.FC<{
                 title: spot.name,
                 status: spot.status || spot.verification_status || 'PROCESSED',
                 type: 'success' as const,
+                spotId: spot.id,
+                spotName: spot.name,
                 data
             };
         });
@@ -315,6 +320,27 @@ export const ScraperPipeline: React.FC<{
 
     const [controlsOpen, setControlsOpen] = React.useState(false);
 
+    // ☠ Block & Purge — called from any belt card button
+    const handleBlockSpot = async (spotId: string, spotName: string) => {
+        if (!window.confirm(`☠ Block & purge "${spotName}" from the entire pipeline?\n\nThis will:\n• Delete all matching records from the database\n• Prevent future re-ingestion\n\nThis cannot be undone.`)) return;
+        try {
+            const res = await fetch(`${CCTOWER}/api/scraper/blocklist`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ keyword: spotName })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`✅ Blocked "${spotName}" — purged ${data.count ?? 0} matching record(s) from the database.`);
+                onBlockSpot?.(); // trigger parent refresh if provided
+            } else {
+                alert('Block failed: ' + JSON.stringify(data));
+            }
+        } catch (e: any) {
+            alert('CCTower unreachable: ' + e.message);
+        }
+    };
+
     return (
         <div className="pipeline-dashboard-container w-full min-h-screen flex flex-col text-white relative" style={{ gap: 0 }}>
             <style>{STYLES}</style>
@@ -407,6 +433,7 @@ export const ScraperPipeline: React.FC<{
                             onDaemonStart={dc?.onStart}
                             onDaemonStop={dc?.onStop}
                             daemonStatus={daemonStatus}
+                            onBlockSpot={handleBlockSpot}
                         />
                     );
                 })}

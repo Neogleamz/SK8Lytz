@@ -838,7 +838,7 @@ app.post('/api/scraper/blocklist', async (req, res) => {
     // Execute SQL Guillotine: delete existing matches instantly
     const { count, error: deleteError } = await supabase
       .from('skate_spots')
-      .delete()
+      .delete({ count: 'exact' })
       .ilike('name', `%${kw}%`);
       
     if (deleteError) throw deleteError;

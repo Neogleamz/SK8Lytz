@@ -6,6 +6,8 @@ interface OutCard {
   status: string;
   type: 'success' | 'rejected';
   data: [string, string, string][];
+  spotId?: string;
+  spotName?: string;
 }
 
 interface BeltProps {
@@ -32,6 +34,7 @@ interface BeltProps {
   inputStatus: string;
   outputStatus: string;
   countBadges?: {label: string; value: string}[];
+  onBlockSpot?: (spotId: string, spotName: string) => void;
 }
 
 // Shared card dimensions
@@ -51,7 +54,8 @@ const DataCard: React.FC<{
   bgColor: string;
   minW: number;
   maxW: number;
-}> = ({ title, badge, badgeColor, data, colColor, borderColor, bgColor, minW, maxW }) => (
+  onBlock?: () => void;
+}> = ({ title, badge, badgeColor, data, colColor, borderColor, bgColor, minW, maxW, onBlock }) => (
   <div style={{
     minWidth: minW, maxWidth: maxW, flexShrink: 0,
     background: bgColor,
@@ -83,12 +87,32 @@ const DataCard: React.FC<{
         </React.Fragment>
       ))}
     </div>
+    {onBlock && (
+      <button
+        onClick={(e) => { e.stopPropagation(); onBlock(); }}
+        style={{
+          marginTop: 7, width: '100%', padding: '5px 0',
+          background: 'rgba(255, 51, 102, 0.08)',
+          border: '1px solid rgba(255, 51, 102, 0.4)',
+          borderRadius: 5, cursor: 'pointer',
+          color: '#ff3366', fontSize: '0.52rem', fontWeight: 900,
+          fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase',
+          letterSpacing: '0.15em', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', gap: 5, transition: 'all 0.15s',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,51,102,0.22)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,51,102,0.08)'; }}
+      >
+        ☠ BLOCK &amp; PURGE
+      </button>
+    )}
   </div>
 );
 
 export const BeltNode: React.FC<BeltProps> = ({
   id, name, color, rgb, job, daemon, target, inQ, status, gatekeeper, attempting, outCards,
-  onPhaseNav, daemonActive = false, onDaemonStart, onDaemonStop, hasDaemon = true, daemonStatus, inputStatus, outputStatus, countBadges = []
+  onPhaseNav, daemonActive = false, onDaemonStart, onDaemonStop, hasDaemon = true, daemonStatus, inputStatus, outputStatus, countBadges = [],
+  onBlockSpot,
 }) => {
   const [isConfigOpen, setConfigOpen] = useState(false);
   const successCards = outCards.filter(c => c.type === 'success').slice(0, 2);
@@ -473,6 +497,7 @@ export const BeltNode: React.FC<BeltProps> = ({
               bgColor="rgba(10,10,15,0.95)"
               minW={SUCCESS_W}
               maxW={270}
+              onBlock={onBlockSpot && sc.spotId ? () => onBlockSpot(sc.spotId!, sc.spotName ?? sc.title) : undefined}
             />
           ))}
         </div>
