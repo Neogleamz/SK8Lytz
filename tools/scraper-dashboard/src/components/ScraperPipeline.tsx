@@ -104,10 +104,10 @@ export const ScraperPipeline: React.FC<{
     const getSpotsForPhase = (beltId: number, count: number = 2) => {
         let spots = [];
         if (beltId === 1) spots = phaseQueues?.phase1 || [];
-        else if (beltId === 2) spots = phaseQueues?.phase3 || []; // Crawl is phase 3 in API
-        else if (beltId === 3) spots = phaseQueues?.phase4 || []; // Detective is phase 4
-        else if (beltId === 4) spots = phaseQueues?.phase6 || []; // Photographer is phase 6
-        else if (beltId === 5) spots = phaseQueues?.recent || [];
+        else if (beltId === 2) spots = phaseQueues?.phase2 || []; // Spider: ENRICHED + website
+        else if (beltId === 3) spots = phaseQueues?.phase3 || []; // Detective: IDENTITY_ESTABLISHED + candidate_links
+        else if (beltId === 4) spots = phaseQueues?.phase4 || []; // Photographer: candidate_photos queued
+        else if (beltId === 5) spots = phaseQueues?.phase6 || []; // Publisher: MEDIA_READY
         return spots.slice(0, count);
     };
 

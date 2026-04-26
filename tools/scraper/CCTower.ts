@@ -727,13 +727,17 @@ app.get('/api/queue', async (req, res) => {
   let query = supabase.from('skate_spots').select('*');
   if (phase === 'phase1') {
      query = query.or('verification_status.eq.PENDING,verification_status.is.null');
-  } else if (phase === 'phase3') {
-     // Detective queue: ENRICHED/IDENTITY_ESTABLISHED, not yet crawled, has website
+  } else if (phase === 'phase2') {
+     // Spider queue: ENRICHED records with website — what Operator processes
      query = query
-       .or('verification_status.eq.IDENTITY_ESTABLISHED,verification_status.eq.ENRICHED')
-       .eq('is_deep_crawled', false)
+       .eq('verification_status', 'ENRICHED')
        .not('website', 'is', null)
        .neq('website', '');
+  } else if (phase === 'phase3') {
+     // Detective queue: IDENTITY_ESTABLISHED with candidate_links — what Indexer processes
+     query = query
+       .eq('verification_status', 'IDENTITY_ESTABLISHED')
+       .not('candidate_links', 'is', null);
   } else if (phase === 'phase4') {
      // Photographer queue: has candidate_photos but no photos yet
      query = query

@@ -306,7 +306,7 @@ function App() {
 
   const fetchQueue = async (only?: string[]) => {
     // Phases now: phase1, phase3 (Detective), phase4 (Photographer), phase6 (Publisher)
-    const phasesToFetch = only ?? ['phase1', 'phase3', 'phase4', 'phase6', 'recent'];
+    const phasesToFetch = only ?? ['phase1', 'phase2', 'phase3', 'phase4', 'phase6', 'recent'];
     // Read from ref so this always has the live value even inside stale interval closures
     const activeStates = stateOverrideRef.current;
     const statesParam = activeStates.length > 0 ? `&states=${activeStates.join(',')}` : '';
