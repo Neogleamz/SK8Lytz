@@ -16,7 +16,7 @@ interface PatternPickerTabProps {
   Colors: any;
 }
 
-const CATEGORIES = ['Solid', 'Rainbow', 'Sparkle', 'Chase', 'Marquee', 'Wave', 'Breathe'];
+const CATEGORIES = ['Solid', 'Rainbow', 'Sparkle', 'Chase', 'Marquee', 'Wave', 'Breathe', 'Test'];
 
 export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
   selectedEffectId, fgColor, bgColor, speed, brightness, points, direction, onSelect, Colors

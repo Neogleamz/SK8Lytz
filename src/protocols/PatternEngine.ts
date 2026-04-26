@@ -191,6 +191,32 @@ export const SK8LYTZ_TEMPLATES: SK8LytzTemplate[] = [
   // ── GROUP 9: NATIVE TEMPORAL (0x51 EXTENDED) ────────────────────────────
   // (Note: Smooth Breath (17), Wipe/Fill (18), and Strobe Flash (26) natively intercept via 0x51 in buildPatternPayload)
   { id: 72, name: 'Center-Out Marquee',   icon: '🎆', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Marquee' },
+
+  // ── GROUP 10: TEST NATIVE (0x51) ─────────────────────────────────────────
+  { id: 201, name: 'Change gradually',     icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 202, name: 'Bright up & Fade',     icon: '🧪', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 203, name: 'Change quickly',       icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 204, name: 'Strobe-flash',         icon: '🧪', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 205, name: 'Run 1 pt',             icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 207, name: 'Run center-out',       icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 209, name: 'Overlay',              icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 211, name: 'Overlay center',       icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 213, name: 'Fading run 1 pt',      icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 215, name: 'Olivary flowing',      icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 217, name: 'Run 1 pt w/bg',        icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 219, name: '2c run multi pts',     icon: '🧪', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 221, name: '2c run alt fade',      icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 223, name: '2c run alt multi',     icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 225, name: 'Fade out flows',       icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 227, name: '7c alt 1 pt w/bg',     icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 229, name: '7c run alt 1 pt',      icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 231, name: '7c run alt multi',     icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 233, name: '7c overlay multi',     icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 235, name: '7c overlay center',    icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 237, name: '7c flow gradually',    icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 239, name: '7c fading out run',    icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 241, name: '7c olivary run',       icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 243, name: '7c fading run w/white',icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
 ];
 
 // ─── MATH HELPERS ─────────────────────────────────────────────────────────────
@@ -1098,6 +1124,17 @@ export function getVisualizerFrame(
   // For visualizer, we only generate ONE segment of data (segments=1),
   // since ProductVisualizer's 'isMirrored' will automatically handle the physical geometry mapping.
   const visualizerOptions = { ...options, segments: 1 };
+
+  // ── NATIVE 0x51 TEST PATTERN INTERCEPTION ──
+  if (patternId >= 201 && patternId <= 244) {
+    let modeId = patternId - 200;
+    // Map Forward/Reverse via the modeId + 1 trick
+    if (direction === 0 && modeId >= 5) {
+      modeId += 1;
+    }
+    return getSymphonyVisualizerFrame(modeId, fg, bg, n, animTick);
+  }
+
   const generated = generateArray(patternId, fg, bg, n, animTick, direction, visualizerOptions);
 
   // All 61 builders manage their own tick-based animation internally.
@@ -1244,7 +1281,7 @@ export function buildPatternPayload(
   hardwareLedPoints?: number
 ): number[] | null {
   // ── GROUP 9: NATIVE TEMPORAL (0x51 INTERCEPTION) ──
-  const is0x51Target = [17, 18, 24, 26, 72].includes(patternId);
+  const is0x51Target = [17, 18, 24, 26, 72].includes(patternId) || (patternId >= 201 && patternId <= 244);
   if (is0x51Target) {
     let modeId = 1; // Default to Breathe
     if (patternId === 17 || patternId === 24) modeId = 1; // Change gradually (Breathe)
@@ -1252,8 +1289,22 @@ export function buildPatternPayload(
     if (patternId === 26) modeId = 4; // Strobe-flash
     if (patternId === 72) modeId = 7; // Running, from middle to both ends (Center-Out)
 
+    if (patternId >= 201 && patternId <= 244) {
+      modeId = patternId - 200;
+      // Map Forward/Reverse via the modeId + 1 trick
+      if (direction === 0 && modeId >= 5) {
+        modeId += 1;
+      }
+    }
+
     // Hardware expects direction logic via the 10th byte (0x80 = forward, 0x00 = reverse)
-    const hardwareDir = direction === 1 ? 0x80 : 0x00;
+    let hardwareDir = direction === 1 ? 0x80 : 0x00;
+    
+    // For 201-244, direction is physically baked into the modeId pair (e.g. 5 vs 6).
+    // We send 0x80 (forward) for the segment mirror byte to prevent double-inversion.
+    if (patternId >= 201 && patternId <= 244) {
+      hardwareDir = 0x80;
+    }
 
     return ZenggeProtocol.setCustomModeExtended([{
       mode: modeId,
@@ -1436,4 +1487,119 @@ export function getMusicVisualizerFrame(
   return { pixels, opacities };
 }
 
+// ─── 0x51 SYMPHONY VISUALIZER ENGINE ─────────────────────────────────────────
 
+/**
+ * Get the visualizer pixel array for a native 0x51 Symphony Effect.
+ * This is COMPLETELY ISOLATED from the 0x59 PatternEngine. It uses the 44
+ * hardware IDs defined by ZENGGE firmware.
+ *
+ * @param symphonyId 1-44 (The exact ZENGGE hardware effect ID)
+ * @param fg Foreground color 
+ * @param bg Background color
+ * @param numLEDs Number of pixels per segment
+ * @param animTick 0.0 to 1.0 driving the animation
+ */
+export function getSymphonyVisualizerFrame(
+  symphonyId: number,
+  fg: RGB,
+  bg: RGB,
+  numLEDs: number,
+  animTick: number
+): RGB[] {
+  const n = Math.max(1, numLEDs);
+  const black: RGB = { r: 0, g: 0, b: 0 };
+
+  switch (symphonyId) {
+    // ── Single/Dual Color Modifiable (1-34) ──
+    case 1: return buildNativeBreathe(fg, bg, n, animTick); // Change gradually
+    case 2: return buildNativeBreathe(fg, black, n, animTick); // Bright up and Fade gradually
+    case 3: return buildColorJump(fg, bg, n, animTick); // Change quickly
+    case 4: return buildStrobe(fg, n, animTick); // Strobe-flash
+    
+    // Running 1 point
+    case 5: return buildSingleDotChase(fg, bg, n, animTick, 1); // start to end
+    case 6: return buildSingleDotChase(fg, bg, n, animTick, 0); // end to start
+    case 7: return buildNativeCenterOut(fg, bg, n, animTick); // middle to both ends
+    case 8: return buildNativeCenterOut(fg, bg, n, 1 - animTick); // both ends to middle
+
+    // Overlay
+    case 9: return buildWipeFill(fg, bg, n, animTick, 1);
+    case 10: return buildWipeFill(fg, bg, n, animTick, 0);
+    case 11: return buildNativeCenterOut(fg, bg, n, animTick); // Overlay middle to ends
+    case 12: return buildNativeCenterOut(fg, bg, n, 1 - animTick);
+
+    // Fading and running 1 point (Comet)
+    case 13: return buildCometChase(fg, bg, n, animTick, 1);
+    case 14: return buildCometChase(fg, bg, n, animTick, 0);
+
+    // Olivary Flowing (Wave)
+    case 15: return buildSinePulseWave(fg, bg, n, animTick, 1);
+    case 16: return buildSinePulseWave(fg, bg, n, animTick, 0);
+
+    // Running 1 point w/ background
+    case 17: return buildSingleDotChase(fg, bg, n, animTick, 1);
+    case 18: return buildSingleDotChase(fg, bg, n, animTick, 0);
+
+    // 2 colors run, multi points w/black background
+    case 19: return buildDashedMarquee(fg, black, n, animTick, 1);
+    case 20: return buildDashedMarquee(fg, black, n, animTick, 0);
+
+    // 2 colors run alternately, fading
+    case 21: return buildBreathingWave(fg, bg, n, animTick, 1);
+    case 22: return buildBreathingWave(fg, bg, n, animTick, 0);
+
+    // 2 colors run alternately, multi points
+    case 23: return buildDashedMarquee(fg, bg, n, animTick, 1);
+    case 24: return buildDashedMarquee(fg, bg, n, animTick, 0);
+
+    // Fading out Flows (Meteor Shower)
+    case 25: return buildMeteorShower(fg, bg, n, animTick, 1);
+    case 26: return buildMeteorShower(fg, bg, n, animTick, 0);
+
+    // 7 colors run alternately, 1 point with multi points background
+    case 27: {
+      const frame = buildRainbowMarquee(n, animTick, 1);
+      return frame.map(p => (p.r === 0 && p.g === 0 && p.b === 0) ? bg : p);
+    }
+    case 28: {
+      const frame = buildRainbowMarquee(n, animTick, 0);
+      return frame.map(p => (p.r === 0 && p.g === 0 && p.b === 0) ? bg : p);
+    }
+
+    // 7 colors run alternately, 1 point
+    case 29: return buildRainbowMarquee(n, animTick, 1);
+    case 30: return buildRainbowMarquee(n, animTick, 0);
+
+    // 7 colors run alternately, multi points
+    case 31: return buildRainbowComet(n, animTick, 1);
+    case 32: return buildRainbowComet(n, animTick, 0);
+
+    // 7 colors overlay, multi points
+    case 33: return buildTrueRainbowFlow(n, animTick, 1); 
+    case 34: return buildTrueRainbowFlow(n, animTick, 0);
+
+    // ── 7-Color Generative / No-Color (35-44) ──
+    case 35: return buildRainbowBreathing(n, animTick); 
+    case 36: return buildRainbowBreathing(n, animTick); 
+    
+    // 7 colors flow gradually
+    case 37: return buildTrueRainbowFlow(n, animTick, 1);
+    case 38: return buildTrueRainbowFlow(n, animTick, 0);
+
+    // Fading out run, 7 colors
+    case 39: return buildRainbowComet(n, animTick, 1);
+    case 40: return buildRainbowComet(n, animTick, 0);
+
+    // Runs in olivary, 7 colors
+    case 41: return buildTrueRainbowFlow(n, animTick, 1); 
+    case 42: return buildTrueRainbowFlow(n, animTick, 0);
+
+    // Fading out run, 7 colors start with white color
+    case 43: return buildRainbowChaser(n, animTick, 1);
+    case 44: return buildRainbowChaser(n, animTick, 0);
+
+    // Fallback
+    default: return Array(n).fill(black);
+  }
+}
