@@ -133,7 +133,7 @@ export const BeltNode: React.FC<BeltProps> = ({
             </div>
             
             {/* GRID COL 6: MAP */}
-            <div style={{ gridColumn: 6, gridRow: 1, zIndex: 2 }} className="phase-map-container w-[300px] h-[250px] relative ml-5" style={{ '--col-color': `var(${color})`, alignSelf: 'center' } as React.CSSProperties}>
+            <div style={{ gridColumn: 6, gridRow: 1, zIndex: 2, '--col-color': `var(${color})`, alignSelf: 'center' } as React.CSSProperties} className="phase-map-container w-[300px] h-[250px] relative ml-5">
                 <div className="absolute top-3 left-4 text-[0.6rem] font-black uppercase tracking-widest text-white/40 z-10">{name.split('(')[0].trim()} Saturation</div>
                 <div style={{width: '100%', height: 'auto', opacity: 0.8, filter: `drop-shadow(0 0 10px var(${color}))`, padding: 20}}>
                   <USAMap 

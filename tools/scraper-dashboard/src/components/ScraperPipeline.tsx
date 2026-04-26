@@ -116,19 +116,20 @@ const generateUniformBelt = (idx: number, id: number, name: string, color: strin
   ]
 });
 
-const mockBelts = [
-    generateUniformBelt(1, 1, 'Scout Phase (Google Places Seed)', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING SEED...', 'Roller City', 'EVALUATING BLOCKLIST', ['KS', 'MO', 'CA', 'TX', 'NY', 'FL', 'IL', 'WA', 'MI', 'GA']),
-    generateUniformBelt(2, 2, 'Crawl Phase (Spider Engine)', '--neon-crawl', '157, 78, 221', 'Spider_v3', 'DEEP CRAWLING DOM...', 'Skate City Shawnee', 'FETCHING /schedule', ['KS', 'MO', 'CA', 'TX', 'FL', 'WA']),
-    generateUniformBelt(3, 3, 'Detective Phase (Llama-3.2 Extraction)', '--neon-detective', '255, 106, 0', 'Llama3.2-8b', 'INFERENCING JSON...', 'Skate City OP', 'STREAMING TO DB', ['KS', 'MO', 'TX', 'FL']),
-    generateUniformBelt(4, 4, 'Photographer (Cloud Vision)', '--neon-photo', '255, 0, 127', 'Vision_v1', 'ANALYZING IMAGES...', 'Oaks Park Roller Skating Rink', 'DETECTING HARDWOOD', ['WA', 'CA', 'NY', 'FL']),
-    generateUniformBelt(5, 5, 'Publisher (DB Sync)', '--neon-publish', '0, 212, 255', 'Sync_v4', 'UPSERTING BATCH...', 'Skate City Aurora', 'COMMITTING TRANSACTION', ['KS', 'MO', 'TX', 'CA'])
-];
-
 export const ScraperPipeline: React.FC<{ headerControls?: React.ReactNode, pipelineStats?: any, phaseQueues?: any }> = ({ headerControls, pipelineStats, phaseQueues }) => {
-    const { telemetry } = useScraperTelemetry(2000);
+    const { telemetry, loading } = useScraperTelemetry(2000);
 
-    const getRecentSpots = (count: number = 3) => (phaseQueues?.recent || []).slice(0, count);
-    const getQueueNames = (phase: string, count: number = 3) => (phaseQueues?.[phase] || []).slice(0, count).map((s: any) => s.name);
+    const getSpotsForPhase = (beltId: number, count: number = 2) => {
+        let spots = [];
+        if (beltId === 1) spots = phaseQueues?.phase1 || [];
+        else if (beltId === 2) spots = phaseQueues?.phase3 || []; // Crawl is phase 3 in API
+        else if (beltId === 3) spots = phaseQueues?.phase4 || []; // Detective is phase 4
+        else if (beltId === 4) spots = phaseQueues?.phase6 || []; // Photographer is phase 6
+        else if (beltId === 5) spots = phaseQueues?.recent || [];
+        return spots.slice(0, count);
+    };
+
+    const getQueueNames = (phase: string, count: number = 3) => (phaseQueues?.[phase] || []).slice(0, count).map((s: any) => s.name || s.url || s.target);
 
     const buildPhaseCards = (phaseId: number, spots: any[]) => {
         return spots.map(spot => {
@@ -189,8 +190,8 @@ export const ScraperPipeline: React.FC<{ headerControls?: React.ReactNode, pipel
         if (belt.id === 5) liveData = telemetry.publisher;
 
         // Populate fields from real DB spots
-        const recentSpots = getRecentSpots(2);
-        const dynamicCards = buildPhaseCards(belt.id, recentSpots);
+        const specificSpots = getSpotsForPhase(belt.id, 2);
+        const dynamicCards = buildPhaseCards(belt.id, specificSpots);
 
         if (liveData) {
             return {
