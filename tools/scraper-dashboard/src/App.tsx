@@ -1182,8 +1182,8 @@ function App() {
                />
                {!isCollapsed(`daemon_explainer_${activeTab}`) && (
                  <>
-                   {activeTab === 'phase2' && <p>Targets <strong>ENRICHED</strong> records from the Google Scout and resolves their real-world contact identity — confirming the business website and phone number via GHOST-stealth web search. Graduates records to <strong>IDENTITY_ESTABLISHED</strong> when found, or marks as <strong>MISSING_WEBSITE</strong> and skips if no website was seeded.</p>}
-                   {activeTab === 'phase3' && <p>The Detective deep-crawls each spot's website using Puppeteer with GHOST identity spoofing. Extracts operating hours, 18+ adult night schedules, pricing, event listings, social links, and photo candidates (OG image, DOM images, Facebook OG). Writes <code>candidate_photos</code> for the Photographer to harvest.</p>}
+                   {activeTab === 'phase2' && <p>Targets <strong>IDENTITY_ESTABLISHED → INDEXED</strong> when found, or marks as <strong>MISSING_WEBSITE</strong> and skips if no website was seeded.</p>}
+                   {activeTab === 'phase3' && <p>The AI Detective visits the <strong>candidate_links</strong> collected by the Spider in Phase 2 — no re-crawl needed. Runs <strong>Ollama Llama-3</strong> across the combined page text to extract hours, adult night schedules, pricing, events, social links, and photo candidates. Promotes records to <strong>INDEXED</strong>.</p>}
                    {activeTab === 'phase4' && <p>The Photographer daemon reads <code>candidate_photos</code> written by the Indexer — downloading OG images and DOM media as binary uploads to Supabase Storage. Falls back to Google Street View Static as a guaranteed photo source. Promotes records to <strong>MEDIA_READY</strong> on success.</p>}
                    {activeTab === 'phase5' && <p>The Publisher Gate is the final human-approved release step. Only records with <strong style={{color:'#4caf50'}}>is_published = true</strong> are visible on the live SK8Lytz app map. Bulk-promote all pipeline-complete records (ENRICHED + MEDIA_READY) below, or use the Databank QA tab to approve individual spots.</p>}
                  </>
@@ -1202,7 +1202,7 @@ function App() {
                          <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('operator', 'stop')} disabled={!status?.currentTarget?.includes('Operator: online')}>■ STOP</button>
                       </div>
                       <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
-                         ENRICHED → IDENTITY_ESTABLISHED
+                         IDENTITY_ESTABLISHED → INDEXED
                       </div>
                       {status?.currentTarget?.includes('Operator: online') && <div className="flow-animation"></div>}
                    </div>
@@ -1216,7 +1216,7 @@ function App() {
              {activeTab === 'phase3' && (
                 <div className="flow-visualizer" style={{ padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
-                    {/* Dual input: both ENRICHED and IDENTITY_ESTABLISHED feed into Indexer */}
+                    {/* Dual input: both IDENTITY_ESTABLISHED → INDEXED feed into Indexer */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-end', minWidth: '120px' }}>
                       <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#ff5a00' }}>{status?.enrichedCount || 0}</div>

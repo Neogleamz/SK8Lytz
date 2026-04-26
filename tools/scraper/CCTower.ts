@@ -115,6 +115,7 @@ app.get('/status', async (req, res) => {
     let operatorStatus = 'Offline';
     let indexerStatus = 'Offline';
     let photographerStatus = 'Offline';
+    let ollamaStatus = 'Offline';
 
     if (!err && stdout) {
       try {
@@ -158,7 +159,12 @@ app.get('/status', async (req, res) => {
     const { count: indexedCount } = await supabase
       .from('skate_spots')
       .select('*', { count: 'exact', head: true })
-      .eq('is_deep_crawled', true);
+      .eq('verification_status', 'INDEXED');
+
+    const { count: missingWebsiteCount } = await supabase
+      .from('skate_spots')
+      .select('*', { count: 'exact', head: true })
+      .eq('verification_status', 'MISSING_WEBSITE');
 
     const { count: enrichedCount } = await supabase
       .from('skate_spots')
@@ -181,7 +187,7 @@ app.get('/status', async (req, res) => {
       isRunning: running,
       isHarvestingActive,
       isHeadless,
-      currentTarget: `Operator: ${operatorStatus} | Indexer: ${indexerStatus} | Photographer: ${photographerStatus}`,
+      currentTarget: `Operator: ${operatorStatus} | Indexer: ${indexerStatus} | Photographer: ${photographerStatus} | Ollama: ${ollamaStatus}`,
       isGoogleSweepActive,
       totalCount: totalCount || 0,          // COUNT(*) — true total seeded
       processedCount: totalProcessed || 0,
@@ -190,10 +196,11 @@ app.get('/status', async (req, res) => {
       candidatesReadyCount: candidatesCount || 0,
       publishedCount: publishedCount || 0,
       
-      // New Micro-Scraper Metrics
+      // Pipeline stage counts (matches real verification_status values)
       pendingCount: pendingCount || 0,
       identityCount: identityCount || 0,
       indexedCount: indexedCount || 0,
+      missingWebsiteCount: missingWebsiteCount || 0,
       
       errorCount,
       consecutiveErrors,
@@ -218,10 +225,10 @@ app.post('/api/pulse', (req, res) => {
 });
 
 app.post('/start', (req, res) => {
-  const { daemons } = req.body as { daemons?: string[] };
+  const { daemons } = (req.body || {}) as { daemons?: string[] };
   const target = (daemons && daemons.length > 0)
     ? daemons.map(d => `scraper-${d}`).join(',')
-    : 'scraper-operator,scraper-indexer,scraper-photographer';
+    : 'scraper-operator,scraper-indexer,scraper-photographer,ollama-daemon';
   console.log(`Orchestrating start: ${target}`);
   exec(`pm2 start ecosystem.config.js --only ${target}`, { cwd: __dirname, windowsHide: true }, (err) => {
      if (err) {
@@ -234,10 +241,10 @@ app.post('/start', (req, res) => {
 });
 
 app.post('/stop', (req, res) => {
-  const { daemons } = req.body as { daemons?: string[] };
+  const { daemons } = (req.body || {}) as { daemons?: string[] };
   const target = (daemons && daemons.length > 0)
     ? daemons.map(d => `scraper-${d}`).join(' ')
-    : 'scraper-operator scraper-indexer scraper-photographer';
+    : 'scraper-operator scraper-indexer scraper-photographer ollama-daemon';
   console.log(`Orchestrating stop: ${target}`);
   exec(`pm2 stop ${target}`, { cwd: __dirname, windowsHide: true }, (err) => {
      if (err) {
@@ -251,8 +258,9 @@ app.post('/stop', (req, res) => {
 
 app.post('/api/daemons/:name/start', (req, res) => {
   const { name } = req.params;
-  console.log(`Commanding daemon start: scraper-${name}`);
-  exec(`pm2 start scraper-${name}`, { cwd: __dirname, windowsHide: true }, (err, stdout, stderr) => {
+  const target = name === 'ollama-daemon' ? 'ollama-daemon' : `scraper-${name}`;
+  console.log(`Commanding daemon start: ${target}`);
+  exec(`pm2 start ${target}`, { cwd: __dirname, windowsHide: true }, (err, stdout, stderr) => {
      if (err) {
         console.error(`Failed to start ${name}:`, err);
         return res.status(500).json({ success: false, message: `Failed to start ${name}` });
@@ -263,8 +271,9 @@ app.post('/api/daemons/:name/start', (req, res) => {
 
 app.post('/api/daemons/:name/stop', (req, res) => {
   const { name } = req.params;
-  console.log(`Commanding daemon stop: scraper-${name}`);
-  exec(`pm2 stop scraper-${name}`, { cwd: __dirname, windowsHide: true }, (err, stdout, stderr) => {
+  const target = name === 'ollama-daemon' ? 'ollama-daemon' : `scraper-${name}`;
+  console.log(`Commanding daemon stop: ${target}`);
+  exec(`pm2 stop ${target}`, { cwd: __dirname, windowsHide: true }, (err, stdout, stderr) => {
      if (err) {
         console.error(`Failed to stop ${name}:`, err);
         return res.status(500).json({ success: false, message: `Failed to stop ${name}` });

@@ -39,17 +39,25 @@ console.error = (...args) => { _err(...args); pushLog('ERROR', args.join(' ')); 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 type DayKey = typeof DAYS[number];
 
-// ─── Main Indexer Loop ──────────────────────────────────────────────────────
+// Max pages to visit per record — prevents runaway crawl on large sites
+const MAX_PAGES_PER_RECORD = 4;
 
+// ─── Main Indexer Loop ──────────────────────────────────────────────────────
 async function runIndexer() {
-  console.log('[Indexer v2] 🕵️ Booting Detective — Hours/Pricing/Events Engine...');
+  console.log('[Indexer v3] 🧠 Booting AI Detective — using Spider-provided candidate_links...');
 
   while (true) {
+    let browser: any = null;
     try {
-      // Fetch active region config — ensures priority state changes take effect immediately
-      const configRes = await fetch('http://localhost:5999/api/priority-states').then(r => r.json()).catch(() => ({ priority_states: [] }));
+      // Fetch active region config — hard state filter applied at RPC level
+      const configRes = await fetch('http://localhost:5999/api/priority-states')
+        .then(r => r.json())
+        .catch(() => ({ priority_states: [] }));
       const priorityStates = configRes.priority_states || [];
-      const { data: spots, error: rpcError } = await supabase.rpc('get_next_spot_for_indexer', { priority_states: priorityStates });
+
+      const { data: spots, error: rpcError } = await supabase.rpc('get_next_spot_for_indexer', {
+        priority_states: priorityStates
+      });
       if (rpcError) throw new Error('RPC Failed/' + rpcError.message);
 
       if (!spots || spots.length === 0) {
@@ -60,23 +68,19 @@ async function runIndexer() {
       }
 
       const target = spots[0];
-      console.log(`\n🕵️ [Indexer v2] Analyzing: ${target.name} (${target.city}, ${target.state})`);
+      console.log(`\n🧠 [Detective] Analyzing: ${target.name} (${target.city}, ${target.state})`);
 
-      // ── No website: mark as crawled and skip ──────────────────────────────
-      if (!target.website) {
-        console.log(`   ⚠️ No website. Marking crawled and skipping.`);
-        await supabase.from('skate_spots').update({
-          is_deep_crawled: true,
-          last_attempted_at: new Date().toISOString()
-        }).eq('id', target.id);
-        continue;
-      }
+      // Mark in-flight immediately to prevent duplicate picks
+      await supabase.from('skate_spots').update({
+        last_attempted_at: new Date().toISOString(),
+        retry_count: (target.retry_count || 0) + 1
+      }).eq('id', target.id);
 
-      // ── Fetch current configurations ───────────────────────────────────
+      // ── Fetch global AI config ─────────────────────────────────────────────
       const statusRes = await fetch('http://localhost:5999/status')
         .then(r => r.json())
         .catch(() => ({ isHeadless: true }));
-        
+
       const configResGlobal = await fetch('http://localhost:5999/config')
         .then(r => r.json())
         .catch(() => ({ config: {} }));
@@ -84,7 +88,7 @@ async function runIndexer() {
 
       const identity = GHOST.generateIdentity();
 
-      const browser = await puppeteer.launch({
+      browser = await puppeteer.launch({
         headless: statusRes.isHeadless ? 'new' : false,
         protocolTimeout: 60000,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
@@ -94,89 +98,97 @@ async function runIndexer() {
       await page.setUserAgent(identity.userAgent);
       await page.setViewport(identity.viewport);
 
-      // ── Navigate with networkidle2 for JS-rendered content ───────────────
-      console.log(`   [Crawl] → ${target.website}`);
-      try {
-        await page.goto(target.website, {
-          waitUntil: 'networkidle2',
-          timeout: 30000
-        });
-      } catch {
-        // Fallback to domcontentloaded if networkidle2 times out
+      // ── Use candidate_links from Spider (Phase 2) ──────────────────────────
+      // candidate_links is a JSONB object: { root: url, hours: url, pricing: url, ... }
+      // Priority: hours > adult > pricing > events > contact > about > root
+      const candidateLinks: Record<string, string> = target.candidate_links || {};
+      const PAGE_PRIORITY = ['hours', 'adult', 'pricing', 'events', 'contact', 'about', 'root'];
+
+      // Build ordered list of URLs to visit (deduplicated, max MAX_PAGES_PER_RECORD)
+      const urlsToVisit: string[] = [];
+      for (const key of PAGE_PRIORITY) {
+        if (candidateLinks[key] && !urlsToVisit.includes(candidateLinks[key])) {
+          urlsToVisit.push(candidateLinks[key]);
+          if (urlsToVisit.length >= MAX_PAGES_PER_RECORD) break;
+        }
+      }
+      // Fallback: use website root if no candidate_links were collected
+      if (urlsToVisit.length === 0 && target.website) {
+        urlsToVisit.push(target.website);
+      }
+
+      console.log(`   [Detective] Visiting ${urlsToVisit.length} candidate pages...`);
+
+      // ── Visit each candidate page and collect text + links ─────────────────
+      let combinedText = '';
+      const allLinks: string[] = [];
+      let ogImage: string | null = null;
+      const domImages: string[] = [];
+
+      for (const url of urlsToVisit) {
+        console.log(`   → ${url}`);
         try {
-          await page.goto(target.website, { waitUntil: 'domcontentloaded', timeout: 15000 });
+          await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
         } catch {
-          console.error(`   ✗ Navigation failed for ${target.website}`);
-          await browser.close();
-          await supabase.from('skate_spots').update({
-            is_deep_crawled: true,
-            retry_count: (target.retry_count || 0) + 1,
-            last_attempted_at: new Date().toISOString()
-          }).eq('id', target.id);
-          continue;
-        }
-      }
-
-      await sleep(1500);
-
-      // --- Smart City Spider Logic ---
-      if (target.city) {
-        try {
-          const linksData = await page.evaluate(() => {
-            return Array.from(document.querySelectorAll('a')).map(a => ({
-              text: (a.innerText || '').toLowerCase(),
-              href: (a.href || '').toLowerCase()
-            }));
-          });
-          
-          const currentHostname = new URL(target.website).hostname;
-          const internalLinks = linksData.filter((l: any) => {
-            try {
-              const linkUrl = new URL(l.href);
-              return linkUrl.hostname === currentHostname || linkUrl.hostname.includes(currentHostname.replace('www.',''));
-            } catch(e) { return false; }
-          });
-
-          const targetCityStr = target.city.toLowerCase();
-          let match = internalLinks.find((l: any) => l.text.includes(targetCityStr) || l.href.includes(targetCityStr));
-          
-          if (!match) {
-            match = internalLinks.find((l: any) => l.text.includes('hours') || l.text.includes('location') || l.text.includes('schedule') || l.text.includes('calendar'));
+          try {
+            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+          } catch {
+            console.error(`   ✗ Navigation failed: ${url}`);
+            continue;
           }
-
-          if (match && match.href && !match.href.startsWith('mailto:') && !match.href.startsWith('tel:')) {
-            console.log(`   [Spider] Hopping to subpage: ${match.href}`);
-            await page.goto(match.href, { waitUntil: 'domcontentloaded', timeout: 30000 });
-            await sleep(1500);
-          }
-        } catch (spiderErr) {
-          console.error('   ? Spider heuristic hop failed, defaulting to root:', spiderErr);
         }
-      }
-      // -------------------------------
+        await sleep(1000);
 
-      // ── DOM Extraction & Cleanup for LLM ───────────────────────────────────
-      const pageData = await page.evaluate(() => {
-        const anchors = Array.from(document.querySelectorAll('a'));
-        const links = anchors.map(a => a.href.toLowerCase()).filter(Boolean);
-        
-        // Clean DOM
-        document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
-        const cleanText = document.body.innerText.replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
-        
-        return { links, cleanText };
-      });
+        const pageData = await page.evaluate(() => {
+          // Collect OG image if not already found
+          const ogMeta = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null;
+
+          // Collect large DOM images
+          const imgs = Array.from(document.querySelectorAll('img'))
+            .filter((img: any) => {
+              const w = img.naturalWidth || img.width || 0;
+              const h = img.naturalHeight || img.height || 0;
+              const src = (img.src || '').toLowerCase();
+              return w >= 400 && h >= 300 &&
+                !src.includes('logo') && !src.includes('icon') &&
+                !src.includes('pixel') && !src.includes('gif') &&
+                (src.startsWith('http') || src.startsWith('//'));
+            })
+            .map((img: any) => img.src)
+            .slice(0, 3);
+
+          // Collect all hrefs for social extraction
+          const links = Array.from(document.querySelectorAll('a'))
+            .map(a => (a.href || '').toLowerCase())
+            .filter(Boolean);
+
+          // Clean DOM text for AI
+          document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
+          const cleanText = document.body.innerText.replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+
+          return { ogMeta, imgs, links, cleanText };
+        }).catch(() => ({ ogMeta: null, imgs: [], links: [], cleanText: '' }));
+
+        if (pageData.cleanText) {
+          combinedText += `\n\n[PAGE: ${url}]\n${pageData.cleanText}`;
+        }
+        allLinks.push(...pageData.links);
+        if (!ogImage && pageData.ogMeta && !pageData.ogMeta.includes('placeholder')) {
+          ogImage = pageData.ogMeta;
+        }
+        domImages.push(...pageData.imgs.slice(0, 2));
+      }
 
       await browser.close();
+      browser = null;
 
-      const text = pageData.cleanText;
-
-      // ── AI Toxicity Bouncer (Dynamic Exclusions) ───────────────────────────
+      // ── AI Toxicity Bouncer ────────────────────────────────────────────────
       const exclusions = aiConfig.ai_exclusion_keywords || [];
-      const toxicityReason = exclusions.find((kw: string) => text.toLowerCase().includes(kw.toLowerCase()));
+      const toxicityReason = exclusions.find((kw: string) =>
+        combinedText.toLowerCase().includes(kw.toLowerCase())
+      );
       if (toxicityReason) {
-        console.log(`   🚫 AI HEALER ABORT: Exclusion keyword hit [${toxicityReason}]`);
-        pushLog('INFO', `Phase 2 Healer rejected ${target.name}: Keyword "${toxicityReason}"`);
+        console.log(`   🚫 HEALER ABORT: Exclusion keyword [${toxicityReason}]`);
         await supabase.from('skate_spots').update({
           is_deep_crawled: true,
           verification_status: 'REJECTED',
@@ -185,23 +197,24 @@ async function runIndexer() {
         continue;
       }
 
-      // ── Llama-3 Detective Extraction ──────────────────────────────────────
+      // ── Llama-3 Detective Extraction ───────────────────────────────────────
       const systemPrompt = aiConfig.ai_system_prompt || 'Extract JSON data accurately.';
       const targetVectors = aiConfig.ai_target_vectors || [];
       const schema = targetVectors.reduce((acc: any, vec: any) => {
-        acc[vec.key] = vec.prompt || vec.type; // Use vec.prompt for better LLM instruction
+        acc[vec.key] = vec.prompt || vec.type;
         return acc;
       }, {});
 
-      let contextHeader = "";
+      let contextHeader = '';
       if (target.name && target.city) {
-        contextHeader = `You are analyzing a website for a roller rink. The specific location you are targeting is [${target.name}] located in [${target.city}]. This text may contain data for multiple franchise locations. Ignore all other cities. ONLY extract the hours, pricing, and adult nights for the [${target.name}] location.\n\n`;
+        contextHeader = `You are analyzing website content for a skate facility. The specific location is [${target.name}] in [${target.city}]. The text below may contain info for multiple franchise locations. ONLY extract data for [${target.name}]. Ignore all other cities.\n\n`;
       }
 
-      const prompt = `${contextHeader}${systemPrompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${text}`;
-      
+      const prompt = `${contextHeader}${systemPrompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${combinedText.slice(0, 12000)}`;
+
       const detectiveModel = aiConfig.detective_model || 'llama3.1';
       console.log(`   🧠 Invoking Ollama Detective (${detectiveModel})...`);
+
       let aiMetadata: any = {};
       try {
         const fetch = require('node-fetch');
@@ -210,7 +223,7 @@ async function runIndexer() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: detectiveModel,
-            prompt: prompt,
+            prompt,
             format: 'json',
             stream: false
           })
@@ -219,25 +232,25 @@ async function runIndexer() {
         const aiData = await response.json();
         aiMetadata = JSON.parse(aiData.response);
       } catch (err: any) {
-         console.error('   ✗ Ollama Extraction Failed:', err.message);
-         // Proceed with empty metadata; we still get photos and links
+        console.error('   ✗ Ollama Extraction Failed:', err.message);
+        // Non-fatal — proceed with socials and photo candidates
       }
 
-      // Map AI Metadata back to structured columns if they match
-      const opening_hours = aiMetadata.opening_hours || target.opening_hours || null;
-      const has_adult_night = aiMetadata.has_adult_night || target.has_adult_night || false;
-      const adult_night_details = aiMetadata.adult_night_details || target.adult_night_details || null;
-      const adultNightSchedule = aiMetadata.adult_night_schedule || target.adult_night_schedule || null;
-      const special_events = aiMetadata.special_events || target.special_events || null;
-      const pricing_data = aiMetadata.pricing_data || target.pricing_data || null;
+      // ── Map AI output to structured columns ────────────────────────────────
+      const opening_hours   = aiMetadata.opening_hours   || target.opening_hours   || null;
+      const has_adult_night = aiMetadata.has_adult_night ?? target.has_adult_night  ?? false;
+      const adult_night_details  = aiMetadata.adult_night_details  || target.adult_night_details  || null;
+      const adultNightSchedule   = aiMetadata.adult_night_schedule || target.adult_night_schedule || null;
+      const special_events  = aiMetadata.special_events  || target.special_events  || null;
+      const pricing_data    = aiMetadata.pricing_data    || target.pricing_data    || null;
 
-      // ── Social Links ──────────────────────────────────────────────────────
+      // ── Social Links (from collected hrefs) ────────────────────────────────
       let instagram_url = target.instagram_url || null;
-      let facebook_url = target.facebook_url || null;
-      let tiktok_url = target.tiktok_url || null;
-      let schedule_url = target.schedule_url || null;
+      let facebook_url  = target.facebook_url  || null;
+      let tiktok_url    = target.tiktok_url    || null;
+      let schedule_url  = target.schedule_url  || null;
 
-      pageData.links.forEach((href: string) => {
+      for (const href of allLinks) {
         if (!instagram_url && href.includes('instagram.com') && !href.includes('/explore') && !href.includes('/p/')) {
           instagram_url = href;
         }
@@ -253,47 +266,23 @@ async function runIndexer() {
         if (!schedule_url && (href.includes('/schedule') || href.includes('/calendar') || href.includes('/hours'))) {
           schedule_url = href;
         }
-      });
+      }
 
-      // ── Photo Candidates (free harvest — no API cost) ─────────────────────
-      // Only collect if we don't already have photos
+      // ── Photo Candidates ───────────────────────────────────────────────────
       let candidate_photos: Record<string, any> | null = target.candidate_photos || null;
       if (!target.photos && !candidate_photos) {
         const candidateMap: Record<string, any> = {};
 
-        // Tier 1: OG image — site's intentional hero photo
-        const ogImage = await page.evaluate(() =>
-          document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null
-        ).catch(() => null);
-        if (ogImage && !ogImage.includes('placeholder') && !ogImage.includes('default')) {
-          candidateMap.og_image = ogImage;
-        }
+        if (ogImage) candidateMap.og_image = ogImage;
+        if (domImages.length > 0) candidateMap.dom_images = [...new Set(domImages)].slice(0, 3);
 
-        // Tier 2: DOM large images (naturalWidth >= 400, naturalHeight >= 300)
-        const domImages = await page.evaluate(() => {
-          return Array.from(document.querySelectorAll('img'))
-            .filter((img: any) => {
-              const w = img.naturalWidth || img.width || 0;
-              const h = img.naturalHeight || img.height || 0;
-              const src = (img.src || '').toLowerCase();
-              // Exclude icons, logos, tracking pixels, placeholder gifs
-              return w >= 400 && h >= 300 &&
-                !src.includes('logo') && !src.includes('icon') &&
-                !src.includes('pixel') && !src.includes('gif') &&
-                (src.startsWith('http') || src.startsWith('//'));
-            })
-            .map((img: any) => img.src)
-            .slice(0, 3);
-        }).catch(() => [] as string[]);
-        if (domImages.length > 0) candidateMap.dom_images = domImages;
-
-        // Tier 3: Street View Static (deterministic from lat/lng — free tier 25k/month)
+        // Street View Static (free tier — 25k/month)
         const MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_PLACES_API_KEY || '';
         if (target.lat && target.lng && MAPS_KEY) {
           candidateMap.street_view_url = `https://maps.googleapis.com/maps/api/streetview?size=800x600&location=${target.lat},${target.lng}&heading=auto&fov=80&key=${MAPS_KEY}`;
         }
 
-        // Tier 4: Facebook cover photo via OG (lightweight fetch — no browser)
+        // Facebook cover OG (lightweight fetch)
         if (facebook_url && facebook_url.includes('facebook.com')) {
           try {
             const fbRes = await fetch(facebook_url, {
@@ -303,23 +292,23 @@ async function runIndexer() {
             const fbHtml = await fbRes.text();
             const ogMatch = fbHtml.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/);
             if (ogMatch?.[1]) candidateMap.facebook_og = ogMatch[1];
-          } catch { /* Facebook fetch failed — non-critical */ }
+          } catch { /* non-critical */ }
         }
 
         if (Object.keys(candidateMap).length > 0) {
           candidate_photos = candidateMap;
-          console.log(`   📸 Photo candidates collected: ${Object.keys(candidateMap).join(', ')}`);
+          console.log(`   📸 Photo candidates: ${Object.keys(candidateMap).join(', ')}`);
         }
       }
 
-      // ── Log Result ────────────────────────────────────────────────────────
-      const hoursFound = Object.keys(opening_hours || {}).length;
-      const scheduleFound = adultNightSchedule ? Object.keys(adultNightSchedule).length : 0;
-      const eventsFound = special_events?.length || 0;
+      // ── Log Summary ────────────────────────────────────────────────────────
+      const hoursFound   = Object.keys(opening_hours || {}).length;
+      const schedFound   = adultNightSchedule ? Object.keys(adultNightSchedule).length : 0;
+      const eventsFound  = special_events?.length || 0;
       const pricingFound = Object.keys(pricing_data || {}).length;
-      console.log(`   ✓ Hours[${hoursFound}/7] AdultNight[${has_adult_night ? 'Y' : 'N'}, ${scheduleFound} days] Events[${eventsFound}] Pricing[${pricingFound}] Socials[IG:${instagram_url ? 'Y' : 'N'} FB:${facebook_url ? 'Y' : 'N'}] Photos[${candidate_photos ? Object.keys(candidate_photos).length : 0} candidates]`);
+      console.log(`   ✓ Hours[${hoursFound}/7] AdultNight[${has_adult_night ? 'Y' : 'N'}, ${schedFound}d] Events[${eventsFound}] Pricing[${pricingFound}] Socials[IG:${instagram_url ? 'Y' : 'N'} FB:${facebook_url ? 'Y' : 'N'}] Photos[${candidate_photos ? Object.keys(candidate_photos).length : 0}]`);
 
-      // ── Write to DB ───────────────────────────────────────────────────────
+      // ── Write to DB ────────────────────────────────────────────────────────
       const { error: updateError } = await supabase.from('skate_spots').update({
         // Social
         instagram_url,
@@ -335,16 +324,12 @@ async function runIndexer() {
         // Events & Pricing
         special_events,
         pricing_data,
-        // Photos (candidates written here; Photographer daemon downloads + uploads)
+        // Photos
         ...(candidate_photos ? { candidate_photos } : {}),
-        
-        // AI Metadata Dump
+        // AI dump
         ai_metadata: Object.keys(aiMetadata).length > 0 ? aiMetadata : (target.ai_metadata || null),
-
-        // Pipeline flags
-        // IMPORTANT: Never downgrade ENRICHED. ENRICHED + deep_crawled = still ENRICHED.
-        // Only promote IDENTITY_ESTABLISHED to INDEXED after deep crawl.
-        verification_status: target.verification_status === 'ENRICHED' ? 'ENRICHED' : 'INDEXED',
+        // Pipeline — IDENTITY_ESTABLISHED → INDEXED
+        verification_status: 'INDEXED',
         is_deep_crawled: true,
         retry_count: 0,
         last_attempted_at: new Date().toISOString()
@@ -361,6 +346,10 @@ async function runIndexer() {
       const delay = 30000;
       reportPulse(delay);
       await sleep(delay);
+    } finally {
+      if (browser) {
+        try { await (browser as any).close(); } catch (e) {}
+      }
     }
   }
 }
