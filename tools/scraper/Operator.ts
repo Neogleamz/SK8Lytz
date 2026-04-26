@@ -42,7 +42,7 @@ async function runOperator() {
   while (true) {
     let target: any = null;
     let browser: any = null;
-    let delay = await GHOST.getAdaptiveDelay('GOOGLE');
+    let delay = 8000 + Math.random() * 7000; // 8–15s — small business sites, no Google-level stealth needed
 
     try {
       const configRes = await fetch('http://localhost:5999/api/priority-states').then(r => r.json()).catch(() => ({ priority_states: [] }));

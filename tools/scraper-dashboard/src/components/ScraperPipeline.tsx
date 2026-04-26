@@ -142,24 +142,18 @@ export const ScraperPipeline: React.FC<{
                 data.push(['verification_status', val(spot.verification_status, 'PENDING'),                           ok(spot.verification_status)]);
                 data.push(['created_at',       spot.created_at ? new Date(spot.created_at).toLocaleDateString() : 'NOW', 'val']);
 
-            } else if (phaseId === 2) { // ── CRAWL: Website deep crawl ──
+            } else if (phaseId === 2) { // ── SPIDER: Website link discovery output ──
+                const links = spot.candidate_links ? Object.keys(spot.candidate_links) : [];
+                data.push(['city',             val(spot.city),                                                        ok(spot.city)]);
+                data.push(['state',            val(spot.state),                                                       ok(spot.state)]);
                 data.push(['website',          val(spot.website),                                                     ok(spot.website)]);
-                data.push(['is_deep_crawled',  bool(spot.is_deep_crawled),                                            boolOk(spot.is_deep_crawled)]);
-                data.push(['operator_name',    val(spot.operator_name),                                               ok(spot.operator_name)]);
-                data.push(['operator_desc',    spot.operator_description ? `${String(spot.operator_description).slice(0, 30)}…` : 'NULL', ok(spot.operator_description)]);
-                data.push(['opening_hours',    spot.opening_hours ? 'PARSED' : 'NULL',                                boolOk(spot.opening_hours)]);
-                data.push(['schedule_url',     spot.schedule_url ? 'FOUND' : 'NULL',                                  boolOk(spot.schedule_url)]);
-                data.push(['has_fee',          bool(spot.has_fee),                                                    'val']);
-                data.push(['pricing_data',     spot.pricing_data ? 'EXTRACTED' : 'NULL',                              boolOk(spot.pricing_data)]);
-                data.push(['facebook_url',     spot.facebook_url ? 'FOUND' : 'NULL',                                  boolOk(spot.facebook_url)]);
-                data.push(['instagram_url',    spot.instagram_url ? 'FOUND' : 'NULL',                                 boolOk(spot.instagram_url)]);
-                data.push(['tiktok_url',       spot.tiktok_url ? 'FOUND' : 'NULL',                                    boolOk(spot.tiktok_url)]);
-                data.push(['socials',          spot.socials ? `${Object.keys(spot.socials).length} platforms` : '0', boolOk(spot.socials)]);
-                data.push(['special_events',   spot.special_events ? 'DETECTED' : 'NULL',                             boolOk(spot.special_events)]);
-                data.push(['raw_kp',           spot.raw_knowledge_panel ? 'CAPTURED' : 'NULL',                        boolOk(spot.raw_knowledge_panel)]);
-                data.push(['photo_candidates', spot.candidate_photos ? `${Array.isArray(spot.candidate_photos) ? spot.candidate_photos.length : '?'} imgs` : '0', boolOk(spot.candidate_photos)]);
-                data.push(['last_attempted',   spot.last_attempted_at ? new Date(spot.last_attempted_at).toLocaleDateString() : 'NEVER', 'val']);
+                data.push(['status',           val(spot.verification_status, 'ENRICHED'),                             ok(spot.verification_status)]);
+                data.push(['links_found',      links.length > 0 ? `${links.length} pages` : '0',                     links.length > 0 ? 'success' : 'missing']);
+                data.push(['link_keys',        links.length > 0 ? links.slice(0, 4).join(', ') : 'none',             links.length > 0 ? 'success' : 'missing']);
+                data.push(['root',             spot.candidate_links?.root ? spot.candidate_links.root.slice(0, 28) + '…' : 'NULL', ok(spot.candidate_links?.root)]);
                 data.push(['retry_count',      val(spot.retry_count, '0'),                                            spot.retry_count > 2 ? 'missing' : 'val']);
+                data.push(['last_spidered',    spot.last_attempted_at ? new Date(spot.last_attempted_at).toLocaleString() : 'NEVER', 'val']);
+
 
             } else if (phaseId === 3) { // ── DETECTIVE: Llama-3.2 AI extraction ──
                 data.push(['surface_type',     val(spot.surface_type, 'UNKNOWN'),                                     ok(spot.surface_type)]);
