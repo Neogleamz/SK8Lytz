@@ -16,12 +16,12 @@ interface PatternPickerTabProps {
   Colors: any;
 }
 
-const CATEGORIES = ['Solid', 'Rainbow', 'Sparkle', 'Chase', 'Marquee', 'Wave', 'Breathe', 'All'];
+const CATEGORIES = ['Solid', 'Rainbow', 'Sparkle', 'Chase', 'Marquee', 'Wave', 'Breathe'];
 
 export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
   selectedEffectId, fgColor, bgColor, speed, brightness, points, direction, onSelect, Colors
 }) => {
-  const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [activeCategory, setActiveCategory] = useState<string>('Solid');
 
   // ── Viewport gate (v3 — perf hardened) ────────────────────────────────────
   // Gate starts CLOSED: visibleIds begins as empty Set so ZERO cards animate
@@ -60,7 +60,6 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
 
   const filteredTemplates = SK8LYTZ_TEMPLATES.filter((effect) => {
     if (effect.group === 'Street') return false;
-    if (activeCategory === 'All') return true;
     return effect.group === activeCategory;
   });
 

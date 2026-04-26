@@ -72,12 +72,16 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
         {/* Glassmorphism Refraction */}
         <View style={styles.cardRefraction} />
 
-        {/* Header row: ID badge + FG/BG dots */}
+        {/* Single header row: Name + FG/BG dots */}
         <View style={styles.cardHeader}>
-          <View style={[styles.idBadge, isSelected && { backgroundColor: '#00F0FF' }]}>
-            <Text style={[styles.idText, isSelected && { color: '#000' }]}>{effect.id}</Text>
-          </View>
-          <View style={{ flexDirection: 'row', gap: Spacing.xxs }}>
+          <Text
+            style={[styles.effectName, isSelected && { color: '#00F0FF' }]}
+            numberOfLines={1}
+            allowFontScaling={false}
+          >
+            {effect.name}
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 3 }}>
             {effect.requiresForeground && (
               <View style={[styles.capDot, { backgroundColor: fgColor, borderColor: 'rgba(255,255,255,0.3)' }]} />
             )}
@@ -86,15 +90,6 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
             )}
           </View>
         </View>
-
-        {/* Effect name */}
-        <Text
-          style={[styles.effectName, isSelected && { color: '#00F0FF' }]}
-          numberOfLines={2}
-          allowFontScaling={false}
-        >
-          {effect.name}
-        </Text>
 
         {/* Live LED strip preview using PatternEngine */}
         <View style={styles.stripWrapper}>
@@ -106,8 +101,8 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
             speed={speed}
             brightness={brightness}
             direction={effect.supportsDirection ? (direction as 0 | 1) : 1}
-            autoPlay={autoPlay}  // ← visibility-gated from PatternPickerTab scroll tracker
-            height={9}
+            autoPlay={autoPlay}
+            height={8}
           />
         </View>
       </TouchableOpacity>
@@ -118,49 +113,36 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
 const styles = StyleSheet.create({
   effectCard: {
     backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.08)',
-    padding: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 6,
     overflow: 'hidden',
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
-  },
-  idBadge: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 6,
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: 1,
-    minWidth: 22,
-    alignItems: 'center',
-  },
-  idText: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 9,
-    fontWeight: '900',
+    marginBottom: 4,
   },
   capDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
     borderWidth: 1,
   },
   effectName: {
     color: 'rgba(255,255,255,0.85)',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
-    lineHeight: 14,
-    marginBottom: Spacing.xs,
-    minHeight: 28,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+    flex: 1,
+    marginRight: 4,
   },
   stripWrapper: {
-    height: 9,
-    borderRadius: 5,
+    height: 8,
+    borderRadius: 4,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
@@ -175,4 +157,3 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '45deg' }],
   },
 });
-
