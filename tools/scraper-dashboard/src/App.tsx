@@ -656,107 +656,116 @@ function App() {
       statusActive: true },
   ];
 
+  const headerControls = (
+    <>
+      {/* Logo */}
+      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, flexShrink: 0, marginRight: '6px' }}>
+        <span style={{ fontSize: '0.95rem', fontWeight: 900, background: 'linear-gradient(90deg,#8a2be2,#e91e63)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.02em' }}>SK8Lytz</span>
+        <span style={{ fontSize: '0.52rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>SK8Spotz</span>
+      </div>
+      <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+      {/* Daemon pills */}
+      {[
+        { id: 'indexer',      label: 'Detective',    color: '#ff5a00', onKey: 'Indexer: online' },
+        { id: 'photographer', label: 'Photographer', color: '#e91e63', onKey: 'Photographer: online' },
+      ].map(d => {
+        const isOn = status?.currentTarget?.includes(d.onKey);
+        return (
+          <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: isOn ? `${d.color}12` : 'rgba(255,255,255,0.03)', padding: '3px 8px', borderRadius: '20px', border: `1px solid ${isOn ? d.color + '55' : 'rgba(255,255,255,0.08)'}`, flexShrink: 0 }}>
+            <div className={`status-dot ${isOn ? 'online' : 'offline'}`} style={{ background: isOn ? d.color : '', boxShadow: isOn ? `0 0 5px ${d.color}` : '', width: '6px', height: '6px' }} />
+            <span style={{ fontSize: '0.6rem', color: isOn ? d.color : 'rgba(255,255,255,0.25)', fontWeight: 700 }}>{d.label.toUpperCase()}</span>
+            <button onClick={() => triggerSpecificDaemon(d.id, isOn ? 'stop' : 'start')}
+              style={{ fontSize: '0.58rem', fontWeight: 800, padding: '1px 5px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: isOn ? 'rgba(255,60,60,0.25)' : `${d.color}33`, color: isOn ? '#ff6b6b' : d.color }}>
+              {isOn ? 'STOP' : 'GO'}
+            </button>
+          </div>
+        );
+      })}
+      <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+      {/* Active Region chips */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+        <span style={{ fontSize: '0.56rem', fontWeight: 800, color: '#8a2be2', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Region:</span>
+        <button onClick={() => setPriorityStates([])}
+          style={{ fontSize: '0.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+            background: stateOverride.length === 0 ? '#8a2be2' : 'rgba(255,255,255,0.06)',
+            color: stateOverride.length === 0 ? '#fff' : 'rgba(255,255,255,0.3)' }}>ALL</button>
+        {stateOverride.map(st => (
+          <button key={st} onClick={() => togglePriorityState(st)}
+            style={{ fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#8a2be2', color: '#fff' }}
+          >{st} x</button>
+        ))}
+        <button
+          onClick={() => { const s = prompt('State (2-letter):'); if (s && s.trim().length >= 2) togglePriorityState(s.trim().toUpperCase().slice(0, 2)); }}
+          style={{ fontSize: '0.58rem', padding: '2px 5px', borderRadius: '10px', border: '1px dashed rgba(138,43,226,0.4)', background: 'transparent', color: '#8a2be2', cursor: 'pointer' }}>+</button>
+      </div>
+      <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+      {/* Stealth toggles */}
+      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', flexShrink: 0 }}>
+        <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700 }}>Headless</span>
+        <label className="switch mini"><input type="checkbox" checked={isHeadless} onChange={e => toggleHeadless(e.target.checked)} /><span className="slider round" /></label>
+      </label>
+      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', flexShrink: 0 }}>
+        <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700 }}>Spoof</span>
+        <label className="switch mini"><input type="checkbox" checked={identityRotation} onChange={e => updateGlobalStrategy('identity_rotation_enabled', e.target.checked)} /><span className="slider round" /></label>
+      </label>
+      <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+      {/* Timing */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+        <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.3)' }}>Cooldown</span>
+        <input type="number" className="mini-input" style={{ width: '58px' }} value={cooldownBase} onChange={e => updateGlobalStrategy('cooldown_base_ms', parseInt(e.target.value))} />
+        <span style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.18)' }}>ms</span>
+        <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.3)', marginLeft: '3px' }}>Jitter</span>
+        <input type="number" className="mini-input" style={{ width: '40px' }} value={cooldownJitter} onChange={e => updateGlobalStrategy('cooldown_jitter_pct', parseInt(e.target.value))} />
+        <span style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.18)' }}>%</span>
+        <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.3)', marginLeft: '3px' }}>Throttle</span>
+        <input type="number" className="mini-input" style={{ width: '58px' }} value={sleepInterval} onChange={e => updateGlobalStrategy('sleep_interval', parseInt(e.target.value))} />
+        <span style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.18)' }}>ms</span>
+      </div>
+      {/* Power — pushed right */}
+      <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', flexShrink: 0 }}>
+        <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}
+          style={{ padding: '4px 12px', fontSize: '0.62rem', fontWeight: 800 }}>BOOT ALL</button>
+        <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}
+          style={{ padding: '4px 12px', fontSize: '0.62rem', fontWeight: 800 }}>HALT ALL</button>
+      </div>
+    </>
+  );
+
   return (
     <div className="dashboard-container">
       {/* ======= COMPACT STICKY COMMAND BAR ======= */}
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', padding: '8px 20px', background: 'rgba(12,12,20,0.97)', borderBottom: '1px solid rgba(138,43,226,0.2)', position: 'sticky', top: 0, zIndex: 50, backdropFilter: 'blur(10px)' }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, flexShrink: 0, marginRight: '6px' }}>
-          <span style={{ fontSize: '0.95rem', fontWeight: 900, background: 'linear-gradient(90deg,#8a2be2,#e91e63)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.02em' }}>SK8Lytz</span>
-          <span style={{ fontSize: '0.52rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>SK8Spotz</span>
+      {activeTab !== 'pipeline' && (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', padding: '8px 20px', background: 'rgba(12,12,20,0.97)', borderBottom: '1px solid rgba(138,43,226,0.2)', position: 'sticky', top: 0, zIndex: 50, backdropFilter: 'blur(10px)' }}>
+          {headerControls}
         </div>
-        <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
-        {/* Daemon pills */}
-        {[
-          { id: 'indexer',      label: 'Detective',    color: '#ff5a00', onKey: 'Indexer: online' },
-          { id: 'photographer', label: 'Photographer', color: '#e91e63', onKey: 'Photographer: online' },
-        ].map(d => {
-          const isOn = status?.currentTarget?.includes(d.onKey);
-          return (
-            <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: isOn ? `${d.color}12` : 'rgba(255,255,255,0.03)', padding: '3px 8px', borderRadius: '20px', border: `1px solid ${isOn ? d.color + '55' : 'rgba(255,255,255,0.08)'}`, flexShrink: 0 }}>
-              <div className={`status-dot ${isOn ? 'online' : 'offline'}`} style={{ background: isOn ? d.color : '', boxShadow: isOn ? `0 0 5px ${d.color}` : '', width: '6px', height: '6px' }} />
-              <span style={{ fontSize: '0.6rem', color: isOn ? d.color : 'rgba(255,255,255,0.25)', fontWeight: 700 }}>{d.label.toUpperCase()}</span>
-              <button onClick={() => triggerSpecificDaemon(d.id, isOn ? 'stop' : 'start')}
-                style={{ fontSize: '0.58rem', fontWeight: 800, padding: '1px 5px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: isOn ? 'rgba(255,60,60,0.25)' : `${d.color}33`, color: isOn ? '#ff6b6b' : d.color }}>
-                {isOn ? 'STOP' : 'GO'}
-              </button>
-            </div>
-          );
-        })}
-        <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
-        {/* Active Region chips */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-          <span style={{ fontSize: '0.56rem', fontWeight: 800, color: '#8a2be2', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Region:</span>
-          <button onClick={() => setPriorityStates([])}
-            style={{ fontSize: '0.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-              background: stateOverride.length === 0 ? '#8a2be2' : 'rgba(255,255,255,0.06)',
-              color: stateOverride.length === 0 ? '#fff' : 'rgba(255,255,255,0.3)' }}>ALL</button>
-          {stateOverride.map(st => (
-            <button key={st} onClick={() => togglePriorityState(st)}
-              style={{ fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#8a2be2', color: '#fff' }}
-            >{st} x</button>
-          ))}
-          <button
-            onClick={() => { const s = prompt('State (2-letter):'); if (s && s.trim().length >= 2) togglePriorityState(s.trim().toUpperCase().slice(0, 2)); }}
-            style={{ fontSize: '0.58rem', padding: '2px 5px', borderRadius: '10px', border: '1px dashed rgba(138,43,226,0.4)', background: 'transparent', color: '#8a2be2', cursor: 'pointer' }}>+</button>
-        </div>
-        <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
-        {/* Stealth toggles */}
-        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', flexShrink: 0 }}>
-          <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700 }}>Headless</span>
-          <label className="switch mini"><input type="checkbox" checked={isHeadless} onChange={e => toggleHeadless(e.target.checked)} /><span className="slider round" /></label>
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', flexShrink: 0 }}>
-          <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700 }}>Spoof</span>
-          <label className="switch mini"><input type="checkbox" checked={identityRotation} onChange={e => updateGlobalStrategy('identity_rotation_enabled', e.target.checked)} /><span className="slider round" /></label>
-        </label>
-        <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
-        {/* Timing */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-          <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.3)' }}>Cooldown</span>
-          <input type="number" className="mini-input" style={{ width: '58px' }} value={cooldownBase} onChange={e => updateGlobalStrategy('cooldown_base_ms', parseInt(e.target.value))} />
-          <span style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.18)' }}>ms</span>
-          <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.3)', marginLeft: '3px' }}>Jitter</span>
-          <input type="number" className="mini-input" style={{ width: '40px' }} value={cooldownJitter} onChange={e => updateGlobalStrategy('cooldown_jitter_pct', parseInt(e.target.value))} />
-          <span style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.18)' }}>%</span>
-          <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.3)', marginLeft: '3px' }}>Throttle</span>
-          <input type="number" className="mini-input" style={{ width: '58px' }} value={sleepInterval} onChange={e => updateGlobalStrategy('sleep_interval', parseInt(e.target.value))} />
-          <span style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.18)' }}>ms</span>
-        </div>
-        {/* Power — pushed right */}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', flexShrink: 0 }}>
-          <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}
-            style={{ padding: '4px 12px', fontSize: '0.62rem', fontWeight: 800 }}>BOOT ALL</button>
-          <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}
-            style={{ padding: '4px 12px', fontSize: '0.62rem', fontWeight: 800 }}>HALT ALL</button>
-        </div>
-      </div>
-
+      )}
 
       {/* =========== 6-PHASE UNIFORM PIPELINE GRID =========== */}
-      <div className="pipeline-grid fade-in">
-         {PIPELINE_PHASES.map((phase) => (
-            <div 
-               key={phase.id} 
-               className={`pipeline-card ${activeTab === phase.route ? 'active' : ''}`}
-               onClick={() => setActiveTab(phase.route as any)}
-               style={{ borderTop: `4px solid ${phase.color}` }}
-            >
-               <div className="pipeline-card-header">
-                  <span className="phase-id">Phase {phase.id}</span>
-                  <div className={`status-dot ${phase.statusActive ? 'online' : 'offline'}`}></div>
-               </div>
-               <h3 style={{ color: phase.color }}>{phase.title}</h3>
-               <p className="phase-sub">{phase.sub}</p>
-               <p className="phase-target">{phase.target}</p>
-               
-               <div className="mini-stat-box" style={{marginTop: 'auto'}}>
-                  <span className="stat-label">{phase.metricLabel}</span>
-                  <div className="stat-value" style={{ color: phase.color }}>{phase.metric?.toLocaleString()}</div>
-               </div>
-            </div>
-         ))}
-      </div>
+      {activeTab !== 'pipeline' && (
+        <div className="pipeline-grid fade-in">
+           {PIPELINE_PHASES.map((phase) => (
+              <div 
+                 key={phase.id} 
+                 className={`pipeline-card ${activeTab === phase.route ? 'active' : ''}`}
+                 onClick={() => setActiveTab(phase.route as any)}
+                 style={{ borderTop: `4px solid ${phase.color}` }}
+              >
+                 <div className="pipeline-card-header">
+                    <span className="phase-id">Phase {phase.id}</span>
+                    <div className={`status-dot ${phase.statusActive ? 'online' : 'offline'}`}></div>
+                 </div>
+                 <h3 style={{ color: phase.color }}>{phase.title}</h3>
+                 <p className="phase-sub">{phase.sub}</p>
+                 <p className="phase-target">{phase.target}</p>
+                 
+                 <div className="mini-stat-box" style={{marginTop: 'auto'}}>
+                    <span className="stat-label">{phase.metricLabel}</span>
+                    <div className="stat-value" style={{ color: phase.color }}>{phase.metric?.toLocaleString()}</div>
+                 </div>
+              </div>
+           ))}
+        </div>
+      )}
 
       {/* ======= REGION PULSE: live per-phase breakdown ======= */}
       {pipelineStats && (() => {
@@ -848,7 +857,7 @@ function App() {
         {/* =========== PHASE 0: UNIFIED PIPELINE =========== */}
         {activeTab === 'pipeline' && (
           <div className="tab-pane pipeline fade-in">
-             <ScraperPipeline />
+             <ScraperPipeline headerControls={headerControls} pipelineStats={pipelineStats} phaseQueues={phaseQueues} />
           </div>
         )}
 

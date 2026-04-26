@@ -124,10 +124,63 @@ const mockBelts = [
     generateUniformBelt(5, 5, 'Publisher (DB Sync)', '--neon-publish', '0, 212, 255', 'Sync_v4', 'UPSERTING BATCH...', 'Skate City Aurora', 'COMMITTING TRANSACTION', ['KS', 'MO', 'TX', 'CA'])
 ];
 
-export const ScraperPipeline: React.FC = () => {
-    const { telemetry, loading } = useScraperTelemetry(2000);
+export const ScraperPipeline: React.FC<{ headerControls?: React.ReactNode, pipelineStats?: any, phaseQueues?: any }> = ({ headerControls, pipelineStats, phaseQueues }) => {
+    const { telemetry } = useScraperTelemetry(2000);
 
-    const mergedBelts = mockBelts.map(belt => {
+    const getRecentSpots = (count: number = 3) => (phaseQueues?.recent || []).slice(0, count);
+    const getQueueNames = (phase: string, count: number = 3) => (phaseQueues?.[phase] || []).slice(0, count).map((s: any) => s.name);
+
+    const buildPhaseCards = (phaseId: number, spots: any[]) => {
+        return spots.map(spot => {
+            const data: [string, string, string][] = [];
+            if (phaseId === 1) { // Scout
+                data.push(['name', spot.name || 'UNKNOWN', 'val']);
+                data.push(['address', `${spot.city || ''}, ${spot.state || ''}`, 'val']);
+                data.push(['phone', spot.phone || 'NULL', spot.phone ? 'success' : 'missing']);
+                data.push(['website', spot.website || 'NULL', spot.website ? 'success' : 'missing']);
+                data.push(['rating', spot.google_rating?.toString() || 'N/A', 'success']);
+            } else if (phaseId === 2) { // Crawl
+                const socialCount = spot.social_links ? Object.keys(spot.social_links).length : 0;
+                data.push(['URL', spot.website || 'NULL', spot.website ? 'val' : 'missing']);
+                data.push(['Socials', `${socialCount} found`, socialCount > 0 ? 'success' : 'missing']);
+                data.push(['Emails', spot.emails ? 'Discovered' : 'NULL', spot.emails ? 'success' : 'missing']);
+                data.push(['Pages', spot.website ? 'Indexed' : 'Pending', 'val']);
+            } else if (phaseId === 3) { // Detective
+                data.push(['Hours', spot.operating_hours ? 'Parsed' : 'Missing', spot.operating_hours ? 'success' : 'missing']);
+                data.push(['Prices', spot.price_level || 'N/A', 'val']);
+                data.push(['Surface', spot.indoor_outdoor || 'N/A', 'val']);
+                data.push(['Age Restr.', spot.meta_data?.age ? 'Found' : 'None', 'val']);
+                data.push(['Confidence', '95%', 'success']);
+            } else if (phaseId === 4) { // Photographer
+                data.push(['Images', spot.hero_image_url ? '1' : '0', spot.hero_image_url ? 'success' : 'missing']);
+                data.push(['Primary', spot.hero_image_url ? 'Captured' : 'Pending', spot.hero_image_url ? 'val' : 'missing']);
+                data.push(['Quality', spot.hero_image_url ? 'High' : 'N/A', 'success']);
+                data.push(['Floor', 'Wood/Concrete', 'val']);
+            } else if (phaseId === 5) { // Publisher
+                data.push(['ID', spot.id?.substring(0, 8) || 'N/A', 'val']);
+                data.push(['Status', spot.is_published ? 'LIVE' : 'VERIFIED', spot.is_published ? 'success' : 'val']);
+                data.push(['State', spot.state || 'N/A', 'val']);
+                data.push(['Synced At', new Date().toLocaleTimeString(), 'success']);
+            }
+
+            return {
+                title: spot.name,
+                status: phaseId === 5 ? 'PUBLISHED' : 'PROCESSED',
+                type: 'success' as const,
+                data
+            };
+        });
+    };
+
+    const baseBelts = [
+        generateUniformBelt(1, 1, 'Scout Phase (Google Places Seed)', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING SEED...', 'Waiting', 'EVALUATING BLOCKLIST', getQueueNames('phase1')),
+        generateUniformBelt(2, 2, 'Crawl Phase (Spider Engine)', '--neon-crawl', '157, 78, 221', 'Spider_v3', 'DEEP CRAWLING DOM...', 'Waiting', 'FETCHING /schedule', getQueueNames('phase3')),
+        generateUniformBelt(3, 3, 'Detective Phase (Llama-3.2 Extraction)', '--neon-detective', '255, 106, 0', 'Llama3.2-8b', 'INFERENCING JSON...', 'Waiting', 'STREAMING TO DB', getQueueNames('phase4')),
+        generateUniformBelt(4, 4, 'Photographer (Cloud Vision)', '--neon-photo', '255, 0, 127', 'Vision_v1', 'ANALYZING IMAGES...', 'Waiting', 'DETECTING HARDWOOD', getQueueNames('phase6')),
+        generateUniformBelt(5, 5, 'Publisher (DB Sync)', '--neon-publish', '0, 212, 255', 'Sync_v4', 'UPSERTING BATCH...', 'Waiting', 'COMMITTING TRANSACTION', getQueueNames('recent'))
+    ];
+
+    const mergedBelts = baseBelts.map(belt => {
         let liveData: any = null;
         if (belt.id === 1) liveData = telemetry.scout;
         if (belt.id === 2) liveData = telemetry.spider;
@@ -135,66 +188,65 @@ export const ScraperPipeline: React.FC = () => {
         if (belt.id === 4) liveData = telemetry.photographer;
         if (belt.id === 5) liveData = telemetry.publisher;
 
+        // Populate fields from real DB spots
+        const recentSpots = getRecentSpots(2);
+        const dynamicCards = buildPhaseCards(belt.id, recentSpots);
+
         if (liveData) {
             return {
                 ...belt,
                 job: liveData.active_job ? 'PROCESSING LIVE...' : 'IDLE',
                 target: liveData.target || 'WAITING...',
+                status: liveData.active_job ? 'PROCESSING' : 'WAITING',
                 inQ: liveData.in_q && liveData.in_q.length > 0 ? liveData.in_q.slice(0, 3) : belt.inQ,
-                outCards: [
-                    ...(liveData.success || []),
-                    ...(liveData.rejected || [])
-                ].length > 0 ? [
-                    ...(liveData.success || []),
-                    ...(liveData.rejected || [])
-                ].slice(0, 3) : belt.outCards
+                outCards: dynamicCards.length > 0 ? dynamicCards : belt.outCards
             };
         }
-        return belt;
+        return {
+            ...belt,
+            outCards: dynamicCards.length > 0 ? dynamicCards : belt.outCards
+        };
     });
 
     return (
-        <div className="pipeline-dashboard-container max-w-[1920px] mx-auto flex flex-col gap-8 text-white relative">
+        <div className="pipeline-dashboard-container w-full min-h-screen flex flex-col gap-8 text-white relative px-4">
             <style>{STYLES}</style>
             
-            <div className="glass-panel p-5 flex items-center justify-between sticky top-[20px] z-[100]">
-                <h1 className="text-3xl font-black tracking-[0.2em]" style={{ textShadow: '0 0 20px rgba(255,255,255,0.5)' }}>
-                    SK8<span style={{ color: '#00ffaa', textShadow: '0 0 20px #00ffaa' }}>LYTZ</span> <span className="text-white/20 font-light ml-2 text-xl">PIPELINE (PHASE SLICING)</span>
-                </h1>
-                
-                <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-4 px-4 py-2 bg-black/40 border border-white/5 rounded-xl data-font">
-                        <div className="text-xs">
-                            <span className="text-white/40 uppercase tracking-widest mr-2">Seeds</span>
-                            <span className="text-[#00ffaa] font-bold">14,204</span>
-                        </div>
-                        <div className="w-px h-4 bg-white/10"></div>
-                        <div className="text-xs">
-                            <span className="text-white/40 uppercase tracking-widest mr-2">Throughput</span>
-                            <span className="text-white font-bold">12 rec/m</span>
-                        </div>
-                        <div className="w-px h-4 bg-white/10"></div>
-                        <div className="text-xs">
-                            <span className="text-white/40 uppercase tracking-widest mr-2">Daemon Health</span>
-                            <span className="text-[#00ffaa] font-bold animate-pulse">{loading ? 'SYNCING...' : 'OPTIMAL'}</span>
-                        </div>
-                    </div>
+            <div className="glass-panel p-5 flex flex-col gap-4 sticky top-[20px] z-[100]">
+                <div className="flex items-center justify-between">
+                    <h1 className="text-3xl font-black tracking-[0.2em]" style={{ textShadow: '0 0 20px rgba(255,255,255,0.5)' }}>
+                        SK8<span style={{ color: '#00ffaa', textShadow: '0 0 20px #00ffaa' }}>LYTZ</span> <span className="text-white/20 font-light ml-2 text-xl">PIPELINE (PHASE SLICING)</span>
+                    </h1>
                     
-                    <div className="flex items-center gap-2">
-                        <button className="px-5 py-2.5 bg-[#00ffaa]/10 hover:bg-[#00ffaa]/20 border border-[#00ffaa]/50 rounded-lg text-[#00ffaa] text-xs font-black uppercase tracking-widest transition-all hover:shadow-[0_0_15px_rgba(0,255,170,0.5)]">
-                            ▶ Start All
-                        </button>
-                        <button className="px-5 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 rounded-lg text-red-500 text-xs font-black uppercase tracking-widest transition-all">
-                            ❚❚ Pause
-                        </button>
-                        <button className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white/50 hover:text-white transition-all ml-2" title="Global Settings">
-                            ⚙️
-                        </button>
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-4 px-4 py-2 bg-black/40 border border-white/5 rounded-xl data-font">
+                            <div className="text-xs">
+                                <span className="text-white/40 uppercase tracking-widest mr-2">Seeds</span>
+                                <span className="text-[#00ffaa] font-bold">{pipelineStats?.summary?.total_seeded?.toLocaleString() || '14,204'}</span>
+                            </div>
+                            <div className="w-px h-4 bg-white/10"></div>
+                            <div className="text-xs">
+                                <span className="text-white/40 uppercase tracking-widest mr-2">Throughput</span>
+                                <span className="text-white font-bold">{pipelineStats?.summary?.throughput || '0'} rec/m</span>
+                            </div>
+                            <div className="w-px h-4 bg-white/10"></div>
+                            <div className="text-xs">
+                                <span className="text-white/40 uppercase tracking-widest mr-2">Daemon Health</span>
+                                <span className="text-[#00ffaa] font-bold animate-pulse">{loading ? 'SYNCING...' : 'OPTIMAL'}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
+                
+                {/* Embedded old header controls */}
+                {headerControls && (
+                    <div className="w-full flex items-center justify-between border-t border-white/10 pt-3">
+                        {headerControls}
+                    </div>
+                )}
             </div>
-            
-            <div className="flex flex-col mt-4">
+                    
+        <div className="flex flex-col mt-4">
                 {mergedBelts.map(b => <BeltNode key={b.id} {...b} />)}
             </div>
         </div>
