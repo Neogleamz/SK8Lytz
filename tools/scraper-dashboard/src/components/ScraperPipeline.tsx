@@ -269,20 +269,20 @@ export const ScraperPipeline: React.FC<{
         const inQCount = liveData?.in_q?.length ?? 0;
         const countBadges: {label: string; value: string}[] = [];
         if (belt.id === 1) {
-            countBadges.push({ label: 'OUT', value: `${(pipelineStats?.seededCount ?? 0).toLocaleString()} SEEDED` });
+            countBadges.push({ label: 'OUT', value: `${(pipelineStats?.summary?.seeded ?? 0).toLocaleString()} SEEDED` });
         } else if (belt.id === 2) {
-            countBadges.push({ label: 'IN', value: `${(pipelineStats?.seededCount ?? 0).toLocaleString()} SEEDED` });
-            const done = (pipelineStats?.enrichedCount ?? 0) + (pipelineStats?.deepCrawledCount ?? 0) + (pipelineStats?.mediaReadyCount ?? 0) + (pipelineStats?.publishedCount ?? 0);
+            countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.seeded ?? 0).toLocaleString()} SEEDED` });
+            const done = (pipelineStats?.summary?.enriched ?? 0) + (pipelineStats?.summary?.deep_crawled_count ?? 0) + (pipelineStats?.summary?.media_ready ?? 0) + (pipelineStats?.summary?.published ?? 0);
             countBadges.push({ label: 'DONE', value: `${done.toLocaleString()} SPIDERED` });
         } else if (belt.id === 3) {
-            countBadges.push({ label: 'IN', value: `${(pipelineStats?.enrichedCount ?? 0)} ENRICHED` });
-            countBadges.push({ label: 'OUT', value: `${(pipelineStats?.deepCrawledCount ?? 0)} DEEP_CRAWLED` });
+            countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.enriched ?? 0)} ENRICHED` });
+            countBadges.push({ label: 'OUT', value: `${(pipelineStats?.summary?.deep_crawled_count ?? 0)} DEEP_CRAWLED` });
         } else if (belt.id === 4) {
-            countBadges.push({ label: 'IN', value: `${(pipelineStats?.deepCrawledCount ?? 0)} DEEP_CRAWLED` });
-            countBadges.push({ label: 'OUT', value: `${(pipelineStats?.mediaReadyCount ?? 0)} MEDIA_READY` });
+            countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.deep_crawled_count ?? 0)} DEEP_CRAWLED` });
+            countBadges.push({ label: 'OUT', value: `${(pipelineStats?.summary?.media_ready ?? 0)} MEDIA_READY` });
         } else if (belt.id === 5) {
-            countBadges.push({ label: 'IN', value: `${(pipelineStats?.mediaReadyCount ?? 0)} MEDIA_READY` });
-            countBadges.push({ label: 'PUB', value: `${(pipelineStats?.publishedCount ?? 0)} PUBLISHED` });
+            countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.media_ready ?? 0)} MEDIA_READY` });
+            countBadges.push({ label: 'PUB', value: `${(pipelineStats?.summary?.published ?? 0)} PUBLISHED` });
         }
 
         if (liveData) {
