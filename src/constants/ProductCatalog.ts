@@ -47,7 +47,7 @@ export const LOCAL_PRODUCT_CATALOG: ProductProfile[] = [
     vizBlobDiameterMm: 7.6,
     vizBaseWidth: 60,
     vizBaseHeight: 90,
-    vizIsMirrored: true,
+    vizIsMirrored: false, // HALOZ: hardware auto-mirrors to seg2. Software must NOT mirror additionally (causes 4-dot artifact via applySymmetry/mirroredFract ping-pong).
     batteryCapacityMilliAmpereHour: 1200,
     vizThemeColor: '#00C8FF',
     brandIcon: 'circle-double',
