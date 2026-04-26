@@ -75,21 +75,21 @@ const STYLES = `
 .pipeline-dashboard-container .map-svg path.active { fill: var(--col-color); fill-opacity: 0.4; stroke-opacity: 1; }
 .pipeline-dashboard-container .belt-wrapper { display: flex; gap: 20px; align-items: stretch; position: relative; padding: 20px 0; border-bottom: 1px dashed rgba(255,255,255,0.05); }
 .pipeline-dashboard-container .belt-flow-area { flex: 1; overflow: hidden; position: relative; display: flex; flex-direction: column; }
-\`;
+`;
 
 // Uniform data generation to ensure every belt has exactly 2 pending, 2 success, 1 rejected
 const generateUniformBelt = (idx: number, id: number, name: string, color: string, rgb: string, daemon: string, job: string, target: string, status: string, states: string[]) => ({
   id, name, color, rgb, activeStates: states, job, daemon, target, status,
-  inQ: [\`Query: Batch \${idx}A\`, \`Query: Batch \${idx}B\`],
+  inQ: [`Query: Batch ${idx}A`, `Query: Batch ${idx}B`],
   gatekeeper: ['MUST BE ESTABLISHMENT', 'NOT IN BLOCKLIST'],
   attempting: [
       ['name', 'done'], ['address', 'done'], ['phone', 'done'], ['website', 'fail'], ['rating', 'done']
   ] as [string, string][],
   outCards: [
       {
-          title: \`Target \${idx} Alpha\`, status: 'PROCESSED', type: 'success' as const,
+          title: `Target ${idx} Alpha`, status: 'PROCESSED', type: 'success' as const,
           data: [
-              ['name', \`Target \${idx} Alpha\`, 'val'],
+              ['name', `Target ${idx} Alpha`, 'val'],
               ['address', '1000 Main St', 'val'],
               ['phone', '555-0100', 'success'],
               ['website', 'NULL', 'missing'],
@@ -97,9 +97,9 @@ const generateUniformBelt = (idx: number, id: number, name: string, color: strin
           ] as [string, string, string][]
       },
       {
-          title: \`Target \${idx} Beta\`, status: 'PROCESSED', type: 'success' as const,
+          title: `Target ${idx} Beta`, status: 'PROCESSED', type: 'success' as const,
           data: [
-              ['name', \`Target \${idx} Beta\`, 'val'],
+              ['name', `Target ${idx} Beta`, 'val'],
               ['address', '200 Oak Ave', 'val'],
               ['phone', '555-0200', 'success'],
               ['website', 'NULL', 'missing'],
@@ -107,9 +107,9 @@ const generateUniformBelt = (idx: number, id: number, name: string, color: strin
           ] as [string, string, string][]
       },
       {
-          title: \`Target \${idx} Blocked\`, status: 'BLOCKED', type: 'rejected' as const,
+          title: `Target ${idx} Blocked`, status: 'BLOCKED', type: 'rejected' as const,
           data: [
-              ['name', \`Target \${idx} Blocked\`, 'val'],
+              ['name', `Target ${idx} Blocked`, 'val'],
               ['block_reason', '"skate shop" match', 'missing']
           ] as [string, string, string][]
       }
