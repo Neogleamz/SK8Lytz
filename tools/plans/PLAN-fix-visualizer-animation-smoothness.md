@@ -22,6 +22,12 @@ This plan restores the buttery smooth architectural intent for both the math loo
   - Set `numColumns={2}` to maintain the grid layout.
   - Remove the manual `onLayout` debouncing gate (`visibleIds`), as `FlatList` has built-in virtualization which prevents off-screen items from rendering heavy DOM nodes or running intervals simultaneously.
   - Update grid wrapper styling (`columnWrapperStyle`) to support the `justifyContent: 'space-between'` gap.
+  - **ADDITION (Click Latency Fix)**: Extract the `renderItem` function from being defined inline to a stable `useCallback` with an empty dependency array. Use a `useRef` to pass volatile state (`selectedEffectId`, `fgColor`, etc.) into the stable `renderItem` without triggering a new closure creation.
+  - **ADDITION**: Pass the volatile state variables to `FlatList` via the `extraData` prop so that the virtualization engine knows to re-diff the cells when state changes, without tearing down the DOM wrappers.
+
+### src/components/ProductVisualizer.tsx
+- **[MODIFY] Component**:
+  - **ADDITION (Memory Leak/Render Storm Fix)**: Wrap the fallback `renderDevices` array creation in a `useMemo`. When no `devices` array is passed (e.g. in the Web Demo), creating an inline `[{ name: product... }]` array breaks the `React.memo` inside the child `VisualizerUnit`. This ensures `VisualizerUnit` only re-renders when actual props (like `patternId`) change.
 
 ## Verification Plan
 1. **Performance Test:** Open the `Test` category. It should instantly load without throwing `[Violation] 'message' handler took <N>ms` in the terminal.

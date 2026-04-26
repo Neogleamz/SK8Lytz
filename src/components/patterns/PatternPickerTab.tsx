@@ -111,8 +111,7 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
         viewabilityConfig={viewabilityConfig}
         initialNumToRender={8}
         windowSize={3}
-        removeClippedSubviews={true}
-        extraData={[selectedEffectId, fgColor, bgColor, speed, brightness, direction, visibleIds]}
+        extraData={`${selectedEffectId}-${fgColor}-${bgColor}-${speed}-${brightness}-${direction}-${visibleIds.size}`}
         renderItem={renderItem}
       />
     </View>
