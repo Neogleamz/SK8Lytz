@@ -23,6 +23,15 @@ const reportPulse = (delayMs: number, ghost?: any, active_job?: string | null, t
 console.log = (...args) => { _log(...args); pushLog('INFO', args.join(' ')); };
 console.error = (...args) => { _err(...args); pushLog('ERROR', args.join(' ')); };
 
+// ─── Social media domains — crawling these wastes time and yields no useful data ─
+const SOCIAL_DOMAINS = ['facebook.com', 'instagram.com', 'twitter.com', 'x.com', 'tiktok.com', 'youtube.com', 'yelp.com', 'google.com', 'linkedin.com', 'snapchat.com'];
+const isSocialMediaUrl = (url: string): string | null => {
+  try {
+    const h = new URL(url).hostname.replace('www.', '');
+    return SOCIAL_DOMAINS.find(d => h === d || h.endsWith('.' + d)) || null;
+  } catch { return null; }
+};
+
 // ─── Link scoring: which subpages are most valuable for the Detective ────────
 const PAGE_SCORE_RULES: { pattern: RegExp; key: string; score: number }[] = [
   { pattern: /hours|schedule|session/i,         key: 'hours',   score: 10 },
@@ -72,6 +81,22 @@ async function runOperator() {
         console.log(`   ⚠️  No website. REJECTED.`);
         await supabase.from('skate_spots').update({ verification_status: 'REJECTED' }).eq('id', target.id);
         await sleep(2000);
+        continue;
+      }
+
+      // GATE: website IS a social media URL — don't crawl, store the handle instead
+      const socialDomain = isSocialMediaUrl(target.website);
+      if (socialDomain) {
+        console.log(`   ⚠️  Website is ${socialDomain} — storing social handle, skipping browser crawl.`);
+        const socialUpdate: Record<string, any> = {
+          candidate_links: { _social_only: true },
+          verification_status: 'ENRICHED',
+        };
+        if (socialDomain === 'facebook.com') socialUpdate.facebook_url = target.website;
+        if (socialDomain === 'instagram.com') socialUpdate.instagram_url = target.website;
+        if (socialDomain === 'tiktok.com') socialUpdate.tiktok_url = target.website;
+        await supabase.from('skate_spots').update(socialUpdate).eq('id', target.id);
+        await sleep(1000);
         continue;
       }
 

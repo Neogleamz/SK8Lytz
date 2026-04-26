@@ -87,16 +87,6 @@ async function runIndexer() {
         .catch(() => ({ config: {} }));
       const aiConfig = configResGlobal.config || {};
 
-      // No GHOST stealth needed — targeting small business websites, not Google
-      browser = await puppeteer.launch({
-        headless: statusRes.isHeadless ? 'new' : false,
-        protocolTimeout: 60000,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-      });
-
-      const page = await browser.newPage();
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
-      await page.setViewport({ width: 1280, height: 800 });
 
       // ── Use candidate_links from Spider (Phase 2) ──────────────────────────
       // candidate_links is a JSONB object: { root: url, hours: url, pricing: url, ... }
@@ -117,70 +107,94 @@ async function runIndexer() {
         urlsToVisit.push(target.website);
       }
 
-      console.log(`   [Detective] Visiting ${urlsToVisit.length} candidate pages...`);
+      // ── Filter out social media URLs — they hit login walls, yield no text ──
+      const SOCIAL_CRAWL_BLOCKLIST = ['facebook.com', 'instagram.com', 'twitter.com', 'x.com', 'tiktok.com', 'youtube.com', 'yelp.com', 'google.com', 'linkedin.com'];
+      const isSocialCrawlBlocked = (url: string) => {
+        try { const h = new URL(url).hostname.replace('www.', ''); return SOCIAL_CRAWL_BLOCKLIST.some(d => h === d || h.endsWith('.' + d)); } catch { return false; }
+      };
+      const filteredUrls = urlsToVisit.filter(u => !isSocialCrawlBlocked(u));
+      const socialOnlyRecord = filteredUrls.length === 0;
 
-      // ── Visit each candidate page and collect text + links ─────────────────
+      if (socialOnlyRecord) {
+        console.log(`   ⚠️  [Detective] No crawlable URLs (social-only record) — running AI on metadata only.`);
+      }
+
+      console.log(`   [Detective] Visiting ${filteredUrls.length} candidate pages${socialOnlyRecord ? ' (SKIP — social only)' : ''}...`);
+
+      // ── Visit candidate pages OR fallback to metadata-only for social records ──
       let combinedText = '';
       const allLinks: string[] = [];
       let ogImage: string | null = null;
       const domImages: string[] = [];
 
-      for (const url of urlsToVisit) {
-        console.log(`   → ${url}`);
-        try {
-          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-        } catch {
+      if (!socialOnlyRecord) {
+        // Launch browser only when we have real URLs to visit
+        browser = await puppeteer.launch({
+          headless: statusRes.isHeadless ? 'new' : false,
+          protocolTimeout: 60000,
+          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        });
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+        await page.setViewport({ width: 1280, height: 800 });
+
+        for (const url of filteredUrls) {
+          console.log(`   → ${url}`);
           try {
-            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
           } catch {
-            console.error(`   ✗ Navigation failed: ${url}`);
-            continue;
+            try {
+              await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+            } catch {
+              console.error(`   ✗ Navigation failed: ${url}`);
+              continue;
+            }
           }
+          await sleep(1000);
+
+          const pageData = await page.evaluate(() => {
+            const ogMeta = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null;
+            const imgs = Array.from(document.querySelectorAll('img'))
+              .filter((img: any) => {
+                const w = img.naturalWidth || img.width || 0;
+                const h = img.naturalHeight || img.height || 0;
+                const src = (img.src || '').toLowerCase();
+                return w >= 400 && h >= 300 &&
+                  !src.includes('logo') && !src.includes('icon') &&
+                  !src.includes('pixel') && !src.includes('gif') &&
+                  (src.startsWith('http') || src.startsWith('//'));
+              })
+              .map((img: any) => img.src)
+              .slice(0, 3);
+            const links = Array.from(document.querySelectorAll('a'))
+              .map(a => (a.href || '').toLowerCase())
+              .filter(Boolean);
+            document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
+            const cleanText = document.body.innerText.replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+            return { ogMeta, imgs, links, cleanText };
+          }).catch(() => ({ ogMeta: null, imgs: [], links: [], cleanText: '' }));
+
+          if (pageData.cleanText) {
+            combinedText += `\n\n[PAGE: ${url}]\n${pageData.cleanText}`;
+          }
+          allLinks.push(...pageData.links);
+          if (!ogImage && pageData.ogMeta && !pageData.ogMeta.includes('placeholder')) {
+            ogImage = pageData.ogMeta;
+          }
+          domImages.push(...pageData.imgs.slice(0, 2));
         }
-        await sleep(1000);
 
-        const pageData = await page.evaluate(() => {
-          // Collect OG image if not already found
-          const ogMeta = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null;
-
-          // Collect large DOM images
-          const imgs = Array.from(document.querySelectorAll('img'))
-            .filter((img: any) => {
-              const w = img.naturalWidth || img.width || 0;
-              const h = img.naturalHeight || img.height || 0;
-              const src = (img.src || '').toLowerCase();
-              return w >= 400 && h >= 300 &&
-                !src.includes('logo') && !src.includes('icon') &&
-                !src.includes('pixel') && !src.includes('gif') &&
-                (src.startsWith('http') || src.startsWith('//'));
-            })
-            .map((img: any) => img.src)
-            .slice(0, 3);
-
-          // Collect all hrefs for social extraction
-          const links = Array.from(document.querySelectorAll('a'))
-            .map(a => (a.href || '').toLowerCase())
-            .filter(Boolean);
-
-          // Clean DOM text for AI
-          document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
-          const cleanText = document.body.innerText.replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
-
-          return { ogMeta, imgs, links, cleanText };
-        }).catch(() => ({ ogMeta: null, imgs: [], links: [], cleanText: '' }));
-
-        if (pageData.cleanText) {
-          combinedText += `\n\n[PAGE: ${url}]\n${pageData.cleanText}`;
-        }
-        allLinks.push(...pageData.links);
-        if (!ogImage && pageData.ogMeta && !pageData.ogMeta.includes('placeholder')) {
-          ogImage = pageData.ogMeta;
-        }
-        domImages.push(...pageData.imgs.slice(0, 2));
+        await browser.close();
+        browser = null;
+      } else {
+        // Social-only record — give AI basic metadata context to work with
+        combinedText = `Facility name: ${target.name}. Location: ${target.city}, ${target.state}. ` +
+          `Type: ${target.facility_type || 'roller rink'}. ` +
+          (target.phone ? `Phone: ${target.phone}. ` : '') +
+          (target.facebook_url ? `Facebook: ${target.facebook_url}. ` : '') +
+          `Note: No website available — extract what you can from facility type and name.`;
       }
 
-      await browser.close();
-      browser = null;
 
       // ── AI Toxicity Bouncer ────────────────────────────────────────────────
       const exclusions = aiConfig.ai_exclusion_keywords || [];

@@ -142,11 +142,11 @@ async function runPhotographerLoop() {
     // If priority states set, fetch them first via two ordered queries (Supabase doesn't support CASE in order)
     const { data: target, error: queryError } = priorityStates.length > 0
       ? await photoQuery.in('state', priorityStates).order('last_attempted_at', { ascending: true, nullsFirst: true }).limit(1).maybeSingle()
-        .then(async (res) => {
-          // No priority state results — fall back to any state
-          if (!res.data) return supabase.from('skate_spots').select('id, name, state, candidate_photos, photos, verification_status').not('candidate_photos', 'is', null).is('photos', null).order('last_attempted_at', { ascending: true, nullsFirst: true }).limit(1).single();
-          return res;
-        })
+          .then(async (res) => {
+            // Priority states set but no results — HOLD, do not spill into other states
+            if (!res.data) return { data: null, error: null };
+            return res;
+          })
       : await photoQuery.order('last_attempted_at', { ascending: true, nullsFirst: true }).limit(1).single();
 
     if (queryError || !target) {
