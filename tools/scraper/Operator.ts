@@ -18,8 +18,8 @@ const _err = console.error;
 const pushLog = (type: 'INFO'|'ERROR', message: string) => {
   fetch('http://localhost:5999/api/logs/ingest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type, source: 'Phase 2', message }) }).catch(() => {});
 };
-const reportPulse = (delayMs: number, ghost?: any) => {
-  fetch('http://localhost:5999/api/pulse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: 'Phase 2', delayMs, ghost }) }).catch(() => {});
+const reportPulse = (delayMs: number, ghost?: any, active_job?: string | null, target?: string | null) => {
+  fetch('http://localhost:5999/api/pulse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: 'Phase 2', delayMs, ghost, active_job, target }) }).catch(() => {});
 };
 console.log = (...args) => { _log(...args); pushLog('INFO', args.join(' ')); };
 console.error = (...args) => { _err(...args); pushLog('ERROR', args.join(' ')); };
@@ -59,6 +59,8 @@ async function runOperator() {
 
       target = spots[0];
       console.log(`\n🕷️  [Spider] ${target.name} (${target.city}, ${target.state})`);
+      // Report active job to CCTower telemetry immediately
+      reportPulse(0, undefined, target.name, target.website || null);
 
       // Pre-flight burial — prevents re-pick on crash
       await supabase.from('skate_spots').update({
@@ -162,7 +164,7 @@ async function runOperator() {
     } finally {
       if (browser) { try { await (browser as any).close(); } catch (e) {} }
       console.log(`⏳ [GHOST] Cooldown: ${Math.round(delay/1000)}s`);
-      reportPulse(delay);
+      reportPulse(delay, undefined, null, null); // clear active job during cooldown
       await sleep(delay);
     }
   }

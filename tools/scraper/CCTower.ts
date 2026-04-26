@@ -90,6 +90,14 @@ const pulseRegistry: Record<string, PulseData> = {
   'Phase 6': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
 };
 
+// Active job tracker — daemons report what they are currently processing
+const activeJobRegistry: Record<string, { active_job: string | null; target: string | null; updated_at: string }> = {
+  'Phase 1': { active_job: null, target: null, updated_at: '' },
+  'Phase 2': { active_job: null, target: null, updated_at: '' },
+  'Phase 3': { active_job: null, target: null, updated_at: '' },
+  'Phase 4': { active_job: null, target: null, updated_at: '' },
+};
+
 // Async sleep helper
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -207,13 +215,21 @@ app.get('/status', async (req, res) => {
 });
 
 app.post('/api/pulse', (req, res) => {
-  const { source, delayMs, ghost } = req.body;
+  const { source, delayMs, ghost, active_job, target } = req.body;
   if (pulseRegistry[source]) {
     pulseRegistry[source] = {
       lastRunAt: new Date().toISOString(),
       nextRunAt: new Date(Date.now() + delayMs).toISOString(),
       delayMs,
       ghost
+    };
+  }
+  // Track active job for telemetry display
+  if (activeJobRegistry[source] !== undefined) {
+    activeJobRegistry[source] = {
+      active_job: active_job || null,
+      target: target || null,
+      updated_at: new Date().toISOString()
     };
   }
   res.json({ success: true });
@@ -278,32 +294,32 @@ app.post('/api/daemons/:name/stop', (req, res) => {
 });
 app.get('/api/pipeline/telemetry', async (req, res) => {
   try {
-    const { data, error } = await supabase.from('scraper_config').select('daemon_telemetry').limit(1).single();
-    if (error) throw error;
-    res.json(data?.daemon_telemetry || {});
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
+    // Build live telemetry from DB queues + in-memory active job registry
+    // in_q = next 3 spots waiting in each phase queue (DB truth)
+    const [p1, p2, p3, p4, p6] = await Promise.all([
+      supabase.from('skate_spots').select('name').or('verification_status.eq.PENDING,verification_status.is.null').limit(3).order('created_at', { ascending: true }),
+      supabase.from('skate_spots').select('name').eq('verification_status', 'SEEDED').not('website', 'is', null).neq('website', '').limit(3).order('last_attempted_at', { ascending: true, nullsFirst: true }),
+      supabase.from('skate_spots').select('name').eq('verification_status', 'ENRICHED').not('candidate_links', 'is', null).limit(3).order('last_attempted_at', { ascending: true, nullsFirst: true }),
+      supabase.from('skate_spots').select('name').eq('verification_status', 'DEEP_CRAWLED').not('candidate_photos', 'is', null).is('photos', null).limit(3).order('last_attempted_at', { ascending: true, nullsFirst: true }),
+      supabase.from('skate_spots').select('name').eq('verification_status', 'MEDIA_READY').eq('is_published', false).limit(3).order('created_at', { ascending: false }),
+    ]);
 
-app.post('/api/pipeline/telemetry/:daemon', async (req, res) => {
-  try {
-    const daemon = req.params.daemon; // e.g., 'scout', 'spider', 'detective'
-    const payload = req.body;
-    
-    const { data, error: fetchErr } = await supabase.from('scraper_config').select('daemon_telemetry').limit(1).single();
-    if (fetchErr) throw fetchErr;
-    
-    const currentTelemetry = data?.daemon_telemetry || {};
-    currentTelemetry[daemon] = {
-      ...currentTelemetry[daemon],
-      ...payload
+    const names = (r: any) => (r.data || []).map((s: any) => s.name);
+    const isAlive = (phase: string) => {
+      const p = pulseRegistry[phase];
+      if (!p?.lastRunAt) return false;
+      return (Date.now() - new Date(p.lastRunAt).getTime()) < 600000; // alive if pulsed in last 10 min
     };
-    
-    const { error: updateErr } = await supabase.from('scraper_config').update({ daemon_telemetry: currentTelemetry }).eq('id', 1);
-    if (updateErr) throw updateErr;
-    
-    res.json({ success: true, telemetry: currentTelemetry });
+    const aj = (phase: string) => activeJobRegistry[phase]?.active_job || null;
+    const tgt = (phase: string) => activeJobRegistry[phase]?.target || null;
+
+    res.json({
+      scout:      { active_job: aj('Phase 1'), target: tgt('Phase 1'), in_q: names(p1), pulse: pulseRegistry['Phase 1'], alive: isAlive('Phase 1') },
+      spider:     { active_job: aj('Phase 2'), target: tgt('Phase 2'), in_q: names(p2), pulse: pulseRegistry['Phase 2'], alive: isAlive('Phase 2') },
+      detective:  { active_job: aj('Phase 3'), target: tgt('Phase 3'), in_q: names(p3), pulse: pulseRegistry['Phase 3'], alive: isAlive('Phase 3') },
+      photographer: { active_job: aj('Phase 4'), target: tgt('Phase 4'), in_q: names(p4), pulse: pulseRegistry['Phase 4'], alive: isAlive('Phase 4') },
+      publisher:  { active_job: null, target: null, in_q: names(p6), pulse: pulseRegistry['Phase 6'], alive: false },
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

@@ -24,11 +24,11 @@ const pushLog = (type: 'INFO' | 'ERROR', message: string) => {
   }).catch(() => {});
 };
 
-const reportPulse = (delayMs: number, ghost?: any) => {
+const reportPulse = (delayMs: number, ghost?: any, active_job?: string | null, target_url?: string | null) => {
   fetch('http://localhost:5999/api/pulse', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ source: 'Phase 3', delayMs, ghost })
+    body: JSON.stringify({ source: 'Phase 3', delayMs, ghost, active_job, target: target_url })
   }).catch(() => {});
 };
 
@@ -69,6 +69,8 @@ async function runIndexer() {
 
       const target = spots[0];
       console.log(`\n🧠 [Detective] Analyzing: ${target.name} (${target.city}, ${target.state})`);
+      // Report active job to CCTower telemetry immediately
+      reportPulse(0, undefined, target.name, target.website || null);
 
       // Mark in-flight immediately to prevent duplicate picks
       await supabase.from('skate_spots').update({
