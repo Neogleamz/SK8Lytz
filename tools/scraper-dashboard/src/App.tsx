@@ -161,7 +161,7 @@ function App() {
       // Only re-fetch queue for the currently visible tab (not all 6 every 5s)
       // When viewing the pipeline belt, refresh all phase queues so every belt has live data
       const phasesToRefresh = activeTabRef.current === 'pipeline'
-        ? ['phase1', 'phase2', 'phase3', 'phase4', 'phase6', 'recent']
+        ? ['phase1', 'phase2', 'phase3', 'phase4', 'phase6', 'spider-recent', 'recent']
         : [activeTabRef.current, 'recent'];
       fetchQueue(phasesToRefresh);
 
@@ -311,7 +311,7 @@ function App() {
 
   const fetchQueue = async (only?: string[]) => {
     // Phases now: phase1, phase3 (Detective), phase4 (Photographer), phase6 (Publisher)
-    const phasesToFetch = only ?? ['phase1', 'phase2', 'phase3', 'phase4', 'phase6', 'recent'];
+    const phasesToFetch = only ?? ['phase1', 'phase2', 'phase3', 'phase4', 'phase6', 'spider-recent', 'recent'];
     // Read from ref so this always has the live value even inside stale interval closures
     const activeStates = stateOverrideRef.current;
     const statesParam = activeStates.length > 0 ? `&states=${activeStates.join(',')}` : '';

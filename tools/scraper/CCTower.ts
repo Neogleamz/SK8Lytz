@@ -758,6 +758,12 @@ app.get('/api/queue', async (req, res) => {
   } else if (phase === 'phase6') {
      // Publisher queue: MEDIA_READY, not yet published
      query = query.eq('verification_status', 'MEDIA_READY').eq('is_published', false);
+  } else if (phase === 'spider-recent') {
+     // Recently Spider-processed: spots with candidate_links regardless of downstream status
+     // Ordered newest-first so dashboard shows the latest Spider output even if Indexer consumed them
+     query = query
+       .not('candidate_links', 'is', null)
+       .in('verification_status', ['ENRICHED', 'DEEP_CRAWLED', 'MEDIA_READY', 'PUBLISHED']);
   } else {
      query = query.or('verification_status.eq.PENDING,verification_status.eq.SEEDED,verification_status.eq.ENRICHED,verification_status.eq.DEEP_CRAWLED,verification_status.is.null');
   }
@@ -767,8 +773,9 @@ app.get('/api/queue', async (req, res) => {
     query = query.in('state', states);
   }
 
+  const sortAsc = phase !== 'spider-recent';
   const { data, error } = await query
-    .order('last_attempted_at', { ascending: true, nullsFirst: true })
+    .order('last_attempted_at', { ascending: sortAsc, nullsFirst: sortAsc })
     .limit(10);
 
   if (error) return res.status(500).json({ error: error.message });

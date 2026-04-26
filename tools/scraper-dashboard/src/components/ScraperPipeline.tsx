@@ -106,7 +106,7 @@ export const ScraperPipeline: React.FC<{
     const getSpotsForPhase = (beltId: number, count: number = 2) => {
         let spots: any[] = [];
         if (beltId === 1) spots = phaseQueues?.phase2 || [];   // Scout output = SEEDED records (Spider input)
-        else if (beltId === 2) spots = phaseQueues?.phase3 || [];   // Spider output = ENRICHED records (Detective input)
+        else if (beltId === 2) spots = phaseQueues?.['spider-recent'] || []; // Spider output: recently spidered spots (any downstream status)
         else if (beltId === 3) spots = phaseQueues?.phase4 || [];   // Detective output = DEEP_CRAWLED (Photographer input)
         else if (beltId === 4) spots = phaseQueues?.phase6 || [];   // Photographer output = MEDIA_READY (Publisher input)
         else if (beltId === 5) spots = phaseQueues?.recent || [];   // Publisher output = recently published
@@ -155,27 +155,20 @@ export const ScraperPipeline: React.FC<{
                 data.push(['last_spidered',    spot.last_attempted_at ? new Date(spot.last_attempted_at).toLocaleString() : 'NEVER', 'val']);
 
 
-            } else if (phaseId === 3) { // ── DETECTIVE: Llama-3.2 AI extraction ──
-                data.push(['surface_type',     val(spot.surface_type, 'UNKNOWN'),                                     ok(spot.surface_type)]);
-                data.push(['surface_quality',  val(spot.surface_quality, 'N/A'),                                      ok(spot.surface_quality)]);
-                data.push(['is_indoor',        bool(spot.is_indoor),                                                  'val']);
-                data.push(['capacity',         val(spot.capacity, 'N/A'),                                             ok(spot.capacity)]);
-                data.push(['has_rental',       bool(spot.has_rental),                                                 boolOk(spot.has_rental)]);
-                data.push(['has_pro_shop',     bool(spot.has_pro_shop || spot.has_proshop),                           boolOk(spot.has_pro_shop || spot.has_proshop)]);
-                data.push(['has_food',         bool(spot.has_food),                                                   boolOk(spot.has_food)]);
-                data.push(['has_lights',       bool(spot.has_lights),                                                 boolOk(spot.has_lights)]);
-                data.push(['has_lockers',      bool(spot.has_lockers),                                                boolOk(spot.has_lockers)]);
-                data.push(['has_ac',           bool(spot.has_ac),                                                     boolOk(spot.has_ac)]);
-                data.push(['has_wifi',         bool(spot.has_wifi),                                                   boolOk(spot.has_wifi)]);
-                data.push(['has_toilets',      bool(spot.has_toilets),                                                boolOk(spot.has_toilets)]);
-                data.push(['wheelchair',       bool(spot.is_wheelchair_accessible),                                   boolOk(spot.is_wheelchair_accessible)]);
-                data.push(['has_adult_night',  bool(spot.has_adult_night),                                            boolOk(spot.has_adult_night)]);
-                data.push(['adult_night_det',  spot.adult_night_details ? `${String(spot.adult_night_details).slice(0, 20)}…` : 'N/A', ok(spot.adult_night_details)]);
-                data.push(['hosts_derby',      bool(spot.hosts_derby),                                                boolOk(spot.hosts_derby)]);
-                data.push(['vibe_score',       spot.vibe_score != null ? `${spot.vibe_score}/100` : 'N/A',            ok(spot.vibe_score)]);
-                data.push(['vibe_rating',      spot.vibe_rating != null ? `${spot.vibe_rating}★` : 'N/A',            ok(spot.vibe_rating)]);
-                data.push(['cultural_meta',    spot.cultural_metadata ? 'ENRICHED' : 'NULL',                          boolOk(spot.cultural_metadata)]);
-                data.push(['adult_schedule',   spot.adult_night_schedule ? 'PARSED' : 'NULL',                         boolOk(spot.adult_night_schedule)]);
+            } else if (phaseId === 3) { // ── DETECTIVE: Indexer output (DEEP_CRAWLED) ──
+                // Show fields the Indexer ACTUALLY populates (not Llama AI fields which may be null)
+                const candLinks = spot.candidate_links ? Object.keys(spot.candidate_links) : [];
+                const candPhotos = spot.candidate_photos ? (typeof spot.candidate_photos === 'object' ? Object.keys(spot.candidate_photos).length : '?') : 0;
+                data.push(['is_deep_crawled',  bool(spot.is_deep_crawled),                                            boolOk(spot.is_deep_crawled)]);
+                data.push(['website',          val(spot.website),                                                     ok(spot.website)]);
+                data.push(['opening_hours',    spot.opening_hours ? 'PARSED' : 'NULL',                                boolOk(spot.opening_hours)]);
+                data.push(['facebook_url',     spot.facebook_url ? spot.facebook_url.slice(0, 26) + '…' : 'NULL',     boolOk(spot.facebook_url)]);
+                data.push(['instagram_url',    spot.instagram_url ? 'FOUND' : 'NULL',                                 boolOk(spot.instagram_url)]);
+                data.push(['links_indexed',    candLinks.length > 0 ? `${candLinks.length} pages` : '0',              candLinks.length > 0 ? 'success' : 'missing']);
+                data.push(['photo_candidates', String(candPhotos),                                                     Number(candPhotos) > 0 ? 'success' : 'missing']);
+                data.push(['rating',           spot.rating != null ? `${spot.rating}★ (${spot.user_ratings_total})` : 'N/A', ok(spot.rating)]);
+                data.push(['last_crawled',     spot.last_attempted_at ? new Date(spot.last_attempted_at).toLocaleString() : 'NEVER', 'val']);
+                data.push(['status',           val(spot.verification_status, 'DEEP_CRAWLED'),                         ok(spot.verification_status)]);
 
             } else if (phaseId === 4) { // ── PHOTOGRAPHER: Image harvest ──
                 const photoCount = Array.isArray(spot.photos) ? spot.photos.length : spot.photos ? '?' : 0;
@@ -272,6 +265,26 @@ export const ScraperPipeline: React.FC<{
         const specificSpots = getSpotsForPhase(belt.id, 2);
         const dynamicCards = buildPhaseCards(belt.id, specificSpots);
 
+        // Per-belt count badges from live telemetry + pipelineStats
+        const inQCount = liveData?.in_q?.length ?? 0;
+        const countBadges: {label: string; value: string}[] = [];
+        if (belt.id === 1) {
+            countBadges.push({ label: 'OUT', value: `${(pipelineStats?.seededCount ?? 0).toLocaleString()} SEEDED` });
+        } else if (belt.id === 2) {
+            countBadges.push({ label: 'IN', value: `${(pipelineStats?.seededCount ?? 0).toLocaleString()} SEEDED` });
+            const done = (pipelineStats?.enrichedCount ?? 0) + (pipelineStats?.deepCrawledCount ?? 0) + (pipelineStats?.mediaReadyCount ?? 0) + (pipelineStats?.publishedCount ?? 0);
+            countBadges.push({ label: 'DONE', value: `${done.toLocaleString()} SPIDERED` });
+        } else if (belt.id === 3) {
+            countBadges.push({ label: 'IN', value: `${(pipelineStats?.enrichedCount ?? 0)} ENRICHED` });
+            countBadges.push({ label: 'OUT', value: `${(pipelineStats?.deepCrawledCount ?? 0)} DEEP_CRAWLED` });
+        } else if (belt.id === 4) {
+            countBadges.push({ label: 'IN', value: `${(pipelineStats?.deepCrawledCount ?? 0)} DEEP_CRAWLED` });
+            countBadges.push({ label: 'OUT', value: `${(pipelineStats?.mediaReadyCount ?? 0)} MEDIA_READY` });
+        } else if (belt.id === 5) {
+            countBadges.push({ label: 'IN', value: `${(pipelineStats?.mediaReadyCount ?? 0)} MEDIA_READY` });
+            countBadges.push({ label: 'PUB', value: `${(pipelineStats?.publishedCount ?? 0)} PUBLISHED` });
+        }
+
         if (liveData) {
             return {
                 ...belt,
@@ -279,12 +292,14 @@ export const ScraperPipeline: React.FC<{
                 target: liveData.target || (liveData.in_q?.[0] ? `Next: ${liveData.in_q[0]}` : 'WAITING...'),
                 status: liveData.active_job ? 'PROCESSING' : (liveData.alive ? 'WAITING' : 'OFFLINE'),
                 inQ: liveData.in_q && liveData.in_q.length > 0 ? liveData.in_q.slice(0, 3) : belt.inQ,
-                outCards: dynamicCards.length > 0 ? dynamicCards : belt.outCards
+                outCards: dynamicCards.length > 0 ? dynamicCards : belt.outCards,
+                countBadges,
             };
         }
         return {
             ...belt,
-            outCards: dynamicCards.length > 0 ? dynamicCards : belt.outCards
+            outCards: dynamicCards.length > 0 ? dynamicCards : belt.outCards,
+            countBadges,
         };
     });
 

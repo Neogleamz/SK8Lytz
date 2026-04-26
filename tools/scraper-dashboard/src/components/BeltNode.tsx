@@ -31,6 +31,7 @@ interface BeltProps {
   daemonStatus?: string; // live status string e.g. "PROCESSING: target.com"
   inputStatus: string;
   outputStatus: string;
+  countBadges?: {label: string; value: string}[];
 }
 
 // Shared card dimensions
@@ -87,7 +88,7 @@ const DataCard: React.FC<{
 
 export const BeltNode: React.FC<BeltProps> = ({
   id, name, color, rgb, job, daemon, target, inQ, status, gatekeeper, attempting, outCards,
-  onPhaseNav, daemonActive = false, onDaemonStart, onDaemonStop, hasDaemon = true, daemonStatus, inputStatus, outputStatus
+  onPhaseNav, daemonActive = false, onDaemonStart, onDaemonStop, hasDaemon = true, daemonStatus, inputStatus, outputStatus, countBadges = []
 }) => {
   const [isConfigOpen, setConfigOpen] = useState(false);
   const successCards = outCards.filter(c => c.type === 'success').slice(0, 2);
@@ -143,6 +144,23 @@ export const BeltNode: React.FC<BeltProps> = ({
             {isConfigOpen ? '▼ CLOSE' : '↗ CONFIGURE'}
           </span>
         </button>
+
+        {/* Count badges: pipeline throughput metrics */}
+        {countBadges.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+            {countBadges.map((badge, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                padding: '2px 8px', borderRadius: 10,
+                background: `rgba(${colRgb},0.1)`,
+                border: `1px solid rgba(${colRgb},0.2)`,
+              }}>
+                <span style={{ fontSize: '0.48rem', fontWeight: 900, color: `rgba(${colRgb},0.7)`, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'JetBrains Mono, monospace' }}>{badge.label}</span>
+                <span style={{ fontSize: '0.56rem', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>{badge.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Live daemon status ticker — center, must shrink not push buttons off */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '0 8px' }}>
