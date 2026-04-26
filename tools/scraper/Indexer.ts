@@ -130,7 +130,7 @@ async function runIndexer() {
       for (const url of urlsToVisit) {
         console.log(`   → ${url}`);
         try {
-          await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
         } catch {
           try {
             await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
@@ -239,12 +239,30 @@ async function runIndexer() {
       }
 
       // ── Map AI output to structured columns ────────────────────────────────
-      const opening_hours   = aiMetadata.opening_hours   || target.opening_hours   || null;
-      const has_adult_night = aiMetadata.has_adult_night ?? target.has_adult_night  ?? false;
+      // IMPORTANT: schema keys (from ai_target_vectors) don't always match DB column names.
+      // Handle both the schema key and the DB column name as fallbacks.
+      const opening_hours        = aiMetadata.hours          || aiMetadata.opening_hours        || target.opening_hours        || null;
+      const pricing_data         = aiMetadata.pricing         || aiMetadata.pricing_data         || target.pricing_data         || null;
+      const surface_type         = aiMetadata.surface_type    || target.surface_type    || null;
+      const surface_quality      = aiMetadata.surface_quality || target.surface_quality || null;
+      const vibe_score           = aiMetadata.vibe_score      ?? target.vibe_score      ?? null;
+      const has_adult_night      = aiMetadata.has_adult_night ?? target.has_adult_night  ?? false;
       const adult_night_details  = aiMetadata.adult_night_details  || target.adult_night_details  || null;
       const adultNightSchedule   = aiMetadata.adult_night_schedule || target.adult_night_schedule || null;
-      const special_events  = aiMetadata.special_events  || target.special_events  || null;
-      const pricing_data    = aiMetadata.pricing_data    || target.pricing_data    || null;
+      const special_events       = aiMetadata.special_events  || target.special_events  || null;
+      const capacity             = aiMetadata.capacity        || target.capacity         || null;
+      const has_rental           = aiMetadata.has_rental      ?? target.has_rental       ?? null;
+      const has_pro_shop         = aiMetadata.has_pro_shop    ?? target.has_pro_shop     ?? null;
+      const has_food             = aiMetadata.has_food        ?? target.has_food         ?? null;
+      const has_lights           = aiMetadata.has_lights      ?? target.has_lights       ?? null;
+      const has_lockers          = aiMetadata.has_lockers     ?? target.has_lockers      ?? null;
+      const has_ac               = aiMetadata.has_ac          ?? target.has_ac           ?? null;
+      const has_wifi             = aiMetadata.has_wifi        ?? target.has_wifi         ?? null;
+      const has_toilets          = aiMetadata.has_toilets     ?? target.has_toilets      ?? null;
+      // Key mismatches: schema key → DB column name
+      const is_wheelchair_accessible = aiMetadata.wheelchair  ?? aiMetadata.is_wheelchair_accessible ?? target.is_wheelchair_accessible ?? null;
+      const hosts_derby              = aiMetadata.derby        ?? aiMetadata.hosts_derby              ?? target.hosts_derby              ?? null;
+      const cultural_metadata        = aiMetadata.cultural_meta || aiMetadata.cultural_metadata       || target.cultural_metadata        || null;
 
       // ── Social Links (from collected hrefs) ────────────────────────────────
       let instagram_url = target.instagram_url || null;
@@ -317,15 +335,31 @@ async function runIndexer() {
         facebook_url,
         tiktok_url,
         schedule_url,
-        // Hours
+        // Hours & Schedule
         opening_hours,
+        adult_night_schedule: adultNightSchedule,
         // Adult Night
         has_adult_night,
         adult_night_details,
-        adult_night_schedule: adultNightSchedule,
         // Events & Pricing
         special_events,
         pricing_data,
+        // Facility attributes (all extracted by AI)
+        surface_type,
+        surface_quality,
+        vibe_score,
+        capacity,
+        has_rental,
+        has_pro_shop,
+        has_food,
+        has_lights,
+        has_lockers,
+        has_ac,
+        has_wifi,
+        has_toilets,
+        is_wheelchair_accessible,
+        hosts_derby,
+        cultural_metadata,
         // Photos
         ...(candidate_photos ? { candidate_photos } : {}),
         // AI dump
@@ -339,7 +373,7 @@ async function runIndexer() {
 
       if (updateError) throw updateError;
 
-      const delay = await GHOST.getAdaptiveDelay('GOOGLE');
+      const delay = 8000 + Math.random() * 7000; // 8–15s — small business sites, no Google-level stealth needed
       reportPulse(delay, identity);
       await sleep(delay);
 
