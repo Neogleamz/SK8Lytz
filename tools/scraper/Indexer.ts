@@ -12,35 +12,6 @@ const supabase = createClient(
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// ─── Toxicity Bouncer: Eliminates known false-positives ─────────────────────
-function checkToxicity(text: string): string | null {
-  const t = text.toLowerCase();
-  
-  // Severe instant-kill keywords (specialty shops that aren't skates)
-  if (/\b(?:bicycle repair|trek bikes|specialized bicycles|ice hockey equipment|pure hockey)\b/.test(t)) {
-    return 'Severe non-skate retail signature detected.';
-  }
-
-  // Density-based keyword checks
-  const bikeMentions = (t.match(/\b(?:bike|bikes|bicycle|bicycles|ebike)\b/g) || []).length;
-  // If it's a bike shop disguised as a skate shop, the word bike will appear everywhere.
-  if (bikeMentions > 6 && !t.includes('roller skate')) {
-    return 'Exceeds bicycle mention threshold (Likely a bike shop).';
-  }
-
-  const hockeyMentions = (t.match(/\b(?:ice hockey|puck|stick repair|skate sharpening for hockey)\b/g) || []).length;
-  if (hockeyMentions > 4 && !t.includes('inline') && !t.includes('quad')) {
-    return 'Exceeds ice hockey mention threshold (Likely an Ice Rink or Ice shop).';
-  }
-
-  const rvMentions = (t.match(/\b(?:camper|rv sales|motorhome)\b/g) || []).length;
-  if (rvMentions > 3) {
-    return 'Exceeds RV/Camper mention threshold (Likely Camping World).';
-  }
-
-  return null;
-}
-
 // ─── Telemetry Hook to CCTower ─────────────────────────────────────────────
 const _log = console.log;
 const _err = console.error;
@@ -67,194 +38,6 @@ console.error = (...args) => { _err(...args); pushLog('ERROR', args.join(' ')); 
 // ─── Constants ─────────────────────────────────────────────────────────────
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 type DayKey = typeof DAYS[number];
-
-// ─── Extraction Engine ─────────────────────────────────────────────────────
-
-/**
- * Parses a flat body text for structured Mon–Sun hours.
- * Returns a partial record; only fills days not already populated.
- */
-function parseHoursFromText(text: string): Partial<Record<DayKey, string>> {
-  const hours: Partial<Record<DayKey, string>> = {};
-  for (const day of DAYS) {
-    // Match: "Monday 4:00 PM - 9:00 PM", "Mon: 4pm-9pm", "Monday: Closed"
-    const regex = new RegExp(
-      `\\b${day.substring(0, 3)}(?:${day.substring(3)})?[:\\s.]+([\\d]{1,2}(?::[0-9]{2})?\\s*(?:am|pm)[\\s\\-–to]+[\\d]{1,2}(?::[0-9]{2})?\\s*(?:am|pm)|closed|open 24 hours?)`,
-      'i'
-    );
-    const match = regex.exec(text);
-    if (match) hours[day] = match[1].trim().toLowerCase();
-  }
-  return hours;
-}
-
-/**
- * Parses <table> and <dl> elements in the DOM for structured hours.
- * Returns stringified JSON to pass back through page.evaluate().
- */
-function buildTableHoursScript(): string {
-  return `
-    (() => {
-      const hours = {};
-      const dayMap = {
-        mon: 'monday', tue: 'tuesday', wed: 'wednesday', thu: 'thursday',
-        fri: 'friday', sat: 'saturday', sun: 'sunday',
-        monday: 'monday', tuesday: 'tuesday', wednesday: 'wednesday',
-        thursday: 'thursday', friday: 'friday', saturday: 'saturday', sunday: 'sunday'
-      };
-      const allDays = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
-
-      // Strategy 1: <table> rows — col 0 = day, col 1 = hours
-      document.querySelectorAll('table tr').forEach(row => {
-        const cells = Array.from(row.querySelectorAll('td, th')).map(c => c.innerText.trim().toLowerCase());
-        if (cells.length >= 2) {
-          const dayKey = Object.keys(dayMap).find(k => cells[0].startsWith(k));
-          if (dayKey && !hours[dayMap[dayKey]]) {
-            hours[dayMap[dayKey]] = cells[1];
-          }
-        }
-      });
-
-      // Strategy 2: <dl> format — <dt>Monday</dt><dd>4pm-9pm</dd>
-      document.querySelectorAll('dl').forEach(dl => {
-        const dts = Array.from(dl.querySelectorAll('dt'));
-        const dds = Array.from(dl.querySelectorAll('dd'));
-        dts.forEach((dt, i) => {
-          const txt = dt.innerText.trim().toLowerCase();
-          const dayKey = Object.keys(dayMap).find(k => txt.startsWith(k));
-          if (dayKey && dds[i] && !hours[dayMap[dayKey]]) {
-            hours[dayMap[dayKey]] = dds[i].innerText.trim().toLowerCase();
-          }
-        });
-      });
-
-      // Strategy 3: Google-style spans with aria-label or data-day
-      document.querySelectorAll('[aria-label]').forEach(el => {
-        const label = el.getAttribute('aria-label')?.toLowerCase() || '';
-        const dayKey = Object.keys(dayMap).find(k => label.startsWith(k));
-        if (dayKey && !hours[dayMap[dayKey]]) {
-          hours[dayMap[dayKey]] = el.innerText.trim().toLowerCase();
-        }
-      });
-
-      return JSON.stringify(hours);
-    })()
-  `;
-}
-
-/**
- * Detects which specific days have adult/18+ night sessions.
- * Returns a map of day → time string.
- */
-function parseAdultNightSchedule(text: string): Partial<Record<DayKey, string>> | null {
-  const schedule: Partial<Record<DayKey, string>> = {};
-
-  // Look for adult night mentions near day names
-  // e.g. "Friday Adult Night 9pm-midnight", "18+ Saturdays 10pm-1am"
-  const adultNightRegex = new RegExp(
-    `(${DAYS.map(d => d.substring(0, 3)).join('|')}${DAYS.map(d => d).join('|')})` +
-    `.{0,40}` +
-    `(?:18\\s*\\+|21\\s*\\+|adult[s]?|18 and older).{0,60}` +
-    `([\\d]{1,2}(?::[0-9]{2})?\\s*(?:am|pm).{0,20}[\\d]{1,2}(?::[0-9]{2})?\\s*(?:am|pm|midnight|noon))`,
-    'gi'
-  );
-
-  // Reverse pattern: "Adult Night every Friday 9pm-11pm"
-  const reverseRegex = new RegExp(
-    `(?:18\\s*\\+|21\\s*\\+|adult[s]?\\s+night).{0,60}` +
-    `(${DAYS.join('|')}).{0,40}` +
-    `([\\d]{1,2}(?::[0-9]{2})?\\s*(?:am|pm).{0,20}[\\d]{1,2}(?::[0-9]{2})?\\s*(?:am|pm|midnight|noon))`,
-    'gi'
-  );
-
-  const dayMap: Record<string, DayKey> = {
-    mon: 'monday', tue: 'tuesday', wed: 'wednesday', thu: 'thursday',
-    fri: 'friday', sat: 'saturday', sun: 'sunday',
-    monday: 'monday', tuesday: 'tuesday', wednesday: 'wednesday',
-    thursday: 'thursday', friday: 'friday', saturday: 'saturday', sunday: 'sunday'
-  };
-
-  let m: RegExpExecArray | null;
-  while ((m = adultNightRegex.exec(text)) !== null) {
-    const dayKey = Object.keys(dayMap).find(k => m![1].toLowerCase().startsWith(k));
-    if (dayKey) schedule[dayMap[dayKey]] = m[2].trim();
-  }
-  while ((m = reverseRegex.exec(text)) !== null) {
-    const dayKey = Object.keys(dayMap).find(k => m![1].toLowerCase().startsWith(k));
-    if (dayKey && !schedule[dayMap[dayKey]]) schedule[dayMap[dayKey]] = m[2].trim();
-  }
-
-  return Object.keys(schedule).length > 0 ? schedule : null;
-}
-
-/**
- * Extracts recurring special events from body text.
- * Returns an array of event description strings.
- */
-function parseSpecialEvents(text: string): string[] | null {
-  const events: string[] = [];
-  const eventPatterns = [
-    // "Cosmic/Galaxy/Glow skate every Friday"
-    /(?:cosmic|galaxy|glow|neon|blacklight|disco|80s|theme|retro|holiday)\s+(?:skate|night|session|skating).{0,60}(?:every|each)?\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)/gi,
-    // "Every Friday: Cosmic Skate"
-    /every\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)[,:\s]+.{5,60}?(?:skate|rink|night|session)/gi,
-    // "Birthday parties available"
-    /birthday\s+(?:parties|party)\s+(?:available|offered|welcome|packages?)/gi,
-    // "Private party rental"
-    /private\s+(?:party|event|rental|reservation)\s+(?:available|offered|packages?)/gi,
-    // "Family skate night"
-    /family\s+(?:skate|skating)\s+(?:night|session|day)/gi,
-    // "Couples skate"
-    /couples?\s+skate/gi,
-    // "Roller derby"
-    /roller\s+derby/gi,
-  ];
-
-  for (const pattern of eventPatterns) {
-    let m: RegExpExecArray | null;
-    while ((m = pattern.exec(text)) !== null) {
-      const snippet = m[0].trim().replace(/\s+/g, ' ');
-      if (!events.some(e => e.toLowerCase().includes(snippet.toLowerCase().substring(0, 20)))) {
-        events.push(snippet);
-      }
-    }
-  }
-
-  return events.length > 0 ? events : null;
-}
-
-/**
- * Extracts structured pricing from body text.
- * Returns an object or null.
- */
-function parsePricing(text: string): Record<string, string> | null {
-  const pricing: Record<string, string> = {};
-
-  const patterns: [string, RegExp][] = [
-    ['admission', /(?:admission|general|entry|skate fee)[:\s]+\$?([\d.]+)/gi],
-    ['child_admission', /(?:child|children|kids?)\s+(?:admission|entry|skate)[:\s]+\$?([\d.]+)/gi],
-    ['skate_rental', /(?:skate|blade|boot)\s+rental[:\s]+\$?([\d.]+)/gi],
-    ['adult_admission', /adult\s+(?:admission|entry|skate)[:\s]+\$?([\d.]+)/gi],
-    ['helmet_rental', /helmet\s+rental[:\s]+\$?([\d.]+)/gi],
-  ];
-
-  for (const [key, regex] of patterns) {
-    const m = regex.exec(text);
-    if (m) pricing[key] = `$${m[1]}`;
-  }
-
-  // Fallback: grab any price mentions near "admission" or "skate"
-  if (Object.keys(pricing).length === 0) {
-    const fallback = /(?:admission|skate rental|price|entry).{0,60}\$(\d+(?:\.\d{2})?)/gi;
-    let m: RegExpExecArray | null;
-    let count = 0;
-    while ((m = fallback.exec(text)) !== null && count < 5) {
-      pricing[`price_${count++}`] = `$${m[1]}`;
-    }
-  }
-
-  return Object.keys(pricing).length > 0 ? pricing : null;
-}
 
 // ─── Main Indexer Loop ──────────────────────────────────────────────────────
 
@@ -289,16 +72,21 @@ async function runIndexer() {
         continue;
       }
 
-      // ── Fetch current headless setting ───────────────────────────────────
+      // ── Fetch current configurations ───────────────────────────────────
       const statusRes = await fetch('http://localhost:5999/status')
         .then(r => r.json())
         .catch(() => ({ isHeadless: true }));
+        
+      const configResGlobal = await fetch('http://localhost:5999/config')
+        .then(r => r.json())
+        .catch(() => ({ config: {} }));
+      const aiConfig = configResGlobal.config || {};
 
       const identity = GHOST.generateIdentity();
 
       const browser = await puppeteer.launch({
         headless: statusRes.isHeadless ? 'new' : false,
-        protocolTimeout: 60000,  // 60s max for any CDP protocol call (default: 180s)
+        protocolTimeout: 60000,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
       });
 
@@ -331,31 +119,28 @@ async function runIndexer() {
 
       await sleep(1500);
 
-      // ── DOM Extraction ────────────────────────────────────────────────────
+      // ── DOM Extraction & Cleanup for LLM ───────────────────────────────────
       const pageData = await page.evaluate(() => {
         const anchors = Array.from(document.querySelectorAll('a'));
-        return {
-          links: anchors.map(a => a.href.toLowerCase()).filter(Boolean),
-          bodyText: document.body.innerText.replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ')
-        };
+        const links = anchors.map(a => a.href.toLowerCase()).filter(Boolean);
+        
+        // Clean DOM
+        document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
+        const cleanText = document.body.innerText.replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+        
+        return { links, cleanText };
       });
-
-      // Strategy: parse table-structured hours from DOM
-      let tableHours: Partial<Record<DayKey, string>> = {};
-      try {
-        const tableHoursJson = await page.evaluate(new Function(`return ${buildTableHoursScript()}`) as any);
-        tableHours = JSON.parse(tableHoursJson as string) || {};
-      } catch { /* DOM may not have table hours */ }
 
       await browser.close();
 
-      const text = pageData.bodyText;
+      const text = pageData.cleanText;
 
-      // ── Healer/Toxicity Bouncer Check ──────────────────────────────────────
-      const toxicityReason = checkToxicity(text);
+      // ── AI Toxicity Bouncer (Dynamic Exclusions) ───────────────────────────
+      const exclusions = aiConfig.ai_exclusion_keywords || [];
+      const toxicityReason = exclusions.find((kw: string) => text.toLowerCase().includes(kw.toLowerCase()));
       if (toxicityReason) {
-        console.log(`   🚫 HEALER ABORT: ${toxicityReason}`);
-        pushLog('INFO', `Phase 2 Healer rejected ${target.name}: ${toxicityReason}`);
+        console.log(`   🚫 AI HEALER ABORT: Exclusion keyword hit [${toxicityReason}]`);
+        pushLog('INFO', `Phase 2 Healer rejected ${target.name}: Keyword "${toxicityReason}"`);
         await supabase.from('skate_spots').update({
           is_deep_crawled: true,
           verification_status: 'REJECTED',
@@ -363,13 +148,54 @@ async function runIndexer() {
         }).eq('id', target.id);
         continue;
       }
+
+      // ── Llama-3 Detective Extraction ──────────────────────────────────────
+      const systemPrompt = aiConfig.ai_system_prompt || 'Extract JSON data accurately.';
+      const targetVectors = aiConfig.ai_target_vectors || [];
+      const schema = targetVectors.reduce((acc: any, vec: any) => {
+        acc[vec.key] = vec.type;
+        return acc;
+      }, {});
+
+      const prompt = `${systemPrompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${text}`;
+      
+      console.log(`   🧠 Invoking Ollama Detective (llama3)...`);
+      let aiMetadata: any = {};
+      try {
+        const fetch = require('node-fetch');
+        const response = await fetch('http://localhost:11434/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'llama3',
+            prompt: prompt,
+            format: 'json',
+            stream: false
+          })
+        });
+        if (!response.ok) throw new Error('Ollama HTTP error');
+        const aiData = await response.json();
+        aiMetadata = JSON.parse(aiData.response);
+      } catch (err: any) {
+         console.error('   ✗ Ollama Extraction Failed:', err.message);
+         // Proceed with empty metadata; we still get photos and links
+      }
+
+      // Map AI Metadata back to structured columns if they match
+      const opening_hours = aiMetadata.opening_hours || target.opening_hours || null;
+      const has_adult_night = aiMetadata.has_adult_night || target.has_adult_night || false;
+      const adult_night_details = aiMetadata.adult_night_details || target.adult_night_details || null;
+      const adultNightSchedule = aiMetadata.adult_night_schedule || target.adult_night_schedule || null;
+      const special_events = aiMetadata.special_events || target.special_events || null;
+      const pricing_data = aiMetadata.pricing_data || target.pricing_data || null;
+
       // ── Social Links ──────────────────────────────────────────────────────
       let instagram_url = target.instagram_url || null;
       let facebook_url = target.facebook_url || null;
       let tiktok_url = target.tiktok_url || null;
       let schedule_url = target.schedule_url || null;
 
-      pageData.links.forEach(href => {
+      pageData.links.forEach((href: string) => {
         if (!instagram_url && href.includes('instagram.com') && !href.includes('/explore') && !href.includes('/p/')) {
           instagram_url = href;
         }
@@ -379,7 +205,6 @@ async function runIndexer() {
         if (!tiktok_url && href.includes('tiktok.com') && !href.includes('music')) {
           tiktok_url = href;
         }
-        // PDF schedule → store as schedule_url
         if (!schedule_url && href.includes('.pdf') && (href.includes('sched') || href.includes('hours') || href.includes('calendar'))) {
           schedule_url = href;
         }
@@ -387,51 +212,6 @@ async function runIndexer() {
           schedule_url = href;
         }
       });
-
-      // ── Hours: Table parse (primary) → Text regex (fallback) ─────────────
-      // Only fill hours the Google Places data didn't already provide
-      const existingHours: Partial<Record<DayKey, string>> = target.opening_hours || {};
-      const textHours = parseHoursFromText(text);
-
-      const mergedHours: Partial<Record<DayKey, string>> = { ...textHours, ...tableHours };
-      const finalHours: Partial<Record<DayKey, string>> = {};
-
-      for (const day of DAYS) {
-        // Google/existing data takes priority; fill gaps from website
-        if (existingHours[day]) {
-          finalHours[day] = existingHours[day];
-        } else if (mergedHours[day]) {
-          finalHours[day] = mergedHours[day];
-        }
-      }
-
-      const opening_hours = Object.keys(finalHours).length > 0 ? finalHours : (target.opening_hours || null);
-
-      // ── Adult Night: Detect presence and per-day schedule ─────────────────
-      const adultNightSchedule = parseAdultNightSchedule(text);
-      let has_adult_night = target.has_adult_night || false;
-      let adult_night_details = target.adult_night_details || null;
-
-      // Simple presence check (fallback)
-      const adultRegex = /(\b18\s*\+|\b18\s*and\s*older|\b21\s*\+|\b(?:adult|adults)\s*(?:skate|only|night))/gi;
-      const adultMatch = adultRegex.exec(text);
-      if (adultMatch || adultNightSchedule) {
-        has_adult_night = true;
-        if (!adult_night_details && adultMatch) {
-          const ctxStart = Math.max(0, adultMatch.index - 30);
-          adult_night_details = text.substring(ctxStart, adultMatch.index + 100).trim();
-        }
-      }
-
-      // ── Special Events ────────────────────────────────────────────────────
-      const newEvents = parseSpecialEvents(text);
-      const existingEvents: string[] = target.special_events || [];
-      const special_events = newEvents
-        ? [...new Set([...existingEvents, ...newEvents])]
-        : (existingEvents.length > 0 ? existingEvents : null);
-
-      // ── Pricing ───────────────────────────────────────────────────────────
-      const pricing_data = parsePricing(text) || target.pricing_data || null;
 
       // ── Photo Candidates (free harvest — no API cost) ─────────────────────
       // Only collect if we don't already have photos
@@ -493,7 +273,7 @@ async function runIndexer() {
       // ── Log Result ────────────────────────────────────────────────────────
       const hoursFound = Object.keys(opening_hours || {}).length;
       const scheduleFound = adultNightSchedule ? Object.keys(adultNightSchedule).length : 0;
-      const eventsFound = newEvents?.length || 0;
+      const eventsFound = special_events?.length || 0;
       const pricingFound = Object.keys(pricing_data || {}).length;
       console.log(`   ✓ Hours[${hoursFound}/7] AdultNight[${has_adult_night ? 'Y' : 'N'}, ${scheduleFound} days] Events[${eventsFound}] Pricing[${pricingFound}] Socials[IG:${instagram_url ? 'Y' : 'N'} FB:${facebook_url ? 'Y' : 'N'}] Photos[${candidate_photos ? Object.keys(candidate_photos).length : 0} candidates]`);
 
@@ -515,6 +295,10 @@ async function runIndexer() {
         pricing_data,
         // Photos (candidates written here; Photographer daemon downloads + uploads)
         ...(candidate_photos ? { candidate_photos } : {}),
+        
+        // AI Metadata Dump
+        ai_metadata: Object.keys(aiMetadata).length > 0 ? aiMetadata : (target.ai_metadata || null),
+
         // Pipeline flags
         // IMPORTANT: Never downgrade ENRICHED. ENRICHED + deep_crawled = still ENRICHED.
         // Only promote IDENTITY_ESTABLISHED to INDEXED after deep crawl.

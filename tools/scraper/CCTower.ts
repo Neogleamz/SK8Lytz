@@ -289,7 +289,10 @@ app.post('/config', async (req, res) => {
     max_consecutive_errors,
     auto_resume_enabled,
     identity_rotation_enabled,
-    randomize_viewport_enabled 
+    randomize_viewport_enabled,
+    ai_system_prompt,
+    ai_exclusion_keywords,
+    ai_target_vectors
   } = req.body;
 
   const { error } = await supabase.from('scraper_config').update({
@@ -301,13 +304,76 @@ app.post('/config', async (req, res) => {
     max_consecutive_errors,
     auto_resume_enabled,
     identity_rotation_enabled,
-    randomize_viewport_enabled
+    randomize_viewport_enabled,
+    ai_system_prompt,
+    ai_exclusion_keywords,
+    ai_target_vectors
   }).eq('id', 1);
 
   if (error) {
     return res.status(500).json({ error: error.message });
   }
   res.json({ success: true, message: 'Config updated' });
+});
+
+// --- AI Detective Sandbox ---
+app.post('/api/sandbox', async (req, res) => {
+  const { url, ai_system_prompt, ai_target_vectors } = req.body;
+  if (!url || !ai_system_prompt || !ai_target_vectors) {
+    return res.status(400).json({ error: 'url, ai_system_prompt, and ai_target_vectors are required' });
+  }
+
+  try {
+    const puppeteer = require('puppeteer');
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+    // Clean DOM and extract text
+    const cleanText = await page.evaluate(() => {
+      document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
+      return document.body.innerText.replace(/\s+/g, ' ').trim();
+    });
+    await browser.close();
+
+    // Construct the Ollama prompt
+    const schema = ai_target_vectors.reduce((acc: any, vec: any) => {
+      acc[vec.key] = vec.type;
+      return acc;
+    }, {});
+
+    const prompt = `${ai_system_prompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${cleanText}`;
+
+    // Hit Local Ollama
+    const fetch = require('node-fetch');
+    const response = await fetch('http://localhost:11434/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llama3', // Adjust based on your local model, e.g., llama3.1
+        prompt: prompt,
+        format: 'json',
+        stream: false
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Ollama API failed: ${response.statusText}`);
+    }
+
+    const aiData = await response.json();
+    let parsedJson = {};
+    try {
+      parsedJson = JSON.parse(aiData.response);
+    } catch(e) {
+      parsedJson = { error: 'Failed to parse JSON', raw: aiData.response };
+    }
+
+    res.json({ success: true, cleanText, aiResponse: parsedJson });
+  } catch (err: any) {
+    console.error('Sandbox error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // --- Priority States API (Global Active Region) ---

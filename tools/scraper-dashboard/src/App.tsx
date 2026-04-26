@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import USAMap from './USMap';
+import DetectiveLab from './DetectiveLab';
 import './App.css';
 
 const API_BASE = 'http://localhost:5999';
@@ -53,7 +54,7 @@ const US_STATES = [
 ];
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5' | 'phase6'>('phase1');
+  const [activeTab, setActiveTab] = useState<'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5' | 'phase6' | 'lab'>('phase1');
   const [seedProvider, setSeedProvider] = useState<'osm'|'google'>('google');
 
 
@@ -93,6 +94,11 @@ function App() {
   const [cooldownJitter, setCooldownJitter] = useState<number>(20);
   const [maxStrikes, setMaxStrikes] = useState<number>(3);
   const [autoResume, setAutoResume] = useState<boolean>(true);
+
+  // --- AI Config States ---
+  const [aiSystemPrompt, setAiSystemPrompt] = useState<string>('');
+  const [aiExclusionKeywords, setAiExclusionKeywords] = useState<string[]>([]);
+  const [aiTargetVectors, setAiTargetVectors] = useState<any[]>([]);
 
   // --- Logs & Queue States ---
   const [logs, setLogs] = useState<{type: string, message: string, source?: string}[]>([]);
@@ -240,6 +246,9 @@ function App() {
             setAutoResume(config.auto_resume_enabled ?? true);
             setIdentityRotation(config.identity_rotation_enabled ?? true);
             setRandomizeViewport(config.randomize_viewport_enabled ?? true);
+            setAiSystemPrompt(config.ai_system_prompt || '');
+            setAiExclusionKeywords(config.ai_exclusion_keywords || []);
+            setAiTargetVectors(config.ai_target_vectors || []);
          }
       }
     } catch {
@@ -443,6 +452,12 @@ function App() {
        setIdentityRotation(value);
      } else if (field === 'randomize_viewport_enabled') {
        setRandomizeViewport(value);
+     } else if (field === 'ai_system_prompt') {
+       setAiSystemPrompt(value);
+     } else if (field === 'ai_exclusion_keywords') {
+       setAiExclusionKeywords(value);
+     } else if (field === 'ai_target_vectors') {
+       setAiTargetVectors(value);
      }
 
      await fetch(`${API_BASE}/config`, {
@@ -457,7 +472,10 @@ function App() {
           max_consecutive_errors: newStrikes,
           auto_resume_enabled: newAutoResume,
           identity_rotation_enabled: field === 'identity_rotation_enabled' ? value : identityRotation,
-          randomize_viewport_enabled: field === 'randomize_viewport_enabled' ? value : randomizeViewport
+          randomize_viewport_enabled: field === 'randomize_viewport_enabled' ? value : randomizeViewport,
+          ai_system_prompt: field === 'ai_system_prompt' ? value : aiSystemPrompt,
+          ai_exclusion_keywords: field === 'ai_exclusion_keywords' ? value : aiExclusionKeywords,
+          ai_target_vectors: field === 'ai_target_vectors' ? value : aiTargetVectors
         })
      });
   };
@@ -630,6 +648,10 @@ function App() {
     { id: '4', title: 'Publisher', sub: 'QA Review + Live App Gate', route: 'phase6', color: '#4caf50',
       target: 'Review -> is_published',
       metric: status?.publishedCount || 0, metricLabel: 'Live on App', isDaemon: false,
+      statusActive: true },
+    { id: 'Lab', title: 'Detective Lab', sub: 'Ollama Config & Sandbox', route: 'lab', color: '#00d2ff',
+      target: 'AI Config',
+      metric: aiTargetVectors.length, metricLabel: 'Target Vectors', isDaemon: false,
       statusActive: true },
   ];
 
@@ -1991,6 +2013,18 @@ function App() {
             )}
             </div>}  {/* end databank_grid collapsible */}
           </div>
+        )}
+
+        {activeTab === 'lab' && (
+          <DetectiveLab
+            aiSystemPrompt={aiSystemPrompt}
+            setAiSystemPrompt={setAiSystemPrompt}
+            aiTargetVectors={aiTargetVectors}
+            setAiTargetVectors={setAiTargetVectors}
+            aiExclusionKeywords={aiExclusionKeywords}
+            setAiExclusionKeywords={setAiExclusionKeywords}
+            updateGlobalStrategy={updateGlobalStrategy}
+          />
         )}
       </div>
 
