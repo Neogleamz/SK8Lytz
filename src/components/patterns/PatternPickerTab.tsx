@@ -22,6 +22,17 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
   selectedEffectId, fgColor, bgColor, speed, brightness, points, direction, onSelect, Colors
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('Solid');
+  const [visibleIds, setVisibleIds] = useState<Set<number>>(new Set());
+
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    const next = new Set<number>();
+    viewableItems.forEach((v: any) => next.add(v.item.id));
+    setVisibleIds(next);
+  }).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 10,
+  }).current;
 
   const filteredTemplates = SK8LYTZ_TEMPLATES.filter((effect) => {
     if (effect.group === 'Street') return false;
@@ -72,6 +83,11 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
         }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        initialNumToRender={8}
+        windowSize={3}
+        removeClippedSubviews={true}
         renderItem={({ item: effect }) => (
           <View style={{ width: '48%' }}>
             <PatternCard
@@ -85,7 +101,7 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
               points={points}
               onSelect={() => onSelect(effect.id)}
               Colors={Colors}
-              autoPlay={true}
+              autoPlay={visibleIds.has(effect.id) || selectedEffectId === effect.id}
             />
           </View>
         )}
