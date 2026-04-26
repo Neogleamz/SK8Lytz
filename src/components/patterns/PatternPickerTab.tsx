@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { Spacing } from '../../theme/theme';
@@ -22,6 +22,32 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
   selectedEffectId, fgColor, bgColor, speed, brightness, points, direction, onSelect, Colors
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('All');
+
+  // ── Viewport gate ─────────────────────────────────────────────────────────
+  // visibleIds = null  →  viewport not yet measured, all cards animate (safe default)
+  // visibleIds = Set   →  viewport measured, only in-window cards animate
+  //
+  // viewportHeightRef starts at 0 (unmeasured). The gate activates ONLY after
+  // ScrollView.onLayout fires with the real rendered height, preventing the old
+  // "frozen on open" bug that came from hardcoding 600px as the viewport height.
+  const scrollYRef = useRef(0);
+  const viewportHeightRef = useRef(0); // 0 = not yet measured
+  const cardYPositions = useRef<Record<number, number>>({});
+  const [visibleIds, setVisibleIds] = useState<Set<number> | null>(null);
+
+  const updateVisibility = useCallback(() => {
+    if (viewportHeightRef.current === 0) return; // unmeasured — keep null so all cards play
+    const scrollY = scrollYRef.current;
+    const viewH = viewportHeightRef.current;
+    const visTop = scrollY - 100; // 100px pre-warm buffer above viewport
+    const visBot = scrollY + viewH + 100; // 100px pre-warm buffer below viewport
+    const positions = cardYPositions.current;
+    const next = new Set<number>();
+    for (const [idStr, y] of Object.entries(positions)) {
+      if (y >= visTop && y <= visBot) next.add(Number(idStr));
+    }
+    setVisibleIds(next);
+  }, []);
 
   const filteredTemplates = SK8LYTZ_TEMPLATES.filter((effect) => {
     if (effect.group === 'Street') return false;
@@ -69,9 +95,27 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
         }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onLayout={(e) => {
+          // First real measurement of the ScrollView's rendered height.
+          // Once this fires, the gate becomes active and is computed from real data.
+          viewportHeightRef.current = e.nativeEvent.layout.height;
+          updateVisibility();
+        }}
+        onScroll={(e) => {
+          scrollYRef.current = e.nativeEvent.contentOffset.y;
+          updateVisibility();
+        }}
+        scrollEventThrottle={100}
       >
         {filteredTemplates.map((effect) => (
-          <View key={effect.id} style={{ width: '48%', marginBottom: Spacing.sm }}>
+          <View
+            key={effect.id}
+            onLayout={(e) => {
+              cardYPositions.current[effect.id] = e.nativeEvent.layout.y;
+              updateVisibility();
+            }}
+            style={{ width: '48%', marginBottom: Spacing.sm }}
+          >
             <PatternCard
               effect={effect}
               isSelected={selectedEffectId === effect.id}
@@ -83,7 +127,11 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
               points={points}
               onSelect={() => onSelect(effect.id)}
               Colors={Colors}
-              autoPlay={true}
+              autoPlay={
+                // null = viewport not yet measured → animate all (avoids frozen-on-open flash)
+                // Set  = viewport measured → only animate if visible OR currently selected
+                visibleIds === null || visibleIds.has(effect.id) || selectedEffectId === effect.id
+              }
             />
           </View>
         ))}
@@ -122,4 +170,3 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 });
-
