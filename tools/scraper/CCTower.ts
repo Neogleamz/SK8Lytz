@@ -312,35 +312,12 @@ app.get('/config', async (req, res) => {
 });
 
 app.post('/config', async (req, res) => {
-  const { 
-    state_override, 
-    target_facilities, 
-    sleep_interval_ms,
-    cooldown_base_ms,
-    cooldown_jitter_pct,
-    max_consecutive_errors,
-    auto_resume_enabled,
-    identity_rotation_enabled,
-    randomize_viewport_enabled,
-    ai_system_prompt,
-    ai_exclusion_keywords,
-    ai_target_vectors
-  } = req.body;
+  const payload = { ...req.body };
+  delete payload.id;
+  delete payload.daemon_telemetry;
+  delete payload.updated_at;
 
-  const { error } = await supabase.from('scraper_config').update({
-    state_override,
-    target_facilities,
-    sleep_interval_ms,
-    cooldown_base_ms,
-    cooldown_jitter_pct,
-    max_consecutive_errors,
-    auto_resume_enabled,
-    identity_rotation_enabled,
-    randomize_viewport_enabled,
-    ai_system_prompt,
-    ai_exclusion_keywords,
-    ai_target_vectors
-  }).eq('id', 1);
+  const { error } = await supabase.from('scraper_config').update(payload).eq('id', 1);
 
   if (error) {
     return res.status(500).json({ error: error.message });
@@ -418,11 +395,12 @@ app.post('/api/sandbox', async (req, res) => {
 
     // Hit Local Ollama
     const fetch = require('node-fetch');
+    const targetModel = req.body.detective_model || 'llama3.2';
     const response = await fetch('http://localhost:11434/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama3.1', // Adjust based on your local model, e.g., llama3.1
+        model: targetModel,
         prompt: prompt,
         format: 'json',
         stream: false
@@ -811,18 +789,18 @@ app.delete('/api/skate_spots/:id', async (req, res) => {
 });
 
 app.get('/api/scraper/blocklist', async (req, res) => {
-  const { data, error } = await supabase.from('scraper_blocklist_keywords').select('*').order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('scraper_blocklist').select('*').order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
   res.json({ keywords: data });
 });
 
 app.post('/api/scraper/blocklist', async (req, res) => {
-  const { keyword } = req.body;
+  const { keyword, match_type = 'name', reason = '' } = req.body;
   if (!keyword) return res.status(400).json({ error: 'Missing keyword' });
   const kw = keyword.toLowerCase().trim();
   
   try {
-    const { error } = await supabase.from('scraper_blocklist_keywords').upsert({ keyword: kw });
+    const { error } = await supabase.from('scraper_blocklist').insert({ pattern: kw, match_type, reason });
     if (error) throw error;
     
     // Execute SQL Guillotine: delete existing matches instantly
@@ -840,10 +818,9 @@ app.post('/api/scraper/blocklist', async (req, res) => {
   }
 });
 
-app.delete('/api/scraper/blocklist/:keyword', async (req, res) => {
-  const { keyword } = req.params;
-  const { error } = await supabase.from('scraper_blocklist_keywords').delete().eq('keyword', parseInt(keyword) ? keyword : keyword.toLowerCase().trim()); // handle params
-  // Wait, keyword is a string. Supabase eq handles string. Let's just use keyword natively
+app.delete('/api/scraper/blocklist/:id', async (req, res) => {
+  const { id } = req.params;
+  const { error } = await supabase.from('scraper_blocklist').delete().eq('id', id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true });
 });

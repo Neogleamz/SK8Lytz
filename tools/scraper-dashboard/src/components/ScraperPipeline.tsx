@@ -77,47 +77,29 @@ const STYLES = `
 .pipeline-dashboard-container .belt-flow-area { flex: 1; overflow: hidden; position: relative; display: flex; flex-direction: column; }
 `;
 
-// Uniform data generation to ensure every belt has exactly 2 pending, 2 success, 1 rejected
 const generateUniformBelt = (idx: number, id: number, name: string, color: string, rgb: string, daemon: string, job: string, target: string, status: string, states: string[]) => ({
   id, name, color, rgb, activeStates: states, job, daemon, target, status,
-  inQ: [`Query: Batch ${idx}A`, `Query: Batch ${idx}B`],
-  gatekeeper: ['MUST BE ESTABLISHMENT', 'NOT IN BLOCKLIST'],
-  attempting: [
-      ['name', 'done'], ['address', 'done'], ['phone', 'done'], ['website', 'fail'], ['rating', 'done']
-  ] as [string, string][],
-  outCards: [
-      {
-          title: `Target ${idx} Alpha`, status: 'PROCESSED', type: 'success' as const,
-          data: [
-              ['name', `Target ${idx} Alpha`, 'val'],
-              ['address', '1000 Main St', 'val'],
-              ['phone', '555-0100', 'success'],
-              ['website', 'NULL', 'missing'],
-              ['rating', '4.5', 'success']
-          ] as [string, string, string][]
-      },
-      {
-          title: `Target ${idx} Beta`, status: 'PROCESSED', type: 'success' as const,
-          data: [
-              ['name', `Target ${idx} Beta`, 'val'],
-              ['address', '200 Oak Ave', 'val'],
-              ['phone', '555-0200', 'success'],
-              ['website', 'NULL', 'missing'],
-              ['rating', '4.2', 'success']
-          ] as [string, string, string][]
-      },
-      {
-          title: `Target ${idx} Blocked`, status: 'BLOCKED', type: 'rejected' as const,
-          data: [
-              ['name', `Target ${idx} Blocked`, 'val'],
-              ['block_reason', '"skate shop" match', 'missing']
-          ] as [string, string, string][]
-      }
-  ]
+  inQ: [],
+  gatekeeper: [],
+  attempting: [] as [string, string][],
+  outCards: []
 });
 
-export const ScraperPipeline: React.FC<{ headerControls?: React.ReactNode, pipelineStats?: any, phaseQueues?: any }> = ({ headerControls, pipelineStats, phaseQueues }) => {
-    const { telemetry, loading } = useScraperTelemetry(2000);
+// Belt id → app tab mapping
+const BELT_TAB: Record<number, string> = { 1: 'phase1', 2: 'phase2', 3: 'phase3', 4: 'phase4', 5: 'phase5' };
+
+export const ScraperPipeline: React.FC<{
+    headerControls?: React.ReactNode;
+    belowHeader?: React.ReactNode;
+    pipelineStats?: any;
+    phaseQueues?: any;
+    onPhaseNav?: (tab: string) => void;
+    // Daemon control props
+    status?: any;
+    triggerSpecificDaemon?: (name: string, action: 'start' | 'stop') => void;
+    triggerHarvest?: (type: string, states?: string[]) => void;
+}> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest }) => {
+    const { telemetry, config, loading } = useScraperTelemetry(2000);
 
     const getSpotsForPhase = (beltId: number, count: number = 2) => {
         let spots = [];
@@ -134,44 +116,114 @@ export const ScraperPipeline: React.FC<{ headerControls?: React.ReactNode, pipel
     const buildPhaseCards = (phaseId: number, spots: any[]) => {
         return spots.map(spot => {
             const data: [string, string, string][] = [];
-            if (phaseId === 1) { // Scout
-                data.push(['name', spot.name || 'UNKNOWN', 'val']);
-                data.push(['address', `${spot.city || ''}, ${spot.state || ''}`, 'val']);
-                data.push(['phone', spot.phone || 'NULL', spot.phone ? 'success' : 'missing']);
-                data.push(['website', spot.website || 'NULL', spot.website ? 'success' : 'missing']);
-                data.push(['rating', spot.google_rating?.toString() || 'N/A', 'success']);
-            } else if (phaseId === 2) { // Crawl
-                const socialCount = spot.social_links ? Object.keys(spot.social_links).length : 0;
-                data.push(['URL', spot.website || 'NULL', spot.website ? 'val' : 'missing']);
-                data.push(['Socials', `${socialCount} found`, socialCount > 0 ? 'success' : 'missing']);
-                data.push(['Emails', spot.emails ? 'Discovered' : 'NULL', spot.emails ? 'success' : 'missing']);
-                data.push(['Pages', spot.website ? 'Indexed' : 'Pending', 'val']);
-            } else if (phaseId === 3) { // Detective
-                data.push(['Hours', spot.operating_hours ? 'Parsed' : 'Missing', spot.operating_hours ? 'success' : 'missing']);
-                data.push(['Prices', spot.price_level || 'N/A', 'val']);
-                data.push(['Surface', spot.indoor_outdoor || 'N/A', 'val']);
-                data.push(['Age Restr.', spot.meta_data?.age ? 'Found' : 'None', 'val']);
-                data.push(['Confidence', '95%', 'success']);
-            } else if (phaseId === 4) { // Photographer
-                data.push(['Images', spot.hero_image_url ? '1' : '0', spot.hero_image_url ? 'success' : 'missing']);
-                data.push(['Primary', spot.hero_image_url ? 'Captured' : 'Pending', spot.hero_image_url ? 'val' : 'missing']);
-                data.push(['Quality', spot.hero_image_url ? 'High' : 'N/A', 'success']);
-                data.push(['Floor', 'Wood/Concrete', 'val']);
-            } else if (phaseId === 5) { // Publisher
-                data.push(['ID', spot.id?.substring(0, 8) || 'N/A', 'val']);
-                data.push(['Status', spot.is_published ? 'LIVE' : 'VERIFIED', spot.is_published ? 'success' : 'val']);
-                data.push(['State', spot.state || 'N/A', 'val']);
-                data.push(['Synced At', new Date().toLocaleTimeString(), 'success']);
+            const bool = (v: any) => (v === true ? 'YES' : v === false ? 'NO' : 'N/A');
+            const val  = (v: any, fallback = 'NULL') => v != null ? String(v) : fallback;
+            const ok   = (v: any): string => (v != null && v !== '' && v !== false) ? 'success' : 'missing';
+            const boolOk = (v: any): string => (v === true ? 'success' : 'missing');
+
+            if (phaseId === 1) { // ── SCOUT: Google Places seed ──
+                data.push(['name',             val(spot.name),                                                        ok(spot.name)]);
+                data.push(['facility_type',    val(spot.facility_type, 'UNKNOWN'),                                    ok(spot.facility_type)]);
+                data.push(['address',          val(spot.street_address || spot.address),                              ok(spot.street_address || spot.address)]);
+                data.push(['city',             val(spot.city),                                                        ok(spot.city)]);
+                data.push(['state',            val(spot.state),                                                       ok(spot.state)]);
+                data.push(['zip',              val(spot.zip),                                                         ok(spot.zip)]);
+                data.push(['lat',              spot.lat != null ? Number(spot.lat).toFixed(5) : 'NULL',               ok(spot.lat)]);
+                data.push(['lng',              spot.lng != null ? Number(spot.lng).toFixed(5) : 'NULL',               ok(spot.lng)]);
+                data.push(['phone',            val(spot.phone || spot.phone_number),                                  ok(spot.phone || spot.phone_number)]);
+                data.push(['website',          val(spot.website),                                                     ok(spot.website)]);
+                data.push(['rating',           spot.rating != null ? `★ ${spot.rating}` : 'N/A',                     ok(spot.rating)]);
+                data.push(['reviews',          val(spot.user_ratings_total, '0'),                                     ok(spot.user_ratings_total)]);
+                data.push(['google_place_id',  spot.google_place_id ? spot.google_place_id.slice(0, 12) + '…' : 'NULL', ok(spot.google_place_id)]);
+                data.push(['source',           val(spot.source, 'GOOGLE'),                                            'val']);
+                data.push(['is_indoor',        bool(spot.is_indoor),                                                  'val']);
+                data.push(['verification_status', val(spot.verification_status, 'PENDING'),                           ok(spot.verification_status)]);
+                data.push(['created_at',       spot.created_at ? new Date(spot.created_at).toLocaleDateString() : 'NOW', 'val']);
+
+            } else if (phaseId === 2) { // ── CRAWL: Website deep crawl ──
+                data.push(['website',          val(spot.website),                                                     ok(spot.website)]);
+                data.push(['is_deep_crawled',  bool(spot.is_deep_crawled),                                            boolOk(spot.is_deep_crawled)]);
+                data.push(['operator_name',    val(spot.operator_name),                                               ok(spot.operator_name)]);
+                data.push(['operator_desc',    spot.operator_description ? `${String(spot.operator_description).slice(0, 30)}…` : 'NULL', ok(spot.operator_description)]);
+                data.push(['opening_hours',    spot.opening_hours ? 'PARSED' : 'NULL',                                boolOk(spot.opening_hours)]);
+                data.push(['schedule_url',     spot.schedule_url ? 'FOUND' : 'NULL',                                  boolOk(spot.schedule_url)]);
+                data.push(['has_fee',          bool(spot.has_fee),                                                    'val']);
+                data.push(['pricing_data',     spot.pricing_data ? 'EXTRACTED' : 'NULL',                              boolOk(spot.pricing_data)]);
+                data.push(['facebook_url',     spot.facebook_url ? 'FOUND' : 'NULL',                                  boolOk(spot.facebook_url)]);
+                data.push(['instagram_url',    spot.instagram_url ? 'FOUND' : 'NULL',                                 boolOk(spot.instagram_url)]);
+                data.push(['tiktok_url',       spot.tiktok_url ? 'FOUND' : 'NULL',                                    boolOk(spot.tiktok_url)]);
+                data.push(['socials',          spot.socials ? `${Object.keys(spot.socials).length} platforms` : '0', boolOk(spot.socials)]);
+                data.push(['special_events',   spot.special_events ? 'DETECTED' : 'NULL',                             boolOk(spot.special_events)]);
+                data.push(['raw_kp',           spot.raw_knowledge_panel ? 'CAPTURED' : 'NULL',                        boolOk(spot.raw_knowledge_panel)]);
+                data.push(['photo_candidates', spot.candidate_photos ? `${Array.isArray(spot.candidate_photos) ? spot.candidate_photos.length : '?'} imgs` : '0', boolOk(spot.candidate_photos)]);
+                data.push(['last_attempted',   spot.last_attempted_at ? new Date(spot.last_attempted_at).toLocaleDateString() : 'NEVER', 'val']);
+                data.push(['retry_count',      val(spot.retry_count, '0'),                                            spot.retry_count > 2 ? 'missing' : 'val']);
+
+            } else if (phaseId === 3) { // ── DETECTIVE: Llama-3.2 AI extraction ──
+                data.push(['surface_type',     val(spot.surface_type, 'UNKNOWN'),                                     ok(spot.surface_type)]);
+                data.push(['surface_quality',  val(spot.surface_quality, 'N/A'),                                      ok(spot.surface_quality)]);
+                data.push(['is_indoor',        bool(spot.is_indoor),                                                  'val']);
+                data.push(['capacity',         val(spot.capacity, 'N/A'),                                             ok(spot.capacity)]);
+                data.push(['has_rental',       bool(spot.has_rental),                                                 boolOk(spot.has_rental)]);
+                data.push(['has_pro_shop',     bool(spot.has_pro_shop || spot.has_proshop),                           boolOk(spot.has_pro_shop || spot.has_proshop)]);
+                data.push(['has_food',         bool(spot.has_food),                                                   boolOk(spot.has_food)]);
+                data.push(['has_lights',       bool(spot.has_lights),                                                 boolOk(spot.has_lights)]);
+                data.push(['has_lockers',      bool(spot.has_lockers),                                                boolOk(spot.has_lockers)]);
+                data.push(['has_ac',           bool(spot.has_ac),                                                     boolOk(spot.has_ac)]);
+                data.push(['has_wifi',         bool(spot.has_wifi),                                                   boolOk(spot.has_wifi)]);
+                data.push(['has_toilets',      bool(spot.has_toilets),                                                boolOk(spot.has_toilets)]);
+                data.push(['wheelchair',       bool(spot.is_wheelchair_accessible),                                   boolOk(spot.is_wheelchair_accessible)]);
+                data.push(['has_adult_night',  bool(spot.has_adult_night),                                            boolOk(spot.has_adult_night)]);
+                data.push(['adult_night_det',  spot.adult_night_details ? `${String(spot.adult_night_details).slice(0, 20)}…` : 'N/A', ok(spot.adult_night_details)]);
+                data.push(['hosts_derby',      bool(spot.hosts_derby),                                                boolOk(spot.hosts_derby)]);
+                data.push(['vibe_score',       spot.vibe_score != null ? `${spot.vibe_score}/100` : 'N/A',            ok(spot.vibe_score)]);
+                data.push(['vibe_rating',      spot.vibe_rating != null ? `${spot.vibe_rating}★` : 'N/A',            ok(spot.vibe_rating)]);
+                data.push(['cultural_meta',    spot.cultural_metadata ? 'ENRICHED' : 'NULL',                          boolOk(spot.cultural_metadata)]);
+                data.push(['adult_schedule',   spot.adult_night_schedule ? 'PARSED' : 'NULL',                         boolOk(spot.adult_night_schedule)]);
+
+            } else if (phaseId === 4) { // ── PHOTOGRAPHER: Image harvest ──
+                const photoCount = Array.isArray(spot.photos) ? spot.photos.length : spot.photos ? '?' : 0;
+                const candCount  = Array.isArray(spot.candidate_photos) ? spot.candidate_photos.length : 0;
+                data.push(['photos',           `${photoCount} imgs`,                                                  Number(photoCount) > 0 ? 'success' : 'missing']);
+                data.push(['candidate_photos', `${candCount} queued`,                                                  candCount > 0 ? 'success' : 'missing']);
+                data.push(['last_enriched_at', spot.last_enriched_at ? new Date(spot.last_enriched_at).toLocaleDateString() : 'NEVER', ok(spot.last_enriched_at)]);
+                data.push(['last_attempted',   spot.last_attempted_at ? new Date(spot.last_attempted_at).toLocaleTimeString() : 'NEVER', 'val']);
+                data.push(['retry_count',      val(spot.retry_count, '0'),                                            spot.retry_count > 2 ? 'missing' : 'val']);
+                data.push(['facebook_url',     spot.facebook_url ? 'SCRAPED' : 'PENDING',                             boolOk(spot.facebook_url)]);
+                data.push(['instagram_url',    spot.instagram_url ? 'SCRAPED' : 'PENDING',                            boolOk(spot.instagram_url)]);
+                data.push(['website',          spot.website ? 'SCRAPED' : 'N/A',                                      boolOk(spot.website)]);
+                data.push(['name',             val(spot.name),                                                        ok(spot.name)]);
+                data.push(['state',            val(spot.state),                                                       ok(spot.state)]);
+                data.push(['is_deep_crawled',  bool(spot.is_deep_crawled),                                            boolOk(spot.is_deep_crawled)]);
+
+            } else if (phaseId === 5) { // ── PUBLISHER: QA gate + DB sync ──
+                data.push(['id',               spot.id ? spot.id.slice(0, 12) + '…' : 'N/A',                         ok(spot.id)]);
+                data.push(['name',             val(spot.name),                                                        ok(spot.name)]);
+                data.push(['is_published',     bool(spot.is_published),                                               boolOk(spot.is_published)]);
+                data.push(['is_verified',      bool(spot.is_verified),                                                boolOk(spot.is_verified)]);
+                data.push(['is_featured',      bool(spot.is_featured),                                                boolOk(spot.is_featured)]);
+                data.push(['verification_status', val(spot.verification_status, 'PENDING'),                           ok(spot.verification_status)]);
+                data.push(['state',            val(spot.state),                                                       ok(spot.state)]);
+                data.push(['facility_type',    val(spot.facility_type, 'UNKNOWN'),                                    ok(spot.facility_type)]);
+                data.push(['surface_type',     val(spot.surface_type, 'N/A'),                                         ok(spot.surface_type)]);
+                data.push(['photos',           `${Array.isArray(spot.photos) ? spot.photos.length : 0} imgs`,         Array.isArray(spot.photos) && spot.photos.length > 0 ? 'success' : 'missing']);
+                data.push(['has_rental',       bool(spot.has_rental),                                                 boolOk(spot.has_rental)]);
+                data.push(['has_pro_shop',     bool(spot.has_pro_shop || spot.has_proshop),                           boolOk(spot.has_pro_shop || spot.has_proshop)]);
+                data.push(['vibe_score',       spot.vibe_score != null ? `${spot.vibe_score}/100` : 'N/A',            ok(spot.vibe_score)]);
+                data.push(['updated_at',       spot.updated_at ? new Date(spot.updated_at).toLocaleDateString() : 'N/A', ok(spot.updated_at)]);
+                data.push(['updated_by',       val(spot.updated_by, 'AUTO'),                                          'val']);
+                data.push(['source',           val(spot.source, 'GOOGLE'),                                            'val']);
             }
 
             return {
                 title: spot.name,
-                status: phaseId === 5 ? 'PUBLISHED' : 'PROCESSED',
+                status: phaseId === 5 ? (spot.is_published ? 'PUBLISHED' : 'VERIFIED') : 'PROCESSED',
                 type: 'success' as const,
                 data
             };
         });
     };
+
 
     const baseBelts = [
         generateUniformBelt(1, 1, 'Scout Phase (Google Places Seed)', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING SEED...', 'Waiting', 'EVALUATING BLOCKLIST', getQueueNames('phase1')),
@@ -179,6 +231,37 @@ export const ScraperPipeline: React.FC<{ headerControls?: React.ReactNode, pipel
         generateUniformBelt(3, 3, 'Detective Phase (Llama-3.2 Extraction)', '--neon-detective', '255, 106, 0', 'Llama3.2-8b', 'INFERENCING JSON...', 'Waiting', 'STREAMING TO DB', getQueueNames('phase4')),
         generateUniformBelt(4, 4, 'Photographer (Cloud Vision)', '--neon-photo', '255, 0, 127', 'Vision_v1', 'ANALYZING IMAGES...', 'Waiting', 'DETECTING HARDWOOD', getQueueNames('phase6')),
         generateUniformBelt(5, 5, 'Publisher (DB Sync)', '--neon-publish', '0, 212, 255', 'Sync_v4', 'UPSERTING BATCH...', 'Waiting', 'COMMITTING TRANSACTION', getQueueNames('recent'))
+    ];
+
+    // Restore the technical target collection checklists on the Active Job cards with EVERY field
+    baseBelts[0].attempting = [['name', 'pending'], ['facility_type', 'pending'], ['address', 'pending'], ['city', 'pending'], ['state', 'pending'], ['zip', 'pending'], ['lat', 'pending'], ['lng', 'pending'], ['phone', 'pending'], ['website', 'pending'], ['rating', 'pending'], ['reviews', 'pending'], ['place_id', 'pending'], ['is_indoor', 'pending']];
+    
+    // Add custom paths to Crawl:
+    const crawlPaths = config?.crawl_priority_paths || [];
+    baseBelts[1].attempting = [
+      ['website', 'pending'], ['operator_name', 'pending'], ['operator_desc', 'pending'], ['opening_hours', 'pending'], ['schedule_url', 'pending'], ['pricing_data', 'pending'], ['has_fee', 'pending'], ['facebook_url', 'pending'], ['instagram_url', 'pending'], ['tiktok_url', 'pending'], ['special_events', 'pending'], ['raw_kp', 'pending'],
+      ...crawlPaths.map((p: string) => [p, 'pending'] as [string, string])
+    ];
+
+    // Add AI target vectors to Detective:
+    const aiVectors = config?.ai_target_vectors || [];
+    baseBelts[2].attempting = [
+      ['surface_type', 'pending'], ['surface_quality', 'pending'], ['is_indoor', 'pending'], ['capacity', 'pending'], ['has_rental', 'pending'], ['has_pro_shop', 'pending'], ['has_food', 'pending'], ['has_lights', 'pending'], ['has_lockers', 'pending'], ['has_ac', 'pending'], ['has_wifi', 'pending'], ['has_toilets', 'pending'], ['wheelchair', 'pending'], ['adult_night', 'pending'], ['derby', 'pending'], ['vibe_score', 'pending'], ['cultural_meta', 'pending'],
+      ...aiVectors.map((v: any) => [(v.key || v), 'pending'] as [string, string])
+    ];
+
+    // Add Photo categories to Photographer:
+    const photoCategories = config?.photo_categories || [];
+    baseBelts[3].attempting = [
+      ['photos', 'pending'], ['candidate_photos', 'pending'], ['facebook_url', 'pending'], ['instagram_url', 'pending'], ['website', 'pending'], ['is_deep_crawled', 'pending'],
+      ...photoCategories.map((c: string) => [c, 'pending'] as [string, string])
+    ];
+
+    // Add Publisher required fields:
+    const pubFields = config?.publisher_required_fields || [];
+    baseBelts[4].attempting = [
+      ['id', 'pending'], ['is_published', 'pending'], ['is_verified', 'pending'], ['is_featured', 'pending'], ['verification_status', 'pending'], ['surface_type', 'pending'], ['has_rental', 'pending'], ['has_pro_shop', 'pending'], ['vibe_score', 'pending'], ['updated_at', 'pending'], ['source', 'pending'],
+      ...pubFields.map((f: string) => [f, 'pending'] as [string, string])
     ];
 
     const mergedBelts = baseBelts.map(belt => {
@@ -209,46 +292,113 @@ export const ScraperPipeline: React.FC<{ headerControls?: React.ReactNode, pipel
         };
     });
 
+    // Per-belt daemon control mappings
+    const beltDaemon: Record<number, { active: boolean; hasDaemon: boolean; onStart: () => void; onStop: () => void }> = {
+        1: { hasDaemon: true,  active: !!(status?.isHarvestingActive || status?.isGoogleSweepActive), onStart: () => triggerHarvest?.('start-all'), onStop: () => triggerHarvest?.('stop-all') },
+        2: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Operator: online')),    onStart: () => triggerSpecificDaemon?.('operator', 'start'),    onStop: () => triggerSpecificDaemon?.('operator', 'stop') },
+        3: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Indexer: online')),     onStart: () => triggerSpecificDaemon?.('indexer', 'start'),     onStop: () => triggerSpecificDaemon?.('indexer', 'stop') },
+        4: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Photographer: online')), onStart: () => triggerSpecificDaemon?.('photographer', 'start'), onStop: () => triggerSpecificDaemon?.('photographer', 'stop') },
+        5: { hasDaemon: false, active: false, onStart: () => {}, onStop: () => {} },
+    };
+
+
+    const [controlsOpen, setControlsOpen] = React.useState(false);
+
     return (
-        <div className="pipeline-dashboard-container w-full min-h-screen flex flex-col gap-8 text-white relative px-4">
+        <div className="pipeline-dashboard-container w-full min-h-screen flex flex-col text-white relative" style={{ gap: 0 }}>
             <style>{STYLES}</style>
-            
-            <div className="glass-panel p-5 flex flex-col gap-4 sticky top-[20px] z-[100]">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-3xl font-black tracking-[0.2em]" style={{ textShadow: '0 0 20px rgba(255,255,255,0.5)' }}>
-                        SK8<span style={{ color: '#00ffaa', textShadow: '0 0 20px #00ffaa' }}>LYTZ</span> <span className="text-white/20 font-light ml-2 text-xl">PIPELINE (PHASE SLICING)</span>
-                    </h1>
-                    
-                    <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-4 px-4 py-2 bg-black/40 border border-white/5 rounded-xl data-font">
-                            <div className="text-xs">
-                                <span className="text-white/40 uppercase tracking-widest mr-2">Seeds</span>
-                                <span className="text-[#00ffaa] font-bold">{pipelineStats?.summary?.total_seeded?.toLocaleString() || '14,204'}</span>
-                            </div>
-                            <div className="w-px h-4 bg-white/10"></div>
-                            <div className="text-xs">
-                                <span className="text-white/40 uppercase tracking-widest mr-2">Throughput</span>
-                                <span className="text-white font-bold">{pipelineStats?.summary?.throughput || '0'} rec/m</span>
-                            </div>
-                            <div className="w-px h-4 bg-white/10"></div>
-                            <div className="text-xs">
-                                <span className="text-white/40 uppercase tracking-widest mr-2">Daemon Health</span>
-                                <span className="text-[#00ffaa] font-bold animate-pulse">{loading ? 'SYNCING...' : 'OPTIMAL'}</span>
-                            </div>
-                        </div>
+
+            {/* ── SLIM MISSION CONTROL HUD ── */}
+            <div style={{
+                position: 'sticky', top: 0, zIndex: 100,
+                background: 'rgba(8,8,14,0.97)',
+                borderBottom: '1px solid rgba(0,255,170,0.12)',
+                backdropFilter: 'blur(20px)',
+                boxShadow: '0 4px 30px rgba(0,0,0,0.6)',
+            }}>
+                {/* Top row: branding + stats + controls toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 0, padding: '10px 20px', minHeight: 52 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, flexShrink: 0, marginRight: 18 }}>
+                        <span style={{ fontSize: '1.05rem', fontWeight: 900, background: 'linear-gradient(90deg,#00ffaa,#00d4ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '0.05em' }}>SK8LYTZ</span>
+                        <span style={{ fontSize: '0.48rem', fontWeight: 800, color: 'rgba(0,255,170,0.45)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>FACTORY FLOOR</span>
                     </div>
+                    <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.07)', flexShrink: 0, marginRight: 18 }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        {[
+                            { label: 'Seeds',      value: pipelineStats?.summary?.total_seeded?.toLocaleString() ?? '\u2014', color: '#00ffaa' },
+                            { label: 'Published',  value: pipelineStats?.summary?.published?.toLocaleString()    ?? '\u2014', color: '#4ade80' },
+                            { label: 'Throughput', value: `${pipelineStats?.summary?.throughput ?? 0}/m`,                    color: '#fff' },
+                            { label: 'DB Sync',    value: loading ? 'SYNCING' : 'LIVE',                                      color: loading ? '#ffb300' : '#00ffaa' },
+                        ].map(s => (
+                            <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
+                                <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em', fontFamily: 'JetBrains Mono, monospace' }}>{s.label}</span>
+                                <span style={{ fontSize: '0.68rem', fontWeight: 900, color: s.color, fontFamily: 'JetBrains Mono, monospace' }}>{s.value}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{ flex: 1 }} />
+                    <button
+                        onClick={() => setControlsOpen(o => !o)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '5px 14px', borderRadius: 20,
+                            border: `1px solid ${controlsOpen ? 'rgba(0,255,170,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                            background: controlsOpen ? 'rgba(0,255,170,0.08)' : 'rgba(255,255,255,0.04)',
+                            color: controlsOpen ? '#00ffaa' : 'rgba(255,255,255,0.5)',
+                            cursor: 'pointer', fontSize: '0.6rem', fontWeight: 800,
+                            textTransform: 'uppercase', letterSpacing: '0.1em',
+                            transition: 'all 0.2s', flexShrink: 0, marginLeft: 12,
+                        }}
+                    >
+                        <span>⚙</span> Global Controls <span style={{ fontSize: '0.65rem', opacity: 0.6 }}>{controlsOpen ? '▲' : '▼'}</span>
+                    </button>
                 </div>
-                
-                {/* Embedded old header controls */}
-                {headerControls && (
-                    <div className="w-full flex items-center justify-between border-t border-white/10 pt-3">
+
+                {/* Collapsible Global Controls drawer */}
+                {controlsOpen && (
+                    <div style={{
+                        borderTop: '1px solid rgba(255,255,255,0.06)',
+                        background: 'rgba(4,4,10,0.98)',
+                        padding: '10px 20px',
+                        display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 14px',
+                    }}>
+                        <span style={{ fontSize: '0.5rem', fontWeight: 900, color: 'rgba(0,255,170,0.5)', textTransform: 'uppercase', letterSpacing: '0.2em', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
+                            ⚡ MISSION CONTROLS
+                        </span>
+                        <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.07)', flexShrink: 0 }} />
                         {headerControls}
                     </div>
                 )}
             </div>
-                    
-        <div className="flex flex-col mt-4">
-                {mergedBelts.map(b => <BeltNode key={b.id} {...b} />)}
+
+            {/* Region Pulse — below sticky HUD */}
+            {belowHeader}
+
+            {/* ── BELT ROWS ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '14px 16px' }}>
+                {mergedBelts.map(b => {
+                    const dc = beltDaemon[b.id];
+                    // Build live status string from belt telemetry
+                    const isActive = dc?.active;
+                    const statusLabel = b.status === 'PROCESSING' ? 'PROCESSING' : 'IDLE';
+                    const daemonStatus = b.target && b.target !== 'WAITING...'
+                        ? `${statusLabel}: ${b.target}`
+                        : b.job && b.job !== 'IDLE'
+                            ? b.job
+                            : isActive ? 'RUNNING \u2014 WAITING FOR QUEUE' : 'IDLE \u2014 AWAITING JOB';
+                    return (
+                        <BeltNode
+                            key={b.id}
+                            {...b}
+                            onPhaseNav={onPhaseNav ? () => onPhaseNav(BELT_TAB[b.id] ?? 'phase1') : undefined}
+                            daemonActive={dc?.active}
+                            hasDaemon={dc?.hasDaemon ?? true}
+                            onDaemonStart={dc?.onStart}
+                            onDaemonStop={dc?.onStop}
+                            daemonStatus={daemonStatus}
+                        />
+                    );
+                })}
             </div>
         </div>
     );

@@ -656,6 +656,105 @@ function App() {
       statusActive: true },
   ];
 
+  // ── REGION PULSE — single source of truth, used in both tab layouts ──
+  const regionPulseEl = pipelineStats ? (() => {
+    const s = pipelineStats.summary;
+    const rows = pipelineStats.stats || [];
+    const label = stateOverride.length > 0 ? stateOverride.join(' · ') : 'NATIONWIDE';
+    const C = { scout: '#00ffaa', crawl: '#9d4edd', detective: '#ff6a00', photo: '#ff007f', pub: '#00d4ff' };
+    const row = (k: string, v: any, color = '#fff') => (
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>{k}</span>
+        <span style={{ fontSize: '0.7rem', fontWeight: 800, color }}>{typeof v === 'number' ? v.toLocaleString() : v}</span>
+      </div>
+    );
+    const crawlDone    = s.deep_crawled    || 0;
+    const crawlWaiting = Math.max(0, (s.has_website || 0) - crawlDone);
+    return (
+      <div style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+        <div onClick={() => toggleSection('pulse')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 14px', borderBottom: isCollapsed('pulse') ? 'none' : '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.03)', cursor: 'pointer', userSelect: 'none' as const }}>
+          <span style={{ fontSize: '0.56rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' as const, letterSpacing: '0.12em' }}>Region Pulse</span>
+          <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#8a2be2' }}>{label}</span>
+          <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)', marginLeft: 'auto' }}>{s.total?.toLocaleString()} records · {isCollapsed('pulse') ? '▼' : '▲'}</span>
+        </div>
+        {!isCollapsed('pulse') && (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1px', background: 'rgba(255,255,255,0.04)' }}>
+              {/* ① SCOUT */}
+              <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.scout, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.scout}33`, paddingBottom: '4px' }}>① Scout</div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
+                  {row('Total Seeded', s.total, '#fff')}
+                  {row('Enriched', s.enriched, C.scout)}
+                  {row('Has Website', s.has_website, 'rgba(255,255,255,0.6)')}
+                  {row('No Website', (s.total||0)-(s.has_website||0), 'rgba(255,255,255,0.25)')}
+                </div>
+              </div>
+              {/* ② CRAWL */}
+              <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.crawl, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.crawl}33`, paddingBottom: '4px' }}>② Crawl</div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
+                  {row('Eligible', s.has_website, 'rgba(255,255,255,0.6)')}
+                  {row('Deep Crawled', s.deep_crawled, C.crawl)}
+                  {row('Awaiting', crawlWaiting, crawlWaiting > 0 ? '#ffb300' : 'rgba(255,255,255,0.3)')}
+                  {row('Skipped', (s.total||0)-(s.has_website||0), 'rgba(255,255,255,0.2)')}
+                </div>
+              </div>
+              {/* ③ DETECTIVE */}
+              <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.detective, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.detective}33`, paddingBottom: '4px' }}>③ Detective</div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
+                  {row('AI In Queue', s.detective_queue, s.detective_queue > 0 ? '#ffb300' : 'rgba(255,255,255,0.3)')}
+                  {row('AI Processed', s.deep_crawled, C.detective)}
+                  {row('Has Candidates', s.has_candidates, 'rgba(255,255,255,0.6)')}
+                  {row('No Candidates', (s.deep_crawled||0)-(s.has_candidates||0), 'rgba(255,255,255,0.25)')}
+                </div>
+              </div>
+              {/* ④ PHOTOGRAPHER */}
+              <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.photo, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.photo}33`, paddingBottom: '4px' }}>④ Photographer</div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
+                  {row('Candidates', s.has_candidates, 'rgba(255,255,255,0.6)')}
+                  {row('Queue', s.photographer_queue, s.photographer_queue > 0 ? C.photo : 'rgba(255,255,255,0.3)')}
+                  {row('Photographed', s.has_photos, '#fff')}
+                  {row('Media Ready', s.media_ready, C.photo)}
+                </div>
+              </div>
+              {/* ⑤ PUBLISHER */}
+              <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.pub, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.pub}33`, paddingBottom: '4px' }}>⑤ Publisher</div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
+                  {row('Ready', s.media_ready, C.pub)}
+                  {row('Live on App', s.published, '#4ade80')}
+                  {row('Pipeline %', `${s.total > 0 ? Math.round((s.enriched/s.total)*100) : 0}%`, 'rgba(255,255,255,0.5)')}
+                  {row('Published %', `${s.total > 0 ? Math.round((s.published/s.total)*100) : 0}%`, '#4ade80')}
+                </div>
+              </div>
+            </div>
+            {/* Per-state chips */}
+            {rows.length > 1 && (
+              <div style={{ padding: '5px 14px 7px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                <div style={{ fontSize: '0.54rem', fontWeight: 900, color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: '4px' }}>Per State</div>
+                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' as const }}>
+                  {rows.slice(0, 20).map((r: any) => (
+                    <div key={r.state} style={{ display: 'inline-flex', gap: '4px', alignItems: 'center', padding: '2px 7px', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <span style={{ fontSize: '0.64rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)' }}>{r.state}</span>
+                      <span style={{ fontSize: '0.58rem', color: '#00ffaa' }} title="Total">{r.total}</span>
+                      {r.crawl_queue      > 0 && <span style={{ fontSize: '0.58rem', color: '#9d4edd' }} title="Crawl queue">🕷{r.crawl_queue}</span>}
+                      {r.detective_queue  > 0 && <span style={{ fontSize: '0.58rem', color: '#ff6a00' }} title="AI queue">🔎{r.detective_queue}</span>}
+                      {r.photographer_queue > 0 && <span style={{ fontSize: '0.58rem', color: '#ff007f' }} title="Photo queue">📸{r.photographer_queue}</span>}
+                      {r.published        > 0 && <span style={{ fontSize: '0.58rem', color: '#4ade80' }} title="Published">✓{r.published}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  })() : null;
+
   const headerControls = (
     <>
       {/* Logo */}
@@ -767,100 +866,31 @@ function App() {
         </div>
       )}
 
-      {/* ======= REGION PULSE: live per-phase breakdown ======= */}
-      {pipelineStats && (() => {
-        const s = pipelineStats.summary;
-        const rows = pipelineStats.stats;
-        const label = stateOverride.length > 0 ? stateOverride.join(' · ') : 'NATIONWIDE';
-        const COL = { scout:'#8a2be2', detective:'#ff5a00', photographer:'#e91e63', publisher:'#4caf50' };
-        return (
-          <div style={{ margin: '0 0 1rem 0', background: 'rgba(0,0,0,0.35)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-            {/* Header row — always visible, click to collapse */}
-            <div
-              onClick={() => toggleSection('pulse')}
-              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 14px', borderBottom: isCollapsed('pulse') ? 'none' : '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.03)', cursor: 'pointer', userSelect: 'none' }}
-            >
-              <span style={{ fontSize: '0.58rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Region Pulse</span>
-              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#8a2be2' }}>{label}</span>
-              <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.2)', marginLeft: 'auto' }}>{s.total?.toLocaleString()} total · {isCollapsed('pulse') ? '▼ expand' : '▲ collapse'}</span>
-            </div>
-            {/* Collapsible body */}
-            {!isCollapsed('pulse') && (
-              <>
-                {/* Phase metric columns */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'rgba(255,255,255,0.04)' }}>
-                  {/* Phase 1: Scout */}
-                  <div style={{ background: 'rgba(12,12,20,0.95)', padding: '10px 14px' }}>
-                    <div style={{ fontSize: '0.58rem', fontWeight: 800, color: COL.scout, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>① Scout</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Total Seeded</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#fff' }}>{s.total?.toLocaleString()}</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Enriched</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: COL.scout }}>{s.enriched?.toLocaleString()}</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Has Website</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)' }}>{s.has_website?.toLocaleString()}</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Pending</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#ffb300' }}>{s.pending?.toLocaleString()}</span></div>
-                    </div>
-                  </div>
-                  {/* Phase 2: Detective */}
-                  <div style={{ background: 'rgba(12,12,20,0.95)', padding: '10px 14px' }}>
-                    <div style={{ fontSize: '0.58rem', fontWeight: 800, color: COL.detective, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>② Detective</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>In Queue</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: COL.detective }}>{s.detective_queue?.toLocaleString()}</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Crawled</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#fff' }}>{s.deep_crawled?.toLocaleString()}</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>No Website</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)' }}>{((s.total||0)-(s.has_website||0))?.toLocaleString()}</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Has Candidates</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)' }}>{s.has_candidates?.toLocaleString()}</span></div>
-                    </div>
-                  </div>
-                  {/* Phase 3: Photographer */}
-                  <div style={{ background: 'rgba(12,12,20,0.95)', padding: '10px 14px' }}>
-                    <div style={{ fontSize: '0.58rem', fontWeight: 800, color: COL.photographer, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>③ Photographer</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>In Queue</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: s.photographer_queue > 0 ? COL.photographer : 'rgba(255,255,255,0.3)' }}>{s.photographer_queue?.toLocaleString()}</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Photographed</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#fff' }}>{s.has_photos?.toLocaleString()}</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>No Candidates</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)' }}>{((s.total||0)-(s.has_candidates||0))?.toLocaleString()}</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Media Ready</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: COL.photographer }}>{s.media_ready?.toLocaleString()}</span></div>
-                    </div>
-                  </div>
-                  {/* Phase 4: Publisher */}
-                  <div style={{ background: 'rgba(12,12,20,0.95)', padding: '10px 14px' }}>
-                    <div style={{ fontSize: '0.58rem', fontWeight: 800, color: COL.publisher, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>④ Publisher</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Ready to Publish</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: COL.publisher }}>{s.media_ready?.toLocaleString()}</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Live on App</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#4ade80' }}>{s.published?.toLocaleString()}</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Pipeline %</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)' }}>{s.total > 0 ? Math.round((s.enriched/s.total)*100) : 0}%</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>Published %</span><span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#4ade80' }}>{s.total > 0 ? Math.round((s.published/s.total)*100) : 0}%</span></div>
-                    </div>
-                  </div>
-                </div>
-                {/* Per-state breakdown */}
-                {rows.length > 1 && (
-                  <div style={{ padding: '6px 14px 8px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                    <div style={{ fontSize: '0.56rem', fontWeight: 800, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '5px' }}>Per State</div>
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                      {rows.slice(0, 15).map((r: any) => (
-                        <div key={r.state} style={{ display: 'inline-flex', gap: '5px', alignItems: 'center', padding: '2px 8px', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                          <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)' }}>{r.state}</span>
-                          <span style={{ fontSize: '0.6rem', color: '#8a2be2' }} title="Total">{r.total}</span>
-                          <span style={{ fontSize: '0.6rem', color: COL.detective }} title="Detective queue">{r.detective_queue > 0 ? `🔎${r.detective_queue}` : ''}</span>
-                          <span style={{ fontSize: '0.6rem', color: COL.photographer }} title="Photographer queue">{r.photographer_queue > 0 ? `📸${r.photographer_queue}` : ''}</span>
-                          <span style={{ fontSize: '0.6rem', color: '#4ade80' }} title="Published">{r.published > 0 ? `✓${r.published}` : ''}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        );
-      })()}
+      {/* ======= REGION PULSE: 5-phase live breakdown ======= */}
+      {activeTab !== 'pipeline' && regionPulseEl && (
+        <div style={{ margin: '0 0 1rem 0', borderRadius: '10px', overflow: 'hidden' }}>
+          {regionPulseEl}
+        </div>
+      )}
 
+      {activeTab === 'pipeline' && (
+        <div className="fade-in w-full">
+           <ScraperPipeline
+              headerControls={headerControls}
+              belowHeader={regionPulseEl ?? undefined}
+              pipelineStats={pipelineStats}
+              phaseQueues={phaseQueues}
+              onPhaseNav={(tab) => setActiveTab(tab as any)}
+              status={status}
+              triggerSpecificDaemon={triggerSpecificDaemon}
+              triggerHarvest={triggerHarvest}
+            />
+        </div>
+      )}
+
+      {activeTab !== 'pipeline' && (
+      <>
       <div className="content-area fade-in">
-        {/* =========== PHASE 0: UNIFIED PIPELINE =========== */}
-        {activeTab === 'pipeline' && (
-          <div className="tab-pane pipeline fade-in">
-             <ScraperPipeline headerControls={headerControls} pipelineStats={pipelineStats} phaseQueues={phaseQueues} />
-          </div>
-        )}
-
         {/* =========== PHASE 1: GLOBAL STRATEGY & INTAKE =========== */}
         {activeTab === 'phase1' && (
           <div className="tab-pane phase-1">
@@ -2095,6 +2125,8 @@ function App() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

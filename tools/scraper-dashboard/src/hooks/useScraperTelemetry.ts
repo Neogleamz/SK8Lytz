@@ -27,6 +27,7 @@ export interface PipelineTelemetry {
 
 export function useScraperTelemetry(pollingIntervalMs: number = 2000) {
   const [telemetry, setTelemetry] = useState<PipelineTelemetry>({});
+  const [config, setConfig] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,13 +36,21 @@ export function useScraperTelemetry(pollingIntervalMs: number = 2000) {
 
     const fetchTelemetry = async () => {
       try {
-        const response = await fetch(`${API_BASE}/api/pipeline/telemetry`);
-        if (!response.ok) {
-          throw new Error(`HTTP Error: ${response.status}`);
+        const [telRes, confRes] = await Promise.all([
+          fetch(`${API_BASE}/api/pipeline/telemetry`),
+          fetch(`${API_BASE}/config`).catch(() => ({ ok: true, json: () => ({}) } as any))
+        ]);
+
+        if (!telRes.ok) {
+          throw new Error(`HTTP Error: ${telRes.status}`);
         }
-        const data = await response.json();
+        
+        const data = await telRes.json();
+        const confData = await confRes.json();
+
         if (isMounted) {
           setTelemetry(data);
+          if (confData.config) setConfig(confData.config);
           setError(null);
         }
       } catch (err: any) {
@@ -67,5 +76,5 @@ export function useScraperTelemetry(pollingIntervalMs: number = 2000) {
     };
   }, [pollingIntervalMs]);
 
-  return { telemetry, loading, error };
+  return { telemetry, config, loading, error };
 }

@@ -189,7 +189,7 @@ async function runIndexer() {
       const systemPrompt = aiConfig.ai_system_prompt || 'Extract JSON data accurately.';
       const targetVectors = aiConfig.ai_target_vectors || [];
       const schema = targetVectors.reduce((acc: any, vec: any) => {
-        acc[vec.key] = vec.type;
+        acc[vec.key] = vec.prompt || vec.type; // Use vec.prompt for better LLM instruction
         return acc;
       }, {});
 
@@ -200,7 +200,8 @@ async function runIndexer() {
 
       const prompt = `${contextHeader}${systemPrompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${text}`;
       
-      console.log(`   🧠 Invoking Ollama Detective (llama3)...`);
+      const detectiveModel = aiConfig.detective_model || 'llama3.1';
+      console.log(`   🧠 Invoking Ollama Detective (${detectiveModel})...`);
       let aiMetadata: any = {};
       try {
         const fetch = require('node-fetch');
@@ -208,7 +209,7 @@ async function runIndexer() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'llama3.1',
+            model: detectiveModel,
             prompt: prompt,
             format: 'json',
             stream: false
