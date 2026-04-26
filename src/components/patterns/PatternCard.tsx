@@ -14,7 +14,7 @@ interface PatternCardProps {
   brightness: number;
   direction: number;
   points: number;
-  onSelect: () => void;
+  onSelect: (id: number) => void;
   Colors: any;
   /** Controls whether the LEDStripPreview animation is running (visibility gate) */
   autoPlay?: boolean;
@@ -36,8 +36,8 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
     if (isSelected) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.04, duration: 600, useNativeDriver: false }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: false }),
+          Animated.timing(pulseAnim, { toValue: 1.04, duration: 600, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
         ])
       ).start();
     } else {
@@ -51,7 +51,7 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
       <TouchableOpacity
         id={`fx-card-${effect.id}`}
         activeOpacity={0.75}
-        onPress={onSelect}
+        onPress={() => onSelect(effect.id)}
         style={[
           styles.effectCard,
           isSelected && {

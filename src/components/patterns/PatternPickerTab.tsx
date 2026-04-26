@@ -99,7 +99,7 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
               brightness={brightness}
               direction={direction}
               points={points}
-              onSelect={() => onSelect(effect.id)}
+              onSelect={onSelect}
               Colors={Colors}
               autoPlay={visibleIds.has(effect.id) || selectedEffectId === effect.id}
             />
