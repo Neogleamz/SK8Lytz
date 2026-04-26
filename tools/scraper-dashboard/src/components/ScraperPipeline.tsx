@@ -227,10 +227,10 @@ export const ScraperPipeline: React.FC<{
 
     const baseBelts = [
         generateUniformBelt(1, 1, 'Phase 1: The Scout (Google Sweep)', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING...', 'Waiting', 'PENDING', 'SEEDED', getQueueNames('phase1')),
-        generateUniformBelt(2, 2, 'Phase 2: The Spider (Operator)', '--neon-crawl', '157, 78, 221', 'Spider_v3', 'PROCESSING...', 'Waiting', 'SEEDED', 'ENRICHED', getQueueNames('phase3')),
-        generateUniformBelt(3, 3, 'Phase 3: The Detective (Indexer)', '--neon-detective', '255, 106, 0', 'Llama3.2-8b', 'PROCESSING...', 'Waiting', 'ENRICHED', 'DEEP_CRAWLED', getQueueNames('phase4')),
-        generateUniformBelt(4, 4, 'Phase 4: The Photographer', '--neon-photo', '255, 0, 127', 'Vision_v1', 'PROCESSING...', 'Waiting', 'DEEP_CRAWLED', 'MEDIA_READY', getQueueNames('phase6')),
-        generateUniformBelt(5, 5, 'Phase 5: The Publisher', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('recent'))
+        generateUniformBelt(2, 2, 'Phase 2: The Spider (Operator)', '--neon-crawl', '157, 78, 221', 'Spider_v3', 'PROCESSING...', 'Waiting', 'SEEDED', 'ENRICHED', getQueueNames('phase2')),
+        generateUniformBelt(3, 3, 'Phase 3: The Detective (Indexer)', '--neon-detective', '255, 106, 0', 'Llama3.2-8b', 'PROCESSING...', 'Waiting', 'ENRICHED', 'DEEP_CRAWLED', getQueueNames('phase3')),
+        generateUniformBelt(4, 4, 'Phase 4: The Photographer', '--neon-photo', '255, 0, 127', 'Vision_v1', 'PROCESSING...', 'Waiting', 'DEEP_CRAWLED', 'MEDIA_READY', getQueueNames('phase4')),
+        generateUniformBelt(5, 5, 'Phase 5: The Publisher', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('phase6'))
     ];
 
     // Restore the technical target collection checklists on the Active Job cards with EVERY field
