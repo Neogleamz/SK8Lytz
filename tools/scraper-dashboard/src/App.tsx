@@ -159,7 +159,12 @@ function App() {
       fetchSystemStatus();
       fetchCoverage();
       // Only re-fetch queue for the currently visible tab (not all 6 every 5s)
-      fetchQueue([activeTabRef.current, 'recent']);
+      // When viewing the pipeline belt, refresh all phase queues so every belt has live data
+      const phasesToRefresh = activeTabRef.current === 'pipeline'
+        ? ['phase1', 'phase2', 'phase3', 'phase4', 'phase6', 'recent']
+        : [activeTabRef.current, 'recent'];
+      fetchQueue(phasesToRefresh);
+
     }, 5000);
 
     // Region Pulse refreshes on a slower 15s cycle (heavier query)
