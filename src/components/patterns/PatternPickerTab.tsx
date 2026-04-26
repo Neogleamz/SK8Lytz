@@ -23,30 +23,39 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('All');
 
-  // ── Viewport gate ─────────────────────────────────────────────────────────
-  // visibleIds = null  →  viewport not yet measured, all cards animate (safe default)
-  // visibleIds = Set   →  viewport measured, only in-window cards animate
+  // ── Viewport gate (v3 — perf hardened) ────────────────────────────────────
+  // Gate starts CLOSED: visibleIds begins as empty Set so ZERO cards animate
+  // on mount. This eliminates the "initial storm" where 30+ setIntervals fire
+  // simultaneously before the ScrollView has measured its height.
   //
-  // viewportHeightRef starts at 0 (unmeasured). The gate activates ONLY after
-  // ScrollView.onLayout fires with the real rendered height, preventing the old
-  // "frozen on open" bug that came from hardcoding 600px as the viewport height.
+  // Flow:
+  //   1. Mount → all cards render with autoPlay=false (only selected animates)
+  //   2. ScrollView.onLayout fires → viewportHeightRef measured → debounced update
+  //   3. Card onLayout fires × N → cardYPositions populated → debounced update
+  //   4. Debounce timer fires → single setVisibleIds() with correct ~8 visible IDs
+  //   5. Only those 8 cards get autoPlay=true → 8 intervals, not 30
   const scrollYRef = useRef(0);
-  const viewportHeightRef = useRef(0); // 0 = not yet measured
+  const viewportHeightRef = useRef(0);
   const cardYPositions = useRef<Record<number, number>>({});
-  const [visibleIds, setVisibleIds] = useState<Set<number> | null>(null);
+  const [visibleIds, setVisibleIds] = useState<Set<number>>(new Set());
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const updateVisibility = useCallback(() => {
-    if (viewportHeightRef.current === 0) return; // unmeasured — keep null so all cards play
-    const scrollY = scrollYRef.current;
-    const viewH = viewportHeightRef.current;
-    const visTop = scrollY - 100; // 100px pre-warm buffer above viewport
-    const visBot = scrollY + viewH + 100; // 100px pre-warm buffer below viewport
-    const positions = cardYPositions.current;
-    const next = new Set<number>();
-    for (const [idStr, y] of Object.entries(positions)) {
-      if (y >= visTop && y <= visBot) next.add(Number(idStr));
-    }
-    setVisibleIds(next);
+  // Debounced visibility update — batches 30+ onLayout calls into 1 setState
+  const scheduleVisibilityUpdate = useCallback(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      if (viewportHeightRef.current === 0) return;
+      const scrollY = scrollYRef.current;
+      const viewH = viewportHeightRef.current;
+      const visTop = scrollY - 120;
+      const visBot = scrollY + viewH + 120;
+      const positions = cardYPositions.current;
+      const next = new Set<number>();
+      for (const [idStr, y] of Object.entries(positions)) {
+        if (y >= visTop && y <= visBot) next.add(Number(idStr));
+      }
+      setVisibleIds(next);
+    }, 50); // 50ms debounce — all onLayouts settle within one frame
   }, []);
 
   const filteredTemplates = SK8LYTZ_TEMPLATES.filter((effect) => {
@@ -96,23 +105,21 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         onLayout={(e) => {
-          // First real measurement of the ScrollView's rendered height.
-          // Once this fires, the gate becomes active and is computed from real data.
           viewportHeightRef.current = e.nativeEvent.layout.height;
-          updateVisibility();
+          scheduleVisibilityUpdate();
         }}
         onScroll={(e) => {
           scrollYRef.current = e.nativeEvent.contentOffset.y;
-          updateVisibility();
+          scheduleVisibilityUpdate();
         }}
-        scrollEventThrottle={100}
+        scrollEventThrottle={150}
       >
         {filteredTemplates.map((effect) => (
           <View
             key={effect.id}
             onLayout={(e) => {
               cardYPositions.current[effect.id] = e.nativeEvent.layout.y;
-              updateVisibility();
+              scheduleVisibilityUpdate();
             }}
             style={{ width: '48%', marginBottom: Spacing.sm }}
           >
@@ -128,9 +135,9 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
               onSelect={() => onSelect(effect.id)}
               Colors={Colors}
               autoPlay={
-                // null = viewport not yet measured → animate all (avoids frozen-on-open flash)
-                // Set  = viewport measured → only animate if visible OR currently selected
-                visibleIds === null || visibleIds.has(effect.id) || selectedEffectId === effect.id
+                // Gate starts closed (empty Set) so no initial storm.
+                // Selected card always animates for immediate feedback.
+                visibleIds.has(effect.id) || selectedEffectId === effect.id
               }
             />
           </View>
