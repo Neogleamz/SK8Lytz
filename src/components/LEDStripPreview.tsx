@@ -27,33 +27,39 @@ interface LEDStripPreviewProps {
 }
 
 export const LEDStripPreview = React.memo(({ patternId, fg, bg, numLEDs, speed, brightness = 100, direction = 1, autoPlay = true, dotSize = 6, height = 16, style }: LEDStripPreviewProps) => {
-  const [frame, setFrame] = useState<RGB[]>([]);
+  // Compute t=0 frame synchronously on mount — every card renders immediately.
+  // Static patterns (quartered, solid, trisection) are complete at t=0 and never
+  // need the interval. Animated patterns show their starting position instantly.
+  const computeFrame = (tick: number): RGB[] => {
+    const rawFrame = getVisualizerFrame(patternId, hexToRgb(fg), hexToRgb(bg), numLEDs, tick, direction);
+    const bFactor = brightness / 100;
+    return bFactor < 1 ? rawFrame.map(c => ({
+      r: Math.round(c.r * bFactor),
+      g: Math.round(c.g * bFactor),
+      b: Math.round(c.b * bFactor)
+    })) : rawFrame;
+  };
 
-  // Frame-diff guard: prevents calling setFrame when the pixel array is identical.
-  // Uses an integer channel-sum hash (r*65536 + g*256 + b) instead of string serialization
-  // to avoid 43+ template string allocations + join on every 50ms tick.
-  // Collision probability is negligibly low for LED visualizer use (worst case: skip 1 frame).
+  const computeHash = (f: RGB[]): number =>
+    f.reduce((acc, c, i) => acc + (i + 1) * (c.r * 65536 + c.g * 256 + c.b), 0);
+
+  const [frame, setFrame] = useState<RGB[]>(() => computeFrame(0));
+
+  // Seed hash with t=0 frame so first interval tick doesn't redundantly re-render
   const prevFrameRef = useRef<number>(0);
+  if (prevFrameRef.current === 0 && frame.length > 0) {
+    prevFrameRef.current = computeHash(frame);
+  }
 
   useEffect(() => {
     if (!autoPlay) return;
     const interval = setInterval(() => {
       const currentSpeed = speed || 50;
       const tick = (Date.now() % (1000 / currentSpeed * 100)) / (1000 / currentSpeed * 100);
-      const rawFrame = getVisualizerFrame(patternId, hexToRgb(fg), hexToRgb(bg), numLEDs, tick, direction);
-      
-      const bFactor = brightness / 100;
-      const nextFrame = bFactor < 1 ? rawFrame.map(c => ({
-        r: Math.round(c.r * bFactor),
-        g: Math.round(c.g * bFactor),
-        b: Math.round(c.b * bFactor)
-      })) : rawFrame;
+      const nextFrame = computeFrame(tick);
 
-      // Position-sensitive hash: multiply each pixel's color sum by (i+1).
-      // Pure sum hash is translation-invariant — chases/marquees have the same total
-      // brightness regardless of position, so the guard would always block re-renders.
-      // Weighting by position makes pos=5 and pos=6 produce different hashes.
-      const hash = nextFrame.reduce((acc, c, i) => acc + (i + 1) * (c.r * 65536 + c.g * 256 + c.b), 0);
+      // Position-sensitive hash: weighting by (i+1) catches translations (chases/marquees)
+      const hash = computeHash(nextFrame);
       if (hash !== prevFrameRef.current) {
         prevFrameRef.current = hash;
         setFrame(nextFrame);
