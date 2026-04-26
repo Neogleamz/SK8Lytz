@@ -77,11 +77,14 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
   }, [product, mode, color, patternId, speed, isPoweredOn, JSON.stringify(multiColors), multiTransition, builderTransitionType]);
 
   // Fallback if no specific devices array is provided: construct one or two devices based on isPaired flag
-  const renderDevices = (devices && devices.length > 0) ? devices : (
-    isPaired
-      ? [{ name: `${product} Left`, type: product, points }, { name: `${product} Right`, type: product, points }]
-      : [{ name: product, type: product, points }]
-  );
+  // Stable array reference for devices to prevent VisualizerUnit React.memo breakage
+  const renderDevices = useMemo(() => {
+    return (devices && devices.length > 0) ? devices : (
+      isPaired
+        ? [{ id: 'mock-left', name: `${product} Left`, type: product, points }, { id: 'mock-right', name: `${product} Right`, type: product, points }]
+        : [{ id: 'mock-single', name: product, type: product, points }]
+    );
+  }, [devices, isPaired, product, points]);
 
   return (
     <View style={[styles.container, { backgroundColor: '#000000', borderColor: 'rgba(255,255,255,0.12)' }]}>

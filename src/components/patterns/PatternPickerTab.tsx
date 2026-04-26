@@ -39,6 +39,30 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
     return effect.group === activeCategory;
   });
 
+  const propsRef = useRef({ selectedEffectId, fgColor, bgColor, speed, brightness, direction, points, onSelect, Colors, visibleIds });
+  propsRef.current = { selectedEffectId, fgColor, bgColor, speed, brightness, direction, points, onSelect, Colors, visibleIds };
+
+  const renderItem = useCallback(({ item: effect }: any) => {
+    const p = propsRef.current;
+    return (
+      <View style={{ width: '48%' }}>
+        <PatternCard
+          effect={effect}
+          isSelected={p.selectedEffectId === effect.id}
+          fgColor={p.fgColor}
+          bgColor={p.bgColor}
+          speed={p.speed}
+          brightness={p.brightness}
+          direction={p.direction}
+          points={p.points}
+          onSelect={p.onSelect}
+          Colors={p.Colors}
+          autoPlay={p.visibleIds.has(effect.id) || p.selectedEffectId === effect.id}
+        />
+      </View>
+    );
+  }, []);
+
   return (
     <View style={{ flex: 1 }}>
       {/* Horizontal Category Wheel */}
@@ -88,23 +112,8 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
         initialNumToRender={8}
         windowSize={3}
         removeClippedSubviews={true}
-        renderItem={({ item: effect }) => (
-          <View style={{ width: '48%' }}>
-            <PatternCard
-              effect={effect}
-              isSelected={selectedEffectId === effect.id}
-              fgColor={fgColor}
-              bgColor={bgColor}
-              speed={speed}
-              brightness={brightness}
-              direction={direction}
-              points={points}
-              onSelect={onSelect}
-              Colors={Colors}
-              autoPlay={visibleIds.has(effect.id) || selectedEffectId === effect.id}
-            />
-          </View>
-        )}
+        extraData={[selectedEffectId, fgColor, bgColor, speed, brightness, direction, visibleIds]}
+        renderItem={renderItem}
       />
     </View>
   );
