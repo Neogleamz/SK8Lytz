@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { ScrollView, FlatList, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { Spacing } from '../../theme/theme';
 import { PatternCard } from './PatternCard';
@@ -22,41 +22,6 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
   selectedEffectId, fgColor, bgColor, speed, brightness, points, direction, onSelect, Colors
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('Solid');
-
-  // ── Viewport gate (v3 — perf hardened) ────────────────────────────────────
-  // Gate starts CLOSED: visibleIds begins as empty Set so ZERO cards animate
-  // on mount. This eliminates the "initial storm" where 30+ setIntervals fire
-  // simultaneously before the ScrollView has measured its height.
-  //
-  // Flow:
-  //   1. Mount → all cards render with autoPlay=false (only selected animates)
-  //   2. ScrollView.onLayout fires → viewportHeightRef measured → debounced update
-  //   3. Card onLayout fires × N → cardYPositions populated → debounced update
-  //   4. Debounce timer fires → single setVisibleIds() with correct ~8 visible IDs
-  //   5. Only those 8 cards get autoPlay=true → 8 intervals, not 30
-  const scrollYRef = useRef(0);
-  const viewportHeightRef = useRef(0);
-  const cardYPositions = useRef<Record<number, number>>({});
-  const [visibleIds, setVisibleIds] = useState<Set<number>>(new Set());
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Debounced visibility update — batches 30+ onLayout calls into 1 setState
-  const scheduleVisibilityUpdate = useCallback(() => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => {
-      if (viewportHeightRef.current === 0) return;
-      const scrollY = scrollYRef.current;
-      const viewH = viewportHeightRef.current;
-      const visTop = scrollY - 120;
-      const visBot = scrollY + viewH + 120;
-      const positions = cardYPositions.current;
-      const next = new Set<number>();
-      for (const [idStr, y] of Object.entries(positions)) {
-        if (y >= visTop && y <= visBot) next.add(Number(idStr));
-      }
-      setVisibleIds(next);
-    }, 50); // 50ms debounce — all onLayouts settle within one frame
-  }, []);
 
   const filteredTemplates = SK8LYTZ_TEMPLATES.filter((effect) => {
     if (effect.group === 'Street') return false;
@@ -92,36 +57,23 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
         </ScrollView>
       </View>
 
-      <ScrollView
+      <FlatList
+        data={filteredTemplates}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={2}
         style={{ flex: 1 }}
         contentContainerStyle={{
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
           paddingHorizontal: Spacing.xs,
           paddingBottom: Spacing.md,
         }}
+        columnWrapperStyle={{
+          justifyContent: 'space-between',
+          marginBottom: Spacing.sm,
+        }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        onLayout={(e) => {
-          viewportHeightRef.current = e.nativeEvent.layout.height;
-          scheduleVisibilityUpdate();
-        }}
-        onScroll={(e) => {
-          scrollYRef.current = e.nativeEvent.contentOffset.y;
-          scheduleVisibilityUpdate();
-        }}
-        scrollEventThrottle={150}
-      >
-        {filteredTemplates.map((effect) => (
-          <View
-            key={effect.id}
-            onLayout={(e) => {
-              cardYPositions.current[effect.id] = e.nativeEvent.layout.y;
-              scheduleVisibilityUpdate();
-            }}
-            style={{ width: '48%', marginBottom: Spacing.sm }}
-          >
+        renderItem={({ item: effect }) => (
+          <View style={{ width: '48%' }}>
             <PatternCard
               effect={effect}
               isSelected={selectedEffectId === effect.id}
@@ -133,15 +85,11 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
               points={points}
               onSelect={() => onSelect(effect.id)}
               Colors={Colors}
-              autoPlay={
-                // Gate starts closed (empty Set) so no initial storm.
-                // Selected card always animates for immediate feedback.
-                visibleIds.has(effect.id) || selectedEffectId === effect.id
-              }
+              autoPlay={true}
             />
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </View>
   );
 };

@@ -1096,10 +1096,14 @@ function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: 
 /**
  * Rotate a pixel array by `offset` positions (for visualizer scroll simulation).
  */
-function rotateArray(arr: RGB[], animTick: number): RGB[] {
+function rotateArray(arr: RGB[], animTick: number, direction: 0 | 1): RGB[] {
   if (arr.length === 0) return arr;
-  // Negate animTick so it flows visually correct
-  const offset = Math.floor((1 - animTick) * arr.length) % arr.length;
+  // Direction 1 = Forward (shift array right), 0 = Reverse (shift array left)
+  // To make it flow forward visually, we offset by (1 - animTick). 
+  // Reverse flows opposite.
+  const phase = direction === 1 ? (1 - animTick) : animTick;
+  const offset = Math.floor(phase * arr.length) % arr.length;
+  
   if (offset === 0) return arr;
   return [...arr.slice(offset), ...arr.slice(0, offset)];
 }
@@ -1135,9 +1139,20 @@ export function getVisualizerFrame(
     return getSymphonyVisualizerFrame(modeId, fg, bg, n, animTick);
   }
 
-  const generated = generateArray(patternId, fg, bg, n, animTick, direction, visualizerOptions);
+  // Check if hardware natively handles the animation via 0x02 Running
+  const transitionType = getPatternTransitionType(patternId);
+  const isContinuousScroll = transitionType === 0x02 && patternId < 100;
 
-  // All 61 builders manage their own tick-based animation internally.
+  // Spatial effects (Continuous scroll) need a static `tick=0` to build a seamless snapshot
+  // Temporal effects (Breathe, Flash, Strobe) need dynamic `animTick` to interpolate phase
+  const passTick = isContinuousScroll ? 0 : animTick;
+
+  const generated = generateArray(patternId, fg, bg, n, passTick, direction, visualizerOptions);
+
+  if (isContinuousScroll) {
+    return rotateArray(generated, animTick, direction);
+  }
+
   return generated;
 }
 
