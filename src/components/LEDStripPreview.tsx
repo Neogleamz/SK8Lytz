@@ -49,9 +49,11 @@ export const LEDStripPreview = React.memo(({ patternId, fg, bg, numLEDs, speed, 
         b: Math.round(c.b * bFactor)
       })) : rawFrame;
 
-      // Only commit to React state if pixels actually changed this tick
-      // Hash: sum of (r*65536 + g*256 + b) across all LEDs — O(n) with zero string allocation
-      const hash = nextFrame.reduce((acc, c) => acc + c.r * 65536 + c.g * 256 + c.b, 0);
+      // Position-sensitive hash: multiply each pixel's color sum by (i+1).
+      // Pure sum hash is translation-invariant — chases/marquees have the same total
+      // brightness regardless of position, so the guard would always block re-renders.
+      // Weighting by position makes pos=5 and pos=6 produce different hashes.
+      const hash = nextFrame.reduce((acc, c, i) => acc + (i + 1) * (c.r * 65536 + c.g * 256 + c.b), 0);
       if (hash !== prevFrameRef.current) {
         prevFrameRef.current = hash;
         setFrame(nextFrame);
