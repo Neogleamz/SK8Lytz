@@ -39,7 +39,7 @@ interface BeltProps {
 
 // Shared card dimensions
 const PENDING_W = 136;
-const SUCCESS_W = 220;
+const SUCCESS_W = 250;
 const MACHINE_W = 310;
 const ARROW_W = 44;
 const LEFT_W = PENDING_W * 2 + 8; // 280px — two cards + gap
@@ -496,7 +496,7 @@ export const BeltNode: React.FC<BeltProps> = ({
               borderColor={colVar}
               bgColor="rgba(10,10,15,0.95)"
               minW={SUCCESS_W}
-              maxW={270}
+              maxW={300}
               onBlock={onBlockSpot && sc.spotId ? () => onBlockSpot(sc.spotId!, sc.spotName ?? sc.title) : undefined}
             />
           ))}

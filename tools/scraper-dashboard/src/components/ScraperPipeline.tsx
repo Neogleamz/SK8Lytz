@@ -145,33 +145,92 @@ export const ScraperPipeline: React.FC<{
                 data.push(['verification_status', val(spot.verification_status, 'PENDING'),                           ok(spot.verification_status)]);
                 data.push(['created_at',       spot.created_at ? new Date(spot.created_at).toLocaleDateString() : 'NOW', 'val']);
 
-            } else if (phaseId === 2) { // ── SPIDER: Website link discovery output ──
-                const links = spot.candidate_links ? Object.keys(spot.candidate_links) : [];
-                data.push(['city',             val(spot.city),                                                        ok(spot.city)]);
-                data.push(['state',            val(spot.state),                                                       ok(spot.state)]);
-                data.push(['website',          val(spot.website),                                                     ok(spot.website)]);
-                data.push(['status',           val(spot.verification_status, 'ENRICHED'),                             ok(spot.verification_status)]);
-                data.push(['links_found',      links.length > 0 ? `${links.length} pages` : '0',                     links.length > 0 ? 'success' : 'missing']);
-                data.push(['link_keys',        links.length > 0 ? links.slice(0, 4).join(', ') : 'none',             links.length > 0 ? 'success' : 'missing']);
-                data.push(['root',             spot.candidate_links?.root ? spot.candidate_links.root.slice(0, 28) + '…' : 'NULL', ok(spot.candidate_links?.root)]);
-                data.push(['retry_count',      val(spot.retry_count, '0'),                                            spot.retry_count > 2 ? 'missing' : 'val']);
-                data.push(['last_spidered',    spot.last_attempted_at ? new Date(spot.last_attempted_at).toLocaleString() : 'NEVER', 'val']);
+            } else if (phaseId === 2) { // ── SPIDER: Website link discovery — ALL target fields ──
+                const cl = spot.candidate_links || {};
+                const links = Object.keys(cl);
+                data.push(['name',            val(spot.name),                                                          ok(spot.name)]);
+                data.push(['city',            val(spot.city),                                                          ok(spot.city)]);
+                data.push(['state',           val(spot.state),                                                         ok(spot.state)]);
+                data.push(['website',         val(spot.website),                                                       ok(spot.website)]);
+                data.push(['status',          val(spot.verification_status, 'ENRICHED'),                               ok(spot.verification_status)]);
+                // candidate_links — each discovered page
+                data.push(['links_found',     links.length > 0 ? `${links.length} pages` : 'NULL',                     links.length > 0 ? 'success' : 'missing']);
+                data.push(['→ root',          cl.root ? cl.root.slice(0, 30) + '…' : 'NULL',                          ok(cl.root)]);
+                data.push(['→ hours',         cl.hours     ? '✓ FOUND' : 'NULL',                                       ok(cl.hours)]);
+                data.push(['→ pricing',       cl.pricing   ? '✓ FOUND' : 'NULL',                                       ok(cl.pricing)]);
+                data.push(['→ schedule',      cl.schedule  ? '✓ FOUND' : 'NULL',                                       ok(cl.schedule)]);
+                data.push(['→ events',        cl.events    ? '✓ FOUND' : 'NULL',                                       ok(cl.events)]);
+                data.push(['→ contact',       cl.contact   ? '✓ FOUND' : 'NULL',                                       ok(cl.contact)]);
+                data.push(['→ about',         cl.about     ? '✓ FOUND' : 'NULL',                                       ok(cl.about)]);
+                data.push(['→ adult',         cl.adult     ? '✓ FOUND' : 'NULL',                                       ok(cl.adult)]);
+                data.push(['→ lessons',       cl.lessons   ? '✓ FOUND' : 'NULL',                                       ok(cl.lessons)]);
+                data.push(['→ gallery',       cl.gallery   ? '✓ FOUND' : 'NULL',                                       ok(cl.gallery)]);
+                // Crawled content
+                data.push(['opening_hours',   spot.opening_hours   ? 'PARSED' : 'NULL',                                boolOk(spot.opening_hours)]);
+                data.push(['pricing_data',    spot.pricing_data    ? 'PARSED' : 'NULL',                                boolOk(spot.pricing_data)]);
+                data.push(['has_fee',         bool(spot.has_fee),                                                      'val']);
+                data.push(['schedule_url',    spot.schedule_url    ? '✓ FOUND' : 'NULL',                               boolOk(spot.schedule_url)]);
+                data.push(['special_events',  spot.special_events  ? 'PARSED' : 'NULL',                                boolOk(spot.special_events)]);
+                data.push(['raw_kp',          spot.raw_knowledge_panel ? 'PARSED' : 'NULL',                            boolOk(spot.raw_knowledge_panel)]);
+                // Social
+                data.push(['facebook_url',    spot.facebook_url    ? '✓ FOUND' : 'NULL',                               boolOk(spot.facebook_url)]);
+                data.push(['instagram_url',   spot.instagram_url   ? '✓ FOUND' : 'NULL',                               boolOk(spot.instagram_url)]);
+                data.push(['tiktok_url',      spot.tiktok_url      ? '✓ FOUND' : 'NULL',                               boolOk(spot.tiktok_url)]);
+                // Operator meta
+                data.push(['operator_name',   val(spot.operator_name, 'NULL'),                                         ok(spot.operator_name)]);
+                data.push(['operator_desc',   spot.operator_description ? spot.operator_description.slice(0, 28) + '…' : 'NULL', ok(spot.operator_description)]);
+                data.push(['retry_count',     val(spot.retry_count, '0'),                                              spot.retry_count > 2 ? 'missing' : 'val']);
+                data.push(['last_spidered',   spot.last_attempted_at ? new Date(spot.last_attempted_at).toLocaleString() : 'NEVER', 'val']);
 
-
-            } else if (phaseId === 3) { // ── DETECTIVE: Indexer output (DEEP_CRAWLED) ──
-                // Show fields the Indexer ACTUALLY populates (not Llama AI fields which may be null)
+            } else if (phaseId === 3) { // ── DETECTIVE: Indexer output — ALL AI target fields ──
                 const candLinks = spot.candidate_links ? Object.keys(spot.candidate_links) : [];
-                const candPhotos = spot.candidate_photos ? (typeof spot.candidate_photos === 'object' ? Object.keys(spot.candidate_photos).length : '?') : 0;
-                data.push(['is_deep_crawled',  bool(spot.is_deep_crawled),                                            boolOk(spot.is_deep_crawled)]);
-                data.push(['website',          val(spot.website),                                                     ok(spot.website)]);
-                data.push(['opening_hours',    spot.opening_hours ? 'PARSED' : 'NULL',                                boolOk(spot.opening_hours)]);
-                data.push(['facebook_url',     spot.facebook_url ? spot.facebook_url.slice(0, 26) + '…' : 'NULL',     boolOk(spot.facebook_url)]);
-                data.push(['instagram_url',    spot.instagram_url ? 'FOUND' : 'NULL',                                 boolOk(spot.instagram_url)]);
-                data.push(['links_indexed',    candLinks.length > 0 ? `${candLinks.length} pages` : '0',              candLinks.length > 0 ? 'success' : 'missing']);
-                data.push(['photo_candidates', String(candPhotos),                                                     Number(candPhotos) > 0 ? 'success' : 'missing']);
-                data.push(['rating',           spot.rating != null ? `${spot.rating}★ (${spot.user_ratings_total})` : 'N/A', ok(spot.rating)]);
-                data.push(['last_crawled',     spot.last_attempted_at ? new Date(spot.last_attempted_at).toLocaleString() : 'NEVER', 'val']);
-                data.push(['status',           val(spot.verification_status, 'DEEP_CRAWLED'),                         ok(spot.verification_status)]);
+                const candPhotosCount = spot.candidate_photos && typeof spot.candidate_photos === 'object' ? Object.keys(spot.candidate_photos).length : 0;
+                const hoursKeys = spot.opening_hours && typeof spot.opening_hours === 'object' ? Object.keys(spot.opening_hours).length : 0;
+                // Identity
+                data.push(['name',            val(spot.name),                                                          ok(spot.name)]);
+                data.push(['city',            val(spot.city),                                                          ok(spot.city)]);
+                data.push(['state',           val(spot.state),                                                         ok(spot.state)]);
+                data.push(['website',         val(spot.website),                                                       ok(spot.website)]);
+                data.push(['is_deep_crawled', bool(spot.is_deep_crawled),                                              boolOk(spot.is_deep_crawled)]);
+                data.push(['status',          val(spot.verification_status, 'DEEP_CRAWLED'),                           ok(spot.verification_status)]);
+                // Facility — AI vectors
+                data.push(['surface_type',    val(spot.surface_type, 'NULL'),                                          ok(spot.surface_type)]);
+                data.push(['surface_quality', val(spot.surface_quality, 'NULL'),                                       ok(spot.surface_quality)]);
+                data.push(['is_indoor',       bool(spot.is_indoor),                                                    'val']);
+                data.push(['capacity',        spot.capacity != null ? String(spot.capacity) : 'NULL',                  ok(spot.capacity)]);
+                data.push(['has_rental',      bool(spot.has_rental),                                                   boolOk(spot.has_rental)]);
+                data.push(['has_pro_shop',    bool(spot.has_pro_shop),                                                 boolOk(spot.has_pro_shop)]);
+                // Adult night — critical fields
+                data.push(['adult_night',     bool(spot.has_adult_night),                                              boolOk(spot.has_adult_night)]);
+                data.push(['adult_dtl',       spot.adult_night_details ? spot.adult_night_details.slice(0, 28) + '…' : 'NULL', boolOk(spot.adult_night_details)]);
+                data.push(['adult_sched',     spot.adult_night_schedule ? 'PARSED' : 'NULL',                           boolOk(spot.adult_night_schedule)]);
+                // Amenities
+                data.push(['has_food',        bool(spot.has_food),                                                     boolOk(spot.has_food)]);
+                data.push(['has_lights',      bool(spot.has_lights),                                                   boolOk(spot.has_lights)]);
+                data.push(['has_lockers',     bool(spot.has_lockers),                                                  boolOk(spot.has_lockers)]);
+                data.push(['has_ac',          bool(spot.has_ac),                                                       boolOk(spot.has_ac)]);
+                data.push(['has_wifi',        bool(spot.has_wifi),                                                     boolOk(spot.has_wifi)]);
+                data.push(['has_toilets',     bool(spot.has_toilets),                                                  boolOk(spot.has_toilets)]);
+                data.push(['wheelchair',      bool(spot.is_wheelchair_accessible),                                     boolOk(spot.is_wheelchair_accessible)]);
+                data.push(['derby',           bool(spot.hosts_derby),                                                  boolOk(spot.hosts_derby)]);
+                data.push(['cultural_meta',   spot.cultural_metadata ? 'PARSED' : 'NULL',                              boolOk(spot.cultural_metadata)]);
+                data.push(['vibe_score',      spot.vibe_score != null ? `${spot.vibe_score}/100` : 'NULL',              ok(spot.vibe_score)]);
+                // Hours + schedule
+                data.push(['opening_hours',   spot.opening_hours ? `${hoursKeys}/7 days` : 'NULL',                    spot.opening_hours ? 'success' : 'missing']);
+                data.push(['pricing_data',    spot.pricing_data ? 'PARSED' : 'NULL',                                   boolOk(spot.pricing_data)]);
+                data.push(['schedule_url',    spot.schedule_url ? '✓ FOUND' : 'NULL',                                boolOk(spot.schedule_url)]);
+                data.push(['special_events',  spot.special_events ? 'PARSED' : 'NULL',                                 boolOk(spot.special_events)]);
+                // Social
+                data.push(['facebook_url',    spot.facebook_url ? '✓ FOUND' : 'NULL',                                boolOk(spot.facebook_url)]);
+                data.push(['instagram_url',   spot.instagram_url ? '✓ FOUND' : 'NULL',                               boolOk(spot.instagram_url)]);
+                data.push(['tiktok_url',      spot.tiktok_url ? '✓ FOUND' : 'NULL',                                  boolOk(spot.tiktok_url)]);
+                // Photos + meta
+                data.push(['photos',          Array.isArray(spot.photos) ? `${spot.photos.length} imgs` : 'NULL',      Array.isArray(spot.photos) && spot.photos.length > 0 ? 'success' : 'missing']);
+                data.push(['photo_cands',     candPhotosCount > 0 ? `${candPhotosCount} queued` : 'NULL',               candPhotosCount > 0 ? 'success' : 'missing']);
+                data.push(['links_indexed',   candLinks.length > 0 ? `${candLinks.length} pages` : '0',                 candLinks.length > 0 ? 'success' : 'missing']);
+                data.push(['rating',          spot.rating != null ? `${spot.rating}★ (${spot.user_ratings_total})` : 'N/A', ok(spot.rating)]);
+                data.push(['retry_count',     val(spot.retry_count, '0'),                                               spot.retry_count > 2 ? 'missing' : 'val']);
+                data.push(['last_crawled',    spot.last_attempted_at ? new Date(spot.last_attempted_at).toLocaleString() : 'NEVER', 'val']);
 
             } else if (phaseId === 4) { // ── PHOTOGRAPHER: Image harvest ──
                 const photoCount = Array.isArray(spot.photos) ? spot.photos.length : spot.photos ? '?' : 0;
