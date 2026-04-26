@@ -21,9 +21,10 @@ interface PatternCardProps {
 }
 
 // Fixed canonical LED count for pattern previews — NEVER use hardware points here.
-// 24 divides evenly by 3 AND 4 → trisection [8,8,8], quartered [6,6,6,6], center-accent [9,6,9].
-// Pattern cards are a universal pattern showcase, NOT a hardware simulation.
-const PATTERN_PREVIEW_LEDS = 24;
+// 12 divides evenly by 3 AND 4 → trisection [4,4,4], quartered [3,3,3,3].
+// Kept low to minimize DOM nodes (each LED = 1 div on web). At 8px strip height,
+// 12 vs 24 segments is visually indistinguishable.
+const PATTERN_PREVIEW_LEDS = 12;
 
 export const PatternCard: React.FC<PatternCardProps> = React.memo(({
   effect, isSelected, fgColor, bgColor, speed, brightness, direction, points, onSelect, Colors,
