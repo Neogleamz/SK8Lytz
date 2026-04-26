@@ -642,7 +642,7 @@ function App() {
       target: 'Google API -> ENRICHED',
       metric: status?.totalCount || 0, metricLabel: 'Total Seeded', isDaemon: false,
       statusActive: status?.isHarvestingActive || status?.isGoogleSweepActive },
-    { id: '2', title: 'The Detective', sub: 'Website Deep Crawl + Photo Candidates', route: 'phase3', color: '#ff5a00',
+    { id: '2', title: 'The Spider', sub: 'Website Deep Crawl', route: 'phase3', color: '#ff5a00',
       target: 'ENRICHED -> is_deep_crawled',
       metric: status?.indexedCount || 0, metricLabel: 'Sites Crawled', isDaemon: true,
       statusActive: status?.currentTarget?.includes('Indexer: online') },
@@ -765,8 +765,10 @@ function App() {
       <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
       {/* Daemon pills */}
       {[
-        { id: 'indexer',      label: 'Detective',    color: '#ff5a00', onKey: 'Indexer: online' },
-        { id: 'photographer', label: 'Photographer', color: '#e91e63', onKey: 'Photographer: online' },
+        { id: 'operator',     label: 'Phase 2: Spider',    color: '#9d4edd', onKey: 'Operator: online' },
+        { id: 'indexer',      label: 'Phase 3: Detective', color: '#ff5a00', onKey: 'Indexer: online' },
+        { id: 'photographer', label: 'Phase 4: Photo',     color: '#e91e63', onKey: 'Photographer: online' },
+        { id: 'ollama-daemon',label: 'Ollama Engine',      color: '#00d4ff', onKey: 'Ollama: online' },
       ].map(d => {
         const isOn = status?.currentTarget?.includes(d.onKey);
         return (
@@ -784,18 +786,46 @@ function App() {
       {/* Active Region chips */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
         <span style={{ fontSize: '0.56rem', fontWeight: 800, color: '#8a2be2', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Region:</span>
-        <button onClick={() => setPriorityStates([])}
+        <button onClick={() => updateGlobalStrategy('state_override', 'ALL')}
           style={{ fontSize: '0.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: '10px', border: 'none', cursor: 'pointer',
             background: stateOverride.length === 0 ? '#8a2be2' : 'rgba(255,255,255,0.06)',
             color: stateOverride.length === 0 ? '#fff' : 'rgba(255,255,255,0.3)' }}>ALL</button>
         {stateOverride.map(st => (
-          <button key={st} onClick={() => togglePriorityState(st)}
+          <button key={st} onClick={() => updateGlobalStrategy('state_override', st)}
             style={{ fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#8a2be2', color: '#fff' }}
           >{st} x</button>
         ))}
-        <button
-          onClick={() => { const s = prompt('State (2-letter):'); if (s && s.trim().length >= 2) togglePriorityState(s.trim().toUpperCase().slice(0, 2)); }}
-          style={{ fontSize: '0.58rem', padding: '2px 5px', borderRadius: '10px', border: '1px dashed rgba(138,43,226,0.4)', background: 'transparent', color: '#8a2be2', cursor: 'pointer' }}>+</button>
+        <select 
+          value="" 
+          onChange={(e) => {
+            const st = e.target.value;
+            if (st) updateGlobalStrategy('state_override', st);
+          }}
+          style={{ 
+            fontSize: '0.58rem', padding: '2px 5px', borderRadius: '10px', 
+            border: '1px dashed rgba(138,43,226,0.4)', background: 'transparent', 
+            color: '#8a2be2', cursor: 'pointer', outline: 'none' 
+          }}
+        >
+          <option value="" disabled>+</option>
+          {['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'].filter(s => !stateOverride.includes(s)).map(st => (
+            <option key={st} value={st} style={{ background: '#111', color: '#fff' }}>{st}</option>
+          ))}
+        </select>
+      </div>
+      <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+      {/* Target Facilities */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+        <span style={{ fontSize: '0.56rem', fontWeight: 800, color: '#00ffaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Targets:</span>
+        {['roller_rink', 'skate_park', 'skate_shop'].map(fac => {
+          const isActive = targetFacilities?.includes(fac);
+          return (
+            <button key={fac} onClick={() => updateGlobalStrategy('target_facilities', fac)}
+              style={{ fontSize: '0.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: '10px', border: isActive ? '1px solid #00ffaa' : '1px solid rgba(255,255,255,0.1)', cursor: 'pointer',
+                background: isActive ? 'rgba(0,255,170,0.15)' : 'rgba(255,255,255,0.02)',
+                color: isActive ? '#00ffaa' : 'rgba(255,255,255,0.4)' }}>{fac.replace('_', ' ').toUpperCase()}</button>
+          );
+        })}
       </div>
       <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
       {/* Stealth toggles */}
@@ -987,7 +1017,7 @@ function App() {
                <div className="facility-switches-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1.5rem', marginTop: 0 }}>Target Facilities</h3>
                   <div className="facility-switches">
-                     {['skatepark', 'roller_rink', 'skate_shop'].map(f => (
+                     {['roller_rink', 'skate_park', 'skate_shop'].map(f => (
                        <label key={f} className="switch-row mini" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', padding: '4px 0' }}>
                           <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{f.replace('_', ' ').toUpperCase()}</span>
                           <label className="switch">
@@ -1152,7 +1182,7 @@ function App() {
                />
                {!isCollapsed(`daemon_explainer_${activeTab}`) && (
                  <>
-                   {activeTab === 'phase2' && <p>Targets <strong>PENDING</strong> records and resolves their real-world identity — finding the business website and phone number via web search heuristics. Graduates records to <strong>IDENTITY_ESTABLISHED</strong> when found. <em style={{color:'rgba(255,255,255,0.4)'}}>Note: Since the pipeline now uses Google Places as the primary seeder, PENDING records are rare. This daemon handles any OSM legacy records or manually added entries.</em></p>}
+                   {activeTab === 'phase2' && <p>Targets <strong>ENRICHED</strong> records from the Google Scout and resolves their real-world contact identity — confirming the business website and phone number via GHOST-stealth web search. Graduates records to <strong>IDENTITY_ESTABLISHED</strong> when found, or marks as <strong>MISSING_WEBSITE</strong> and skips if no website was seeded.</p>}
                    {activeTab === 'phase3' && <p>The Detective deep-crawls each spot's website using Puppeteer with GHOST identity spoofing. Extracts operating hours, 18+ adult night schedules, pricing, event listings, social links, and photo candidates (OG image, DOM images, Facebook OG). Writes <code>candidate_photos</code> for the Photographer to harvest.</p>}
                    {activeTab === 'phase4' && <p>The Photographer daemon reads <code>candidate_photos</code> written by the Indexer — downloading OG images and DOM media as binary uploads to Supabase Storage. Falls back to Google Street View Static as a guaranteed photo source. Promotes records to <strong>MEDIA_READY</strong> on success.</p>}
                    {activeTab === 'phase5' && <p>The Publisher Gate is the final human-approved release step. Only records with <strong style={{color:'#4caf50'}}>is_published = true</strong> are visible on the live SK8Lytz app map. Bulk-promote all pipeline-complete records (ENRICHED + MEDIA_READY) below, or use the Databank QA tab to approve individual spots.</p>}
@@ -1163,22 +1193,22 @@ function App() {
              {activeTab === 'phase2' && (
                 <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
                    <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#8a2be2' }}>{status?.pendingCount || 0}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>PENDING</div>
+                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#00ffaa' }}>{status?.enrichedCount || 0}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>ENRICHED</div>
                    </div>
                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('operator', 'start')} disabled={status?.currentTarget?.includes('Operator: online')}>▶ START OPERATOR</button>
+                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('operator', 'start')} disabled={status?.currentTarget?.includes('Operator: online')}>▶ Phase 2: Spider (Operator)</button>
                          <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('operator', 'stop')} disabled={!status?.currentTarget?.includes('Operator: online')}>■ STOP</button>
                       </div>
                       <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
-                         {status?.identityCount || 0} / {(status?.pendingCount || 0) + (status?.identityCount || 0)} Completed
+                         ENRICHED → IDENTITY_ESTABLISHED
                       </div>
                       {status?.currentTarget?.includes('Operator: online') && <div className="flow-animation"></div>}
                    </div>
                    <div style={{ textAlign: 'center', minWidth: '100px' }}>
                       <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#5d78ff' }}>{status?.identityCount || 0}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>IDENTIFIED</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>IDENTITY_EST.</div>
                    </div>
                 </div>
              )}
@@ -1201,7 +1231,7 @@ function App() {
                     </div>
                     <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                        <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                          <button className="btn-mini start" onClick={() => triggerSpecificDaemon('indexer', 'start')} disabled={status?.currentTarget?.includes('Indexer: online')}>▶ START DETECTIVE</button>
+                          <button className="btn-mini start" onClick={() => triggerSpecificDaemon('indexer', 'start')} disabled={status?.currentTarget?.includes('Indexer: online')}>▶ Phase 3: Detective (Indexer)</button>
                           <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('indexer', 'stop')} disabled={!status?.currentTarget?.includes('Indexer: online')}>■ STOP</button>
                        </div>
                        <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
@@ -1240,7 +1270,7 @@ function App() {
                    </div>
                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('photographer', 'start')} disabled={status?.currentTarget?.includes('Photographer: online')}>START PHOTOGRAPHER</button>
+                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('photographer', 'start')} disabled={status?.currentTarget?.includes('Photographer: online')}>▶ Phase 4: Photographer</button>
                          <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('photographer', 'stop')} disabled={!status?.currentTarget?.includes('Photographer: online')}>■ STOP</button>
                       </div>
                       <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>

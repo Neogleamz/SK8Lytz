@@ -77,8 +77,8 @@ const STYLES = `
 .pipeline-dashboard-container .belt-flow-area { flex: 1; overflow: hidden; position: relative; display: flex; flex-direction: column; }
 `;
 
-const generateUniformBelt = (idx: number, id: number, name: string, color: string, rgb: string, daemon: string, job: string, target: string, status: string, states: string[]) => ({
-  id, name, color, rgb, activeStates: states, job, daemon, target, status,
+const generateUniformBelt = (idx: number, id: number, name: string, color: string, rgb: string, daemon: string, job: string, target: string, inputStatus: string, outputStatus: string, states: string[]) => ({
+  id, name, color, rgb, activeStates: states, job, daemon, target, inputStatus, outputStatus,
   inQ: [],
   gatekeeper: [],
   attempting: [] as [string, string][],
@@ -217,7 +217,7 @@ export const ScraperPipeline: React.FC<{
 
             return {
                 title: spot.name,
-                status: phaseId === 5 ? (spot.is_published ? 'PUBLISHED' : 'VERIFIED') : 'PROCESSED',
+                status: spot.status || spot.verification_status || 'PROCESSED',
                 type: 'success' as const,
                 data
             };
@@ -226,11 +226,11 @@ export const ScraperPipeline: React.FC<{
 
 
     const baseBelts = [
-        generateUniformBelt(1, 1, 'Scout Phase (Google Places Seed)', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING SEED...', 'Waiting', 'EVALUATING BLOCKLIST', getQueueNames('phase1')),
-        generateUniformBelt(2, 2, 'Crawl Phase (Spider Engine)', '--neon-crawl', '157, 78, 221', 'Spider_v3', 'DEEP CRAWLING DOM...', 'Waiting', 'FETCHING /schedule', getQueueNames('phase3')),
-        generateUniformBelt(3, 3, 'Detective Phase (Llama-3.2 Extraction)', '--neon-detective', '255, 106, 0', 'Llama3.2-8b', 'INFERENCING JSON...', 'Waiting', 'STREAMING TO DB', getQueueNames('phase4')),
-        generateUniformBelt(4, 4, 'Photographer (Cloud Vision)', '--neon-photo', '255, 0, 127', 'Vision_v1', 'ANALYZING IMAGES...', 'Waiting', 'DETECTING HARDWOOD', getQueueNames('phase6')),
-        generateUniformBelt(5, 5, 'Publisher (DB Sync)', '--neon-publish', '0, 212, 255', 'Sync_v4', 'UPSERTING BATCH...', 'Waiting', 'COMMITTING TRANSACTION', getQueueNames('recent'))
+        generateUniformBelt(1, 1, 'Phase 1: The Scout (Google Sweep)', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING...', 'Waiting', 'PENDING', 'SEEDED', getQueueNames('phase1')),
+        generateUniformBelt(2, 2, 'Phase 2: The Spider (Operator)', '--neon-crawl', '157, 78, 221', 'Spider_v3', 'PROCESSING...', 'Waiting', 'SEEDED', 'ENRICHED', getQueueNames('phase3')),
+        generateUniformBelt(3, 3, 'Phase 3: The Detective (Indexer)', '--neon-detective', '255, 106, 0', 'Llama3.2-8b', 'PROCESSING...', 'Waiting', 'ENRICHED', 'DEEP_CRAWLED', getQueueNames('phase4')),
+        generateUniformBelt(4, 4, 'Phase 4: The Photographer', '--neon-photo', '255, 0, 127', 'Vision_v1', 'PROCESSING...', 'Waiting', 'DEEP_CRAWLED', 'MEDIA_READY', getQueueNames('phase6')),
+        generateUniformBelt(5, 5, 'Phase 5: The Publisher', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('recent'))
     ];
 
     // Restore the technical target collection checklists on the Active Job cards with EVERY field

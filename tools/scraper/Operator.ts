@@ -71,6 +71,19 @@ async function runOperator() {
         retry_count: (target.retry_count || 0) + 1
       }).eq('id', target.id);
 
+      // ─── FAST PATH: Google-sourced records already have a website ───────────
+      // All 1,979 records were seeded via Google Places and already carry a website URL.
+      // Skip the Puppeteer Google Search entirely and promote immediately.
+      if (target.website && target.website.trim() !== '') {
+        console.log(`   ⚡ [Operator Fast-Path] Website already present: ${target.website}`);
+        await supabase.from('skate_spots').update({
+          verification_status: 'IDENTITY_ESTABLISHED'
+        }).eq('id', target.id);
+        reportPulse(delay);
+        continue;
+      }
+      // ─── SLOW PATH: OSM / manually-added records without a website ──────────
+
       const searchQuery = target.street_address 
           ? `${target.name} ${target.street_address} ${target.city} ${target.state}`
           : `${target.name} ${target.city} ${target.state}`;
@@ -101,8 +114,7 @@ async function runOperator() {
       if (isBotGated) {
           console.error(`[Operator] 🚨 Google Captcha hit on ${target.name}. Moving to GHOST_PAUSED.`);
           await supabase.from('skate_spots').update({ 
-              verification_status: 'GHOST_PAUSED',
-              last_error: 'GOOGLE_CAPTCHA_GATED' 
+              verification_status: 'GHOST_PAUSED'
           }).eq('id', target.id);
           
           delay = delay * 5; // 5x Penalty Delay
@@ -143,9 +155,8 @@ async function runOperator() {
     } catch (err: any) {
       console.error('[Operator Error]', err.message);
       if (target) {
-          await supabase.from('skate_spots').update({ 
-               last_error: err.message.slice(0, 200) 
-          }).eq('id', target.id);
+          // Note: no last_error column in schema — log only
+          console.error(`[Operator] Error on ${target?.name}: ${err.message.slice(0, 200)}`);
       }
       delay = Math.max(delay, 45000); // 45s minimum on error
     } finally {
