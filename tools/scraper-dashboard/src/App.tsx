@@ -634,6 +634,10 @@ function App() {
   };
 
   const PIPELINE_PHASES = [
+    { id: '0', title: 'Factory Floor', sub: 'Unified Live Telemetry', route: 'pipeline', color: '#00ffaa',
+      target: 'Daemons -> UI',
+      metric: 'LIVE', metricLabel: 'Real-Time Sync', isDaemon: true,
+      statusActive: true },
     { id: '1', title: 'The Scout', sub: 'Google Places — Nationwide Seeding', route: 'phase1', color: '#8a2be2',
       target: 'Google API -> ENRICHED',
       metric: status?.totalCount || 0, metricLabel: 'Total Seeded', isDaemon: false,
@@ -841,6 +845,13 @@ function App() {
       })()}
 
       <div className="content-area fade-in">
+        {/* =========== PHASE 0: UNIFIED PIPELINE =========== */}
+        {activeTab === 'pipeline' && (
+          <div className="tab-pane pipeline fade-in">
+             <ScraperPipeline />
+          </div>
+        )}
+
         {/* =========== PHASE 1: GLOBAL STRATEGY & INTAKE =========== */}
         {activeTab === 'phase1' && (
           <div className="tab-pane phase-1">
