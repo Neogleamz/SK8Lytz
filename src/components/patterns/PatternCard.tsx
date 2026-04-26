@@ -20,6 +20,11 @@ interface PatternCardProps {
   autoPlay?: boolean;
 }
 
+// Fixed canonical LED count for pattern previews — NEVER use hardware points here.
+// 24 divides evenly by 3 AND 4 → trisection [8,8,8], quartered [6,6,6,6], center-accent [9,6,9].
+// Pattern cards are a universal pattern showcase, NOT a hardware simulation.
+const PATTERN_PREVIEW_LEDS = 24;
+
 export const PatternCard: React.FC<PatternCardProps> = React.memo(({
   effect, isSelected, fgColor, bgColor, speed, brightness, direction, points, onSelect, Colors,
   autoPlay = true,
@@ -97,7 +102,7 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
             patternId={effect.id}
             fg={effect.requiresForeground ? fgColor : '#FF4400'}
             bg={effect.requiresBackground ? bgColor : '#000000'}
-            numLEDs={points}
+            numLEDs={PATTERN_PREVIEW_LEDS}
             speed={speed}
             brightness={brightness}
             direction={effect.supportsDirection ? (direction as 0 | 1) : 1}
