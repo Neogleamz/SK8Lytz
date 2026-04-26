@@ -293,9 +293,12 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
           const framePixels = hoistedFramePixels || [];
 
           // ── Diffusion blending: blend adjacent LED colors near chip boundaries ──
-          // NOTE: Street mode slot mapping is intentionally using segmentI (not rawFract).
-          // HALOZ street mode symmetry fix is tracked as a separate task.
-          const rawLedPos = (segmentI / activeSegmentLeds) * framePixels.length;
+          // For RING (HALOZ): rawFract is already inverted for left arc (line 253) → gives correct
+          // pSlot topology: right arc pSlot 0 at BOTTOM, left arc pSlot 0 at TOP.
+          // For all other shapes: segmentI/activeSegmentLeds unchanged (SOULZ, RAILZ unaffected).
+          // Note: this is GEOMETRY only — street pattern colors (pid 101-105, brake/cruise) unchanged.
+          const ledFract = vizShape === 'RING' ? rawFract : (segmentI / activeSegmentLeds);
+          const rawLedPos = ledFract * framePixels.length;
           const slot0 = Math.floor(rawLedPos) % Math.max(1, framePixels.length);
           const slotT = rawLedPos - Math.floor(rawLedPos);
           const DIFF = 0.35;
