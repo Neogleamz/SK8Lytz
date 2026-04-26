@@ -933,133 +933,141 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       
 
 
-        <SupportModal
-          visible={isSupportModalVisible}
-          onClose={() => setIsSupportModalVisible(false)}
-          Colors={Colors}
-          styles={styles}
-        />
+        {isSupportModalVisible && (
+          <SupportModal
+            visible={isSupportModalVisible}
+            onClose={() => setIsSupportModalVisible(false)}
+            Colors={Colors}
+            styles={styles}
+          />
+        )}
 
       {/* HardwareSetupWizardScreen is conditionally returned at the top level instead of here */}
 
 
 
       {/* Crew Hub Modal */}
-      <CrewModal
-        visible={isCrewModalVisible}
-        onClose={() => setIsCrewModalVisible(false)}
-        initialStep={crewInitialStep}
-        activeSession={crewSession}
-        activeRole={crewRole}
-        currentModeSummary={crewModeSummary}
-        lastLeaderScene={lastLeaderScene}
-        onSessionReady={(session: CrewSession, role: CrewRole, lastScene: Record<string, any> | null) => {
-          setCrewSession(session);
-          setCrewRole(role);
-          if (role === 'leader') {
-            crewService.subscribeAsLeader(session.id, () => {});
-          } else {
-            crewService.subscribeAsMember(session.id, (scene) => {
-              dockedControllerRef.current?.applyCloudScene(scene);
-              setLastLeaderScene(scene); // track for member dashboard
-            }, () => {
-              // session_ended callback — leader ended the session
-              setCrewSession(null);
-              setCrewRole(null);
-              setCrewModeSummary(undefined);
-              setIsCrewModalVisible(false);
-              Alert.alert('Session Ended', 'The crew leader has ended this session. Your skates will keep the current pattern.');
-            });
-            if (lastScene) {
-              setLastLeaderScene(lastScene); // seed dashboard immediately from persisted DB scene
-              setTimeout(() => dockedControllerRef.current?.applyCloudScene(lastScene), 300);
+      {isCrewModalVisible && (
+        <CrewModal
+          visible={isCrewModalVisible}
+          onClose={() => setIsCrewModalVisible(false)}
+          initialStep={crewInitialStep}
+          activeSession={crewSession}
+          activeRole={crewRole}
+          currentModeSummary={crewModeSummary}
+          lastLeaderScene={lastLeaderScene}
+          onSessionReady={(session: CrewSession, role: CrewRole, lastScene: Record<string, any> | null) => {
+            setCrewSession(session);
+            setCrewRole(role);
+            if (role === 'leader') {
+              crewService.subscribeAsLeader(session.id, () => {});
+            } else {
+              crewService.subscribeAsMember(session.id, (scene) => {
+                dockedControllerRef.current?.applyCloudScene(scene);
+                setLastLeaderScene(scene); // track for member dashboard
+              }, () => {
+                // session_ended callback — leader ended the session
+                setCrewSession(null);
+                setCrewRole(null);
+                setCrewModeSummary(undefined);
+                setIsCrewModalVisible(false);
+                Alert.alert('Session Ended', 'The crew leader has ended this session. Your skates will keep the current pattern.');
+              });
+              if (lastScene) {
+                setLastLeaderScene(lastScene); // seed dashboard immediately from persisted DB scene
+                setTimeout(() => dockedControllerRef.current?.applyCloudScene(lastScene), 300);
+              }
             }
-          }
-        }}
-        onSessionLeft={() => {
-          // Member left voluntarily — clear session and return to hub landing
-          setCrewSession(null);
-          setCrewRole(null);
-          setCrewModeSummary(undefined);
-          // Don't close modal — CrewModal will reset step to 'landing' via its useEffect
-          // so the user lands back at the hub page naturally
-        }}
-        onSessionEnded={() => {
-          // Leader ended the session — clear all session state
-          setCrewSession(null);
-          setCrewRole(null);
-          setCrewModeSummary(undefined);
-          // Don't force-close — CrewModal resets step to 'landing' via activeSession→null
-        }}
-      />
+          }}
+          onSessionLeft={() => {
+            // Member left voluntarily — clear session and return to hub landing
+            setCrewSession(null);
+            setCrewRole(null);
+            setCrewModeSummary(undefined);
+            // Don't close modal — CrewModal will reset step to 'landing' via its useEffect
+            // so the user lands back at the hub page naturally
+          }}
+          onSessionEnded={() => {
+            // Leader ended the session — clear all session state
+            setCrewSession(null);
+            setCrewRole(null);
+            setCrewModeSummary(undefined);
+            // Don't force-close — CrewModal resets step to 'landing' via activeSession→null
+          }}
+        />
+      )}
 
       {/* Account Management Modal */}
-      <AccountModal
-        visible={isAccountModalVisible}
-        onClose={() => setIsAccountModalVisible(false)}
-        onSignOut={handleLogout}
-        isOfflineMode={isOfflineMode}
-        onJoinCrewSession={(crewId) => {
-          setPendingJoinCrewId(crewId);
-          setIsCrewModalVisible(true);
-          setIsAccountModalVisible(false);
-        }}
-        registeredDevices={mappedRegisteredDevicesForModal}
-        onDeviceRenamed={async (deviceId, newName) => {
-          setAllDevices((prev: any[]) => prev.map((d: any) =>
-            d.id === deviceId ? { ...d, customName: newName } : d
-          ));
-          const rd = registeredDevices.find(r => r.device_mac === deviceId);
-          if (rd) {
-            await saveRegisteredDevice({ ...rd, custom_name: newName, is_pending_sync: true });
-          }
-        }}
-        onDeviceForgotten={async (deviceId) => {
-          setAllDevices((prev: any[]) => prev.filter((d: any) => d.id !== deviceId));
-          await deregisterDevice(deviceId);
-        }}
-        onGroupRenamed={async (oldGroupName, newGroupName) => {
-          const devs = registeredDevices.filter(d => d.group_name === oldGroupName);
-          for (const d of devs) {
-            await saveRegisteredDevice({ ...d, group_name: newGroupName, is_pending_sync: true });
-          }
-          // Sync local customGroups array so the dashboard UI instantly re-renders
-          const updatedGroups = customGroupsRef.current.map(g => 
-            g.name === oldGroupName ? { ...g, name: newGroupName } : g
-          );
-          setCustomGroups(updatedGroups);
-          AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
-        }}
-        onGroupForgotten={async (groupName) => {
-          const devs = registeredDevices.filter(d => d.group_name === groupName);
-          for (const d of devs) {
-            await deregisterDevice(d.device_mac);
-          }
-          // Also forcibly scrub the group from the dashboard cache if it exists there
-          const group = customGroups.find(g => g.name === groupName);
-          if (group) {
-            await handleGroupDelete(group.id);
-          }
-        }}
-      />
+      {isAccountModalVisible && (
+        <AccountModal
+          visible={isAccountModalVisible}
+          onClose={() => setIsAccountModalVisible(false)}
+          onSignOut={handleLogout}
+          isOfflineMode={isOfflineMode}
+          onJoinCrewSession={(crewId) => {
+            setPendingJoinCrewId(crewId);
+            setIsCrewModalVisible(true);
+            setIsAccountModalVisible(false);
+          }}
+          registeredDevices={mappedRegisteredDevicesForModal}
+          onDeviceRenamed={async (deviceId, newName) => {
+            setAllDevices((prev: any[]) => prev.map((d: any) =>
+              d.id === deviceId ? { ...d, customName: newName } : d
+            ));
+            const rd = registeredDevices.find(r => r.device_mac === deviceId);
+            if (rd) {
+              await saveRegisteredDevice({ ...rd, custom_name: newName, is_pending_sync: true });
+            }
+          }}
+          onDeviceForgotten={async (deviceId) => {
+            setAllDevices((prev: any[]) => prev.filter((d: any) => d.id !== deviceId));
+            await deregisterDevice(deviceId);
+          }}
+          onGroupRenamed={async (oldGroupName, newGroupName) => {
+            const devs = registeredDevices.filter(d => d.group_name === oldGroupName);
+            for (const d of devs) {
+              await saveRegisteredDevice({ ...d, group_name: newGroupName, is_pending_sync: true });
+            }
+            // Sync local customGroups array so the dashboard UI instantly re-renders
+            const updatedGroups = customGroupsRef.current.map(g => 
+              g.name === oldGroupName ? { ...g, name: newGroupName } : g
+            );
+            setCustomGroups(updatedGroups);
+            AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
+          }}
+          onGroupForgotten={async (groupName) => {
+            const devs = registeredDevices.filter(d => d.group_name === groupName);
+            for (const d of devs) {
+              await deregisterDevice(d.device_mac);
+            }
+            // Also forcibly scrub the group from the dashboard cache if it exists there
+            const group = customGroups.find(g => g.name === groupName);
+            if (group) {
+              await handleGroupDelete(group.id);
+            }
+          }}
+        />
+      )}
       
       {/* Admin Tools Hub (Replaces LogViewerModal) */}
-      <AdminToolsModal
-        visible={isAdminToolsVisible}
-        onClose={() => setIsAdminToolsVisible(false)}
-        allDevices={allDevices}
-        connectedDevices={connectedDevices as any[]}
-        bleState={bleState}
-        handleScan={() => scanForPeripherals()}
-        writeToDevice={writeToDevice}
-        liveRxPayload={lastRawNotification}
-        liveDeviceConfigs={deviceConfigs}
-        onConnectToDevice={async (d: any) => { await connectToDevices([d]); }}
-        onDisconnectFromDevice={async (_id: string) => { disconnectFromDevice(); }}
-        isDiagnosticsMode={isDiagnosticsMode}
-        onToggleDiagnostics={() => setIsDiagnosticsMode(!isDiagnosticsMode)}
-        hwSettings={activeHwSettings}
-      />
+      {isAdminToolsVisible && (
+        <AdminToolsModal
+          visible={isAdminToolsVisible}
+          onClose={() => setIsAdminToolsVisible(false)}
+          allDevices={allDevices}
+          connectedDevices={connectedDevices as any[]}
+          bleState={bleState}
+          handleScan={() => scanForPeripherals()}
+          writeToDevice={writeToDevice}
+          liveRxPayload={lastRawNotification}
+          liveDeviceConfigs={deviceConfigs}
+          onConnectToDevice={async (d: any) => { await connectToDevices([d]); }}
+          onDisconnectFromDevice={async (_id: string) => { disconnectFromDevice(); }}
+          isDiagnosticsMode={isDiagnosticsMode}
+          onToggleDiagnostics={() => setIsDiagnosticsMode(!isDiagnosticsMode)}
+          hwSettings={activeHwSettings}
+        />
+      )}
 
 
     </SafeAreaView>

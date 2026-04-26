@@ -48,7 +48,11 @@ interface ProductVisualizerProps {
 
 import { VisualizerUnit } from './VisualizerUnit';
 
-const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, hwSettings, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors, multiTransition, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 0x01, builderDirection = 1, fixedDirection = 1, streetDistribution = [0.3, 0.4, 0.3] }: ProductVisualizerProps) => {
+const EMPTY_MULTI_COLORS: string[] = [];
+const EMPTY_BUILDER_NODES: any[] = [];
+const DEFAULT_STREET_DISTRIBUTION = [0.3, 0.4, 0.3];
+
+const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, hwSettings, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = EMPTY_MULTI_COLORS, multiTransition = 0, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = EMPTY_BUILDER_NODES, builderFillMode = 'GRADIENT', builderTransitionType = 0x01, builderDirection = 1, fixedDirection = 1, streetDistribution = DEFAULT_STREET_DISTRIBUTION }: ProductVisualizerProps) => {
   const { isDark } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
 
@@ -106,8 +110,8 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
             brightness={brightness}
             isPoweredOn={isPoweredOn}
             audioMagnitude={audioMagnitude}
-            multiColors={multiColors || []}
-            multiTransition={multiTransition || 0}
+            multiColors={multiColors}
+            multiTransition={multiTransition}
             isStreetBraking={isStreetBraking}
             streetCruiseColor={streetCruiseColor}
             motionState={motionState}
