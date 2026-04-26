@@ -56,7 +56,7 @@ export const LEDStripPreview = React.memo(({ patternId, fg, bg, numLEDs, speed, 
         prevFrameRef.current = hash;
         setFrame(nextFrame);
       }
-    }, 50); // 20fps
+    }, 150); // ~6fps — pattern card previews don't need high frame rate; hash guard skips static patterns
     return () => clearInterval(interval);
   }, [patternId, fg, bg, numLEDs, speed, brightness, direction, autoPlay]);
 
