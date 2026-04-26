@@ -119,6 +119,42 @@ async function runIndexer() {
 
       await sleep(1500);
 
+      // --- Smart City Spider Logic ---
+      if (target.city) {
+        try {
+          const linksData = await page.evaluate(() => {
+            return Array.from(document.querySelectorAll('a')).map(a => ({
+              text: (a.innerText || '').toLowerCase(),
+              href: (a.href || '').toLowerCase()
+            }));
+          });
+          
+          const currentHostname = new URL(target.website).hostname;
+          const internalLinks = linksData.filter((l: any) => {
+            try {
+              const linkUrl = new URL(l.href);
+              return linkUrl.hostname === currentHostname || linkUrl.hostname.includes(currentHostname.replace('www.',''));
+            } catch(e) { return false; }
+          });
+
+          const targetCityStr = target.city.toLowerCase();
+          let match = internalLinks.find((l: any) => l.text.includes(targetCityStr) || l.href.includes(targetCityStr));
+          
+          if (!match) {
+            match = internalLinks.find((l: any) => l.text.includes('hours') || l.text.includes('location') || l.text.includes('schedule') || l.text.includes('calendar'));
+          }
+
+          if (match && match.href && !match.href.startsWith('mailto:') && !match.href.startsWith('tel:')) {
+            console.log(`   [Spider] Hopping to subpage: ${match.href}`);
+            await page.goto(match.href, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await sleep(1500);
+          }
+        } catch (spiderErr) {
+          console.error('   ? Spider heuristic hop failed, defaulting to root:', spiderErr);
+        }
+      }
+      // -------------------------------
+
       // ── DOM Extraction & Cleanup for LLM ───────────────────────────────────
       const pageData = await page.evaluate(() => {
         const anchors = Array.from(document.querySelectorAll('a'));
@@ -157,7 +193,12 @@ async function runIndexer() {
         return acc;
       }, {});
 
-      const prompt = `${systemPrompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${text}`;
+      let contextHeader = "";
+      if (target.name && target.city) {
+        contextHeader = `You are analyzing a website for a roller rink. The specific location you are targeting is [${target.name}] located in [${target.city}]. This text may contain data for multiple franchise locations. Ignore all other cities. ONLY extract the hours, pricing, and adult nights for the [${target.name}] location.\n\n`;
+      }
+
+      const prompt = `${contextHeader}${systemPrompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${text}`;
       
       console.log(`   🧠 Invoking Ollama Detective (llama3)...`);
       let aiMetadata: any = {};

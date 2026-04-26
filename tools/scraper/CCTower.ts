@@ -318,7 +318,7 @@ app.post('/config', async (req, res) => {
 
 // --- AI Detective Sandbox ---
 app.post('/api/sandbox', async (req, res) => {
-  const { url, ai_system_prompt, ai_target_vectors } = req.body;
+  const { url, ai_system_prompt, ai_target_vectors, spot_name, spot_city } = req.body;
   if (!url || !ai_system_prompt || !ai_target_vectors) {
     return res.status(400).json({ error: 'url, ai_system_prompt, and ai_target_vectors are required' });
   }
@@ -328,6 +328,41 @@ app.post('/api/sandbox', async (req, res) => {
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+    // --- Smart City Spider Logic ---
+    if (spot_city) {
+      try {
+        const links = await page.evaluate(() => {
+          return Array.from(document.querySelectorAll('a')).map(a => ({
+            text: (a.innerText || '').toLowerCase(),
+            href: (a.href || '').toLowerCase()
+          }));
+        });
+        
+        const currentHostname = new URL(url).hostname;
+        const internalLinks = links.filter(l => {
+          try {
+            const linkUrl = new URL(l.href);
+            return linkUrl.hostname === currentHostname || linkUrl.hostname.includes(currentHostname.replace('www.',''));
+          } catch(e) { return false; }
+        });
+
+        const targetCityStr = spot_city.toLowerCase();
+        let match = internalLinks.find(l => l.text.includes(targetCityStr) || l.href.includes(targetCityStr));
+        
+        if (!match) {
+          match = internalLinks.find(l => l.text.includes('hours') || l.text.includes('location') || l.text.includes('schedule') || l.text.includes('calendar'));
+        }
+
+        if (match && match.href && !match.href.startsWith('mailto:') && !match.href.startsWith('tel:')) {
+          console.log(`[Sandbox Spider] Hopping to subpage: ${match.href}`);
+          await page.goto(match.href, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        }
+      } catch (spiderErr) {
+        console.error('[Sandbox Spider] Heuristic hop failed, defaulting to root:', spiderErr);
+      }
+    }
+    // -------------------------------
 
     // Clean DOM and extract text
     const cleanText = await page.evaluate(() => {
@@ -342,7 +377,12 @@ app.post('/api/sandbox', async (req, res) => {
       return acc;
     }, {});
 
-    const prompt = `${ai_system_prompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${cleanText}`;
+    let contextHeader = "";
+    if (spot_name && spot_city) {
+      contextHeader = `You are analyzing a website for a roller rink. The specific location you are targeting is [${spot_name}] located in [${spot_city}]. This text may contain data for multiple franchise locations. Ignore all other cities. ONLY extract the hours, pricing, and adult nights for the [${spot_name}] location.\n\n`;
+    }
+
+    const prompt = `${contextHeader}${ai_system_prompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${cleanText}`;
 
     // Hit Local Ollama
     const fetch = require('node-fetch');

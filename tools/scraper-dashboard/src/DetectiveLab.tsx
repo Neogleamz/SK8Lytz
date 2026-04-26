@@ -12,6 +12,8 @@ export default function DetectiveLab({
   updateGlobalStrategy
 }: any) {
   const [sandboxUrl, setSandboxUrl] = useState('');
+  const [sandboxSpotName, setSandboxSpotName] = useState('');
+  const [sandboxSpotCity, setSandboxSpotCity] = useState('');
   const [sandboxResult, setSandboxResult] = useState<any>(null);
   const [isSandboxRunning, setIsSandboxRunning] = useState(false);
   const [newKeyword, setNewKeyword] = useState('');
@@ -29,6 +31,8 @@ export default function DetectiveLab({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: sandboxUrl,
+          spot_name: sandboxSpotName,
+          spot_city: sandboxSpotCity,
           ai_system_prompt: aiSystemPrompt,
           ai_target_vectors: aiTargetVectors
         })
@@ -158,6 +162,10 @@ export default function DetectiveLab({
       <div className="panel" style={{ flex: 1, background: 'rgba(20,20,30,0.95)', minHeight: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
         <h2 className="panel-header" style={{ color: '#4caf50' }}>Sandbox Playground</h2>
         <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+           <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+             <input className="table-input" style={{ flex: 1 }} value={sandboxSpotName} onChange={e => setSandboxSpotName(e.target.value)} placeholder="Test Spot Name (e.g. Skate City Overland Park)" />
+             <input className="table-input" style={{ flex: 1 }} value={sandboxSpotCity} onChange={e => setSandboxSpotCity(e.target.value)} placeholder="Test City (e.g. Overland Park)" />
+           </div>
            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
              <input className="table-input" style={{ flex: 1 }} value={sandboxUrl} onChange={e => setSandboxUrl(e.target.value)} placeholder="https://example.com/target-site" />
              <button onClick={runSandbox} disabled={isSandboxRunning} className="btn-primary" style={{ background: '#4caf50', color: '#fff', opacity: isSandboxRunning ? 0.5 : 1 }}>
