@@ -54,7 +54,7 @@ const US_STATES = [
 ];
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5' | 'phase6' | 'lab'>('phase1');
+  const [activeTab, setActiveTab] = useState<'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5' | 'phase6'>('phase1');
   const [seedProvider, setSeedProvider] = useState<'osm'|'google'>('google');
 
 
@@ -649,10 +649,6 @@ function App() {
       target: 'Review -> is_published',
       metric: status?.publishedCount || 0, metricLabel: 'Live on App', isDaemon: false,
       statusActive: true },
-    { id: 'Lab', title: 'Detective Lab', sub: 'Ollama Config & Sandbox', route: 'lab', color: '#00d2ff',
-      target: 'AI Config',
-      metric: aiTargetVectors.length, metricLabel: 'Target Vectors', isDaemon: false,
-      statusActive: true },
   ];
 
   return (
@@ -1168,6 +1164,20 @@ function App() {
                        <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>Awaiting harvest</div>
                     </div>
                   </div>
+                </div>
+             )}
+
+             {activeTab === 'phase3' && (
+                <div style={{ marginTop: '2rem' }}>
+                  <DetectiveLab
+                    aiSystemPrompt={aiSystemPrompt}
+                    setAiSystemPrompt={setAiSystemPrompt}
+                    aiTargetVectors={aiTargetVectors}
+                    setAiTargetVectors={setAiTargetVectors}
+                    aiExclusionKeywords={aiExclusionKeywords}
+                    setAiExclusionKeywords={setAiExclusionKeywords}
+                    updateGlobalStrategy={updateGlobalStrategy}
+                  />
                 </div>
              )}
 
@@ -2013,18 +2023,6 @@ function App() {
             )}
             </div>}  {/* end databank_grid collapsible */}
           </div>
-        )}
-
-        {activeTab === 'lab' && (
-          <DetectiveLab
-            aiSystemPrompt={aiSystemPrompt}
-            setAiSystemPrompt={setAiSystemPrompt}
-            aiTargetVectors={aiTargetVectors}
-            setAiTargetVectors={setAiTargetVectors}
-            aiExclusionKeywords={aiExclusionKeywords}
-            setAiExclusionKeywords={setAiExclusionKeywords}
-            updateGlobalStrategy={updateGlobalStrategy}
-          />
         )}
       </div>
 
