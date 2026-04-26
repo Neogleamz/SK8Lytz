@@ -272,6 +272,38 @@ app.post('/api/daemons/:name/stop', (req, res) => {
      res.json({ success: true, message: `${name} daemon stopped` });
   });
 });
+app.get('/api/pipeline/telemetry', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('scraper_config').select('daemon_telemetry').limit(1).single();
+    if (error) throw error;
+    res.json(data?.daemon_telemetry || {});
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/pipeline/telemetry/:daemon', async (req, res) => {
+  try {
+    const daemon = req.params.daemon; // e.g., 'scout', 'spider', 'detective'
+    const payload = req.body;
+    
+    const { data, error: fetchErr } = await supabase.from('scraper_config').select('daemon_telemetry').limit(1).single();
+    if (fetchErr) throw fetchErr;
+    
+    const currentTelemetry = data?.daemon_telemetry || {};
+    currentTelemetry[daemon] = {
+      ...currentTelemetry[daemon],
+      ...payload
+    };
+    
+    const { error: updateErr } = await supabase.from('scraper_config').update({ daemon_telemetry: currentTelemetry }).eq('id', 1);
+    if (updateErr) throw updateErr;
+    
+    res.json({ success: true, telemetry: currentTelemetry });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 app.get('/config', async (req, res) => {
   const { data, error } = await supabase.from('scraper_config').select('*').eq('id', 1).single();

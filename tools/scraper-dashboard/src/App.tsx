@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import USAMap from './USMap';
 import DetectiveLab from './DetectiveLab';
+import ScraperPipeline from './components/ScraperPipeline';
 import './App.css';
 
 const API_BASE = 'http://localhost:5999';
@@ -54,7 +55,7 @@ const US_STATES = [
 ];
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5' | 'phase6'>('phase1');
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5' | 'phase6'>('pipeline');
   const [seedProvider, setSeedProvider] = useState<'osm'|'google'>('google');
 
 
