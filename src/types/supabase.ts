@@ -1473,6 +1473,33 @@ export type Database = {
         }
         Relationships: []
       }
+      scraper_blocklist: {
+        Row: {
+          added_by: string | null
+          created_at: string | null
+          id: number
+          match_type: string
+          pattern: string
+          reason: string | null
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string | null
+          id?: number
+          match_type?: string
+          pattern: string
+          reason?: string | null
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string | null
+          id?: number
+          match_type?: string
+          pattern?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       scraper_blocklist_keywords: {
         Row: {
           added_by: string | null
@@ -1493,42 +1520,132 @@ export type Database = {
       }
       scraper_config: {
         Row: {
+          ai_exclusion_keywords: string[] | null
+          ai_system_prompt: string | null
+          ai_target_vectors: Json | null
           auto_resume_enabled: boolean | null
           cooldown_base_ms: number | null
           cooldown_jitter_pct: number | null
+          crawl_depth: number | null
+          crawl_gatekeeper_rules: Json | null
+          crawl_http_timeout_ms: number | null
+          crawl_max_retries: number | null
+          crawl_priority_paths: string[] | null
+          crawl_social_platforms: string[] | null
+          daemon_telemetry: Json | null
+          detective_confidence_min: number | null
+          detective_gatekeeper_rules: Json | null
+          detective_max_tokens: number | null
+          detective_model: string | null
+          detective_temperature: number | null
           id: number
           identity_rotation_enabled: boolean | null
           is_active: boolean | null
           max_consecutive_errors: number | null
+          photo_categories: string[] | null
+          photo_gatekeeper_rules: Json | null
+          photo_min_count: number | null
+          photo_min_size_kb: number | null
+          photo_sources: string[] | null
+          photo_vision_api: string | null
+          publisher_auto_publish_enabled: boolean | null
+          publisher_auto_publish_threshold: number | null
+          publisher_gatekeeper_rules: Json | null
+          publisher_required_fields: string[] | null
+          publisher_upsert_strategy: string | null
+          publisher_webhook_url: string | null
           randomize_viewport_enabled: boolean | null
+          scout_gatekeeper_rules: Json | null
+          scout_rate_limit_rpm: number | null
+          scout_search_queries: string[] | null
           sleep_interval_ms: number | null
           state_override: string[] | null
           target_facilities: string[] | null
           updated_at: string | null
         }
         Insert: {
+          ai_exclusion_keywords?: string[] | null
+          ai_system_prompt?: string | null
+          ai_target_vectors?: Json | null
           auto_resume_enabled?: boolean | null
           cooldown_base_ms?: number | null
           cooldown_jitter_pct?: number | null
+          crawl_depth?: number | null
+          crawl_gatekeeper_rules?: Json | null
+          crawl_http_timeout_ms?: number | null
+          crawl_max_retries?: number | null
+          crawl_priority_paths?: string[] | null
+          crawl_social_platforms?: string[] | null
+          daemon_telemetry?: Json | null
+          detective_confidence_min?: number | null
+          detective_gatekeeper_rules?: Json | null
+          detective_max_tokens?: number | null
+          detective_model?: string | null
+          detective_temperature?: number | null
           id?: number
           identity_rotation_enabled?: boolean | null
           is_active?: boolean | null
           max_consecutive_errors?: number | null
+          photo_categories?: string[] | null
+          photo_gatekeeper_rules?: Json | null
+          photo_min_count?: number | null
+          photo_min_size_kb?: number | null
+          photo_sources?: string[] | null
+          photo_vision_api?: string | null
+          publisher_auto_publish_enabled?: boolean | null
+          publisher_auto_publish_threshold?: number | null
+          publisher_gatekeeper_rules?: Json | null
+          publisher_required_fields?: string[] | null
+          publisher_upsert_strategy?: string | null
+          publisher_webhook_url?: string | null
           randomize_viewport_enabled?: boolean | null
+          scout_gatekeeper_rules?: Json | null
+          scout_rate_limit_rpm?: number | null
+          scout_search_queries?: string[] | null
           sleep_interval_ms?: number | null
           state_override?: string[] | null
           target_facilities?: string[] | null
           updated_at?: string | null
         }
         Update: {
+          ai_exclusion_keywords?: string[] | null
+          ai_system_prompt?: string | null
+          ai_target_vectors?: Json | null
           auto_resume_enabled?: boolean | null
           cooldown_base_ms?: number | null
           cooldown_jitter_pct?: number | null
+          crawl_depth?: number | null
+          crawl_gatekeeper_rules?: Json | null
+          crawl_http_timeout_ms?: number | null
+          crawl_max_retries?: number | null
+          crawl_priority_paths?: string[] | null
+          crawl_social_platforms?: string[] | null
+          daemon_telemetry?: Json | null
+          detective_confidence_min?: number | null
+          detective_gatekeeper_rules?: Json | null
+          detective_max_tokens?: number | null
+          detective_model?: string | null
+          detective_temperature?: number | null
           id?: number
           identity_rotation_enabled?: boolean | null
           is_active?: boolean | null
           max_consecutive_errors?: number | null
+          photo_categories?: string[] | null
+          photo_gatekeeper_rules?: Json | null
+          photo_min_count?: number | null
+          photo_min_size_kb?: number | null
+          photo_sources?: string[] | null
+          photo_vision_api?: string | null
+          publisher_auto_publish_enabled?: boolean | null
+          publisher_auto_publish_threshold?: number | null
+          publisher_gatekeeper_rules?: Json | null
+          publisher_required_fields?: string[] | null
+          publisher_upsert_strategy?: string | null
+          publisher_webhook_url?: string | null
           randomize_viewport_enabled?: boolean | null
+          scout_gatekeeper_rules?: Json | null
+          scout_rate_limit_rpm?: number | null
+          scout_search_queries?: string[] | null
           sleep_interval_ms?: number | null
           state_override?: string[] | null
           target_facilities?: string[] | null
@@ -1745,6 +1862,8 @@ export type Database = {
           address: string | null
           adult_night_details: string | null
           adult_night_schedule: Json | null
+          ai_metadata: Json | null
+          candidate_links: Json | null
           candidate_photos: Json | null
           capacity: number | null
           city: string | null
@@ -1810,6 +1929,8 @@ export type Database = {
           address?: string | null
           adult_night_details?: string | null
           adult_night_schedule?: Json | null
+          ai_metadata?: Json | null
+          candidate_links?: Json | null
           candidate_photos?: Json | null
           capacity?: number | null
           city?: string | null
@@ -1877,6 +1998,8 @@ export type Database = {
           address?: string | null
           adult_night_details?: string | null
           adult_night_schedule?: Json | null
+          ai_metadata?: Json | null
+          candidate_links?: Json | null
           candidate_photos?: Json | null
           capacity?: number | null
           city?: string | null
@@ -2687,6 +2810,8 @@ export type Database = {
           address: string | null
           adult_night_details: string | null
           adult_night_schedule: Json | null
+          ai_metadata: Json | null
+          candidate_links: Json | null
           candidate_photos: Json | null
           capacity: number | null
           city: string | null
@@ -2761,6 +2886,8 @@ export type Database = {
           address: string | null
           adult_night_details: string | null
           adult_night_schedule: Json | null
+          ai_metadata: Json | null
+          candidate_links: Json | null
           candidate_photos: Json | null
           capacity: number | null
           city: string | null
