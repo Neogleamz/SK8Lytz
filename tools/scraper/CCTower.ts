@@ -411,11 +411,27 @@ app.post('/api/sandbox', async (req, res) => {
       }
       // -------------------------------
 
+      let ocrText = '';
+      try {
+        console.log(`[Brute Force OCR] Taking full page screenshot for ${url}`);
+        const screenshotBuffer = await page.screenshot({ fullPage: true, encoding: 'base64' });
+        const Tesseract = require('tesseract.js');
+        const { data: { text } } = await Tesseract.recognize(Buffer.from(screenshotBuffer, 'base64'), 'eng');
+        ocrText = text.replace(/\s+/g, ' ').trim();
+        console.log(`[Brute Force OCR] Extracted ${ocrText.length} characters.`);
+      } catch (ocrErr) {
+        console.error('[Brute Force OCR] Failed to process screenshot:', ocrErr);
+      }
+
       cleanText = await page.evaluate(() => {
         document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
         return document.body.innerText.replace(/\s+/g, ' ').trim();
       });
       await browser.close();
+
+      if (ocrText && ocrText.length > 20) {
+          cleanText = cleanText + '\n\n--- VISUAL OCR TEXT (FROM SCREENSHOT) ---\n\n' + ocrText;
+      }
     }
 
     // Construct the Schema

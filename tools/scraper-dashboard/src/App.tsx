@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import USAMap from './USMap';
-import DetectiveLab from './DetectiveLab';
 import ScraperPipeline from './components/ScraperPipeline';
+import { SniperBench } from './components/SniperBench';
 import './App.css';
 
 const API_BASE = 'http://localhost:5999';
@@ -55,7 +55,7 @@ const US_STATES = [
 ];
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5' | 'phase6'>('pipeline');
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5' | 'phase6' | 'sniper'>('pipeline');
   const [seedProvider, setSeedProvider] = useState<'osm'|'google'>('google');
 
 
@@ -658,6 +658,10 @@ function App() {
     { id: '4', title: 'Publisher', sub: 'QA Review + Live App Gate', route: 'phase6', color: '#4caf50',
       target: 'Review -> is_published',
       metric: status?.publishedCount || 0, metricLabel: 'Live on App', isDaemon: false,
+      statusActive: true },
+    { id: '5', title: 'Sniper Bench', sub: 'Single-Record QA Testing', route: 'sniper', color: '#f43f5e',
+      target: 'URL -> 68-Field Map',
+      metric: 'TEST', metricLabel: 'Brute Force OCR', isDaemon: false,
       statusActive: true },
   ];
 
@@ -2110,6 +2114,12 @@ function App() {
           </div>
         )}
       </div>
+
+      {activeTab === 'sniper' && (
+        <div className="tab-pane phase-sniper h-[80vh] w-full rounded-xl overflow-hidden border border-[#2D3340] shadow-2xl">
+          <SniperBench />
+        </div>
+      )}
 
       <div className="log-panel panel">
         <div className="log-header">
