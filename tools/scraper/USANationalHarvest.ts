@@ -98,7 +98,7 @@ export async function processState(stateCode: string, targetFacilities: string[]
     conditions += `    nwr["leisure"="sports_centre"]["name"~"Skate|Rink|Roll",i](area.searchArea);\n`;
     conditions += `    nwr["building"]["name"~"Skate Center|Rink|Roll",i](area.searchArea);\n`;
   }
-  if (includeAll || targetFacilities.includes('skatepark')) {
+  if (includeAll || targetFacilities.includes('skate_park')) {
     conditions += `    nwr["sport"="skateboard"](area.searchArea);\n`;
     conditions += `    nwr["leisure"="skatepark"](area.searchArea);\n`;
     conditions += `    nwr["name"~"Skatepark",i](area.searchArea);\n`;
@@ -179,10 +179,10 @@ ${conditions}  );
     const isRollerRink = tags['sport']?.includes('roller_skating') || tags.name?.toLowerCase().match(/rink|skateland|skate center/);
     const isProShop = tags['shop']?.includes('skate') || tags['shop']?.includes('sports') || tags.name?.toLowerCase().includes('skate shop');
     
-    if (isProShop) facility_type = 'pro_shop';
-    else if (isSkatepark && isRollerRink) facility_type = 'hybrid';
-    else if (isSkatepark) facility_type = 'skatepark';
+    if (isProShop) facility_type = 'skate_shop';
+    else if (isSkatepark) facility_type = 'skate_park';
     else if (isRollerRink) facility_type = 'roller_rink';
+    else continue; // Reject anything that doesn't fit the core 3
     
     let name = tags.name || tags.brand || null;
     if (!name) {
@@ -198,9 +198,8 @@ ${conditions}  );
     let zip = tags['addr:postcode'] || null;
 
     if (!street_address || !city || !state || !zip) {
-      // Bypassing expensive reverse geocode for broad-net pulse to avoid stalls.
-      // Phase 2 (Operator) will enrich these later.
-      /*
+      // Nominatim reverse geocode — fills in zip, city, state when OSM tags are sparse.
+      // GHOST adaptive delay on line 156 already throttles these calls safely.
       const geo = await reverseGeocode(lat, lon);
       if (geo) {
         if (!street_address && geo.fullAddress) street_address = geo.fullAddress;
@@ -208,7 +207,6 @@ ${conditions}  );
         if (!state && geo.state) state = geo.state;
         if (!zip && geo.zip) zip = geo.zip;
       }
-      */
     }
 
     if (i % 10 === 0) console.log(`  ⏳ [${stateCode}] Geocoding progress: ${i}/${elements.length}...`);
@@ -242,7 +240,7 @@ ${conditions}  );
       opening_hours: buildHoursJSON(tags['opening_hours']), website: tags.website || tags['contact:website'] || null,
       has_lights, has_fee, has_rental, is_wheelchair_accessible, has_wifi, has_toilets, operator_name, operator_description,
       has_food, has_ac, has_lockers, capacity, hosts_derby,
-      verification_status: 'PENDING'
+      verification_status: 'SEEDED'
     });
   }
 
