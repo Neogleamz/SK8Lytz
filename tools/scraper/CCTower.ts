@@ -363,9 +363,7 @@ app.post('/api/sniper/seed', async (req, res) => {
     website: url,
     name: spot_name || 'Sniper Target',
     city: spot_city || null,
-    state: 'TEST',
     verification_status: 'SEEDED',
-    source: 'SNIPER_BENCH',
     retry_count: -999, // Push to front of queue
     last_attempted_at: new Date(0).toISOString() // Force immediate pickup
   }).select('id').single();
