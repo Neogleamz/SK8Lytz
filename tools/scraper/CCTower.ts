@@ -215,7 +215,6 @@ app.get('/status', async (req, res) => {
       // Pipeline stage counts (matches real verification_status values)
       pendingCount: pendingCount || 0,
       seededCount: seededCount || 0,
-      enrichedCount: enrichedCount || 0,
       deepCrawledCount: deepCrawledCount || 0,
       
       errorCount,
@@ -466,6 +465,7 @@ app.post('/api/sandbox', async (req, res) => {
   }
 
   try {
+    let cleanText = '';
     // Image-Trap OCR logic
     if (url.match(/\.(jpeg|jpg|gif|png)$/i)) {
       console.log(`[Image-Trap] Detected image URL, running OCR on ${url}`);
