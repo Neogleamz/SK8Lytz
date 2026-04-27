@@ -353,6 +353,36 @@ app.post('/config', async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
   res.json({ success: true, message: 'Config updated' });
+});// --- Sniper Bench End-to-End Pipeline Tracing ---
+app.post('/api/sniper/seed', async (req, res) => {
+  const { url, spot_name, spot_city } = req.body;
+  if (!url) return res.status(400).json({ error: 'URL is required' });
+
+  // Insert a high-priority record to force daemons to process it immediately
+  const { data, error } = await supabase.from('skate_spots').insert({
+    website: url,
+    name: spot_name || 'Sniper Target',
+    city: spot_city || null,
+    lat: 0.0, // Sniper placeholder — no geo lookup performed
+    lng: 0.0, // Sniper placeholder — no geo lookup performed
+    verification_status: 'SEEDED',
+    retry_count: -999, // Push to front of queue
+    last_attempted_at: new Date(0).toISOString() // Force immediate pickup
+  }).select('id').single();
+
+  if (error) {
+    console.error('[Sniper] Seed Error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+
+  console.log(`[Sniper] Seeded test record ID: ${data.id} for ${url}`);
+  res.json({ success: true, spot_id: data.id });
+});
+
+app.get('/api/sniper/poll/:id', async (req, res) => {
+  const { data, error } = await supabase.from('skate_spots').select('*').eq('id', req.params.id).single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true, spot: data });
 });
 
 // --- AI Detective Sandbox ---
@@ -411,11 +441,27 @@ app.post('/api/sandbox', async (req, res) => {
       }
       // -------------------------------
 
+      let ocrText = '';
+      try {
+        console.log(`[Brute Force OCR] Taking full page screenshot for ${url}`);
+        const screenshotBuffer = await page.screenshot({ fullPage: true, encoding: 'base64' });
+        const Tesseract = require('tesseract.js');
+        const { data: { text } } = await Tesseract.recognize(Buffer.from(screenshotBuffer, 'base64'), 'eng');
+        ocrText = text.replace(/\s+/g, ' ').trim();
+        console.log(`[Brute Force OCR] Extracted ${ocrText.length} characters.`);
+      } catch (ocrErr) {
+        console.error('[Brute Force OCR] Failed to process screenshot:', ocrErr);
+      }
+
       cleanText = await page.evaluate(() => {
         document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
         return document.body.innerText.replace(/\s+/g, ' ').trim();
       });
       await browser.close();
+
+      if (ocrText && ocrText.length > 20) {
+          cleanText = cleanText + '\n\n--- VISUAL OCR TEXT (FROM SCREENSHOT) ---\n\n' + ocrText;
+      }
     }
 
     // Construct the Schema
