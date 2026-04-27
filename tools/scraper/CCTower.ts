@@ -364,7 +364,6 @@ app.post('/api/sniper/seed', async (req, res) => {
     name: spot_name || 'Sniper Target',
     city: spot_city || null,
     state: 'TEST',
-    country: 'USA',
     verification_status: 'SEEDED',
     source: 'SNIPER_BENCH',
     retry_count: -999, // Push to front of queue
