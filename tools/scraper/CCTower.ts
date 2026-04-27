@@ -7,6 +7,7 @@ import { EventEmitter } from 'events';
 import { createClient } from '@supabase/supabase-js';
 import { exec } from 'child_process';
 import { startGoogleSweep, stopGoogleSweep, isGoogleSweepActive } from './GoogleSweep';
+import { GooglePlacesProvider, RETAIL_BLOCKLIST } from './lib/providers/GooglePlacesProvider';
 
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
@@ -353,30 +354,100 @@ app.post('/config', async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
   res.json({ success: true, message: 'Config updated' });
-});// --- Sniper Bench End-to-End Pipeline Tracing ---
+});
+
+// --- Sniper Bench End-to-End Pipeline Tracing ---
 app.post('/api/sniper/seed', async (req, res) => {
   const { url, spot_name, spot_city } = req.body;
   if (!url) return res.status(400).json({ error: 'URL is required' });
+  if (!spot_name || !spot_city) return res.status(400).json({ error: 'spot_name and spot_city are required for Google Places lookup' });
 
-  // Insert a high-priority record to force daemons to process it immediately
-  const { data, error } = await supabase.from('skate_spots').insert({
-    website: url,
-    name: spot_name || 'Sniper Target',
-    city: spot_city || null,
-    lat: 0.0, // Sniper placeholder — no geo lookup performed
-    lng: 0.0, // Sniper placeholder — no geo lookup performed
-    verification_status: 'SEEDED',
-    retry_count: -999, // Push to front of queue
-    last_attempted_at: new Date(0).toISOString() // Force immediate pickup
-  }).select('id').single();
+  try {
+    // ── Step 1: Text Search to find place_id ────────────────────────────────
+    console.log(`[Sniper] Searching Google Places for: "${spot_name} ${spot_city}"`);
+    const placeIds = await GooglePlacesProvider.searchRegion(`${spot_name} ${spot_city}`, 'roller_rink');
 
-  if (error) {
-    console.error('[Sniper] Seed Error:', error.message);
-    return res.status(500).json({ error: error.message });
+    if (!placeIds || placeIds.length === 0) {
+      // Fallback: seed with just URL + basic info if Google can't find the place
+      console.warn(`[Sniper] No Google Places result found for "${spot_name} ${spot_city}" — seeding with URL only`);
+      return res.status(404).json({ error: `No Google Places result found for "${spot_name} ${spot_city}". Try adjusting the name or city.` });
+    }
+
+    // ── Step 2: Fetch full Place Details for top result ─────────────────────
+    const placeId = placeIds[0];
+    console.log(`[Sniper] Fetching Place Details for place_id: ${placeId}`);
+    const details = await GooglePlacesProvider.getPlaceDetails(placeId);
+
+    if (!details) throw new Error('Place Details returned null for place_id: ' + placeId);
+    if (!details.lat || !details.lng) throw new Error('Place Details missing coordinates');
+
+    // Retail blocklist check
+    const lowerName = details.name.toLowerCase();
+    if (RETAIL_BLOCKLIST.some(block => lowerName.includes(block))) {
+      return res.status(400).json({ error: `Place "${details.name}" is on the retail blocklist — not a valid skate facility` });
+    }
+
+    // ── Step 3: Parse address components (same logic as GoogleSweep) ─────────
+    const parts = details.formatted_address?.split(',') || [];
+    let derivedState: string | null = null;
+    let derivedCity: string | null = null;
+    let derivedZip: string | null = null;
+    if (parts.length >= 3) {
+      const stateZipStr = parts[parts.length - 2].trim();
+      derivedCity = parts[parts.length - 3].trim();
+      const splitStateZip = stateZipStr.split(' ');
+      if (splitStateZip.length > 0) derivedState = splitStateZip[0];
+      if (splitStateZip.length > 1) derivedZip = splitStateZip[1];
+    }
+
+    // ── Step 4: Build metaRecord identical to GoogleSweep ────────────────────
+    const googlePhotos = details.photos && details.photos.length > 0
+      ? { google_refs: details.photos }
+      : null;
+
+    const metaRecord: Record<string, any> = {
+      name:                 details.name,
+      lat:                  details.lat,
+      lng:                  details.lng,
+      city:                 derivedCity || spot_city,
+      state:                derivedState || null,
+      zip:                  derivedZip || null,
+      street_address:       details.formatted_address || null,
+      phone_number:         details.formatted_phone_number || null,
+      website:              url || details.website || null, // user-provided URL takes priority
+      google_place_id:      details.place_id,
+      google_maps_url:      details.google_maps_url || null,
+      business_status:      details.business_status || 'OPERATIONAL',
+      rating:               details.rating ?? null,
+      user_ratings_total:   details.user_ratings_total ?? null,
+      opening_hours:        details.opening_hours || null,
+      operator_description: details.editorial_summary || null,
+      facility_type:        'roller_rink',
+      last_enriched_at:     new Date().toISOString(),
+      raw_knowledge_panel:  { types: details.types || null },
+      verification_status:  'SEEDED',
+      retry_count:          -999, // Push to front of queue
+      last_attempted_at:    new Date(0).toISOString(),
+      ...(googlePhotos ? { candidate_photos: googlePhotos } : {}),
+    };
+
+    // ── Step 5: Upsert (same dedup logic as GoogleSweep) ─────────────────────
+    const { data, error } = await supabase.from('skate_spots')
+      .upsert(metaRecord, { onConflict: 'google_place_id', ignoreDuplicates: false })
+      .select('id').single();
+
+    if (error) {
+      console.error('[Sniper] Seed Upsert Error:', error.message);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log(`[Sniper] ✅ Seeded full Phase-1 record ID: ${data.id} for "${details.name}" → ${url}`);
+    res.json({ success: true, spot_id: data.id, place_name: details.name, address: details.formatted_address });
+
+  } catch (err: any) {
+    console.error('[Sniper] Seed Error:', err.message);
+    res.status(500).json({ error: err.message });
   }
-
-  console.log(`[Sniper] Seeded test record ID: ${data.id} for ${url}`);
-  res.json({ success: true, spot_id: data.id });
 });
 
 app.get('/api/sniper/poll/:id', async (req, res) => {

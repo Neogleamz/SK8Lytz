@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFieldRegistry } from '../hooks/useFieldRegistry';
 
 export const SniperBench: React.FC = () => {
@@ -10,6 +10,7 @@ export const SniperBench: React.FC = () => {
   const [results, setResults] = useState<any>(null);
   const [executionLog, setExecutionLog] = useState<string[]>([]);
   const [cleanText, setCleanText] = useState<string>('');
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const log = (msg: string) => setExecutionLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
 
@@ -40,7 +41,7 @@ export const SniperBench: React.FC = () => {
       let currentStatus = 'SEEDED';
       let retries = 0;
 
-      const poll = setInterval(async () => {
+      pollRef.current = setInterval(async () => {
         try {
           const pollRes = await fetch(`http://localhost:5999/api/sniper/poll/${spotId}`);
           const pollData = await pollRes.json();
@@ -62,7 +63,7 @@ export const SniperBench: React.FC = () => {
 
             // Check if we hit a terminal state
             if (['REVIEW_PENDING', 'PUBLISHED', 'REJECTED', 'STALLED'].includes(currentStatus)) {
-              clearInterval(poll);
+              clearInterval(pollRef.current!); pollRef.current = null;
               
               if (spot.raw_ai_payload) {
                 log(`Successfully retrieved AI Payload from DB.`);
@@ -78,7 +79,7 @@ export const SniperBench: React.FC = () => {
         } catch (e) {
           retries++;
           if (retries > 30) {
-            clearInterval(poll);
+            clearInterval(pollRef.current!); pollRef.current = null;
             log('Critical Timeout: Pipeline polling failed.');
             setLoading(false);
           }
@@ -89,6 +90,12 @@ export const SniperBench: React.FC = () => {
       log(`Critical Failure: ${err.message}`);
       setLoading(false);
     }
+  };
+
+  const handleCancel = () => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    log('⛔ Cancelled by user.');
+    setLoading(false);
   };
 
   if (fieldsLoading) return <div className="p-8 text-white">Loading Field Registry...</div>;
@@ -150,20 +157,36 @@ export const SniperBench: React.FC = () => {
               </div>
             </div>
 
-            <button
-              onClick={handleFire}
-              disabled={loading}
-              style={{
-                width: '100%', padding: '12px', borderRadius: '4px', fontSize: '0.875rem', fontWeight: 'bold', marginTop: '1rem', cursor: loading ? 'not-allowed' : 'pointer',
-                background: loading ? 'rgba(255,255,255,0.1)' : '#f43f5e',
-                color: loading ? 'rgba(255,255,255,0.4)' : '#fff',
-                border: 'none',
-                boxShadow: loading ? 'none' : '0 0 15px rgba(244,63,94,0.3)',
-                transition: 'all 0.2s'
-              }}
-            >
-              {loading ? 'Executing Pipeline...' : 'Fire Sniper'}
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+              <button
+                onClick={handleFire}
+                disabled={loading}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '4px', fontSize: '0.875rem', fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer',
+                  background: loading ? 'rgba(255,255,255,0.07)' : '#f43f5e',
+                  color: loading ? 'rgba(255,255,255,0.3)' : '#fff',
+                  border: 'none',
+                  boxShadow: loading ? 'none' : '0 0 15px rgba(244,63,94,0.3)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {loading ? '⏳ Running...' : '🎯 Fire Sniper'}
+              </button>
+              {loading && (
+                <button
+                  onClick={handleCancel}
+                  style={{
+                    padding: '12px 16px', borderRadius: '4px', fontSize: '0.875rem', fontWeight: 'bold', cursor: 'pointer',
+                    background: 'rgba(255,100,50,0.15)',
+                    color: '#f97316',
+                    border: '1px solid rgba(255,100,50,0.3)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  ⛔ Cancel
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
