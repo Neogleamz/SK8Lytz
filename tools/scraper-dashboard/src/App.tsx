@@ -2116,7 +2116,7 @@ function App() {
       </div>
 
       {activeTab === 'sniper' && (
-        <div className="tab-pane phase-sniper h-[80vh] w-full rounded-xl overflow-hidden border border-[#2D3340] shadow-2xl">
+        <div className="tab-pane phase-sniper" style={{ height: '80vh', width: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid #2D3340', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
           <SniperBench />
         </div>
       )}

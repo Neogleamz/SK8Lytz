@@ -174,82 +174,87 @@ export const SniperBench: React.FC = () => {
         </div>
 
         <div style={{ flex: 1, overflow: 'auto', padding: '1.5rem' }}>
-          {!results && !loading && (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.875rem' }}>
-              Fire the sniper to populate the report card.
-            </div>
-          )}
-
           {loading && (
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#f43f5e', gap: '1rem' }}>
-              <div style={{ width: '2rem', height: '2rem', border: '2px solid #f43f5e', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f43f5e', gap: '1rem', marginBottom: '1.5rem', background: 'rgba(244,63,94,0.05)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(244,63,94,0.1)' }}>
+              <div style={{ width: '1.5rem', height: '1.5rem', border: '2px solid #f43f5e', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
               <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-              <p style={{ fontSize: '0.875rem', fontFamily: 'JetBrains Mono, monospace' }}>Running Brute Force Extractor...</p>
+              <p style={{ fontSize: '0.875rem', fontFamily: 'JetBrains Mono, monospace', margin: 0 }}>Running Brute Force Extractor...</p>
             </div>
           )}
 
-          {results && (
-            <div style={{ background: '#0F1218', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', overflow: 'hidden' }}>
-              <div style={{ background: '#151921', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center' }}>
-                <h4 style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#60a5fa', textTransform: 'uppercase', margin: 0 }}>Omni-Field Validation Record</h4>
-                <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' }}>Total Fields Evaluated: {fields.length}</span>
+          <div style={{ background: '#0F1218', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', overflow: 'hidden' }}>
+            <div style={{ background: '#151921', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center' }}>
+              <h4 style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#60a5fa', textTransform: 'uppercase', margin: 0 }}>Omni-Field Validation Record</h4>
+              <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' }}>Total Fields Evaluated: {fields.length}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', padding: '8px 16px', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid rgba(255,255,255,0.1)', fontSize: '0.7rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div style={{ width: '25%' }}>Schema Target</div>
+                <div style={{ width: '15%' }}>Status</div>
+                <div style={{ width: '40%' }}>Extracted Value</div>
+                <div style={{ width: '20%' }}>Pipeline Source / Method</div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', padding: '8px 16px', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid rgba(255,255,255,0.1)', fontSize: '0.7rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  <div style={{ width: '25%' }}>Schema Target</div>
-                  <div style={{ width: '15%' }}>Status</div>
-                  <div style={{ width: '40%' }}>Extracted Value</div>
-                  <div style={{ width: '20%' }}>Pipeline Source / Method</div>
-                </div>
-                {fields.sort((a,b) => a.phase_id - b.phase_id || a.sort_order - b.sort_order).map((f, i) => {
-                  const value = results[f.field_name];
+              {fields.sort((a,b) => a.phase_id - b.phase_id || a.sort_order - b.sort_order).map((f, i) => {
+                
+                let hasValue = false;
+                let value: any = null;
+                
+                if (results) {
+                  value = results[f.field_name];
                   const isMissing = value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0) || (typeof value === 'object' && Object.keys(value).length === 0);
-                  const hasValue = !isMissing || value === false;
-                  
-                  const methodText = f.phase_id === 1 ? 'Google Places API (Direct)' : 
-                                     f.phase_id === 2 ? 'DOM Crawler (Homepage Links)' :
-                                     f.phase_id === 3 ? 'AI Detective (DOM + OCR Infer)' :
-                                     f.phase_id === 4 ? 'Vision API (Gallery Scraping)' :
-                                     'Pipeline Aggregation';
+                  hasValue = !isMissing || value === false;
+                }
 
-                  return (
-                    <div key={f.id} style={{ display: 'flex', padding: '12px 16px', borderBottom: i < fields.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'background 0.2s', cursor: 'default' }} onMouseEnter={e => e.currentTarget.style.background = '#151921'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                      <div style={{ width: '25%', display: 'flex', flexDirection: 'column', paddingRight: '10px' }}>
-                        <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>{f.display_label}</span>
-                        <span style={{ fontSize: '0.625rem', fontFamily: 'JetBrains Mono, monospace', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>{f.field_name}</span>
-                      </div>
-                      <div style={{ width: '15%', display: 'flex', alignItems: 'center' }}>
-                        {hasValue ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(74, 222, 128, 0.1)', border: '1px solid rgba(74,222,128,0.3)', padding: '4px 8px', borderRadius: '4px' }}>
-                            <span style={{ color: '#4ade80', fontSize: '0.75rem' }}>🟢</span>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#4ade80' }}>PASS</span>
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244,63,94,0.3)', padding: '4px 8px', borderRadius: '4px' }}>
-                            <span style={{ color: '#f43f5e', fontSize: '0.75rem' }}>🔴</span>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#f43f5e' }}>FAIL</span>
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ width: '40%', display: 'flex', alignItems: 'center', paddingRight: '10px' }}>
-                        {hasValue ? (
-                          <pre style={{ fontSize: '0.75rem', color: '#e2e8f0', fontFamily: 'JetBrains Mono, monospace', background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '6px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxWidth: '100%', margin: 0, border: '1px solid rgba(255,255,255,0.05)' }}>
-                            {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
-                          </pre>
-                        ) : (
-                          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono, monospace', fontStyle: 'italic' }}>NULL</span>
-                        )}
-                      </div>
-                      <div style={{ width: '20%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.6)' }}>Phase {f.phase_id}</span>
-                        <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>{methodText}</span>
-                      </div>
+                const methodText = f.phase_id === 1 ? 'Google Places API (Direct)' : 
+                                    f.phase_id === 2 ? 'DOM Crawler (Homepage Links)' :
+                                    f.phase_id === 3 ? 'AI Detective (DOM + OCR Infer)' :
+                                    f.phase_id === 4 ? 'Vision API (Gallery Scraping)' :
+                                    'Pipeline Aggregation';
+
+                return (
+                  <div key={f.id} style={{ display: 'flex', padding: '12px 16px', borderBottom: i < fields.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'background 0.2s', cursor: 'default' }} onMouseEnter={e => e.currentTarget.style.background = '#151921'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    <div style={{ width: '25%', display: 'flex', flexDirection: 'column', paddingRight: '10px' }}>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>{f.display_label}</span>
+                      <span style={{ fontSize: '0.625rem', fontFamily: 'JetBrains Mono, monospace', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>{f.field_name}</span>
                     </div>
-                  );
-                })}
-              </div>
+                    <div style={{ width: '15%', display: 'flex', alignItems: 'center' }}>
+                      {!results ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '4px' }}>
+                          <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>⏳</span>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8' }}>AWAITING</span>
+                        </div>
+                      ) : hasValue ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(74, 222, 128, 0.1)', border: '1px solid rgba(74,222,128,0.3)', padding: '4px 8px', borderRadius: '4px' }}>
+                          <span style={{ color: '#4ade80', fontSize: '0.75rem' }}>🟢</span>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#4ade80' }}>PASS</span>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244,63,94,0.3)', padding: '4px 8px', borderRadius: '4px' }}>
+                          <span style={{ color: '#f43f5e', fontSize: '0.75rem' }}>🔴</span>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#f43f5e' }}>FAIL</span>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ width: '40%', display: 'flex', alignItems: 'center', paddingRight: '10px' }}>
+                      {!results ? (
+                         <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.2)', fontFamily: 'JetBrains Mono, monospace', fontStyle: 'italic' }}>Pending Sniper Fire...</span>
+                      ) : hasValue ? (
+                        <pre style={{ fontSize: '0.75rem', color: '#e2e8f0', fontFamily: 'JetBrains Mono, monospace', background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '6px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxWidth: '100%', margin: 0, border: '1px solid rgba(255,255,255,0.05)' }}>
+                          {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                        </pre>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono, monospace', fontStyle: 'italic' }}>NULL</span>
+                      )}
+                    </div>
+                    <div style={{ width: '20%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.6)' }}>Phase {f.phase_id}</span>
+                      <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>{methodText}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
