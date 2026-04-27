@@ -184,6 +184,30 @@ async function runIndexer() {
 
         for (const url of filteredUrls) {
           console.log(`   → ${url}`);
+
+          // ── Image-Trap Short-Circuit ───────────────────────────────────────
+          // If the URL is a direct image file, skip Puppeteer entirely.
+          // Puppeteer would render it as a blank DOM with zero text and zero <img> tags,
+          // so flyerUrls would stay empty and OCR would never fire.
+          // Instead, feed the URL directly to Tesseract right here.
+          const isDirectImageUrl = /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(url);
+          if (isDirectImageUrl) {
+            console.log(`   👁️  Direct image URL detected — running Tesseract immediately on: ${url}`);
+            try {
+              const { data: { text } } = await Tesseract.recognize(url, 'eng');
+              if (text && text.trim().length > 20) {
+                combinedText += `\n\n[OCR from Direct Image: ${url}]\n${text}`;
+                console.log(`      ↳ OCR extracted ${text.length} chars from direct image`);
+              } else {
+                console.log(`      ↳ OCR yielded no usable text from ${url}`);
+              }
+            } catch (ocrErr: any) {
+              console.error(`      ✗ Direct image OCR failed for ${url}:`, ocrErr.message);
+            }
+            continue; // skip Puppeteer for this URL
+          }
+          // ──────────────────────────────────────────────────────────────────
+
           try {
             await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
           } catch {
