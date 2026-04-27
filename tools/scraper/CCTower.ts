@@ -6,8 +6,19 @@ import path from 'path';
 import { EventEmitter } from 'events';
 import { createClient } from '@supabase/supabase-js';
 import { exec } from 'child_process';
-import { US_STATES, processState, startNationalHarvester, stopNationalHarvester, isHarvestingActive } from './USANationalHarvest';
 import { startGoogleSweep, stopGoogleSweep, isGoogleSweepActive } from './GoogleSweep';
+
+const US_STATES = [
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
+  'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
+  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT',
+  'VA','WA','WV','WI','WY'
+];
+
+let isHarvestingActive = false;
+const processState = async (state: string, targets: any[], force?: boolean) => { console.log(`[DEPRECATED] OSM Harvest called for ${state}`); };
+const startNationalHarvester = async (targets: any[], states: any[]) => { console.log(`[DEPRECATED] OSM Harvest started`); };
+const stopNationalHarvester = async () => { console.log(`[DEPRECATED] OSM Harvest stopped`); };
 
 
  // --- Logging Infrastructure ---
@@ -123,7 +134,6 @@ app.get('/status', async (req, res) => {
     let operatorStatus = 'Offline';
     let indexerStatus = 'Offline';
     let photographerStatus = 'Offline';
-    let ollamaStatus = 'Offline';
 
     if (!err && stdout) {
       try {
@@ -190,7 +200,7 @@ app.get('/status', async (req, res) => {
       isRunning: running,
       isHarvestingActive,
       isHeadless,
-      currentTarget: `Operator: ${operatorStatus} | Indexer: ${indexerStatus} | Photographer: ${photographerStatus} | Ollama: ${ollamaStatus}`,
+      currentTarget: `Operator: ${operatorStatus} | Indexer: ${indexerStatus} | Photographer: ${photographerStatus}`,
       isGoogleSweepActive,
       totalCount: totalCount || 0,          // COUNT(*) — true total seeded
       processedCount: totalProcessed || 0,
@@ -239,7 +249,7 @@ app.post('/start', (req, res) => {
   const { daemons } = (req.body || {}) as { daemons?: string[] };
   const target = (daemons && daemons.length > 0)
     ? daemons.map(d => `scraper-${d}`).join(',')
-    : 'scraper-operator,scraper-indexer,scraper-photographer,ollama-daemon';
+    : 'scraper-operator,scraper-indexer,scraper-photographer';
   console.log(`Orchestrating start: ${target}`);
   exec(`pm2 start ecosystem.config.js --only ${target}`, { cwd: __dirname, windowsHide: true }, (err) => {
      if (err) {
@@ -255,7 +265,7 @@ app.post('/stop', (req, res) => {
   const { daemons } = (req.body || {}) as { daemons?: string[] };
   const target = (daemons && daemons.length > 0)
     ? daemons.map(d => `scraper-${d}`).join(' ')
-    : 'scraper-operator scraper-indexer scraper-photographer ollama-daemon';
+    : 'scraper-operator scraper-indexer scraper-photographer';
   console.log(`Orchestrating stop: ${target}`);
   exec(`pm2 stop ${target}`, { cwd: __dirname, windowsHide: true }, (err) => {
      if (err) {
@@ -269,7 +279,7 @@ app.post('/stop', (req, res) => {
 
 app.post('/api/daemons/:name/start', (req, res) => {
   const { name } = req.params;
-  const target = name === 'ollama-daemon' ? 'ollama-daemon' : `scraper-${name}`;
+  const target = `scraper-${name}`;
   console.log(`Commanding daemon start: ${target}`);
   exec(`pm2 start ${target}`, { cwd: __dirname, windowsHide: true }, (err, stdout, stderr) => {
      if (err) {
@@ -282,7 +292,7 @@ app.post('/api/daemons/:name/start', (req, res) => {
 
 app.post('/api/daemons/:name/stop', (req, res) => {
   const { name } = req.params;
-  const target = name === 'ollama-daemon' ? 'ollama-daemon' : `scraper-${name}`;
+  const target = `scraper-${name}`;
   console.log(`Commanding daemon stop: ${target}`);
   exec(`pm2 stop ${target}`, { cwd: __dirname, windowsHide: true }, (err, stdout, stderr) => {
      if (err) {
@@ -353,54 +363,62 @@ app.post('/api/sandbox', async (req, res) => {
   }
 
   try {
-    const puppeteer = require('puppeteer');
-    const browser = await puppeteer.launch({ headless: true });
-    const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    // Image-Trap OCR logic
+    if (url.match(/\.(jpeg|jpg|gif|png)$/i)) {
+      console.log(`[Image-Trap] Detected image URL, running OCR on ${url}`);
+      const Tesseract = require('tesseract.js');
+      const { data: { text } } = await Tesseract.recognize(url, 'eng');
+      cleanText = text.replace(/\s+/g, ' ').trim();
+    } else {
+      // Clean DOM and extract text for standard webpages
+      const puppeteer = require('puppeteer');
+      const browser = await puppeteer.launch({ headless: true });
+      const page = await browser.newPage();
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-    // --- Smart City Spider Logic ---
-    if (spot_city) {
-      try {
-        const links = await page.evaluate(() => {
-          return Array.from(document.querySelectorAll('a')).map(a => ({
-            text: (a.innerText || '').toLowerCase(),
-            href: (a.href || '').toLowerCase()
-          }));
-        });
-        
-        const currentHostname = new URL(url).hostname;
-        const internalLinks = links.filter(l => {
-          try {
-            const linkUrl = new URL(l.href);
-            return linkUrl.hostname === currentHostname || linkUrl.hostname.includes(currentHostname.replace('www.',''));
-          } catch(e) { return false; }
-        });
+      // --- Smart City Spider Logic ---
+      if (spot_city) {
+        try {
+          const links = await page.evaluate(() => {
+            return Array.from(document.querySelectorAll('a')).map(a => ({
+              text: (a.innerText || '').toLowerCase(),
+              href: (a.href || '').toLowerCase()
+            }));
+          });
+          
+          const currentHostname = new URL(url).hostname;
+          const internalLinks = links.filter(l => {
+            try {
+              const linkUrl = new URL(l.href);
+              return linkUrl.hostname === currentHostname || linkUrl.hostname.includes(currentHostname.replace('www.',''));
+            } catch(e) { return false; }
+          });
 
-        const targetCityStr = spot_city.toLowerCase();
-        let match = internalLinks.find(l => l.text.includes(targetCityStr) || l.href.includes(targetCityStr));
-        
-        if (!match) {
-          match = internalLinks.find(l => l.text.includes('hours') || l.text.includes('location') || l.text.includes('schedule') || l.text.includes('calendar'));
+          const targetCityStr = spot_city.toLowerCase();
+          let match = internalLinks.find(l => l.text.includes(targetCityStr) || l.href.includes(targetCityStr));
+          
+          if (!match) {
+            match = internalLinks.find(l => l.text.includes('hours') || l.text.includes('location') || l.text.includes('schedule') || l.text.includes('calendar'));
+          }
+
+          if (match && match.href && !match.href.startsWith('mailto:') && !match.href.startsWith('tel:')) {
+            console.log(`[Sandbox Spider] Hopping to subpage: ${match.href}`);
+            await page.goto(match.href, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          }
+        } catch (spiderErr) {
+          console.error('[Sandbox Spider] Heuristic hop failed, defaulting to root:', spiderErr);
         }
-
-        if (match && match.href && !match.href.startsWith('mailto:') && !match.href.startsWith('tel:')) {
-          console.log(`[Sandbox Spider] Hopping to subpage: ${match.href}`);
-          await page.goto(match.href, { waitUntil: 'domcontentloaded', timeout: 30000 });
-        }
-      } catch (spiderErr) {
-        console.error('[Sandbox Spider] Heuristic hop failed, defaulting to root:', spiderErr);
       }
+      // -------------------------------
+
+      cleanText = await page.evaluate(() => {
+        document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
+        return document.body.innerText.replace(/\s+/g, ' ').trim();
+      });
+      await browser.close();
     }
-    // -------------------------------
 
-    // Clean DOM and extract text
-    const cleanText = await page.evaluate(() => {
-      document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
-      return document.body.innerText.replace(/\s+/g, ' ').trim();
-    });
-    await browser.close();
-
-    // Construct the Ollama prompt
+    // Construct the Schema
     const schema = ai_target_vectors.reduce((acc: any, vec: any) => {
       acc[vec.key] = vec.type;
       return acc;
@@ -408,35 +426,41 @@ app.post('/api/sandbox', async (req, res) => {
 
     let contextHeader = "";
     if (spot_name && spot_city) {
-      contextHeader = `You are analyzing a website for a roller rink. The specific location you are targeting is [${spot_name}] located in [${spot_city}]. This text may contain data for multiple franchise locations. Ignore all other cities. ONLY extract the hours, pricing, and adult nights for the [${spot_name}] location.\n\n`;
+      contextHeader = `You are analyzing data for a roller rink. The specific location you are targeting is [${spot_name}] located in [${spot_city}]. This text may contain data for multiple franchise locations. Ignore all other cities. ONLY extract the hours, pricing, and adult nights for the [${spot_name}] location.\n\n`;
     }
 
-    const prompt = `${contextHeader}${ai_system_prompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${cleanText}`;
+    const systemPrompt = `${contextHeader}${ai_system_prompt}\n\nYou MUST return a valid JSON object exactly matching this schema:\n${JSON.stringify(schema, null, 2)}\n\nDo not include any conversational text or markdown code blocks. Just the raw JSON.`;
 
-    // Hit Local Ollama
+    // Hit Local LM Studio (OpenAI Compatible)
     const fetch = require('node-fetch');
-    const targetModel = req.body.detective_model || 'llama3.2';
-    const response = await fetch('http://localhost:11434/api/generate', {
+    const targetModel = req.body.detective_model || 'local-model';
+    const response = await fetch('http://localhost:1234/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: targetModel,
-        prompt: prompt,
-        format: 'json',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Website/Image Text:\n${cleanText}` }
+        ],
+        temperature: 0.1,
         stream: false
       })
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama API failed: ${response.statusText}`);
+      throw new Error(`LM Studio API failed: ${response.statusText}`);
     }
 
     const aiData = await response.json();
     let parsedJson = {};
     try {
-      parsedJson = JSON.parse(aiData.response);
+      const contentString = aiData.choices[0].message.content;
+      // Strip out markdown code blocks if the model ignored instructions
+      const jsonStr = contentString.replace(/```json/g, '').replace(/```/g, '').trim();
+      parsedJson = JSON.parse(jsonStr);
     } catch(e) {
-      parsedJson = { error: 'Failed to parse JSON', raw: aiData.response };
+      parsedJson = { error: 'Failed to parse JSON', raw: aiData.choices?.[0]?.message?.content || aiData };
     }
 
     res.json({ success: true, cleanText, aiResponse: parsedJson });
@@ -729,6 +753,16 @@ app.get('/api/recent-spots', async (req, res) => {
   res.json({ spots: data });
 });
 
+app.get('/api/field-registry', async (req, res) => {
+  const { data, error } = await supabase
+    .from('pipeline_field_registry')
+    .select('*')
+    .order('sort_order', { ascending: true });
+  
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ fields: data });
+});
+
 
 app.get('/api/queue', async (req, res) => {
   const { phase } = req.query;
@@ -817,6 +851,38 @@ app.delete('/api/skate_spots/:id', async (req, res) => {
     const { error } = await supabase.from('skate_spots').delete().eq('id', id);
     if (error) throw error;
     
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/skate_spots/:id/restart', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { error } = await supabase.from('skate_spots').update({
+      verification_status: 'SEEDED',
+      last_attempted_at: null,
+      candidate_links: null,
+      candidate_photos: null,
+      photos: null,
+      opening_hours: null,
+      pricing_data: null
+    }).eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/skate_spots/:id/freeze', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { error } = await supabase.from('skate_spots').update({
+      verification_status: 'ON_HOLD'
+    }).eq('id', id);
+    if (error) throw error;
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

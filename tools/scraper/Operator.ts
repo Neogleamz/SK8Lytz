@@ -102,7 +102,6 @@ async function runOperator() {
 
       // Launch browser
       const statusRes = await fetch('http://localhost:5999/status').then(r => r.json()).catch(() => ({ isHeadless: true }));
-      const identity = GHOST.generateIdentity();
       browser = await puppeteer.launch({
         headless: statusRes.isHeadless ? 'new' : false,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']

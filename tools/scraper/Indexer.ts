@@ -2,6 +2,7 @@ import puppeteer from 'puppeteer';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
+import Tesseract from 'tesseract.js';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const supabase = createClient(
@@ -168,6 +169,7 @@ async function runIndexer() {
       const allLinks: string[] = [];
       let ogImage: string | null = null;
       const domImages: string[] = [];
+      const flyerUrls: string[] = [];
 
       if (!socialOnlyRecord) {
         // Launch browser only when we have real URLs to visit
@@ -194,7 +196,9 @@ async function runIndexer() {
           }
           await sleep(1000);
 
-          const pageData = await page.evaluate(() => {
+          const isPriorityUrl = url.includes('schedule') || url.includes('pricing') || url.includes('hours') || url.includes('admission');
+
+          const pageData = await page.evaluate((isPriority) => {
             const ogMeta = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null;
             const imgs = Array.from(document.querySelectorAll('img'))
               .filter((img: any) => {
@@ -206,15 +210,21 @@ async function runIndexer() {
                   !src.includes('pixel') && !src.includes('gif') &&
                   (src.startsWith('http') || src.startsWith('//'));
               })
-              .map((img: any) => img.src)
-              .slice(0, 3);
+              .map((img: any) => {
+                const src = img.src;
+                const alt = (img.alt || '').toLowerCase();
+                // Flag as flyer if on a priority page, OR if alt/src contains keywords
+                const isFlyer = isPriority || src.includes('schedule') || src.includes('pricing') || src.includes('flyer') || alt.includes('schedule') || alt.includes('pricing');
+                return { src, isFlyer };
+              });
+
             const links = Array.from(document.querySelectorAll('a'))
               .map(a => (a.href || '').toLowerCase())
               .filter(Boolean);
             document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
             const cleanText = document.body.innerText.replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
             return { ogMeta, imgs, links, cleanText };
-          }).catch(() => ({ ogMeta: null, imgs: [], links: [], cleanText: '' }));
+          }, isPriorityUrl).catch(() => ({ ogMeta: null, imgs: [], links: [], cleanText: '' }));
 
           if (pageData.cleanText) {
             combinedText += `\n\n[PAGE: ${url}]\n${pageData.cleanText}`;
@@ -223,11 +233,36 @@ async function runIndexer() {
           if (!ogImage && pageData.ogMeta && !pageData.ogMeta.includes('placeholder')) {
             ogImage = pageData.ogMeta;
           }
-          domImages.push(...pageData.imgs.slice(0, 2));
+          
+          const pageImages = pageData.imgs.map((i: any) => i.src);
+          domImages.push(...pageImages.slice(0, 2));
+
+          const trappedFlyers = pageData.imgs.filter((i: any) => i.isFlyer).map((i: any) => i.src);
+          if (trappedFlyers.length > 0) {
+            flyerUrls.push(...trappedFlyers);
+          }
         }
 
         await browser.close();
         browser = null;
+
+        // ── OCR Pass ──
+        if (flyerUrls.length > 0) {
+          const uniqueFlyers = [...new Set(flyerUrls)].slice(0, 3); // Max 3 flyers to prevent runaway OCR
+          console.log(`   👁️  Trapped ${uniqueFlyers.length} potential flyer images. Running OCR...`);
+          for (const fUrl of uniqueFlyers) {
+            try {
+              const { data: { text } } = await Tesseract.recognize(fUrl, 'eng');
+              if (text && text.length > 20) {
+                 combinedText += `\n\n[OCR from Flyer Image: ${fUrl}]\n${text}`;
+                 console.log(`      ↳ OCR extracted ${text.length} chars from ${fUrl}`);
+              }
+            } catch (err: any) {
+              console.error(`      ✗ OCR failed for ${fUrl}:`, err.message);
+            }
+          }
+        }
+
       } else {
         // Social-only record — give AI basic metadata context to work with
         combinedText = `Facility name: ${target.name}. Location: ${target.city}, ${target.state}. ` +

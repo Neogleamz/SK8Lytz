@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
+import { useFieldRegistry } from '../hooks/useFieldRegistry';
 const API_BASE = 'http://localhost:5999';
 
 interface DrawerProps {
@@ -129,6 +129,7 @@ const ToggleSwitch = ({ label, checked, onChange, colColor }: { label: string, c
 );
 
 export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onClose, colColor }) => {
+  const { fields, loading: registryLoading } = useFieldRegistry();
   const [config, setConfig] = useState<any>(null);
   const [blocklist, setBlocklist] = useState<any[]>([]);
   const [sandboxUrl, setSandboxUrl] = useState('');
@@ -237,11 +238,12 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
           {phaseId === 1 && (
             <>
               <div style={{ gridColumn: '1 / -1', background: 'rgba(0,255,170,0.05)', border: `1px solid ${colColor}44`, padding: '10px', borderRadius: '6px', marginBottom: '8px' }}>
-                <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping (Google Places)</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
-                  <span>✓ name</span><span>✓ address</span><span>✓ phone</span>
-                  <span>✓ lat / lng</span><span>✓ website</span><span>✓ rating / reviews</span>
-                  <span>✓ facility_type</span><span>✓ google_place_id</span><span>✓ is_indoor</span>
+                <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping</h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
+                  {fields.filter(f => f.phase_id === 1).map(f => (
+                    <span key={f.field_name} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {f.field_name}</span>
+                  ))}
+                  {registryLoading && <span>Loading registry...</span>}
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -330,14 +332,15 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
           {phaseId === 2 && (
             <>
               <div style={{ gridColumn: '1 / -1', background: 'rgba(157,78,221,0.05)', border: `1px solid ${colColor}44`, padding: '10px', borderRadius: '6px', marginBottom: '8px' }}>
-                <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping (Target Website)</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
-                  <span>✓ operator_name</span><span>✓ operator_desc</span><span>✓ opening_hours</span>
-                  <span>✓ schedule_url</span><span>✓ pricing_data</span><span>✓ candidate_photos</span>
-                  <span>✓ special_events</span><span>✓ socials (fb/ig/tk)</span><span>✓ raw_knowledge_panel</span>
-                  {config?.crawl_priority_paths?.map((p: string, i: number) => (
-                    <span key={i} style={{ color: colColor }}>✓ {p}</span>
+                <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping</h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
+                  {fields.filter(f => f.phase_id === 2).map(f => (
+                    <span key={f.field_name} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {f.field_name}</span>
                   ))}
+                  {config?.crawl_priority_paths?.map((p: string, i: number) => (
+                    <span key={`path-${i}`} style={{ color: colColor, background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {p}</span>
+                  ))}
+                  {registryLoading && <span>Loading registry...</span>}
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -393,14 +396,15 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
           {phaseId === 3 && (
             <>
               <div style={{ gridColumn: '1 / -1', background: 'rgba(255,106,0,0.05)', border: `1px solid ${colColor}44`, padding: '10px', borderRadius: '6px', marginBottom: '8px' }}>
-                <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping (LLM Extraction)</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
-                  <span>✓ surface_type</span><span>✓ surface_quality</span><span>✓ vibe_score/rating</span>
-                  <span>✓ has_rental</span><span>✓ has_pro_shop</span><span>✓ has_adult_night</span>
-                  <span>✓ capacity</span><span>✓ amenities (wifi, ac)</span><span>✓ cultural_metadata</span>
-                  {config?.ai_target_vectors?.map((v: any, i: number) => (
-                    <span key={i} style={{ color: colColor }}>✓ {v.key || v}</span>
+                <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping</h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
+                  {fields.filter(f => f.phase_id === 3).map(f => (
+                    <span key={f.field_name} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {f.field_name}</span>
                   ))}
+                  {config?.ai_target_vectors?.map((v: any, i: number) => (
+                    <span key={`vec-${i}`} style={{ color: colColor, background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {v.key || v}</span>
+                  ))}
+                  {registryLoading && <span>Loading registry...</span>}
                 </div>
               </div>
 
@@ -546,10 +550,15 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
           {phaseId === 4 && (
             <>
               <div style={{ gridColumn: '1 / -1', background: 'rgba(255,0,127,0.05)', border: `1px solid ${colColor}44`, padding: '10px', borderRadius: '6px', marginBottom: '8px' }}>
-                <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping (Vision API)</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
-                  <span>✓ photos (verified)</span><span>✓ visual tags</span><span>✓ resolution check</span>
-                  <span>✓ is_deep_crawled</span><span>✓ last_enriched_at</span><span></span>
+                <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping</h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
+                  {fields.filter(f => f.phase_id === 4).map(f => (
+                    <span key={f.field_name} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {f.field_name}</span>
+                  ))}
+                  {config?.photo_categories?.map((c: string, i: number) => (
+                    <span key={`cat-${i}`} style={{ color: colColor, background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {c}</span>
+                  ))}
+                  {registryLoading && <span>Loading registry...</span>}
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -597,10 +606,12 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
           {phaseId === 5 && (
             <>
               <div style={{ gridColumn: '1 / -1', background: 'rgba(0,212,255,0.05)', border: `1px solid ${colColor}44`, padding: '10px', borderRadius: '6px', marginBottom: '8px' }}>
-                <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping (DB Sync)</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
-                  <span>✓ is_published</span><span>✓ verification_status</span><span>✓ updated_at</span>
-                  <span>✓ updated_by</span><span>✓ is_featured</span><span></span>
+                <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping</h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
+                  {fields.filter(f => f.phase_id === 5).map(f => (
+                    <span key={f.field_name} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {f.field_name}</span>
+                  ))}
+                  {registryLoading && <span>Loading registry...</span>}
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

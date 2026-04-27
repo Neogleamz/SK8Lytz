@@ -1,6 +1,7 @@
 import React from 'react';
 import BeltNode from './BeltNode';
 import { useScraperTelemetry } from '../hooks/useScraperTelemetry';
+import { useFieldRegistry } from '../hooks/useFieldRegistry';
 
 const CCTOWER = 'http://localhost:5999';
 
@@ -82,6 +83,7 @@ const STYLES = `
 const generateUniformBelt = (idx: number, id: number, name: string, color: string, rgb: string, daemon: string, job: string, target: string, inputStatus: string, outputStatus: string, states: string[]) => ({
   id, name, color, rgb, activeStates: states, job, daemon, target, inputStatus, outputStatus,
   inQ: [],
+  status: 'IDLE',
   gatekeeper: [],
   attempting: [] as [string, string][],
   outCards: []
@@ -103,6 +105,7 @@ export const ScraperPipeline: React.FC<{
     onBlockSpot?: () => void; // optional refresh callback after block
 }> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot }) => {
     const { telemetry, config, loading } = useScraperTelemetry(2000);
+    const { fields } = useFieldRegistry();
 
     // outCards show OUTPUT (completed) records for each belt.
     // The output of phase N = the input of phase N+1, so we read the next phase queue.
@@ -120,163 +123,96 @@ export const ScraperPipeline: React.FC<{
 
     const buildPhaseCards = (phaseId: number, spots: any[]) => {
         return spots.map(spot => {
-            const data: [string, string, string][] = [];
+            const data: [string, React.ReactNode, string][] = [];
             const bool = (v: any) => (v === true ? 'YES' : v === false ? 'NO' : 'N/A');
             const val  = (v: any, fallback = 'NULL') => v != null ? String(v) : fallback;
             const ok   = (v: any): string => (v != null && v !== '' && v !== false) ? 'success' : 'missing';
             const boolOk = (v: any): string => (v === true ? 'success' : 'missing');
 
-            if (phaseId === 1) { // ── SCOUT: OSM seed ──
-                // ▶ CURRENT STATUS badge — always first row
+            // ▶ CURRENT STATUS badge
+            if (phaseId === 1) {
                 const s1 = spot.verification_status || 'SEEDED';
-                const s1ok = s1 === 'SEEDED' ? 'success' : 'warning';
-                data.push(['\u25b6 CURRENT STATUS', s1, s1ok]);
-                data.push(['name',             val(spot.name),                                                        ok(spot.name)]);
-                data.push(['facility_type',    val(spot.facility_type, 'UNKNOWN'),                                    ok(spot.facility_type)]);
-                data.push(['address',          val(spot.street_address || spot.address),                              ok(spot.street_address || spot.address)]);
-                data.push(['city',             val(spot.city),                                                        ok(spot.city)]);
-                data.push(['state',            val(spot.state),                                                       ok(spot.state)]);
-                data.push(['zip',              val(spot.zip),                                                         ok(spot.zip)]);
-                data.push(['lat',              spot.lat != null ? Number(spot.lat).toFixed(5) : 'NULL',               ok(spot.lat)]);
-                data.push(['lng',              spot.lng != null ? Number(spot.lng).toFixed(5) : 'NULL',               ok(spot.lng)]);
-                data.push(['phone',            val(spot.phone || spot.phone_number),                                  ok(spot.phone || spot.phone_number)]);
-                data.push(['website',          val(spot.website),                                                     ok(spot.website)]);
-                data.push(['rating',           spot.rating != null ? `★ ${spot.rating}` : 'N/A',                     ok(spot.rating)]);
-                data.push(['reviews',          val(spot.user_ratings_total, '0'),                                     ok(spot.user_ratings_total)]);
-                data.push(['google_place_id',  spot.google_place_id ? spot.google_place_id.slice(0, 12) + '…' : 'NULL', ok(spot.google_place_id)]);
-                data.push(['source',           val(spot.source, 'OSM'),                                               'val']);
-                data.push(['is_indoor',        bool(spot.is_indoor),                                                  'val']);
-                data.push(['created_at',       spot.created_at ? new Date(spot.created_at).toLocaleDateString() : 'NOW', 'val']);
-
-            } else if (phaseId === 2) { // ── SPIDER: URL map building ONLY — feeds Detective ──
-                const cl = spot.candidate_links || {};
-                const links = Object.keys(cl).filter(k => k !== '_social_only');
-                // ▶ CURRENT STATUS badge — should always be ENRICHED on this belt
+                data.push(['\u25b6 CURRENT STATUS', s1, s1 === 'SEEDED' ? 'success' : 'warning']);
+            } else if (phaseId === 2) {
                 const s2 = spot.verification_status || 'ENRICHED';
-                const s2ok = s2 === 'ENRICHED' ? 'success' : 'warning';
-                data.push(['▶ CURRENT STATUS', s2, s2ok]);
-                // Identity
-                data.push(['name',            val(spot.name),                                                          ok(spot.name)]);
-                data.push(['city',            val(spot.city),                                                          ok(spot.city)]);
-                data.push(['state',           val(spot.state),                                                         ok(spot.state)]);
-                data.push(['website',         val(spot.website),                                                       ok(spot.website)]);
-                data.push(['phone',           val(spot.phone, 'NULL'),                                                 ok(spot.phone)]);
-                // candidate_links — the URL map the Detective will crawl
-                data.push(['pages_found',     links.length > 0 ? `${links.length} URLs mapped` : 'NULL',              links.length > 0 ? 'success' : 'missing']);
-                data.push(['→ root',          cl.root ? cl.root.slice(0, 32) + '…' : 'NULL',                          ok(cl.root)]);
-                data.push(['→ hours',         cl.hours    ? '✓ FOUND' : 'NULL',                                        ok(cl.hours)]);
-                data.push(['→ pricing',       cl.pricing  ? '✓ FOUND' : 'NULL',                                        ok(cl.pricing)]);
-                data.push(['→ schedule',      cl.schedule ? '✓ FOUND' : 'NULL',                                        ok(cl.schedule)]);
-                data.push(['→ events',        cl.events   ? '✓ FOUND' : 'NULL',                                        ok(cl.events)]);
-                data.push(['→ contact',       cl.contact  ? '✓ FOUND' : 'NULL',                                        ok(cl.contact)]);
-                data.push(['→ about',         cl.about    ? '✓ FOUND' : 'NULL',                                        ok(cl.about)]);
-                data.push(['→ adult',         cl.adult    ? '✓ FOUND' : 'NULL',                                        ok(cl.adult)]);
-                data.push(['→ lessons',       cl.lessons  ? '✓ FOUND' : 'NULL',                                        ok(cl.lessons)]);
-                data.push(['→ gallery',       cl.gallery  ? '✓ FOUND' : 'NULL',                                        ok(cl.gallery)]);
-                // Social handles extracted from website (Spider only job)
-                data.push(['facebook_url',    spot.facebook_url    ? '✓ FOUND' : 'NULL',                               boolOk(spot.facebook_url)]);
-                data.push(['instagram_url',   spot.instagram_url   ? '✓ FOUND' : 'NULL',                               boolOk(spot.instagram_url)]);
-                data.push(['tiktok_url',      spot.tiktok_url      ? '✓ FOUND' : 'NULL',                               boolOk(spot.tiktok_url)]);
-                // Operator meta
-                data.push(['operator_name',   val(spot.operator_name, 'NULL'),                                         ok(spot.operator_name)]);
-                data.push(['social_only',     cl._social_only ? 'YES (no website)' : 'NO',                             cl._social_only ? 'warning' : 'val']);
-                data.push(['retry_count',     val(spot.retry_count, '0'),                                              spot.retry_count > 2 ? 'missing' : 'val']);
-                data.push(['last_spidered',   spot.last_attempted_at ? new Date(spot.last_attempted_at).toLocaleString() : 'NEVER', 'val']);
-
-            } else if (phaseId === 3) { // ── DETECTIVE: Indexer output — ALL AI target fields ──
-                const candLinks = spot.candidate_links ? Object.keys(spot.candidate_links) : [];
-                const candPhotosCount = spot.candidate_photos && typeof spot.candidate_photos === 'object' ? Object.keys(spot.candidate_photos).length : 0;
-                const hoursKeys = spot.opening_hours && typeof spot.opening_hours === 'object' ? Object.keys(spot.opening_hours).length : 0;
-                // ▶ CURRENT STATUS badge — should always be DEEP_CRAWLED on this belt
+                data.push(['\u25b6 CURRENT STATUS', s2, s2 === 'ENRICHED' ? 'success' : 'warning']);
+            } else if (phaseId === 3) {
                 const s3 = spot.verification_status || 'DEEP_CRAWLED';
-                const s3ok = s3 === 'DEEP_CRAWLED' ? 'success' : 'warning';
-                data.push(['▶ CURRENT STATUS', s3, s3ok]);
-                // Identity
-                data.push(['name',            val(spot.name),                                                          ok(spot.name)]);
-                data.push(['city',            val(spot.city),                                                          ok(spot.city)]);
-                data.push(['state',           val(spot.state),                                                         ok(spot.state)]);
-                data.push(['website',         val(spot.website),                                                       ok(spot.website)]);
-                data.push(['is_deep_crawled', bool(spot.is_deep_crawled),                                              boolOk(spot.is_deep_crawled)]);
-                // Facility — AI vectors
-                data.push(['surface_type',    val(spot.surface_type, 'NULL'),                                          ok(spot.surface_type)]);
-                data.push(['surface_quality', val(spot.surface_quality, 'NULL'),                                       ok(spot.surface_quality)]);
-                data.push(['is_indoor',       bool(spot.is_indoor),                                                    'val']);
-                data.push(['capacity',        spot.capacity != null ? String(spot.capacity) : 'NULL',                  ok(spot.capacity)]);
-                data.push(['has_rental',      bool(spot.has_rental),                                                   boolOk(spot.has_rental)]);
-                data.push(['has_pro_shop',    bool(spot.has_pro_shop),                                                 boolOk(spot.has_pro_shop)]);
-                // Adult night — critical fields
-                data.push(['adult_night',     bool(spot.has_adult_night),                                              boolOk(spot.has_adult_night)]);
-                data.push(['adult_dtl',       spot.adult_night_details ? spot.adult_night_details.slice(0, 28) + '…' : 'NULL', boolOk(spot.adult_night_details)]);
-                data.push(['adult_sched',     spot.adult_night_schedule ? 'PARSED' : 'NULL',                           boolOk(spot.adult_night_schedule)]);
-                // Amenities
-                data.push(['has_food',        bool(spot.has_food),                                                     boolOk(spot.has_food)]);
-                data.push(['has_lights',      bool(spot.has_lights),                                                   boolOk(spot.has_lights)]);
-                data.push(['has_lockers',     bool(spot.has_lockers),                                                  boolOk(spot.has_lockers)]);
-                data.push(['has_ac',          bool(spot.has_ac),                                                       boolOk(spot.has_ac)]);
-                data.push(['has_wifi',        bool(spot.has_wifi),                                                     boolOk(spot.has_wifi)]);
-                data.push(['has_toilets',     bool(spot.has_toilets),                                                  boolOk(spot.has_toilets)]);
-                data.push(['wheelchair',      bool(spot.is_wheelchair_accessible),                                     boolOk(spot.is_wheelchair_accessible)]);
-                data.push(['derby',           bool(spot.hosts_derby),                                                  boolOk(spot.hosts_derby)]);
-                data.push(['cultural_meta',   spot.cultural_metadata ? 'PARSED' : 'NULL',                              boolOk(spot.cultural_metadata)]);
-                data.push(['vibe_score',      spot.vibe_score != null ? `${spot.vibe_score}/100` : 'NULL',              ok(spot.vibe_score)]);
-                // Hours + schedule
-                data.push(['opening_hours',   spot.opening_hours ? `${hoursKeys}/7 days` : 'NULL',                    spot.opening_hours ? 'success' : 'missing']);
-                data.push(['pricing_data',    spot.pricing_data ? 'PARSED' : 'NULL',                                   boolOk(spot.pricing_data)]);
-                data.push(['schedule_url',    spot.schedule_url ? '✓ FOUND' : 'NULL',                                boolOk(spot.schedule_url)]);
-                data.push(['special_events',  spot.special_events ? 'PARSED' : 'NULL',                                 boolOk(spot.special_events)]);
-                // Social
-                data.push(['facebook_url',    spot.facebook_url ? '✓ FOUND' : 'NULL',                                boolOk(spot.facebook_url)]);
-                data.push(['instagram_url',   spot.instagram_url ? '✓ FOUND' : 'NULL',                               boolOk(spot.instagram_url)]);
-                data.push(['tiktok_url',      spot.tiktok_url ? '✓ FOUND' : 'NULL',                                  boolOk(spot.tiktok_url)]);
-                // Photos + meta
-                data.push(['photos',          Array.isArray(spot.photos) ? `${spot.photos.length} imgs` : 'NULL',      Array.isArray(spot.photos) && spot.photos.length > 0 ? 'success' : 'missing']);
-                data.push(['photo_cands',     candPhotosCount > 0 ? `${candPhotosCount} queued` : 'NULL',               candPhotosCount > 0 ? 'success' : 'missing']);
-                data.push(['links_indexed',   candLinks.length > 0 ? `${candLinks.length} pages` : '0',                 candLinks.length > 0 ? 'success' : 'missing']);
-                data.push(['rating',          spot.rating != null ? `${spot.rating}★ (${spot.user_ratings_total})` : 'N/A', ok(spot.rating)]);
-                data.push(['retry_count',     val(spot.retry_count, '0'),                                               spot.retry_count > 2 ? 'missing' : 'val']);
-                data.push(['last_crawled',    spot.last_attempted_at ? new Date(spot.last_attempted_at).toLocaleString() : 'NEVER', 'val']);
-
-            } else if (phaseId === 4) { // ── PHOTOGRAPHER: Image harvest ──
-                const photoCount = Array.isArray(spot.photos) ? spot.photos.length : spot.photos ? '?' : 0;
-                const candCount  = Array.isArray(spot.candidate_photos) ? spot.candidate_photos.length : 0;
-                // ▶ CURRENT STATUS badge — should always be MEDIA_READY on this belt
+                data.push(['\u25b6 CURRENT STATUS', s3, s3 === 'DEEP_CRAWLED' ? 'success' : 'warning']);
+            } else if (phaseId === 4) {
                 const s4 = spot.verification_status || 'MEDIA_READY';
-                const s4ok = s4 === 'MEDIA_READY' ? 'success' : 'warning';
-                data.push(['▶ CURRENT STATUS', s4, s4ok]);
-                data.push(['photos',           `${photoCount} imgs`,                                                  Number(photoCount) > 0 ? 'success' : 'missing']);
-                data.push(['candidate_photos', `${candCount} queued`,                                                  candCount > 0 ? 'success' : 'missing']);
-                data.push(['last_enriched_at', spot.last_enriched_at ? new Date(spot.last_enriched_at).toLocaleDateString() : 'NEVER', ok(spot.last_enriched_at)]);
-                data.push(['last_attempted',   spot.last_attempted_at ? new Date(spot.last_attempted_at).toLocaleTimeString() : 'NEVER', 'val']);
-                data.push(['retry_count',      val(spot.retry_count, '0'),                                            spot.retry_count > 2 ? 'missing' : 'val']);
-                data.push(['facebook_url',     spot.facebook_url ? 'SCRAPED' : 'PENDING',                             boolOk(spot.facebook_url)]);
-                data.push(['instagram_url',    spot.instagram_url ? 'SCRAPED' : 'PENDING',                            boolOk(spot.instagram_url)]);
-                data.push(['website',          spot.website ? 'SCRAPED' : 'N/A',                                      boolOk(spot.website)]);
-                data.push(['name',             val(spot.name),                                                        ok(spot.name)]);
-                data.push(['state',            val(spot.state),                                                       ok(spot.state)]);
-                data.push(['is_deep_crawled',  bool(spot.is_deep_crawled),                                            boolOk(spot.is_deep_crawled)]);
-
-            } else if (phaseId === 5) { // ── PUBLISHER: QA gate + DB sync ──
-                // ▶ CURRENT STATUS badge — should always be PUBLISHED on this belt
+                data.push(['\u25b6 CURRENT STATUS', s4, s4 === 'MEDIA_READY' ? 'success' : 'warning']);
+            } else if (phaseId === 5) {
                 const s5 = spot.verification_status || 'PUBLISHED';
-                const s5ok = s5 === 'PUBLISHED' ? 'success' : 'warning';
-                data.push(['▶ CURRENT STATUS', s5, s5ok]);
-                data.push(['id',               spot.id ? spot.id.slice(0, 12) + '…' : 'N/A',                         ok(spot.id)]);
-                data.push(['name',             val(spot.name),                                                        ok(spot.name)]);
-                data.push(['is_published',     bool(spot.is_published),                                               boolOk(spot.is_published)]);
-                data.push(['is_verified',      bool(spot.is_verified),                                                boolOk(spot.is_verified)]);
-                data.push(['is_featured',      bool(spot.is_featured),                                                boolOk(spot.is_featured)]);
-                data.push(['verification_status', val(spot.verification_status, 'PUBLISHED'),                         ok(spot.verification_status)]);
-                data.push(['state',            val(spot.state),                                                       ok(spot.state)]);
-                data.push(['facility_type',    val(spot.facility_type, 'UNKNOWN'),                                    ok(spot.facility_type)]);
-                data.push(['surface_type',     val(spot.surface_type, 'N/A'),                                         ok(spot.surface_type)]);
-                data.push(['photos',           `${Array.isArray(spot.photos) ? spot.photos.length : 0} imgs`,         Array.isArray(spot.photos) && spot.photos.length > 0 ? 'success' : 'missing']);
-                data.push(['has_rental',       bool(spot.has_rental),                                                 boolOk(spot.has_rental)]);
-                data.push(['has_pro_shop',     bool(spot.has_pro_shop || spot.has_proshop),                           boolOk(spot.has_pro_shop || spot.has_proshop)]);
-                data.push(['vibe_score',       spot.vibe_score != null ? `${spot.vibe_score}/100` : 'N/A',            ok(spot.vibe_score)]);
-                data.push(['updated_at',       spot.updated_at ? new Date(spot.updated_at).toLocaleDateString() : 'N/A', ok(spot.updated_at)]);
-                data.push(['updated_by',       val(spot.updated_by, 'AUTO'),                                          'val']);
-                data.push(['source',           val(spot.source, 'GOOGLE'),                                            'val']);
+                data.push(['\u25b6 CURRENT STATUS', s5, s5 === 'PUBLISHED' ? 'success' : 'warning']);
             }
+
+            // DYNAMIC FIELDS
+            const phaseFields = fields.filter(f => f.phase_id === phaseId);
+            phaseFields.forEach(f => {
+                let displayVal: React.ReactNode = 'NULL';
+                let status = 'missing';
+
+                const rawVal = spot[f.field_name];
+                const clVal = spot.candidate_links?.[f.field_name]; // fallback for nested link mapping
+
+                if (f.data_type === 'boolean') {
+                    displayVal = bool(rawVal);
+                    status = boolOk(rawVal);
+                } else if (f.data_type === 'number') {
+                    displayVal = val(rawVal);
+                    status = ok(rawVal);
+                } else if (f.data_type === 'date') {
+                    displayVal = rawVal ? new Date(rawVal).toLocaleDateString() : 'NEVER';
+                    status = rawVal ? 'val' : 'missing';
+                } else if (f.data_type === 'json') {
+                    displayVal = rawVal ? <pre style={{margin:0,fontSize:'0.6rem',maxHeight:'100px',overflow:'auto',background:'rgba(0,0,0,0.3)',padding:'4px'}}>{JSON.stringify(rawVal, null, 2)}</pre> : 'NULL';
+                    status = rawVal ? 'success' : 'missing';
+                } else if (f.data_type === 'url_check') {
+                    const target = clVal || rawVal;
+                    displayVal = target ? <a href={target} target="_blank" rel="noreferrer" style={{color: 'inherit', textDecoration: 'underline'}}>{target}</a> : 'NULL';
+                    status = ok(target);
+                } else if (f.data_type === 'json_array') {
+                    if (Array.isArray(rawVal) && rawVal.length > 0) {
+                        displayVal = (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: '100px', overflowY: 'auto' }}>
+                                {rawVal.map((item, idx) => (
+                                    typeof item === 'string' && item.startsWith('http')
+                                        ? <a key={idx} href={item} target="_blank" rel="noreferrer" style={{color: 'inherit', textDecoration: 'underline', fontSize: '0.65rem'}}>{item}</a>
+                                        : <span key={idx} style={{fontSize: '0.65rem'}}>{String(item)}</span>
+                                ))}
+                            </div>
+                        );
+                        status = 'success';
+                    } else if (rawVal && typeof rawVal === 'object') {
+                        const keys = Object.keys(rawVal);
+                        if (keys.length > 0) {
+                            displayVal = (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: '100px', overflowY: 'auto' }}>
+                                    {keys.map((key, idx) => (
+                                        typeof rawVal[key] === 'string' && rawVal[key].startsWith('http')
+                                            ? <a key={idx} href={rawVal[key]} target="_blank" rel="noreferrer" style={{color: 'inherit', textDecoration: 'underline', fontSize: '0.65rem'}}>{rawVal[key]}</a>
+                                            : <span key={idx} style={{fontSize: '0.65rem'}}>{key}: {String(rawVal[key])}</span>
+                                    ))}
+                                </div>
+                            );
+                            status = 'success';
+                        } else {
+                            displayVal = 'NULL';
+                            status = 'missing';
+                        }
+                    } else {
+                        displayVal = 'NULL';
+                        status = 'missing';
+                    }
+                } else {
+                    // String fallback
+                    const target = clVal || rawVal;
+                    displayVal = target ? (typeof target === 'string' && target.startsWith('http') ? <a href={target} target="_blank" rel="noreferrer" style={{color: 'inherit', textDecoration: 'underline'}}>{target}</a> : String(target)) : 'NULL';
+                    status = ok(target);
+                }
+                data.push([f.display_label, displayVal, status]);
+            });
 
             return {
                 title: spot.name,
@@ -427,6 +363,22 @@ export const ScraperPipeline: React.FC<{
         }
     };
 
+    const handleRestartSpot = async (spotId: string) => {
+        if (!window.confirm(`Force restart this spot to SEEDED?`)) return;
+        try {
+            const res = await fetch(`${CCTOWER}/api/skate_spots/${spotId}/restart`, { method: 'POST' });
+            if ((await res.json()).success) onBlockSpot?.(); // trigger refresh
+        } catch (e) { console.error(e); }
+    };
+
+    const handleFreezeSpot = async (spotId: string) => {
+        if (!window.confirm(`Freeze this spot to ON_HOLD?`)) return;
+        try {
+            const res = await fetch(`${CCTOWER}/api/skate_spots/${spotId}/freeze`, { method: 'POST' });
+            if ((await res.json()).success) onBlockSpot?.(); // trigger refresh
+        } catch (e) { console.error(e); }
+    };
+
     return (
         <div className="pipeline-dashboard-container w-full min-h-screen flex flex-col text-white relative" style={{ gap: 0 }}>
             <style>{STYLES}</style>
@@ -448,7 +400,7 @@ export const ScraperPipeline: React.FC<{
                     <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.07)', flexShrink: 0, marginRight: 18 }} />
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                         {[
-                            { label: 'Seeds',      value: pipelineStats?.summary?.total_seeded?.toLocaleString() ?? '\u2014', color: '#00ffaa' },
+                            { label: 'Seeds',      value: pipelineStats?.summary?.seeded?.toLocaleString() ?? '\u2014', color: '#00ffaa' },
                             { label: 'Published',  value: pipelineStats?.summary?.published?.toLocaleString()    ?? '\u2014', color: '#4ade80' },
                             { label: 'Throughput', value: `${pipelineStats?.summary?.throughput ?? 0}/m`,                    color: '#fff' },
                             { label: 'DB Sync',    value: loading ? 'SYNCING' : 'LIVE',                                      color: loading ? '#ffb300' : '#00ffaa' },
@@ -520,6 +472,8 @@ export const ScraperPipeline: React.FC<{
                             onDaemonStop={dc?.onStop}
                             daemonStatus={daemonStatus}
                             onBlockSpot={handleBlockSpot}
+                            onRestartSpot={handleRestartSpot}
+                            onFreezeSpot={handleFreezeSpot}
                         />
                     );
                 })}

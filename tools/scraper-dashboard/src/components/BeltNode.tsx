@@ -5,7 +5,7 @@ interface OutCard {
   title: string;
   status: string;
   type: 'success' | 'rejected';
-  data: [string, string, string][];
+  data: [string, React.ReactNode, string][];
   spotId?: string;
   spotName?: string;
 }
@@ -35,6 +35,8 @@ interface BeltProps {
   outputStatus: string;
   countBadges?: {label: string; value: string}[];
   onBlockSpot?: (spotId: string, spotName: string) => void;
+  onRestartSpot?: (spotId: string) => void;
+  onFreezeSpot?: (spotId: string) => void;
 }
 
 // Shared card dimensions
@@ -48,14 +50,16 @@ const DataCard: React.FC<{
   title: string;
   badge: string;
   badgeColor: string;
-  data: [string, string, string][];
+  data: [string, React.ReactNode, string][];
   colColor: string;
   borderColor: string;
   bgColor: string;
   minW: number;
   maxW: number;
   onBlock?: () => void;
-}> = ({ title, badge, badgeColor, data, colColor, borderColor, bgColor, minW, maxW, onBlock }) => (
+  onRestart?: () => void;
+  onFreeze?: () => void;
+}> = ({ title, badge, badgeColor, data, colColor, borderColor, bgColor, minW, maxW, onBlock, onRestart, onFreeze }) => (
   <div style={{
     minWidth: minW, maxWidth: maxW, flexShrink: 0,
     background: bgColor,
@@ -88,23 +92,44 @@ const DataCard: React.FC<{
       ))}
     </div>
     {onBlock && (
-      <button
-        onClick={(e) => { e.stopPropagation(); onBlock(); }}
-        style={{
-          marginTop: 7, width: '100%', padding: '5px 0',
-          background: 'rgba(255, 51, 102, 0.08)',
-          border: '1px solid rgba(255, 51, 102, 0.4)',
-          borderRadius: 5, cursor: 'pointer',
-          color: '#ff3366', fontSize: '0.52rem', fontWeight: 900,
-          fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase',
-          letterSpacing: '0.15em', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', gap: 5, transition: 'all 0.15s',
-        }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,51,102,0.22)'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,51,102,0.08)'; }}
-      >
-        ☠ BLOCK &amp; PURGE
-      </button>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, marginTop: 7 }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onRestart?.(); }}
+          style={{
+            padding: '4px 0', background: 'rgba(0, 255, 150, 0.08)', border: '1px solid rgba(0, 255, 150, 0.4)',
+            borderRadius: 5, cursor: 'pointer', color: '#00ff96', fontSize: '0.45rem', fontWeight: 900,
+            fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,255,150,0.22)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,255,150,0.08)'; }}
+        >
+          [RESTART]
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onFreeze?.(); }}
+          style={{
+            padding: '4px 0', background: 'rgba(0, 200, 255, 0.08)', border: '1px solid rgba(0, 200, 255, 0.4)',
+            borderRadius: 5, cursor: 'pointer', color: '#00c8ff', fontSize: '0.45rem', fontWeight: 900,
+            fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,200,255,0.22)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,200,255,0.08)'; }}
+        >
+          [FREEZE]
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onBlock(); }}
+          style={{
+            padding: '4px 0', background: 'rgba(255, 51, 102, 0.08)', border: '1px solid rgba(255, 51, 102, 0.4)',
+            borderRadius: 5, cursor: 'pointer', color: '#ff3366', fontSize: '0.45rem', fontWeight: 900,
+            fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,51,102,0.22)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,51,102,0.08)'; }}
+        >
+          [BLOCK]
+        </button>
+      </div>
     )}
   </div>
 );
@@ -112,7 +137,7 @@ const DataCard: React.FC<{
 export const BeltNode: React.FC<BeltProps> = ({
   id, name, color, rgb, job, daemon, target, inQ, status, gatekeeper, attempting, outCards,
   onPhaseNav, daemonActive = false, onDaemonStart, onDaemonStop, hasDaemon = true, daemonStatus, inputStatus, outputStatus, countBadges = [],
-  onBlockSpot,
+  onBlockSpot, onRestartSpot, onFreezeSpot,
 }) => {
   const [isConfigOpen, setConfigOpen] = useState(false);
   const successCards = outCards.filter(c => c.type === 'success').slice(0, 2);
@@ -498,6 +523,8 @@ export const BeltNode: React.FC<BeltProps> = ({
               minW={SUCCESS_W}
               maxW={300}
               onBlock={onBlockSpot && sc.spotId ? () => onBlockSpot(sc.spotId!, sc.spotName ?? sc.title) : undefined}
+              onRestart={onRestartSpot && sc.spotId ? () => onRestartSpot(sc.spotId!) : undefined}
+              onFreeze={onFreezeSpot && sc.spotId ? () => onFreezeSpot(sc.spotId!) : undefined}
             />
           ))}
         </div>
