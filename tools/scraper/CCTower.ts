@@ -8,6 +8,8 @@ import { createClient } from '@supabase/supabase-js';
 import { exec } from 'child_process';
 import { startGoogleSweep, stopGoogleSweep, isGoogleSweepActive } from './GoogleSweep';
 import { GooglePlacesProvider, RETAIL_BLOCKLIST } from './lib/providers/GooglePlacesProvider';
+import { executeSpider } from './core/SpiderEngine';
+import { executeDetective } from './core/DetectiveEngine';
 
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
@@ -1123,6 +1125,107 @@ app.get('/api/img-proxy', async (req, res) => {
     (upstream.body as any).pipe(res);
   } catch (err: any) {
     res.status(502).send('Proxy fetch error: ' + err.message);
+  }
+});
+
+// ─── Sniper Bench: Isolated SSE Streaming Pipeline ──────────────────────────
+// This endpoint runs a full Spider + Detective execution in memory against a
+// single spot_id WITHOUT modifying any database records. Results stream to the
+// caller via Server-Sent Events so the UI can show real-time progress.
+app.get('/api/sniper/stream', async (req, res) => {
+  const { spot_id } = req.query;
+  if (!spot_id) {
+    res.status(400).json({ error: 'spot_id query param is required' });
+    return;
+  }
+
+  // ── Set SSE headers ────────────────────────────────────────────────────────
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.flushHeaders?.();
+
+  const send = (type: 'log' | 'result' | 'error' | 'done', payload: any) => {
+    res.write(`data: ${JSON.stringify({ type, payload })}\n\n`);
+  };
+
+  try {
+    // ── Fetch spot record (read-only) ──────────────────────────────────────
+    send('log', '[Sniper] 🎯 Fetching spot record from database...');
+    const { data: spot, error: fetchError } = await supabase
+      .from('skate_spots')
+      .select('*')
+      .eq('id', String(spot_id))
+      .single();
+
+    if (fetchError || !spot) {
+      send('error', `Failed to fetch spot: ${fetchError?.message || 'Not found'}`);
+      res.end();
+      return;
+    }
+
+    send('log', `[Sniper] ✓ Loaded: "${spot.name}" (${spot.city}, ${spot.state})`);
+    send('log', `[Sniper] 🌐 Website: ${spot.website || '(none)'}`);
+    send('log', `[Sniper] 📋 Current status: ${spot.verification_status || 'UNKNOWN'}`);
+    send('log', '[Sniper] ─────────────────────────────────────────');
+
+    // ── Fetch global AI config ─────────────────────────────────────────────
+    const configRes = await fetch('http://localhost:5999/config').then(r => r.json()).catch(() => ({ config: {} }));
+    const aiConfig = configRes.config || {};
+
+    // ── Phase 2: Spider ────────────────────────────────────────────────────
+    send('log', '[Sniper] === PHASE 2: SPIDER ===');
+    const spiderResult = await executeSpider(
+      spot.website || '',
+      true, // always headless in Sniper
+      (msg) => send('log', msg)
+    );
+    send('log', '[Sniper] ─────────────────────────────────────────');
+
+    // Use existing candidate_links if spider was blocked (social-only)
+    const candidateLinks = spiderResult.isSocialOnly
+      ? (spot.candidate_links || {})
+      : (spiderResult.candidateLinks || spot.candidate_links || {});
+
+    // ── Phase 3: Detective ─────────────────────────────────────────────────
+    send('log', '[Sniper] === PHASE 3: DETECTIVE ===');
+    const detectiveResult = await executeDetective(
+      spot,
+      candidateLinks,
+      aiConfig,
+      true, // always headless in Sniper
+      (msg) => send('log', msg)
+    );
+    send('log', '[Sniper] ─────────────────────────────────────────');
+
+    // ── Stream final result payload ────────────────────────────────────────
+    send('log', '[Sniper] ✅ Isolated pipeline complete — NO database changes made.');
+    send('result', {
+      spot_id: String(spot_id),
+      spot_name: spot.name,
+      spiderResult: {
+        candidateLinks: spiderResult.candidateLinks,
+        isSocialOnly: spiderResult.isSocialOnly,
+        summary: spiderResult.summary,
+      },
+      detectiveResult: {
+        qualityScore: detectiveResult.qualityScore,
+        passedQualityGate: detectiveResult.passedQualityGate,
+        simulatedStatus: detectiveResult.mappedFields._simulated_status,
+        aiMetadata: detectiveResult.aiMetadata,
+        mappedFields: detectiveResult.mappedFields,
+        socialLinks: detectiveResult.socialLinks,
+        candidatePhotos: detectiveResult.candidatePhotos,
+        flyerUrls: detectiveResult.flyerUrls,
+      }
+    });
+    send('done', true);
+  } catch (err: any) {
+    send('error', `Sniper pipeline crashed: ${err.message}`);
+    send('done', true);
+  } finally {
+    res.end();
   }
 });
 

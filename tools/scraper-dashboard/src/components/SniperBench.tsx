@@ -1,311 +1,336 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useFieldRegistry } from '../hooks/useFieldRegistry';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+type RunState = 'idle' | 'running' | 'done' | 'error';
 
 export const SniperBench: React.FC = () => {
   const { fields, loading: fieldsLoading } = useFieldRegistry();
-  const [url, setUrl] = useState('');
-  const [spotName, setSpotName] = useState('');
-  const [spotCity, setSpotCity] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<any>(null);
-  const [liveSpot, setLiveSpot] = useState<Record<string, any> | null>(null);
+  const [spotId, setSpotId] = useState('');
+  const [runState, setRunState] = useState<RunState>('idle');
   const [executionLog, setExecutionLog] = useState<string[]>([]);
-  const [cleanText, setCleanText] = useState<string>('');
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [liveSpot, setLiveSpot] = useState<Record<string, any> | null>(null);
+  const [sniperResult, setSniperResult] = useState<any>(null);
+  const esRef = useRef<EventSource | null>(null);
+  const logEndRef = useRef<HTMLDivElement>(null);
 
-  const log = (msg: string) => setExecutionLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+  const log = (msg: string) => {
+    setExecutionLog(prev => {
+      const next = [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`];
+      // Auto-scroll after state update
+      setTimeout(() => logEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      return next;
+    });
+  };
 
-  const handleFire = async () => {
-    if (!url) return alert('URL is required for Sniper test');
-    setLoading(true);
-    setResults(null);
+  const handleFire = () => {
+    if (!spotId.trim()) return alert('Enter a Spot ID to target.');
+    if (esRef.current) { esRef.current.close(); esRef.current = null; }
+
+    setRunState('running');
+    setSniperResult(null);
     setLiveSpot(null);
     setExecutionLog([]);
-    setCleanText('');
 
-    log(`Initializing End-to-End Pipeline Tracer for ${url}`);
+    log(`[Sniper] 🎯 Connecting to isolated pipeline stream for spot: ${spotId}`);
 
-    try {
-      // 1. Seed the record with priority
-      const seedRes = await fetch('http://localhost:5999/api/sniper/seed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, spot_name: spotName, spot_city: spotCity })
-      });
-      
-      const seedData = await seedRes.json();
-      if (!seedData.success) throw new Error(seedData.error || 'Failed to seed record');
-      
-      const spotId = seedData.spot_id;
-      log(`✅ Seeded to DB [ID: ${spotId}]. Waiting for Operator...`);
+    const es = new EventSource(`http://localhost:5999/api/sniper/stream?spot_id=${encodeURIComponent(spotId.trim())}`);
+    esRef.current = es;
 
-      // 2. Poll the pipeline
-      let currentStatus = 'SEEDED';
-      let retries = 0;
-
-      pollRef.current = setInterval(async () => {
-        try {
-          const pollRes = await fetch(`http://localhost:5999/api/sniper/poll/${spotId}`);
-          const pollData = await pollRes.json();
-          
-          if (pollData.success && pollData.spot) {
-            const spot = pollData.spot;
-            // Always update the live spot — gives immediate Phase 1 data
-            setLiveSpot(spot);
-            
-            if (spot.verification_status !== currentStatus) {
-              currentStatus = spot.verification_status;
-              
-              if (currentStatus === 'ENRICHED') log('🕷️ Operator finished (Spidering complete). Waiting for Indexer (Detective)...');
-              else if (currentStatus === 'MEDIA_READY') log('🕵️ Indexer finished (AI Extraction complete). Waiting for Photographer...');
-              else if (currentStatus === 'REVIEW_PENDING') log('📸 Photographer finished. Pipeline complete! Gathering results...');
-              else if (currentStatus === 'PUBLISHED') log('✅ Record automatically published!');
-              else if (currentStatus === 'REJECTED') log('❌ Record REJECTED by Gatekeeper.');
-              else if (currentStatus === 'STALLED') log('⚠️ Record STALLED in pipeline.');
-              else log(`Transitioned to: ${currentStatus}`);
-            }
-
-            // Check if we hit a terminal state
-            if (['REVIEW_PENDING', 'PUBLISHED', 'REJECTED', 'STALLED'].includes(currentStatus)) {
-              clearInterval(pollRef.current!); pollRef.current = null;
-              
-              if (spot.raw_ai_payload) {
-                log(`Successfully retrieved AI Payload from DB.`);
-                setResults(spot.raw_ai_payload);
-              } else {
-                log(`Pipeline finished, but no AI payload was generated.`);
-              }
-              
-              setCleanText(JSON.stringify(spot.candidate_links || {}, null, 2));
-              setLoading(false);
-            }
+    es.onmessage = (event) => {
+      try {
+        const { type, payload } = JSON.parse(event.data);
+        if (type === 'log') {
+          log(payload);
+        } else if (type === 'result') {
+          setSniperResult(payload);
+          // Populate the 68-field report card using mappedFields
+          if (payload.detectiveResult?.mappedFields) {
+            setLiveSpot(payload.detectiveResult.mappedFields);
           }
-        } catch (e) {
-          retries++;
-          if (retries > 30) {
-            clearInterval(pollRef.current!); pollRef.current = null;
-            log('Critical Timeout: Pipeline polling failed.');
-            setLoading(false);
-          }
+        } else if (type === 'error') {
+          log(`❌ ERROR: ${payload}`);
+          setRunState('error');
+        } else if (type === 'done') {
+          es.close();
+          esRef.current = null;
+          setRunState(prev => prev === 'error' ? 'error' : 'done');
+          log('[Sniper] 🔒 Stream closed. Pipeline run complete.');
         }
-      }, 2000);
+      } catch (e) {
+        log(`[Sniper] ⚠️ Failed to parse SSE event: ${event.data}`);
+      }
+    };
 
-    } catch (err: any) {
-      log(`Critical Failure: ${err.message}`);
-      setLoading(false);
-    }
+    es.onerror = () => {
+      log('[Sniper] ❌ SSE connection lost. Is CCTower running on port 5999?');
+      es.close();
+      esRef.current = null;
+      setRunState('error');
+    };
   };
 
   const handleCancel = () => {
-    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-    log('⛔ Cancelled by user.');
-    setLoading(false);
+    if (esRef.current) { esRef.current.close(); esRef.current = null; }
+    log('[Sniper] ⛔ Cancelled by user — NO database changes were made.');
+    setRunState('idle');
+  };
+
+  const handleReset = () => {
+    if (esRef.current) { esRef.current.close(); esRef.current = null; }
+    setRunState('idle');
+    setSniperResult(null);
+    setLiveSpot(null);
+    setExecutionLog([]);
   };
 
   if (fieldsLoading) return <div className="p-8 text-white">Loading Field Registry...</div>;
 
-  const getPhaseName = (id: number) => {
-    const map: Record<number, string> = {
-      1: 'Phase 1: Scout (Google Places)',
-      2: 'Phase 2: Spider (Social & URLs)',
-      3: 'Phase 3: Detective (AI Extraction)',
-      4: 'Phase 4: Photographer (Media)',
-      5: 'Phase 5: Publisher (Final)'
-    };
-    return map[id] || `Phase ${id}`;
+  const statusColor: Record<RunState, string> = {
+    idle: '#94a3b8', running: '#f43f5e', done: '#4ade80', error: '#f97316'
+  };
+  const statusLabel: Record<RunState, string> = {
+    idle: '⏸ READY', running: '⚡ RUNNING', done: '✅ COMPLETE', error: '❌ ERROR'
   };
 
   return (
     <div style={{ display: 'flex', height: '100%', width: '100%', background: '#0B0D11', color: '#e2e8f0', overflow: 'hidden', fontFamily: 'Outfit, sans-serif' }}>
+
       {/* LEFT: Controls & Logs */}
-      <div style={{ width: '33.33%', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(255,255,255,0.1)', background: '#0F1218' }}>
-        <div style={{ padding: '1.5rem', flexShrink: 0 }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 0.5rem 0' }}>
-            <span style={{ color: '#f43f5e' }}>🎯</span> Sniper Test Bench
-          </h2>
-          <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', margin: '0 0 1.5rem 0' }}>
-            Bypass the bulk queues. Run a synchronous, single-record test through the Brute Force AI Detective to see exactly what passes and fails.
-          </p>
+      <div style={{ width: '36%', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(255,255,255,0.1)', background: '#0F1218' }}>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Target URL (Required)</label>
-              <input 
-                type="text" 
-                value={url}
-                onChange={e => setUrl(e.target.value)}
-                placeholder="https://sk8away.net/hours-pricing/"
-                style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '8px 12px', fontSize: '0.875rem', color: '#fff', outline: 'none' }}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Spot Name (Optional)</label>
-                <input 
-                  type="text" 
-                  value={spotName}
-                  onChange={e => setSpotName(e.target.value)}
-                  placeholder="Sk8away"
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '8px 12px', fontSize: '0.875rem', color: '#fff', outline: 'none' }}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>City (Optional)</label>
-                <input 
-                  type="text" 
-                  value={spotCity}
-                  onChange={e => setSpotCity(e.target.value)}
-                  placeholder="Topeka"
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '8px 12px', fontSize: '0.875rem', color: '#fff', outline: 'none' }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-              <button
-                onClick={handleFire}
-                disabled={loading}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '4px', fontSize: '0.875rem', fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer',
-                  background: loading ? 'rgba(255,255,255,0.07)' : '#f43f5e',
-                  color: loading ? 'rgba(255,255,255,0.3)' : '#fff',
-                  border: 'none',
-                  boxShadow: loading ? 'none' : '0 0 15px rgba(244,63,94,0.3)',
-                  transition: 'all 0.2s'
-                }}
-              >
-                {loading ? '⏳ Running...' : '🎯 Fire Sniper'}
-              </button>
-              {loading && (
-                <button
-                  onClick={handleCancel}
-                  style={{
-                    padding: '12px 16px', borderRadius: '4px', fontSize: '0.875rem', fontWeight: 'bold', cursor: 'pointer',
-                    background: 'rgba(255,100,50,0.15)',
-                    color: '#f97316',
-                    border: '1px solid rgba(255,100,50,0.3)',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  ⛔ Cancel
-                </button>
-              )}
-            </div>
+        {/* Header */}
+        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+            <span style={{ color: '#f43f5e', fontSize: '1.25rem' }}>🎯</span>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>Sniper Bench</h2>
+            <span style={{ marginLeft: 'auto', fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.05em', color: statusColor[runState], background: `${statusColor[runState]}18`, border: `1px solid ${statusColor[runState]}44`, padding: '3px 8px', borderRadius: '4px' }}>
+              {statusLabel[runState]}
+            </span>
           </div>
+          <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', margin: 0, lineHeight: 1.5 }}>
+            Isolated QA lab. Targets a single DB record by ID and runs the full Spider → Detective pipeline in memory. <strong style={{ color: '#f43f5e' }}>Zero database writes.</strong>
+          </p>
         </div>
 
-        {/* Console / Text Dump */}
-        <div style={{ flex: 1, overflow: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', padding: '1rem', background: '#0a0c10', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.75rem', color: '#4ade80' }}>
-          <div style={{ marginBottom: '1rem' }}>
-            <h3 style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '0.5rem', margin: 0 }}>// Execution Log</h3>
-            {executionLog.map((l, i) => <div key={i}>{l}</div>)}
+        {/* Target Input */}
+        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+          <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.4)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            🎯 Target Spot UUID
+          </label>
+          <input
+            type="text"
+            value={spotId}
+            onChange={e => setSpotId(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && runState === 'idle' && handleFire()}
+            placeholder="e.g. 3c5a2f91-... (from queue/databank)"
+            disabled={runState === 'running'}
+            style={{
+              width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(244,63,94,0.3)',
+              borderRadius: '6px', padding: '9px 12px', fontSize: '0.8rem', color: '#fff', outline: 'none',
+              boxSizing: 'border-box', fontFamily: 'JetBrains Mono, monospace'
+            }}
+          />
+          <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.25)', margin: '6px 0 0 0' }}>
+            Copy any spot ID from the Queue or Databank view. The record will be read-only.
+          </p>
+        </div>
+
+        {/* Controls */}
+        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: '8px', flexShrink: 0 }}>
+          {runState !== 'running' ? (
+            <button
+              onClick={runState !== 'idle' ? handleReset : handleFire}
+              style={{
+                flex: 1, padding: '10px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer',
+                background: runState !== 'idle' ? 'rgba(255,255,255,0.07)' : '#f43f5e',
+                color: runState !== 'idle' ? 'rgba(255,255,255,0.5)' : '#fff',
+                border: runState !== 'idle' ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                boxShadow: runState === 'idle' ? '0 0 20px rgba(244,63,94,0.3)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              {runState === 'idle' ? '🎯 FIRE' : '↺ RESET'}
+            </button>
+          ) : (
+            <button
+              onClick={handleCancel}
+              style={{
+                flex: 1, padding: '10px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer',
+                background: 'rgba(249,115,22,0.1)', color: '#f97316',
+                border: '1px solid rgba(249,115,22,0.3)', transition: 'all 0.2s'
+              }}
+            >
+              ⛔ ABORT
+            </button>
+          )}
+        </div>
+
+        {/* Spider Result Mini-Card */}
+        {sniperResult?.spiderResult && (
+          <div style={{ margin: '0 1.5rem 0 1.5rem', padding: '0.75rem', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '8px', flexShrink: 0 }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#818cf8', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>⟦ Spider Links ⟧</div>
+            {Object.entries(sniperResult.spiderResult.candidateLinks || {}).map(([k, v]) => (
+              <div key={k} style={{ display: 'flex', gap: '6px', fontSize: '0.68rem', marginBottom: '3px' }}>
+                <span style={{ color: '#818cf8', fontWeight: 700, minWidth: '60px', fontFamily: 'JetBrains Mono, monospace' }}>{k}</span>
+                <span style={{ color: 'rgba(255,255,255,0.5)', wordBreak: 'break-all', fontFamily: 'JetBrains Mono, monospace' }}>{String(v)}</span>
+              </div>
+            ))}
           </div>
-          
-          {cleanText && (
-            <div style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
-              <h3 style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '0.5rem', margin: 0 }}>// Raw Extracted Text (DOM + OCR)</h3>
-              <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', opacity: 0.8, lineHeight: 1.5 }}>
-                {cleanText}
+        )}
+
+        {/* Quality Score Badge */}
+        {sniperResult?.detectiveResult && (
+          <div style={{ margin: '0.75rem 1.5rem 0 1.5rem', padding: '0.75rem', background: sniperResult.detectiveResult.passedQualityGate ? 'rgba(74,222,128,0.08)' : 'rgba(244,63,94,0.08)', border: `1px solid ${sniperResult.detectiveResult.passedQualityGate ? 'rgba(74,222,128,0.3)' : 'rgba(244,63,94,0.3)'}`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            <div>
+              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Quality Score</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 900, color: sniperResult.detectiveResult.passedQualityGate ? '#4ade80' : '#f43f5e' }}>
+                {sniperResult.detectiveResult.qualityScore}<span style={{ fontSize: '0.75rem', opacity: 0.5 }}>/17</span>
               </div>
             </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Simulated Status</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 800, color: sniperResult.detectiveResult.passedQualityGate ? '#4ade80' : '#f43f5e', fontFamily: 'JetBrains Mono, monospace' }}>
+                {sniperResult.detectiveResult.simulatedStatus}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Execution Log Console */}
+        <div style={{ flex: 1, overflow: 'auto', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '1rem', background: '#080a0e', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.7rem', color: '#4ade80', marginTop: '0.75rem' }}>
+          <div style={{ color: 'rgba(255,255,255,0.25)', marginBottom: '6px', fontSize: '0.65rem' }}>// Execution Log</div>
+          {executionLog.length === 0 && (
+            <div style={{ color: 'rgba(255,255,255,0.2)', fontStyle: 'italic' }}>Waiting for FIRE command...</div>
           )}
+          {executionLog.map((l, i) => (
+            <div key={i} style={{ lineHeight: 1.7, color: l.includes('ERROR') || l.includes('❌') ? '#f97316' : l.includes('✅') || l.includes('✓') ? '#4ade80' : l.includes('⚠️') ? '#fbbf24' : '#4ade80' }}>
+              {l}
+            </div>
+          ))}
+          <div ref={logEndRef} />
         </div>
       </div>
 
       {/* RIGHT: 68-Field Report Card */}
-      <div style={{ width: '66.66%', display: 'flex', flexDirection: 'column', background: '#0B0D11', overflow: 'hidden' }}>
-        <div style={{ padding: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', background: '#0F1218', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h3 style={{ fontSize: '0.875rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>68-Field Report Card</h3>
-          {results && (
-            <div style={{ fontSize: '0.75rem', background: 'rgba(74, 222, 128, 0.1)', color: '#4ade80', padding: '4px 12px', borderRadius: '9999px', border: '1px solid rgba(74, 222, 128, 0.2)' }}>
-              Test Completed
-            </div>
-          )}
+      <div style={{ width: '64%', display: 'flex', flexDirection: 'column', background: '#0B0D11', overflow: 'hidden' }}>
+        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', background: '#0F1218', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <h3 style={{ fontSize: '0.82rem', fontWeight: 800, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
+            68-Field Report Card
+          </h3>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {liveSpot && (
+              <>
+                <span style={{ fontSize: '0.7rem', color: '#4ade80' }}>
+                  {Object.values(liveSpot).filter(v => v !== null && v !== undefined && v !== '' && v !== false).length} / {fields.length} populated
+                </span>
+              </>
+            )}
+            {runState === 'done' && (
+              <div style={{ fontSize: '0.72rem', background: 'rgba(74,222,128,0.1)', color: '#4ade80', padding: '3px 10px', borderRadius: '9999px', border: '1px solid rgba(74,222,128,0.2)' }}>
+                Simulation Complete
+              </div>
+            )}
+          </div>
         </div>
 
         <div style={{ flex: 1, overflow: 'auto', padding: '1.5rem' }}>
-          {loading && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f43f5e', gap: '1rem', marginBottom: '1.5rem', background: 'rgba(244,63,94,0.05)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(244,63,94,0.1)' }}>
-              <div style={{ width: '1.5rem', height: '1.5rem', border: '2px solid #f43f5e', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+          {runState === 'running' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', background: 'rgba(244,63,94,0.05)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(244,63,94,0.1)' }}>
+              <div style={{ width: '1.25rem', height: '1.25rem', border: '2px solid #f43f5e', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', flexShrink: 0 }} />
               <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-              <p style={{ fontSize: '0.875rem', fontFamily: 'JetBrains Mono, monospace', margin: 0 }}>Running Brute Force Extractor...</p>
+              <p style={{ fontSize: '0.82rem', fontFamily: 'JetBrains Mono, monospace', margin: 0, color: '#f43f5e' }}>
+                Isolated pipeline running — watch the execution log ←
+              </p>
             </div>
           )}
 
           <div style={{ background: '#0F1218', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', overflow: 'hidden' }}>
-            <div style={{ background: '#151921', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center' }}>
-              <h4 style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#60a5fa', textTransform: 'uppercase', margin: 0 }}>Omni-Field Validation Record</h4>
-              <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' }}>Total Fields Evaluated: {fields.length}</span>
+            <div style={{ background: '#151921', padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center' }}>
+              <h4 style={{ fontSize: '0.82rem', fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', margin: 0 }}>Omni-Field Validation Record</h4>
+              <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>Total Fields: {fields.length}</span>
             </div>
+
+            {/* Column Headers */}
+            <div style={{ display: 'flex', padding: '8px 16px', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid rgba(255,255,255,0.1)', fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <div style={{ width: '28%' }}>Schema Target</div>
+              <div style={{ width: '13%' }}>Status</div>
+              <div style={{ width: '39%' }}>Extracted Value</div>
+              <div style={{ width: '20%' }}>Source</div>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', padding: '8px 16px', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid rgba(255,255,255,0.1)', fontSize: '0.7rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                <div style={{ width: '25%' }}>Schema Target</div>
-                <div style={{ width: '15%' }}>Status</div>
-                <div style={{ width: '40%' }}>Extracted Value</div>
-                <div style={{ width: '20%' }}>Pipeline Source / Method</div>
-              </div>
-              {fields.sort((a,b) => a.phase_id - b.phase_id || a.sort_order - b.sort_order).map((f, i) => {
-                
-                let hasValue = false;
-                let value: any = null;
-                
-                // Value resolution: liveSpot covers ALL db columns (Phase 1-4);
-                // results (raw_ai_payload) covers AI-extracted fields that may differ.
-                // Prefer liveSpot first so Phase 1 data shows immediately.
-                const spotVal = liveSpot ? liveSpot[f.field_name] : undefined;
-                const aiVal = results ? results[f.field_name] : undefined;
-                value = spotVal !== undefined && spotVal !== null ? spotVal : aiVal;
-                const isMissing = value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0) || (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0);
-                hasValue = !isMissing || value === false;
+              {fields
+                .sort((a, b) => a.phase_id - b.phase_id || a.sort_order - b.sort_order)
+                .map((f, i) => {
+                  const rawVal = liveSpot ? liveSpot[f.field_name] : undefined;
+                  const isMissing = rawVal === undefined || rawVal === null || rawVal === '' ||
+                    (Array.isArray(rawVal) && rawVal.length === 0) ||
+                    (typeof rawVal === 'object' && !Array.isArray(rawVal) && Object.keys(rawVal).length === 0);
+                  const hasValue = !isMissing || rawVal === false;
 
-                const methodText = f.phase_id === 1 ? 'Google Places API (Direct)' : 
-                                    f.phase_id === 2 ? 'DOM Crawler (Homepage Links)' :
-                                    f.phase_id === 3 ? 'AI Detective (DOM + OCR Infer)' :
-                                    f.phase_id === 4 ? 'Vision API (Gallery Scraping)' :
-                                    'Pipeline Aggregation';
+                  const methodText = f.phase_id === 1 ? 'Google Places API' :
+                    f.phase_id === 2 ? 'DOM Crawler / Spider' :
+                    f.phase_id === 3 ? 'AI Detective (Ollama)' :
+                    f.phase_id === 4 ? 'Photographer / Vision' :
+                    'Pipeline';
 
-                return (
-                  <div key={f.id} style={{ display: 'flex', padding: '12px 16px', borderBottom: i < fields.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'background 0.2s', cursor: 'default' }} onMouseEnter={e => e.currentTarget.style.background = '#151921'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <div style={{ width: '25%', display: 'flex', flexDirection: 'column', paddingRight: '10px' }}>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>{f.display_label}</span>
-                      <span style={{ fontSize: '0.625rem', fontFamily: 'JetBrains Mono, monospace', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>{f.field_name}</span>
+                  const phaseColor = f.phase_id === 1 ? '#fbbf24' : f.phase_id === 2 ? '#818cf8' : f.phase_id === 3 ? '#38bdf8' : f.phase_id === 4 ? '#fb7185' : '#94a3b8';
+
+                  return (
+                    <div
+                      key={f.id}
+                      style={{ display: 'flex', padding: '10px 16px', borderBottom: i < fields.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', transition: 'background 0.15s', cursor: 'default' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#151921'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      {/* Field Name */}
+                      <div style={{ width: '28%', display: 'flex', flexDirection: 'column', paddingRight: '10px', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'rgba(255,255,255,0.88)' }}>{f.display_label}</span>
+                        <span style={{ fontSize: '0.6rem', fontFamily: 'JetBrains Mono, monospace', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>{f.field_name}</span>
+                      </div>
+
+                      {/* Status Pill */}
+                      <div style={{ width: '13%', display: 'flex', alignItems: 'center' }}>
+                        {!liveSpot ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '3px 7px', borderRadius: '4px' }}>
+                            <span style={{ color: '#94a3b8', fontSize: '0.7rem' }}>⏳</span>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8' }}>AWAIT</span>
+                          </div>
+                        ) : hasValue ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.25)', padding: '3px 7px', borderRadius: '4px' }}>
+                            <span style={{ color: '#4ade80', fontSize: '0.7rem' }}>●</span>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#4ade80' }}>PASS</span>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', padding: '3px 7px', borderRadius: '4px' }}>
+                            <span style={{ color: '#f43f5e', fontSize: '0.7rem' }}>●</span>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#f43f5e' }}>NULL</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Value */}
+                      <div style={{ width: '39%', display: 'flex', alignItems: 'center', paddingRight: '10px' }}>
+                        {!liveSpot ? (
+                          <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.15)', fontFamily: 'JetBrains Mono, monospace', fontStyle: 'italic' }}>Pending fire...</span>
+                        ) : hasValue ? (
+                          <pre style={{ fontSize: '0.7rem', color: '#e2e8f0', fontFamily: 'JetBrains Mono, monospace', background: 'rgba(255,255,255,0.02)', padding: '5px 8px', borderRadius: '4px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxWidth: '100%', margin: 0, border: '1px solid rgba(255,255,255,0.04)' }}>
+                            {typeof rawVal === 'object' ? JSON.stringify(rawVal, null, 2) : String(rawVal)}
+                          </pre>
+                        ) : (
+                          <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)', fontFamily: 'JetBrains Mono, monospace', fontStyle: 'italic' }}>null</span>
+                        )}
+                      </div>
+
+                      {/* Source */}
+                      <div style={{ width: '20%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 800, color: phaseColor }}>Phase {f.phase_id}</span>
+                        <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', marginTop: '2px' }}>{methodText}</span>
+                      </div>
                     </div>
-                    <div style={{ width: '15%', display: 'flex', alignItems: 'center' }}>
-                      {!liveSpot && !results ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '4px' }}>
-                          <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>⏳</span>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8' }}>AWAITING</span>
-                        </div>
-                      ) : hasValue ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(74, 222, 128, 0.1)', border: '1px solid rgba(74,222,128,0.3)', padding: '4px 8px', borderRadius: '4px' }}>
-                          <span style={{ color: '#4ade80', fontSize: '0.75rem' }}>🟢</span>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#4ade80' }}>PASS</span>
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244,63,94,0.3)', padding: '4px 8px', borderRadius: '4px' }}>
-                          <span style={{ color: '#f43f5e', fontSize: '0.75rem' }}>🔴</span>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#f43f5e' }}>FAIL</span>
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ width: '40%', display: 'flex', alignItems: 'center', paddingRight: '10px' }}>
-                      {!liveSpot && !results ? (
-                         <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.2)', fontFamily: 'JetBrains Mono, monospace', fontStyle: 'italic' }}>Pending Sniper Fire...</span>
-                      ) : hasValue ? (
-                        <pre style={{ fontSize: '0.75rem', color: '#e2e8f0', fontFamily: 'JetBrains Mono, monospace', background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '6px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxWidth: '100%', margin: 0, border: '1px solid rgba(255,255,255,0.05)' }}>
-                          {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
-                        </pre>
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono, monospace', fontStyle: 'italic' }}>NULL</span>
-                      )}
-                    </div>
-                    <div style={{ width: '20%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.6)' }}>Phase {f.phase_id}</span>
-                      <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>{methodText}</span>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           </div>
         </div>
@@ -313,4 +338,3 @@ export const SniperBench: React.FC = () => {
     </div>
   );
 };
-
