@@ -34,11 +34,53 @@ const reportPulse = (delayMs: number, ghost?: any, active_job?: string | null, t
 console.log = (...args) => { _log(...args); pushLog('INFO', args.join(' ')); };
 console.error = (...args) => { _err(...args); pushLog('ERROR', args.join(' ')); };
 
-// ─── Constants ─────────────────────────────────────────────────────────────
+// ─── AI Output Type Sanitizers ────────────────────────────────────────────
+// The LLM returns free-text; these coerce to Postgres-safe types or null.
+
+/** Parse a number from AI output. Returns null if unparseable (e.g. "family-friendly"). */
+const safeNum = (v: any): number | null => {
+  if (v == null) return null;
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+};
+
+/** Parse a boolean from AI output. Returns null for ambiguous free-text. */
+const safeBool = (v: any): boolean | null => {
+  if (v == null) return null;
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'string') {
+    const lower = v.toLowerCase().trim();
+    if (['yes', 'true', '1', 'y', 'available', 'offered'].includes(lower)) return true;
+    if (['no', 'false', '0', 'n', 'null', 'none', 'unknown', 'not available', 'n/a'].includes(lower)) return false;
+  }
+  // Free-text sentences (e.g. "Wheelchairs are allowed...") → null, not a crash
+  return null;
+};
+
+/**
+ * Map AI surface string to a valid skate_spot_surface enum value.
+ * DB enum: wood | concrete | asphalt | sport_court | unknown
+ */
+const SURFACE_KEYWORD_MAP: [string, string][] = [
+  ['maple', 'wood'], ['hardwood', 'wood'], ['wood', 'wood'], ['rotacast', 'wood'],
+  ['roll-on', 'wood'], ['laminate', 'wood'],
+  ['concrete', 'concrete'], ['cement', 'concrete'],
+  ['asphalt', 'asphalt'], ['tarmac', 'asphalt'],
+  ['sport court', 'sport_court'], ['sport_court', 'sport_court'],
+  ['polyurethane', 'sport_court'], ['synthetic', 'sport_court'], ['rubber', 'sport_court'],
+];
+const safeSurface = (v: any): string | null => {
+  if (!v || typeof v !== 'string') return null;
+  const lower = v.toLowerCase().trim();
+  for (const [keyword, enumVal] of SURFACE_KEYWORD_MAP) {
+    if (lower.includes(keyword)) return enumVal;
+  }
+  return 'unknown'; // AI returned something but we can't map it — valid enum, not a crash
+};
+
+// ─── Constants ──────────────────────────────────────────────────────────────
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 type DayKey = typeof DAYS[number];
-
-// Max pages to visit per record — prevents runaway crawl on large sites
 const MAX_PAGES_PER_RECORD = 4;
 
 // ─── Main Indexer Loop ──────────────────────────────────────────────────────
@@ -250,30 +292,27 @@ async function runIndexer() {
         // Non-fatal — proceed with socials and photo candidates
       }
 
-      // ── Map AI output to structured columns ────────────────────────────────
-      // IMPORTANT: schema keys (from ai_target_vectors) don't always match DB column names.
-      // Handle both the schema key and the DB column name as fallbacks.
+      // ── Map AI output → typed DB columns (sanitized to prevent Postgres type errors) ──
       const opening_hours        = aiMetadata.hours          || aiMetadata.opening_hours        || target.opening_hours        || null;
       const pricing_data         = aiMetadata.pricing         || aiMetadata.pricing_data         || target.pricing_data         || null;
-      const surface_type         = aiMetadata.surface_type    || target.surface_type    || null;
+      const surface_type         = safeSurface(aiMetadata.surface_type    || target.surface_type);
       const surface_quality      = aiMetadata.surface_quality || target.surface_quality || null;
-      const vibe_score           = aiMetadata.vibe_score      ?? target.vibe_score      ?? null;
-      const has_adult_night      = aiMetadata.has_adult_night ?? target.has_adult_night  ?? false;
+      const vibe_score           = safeNum(aiMetadata.vibe_score      ?? target.vibe_score);
+      const has_adult_night      = safeBool(aiMetadata.has_adult_night ?? target.has_adult_night) ?? false;
       const adult_night_details  = aiMetadata.adult_night_details  || target.adult_night_details  || null;
       const adultNightSchedule   = aiMetadata.adult_night_schedule || target.adult_night_schedule || null;
       const special_events       = aiMetadata.special_events  || target.special_events  || null;
-      const capacity             = aiMetadata.capacity        || target.capacity         || null;
-      const has_rental           = aiMetadata.has_rental      ?? target.has_rental       ?? null;
-      const has_pro_shop         = aiMetadata.has_pro_shop    ?? target.has_pro_shop     ?? null;
-      const has_food             = aiMetadata.has_food        ?? target.has_food         ?? null;
-      const has_lights           = aiMetadata.has_lights      ?? target.has_lights       ?? null;
-      const has_lockers          = aiMetadata.has_lockers     ?? target.has_lockers      ?? null;
-      const has_ac               = aiMetadata.has_ac          ?? target.has_ac           ?? null;
-      const has_wifi             = aiMetadata.has_wifi        ?? target.has_wifi         ?? null;
-      const has_toilets          = aiMetadata.has_toilets     ?? target.has_toilets      ?? null;
-      // Key mismatches: schema key → DB column name
-      const is_wheelchair_accessible = aiMetadata.wheelchair  ?? aiMetadata.is_wheelchair_accessible ?? target.is_wheelchair_accessible ?? null;
-      const hosts_derby              = aiMetadata.derby        ?? aiMetadata.hosts_derby              ?? target.hosts_derby              ?? null;
+      const capacity             = safeNum(aiMetadata.capacity        ?? target.capacity);
+      const has_rental           = safeBool(aiMetadata.has_rental      ?? target.has_rental);
+      const has_pro_shop         = safeBool(aiMetadata.has_pro_shop    ?? target.has_pro_shop);
+      const has_food             = safeBool(aiMetadata.has_food        ?? target.has_food);
+      const has_lights           = safeBool(aiMetadata.has_lights      ?? target.has_lights);
+      const has_lockers          = safeBool(aiMetadata.has_lockers     ?? target.has_lockers);
+      const has_ac               = safeBool(aiMetadata.has_ac          ?? target.has_ac);
+      const has_wifi             = safeBool(aiMetadata.has_wifi        ?? target.has_wifi);
+      const has_toilets          = safeBool(aiMetadata.has_toilets     ?? target.has_toilets);
+      const is_wheelchair_accessible = safeBool(aiMetadata.wheelchair  ?? aiMetadata.is_wheelchair_accessible ?? target.is_wheelchair_accessible);
+      const hosts_derby              = safeBool(aiMetadata.derby        ?? aiMetadata.hosts_derby              ?? target.hosts_derby);
       const cultural_metadata        = aiMetadata.cultural_meta || aiMetadata.cultural_metadata       || target.cultural_metadata        || null;
 
       // ── Social Links (from collected hrefs) ────────────────────────────────
@@ -383,9 +422,20 @@ async function runIndexer() {
         last_attempted_at: new Date().toISOString()
       }).eq('id', target.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        // Type sanitizers should prevent this, but if it still fails — DO NOT loop.
+        // Advance the record to DEEP_CRAWLED with a minimal safe payload so it never gets re-picked.
+        console.error('[Indexer] Full update failed, writing safe fallback to advance pipeline:', updateError.message);
+        await supabase.from('skate_spots').update({
+          verification_status: 'DEEP_CRAWLED',
+          is_deep_crawled: true,
+          last_attempted_at: new Date().toISOString(),
+          ai_metadata: Object.keys(aiMetadata).length > 0 ? aiMetadata : null,
+          ...(candidate_photos ? { candidate_photos } : {})
+        }).eq('id', target.id);
+      }
 
-      const delay = 2000 + Math.random() * 2000; // 2-4s — small business sites, no stealth needed
+      const delay = 2000 + Math.random() * 2000;
       reportPulse(delay);
       await sleep(delay);
 
