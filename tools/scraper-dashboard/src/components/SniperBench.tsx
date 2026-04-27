@@ -20,52 +20,75 @@ export const SniperBench: React.FC = () => {
     setExecutionLog([]);
     setCleanText('');
 
-    log(`Initializing Sniper Test for ${url}`);
-
-    // Build the giant 68-field schema dynamically
-    const aiTargetVectors = fields
-      // Phase 3 and beyond fields typically populated by AI
-      .filter(f => f.phase_id >= 3 && f.data_type !== 'uuid' && f.data_type !== 'timestamp')
-      .map(f => ({
-        key: f.field_name,
-        type: f.data_type
-      }));
-
-    log(`Assembled schema with ${aiTargetVectors.length} target vectors from Registry`);
-    log(`Firing Brute Force Screenshot OCR + Detective Pipeline...`);
+    log(`Initializing End-to-End Pipeline Tracer for ${url}`);
 
     try {
-      const startTime = Date.now();
-      const res = await fetch('http://localhost:5999/api/sandbox', {
+      // 1. Seed the record with priority
+      const seedRes = await fetch('http://localhost:5999/api/sniper/seed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url,
-          spot_name: spotName,
-          spot_city: spotCity,
-          ai_system_prompt: "You are the primary AI Detective. Extract data strictly matching the requested schema. If data is completely missing, return null.",
-          ai_target_vectors: aiTargetVectors,
-          detective_model: 'llama3.2'
-        })
+        body: JSON.stringify({ url, spot_name: spotName, spot_city: spotCity })
       });
+      
+      const seedData = await seedRes.json();
+      if (!seedData.success) throw new Error(seedData.error || 'Failed to seed record');
+      
+      const spotId = seedData.spot_id;
+      log(`✅ Seeded to DB [ID: ${spotId}]. Waiting for Operator...`);
 
-      const data = await res.json();
-      const endTime = Date.now();
-      
-      log(`Execution complete in ${((endTime - startTime) / 1000).toFixed(2)}s`);
-      
-      if (data.success) {
-        log(`Successfully mapped ${Object.keys(data.aiResponse || {}).length} fields.`);
-        setResults(data.aiResponse);
-        setCleanText(data.cleanText);
-      } else {
-        log(`Error: ${data.error}`);
-      }
+      // 2. Poll the pipeline
+      let currentStatus = 'SEEDED';
+      let retries = 0;
+
+      const poll = setInterval(async () => {
+        try {
+          const pollRes = await fetch(`http://localhost:5999/api/sniper/poll/${spotId}`);
+          const pollData = await pollRes.json();
+          
+          if (pollData.success && pollData.spot) {
+            const spot = pollData.spot;
+            
+            if (spot.verification_status !== currentStatus) {
+              currentStatus = spot.verification_status;
+              
+              if (currentStatus === 'ENRICHED') log('🕷️ Operator finished (Spidering complete). Waiting for Indexer (Detective)...');
+              else if (currentStatus === 'MEDIA_READY') log('🕵️ Indexer finished (AI Extraction complete). Waiting for Photographer...');
+              else if (currentStatus === 'REVIEW_PENDING') log('📸 Photographer finished. Pipeline complete! Gathering results...');
+              else if (currentStatus === 'PUBLISHED') log('✅ Record automatically published!');
+              else if (currentStatus === 'REJECTED') log('❌ Record REJECTED by Gatekeeper.');
+              else if (currentStatus === 'STALLED') log('⚠️ Record STALLED in pipeline.');
+              else log(`Transitioned to: ${currentStatus}`);
+            }
+
+            // Check if we hit a terminal state
+            if (['REVIEW_PENDING', 'PUBLISHED', 'REJECTED', 'STALLED'].includes(currentStatus)) {
+              clearInterval(poll);
+              
+              if (spot.raw_ai_payload) {
+                log(`Successfully retrieved AI Payload from DB.`);
+                setResults(spot.raw_ai_payload);
+              } else {
+                log(`Pipeline finished, but no AI payload was generated.`);
+              }
+              
+              setCleanText(JSON.stringify(spot.candidate_links || {}, null, 2));
+              setLoading(false);
+            }
+          }
+        } catch (e) {
+          retries++;
+          if (retries > 30) {
+            clearInterval(poll);
+            log('Critical Timeout: Pipeline polling failed.');
+            setLoading(false);
+          }
+        }
+      }, 2000);
+
     } catch (err: any) {
       log(`Critical Failure: ${err.message}`);
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   if (fieldsLoading) return <div className="p-8 text-white">Loading Field Registry...</div>;
