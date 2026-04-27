@@ -301,17 +301,32 @@ export const ScraperPipeline: React.FC<{
     // Restore the technical target collection checklists on the Active Job cards with EVERY field
     baseBelts[0].attempting = [['name', 'pending'], ['facility_type', 'pending'], ['address', 'pending'], ['city', 'pending'], ['state', 'pending'], ['zip', 'pending'], ['lat', 'pending'], ['lng', 'pending'], ['phone', 'pending'], ['website', 'pending'], ['rating', 'pending'], ['reviews', 'pending'], ['place_id', 'pending'], ['is_indoor', 'pending']];
     
-    // Add custom paths to Crawl:
+    // Phase 2 Spider checklist — ONLY what the Operator actually writes:
+    // candidate_links URL map + social handles extracted from the homepage
     const crawlPaths = config?.crawl_priority_paths || [];
     baseBelts[1].attempting = [
-      ['website', 'pending'], ['operator_name', 'pending'], ['operator_desc', 'pending'], ['opening_hours', 'pending'], ['schedule_url', 'pending'], ['pricing_data', 'pending'], ['has_fee', 'pending'], ['facebook_url', 'pending'], ['instagram_url', 'pending'], ['tiktok_url', 'pending'], ['special_events', 'pending'], ['raw_kp', 'pending'],
+      ['website',       'pending'],
+      ['→ root',        'pending'], ['→ hours',    'pending'], ['→ pricing',  'pending'],
+      ['→ schedule',    'pending'], ['→ events',   'pending'], ['→ contact',  'pending'],
+      ['→ about',       'pending'], ['→ adult',    'pending'], ['→ lessons',  'pending'], ['→ gallery', 'pending'],
+      ['facebook_url',  'pending'], ['instagram_url', 'pending'], ['tiktok_url', 'pending'],
+      ['operator_name', 'pending'], ['phone',      'pending'],
       ...crawlPaths.map((p: string) => [p, 'pending'] as [string, string])
     ];
 
-    // Add AI target vectors to Detective:
+    // Phase 3 Detective checklist — AI fields the Indexer extracts from the crawled pages:
     const aiVectors = config?.ai_target_vectors || [];
     baseBelts[2].attempting = [
-      ['surface_type', 'pending'], ['surface_quality', 'pending'], ['is_indoor', 'pending'], ['capacity', 'pending'], ['has_rental', 'pending'], ['has_pro_shop', 'pending'], ['has_food', 'pending'], ['has_lights', 'pending'], ['has_lockers', 'pending'], ['has_ac', 'pending'], ['has_wifi', 'pending'], ['has_toilets', 'pending'], ['wheelchair', 'pending'], ['adult_night', 'pending'], ['derby', 'pending'], ['vibe_score', 'pending'], ['cultural_meta', 'pending'],
+      // Crawled content parsed from candidate_links pages (moved from Phase 2)
+      ['opening_hours',   'pending'], ['pricing_data',  'pending'], ['has_fee',       'pending'],
+      ['schedule_url',    'pending'], ['special_events','pending'], ['raw_knowledge', 'pending'],
+      // AI semantic extraction vectors
+      ['surface_type',    'pending'], ['surface_quality','pending'], ['is_indoor',     'pending'],
+      ['capacity',        'pending'], ['has_rental',    'pending'], ['has_pro_shop',  'pending'],
+      ['has_food',        'pending'], ['has_lights',    'pending'], ['has_lockers',   'pending'],
+      ['has_ac',          'pending'], ['has_wifi',      'pending'], ['has_toilets',   'pending'],
+      ['wheelchair',      'pending'], ['adult_night',   'pending'], ['derby',         'pending'],
+      ['vibe_score',      'pending'], ['cultural_meta', 'pending'],
       ...aiVectors.map((v: any) => [(v.key || v), 'pending'] as [string, string])
     ];
 
