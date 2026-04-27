@@ -737,7 +737,8 @@ app.get('/api/queue', async (req, res) => {
 
   let query = supabase.from('skate_spots').select('*');
   if (phase === 'phase1') {
-     query = query.or('verification_status.eq.PENDING,verification_status.is.null');
+     // Scout output: SEEDED records waiting for the Spider to pick up
+     query = query.eq('verification_status', 'SEEDED');
   } else if (phase === 'phase2') {
      // Spider queue: SEEDED with website — what Operator processes
      query = query
@@ -759,13 +760,15 @@ app.get('/api/queue', async (req, res) => {
      // Publisher queue: MEDIA_READY, not yet published
      query = query.eq('verification_status', 'MEDIA_READY').eq('is_published', false);
   } else if (phase === 'spider-recent') {
-     // Recently Spider-processed: spots with candidate_links regardless of downstream status
-     // Ordered newest-first so dashboard shows the latest Spider output even if Indexer consumed them
+     // Spider output belt: ONLY ENRICHED — records the Spider just processed, waiting for Detective.
      query = query
        .not('candidate_links', 'is', null)
-       .in('verification_status', ['ENRICHED', 'DEEP_CRAWLED', 'MEDIA_READY', 'PUBLISHED']);
+       .eq('verification_status', 'ENRICHED');
+  } else if (phase === 'detective-recent') {
+     // Detective output belt: ALL DEEP_CRAWLED — just processed by Indexer, waiting for Photographer.
+     query = query.eq('verification_status', 'DEEP_CRAWLED');
   } else {
-     query = query.or('verification_status.eq.PENDING,verification_status.eq.SEEDED,verification_status.eq.ENRICHED,verification_status.eq.DEEP_CRAWLED,verification_status.is.null');
+     query = query.or('verification_status.eq.SEEDED,verification_status.eq.ENRICHED,verification_status.eq.DEEP_CRAWLED,verification_status.is.null');
   }
 
   // Apply state filter if priority regions are active

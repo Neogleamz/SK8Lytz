@@ -108,11 +108,11 @@ export const ScraperPipeline: React.FC<{
     // The output of phase N = the input of phase N+1, so we read the next phase queue.
     const getSpotsForPhase = (beltId: number, count: number = 2) => {
         let spots: any[] = [];
-        if (beltId === 1) spots = phaseQueues?.phase2 || [];   // Scout output = SEEDED records (Spider input)
-        else if (beltId === 2) spots = phaseQueues?.['spider-recent'] || []; // Spider output: recently spidered spots (any downstream status)
-        else if (beltId === 3) spots = phaseQueues?.phase4 || [];   // Detective output = DEEP_CRAWLED (Photographer input)
-        else if (beltId === 4) spots = phaseQueues?.phase6 || [];   // Photographer output = MEDIA_READY (Publisher input)
-        else if (beltId === 5) spots = phaseQueues?.recent || [];   // Publisher output = recently published
+        if (beltId === 1) spots = phaseQueues?.phase2 || [];              // Scout out  = SEEDED (Spider input)
+        else if (beltId === 2) spots = phaseQueues?.['spider-recent'] || []; // Spider out = ENRICHED (Detective input)
+        else if (beltId === 3) spots = phaseQueues?.['detective-recent'] || []; // Detective out = DEEP_CRAWLED (Photographer input)
+        else if (beltId === 4) spots = phaseQueues?.phase6 || [];              // Photographer out = MEDIA_READY (Publisher input)
+        else if (beltId === 5) spots = phaseQueues?.recent || [];              // Publisher out = PUBLISHED
         return spots.slice(0, count);
     };
 
@@ -126,7 +126,11 @@ export const ScraperPipeline: React.FC<{
             const ok   = (v: any): string => (v != null && v !== '' && v !== false) ? 'success' : 'missing';
             const boolOk = (v: any): string => (v === true ? 'success' : 'missing');
 
-            if (phaseId === 1) { // ── SCOUT: Google Places seed ──
+            if (phaseId === 1) { // ── SCOUT: OSM seed ──
+                // ▶ CURRENT STATUS badge — always first row
+                const s1 = spot.verification_status || 'SEEDED';
+                const s1ok = s1 === 'SEEDED' ? 'success' : 'warning';
+                data.push(['\u25b6 CURRENT STATUS', s1, s1ok]);
                 data.push(['name',             val(spot.name),                                                        ok(spot.name)]);
                 data.push(['facility_type',    val(spot.facility_type, 'UNKNOWN'),                                    ok(spot.facility_type)]);
                 data.push(['address',          val(spot.street_address || spot.address),                              ok(spot.street_address || spot.address)]);
@@ -140,45 +144,42 @@ export const ScraperPipeline: React.FC<{
                 data.push(['rating',           spot.rating != null ? `★ ${spot.rating}` : 'N/A',                     ok(spot.rating)]);
                 data.push(['reviews',          val(spot.user_ratings_total, '0'),                                     ok(spot.user_ratings_total)]);
                 data.push(['google_place_id',  spot.google_place_id ? spot.google_place_id.slice(0, 12) + '…' : 'NULL', ok(spot.google_place_id)]);
-                data.push(['source',           val(spot.source, 'GOOGLE'),                                            'val']);
+                data.push(['source',           val(spot.source, 'OSM'),                                               'val']);
                 data.push(['is_indoor',        bool(spot.is_indoor),                                                  'val']);
-                data.push(['verification_status', val(spot.verification_status, 'PENDING'),                           ok(spot.verification_status)]);
                 data.push(['created_at',       spot.created_at ? new Date(spot.created_at).toLocaleDateString() : 'NOW', 'val']);
 
-            } else if (phaseId === 2) { // ── SPIDER: Website link discovery — ALL target fields ──
+            } else if (phaseId === 2) { // ── SPIDER: URL map building ONLY — feeds Detective ──
                 const cl = spot.candidate_links || {};
-                const links = Object.keys(cl);
+                const links = Object.keys(cl).filter(k => k !== '_social_only');
+                // ▶ CURRENT STATUS badge — should always be ENRICHED on this belt
+                const s2 = spot.verification_status || 'ENRICHED';
+                const s2ok = s2 === 'ENRICHED' ? 'success' : 'warning';
+                data.push(['▶ CURRENT STATUS', s2, s2ok]);
+                // Identity
                 data.push(['name',            val(spot.name),                                                          ok(spot.name)]);
                 data.push(['city',            val(spot.city),                                                          ok(spot.city)]);
                 data.push(['state',           val(spot.state),                                                         ok(spot.state)]);
                 data.push(['website',         val(spot.website),                                                       ok(spot.website)]);
-                data.push(['status',          val(spot.verification_status, 'ENRICHED'),                               ok(spot.verification_status)]);
-                // candidate_links — each discovered page
-                data.push(['links_found',     links.length > 0 ? `${links.length} pages` : 'NULL',                     links.length > 0 ? 'success' : 'missing']);
-                data.push(['→ root',          cl.root ? cl.root.slice(0, 30) + '…' : 'NULL',                          ok(cl.root)]);
-                data.push(['→ hours',         cl.hours     ? '✓ FOUND' : 'NULL',                                       ok(cl.hours)]);
-                data.push(['→ pricing',       cl.pricing   ? '✓ FOUND' : 'NULL',                                       ok(cl.pricing)]);
-                data.push(['→ schedule',      cl.schedule  ? '✓ FOUND' : 'NULL',                                       ok(cl.schedule)]);
-                data.push(['→ events',        cl.events    ? '✓ FOUND' : 'NULL',                                       ok(cl.events)]);
-                data.push(['→ contact',       cl.contact   ? '✓ FOUND' : 'NULL',                                       ok(cl.contact)]);
-                data.push(['→ about',         cl.about     ? '✓ FOUND' : 'NULL',                                       ok(cl.about)]);
-                data.push(['→ adult',         cl.adult     ? '✓ FOUND' : 'NULL',                                       ok(cl.adult)]);
-                data.push(['→ lessons',       cl.lessons   ? '✓ FOUND' : 'NULL',                                       ok(cl.lessons)]);
-                data.push(['→ gallery',       cl.gallery   ? '✓ FOUND' : 'NULL',                                       ok(cl.gallery)]);
-                // Crawled content
-                data.push(['opening_hours',   spot.opening_hours   ? 'PARSED' : 'NULL',                                boolOk(spot.opening_hours)]);
-                data.push(['pricing_data',    spot.pricing_data    ? 'PARSED' : 'NULL',                                boolOk(spot.pricing_data)]);
-                data.push(['has_fee',         bool(spot.has_fee),                                                      'val']);
-                data.push(['schedule_url',    spot.schedule_url    ? '✓ FOUND' : 'NULL',                               boolOk(spot.schedule_url)]);
-                data.push(['special_events',  spot.special_events  ? 'PARSED' : 'NULL',                                boolOk(spot.special_events)]);
-                data.push(['raw_kp',          spot.raw_knowledge_panel ? 'PARSED' : 'NULL',                            boolOk(spot.raw_knowledge_panel)]);
-                // Social
+                data.push(['phone',           val(spot.phone, 'NULL'),                                                 ok(spot.phone)]);
+                // candidate_links — the URL map the Detective will crawl
+                data.push(['pages_found',     links.length > 0 ? `${links.length} URLs mapped` : 'NULL',              links.length > 0 ? 'success' : 'missing']);
+                data.push(['→ root',          cl.root ? cl.root.slice(0, 32) + '…' : 'NULL',                          ok(cl.root)]);
+                data.push(['→ hours',         cl.hours    ? '✓ FOUND' : 'NULL',                                        ok(cl.hours)]);
+                data.push(['→ pricing',       cl.pricing  ? '✓ FOUND' : 'NULL',                                        ok(cl.pricing)]);
+                data.push(['→ schedule',      cl.schedule ? '✓ FOUND' : 'NULL',                                        ok(cl.schedule)]);
+                data.push(['→ events',        cl.events   ? '✓ FOUND' : 'NULL',                                        ok(cl.events)]);
+                data.push(['→ contact',       cl.contact  ? '✓ FOUND' : 'NULL',                                        ok(cl.contact)]);
+                data.push(['→ about',         cl.about    ? '✓ FOUND' : 'NULL',                                        ok(cl.about)]);
+                data.push(['→ adult',         cl.adult    ? '✓ FOUND' : 'NULL',                                        ok(cl.adult)]);
+                data.push(['→ lessons',       cl.lessons  ? '✓ FOUND' : 'NULL',                                        ok(cl.lessons)]);
+                data.push(['→ gallery',       cl.gallery  ? '✓ FOUND' : 'NULL',                                        ok(cl.gallery)]);
+                // Social handles extracted from website (Spider only job)
                 data.push(['facebook_url',    spot.facebook_url    ? '✓ FOUND' : 'NULL',                               boolOk(spot.facebook_url)]);
                 data.push(['instagram_url',   spot.instagram_url   ? '✓ FOUND' : 'NULL',                               boolOk(spot.instagram_url)]);
                 data.push(['tiktok_url',      spot.tiktok_url      ? '✓ FOUND' : 'NULL',                               boolOk(spot.tiktok_url)]);
                 // Operator meta
                 data.push(['operator_name',   val(spot.operator_name, 'NULL'),                                         ok(spot.operator_name)]);
-                data.push(['operator_desc',   spot.operator_description ? spot.operator_description.slice(0, 28) + '…' : 'NULL', ok(spot.operator_description)]);
+                data.push(['social_only',     cl._social_only ? 'YES (no website)' : 'NO',                             cl._social_only ? 'warning' : 'val']);
                 data.push(['retry_count',     val(spot.retry_count, '0'),                                              spot.retry_count > 2 ? 'missing' : 'val']);
                 data.push(['last_spidered',   spot.last_attempted_at ? new Date(spot.last_attempted_at).toLocaleString() : 'NEVER', 'val']);
 
@@ -186,13 +187,16 @@ export const ScraperPipeline: React.FC<{
                 const candLinks = spot.candidate_links ? Object.keys(spot.candidate_links) : [];
                 const candPhotosCount = spot.candidate_photos && typeof spot.candidate_photos === 'object' ? Object.keys(spot.candidate_photos).length : 0;
                 const hoursKeys = spot.opening_hours && typeof spot.opening_hours === 'object' ? Object.keys(spot.opening_hours).length : 0;
+                // ▶ CURRENT STATUS badge — should always be DEEP_CRAWLED on this belt
+                const s3 = spot.verification_status || 'DEEP_CRAWLED';
+                const s3ok = s3 === 'DEEP_CRAWLED' ? 'success' : 'warning';
+                data.push(['▶ CURRENT STATUS', s3, s3ok]);
                 // Identity
                 data.push(['name',            val(spot.name),                                                          ok(spot.name)]);
                 data.push(['city',            val(spot.city),                                                          ok(spot.city)]);
                 data.push(['state',           val(spot.state),                                                         ok(spot.state)]);
                 data.push(['website',         val(spot.website),                                                       ok(spot.website)]);
                 data.push(['is_deep_crawled', bool(spot.is_deep_crawled),                                              boolOk(spot.is_deep_crawled)]);
-                data.push(['status',          val(spot.verification_status, 'DEEP_CRAWLED'),                           ok(spot.verification_status)]);
                 // Facility — AI vectors
                 data.push(['surface_type',    val(spot.surface_type, 'NULL'),                                          ok(spot.surface_type)]);
                 data.push(['surface_quality', val(spot.surface_quality, 'NULL'),                                       ok(spot.surface_quality)]);
@@ -235,6 +239,10 @@ export const ScraperPipeline: React.FC<{
             } else if (phaseId === 4) { // ── PHOTOGRAPHER: Image harvest ──
                 const photoCount = Array.isArray(spot.photos) ? spot.photos.length : spot.photos ? '?' : 0;
                 const candCount  = Array.isArray(spot.candidate_photos) ? spot.candidate_photos.length : 0;
+                // ▶ CURRENT STATUS badge — should always be MEDIA_READY on this belt
+                const s4 = spot.verification_status || 'MEDIA_READY';
+                const s4ok = s4 === 'MEDIA_READY' ? 'success' : 'warning';
+                data.push(['▶ CURRENT STATUS', s4, s4ok]);
                 data.push(['photos',           `${photoCount} imgs`,                                                  Number(photoCount) > 0 ? 'success' : 'missing']);
                 data.push(['candidate_photos', `${candCount} queued`,                                                  candCount > 0 ? 'success' : 'missing']);
                 data.push(['last_enriched_at', spot.last_enriched_at ? new Date(spot.last_enriched_at).toLocaleDateString() : 'NEVER', ok(spot.last_enriched_at)]);
@@ -248,12 +256,16 @@ export const ScraperPipeline: React.FC<{
                 data.push(['is_deep_crawled',  bool(spot.is_deep_crawled),                                            boolOk(spot.is_deep_crawled)]);
 
             } else if (phaseId === 5) { // ── PUBLISHER: QA gate + DB sync ──
+                // ▶ CURRENT STATUS badge — should always be PUBLISHED on this belt
+                const s5 = spot.verification_status || 'PUBLISHED';
+                const s5ok = s5 === 'PUBLISHED' ? 'success' : 'warning';
+                data.push(['▶ CURRENT STATUS', s5, s5ok]);
                 data.push(['id',               spot.id ? spot.id.slice(0, 12) + '…' : 'N/A',                         ok(spot.id)]);
                 data.push(['name',             val(spot.name),                                                        ok(spot.name)]);
                 data.push(['is_published',     bool(spot.is_published),                                               boolOk(spot.is_published)]);
                 data.push(['is_verified',      bool(spot.is_verified),                                                boolOk(spot.is_verified)]);
                 data.push(['is_featured',      bool(spot.is_featured),                                                boolOk(spot.is_featured)]);
-                data.push(['verification_status', val(spot.verification_status, 'PENDING'),                           ok(spot.verification_status)]);
+                data.push(['verification_status', val(spot.verification_status, 'PUBLISHED'),                         ok(spot.verification_status)]);
                 data.push(['state',            val(spot.state),                                                       ok(spot.state)]);
                 data.push(['facility_type',    val(spot.facility_type, 'UNKNOWN'),                                    ok(spot.facility_type)]);
                 data.push(['surface_type',     val(spot.surface_type, 'N/A'),                                         ok(spot.surface_type)]);
@@ -279,11 +291,11 @@ export const ScraperPipeline: React.FC<{
 
 
     const baseBelts = [
-        generateUniformBelt(1, 1, 'Phase 1: The Scout (Google Sweep)', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING...', 'Waiting', 'PENDING', 'SEEDED', getQueueNames('phase1')),
-        generateUniformBelt(2, 2, 'Phase 2: The Spider (Operator)', '--neon-crawl', '157, 78, 221', 'Spider_v3', 'PROCESSING...', 'Waiting', 'SEEDED', 'ENRICHED', getQueueNames('phase2')),
-        generateUniformBelt(3, 3, 'Phase 3: The Detective (Indexer)', '--neon-detective', '255, 106, 0', 'Llama3.2-8b', 'PROCESSING...', 'Waiting', 'ENRICHED', 'DEEP_CRAWLED', getQueueNames('phase3')),
-        generateUniformBelt(4, 4, 'Phase 4: The Photographer', '--neon-photo', '255, 0, 127', 'Vision_v1', 'PROCESSING...', 'Waiting', 'DEEP_CRAWLED', 'MEDIA_READY', getQueueNames('phase4')),
-        generateUniformBelt(5, 5, 'Phase 5: The Publisher', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('phase6'))
+        generateUniformBelt(1, 1, 'Phase 1 │ Scout (OSM Harvest)  IN: null → OUT: SEEDED', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING...', 'Waiting', 'PENDING', 'SEEDED', getQueueNames('phase1')),
+        generateUniformBelt(2, 2, 'Phase 2 │ Spider (Operator)  IN: SEEDED → OUT: ENRICHED', '--neon-crawl', '157, 78, 221', 'Spider_v3', 'PROCESSING...', 'Waiting', 'SEEDED', 'ENRICHED', getQueueNames('phase2')),
+        generateUniformBelt(3, 3, 'Phase 3 │ Detective (Indexer)  IN: ENRICHED → OUT: DEEP_CRAWLED', '--neon-detective', '255, 106, 0', 'Llama3.2-8b', 'PROCESSING...', 'Waiting', 'ENRICHED', 'DEEP_CRAWLED', getQueueNames('phase3')),
+        generateUniformBelt(4, 4, 'Phase 4 │ Photographer  IN: DEEP_CRAWLED → OUT: MEDIA_READY', '--neon-photo', '255, 0, 127', 'Vision_v1', 'PROCESSING...', 'Waiting', 'DEEP_CRAWLED', 'MEDIA_READY', getQueueNames('phase4')),
+        generateUniformBelt(5, 5, 'Phase 5 │ Publisher  IN: MEDIA_READY → OUT: PUBLISHED', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('phase6'))
     ];
 
     // Restore the technical target collection checklists on the Active Job cards with EVERY field
