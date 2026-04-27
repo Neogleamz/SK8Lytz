@@ -104,37 +104,69 @@ export async function startGoogleSweep(
           continue;
         }
 
-        // Parse city/state from formatted_address
+        // Parse city/state/zip from formatted_address
         // e.g. "201 W MacArthur Blvd, Oakland, CA 94611, USA"
         const parts = details.formatted_address?.split(',') || [];
         let derivedState: string | undefined;
         let derivedCity: string | undefined;
+        let derivedZip: string | undefined;
 
         if (parts.length >= 3) {
           const stateZipStr = parts[parts.length - 2].trim(); // "CA 94611"
           derivedCity = parts[parts.length - 3].trim();       // "Oakland"
           const splitStateZip = stateZipStr.split(' ');
           if (splitStateZip.length > 0) derivedState = splitStateZip[0]; // "CA"
+          if (splitStateZip.length > 1) derivedZip  = splitStateZip[1]; // "94611"
         }
         if (!derivedState) derivedState = stateCode; // fallback
 
-        // metaRecord: factual Google data ONLY — no pipeline status.
-        // Used on all update/conflict paths so MEDIA_READY is never downgraded to SEEDED.
+        // ── Phase 1 Quality Gate ──────────────────────────────────────────────────
+        // HARD REJECT: Permanently closed venues are dead data — never seed them.
+        // NOTE: google's `url` field = their Maps page URL, NOT the venue's own website.
+        if (details.business_status === 'CLOSED_PERMANENTLY') {
+          console.log(`  🚫 REJECTED [CLOSED_PERMANENTLY]: ${details.name}`);
+          continue;
+        }
+        // HARD REJECT: Must have name + coordinates + full address.
+        if (!details.name || !details.lat || !details.lng || !details.formatted_address) {
+          console.log(`  🚫 SEEDED REJECTED: Missing name/coords/address — ${details.place_id}`);
+          continue;
+        }
+        // SOFT WARN: Missing phone — still seeds but flagged
+        if (!details.formatted_phone_number) {
+          console.log(`  ⚠️  LOW_DATA: No phone number — ${details.name}`);
+        }
+        // NOTE: No website is OK — Phase 2 (Spider) handles social-only path
+
+        // Build candidate_photos from Google photo references
+        const googlePhotos = details.photos && details.photos.length > 0
+          ? { google_refs: details.photos }
+          : null;
+
+        // metaRecord: ALL factual Google data stored in proper columns — no JSONB burial.
+        // Updated on every refresh so fields stay current without downgrading pipeline status.
         const metaRecord = {
-          name: details.name,
-          lat: details.lat,
-          lng: details.lng,
-          city: derivedCity,
-          state: derivedState,
-          street_address: details.formatted_address,
-          phone_number: details.formatted_phone_number,
-          website: details.website,
-          google_place_id: details.place_id,
-          rating: details.rating,
-          user_ratings_total: details.user_ratings_total,
-          opening_hours: details.opening_hours,
-          facility_type: facilityType,           // ← correct per-type value
-          last_enriched_at: new Date().toISOString()
+          name:                 details.name,
+          lat:                  details.lat,
+          lng:                  details.lng,
+          city:                 derivedCity,
+          state:                derivedState,
+          zip:                  derivedZip,
+          street_address:       details.formatted_address,
+          phone_number:         details.formatted_phone_number  || null,
+          website:              details.website                 || null,   // venue's own website
+          google_place_id:      details.place_id,
+          google_maps_url:      details.google_maps_url         || null,   // Google Maps page URL (different from website)
+          business_status:      details.business_status         || 'OPERATIONAL',
+          rating:               details.rating                  ?? null,
+          user_ratings_total:   details.user_ratings_total      ?? null,
+          opening_hours:        details.opening_hours           || null,
+          operator_description: details.editorial_summary       || null,
+          facility_type:        facilityType,
+          last_enriched_at:     new Date().toISOString(),
+          ...(googlePhotos ? { candidate_photos: googlePhotos } : {}),
+          // raw_knowledge_panel: place type tags from Google (no dedicated column)
+          raw_knowledge_panel: { types: details.types || null }
         };
 
         // freshRecord: only for brand-new inserts — Scout outputs SEEDED status

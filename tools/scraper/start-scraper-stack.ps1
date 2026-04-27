@@ -30,7 +30,8 @@ if ($LASTEXITCODE -ne 0) {
 pm2 start ecosystem.config.js --only scraper-operator --stop-exit-codes 0 2>&1 | Out-Null
 pm2 start ecosystem.config.js --only scraper-indexer --stop-exit-codes 0 2>&1 | Out-Null
 pm2 start ecosystem.config.js --only scraper-photographer --stop-exit-codes 0 2>&1 | Out-Null
-pm2 stop scraper-operator scraper-indexer scraper-photographer 2>&1 | Out-Null
+pm2 start ecosystem.config.js --only ollama-daemon --stop-exit-codes 0 2>&1 | Out-Null
+pm2 stop scraper-operator scraper-indexer scraper-photographer ollama-daemon 2>&1 | Out-Null
 Write-Host "   🤖 Daemons registered (STOPPED) - start them from the web UI" -ForegroundColor DarkGray
 
 # 3. Start Discord Bridge via PM2 (always-on notification relay)

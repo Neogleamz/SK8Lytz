@@ -18,6 +18,12 @@ export interface GooglePlaceResult {
   website?: string;
   formatted_phone_number?: string;
   opening_hours?: any;
+  // ─ Extended fields ───────────────────────────────────────
+  editorial_summary?: string;   // Short venue description from Google
+  photos?: string[];             // Array of photo_reference strings (up to 5)
+  business_status?: string;     // OPERATIONAL | CLOSED_TEMPORARILY | CLOSED_PERMANENTLY
+  google_maps_url?: string;     // Full Google Maps URL for this place
+  types?: string[];             // Google place type array
 }
 
 export type FacilityType = 'roller_rink' | 'skate_shop' | 'skate_park';
@@ -294,7 +300,12 @@ export class GooglePlacesProvider {
             "rating",
             "user_ratings_total",
             "website",
-            "types"
+            "types",
+            // Extended fields — capture everything Google gives us
+            "editorial_summary",
+            "photos",
+            "business_status",
+            "url",
           ],
           key: API_KEY
         }
@@ -316,7 +327,16 @@ export class GooglePlacesProvider {
         user_ratings_total: place.user_ratings_total,
         website: place.website,
         formatted_phone_number: place.international_phone_number || place.formatted_phone_number,
-        opening_hours: place.opening_hours ? place.opening_hours.weekday_text : null,
+        // Full opening_hours object — has periods (structured) AND weekday_text (human readable)
+        opening_hours: place.opening_hours ?? null,
+        // Extended fields
+        editorial_summary: (place as any).editorial_summary?.overview ?? null,
+        photos: (place as any).photos
+          ? (place as any).photos.slice(0, 5).map((p: any) => p.photo_reference)
+          : null,
+        business_status: (place as any).business_status ?? null,
+        google_maps_url: (place as any).url ?? null,
+        types: place.types ?? null,
       };
     } catch (error: any) {
       console.error(`[GooglePlaces] Details error for ${placeId}:`, error.message);

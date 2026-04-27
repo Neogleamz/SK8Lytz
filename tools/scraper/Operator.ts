@@ -171,9 +171,28 @@ async function runOperator() {
         count++;
       }
 
-      console.log(`   ✓ [Spider] ${Object.keys(candidateLinks).length} links: [${Object.keys(candidateLinks).join(', ')}]`);
+      const linkCount = Object.keys(candidateLinks).length;
+      const subpages  = linkCount - 1; // exclude root
+      console.log(`   ✓ [Spider] ${linkCount} links mapped: [${Object.keys(candidateLinks).join(', ')}]`);
 
-      // SEEDED → ENRICHED
+      // ── Phase 2 Quality Gate ───────────────────────────────────────────────
+      // root is always added, so linkCount >= 1. Sanity check: root must be a real URL.
+      if (!candidateLinks.root) {
+        console.error(`   ✗ STALLED: candidate_links has no root URL — cannot advance to Detective.`);
+        await supabase.from('skate_spots').update({
+          verification_status: 'STALLED',
+          retry_count: (target.retry_count || 0) + 1,
+          last_attempted_at: new Date().toISOString()
+        }).eq('id', target.id);
+        reportPulse(delay);
+        continue;
+      }
+
+      if (subpages === 0) {
+        console.log(`   ⚠️  LOW YIELD: Only root URL found — Detective will have limited data.`);
+      }
+
+      // ✅ Gate passed — advance to ENRICHED
       const { error: updateError } = await supabase.from('skate_spots').update({
         candidate_links: candidateLinks,
         verification_status: 'ENRICHED'

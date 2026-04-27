@@ -293,27 +293,32 @@ async function runIndexer() {
       }
 
       // ── Map AI output → typed DB columns (sanitized to prevent Postgres type errors) ──
-      const opening_hours        = aiMetadata.hours          || aiMetadata.opening_hours        || target.opening_hours        || null;
-      const pricing_data         = aiMetadata.pricing         || aiMetadata.pricing_data         || target.pricing_data         || null;
+      const opening_hours        = aiMetadata.hours             || aiMetadata.opening_hours        || target.opening_hours        || null;
+      const pricing_data         = aiMetadata.pricing            || aiMetadata.pricing_data         || target.pricing_data         || null;
       const surface_type         = safeSurface(aiMetadata.surface_type    || target.surface_type);
-      const surface_quality      = aiMetadata.surface_quality || target.surface_quality || null;
-      const vibe_score           = safeNum(aiMetadata.vibe_score      ?? target.vibe_score);
-      const has_adult_night      = safeBool(aiMetadata.has_adult_night ?? target.has_adult_night) ?? false;
+      const surface_quality      = aiMetadata.surface_quality    || target.surface_quality || null;
+      const vibe_score           = safeNum(aiMetadata.vibe_score           ?? target.vibe_score);
+      const is_indoor            = safeBool(aiMetadata.is_indoor            ?? target.is_indoor);
+      const has_fee              = safeBool(aiMetadata.has_fee              ?? target.has_fee);
+      const has_adult_night      = safeBool(aiMetadata.has_adult_night      ?? target.has_adult_night) ?? false;
       const adult_night_details  = aiMetadata.adult_night_details  || target.adult_night_details  || null;
       const adultNightSchedule   = aiMetadata.adult_night_schedule || target.adult_night_schedule || null;
-      const special_events       = aiMetadata.special_events  || target.special_events  || null;
-      const capacity             = safeNum(aiMetadata.capacity        ?? target.capacity);
-      const has_rental           = safeBool(aiMetadata.has_rental      ?? target.has_rental);
-      const has_pro_shop         = safeBool(aiMetadata.has_pro_shop    ?? target.has_pro_shop);
-      const has_food             = safeBool(aiMetadata.has_food        ?? target.has_food);
-      const has_lights           = safeBool(aiMetadata.has_lights      ?? target.has_lights);
-      const has_lockers          = safeBool(aiMetadata.has_lockers     ?? target.has_lockers);
-      const has_ac               = safeBool(aiMetadata.has_ac          ?? target.has_ac);
-      const has_wifi             = safeBool(aiMetadata.has_wifi        ?? target.has_wifi);
-      const has_toilets          = safeBool(aiMetadata.has_toilets     ?? target.has_toilets);
-      const is_wheelchair_accessible = safeBool(aiMetadata.wheelchair  ?? aiMetadata.is_wheelchair_accessible ?? target.is_wheelchair_accessible);
-      const hosts_derby              = safeBool(aiMetadata.derby        ?? aiMetadata.hosts_derby              ?? target.hosts_derby);
-      const cultural_metadata        = aiMetadata.cultural_meta || aiMetadata.cultural_metadata       || target.cultural_metadata        || null;
+      const special_events       = aiMetadata.special_events       || target.special_events       || null;
+      // capacity is integer in DB — use parseInt, not parseFloat
+      const rawCapacity          = aiMetadata.capacity ?? target.capacity;
+      const capacity             = rawCapacity != null && !isNaN(parseInt(String(rawCapacity))) ? parseInt(String(rawCapacity)) : null;
+      const has_rental           = safeBool(aiMetadata.has_rental           ?? target.has_rental);
+      const has_pro_shop         = safeBool(aiMetadata.has_pro_shop         ?? target.has_pro_shop);
+      const has_food             = safeBool(aiMetadata.has_food             ?? target.has_food);
+      const has_lights           = safeBool(aiMetadata.has_lights           ?? target.has_lights);
+      const has_lockers          = safeBool(aiMetadata.has_lockers          ?? target.has_lockers);
+      const has_ac               = safeBool(aiMetadata.has_ac               ?? target.has_ac);
+      const has_wifi             = safeBool(aiMetadata.has_wifi             ?? target.has_wifi);
+      const has_toilets          = safeBool(aiMetadata.has_toilets          ?? target.has_toilets);
+      const is_wheelchair_accessible = safeBool(aiMetadata.wheelchair ?? aiMetadata.is_wheelchair_accessible ?? target.is_wheelchair_accessible);
+      const hosts_derby              = safeBool(aiMetadata.derby     ?? aiMetadata.hosts_derby              ?? target.hosts_derby);
+      const cultural_metadata        = aiMetadata.cultural_meta     || aiMetadata.cultural_metadata         || target.cultural_metadata || null;
+      const operator_description     = aiMetadata.operator_description || target.operator_description       || null;
 
       // ── Social Links (from collected hrefs) ────────────────────────────────
       let instagram_url = target.instagram_url || null;
@@ -372,15 +377,43 @@ async function runIndexer() {
         }
       }
 
-      // ── Log Summary ────────────────────────────────────────────────────────
+      // ── Quality Gate — count populated fields before advancing ──────────────
+      // Each non-null key field counts as 1 point.
+      // DEEP_CRAWLED requires >= 2 points so we know the AI actually extracted something.
+      // Records with 0-1 points are marked STALLED — visible on dashboard, not re-queued blindly.
+      const qualityFields = [
+        opening_hours, pricing_data, surface_type, vibe_score,
+        has_fee, has_rental, has_pro_shop, has_food, has_lights,
+        has_ac, has_lockers, has_toilets, has_wifi,
+        has_adult_night, special_events, operator_description, cultural_metadata
+      ];
+      const qualityScore = qualityFields.filter(f => f !== null && f !== undefined && f !== false).length;
       const hoursFound   = Object.keys(opening_hours || {}).length;
+      const pricingFound = Object.keys(pricing_data  || {}).length;
+      const eventsFound  = Array.isArray(special_events) ? special_events.length : 0;
       const schedFound   = adultNightSchedule ? Object.keys(adultNightSchedule).length : 0;
-      const eventsFound  = special_events?.length || 0;
-      const pricingFound = Object.keys(pricing_data || {}).length;
-      console.log(`   ✓ Hours[${hoursFound}/7] AdultNight[${has_adult_night ? 'Y' : 'N'}, ${schedFound}d] Events[${eventsFound}] Pricing[${pricingFound}] Socials[IG:${instagram_url ? 'Y' : 'N'} FB:${facebook_url ? 'Y' : 'N'}] Photos[${candidate_photos ? Object.keys(candidate_photos).length : 0}]`);
 
-      // ── Write to DB ────────────────────────────────────────────────────────
+      console.log(`   📊 Quality[${qualityScore}/17] Hours[${hoursFound}/7] Pricing[${pricingFound}] AdultNight[${has_adult_night ? 'Y' : 'N'}, ${schedFound}d] Events[${eventsFound}] Socials[IG:${instagram_url ? 'Y' : 'N'} FB:${facebook_url ? 'Y' : 'N'}] Photos[${candidate_photos ? Object.keys(candidate_photos).length : 0}]`);
+
+      if (qualityScore < 2) {
+        // AI ran but extracted nothing meaningful — mark STALLED so it is visible on dashboard
+        console.error(`   ⚠️  STALLED: Quality score ${qualityScore}/17 — insufficient data extracted. Marking STALLED.`);
+        await supabase.from('skate_spots').update({
+          verification_status: 'STALLED',
+          is_deep_crawled: false,
+          retry_count: (target.retry_count || 0) + 1,
+          last_attempted_at: new Date().toISOString(),
+          ai_metadata: Object.keys(aiMetadata).length > 0 ? aiMetadata : (target.ai_metadata || null),
+          ...(candidate_photos ? { candidate_photos } : {})
+        }).eq('id', target.id);
+        continue;
+      }
+
+      // ── Write all fields to DB ─────────────────────────────────────────────
       const { error: updateError } = await supabase.from('skate_spots').update({
+        // Identity enrichment
+        is_indoor,
+        operator_description,
         // Social
         instagram_url,
         facebook_url,
@@ -395,7 +428,8 @@ async function runIndexer() {
         // Events & Pricing
         special_events,
         pricing_data,
-        // Facility attributes (all extracted by AI)
+        has_fee,
+        // Facility attributes (AI extracted)
         surface_type,
         surface_quality,
         vibe_score,
@@ -413,9 +447,9 @@ async function runIndexer() {
         cultural_metadata,
         // Photos
         ...(candidate_photos ? { candidate_photos } : {}),
-        // AI dump
+        // AI raw dump
         ai_metadata: Object.keys(aiMetadata).length > 0 ? aiMetadata : (target.ai_metadata || null),
-        // Pipeline — ENRICHED → DEEP_CRAWLED
+        // ✅ Pipeline advance — only reached if qualityScore >= 2
         verification_status: 'DEEP_CRAWLED',
         is_deep_crawled: true,
         retry_count: 0,
@@ -423,9 +457,8 @@ async function runIndexer() {
       }).eq('id', target.id);
 
       if (updateError) {
-        // Type sanitizers should prevent this, but if it still fails — DO NOT loop.
-        // Advance the record to DEEP_CRAWLED with a minimal safe payload so it never gets re-picked.
-        console.error('[Indexer] Full update failed, writing safe fallback to advance pipeline:', updateError.message);
+        console.error('[Indexer] DB write failed after sanitization:', updateError.message);
+        // Still advance — raw AI data is in ai_metadata, don't re-queue
         await supabase.from('skate_spots').update({
           verification_status: 'DEEP_CRAWLED',
           is_deep_crawled: true,
