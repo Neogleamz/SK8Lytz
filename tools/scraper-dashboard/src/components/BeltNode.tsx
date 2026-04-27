@@ -178,7 +178,13 @@ export const BeltNode: React.FC<BeltProps> = ({
         <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, background: colVar, boxShadow: `0 0 12px ${colVar}` }} />
 
         {/* Phase name — clickable */}
-        <button onClick={() => setConfigOpen(!isConfigOpen)} style={{
+        <button onClick={() => {
+          if (id === 6 && onPhaseNav) {
+            onPhaseNav();
+          } else {
+            setConfigOpen(!isConfigOpen);
+          }
+        }} style={{
           background: 'none', border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 10, padding: 0,
           flexShrink: 0,
@@ -190,7 +196,7 @@ export const BeltNode: React.FC<BeltProps> = ({
             textShadow: `0 0 20px ${colVar}, 0 0 40px rgba(${colRgb},0.5)`,
           }}>{name}</span>
           <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.22)', fontFamily: 'JetBrains Mono, monospace', marginLeft: 6 }}>
-            {isConfigOpen ? '▼ CLOSE' : '↗ CONFIGURE'}
+            {id === 6 ? '↗ OPEN WORKBENCH' : (isConfigOpen ? '▼ CLOSE' : '↗ CONFIGURE')}
           </span>
         </button>
 

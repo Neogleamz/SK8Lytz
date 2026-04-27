@@ -52,7 +52,8 @@ const safeBool = (v: any): boolean | null => {
   if (typeof v === 'string') {
     const lower = v.toLowerCase().trim();
     if (['yes', 'true', '1', 'y', 'available', 'offered'].includes(lower)) return true;
-    if (['no', 'false', '0', 'n', 'null', 'none', 'unknown', 'not available', 'n/a'].includes(lower)) return false;
+    if (['no', 'false', '0', 'n'].includes(lower)) return false;
+    if (['null', 'none', 'unknown', 'not available', 'n/a'].includes(lower)) return null;
   }
   // Free-text sentences (e.g. "Wheelchairs are allowed...") → null, not a crash
   return null;
@@ -365,8 +366,15 @@ async function runIndexer() {
       const is_indoor            = safeBool(aiMetadata.is_indoor            ?? target.is_indoor);
       const has_fee              = safeBool(aiMetadata.has_fee              ?? target.has_fee);
       const has_adult_night      = safeBool(aiMetadata.has_adult_night      ?? target.has_adult_night) ?? false;
-      const adult_night_details  = aiMetadata.adult_night_details  || target.adult_night_details  || null;
-      const adultNightSchedule   = aiMetadata.adult_night_schedule || target.adult_night_schedule || null;
+      let adult_night_details  = aiMetadata.adult_night_details  || target.adult_night_details  || null;
+      let adultNightSchedule   = aiMetadata.adult_night_schedule || target.adult_night_schedule || null;
+      
+      // Anti-hallucination guard: Nullify details if the AI says adult night doesn't exist
+      if (has_adult_night === false) {
+        adult_night_details = null;
+        adultNightSchedule = null;
+      }
+
       const special_events       = aiMetadata.special_events       || target.special_events       || null;
       // capacity is integer in DB — use parseInt, not parseFloat
       const rawCapacity          = aiMetadata.capacity ?? target.capacity;

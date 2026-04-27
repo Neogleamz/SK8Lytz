@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import USAMap from './USMap';
-import DetectiveLab from './DetectiveLab';
 import ScraperPipeline from './components/ScraperPipeline';
+import { SniperBench } from './components/SniperBench';
 import './App.css';
 
 const API_BASE = 'http://localhost:5999';
@@ -55,7 +55,7 @@ const US_STATES = [
 ];
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5' | 'phase6'>('pipeline');
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5' | 'phase6' | 'sniper'>('pipeline');
   const [seedProvider, setSeedProvider] = useState<'osm'|'google'>('google');
 
 
@@ -658,7 +658,7 @@ function App() {
     { id: '4', title: 'Publisher', sub: 'QA Review + Live App Gate', route: 'phase6', color: '#4caf50',
       target: 'Review -> is_published',
       metric: status?.publishedCount || 0, metricLabel: 'Live on App', isDaemon: false,
-      statusActive: true },
+      statusActive: true }
   ];
 
   // ── REGION PULSE — single source of truth, used in both tab layouts ──
@@ -855,7 +855,11 @@ function App() {
         <span style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.18)' }}>ms</span>
       </div>
       {/* Power — pushed right */}
-      <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', flexShrink: 0 }}>
+      <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', flexShrink: 0, alignItems: 'center' }}>
+        <button className="btn-icon" onClick={() => setActiveTab('sniper' as any)} title="Sniper Bench"
+          style={{ background: activeTab === 'sniper' ? 'rgba(244, 63, 94, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'sniper' ? '#f43f5e' : 'rgba(255,255,255,0.6)', border: activeTab === 'sniper' ? '1px solid #f43f5e' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer' }}>
+          🎯
+        </button>
         <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}
           style={{ padding: '4px 12px', fontSize: '0.62rem', fontWeight: 800 }}>BOOT ALL</button>
         <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}
@@ -2110,6 +2114,12 @@ function App() {
           </div>
         )}
       </div>
+
+      {activeTab === 'sniper' && (
+        <div className="tab-pane phase-sniper" style={{ height: '80vh', width: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid #2D3340', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+          <SniperBench />
+        </div>
+      )}
 
       <div className="log-panel panel">
         <div className="log-header">

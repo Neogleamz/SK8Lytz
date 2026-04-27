@@ -90,7 +90,7 @@ const generateUniformBelt = (idx: number, id: number, name: string, color: strin
 });
 
 // Belt id → app tab mapping
-const BELT_TAB: Record<number, string> = { 1: 'phase1', 2: 'phase2', 3: 'phase3', 4: 'phase4', 5: 'phase5' };
+const BELT_TAB: Record<number, string> = { 1: 'phase1', 2: 'phase2', 3: 'phase3', 4: 'phase4', 5: 'phase6', 6: 'sniper' };
 
 export const ScraperPipeline: React.FC<{
     headerControls?: React.ReactNode;
@@ -231,7 +231,8 @@ export const ScraperPipeline: React.FC<{
         generateUniformBelt(2, 2, 'Phase 2 │ Spider (Operator)  IN: SEEDED → OUT: ENRICHED', '--neon-crawl', '157, 78, 221', 'Spider_v3', 'PROCESSING...', 'Waiting', 'SEEDED', 'ENRICHED', getQueueNames('phase2')),
         generateUniformBelt(3, 3, 'Phase 3 │ Detective (Indexer)  IN: ENRICHED → OUT: DEEP_CRAWLED', '--neon-detective', '255, 106, 0', 'Llama3.2-8b', 'PROCESSING...', 'Waiting', 'ENRICHED', 'DEEP_CRAWLED', getQueueNames('phase3')),
         generateUniformBelt(4, 4, 'Phase 4 │ Photographer  IN: DEEP_CRAWLED → OUT: MEDIA_READY', '--neon-photo', '255, 0, 127', 'Vision_v1', 'PROCESSING...', 'Waiting', 'DEEP_CRAWLED', 'MEDIA_READY', getQueueNames('phase4')),
-        generateUniformBelt(5, 5, 'Phase 5 │ Publisher  IN: MEDIA_READY → OUT: PUBLISHED', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('phase6'))
+        generateUniformBelt(5, 5, 'Phase 5 │ Publisher  IN: MEDIA_READY → OUT: PUBLISHED', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('phase6')),
+        generateUniformBelt(6, 6, 'Sniper Bench │ Single-Record Brute Force QA', '#f43f5e', '244, 63, 94', 'Interactive', 'IDLE', 'Awaiting URL', 'N/A', '68-Field Map', [])
     ];
 
     // Restore the technical target collection checklists on the Active Job cards with EVERY field
@@ -337,6 +338,7 @@ export const ScraperPipeline: React.FC<{
         3: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Indexer: online')),     onStart: () => triggerSpecificDaemon?.('indexer', 'start'),     onStop: () => triggerSpecificDaemon?.('indexer', 'stop') },
         4: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Photographer: online')), onStart: () => triggerSpecificDaemon?.('photographer', 'start'), onStop: () => triggerSpecificDaemon?.('photographer', 'stop') },
         5: { hasDaemon: false, active: false, onStart: () => {}, onStop: () => {} },
+        6: { hasDaemon: false, active: false, onStart: () => {}, onStop: () => {} },
     };
 
 
