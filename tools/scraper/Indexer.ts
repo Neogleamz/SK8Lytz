@@ -325,7 +325,9 @@ async function runIndexer() {
         contextHeader = `You are analyzing website content for a skate facility. The specific location is [${target.name}] in [${target.city}]. The text below may contain info for multiple franchise locations. ONLY extract data for [${target.name}]. Ignore all other cities.\n\n`;
       }
 
-      const prompt = `${contextHeader}${systemPrompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${combinedText.slice(0, 12000)}`;
+      // We slice to 25000 chars (~6k tokens) to fit within LLaMA 3.1's 8k context window.
+      // The previous 12k limit was artificially cutting off pages with massive event lists.
+      const prompt = `${contextHeader}${systemPrompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${combinedText.slice(0, 25000)}`;
 
       const detectiveModel = aiConfig.detective_model || 'llama3.1';
       console.log(`   🧠 Invoking Ollama Detective (${detectiveModel})...`);
@@ -340,7 +342,10 @@ async function runIndexer() {
             model: detectiveModel,
             prompt,
             format: 'json',
-            stream: false
+            stream: false,
+            options: {
+              num_ctx: 8192
+            }
           })
         });
         if (!response.ok) throw new Error('Ollama HTTP error');
