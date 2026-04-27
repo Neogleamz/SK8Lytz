@@ -114,3 +114,6 @@ tools/RECOVERED_TASKS.md
 
 # Local Database Backups
 backups/
+
+# Tesseract
+*.traineddata
