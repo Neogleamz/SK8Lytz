@@ -363,6 +363,8 @@ app.post('/api/sniper/seed', async (req, res) => {
     website: url,
     name: spot_name || 'Sniper Target',
     city: spot_city || null,
+    lat: 0.0, // Sniper placeholder — no geo lookup performed
+    lng: 0.0, // Sniper placeholder — no geo lookup performed
     verification_status: 'SEEDED',
     retry_count: -999, // Push to front of queue
     last_attempted_at: new Date(0).toISOString() // Force immediate pickup
