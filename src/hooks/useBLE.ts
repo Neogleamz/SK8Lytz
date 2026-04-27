@@ -526,42 +526,36 @@ export default function useBLE(): BluetoothLowEnergyApi {
     const chunkSize = Math.max(20, safeMtu); 
 
     const totalLen = payload.length;
-    const seqByte = Math.floor(Math.random() * 256) & 0xFF; // Random sequence per transaction
+    // Random session sequence byte — constant across all chunks of one transaction
+    const seqByte = Math.floor(Math.random() * 256) & 0xFF;
 
     const chunks: number[][] = [];
     let offset = 0;
-    let segIdx = 0;
 
     while (offset < totalLen) {
-      const isFirst = offset === 0;
-      const headerSize = isFirst ? 8 : 5;
-      let dataLen = Math.min(chunkSize - headerSize, totalLen - offset);
-      const isLast = (offset + dataLen) >= totalLen;
+      // ZENGGE 0x40 chunk header is always 8 bytes:
+      //   [0x40, seqByte, offset_lo, offset_hi, 0x01, 0x43, 0xBD, 0x0B, ...data]
+      //
+      // Source: Live BLE HCI sniff of official ZENGGE app (2026-04-22).
+      // Bytes [4-6] = ZENGGE proprietary magic — NOT payload length.
+      // Bytes [2-3] = byte offset into full payload, little-endian, for hardware reassembly.
+      const HEADER_SIZE = 8;
+      const dataLen = Math.min(chunkSize - HEADER_SIZE, totalLen - offset);
 
-      const chunk = [0x40, seqByte];
-      
-      let currentSegIdx = segIdx;
-      if (isLast) {
-        currentSegIdx |= 0x8000; // MSB flag for EOF Terminator
-      }
+      const chunk = [
+        0x40,                    // ZENGGE chunked frame marker
+        seqByte,                 // Session sequence ID (random per transaction)
+        offset & 0xFF,           // offset_lo (little-endian byte offset into full payload)
+        (offset >> 8) & 0xFF,    // offset_hi
+        0x01,                    // ZENGGE magic byte 1 — BLE sniff verified, DO NOT CHANGE
+        0x43,                    // ZENGGE magic byte 2 — BLE sniff verified, DO NOT CHANGE
+        0xBD,                    // ZENGGE magic byte 3 — BLE sniff verified, DO NOT CHANGE
+        0x0B,                    // Command write ID    — BLE sniff verified, DO NOT CHANGE
+        ...payload.slice(offset, offset + dataLen),
+      ];
 
-      chunk.push((currentSegIdx >> 8) & 0xFF);
-      chunk.push(currentSegIdx & 0xFF);
-
-      if (isFirst) {
-        chunk.push((totalLen >> 8) & 0xFF);
-        chunk.push(totalLen & 0xFF);
-        chunk.push(dataLen & 0xFF);
-        chunk.push(0x0B); // Command ID for Control/Write
-      } else {
-        chunk.push(dataLen & 0xFF);
-      }
-
-      chunk.push(...payload.slice(offset, offset + dataLen));
       chunks.push(chunk);
-
       offset += dataLen;
-      segIdx++;
     }
 
     AppLogger.log('BLE_CHUNKED_WRITE', { payloadLen: totalLen, numChunks: chunks.length, chunkSize });

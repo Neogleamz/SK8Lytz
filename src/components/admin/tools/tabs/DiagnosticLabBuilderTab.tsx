@@ -62,6 +62,9 @@ export function DiagnosticLabBuilderTab({
   // 0x73 isOn state for builder + Oracle fix
   const [bldMusicIsOn, setBldMusicIsOn] = useState(true);
 
+  // 0x51 format toggle: 'compact' = 9B/slot wrapCommand, 'extended' = 10B/slot×32 writeChunked
+  const [bld51Format, setBld51Format] = useState<'compact' | 'extended'>('compact');
+
   // Sync override with result whenever result changes (unless manually edited)
   useEffect(() => {
     if (bldResult?.hex) setBldHexOverride(bldResult.hex);
@@ -166,6 +169,79 @@ export function DiagnosticLabBuilderTab({
 
           <Text style={[S.subTitle, { color: txtMuted, marginTop: Spacing.md }]}>BACKGROUND (COLOR 2)</Text>
           <QuickColorGrid activeColor={bld51Color2} onSelect={setBld51Color2} />
+
+          {/* ── FORMAT TOGGLE ──────────────────────────────────────────────── */}
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, marginTop: Spacing.xl, fontWeight: '900' }}>PACKET FORMAT — SELECT BEFORE TX</Text>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
+            <TouchableOpacity
+              style={[S.chip, bld51Format === 'compact' && { backgroundColor: '#00E67633', borderColor: '#00E676' }, { flex: 1, paddingVertical: Spacing.md }]}
+              onPress={() => setBld51Format('compact')}
+            >
+              <Text style={{ color: bld51Format === 'compact' ? '#00E676' : txtMuted, fontWeight: '900', fontSize: 11, textAlign: 'center' }}>COMPACT (9B)</Text>
+              <Text style={{ color: bld51Format === 'compact' ? '#00E676' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>wrapCommand · confirmed ✅</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[S.chip, bld51Format === 'extended' && { backgroundColor: '#FF950033', borderColor: '#FF9500' }, { flex: 1, paddingVertical: Spacing.md }]}
+              onPress={() => setBld51Format('extended')}
+            >
+              <Text style={{ color: bld51Format === 'extended' ? '#FF9500' : txtMuted, fontWeight: '900', fontSize: 11, textAlign: 'center' }}>EXTENDED (323B)</Text>
+              <Text style={{ color: bld51Format === 'extended' ? '#FF9500' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>writeChunked · 0x40 framing</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ── LIVE PAYLOAD BYTE PREVIEW ──────────────────────────────────── */}
+          <View style={{ backgroundColor: isDark ? '#05070a' : '#f9fafb', borderRadius: 8, padding: Spacing.md, marginBottom: Spacing.lg, borderColor: bld51Format === 'extended' ? '#FF9500' : '#00E676', borderWidth: 1 }}>
+            {bld51Format === 'compact' ? (
+              <Text style={{ color: cyan, fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+                {`[0x51, 0xF0, 0x${(parseInt(bld51Mode)||1).toString(16).padStart(2,'0').toUpperCase()}, 0x${(Math.max(1,Math.min(31,parseInt(bld51Speed)||16))).toString(16).padStart(2,'0').toUpperCase()},`}
+                {`\n R1=${bld51Color1.r} G1=${bld51Color1.g} B1=${bld51Color1.b},`}
+                {`\n R2=${bld51Color2.r} G2=${bld51Color2.g} B2=${bld51Color2.b},`}
+                {`\n 0x0F, CS]  ← 12 bytes`}
+              </Text>
+            ) : (
+              <Text style={{ color: '#FF9500', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+                {`[0x51, 0xF0, 0x${(parseInt(bld51Mode)||1).toString(16).padStart(2,'0').toUpperCase()}, 0x${(Math.max(1,Math.min(31,parseInt(bld51Speed)||16))).toString(16).padStart(2,'0').toUpperCase()},`}
+                {`\n R1=${bld51Color1.r} G1=${bld51Color1.g} B1=${bld51Color1.b},`}
+                {`\n R2=${bld51Color2.r} G2=${bld51Color2.g} B2=${bld51Color2.b},`}
+                {`\n flags=0x${bld51Dir === 1 ? '80' : '00'} (${bld51Dir === 1 ? 'FWD+SEG' : 'REV'})]`}
+                {`\n + 31 empty slots + [0x0F, CS]  ← 323 bytes via 0x40 chunks`}
+              </Text>
+            )}
+          </View>
+
+          {/* ── TX BUTTONS ─────────────────────────────────────────────────── */}
+          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+            <TouchableOpacity
+              style={[S.txBtn, { flex: 1, backgroundColor: '#00E676', borderColor: '#00E676' }]}
+              onPress={() => {
+                const mode = Math.max(1, Math.min(44, parseInt(bld51Mode) || 1));
+                const speed = Math.max(1, Math.min(31, parseInt(bld51Speed) || 16));
+                transmit(
+                  ZenggeProtocol.setCustomModeCompact([{ mode, speed, color1: bld51Color1, color2: bld51Color2 }]),
+                  `0x51 compact mode=${mode} spd=${speed}`,
+                  '0x51'
+                );
+              }}
+            >
+              <Text style={{ color: '#000', fontWeight: '900', fontSize: 11 }}>TX COMPACT (9B)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[S.txBtn, { flex: 1, backgroundColor: '#FF9500', borderColor: '#FF9500' }]}
+              onPress={() => {
+                const mode = Math.max(1, Math.min(44, parseInt(bld51Mode) || 1));
+                const speed = Math.max(1, Math.min(31, parseInt(bld51Speed) || 16));
+                const flags = bld51Dir === 1 ? 0x80 : 0x00;
+                // Extended payload is 323B — writeToDevice will auto-route to writeChunked
+                transmit(
+                  ZenggeProtocol.setCustomModeExtended([{ mode, speed, color1: bld51Color1, color2: bld51Color2, dir: flags }]),
+                  `0x51 extended mode=${mode} spd=${speed} dir=0x${flags.toString(16).toUpperCase()}`,
+                  '0x51'
+                );
+              }}
+            >
+              <Text style={{ color: '#000', fontWeight: '900', fontSize: 11 }}>TX EXTENDED (323B)</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
