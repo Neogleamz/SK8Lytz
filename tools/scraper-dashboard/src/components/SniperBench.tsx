@@ -8,6 +8,7 @@ export const SniperBench: React.FC = () => {
   const [spotCity, setSpotCity] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any>(null);
+  const [liveSpot, setLiveSpot] = useState<Record<string, any> | null>(null);
   const [executionLog, setExecutionLog] = useState<string[]>([]);
   const [cleanText, setCleanText] = useState<string>('');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -18,6 +19,7 @@ export const SniperBench: React.FC = () => {
     if (!url) return alert('URL is required for Sniper test');
     setLoading(true);
     setResults(null);
+    setLiveSpot(null);
     setExecutionLog([]);
     setCleanText('');
 
@@ -48,6 +50,8 @@ export const SniperBench: React.FC = () => {
           
           if (pollData.success && pollData.spot) {
             const spot = pollData.spot;
+            // Always update the live spot — gives immediate Phase 1 data
+            setLiveSpot(spot);
             
             if (spot.verification_status !== currentStatus) {
               currentStatus = spot.verification_status;
@@ -245,11 +249,14 @@ export const SniperBench: React.FC = () => {
                 let hasValue = false;
                 let value: any = null;
                 
-                if (results) {
-                  value = results[f.field_name];
-                  const isMissing = value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0) || (typeof value === 'object' && Object.keys(value).length === 0);
-                  hasValue = !isMissing || value === false;
-                }
+                // Value resolution: liveSpot covers ALL db columns (Phase 1-4);
+                // results (raw_ai_payload) covers AI-extracted fields that may differ.
+                // Prefer liveSpot first so Phase 1 data shows immediately.
+                const spotVal = liveSpot ? liveSpot[f.field_name] : undefined;
+                const aiVal = results ? results[f.field_name] : undefined;
+                value = spotVal !== undefined && spotVal !== null ? spotVal : aiVal;
+                const isMissing = value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0) || (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0);
+                hasValue = !isMissing || value === false;
 
                 const methodText = f.phase_id === 1 ? 'Google Places API (Direct)' : 
                                     f.phase_id === 2 ? 'DOM Crawler (Homepage Links)' :
@@ -264,7 +271,7 @@ export const SniperBench: React.FC = () => {
                       <span style={{ fontSize: '0.625rem', fontFamily: 'JetBrains Mono, monospace', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>{f.field_name}</span>
                     </div>
                     <div style={{ width: '15%', display: 'flex', alignItems: 'center' }}>
-                      {!results ? (
+                      {!liveSpot && !results ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '4px' }}>
                           <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>⏳</span>
                           <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#94a3b8' }}>AWAITING</span>
@@ -282,7 +289,7 @@ export const SniperBench: React.FC = () => {
                       )}
                     </div>
                     <div style={{ width: '40%', display: 'flex', alignItems: 'center', paddingRight: '10px' }}>
-                      {!results ? (
+                      {!liveSpot && !results ? (
                          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.2)', fontFamily: 'JetBrains Mono, monospace', fontStyle: 'italic' }}>Pending Sniper Fire...</span>
                       ) : hasValue ? (
                         <pre style={{ fontSize: '0.75rem', color: '#e2e8f0', fontFamily: 'JetBrains Mono, monospace', background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '6px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxWidth: '100%', margin: 0, border: '1px solid rgba(255,255,255,0.05)' }}>
