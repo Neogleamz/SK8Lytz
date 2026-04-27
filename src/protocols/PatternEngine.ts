@@ -1312,21 +1312,16 @@ export function buildPatternPayload(
       }
     }
 
-    // Hardware expects direction logic via the 10th byte (0x80 = forward, 0x00 = reverse)
-    let hardwareDir = direction === 1 ? 0x80 : 0x00;
-    
-    // For 201-244, direction is physically baked into the modeId pair (e.g. 5 vs 6).
-    // We send 0x80 (forward) for the segment mirror byte to prevent double-inversion.
-    if (patternId >= 201 && patternId <= 244) {
-      hardwareDir = 0x80;
-    }
-
-    return ZenggeProtocol.setCustomModeExtended([{
+    // Direction for named patterns (17,18,26,72) is encoded via the modeId itself.
+    // Direction for TEST group (201-244) is encoded via the modeId pairing (e.g. 5=fwd, 6=rev).
+    // Compact format has no dir byte slot — this is correct and intentional.
+    // EXTENDED format (323B via writeChunked) is confirmed non-functional on 0xA3 hardware
+    // until a real HCI BLE sniff validates the 0x40 framing. Compact is the confirmed path.
+    return ZenggeProtocol.setCustomModeCompact([{
       mode: modeId,
       speed,
       color1: fg,
       color2: bg,
-      dir: hardwareDir
     }]);
   }
 
