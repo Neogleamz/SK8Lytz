@@ -328,77 +328,14 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
             </>
           )}
 
-          {/* Phase 2: CRAWL */}
-          {phaseId === 2 && (
-            <>
-              <div style={{ gridColumn: '1 / -1', background: 'rgba(157,78,221,0.05)', border: `1px solid ${colColor}44`, padding: '10px', borderRadius: '6px', marginBottom: '8px' }}>
-                <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping</h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
-                  {fields.filter(f => f.phase_id === 2).map(f => (
-                    <span key={f.field_name} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {f.field_name}</span>
-                  ))}
-                  {config?.crawl_priority_paths?.map((p: string, i: number) => (
-                    <span key={`path-${i}`} style={{ color: colColor, background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {p}</span>
-                  ))}
-                  {registryLoading && <span>Loading registry...</span>}
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <ToggleSwitch label="Auto Resume Enabled" checked={config?.auto_resume_enabled} onChange={(v) => handleUpdate('auto_resume_enabled', v)} colColor={colColor} />
-                <ToggleSwitch label="Identity Rotation (Spoofing)" checked={config?.identity_rotation_enabled} onChange={(v) => handleUpdate('identity_rotation_enabled', v)} colColor={colColor} />
-                <ToggleSwitch label="Randomize Viewport" checked={config?.randomize_viewport_enabled} onChange={(v) => handleUpdate('randomize_viewport_enabled', v)} colColor={colColor} />
-                <TagInput label="Priority Paths (/pricing, /about)" tags={config?.crawl_priority_paths || []} setTags={(t) => handleUpdate('crawl_priority_paths', t)} colColor={colColor} />
-                <TagInput label="Social Platforms" tags={config?.crawl_social_platforms || []} setTags={(t) => handleUpdate('crawl_social_platforms', t)} colColor={colColor} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div>
-                  <label style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: colColor, boxShadow: `0 0 8px ${colColor}` }} />
-  Crawl Depth
-</label>
-                  <input type="number" value={config?.crawl_depth || 2} onChange={(e) => handleUpdate('crawl_depth', parseInt(e.target.value))} style={{ width: '100%', background: 'rgba(20, 20, 30, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)', borderBottom: `2px solid ${colColor}`, color: '#fff', padding: '10px 14px', borderRadius: '6px', fontSize: '0.75rem', fontFamily: 'Outfit, sans-serif', outline: 'none', transition: 'all 0.2s ease', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: colColor, boxShadow: `0 0 8px ${colColor}` }} />
-  HTTP Sleep Interval (ms)
-</label>
-                  <input type="number" value={config?.sleep_interval_ms || 500} onChange={(e) => handleUpdate('sleep_interval_ms', parseInt(e.target.value))} style={{ width: '100%', background: 'rgba(20, 20, 30, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)', borderBottom: `2px solid ${colColor}`, color: '#fff', padding: '10px 14px', borderRadius: '6px', fontSize: '0.75rem', fontFamily: 'Outfit, sans-serif', outline: 'none', transition: 'all 0.2s ease', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: colColor, boxShadow: `0 0 8px ${colColor}` }} />
-  Cooldown Base (ms)
-</label>
-                  <input type="number" value={config?.cooldown_base_ms || 3000} onChange={(e) => handleUpdate('cooldown_base_ms', parseInt(e.target.value))} style={{ width: '100%', background: 'rgba(20, 20, 30, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)', borderBottom: `2px solid ${colColor}`, color: '#fff', padding: '10px 14px', borderRadius: '6px', fontSize: '0.75rem', fontFamily: 'Outfit, sans-serif', outline: 'none', transition: 'all 0.2s ease', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: colColor, boxShadow: `0 0 8px ${colColor}` }} />
-  Max Consecutive Errors
-</label>
-                  <input type="number" value={config?.max_consecutive_errors || 3} onChange={(e) => handleUpdate('max_consecutive_errors', parseInt(e.target.value))} style={{ width: '100%', background: 'rgba(20, 20, 30, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)', borderBottom: `2px solid ${colColor}`, color: '#fff', padding: '10px 14px', borderRadius: '6px', fontSize: '0.75rem', fontFamily: 'Outfit, sans-serif', outline: 'none', transition: 'all 0.2s ease', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: colColor, boxShadow: `0 0 8px ${colColor}` }} />
-  Gatekeeper Rules (JSON)
-</label>
-                  <textarea rows={3} value={JSON.stringify(config?.crawl_gatekeeper_rules, null, 2)} onChange={(e) => {
-                    try { handleUpdate('crawl_gatekeeper_rules', JSON.parse(e.target.value)) } catch (e) {}
-                  }} style={{ width: '100%', background: 'rgba(20, 20, 30, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)', borderBottom: `2px solid ${colColor}`, color: '#fff', padding: '10px 14px', borderRadius: '6px', fontSize: '0.75rem', fontFamily: 'Outfit, sans-serif', outline: 'none', transition: 'all 0.2s ease', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)', boxSizing: 'border-box' }} />
-                </div>
-              </div>
-            </>
-          )}
 
-          {/* Phase 3: DETECTIVE */}
-          {phaseId === 3 && (
+          {/* Phase 2: DETECTIVE */}
+          {phaseId === 2 && (
             <>
               <div style={{ gridColumn: '1 / -1', background: 'rgba(255,106,0,0.05)', border: `1px solid ${colColor}44`, padding: '10px', borderRadius: '6px', marginBottom: '8px' }}>
                 <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping</h4>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
-                  {fields.filter(f => f.phase_id === 3).map(f => (
+                  {fields.filter(f => f.phase_id === 2).map(f => (
                     <span key={f.field_name} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {f.field_name}</span>
                   ))}
                   {config?.ai_target_vectors?.map((v: any, i: number) => (
@@ -546,13 +483,13 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
             </>
           )}
 
-          {/* Phase 4: PHOTOGRAPHER */}
-          {phaseId === 4 && (
+          {/* Phase 3: PHOTOGRAPHER */}
+          {phaseId === 3 && (
             <>
               <div style={{ gridColumn: '1 / -1', background: 'rgba(255,0,127,0.05)', border: `1px solid ${colColor}44`, padding: '10px', borderRadius: '6px', marginBottom: '8px' }}>
                 <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping</h4>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
-                  {fields.filter(f => f.phase_id === 4).map(f => (
+                  {fields.filter(f => f.phase_id === 3).map(f => (
                     <span key={f.field_name} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {f.field_name}</span>
                   ))}
                   {config?.photo_categories?.map((c: string, i: number) => (
@@ -602,13 +539,13 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
             </>
           )}
 
-          {/* Phase 5: PUBLISHER */}
-          {phaseId === 5 && (
+          {/* Phase 4: PUBLISHER */}
+          {phaseId === 4 && (
             <>
               <div style={{ gridColumn: '1 / -1', background: 'rgba(0,212,255,0.05)', border: `1px solid ${colColor}44`, padding: '10px', borderRadius: '6px', marginBottom: '8px' }}>
                 <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping</h4>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
-                  {fields.filter(f => f.phase_id === 5).map(f => (
+                  {fields.filter(f => f.phase_id === 4).map(f => (
                     <span key={f.field_name} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {f.field_name}</span>
                   ))}
                   {registryLoading && <span>Loading registry...</span>}

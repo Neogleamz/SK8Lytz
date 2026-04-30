@@ -126,6 +126,18 @@ if (!colCheck.find(c => c.name === 'sync_required')) {
   db.exec(`ALTER TABLE local_spots ADD COLUMN sync_required INTEGER DEFAULT 1`);
 }
 
+// Migrate field registry phase_ids from old 5-phase to new 4-phase numbering (idempotent)
+// Old: 1=Scout, 2=Spider(dead), 3=Detective, 4=Photographer, 5=Publisher
+// New: 1=Scout, 2=Detective, 3=Photographer, 4=Publisher
+// Run high→low to prevent collision (5→4 before 4→3, etc.)
+const hasOldPhase5 = (db.prepare('SELECT COUNT(*) as cnt FROM pipeline_field_registry WHERE phase_id = 5').get() as any)?.cnt > 0;
+const hasOldPhase4 = (db.prepare('SELECT COUNT(*) as cnt FROM pipeline_field_registry WHERE phase_id = 4').get() as any)?.cnt > 0;
+const hasOldPhase3 = (db.prepare('SELECT COUNT(*) as cnt FROM pipeline_field_registry WHERE phase_id = 3').get() as any)?.cnt > 0;
+if (hasOldPhase5) db.prepare('UPDATE pipeline_field_registry SET phase_id = 4 WHERE phase_id = 5').run();
+if (hasOldPhase4) db.prepare('UPDATE pipeline_field_registry SET phase_id = 3 WHERE phase_id = 4').run();
+if (hasOldPhase3) db.prepare('UPDATE pipeline_field_registry SET phase_id = 2 WHERE phase_id = 3').run();
+
+
 db.exec(`
   CREATE TRIGGER IF NOT EXISTS set_sync_required
   AFTER UPDATE ON local_spots
