@@ -120,6 +120,12 @@ export const ScraperPipeline: React.FC<{
 
     const getQueueNames = (phase: string, count: number = 3) => (phaseQueues?.[phase] || []).slice(0, count).map((s: any) => s.name || s.url || s.target);
 
+    // Fields to NEVER show in belt output cards — too bulky, use Phase drawer instead
+    const CARD_SKIP_FIELDS = new Set([
+        'candidate_photos', 'photos', 'ai_metadata', 'raw_data',
+        'candidate_links', 'raw_knowledge_panel', 'flyer_urls', 'dom_images'
+    ]);
+
     const buildPhaseCards = (phaseId: number, spots: any[]) => {
         return spots.map(spot => {
             const data: [string, React.ReactNode, string][] = [];
@@ -143,14 +149,14 @@ export const ScraperPipeline: React.FC<{
                 data.push(['\u25b6 CURRENT STATUS', s5, s5 === 'PUBLISHED' ? 'success' : 'warning']);
             }
 
-            // DYNAMIC FIELDS
-            const phaseFields = fields.filter(f => f.phase_id === phaseId);
+            // DYNAMIC FIELDS — skip bloat fields, compact all values to single lines
+            const phaseFields = fields.filter(f => f.phase_id === phaseId && !CARD_SKIP_FIELDS.has(f.field_name));
             phaseFields.forEach(f => {
                 let displayVal: React.ReactNode = 'NULL';
                 let status = 'missing';
 
                 const rawVal = spot[f.field_name];
-                const clVal = spot.candidate_links?.[f.field_name]; // fallback for nested link mapping
+                const clVal = spot.candidate_links?.[f.field_name];
 
                 if (f.data_type === 'boolean') {
                     displayVal = bool(rawVal);
@@ -162,49 +168,49 @@ export const ScraperPipeline: React.FC<{
                     displayVal = rawVal ? new Date(rawVal).toLocaleDateString() : 'NEVER';
                     status = rawVal ? 'val' : 'missing';
                 } else if (f.data_type === 'json') {
-                    displayVal = rawVal ? <pre style={{margin:0,fontSize:'0.6rem',maxHeight:'100px',overflow:'auto',background:'rgba(0,0,0,0.3)',padding:'4px'}}>{JSON.stringify(rawVal, null, 2)}</pre> : 'NULL';
-                    status = rawVal ? 'success' : 'missing';
+                    // Compact: show key count + first key preview, not a full pre block
+                    if (rawVal && typeof rawVal === 'object') {
+                        const keys = Object.keys(rawVal).filter(k => rawVal[k] != null && rawVal[k] !== '');
+                        displayVal = keys.length > 0
+                            ? `${keys.length} fields · ${keys.slice(0, 2).join(', ')}${keys.length > 2 ? '…' : ''}`
+                            : 'EMPTY';
+                        status = keys.length > 0 ? 'success' : 'missing';
+                    } else if (typeof rawVal === 'string' && rawVal.startsWith('{')) {
+                        try {
+                            const parsed = JSON.parse(rawVal);
+                            const keys = Object.keys(parsed).filter(k => parsed[k] != null && parsed[k] !== '');
+                            displayVal = keys.length > 0 ? `${keys.length} fields · ${keys.slice(0,2).join(', ')}` : 'EMPTY';
+                            status = keys.length > 0 ? 'success' : 'missing';
+                        } catch { displayVal = 'PARSE ERR'; status = 'missing'; }
+                    } else {
+                        displayVal = rawVal ? String(rawVal).slice(0, 60) : 'NULL';
+                        status = rawVal ? 'success' : 'missing';
+                    }
                 } else if (f.data_type === 'url_check') {
                     const target = clVal || rawVal;
-                    displayVal = target ? <a href={target} target="_blank" rel="noreferrer" style={{color: 'inherit', textDecoration: 'underline'}}>{target}</a> : 'NULL';
+                    displayVal = target ? <a href={target} target="_blank" rel="noreferrer" style={{color: 'inherit', textDecoration: 'underline'}}>{String(target).replace(/^https?:\/\//, '').slice(0, 40)}</a> : 'NULL';
                     status = ok(target);
                 } else if (f.data_type === 'json_array') {
-                    if (Array.isArray(rawVal) && rawVal.length > 0) {
-                        displayVal = (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: '100px', overflowY: 'auto' }}>
-                                {rawVal.map((item, idx) => (
-                                    typeof item === 'string' && item.startsWith('http')
-                                        ? <a key={idx} href={item} target="_blank" rel="noreferrer" style={{color: 'inherit', textDecoration: 'underline', fontSize: '0.65rem'}}>{item}</a>
-                                        : <span key={idx} style={{fontSize: '0.65rem'}}>{String(item)}</span>
-                                ))}
-                            </div>
-                        );
+                    // Compact: show count + preview of first item only
+                    const arr = Array.isArray(rawVal) ? rawVal
+                        : rawVal && typeof rawVal === 'object' ? Object.values(rawVal)
+                        : typeof rawVal === 'string' ? (() => { try { const p = JSON.parse(rawVal); return Array.isArray(p) ? p : []; } catch { return []; } })()
+                        : [];
+                    if (arr.length > 0) {
+                        const first = String(arr[0]).slice(0, 50);
+                        displayVal = arr.length === 1 ? first : `${arr.length} items · ${first}${first.length === 50 ? '…' : ''}`;
                         status = 'success';
-                    } else if (rawVal && typeof rawVal === 'object') {
-                        const keys = Object.keys(rawVal);
-                        if (keys.length > 0) {
-                            displayVal = (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: '100px', overflowY: 'auto' }}>
-                                    {keys.map((key, idx) => (
-                                        typeof rawVal[key] === 'string' && rawVal[key].startsWith('http')
-                                            ? <a key={idx} href={rawVal[key]} target="_blank" rel="noreferrer" style={{color: 'inherit', textDecoration: 'underline', fontSize: '0.65rem'}}>{rawVal[key]}</a>
-                                            : <span key={idx} style={{fontSize: '0.65rem'}}>{key}: {String(rawVal[key])}</span>
-                                    ))}
-                                </div>
-                            );
-                            status = 'success';
-                        } else {
-                            displayVal = 'NULL';
-                            status = 'missing';
-                        }
                     } else {
-                        displayVal = 'NULL';
-                        status = 'missing';
+                        displayVal = 'NULL'; status = 'missing';
                     }
                 } else {
-                    // String fallback
+                    // String: truncate to 60 chars
                     const target = clVal || rawVal;
-                    displayVal = target ? (typeof target === 'string' && target.startsWith('http') ? <a href={target} target="_blank" rel="noreferrer" style={{color: 'inherit', textDecoration: 'underline'}}>{target}</a> : String(target)) : 'NULL';
+                    if (target && typeof target === 'string' && target.startsWith('http')) {
+                        displayVal = <a href={target} target="_blank" rel="noreferrer" style={{color: 'inherit', textDecoration: 'underline'}}>{target.replace(/^https?:\/\//, '').slice(0, 40)}</a>;
+                    } else {
+                        displayVal = target ? String(target).slice(0, 80) : 'NULL';
+                    }
                     status = ok(target);
                 }
                 data.push([f.display_label, displayVal, status]);
@@ -226,8 +232,7 @@ export const ScraperPipeline: React.FC<{
         generateUniformBelt(1, 1, 'Phase 1 │ Scout (Seed Engine)  IN: null → OUT: SEEDED', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING...', 'Waiting', 'PENDING', 'SEEDED', getQueueNames('phase1')),
         generateUniformBelt(2, 2, 'Phase 2 │ Detective (AI Crawl)  IN: SEEDED → OUT: DEEP_CRAWLED', '--neon-detective', '255, 106, 0', 'Llama3.2-8b', 'PROCESSING...', 'Waiting', 'SEEDED', 'DEEP_CRAWLED', getQueueNames('phase2')),
         generateUniformBelt(3, 3, 'Phase 3 │ Photographer  IN: DEEP_CRAWLED → OUT: MEDIA_READY', '--neon-photo', '255, 0, 127', 'Vision_v1', 'PROCESSING...', 'Waiting', 'DEEP_CRAWLED', 'MEDIA_READY', getQueueNames('phase3')),
-        generateUniformBelt(4, 4, 'Phase 4 │ Publisher  IN: MEDIA_READY → OUT: PUBLISHED', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('phase4')),
-        generateUniformBelt(5, 5, 'Sniper Bench │ Single-Record Brute Force QA', '#f43f5e', '244, 63, 94', 'Interactive', 'IDLE', 'Awaiting URL', 'N/A', '68-Field Map', [])
+        generateUniformBelt(4, 4, 'Phase 4 │ Publisher  IN: MEDIA_READY → OUT: PUBLISHED', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('phase4'))
     ];
 
     // Dynamically pull attempting checkmarks from the field_registry

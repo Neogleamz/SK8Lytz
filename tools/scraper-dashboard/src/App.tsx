@@ -58,6 +58,7 @@ const US_STATES = [
 function App() {
   const [activeTab, setActiveTab] = useState<'pipeline' | 'phase1' | 'phase2' | 'phase3' | 'phase4' | 'sniper' | 'graveyard'>('pipeline');
   const [seedProvider, setSeedProvider] = useState<'osm'|'google'>('google');
+  const [resettingIds, setResettingIds] = useState<Record<string, 'loading' | 'success'>>({});
 
 
   // --- Sys Dashboard States ---
@@ -578,14 +579,21 @@ function App() {
   // Reset a single spot back to SEEDED so it re-enters the Detective queue
   const resetSpotToSeeded = async (id: string, name: string) => {
     if (!confirm(`Reset "${name}" back to SEEDED? The AI Detective will re-crawl it.`)) return;
+    setResettingIds(prev => ({ ...prev, [id]: 'loading' }));
     try {
-      await fetch(`${API_BASE}/api/spots/${id}`, {
+      await fetch(`/api/spots/`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ verification_status: 'SEEDED', retry_count: 0, last_attempted_at: null })
       });
-      fetchSpots(page, gridFilter);
-    } catch (e) {}
+      setResettingIds(prev => ({ ...prev, [id]: 'success' }));
+      setTimeout(() => {
+        setResettingIds(prev => { const next = {...prev}; delete next[id]; return next; });
+        fetchSpots(page, gridFilter);
+      }, 1500);
+    } catch (e) {
+      setResettingIds(prev => { const next = {...prev}; delete next[id]; return next; });
+    }
   };
 
   // Bulk reset all filtered records back to SEEDED (respects global state + facility filters)
@@ -880,20 +888,13 @@ function App() {
           FACTORY FLOOR
         </button>
         {/* Bulk Reset to SEEDED — respects global state + facility filters */}
-        <button
+                <button
           onClick={bulkResetToSeeded}
           disabled={isBulkResetting}
           title={`Reset all ${stateOverride.length > 0 ? stateOverride.join('/') : 'ALL'} ${targetFacilities.length > 0 ? targetFacilities.join('/') : 'ALL TYPE'} records back to SEEDED`}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '5px',
-            padding: '5px 12px', borderRadius: '8px', cursor: isBulkResetting ? 'not-allowed' : 'pointer',
-            background: isBulkResetting ? 'rgba(255,179,0,0.05)' : 'rgba(255,179,0,0.1)',
-            border: '1px solid rgba(255,179,0,0.3)', color: '#ffb300',
-            fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.04em', opacity: isBulkResetting ? 0.5 : 1,
-            whiteSpace: 'nowrap'
-          }}
+          style={{ background: isBulkResetting ? 'rgba(255, 179, 0, 0.4)' : 'rgba(255, 179, 0, 0.15)', color: isBulkResetting ? '#fff' : '#ffb300', border: '1px solid rgba(255, 179, 0, 0.3)', padding: '4px 10px', borderRadius: '6px', cursor: isBulkResetting ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}
         >
-          {isBulkResetting ? '⏳ RESETTING...' : '🔄 RESET→SEEDED'}
+          {isBulkResetting ? '? RESETTING...' : '?? FORCE RESET TO SEEDED'}
         </button>
         <button className="btn-icon" onClick={() => setActiveTab('sniper')} title="Sniper Bench"
           style={{ background: activeTab === 'sniper' ? 'rgba(255, 106, 0, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'sniper' ? '#ff6a00' : 'rgba(255,255,255,0.6)', border: activeTab === 'sniper' ? '1px solid #ff6a00' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>
@@ -2113,8 +2114,11 @@ function App() {
                                     className="btn-icon"
                                     onClick={() => resetSpotToSeeded(row.id, row.name)}
                                     title="Reset to SEEDED — re-enter Detective queue"
-                                    style={{ color: '#ffb300', fontSize: '0.85rem' }}
-                                  >🔄</button>
+                                    disabled={resettingIds[row.id] === 'loading' || resettingIds[row.id] === 'success'}
+                                    style={{ color: resettingIds[row.id] === 'success' ? '#4caf50' : '#ffb300', fontSize: '0.85rem', cursor: resettingIds[row.id] ? 'default' : 'pointer', opacity: resettingIds[row.id] === 'loading' ? 0.5 : 1 }}
+                                  >
+                                    {resettingIds[row.id] === 'loading' ? '⏳' : resettingIds[row.id] === 'success' ? '✅' : '🔄'}
+                                  </button>
                                   <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>🗑️</button>
                                 </>
                               )}
@@ -2194,4 +2198,8 @@ function App() {
 }
 
 export default App;
+
+
+
+
 
