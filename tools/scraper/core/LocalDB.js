@@ -1,15 +1,4 @@
 "use strict";
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -17,38 +6,216 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPipelineStats = exports.addBlocklistKeyword = exports.getBlocklistKeywords = exports.deleteBlocklist = exports.addBlocklist = exports.getBlocklist = exports.updateConfig = exports.getConfig = exports.getSpotsToSync = exports.markSpotSynced = exports.getClosestLocalSpot = exports.getLocalCount = exports.getLocalSpots = exports.deleteLocalSpot = exports.getLocalSpot = exports.updateLocalSpot = exports.upsertLocalSpot = exports.db = void 0;
 exports.getFieldRegistry = getFieldRegistry;
 exports.upsertFieldRegistryItem = upsertFieldRegistryItem;
-var better_sqlite3_1 = __importDefault(require("better-sqlite3"));
-var path_1 = __importDefault(require("path"));
-var fs_1 = __importDefault(require("fs"));
-var DB_DIR = path_1.default.resolve(__dirname, '../../.scraper-data');
+const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
+const DB_DIR = path_1.default.resolve(__dirname, '../../.scraper-data');
 if (!fs_1.default.existsSync(DB_DIR)) {
     fs_1.default.mkdirSync(DB_DIR, { recursive: true });
 }
-var DB_PATH = path_1.default.join(DB_DIR, 'scraper.db');
+const DB_PATH = path_1.default.join(DB_DIR, 'scraper.db');
 exports.db = new better_sqlite3_1.default(DB_PATH, { verbose: process.env.SQLITE_VERBOSE === 'true' ? console.log : undefined });
 // Configure for performance
 exports.db.pragma('journal_mode = WAL');
 exports.db.pragma('synchronous = NORMAL');
 exports.db.pragma('temp_store = MEMORY');
 // Initialize schema
-exports.db.exec("\n  CREATE TABLE IF NOT EXISTS local_spots (\n    id TEXT PRIMARY KEY,\n    name TEXT NOT NULL,\n    lat REAL,\n    lng REAL,\n    city TEXT,\n    state TEXT,\n    zip TEXT,\n    street_address TEXT,\n    phone_number TEXT,\n    website TEXT,\n    google_place_id TEXT UNIQUE,\n    google_maps_url TEXT,\n    business_status TEXT,\n    rating REAL,\n    user_ratings_total INTEGER,\n    opening_hours TEXT, -- JSON\n    operator_description TEXT,\n    facility_type TEXT,\n    is_published INTEGER DEFAULT 0,\n    verification_status TEXT,\n    has_adult_night INTEGER DEFAULT 0,\n    has_pro_shop INTEGER DEFAULT 0,\n    is_deep_crawled INTEGER DEFAULT 0,\n    raw_knowledge_panel TEXT, -- JSON\n    photos TEXT, -- JSON\n    candidate_photos TEXT, -- JSON\n    candidate_links TEXT, -- JSON\n    ai_metadata TEXT, -- JSON\n    last_attempted_at TEXT,\n    last_enriched_at TEXT,\n    retry_count INTEGER DEFAULT 0,\n    created_at TEXT DEFAULT CURRENT_TIMESTAMP,\n    \n    -- We can store the entire row payload here just in case we miss a column\n    raw_data TEXT -- JSON\n  );\n\n  CREATE INDEX IF NOT EXISTS idx_state ON local_spots(state);\n  CREATE INDEX IF NOT EXISTS idx_verification_status ON local_spots(verification_status);\n  CREATE INDEX IF NOT EXISTS idx_last_attempted_at ON local_spots(last_attempted_at);\n\n  CREATE TABLE IF NOT EXISTS scraper_config (\n    id INTEGER PRIMARY KEY,\n    config_json TEXT,\n    updated_at TEXT DEFAULT CURRENT_TIMESTAMP\n  );\n\n  CREATE TABLE IF NOT EXISTS scraper_blocklist (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    pattern TEXT,\n    match_type TEXT,\n    reason TEXT,\n    created_at TEXT DEFAULT CURRENT_TIMESTAMP\n  );\n\n  CREATE TABLE IF NOT EXISTS scraper_blocklist_keywords (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    keyword TEXT UNIQUE,\n    created_at TEXT DEFAULT CURRENT_TIMESTAMP\n  );\n\n  CREATE TABLE IF NOT EXISTS pipeline_field_registry (\n    id TEXT PRIMARY KEY,\n    field_name TEXT,\n    phase_id INTEGER,\n    display_label TEXT,\n    data_type TEXT,\n    sort_order INTEGER,\n    created_at TEXT DEFAULT CURRENT_TIMESTAMP\n  );\n");
+exports.db.exec(`
+  CREATE TABLE IF NOT EXISTS local_spots (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    lat REAL,
+    lng REAL,
+    city TEXT,
+    state TEXT,
+    zip TEXT,
+    street_address TEXT,
+    phone_number TEXT,
+    website TEXT,
+    google_place_id TEXT UNIQUE,
+    google_maps_url TEXT,
+    business_status TEXT,
+    rating REAL,
+    user_ratings_total INTEGER,
+    opening_hours TEXT, -- JSON
+    operator_description TEXT,
+    facility_type TEXT,
+    is_published INTEGER DEFAULT 0,
+    verification_status TEXT,
+    has_adult_night INTEGER DEFAULT 0,
+    has_pro_shop INTEGER DEFAULT 0,
+    is_deep_crawled INTEGER DEFAULT 0,
+    raw_knowledge_panel TEXT, -- JSON
+    photos TEXT, -- JSON
+    candidate_photos TEXT, -- JSON
+    candidate_links TEXT, -- JSON
+    ai_metadata TEXT, -- JSON
+    last_attempted_at TEXT,
+    last_enriched_at TEXT,
+    retry_count INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    surface_type TEXT,
+    is_indoor INTEGER DEFAULT 0,
+    adult_night_details TEXT,
+    source TEXT,
+    is_verified INTEGER DEFAULT 0,
+    updated_at TEXT,
+    updated_by TEXT,
+    is_featured INTEGER DEFAULT 0,
+    has_lights INTEGER,
+    has_fee INTEGER,
+    operator_name TEXT,
+    has_rental INTEGER,
+    is_wheelchair_accessible INTEGER,
+    has_wifi INTEGER,
+    has_toilets INTEGER,
+    has_food INTEGER,
+    has_ac INTEGER,
+    has_lockers INTEGER,
+    capacity INTEGER,
+    hosts_derby INTEGER DEFAULT 0,
+    surface_quality TEXT,
+    vibe_score REAL,
+    cultural_metadata TEXT, -- JSON
+    instagram_url TEXT,
+    facebook_url TEXT,
+    tiktok_url TEXT,
+    schedule_url TEXT,
+    pricing_data TEXT, -- JSON
+    special_events TEXT, -- JSON
+    adult_night_schedule TEXT, -- JSON,
+    
+    -- We can store the entire row payload here just in case we miss a column
+    raw_data TEXT -- JSON
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_state ON local_spots(state);
+  CREATE INDEX IF NOT EXISTS idx_verification_status ON local_spots(verification_status);
+  CREATE INDEX IF NOT EXISTS idx_last_attempted_at ON local_spots(last_attempted_at);
+
+  CREATE TABLE IF NOT EXISTS scraper_config (
+    id INTEGER PRIMARY KEY,
+    config_json TEXT,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS scraper_blocklist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pattern TEXT,
+    match_type TEXT,
+    reason TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS scraper_blocklist_keywords (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    keyword TEXT UNIQUE,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS pipeline_field_registry (
+    id TEXT PRIMARY KEY,
+    field_name TEXT,
+    phase_id INTEGER,
+    display_label TEXT,
+    data_type TEXT,
+    sort_order INTEGER,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+`);
 // Check for sync_required column (migration)
-var colCheck = exports.db.prepare("PRAGMA table_info(local_spots)").all();
-if (!colCheck.find(function (c) { return c.name === 'sync_required'; })) {
-    exports.db.exec("ALTER TABLE local_spots ADD COLUMN sync_required INTEGER DEFAULT 1");
+const colCheck = exports.db.prepare("PRAGMA table_info(local_spots)").all();
+if (!colCheck.find(c => c.name === 'sync_required')) {
+    exports.db.exec(`ALTER TABLE local_spots ADD COLUMN sync_required INTEGER DEFAULT 1`);
 }
-exports.db.exec("\n  CREATE TRIGGER IF NOT EXISTS set_sync_required\n  AFTER UPDATE ON local_spots\n  FOR EACH ROW\n  WHEN NEW.sync_required = OLD.sync_required OR OLD.sync_required IS NULL\n  BEGIN\n      UPDATE local_spots SET sync_required = 1 WHERE id = NEW.id;\n  END;\n  \n  CREATE INDEX IF NOT EXISTS idx_sync_required ON local_spots(sync_required);\n");
+// Check for importance_level column in field registry (migration)
+const fieldRegCheck = exports.db.prepare("PRAGMA table_info(pipeline_field_registry)").all();
+if (!fieldRegCheck.find(c => c.name === 'importance_level')) {
+    exports.db.exec(`ALTER TABLE pipeline_field_registry ADD COLUMN importance_level INTEGER DEFAULT 0`);
+    // Seed initial importance levels
+    exports.db.exec(`
+    UPDATE pipeline_field_registry SET importance_level = 2 WHERE field_name IN ('name', 'address', 'lat', 'lng');
+    UPDATE pipeline_field_registry SET importance_level = 1 WHERE field_name IN ('phone', 'website');
+  `);
+}
+// Migrate field registry phase_ids from old 5-phase to new 4-phase numbering (ONE-TIME)
+// Old: 1=Scout, 2=Spider(dead), 3=Detective, 4=Photographer, 5=Publisher
+// New: 1=Scout, 2=Detective, 3=Photographer, 4=Publisher
+// ONLY run when the old schema marker (phase_id=5) still exists — prevents clobbering new Phase 3/4 seeds.
+const hasOldPhase5 = exports.db.prepare('SELECT COUNT(*) as cnt FROM pipeline_field_registry WHERE phase_id = 5').get()?.cnt > 0;
+if (hasOldPhase5) {
+    exports.db.prepare('UPDATE pipeline_field_registry SET phase_id = 4 WHERE phase_id = 5').run();
+    exports.db.prepare('UPDATE pipeline_field_registry SET phase_id = 3 WHERE phase_id = 4 AND id NOT LIKE \'p4_%\'').run();
+    exports.db.prepare('UPDATE pipeline_field_registry SET phase_id = 2 WHERE phase_id = 3 AND id NOT LIKE \'p3_%\'').run();
+}
+// ── Auto-seed missing field registry entries (ALL phases) ────────────────
+// ON CONFLICT DO NOTHING preserves user-set importance_level.
+const FIELD_SEEDS = [
+    // ── Phase 1: Scout ──
+    { id: 'candidate_links', field_name: 'candidate_links', phase_id: 1, display_label: 'Candidate Links', data_type: 'jsonb', sort_order: 125 },
+    // ── Phase 2: Detective ──
+    { id: 'has_fee', field_name: 'has_fee', phase_id: 2, display_label: 'Has Fee', data_type: 'boolean', sort_order: 231 },
+    { id: 'has_lights', field_name: 'has_lights', phase_id: 2, display_label: 'Has Lights', data_type: 'boolean', sort_order: 232 },
+    { id: 'has_wifi', field_name: 'has_wifi', phase_id: 2, display_label: 'Has WiFi', data_type: 'boolean', sort_order: 233 },
+    { id: 'has_toilets', field_name: 'has_toilets', phase_id: 2, display_label: 'Has Toilets', data_type: 'boolean', sort_order: 234 },
+    { id: 'surface_quality', field_name: 'surface_quality', phase_id: 2, display_label: 'Surface Quality', data_type: 'text', sort_order: 235 },
+    { id: 'vibe_score', field_name: 'vibe_score', phase_id: 2, display_label: 'Vibe Score', data_type: 'float', sort_order: 236 },
+    { id: 'capacity', field_name: 'capacity', phase_id: 2, display_label: 'Capacity', data_type: 'integer', sort_order: 237 },
+    { id: 'schedule_url', field_name: 'schedule_url', phase_id: 2, display_label: 'Schedule URL', data_type: 'text', sort_order: 238 },
+    { id: 'is_indoor', field_name: 'is_indoor', phase_id: 2, display_label: 'Is Indoor', data_type: 'boolean', sort_order: 170 },
+    { id: 'operator_name', field_name: 'operator_name', phase_id: 2, display_label: 'Operator Name', data_type: 'text', sort_order: 360 },
+    // ── Phase 3: Photographer ──
+    { id: 'p3_candidate_photos', field_name: 'candidate_photos', phase_id: 3, display_label: 'Candidate Photos', data_type: 'jsonb', sort_order: 700 },
+    { id: 'p3_photos', field_name: 'photos', phase_id: 3, display_label: 'Curated Photos', data_type: 'jsonb', sort_order: 710 },
+    { id: 'p3_og_image', field_name: 'og_image', phase_id: 3, display_label: 'OG Image', data_type: 'text', sort_order: 720 },
+    { id: 'p3_street_view', field_name: 'street_view_url', phase_id: 3, display_label: 'Street View URL', data_type: 'text', sort_order: 730 },
+    { id: 'p3_dom_images', field_name: 'dom_images', phase_id: 3, display_label: 'DOM Images', data_type: 'jsonb', sort_order: 740 },
+    { id: 'p3_flyer_urls', field_name: 'flyer_urls', phase_id: 3, display_label: 'Flyer URLs', data_type: 'jsonb', sort_order: 750 },
+    { id: 'p3_photo_count', field_name: 'photo_count', phase_id: 3, display_label: 'Photo Count', data_type: 'integer', sort_order: 760 },
+    { id: 'p3_photo_quality', field_name: 'photo_quality', phase_id: 3, display_label: 'Photo Quality Score', data_type: 'float', sort_order: 770 },
+    // ── Phase 4: Publisher ──
+    { id: 'p4_is_published', field_name: 'is_published', phase_id: 4, display_label: 'Is Published', data_type: 'boolean', sort_order: 800 },
+    { id: 'p4_verification', field_name: 'verification_status', phase_id: 4, display_label: 'Verification Status', data_type: 'text', sort_order: 810 },
+    { id: 'p4_sync_required', field_name: 'sync_required', phase_id: 4, display_label: 'Sync Required', data_type: 'boolean', sort_order: 820 },
+    { id: 'p4_last_enriched', field_name: 'last_enriched_at', phase_id: 4, display_label: 'Last Enriched', data_type: 'text', sort_order: 830 },
+    { id: 'p4_publish_score', field_name: 'publish_score', phase_id: 4, display_label: 'Publish Score', data_type: 'float', sort_order: 840 },
+    { id: 'p4_supabase_id', field_name: 'supabase_id', phase_id: 4, display_label: 'Supabase ID', data_type: 'text', sort_order: 850 },
+    { id: 'p4_last_synced', field_name: 'last_synced_at', phase_id: 4, display_label: 'Last Synced At', data_type: 'text', sort_order: 860 },
+];
+const seedStmt = exports.db.prepare(`
+  INSERT INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order, importance_level)
+  VALUES (@id, @field_name, @phase_id, @display_label, @data_type, @sort_order, 0)
+  ON CONFLICT(id) DO UPDATE SET
+    phase_id = excluded.phase_id,
+    display_label = excluded.display_label,
+    data_type = excluded.data_type,
+    sort_order = excluded.sort_order
+`);
+for (const seed of FIELD_SEEDS) {
+    seedStmt.run(seed);
+}
+exports.db.exec(`
+  CREATE TRIGGER IF NOT EXISTS set_sync_required
+  AFTER UPDATE ON local_spots
+  FOR EACH ROW
+  WHEN NEW.sync_required = OLD.sync_required OR OLD.sync_required IS NULL
+  BEGIN
+      UPDATE local_spots SET sync_required = 1 WHERE id = NEW.id;
+  END;
+  
+  CREATE INDEX IF NOT EXISTS idx_sync_required ON local_spots(sync_required);
+`);
 /**
  * Safely parse a JSON string, or stringify an object before saving
  */
-var safeJsonStringify = function (val) {
+const safeJsonStringify = (val) => {
     if (val === null || val === undefined)
         return null;
     if (typeof val === 'string')
         return val;
     return JSON.stringify(val);
 };
-var safeJsonParse = function (val) {
+const safeJsonParse = (val) => {
     if (typeof val === 'string') {
         try {
             return JSON.parse(val);
@@ -62,10 +229,10 @@ var safeJsonParse = function (val) {
 /**
  * Converts a database row to a JS object
  */
-var rowToObj = function (row) {
+const rowToObj = (row) => {
     if (!row)
         return null;
-    var obj = __assign({}, row);
+    const obj = { ...row };
     // Convert 1/0 back to true/false
     obj.is_published = obj.is_published === 1;
     obj.has_adult_night = obj.has_adult_night === 1;
@@ -78,21 +245,130 @@ var rowToObj = function (row) {
     obj.candidate_photos = safeJsonParse(obj.candidate_photos);
     obj.candidate_links = safeJsonParse(obj.candidate_links);
     obj.ai_metadata = safeJsonParse(obj.ai_metadata);
+    obj.cultural_metadata = safeJsonParse(obj.cultural_metadata);
+    obj.pricing_data = safeJsonParse(obj.pricing_data);
+    obj.special_events = safeJsonParse(obj.special_events);
+    obj.adult_night_schedule = safeJsonParse(obj.adult_night_schedule);
+    obj.raw_data = safeJsonParse(obj.raw_data);
+    // Convert additional booleans
+    obj.is_indoor = obj.is_indoor === 1;
+    obj.is_verified = obj.is_verified === 1;
+    obj.is_featured = obj.is_featured === 1;
+    obj.hosts_derby = obj.hosts_derby === 1;
+    obj.has_lights = obj.has_lights === 1 ? true : (obj.has_lights === 0 ? false : null);
+    obj.has_fee = obj.has_fee === 1 ? true : (obj.has_fee === 0 ? false : null);
+    obj.has_rental = obj.has_rental === 1 ? true : (obj.has_rental === 0 ? false : null);
+    obj.is_wheelchair_accessible = obj.is_wheelchair_accessible === 1 ? true : (obj.is_wheelchair_accessible === 0 ? false : null);
+    obj.has_wifi = obj.has_wifi === 1 ? true : (obj.has_wifi === 0 ? false : null);
+    obj.has_toilets = obj.has_toilets === 1 ? true : (obj.has_toilets === 0 ? false : null);
+    obj.has_food = obj.has_food === 1 ? true : (obj.has_food === 0 ? false : null);
+    obj.has_ac = obj.has_ac === 1 ? true : (obj.has_ac === 0 ? false : null);
+    obj.has_lockers = obj.has_lockers === 1 ? true : (obj.has_lockers === 0 ? false : null);
     obj.raw_data = safeJsonParse(obj.raw_data);
     return obj;
 };
 /**
  * Upserts a spot into the local DB.
  */
-var upsertLocalSpot = function (spot) {
-    var is_published = spot.is_published ? 1 : 0;
-    var has_adult_night = spot.has_adult_night ? 1 : 0;
-    var has_pro_shop = spot.has_pro_shop || spot.has_proshop ? 1 : 0;
-    var is_deep_crawled = spot.is_deep_crawled ? 1 : 0;
-    var stmt = exports.db.prepare("\n    INSERT INTO local_spots (\n      id, name, lat, lng, city, state, zip, street_address, phone_number, website,\n      google_place_id, google_maps_url, business_status, rating, user_ratings_total,\n      opening_hours, operator_description, facility_type, is_published, verification_status,\n      has_adult_night, has_pro_shop, is_deep_crawled, raw_knowledge_panel, photos,\n      candidate_photos, candidate_links, ai_metadata, last_attempted_at, last_enriched_at,\n      retry_count, raw_data\n    ) VALUES (\n      @id, @name, @lat, @lng, @city, @state, @zip, @street_address, @phone_number, @website,\n      @google_place_id, @google_maps_url, @business_status, @rating, @user_ratings_total,\n      @opening_hours, @operator_description, @facility_type, @is_published, @verification_status,\n      @has_adult_night, @has_pro_shop, @is_deep_crawled, @raw_knowledge_panel, @photos,\n      @candidate_photos, @candidate_links, @ai_metadata, @last_attempted_at, @last_enriched_at,\n      @retry_count, @raw_data\n    )\n    ON CONFLICT(id) DO UPDATE SET\n      name = excluded.name,\n      lat = excluded.lat,\n      lng = excluded.lng,\n      city = excluded.city,\n      state = excluded.state,\n      zip = excluded.zip,\n      street_address = excluded.street_address,\n      phone_number = excluded.phone_number,\n      website = excluded.website,\n      google_place_id = excluded.google_place_id,\n      google_maps_url = excluded.google_maps_url,\n      business_status = excluded.business_status,\n      rating = excluded.rating,\n      user_ratings_total = excluded.user_ratings_total,\n      opening_hours = excluded.opening_hours,\n      operator_description = excluded.operator_description,\n      facility_type = excluded.facility_type,\n      is_published = excluded.is_published,\n      verification_status = excluded.verification_status,\n      has_adult_night = excluded.has_adult_night,\n      has_pro_shop = excluded.has_pro_shop,\n      is_deep_crawled = excluded.is_deep_crawled,\n      raw_knowledge_panel = excluded.raw_knowledge_panel,\n      photos = excluded.photos,\n      candidate_photos = excluded.candidate_photos,\n      candidate_links = excluded.candidate_links,\n      ai_metadata = excluded.ai_metadata,\n      last_attempted_at = excluded.last_attempted_at,\n      last_enriched_at = excluded.last_enriched_at,\n      retry_count = excluded.retry_count,\n      raw_data = excluded.raw_data\n  ");
-    var id = spot.id || Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+const upsertLocalSpot = (spot) => {
+    const is_published = spot.is_published ? 1 : 0;
+    const has_adult_night = spot.has_adult_night ? 1 : 0;
+    const has_pro_shop = spot.has_pro_shop || spot.has_proshop ? 1 : 0;
+    const is_deep_crawled = spot.is_deep_crawled ? 1 : 0;
+    const stmt = exports.db.prepare(`
+    INSERT INTO local_spots (
+      id, name, lat, lng, city, state, zip, street_address, phone_number, website,
+      google_place_id, google_maps_url, business_status, rating, user_ratings_total,
+      opening_hours, operator_description, facility_type, is_published, verification_status,
+      has_adult_night, has_pro_shop, is_deep_crawled, raw_knowledge_panel, photos,
+      candidate_photos, candidate_links, ai_metadata, last_attempted_at, last_enriched_at,
+      last_enriched_at, retry_count, raw_data,
+      surface_type, is_indoor, adult_night_details, source, is_verified, updated_at,
+      updated_by, is_featured, has_lights,
+      has_fee, operator_name, has_rental, is_wheelchair_accessible, has_wifi,
+      has_toilets, has_food, has_ac, has_lockers, capacity, hosts_derby, surface_quality,
+      vibe_score, cultural_metadata, instagram_url, facebook_url, tiktok_url, schedule_url,
+      pricing_data, special_events, adult_night_schedule
+    ) VALUES (
+      @id, @name, @lat, @lng, @city, @state, @zip, @street_address, @phone_number, @website,
+      @google_place_id, @google_maps_url, @business_status, @rating, @user_ratings_total,
+      @opening_hours, @operator_description, @facility_type, @is_published, @verification_status,
+      @has_adult_night, @has_pro_shop, @is_deep_crawled, @raw_knowledge_panel, @photos,
+      @candidate_photos, @candidate_links, @ai_metadata, @last_attempted_at, @last_enriched_at,
+      @retry_count, @raw_data,
+      @surface_type, @is_indoor, @adult_night_details, @source, @is_verified, @updated_at,
+      @updated_by, @is_featured, @has_lights,
+      @has_fee, @operator_name, @has_rental, @is_wheelchair_accessible, @has_wifi,
+      @has_toilets, @has_food, @has_ac, @has_lockers, @capacity, @hosts_derby, @surface_quality,
+      @vibe_score, @cultural_metadata, @instagram_url, @facebook_url, @tiktok_url, @schedule_url,
+      @pricing_data, @special_events, @adult_night_schedule
+    )
+    ON CONFLICT(id) DO UPDATE SET
+      name = excluded.name,
+      lat = excluded.lat,
+      lng = excluded.lng,
+      city = excluded.city,
+      state = excluded.state,
+      zip = excluded.zip,
+      street_address = excluded.street_address,
+      phone_number = excluded.phone_number,
+      website = excluded.website,
+      google_place_id = excluded.google_place_id,
+      google_maps_url = excluded.google_maps_url,
+      business_status = excluded.business_status,
+      rating = excluded.rating,
+      user_ratings_total = excluded.user_ratings_total,
+      opening_hours = excluded.opening_hours,
+      operator_description = excluded.operator_description,
+      facility_type = excluded.facility_type,
+      is_published = excluded.is_published,
+      verification_status = excluded.verification_status,
+      has_adult_night = excluded.has_adult_night,
+      has_pro_shop = excluded.has_pro_shop,
+      is_deep_crawled = excluded.is_deep_crawled,
+      raw_knowledge_panel = excluded.raw_knowledge_panel,
+      photos = excluded.photos,
+      candidate_photos = excluded.candidate_photos,
+      candidate_links = excluded.candidate_links,
+      ai_metadata = excluded.ai_metadata,
+      last_attempted_at = excluded.last_attempted_at,
+      last_enriched_at = excluded.last_enriched_at,
+      retry_count = excluded.retry_count,
+      raw_data = excluded.raw_data,
+      surface_type = excluded.surface_type,
+      is_indoor = excluded.is_indoor,
+      adult_night_details = excluded.adult_night_details,
+      source = excluded.source,
+      is_verified = excluded.is_verified,
+      updated_at = excluded.updated_at,
+      updated_by = excluded.updated_by,
+      is_featured = excluded.is_featured,
+      has_lights = excluded.has_lights,
+      has_fee = excluded.has_fee,
+      operator_name = excluded.operator_name,
+      has_rental = excluded.has_rental,
+      is_wheelchair_accessible = excluded.is_wheelchair_accessible,
+      has_wifi = excluded.has_wifi,
+      has_toilets = excluded.has_toilets,
+      has_food = excluded.has_food,
+      has_ac = excluded.has_ac,
+      has_lockers = excluded.has_lockers,
+      capacity = excluded.capacity,
+      hosts_derby = excluded.hosts_derby,
+      surface_quality = excluded.surface_quality,
+      vibe_score = excluded.vibe_score,
+      cultural_metadata = excluded.cultural_metadata,
+      instagram_url = excluded.instagram_url,
+      facebook_url = excluded.facebook_url,
+      tiktok_url = excluded.tiktok_url,
+      schedule_url = excluded.schedule_url,
+      pricing_data = excluded.pricing_data,
+      special_events = excluded.special_events,
+      adult_night_schedule = excluded.adult_night_schedule
+  `);
+    const id = spot.id || Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     stmt.run({
-        id: id,
+        id,
         name: spot.name,
         lat: spot.lat || null,
         lng: spot.lng || null,
@@ -110,11 +386,11 @@ var upsertLocalSpot = function (spot) {
         opening_hours: safeJsonStringify(spot.opening_hours),
         operator_description: spot.operator_description || null,
         facility_type: spot.facility_type || null,
-        is_published: is_published,
+        is_published,
         verification_status: spot.verification_status || null,
-        has_adult_night: has_adult_night,
-        has_pro_shop: has_pro_shop,
-        is_deep_crawled: is_deep_crawled,
+        has_adult_night,
+        has_pro_shop,
+        is_deep_crawled,
         raw_knowledge_panel: safeJsonStringify(spot.raw_knowledge_panel),
         photos: safeJsonStringify(spot.photos),
         candidate_photos: safeJsonStringify(spot.candidate_photos),
@@ -123,22 +399,55 @@ var upsertLocalSpot = function (spot) {
         last_attempted_at: spot.last_attempted_at || null,
         last_enriched_at: spot.last_enriched_at || null,
         retry_count: spot.retry_count || 0,
-        raw_data: safeJsonStringify(spot)
+        raw_data: safeJsonStringify(spot),
+        surface_type: spot.surface_type || null,
+        is_indoor: spot.is_indoor ? 1 : 0,
+        adult_night_details: spot.adult_night_details || null,
+        source: spot.source || null,
+        is_verified: spot.is_verified ? 1 : 0,
+        updated_at: spot.updated_at || null,
+        updated_by: spot.updated_by || null,
+        address: spot.address || null,
+        phone: spot.phone || null,
+        vibe_rating: spot.vibe_rating || null,
+        socials: safeJsonStringify(spot.socials),
+        is_featured: spot.is_featured ? 1 : 0,
+        has_lights: spot.has_lights === true ? 1 : (spot.has_lights === false ? 0 : null),
+        has_fee: spot.has_fee === true ? 1 : (spot.has_fee === false ? 0 : null),
+        operator_name: spot.operator_name || null,
+        has_rental: spot.has_rental === true ? 1 : (spot.has_rental === false ? 0 : null),
+        is_wheelchair_accessible: spot.is_wheelchair_accessible === true ? 1 : (spot.is_wheelchair_accessible === false ? 0 : null),
+        has_wifi: spot.has_wifi === true ? 1 : (spot.has_wifi === false ? 0 : null),
+        has_toilets: spot.has_toilets === true ? 1 : (spot.has_toilets === false ? 0 : null),
+        has_food: spot.has_food === true ? 1 : (spot.has_food === false ? 0 : null),
+        has_ac: spot.has_ac === true ? 1 : (spot.has_ac === false ? 0 : null),
+        has_lockers: spot.has_lockers === true ? 1 : (spot.has_lockers === false ? 0 : null),
+        capacity: spot.capacity || null,
+        hosts_derby: spot.hosts_derby ? 1 : 0,
+        surface_quality: spot.surface_quality || null,
+        vibe_score: spot.vibe_score || null,
+        cultural_metadata: safeJsonStringify(spot.cultural_metadata),
+        instagram_url: spot.instagram_url || null,
+        facebook_url: spot.facebook_url || null,
+        tiktok_url: spot.tiktok_url || null,
+        schedule_url: spot.schedule_url || null,
+        pricing_data: safeJsonStringify(spot.pricing_data),
+        special_events: safeJsonStringify(spot.special_events),
+        adult_night_schedule: safeJsonStringify(spot.adult_night_schedule)
     });
     return id;
 };
 exports.upsertLocalSpot = upsertLocalSpot;
-var updateLocalSpot = function (id, updates) {
-    var keys = Object.keys(updates);
+const updateLocalSpot = (id, updates) => {
+    const keys = Object.keys(updates);
     if (keys.length === 0)
         return;
-    var setClauses = [];
-    var params = { id: id };
-    for (var _i = 0, keys_1 = keys; _i < keys_1.length; _i++) {
-        var k = keys_1[_i];
+    const setClauses = [];
+    const params = { id };
+    for (const k of keys) {
         if (k === 'id')
             continue;
-        var val = updates[k];
+        let val = updates[k];
         // Normalize booleans
         if (typeof val === 'boolean')
             val = val ? 1 : 0;
@@ -146,138 +455,144 @@ var updateLocalSpot = function (id, updates) {
         if (val !== null && typeof val === 'object')
             val = JSON.stringify(val);
         // map has_proshop to has_pro_shop just in case
-        var colName = k === 'has_proshop' ? 'has_pro_shop' : k;
-        setClauses.push("".concat(colName, " = @").concat(colName));
+        const colName = k === 'has_proshop' ? 'has_pro_shop' : k;
+        setClauses.push(`${colName} = @${colName}`);
         params[colName] = val;
     }
-    var stmt = exports.db.prepare("UPDATE local_spots SET ".concat(setClauses.join(', '), " WHERE id = @id"));
+    const stmt = exports.db.prepare(`UPDATE local_spots SET ${setClauses.join(', ')} WHERE id = @id`);
     stmt.run(params);
 };
 exports.updateLocalSpot = updateLocalSpot;
-var getLocalSpot = function (id) {
-    var row = exports.db.prepare("SELECT * FROM local_spots WHERE id = ?").get(id);
+const getLocalSpot = (id) => {
+    const row = exports.db.prepare(`SELECT * FROM local_spots WHERE id = ?`).get(id);
     return rowToObj(row);
 };
 exports.getLocalSpot = getLocalSpot;
-var deleteLocalSpot = function (id) {
-    exports.db.prepare("DELETE FROM local_spots WHERE id = ?").run(id);
+const deleteLocalSpot = (id) => {
+    exports.db.prepare(`UPDATE local_spots SET verification_status = 'REJECTED', is_published = 0 WHERE id = ?`).run(id);
 };
 exports.deleteLocalSpot = deleteLocalSpot;
-var getLocalSpots = function (queryArgs) {
-    var _a;
-    if (queryArgs === void 0) { queryArgs = {}; }
-    var query = 'SELECT * FROM local_spots WHERE 1=1';
-    var params = [];
+const getLocalSpots = (queryArgs = {}) => {
+    let query = 'SELECT * FROM local_spots WHERE 1=1';
+    const params = [];
     if (queryArgs.status && queryArgs.status !== 'ALL') {
         if (queryArgs.status === 'UNVERIFIED' || queryArgs.status === 'PENDING') {
-            query += " AND (verification_status = 'PENDING' OR verification_status IS NULL)";
+            query += ` AND (verification_status = 'PENDING' OR verification_status IS NULL)`;
         }
         else {
-            query += " AND verification_status = ?";
+            query += ` AND verification_status = ?`;
             params.push(queryArgs.status);
         }
     }
     if (queryArgs.search) {
-        query += " AND (name LIKE ? OR city LIKE ? OR state LIKE ?)";
-        params.push("%".concat(queryArgs.search, "%"), "%".concat(queryArgs.search, "%"), "%".concat(queryArgs.search, "%"));
+        query += ` AND (name LIKE ? OR city LIKE ? OR state LIKE ?)`;
+        params.push(`%${queryArgs.search}%`, `%${queryArgs.search}%`, `%${queryArgs.search}%`);
+    }
+    if (queryArgs.pipeline_status) {
+        query += ` AND pipeline_status = ?`;
+        params.push(queryArgs.pipeline_status);
     }
     if (queryArgs.state) {
-        query += " AND state = ?";
+        query += ` AND state = ?`;
         params.push(queryArgs.state.toUpperCase());
     }
     if (queryArgs.has_photos)
-        query += " AND photos IS NOT NULL";
+        query += ` AND photos IS NOT NULL AND photos != '[]' AND photos != 'null'`;
     if (queryArgs.has_hours)
-        query += " AND opening_hours IS NOT NULL";
+        query += ` AND opening_hours IS NOT NULL AND opening_hours != '{}' AND opening_hours != 'null'`;
     if (queryArgs.has_website)
-        query += " AND website IS NOT NULL";
+        query += ` AND website IS NOT NULL AND website != ''`;
     if (queryArgs.has_adult_night)
-        query += " AND has_adult_night = 1";
+        query += ` AND has_adult_night = 1`;
     if (queryArgs.has_pro_shop)
-        query += " AND has_pro_shop = 1";
+        query += ` AND has_pro_shop = 1`;
     if (queryArgs.is_published === true)
-        query += " AND is_published = 1";
+        query += ` AND is_published = 1`;
     if (queryArgs.is_published === false)
-        query += " AND (is_published = 0 OR is_published IS NULL)";
+        query += ` AND (is_published = 0 OR is_published IS NULL)`;
     if (queryArgs.is_deep_crawled)
-        query += " AND is_deep_crawled = 1";
-    var ALLOWED_SORT = ['last_attempted_at', 'last_enriched_at', 'name', 'rating', 'user_ratings_total', 'state', 'city', 'verification_status', 'created_at'];
-    var safeSort = ALLOWED_SORT.includes(queryArgs.sortCol) ? queryArgs.sortCol : 'last_attempted_at';
-    var dir = queryArgs.sortDir === 'asc' ? 'ASC' : 'DESC';
-    query += " ORDER BY ".concat(safeSort, " ").concat(dir, " NULLS LAST");
+        query += ` AND is_deep_crawled = 1`;
+    const ALLOWED_SORT = ['last_attempted_at', 'last_enriched_at', 'name', 'rating', 'user_ratings_total', 'state', 'city', 'verification_status', 'created_at'];
+    const safeSort = ALLOWED_SORT.includes(queryArgs.sortCol) ? queryArgs.sortCol : 'last_attempted_at';
+    const dir = queryArgs.sortDir === 'asc' ? 'ASC' : 'DESC';
+    query += ` ORDER BY ${safeSort} ${dir} NULLS LAST`;
     if (queryArgs.limit) {
-        query += " LIMIT ? OFFSET ?";
+        query += ` LIMIT ? OFFSET ?`;
         params.push(Number(queryArgs.limit), Number(queryArgs.offset || 0));
     }
-    var rows = (_a = exports.db.prepare(query)).all.apply(_a, params);
+    const rows = exports.db.prepare(query).all(...params);
     return rows.map(rowToObj);
 };
 exports.getLocalSpots = getLocalSpots;
-var getLocalCount = function (queryArgs) {
-    var _a;
-    if (queryArgs === void 0) { queryArgs = {}; }
-    var query = 'SELECT COUNT(*) as cnt FROM local_spots WHERE 1=1';
-    var params = [];
+const getLocalCount = (queryArgs = {}) => {
+    let query = 'SELECT COUNT(*) as cnt FROM local_spots WHERE 1=1';
+    const params = [];
     if (queryArgs.status && queryArgs.status !== 'ALL') {
         if (queryArgs.status === 'UNVERIFIED' || queryArgs.status === 'PENDING') {
-            query += " AND (verification_status = 'PENDING' OR verification_status IS NULL)";
+            query += ` AND (verification_status = 'PENDING' OR verification_status IS NULL)`;
         }
         else {
-            query += " AND verification_status = ?";
+            query += ` AND verification_status = ?`;
             params.push(queryArgs.status);
         }
     }
     if (queryArgs.search) {
-        query += " AND (name LIKE ? OR city LIKE ? OR state LIKE ?)";
-        params.push("%".concat(queryArgs.search, "%"), "%".concat(queryArgs.search, "%"), "%".concat(queryArgs.search, "%"));
+        query += ` AND (name LIKE ? OR city LIKE ? OR state LIKE ?)`;
+        params.push(`%${queryArgs.search}%`, `%${queryArgs.search}%`, `%${queryArgs.search}%`);
+    }
+    if (queryArgs.pipeline_status) {
+        query += ` AND pipeline_status = ?`;
+        params.push(queryArgs.pipeline_status);
     }
     if (queryArgs.state) {
-        query += " AND state = ?";
+        query += ` AND state = ?`;
         params.push(queryArgs.state.toUpperCase());
     }
     if (queryArgs.has_photos === 'true')
-        query += " AND photos IS NOT NULL";
+        query += ` AND photos IS NOT NULL AND photos != '[]' AND photos != 'null'`;
     if (queryArgs.has_hours === 'true')
-        query += " AND opening_hours IS NOT NULL";
+        query += ` AND opening_hours IS NOT NULL AND opening_hours != '{}' AND opening_hours != 'null'`;
     if (queryArgs.has_website === 'true')
-        query += " AND website IS NOT NULL";
+        query += ` AND website IS NOT NULL AND website != ''`;
     if (queryArgs.has_adult_night === 'true')
-        query += " AND has_adult_night = 1";
+        query += ` AND has_adult_night = 1`;
     if (queryArgs.has_pro_shop === 'true')
-        query += " AND has_pro_shop = 1";
+        query += ` AND has_pro_shop = 1`;
     if (queryArgs.is_published === 'true' || queryArgs.is_published === true)
-        query += " AND is_published = 1";
+        query += ` AND is_published = 1`;
     if (queryArgs.is_published === 'false' || queryArgs.is_published === false)
-        query += " AND (is_published = 0 OR is_published IS NULL)";
+        query += ` AND (is_published = 0 OR is_published IS NULL)`;
     if (queryArgs.is_deep_crawled === 'true')
-        query += " AND is_deep_crawled = 1";
-    var res = (_a = exports.db.prepare(query)).get.apply(_a, params);
+        query += ` AND is_deep_crawled = 1`;
+    const res = exports.db.prepare(query).get(...params);
     return res.cnt;
 };
 exports.getLocalCount = getLocalCount;
 // Haversine distance in meters
-var getDistanceFromLatLonInM = function (lat1, lon1, lat2, lon2) {
-    var R = 6371e3; // Radius of the earth in m
-    var dLat = (lat2 - lat1) * (Math.PI / 180);
-    var dLon = (lon2 - lon1) * (Math.PI / 180);
-    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+const getDistanceFromLatLonInM = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3; // Radius of the earth in m
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
             Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c; // Distance in m
 };
-var getClosestLocalSpot = function (lat, lng, radiusMeters) {
+const getClosestLocalSpot = (lat, lng, radiusMeters) => {
     // Approx 1 degree = 111,000 meters
-    var delta = radiusMeters / 111000;
+    const delta = radiusMeters / 111000;
     // Bounding box query
-    var candidates = exports.db.prepare("\n    SELECT id, name, lat, lng FROM local_spots \n    WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?\n  ").all(lat - delta, lat + delta, lng - delta, lng + delta);
-    var closestSpot = null;
-    var minDistance = Infinity;
-    for (var _i = 0, candidates_1 = candidates; _i < candidates_1.length; _i++) {
-        var c = candidates_1[_i];
+    const candidates = exports.db.prepare(`
+    SELECT id, name, lat, lng FROM local_spots 
+    WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?
+  `).all(lat - delta, lat + delta, lng - delta, lng + delta);
+    let closestSpot = null;
+    let minDistance = Infinity;
+    for (const c of candidates) {
         if (!c.lat || !c.lng)
             continue;
-        var dist = getDistanceFromLatLonInM(lat, lng, c.lat, c.lng);
+        const dist = getDistanceFromLatLonInM(lat, lng, c.lat, c.lng);
         if (dist <= radiusMeters && dist < minDistance) {
             minDistance = dist;
             closestSpot = { spot_id: c.id, distance_meters: dist, name: c.name };
@@ -286,68 +601,81 @@ var getClosestLocalSpot = function (lat, lng, radiusMeters) {
     return closestSpot ? [closestSpot] : null;
 };
 exports.getClosestLocalSpot = getClosestLocalSpot;
-var markSpotSynced = function (id) {
-    exports.db.prepare("UPDATE local_spots SET sync_required = 0 WHERE id = ?").run(id);
+const markSpotSynced = (id) => {
+    exports.db.prepare(`UPDATE local_spots SET sync_required = 0 WHERE id = ?`).run(id);
 };
 exports.markSpotSynced = markSpotSynced;
-var getSpotsToSync = function (limit) {
-    if (limit === void 0) { limit = 50; }
-    var rows = exports.db.prepare("SELECT * FROM local_spots WHERE sync_required = 1 LIMIT ?").all(limit);
+const getSpotsToSync = (limit = 50) => {
+    const rows = exports.db.prepare(`SELECT * FROM local_spots WHERE sync_required = 1 LIMIT ?`).all(limit);
     return rows.map(rowToObj);
 };
 exports.getSpotsToSync = getSpotsToSync;
 // --- CONFIG METHODS ---
-var getConfig = function () {
-    var row = exports.db.prepare("SELECT config_json FROM scraper_config WHERE id = 1").get();
+const getConfig = () => {
+    let row = exports.db.prepare(`SELECT config_json FROM scraper_config WHERE id = 1`).get();
     if (!row) {
-        exports.db.prepare("INSERT INTO scraper_config (id, config_json) VALUES (1, '{}')").run();
-        row = exports.db.prepare("SELECT config_json FROM scraper_config WHERE id = 1").get();
+        exports.db.prepare(`INSERT INTO scraper_config (id, config_json) VALUES (1, '{}')`).run();
+        row = exports.db.prepare(`SELECT config_json FROM scraper_config WHERE id = 1`).get();
     }
     return row && row.config_json ? JSON.parse(row.config_json) : {};
 };
 exports.getConfig = getConfig;
-var updateConfig = function (payload) {
-    var existing = (0, exports.getConfig)();
-    var newConfig = __assign(__assign({}, existing), payload);
-    exports.db.prepare("UPDATE scraper_config SET config_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1").run(JSON.stringify(newConfig));
+const updateConfig = (payload) => {
+    const existing = (0, exports.getConfig)();
+    const newConfig = { ...existing, ...payload };
+    exports.db.prepare(`UPDATE scraper_config SET config_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1`).run(JSON.stringify(newConfig));
 };
 exports.updateConfig = updateConfig;
 // --- BLOCKLIST METHODS ---
-var getBlocklist = function () {
-    return exports.db.prepare("SELECT * FROM scraper_blocklist ORDER BY created_at DESC").all();
+const getBlocklist = () => {
+    return exports.db.prepare(`SELECT * FROM scraper_blocklist ORDER BY created_at DESC`).all();
 };
 exports.getBlocklist = getBlocklist;
-var addBlocklist = function (pattern, match_type, reason) {
-    if (match_type === void 0) { match_type = 'name'; }
-    if (reason === void 0) { reason = ''; }
-    var stmt = exports.db.prepare("INSERT INTO scraper_blocklist (pattern, match_type, reason) VALUES (?, ?, ?)");
-    stmt.run(pattern, match_type, reason);
+const addBlocklist = (pattern, match_type = 'name', reason = '') => {
+    const existing = exports.db.prepare(`SELECT * FROM scraper_blocklist WHERE pattern = ?`).get(pattern);
+    if (!existing) {
+        const stmt = exports.db.prepare(`INSERT INTO scraper_blocklist (pattern, match_type, reason) VALUES (?, ?, ?)`);
+        stmt.run(pattern, match_type, reason);
+    }
 };
 exports.addBlocklist = addBlocklist;
-var deleteBlocklist = function (id) {
-    exports.db.prepare("DELETE FROM scraper_blocklist WHERE id = ?").run(id);
+const deleteBlocklist = (id) => {
+    exports.db.prepare(`DELETE FROM scraper_blocklist WHERE id = ?`).run(id);
 };
 exports.deleteBlocklist = deleteBlocklist;
-var getBlocklistKeywords = function () {
-    return exports.db.prepare("SELECT keyword FROM scraper_blocklist_keywords ORDER BY created_at DESC").all();
+const getBlocklistKeywords = () => {
+    return exports.db.prepare(`SELECT keyword FROM scraper_blocklist_keywords ORDER BY created_at DESC`).all();
 };
 exports.getBlocklistKeywords = getBlocklistKeywords;
-var addBlocklistKeyword = function (keyword) {
-    exports.db.prepare("INSERT INTO scraper_blocklist_keywords (keyword) VALUES (?)").run(keyword);
+const addBlocklistKeyword = (keyword) => {
+    exports.db.prepare(`INSERT INTO scraper_blocklist_keywords (keyword) VALUES (?)`).run(keyword);
 };
 exports.addBlocklistKeyword = addBlocklistKeyword;
 // --- PIPELINE STATS METHODS ---
-var getPipelineStats = function (states) {
-    var _a;
-    if (states === void 0) { states = []; }
-    var whereClause = '1=1';
-    var params = [];
+const getPipelineStats = (states = []) => {
+    let whereClause = '1=1';
+    let params = [];
     if (states.length > 0) {
-        whereClause = "state IN (".concat(states.map(function () { return '?'; }).join(','), ")");
+        whereClause = `state IN (${states.map(() => '?').join(',')})`;
         params = states;
     }
-    var query = "\n    SELECT \n      COUNT(*) as total,\n      SUM(CASE WHEN verification_status = 'SEEDED' THEN 1 ELSE 0 END) as seeded,\n      SUM(CASE WHEN verification_status = 'ENRICHED' THEN 1 ELSE 0 END) as enriched,\n      SUM(CASE WHEN verification_status = 'DEEP_CRAWLED' THEN 1 ELSE 0 END) as deep_crawled_count,\n      SUM(CASE WHEN verification_status = 'MEDIA_READY' THEN 1 ELSE 0 END) as media_ready,\n      SUM(CASE WHEN is_published = 1 THEN 1 ELSE 0 END) as published,\n      SUM(CASE WHEN website IS NOT NULL AND website != '' THEN 1 ELSE 0 END) as has_website,\n      SUM(CASE WHEN verification_status = 'PENDING' OR verification_status IS NULL THEN 1 ELSE 0 END) as spider_queue,\n      SUM(CASE WHEN verification_status = 'SEEDED' THEN 1 ELSE 0 END) as detective_queue,\n      SUM(CASE WHEN candidate_photos IS NOT NULL AND photos IS NULL THEN 1 ELSE 0 END) as has_candidates,\n      SUM(CASE WHEN candidate_photos IS NOT NULL AND photos IS NULL THEN 1 ELSE 0 END) as photographer_queue,\n      SUM(CASE WHEN photos IS NOT NULL THEN 1 ELSE 0 END) as has_photos\n    FROM local_spots\n    WHERE ".concat(whereClause, "\n  ");
-    var result = (_a = exports.db.prepare(query)).get.apply(_a, params);
+    const query = `
+    SELECT 
+      COUNT(*) as total,
+      SUM(CASE WHEN verification_status = 'SEEDED' THEN 1 ELSE 0 END) as seeded,
+      SUM(CASE WHEN verification_status = 'DEEP_CRAWLED' THEN 1 ELSE 0 END) as deep_crawled_count,
+      SUM(CASE WHEN verification_status = 'MEDIA_READY' THEN 1 ELSE 0 END) as media_ready,
+      SUM(CASE WHEN is_published = 1 THEN 1 ELSE 0 END) as published,
+      SUM(CASE WHEN website IS NOT NULL AND website != '' THEN 1 ELSE 0 END) as has_website,
+      SUM(CASE WHEN verification_status = 'SEEDED' THEN 1 ELSE 0 END) as detective_queue,
+      SUM(CASE WHEN verification_status = 'DEEP_CRAWLED' THEN 1 ELSE 0 END) as photographer_queue,
+      SUM(CASE WHEN candidate_photos IS NOT NULL AND candidate_photos != '[]' AND candidate_photos != 'null' AND (photos IS NULL OR photos = '[]' OR photos = 'null') THEN 1 ELSE 0 END) as has_candidates,
+      SUM(CASE WHEN verification_status = 'MEDIA_READY' AND is_published = 0 THEN 1 ELSE 0 END) as publisher_queue,
+      SUM(CASE WHEN photos IS NOT NULL AND photos != '[]' AND photos != 'null' THEN 1 ELSE 0 END) as has_photos
+    FROM local_spots
+    WHERE ${whereClause}
+  `;
+    const result = exports.db.prepare(query).get(...params);
     return result;
 };
 exports.getPipelineStats = getPipelineStats;
@@ -356,6 +684,16 @@ function getFieldRegistry() {
     return exports.db.prepare('SELECT * FROM pipeline_field_registry ORDER BY sort_order ASC').all();
 }
 function upsertFieldRegistryItem(item) {
-    var stmt = exports.db.prepare("\n    INSERT INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order)\n    VALUES (@id, @field_name, @phase_id, @display_label, @data_type, @sort_order)\n    ON CONFLICT(id) DO UPDATE SET\n      field_name=excluded.field_name,\n      phase_id=excluded.phase_id,\n      display_label=excluded.display_label,\n      data_type=excluded.data_type,\n      sort_order=excluded.sort_order\n  ");
+    const stmt = exports.db.prepare(`
+    INSERT INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order, importance_level)
+    VALUES (@id, @field_name, @phase_id, @display_label, @data_type, @sort_order, COALESCE(@importance_level, 0))
+    ON CONFLICT(id) DO UPDATE SET
+      field_name=excluded.field_name,
+      phase_id=excluded.phase_id,
+      display_label=excluded.display_label,
+      data_type=excluded.data_type,
+      sort_order=excluded.sort_order,
+      importance_level=excluded.importance_level
+  `);
     stmt.run(item);
 }

@@ -137,16 +137,16 @@ if (!fieldRegCheck.find(c => c.name === 'importance_level')) {
   `);
 }
 
-// Migrate field registry phase_ids from old 5-phase to new 4-phase numbering (idempotent)
+// Migrate field registry phase_ids from old 5-phase to new 4-phase numbering (ONE-TIME)
 // Old: 1=Scout, 2=Spider(dead), 3=Detective, 4=Photographer, 5=Publisher
 // New: 1=Scout, 2=Detective, 3=Photographer, 4=Publisher
-// Run high→low to prevent collision (5→4 before 4→3, etc.)
+// ONLY run when the old schema marker (phase_id=5) still exists — prevents clobbering new Phase 3/4 seeds.
 const hasOldPhase5 = (db.prepare('SELECT COUNT(*) as cnt FROM pipeline_field_registry WHERE phase_id = 5').get() as any)?.cnt > 0;
-const hasOldPhase4 = (db.prepare('SELECT COUNT(*) as cnt FROM pipeline_field_registry WHERE phase_id = 4').get() as any)?.cnt > 0;
-const hasOldPhase3 = (db.prepare('SELECT COUNT(*) as cnt FROM pipeline_field_registry WHERE phase_id = 3').get() as any)?.cnt > 0;
-if (hasOldPhase5) db.prepare('UPDATE pipeline_field_registry SET phase_id = 4 WHERE phase_id = 5').run();
-if (hasOldPhase4) db.prepare('UPDATE pipeline_field_registry SET phase_id = 3 WHERE phase_id = 4').run();
-if (hasOldPhase3) db.prepare('UPDATE pipeline_field_registry SET phase_id = 2 WHERE phase_id = 3').run();
+if (hasOldPhase5) {
+  db.prepare('UPDATE pipeline_field_registry SET phase_id = 4 WHERE phase_id = 5').run();
+  db.prepare('UPDATE pipeline_field_registry SET phase_id = 3 WHERE phase_id = 4 AND id NOT LIKE \'p4_%\'').run();
+  db.prepare('UPDATE pipeline_field_registry SET phase_id = 2 WHERE phase_id = 3 AND id NOT LIKE \'p3_%\'').run();
+}
 
 // ── Auto-seed missing field registry entries (ALL phases) ────────────────
 // ON CONFLICT DO NOTHING preserves user-set importance_level.
@@ -188,7 +188,11 @@ const FIELD_SEEDS: { id: string; field_name: string; phase_id: number; display_l
 const seedStmt = db.prepare(`
   INSERT INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order, importance_level)
   VALUES (@id, @field_name, @phase_id, @display_label, @data_type, @sort_order, 0)
-  ON CONFLICT(id) DO NOTHING
+  ON CONFLICT(id) DO UPDATE SET
+    phase_id = excluded.phase_id,
+    display_label = excluded.display_label,
+    data_type = excluded.data_type,
+    sort_order = excluded.sort_order
 `);
 for (const seed of FIELD_SEEDS) {
   seedStmt.run(seed);
