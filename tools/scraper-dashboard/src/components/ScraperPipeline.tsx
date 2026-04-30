@@ -85,7 +85,7 @@ const generateUniformBelt = (idx: number, id: number, name: string, color: strin
   inQ: [],
   status: 'IDLE',
   gatekeeper: [],
-  attempting: [] as [string, string][],
+  attempting: [] as [string, string, string?][],
   outCards: []
 });
 
@@ -104,7 +104,7 @@ export const ScraperPipeline: React.FC<{
     triggerHarvest?: (type: string, states?: string[]) => void;
     onBlockSpot?: () => void; // optional refresh callback after block
 }> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot }) => {
-    const { telemetry, config, loading } = useScraperTelemetry(2000);
+    const { telemetry, config, loading, pulse } = useScraperTelemetry(2000);
     const { fields } = useFieldRegistry();
 
     // outCards show OUTPUT (completed) records for each belt.
@@ -230,48 +230,25 @@ export const ScraperPipeline: React.FC<{
         generateUniformBelt(5, 5, 'Sniper Bench │ Single-Record Brute Force QA', '#f43f5e', '244, 63, 94', 'Interactive', 'IDLE', 'Awaiting URL', 'N/A', '68-Field Map', [])
     ];
 
-    // Restore the technical target collection checklists on the Active Job cards with EVERY field
-    baseBelts[0].attempting = [['name', 'pending'], ['facility_type', 'pending'], ['address', 'pending'], ['city', 'pending'], ['state', 'pending'], ['zip', 'pending'], ['lat', 'pending'], ['lng', 'pending'], ['phone', 'pending'], ['website', 'pending'], ['rating', 'pending'], ['reviews', 'pending'], ['place_id', 'pending'], ['is_indoor', 'pending']];
+    // Dynamically pull attempting checkmarks from the field_registry
+    baseBelts[0].attempting = fields.filter(f => f.phase_id === 1).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]);
     
-    // Phase 3 Detective checklist: URL map + social handles extracted from the homepage
-    const crawlPaths = config?.crawl_priority_paths || [];
-    baseBelts[1].attempting = [
-      ['website',       'pending'],
-      ['deep_crawl',    'pending'],
-      ['facebook_url',  'pending'], ['instagram_url', 'pending'], ['tiktok_url', 'pending'],
-      ['operator_name', 'pending'], ['phone',      'pending'],
-      ...crawlPaths.map((p: string) => [p, 'pending'] as [string, string])
-    ];
-
-    // Phase 3 Detective checklist — AI fields the Indexer extracts from the crawled pages:
+    // Phase 2 Detective: Registry fields + dynamic AI vectors
     const aiVectors = config?.ai_target_vectors || [];
-    baseBelts[2].attempting = [
-      // Crawled content parsed from candidate_links pages (moved from Phase 2)
-      ['opening_hours',   'pending'], ['pricing_data',  'pending'], ['has_fee',       'pending'],
-      ['schedule_url',    'pending'], ['special_events','pending'], ['raw_knowledge', 'pending'],
-      // AI semantic extraction vectors
-      ['surface_type',    'pending'], ['surface_quality','pending'], ['is_indoor',     'pending'],
-      ['capacity',        'pending'], ['has_rental',    'pending'], ['has_pro_shop',  'pending'],
-      ['has_food',        'pending'], ['has_lights',    'pending'], ['has_lockers',   'pending'],
-      ['has_ac',          'pending'], ['has_wifi',      'pending'], ['has_toilets',   'pending'],
-      ['wheelchair',      'pending'], ['adult_night',   'pending'], ['derby',         'pending'],
-      ['vibe_score',      'pending'], ['cultural_meta', 'pending'],
-      ...aiVectors.map((v: any) => [(v.key || v), 'pending'] as [string, string])
+    baseBelts[1].attempting = [
+      ...fields.filter(f => f.phase_id === 2).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]),
+      ...aiVectors.map((v: any) => [(v.key || v), 'pending', '⚪'] as [string, string, string])
     ];
 
-    // Add Photo categories to Photographer:
+    // Phase 3 Photographer: Registry fields + photo categories
     const photoCategories = config?.photo_categories || [];
-    baseBelts[3].attempting = [
-      ['photos', 'pending'], ['candidate_photos', 'pending'], ['facebook_url', 'pending'], ['instagram_url', 'pending'], ['website', 'pending'], ['is_deep_crawled', 'pending'],
-      ...photoCategories.map((c: string) => [c, 'pending'] as [string, string])
+    baseBelts[2].attempting = [
+      ...fields.filter(f => f.phase_id === 3).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]),
+      ...photoCategories.map((c: string) => [c, 'pending', '⚪'] as [string, string, string])
     ];
 
-    // Add Publisher required fields:
-    const pubFields = config?.publisher_required_fields || [];
-    baseBelts[3].attempting = [
-      ['id', 'pending'], ['is_published', 'pending'], ['is_verified', 'pending'], ['is_featured', 'pending'], ['verification_status', 'pending'], ['surface_type', 'pending'], ['has_rental', 'pending'], ['has_pro_shop', 'pending'], ['vibe_score', 'pending'], ['updated_at', 'pending'], ['source', 'pending'],
-      ...pubFields.map((f: string) => [f, 'pending'] as [string, string])
-    ];
+    // Phase 4 Publisher: Registry fields
+    baseBelts[3].attempting = fields.filter(f => f.phase_id === 4).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]);
 
     const mergedBelts = baseBelts.map(belt => {
         let liveData: any = null;
@@ -302,8 +279,31 @@ export const ScraperPipeline: React.FC<{
         }
 
         if (liveData) {
+            const activeRecord = liveData.active_record;
+            let dynamicAttempting = belt.attempting;
+            
+            if (activeRecord) {
+                dynamicAttempting = belt.attempting.map(([fieldName, oldStatus, oldIcon], i) => {
+                    const rawVal = activeRecord[fieldName];
+                    let clVal = null;
+                    try {
+                        clVal = typeof activeRecord.candidate_links === 'string' 
+                            ? JSON.parse(activeRecord.candidate_links)?.[fieldName] 
+                            : activeRecord.candidate_links?.[fieldName];
+                    } catch(e) {}
+                    
+                    const target = clVal || rawVal;
+                    let newStatus = 'missing';
+                    if (target != null && target !== '' && target !== false && target !== '[]' && target !== '{}') {
+                        newStatus = 'success';
+                    }
+                    return [fieldName, newStatus, oldIcon] as [string, string, string?];
+                });
+            }
+
             return {
                 ...belt,
+                attempting: dynamicAttempting,
                 job: liveData.active_job || 'IDLE',
                 target: liveData.target || (liveData.in_q?.[0] ? `Next: ${liveData.in_q[0]}` : 'WAITING...'),
                 status: liveData.active_job ? 'PROCESSING' : (liveData.alive ? 'WAITING' : 'OFFLINE'),
@@ -343,6 +343,7 @@ export const ScraperPipeline: React.FC<{
             const data = await res.json();
             if (data.success) {
                 alert(`✅ Blocked "${spotName}" — purged ${data.count ?? 0} matching record(s) from the database.`);
+                pulse();
                 onBlockSpot?.(); // trigger parent refresh if provided
             } else {
                 alert('Block failed: ' + JSON.stringify(data));
@@ -356,7 +357,10 @@ export const ScraperPipeline: React.FC<{
         if (!window.confirm(`Force restart this spot to SEEDED?`)) return;
         try {
             const res = await fetch(`${CCTOWER}/api/skate_spots/${spotId}/restart`, { method: 'POST' });
-            if ((await res.json()).success) onBlockSpot?.(); // trigger refresh
+            if ((await res.json()).success) {
+                pulse();
+                onBlockSpot?.(); // trigger refresh
+            }
         } catch (e) { console.error(e); }
     };
 
@@ -364,7 +368,10 @@ export const ScraperPipeline: React.FC<{
         if (!window.confirm(`Freeze this spot to ON_HOLD?`)) return;
         try {
             const res = await fetch(`${CCTOWER}/api/skate_spots/${spotId}/freeze`, { method: 'POST' });
-            if ((await res.json()).success) onBlockSpot?.(); // trigger refresh
+            if ((await res.json()).success) {
+                pulse();
+                onBlockSpot?.(); // trigger refresh
+            }
         } catch (e) { console.error(e); }
     };
 

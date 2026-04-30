@@ -277,8 +277,8 @@ app.get('/api/pipeline/telemetry', async (req, res) => {
     // Build live telemetry from DB queues + in-memory active job registry
     // in_q = next 3 spots waiting in each phase queue (DB truth)
     const p1 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'PENDING' OR verification_status IS NULL ORDER BY created_at ASC LIMIT 3`).all();
-    const p3 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'SEEDED' AND website IS NOT NULL AND website != '' ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 3`).all();
-    const p4 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND candidate_photos IS NOT NULL AND photos IS NULL ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 3`).all();
+    const p3 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'SEEDED' ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 3`).all();
+    const p4 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND photos IS NULL ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 3`).all();
     const p6 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'MEDIA_READY' AND is_published = 0 ORDER BY created_at DESC LIMIT 3`).all();
 
     const names = (rows: any[]) => rows.map((s: any) => s.name);
@@ -289,12 +289,13 @@ app.get('/api/pipeline/telemetry', async (req, res) => {
     };
     const aj = (phase: string) => activeJobRegistry[phase]?.active_job || null;
     const tgt = (phase: string) => activeJobRegistry[phase]?.target || null;
+    const getRecord = (name: string | null) => name ? db.prepare(`SELECT * FROM local_spots WHERE name = ? LIMIT 1`).get(name) : null;
 
     res.json({
-      scout:      { active_job: aj('Phase 1'), target: tgt('Phase 1'), in_q: names(p1), pulse: pulseRegistry['Phase 1'], alive: isAlive('Phase 1') },
-      detective:  { active_job: aj('Phase 3'), target: tgt('Phase 3'), in_q: names(p3), pulse: pulseRegistry['Phase 3'], alive: isAlive('Phase 3') },
-      photographer: { active_job: aj('Phase 4'), target: tgt('Phase 4'), in_q: names(p4), pulse: pulseRegistry['Phase 4'], alive: isAlive('Phase 4') },
-      publisher:  { active_job: null, target: null, in_q: names(p6), pulse: pulseRegistry['Phase 6'], alive: false },
+      scout:      { active_job: aj('Phase 1'), target: tgt('Phase 1'), active_record: getRecord(tgt('Phase 1')), in_q: names(p1), pulse: pulseRegistry['Phase 1'], alive: isAlive('Phase 1') },
+      detective:  { active_job: aj('Phase 3'), target: tgt('Phase 3'), active_record: getRecord(tgt('Phase 3')), in_q: names(p3), pulse: pulseRegistry['Phase 3'], alive: isAlive('Phase 3') },
+      photographer: { active_job: aj('Phase 4'), target: tgt('Phase 4'), active_record: getRecord(tgt('Phase 4')), in_q: names(p4), pulse: pulseRegistry['Phase 4'], alive: isAlive('Phase 4') },
+      publisher:  { active_job: null, target: null, active_record: null, in_q: names(p6), pulse: pulseRegistry['Phase 6'], alive: false },
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -840,8 +841,8 @@ app.get('/api/queue', async (req, res) => {
 
   let query = 'SELECT * FROM local_spots WHERE 1=1';
   if (phase === 'phase1') query += ` AND verification_status = 'SEEDED'`;
-  else if (phase === 'phase2') query += ` AND verification_status = 'SEEDED' AND website IS NOT NULL AND website != ''`; // Detective input
-  else if (phase === 'phase3') query += ` AND verification_status = 'DEEP_CRAWLED' AND candidate_photos IS NOT NULL AND candidate_photos != '[]'`; // Photographer input
+  else if (phase === 'phase2') query += ` AND verification_status = 'SEEDED'`; // Detective input
+  else if (phase === 'phase3') query += ` AND verification_status = 'DEEP_CRAWLED' AND photos IS NULL`; // Photographer input
   else if (phase === 'phase4') query += ` AND verification_status = 'MEDIA_READY' AND is_published = 0`; // Publisher input
   // phase6 removed (dead) — was old Publisher queue key
   // spider-recent removed (dead) — Spider phase eliminated
@@ -944,7 +945,7 @@ app.post('/api/scraper/blocklist', async (req, res) => {
     addBlocklist(kw, match_type, reason);
     
     // Execute SQL Guillotine on local DB
-    const info = db.prepare(`UPDATE local_spots SET pipeline_status = 'REJECTED', is_published = 0 WHERE name LIKE ? COLLATE NOCASE`).run(`%${kw}%`);
+    const info = db.prepare(`UPDATE local_spots SET verification_status = 'REJECTED', is_published = 0 WHERE name LIKE ? COLLATE NOCASE`).run(`%${kw}%`);
       
     console.log( `Added "${kw}" to blocklist and purged ${info.changes} matching local records.`);
     res.json({ success: true, count: info.changes });

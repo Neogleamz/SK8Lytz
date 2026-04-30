@@ -1462,12 +1462,11 @@ function App() {
                 {/* Status filter */}
                 <select className="form-input" style={{ width: 'auto', fontSize: '0.75rem' }} value={gridFilter} onChange={e => setGridFilter(e.target.value)}>
                   <option value="ALL">All Status</option>
+                  <option value="SEEDED">SEEDED</option>
+                  <option value="DEEP_CRAWLED">DEEP_CRAWLED</option>
                   <option value="MEDIA_READY">MEDIA_READY</option>
-                  <option value="ENRICHED">ENRICHED</option>
-                  <option value="PENDING">PENDING</option>
-                  <option value="IDENTITY_ESTABLISHED">IDENTIFIED</option>
-                  <option value="INDEXED">INDEXED</option>
-                  <option value="REJECTED">Rejected</option>
+                  <option value="ON_HOLD">ON_HOLD</option>
+                  <option value="REJECTED">REJECTED</option>
                 </select>
                 {/* State filter */}
                 <input className="form-input" style={{ width: '68px', fontSize: '0.75rem', textTransform: 'uppercase', textAlign: 'center' }}
@@ -2127,3 +2126,4 @@ function App() {
 }
 
 export default App;
+

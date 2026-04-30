@@ -22,7 +22,7 @@ interface BeltProps {
   inQ: string[];
   status: string;
   gatekeeper?: string[];
-  attempting?: [string, string][];
+  attempting?: [string, string, string?][];
   outCards: OutCard[];
   onPhaseNav?: () => void;
   // Daemon controls
@@ -464,9 +464,10 @@ export const BeltNode: React.FC<BeltProps> = ({
 
             {attempting && attempting.length > 0 && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.56rem' }}>
-                {attempting.map(([tname, tstatus], i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, color: tstatus === 'done' ? colVar : tstatus === 'fail' ? '#ff3366' : 'rgba(255,255,255,0.35)' }}>
-                    <span>{tstatus === 'done' ? '[✓]' : tstatus === 'fail' ? '[✗]' : '[ ]'}</span>
+                {attempting.map(([tname, tstatus, ticon], i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, color: tstatus === 'success' ? colVar : tstatus === 'missing' ? '#ff3366' : 'rgba(255,255,255,0.35)' }}>
+                    <span>{ticon || ''}</span>
+                    <span>{tstatus === 'success' ? '[✓]' : tstatus === 'missing' ? '[✗]' : '[ ]'}</span>
                     <span>{tname}</span>
                   </div>
                 ))}

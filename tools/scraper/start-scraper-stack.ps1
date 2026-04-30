@@ -27,22 +27,22 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Register daemon processes with PM2 (stopped state - they are started from web UI)
-pm2 start ecosystem.config.js --only scraper-operator --stop-exit-codes 0 2>&1 | Out-Null
+
 pm2 start ecosystem.config.js --only scraper-indexer --stop-exit-codes 0 2>&1 | Out-Null
 pm2 start ecosystem.config.js --only scraper-photographer --stop-exit-codes 0 2>&1 | Out-Null
-pm2 start ecosystem.config.js --only ollama-daemon --stop-exit-codes 0 2>&1 | Out-Null
-pm2 stop scraper-operator scraper-indexer scraper-photographer ollama-daemon 2>&1 | Out-Null
+pm2 start ecosystem.config.js --only scraper-publisher --stop-exit-codes 0 2>&1 | Out-Null
+pm2 stop scraper-operator scraper-indexer scraper-photographer scraper-publisher 2>&1 | Out-Null
 Write-Host "   🤖 Daemons registered (STOPPED) - start them from the web UI" -ForegroundColor DarkGray
 
 # 3. Start Discord Bridge via PM2 (always-on notification relay)
 Write-Host "   🔔 Starting Discord Bridge..." -ForegroundColor Yellow
-pm2 start "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\tools\discord-bridge\index.js" --name "discord-bridge" --cwd "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\tools\discord-bridge" 2>&1 | Out-Null
+pm2 start ecosystem.config.js --only discord-bridge 2>&1 | Out-Null
 
 # 4. Start Vite Dashboard (scraper-dashboard dev server) via PM2
 Write-Host "   🖥️  Starting Scraper Dashboard (port 5173)..." -ForegroundColor Yellow
 $dashboardRunning = pm2 list 2>&1 | Select-String "scraper-dashboard"
 if (-not $dashboardRunning) {
-    pm2 start "node_modules/vite/bin/vite.js" --name "scraper-dashboard" --cwd "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\tools\scraper-dashboard" 2>&1 | Out-Null
+    pm2 start ecosystem.config.js --only scraper-dashboard 2>&1 | Out-Null
 } else {
     pm2 reload scraper-dashboard 2>&1 | Out-Null
 }

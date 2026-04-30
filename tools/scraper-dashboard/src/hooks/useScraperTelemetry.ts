@@ -69,11 +69,22 @@ export function useScraperTelemetry(pollingIntervalMs: number = 2000) {
     // Poll
     const interval = setInterval(fetchTelemetry, pollingIntervalMs);
 
+    // Save fetch function for manual pulsing
+    if (!(window as any).__pulseTelemetry) {
+      (window as any).__pulseTelemetry = fetchTelemetry;
+    }
+
     return () => {
       isMounted = false;
       clearInterval(interval);
     };
   }, [pollingIntervalMs]);
 
-  return { telemetry, config, loading, error };
+  const pulse = () => {
+    if ((window as any).__pulseTelemetry) {
+      (window as any).__pulseTelemetry();
+    }
+  };
+
+  return { telemetry, config, loading, error, pulse };
 }

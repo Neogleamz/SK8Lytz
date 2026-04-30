@@ -128,7 +128,7 @@ async function runPhotographerLoop() {
     const priorityStates: string[] = configRes.priority_states || [];
 
     // Build query with priority state ordering
-    let query = `SELECT id, name, state, candidate_photos, photos, verification_status FROM local_spots WHERE candidate_photos IS NOT NULL AND photos IS NULL`;
+    let query = `SELECT id, name, state, candidate_photos, photos, verification_status FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND photos IS NULL`;
     if (priorityStates.length > 0) {
       query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
     }
@@ -158,6 +158,7 @@ async function runPhotographerLoop() {
     let candidates: any = {};
     try {
       candidates = typeof target.candidate_photos === 'string' ? JSON.parse(target.candidate_photos) : target.candidate_photos;
+      if (!candidates) candidates = {};
     } catch (e) {}
 
     const localUrls: string[] = [];
@@ -203,12 +204,13 @@ async function runPhotographerLoop() {
 
       logToTower('INFO', `✨ ${target.name} → MEDIA_READY (${finalPhotos.length} photos saved to disk)`);
     } else {
-      // Null out candidate_photos so this record is skipped on future runs
+      // Null out candidate_photos so this record is skipped on future runs, but promote to MEDIA_READY so it doesn't get stuck.
       updateLocalSpot(target.id, {
         candidate_photos: null,
+        verification_status: 'MEDIA_READY',
         last_attempted_at: new Date().toISOString()
       });
-      logToTower('INFO', `⚠️ ${target.name} → no photos obtainable, cleared candidates`);
+      logToTower('INFO', `⚠️ ${target.name} → no photos obtainable, cleared candidates and promoted to MEDIA_READY`);
     }
 
     reportPulse(COOLDOWN_MS);

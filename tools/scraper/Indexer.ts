@@ -59,7 +59,7 @@ async function runIndexer() {
         .catch(() => ({ priority_states: [] }));
       const priorityStates = configRes.priority_states || [];
 
-      let query = `SELECT * FROM local_spots WHERE verification_status = 'SEEDED' AND website IS NOT NULL AND website != ''`;
+      let query = `SELECT * FROM local_spots WHERE verification_status = 'SEEDED'`;
       if (priorityStates.length > 0) {
         query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
       }

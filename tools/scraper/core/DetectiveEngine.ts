@@ -308,23 +308,30 @@ export async function executeDetective(
 
   const prompt = `${contextHeader}${systemPrompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${combinedText.slice(0, 25000)}`;
   const detectiveModel = aiConfig.detective_model || 'llama3.1';
-  onProgress(`[Detective] 🧠 Invoking Ollama (${detectiveModel})...`);
+  onProgress(`[Detective] 🧠 Invoking LM Studio (${detectiveModel})...`);
 
   let aiMetadata: Record<string, any> = {};
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const fetchFn = require('node-fetch');
-    const response = await fetchFn('http://localhost:11434/api/generate', {
+    const response = await fetchFn('http://localhost:1234/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: detectiveModel, prompt, format: 'json', stream: false, options: { num_ctx: 8192 } })
+      body: JSON.stringify({ 
+        model: detectiveModel, 
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        temperature: 0.1,
+        stream: false
+      })
     });
-    if (!response.ok) throw new Error('Ollama HTTP error');
+    if (!response.ok) throw new Error(`LM Studio HTTP error: ${response.status} ${response.statusText}`);
     const aiData = await response.json();
-    aiMetadata = JSON.parse(aiData.response);
-    onProgress('[Detective] ✓ Ollama extraction complete.');
+    const content = aiData.choices?.[0]?.message?.content || '{}';
+    aiMetadata = JSON.parse(content);
+    onProgress('[Detective] ✓ LM Studio extraction complete.');
   } catch (err: any) {
-    onProgress(`[Detective] ✗ Ollama extraction failed: ${err.message}`);
+    onProgress(`[Detective] ✗ LM Studio extraction failed: ${err.message}`);
   }
 
   // ── Map AI output → typed DB columns ────────────────────────────────────
