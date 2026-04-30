@@ -569,18 +569,6 @@ function App() {
     } catch (e) {}
   };
 
-  const restoreSpot = async (id: string, name: string) => {
-    if (!confirm(`Restore record "${name}" to PENDING status?`)) return;
-    try {
-      await fetch(`${API_BASE}/api/spots/${id}`, { 
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pipeline_status: 'PENDING' })
-      });
-      fetchSpots(page, gridFilter);
-    } catch (e) {}
-  };
-
   const deleteSpot = async (id: string, name: string) => {
     if (!confirm(`PERMANENTLY delete record "${name}"?`)) return;
     try {
