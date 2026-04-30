@@ -626,23 +626,37 @@ export async function executeDetective(
   }
 
   // ── Quality Gate ─────────────────────────────────────────────────────────
+  // Full-spectrum quality check: counts ALL AI-extracted fields (28 total)
   const qualityFields = [
-    opening_hours, pricing_data, surface_type, vibe_score,
+    // Schedule & Pricing (high-value)
+    opening_hours, pricing_data,
+    // Identity
+    operator_name, operator_description,
+    // Facility attributes
+    surface_type, surface_quality, vibe_score, is_indoor, capacity,
+    // Amenities (boolean flags)
     has_fee, has_rental, has_pro_shop, has_food, has_lights,
-    has_ac, has_lockers, has_toilets, has_wifi,
-    has_adult_night, special_events, operator_description, operator_name, cultural_metadata
+    has_ac, has_lockers, has_toilets, has_wifi, is_wheelchair_accessible,
+    // Events & Nightlife
+    has_adult_night, adult_night_details, adultNightSchedule, special_events, hosts_derby,
+    // Social & Cultural
+    instagram_url, facebook_url, tiktok_url, cultural_metadata,
   ];
+  const QUALITY_TOTAL = qualityFields.length; // 28
   const qualityScore = qualityFields.filter(f => f !== null && f !== undefined && f !== false).length;
-  const passedQualityGate = qualityScore >= 2;
+  // Require at least 1 high-value field (hours OR pricing) AND minimum score of 3
+  const hasHighValueField = (opening_hours && Object.keys(opening_hours).length > 0) ||
+                            (pricing_data && Object.keys(pricing_data).length > 0);
+  const passedQualityGate = qualityScore >= 3 && hasHighValueField;
 
   const hoursFound   = Object.keys(opening_hours || {}).length;
   const pricingFound = Object.keys(pricing_data  || {}).length;
   const eventsFound  = Array.isArray(special_events) ? special_events.length : 0;
   const schedFound   = adultNightSchedule ? Object.keys(adultNightSchedule).length : 0;
 
-  onProgress(`[Detective] 📊 Quality[${qualityScore}/17] Hours[${hoursFound}/7] Pricing[${pricingFound}] AdultNight[${has_adult_night ? 'Y' : 'N'}, ${schedFound}d] Events[${eventsFound}] Socials[IG:${instagram_url ? 'Y' : 'N'} FB:${facebook_url ? 'Y' : 'N'}] Photos[${candidatePhotos ? Object.keys(candidatePhotos).length : 0}]`);
+  onProgress(`[Detective] 📊 Quality[${qualityScore}/${QUALITY_TOTAL}] Hours[${hoursFound}/7] Pricing[${pricingFound}] AdultNight[${has_adult_night ? 'Y' : 'N'}, ${schedFound}d] Events[${eventsFound}] Socials[IG:${instagram_url ? 'Y' : 'N'} FB:${facebook_url ? 'Y' : 'N'}] Photos[${candidatePhotos ? Object.keys(candidatePhotos).length : 0}]`);
   if (!passedQualityGate) {
-    onProgress(`[Detective] ⚠️ Quality score ${qualityScore}/17 — below gate threshold of 2. Record would be STALLED in production.`);
+    onProgress(`[Detective] ⚠️ STALLED: Quality score ${qualityScore}/${QUALITY_TOTAL}${!hasHighValueField ? ' — missing hours & pricing (high-value gate)' : ''} — insufficient data extracted.`);
   } else {
     onProgress(`[Detective] ✅ Quality gate passed — record would be marked DEEP_CRAWLED in production.`);
   }

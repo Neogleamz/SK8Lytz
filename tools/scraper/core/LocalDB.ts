@@ -148,6 +148,29 @@ if (hasOldPhase5) db.prepare('UPDATE pipeline_field_registry SET phase_id = 4 WH
 if (hasOldPhase4) db.prepare('UPDATE pipeline_field_registry SET phase_id = 3 WHERE phase_id = 4').run();
 if (hasOldPhase3) db.prepare('UPDATE pipeline_field_registry SET phase_id = 2 WHERE phase_id = 3').run();
 
+// ── Auto-seed missing Phase 2 (Detective) field registry entries ─────────
+// Ensures ALL AI-extracted fields appear in the dashboard toggle grid.
+// ON CONFLICT DO NOTHING preserves user-set importance_level.
+const PHASE2_SEEDS = [
+  { id: 'has_fee',          field_name: 'has_fee',          display_label: 'Has Fee',           data_type: 'boolean', sort_order: 231 },
+  { id: 'has_lights',       field_name: 'has_lights',       display_label: 'Has Lights',        data_type: 'boolean', sort_order: 232 },
+  { id: 'has_wifi',         field_name: 'has_wifi',         display_label: 'Has WiFi',          data_type: 'boolean', sort_order: 233 },
+  { id: 'has_toilets',      field_name: 'has_toilets',      display_label: 'Has Toilets',       data_type: 'boolean', sort_order: 234 },
+  { id: 'surface_quality',  field_name: 'surface_quality',  display_label: 'Surface Quality',   data_type: 'text',    sort_order: 235 },
+  { id: 'vibe_score',       field_name: 'vibe_score',       display_label: 'Vibe Score',        data_type: 'float',   sort_order: 236 },
+  { id: 'capacity',         field_name: 'capacity',         display_label: 'Capacity',          data_type: 'integer', sort_order: 237 },
+  { id: 'schedule_url',     field_name: 'schedule_url',     display_label: 'Schedule URL',      data_type: 'text',    sort_order: 238 },
+  { id: 'is_indoor',        field_name: 'is_indoor',        display_label: 'Is Indoor',         data_type: 'boolean', sort_order: 170 },
+  { id: 'operator_name',    field_name: 'operator_name',    display_label: 'Operator Name',     data_type: 'text',    sort_order: 360 },
+];
+const seedStmt = db.prepare(`
+  INSERT INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order, importance_level)
+  VALUES (@id, @field_name, 2, @display_label, @data_type, @sort_order, 0)
+  ON CONFLICT(id) DO NOTHING
+`);
+for (const seed of PHASE2_SEEDS) {
+  seedStmt.run(seed);
+}
 
 db.exec(`
   CREATE TRIGGER IF NOT EXISTS set_sync_required
