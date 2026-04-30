@@ -13,16 +13,12 @@
  * ⚠️  DB writes happen here — NOT inside SpiderEngine.
  */
 
-import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { executeSpider, isSocialMediaUrl } from './core/SpiderEngine';
+import { db, updateLocalSpot } from './core/LocalDB';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-const supabase = createClient(
-  process.env.EXPO_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''
-);
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -51,8 +47,13 @@ async function runOperator() {
       const configRes = await fetch('http://localhost:5999/api/priority-states').then(r => r.json()).catch(() => ({ priority_states: [] }));
       const priorityStates = configRes.priority_states || [];
 
-      const { data: spots, error: rpcError } = await supabase.rpc('get_next_spot_for_operator', { priority_states: priorityStates });
-      if (rpcError) throw new Error('RPC Failed/' + rpcError.message);
+      let query = `SELECT * FROM local_spots WHERE verification_status = 'SEEDED' AND website IS NOT NULL AND website != ''`;
+      if (priorityStates.length > 0) {
+        query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
+      }
+      query += ` ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`;
+
+      const spots = db.prepare(query).all() as any[];
 
       if (!spots || spots.length === 0) {
         reportPulse(30000);
@@ -65,15 +66,15 @@ async function runOperator() {
       reportPulse(0, undefined, target.name, target.website || null);
 
       // Pre-flight burial — prevents re-pick on crash
-      await supabase.from('skate_spots').update({
+      updateLocalSpot(target.id, {
         last_attempted_at: new Date().toISOString(),
         retry_count: (target.retry_count || 0) + 1
-      }).eq('id', target.id);
+      });
 
       // GATE: no website → REJECTED (pipeline dead end)
       if (!target.website || target.website.trim() === '') {
         console.log(`   ⚠️  No website. REJECTED.`);
-        await supabase.from('skate_spots').update({ verification_status: 'REJECTED' }).eq('id', target.id);
+        updateLocalSpot(target.id, { verification_status: 'REJECTED' });
         await sleep(2000);
         continue;
       }
@@ -97,7 +98,7 @@ async function runOperator() {
         if (result.socialDomain === 'facebook.com') socialUpdate.facebook_url = target.website;
         if (result.socialDomain === 'instagram.com') socialUpdate.instagram_url = target.website;
         if (result.socialDomain === 'tiktok.com') socialUpdate.tiktok_url = target.website;
-        await supabase.from('skate_spots').update(socialUpdate).eq('id', target.id);
+        updateLocalSpot(target.id, socialUpdate);
         await sleep(1000);
         continue;
       }
@@ -105,21 +106,20 @@ async function runOperator() {
       // Handle empty result (navigation failed)
       if (!result.candidateLinks || !result.candidateLinks.root) {
         console.error(`   ✗ STALLED: Spider returned no root URL — cannot advance to Detective.`);
-        await supabase.from('skate_spots').update({
+        updateLocalSpot(target.id, {
           verification_status: 'STALLED',
           retry_count: (target.retry_count || 0) + 1,
           last_attempted_at: new Date().toISOString()
-        }).eq('id', target.id);
+        });
         reportPulse(delay);
         continue;
       }
 
       // ✅ Write result to DB — advance to ENRICHED
-      const { error: updateError } = await supabase.from('skate_spots').update({
+      updateLocalSpot(target.id, {
         candidate_links: result.candidateLinks,
         verification_status: 'ENRICHED'
-      }).eq('id', target.id);
-      if (updateError) throw updateError;
+      });
 
       reportPulse(delay);
 

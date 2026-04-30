@@ -12,6 +12,7 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fetch from 'node-fetch';
+import { db, updateLocalSpot } from './core/LocalDB';
 
 // Load .env — try multiple path strategies to be robust regardless of CWD
 const envPaths = [
@@ -133,21 +134,19 @@ async function runPhotographerLoop() {
     const priorityStates: string[] = configRes.priority_states || [];
 
     // Build query with priority state ordering
-    let photoQuery = supabase
-      .from('skate_spots')
-      .select('id, name, state, candidate_photos, photos, verification_status')
-      .not('candidate_photos', 'is', null)
-      .is('photos', null);
+    let query = `SELECT id, name, state, candidate_photos, photos, verification_status FROM local_spots WHERE candidate_photos IS NOT NULL AND photos IS NULL`;
+    if (priorityStates.length > 0) {
+      query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
+    }
+    query += ` ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`;
 
-    // If priority states set, fetch them first via two ordered queries (Supabase doesn't support CASE in order)
-    const { data: target, error: queryError } = priorityStates.length > 0
-      ? await photoQuery.in('state', priorityStates).order('last_attempted_at', { ascending: true, nullsFirst: true }).limit(1).maybeSingle()
-          .then(async (res) => {
-            // Priority states set but no results — HOLD, do not spill into other states
-            if (!res.data) return { data: null, error: null };
-            return res;
-          })
-      : await photoQuery.order('last_attempted_at', { ascending: true, nullsFirst: true }).limit(1).single();
+    let target: any = null;
+    let queryError = null;
+    try {
+      target = db.prepare(query).get() as any;
+    } catch (e: any) {
+      queryError = e;
+    }
 
     if (queryError || !target) {
       consecutiveIdle++;
@@ -162,7 +161,11 @@ async function runPhotographerLoop() {
     consecutiveIdle = 0;
     logToTower('INFO', `📷 Processing: ${target.name} (${target.state}) [${target.id}]`);
 
-    const candidates = target.candidate_photos as Record<string, any>;
+    let candidates: any = {};
+    try {
+      candidates = typeof target.candidate_photos === 'string' ? JSON.parse(target.candidate_photos) : target.candidate_photos;
+    } catch (e) {}
+    
     const cdnUrls: string[] = [];
 
     // Build ordered list of photo URLs to attempt
@@ -199,19 +202,19 @@ async function runPhotographerLoop() {
     const finalPhotos: string[] | null = cdnUrls.length > 0 ? cdnUrls : null;
 
     if (finalPhotos) {
-      await supabase.from('skate_spots').update({
+      updateLocalSpot(target.id, {
         photos: finalPhotos,
         verification_status: 'MEDIA_READY',
         last_attempted_at: new Date().toISOString()
-      }).eq('id', target.id);
+      });
 
       logToTower('INFO', `✨ ${target.name} → MEDIA_READY (${finalPhotos.length} photos, ${cdnUrls.length} uploaded)`);
     } else {
       // Null out candidate_photos so this record is skipped on future runs
-      await supabase.from('skate_spots').update({
+      updateLocalSpot(target.id, {
         candidate_photos: null,
         last_attempted_at: new Date().toISOString()
-      }).eq('id', target.id);
+      });
       logToTower('INFO', `⚠️ ${target.name} → no photos obtainable, cleared candidates`);
     }
 

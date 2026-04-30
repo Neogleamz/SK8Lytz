@@ -10,6 +10,7 @@ import { startGoogleSweep, stopGoogleSweep, isGoogleSweepActive } from './Google
 import { GooglePlacesProvider, RETAIL_BLOCKLIST } from './lib/providers/GooglePlacesProvider';
 import { executeSpider } from './core/SpiderEngine';
 import { executeDetective } from './core/DetectiveEngine';
+import { db, getLocalSpots, getLocalCount, updateLocalSpot, deleteLocalSpot } from './core/LocalDB';
 
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
@@ -153,51 +154,15 @@ app.get('/status', async (req, res) => {
       } catch(e) {}
     }
 
-    const { count: totalCount } = await supabase
-      .from('skate_spots')
-      .select('*', { count: 'exact', head: true });
-
-    const { count: totalProcessed } = await supabase
-      .from('skate_spots')
-      .select('*', { count: 'exact', head: true })
-      .not('last_attempted_at', 'is', null);
-
-    const { count: publishedCount } = await supabase
-      .from('skate_spots')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_published', true);
-
-    const { count: pendingCount } = await supabase
-      .from('skate_spots')
-      .select('*', { count: 'exact', head: true })
-      .or('verification_status.eq.PENDING,verification_status.is.null');
-
-    const { count: seededCount } = await supabase
-      .from('skate_spots')
-      .select('*', { count: 'exact', head: true })
-      .eq('verification_status', 'SEEDED');
-
-    const { count: enrichedCount } = await supabase
-      .from('skate_spots')
-      .select('*', { count: 'exact', head: true })
-      .eq('verification_status', 'ENRICHED');
-
-    const { count: deepCrawledCount } = await supabase
-      .from('skate_spots')
-      .select('*', { count: 'exact', head: true })
-      .eq('verification_status', 'DEEP_CRAWLED');
-
-    const { count: mediaReadyCount } = await supabase
-      .from('skate_spots')
-      .select('*', { count: 'exact', head: true })
-      .eq('verification_status', 'MEDIA_READY');
-
-    // Photographer input pool: candidate_photos collected, photos not yet downloaded
-    const { count: candidatesCount } = await supabase
-      .from('skate_spots')
-      .select('*', { count: 'exact', head: true })
-      .not('candidate_photos', 'is', null)
-      .is('photos', null);
+    const totalCount = db.prepare('SELECT COUNT(*) as cnt FROM local_spots').get().cnt;
+    const totalProcessed = db.prepare('SELECT COUNT(*) as cnt FROM local_spots WHERE last_attempted_at IS NOT NULL').get().cnt;
+    const publishedCount = db.prepare('SELECT COUNT(*) as cnt FROM local_spots WHERE is_published = 1').get().cnt;
+    const pendingCount = db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'PENDING' OR verification_status IS NULL`).get().cnt;
+    const seededCount = db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'SEEDED'`).get().cnt;
+    const enrichedCount = db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'ENRICHED'`).get().cnt;
+    const deepCrawledCount = db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'DEEP_CRAWLED'`).get().cnt;
+    const mediaReadyCount = db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'MEDIA_READY'`).get().cnt;
+    const candidatesCount = db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE candidate_photos IS NOT NULL AND photos IS NULL`).get().cnt;
 
     res.json({
       isRunning: running,
@@ -308,15 +273,13 @@ app.get('/api/pipeline/telemetry', async (req, res) => {
   try {
     // Build live telemetry from DB queues + in-memory active job registry
     // in_q = next 3 spots waiting in each phase queue (DB truth)
-    const [p1, p2, p3, p4, p6] = await Promise.all([
-      supabase.from('skate_spots').select('name').or('verification_status.eq.PENDING,verification_status.is.null').limit(3).order('created_at', { ascending: true }),
-      supabase.from('skate_spots').select('name').eq('verification_status', 'SEEDED').not('website', 'is', null).neq('website', '').limit(3).order('last_attempted_at', { ascending: true, nullsFirst: true }),
-      supabase.from('skate_spots').select('name').eq('verification_status', 'ENRICHED').not('candidate_links', 'is', null).limit(3).order('last_attempted_at', { ascending: true, nullsFirst: true }),
-      supabase.from('skate_spots').select('name').eq('verification_status', 'DEEP_CRAWLED').not('candidate_photos', 'is', null).is('photos', null).limit(3).order('last_attempted_at', { ascending: true, nullsFirst: true }),
-      supabase.from('skate_spots').select('name').eq('verification_status', 'MEDIA_READY').eq('is_published', false).limit(3).order('created_at', { ascending: false }),
-    ]);
+    const p1 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'PENDING' OR verification_status IS NULL ORDER BY created_at ASC LIMIT 3`).all();
+    const p2 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'SEEDED' AND website IS NOT NULL AND website != '' ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 3`).all();
+    const p3 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'ENRICHED' AND candidate_links IS NOT NULL ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 3`).all();
+    const p4 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND candidate_photos IS NOT NULL AND photos IS NULL ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 3`).all();
+    const p6 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'MEDIA_READY' AND is_published = 0 ORDER BY created_at DESC LIMIT 3`).all();
 
-    const names = (r: any) => (r.data || []).map((s: any) => s.name);
+    const names = (rows: any[]) => rows.map((s: any) => s.name);
     const isAlive = (phase: string) => {
       const p = pulseRegistry[phase];
       if (!p?.lastRunAt) return false;
@@ -433,17 +396,23 @@ app.post('/api/sniper/seed', async (req, res) => {
     };
 
     // ── Step 5: Upsert (same dedup logic as GoogleSweep) ─────────────────────
-    const { data, error } = await supabase.from('skate_spots')
-      .upsert(metaRecord, { onConflict: 'google_place_id', ignoreDuplicates: false })
-      .select('id').single();
-
-    if (error) {
+    let id;
+    try {
+      // Check if place_id exists to update or insert
+      const existing = db.prepare('SELECT id FROM local_spots WHERE google_place_id = ?').get(metaRecord.google_place_id) as any;
+      if (existing) {
+        id = existing.id;
+        updateLocalSpot(id, metaRecord);
+      } else {
+        id = upsertLocalSpot(metaRecord);
+      }
+    } catch (error: any) {
       console.error('[Sniper] Seed Upsert Error:', error.message);
       return res.status(500).json({ error: error.message });
     }
 
-    console.log(`[Sniper] ✅ Seeded full Phase-1 record ID: ${data.id} for "${details.name}" → ${url}`);
-    res.json({ success: true, spot_id: data.id, place_name: details.name, address: details.formatted_address });
+    console.log(`[Sniper] ✅ Seeded full Phase-1 local record ID: ${id} for "${details.name}" → ${url}`);
+    res.json({ success: true, spot_id: id, place_name: details.name, address: details.formatted_address });
 
   } catch (err: any) {
     console.error('[Sniper] Seed Error:', err.message);
@@ -452,9 +421,12 @@ app.post('/api/sniper/seed', async (req, res) => {
 });
 
 app.get('/api/sniper/poll/:id', async (req, res) => {
-  const { data, error } = await supabase.from('skate_spots').select('*').eq('id', req.params.id).single();
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true, spot: data });
+  try {
+    const spot = db.prepare('SELECT * FROM local_spots WHERE id = ?').get(req.params.id);
+    res.json({ success: true, spot });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // --- AI Detective Sandbox ---
@@ -625,14 +597,12 @@ app.get('/api/harvest/status', async (req, res) => {
     });
   }
 
-  const { data, error } = await supabase.from('skate_spots').select('state');
+  const data = db.prepare('SELECT state FROM local_spots WHERE state IS NOT NULL').all();
   const counts: Record<string, number> = {};
-  if (!error && data) {
-    data.forEach((row: any) => {
-      const st = row.state;
-      if (st) counts[st] = (counts[st] || 0) + 1;
-    });
-  }
+  data.forEach((row: any) => {
+    const st = row.state;
+    if (st) counts[st] = (counts[st] || 0) + 1;
+  });
 
   res.json({ seededStates, stateCounts: counts, allStates: US_STATES });
 });
@@ -664,67 +634,33 @@ app.post('/api/discover', async (req, res) => {
 });
 
 app.get('/api/spots', async (req, res) => {
-  const {
-    status, limit = 50, offset = 0,
-    sortCol = 'last_attempted_at', sortDir = 'desc', search = '',
-    has_photos, has_hours, has_website, has_adult_night,
-    has_pro_shop: filterProShop, is_published: filterPublished,
-    state: stateFilter, is_deep_crawled,
-  } = req.query;
-
-  let query = supabase.from('skate_spots').select('*', { count: 'exact' });
-
-  if (status && status !== 'ALL') {
-    if (status === 'UNVERIFIED' || status === 'PENDING') {
-      query = query.or('verification_status.eq.PENDING,verification_status.is.null');
-    } else {
-      query = query.eq('verification_status', status);
-    }
+  try {
+    const spots = getLocalSpots(req.query);
+    const count = getLocalCount(req.query);
+    res.json({ spots, total: count });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
-  if (search) {
-    query = query.or(`name.ilike.%${search}%,city.ilike.%${search}%,state.ilike.%${search}%`);
-  }
-  if (stateFilter && String(stateFilter).length === 2) {
-    query = query.eq('state', String(stateFilter).toUpperCase());
-  }
-  if (has_photos === 'true')        query = query.not('photos', 'is', null);
-  if (has_hours === 'true')         query = query.not('opening_hours', 'is', null);
-  if (has_website === 'true')       query = query.not('website', 'is', null);
-  if (has_adult_night === 'true')   query = query.eq('has_adult_night', true);
-  if (filterProShop === 'true')     query = query.or('has_pro_shop.eq.true,has_proshop.eq.true');
-  if (filterPublished === 'true')   query = query.eq('is_published', true);
-  if (filterPublished === 'false')  query = query.or('is_published.eq.false,is_published.is.null');
-  if (is_deep_crawled === 'true')   query = query.eq('is_deep_crawled', true);
-
-  const ALLOWED_SORT = ['last_attempted_at','last_enriched_at','name','rating',
-    'user_ratings_total','state','city','verification_status','created_at'];
-  const safeSort = ALLOWED_SORT.includes(String(sortCol)) ? String(sortCol) : 'last_attempted_at';
-
-  query = query.order(safeSort, { ascending: sortDir === 'asc', nullsFirst: false })
-               .range(Number(offset), Number(offset) + Number(limit) - 1);
-
-  const { data, error, count } = await query;
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ spots: data, total: count });
 });
 
 app.put('/api/spots/:id', async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
-  const { error } = await supabase.from('skate_spots').update(updates).eq('id', id);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true });
+  try {
+    updateLocalSpot(id, updates);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.post('/api/promote-all', async (req, res) => {
-  // Include MEDIA_READY -- the photographer pipeline's final output status
-  const { error } = await supabase
-    .from('skate_spots')
-    .update({ is_published: true })
-    .or('verification_status.eq.VERIFIED,verification_status.eq.ENRICHED,verification_status.eq.MEDIA_READY');
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true, message: 'Bulk promotion successful' });
+  try {
+    db.prepare(`UPDATE local_spots SET is_published = 1 WHERE verification_status IN ('VERIFIED', 'ENRICHED', 'MEDIA_READY')`).run();
+    res.json({ success: true, message: 'Bulk promotion successful' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // State-scoped publish: promote all eligible records in a single state
@@ -732,15 +668,12 @@ app.post('/api/promote-state/:state', async (req, res) => {
   const { state } = req.params;
   if (!state || state.length !== 2) return res.status(400).json({ error: 'Invalid state abbreviation' });
 
-  const { error, count } = await supabase
-    .from('skate_spots')
-    .update({ is_published: true })
-    .eq('state', state.toUpperCase())
-    .or('verification_status.eq.VERIFIED,verification_status.eq.ENRICHED,verification_status.eq.MEDIA_READY')
-    .select('id', { count: 'exact', head: true });
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true, state: state.toUpperCase(), promoted: count ?? 0 });
+  try {
+    const info = db.prepare(`UPDATE local_spots SET is_published = 1 WHERE state = ? AND verification_status IN ('VERIFIED', 'ENRICHED', 'MEDIA_READY')`).run(state.toUpperCase());
+    res.json({ success: true, state: state.toUpperCase(), promoted: info.changes });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // State-scoped unpublish: retract all records in a single state
@@ -748,21 +681,22 @@ app.post('/api/unpublish-state/:state', async (req, res) => {
   const { state } = req.params;
   if (!state || state.length !== 2) return res.status(400).json({ error: 'Invalid state abbreviation' });
 
-  const { error, count } = await supabase
-    .from('skate_spots')
-    .update({ is_published: false })
-    .eq('state', state.toUpperCase())
-    .select('id', { count: 'exact', head: true });
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true, state: state.toUpperCase(), unpublished: count ?? 0 });
+  try {
+    const info = db.prepare(`UPDATE local_spots SET is_published = 0 WHERE state = ?`).run(state.toUpperCase());
+    res.json({ success: true, state: state.toUpperCase(), unpublished: info.changes });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.delete('/api/spots/:id', async (req, res) => {
   const { id } = req.params;
-  const { error } = await supabase.from('skate_spots').delete().eq('id', id);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true });
+  try {
+    deleteLocalSpot(id);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // --- NEW OMNI-DAEMON ROUTES ---
@@ -857,19 +791,18 @@ app.get('/api/recent-spots', async (req, res) => {
   const statesRaw = (req.query.states as string) || '';
   const states = statesRaw ? statesRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
 
-  let query = supabase
-    .from('skate_spots')
-    .select('*')
-    .order('created_at', { ascending: false, nullsFirst: true })
-    .limit(20); // fetch more so priority sort has room to filter
-
+  let query = 'SELECT * FROM local_spots';
   if (states.length > 0) {
-    query = query.in('state', states);
+    query += ` WHERE state IN (${states.map(s => `'${s}'`).join(',')})`;
   }
+  query += ` ORDER BY created_at DESC NULLS LAST LIMIT 10`;
 
-  const { data, error } = await query.limit(10);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ spots: data });
+  try {
+    const data = db.prepare(query).all();
+    res.json({ spots: data });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.get('/api/field-registry', async (req, res) => {
@@ -888,54 +821,29 @@ app.get('/api/queue', async (req, res) => {
   const statesRaw = (req.query.states as string) || '';
   const states = statesRaw ? statesRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
 
-  let query = supabase.from('skate_spots').select('*');
-  if (phase === 'phase1') {
-     // Scout output: SEEDED records waiting for the Spider to pick up
-     query = query.eq('verification_status', 'SEEDED');
-  } else if (phase === 'phase2') {
-     // Spider queue: SEEDED with website — what Operator processes
-     query = query
-       .eq('verification_status', 'SEEDED')
-       .not('website', 'is', null)
-       .neq('website', '');
-  } else if (phase === 'phase3') {
-     // Detective queue: ENRICHED with candidate_links — what Indexer processes
-     query = query
-       .eq('verification_status', 'ENRICHED')
-       .not('candidate_links', 'is', null);
-  } else if (phase === 'phase4') {
-     // Photographer queue: DEEP_CRAWLED with candidate_photos but no photos yet
-     query = query
-       .eq('verification_status', 'DEEP_CRAWLED')
-       .not('candidate_photos', 'is', null)
-       .is('photos', null);
-  } else if (phase === 'phase6') {
-     // Publisher queue: MEDIA_READY, not yet published
-     query = query.eq('verification_status', 'MEDIA_READY').eq('is_published', false);
-  } else if (phase === 'spider-recent') {
-     // Spider output belt: ONLY ENRICHED — records the Spider just processed, waiting for Detective.
-     query = query
-       .not('candidate_links', 'is', null)
-       .eq('verification_status', 'ENRICHED');
-  } else if (phase === 'detective-recent') {
-     // Detective output belt: ALL DEEP_CRAWLED — just processed by Indexer, waiting for Photographer.
-     query = query.eq('verification_status', 'DEEP_CRAWLED');
-  } else {
-     query = query.or('verification_status.eq.SEEDED,verification_status.eq.ENRICHED,verification_status.eq.DEEP_CRAWLED,verification_status.is.null');
-  }
+  let query = 'SELECT * FROM local_spots WHERE 1=1';
+  if (phase === 'phase1') query += ` AND verification_status = 'SEEDED'`;
+  else if (phase === 'phase2') query += ` AND verification_status = 'SEEDED' AND website IS NOT NULL AND website != ''`;
+  else if (phase === 'phase3') query += ` AND verification_status = 'ENRICHED' AND candidate_links IS NOT NULL`;
+  else if (phase === 'phase4') query += ` AND verification_status = 'DEEP_CRAWLED' AND candidate_photos IS NOT NULL AND photos IS NULL`;
+  else if (phase === 'phase6') query += ` AND verification_status = 'MEDIA_READY' AND is_published = 0`;
+  else if (phase === 'spider-recent') query += ` AND verification_status = 'ENRICHED' AND candidate_links IS NOT NULL`;
+  else if (phase === 'detective-recent') query += ` AND verification_status = 'DEEP_CRAWLED'`;
+  else query += ` AND (verification_status IN ('SEEDED','ENRICHED','DEEP_CRAWLED') OR verification_status IS NULL)`;
 
-  // Apply state filter if priority regions are active
   if (states.length > 0) {
-    query = query.in('state', states);
+    query += ` AND state IN (${states.map(s => `'${s}'`).join(',')})`;
   }
 
   const sortAsc = phase !== 'spider-recent';
-  const { data, error } = await query
-    .order('last_attempted_at', { ascending: sortAsc, nullsFirst: sortAsc })
-    .limit(10);
+  query += sortAsc ? ` ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 10` : ` ORDER BY last_attempted_at DESC NULLS LAST LIMIT 10`;
 
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ spots: data, active_states: states });
+  try {
+    const data = db.prepare(query).all();
+    res.json({ spots: data, active_states: states });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // --- Scraper Blocklist & Spot Deletion ---
@@ -943,8 +851,7 @@ app.get('/api/queue', async (req, res) => {
 app.put('/api/skate_spots/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const { error } = await supabase.from('skate_spots').update(req.body).eq('id', id);
-    if (error) throw error;
+    updateLocalSpot(id, req.body);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -957,7 +864,7 @@ app.delete('/api/skate_spots/:id', async (req, res) => {
 
   try {
     if (blacklist === 'true') {
-      const { data: spot } = await supabase.from('skate_spots').select('name').eq('id', id).single();
+      const spot = db.prepare('SELECT name FROM local_spots WHERE id = ?').get(id) as any;
       if (spot && spot.name) {
         // Strip common suffixes and trim for the blocklist keyword
         let keyword = spot.name.toLowerCase().trim();
@@ -967,9 +874,7 @@ app.delete('/api/skate_spots/:id', async (req, res) => {
       }
     }
     
-    const { error } = await supabase.from('skate_spots').delete().eq('id', id);
-    if (error) throw error;
-    
+    deleteLocalSpot(id);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -979,7 +884,7 @@ app.delete('/api/skate_spots/:id', async (req, res) => {
 app.post('/api/skate_spots/:id/restart', async (req, res) => {
   const { id } = req.params;
   try {
-    const { error } = await supabase.from('skate_spots').update({
+    updateLocalSpot(id, {
       verification_status: 'SEEDED',
       last_attempted_at: null,
       candidate_links: null,
@@ -987,8 +892,7 @@ app.post('/api/skate_spots/:id/restart', async (req, res) => {
       photos: null,
       opening_hours: null,
       pricing_data: null
-    }).eq('id', id);
-    if (error) throw error;
+    });
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -998,10 +902,7 @@ app.post('/api/skate_spots/:id/restart', async (req, res) => {
 app.post('/api/skate_spots/:id/freeze', async (req, res) => {
   const { id } = req.params;
   try {
-    const { error } = await supabase.from('skate_spots').update({
-      verification_status: 'ON_HOLD'
-    }).eq('id', id);
-    if (error) throw error;
+    updateLocalSpot(id, { verification_status: 'ON_HOLD' });
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1023,16 +924,11 @@ app.post('/api/scraper/blocklist', async (req, res) => {
     const { error } = await supabase.from('scraper_blocklist').insert({ pattern: kw, match_type, reason });
     if (error) throw error;
     
-    // Execute SQL Guillotine: delete existing matches instantly
-    const { count, error: deleteError } = await supabase
-      .from('skate_spots')
-      .delete({ count: 'exact' })
-      .ilike('name', `%${kw}%`);
+    // Execute SQL Guillotine on local DB
+    const info = db.prepare(`DELETE FROM local_spots WHERE name LIKE ?`).run(`%${kw}%`);
       
-    if (deleteError) throw deleteError;
-    
-    console.log( `Added "${kw}" to blocklist and purged ${count || 0} matching records.`);
-    res.json({ success: true, count: count || 0 });
+    console.log( `Added "${kw}" to blocklist and purged ${info.changes} matching local records.`);
+    res.json({ success: true, count: info.changes });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1054,25 +950,17 @@ app.get('/api/logs/history', (req, res) => {
 
 app.get('/api/stats/coverage', async (req, res) => {
   try {
-    const { data, error } = await supabase.rpc('get_state_enrichment_stats');
-    if (error) {
-      const { data: rawData, error: rawError } = await supabase
-        .from('skate_spots')
-        .select('state, verification_status, is_published')
-        .then(result => {
-           if (result.error) return result;
-           const stats: Record<string, any> = {};
-           result.data.forEach((row: any) => {
-             if (!stats[row.state]) stats[row.state] = { state: row.state, total: 0, enriched: 0, published: 0 };
-             stats[row.state].total++;
-             if (row.verification_status === 'ENRICHED') stats[row.state].enriched++;
-             if (row.is_published === true) stats[row.state].published++;
-           });
-           return { data: Object.values(stats).sort((a: any,b: any) => b.total - a.total), error: null };
-        });
-      if (rawError) throw rawError;
-      return res.json({ stats: rawData });
-    }
+    const data = db.prepare(`
+      SELECT 
+        state, 
+        COUNT(*) as total, 
+        SUM(CASE WHEN verification_status = 'ENRICHED' THEN 1 ELSE 0 END) as enriched,
+        SUM(CASE WHEN is_published = 1 THEN 1 ELSE 0 END) as published
+      FROM local_spots
+      WHERE state IS NOT NULL
+      GROUP BY state
+      ORDER BY total DESC
+    `).all();
     res.json({ stats: data });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1082,21 +970,21 @@ app.get('/api/stats/coverage', async (req, res) => {
 // --- Databank Coverage: state x verification_status + is_published counts ---
 app.get('/api/stats/databank-coverage', async (req, res) => {
   try {
-    // Server-side COUNT FILTER via RPC — no PostgREST 1000-row cap
-    const { data, error } = await supabase.rpc('get_databank_coverage');
-    if (error) throw error;
-
-    // RPC returns bigint columns — cast to number for JSON serialisation
-    const rows = (data || []).map((r: any) => ({
-      state:                 r.state,
-      total:                 Number(r.total || 0),
-      published:             Number(r.published || 0),
-      PENDING:               Number(r.PENDING || 0),
-      ENRICHED:              Number(r.ENRICHED || 0),
-      IDENTITY_ESTABLISHED:  Number(r.IDENTITY_ESTABLISHED || 0),
-      INDEXED:               Number(r.INDEXED || 0),
-      MEDIA_READY:           Number(r.MEDIA_READY || 0),
-    }));
+    const rows = db.prepare(`
+      SELECT 
+        state,
+        COUNT(*) as total,
+        SUM(CASE WHEN is_published = 1 THEN 1 ELSE 0 END) as published,
+        SUM(CASE WHEN verification_status = 'PENDING' THEN 1 ELSE 0 END) as PENDING,
+        SUM(CASE WHEN verification_status = 'ENRICHED' THEN 1 ELSE 0 END) as ENRICHED,
+        SUM(CASE WHEN verification_status = 'IDENTITY_ESTABLISHED' THEN 1 ELSE 0 END) as IDENTITY_ESTABLISHED,
+        SUM(CASE WHEN verification_status = 'INDEXED' THEN 1 ELSE 0 END) as INDEXED,
+        SUM(CASE WHEN verification_status = 'MEDIA_READY' THEN 1 ELSE 0 END) as MEDIA_READY
+      FROM local_spots
+      WHERE state IS NOT NULL
+      GROUP BY state
+      ORDER BY state ASC
+    `).all();
 
     res.json({ rows });
   } catch (err: any) {
@@ -1152,12 +1040,9 @@ app.get('/api/sniper/stream', async (req, res) => {
 
   try {
     // ── Fetch spot record (read-only) ──────────────────────────────────────
-    send('log', '[Sniper] 🎯 Fetching spot record from database...');
-    const { data: spot, error: fetchError } = await supabase
-      .from('skate_spots')
-      .select('*')
-      .eq('id', String(spot_id))
-      .single();
+    send('log', '[Sniper] 🎯 Fetching spot record from local database...');
+    const spot = db.prepare('SELECT * FROM local_spots WHERE id = ?').get(String(spot_id));
+    const fetchError = !spot ? new Error('Spot not found') : null;
 
     if (fetchError || !spot) {
       send('error', `Failed to fetch spot: ${fetchError?.message || 'Not found'}`);

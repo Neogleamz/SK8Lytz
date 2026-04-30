@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { GooglePlacesProvider, FacilityType, RETAIL_BLOCKLIST, injectDynamicBlocklist } from './lib/providers/GooglePlacesProvider';
+import { db, getClosestLocalSpot, updateLocalSpot, upsertLocalSpot } from './core/LocalDB';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const supabase = createClient(
@@ -173,36 +174,36 @@ export async function startGoogleSweep(
         const freshRecord = { ...metaRecord, verification_status: 'SEEDED' };
 
         // 1. Spatial dedup (150m radius) — catches nearby rows regardless of google_place_id
-        const { data: closestSpot } = await supabase.rpc('get_closest_skate_spot', {
-          p_lat: details.lat,
-          p_lng: details.lng,
-          p_radius_meters: 150
-        });
+        const closestSpot = getClosestLocalSpot(details.lat, details.lng, 150);
 
         if (closestSpot && closestSpot.length > 0) {
           // Existing nearby row — refresh metadata, preserve pipeline status
           const existingId = closestSpot[0].spot_id;
           console.log(`  🔗 Nearby match (${closestSpot[0].distance_meters.toFixed(1)}m) — refreshing metadata.`);
-          const { error } = await supabase.from('skate_spots').update(metaRecord).eq('id', existingId);
-          if (error) console.error(`  ❌ Update Error:`, error.message);
-          else console.log(`  💾 Refreshed: ${details.name}`);
+          try {
+            updateLocalSpot(existingId, metaRecord);
+            console.log(`  💾 Refreshed: ${details.name}`);
+          } catch (error: any) {
+            console.error(`  ❌ Update Error:`, error.message);
+          }
         } else {
           // 2. Upsert on google_place_id — new rows get SEEDED, existing get metadata refresh
-          const isNew = !(await supabase.from('skate_spots')
-            .select('id', { count: 'exact', head: true })
-            .eq('google_place_id', details.place_id)
-            .then(r => r.count && r.count > 0));
+          const existing = db.prepare('SELECT id FROM local_spots WHERE google_place_id = ?').get(details.place_id) as any;
+          const isNew = !existing;
 
-          const { error } = await supabase.from('skate_spots').upsert(
-            isNew ? freshRecord : metaRecord,
-            { onConflict: 'google_place_id', ignoreDuplicates: false }
-          );
-
-          if (error) console.error(`  ❌ Upsert Error for ${details.name}:`, error.message);
-          else console.log(`  💾 ${isNew ? 'NEW' : 'Refreshed'} [${facilityType}]: ${details.name}`);
+          try {
+            if (isNew) {
+               upsertLocalSpot(freshRecord);
+            } else {
+               updateLocalSpot(existing.id, metaRecord);
+            }
+            console.log(`  💾 ${isNew ? 'NEW' : 'Refreshed'} [${facilityType}]: ${details.name}`);
+          } catch (error: any) {
+            console.error(`  ❌ Upsert Error for ${details.name}:`, error.message);
+          }
         }
 
-        await sleep(500); // QPS cooldown between detail fetches
+        await sleep(50); // QPS cooldown between detail fetches
       }
     }
     // ---- End facility type loop ----
