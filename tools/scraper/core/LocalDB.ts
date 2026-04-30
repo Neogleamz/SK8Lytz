@@ -148,27 +148,49 @@ if (hasOldPhase5) db.prepare('UPDATE pipeline_field_registry SET phase_id = 4 WH
 if (hasOldPhase4) db.prepare('UPDATE pipeline_field_registry SET phase_id = 3 WHERE phase_id = 4').run();
 if (hasOldPhase3) db.prepare('UPDATE pipeline_field_registry SET phase_id = 2 WHERE phase_id = 3').run();
 
-// ── Auto-seed missing Phase 2 (Detective) field registry entries ─────────
-// Ensures ALL AI-extracted fields appear in the dashboard toggle grid.
+// ── Auto-seed missing field registry entries (ALL phases) ────────────────
 // ON CONFLICT DO NOTHING preserves user-set importance_level.
-const PHASE2_SEEDS = [
-  { id: 'has_fee',          field_name: 'has_fee',          display_label: 'Has Fee',           data_type: 'boolean', sort_order: 231 },
-  { id: 'has_lights',       field_name: 'has_lights',       display_label: 'Has Lights',        data_type: 'boolean', sort_order: 232 },
-  { id: 'has_wifi',         field_name: 'has_wifi',         display_label: 'Has WiFi',          data_type: 'boolean', sort_order: 233 },
-  { id: 'has_toilets',      field_name: 'has_toilets',      display_label: 'Has Toilets',       data_type: 'boolean', sort_order: 234 },
-  { id: 'surface_quality',  field_name: 'surface_quality',  display_label: 'Surface Quality',   data_type: 'text',    sort_order: 235 },
-  { id: 'vibe_score',       field_name: 'vibe_score',       display_label: 'Vibe Score',        data_type: 'float',   sort_order: 236 },
-  { id: 'capacity',         field_name: 'capacity',         display_label: 'Capacity',          data_type: 'integer', sort_order: 237 },
-  { id: 'schedule_url',     field_name: 'schedule_url',     display_label: 'Schedule URL',      data_type: 'text',    sort_order: 238 },
-  { id: 'is_indoor',        field_name: 'is_indoor',        display_label: 'Is Indoor',         data_type: 'boolean', sort_order: 170 },
-  { id: 'operator_name',    field_name: 'operator_name',    display_label: 'Operator Name',     data_type: 'text',    sort_order: 360 },
+const FIELD_SEEDS: { id: string; field_name: string; phase_id: number; display_label: string; data_type: string; sort_order: number }[] = [
+  // ── Phase 1: Scout ──
+  { id: 'candidate_links',   field_name: 'candidate_links',   phase_id: 1, display_label: 'Candidate Links',     data_type: 'jsonb',    sort_order: 125 },
+
+  // ── Phase 2: Detective ──
+  { id: 'has_fee',            field_name: 'has_fee',            phase_id: 2, display_label: 'Has Fee',              data_type: 'boolean',  sort_order: 231 },
+  { id: 'has_lights',         field_name: 'has_lights',         phase_id: 2, display_label: 'Has Lights',           data_type: 'boolean',  sort_order: 232 },
+  { id: 'has_wifi',           field_name: 'has_wifi',           phase_id: 2, display_label: 'Has WiFi',             data_type: 'boolean',  sort_order: 233 },
+  { id: 'has_toilets',        field_name: 'has_toilets',        phase_id: 2, display_label: 'Has Toilets',          data_type: 'boolean',  sort_order: 234 },
+  { id: 'surface_quality',    field_name: 'surface_quality',    phase_id: 2, display_label: 'Surface Quality',      data_type: 'text',     sort_order: 235 },
+  { id: 'vibe_score',         field_name: 'vibe_score',         phase_id: 2, display_label: 'Vibe Score',           data_type: 'float',    sort_order: 236 },
+  { id: 'capacity',           field_name: 'capacity',           phase_id: 2, display_label: 'Capacity',             data_type: 'integer',  sort_order: 237 },
+  { id: 'schedule_url',       field_name: 'schedule_url',       phase_id: 2, display_label: 'Schedule URL',         data_type: 'text',     sort_order: 238 },
+  { id: 'is_indoor',          field_name: 'is_indoor',          phase_id: 2, display_label: 'Is Indoor',            data_type: 'boolean',  sort_order: 170 },
+  { id: 'operator_name',      field_name: 'operator_name',      phase_id: 2, display_label: 'Operator Name',        data_type: 'text',     sort_order: 360 },
+
+  // ── Phase 3: Photographer ──
+  { id: 'p3_candidate_photos', field_name: 'candidate_photos', phase_id: 3, display_label: 'Candidate Photos',     data_type: 'jsonb',    sort_order: 700 },
+  { id: 'p3_photos',           field_name: 'photos',           phase_id: 3, display_label: 'Curated Photos',       data_type: 'jsonb',    sort_order: 710 },
+  { id: 'p3_og_image',         field_name: 'og_image',         phase_id: 3, display_label: 'OG Image',             data_type: 'text',     sort_order: 720 },
+  { id: 'p3_street_view',      field_name: 'street_view_url',  phase_id: 3, display_label: 'Street View URL',      data_type: 'text',     sort_order: 730 },
+  { id: 'p3_dom_images',       field_name: 'dom_images',       phase_id: 3, display_label: 'DOM Images',           data_type: 'jsonb',    sort_order: 740 },
+  { id: 'p3_flyer_urls',       field_name: 'flyer_urls',       phase_id: 3, display_label: 'Flyer URLs',           data_type: 'jsonb',    sort_order: 750 },
+  { id: 'p3_photo_count',      field_name: 'photo_count',      phase_id: 3, display_label: 'Photo Count',          data_type: 'integer',  sort_order: 760 },
+  { id: 'p3_photo_quality',    field_name: 'photo_quality',    phase_id: 3, display_label: 'Photo Quality Score',  data_type: 'float',    sort_order: 770 },
+
+  // ── Phase 4: Publisher ──
+  { id: 'p4_is_published',     field_name: 'is_published',     phase_id: 4, display_label: 'Is Published',         data_type: 'boolean',  sort_order: 800 },
+  { id: 'p4_verification',     field_name: 'verification_status', phase_id: 4, display_label: 'Verification Status', data_type: 'text',  sort_order: 810 },
+  { id: 'p4_sync_required',    field_name: 'sync_required',    phase_id: 4, display_label: 'Sync Required',        data_type: 'boolean',  sort_order: 820 },
+  { id: 'p4_last_enriched',    field_name: 'last_enriched_at', phase_id: 4, display_label: 'Last Enriched',        data_type: 'text',     sort_order: 830 },
+  { id: 'p4_publish_score',    field_name: 'publish_score',    phase_id: 4, display_label: 'Publish Score',        data_type: 'float',    sort_order: 840 },
+  { id: 'p4_supabase_id',      field_name: 'supabase_id',      phase_id: 4, display_label: 'Supabase ID',          data_type: 'text',     sort_order: 850 },
+  { id: 'p4_last_synced',      field_name: 'last_synced_at',   phase_id: 4, display_label: 'Last Synced At',       data_type: 'text',     sort_order: 860 },
 ];
 const seedStmt = db.prepare(`
   INSERT INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order, importance_level)
-  VALUES (@id, @field_name, 2, @display_label, @data_type, @sort_order, 0)
+  VALUES (@id, @field_name, @phase_id, @display_label, @data_type, @sort_order, 0)
   ON CONFLICT(id) DO NOTHING
 `);
-for (const seed of PHASE2_SEEDS) {
+for (const seed of FIELD_SEEDS) {
   seedStmt.run(seed);
 }
 
