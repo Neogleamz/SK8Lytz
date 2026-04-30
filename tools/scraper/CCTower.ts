@@ -7,7 +7,6 @@ import { EventEmitter } from 'events';
 import { exec } from 'child_process';
 import { startGoogleSweep, stopGoogleSweep, isGoogleSweepActive } from './GoogleSweep';
 import { GooglePlacesProvider, RETAIL_BLOCKLIST } from './lib/providers/GooglePlacesProvider';
-import { executeSpider } from './core/SpiderEngine';
 import { executeDetective } from './core/DetectiveEngine';
 import { db, getLocalSpots, getLocalCount, updateLocalSpot, deleteLocalSpot, upsertLocalSpot, getConfig, updateConfig, getBlocklist, addBlocklist, deleteBlocklist, addBlocklistKeyword, getPipelineStats, getFieldRegistry } from './core/LocalDB';
 
@@ -292,6 +291,7 @@ app.get('/api/pipeline/telemetry', async (req, res) => {
     const tgt = (phase: string) => activeJobRegistry[phase]?.target || null;
 
     res.json({
+      scout:      { active_job: aj('Phase 1'), target: tgt('Phase 1'), in_q: names(p1), pulse: pulseRegistry['Phase 1'], alive: isAlive('Phase 1') },
       detective:  { active_job: aj('Phase 3'), target: tgt('Phase 3'), in_q: names(p3), pulse: pulseRegistry['Phase 3'], alive: isAlive('Phase 3') },
       photographer: { active_job: aj('Phase 4'), target: tgt('Phase 4'), in_q: names(p4), pulse: pulseRegistry['Phase 4'], alive: isAlive('Phase 4') },
       publisher:  { active_job: null, target: null, in_q: names(p6), pulse: pulseRegistry['Phase 6'], alive: false },
@@ -928,7 +928,7 @@ app.post('/api/scraper/blocklist', async (req, res) => {
     addBlocklist(kw, match_type, reason);
     
     // Execute SQL Guillotine on local DB
-    const info = db.prepare(`DELETE FROM local_spots WHERE name LIKE ?`).run(`%${kw}%`);
+    const info = db.prepare(`UPDATE local_spots SET pipeline_status = 'REJECTED', is_published = 0 WHERE name LIKE ? COLLATE NOCASE`).run(`%${kw}%`);
       
     console.log( `Added "${kw}" to blocklist and purged ${info.changes} matching local records.`);
     res.json({ success: true, count: info.changes });
@@ -1065,25 +1065,10 @@ app.get('/api/sniper/stream', async (req, res) => {
     const configRes = await fetch('http://localhost:5999/config').then(r => r.json()).catch(() => ({ config: {} }));
     const aiConfig = configRes.config || {};
 
-    // ── Phase 2: Spider ────────────────────────────────────────────────────
-    send('log', '[Sniper] === PHASE 2: SPIDER ===');
-    const spiderResult = await executeSpider(
-      spot.website || '',
-      true, // always headless in Sniper
-      (msg) => send('log', msg)
-    );
-    send('log', '[Sniper] ─────────────────────────────────────────');
-
-    // Use existing candidate_links if spider was blocked (social-only)
-    const candidateLinks = spiderResult.isSocialOnly
-      ? (spot.candidate_links || {})
-      : (spiderResult.candidateLinks || spot.candidate_links || {});
-
     // ── Phase 3: Detective ─────────────────────────────────────────────────
     send('log', '[Sniper] === PHASE 3: DETECTIVE ===');
     const detectiveResult = await executeDetective(
       spot,
-      candidateLinks,
       aiConfig,
       true, // always headless in Sniper
       (msg) => send('log', msg)
@@ -1096,9 +1081,9 @@ app.get('/api/sniper/stream', async (req, res) => {
       spot_id: String(spot_id),
       spot_name: spot.name,
       spiderResult: {
-        candidateLinks: spiderResult.candidateLinks,
-        isSocialOnly: spiderResult.isSocialOnly,
-        summary: spiderResult.summary,
+        candidateLinks: null,
+        isSocialOnly: false,
+        summary: 'Phase 2 Deprecated',
       },
       detectiveResult: {
         qualityScore: detectiveResult.qualityScore,

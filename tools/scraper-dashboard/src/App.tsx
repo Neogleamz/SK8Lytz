@@ -55,7 +55,7 @@ const US_STATES = [
 ];
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'phase1' | 'phase2' | 'phase3' | 'phase4' | 'phase5' | 'phase6' | 'sniper'>('pipeline');
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'phase1' | 'phase2' | 'phase3' | 'phase4' | 'sniper' | 'graveyard'>('pipeline');
   const [seedProvider, setSeedProvider] = useState<'osm'|'google'>('google');
 
 
@@ -161,7 +161,7 @@ function App() {
       // Only re-fetch queue for the currently visible tab (not all 6 every 5s)
       // When viewing the pipeline belt, refresh all phase queues so every belt has live data
       const phasesToRefresh = activeTabRef.current === 'pipeline'
-        ? ['phase1', 'phase2', 'phase3', 'phase4', 'phase6', 'spider-recent', 'detective-recent', 'recent']
+        ? ['phase1', 'phase2', 'phase3', 'phase4', 'detective-recent', 'recent']
         : [activeTabRef.current, 'recent'];
       fetchQueue(phasesToRefresh);
 
@@ -311,7 +311,7 @@ function App() {
 
   const fetchQueue = async (only?: string[]) => {
     // Phases now: phase1, phase3 (Detective), phase4 (Photographer), phase6 (Publisher)
-    const phasesToFetch = only ?? ['phase1', 'phase2', 'phase3', 'phase4', 'phase6', 'spider-recent', 'detective-recent', 'recent'];
+    const phasesToFetch = only ?? ['phase1', 'phase2', 'phase3', 'phase4', 'detective-recent', 'recent'];
     // Read from ref so this always has the live value even inside stale interval closures
     const activeStates = stateOverrideRef.current;
     const statesParam = activeStates.length > 0 ? `&states=${activeStates.join(',')}` : '';
@@ -379,7 +379,8 @@ function App() {
         .map(([k]) => `${k}=true`)
         .join('&');
       const stateParam = activeState.length === 2 ? `&state=${activeState.toUpperCase()}` : '';
-      const url = `${API_BASE}/api/spots?limit=${rowsPerPage}&offset=${offset}&status=${filter}&sortCol=${col}&sortDir=${dir}&search=${encodeURIComponent(search)}${stateParam}${chipParams ? '&' + chipParams : ''}`;
+        const plStatus = activeTab === 'graveyard' ? '&pipeline_status=REJECTED' : '';
+        const url = `${API_BASE}/api/spots?limit=${rowsPerPage}&offset=${offset}&status=${filter}&sortCol=${col}&sortDir=${dir}&search=${encodeURIComponent(search)}${stateParam}${chipParams ? '&' + chipParams : ''}${plStatus}`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -556,6 +557,30 @@ function App() {
      else { setSortCol(col); setSortDir('asc'); }
   };
 
+  const restoreSpot = async (id: string, name: string) => {
+    if (!confirm(`Restore record "${name}" to PENDING status?`)) return;
+    try {
+      await fetch(`${API_BASE}/api/spots/${id}`, { 
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pipeline_status: 'PENDING' })
+      });
+      fetchSpots(page, gridFilter);
+    } catch (e) {}
+  };
+
+  const restoreSpot = async (id: string, name: string) => {
+    if (!confirm(`Restore record "${name}" to PENDING status?`)) return;
+    try {
+      await fetch(`${API_BASE}/api/spots/${id}`, { 
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pipeline_status: 'PENDING' })
+      });
+      fetchSpots(page, gridFilter);
+    } catch (e) {}
+  };
+
   const deleteSpot = async (id: string, name: string) => {
     if (!confirm(`PERMANENTLY delete record "${name}"?`)) return;
     try {
@@ -638,28 +663,7 @@ function App() {
     } catch (e) {}
   };
 
-  const PIPELINE_PHASES = [
-    { id: '0', title: 'Factory Floor', sub: 'Unified Live Telemetry', route: 'pipeline', color: '#00ffaa',
-      target: 'Daemons -> UI',
-      metric: 'LIVE', metricLabel: 'Real-Time Sync', isDaemon: true,
-      statusActive: true },
-    { id: '1', title: 'The Scout', sub: 'Google Places — Nationwide Seeding', route: 'phase1', color: '#8a2be2',
-      target: 'Google API -> ENRICHED',
-      metric: status?.totalCount || 0, metricLabel: 'Total Seeded', isDaemon: false,
-      statusActive: status?.isHarvestingActive || status?.isGoogleSweepActive },
-    { id: '2', title: 'The Spider', sub: 'Website Deep Crawl', route: 'phase3', color: '#ff5a00',
-      target: 'ENRICHED -> is_deep_crawled',
-      metric: status?.indexedCount || 0, metricLabel: 'Sites Crawled', isDaemon: true,
-      statusActive: status?.currentTarget?.includes('Indexer: online') },
-    { id: '3', title: 'The Photographer', sub: 'Photo Harvest (OG + Street View)', route: 'phase4', color: '#e91e63',
-      target: 'ENRICHED -> MEDIA_READY',
-      metric: status?.mediaReadyCount || 0, metricLabel: 'Galleries Built', isDaemon: true,
-      statusActive: status?.currentTarget?.includes('Photographer: online') },
-    { id: '4', title: 'Publisher', sub: 'QA Review + Live App Gate', route: 'phase6', color: '#4caf50',
-      target: 'Review -> is_published',
-      metric: status?.publishedCount || 0, metricLabel: 'Live on App', isDaemon: false,
-      statusActive: true }
-  ];
+  
 
   // ── REGION PULSE — single source of truth, used in both tab layouts ──
   const regionPulseEl = pipelineStats ? (() => {
@@ -856,9 +860,17 @@ function App() {
       </div>
       {/* Power — pushed right */}
       <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', flexShrink: 0, alignItems: 'center' }}>
-        <button className="btn-icon" onClick={() => setActiveTab('sniper' as any)} title="Sniper Bench"
-          style={{ background: activeTab === 'sniper' ? 'rgba(244, 63, 94, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'sniper' ? '#f43f5e' : 'rgba(255,255,255,0.6)', border: activeTab === 'sniper' ? '1px solid #f43f5e' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer' }}>
-          🎯
+        <button className="btn-icon" onClick={() => setActiveTab('pipeline')} title="Factory Floor"
+          style={{ background: activeTab === 'pipeline' ? 'rgba(0, 255, 170, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'pipeline' ? '#00ffaa' : 'rgba(255,255,255,0.6)', border: activeTab === 'pipeline' ? '1px solid #00ffaa' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 800 }}>
+          FACTORY FLOOR
+        </button>
+        <button className="btn-icon" onClick={() => setActiveTab('sniper')} title="Sniper Bench"
+          style={{ background: activeTab === 'sniper' ? 'rgba(255, 106, 0, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'sniper' ? '#ff6a00' : 'rgba(255,255,255,0.6)', border: activeTab === 'sniper' ? '1px solid #ff6a00' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>
+          🔫
+        </button>
+        <button className="btn-icon" onClick={() => setActiveTab('graveyard')} title="Garbage Can (Rejected & Purged)"
+          style={{ background: activeTab === 'graveyard' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'graveyard' ? '#f44336' : 'rgba(255,255,255,0.6)', border: activeTab === 'graveyard' ? '1px solid #f44336' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>
+          🗑️
         </button>
         <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}
           style={{ padding: '4px 12px', fontSize: '0.62rem', fontWeight: 800 }}>BOOT ALL</button>
@@ -877,32 +889,7 @@ function App() {
         </div>
       )}
 
-      {/* =========== 6-PHASE UNIFORM PIPELINE GRID =========== */}
-      {activeTab !== 'pipeline' && (
-        <div className="pipeline-grid fade-in">
-           {PIPELINE_PHASES.map((phase) => (
-              <div 
-                 key={phase.id} 
-                 className={`pipeline-card ${activeTab === phase.route ? 'active' : ''}`}
-                 onClick={() => setActiveTab(phase.route as any)}
-                 style={{ borderTop: `4px solid ${phase.color}` }}
-              >
-                 <div className="pipeline-card-header">
-                    <span className="phase-id">Phase {phase.id}</span>
-                    <div className={`status-dot ${phase.statusActive ? 'online' : 'offline'}`}></div>
-                 </div>
-                 <h3 style={{ color: phase.color }}>{phase.title}</h3>
-                 <p className="phase-sub">{phase.sub}</p>
-                 <p className="phase-target">{phase.target}</p>
-                 
-                 <div className="mini-stat-box" style={{marginTop: 'auto'}}>
-                    <span className="stat-label">{phase.metricLabel}</span>
-                    <div className="stat-value" style={{ color: phase.color }}>{phase.metric?.toLocaleString()}</div>
-                 </div>
-              </div>
-           ))}
-        </div>
-      )}
+      
 
       {/* ======= REGION PULSE: 5-phase live breakdown ======= */}
       {activeTab !== 'pipeline' && regionPulseEl && (
@@ -1179,67 +1166,44 @@ function App() {
           </div>
         )}
 
-        {/* =========== DAEMON CONTROL CENTER (PHASE 2-5) =========== */}
-        {(['phase2', 'phase3', 'phase4', 'phase5'].includes(activeTab)) && (
+        {/* =========== DAEMON CONTROL CENTER (PHASE 2-4) =========== */}
+        {(['phase2', 'phase3', 'phase4'].includes(activeTab)) && (
           <div className="tab-pane daemon-center">
              <div className="explainer-block" style={{marginBottom: '1rem'}}>
                <SectionHdr
                  id={`daemon_explainer_${activeTab}`}
-                 label={`${PIPELINE_PHASES.find(p=>p.route===activeTab)?.title}: ${PIPELINE_PHASES.find(p=>p.route===activeTab)?.sub}`}
-                 color={PIPELINE_PHASES.find(p=>p.route===activeTab)?.color}
+                 label={<span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className="btn-mini" onClick={(e) => { e.stopPropagation(); setActiveTab('pipeline'); }} style={{ background: '#00ffaa', color: '#000', border: 'none' }}>← BACK TO FACTORY</button>
+                    Phase Databank
+                 </span>}
+                 color={'#fff'}
                />
                {!isCollapsed(`daemon_explainer_${activeTab}`) && (
                  <>
-                   {activeTab === 'phase2' && <p>Targets <strong>IDENTITY_ESTABLISHED → INDEXED</strong> when found, or marks as <strong>MISSING_WEBSITE</strong> and skips if no website was seeded.</p>}
-                   {activeTab === 'phase3' && <p>The AI Detective visits the <strong>candidate_links</strong> collected by the Spider in Phase 2 — no re-crawl needed. Runs <strong>Ollama Llama-3</strong> across the combined page text to extract hours, adult night schedules, pricing, events, social links, and photo candidates. Promotes records to <strong>INDEXED</strong>.</p>}
-                   {activeTab === 'phase4' && <p>The Photographer daemon reads <code>candidate_photos</code> written by the Indexer — downloading OG images and DOM media as binary uploads to Supabase Storage. Falls back to Google Street View Static as a guaranteed photo source. Promotes records to <strong>MEDIA_READY</strong> on success.</p>}
-                   {activeTab === 'phase5' && <p>The Publisher Gate is the final human-approved release step. Only records with <strong style={{color:'#4caf50'}}>is_published = true</strong> are visible on the live SK8Lytz app map. Bulk-promote all pipeline-complete records (ENRICHED + MEDIA_READY) below, or use the Databank QA tab to approve individual spots.</p>}
+                   
+                   {activeTab === 'phase2' && <p>The AI Detective visits the <strong>website</strong> collected by the Indexer in Phase 1 — no regex crawl needed. Runs <strong>Ollama Llama-3</strong> across the combined page text to extract hours, adult night schedules, pricing, events, social links, and photo candidates. Promotes records to <strong>INDEXED</strong>.</p>}
+                   {activeTab === 'phase3' && <p>The Photographer daemon reads <code>candidate_photos</code> written by the Indexer — downloading OG images and DOM media as binary uploads to Supabase Storage. Falls back to Google Street View Static as a guaranteed photo source. Promotes records to <strong>MEDIA_READY</strong> on success.</p>}
+                   {activeTab === 'phase4' && <p>The Publisher Gate is the final human-approved release step. Only records with <strong style={{color:'#4caf50'}}>is_published = true</strong> are visible on the live SK8Lytz app map. Bulk-promote all pipeline-complete records (ENRICHED + MEDIA_READY) below, or use the Databank QA tab to approve individual spots.</p>}
                  </>
                )}
              </div>
              
-             {activeTab === 'phase2' && (
-                <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
-                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#00ffaa' }}>{status?.enrichedCount || 0}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>ENRICHED</div>
-                   </div>
-                   <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
-                      <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('operator', 'start')} disabled={status?.currentTarget?.includes('Operator: online')}>▶ Phase 2: Spider (Operator)</button>
-                         <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('operator', 'stop')} disabled={!status?.currentTarget?.includes('Operator: online')}>■ STOP</button>
-                      </div>
-                      <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
-                         IDENTITY_ESTABLISHED → INDEXED
-                      </div>
-                      {status?.currentTarget?.includes('Operator: online') && <div className="flow-animation"></div>}
-                   </div>
-                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#5d78ff' }}>{status?.identityCount || 0}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>IDENTITY_EST.</div>
-                   </div>
-                </div>
-             )}
+             
 
-             {activeTab === 'phase3' && (
+             
+             {activeTab === 'phase2' && (
                 <div className="flow-visualizer" style={{ padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
-                    {/* Dual input: both IDENTITY_ESTABLISHED → INDEXED feed into Indexer */}
+                    {/* input: SEEDED feeds into Detective */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-end', minWidth: '120px' }}>
                       <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#ff5a00' }}>{status?.enrichedCount || 0}</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>ENRICHED</div>
-                        <div style={{ fontSize: '0.6rem', color: 'rgba(255,90,0,0.6)' }}>Google Primary</div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#5d78ff' }}>{status?.identityCount || 0}</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>IDENTITY_EST.</div>
-                        <div style={{ fontSize: '0.6rem', color: 'rgba(93,120,255,0.6)' }}>OSM Fallback</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#00ffaa' }}>{status?.seededCount || 0}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>SEEDED</div>
                       </div>
                     </div>
                     <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                        <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                          <button className="btn-mini start" onClick={() => triggerSpecificDaemon('indexer', 'start')} disabled={status?.currentTarget?.includes('Indexer: online')}>▶ Phase 3: Detective (Indexer)</button>
+                          <button className="btn-mini start" onClick={() => triggerSpecificDaemon('indexer', 'start')} disabled={status?.currentTarget?.includes('Indexer: online')}>▶ Phase 2: Detective (Indexer)</button>
                           <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('indexer', 'stop')} disabled={!status?.currentTarget?.includes('Indexer: online')}>■ STOP</button>
                        </div>
                        <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
@@ -1256,7 +1220,8 @@ function App() {
                 </div>
              )}
 
-             {activeTab === 'phase3' && (
+
+                          {activeTab === 'phase2' && (
                 <div style={{ marginTop: '2rem' }}>
                   <DetectiveLab
                     aiSystemPrompt={aiSystemPrompt}
@@ -1270,7 +1235,7 @@ function App() {
                 </div>
              )}
 
-             {activeTab === 'phase4' && (
+                          {activeTab === 'phase3' && (
                 <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
                    <div style={{ textAlign: 'center', minWidth: '100px' }}>
                       <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#e91e63' }}>{status?.candidatesReadyCount || 0}</div>
@@ -1278,7 +1243,7 @@ function App() {
                    </div>
                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('photographer', 'start')} disabled={status?.currentTarget?.includes('Photographer: online')}>▶ Phase 4: Photographer</button>
+                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('photographer', 'start')} disabled={status?.currentTarget?.includes('Photographer: online')}>▶ Phase 3: Photographer</button>
                          <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('photographer', 'stop')} disabled={!status?.currentTarget?.includes('Photographer: online')}>■ STOP</button>
                       </div>
                       <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
@@ -1293,7 +1258,7 @@ function App() {
                 </div>
              )}
 
-             {activeTab === 'phase5' && (
+                          {activeTab === 'phase4' && (
                 <div style={{ padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4rem', marginBottom: '2rem' }}>
                     <div style={{ textAlign: 'center' }}>
@@ -1301,32 +1266,31 @@ function App() {
                       <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>MEDIA_READY</div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '3rem', fontWeight: 800, color: '#ff5a00' }}>{status?.enrichedCount || 0}</div>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>ENRICHED</div>
+                      <div style={{ fontSize: '3rem', fontWeight: 800, color: '#ff5a00' }}>{status?.deepCrawledCount || 0}</div>
+                      <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>DEEP_CRAWLED</div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '3rem', fontWeight: 800, color: '#4caf50' }}>{status?.verifiedCount || 0}</div>
+                      <div style={{ fontSize: '3rem', fontWeight: 800, color: '#4caf50' }}>{status?.publishedCount || 0}</div>
                       <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>LIVE ON MAP</div>
                     </div>
                   </div>
                   <div style={{ textAlign: 'center', padding: '1.5rem', background: 'rgba(76,175,80,0.05)', border: '1px solid rgba(76,175,80,0.3)', borderRadius: '8px' }}>
-                    <p style={{ margin: '0 0 1rem', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>The Publisher Gate controls which records are visible to users on the SK8Lytz app map. Use the Databank QA tab to review individual records and toggle <strong style={{color:'#4caf50'}}>APP_LIVE</strong>, or bulk-promote all ENRICHED records below.</p>
-                    <button className="btn btn-start" style={{background: '#4caf50', border: 'none'}} onClick={bulkPromote}> BULK PUBLISH ALL ENRICHED → APP MAP</button>
+                    <p style={{ margin: '0 0 1rem', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>The Publisher Gate controls which records are visible to users on the SK8Lytz app map. Use the Databank QA tab below to review individual records and toggle <strong style={{color:'#4caf50'}}>APP_LIVE</strong>, or bulk-promote all ready records.</p>
+                    <button className="btn btn-start" style={{background: '#4caf50', border: 'none'}} onClick={bulkPromote}> BULK PUBLISH ALL READY → APP MAP</button>
                   </div>
                 </div>
              )}
 
              {/* Mini Data Bank & Evasion Audit */}
-             {(['phase2', 'phase3', 'phase4', 'phase5'].includes(activeTab)) && (() => {
+             {(['phase2', 'phase3', 'phase4'].includes(activeTab)) && (() => {
                 const queue = phaseQueues[activeTab] || [];
                 let hydratingFields: string[] = [];
-                if (activeTab === 'phase2') hydratingFields = ['Website', 'Phone Number'];
-                if (activeTab === 'phase3') hydratingFields = ['Pricing', 'Adult Night', 'Hours', ' Photo Candidates'];
-                if (activeTab === 'phase4') hydratingFields = ['OG Photo', 'DOM Images', 'Street View', 'Facebook OG'];
-                if (activeTab === 'phase5') hydratingFields = ['Media URLs', 'Thumbnails'];
+                if (activeTab === 'phase2') hydratingFields = ['Pricing', 'Adult Night', 'Hours', ' Photo Candidates'];
+                if (activeTab === 'phase3') hydratingFields = ['OG Photo', 'DOM Images', 'Street View', 'Facebook OG'];
+                if (activeTab === 'phase4') hydratingFields = ['Media URLs', 'Thumbnails'];
 
                 const activeLabel = `Phase ${activeTab.replace('phase','')}`;
-                const activeColor = PIPELINE_PHASES.find(p=>p.route===activeTab)?.color || '#fff';
+                const activeColor = '#fff';
 
                 return (
                   <div style={{marginTop: '20px'}}>
@@ -1355,17 +1319,23 @@ function App() {
           </div>
         )}
 
-        {/* =========== PHASE 6: DATABANK QA =========== */}
-        {activeTab === 'phase6' && (
-          <div className="tab-pane graveyard fade-in">
-            <div className="explainer-block" style={{marginBottom: '1rem', background: 'rgba(76, 175, 80, 0.05)', border: '1px solid rgba(76, 175, 80, 0.2)'}}>
-              <h3 style={{marginTop: 0, color: '#4caf50'}}>Phase 4: Databank QA &amp; Live Publish</h3>
-              <p>Final review before publication. Filter and inspect records, then publish state-by-state or individually. Use the view toggle to switch between Card, List, and Table views.</p>
-            </div>
+        {/* =========== PHASE 4: DATABANK QA =========== */}
+        {['phase4', 'graveyard'].includes(activeTab) && (
+            <div className="tab-pane graveyard fade-in">
+              <div className="explainer-block" style={{marginBottom: '1rem', background: activeTab === 'graveyard' ? 'rgba(244, 67, 54, 0.05)' : 'rgba(76, 175, 80, 0.05)', border: `1px solid ${activeTab === 'graveyard' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(76, 175, 80, 0.2)'}`}}>
+                <h3 style={{marginTop: 0, color: activeTab === 'graveyard' ? '#f44336' : '#4caf50'}}>
+                  {activeTab === 'graveyard' ? 'Graveyard: Rejected & Purged Records' : 'Phase 4: Databank QA & Live Publish'}
+                </h3>
+                <p>{activeTab === 'graveyard' 
+                    ? 'Review records that were blocked by the Guillotine or manually rejected. These will not be published.'
+                    : 'Final review before publication. Filter and inspect records, then publish state-by-state or individually. Use the view toggle to switch between Card, List, and Table views.'}
+                </p>
+              </div>
 
 
              {/* =========== STATUS COVERAGE MAP =========== */}
-            <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255,179,0,0.03)', border: '1px solid rgba(255,179,0,0.2)', borderRadius: '12px' }}>
+              {activeTab !== 'graveyard' && (
+              <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255,179,0,0.03)', border: '1px solid rgba(255,179,0,0.2)', borderRadius: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isCollapsed('coverage_map') ? 0 : '0.5rem' }}>
                 <SectionHdr id="coverage_map" label="Pipeline Coverage Map" color="#ffb300" right={
                   !isCollapsed('coverage_map') && (
@@ -2100,7 +2070,15 @@ function App() {
                             ) : (
                               <button className="btn-icon" onClick={() => startEdit(row)}>️</button>
                             )}
-                            <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>️</button>
+                            {activeTab === 'graveyard' ? (
+                                <button className="btn-icon" onClick={() => restoreSpot(row.id, row.name)} title="Restore" style={{color: '#4caf50'}}>♻️</button>
+                              ) : (
+                                {activeTab === 'graveyard' ? (
+                                <button className="btn-icon" onClick={() => restoreSpot(row.id, row.name)} title="Restore" style={{color: '#4caf50'}}>♻️</button>
+                              ) : (
+                                <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>🗑️</button>
+                              )}
+                              )}
                           </div>
                         </td>
                       </tr>
@@ -2125,8 +2103,9 @@ function App() {
         <div className="log-header">
            <h2 className="panel-header" style={{margin:0}}>
              {activeTab === 'phase1' ? 'Phase 1: Seed Engine Logs' :
-              activeTab === 'phase2' ? 'Phase 2: Operator Logs' :
-              activeTab === 'phase3' ? 'Phase 3: Indexer Logs' :
+              activeTab === 'phase2' ? 'Phase 2: Detective Logs' :
+              activeTab === 'phase3' ? 'Phase 3: Photographer Logs' :
+              activeTab === 'phase4' ? 'Phase 4: Publisher Logs' :
               'Omni-Terminal (Restricted Access)'}
            </h2>
            <button className="btn-mini" onClick={fetchHistory}>PERSISTENT HISTORY</button>
@@ -2135,9 +2114,9 @@ function App() {
           {logs
              .filter(log => {
                 if (activeTab === 'phase1') return log.source === 'Phase 1' || log.source === 'System';
-                if (activeTab === 'phase2') return log.source === 'Phase 2' || log.source === 'System';
-                if (activeTab === 'phase3') return log.source === 'Phase 3' || log.source === 'System';
-                if (activeTab === 'phase4') return log.source === 'Photographer' || log.source === 'System';
+                if (activeTab === 'phase2') return log.source === 'Phase 3' || log.source === 'System';
+             if (activeTab === 'phase3') return log.source === 'Photographer' || log.source === 'System';
+             if (activeTab === 'phase4') return log.source === 'System';
                 return true; 
              })
              .map((log, i) => (
@@ -2151,9 +2130,9 @@ function App() {
           ))}
           {logs.filter(log => {
              if (activeTab === 'phase1') return log.source === 'Phase 1' || log.source === 'System';
-             if (activeTab === 'phase2') return log.source === 'Phase 2' || log.source === 'System';
-             if (activeTab === 'phase3') return log.source === 'Phase 3' || log.source === 'System';
-             if (activeTab === 'phase4') return log.source === 'Photographer' || log.source === 'System';
+             if (activeTab === 'phase2') return log.source === 'Phase 3' || log.source === 'System';
+             if (activeTab === 'phase3') return log.source === 'Photographer' || log.source === 'System';
+             if (activeTab === 'phase4') return log.source === 'System';
              return true;
           }).length === 0 && (
              <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', padding: '1rem' }}>No active telemetry signals detected for this phase.</div>

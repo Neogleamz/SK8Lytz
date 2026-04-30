@@ -407,7 +407,7 @@ export const getLocalSpot = (id: string) => {
 };
 
 export const deleteLocalSpot = (id: string) => {
-  db.prepare(`DELETE FROM local_spots WHERE id = ?`).run(id);
+  db.prepare(`UPDATE local_spots SET pipeline_status = 'REJECTED', is_published = 0 WHERE id = ?`).run(id);
 };
 
 export const getLocalSpots = (queryArgs: any = {}) => {
@@ -426,6 +426,11 @@ export const getLocalSpots = (queryArgs: any = {}) => {
   if (queryArgs.search) {
     query += ` AND (name LIKE ? OR city LIKE ? OR state LIKE ?)`;
     params.push(`%${queryArgs.search}%`, `%${queryArgs.search}%`, `%${queryArgs.search}%`);
+  }
+
+  if (queryArgs.pipeline_status) {
+    query += ` AND pipeline_status = ?`;
+    params.push(queryArgs.pipeline_status);
   }
 
   if (queryArgs.state) {
@@ -473,6 +478,11 @@ export const getLocalCount = (queryArgs: any = {}) => {
   if (queryArgs.search) {
     query += ` AND (name LIKE ? OR city LIKE ? OR state LIKE ?)`;
     params.push(`%${queryArgs.search}%`, `%${queryArgs.search}%`, `%${queryArgs.search}%`);
+  }
+
+  if (queryArgs.pipeline_status) {
+    query += ` AND pipeline_status = ?`;
+    params.push(queryArgs.pipeline_status);
   }
 
   if (queryArgs.state) {
@@ -562,8 +572,11 @@ export const getBlocklist = () => {
 };
 
 export const addBlocklist = (pattern: string, match_type: string = 'name', reason: string = '') => {
-  const stmt = db.prepare(`INSERT INTO scraper_blocklist (pattern, match_type, reason) VALUES (?, ?, ?)`);
-  stmt.run(pattern, match_type, reason);
+  const existing = db.prepare(`SELECT * FROM scraper_blocklist WHERE pattern = ?`).get(pattern);
+  if (!existing) {
+    const stmt = db.prepare(`INSERT INTO scraper_blocklist (pattern, match_type, reason) VALUES (?, ?, ?)`);
+    stmt.run(pattern, match_type, reason);
+  }
 };
 
 export const deleteBlocklist = (id: number | string) => {
