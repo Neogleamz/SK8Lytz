@@ -326,6 +326,7 @@ export async function executeDetective(
   const hosts_derby              = safeBool(aiMetadata.derby    ?? aiMetadata.hosts_derby              ?? spotContext.hosts_derby);
   const cultural_metadata        = aiMetadata.cultural_meta    || aiMetadata.cultural_metadata         || spotContext.cultural_metadata || null;
   const operator_description     = aiMetadata.operator_description || spotContext.operator_description  || null;
+  const operator_name            = aiMetadata.operator_name || spotContext.operator_name || null;
 
   // ── Social Links (from collected hrefs) ──────────────────────────────────
   let instagram_url = spotContext.instagram_url || null;
@@ -371,7 +372,7 @@ export async function executeDetective(
     opening_hours, pricing_data, surface_type, vibe_score,
     has_fee, has_rental, has_pro_shop, has_food, has_lights,
     has_ac, has_lockers, has_toilets, has_wifi,
-    has_adult_night, special_events, operator_description, cultural_metadata
+    has_adult_night, special_events, operator_description, operator_name, cultural_metadata
   ];
   const qualityScore = qualityFields.filter(f => f !== null && f !== undefined && f !== false).length;
   const passedQualityGate = qualityScore >= 2;
@@ -389,7 +390,7 @@ export async function executeDetective(
   }
 
   const mappedFields = {
-    is_indoor, operator_description, instagram_url, facebook_url, tiktok_url, schedule_url,
+    is_indoor, operator_description, operator_name, instagram_url, facebook_url, tiktok_url, schedule_url,
     opening_hours, adult_night_schedule: adultNightSchedule,
     has_adult_night, adult_night_details, special_events, pricing_data, has_fee,
     surface_type, surface_quality, vibe_score, capacity, has_rental, has_pro_shop, has_food,

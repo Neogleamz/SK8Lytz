@@ -141,6 +141,7 @@ async function runIndexer() {
         updateLocalSpot(target.id, {
           is_indoor:                  mappedFields.is_indoor,
           operator_description:       mappedFields.operator_description,
+          operator_name:              mappedFields.operator_name,
           instagram_url:              mappedFields.instagram_url,
           facebook_url:               mappedFields.facebook_url,
           tiktok_url:                 mappedFields.tiktok_url,
