@@ -100,8 +100,6 @@ interface PulseData {
 }
 
 const pulseRegistry: Record<string, PulseData> = {
-  'Phase 1': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
-  'Phase 2': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
   'Phase 3': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
   'Phase 4': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
   'Phase 5': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
@@ -110,8 +108,6 @@ const pulseRegistry: Record<string, PulseData> = {
 
 // Active job tracker — daemons report what they are currently processing
 const activeJobRegistry: Record<string, { active_job: string | null; target: string | null; updated_at: string }> = {
-  'Phase 1': { active_job: null, target: null, updated_at: '' },
-  'Phase 2': { active_job: null, target: null, updated_at: '' },
   'Phase 3': { active_job: null, target: null, updated_at: '' },
   'Phase 4': { active_job: null, target: null, updated_at: '' },
 };
@@ -143,7 +139,6 @@ app.get('/status', async (req, res) => {
   // Let's use PM2 to check if the scrapers are actually running online
   exec('pm2 jlist', { windowsHide: true }, async (err, stdout) => {
     let running = false;
-    let operatorStatus = 'Offline';
     let indexerStatus = 'Offline';
     let photographerStatus = 'Offline';
     let publisherStatus = 'Offline';
@@ -151,14 +146,12 @@ app.get('/status', async (req, res) => {
     if (!err && stdout) {
       try {
         const pm2List = JSON.parse(stdout);
-        const operator = pm2List.find((p: any) => p.name === 'scraper-operator');
         const indexer = pm2List.find((p: any) => p.name === 'scraper-indexer');
         const photographer = pm2List.find((p: any) => p.name === 'scraper-photographer');
         const publisher = pm2List.find((p: any) => p.name === 'scraper-publisher');
-        if (operator?.pm2_env?.status === 'online' || indexer?.pm2_env?.status === 'online' || publisher?.pm2_env?.status === 'online') {
+        if (indexer?.pm2_env?.status === 'online' || publisher?.pm2_env?.status === 'online') {
             running = true;
         }
-        operatorStatus = operator?.pm2_env?.status || 'Offline';
         indexerStatus = indexer?.pm2_env?.status || 'Offline';
         photographerStatus = photographer?.pm2_env?.status || 'Offline';
         publisherStatus = publisher?.pm2_env?.status || 'Offline';
@@ -179,7 +172,7 @@ app.get('/status', async (req, res) => {
       isRunning: running,
       isHarvestingActive,
       isHeadless,
-      currentTarget: `Operator: ${operatorStatus} | Indexer: ${indexerStatus} | Photographer: ${photographerStatus}`,
+      currentTarget: `Indexer: ${indexerStatus} | Photographer: ${photographerStatus}`,
       isGoogleSweepActive,
       totalCount: totalCount || 0,          // COUNT(*) — true total seeded
       processedCount: totalProcessed || 0,
@@ -227,7 +220,7 @@ app.post('/start', (req, res) => {
   const { daemons } = (req.body || {}) as { daemons?: string[] };
   const target = (daemons && daemons.length > 0)
     ? daemons.map(d => `scraper-${d}`).join(',')
-    : 'scraper-operator,scraper-indexer,scraper-photographer,scraper-publisher';
+    : 'scraper-indexer,scraper-photographer,scraper-publisher';
   console.log(`Orchestrating start: ${target}`);
   exec(`pm2 start ecosystem.config.js --only ${target}`, { cwd: __dirname, windowsHide: true }, (err) => {
      if (err) {
@@ -243,7 +236,7 @@ app.post('/stop', (req, res) => {
   const { daemons } = (req.body || {}) as { daemons?: string[] };
   const target = (daemons && daemons.length > 0)
     ? daemons.map(d => `scraper-${d}`).join(' ')
-    : 'scraper-operator scraper-indexer scraper-photographer scraper-publisher';
+    : 'scraper-indexer scraper-photographer scraper-publisher';
   console.log(`Orchestrating stop: ${target}`);
   exec(`pm2 stop ${target}`, { cwd: __dirname, windowsHide: true }, (err) => {
      if (err) {
@@ -285,8 +278,7 @@ app.get('/api/pipeline/telemetry', async (req, res) => {
     // Build live telemetry from DB queues + in-memory active job registry
     // in_q = next 3 spots waiting in each phase queue (DB truth)
     const p1 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'PENDING' OR verification_status IS NULL ORDER BY created_at ASC LIMIT 3`).all();
-    const p2 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'SEEDED' AND website IS NOT NULL AND website != '' ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 3`).all();
-    const p3 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'ENRICHED' AND candidate_links IS NOT NULL ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 3`).all();
+    const p3 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'SEEDED' AND website IS NOT NULL AND website != '' ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 3`).all();
     const p4 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND candidate_photos IS NOT NULL AND photos IS NULL ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 3`).all();
     const p6 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'MEDIA_READY' AND is_published = 0 ORDER BY created_at DESC LIMIT 3`).all();
 
@@ -300,8 +292,6 @@ app.get('/api/pipeline/telemetry', async (req, res) => {
     const tgt = (phase: string) => activeJobRegistry[phase]?.target || null;
 
     res.json({
-      scout:      { active_job: aj('Phase 1'), target: tgt('Phase 1'), in_q: names(p1), pulse: pulseRegistry['Phase 1'], alive: isAlive('Phase 1') },
-      spider:     { active_job: aj('Phase 2'), target: tgt('Phase 2'), in_q: names(p2), pulse: pulseRegistry['Phase 2'], alive: isAlive('Phase 2') },
       detective:  { active_job: aj('Phase 3'), target: tgt('Phase 3'), in_q: names(p3), pulse: pulseRegistry['Phase 3'], alive: isAlive('Phase 3') },
       photographer: { active_job: aj('Phase 4'), target: tgt('Phase 4'), in_q: names(p4), pulse: pulseRegistry['Phase 4'], alive: isAlive('Phase 4') },
       publisher:  { active_job: null, target: null, in_q: names(p6), pulse: pulseRegistry['Phase 6'], alive: false },

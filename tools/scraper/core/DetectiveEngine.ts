@@ -95,14 +95,12 @@ function isSocialCrawlBlocked(url: string): boolean {
  * Execute the Phase 3 Detective against a spot's candidate_links.
  *
  * @param spotContext   - The spot record from the DB (name, city, state, website, etc.)
- * @param candidateLinks - The candidate_links JSONB map produced by the Spider.
  * @param aiConfig      - The global AI config fetched from CCTower /config.
  * @param isHeadless    - Whether to launch Puppeteer headless.
  * @param onProgress    - Callback that receives log lines in real-time (for SSE streaming).
  */
 export async function executeDetective(
   spotContext: any,
-  candidateLinks: Record<string, string>,
   aiConfig: any,
   isHeadless: boolean,
   onProgress: (msg: string) => void = () => {}
@@ -115,30 +113,16 @@ export async function executeDetective(
   const domImages: string[] = [];
   const flyerUrls: string[] = [];
 
-  // ── Build ordered list of URLs to visit ──────────────────────────────────
-  const urlsToVisit: string[] = [];
-  for (const key of PAGE_PRIORITY) {
-    if (candidateLinks[key] && !urlsToVisit.includes(candidateLinks[key])) {
-      urlsToVisit.push(candidateLinks[key]);
-      if (urlsToVisit.length >= MAX_PAGES_PER_RECORD) break;
-    }
-  }
-  if (urlsToVisit.length === 0 && spotContext.website) {
-    urlsToVisit.push(spotContext.website);
-  }
-
-  const filteredUrls = urlsToVisit.filter(u => !isSocialCrawlBlocked(u));
-  const socialOnlyRecord = filteredUrls.length === 0;
+  const socialOnlyRecord = isSocialCrawlBlocked(spotContext.website);
 
   if (socialOnlyRecord) {
-    onProgress('[Detective] ⚠️ No crawlable URLs (social-only record) — running AI on metadata only.');
+    onProgress(`[Detective] ⚠️ Website is a social media URL (${spotContext.website}) — running AI on metadata only.`);
     combinedText = `Facility name: ${spotContext.name}. Location: ${spotContext.city}, ${spotContext.state}. ` +
       `Type: ${spotContext.facility_type || 'roller rink'}. ` +
       (spotContext.phone ? `Phone: ${spotContext.phone}. ` : '') +
-      (spotContext.facebook_url ? `Facebook: ${spotContext.facebook_url}. ` : '') +
-      `Note: No website available — extract what you can from facility type and name.`;
+      `Note: No traditional website available.`;
   } else {
-    onProgress(`[Detective] 🕷️ Visiting ${filteredUrls.length} candidate pages...`);
+    onProgress(`[Detective] 🕷️ Crawling root website: ${spotContext.website}`);
     try {
       browser = await puppeteer.launch({
         headless: isHeadless ? 'new' : false,
@@ -149,7 +133,7 @@ export async function executeDetective(
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
       await page.setViewport({ width: 1280, height: 800 });
 
-      for (const url of filteredUrls) {
+      for (const url of [spotContext.website]) {
         onProgress(`[Detective] → ${url}`);
 
         // Image-Trap Short-Circuit
@@ -217,6 +201,56 @@ export async function executeDetective(
         domImages.push(...pageImages.slice(0, 2));
         const trappedFlyers = pageData.imgs.filter((i: any) => i.isFlyer).map((i: any) => i.src);
         if (trappedFlyers.length > 0) flyerUrls.push(...trappedFlyers);
+      }
+
+      // ── DOM Internal Link Navigation ─────────────────────────────────────────
+      let hostname = '';
+      try { hostname = new URL(spotContext.website).hostname; } catch { hostname = ''; }
+      
+      const internalLinks = allLinks.filter((l: any) => {
+        if (!l || l.startsWith('mailto:') || l.startsWith('tel:') || l.startsWith('javascript:')) return false;
+        try {
+          const u = new URL(l);
+          return u.hostname === hostname || u.hostname.includes(hostname.replace('www.', ''));
+        } catch { return false; }
+      });
+
+      const PAGE_SCORE_RULES = [
+        { pattern: /hours|schedule|session/i,         score: 10 },
+        { pattern: /adult.?night|18\+|21\+/i,         score: 10 },
+        { pattern: /pricing|price|admission|rates/i,  score: 9  },
+        { pattern: /events?|calendar|upcoming/i,      score: 8  },
+        { pattern: /location|directions|contact/i,    score: 6  },
+      ];
+
+      type ScoredLink = { href: string; score: number };
+      const scored: ScoredLink[] = [];
+      for (const link of internalLinks) {
+        let bestScore = 0;
+        for (const rule of PAGE_SCORE_RULES) {
+          if (rule.pattern.test(link)) {
+            if (rule.score > bestScore) bestScore = rule.score;
+          }
+        }
+        if (bestScore > 0) scored.push({ href: link, score: bestScore });
+      }
+
+      scored.sort((a, b) => b.score - a.score);
+      const subUrls = [...new Set(scored.map(s => s.href))].slice(0, 3);
+      
+      for (const url of subUrls) {
+        onProgress(`[Detective] → Deep Dive: ${url}`);
+        try {
+          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+          await new Promise(r => setTimeout(r, 1000));
+          const subText = await page.evaluate(() => {
+            document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
+            return document.body.innerText.replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+          }).catch(() => '');
+          if (subText) combinedText += `\n\n[PAGE: ${url}]\n${subText}`;
+        } catch {
+          onProgress(`[Detective] ✗ Deep dive failed: ${url}`);
+        }
       }
 
       await browser.close();
@@ -328,19 +362,11 @@ export async function executeDetective(
   const operator_description     = aiMetadata.operator_description || spotContext.operator_description  || null;
   const operator_name            = aiMetadata.operator_name || spotContext.operator_name || null;
 
-  // ── Social Links (from collected hrefs) ──────────────────────────────────
-  let instagram_url = spotContext.instagram_url || null;
-  let facebook_url  = spotContext.facebook_url  || null;
-  let tiktok_url    = spotContext.tiktok_url    || null;
-  let schedule_url  = spotContext.schedule_url  || null;
-
-  for (const href of allLinks) {
-    if (!instagram_url && href.includes('instagram.com') && !href.includes('/explore') && !href.includes('/p/')) instagram_url = href;
-    if (!facebook_url  && href.includes('facebook.com')  && !href.includes('sharer')) facebook_url = href;
-    if (!tiktok_url    && href.includes('tiktok.com')    && !href.includes('music'))  tiktok_url = href;
-    if (!schedule_url  && href.includes('.pdf') && (href.includes('sched') || href.includes('hours') || href.includes('calendar'))) schedule_url = href;
-    if (!schedule_url  && (href.includes('/schedule') || href.includes('/calendar') || href.includes('/hours'))) schedule_url = href;
-  }
+  // ── Social Links & Schedules (Native AI Vectors) ─────────────────────────
+  const instagram_url = aiMetadata.instagram_url || spotContext.instagram_url || null;
+  const facebook_url  = aiMetadata.facebook_url  || spotContext.facebook_url  || null;
+  const tiktok_url    = aiMetadata.tiktok_url    || spotContext.tiktok_url    || null;
+  const schedule_url  = aiMetadata.schedule_url  || spotContext.schedule_url  || null;
 
   // ── Photo Candidates ─────────────────────────────────────────────────────
   let candidatePhotos: Record<string, any> | null = spotContext.candidate_photos || null;

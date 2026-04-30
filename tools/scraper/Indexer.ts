@@ -48,7 +48,7 @@ console.error = (...args) => { _err(...args); pushLog('ERROR', args.join(' ')); 
 
 // ─── Main Indexer Loop ──────────────────────────────────────────────────────
 async function runIndexer() {
-  console.log('[Indexer v4] 🧠 Booting AI Detective (ENRICHED → DEEP_CRAWLED)...');
+  console.log('[Indexer v4] 🧠 Booting AI Detective (SEEDED → DEEP_CRAWLED)...');
   console.log('[Indexer v4] ℹ️  Core AI logic delegated to core/DetectiveEngine.ts');
 
   while (true) {
@@ -59,7 +59,7 @@ async function runIndexer() {
         .catch(() => ({ priority_states: [] }));
       const priorityStates = configRes.priority_states || [];
 
-      let query = `SELECT * FROM local_spots WHERE verification_status = 'ENRICHED'`;
+      let query = `SELECT * FROM local_spots WHERE verification_status = 'SEEDED' AND website IS NOT NULL AND website != ''`;
       if (priorityStates.length > 0) {
         query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
       }
@@ -89,17 +89,9 @@ async function runIndexer() {
       const configResGlobal = await fetch('http://localhost:5999/config').then(r => r.json()).catch(() => ({ config: {} }));
       const aiConfig = configResGlobal.config || {};
 
-      let candidateLinks: Record<string, string> = {};
-      try {
-        candidateLinks = typeof target.candidate_links === 'string' ? JSON.parse(target.candidate_links) : (target.candidate_links || {});
-      } catch (e) {
-        // ignore parse error
-      }
-
       // ── Delegate to DetectiveEngine ─────────────────────────────────────
       const result = await executeDetective(
         target,
-        candidateLinks,
         aiConfig,
         statusRes.isHeadless,
         (msg: string) => console.log(`   ${msg}`)

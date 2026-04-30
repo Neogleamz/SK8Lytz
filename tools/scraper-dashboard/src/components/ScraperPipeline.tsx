@@ -111,8 +111,8 @@ export const ScraperPipeline: React.FC<{
     // The output of phase N = the input of phase N+1, so we read the next phase queue.
     const getSpotsForPhase = (beltId: number, count: number = 2) => {
         let spots: any[] = [];
-        if (beltId === 1) spots = phaseQueues?.phase2 || [];              // Scout out  = SEEDED (Spider input)
-        else if (beltId === 2) spots = phaseQueues?.['spider-recent'] || []; // Spider out = ENRICHED (Detective input)
+        if (beltId === 1) spots = phaseQueues?.phase1 || [];              // Sweep out  = SEEDED (Detective input)
+        else if (beltId === 2) spots = phaseQueues?.['detective-recent'] || []; // Detective out = DEEP_CRAWLED
         else if (beltId === 3) spots = phaseQueues?.['detective-recent'] || []; // Detective out = DEEP_CRAWLED (Photographer input)
         else if (beltId === 4) spots = phaseQueues?.phase6 || [];              // Photographer out = MEDIA_READY (Publisher input)
         else if (beltId === 5) spots = phaseQueues?.recent || [];              // Publisher out = PUBLISHED
@@ -228,7 +228,7 @@ export const ScraperPipeline: React.FC<{
 
     const baseBelts = [
         generateUniformBelt(1, 1, 'Phase 1 │ Scout (OSM Harvest)  IN: null → OUT: SEEDED', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING...', 'Waiting', 'PENDING', 'SEEDED', getQueueNames('phase1')),
-        generateUniformBelt(2, 2, 'Phase 2 │ Spider (Operator)  IN: SEEDED → OUT: ENRICHED', '--neon-crawl', '157, 78, 221', 'Spider_v3', 'PROCESSING...', 'Waiting', 'SEEDED', 'ENRICHED', getQueueNames('phase2')),
+
         generateUniformBelt(3, 3, 'Phase 3 │ Detective (Indexer)  IN: ENRICHED → OUT: DEEP_CRAWLED', '--neon-detective', '255, 106, 0', 'Llama3.2-8b', 'PROCESSING...', 'Waiting', 'ENRICHED', 'DEEP_CRAWLED', getQueueNames('phase3')),
         generateUniformBelt(4, 4, 'Phase 4 │ Photographer  IN: DEEP_CRAWLED → OUT: MEDIA_READY', '--neon-photo', '255, 0, 127', 'Vision_v1', 'PROCESSING...', 'Waiting', 'DEEP_CRAWLED', 'MEDIA_READY', getQueueNames('phase4')),
         generateUniformBelt(5, 5, 'Phase 5 │ Publisher  IN: MEDIA_READY → OUT: PUBLISHED', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('phase6')),
@@ -238,8 +238,7 @@ export const ScraperPipeline: React.FC<{
     // Restore the technical target collection checklists on the Active Job cards with EVERY field
     baseBelts[0].attempting = [['name', 'pending'], ['facility_type', 'pending'], ['address', 'pending'], ['city', 'pending'], ['state', 'pending'], ['zip', 'pending'], ['lat', 'pending'], ['lng', 'pending'], ['phone', 'pending'], ['website', 'pending'], ['rating', 'pending'], ['reviews', 'pending'], ['place_id', 'pending'], ['is_indoor', 'pending']];
     
-    // Phase 2 Spider checklist — ONLY what the Operator actually writes:
-    // candidate_links URL map + social handles extracted from the homepage
+    // Phase 3 Detective checklist: URL map + social handles extracted from the homepage
     const crawlPaths = config?.crawl_priority_paths || [];
     baseBelts[1].attempting = [
       ['website',       'pending'],
@@ -284,7 +283,7 @@ export const ScraperPipeline: React.FC<{
     const mergedBelts = baseBelts.map(belt => {
         let liveData: any = null;
         if (belt.id === 1) liveData = telemetry.scout;
-        if (belt.id === 2) liveData = telemetry.spider;
+
         if (belt.id === 3) liveData = telemetry.detective;
         if (belt.id === 4) liveData = telemetry.photographer;
         if (belt.id === 5) liveData = telemetry.publisher;
@@ -301,7 +300,7 @@ export const ScraperPipeline: React.FC<{
         } else if (belt.id === 2) {
             countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.seeded ?? 0).toLocaleString()} SEEDED` });
             const done = (pipelineStats?.summary?.enriched ?? 0) + (pipelineStats?.summary?.deep_crawled_count ?? 0) + (pipelineStats?.summary?.media_ready ?? 0) + (pipelineStats?.summary?.published ?? 0);
-            countBadges.push({ label: 'DONE', value: `${done.toLocaleString()} SPIDERED` });
+
         } else if (belt.id === 3) {
             countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.enriched ?? 0)} ENRICHED` });
             countBadges.push({ label: 'OUT', value: `${(pipelineStats?.summary?.deep_crawled_count ?? 0)} DEEP_CRAWLED` });
