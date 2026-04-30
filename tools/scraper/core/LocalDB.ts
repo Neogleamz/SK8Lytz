@@ -442,9 +442,9 @@ export const getLocalSpots = (queryArgs: any = {}) => {
     params.push(queryArgs.state.toUpperCase());
   }
 
-  if (queryArgs.has_photos) query += ` AND photos IS NOT NULL`;
-  if (queryArgs.has_hours) query += ` AND opening_hours IS NOT NULL`;
-  if (queryArgs.has_website) query += ` AND website IS NOT NULL`;
+  if (queryArgs.has_photos) query += ` AND photos IS NOT NULL AND photos != '[]' AND photos != 'null'`;
+  if (queryArgs.has_hours) query += ` AND opening_hours IS NOT NULL AND opening_hours != '{}' AND opening_hours != 'null'`;
+  if (queryArgs.has_website) query += ` AND website IS NOT NULL AND website != ''`;
   if (queryArgs.has_adult_night) query += ` AND has_adult_night = 1`;
   if (queryArgs.has_pro_shop) query += ` AND has_pro_shop = 1`;
   if (queryArgs.is_published === true) query += ` AND is_published = 1`;
@@ -489,9 +489,9 @@ export const getLocalCount = (queryArgs: any = {}) => {
     params.push(queryArgs.state.toUpperCase());
   }
 
-  if (queryArgs.has_photos === 'true') query += ` AND photos IS NOT NULL`;
-  if (queryArgs.has_hours === 'true') query += ` AND opening_hours IS NOT NULL`;
-  if (queryArgs.has_website === 'true') query += ` AND website IS NOT NULL`;
+  if (queryArgs.has_photos === 'true') query += ` AND photos IS NOT NULL AND photos != '[]' AND photos != 'null'`;
+  if (queryArgs.has_hours === 'true') query += ` AND opening_hours IS NOT NULL AND opening_hours != '{}' AND opening_hours != 'null'`;
+  if (queryArgs.has_website === 'true') query += ` AND website IS NOT NULL AND website != ''`;
   if (queryArgs.has_adult_night === 'true') query += ` AND has_adult_night = 1`;
   if (queryArgs.has_pro_shop === 'true') query += ` AND has_pro_shop = 1`;
   if (queryArgs.is_published === 'true' || queryArgs.is_published === true) query += ` AND is_published = 1`;
@@ -608,9 +608,9 @@ export const getPipelineStats = (states: string[] = []) => {
       SUM(CASE WHEN website IS NOT NULL AND website != '' THEN 1 ELSE 0 END) as has_website,
       SUM(CASE WHEN verification_status = 'PENDING' OR verification_status IS NULL THEN 1 ELSE 0 END) as spider_queue,
       SUM(CASE WHEN verification_status = 'SEEDED' THEN 1 ELSE 0 END) as detective_queue,
-      SUM(CASE WHEN candidate_photos IS NOT NULL AND photos IS NULL THEN 1 ELSE 0 END) as has_candidates,
-      SUM(CASE WHEN candidate_photos IS NOT NULL AND photos IS NULL THEN 1 ELSE 0 END) as photographer_queue,
-      SUM(CASE WHEN photos IS NOT NULL THEN 1 ELSE 0 END) as has_photos
+      SUM(CASE WHEN candidate_photos IS NOT NULL AND candidate_photos != '[]' AND candidate_photos != 'null' AND (photos IS NULL OR photos = '[]' OR photos = 'null') THEN 1 ELSE 0 END) as has_candidates,
+      SUM(CASE WHEN candidate_photos IS NOT NULL AND candidate_photos != '[]' AND candidate_photos != 'null' AND (photos IS NULL OR photos = '[]' OR photos = 'null') THEN 1 ELSE 0 END) as photographer_queue,
+      SUM(CASE WHEN photos IS NOT NULL AND photos != '[]' AND photos != 'null' THEN 1 ELSE 0 END) as has_photos
     FROM local_spots
     WHERE ${whereClause}
   `;
