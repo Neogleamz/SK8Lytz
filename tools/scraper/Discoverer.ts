@@ -1,11 +1,10 @@
 import puppeteer from 'puppeteer';
-import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { GHOST } from './lib/GHOST';
+import { upsertLocalSpot } from './core/LocalDB';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-const supabase = createClient(process.env.EXPO_PUBLIC_SUPABASE_URL || '', process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '');
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
@@ -57,16 +56,18 @@ export async function runDirectDiscovery(stateFull: string) {
              // Basic Sanity Check
              if (!lead.name.toLowerCase().match(/rink|skate|skateland/)) continue;
 
-             // Push to DB as PENDING (ignore duplicates based on name/address heuristic)
-             // For now, we'll let Phase 2 handle the heavy lifting
-             const { error } = await supabase.from('skate_spots').upsert({
+             // Push to LocalDB as PENDING (ignore duplicates on name/address)
+             try {
+               upsertLocalSpot({
                  name: lead.name,
                  street_address: lead.address,
-                 state: stateFull.split(' ').pop(), // Crude but works for discovery
+                 state: stateFull.split(' ').pop() || '',
                  verification_status: 'PENDING'
-             }, { onConflict: 'name,street_address', ignoreDuplicates: true });
-
-             if (!error) console.log(`   ➕ Lead Added: ${lead.name}`);
+               });
+               console.log(`   ➕ Lead Added: ${lead.name}`);
+             } catch (err: any) {
+               console.log(`   ⚠️ Skipped (duplicate): ${lead.name}`);
+             }
         }
 
     } catch (err: any) {

@@ -2,44 +2,43 @@
  * Photographer.ts — Phase 4 Media Harvest Daemon
  *
  * Reads candidate_photos collected by the Indexer, downloads each image URL binary,
- * uploads to Supabase Storage (spot-photos bucket), and writes the final CDN URL array
- * to the `photos` column. Sets verification_status = 'MEDIA_READY'.
+ * saves to local disk under .scraper-data/photos/{state}/{spotId}/, and writes
+ * local HTTP URLs back to the `photos` column. Sets verification_status = 'MEDIA_READY'.
  *
- * Zero Puppeteer footprint. Zero new API costs.
+ * Photos are served by CCTower at: http://localhost:5999/api/photos/{state}/{spotId}/{filename}
+ *
+ * Zero Puppeteer footprint. Zero cloud storage costs.
  * Photo sources: OG image, DOM large images, Street View Static (free), Facebook OG.
  */
-import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import fetch from 'node-fetch';
 import { db, updateLocalSpot } from './core/LocalDB';
 
-// Load .env — try multiple path strategies to be robust regardless of CWD
+// Load .env
 const envPaths = [
-  path.resolve(__dirname, '../../.env'),           // from tools/scraper/ → project root
-  path.resolve(process.cwd(), '.env'),             // from wherever PM2 launched
-  path.resolve(process.cwd(), '../../.env'),       // two levels up from CWD
-  'C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.env',    // absolute fallback
+  path.resolve(__dirname, '../../.env'),
+  path.resolve(process.cwd(), '.env'),
+  path.resolve(process.cwd(), '../../.env'),
+  'C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.env',
 ];
 for (const p of envPaths) {
   const result = dotenv.config({ path: p });
-  if (!result.error && process.env.EXPO_PUBLIC_SUPABASE_URL) break;
+  if (!result.error) break;
 }
 
-if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
-  console.error('[Photographer] ❌ Failed to load .env — EXPO_PUBLIC_SUPABASE_URL is missing.');
-  process.exit(1);
+// Local photo storage root — sibling to scraper.db
+const PHOTOS_DIR = path.resolve(__dirname, '../../.scraper-data/photos');
+if (!fs.existsSync(PHOTOS_DIR)) {
+  fs.mkdirSync(PHOTOS_DIR, { recursive: true });
 }
 
-const supabase = createClient(
-  process.env.EXPO_PUBLIC_SUPABASE_URL || '',
-  // Service role preferred for storage uploads; fall back to anon key (same as CCTower)
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''
-);
+// CCTower serves photos at this base URL
+const PHOTO_SERVE_BASE = 'http://localhost:5999/api/photos';
 
-const STORAGE_BUCKET = 'spot-photos';
-const COOLDOWN_MS = 800; // ms between records
-const MAX_PHOTOS_PER_SPOT = 4; // OG + up to 3 DOM images
+const COOLDOWN_MS = 800;
+const MAX_PHOTOS_PER_SPOT = 4;
 
 const reportPulse = (delayMs: number) => {
   fetch('http://localhost:5999/api/pulse', {
@@ -88,43 +87,38 @@ async function downloadImage(url: string): Promise<Buffer | null> {
 }
 
 /**
- * Upload a Buffer to Supabase Storage.
- * Returns the public CDN URL or null on failure.
+ * Save a Buffer to local disk under .scraper-data/photos/{state}/{spotId}/.
+ * Returns the local HTTP URL served by CCTower, or null on failure.
  */
-async function uploadToStorage(
+function saveToLocalDisk(
   buffer: Buffer,
   spotId: string,
   state: string,
   photoIndex: number,
   mimeType = 'image/jpeg'
-): Promise<string | null> {
-  const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg';
-  const filePath = `${state || 'US'}/${spotId}/photo_${photoIndex}.${ext}`;
-
-  const { error } = await supabase.storage
-    .from(STORAGE_BUCKET)
-    .upload(filePath, buffer, {
-      contentType: mimeType,
-      upsert: true
-    });
-
-  if (error) {
-    logToTower('ERROR', `Storage upload failed [${filePath}]: ${error.message}`);
+): string | null {
+  try {
+    const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg';
+    const stateDir = path.join(PHOTOS_DIR, state || 'US', spotId);
+    if (!fs.existsSync(stateDir)) {
+      fs.mkdirSync(stateDir, { recursive: true });
+    }
+    const filename = `photo_${photoIndex}.${ext}`;
+    const filePath = path.join(stateDir, filename);
+    fs.writeFileSync(filePath, buffer);
+    // Return CCTower-served URL
+    return `${PHOTO_SERVE_BASE}/${state || 'US'}/${spotId}/${filename}`;
+  } catch (err: any) {
+    logToTower('ERROR', `Disk write failed for spot ${spotId} photo ${photoIndex}: ${err.message}`);
     return null;
   }
-
-  const { data: publicData } = supabase.storage
-    .from(STORAGE_BUCKET)
-    .getPublicUrl(filePath);
-
-  return publicData?.publicUrl || null;
 }
 
 /**
  * Main processing loop — runs continuously until process is killed.
  */
 async function runPhotographerLoop() {
-  logToTower('INFO', '🚀 Photographer daemon starting — Phase 4 Media Harvest active');
+  logToTower('INFO', '🚀 Photographer daemon starting — Phase 4 Media Harvest active (local storage)');
 
   let consecutiveIdle = 0;
 
@@ -165,8 +159,8 @@ async function runPhotographerLoop() {
     try {
       candidates = typeof target.candidate_photos === 'string' ? JSON.parse(target.candidate_photos) : target.candidate_photos;
     } catch (e) {}
-    
-    const cdnUrls: string[] = [];
+
+    const localUrls: string[] = [];
 
     // Build ordered list of photo URLs to attempt
     const urlCandidates: Array<{ key: string; url: string }> = [];
@@ -177,7 +171,6 @@ async function runPhotographerLoop() {
       );
     }
     if (candidates.facebook_og) urlCandidates.push({ key: 'facebook_og', url: candidates.facebook_og });
-    // Street View is the guaranteed fallback — attempt binary download & upload to Storage
     if (candidates.street_view_url) urlCandidates.push({ key: 'street_view', url: candidates.street_view_url });
 
     let photoIndex = 0;
@@ -190,16 +183,16 @@ async function runPhotographerLoop() {
         continue;
       }
 
-      const cdnUrl = await uploadToStorage(buffer, target.id, target.state || 'US', photoIndex);
-      if (cdnUrl) {
-        cdnUrls.push(cdnUrl);
-        logToTower('INFO', `   ✅ [${candidate.key}] → ${cdnUrl.slice(0, 60)}...`);
+      const localUrl = saveToLocalDisk(buffer, target.id, target.state || 'US', photoIndex);
+      if (localUrl) {
+        localUrls.push(localUrl);
+        logToTower('INFO', `   ✅ [${candidate.key}] → saved locally (${(buffer.length / 1024).toFixed(1)} KB)`);
         photoIndex++;
       }
     }
 
-    // All photos are Supabase CDN URLs — no raw external URLs stored.
-    const finalPhotos: string[] | null = cdnUrls.length > 0 ? cdnUrls : null;
+    // Store local HTTP URLs — served by CCTower /api/photos static handler
+    const finalPhotos: string[] | null = localUrls.length > 0 ? localUrls : null;
 
     if (finalPhotos) {
       updateLocalSpot(target.id, {
@@ -208,7 +201,7 @@ async function runPhotographerLoop() {
         last_attempted_at: new Date().toISOString()
       });
 
-      logToTower('INFO', `✨ ${target.name} → MEDIA_READY (${finalPhotos.length} photos, ${cdnUrls.length} uploaded)`);
+      logToTower('INFO', `✨ ${target.name} → MEDIA_READY (${finalPhotos.length} photos saved to disk)`);
     } else {
       // Null out candidate_photos so this record is skipped on future runs
       updateLocalSpot(target.id, {

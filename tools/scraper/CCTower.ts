@@ -4,13 +4,12 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { EventEmitter } from 'events';
-import { createClient } from '@supabase/supabase-js';
 import { exec } from 'child_process';
 import { startGoogleSweep, stopGoogleSweep, isGoogleSweepActive } from './GoogleSweep';
 import { GooglePlacesProvider, RETAIL_BLOCKLIST } from './lib/providers/GooglePlacesProvider';
 import { executeSpider } from './core/SpiderEngine';
 import { executeDetective } from './core/DetectiveEngine';
-import { db, getLocalSpots, getLocalCount, updateLocalSpot, deleteLocalSpot } from './core/LocalDB';
+import { db, getLocalSpots, getLocalCount, updateLocalSpot, deleteLocalSpot, upsertLocalSpot, getConfig, updateConfig, getBlocklist, addBlocklist, deleteBlocklist, addBlocklistKeyword, getPipelineStats, getFieldRegistry } from './core/LocalDB';
 
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
@@ -67,14 +66,18 @@ console.error = (...args) => {
 };
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-const supabase = createClient(
-  process.env.EXPO_PUBLIC_SUPABASE_URL || '', 
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''
-);
-
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// ─── Local Photo Storage ────────────────────────────────────────────────────
+// Photographer saves images here; CCTower serves them via /api/photos
+const PHOTOS_DIR = path.resolve(__dirname, '../../.scraper-data/photos');
+if (!fs.existsSync(PHOTOS_DIR)) {
+  fs.mkdirSync(PHOTOS_DIR, { recursive: true });
+}
+app.use('/api/photos', express.static(PHOTOS_DIR));
+// ────────────────────────────────────────────────────────────────────────────
 
 let isRunning = false;
 let isHeadless = true;
@@ -117,7 +120,12 @@ const activeJobRegistry: Record<string, { active_job: string | null; target: str
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function fetchConfig() {
-  const { data } = await supabase.from('scraper_config').select('*').eq('id', 1).single();
+  let data;
+  try {
+    data = getConfig();
+  } catch (error) {
+    console.error("Error reading scraper_config:", error);
+  }
   return data || { 
     sleep_interval_ms: 10000, 
     target_facilities: [], 
@@ -304,9 +312,12 @@ app.get('/api/pipeline/telemetry', async (req, res) => {
 });
 
 app.get('/config', async (req, res) => {
-  const { data, error } = await supabase.from('scraper_config').select('*').eq('id', 1).single();
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ config: data });
+  try {
+    const config = getConfig();
+    res.json({ config });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.post('/config', async (req, res) => {
@@ -315,12 +326,12 @@ app.post('/config', async (req, res) => {
   delete payload.daemon_telemetry;
   delete payload.updated_at;
 
-  const { error } = await supabase.from('scraper_config').update(payload).eq('id', 1);
-
-  if (error) {
-    return res.status(500).json({ error: error.message });
+  try {
+    updateConfig(payload);
+    res.json({ success: true, message: 'Config updated' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
-  res.json({ success: true, message: 'Config updated' });
 });
 
 // --- Sniper Bench End-to-End Pipeline Tracing ---
@@ -568,24 +579,33 @@ app.post('/api/sandbox', async (req, res) => {
 // state_override = [] means nationwide (no priority filter)
 
 app.get('/api/priority-states', async (req, res) => {
-  const { data, error } = await supabase.from('scraper_config').select('state_override').eq('id', 1).single();
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ priority_states: data?.state_override || [] });
+  try {
+    const config = getConfig();
+    res.json({ priority_states: config.state_override || [] });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.post('/api/priority-states', async (req, res) => {
   const { states } = req.body;
   if (!Array.isArray(states)) return res.status(400).json({ error: 'states must be an array of 2-letter codes' });
   const valid = states.filter((s: string) => typeof s === 'string' && s.length === 2).map((s: string) => s.toUpperCase());
-  const { error } = await supabase.from('scraper_config').update({ state_override: valid }).eq('id', 1);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true, priority_states: valid, message: valid.length === 0 ? 'Nationwide (no filter)' : `Active region: ${valid.join(', ')}` });
+  try {
+    updateConfig({ state_override: valid });
+    res.json({ success: true, priority_states: valid, message: valid.length === 0 ? 'Nationwide (no filter)' : `Active region: ${valid.join(', ')}` });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.delete('/api/priority-states', async (req, res) => {
-  const { error } = await supabase.from('scraper_config').update({ state_override: [] }).eq('id', 1);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true, priority_states: [], message: 'Region cleared -- nationwide mode active' });
+  try {
+    updateConfig({ state_override: [] });
+    res.json({ success: true, priority_states: [], message: 'Region cleared -- nationwide mode active' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // --- Phase 1: Harvest & Data Grid Routes ---
@@ -768,24 +788,13 @@ app.get('/api/pipeline-stats', async (req, res) => {
   const statesRaw = (req.query.states as string) || '';
   const states = statesRaw ? statesRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
 
-  // Use RPC for server-side COUNTs — bypasses PostgREST's 1000-row default cap
-  const { data, error } = await supabase.rpc('get_pipeline_stats', {
-    p_states: states.length > 0 ? states : null,
-  });
-
-  if (error) return res.status(500).json({ error: error.message });
-
-  const rows = (data || []) as any[];
-
-  // Sum across all returned states for the summary row
-  const summary = rows.reduce((acc: any, r: any) => {
-    const keys = ['total','seeded','enriched','deep_crawled_count','media_ready','published',
-                  'has_website','spider_queue','detective_queue','has_candidates','photographer_queue','has_photos'];
-    keys.forEach(k => { acc[k] = (acc[k] || 0) + Number(r[k] || 0); });
-    return acc;
-  }, { state: states.length > 0 ? states.join('+') : 'ALL' });
-
-  res.json({ stats: rows, summary, active_states: states });
+  try {
+    const statsData = getPipelineStats(states);
+    const summary = { ...statsData, state: states.length > 0 ? states.join('+') : 'ALL' };
+    res.json({ stats: [summary], summary, active_states: states });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 
@@ -809,13 +818,12 @@ app.get('/api/recent-spots', async (req, res) => {
 });
 
 app.get('/api/field-registry', async (req, res) => {
-  const { data, error } = await supabase
-    .from('pipeline_field_registry')
-    .select('*')
-    .order('sort_order', { ascending: true });
-  
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ fields: data });
+  try {
+    const fields = getFieldRegistry();
+    res.json({ fields });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 
@@ -872,7 +880,7 @@ app.delete('/api/skate_spots/:id', async (req, res) => {
         // Strip common suffixes and trim for the blocklist keyword
         let keyword = spot.name.toLowerCase().trim();
         // Insert into blocklist
-        await supabase.from('scraper_blocklist_keywords').upsert({ keyword });
+        addBlocklistKeyword(keyword);
         console.log( `Blacklisted keyword extracted from spot: "${keyword}"`);
       }
     }
@@ -913,9 +921,12 @@ app.post('/api/skate_spots/:id/freeze', async (req, res) => {
 });
 
 app.get('/api/scraper/blocklist', async (req, res) => {
-  const { data, error } = await supabase.from('scraper_blocklist').select('*').order('created_at', { ascending: false });
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ keywords: data });
+  try {
+    const keywords = getBlocklist();
+    res.json({ keywords });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.post('/api/scraper/blocklist', async (req, res) => {
@@ -924,8 +935,7 @@ app.post('/api/scraper/blocklist', async (req, res) => {
   const kw = keyword.toLowerCase().trim();
   
   try {
-    const { error } = await supabase.from('scraper_blocklist').insert({ pattern: kw, match_type, reason });
-    if (error) throw error;
+    addBlocklist(kw, match_type, reason);
     
     // Execute SQL Guillotine on local DB
     const info = db.prepare(`DELETE FROM local_spots WHERE name LIKE ?`).run(`%${kw}%`);
@@ -939,9 +949,12 @@ app.post('/api/scraper/blocklist', async (req, res) => {
 
 app.delete('/api/scraper/blocklist/:id', async (req, res) => {
   const { id } = req.params;
-  const { error } = await supabase.from('scraper_blocklist').delete().eq('id', id);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true });
+  try {
+    deleteBlocklist(id);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.get('/api/logs/history', (req, res) => {

@@ -1,14 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { GooglePlacesProvider, FacilityType, RETAIL_BLOCKLIST, injectDynamicBlocklist } from './lib/providers/GooglePlacesProvider';
-import { db, getClosestLocalSpot, updateLocalSpot, upsertLocalSpot } from './core/LocalDB';
+import { db, getClosestLocalSpot, updateLocalSpot, upsertLocalSpot, getBlocklistKeywords } from './core/LocalDB';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-const supabase = createClient(
-  process.env.EXPO_PUBLIC_SUPABASE_URL || '', 
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''
-);
 
 export let isGoogleSweepActive = false;
 
@@ -58,12 +53,12 @@ export async function startGoogleSweep(
 
   // --- Dynamic Blocklist Injection ---
   try {
-    const { data: dbKeywords } = await supabase.from('scraper_blocklist_keywords').select('keyword');
+    const dbKeywords = getBlocklistKeywords();
     if (dbKeywords && dbKeywords.length > 0) {
-      injectDynamicBlocklist(dbKeywords.map(k => k.keyword));
+      injectDynamicBlocklist(dbKeywords.map((k: any) => k.keyword));
     }
   } catch (err) {
-    console.error('⚠️ Failed to fetch dynamic blocklist from Supabase:', err);
+    console.error('⚠️ Failed to fetch dynamic blocklist from LocalDB:', err);
   }
 
   const statesToRun = targetStates.length > 0 ? targetStates : Object.keys(STATE_NAMES);

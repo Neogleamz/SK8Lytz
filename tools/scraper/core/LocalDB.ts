@@ -58,6 +58,36 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_state ON local_spots(state);
   CREATE INDEX IF NOT EXISTS idx_verification_status ON local_spots(verification_status);
   CREATE INDEX IF NOT EXISTS idx_last_attempted_at ON local_spots(last_attempted_at);
+
+  CREATE TABLE IF NOT EXISTS scraper_config (
+    id INTEGER PRIMARY KEY,
+    config_json TEXT,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS scraper_blocklist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pattern TEXT,
+    match_type TEXT,
+    reason TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS scraper_blocklist_keywords (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    keyword TEXT UNIQUE,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS pipeline_field_registry (
+    id TEXT PRIMARY KEY,
+    field_name TEXT,
+    phase_id INTEGER,
+    display_label TEXT,
+    data_type TEXT,
+    sort_order INTEGER,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 // Check for sync_required column (migration)
@@ -384,3 +414,91 @@ export const getSpotsToSync = (limit: number = 50) => {
   return rows.map(rowToObj);
 };
 
+// --- CONFIG METHODS ---
+export const getConfig = () => {
+  let row = db.prepare(`SELECT config_json FROM scraper_config WHERE id = 1`).get() as any;
+  if (!row) {
+    db.prepare(`INSERT INTO scraper_config (id, config_json) VALUES (1, '{}')`).run();
+    row = db.prepare(`SELECT config_json FROM scraper_config WHERE id = 1`).get() as any;
+  }
+  return row && row.config_json ? JSON.parse(row.config_json) : {};
+};
+
+export const updateConfig = (payload: any) => {
+  const existing = getConfig();
+  const newConfig = { ...existing, ...payload };
+  db.prepare(`UPDATE scraper_config SET config_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1`).run(JSON.stringify(newConfig));
+};
+
+// --- BLOCKLIST METHODS ---
+export const getBlocklist = () => {
+  return db.prepare(`SELECT * FROM scraper_blocklist ORDER BY created_at DESC`).all();
+};
+
+export const addBlocklist = (pattern: string, match_type: string = 'name', reason: string = '') => {
+  const stmt = db.prepare(`INSERT INTO scraper_blocklist (pattern, match_type, reason) VALUES (?, ?, ?)`);
+  stmt.run(pattern, match_type, reason);
+};
+
+export const deleteBlocklist = (id: number | string) => {
+  db.prepare(`DELETE FROM scraper_blocklist WHERE id = ?`).run(id);
+};
+
+export const getBlocklistKeywords = () => {
+  return db.prepare(`SELECT keyword FROM scraper_blocklist_keywords ORDER BY created_at DESC`).all();
+};
+
+export const addBlocklistKeyword = (keyword: string) => {
+  db.prepare(`INSERT INTO scraper_blocklist_keywords (keyword) VALUES (?)`).run(keyword);
+};
+
+// --- PIPELINE STATS METHODS ---
+export const getPipelineStats = (states: string[] = []) => {
+  let whereClause = '1=1';
+  let params: any[] = [];
+  
+  if (states.length > 0) {
+    whereClause = `state IN (${states.map(() => '?').join(',')})`;
+    params = states;
+  }
+
+  const query = `
+    SELECT 
+      COUNT(*) as total,
+      SUM(CASE WHEN verification_status = 'SEEDED' THEN 1 ELSE 0 END) as seeded,
+      SUM(CASE WHEN verification_status = 'ENRICHED' THEN 1 ELSE 0 END) as enriched,
+      SUM(CASE WHEN verification_status = 'DEEP_CRAWLED' THEN 1 ELSE 0 END) as deep_crawled_count,
+      SUM(CASE WHEN verification_status = 'MEDIA_READY' THEN 1 ELSE 0 END) as media_ready,
+      SUM(CASE WHEN is_published = 1 THEN 1 ELSE 0 END) as published,
+      SUM(CASE WHEN website IS NOT NULL AND website != '' THEN 1 ELSE 0 END) as has_website,
+      SUM(CASE WHEN verification_status = 'PENDING' OR verification_status IS NULL THEN 1 ELSE 0 END) as spider_queue,
+      SUM(CASE WHEN verification_status = 'SEEDED' THEN 1 ELSE 0 END) as detective_queue,
+      SUM(CASE WHEN candidate_photos IS NOT NULL AND photos IS NULL THEN 1 ELSE 0 END) as has_candidates,
+      SUM(CASE WHEN candidate_photos IS NOT NULL AND photos IS NULL THEN 1 ELSE 0 END) as photographer_queue,
+      SUM(CASE WHEN photos IS NOT NULL THEN 1 ELSE 0 END) as has_photos
+    FROM local_spots
+    WHERE ${whereClause}
+  `;
+  
+  const result = db.prepare(query).get(...params);
+  return result;
+};
+
+// --- Pipeline Field Registry ---
+export function getFieldRegistry() {
+  return db.prepare('SELECT * FROM pipeline_field_registry ORDER BY sort_order ASC').all();
+}
+
+export function upsertFieldRegistryItem(item: any) {
+  const stmt = db.prepare(`
+    INSERT INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order)
+    VALUES (@id, @field_name, @phase_id, @display_label, @data_type, @sort_order)
+    ON CONFLICT(id) DO UPDATE SET
+      field_name=excluded.field_name,
+      phase_id=excluded.phase_id,
+      display_label=excluded.display_label,
+      data_type=excluded.data_type,
+      sort_order=excluded.sort_order
+  `);
+  stmt.run(item);
+}
