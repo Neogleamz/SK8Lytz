@@ -117,3 +117,10 @@ backups/
 
 # Tesseract
 *.traineddata
+
+# Scraper local SQLite database (live data — never commit)
+tools/.scraper-data/scraper.db
+tools/.scraper-data/scraper.db-shm
+tools/.scraper-data/scraper.db-wal
+tools/.scraper-data/bucket/
+tools/.scraper-data/photos/
