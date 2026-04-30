@@ -2074,11 +2074,7 @@ function App() {
                             {activeTab === 'graveyard' ? (
                                 <button className="btn-icon" onClick={() => restoreSpot(row.id, row.name)} title="Restore" style={{color: '#4caf50'}}>♻️</button>
                               ) : (
-                                {activeTab === 'graveyard' ? (
-                                <button className="btn-icon" onClick={() => restoreSpot(row.id, row.name)} title="Restore" style={{color: '#4caf50'}}>♻️</button>
-                              ) : (
                                 <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>🗑️</button>
-                              )}
                               )}
                           </div>
                         </td>
