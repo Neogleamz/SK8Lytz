@@ -1,5 +1,5 @@
 /**
- * DetectiveEngine.ts — Pure AI Detective (Deep Crawl + Ollama Extraction)
+ * DetectiveEngine.ts — Pure AI Detective (Deep Crawl + LM Studio Extraction)
  *
  * Contains the full Phase 3 (Indexer) deep-crawl and AI extraction logic extracted
  * into a stateless, database-free module. The production Indexer.ts daemon calls
@@ -360,36 +360,97 @@ export async function executeDetective(
           }
         }
         
-        // ── Llama-3 Extraction ─────────────────────────────────────────
-        const systemPrompt = aiConfig.ai_system_prompt || 'Extract JSON data accurately.';
-        const targetVectors = aiConfig.ai_target_vectors || [];
-        const schema = targetVectors.reduce((acc: any, vec: any) => {
+        // ── LM Studio AI Extraction (OpenAI-Compatible) ─────────────────
+        const userSystemPrompt = aiConfig.ai_system_prompt || '';
+        const userVectors = aiConfig.ai_target_vectors || [];
+        const userSchema = userVectors.reduce((acc: any, vec: any) => {
           acc[vec.key] = vec.prompt || vec.type;
           return acc;
         }, {});
 
-        let contextHeader = '';
+        // Built-in comprehensive vector schema — covers ALL 35+ DB fields
+        const BUILTIN_VECTORS: Record<string, string> = {
+          hours: 'Extract the COMPLETE weekly schedule for public skating sessions as an object mapping days to time ranges. Example: {"Monday":"7pm-10pm","Tuesday":"Closed","Wednesday":"6pm-9pm"}. Ignore private party times.',
+          pricing: 'Extract ALL admission prices as an object. Include adult, child, senior, spectator, and skate rental fees. Example: {"adult":"$10","child_under_12":"$7","spectator":"$3","skate_rental":"$5"}',
+          surface_type: 'Identify the skating floor material. Valid values: wood, maple, hardwood, concrete, asphalt, sport_court, synthetic. Return null if unknown.',
+          surface_quality: 'Assess floor condition from descriptions or reviews (e.g., smooth, well-maintained, slippery, sticky, warped). Return null if not mentioned.',
+          vibe_score: 'Rate the facility atmosphere 1-10 based on website tone. 1=rundown, 5=family-friendly, 8=vibrant-community, 10=premium-nightlife.',
+          is_indoor: 'Is this facility indoors? Return true, false, or null.',
+          has_fee: 'Does the facility charge an admission fee? Return true, false, or null.',
+          has_rental: 'Does the facility offer skate rentals? Note if they mention inline vs quad.',
+          has_pro_shop: 'Does the facility have an on-site pro shop that sells skates, wheels, or bearings?',
+          has_food: 'Does the facility have a snack bar, concession stand, or food service?',
+          has_lights: 'Does the facility have special lighting effects (disco lights, LED, blacklight)?',
+          has_lockers: 'Does the facility offer lockers or cubbies for personal items?',
+          has_ac: 'Is the facility air-conditioned? Return true, false, or null.',
+          has_wifi: 'Does the facility offer free WiFi? Return true, false, or null.',
+          has_toilets: 'Does the facility have restrooms/bathrooms? Return true, false, or null.',
+          is_wheelchair_accessible: 'Is the facility wheelchair accessible or ADA compliant?',
+          has_adult_night: 'Does the facility host 18+ or 21+ adult-only skate nights?',
+          adult_night_details: 'If adult nights exist, describe them (age requirement, theme, DJ, etc). Return null if no adult night.',
+          adult_night_schedule: 'If adult nights exist, map which days they occur. Example: {"Friday":"9pm-12am","Saturday":"10pm-1am"}. Return null if none.',
+          hosts_derby: 'Does this facility host roller derby teams or events?',
+          capacity: 'What is the maximum occupancy or skater capacity? Return a number or null.',
+          special_events: 'List any recurring special events (birthday parties, cosmic skate, DJ nights, etc.) as an array of strings.',
+          operator_name: 'Who owns or operates this facility? Return the business or person name, or null.',
+          operator_description: 'A 1-2 sentence description of this facility based on website content. Be factual, not promotional.',
+          cultural_metadata: 'Any cultural or community significance (historic rink, Black-owned, LGBTQ-friendly, legendary DJ, etc). Return null if none.',
+          instagram_url: 'Extract the facility Instagram URL if found. Return full URL or null.',
+          facebook_url: 'Extract the facility Facebook URL if found. Return full URL or null.',
+          tiktok_url: 'Extract the facility TikTok URL if found. Return full URL or null.',
+          schedule_url: 'Extract the URL of the dedicated schedule/hours page if found. Return full URL or null.',
+        };
+
+        // Merge: user-config vectors override built-in ones by key
+        const mergedSchema = { ...BUILTIN_VECTORS, ...userSchema };
+
+        let systemMessage = '';
         if (spotContext.name && spotContext.city) {
-          contextHeader = `You are analyzing website content for a skate facility. The specific location is [${spotContext.name}] in [${spotContext.city}]. The text below may contain info for multiple franchise locations. ONLY extract data for [${spotContext.name}]. Ignore all other cities.\n\n`;
+          systemMessage += `You are a data extraction agent for roller skating facilities. You are analyzing website content for [${spotContext.name}] in [${spotContext.city}]. `;
+          systemMessage += `The text below may contain data for multiple franchise locations. ONLY extract data for [${spotContext.name}]. Ignore all other cities.\n\n`;
         }
 
-        const prompt = `${contextHeader}${systemPrompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${combinedText.slice(-30000)}`;
-        const detectiveModel = aiConfig.detective_model || 'llama3.1';
-        onProgress(`[Detective] 🧠 Invoking Ollama (${detectiveModel}) - Pass ${passCount}...`);
+        // Append the user's custom system prompt if one exists in config
+        if (userSystemPrompt) {
+          systemMessage += userSystemPrompt + '\n\n';
+        }
+
+        // Anti-hallucination rules
+        systemMessage += `RULES:\n`;
+        systemMessage += `1. If you cannot find evidence for a field in the provided text, return null for that field. Do NOT guess or infer.\n`;
+        systemMessage += `2. Return ONLY a valid JSON object matching the schema below. No markdown, no code blocks, no commentary.\n`;
+        systemMessage += `3. For boolean fields, return true, false, or null (not strings).\n`;
+        systemMessage += `4. For URL fields, return the full URL starting with http/https, or null.\n\n`;
+        systemMessage += `SCHEMA (extract ALL of these fields):\n${JSON.stringify(mergedSchema, null, 2)}`;
+
+        const userMessage = `Website/Image Text:\n${combinedText.slice(-30000)}`;
+        const detectiveModel = aiConfig.detective_model || 'local-model';
+        onProgress(`[Detective] 🧠 Invoking LM Studio (${detectiveModel}) - Pass ${passCount}...`);
 
         try {
           const fetchFn = require('node-fetch');
-          const response = await fetchFn('http://localhost:11434/api/generate', {
+          const response = await fetchFn('http://localhost:1234/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: detectiveModel, prompt, format: 'json', stream: false, options: { num_ctx: 8192 } })
+            body: JSON.stringify({
+              model: detectiveModel,
+              messages: [
+                { role: 'system', content: systemMessage },
+                { role: 'user', content: userMessage }
+              ],
+              temperature: 0.1,
+              stream: false
+            })
           });
-          if (!response.ok) throw new Error('Ollama HTTP error');
+          if (!response.ok) throw new Error(`LM Studio API failed: ${response.statusText}`);
           const aiData = await response.json();
-          aiMetadata = JSON.parse(aiData.response);
-          onProgress(`[Detective] ✓ Ollama extraction complete (Pass ${passCount}).`);
+          const contentString = aiData.choices?.[0]?.message?.content || '{}';
+          // Strip markdown code blocks if the model ignored instructions
+          const jsonStr = contentString.replace(/```json/g, '').replace(/```/g, '').trim();
+          aiMetadata = JSON.parse(jsonStr);
+          onProgress(`[Detective] ✓ LM Studio extraction complete (Pass ${passCount}). Keys: ${Object.keys(aiMetadata).length}`);
         } catch (err: any) {
-          onProgress(`[Detective] ✗ Ollama extraction failed: ${err.message}`);
+          onProgress(`[Detective] ✗ LM Studio extraction failed: ${err.message}`);
         }
 
         // ── Missing Data Fallback Check ────────────────────────────────
