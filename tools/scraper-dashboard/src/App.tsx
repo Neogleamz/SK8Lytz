@@ -658,14 +658,13 @@ function App() {
     const s = pipelineStats.summary;
     const rows = pipelineStats.stats || [];
     const label = stateOverride.length > 0 ? stateOverride.join(' · ') : 'NATIONWIDE';
-    const C = { scout: '#00ffaa', crawl: '#9d4edd', detective: '#ff6a00', photo: '#ff007f', pub: '#00d4ff' };
+    const C = { scout: '#00ffaa', detective: '#ff6a00', photo: '#ff007f', pub: '#00d4ff' };
     const row = (k: string, v: any, color = '#fff') => (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)' }}>{k}</span>
         <span style={{ fontSize: '0.7rem', fontWeight: 800, color }}>{typeof v === 'number' ? v.toLocaleString() : v}</span>
       </div>
     );
-    const crawlWaiting = s.spider_queue || 0;
     return (
       <div style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
         <div onClick={() => toggleSection('pulse')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 14px', borderBottom: isCollapsed('pulse') ? 'none' : '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.03)', cursor: 'pointer', userSelect: 'none' as const }}>
@@ -675,54 +674,44 @@ function App() {
         </div>
         {!isCollapsed('pulse') && (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1px', background: 'rgba(255,255,255,0.04)' }}>
-              {/* ① SCOUT */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'rgba(255,255,255,0.04)' }}>
+              {/* ① SCOUT — IN: PENDING  OUT: SEEDED */}
               <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
-                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.scout, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.scout}33`, paddingBottom: '4px' }}>① Scout</div>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.scout, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.scout}33`, paddingBottom: '4px' }}>① Scout  IN:PENDING → OUT:SEEDED</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
-                  {row('Total Seeded', s.total, '#fff')}
-                  {row('SEEDED (waiting)', s.seeded, C.scout)}
+                  {row('Total in DB', s.total, '#fff')}
+                  {row('SEEDED (awaiting Det.)', s.seeded, C.scout)}
                   {row('Has Website', s.has_website, 'rgba(255,255,255,0.6)')}
                   {row('No Website', (s.total||0)-(s.has_website||0), 'rgba(255,255,255,0.25)')}
                 </div>
               </div>
-              {/* ② CRAWL */}
+              {/* ② DETECTIVE — IN: SEEDED  OUT: DEEP_CRAWLED */}
               <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
-                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.crawl, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.crawl}33`, paddingBottom: '4px' }}>② Crawl</div>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.detective, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.detective}33`, paddingBottom: '4px' }}>② Detective  IN:SEEDED → OUT:DEEP_CRAWLED</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
-                  {row('Eligible', s.has_website, 'rgba(255,255,255,0.6)')}
-                  {row('Spider Done', s.enriched, C.crawl)}
-                  {row('Awaiting', crawlWaiting, crawlWaiting > 0 ? '#ffb300' : 'rgba(255,255,255,0.3)')}
-                  {row('No Website', (s.total||0)-(s.has_website||0), 'rgba(255,255,255,0.2)')}
-                </div>
-              </div>
-              {/* ③ DETECTIVE */}
-              <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
-                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.detective, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.detective}33`, paddingBottom: '4px' }}>③ Detective</div>
-                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
-                  {row('AI In Queue', s.detective_queue, s.detective_queue > 0 ? '#ffb300' : 'rgba(255,255,255,0.3)')}
-                  {row('AI Processed', s.deep_crawled_count, C.detective)}
-                  {row('Has Candidates', s.has_candidates, 'rgba(255,255,255,0.6)')}
+                  {row('AI Queue (SEEDED+site)', s.detective_queue, s.detective_queue > 0 ? '#ffb300' : 'rgba(255,255,255,0.3)')}
+                  {row('AI Done (DEEP_CRAWLED)', s.deep_crawled_count, C.detective)}
+                  {row('Has Photo Candidates', s.has_candidates, 'rgba(255,255,255,0.6)')}
                   {row('No Candidates', (s.deep_crawled_count||0)-(s.has_candidates||0), 'rgba(255,255,255,0.25)')}
                 </div>
               </div>
-              {/* ④ PHOTOGRAPHER */}
+              {/* ③ PHOTOGRAPHER — IN: DEEP_CRAWLED  OUT: MEDIA_READY */}
               <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
-                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.photo, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.photo}33`, paddingBottom: '4px' }}>④ Photographer</div>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.photo, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.photo}33`, paddingBottom: '4px' }}>③ Photographer  IN:DEEP_CRAWLED → OUT:MEDIA_READY</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
-                  {row('Candidates', s.has_candidates, 'rgba(255,255,255,0.6)')}
-                  {row('Queue', s.photographer_queue, s.photographer_queue > 0 ? C.photo : 'rgba(255,255,255,0.3)')}
+                  {row('Photo Queue (DEEP_CRAWLED)', s.photographer_queue, s.photographer_queue > 0 ? '#ffb300' : 'rgba(255,255,255,0.3)')}
+                  {row('Photo Candidates', s.has_candidates, 'rgba(255,255,255,0.6)')}
                   {row('Photographed', s.has_photos, '#fff')}
-                  {row('Media Ready', s.media_ready, C.photo)}
+                  {row('MEDIA_READY', s.media_ready, C.photo)}
                 </div>
               </div>
-              {/* ⑤ PUBLISHER */}
+              {/* ④ PUBLISHER — IN: MEDIA_READY  OUT: PUBLISHED */}
               <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
-                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.pub, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.pub}33`, paddingBottom: '4px' }}>⑤ Publisher</div>
-                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
-                  {row('Ready', s.media_ready, C.pub)}
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.pub, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.pub}33`, paddingBottom: '4px' }}>④ Publisher  IN:MEDIA_READY → OUT:PUBLISHED</div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
+                  {row('Pub Queue (MEDIA_READY)', s.publisher_queue, s.publisher_queue > 0 ? '#ffb300' : C.pub)}
                   {row('Live on App', s.published, '#4ade80')}
-                  {row('Pipeline %', `${s.total > 0 ? Math.round((s.seeded/s.total)*100) : 0}%`, 'rgba(255,255,255,0.5)')}
+                  {row('Pipeline %', `${s.total > 0 ? Math.round((s.deep_crawled_count/s.total)*100) : 0}%`, 'rgba(255,255,255,0.5)')}
                   {row('Published %', `${s.total > 0 ? Math.round((s.published/s.total)*100) : 0}%`, '#4ade80')}
                 </div>
               </div>
@@ -736,9 +725,9 @@ function App() {
                     <div key={r.state} style={{ display: 'inline-flex', gap: '4px', alignItems: 'center', padding: '2px 7px', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
                       <span style={{ fontSize: '0.64rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)' }}>{r.state}</span>
                       <span style={{ fontSize: '0.58rem', color: '#00ffaa' }} title="Total">{r.total}</span>
-                      {r.crawl_queue      > 0 && <span style={{ fontSize: '0.58rem', color: '#9d4edd' }} title="Crawl queue">🕷{r.crawl_queue}</span>}
                       {r.detective_queue  > 0 && <span style={{ fontSize: '0.58rem', color: '#ff6a00' }} title="AI queue">🔎{r.detective_queue}</span>}
                       {r.photographer_queue > 0 && <span style={{ fontSize: '0.58rem', color: '#ff007f' }} title="Photo queue">📸{r.photographer_queue}</span>}
+                      {r.publisher_queue > 0 && <span style={{ fontSize: '0.58rem', color: '#00d4ff' }} title="Publisher queue">🚀{r.publisher_queue}</span>}
                       {r.published        > 0 && <span style={{ fontSize: '0.58rem', color: '#4ade80' }} title="Published">✓{r.published}</span>}
                     </div>
                   ))}

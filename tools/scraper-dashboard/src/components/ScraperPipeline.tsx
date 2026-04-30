@@ -90,7 +90,7 @@ const generateUniformBelt = (idx: number, id: number, name: string, color: strin
 });
 
 // Belt id → app tab mapping
-const BELT_TAB: Record<number, string> = { 1: 'phase1', 2: 'phase2', 3: 'phase3', 4: 'phase4', 5: 'phase6', 6: 'sniper' };
+const BELT_TAB: Record<number, string> = { 1: 'phase1', 2: 'phase2', 3: 'phase3', 4: 'phase4', 5: 'sniper' };
 
 export const ScraperPipeline: React.FC<{
     headerControls?: React.ReactNode;
@@ -112,10 +112,9 @@ export const ScraperPipeline: React.FC<{
     const getSpotsForPhase = (beltId: number, count: number = 2) => {
         let spots: any[] = [];
         if (beltId === 1) spots = phaseQueues?.phase1 || [];              // Sweep out  = SEEDED (Detective input)
-        else if (beltId === 2) spots = phaseQueues?.['detective-recent'] || []; // Detective out = DEEP_CRAWLED
-        else if (beltId === 3) spots = phaseQueues?.['detective-recent'] || []; // Detective out = DEEP_CRAWLED (Photographer input)
-        else if (beltId === 4) spots = phaseQueues?.phase6 || [];              // Photographer out = MEDIA_READY (Publisher input)
-        else if (beltId === 5) spots = phaseQueues?.recent || [];              // Publisher out = PUBLISHED
+        else if (beltId === 2) spots = phaseQueues?.['detective-recent'] || []; // Detective out = DEEP_CRAWLED (Photographer input)
+        else if (beltId === 3) spots = phaseQueues?.phase4 || [];              // Photographer out = MEDIA_READY (Publisher input)
+        else if (beltId === 4) spots = phaseQueues?.recent || [];              // Publisher out = PUBLISHED
         return spots.slice(0, count);
     };
 
@@ -134,15 +133,12 @@ export const ScraperPipeline: React.FC<{
                 const s1 = spot.verification_status || 'SEEDED';
                 data.push(['\u25b6 CURRENT STATUS', s1, s1 === 'SEEDED' ? 'success' : 'warning']);
             } else if (phaseId === 2) {
-                const s2 = spot.verification_status || 'ENRICHED';
-                data.push(['\u25b6 CURRENT STATUS', s2, s2 === 'ENRICHED' ? 'success' : 'warning']);
-            } else if (phaseId === 3) {
                 const s3 = spot.verification_status || 'DEEP_CRAWLED';
                 data.push(['\u25b6 CURRENT STATUS', s3, s3 === 'DEEP_CRAWLED' ? 'success' : 'warning']);
-            } else if (phaseId === 4) {
+            } else if (phaseId === 3) {
                 const s4 = spot.verification_status || 'MEDIA_READY';
                 data.push(['\u25b6 CURRENT STATUS', s4, s4 === 'MEDIA_READY' ? 'success' : 'warning']);
-            } else if (phaseId === 5) {
+            } else if (phaseId === 4) {
                 const s5 = spot.verification_status || 'PUBLISHED';
                 data.push(['\u25b6 CURRENT STATUS', s5, s5 === 'PUBLISHED' ? 'success' : 'warning']);
             }
@@ -227,12 +223,11 @@ export const ScraperPipeline: React.FC<{
 
 
     const baseBelts = [
-        generateUniformBelt(1, 1, 'Phase 1 │ Scout (OSM Harvest)  IN: null → OUT: SEEDED', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING...', 'Waiting', 'PENDING', 'SEEDED', getQueueNames('phase1')),
-
-        generateUniformBelt(3, 3, 'Phase 3 │ Detective (Indexer)  IN: ENRICHED → OUT: DEEP_CRAWLED', '--neon-detective', '255, 106, 0', 'Llama3.2-8b', 'PROCESSING...', 'Waiting', 'ENRICHED', 'DEEP_CRAWLED', getQueueNames('phase3')),
-        generateUniformBelt(4, 4, 'Phase 4 │ Photographer  IN: DEEP_CRAWLED → OUT: MEDIA_READY', '--neon-photo', '255, 0, 127', 'Vision_v1', 'PROCESSING...', 'Waiting', 'DEEP_CRAWLED', 'MEDIA_READY', getQueueNames('phase4')),
-        generateUniformBelt(5, 5, 'Phase 5 │ Publisher  IN: MEDIA_READY → OUT: PUBLISHED', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('phase6')),
-        generateUniformBelt(6, 6, 'Sniper Bench │ Single-Record Brute Force QA', '#f43f5e', '244, 63, 94', 'Interactive', 'IDLE', 'Awaiting URL', 'N/A', '68-Field Map', [])
+        generateUniformBelt(1, 1, 'Phase 1 │ Scout (Seed Engine)  IN: null → OUT: SEEDED', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING...', 'Waiting', 'PENDING', 'SEEDED', getQueueNames('phase1')),
+        generateUniformBelt(2, 2, 'Phase 2 │ Detective (AI Crawl)  IN: SEEDED → OUT: DEEP_CRAWLED', '--neon-detective', '255, 106, 0', 'Llama3.2-8b', 'PROCESSING...', 'Waiting', 'SEEDED', 'DEEP_CRAWLED', getQueueNames('phase2')),
+        generateUniformBelt(3, 3, 'Phase 3 │ Photographer  IN: DEEP_CRAWLED → OUT: MEDIA_READY', '--neon-photo', '255, 0, 127', 'Vision_v1', 'PROCESSING...', 'Waiting', 'DEEP_CRAWLED', 'MEDIA_READY', getQueueNames('phase3')),
+        generateUniformBelt(4, 4, 'Phase 4 │ Publisher  IN: MEDIA_READY → OUT: PUBLISHED', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('phase4')),
+        generateUniformBelt(5, 5, 'Sniper Bench │ Single-Record Brute Force QA', '#f43f5e', '244, 63, 94', 'Interactive', 'IDLE', 'Awaiting URL', 'N/A', '68-Field Map', [])
     ];
 
     // Restore the technical target collection checklists on the Active Job cards with EVERY field
@@ -242,9 +237,7 @@ export const ScraperPipeline: React.FC<{
     const crawlPaths = config?.crawl_priority_paths || [];
     baseBelts[1].attempting = [
       ['website',       'pending'],
-      ['→ root',        'pending'], ['→ hours',    'pending'], ['→ pricing',  'pending'],
-      ['→ schedule',    'pending'], ['→ events',   'pending'], ['→ contact',  'pending'],
-      ['→ about',       'pending'], ['→ adult',    'pending'], ['→ lessons',  'pending'], ['→ gallery', 'pending'],
+      ['deep_crawl',    'pending'],
       ['facebook_url',  'pending'], ['instagram_url', 'pending'], ['tiktok_url', 'pending'],
       ['operator_name', 'pending'], ['phone',      'pending'],
       ...crawlPaths.map((p: string) => [p, 'pending'] as [string, string])
@@ -275,7 +268,7 @@ export const ScraperPipeline: React.FC<{
 
     // Add Publisher required fields:
     const pubFields = config?.publisher_required_fields || [];
-    baseBelts[4].attempting = [
+    baseBelts[3].attempting = [
       ['id', 'pending'], ['is_published', 'pending'], ['is_verified', 'pending'], ['is_featured', 'pending'], ['verification_status', 'pending'], ['surface_type', 'pending'], ['has_rental', 'pending'], ['has_pro_shop', 'pending'], ['vibe_score', 'pending'], ['updated_at', 'pending'], ['source', 'pending'],
       ...pubFields.map((f: string) => [f, 'pending'] as [string, string])
     ];
@@ -284,9 +277,9 @@ export const ScraperPipeline: React.FC<{
         let liveData: any = null;
         if (belt.id === 1) liveData = telemetry.scout;
 
-        if (belt.id === 3) liveData = telemetry.detective;
-        if (belt.id === 4) liveData = telemetry.photographer;
-        if (belt.id === 5) liveData = telemetry.publisher;
+        if (belt.id === 2) liveData = telemetry.detective;
+        if (belt.id === 3) liveData = telemetry.photographer;
+        if (belt.id === 4) liveData = telemetry.publisher;
 
         // Populate fields from real DB spots
         const specificSpots = getSpotsForPhase(belt.id, 2);
@@ -298,16 +291,12 @@ export const ScraperPipeline: React.FC<{
         if (belt.id === 1) {
             countBadges.push({ label: 'OUT', value: `${(pipelineStats?.summary?.seeded ?? 0).toLocaleString()} SEEDED` });
         } else if (belt.id === 2) {
-            countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.seeded ?? 0).toLocaleString()} SEEDED` });
-            const done = (pipelineStats?.summary?.enriched ?? 0) + (pipelineStats?.summary?.deep_crawled_count ?? 0) + (pipelineStats?.summary?.media_ready ?? 0) + (pipelineStats?.summary?.published ?? 0);
-
-        } else if (belt.id === 3) {
             countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.enriched ?? 0)} ENRICHED` });
             countBadges.push({ label: 'OUT', value: `${(pipelineStats?.summary?.deep_crawled_count ?? 0)} DEEP_CRAWLED` });
-        } else if (belt.id === 4) {
+        } else if (belt.id === 3) {
             countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.deep_crawled_count ?? 0)} DEEP_CRAWLED` });
             countBadges.push({ label: 'OUT', value: `${(pipelineStats?.summary?.media_ready ?? 0)} MEDIA_READY` });
-        } else if (belt.id === 5) {
+        } else if (belt.id === 4) {
             countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.media_ready ?? 0)} MEDIA_READY` });
             countBadges.push({ label: 'PUB', value: `${(pipelineStats?.summary?.published ?? 0)} PUBLISHED` });
         }
@@ -333,11 +322,10 @@ export const ScraperPipeline: React.FC<{
     // Per-belt daemon control mappings
     const beltDaemon: Record<number, { active: boolean; hasDaemon: boolean; onStart: () => void; onStop: () => void }> = {
         1: { hasDaemon: true,  active: !!(status?.isHarvestingActive || status?.isGoogleSweepActive), onStart: () => triggerHarvest?.('start-all'), onStop: () => triggerHarvest?.('stop-all') },
-        2: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Operator: online')),    onStart: () => triggerSpecificDaemon?.('operator', 'start'),    onStop: () => triggerSpecificDaemon?.('operator', 'stop') },
-        3: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Indexer: online')),     onStart: () => triggerSpecificDaemon?.('indexer', 'start'),     onStop: () => triggerSpecificDaemon?.('indexer', 'stop') },
-        4: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Photographer: online')), onStart: () => triggerSpecificDaemon?.('photographer', 'start'), onStop: () => triggerSpecificDaemon?.('photographer', 'stop') },
+        2: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Indexer: online')),     onStart: () => triggerSpecificDaemon?.('indexer', 'start'),     onStop: () => triggerSpecificDaemon?.('indexer', 'stop') },
+        3: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Photographer: online')), onStart: () => triggerSpecificDaemon?.('photographer', 'start'), onStop: () => triggerSpecificDaemon?.('photographer', 'stop') },
+        4: { hasDaemon: false, active: false, onStart: () => {}, onStop: () => {} },
         5: { hasDaemon: false, active: false, onStart: () => {}, onStop: () => {} },
-        6: { hasDaemon: false, active: false, onStart: () => {}, onStop: () => {} },
     };
 
 

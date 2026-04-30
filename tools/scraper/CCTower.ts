@@ -824,19 +824,19 @@ app.get('/api/queue', async (req, res) => {
 
   let query = 'SELECT * FROM local_spots WHERE 1=1';
   if (phase === 'phase1') query += ` AND verification_status = 'SEEDED'`;
-  else if (phase === 'phase2') query += ` AND verification_status = 'SEEDED' AND website IS NOT NULL AND website != ''`;
-  else if (phase === 'phase3') query += ` AND verification_status = 'ENRICHED' AND candidate_links IS NOT NULL`;
-  else if (phase === 'phase4') query += ` AND verification_status = 'DEEP_CRAWLED' AND candidate_photos IS NOT NULL AND photos IS NULL`;
-  else if (phase === 'phase6') query += ` AND verification_status = 'MEDIA_READY' AND is_published = 0`;
-  else if (phase === 'spider-recent') query += ` AND verification_status = 'ENRICHED' AND candidate_links IS NOT NULL`;
+  else if (phase === 'phase2') query += ` AND verification_status = 'SEEDED' AND website IS NOT NULL AND website != ''`; // Detective input
+  else if (phase === 'phase3') query += ` AND verification_status = 'DEEP_CRAWLED' AND candidate_photos IS NOT NULL AND candidate_photos != '[]'`; // Photographer input
+  else if (phase === 'phase4') query += ` AND verification_status = 'MEDIA_READY' AND is_published = 0`; // Publisher input
+  // phase6 removed (dead) — was old Publisher queue key
+  // spider-recent removed (dead) — Spider phase eliminated
   else if (phase === 'detective-recent') query += ` AND verification_status = 'DEEP_CRAWLED'`;
-  else query += ` AND (verification_status IN ('SEEDED','ENRICHED','DEEP_CRAWLED') OR verification_status IS NULL)`;
+  else query += ` AND (verification_status IN ('SEEDED','DEEP_CRAWLED','MEDIA_READY') OR verification_status IS NULL)`;
 
   if (states.length > 0) {
     query += ` AND state IN (${states.map(s => `'${s}'`).join(',')})`;
   }
 
-  const sortAsc = phase !== 'spider-recent';
+  const sortAsc = phase !== 'detective-recent';
   query += sortAsc ? ` ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 10` : ` ORDER BY last_attempted_at DESC NULLS LAST LIMIT 10`;
 
   try {

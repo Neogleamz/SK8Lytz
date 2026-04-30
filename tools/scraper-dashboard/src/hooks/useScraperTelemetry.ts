@@ -19,7 +19,6 @@ export interface DaemonTelemetry {
 
 export interface PipelineTelemetry {
   scout?: DaemonTelemetry;
-  spider?: DaemonTelemetry;
   detective?: DaemonTelemetry;
   photographer?: DaemonTelemetry;
   publisher?: DaemonTelemetry;

@@ -109,7 +109,7 @@ export const SniperBench: React.FC = () => {
             </span>
           </div>
           <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', margin: 0, lineHeight: 1.5 }}>
-            Isolated QA lab. Targets a single DB record by ID and runs the full Spider → Detective pipeline in memory. <strong style={{ color: '#f43f5e' }}>Zero database writes.</strong>
+            Isolated QA lab. Targets a single DB record by ID and runs the full Detective pipeline in memory. <strong style={{ color: '#f43f5e' }}>Zero database writes.</strong>
           </p>
         </div>
 
@@ -166,18 +166,6 @@ export const SniperBench: React.FC = () => {
           )}
         </div>
 
-        {/* Spider Result Mini-Card */}
-        {sniperResult?.spiderResult && (
-          <div style={{ margin: '0 1.5rem 0 1.5rem', padding: '0.75rem', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '8px', flexShrink: 0 }}>
-            <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#818cf8', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>⟦ Spider Links ⟧</div>
-            {Object.entries(sniperResult.spiderResult.candidateLinks || {}).map(([k, v]) => (
-              <div key={k} style={{ display: 'flex', gap: '6px', fontSize: '0.68rem', marginBottom: '3px' }}>
-                <span style={{ color: '#818cf8', fontWeight: 700, minWidth: '60px', fontFamily: 'JetBrains Mono, monospace' }}>{k}</span>
-                <span style={{ color: 'rgba(255,255,255,0.5)', wordBreak: 'break-all', fontFamily: 'JetBrains Mono, monospace' }}>{String(v)}</span>
-              </div>
-            ))}
-          </div>
-        )}
 
         {/* Quality Score Badge */}
         {sniperResult?.detectiveResult && (
@@ -270,12 +258,11 @@ export const SniperBench: React.FC = () => {
                   const hasValue = !isMissing || rawVal === false;
 
                   const methodText = f.phase_id === 1 ? 'Google Places API' :
-                    f.phase_id === 2 ? 'DOM Crawler / Spider' :
                     f.phase_id === 3 ? 'AI Detective (Ollama)' :
                     f.phase_id === 4 ? 'Photographer / Vision' :
                     'Pipeline';
 
-                  const phaseColor = f.phase_id === 1 ? '#fbbf24' : f.phase_id === 2 ? '#818cf8' : f.phase_id === 3 ? '#38bdf8' : f.phase_id === 4 ? '#fb7185' : '#94a3b8';
+                  const phaseColor = f.phase_id === 1 ? '#fbbf24' : f.phase_id === 3 ? '#38bdf8' : f.phase_id === 4 ? '#fb7185' : '#94a3b8';
 
                   return (
                     <div
