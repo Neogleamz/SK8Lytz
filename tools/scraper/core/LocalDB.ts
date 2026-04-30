@@ -57,10 +57,6 @@ db.exec(`
     is_verified INTEGER DEFAULT 0,
     updated_at TEXT,
     updated_by TEXT,
-    address TEXT,
-    phone TEXT,
-    vibe_rating REAL,
-    socials TEXT, -- JSON
     is_featured INTEGER DEFAULT 0,
     has_lights INTEGER,
     has_fee INTEGER,
@@ -178,7 +174,6 @@ const rowToObj = (row: any) => {
   obj.candidate_photos = safeJsonParse(obj.candidate_photos);
   obj.candidate_links = safeJsonParse(obj.candidate_links);
   obj.ai_metadata = safeJsonParse(obj.ai_metadata);
-  obj.socials = safeJsonParse(obj.socials);
   obj.cultural_metadata = safeJsonParse(obj.cultural_metadata);
   obj.pricing_data = safeJsonParse(obj.pricing_data);
   obj.special_events = safeJsonParse(obj.special_events);
@@ -222,7 +217,7 @@ export const upsertLocalSpot = (spot: any) => {
       candidate_photos, candidate_links, ai_metadata, last_attempted_at, last_enriched_at,
       last_enriched_at, retry_count, raw_data,
       surface_type, is_indoor, adult_night_details, source, is_verified, updated_at,
-      updated_by, address, phone, vibe_rating, socials, is_featured, has_lights,
+      updated_by, is_featured, has_lights,
       has_fee, operator_name, has_rental, is_wheelchair_accessible, has_wifi,
       has_toilets, has_food, has_ac, has_lockers, capacity, hosts_derby, surface_quality,
       vibe_score, cultural_metadata, instagram_url, facebook_url, tiktok_url, schedule_url,
@@ -235,7 +230,7 @@ export const upsertLocalSpot = (spot: any) => {
       @candidate_photos, @candidate_links, @ai_metadata, @last_attempted_at, @last_enriched_at,
       @retry_count, @raw_data,
       @surface_type, @is_indoor, @adult_night_details, @source, @is_verified, @updated_at,
-      @updated_by, @address, @phone, @vibe_rating, @socials, @is_featured, @has_lights,
+      @updated_by, @is_featured, @has_lights,
       @has_fee, @operator_name, @has_rental, @is_wheelchair_accessible, @has_wifi,
       @has_toilets, @has_food, @has_ac, @has_lockers, @capacity, @hosts_derby, @surface_quality,
       @vibe_score, @cultural_metadata, @instagram_url, @facebook_url, @tiktok_url, @schedule_url,
@@ -280,10 +275,6 @@ export const upsertLocalSpot = (spot: any) => {
       is_verified = excluded.is_verified,
       updated_at = excluded.updated_at,
       updated_by = excluded.updated_by,
-      address = excluded.address,
-      phone = excluded.phone,
-      vibe_rating = excluded.vibe_rating,
-      socials = excluded.socials,
       is_featured = excluded.is_featured,
       has_lights = excluded.has_lights,
       has_fee = excluded.has_fee,
