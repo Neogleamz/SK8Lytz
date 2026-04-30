@@ -11,17 +11,16 @@
 
 import puppeteer from 'puppeteer';
 import Tesseract from 'tesseract.js';
+import pdfParse from 'pdf-parse';
 
 // ─── Re-export shared type sanitizers (used by Indexer thin wrapper too) ─────
 
-/** Parse a number from AI output. Returns null if unparseable. */
 export const safeNum = (v: any): number | null => {
   if (v == null) return null;
   const n = Number(v);
   return isNaN(n) ? null : n;
 };
 
-/** Parse a boolean from AI output. Returns null for ambiguous free-text. */
 export const safeBool = (v: any): boolean | null => {
   if (v == null) return null;
   if (typeof v === 'boolean') return v;
@@ -34,10 +33,6 @@ export const safeBool = (v: any): boolean | null => {
   return null;
 };
 
-/**
- * Map AI surface string to a valid skate_spot_surface enum value.
- * DB enum: wood | concrete | asphalt | sport_court | unknown
- */
 const SURFACE_KEYWORD_MAP: [string, string][] = [
   ['maple', 'wood'], ['hardwood', 'wood'], ['wood', 'wood'], ['rotacast', 'wood'],
   ['roll-on', 'wood'], ['laminate', 'wood'],
@@ -58,27 +53,19 @@ export const safeSurface = (v: any): string | null => {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface DetectiveResult {
-  /** Raw AI extraction output (the full JSON the LLM returned) */
   aiMetadata: Record<string, any>;
-  /** All mapped, sanitized DB-ready fields */
   mappedFields: Record<string, any>;
-  /** Combined page text that was fed to the AI */
   combinedText: string;
-  /** Quality score (0-17) — how many fields the AI successfully extracted */
   qualityScore: number;
-  /** Whether the record passed the quality gate (>= 2) */
   passedQualityGate: boolean;
-  /** Photo candidates discovered during crawl */
   candidatePhotos: Record<string, any> | null;
-  /** Social links discovered during crawl */
   socialLinks: { instagram_url: string | null; facebook_url: string | null; tiktok_url: string | null; schedule_url: string | null };
-  /** Flyer image URLs that were OCR'd */
   flyerUrls: string[];
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-const MAX_PAGES_PER_RECORD = 4;
-const PAGE_PRIORITY = ['hours', 'adult', 'pricing', 'events', 'contact', 'about', 'root'];
+// ─── Constants & Utilities ───────────────────────────────────────────────────
+
+const MAX_PAGES_PER_RECORD = 8;
 const SOCIAL_CRAWL_BLOCKLIST = [
   'facebook.com', 'instagram.com', 'twitter.com', 'x.com',
   'tiktok.com', 'youtube.com', 'yelp.com', 'google.com', 'linkedin.com'
@@ -91,13 +78,26 @@ function isSocialCrawlBlocked(url: string): boolean {
   } catch { return false; }
 }
 
+async function autoScroll(page: any) {
+  await page.evaluate(async () => {
+    await new Promise((resolve) => {
+      let totalHeight = 0;
+      const distance = 100;
+      const timer = setInterval(() => {
+        const scrollHeight = document.body.scrollHeight;
+        window.scrollBy(0, distance);
+        totalHeight += distance;
+        if (totalHeight >= scrollHeight - window.innerHeight) {
+          clearInterval(timer);
+          resolve(true);
+        }
+      }, 100);
+    });
+  });
+}
+
 /**
  * Execute the Phase 3 Detective against a spot's candidate_links.
- *
- * @param spotContext   - The spot record from the DB (name, city, state, website, etc.)
- * @param aiConfig      - The global AI config fetched from CCTower /config.
- * @param isHeadless    - Whether to launch Puppeteer headless.
- * @param onProgress    - Callback that receives log lines in real-time (for SSE streaming).
  */
 export async function executeDetective(
   spotContext: any,
@@ -108,10 +108,11 @@ export async function executeDetective(
 
   let browser: any = null;
   let combinedText = '';
-  const allLinks: string[] = [];
+  const allLinks: {href: string, text: string}[] = [];
   let ogImage: string | null = null;
   const domImages: string[] = [];
   const flyerUrls: string[] = [];
+  let aiMetadata: Record<string, any> = {};
 
   const socialOnlyRecord = isSocialCrawlBlocked(spotContext.website);
 
@@ -133,145 +134,286 @@ export async function executeDetective(
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
       await page.setViewport({ width: 1280, height: 800 });
 
-      for (const url of [spotContext.website]) {
-        onProgress(`[Detective] → ${url}`);
+      // Pass 1 variables
+      const crawlQueue = [spotContext.website];
+      let passCount = 1;
 
-        // Image-Trap Short-Circuit
-        const isDirectImageUrl = /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(url);
-        if (isDirectImageUrl) {
-          onProgress(`[Detective] 👁️ Direct image URL detected — running Tesseract: ${url}`);
-          try {
-            const { data: { text } } = await Tesseract.recognize(url, 'eng');
-            if (text && text.trim().length > 20) {
-              combinedText += `\n\n[OCR from Direct Image: ${url}]\n${text}`;
-              onProgress(`[Detective] ↳ OCR extracted ${text.length} chars from direct image`);
-            } else {
-              onProgress(`[Detective] ↳ OCR yielded no usable text from ${url}`);
+      while (passCount <= 2) {
+        onProgress(`[Detective] 🔄 Beginning Crawl Pass ${passCount}...`);
+        
+        // Crawl all URLs in queue
+        while (crawlQueue.length > 0 && combinedText.length < 50000) {
+          const url = crawlQueue.shift()!;
+          onProgress(`[Detective] → ${url}`);
+
+          // PDF Trap
+          if (url.toLowerCase().endsWith('.pdf')) {
+            onProgress(`[Detective] 📄 PDF detected — running pdf-parse: ${url}`);
+            try {
+              const fetchFn = require('node-fetch');
+              const pdfRes = await fetchFn(url);
+              const pdfBuffer = await pdfRes.buffer();
+              const pdfData = await pdfParse(pdfBuffer);
+              combinedText += `\n\n[PDF DOCUMENT: ${url}]\n${pdfData.text}`;
+              onProgress(`[Detective] ↳ Extracted ${pdfData.text.length} chars from PDF`);
+            } catch (e: any) {
+              onProgress(`[Detective] ✗ PDF extraction failed: ${e.message}`);
             }
-          } catch (ocrErr: any) {
-            onProgress(`[Detective] ✗ Direct image OCR failed: ${ocrErr.message}`);
-          }
-          continue;
-        }
-
-        try {
-          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-        } catch {
-          try {
-            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
-          } catch {
-            onProgress(`[Detective] ✗ Navigation failed: ${url}`);
             continue;
           }
-        }
-        await new Promise(r => setTimeout(r, 1000));
 
-        const isPriorityUrl = url.includes('schedule') || url.includes('pricing') || url.includes('hours') || url.includes('admission');
-        const pageData = await page.evaluate((isPriority: boolean) => {
-          const ogMeta = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null;
-          const imgs = Array.from(document.querySelectorAll('img'))
-            .filter((img: any) => {
-              const w = img.naturalWidth || img.width || 0;
-              const h = img.naturalHeight || img.height || 0;
-              const src = (img.src || '').toLowerCase();
-              return w >= 400 && h >= 300 &&
-                !src.includes('logo') && !src.includes('icon') &&
-                !src.includes('pixel') && !src.includes('gif') &&
-                (src.startsWith('http') || src.startsWith('//'));
-            })
-            .map((img: any) => {
-              const src = img.src;
-              const alt = (img.alt || '').toLowerCase();
-              const isFlyer = isPriority || src.includes('schedule') || src.includes('pricing') || src.includes('flyer') || alt.includes('schedule') || alt.includes('pricing');
-              return { src, isFlyer };
-            });
-          const links = Array.from(document.querySelectorAll('a'))
-            .map((a: any) => (a.href || '').toLowerCase())
-            .filter(Boolean);
-          document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
-          const cleanText = document.body.innerText.replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
-          return { ogMeta, imgs, links, cleanText };
-        }, isPriorityUrl).catch(() => ({ ogMeta: null, imgs: [], links: [], cleanText: '' }));
+          // Image-Trap
+          const isDirectImageUrl = /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(url);
+          if (isDirectImageUrl) {
+            onProgress(`[Detective] 👁️ Direct image URL detected — running Tesseract: ${url}`);
+            try {
+              const { data: { text } } = await Tesseract.recognize(url, 'eng');
+              if (text && text.trim().length > 20) {
+                combinedText += `\n\n[OCR from Direct Image: ${url}]\n${text}`;
+                onProgress(`[Detective] ↳ OCR extracted ${text.length} chars from direct image`);
+              } else {
+                onProgress(`[Detective] ↳ OCR yielded no usable text from ${url}`);
+              }
+            } catch (ocrErr: any) {
+              onProgress(`[Detective] ✗ Direct image OCR failed: ${ocrErr.message}`);
+            }
+            continue;
+          }
 
-        if (pageData.cleanText) combinedText += `\n\n[PAGE: ${url}]\n${pageData.cleanText}`;
-        allLinks.push(...pageData.links);
-        if (!ogImage && pageData.ogMeta && !pageData.ogMeta.includes('placeholder')) ogImage = pageData.ogMeta;
+          try {
+            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          } catch {
+            try {
+              await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+            } catch {
+              onProgress(`[Detective] ✗ Navigation failed: ${url}`);
+              continue;
+            }
+          }
+          
+          // Lazy load sweep
+          onProgress(`[Detective] 📜 Auto-scrolling to trigger lazy-loaded media...`);
+          await autoScroll(page);
 
-        const pageImages = pageData.imgs.map((i: any) => i.src);
-        domImages.push(...pageImages.slice(0, 2));
-        const trappedFlyers = pageData.imgs.filter((i: any) => i.isFlyer).map((i: any) => i.src);
-        if (trappedFlyers.length > 0) flyerUrls.push(...trappedFlyers);
-      }
+          const isPriorityUrl = url.includes('schedule') || url.includes('pricing') || url.includes('hours') || 
+            url.includes('admission') || url.includes('session') || url.includes('skating') || 
+            url.includes('public-skating') || url.includes('calendar') || url.includes('events') || 
+            url.includes('open-skate') || url.includes('times') || url.includes('rates') || 
+            url.includes('info') || url.includes('tickets') || url.includes('booking');
 
-      // ── DOM Internal Link Navigation ─────────────────────────────────────────
-      let hostname = '';
-      try { hostname = new URL(spotContext.website).hostname; } catch { hostname = ''; }
-      
-      const internalLinks = allLinks.filter((l: any) => {
-        if (!l || l.startsWith('mailto:') || l.startsWith('tel:') || l.startsWith('javascript:')) return false;
-        try {
-          const u = new URL(l);
-          return u.hostname === hostname || u.hostname.includes(hostname.replace('www.', ''));
-        } catch { return false; }
-      });
+          const pageData = await page.evaluate((isPriority: boolean) => {
+            const ogMeta = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || null;
+            
+            // 1. Extract JSON-LD Business Schema
+            const jsonLd = Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
+              .map((el: any) => el.innerText).join('\n');
 
-      const PAGE_SCORE_RULES = [
-        { pattern: /hours|schedule|session/i,         score: 10 },
-        { pattern: /adult.?night|18\+|21\+/i,         score: 10 },
-        { pattern: /pricing|price|admission|rates/i,  score: 9  },
-        { pattern: /events?|calendar|upcoming/i,      score: 8  },
-        { pattern: /location|directions|contact/i,    score: 6  },
-      ];
+            // 2. Extract iframes before removal
+            const iframes = Array.from(document.querySelectorAll('iframe'))
+              .map((el: any) => el.src || '')
+              .filter((src: string) => src.includes('calendar') || src.includes('ticket') || src.includes('centeredge') || src.includes('roller'));
 
-      type ScoredLink = { href: string; score: number };
-      const scored: ScoredLink[] = [];
-      for (const link of internalLinks) {
-        let bestScore = 0;
-        for (const rule of PAGE_SCORE_RULES) {
-          if (rule.pattern.test(link)) {
-            if (rule.score > bestScore) bestScore = rule.score;
+            // 3. Extract Images & Flag Unrestricted OCR
+            const imgs = Array.from(document.querySelectorAll('img'))
+              .filter((img: any) => {
+                const w = img.naturalWidth || img.width || 0;
+                const h = img.naturalHeight || img.height || 0;
+                const src = (img.src || '').toLowerCase();
+                return w >= 400 && h >= 300 &&
+                  !src.includes('logo') && !src.includes('icon') &&
+                  !src.includes('pixel') && !src.includes('gif') &&
+                  (src.startsWith('http') || src.startsWith('//'));
+              })
+              .map((img: any) => {
+                const src = img.src;
+                const alt = (img.alt || '').toLowerCase();
+                // Unrestricted OCR logic: if it's a priority page, EVERY large image is a flyer.
+                const isFlyer = isPriority || src.includes('schedule') || src.includes('pricing') || src.includes('flyer') || alt.includes('schedule') || alt.includes('pricing');
+                return { src, isFlyer };
+              });
+              
+            // 4. Semantic Links
+            const links = Array.from(document.querySelectorAll('a'))
+              .map((a: any) => ({
+                href: (a.href || '').toLowerCase(),
+                text: (a.innerText || '').toLowerCase()
+              }))
+              .filter(l => l.href && (l.href.startsWith('http') || l.href.startsWith('//')));
+              
+            // 5. Clean DOM
+            document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
+            const cleanText = document.body.innerText.replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+            
+            return { ogMeta, imgs, links, cleanText, jsonLd, iframes };
+          }, isPriorityUrl).catch(() => ({ ogMeta: null, imgs: [], links: [], cleanText: '', jsonLd: '', iframes: [] }));
+
+          if (pageData.jsonLd) combinedText += `\n\n[HIDDEN JSON-LD SCHEMA: ${url}]\n${pageData.jsonLd}`;
+          if (pageData.cleanText) combinedText += `\n\n[PAGE: ${url}]\n${pageData.cleanText}`;
+          
+          allLinks.push(...pageData.links);
+          if (!ogImage && pageData.ogMeta && !pageData.ogMeta.includes('placeholder')) ogImage = pageData.ogMeta;
+
+          const pageImages = pageData.imgs.map((i: any) => i.src);
+          domImages.push(...pageImages.slice(0, 2));
+          
+          const trappedFlyers = pageData.imgs.filter((i: any) => i.isFlyer).map((i: any) => i.src);
+          if (trappedFlyers.length > 0) flyerUrls.push(...trappedFlyers);
+          
+          if (pageData.iframes.length > 0) {
+             onProgress(`[Detective] 🎟️ Found ${pageData.iframes.length} ticketing/calendar iframes.`);
+             crawlQueue.push(...pageData.iframes); // Scrape the iframes!
           }
         }
-        if (bestScore > 0) scored.push({ href: link, score: bestScore });
-      }
 
-      scored.sort((a, b) => b.score - a.score);
-      const subUrls = [...new Set(scored.map(s => s.href))].slice(0, 3);
-      
-      for (const url of subUrls) {
-        onProgress(`[Detective] → Deep Dive: ${url}`);
+        // ── DOM Internal Link Navigation ─────────────────────────────────────────
+        let hostname = '';
+        try { hostname = new URL(spotContext.website).hostname; } catch { hostname = ''; }
+        
+        const internalLinks = allLinks.filter((l: any) => {
+          if (!l.href || l.href.startsWith('mailto:') || l.href.startsWith('tel:') || l.href.startsWith('javascript:')) return false;
+          // Only crawl internal links or ticketing iframes
+          try {
+            const u = new URL(l.href);
+            return u.hostname === hostname || u.hostname.includes(hostname.replace('www.', '')) || l.href.includes('centeredge') || l.href.includes('roller');
+          } catch { return false; }
+        });
+
+        // Expanded Dictionary
+        const PAGE_SCORE_RULES = [
+          { pattern: /hours|schedule|session|times|calendar|events|open.?skate/i, score: 10 },
+          { pattern: /adult.?night|18\+|21\+/i,                                  score: 10 },
+          { pattern: /pricing|price|admission|rates|tickets|booking/i,            score: 9  },
+          { pattern: /location|directions|contact|info/i,                         score: 6  },
+        ];
+
+        type ScoredLink = { href: string; score: number };
+        const scored: ScoredLink[] = [];
+        for (const link of internalLinks) {
+          let bestScore = 0;
+          for (const rule of PAGE_SCORE_RULES) {
+            // Semantic scoring: Test both URL and the surrounding <a> text!
+            if (rule.pattern.test(link.href) || rule.pattern.test(link.text)) {
+              if (rule.score > bestScore) bestScore = rule.score;
+            }
+          }
+          if (bestScore > 0) scored.push({ href: link.href, score: bestScore });
+        }
+
+        scored.sort((a, b) => b.score - a.score);
+        
+        // Pass 1 grabs 3 deep links. Pass 2 grabs 5 additional ones.
+        const linksToGrab = passCount === 1 ? 3 : 5;
+        const subUrls = [...new Set(scored.map(s => s.href))].slice(0, linksToGrab);
+        
+        for (const url of subUrls) {
+          // Skip if already in text (naively check if URL is in combinedText, though a weak check, it stops duplicate crawls)
+          if (combinedText.includes(`[PAGE: ${url}]`)) continue;
+          
+          onProgress(`[Detective] → Deep Dive: ${url}`);
+          try {
+            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+            await autoScroll(page);
+            await new Promise(r => setTimeout(r, 1000));
+            const subData = await page.evaluate(() => {
+              // Extract JSON-LD and Unrestricted OCR again for deep dives
+              const jsonLd = Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map((el: any) => el.innerText).join('\n');
+              const iframes = Array.from(document.querySelectorAll('iframe'))
+                  .map((el: any) => el.src || '')
+                  .filter((src: string) => src.includes('calendar') || src.includes('ticket') || src.includes('centeredge') || src.includes('roller'));
+              const flyers = Array.from(document.querySelectorAll('img')).filter((img: any) => {
+                  const w = img.naturalWidth || img.width || 0;
+                  const h = img.naturalHeight || img.height || 0;
+                  return w >= 400 && h >= 300 && !img.src.includes('logo') && !img.src.includes('icon');
+              }).map((img: any) => img.src);
+              
+              document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
+              const cleanText = document.body.innerText.replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+              return { cleanText, jsonLd, iframes, flyers };
+            }).catch(() => ({ cleanText: '', jsonLd: '', iframes: [], flyers: [] }));
+            
+            if (subData.jsonLd) combinedText += `\n\n[HIDDEN JSON-LD SCHEMA: ${url}]\n${subData.jsonLd}`;
+            if (subData.cleanText) combinedText += `\n\n[PAGE: ${url}]\n${subData.cleanText}`;
+            if (subData.iframes.length > 0) crawlQueue.push(...subData.iframes);
+            if (subData.flyers.length > 0) flyerUrls.push(...subData.flyers);
+          } catch {
+            onProgress(`[Detective] ✗ Deep dive failed: ${url}`);
+          }
+        }
+
+        // OCR Pass
+        if (flyerUrls.length > 0) {
+          const uniqueFlyers = [...new Set(flyerUrls)].slice(0, 5); // Increased from 3 to 5
+          onProgress(`[Detective] 👁️ Trapped ${uniqueFlyers.length} potential flyer images. Running OCR...`);
+          for (const fUrl of uniqueFlyers) {
+            // Check if already OCR'd
+            if (combinedText.includes(`[OCR from Flyer Image: ${fUrl}]`)) continue;
+            
+            try {
+              const { data: { text } } = await Tesseract.recognize(fUrl, 'eng');
+              if (text && text.length > 20) {
+                combinedText += `\n\n[OCR from Flyer Image: ${fUrl}]\n${text}`;
+                onProgress(`[Detective] ↳ OCR extracted ${text.length} chars from ${fUrl}`);
+              }
+            } catch (err: any) {
+              onProgress(`[Detective] ✗ OCR failed for ${fUrl}: ${err.message}`);
+            }
+          }
+        }
+        
+        // ── Llama-3 Extraction ─────────────────────────────────────────
+        const systemPrompt = aiConfig.ai_system_prompt || 'Extract JSON data accurately.';
+        const targetVectors = aiConfig.ai_target_vectors || [];
+        const schema = targetVectors.reduce((acc: any, vec: any) => {
+          acc[vec.key] = vec.prompt || vec.type;
+          return acc;
+        }, {});
+
+        let contextHeader = '';
+        if (spotContext.name && spotContext.city) {
+          contextHeader = `You are analyzing website content for a skate facility. The specific location is [${spotContext.name}] in [${spotContext.city}]. The text below may contain info for multiple franchise locations. ONLY extract data for [${spotContext.name}]. Ignore all other cities.\n\n`;
+        }
+
+        const prompt = `${contextHeader}${systemPrompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${combinedText.slice(-30000)}`;
+        const detectiveModel = aiConfig.detective_model || 'llama3.1';
+        onProgress(`[Detective] 🧠 Invoking Ollama (${detectiveModel}) - Pass ${passCount}...`);
+
         try {
-          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
-          await new Promise(r => setTimeout(r, 1000));
-          const subText = await page.evaluate(() => {
-            document.querySelectorAll('nav, footer, script, style, header, iframe, noscript').forEach(el => el.remove());
-            return document.body.innerText.replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
-          }).catch(() => '');
-          if (subText) combinedText += `\n\n[PAGE: ${url}]\n${subText}`;
-        } catch {
-          onProgress(`[Detective] ✗ Deep dive failed: ${url}`);
+          const fetchFn = require('node-fetch');
+          const response = await fetchFn('http://localhost:11434/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: detectiveModel, prompt, format: 'json', stream: false, options: { num_ctx: 8192 } })
+          });
+          if (!response.ok) throw new Error('Ollama HTTP error');
+          const aiData = await response.json();
+          aiMetadata = JSON.parse(aiData.response);
+          onProgress(`[Detective] ✓ Ollama extraction complete (Pass ${passCount}).`);
+        } catch (err: any) {
+          onProgress(`[Detective] ✗ Ollama extraction failed: ${err.message}`);
+        }
+
+        // ── Missing Data Fallback Check ────────────────────────────────
+        const hours = aiMetadata.hours || aiMetadata.opening_hours || {};
+        const pricing = aiMetadata.pricing || aiMetadata.pricing_data || {};
+        
+        if (passCount === 1) {
+          const hasHours = Object.keys(hours).length > 0;
+          const hasPricing = Object.keys(pricing).length > 0;
+          if (!hasHours || !hasPricing) {
+            onProgress(`[Detective] ⚠️ Missing critical data (Hours: ${hasHours}, Pricing: ${hasPricing}). Triggering DEEP PASS fallback loop.`);
+            passCount = 2; // trigger deep pass
+            continue;
+          } else {
+            break; // Stop loop, we got everything!
+          }
+        } else {
+          break; // Done with pass 2
         }
       }
 
       await browser.close();
       browser = null;
 
-      // OCR Pass
-      if (flyerUrls.length > 0) {
-        const uniqueFlyers = [...new Set(flyerUrls)].slice(0, 3);
-        onProgress(`[Detective] 👁️ Trapped ${uniqueFlyers.length} potential flyer images. Running OCR...`);
-        for (const fUrl of uniqueFlyers) {
-          try {
-            const { data: { text } } = await Tesseract.recognize(fUrl, 'eng');
-            if (text && text.length > 20) {
-              combinedText += `\n\n[OCR from Flyer Image: ${fUrl}]\n${text}`;
-              onProgress(`[Detective] ↳ OCR extracted ${text.length} chars from ${fUrl}`);
-            }
-          } catch (err: any) {
-            onProgress(`[Detective] ✗ OCR failed for ${fUrl}: ${err.message}`);
-          }
-        }
-      }
     } finally {
       if (browser) { try { await browser.close(); } catch (_) {} browser = null; }
     }
@@ -284,47 +426,12 @@ export async function executeDetective(
   );
   if (toxicityReason) {
     onProgress(`[Detective] 🚫 HEALER ABORT: Exclusion keyword [${toxicityReason}] found in content.`);
-    const emptyResult: DetectiveResult = {
+    return {
       aiMetadata: {}, mappedFields: {}, combinedText,
       qualityScore: 0, passedQualityGate: false, candidatePhotos: null,
       socialLinks: { instagram_url: null, facebook_url: null, tiktok_url: null, schedule_url: null },
       flyerUrls
     };
-    return emptyResult;
-  }
-
-  // ── Llama-3 Detective Extraction ─────────────────────────────────────────
-  const systemPrompt = aiConfig.ai_system_prompt || 'Extract JSON data accurately.';
-  const targetVectors = aiConfig.ai_target_vectors || [];
-  const schema = targetVectors.reduce((acc: any, vec: any) => {
-    acc[vec.key] = vec.prompt || vec.type;
-    return acc;
-  }, {});
-
-  let contextHeader = '';
-  if (spotContext.name && spotContext.city) {
-    contextHeader = `You are analyzing website content for a skate facility. The specific location is [${spotContext.name}] in [${spotContext.city}]. The text below may contain info for multiple franchise locations. ONLY extract data for [${spotContext.name}]. Ignore all other cities.\n\n`;
-  }
-
-  const prompt = `${contextHeader}${systemPrompt}\n\nSchema:\n${JSON.stringify(schema, null, 2)}\n\nWebsite Text:\n${combinedText.slice(0, 25000)}`;
-  const detectiveModel = aiConfig.detective_model || 'llama3.1';
-  onProgress(`[Detective] 🧠 Invoking Ollama (${detectiveModel})...`);
-
-  let aiMetadata: Record<string, any> = {};
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const fetchFn = require('node-fetch');
-    const response = await fetchFn('http://localhost:11434/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: detectiveModel, prompt, format: 'json', stream: false, options: { num_ctx: 8192 } })
-    });
-    if (!response.ok) throw new Error('Ollama HTTP error');
-    const aiData = await response.json();
-    aiMetadata = JSON.parse(aiData.response);
-    onProgress('[Detective] ✓ Ollama extraction complete.');
-  } catch (err: any) {
-    onProgress(`[Detective] ✗ Ollama extraction failed: ${err.message}`);
   }
 
   // ── Map AI output → typed DB columns ────────────────────────────────────
@@ -339,7 +446,6 @@ export async function executeDetective(
   let adult_night_details    = aiMetadata.adult_night_details || spotContext.adult_night_details || null;
   let adultNightSchedule     = aiMetadata.adult_night_schedule || spotContext.adult_night_schedule || null;
 
-  // Anti-hallucination guard: Nullify details if AI says adult night doesn't exist
   if (has_adult_night === false) {
     adult_night_details = null;
     adultNightSchedule = null;
@@ -378,15 +484,6 @@ export async function executeDetective(
     if (spotContext.lat && spotContext.lng && MAPS_KEY) {
       candidateMap.street_view_url = `https://maps.googleapis.com/maps/api/streetview?size=800x600&location=${spotContext.lat},${spotContext.lng}&heading=auto&fov=80&key=${MAPS_KEY}`;
     }
-    if (facebook_url && facebook_url.includes('facebook.com')) {
-      try {
-        const fetchFn = require('node-fetch');
-        const fbRes = await fetchFn(facebook_url, { headers: { 'User-Agent': 'facebookexternalhit/1.1' }, signal: AbortSignal.timeout(5000) });
-        const fbHtml = await fbRes.text();
-        const ogMatch = fbHtml.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/);
-        if (ogMatch?.[1]) candidateMap.facebook_og = ogMatch[1];
-      } catch { /* non-critical */ }
-    }
     if (Object.keys(candidateMap).length > 0) {
       candidatePhotos = candidateMap;
       onProgress(`[Detective] 📸 Photo candidates: ${Object.keys(candidateMap).join(', ')}`);
@@ -423,18 +520,12 @@ export async function executeDetective(
     has_lights, has_lockers, has_ac, has_wifi, has_toilets, is_wheelchair_accessible, hosts_derby,
     cultural_metadata, candidate_photos: candidatePhotos,
     ai_metadata: Object.keys(aiMetadata).length > 0 ? aiMetadata : null,
-    // What the status *would be* if written to DB
     _simulated_status: passedQualityGate ? 'DEEP_CRAWLED' : 'STALLED',
   };
 
   return {
-    aiMetadata,
-    mappedFields,
-    combinedText,
-    qualityScore,
-    passedQualityGate,
-    candidatePhotos,
-    socialLinks: { instagram_url, facebook_url, tiktok_url, schedule_url },
+    aiMetadata, mappedFields, combinedText, qualityScore, passedQualityGate,
+    candidatePhotos, socialLinks: { instagram_url, facebook_url, tiktok_url, schedule_url },
     flyerUrls,
   };
 }
