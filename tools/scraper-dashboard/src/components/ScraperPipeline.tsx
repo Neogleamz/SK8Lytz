@@ -114,7 +114,7 @@ export const ScraperPipeline: React.FC<{
         if (beltId === 1) spots = phaseQueues?.phase1 || [];              // Sweep out  = SEEDED (Detective input)
         else if (beltId === 2) spots = phaseQueues?.['detective-recent'] || []; // Detective out = DEEP_CRAWLED (Photographer input)
         else if (beltId === 3) spots = phaseQueues?.phase4 || [];              // Photographer out = MEDIA_READY (Publisher input)
-        else if (beltId === 4) spots = phaseQueues?.recent || [];              // Publisher out = PUBLISHED
+        else if (beltId === 4) spots = phaseQueues?.published || [];              // Publisher out = PUBLISHED
         return spots.slice(0, count);
     };
 
@@ -475,6 +475,7 @@ export const ScraperPipeline: React.FC<{
                             onBlockSpot={handleBlockSpot}
                             onRestartSpot={handleRestartSpot}
                             onFreezeSpot={handleFreezeSpot}
+                            carouselSpots={b.id === 4 ? phaseQueues?.['published'] : undefined}
                         />
                     );
                 })}
@@ -484,3 +485,6 @@ export const ScraperPipeline: React.FC<{
 }
 
 export default ScraperPipeline;
+
+
+

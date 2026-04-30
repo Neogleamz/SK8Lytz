@@ -481,6 +481,11 @@ export async function executeDetective(
         const detectiveModel = aiConfig.detective_model || 'local-model';
         onProgress(`[Detective] 🧠 Invoking LM Studio (${detectiveModel}) - Pass ${passCount}...`);
 
+        if (combinedText.trim().length < 50) {
+          onProgress(`[Detective] ⚠️ Content length too short (${combinedText.length} chars). Skipping LM Studio to prevent Bad Request.`);
+          break;
+        }
+
         const LM_STUDIO_URL = 'http://localhost:1234/v1/chat/completions';
         const lmPayload = {
           model: detectiveModel,
@@ -570,7 +575,7 @@ export async function executeDetective(
   }
 
   // ── Map AI output → typed DB columns ────────────────────────────────────
-  const opening_hours        = aiMetadata.hours            || aiMetadata.opening_hours        || spotContext.opening_hours        || null;
+  let opening_hours          = aiMetadata.hours            || aiMetadata.opening_hours        || spotContext.opening_hours        || null;
   const pricing_data         = aiMetadata.pricing           || aiMetadata.pricing_data         || spotContext.pricing_data         || null;
   const surface_type         = safeSurface(aiMetadata.surface_type   || spotContext.surface_type);
   const surface_quality      = aiMetadata.surface_quality   || spotContext.surface_quality || null;
@@ -622,6 +627,33 @@ export async function executeDetective(
     if (Object.keys(candidateMap).length > 0) {
       candidatePhotos = candidateMap;
       onProgress(`[Detective] 📸 Photo candidates: ${Object.keys(candidateMap).join(', ')}`);
+    }
+  }
+
+  // ── Google Places Fallback for Hours ─────────────────────────────────────
+  // If the site blocked us (403) or the AI failed to extract hours, fall back to Places API
+  if ((!opening_hours || Object.keys(opening_hours).length === 0) && spotContext.google_place_id) {
+    const MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_PLACES_API_KEY || '';
+    if (MAPS_KEY) {
+      try {
+        onProgress(`[Detective] 🕒 Hours missing. Fetching fallback from Google Places API...`);
+        const fetchFn = require('node-fetch');
+        const placesUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${spotContext.google_place_id}&fields=opening_hours&key=${MAPS_KEY}`;
+        const placeRes = await fetchFn(placesUrl);
+        if (placeRes.ok) {
+          const placeData = await placeRes.json();
+          if (placeData.result?.opening_hours?.weekday_text) {
+            opening_hours = {};
+            placeData.result.opening_hours.weekday_text.forEach((dayStr: string) => {
+              const [day, ...rest] = dayStr.split(/:\s*/);
+              if (day && rest.length > 0) opening_hours[day] = rest.join(':');
+            });
+            onProgress(`[Detective] ✓ Recovered hours from Google Places API.`);
+          }
+        }
+      } catch (err: any) {
+        onProgress(`[Detective] ✗ Google Places fallback failed: ${err.message}`);
+      }
     }
   }
 

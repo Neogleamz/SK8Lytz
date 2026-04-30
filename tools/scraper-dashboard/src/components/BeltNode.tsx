@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PhaseControlDrawer } from './PhaseControlDrawer';
+import { DatabankCard } from './DatabankCard';
 
 interface OutCard {
   title: string;
@@ -11,6 +12,7 @@ interface OutCard {
 }
 
 interface BeltProps {
+  carouselSpots?: any[];
   id: number;
   name: string;
   color: string;
@@ -135,11 +137,22 @@ const DataCard: React.FC<{
 );
 
 export const BeltNode: React.FC<BeltProps> = ({
+  carouselSpots,
   id, name, color, rgb, job, daemon, target, inQ, status, gatekeeper, attempting, outCards,
   onPhaseNav, daemonActive = false, onDaemonStart, onDaemonStop, hasDaemon = true, daemonStatus, inputStatus, outputStatus, countBadges = [],
   onBlockSpot, onRestartSpot, onFreezeSpot,
 }) => {
   const [isConfigOpen, setConfigOpen] = useState(false);
+  const [carouselIdx, setCarouselIdx] = useState(0);
+
+  React.useEffect(() => {
+    if (!carouselSpots || carouselSpots.length === 0) return;
+    const interval = setInterval(() => {
+      setCarouselIdx(prev => (prev + 1) % carouselSpots.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [carouselSpots]);
+
   const successCards = outCards.filter(c => c.type === 'success').slice(0, 2);
   const rejectedCards = outCards.filter(c => c.type === 'rejected').slice(0, 2);
   // Always show 2 slots in each lane
@@ -510,7 +523,18 @@ export const BeltNode: React.FC<BeltProps> = ({
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           gap: 8, paddingLeft: 4, zIndex: 1,
         }}>
-          {successCards.length === 0 ? (
+          {carouselSpots && carouselSpots.length > 0 ? (
+            <div style={{ width: 180, height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ transform: 'scale(0.85)', transformOrigin: 'center left', width: '100%', height: '100%', animation: 'fadeIn 0.5s ease-in-out' }} key={carouselIdx}>
+                <DatabankCard 
+                  spot={carouselSpots[carouselIdx]} 
+                  variant="polaroid" 
+                  readOnly={true} 
+                  proxyImg={(url: string) => url ? `http://localhost:5999/api/proxy-image?url=${encodeURIComponent(url)}` : ''} 
+                />
+              </div>
+            </div>
+          ) : successCards.length === 0 ? (
             <div style={{
               width: SUCCESS_W, minHeight: 72,
               background: 'rgba(10,10,15,0.4)',
@@ -547,6 +571,7 @@ export const BeltNode: React.FC<BeltProps> = ({
       <style>{`
         @keyframes beltFlowRight { 0%{transform:translateX(-4px);opacity:0} 50%{opacity:1} 100%{transform:translateX(4px);opacity:0} }
         @keyframes beltFlowLeft  { 0%{transform:translateX(4px);opacity:0}  50%{opacity:1} 100%{transform:translateX(-4px);opacity:0} }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(0.85); } }
         @keyframes spin  { 100%{transform:rotate(360deg)} }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
       `}</style>
@@ -555,3 +580,4 @@ export const BeltNode: React.FC<BeltProps> = ({
 };
 
 export default BeltNode;
+

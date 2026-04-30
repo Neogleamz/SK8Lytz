@@ -887,6 +887,7 @@ app.get('/api/queue', async (req, res) => {
   // phase6 removed (dead) — was old Publisher queue key
   // spider-recent removed (dead) — Spider phase eliminated
   else if (phase === 'detective-recent') query += ` AND verification_status = 'DEEP_CRAWLED'`;
+  else if (phase === 'published') query += ` AND is_published = 1`;
   else query += ` AND (verification_status IN ('SEEDED','DEEP_CRAWLED','MEDIA_READY') OR verification_status IS NULL)`;
 
   if (states.length > 0) {
@@ -1165,3 +1166,4 @@ app.get('/api/sniper/stream', async (req, res) => {
 app.listen(5999, () => {
   console.log('[CCTower] API listening on port 5999');
 });
+
