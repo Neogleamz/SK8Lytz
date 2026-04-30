@@ -826,13 +826,53 @@ app.put('/api/field-registry/:id', async (req, res) => {
     const existing = getFieldRegistry().find(f => f.id === req.params.id);
     if (!existing) return res.status(404).json({ error: 'Field not found' });
     
-    upsertFieldRegistryItem({ ...existing, importance_level });
-    res.json({ success: true, importance_level });
+  upsertFieldRegistryItem({ ...existing, importance_level });
+  res.json({ success: true, importance_level });
+} catch (error: any) {
+  res.status(500).json({ error: error.message });
+}
+});
+
+
+// ── Bulk Reset to SEEDED ──────────────────────────────────────────────────────
+// Resets all matching records back to SEEDED so they re-enter the Detective queue.
+// Respects the global state[] and facility_types[] filters.
+// Body: { states: string[], facility_types: string[], confirm: true }
+app.post('/api/bulk-reset-to-seeded', (req, res) => {
+  try {
+    const { states = [], facility_types = [] } = req.body;
+
+    let whereClauses = [`verification_status IN ('DEEP_CRAWLED','MEDIA_READY','STALLED')`];
+    const params: any[] = [];
+
+    if (states.length > 0) {
+      whereClauses.push(`state IN (${states.map(() => '?').join(',')})`);
+      params.push(...states.map((s: string) => s.toUpperCase()));
+    }
+
+    if (facility_types.length > 0) {
+      whereClauses.push(`facility_type IN (${facility_types.map(() => '?').join(',')})`);
+      params.push(...facility_types);
+    }
+
+    const where = whereClauses.join(' AND ');
+    // First count so we can report
+    const countRes = db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE ${where}`).get(...params) as any;
+    // Execute reset
+    const result = db.prepare(
+      `UPDATE local_spots SET verification_status = 'SEEDED', retry_count = 0, last_attempted_at = NULL WHERE ${where}`
+    ).run(...params);
+
+    res.json({
+      success: true,
+      reset_count: result.changes,
+      total_matched: countRes?.cnt ?? 0,
+      filters: { states, facility_types }
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 app.get('/api/queue', async (req, res) => {
   const { phase } = req.query;

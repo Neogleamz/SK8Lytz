@@ -575,6 +575,46 @@ function App() {
     } catch (e) {}
   };
 
+  // Reset a single spot back to SEEDED so it re-enters the Detective queue
+  const resetSpotToSeeded = async (id: string, name: string) => {
+    if (!confirm(`Reset "${name}" back to SEEDED? The AI Detective will re-crawl it.`)) return;
+    try {
+      await fetch(`${API_BASE}/api/spots/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verification_status: 'SEEDED', retry_count: 0, last_attempted_at: null })
+      });
+      fetchSpots(page, gridFilter);
+    } catch (e) {}
+  };
+
+  // Bulk reset all filtered records back to SEEDED (respects global state + facility filters)
+  const [isBulkResetting, setIsBulkResetting] = useState(false);
+  const bulkResetToSeeded = async () => {
+    const stateLabel = stateOverride.length > 0 ? stateOverride.join(', ') : 'ALL STATES';
+    const facLabel = targetFacilities.length > 0 ? targetFacilities.join(', ') : 'ALL TYPES';
+    if (!confirm(`Reset ALL records back to SEEDED?\n\nFilters: ${stateLabel} / ${facLabel}\n\nThis will clear retry counts and requeue everything for the AI Detective.`)) return;
+    setIsBulkResetting(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/bulk-reset-to-seeded`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ states: stateOverride, facility_types: targetFacilities })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`✅ Reset ${data.reset_count} records to SEEDED.\nFilters: ${stateLabel} / ${facLabel}`);
+        fetchSpots(page, gridFilter);
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (e) {
+      alert('Bulk reset failed — check CCTower logs.');
+    } finally {
+      setIsBulkResetting(false);
+    }
+  };
+
   const startEdit = (spot: any) => { setEditingId(spot.id); setEditForm({ ...spot }); };
   const saveEdit = async () => {
     try {
@@ -838,6 +878,22 @@ function App() {
         <button className="btn-icon" onClick={() => setActiveTab('pipeline')} title="Factory Floor"
           style={{ background: activeTab === 'pipeline' ? 'rgba(0, 255, 170, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'pipeline' ? '#00ffaa' : 'rgba(255,255,255,0.6)', border: activeTab === 'pipeline' ? '1px solid #00ffaa' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 800 }}>
           FACTORY FLOOR
+        </button>
+        {/* Bulk Reset to SEEDED — respects global state + facility filters */}
+        <button
+          onClick={bulkResetToSeeded}
+          disabled={isBulkResetting}
+          title={`Reset all ${stateOverride.length > 0 ? stateOverride.join('/') : 'ALL'} ${targetFacilities.length > 0 ? targetFacilities.join('/') : 'ALL TYPE'} records back to SEEDED`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '5px',
+            padding: '5px 12px', borderRadius: '8px', cursor: isBulkResetting ? 'not-allowed' : 'pointer',
+            background: isBulkResetting ? 'rgba(255,179,0,0.05)' : 'rgba(255,179,0,0.1)',
+            border: '1px solid rgba(255,179,0,0.3)', color: '#ffb300',
+            fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.04em', opacity: isBulkResetting ? 0.5 : 1,
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {isBulkResetting ? '⏳ RESETTING...' : '🔄 RESET→SEEDED'}
         </button>
         <button className="btn-icon" onClick={() => setActiveTab('sniper')} title="Sniper Bench"
           style={{ background: activeTab === 'sniper' ? 'rgba(255, 106, 0, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'sniper' ? '#ff6a00' : 'rgba(255,255,255,0.6)', border: activeTab === 'sniper' ? '1px solid #ff6a00' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>
@@ -1774,6 +1830,8 @@ function App() {
                             </label>
                             <button onClick={() => { setEditingId(spot.id); setEditForm(spot); }}
                               style={{ marginLeft:'auto', padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,255,255,0.15)', background:'transparent', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:'0.65rem' }}>Edit</button>
+                            <button onClick={() => resetSpotToSeeded(spot.id, spot.name)} title="Reset to SEEDED"
+                              style={{ padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,179,0,0.25)', background:'rgba(255,179,0,0.08)', color:'#ffb300', cursor:'pointer', fontSize:'0.65rem', fontWeight:700 }}>🔄 Reset</button>
                             <button onClick={async () => { if(confirm(`Purge AND permanently block ${spot.name}?`)) { await fetch(`${API_BASE}/api/skate_spots/${spot.id}?blacklist=true`,{method:'DELETE'}); fetchSpots(page,gridFilter); } }}
                               style={{ padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,59,48,0.25)', background:'rgba(255,59,48,0.1)', color:'rgba(255,59,48,0.8)', cursor:'pointer', fontSize:'0.65rem', fontWeight:700 }}>Purge</button>
                           </div>
@@ -1927,6 +1985,8 @@ function App() {
                           </label>
                           <button onClick={() => { setEditingId(spot.id); setEditForm(spot); }}
                             style={{ padding:'3px 10px', borderRadius:'5px', border:'1px solid rgba(255,255,255,0.12)', background:'transparent', color:'rgba(255,255,255,0.45)', cursor:'pointer', fontSize:'0.6rem' }}>Edit</button>
+                          <button onClick={() => resetSpotToSeeded(spot.id, spot.name)} title="Reset to SEEDED"
+                            style={{ padding:'3px 10px', borderRadius:'5px', border:'1px solid rgba(255,179,0,0.2)', background:'rgba(255,179,0,0.08)', color:'#ffb300', cursor:'pointer', fontSize:'0.6rem', fontWeight:700 }}>🔄</button>
                           <button onClick={async () => { if(confirm(`Purge AND permanently block ${spot.name}?`)) { await fetch(`${API_BASE}/api/skate_spots/${spot.id}?blacklist=true`,{method:'DELETE'}); fetchSpots(page,gridFilter); } }}
                             style={{ padding:'3px 10px', borderRadius:'5px', border:'1px solid rgba(255,59,48,0.2)', background:'rgba(255,59,48,0.1)', color:'rgba(255,59,48,0.8)', cursor:'pointer', fontSize:'0.6rem', fontWeight:700 }}>Purge</button>
                         </div>
@@ -2048,7 +2108,15 @@ function App() {
                             {activeTab === 'graveyard' ? (
                                 <button className="btn-icon" onClick={() => restoreSpot(row.id, row.name)} title="Restore" style={{color: '#4caf50'}}>♻️</button>
                               ) : (
-                                <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>🗑️</button>
+                                <>
+                                  <button
+                                    className="btn-icon"
+                                    onClick={() => resetSpotToSeeded(row.id, row.name)}
+                                    title="Reset to SEEDED — re-enter Detective queue"
+                                    style={{ color: '#ffb300', fontSize: '0.85rem' }}
+                                  >🔄</button>
+                                  <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>🗑️</button>
+                                </>
                               )}
                           </div>
                         </td>
