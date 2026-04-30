@@ -159,6 +159,14 @@ export async function executeDetective(
   const domImages: string[] = [];
   const flyerUrls: string[] = [];
   let aiMetadata: Record<string, any> = {};
+  // Guard: if no website at all, skip crawling entirely
+  if (!spotContext.website) {
+    onProgress(`[Detective] ⚠️ No website URL — running AI on metadata only.`);
+    combinedText = `Facility name: ${spotContext.name}. Location: ${spotContext.city}, ${spotContext.state}. ` +
+      `Type: ${spotContext.facility_type || 'roller rink'}. ` +
+      (spotContext.phone ? `Phone: ${spotContext.phone}. ` : '') +
+      `Note: No website available for this facility.`;
+  } else {
 
   const socialOnlyRecord = isSocialCrawlBlocked(spotContext.website);
 
@@ -543,7 +551,8 @@ export async function executeDetective(
     } finally {
       if (browser) { try { await browser.close(); } catch (_) {} browser = null; }
     }
-  }
+    }
+  } // end: website null guard
 
   // ── AI Toxicity Bouncer ──────────────────────────────────────────────────
   const exclusions = aiConfig.ai_exclusion_keywords || [];
