@@ -126,6 +126,17 @@ if (!colCheck.find(c => c.name === 'sync_required')) {
   db.exec(`ALTER TABLE local_spots ADD COLUMN sync_required INTEGER DEFAULT 1`);
 }
 
+// Check for importance_level column in field registry (migration)
+const fieldRegCheck = db.prepare("PRAGMA table_info(pipeline_field_registry)").all() as any[];
+if (!fieldRegCheck.find(c => c.name === 'importance_level')) {
+  db.exec(`ALTER TABLE pipeline_field_registry ADD COLUMN importance_level INTEGER DEFAULT 0`);
+  // Seed initial importance levels
+  db.exec(`
+    UPDATE pipeline_field_registry SET importance_level = 2 WHERE field_name IN ('name', 'address', 'lat', 'lng');
+    UPDATE pipeline_field_registry SET importance_level = 1 WHERE field_name IN ('phone', 'website');
+  `);
+}
+
 // Migrate field registry phase_ids from old 5-phase to new 4-phase numbering (idempotent)
 // Old: 1=Scout, 2=Spider(dead), 3=Detective, 4=Photographer, 5=Publisher
 // New: 1=Scout, 2=Detective, 3=Photographer, 4=Publisher
@@ -641,14 +652,15 @@ export function getFieldRegistry() {
 
 export function upsertFieldRegistryItem(item: any) {
   const stmt = db.prepare(`
-    INSERT INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order)
-    VALUES (@id, @field_name, @phase_id, @display_label, @data_type, @sort_order)
+    INSERT INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order, importance_level)
+    VALUES (@id, @field_name, @phase_id, @display_label, @data_type, @sort_order, COALESCE(@importance_level, 0))
     ON CONFLICT(id) DO UPDATE SET
       field_name=excluded.field_name,
       phase_id=excluded.phase_id,
       display_label=excluded.display_label,
       data_type=excluded.data_type,
-      sort_order=excluded.sort_order
+      sort_order=excluded.sort_order,
+      importance_level=excluded.importance_level
   `);
   stmt.run(item);
 }

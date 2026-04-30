@@ -14,7 +14,7 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fetch from 'node-fetch';
-import { db, getSpotsToSync, markSpotSynced, updateLocalSpot } from './core/LocalDB';
+import { db, getSpotsToSync, markSpotSynced, updateLocalSpot, getFieldRegistry } from './core/LocalDB';
 
 // Load .env
 const envPaths = [
@@ -83,10 +83,34 @@ async function runPublisher() {
 
       console.log(`[Publisher] Found ${spotsToSync.length} spot(s) pending sync.`);
 
+      const fields = getFieldRegistry();
+      const requiredFields = fields.filter(f => f.importance_level === 2).map(f => f.field_name);
+
       for (const spot of spotsToSync) {
         reportPulse(0, spot.name);
 
         if (spot.is_published) {
+          // Guillotine Check: Verify all required fields are present
+          let missingRequired = false;
+          let missingFieldName = '';
+          for (const rf of requiredFields) {
+            const val = spot[rf];
+            if (val === null || val === undefined || val === '' || 
+               (Array.isArray(val) && val.length === 0) || 
+               (typeof val === 'string' && val === '[]')) {
+              missingRequired = true;
+              missingFieldName = rf;
+              break;
+            }
+          }
+
+          if (missingRequired) {
+            console.error(`[Publisher] 🛑 GUILLOTINE: Rejected [${spot.id}] ${spot.name} (Missing required field: ${missingFieldName})`);
+            updateLocalSpot(spot.id, { is_published: 0, pipeline_status: 'REJECTED', verification_status: 'REJECTED' });
+            markSpotSynced(spot.id);
+            continue;
+          }
+
           // Clean payload for Supabase insertion (exclude local-only columns if any)
           const payload = { ...spot };
           delete payload.sync_required; // Don't push local sync flag

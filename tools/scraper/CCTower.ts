@@ -816,6 +816,22 @@ app.get('/api/field-registry', async (req, res) => {
   }
 });
 
+app.put('/api/field-registry/:id', async (req, res) => {
+  try {
+    const { importance_level } = req.body;
+    if (importance_level === undefined) return res.status(400).json({ error: 'Missing importance_level' });
+    
+    // We only update importance_level for now. Read existing record first to merge.
+    const existing = getFieldRegistry().find(f => f.id === req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Field not found' });
+    
+    upsertFieldRegistryItem({ ...existing, importance_level });
+    res.json({ success: true, importance_level });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 app.get('/api/queue', async (req, res) => {
   const { phase } = req.query;

@@ -129,7 +129,7 @@ const ToggleSwitch = ({ label, checked, onChange, colColor }: { label: string, c
 );
 
 export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onClose, colColor }) => {
-  const { fields, loading: registryLoading } = useFieldRegistry();
+  const { fields, loading: registryLoading, toggleImportance } = useFieldRegistry();
   const [config, setConfig] = useState<any>(null);
   const [blocklist, setBlocklist] = useState<any[]>([]);
   const [sandboxUrl, setSandboxUrl] = useState('');
@@ -240,9 +240,17 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
               <div style={{ gridColumn: '1 / -1', background: 'rgba(0,255,170,0.05)', border: `1px solid ${colColor}44`, padding: '10px', borderRadius: '6px', marginBottom: '8px' }}>
                 <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping</h4>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
-                  {fields.filter(f => f.phase_id === 1).map(f => (
-                    <span key={f.field_name} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {f.field_name}</span>
-                  ))}
+                  {fields.filter(f => f.phase_id === 1).map(f => {
+  const isReq = f.importance_level === 2;
+  const isPri = f.importance_level === 1;
+  const icon = isReq ? '🛑' : isPri ? '⭐' : '⚪';
+  const color = isReq ? '#f44336' : isPri ? '#ffeb3b' : 'rgba(255,255,255,0.7)';
+  return (
+    <button key={f.id || f.field_name} onClick={() => toggleImportance(f.id, f.importance_level)} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', border: 'none', color, cursor: 'pointer', fontSize: '0.65rem' }}>
+      {icon} {f.field_name}
+    </button>
+  );
+})}
                   {registryLoading && <span>Loading registry...</span>}
                 </div>
               </div>
@@ -335,9 +343,17 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
               <div style={{ gridColumn: '1 / -1', background: 'rgba(255,106,0,0.05)', border: `1px solid ${colColor}44`, padding: '10px', borderRadius: '6px', marginBottom: '8px' }}>
                 <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping</h4>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
-                  {fields.filter(f => f.phase_id === 2).map(f => (
-                    <span key={f.field_name} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {f.field_name}</span>
-                  ))}
+                  {fields.filter(f => f.phase_id === 2).map(f => {
+  const isReq = f.importance_level === 2;
+  const isPri = f.importance_level === 1;
+  const icon = isReq ? '🛑' : isPri ? '⭐' : '⚪';
+  const color = isReq ? '#f44336' : isPri ? '#ffeb3b' : 'rgba(255,255,255,0.7)';
+  return (
+    <button key={f.id || f.field_name} onClick={() => toggleImportance(f.id, f.importance_level)} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', border: 'none', color, cursor: 'pointer', fontSize: '0.65rem' }}>
+      {icon} {f.field_name}
+    </button>
+  );
+})}
                   {config?.ai_target_vectors?.map((v: any, i: number) => (
                     <span key={`vec-${i}`} style={{ color: colColor, background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {v.key || v}</span>
                   ))}
@@ -489,9 +505,17 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
               <div style={{ gridColumn: '1 / -1', background: 'rgba(255,0,127,0.05)', border: `1px solid ${colColor}44`, padding: '10px', borderRadius: '6px', marginBottom: '8px' }}>
                 <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping</h4>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
-                  {fields.filter(f => f.phase_id === 3).map(f => (
-                    <span key={f.field_name} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {f.field_name}</span>
-                  ))}
+                  {fields.filter(f => f.phase_id === 3).map(f => {
+  const isReq = f.importance_level === 2;
+  const isPri = f.importance_level === 1;
+  const icon = isReq ? '🛑' : isPri ? '⭐' : '⚪';
+  const color = isReq ? '#f44336' : isPri ? '#ffeb3b' : 'rgba(255,255,255,0.7)';
+  return (
+    <button key={f.id || f.field_name} onClick={() => toggleImportance(f.id, f.importance_level)} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', border: 'none', color, cursor: 'pointer', fontSize: '0.65rem' }}>
+      {icon} {f.field_name}
+    </button>
+  );
+})}
                   {config?.photo_categories?.map((c: string, i: number) => (
                     <span key={`cat-${i}`} style={{ color: colColor, background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {c}</span>
                   ))}
@@ -545,9 +569,17 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
               <div style={{ gridColumn: '1 / -1', background: 'rgba(0,212,255,0.05)', border: `1px solid ${colColor}44`, padding: '10px', borderRadius: '6px', marginBottom: '8px' }}>
                 <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping</h4>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
-                  {fields.filter(f => f.phase_id === 4).map(f => (
-                    <span key={f.field_name} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>✓ {f.field_name}</span>
-                  ))}
+                  {fields.filter(f => f.phase_id === 4).map(f => {
+  const isReq = f.importance_level === 2;
+  const isPri = f.importance_level === 1;
+  const icon = isReq ? '🛑' : isPri ? '⭐' : '⚪';
+  const color = isReq ? '#f44336' : isPri ? '#ffeb3b' : 'rgba(255,255,255,0.7)';
+  return (
+    <button key={f.id || f.field_name} onClick={() => toggleImportance(f.id, f.importance_level)} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', border: 'none', color, cursor: 'pointer', fontSize: '0.65rem' }}>
+      {icon} {f.field_name}
+    </button>
+  );
+})}
                   {registryLoading && <span>Loading registry...</span>}
                 </div>
               </div>

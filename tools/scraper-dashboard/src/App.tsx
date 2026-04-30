@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import USAMap from './USMap';
 import ScraperPipeline from './components/ScraperPipeline';
+import DetectiveLab from './DetectiveLab';
 import { SniperBench } from './components/SniperBench';
 import './App.css';
 
@@ -223,10 +224,7 @@ function App() {
     if (activeTab === 'phase1') {
       fetchDatabankCoverage(); // Phase 1 map uses same source — Google record density per state
     }
-    if (activeTab === 'phase6') {
-      fetchSpots(0, gridFilter, sortCol, sortDir, searchQuery);
-      fetchDatabankCoverage();
-    }
+    
   }, [activeTab, gridFilter, sortCol, sortDir, searchQuery, chips, stateChip]);
 
   // --- Data Fetchers ---
