@@ -18,20 +18,66 @@ import pdfParse from 'pdf-parse';
 export const safeNum = (v: any): number | null => {
   if (v == null) return null;
   const n = Number(v);
-  return isNaN(n) ? null : n;
+  if (!isNaN(n)) return n;
+  // Secondary parser: extract leading number from mixed strings like "7 - family-friendly"
+  if (typeof v === 'string') {
+    const match = v.match(/^\s*(\d+\.?\d*)/);
+    if (match) return Number(match[1]);
+  }
+  return null;
 };
 
 export const safeBool = (v: any): boolean | null => {
   if (v == null) return null;
   if (typeof v === 'boolean') return v;
+  if (typeof v === 'number') return v !== 0;
   if (typeof v === 'string') {
     const lower = v.toLowerCase().trim();
+    // Exact matches first
     if (['yes', 'true', '1', 'y', 'available', 'offered'].includes(lower)) return true;
-    if (['no', 'false', '0', 'n'].includes(lower)) return false;
-    if (['null', 'none', 'unknown', 'not available', 'n/a'].includes(lower)) return null;
+    if (['no', 'false', '0', 'n', 'none'].includes(lower)) return false;
+    if (['null', 'unknown', 'not available', 'n/a', 'not mentioned', 'not specified'].includes(lower)) return null;
+    // Affirmative language detection (catches prose like "Wheelchairs are allowed on the rink floor.")
+    const AFFIRMATIVE = /\b(yes|allowed|accessible|available|offered|provided|included|compliant|ada|handicap|equipped|open)\b/i;
+    const NEGATIVE = /\b(no|not|unavailable|inaccessible|closed|denied|none|lacking|without)\b/i;
+    if (AFFIRMATIVE.test(lower) && !NEGATIVE.test(lower)) return true;
+    if (NEGATIVE.test(lower)) return false;
+    // Ambiguous phrases like "partially accessible" → still true (it IS accessible)
+    if (/partial/i.test(lower)) return true;
   }
   return null;
 };
+
+/**
+ * Attempt to repair truncated JSON from LLM output.
+ * Handles unterminated strings, missing closing brackets/braces.
+ */
+function repairJSON(raw: string): any {
+  let s = raw.trim();
+  // Strip markdown fences
+  s = s.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+  // Try direct parse first
+  try { return JSON.parse(s); } catch {}
+  // Count brackets/braces
+  let braces = 0, brackets = 0, inString = false, escaped = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (escaped) { escaped = false; continue; }
+    if (c === '\\') { escaped = true; continue; }
+    if (c === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (c === '{') braces++;
+    if (c === '}') braces--;
+    if (c === '[') brackets++;
+    if (c === ']') brackets--;
+  }
+  // Close unterminated string
+  if (inString) s += '"';
+  // Close missing brackets/braces
+  while (brackets > 0) { s += ']'; brackets--; }
+  while (braces > 0) { s += '}'; braces--; }
+  try { return JSON.parse(s); } catch { return {}; }
+}
 
 const SURFACE_KEYWORD_MAP: [string, string][] = [
   ['maple', 'wood'], ['hardwood', 'wood'], ['wood', 'wood'], ['rotacast', 'wood'],
@@ -427,30 +473,49 @@ export async function executeDetective(
         const detectiveModel = aiConfig.detective_model || 'local-model';
         onProgress(`[Detective] 🧠 Invoking LM Studio (${detectiveModel}) - Pass ${passCount}...`);
 
-        try {
-          const fetchFn = require('node-fetch');
-          const response = await fetchFn('http://localhost:1234/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model: detectiveModel,
-              messages: [
-                { role: 'system', content: systemMessage },
-                { role: 'user', content: userMessage }
-              ],
-              temperature: 0.1,
-              stream: false
-            })
-          });
-          if (!response.ok) throw new Error(`LM Studio API failed: ${response.statusText}`);
-          const aiData = await response.json();
-          const contentString = aiData.choices?.[0]?.message?.content || '{}';
-          // Strip markdown code blocks if the model ignored instructions
-          const jsonStr = contentString.replace(/```json/g, '').replace(/```/g, '').trim();
-          aiMetadata = JSON.parse(jsonStr);
-          onProgress(`[Detective] ✓ LM Studio extraction complete (Pass ${passCount}). Keys: ${Object.keys(aiMetadata).length}`);
-        } catch (err: any) {
-          onProgress(`[Detective] ✗ LM Studio extraction failed: ${err.message}`);
+        const LM_STUDIO_URL = 'http://localhost:1234/v1/chat/completions';
+        const lmPayload = {
+          model: detectiveModel,
+          messages: [
+            { role: 'system', content: systemMessage },
+            { role: 'user', content: userMessage }
+          ],
+          temperature: 0.1,
+          stream: false
+        };
+
+        // Retry loop: 1 retry with 3s backoff on failure (cold model load, timeout, etc.)
+        const MAX_LM_RETRIES = 2;
+        for (let attempt = 1; attempt <= MAX_LM_RETRIES; attempt++) {
+          try {
+            const fetchFn = require('node-fetch');
+            const response = await fetchFn(LM_STUDIO_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(lmPayload)
+            });
+            if (!response.ok) throw new Error(`LM Studio API failed: ${response.statusText}`);
+            const aiData = await response.json();
+            const contentString = aiData.choices?.[0]?.message?.content || '{}';
+            // Primary parse with markdown stripping
+            const jsonStr = contentString.replace(/```json/g, '').replace(/```/g, '').trim();
+            try {
+              aiMetadata = JSON.parse(jsonStr);
+            } catch {
+              // JSON repair fallback for truncated output
+              onProgress(`[Detective] ⚠️ JSON parse failed — attempting repair...`);
+              aiMetadata = repairJSON(contentString);
+            }
+            const fillRate = Object.values(aiMetadata).filter(v => v !== null && v !== undefined).length;
+            onProgress(`[Detective] ✓ LM Studio extraction complete (Pass ${passCount}, Attempt ${attempt}). Keys: ${Object.keys(aiMetadata).length}, Fill: ${fillRate}`);
+            break; // Success — exit retry loop
+          } catch (err: any) {
+            onProgress(`[Detective] ✗ LM Studio attempt ${attempt}/${MAX_LM_RETRIES} failed: ${err.message}`);
+            if (attempt < MAX_LM_RETRIES) {
+              onProgress(`[Detective] ⏳ Retrying in 3s...`);
+              await new Promise(r => setTimeout(r, 3000));
+            }
+          }
         }
 
         // ── Missing Data Fallback Check ────────────────────────────────
