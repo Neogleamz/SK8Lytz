@@ -43,6 +43,17 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
       error_file: './logs/photographer-error.log',
       out_file: './logs/photographer-out.log'
+    },
+    {
+      name: 'scraper-publisher',
+      script: 'node_modules/tsx/dist/cli.cjs',
+      args: 'Publisher.ts',
+      cwd: 'C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/scraper',
+      watch: false,
+      env: { NODE_ENV: 'production' },
+      log_date_format: 'YYYY-MM-DD HH:mm:ss',
+      error_file: './logs/publisher-error.log',
+      out_file: './logs/publisher-out.log'
     }
   ]
 };

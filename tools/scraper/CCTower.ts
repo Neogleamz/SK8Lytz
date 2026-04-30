@@ -138,6 +138,7 @@ app.get('/status', async (req, res) => {
     let operatorStatus = 'Offline';
     let indexerStatus = 'Offline';
     let photographerStatus = 'Offline';
+    let publisherStatus = 'Offline';
 
     if (!err && stdout) {
       try {
@@ -145,12 +146,14 @@ app.get('/status', async (req, res) => {
         const operator = pm2List.find((p: any) => p.name === 'scraper-operator');
         const indexer = pm2List.find((p: any) => p.name === 'scraper-indexer');
         const photographer = pm2List.find((p: any) => p.name === 'scraper-photographer');
-        if (operator?.pm2_env?.status === 'online' || indexer?.pm2_env?.status === 'online') {
+        const publisher = pm2List.find((p: any) => p.name === 'scraper-publisher');
+        if (operator?.pm2_env?.status === 'online' || indexer?.pm2_env?.status === 'online' || publisher?.pm2_env?.status === 'online') {
             running = true;
         }
         operatorStatus = operator?.pm2_env?.status || 'Offline';
         indexerStatus = indexer?.pm2_env?.status || 'Offline';
         photographerStatus = photographer?.pm2_env?.status || 'Offline';
+        publisherStatus = publisher?.pm2_env?.status || 'Offline';
       } catch(e) {}
     }
 
@@ -216,7 +219,7 @@ app.post('/start', (req, res) => {
   const { daemons } = (req.body || {}) as { daemons?: string[] };
   const target = (daemons && daemons.length > 0)
     ? daemons.map(d => `scraper-${d}`).join(',')
-    : 'scraper-operator,scraper-indexer,scraper-photographer';
+    : 'scraper-operator,scraper-indexer,scraper-photographer,scraper-publisher';
   console.log(`Orchestrating start: ${target}`);
   exec(`pm2 start ecosystem.config.js --only ${target}`, { cwd: __dirname, windowsHide: true }, (err) => {
      if (err) {
@@ -232,7 +235,7 @@ app.post('/stop', (req, res) => {
   const { daemons } = (req.body || {}) as { daemons?: string[] };
   const target = (daemons && daemons.length > 0)
     ? daemons.map(d => `scraper-${d}`).join(' ')
-    : 'scraper-operator scraper-indexer scraper-photographer';
+    : 'scraper-operator scraper-indexer scraper-photographer scraper-publisher';
   console.log(`Orchestrating stop: ${target}`);
   exec(`pm2 stop ${target}`, { cwd: __dirname, windowsHide: true }, (err) => {
      if (err) {

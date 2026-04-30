@@ -60,6 +60,24 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_last_attempted_at ON local_spots(last_attempted_at);
 `);
 
+// Check for sync_required column (migration)
+const colCheck = db.prepare("PRAGMA table_info(local_spots)").all() as any[];
+if (!colCheck.find(c => c.name === 'sync_required')) {
+  db.exec(`ALTER TABLE local_spots ADD COLUMN sync_required INTEGER DEFAULT 1`);
+}
+
+db.exec(`
+  CREATE TRIGGER IF NOT EXISTS set_sync_required
+  AFTER UPDATE ON local_spots
+  FOR EACH ROW
+  WHEN NEW.sync_required = OLD.sync_required OR OLD.sync_required IS NULL
+  BEGIN
+      UPDATE local_spots SET sync_required = 1 WHERE id = NEW.id;
+  END;
+  
+  CREATE INDEX IF NOT EXISTS idx_sync_required ON local_spots(sync_required);
+`);
+
 /**
  * Safely parse a JSON string, or stringify an object before saving
  */
@@ -356,3 +374,13 @@ export const getClosestLocalSpot = (lat: number, lng: number, radiusMeters: numb
 
   return closestSpot ? [closestSpot] : null;
 };
+
+export const markSpotSynced = (id: string) => {
+  db.prepare(`UPDATE local_spots SET sync_required = 0 WHERE id = ?`).run(id);
+};
+
+export const getSpotsToSync = (limit: number = 50) => {
+  const rows = db.prepare(`SELECT * FROM local_spots WHERE sync_required = 1 LIMIT ?`).all(limit);
+  return rows.map(rowToObj);
+};
+
