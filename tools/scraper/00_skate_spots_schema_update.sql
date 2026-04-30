@@ -1,11 +1,35 @@
--- Migration to augment the skate_spots table for the US National Dataset Pipeline
-
-ALTER TABLE skate_spots
-  ADD COLUMN IF NOT EXISTS street_address TEXT,
-  ADD COLUMN IF NOT EXISTS opening_hours JSONB,
-  ADD COLUMN IF NOT EXISTS website TEXT,
-  ADD COLUMN IF NOT EXISTS socials JSONB,
-  ADD COLUMN IF NOT EXISTS facility_type TEXT,
-  ADD COLUMN IF NOT EXISTS has_pro_shop BOOLEAN DEFAULT FALSE,
-  ADD COLUMN IF NOT EXISTS has_adult_night BOOLEAN DEFAULT FALSE,
-  ADD COLUMN IF NOT EXISTS vibe_rating TEXT;
+-- Add missing columns to local_spots table
+ALTER TABLE local_spots ADD COLUMN surface_type TEXT;
+ALTER TABLE local_spots ADD COLUMN is_indoor INTEGER DEFAULT 0;
+ALTER TABLE local_spots ADD COLUMN adult_night_details TEXT;
+ALTER TABLE local_spots ADD COLUMN source TEXT;
+ALTER TABLE local_spots ADD COLUMN is_verified INTEGER DEFAULT 0;
+ALTER TABLE local_spots ADD COLUMN updated_at TEXT;
+ALTER TABLE local_spots ADD COLUMN updated_by TEXT;
+ALTER TABLE local_spots ADD COLUMN address TEXT;
+ALTER TABLE local_spots ADD COLUMN phone TEXT;
+ALTER TABLE local_spots ADD COLUMN vibe_rating REAL;
+ALTER TABLE local_spots ADD COLUMN socials TEXT;
+ALTER TABLE local_spots ADD COLUMN is_featured INTEGER DEFAULT 0;
+ALTER TABLE local_spots ADD COLUMN has_lights INTEGER;
+ALTER TABLE local_spots ADD COLUMN has_fee INTEGER;
+ALTER TABLE local_spots ADD COLUMN operator_name TEXT;
+ALTER TABLE local_spots ADD COLUMN has_rental INTEGER;
+ALTER TABLE local_spots ADD COLUMN is_wheelchair_accessible INTEGER;
+ALTER TABLE local_spots ADD COLUMN has_wifi INTEGER;
+ALTER TABLE local_spots ADD COLUMN has_toilets INTEGER;
+ALTER TABLE local_spots ADD COLUMN has_food INTEGER;
+ALTER TABLE local_spots ADD COLUMN has_ac INTEGER;
+ALTER TABLE local_spots ADD COLUMN has_lockers INTEGER;
+ALTER TABLE local_spots ADD COLUMN capacity INTEGER;
+ALTER TABLE local_spots ADD COLUMN hosts_derby INTEGER DEFAULT 0;
+ALTER TABLE local_spots ADD COLUMN surface_quality TEXT;
+ALTER TABLE local_spots ADD COLUMN vibe_score REAL;
+ALTER TABLE local_spots ADD COLUMN cultural_metadata TEXT;
+ALTER TABLE local_spots ADD COLUMN instagram_url TEXT;
+ALTER TABLE local_spots ADD COLUMN facebook_url TEXT;
+ALTER TABLE local_spots ADD COLUMN tiktok_url TEXT;
+ALTER TABLE local_spots ADD COLUMN schedule_url TEXT;
+ALTER TABLE local_spots ADD COLUMN pricing_data TEXT;
+ALTER TABLE local_spots ADD COLUMN special_events TEXT;
+ALTER TABLE local_spots ADD COLUMN adult_night_schedule TEXT;

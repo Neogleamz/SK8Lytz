@@ -50,6 +50,40 @@ db.exec(`
     last_enriched_at TEXT,
     retry_count INTEGER DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    surface_type TEXT,
+    is_indoor INTEGER DEFAULT 0,
+    adult_night_details TEXT,
+    source TEXT,
+    is_verified INTEGER DEFAULT 0,
+    updated_at TEXT,
+    updated_by TEXT,
+    address TEXT,
+    phone TEXT,
+    vibe_rating REAL,
+    socials TEXT, -- JSON
+    is_featured INTEGER DEFAULT 0,
+    has_lights INTEGER,
+    has_fee INTEGER,
+    operator_name TEXT,
+    has_rental INTEGER,
+    is_wheelchair_accessible INTEGER,
+    has_wifi INTEGER,
+    has_toilets INTEGER,
+    has_food INTEGER,
+    has_ac INTEGER,
+    has_lockers INTEGER,
+    capacity INTEGER,
+    hosts_derby INTEGER DEFAULT 0,
+    surface_quality TEXT,
+    vibe_score REAL,
+    cultural_metadata TEXT, -- JSON
+    instagram_url TEXT,
+    facebook_url TEXT,
+    tiktok_url TEXT,
+    schedule_url TEXT,
+    pricing_data TEXT, -- JSON
+    special_events TEXT, -- JSON
+    adult_night_schedule TEXT, -- JSON,
     
     -- We can store the entire row payload here just in case we miss a column
     raw_data TEXT -- JSON
@@ -144,6 +178,27 @@ const rowToObj = (row: any) => {
   obj.candidate_photos = safeJsonParse(obj.candidate_photos);
   obj.candidate_links = safeJsonParse(obj.candidate_links);
   obj.ai_metadata = safeJsonParse(obj.ai_metadata);
+  obj.socials = safeJsonParse(obj.socials);
+  obj.cultural_metadata = safeJsonParse(obj.cultural_metadata);
+  obj.pricing_data = safeJsonParse(obj.pricing_data);
+  obj.special_events = safeJsonParse(obj.special_events);
+  obj.adult_night_schedule = safeJsonParse(obj.adult_night_schedule);
+  obj.raw_data = safeJsonParse(obj.raw_data);
+
+  // Convert additional booleans
+  obj.is_indoor = obj.is_indoor === 1;
+  obj.is_verified = obj.is_verified === 1;
+  obj.is_featured = obj.is_featured === 1;
+  obj.hosts_derby = obj.hosts_derby === 1;
+  obj.has_lights = obj.has_lights === 1 ? true : (obj.has_lights === 0 ? false : null);
+  obj.has_fee = obj.has_fee === 1 ? true : (obj.has_fee === 0 ? false : null);
+  obj.has_rental = obj.has_rental === 1 ? true : (obj.has_rental === 0 ? false : null);
+  obj.is_wheelchair_accessible = obj.is_wheelchair_accessible === 1 ? true : (obj.is_wheelchair_accessible === 0 ? false : null);
+  obj.has_wifi = obj.has_wifi === 1 ? true : (obj.has_wifi === 0 ? false : null);
+  obj.has_toilets = obj.has_toilets === 1 ? true : (obj.has_toilets === 0 ? false : null);
+  obj.has_food = obj.has_food === 1 ? true : (obj.has_food === 0 ? false : null);
+  obj.has_ac = obj.has_ac === 1 ? true : (obj.has_ac === 0 ? false : null);
+  obj.has_lockers = obj.has_lockers === 1 ? true : (obj.has_lockers === 0 ? false : null);
   obj.raw_data = safeJsonParse(obj.raw_data);
 
   return obj;
@@ -165,14 +220,26 @@ export const upsertLocalSpot = (spot: any) => {
       opening_hours, operator_description, facility_type, is_published, verification_status,
       has_adult_night, has_pro_shop, is_deep_crawled, raw_knowledge_panel, photos,
       candidate_photos, candidate_links, ai_metadata, last_attempted_at, last_enriched_at,
-      retry_count, raw_data
+      last_enriched_at, retry_count, raw_data,
+      surface_type, is_indoor, adult_night_details, source, is_verified, updated_at,
+      updated_by, address, phone, vibe_rating, socials, is_featured, has_lights,
+      has_fee, operator_name, has_rental, is_wheelchair_accessible, has_wifi,
+      has_toilets, has_food, has_ac, has_lockers, capacity, hosts_derby, surface_quality,
+      vibe_score, cultural_metadata, instagram_url, facebook_url, tiktok_url, schedule_url,
+      pricing_data, special_events, adult_night_schedule
     ) VALUES (
       @id, @name, @lat, @lng, @city, @state, @zip, @street_address, @phone_number, @website,
       @google_place_id, @google_maps_url, @business_status, @rating, @user_ratings_total,
       @opening_hours, @operator_description, @facility_type, @is_published, @verification_status,
       @has_adult_night, @has_pro_shop, @is_deep_crawled, @raw_knowledge_panel, @photos,
       @candidate_photos, @candidate_links, @ai_metadata, @last_attempted_at, @last_enriched_at,
-      @retry_count, @raw_data
+      @retry_count, @raw_data,
+      @surface_type, @is_indoor, @adult_night_details, @source, @is_verified, @updated_at,
+      @updated_by, @address, @phone, @vibe_rating, @socials, @is_featured, @has_lights,
+      @has_fee, @operator_name, @has_rental, @is_wheelchair_accessible, @has_wifi,
+      @has_toilets, @has_food, @has_ac, @has_lockers, @capacity, @hosts_derby, @surface_quality,
+      @vibe_score, @cultural_metadata, @instagram_url, @facebook_url, @tiktok_url, @schedule_url,
+      @pricing_data, @special_events, @adult_night_schedule
     )
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
@@ -205,7 +272,41 @@ export const upsertLocalSpot = (spot: any) => {
       last_attempted_at = excluded.last_attempted_at,
       last_enriched_at = excluded.last_enriched_at,
       retry_count = excluded.retry_count,
-      raw_data = excluded.raw_data
+      raw_data = excluded.raw_data,
+      surface_type = excluded.surface_type,
+      is_indoor = excluded.is_indoor,
+      adult_night_details = excluded.adult_night_details,
+      source = excluded.source,
+      is_verified = excluded.is_verified,
+      updated_at = excluded.updated_at,
+      updated_by = excluded.updated_by,
+      address = excluded.address,
+      phone = excluded.phone,
+      vibe_rating = excluded.vibe_rating,
+      socials = excluded.socials,
+      is_featured = excluded.is_featured,
+      has_lights = excluded.has_lights,
+      has_fee = excluded.has_fee,
+      operator_name = excluded.operator_name,
+      has_rental = excluded.has_rental,
+      is_wheelchair_accessible = excluded.is_wheelchair_accessible,
+      has_wifi = excluded.has_wifi,
+      has_toilets = excluded.has_toilets,
+      has_food = excluded.has_food,
+      has_ac = excluded.has_ac,
+      has_lockers = excluded.has_lockers,
+      capacity = excluded.capacity,
+      hosts_derby = excluded.hosts_derby,
+      surface_quality = excluded.surface_quality,
+      vibe_score = excluded.vibe_score,
+      cultural_metadata = excluded.cultural_metadata,
+      instagram_url = excluded.instagram_url,
+      facebook_url = excluded.facebook_url,
+      tiktok_url = excluded.tiktok_url,
+      schedule_url = excluded.schedule_url,
+      pricing_data = excluded.pricing_data,
+      special_events = excluded.special_events,
+      adult_night_schedule = excluded.adult_night_schedule
   `);
 
   const id = spot.id || Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -242,7 +343,41 @@ export const upsertLocalSpot = (spot: any) => {
     last_attempted_at: spot.last_attempted_at || null,
     last_enriched_at: spot.last_enriched_at || null,
     retry_count: spot.retry_count || 0,
-    raw_data: safeJsonStringify(spot)
+    raw_data: safeJsonStringify(spot),
+    surface_type: spot.surface_type || null,
+    is_indoor: spot.is_indoor ? 1 : 0,
+    adult_night_details: spot.adult_night_details || null,
+    source: spot.source || null,
+    is_verified: spot.is_verified ? 1 : 0,
+    updated_at: spot.updated_at || null,
+    updated_by: spot.updated_by || null,
+    address: spot.address || null,
+    phone: spot.phone || null,
+    vibe_rating: spot.vibe_rating || null,
+    socials: safeJsonStringify(spot.socials),
+    is_featured: spot.is_featured ? 1 : 0,
+    has_lights: spot.has_lights === true ? 1 : (spot.has_lights === false ? 0 : null),
+    has_fee: spot.has_fee === true ? 1 : (spot.has_fee === false ? 0 : null),
+    operator_name: spot.operator_name || null,
+    has_rental: spot.has_rental === true ? 1 : (spot.has_rental === false ? 0 : null),
+    is_wheelchair_accessible: spot.is_wheelchair_accessible === true ? 1 : (spot.is_wheelchair_accessible === false ? 0 : null),
+    has_wifi: spot.has_wifi === true ? 1 : (spot.has_wifi === false ? 0 : null),
+    has_toilets: spot.has_toilets === true ? 1 : (spot.has_toilets === false ? 0 : null),
+    has_food: spot.has_food === true ? 1 : (spot.has_food === false ? 0 : null),
+    has_ac: spot.has_ac === true ? 1 : (spot.has_ac === false ? 0 : null),
+    has_lockers: spot.has_lockers === true ? 1 : (spot.has_lockers === false ? 0 : null),
+    capacity: spot.capacity || null,
+    hosts_derby: spot.hosts_derby ? 1 : 0,
+    surface_quality: spot.surface_quality || null,
+    vibe_score: spot.vibe_score || null,
+    cultural_metadata: safeJsonStringify(spot.cultural_metadata),
+    instagram_url: spot.instagram_url || null,
+    facebook_url: spot.facebook_url || null,
+    tiktok_url: spot.tiktok_url || null,
+    schedule_url: spot.schedule_url || null,
+    pricing_data: safeJsonStringify(spot.pricing_data),
+    special_events: safeJsonStringify(spot.special_events),
+    adult_night_schedule: safeJsonStringify(spot.adult_night_schedule)
   });
 
   return id;
