@@ -295,7 +295,8 @@ export const BeltNode: React.FC<BeltProps> = ({
         gridTemplateColumns: `${LEFT_W}px ${ARROW_W}px ${MACHINE_W}px ${ARROW_W}px 1fr`,
         gridTemplateRows: 'auto auto',
         gap: '6px 0',
-        alignItems: 'stretch',
+        alignItems: 'center',
+        justifyItems: 'center',
         position: 'relative',
       }}>
 
@@ -323,8 +324,8 @@ export const BeltNode: React.FC<BeltProps> = ({
         {/* ═══ COL 1, ROW 1: PENDING CARDS ═══ */}
         <div style={{
           gridColumn: 1, gridRow: 1,
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-          gap: 8, paddingRight: 0, zIndex: 1, minHeight: 80,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: 8, zIndex: 1, minHeight: 80,
         }}>
           {pendingSlots.map((iq, i) => (
             <div key={`p${i}`} style={{
@@ -351,8 +352,8 @@ export const BeltNode: React.FC<BeltProps> = ({
         {/* ═══ COL 1, ROW 2: REJECTED CARDS (flowing back ←) ═══ */}
         <div style={{
           gridColumn: 1, gridRow: 2,
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-          gap: 8, paddingRight: 0, zIndex: 1, minHeight: 72,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: 8, zIndex: 1, minHeight: 72,
         }}>
           {rejectedSlots ? rejectedSlots.map((rc, i) => (
             <div key={`rej${i}`} style={{
@@ -417,6 +418,8 @@ export const BeltNode: React.FC<BeltProps> = ({
           boxShadow: `0 0 30px rgba(${colRgb},0.18), inset 0 0 18px rgba(${colRgb},0.07)`,
           position: 'relative',
           display: 'flex', flexDirection: 'column',
+          justifySelf: 'center',
+          width: MACHINE_W,
         }}>
           {/* top glow bar */}
           <div style={{ position: 'absolute', top: -1, left: '25%', right: '25%', height: 2, background: colVar, boxShadow: `0 0 12px ${colVar}`, borderRadius: 2 }} />
@@ -505,7 +508,7 @@ export const BeltNode: React.FC<BeltProps> = ({
         {/* ═══ COL 5, ROW 1: SUCCESS CARDS ═══ */}
         <div style={{
           gridColumn: 5, gridRow: 1,
-          display: 'flex', alignItems: 'center',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           gap: 8, paddingLeft: 4, zIndex: 1,
         }}>
           {successCards.length === 0 ? (
