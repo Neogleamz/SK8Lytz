@@ -295,8 +295,7 @@ export const BeltNode: React.FC<BeltProps> = ({
         gridTemplateColumns: `${LEFT_W}px ${ARROW_W}px ${MACHINE_W}px ${ARROW_W}px 1fr`,
         gridTemplateRows: 'auto auto',
         gap: '6px 0',
-        alignItems: 'center',
-        justifyItems: 'center',
+        alignItems: 'stretch',
         position: 'relative',
       }}>
 
@@ -384,7 +383,7 @@ export const BeltNode: React.FC<BeltProps> = ({
         <div style={{
           gridColumn: 2, gridRow: 1,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1, gap: 2
+          zIndex: 1, gap: 2, alignSelf: 'center',
         }}>
           <div style={{ fontSize: '0.45rem', fontWeight: 900, color: colVar, textTransform: 'uppercase', fontFamily: 'JetBrains Mono, monospace', textAlign: 'center', lineHeight: 1 }}>{inputStatus}</div>
           <div style={{
@@ -494,7 +493,7 @@ export const BeltNode: React.FC<BeltProps> = ({
         <div style={{
           gridColumn: 4, gridRow: 1,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1, gap: 2
+          zIndex: 1, gap: 2, alignSelf: 'center',
         }}>
           <div style={{ fontSize: '0.45rem', fontWeight: 900, color: colVar, textTransform: 'uppercase', fontFamily: 'JetBrains Mono, monospace', textAlign: 'center', lineHeight: 1 }}>{outputStatus}</div>
           <div style={{
