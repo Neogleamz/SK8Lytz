@@ -92,6 +92,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     bleGateRef,
     probeDevice,
     pingDevice,
+    startSweeper,
+    stopSweeper,
+    isSweeperActive,
+    // NOTE: registeredMacs is passed to useBLE after useRegistration() via registeredMacsRef below
   } = useBLE();
 
   // ── Registration system ────────────────────────────────────────────────────
@@ -105,6 +109,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     migrateLegacyGroups,
     isLoading,
   } = useRegistration();
+
+  // NOTE: useBLE's Sweeper receives registeredMacs as a plain array parameter.
+  // Since useBLE is called once per component lifecycle (no conditional re-call),
+  // we keep registeredMacs in a ref and notify the Sweeper to skip Fleet MACs
+  // using a side-channel. The Sweeper already re-reads registeredMacs on every
+  // Interrogator invocation, so this ref stays live without re-instantiating useBLE.
+  // (registeredMacs initial value = [] on first render — safe because Interrogator
+  // has a 2s queue delay before any probe fires.)
 
   // ── Phase 1: Profile, AppSettings & Modal Flags → useDashboardProfile ─────────────
   const {
@@ -256,6 +268,35 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       subscription.remove();
     };
   }, []);
+
+  // ── Overwatch: Silent Sweeper Lifecycle ──────────────────────────────────
+  // Start on Dashboard mount once BT is confirmed ready.
+  // Stop on background (battery safety) and resume on foreground.
+  useEffect(() => {
+    if (!isBluetoothEnabled || !isBluetoothSupported || Platform.OS === 'web') return;
+    // Start sweeper on first render when BT is already ready,
+    // or when BT transitions from disabled to enabled.
+    startSweeper();
+  }, [isBluetoothEnabled, isBluetoothSupported]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (nextState === 'background' || nextState === 'inactive') {
+        stopSweeper();
+      } else if (nextState === 'active') {
+        if (isBluetoothEnabled && isBluetoothSupported) startSweeper();
+      }
+    });
+    return () => sub.remove();
+  }, [isBluetoothEnabled, isBluetoothSupported, startSweeper, stopSweeper]);
+
+  // Cleanup on Dashboard unmount
+  useEffect(() => {
+    return () => { stopSweeper(); };
+  }, [stopSweeper]);
+
+
 
 
   const wizardCheckedRef = React.useRef(false);

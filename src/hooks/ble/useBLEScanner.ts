@@ -15,12 +15,15 @@ export interface UseBLEScannerProps {
   bleManager: any;
   allDevices: Device[];
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
+  /** Optional HW cache from useBLESweeper — enriches PendingRegistrations with real EEPROM data */
+  hwCache?: Record<string, any>;
 }
 
 export function useBLEScanner({
   bleManager,
   allDevices,
   setAllDevices,
+  hwCache = {},
 }: UseBLEScannerProps) {
   const [scannerState, setScannerState] = useState<'IDLE' | 'SCANNING' | 'PROBING'>('IDLE');
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
@@ -111,6 +114,12 @@ export function useBLEScanner({
 
       const normalizedMac = d.id.toUpperCase();
       const deviceIdShort = normalizedMac.replace(/:/g, '').slice(-4);
+
+      // ── Overwatch Cache Lookup ────────────────────────────────────────────
+      // If the Sweeper's Interrogator has already probed this device, use the
+      // real EEPROM data instead of advertisement/name heuristics.
+      const cached = hwCache[normalizedMac];
+
       return {
         device_mac:   normalizedMac,
         device_name:  `SK8Lytz-${deviceIdShort}`,
@@ -120,16 +129,16 @@ export function useBLEScanner({
         product_type: type as any,
         position:     pos,
         group_name:   getDefaultGroupName(type),
-        led_points:   d.hwPoints || profile.vizDefaultPoints,
-        segments:     d.hwSegments ?? profile.defaultSegments,
-        ic_type:      d.hwStripType ?? (profile.defaultIcType === 1 ? 'WS2812B' : 'SM16703'),
-        color_sorting: d.hwSorting ?? (profile.defaultColorSorting === 2 ? 'GRB' : 'RGB'),
+        led_points:   cached?.ledPoints    ?? d.hwPoints ?? profile.vizDefaultPoints,
+        segments:     cached?.segments     ?? d.hwSegments ?? profile.defaultSegments,
+        ic_type:      cached?.icName       ?? d.hwStripType ?? (profile.defaultIcType === 1 ? 'WS2812B' : 'SM16703'),
+        color_sorting: cached?.colorSortingName ?? d.hwSorting ?? (profile.defaultColorSorting === 2 ? 'GRB' : 'RGB'),
         rssi:         d.rssi ?? -99,
         firmware_ver: d.firmwareVer,
         led_version:  d.ledVersion,
         product_id:   d.productId,
-        rf_mode:      d.hwRfMode,
-        rf_paired_count: d.hwRfPairedCount,
+        rf_mode:      cached?.rfMode ?? d.hwRfMode,
+        rf_paired_count: cached?.rfPairedCount ?? d.hwRfPairedCount,
       };
     };
 

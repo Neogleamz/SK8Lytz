@@ -231,8 +231,12 @@ export function useDashboardAutoConnect({
               count: idsToConnect.length,
             });
             autoConnectIdsRef.current = idsToConnect;
-            // Start scan NOW — ref is populated, observer will catch every device
-            scanForPeripherals({ disableProbing: true });
+            // ── Overwatch: NO manual scan needed here ──────────────────────────
+            // useBLESweeper (Silent Sweeper) is already running in the background,
+            // continuously populating allDevices. The observer effect above will
+            // fire connectToDevices() the moment Fleet MACs appear in the list.
+            // Starting a manual scan here was a duplicate trigger that raced
+            // against the Sweeper and caused double-connection attempts.
           }
         }
       }
