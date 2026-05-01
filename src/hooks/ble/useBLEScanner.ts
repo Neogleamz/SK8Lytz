@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Platform, InteractionManager } from 'react-native';
+import { Platform, InteractionManager } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { LOCAL_PRODUCT_CATALOG, getLocalProfileByPoints } from '../../constants/ProductCatalog';
 import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
@@ -15,18 +15,12 @@ export interface UseBLEScannerProps {
   bleManager: any;
   allDevices: Device[];
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
-  probeDevice: (mac: string) => Promise<any>;
-  hardwareProbedCallbackRef: React.MutableRefObject<((deviceId: string, config: any) => void) | undefined>;
-  disableProbing?: boolean;
 }
 
 export function useBLEScanner({
   bleManager,
   allDevices,
   setAllDevices,
-  probeDevice,
-  hardwareProbedCallbackRef,
-  disableProbing = true
 }: UseBLEScannerProps) {
   const [scannerState, setScannerState] = useState<'IDLE' | 'SCANNING' | 'PROBING'>('IDLE');
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
@@ -39,8 +33,6 @@ export function useBLEScanner({
   const telemetryCacheRef = useRef<Map<string, number>>(new Map());
   const telemetryBatchRef = useRef<any[]>([]);
   const telemetryTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const knownMacsRef = useRef<Set<string>>(new Set());
 
   const flushTelemetry = () => {
     if (telemetryBatchRef.current.length === 0) return;
@@ -160,119 +152,11 @@ export function useBLEScanner({
     }
   };
 
-  const probeAllDiscoveredDevices = async (retriesLeft = 3) => {
-    if (Platform.OS === 'web' || !bleManager) return;
-    const devices = allDevicesRef.current;
-    
-    const pending = devices.filter(d => (d as any).hwPoints == null);
-    if (pending.length === 0) {
-      setScannerState('IDLE');
-      scannerStateRef.current = 'IDLE';
-      return;
-    }
-
-    setScannerState('PROBING');
-    scannerStateRef.current = 'PROBING';
-    AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_round_start', pendingCount: pending.length, retriesLeft });
-
-    const failedIds: string[] = [];
-
-    // Parallel probe with a concurrency cap of 2.
-    // iOS/Android GATT adapters can handle 2 simultaneous connections reliably;
-    // more than that causes timeouts and auth failures on most chipsets.
-    const CONCURRENCY = 2;
-    let aborted = false;
-
-    const probeOne = async (device: Device): Promise<void> => {
-      if (scannerStateRef.current !== 'PROBING') {
-        aborted = true;
-        return;
-      }
-      try {
-        const alreadyConn = await bleManager.isDeviceConnected(device.id).catch(() => false);
-        const hasHwInfo = (device as any).hwPoints != null;
-        
-        // --- PASSIVE TELEMETRY BYPASS ---
-        // If we don't have HW info, try to reconstruct it from the registry cache.
-        if (!hasHwInfo && knownMacsRef.current.has(device.id)) {
-           try {
-              const cachedStr = await AsyncStorage.getItem('@Sk8lytz_registered_devices');
-              if (cachedStr) {
-                 const cachedList = JSON.parse(cachedStr);
-                 const cachedData = cachedList.find((d: any) => d.device_mac === device.id);
-                 if (cachedData) {
-                    (device as any).hwPoints = cachedData.led_points;
-                    (device as any).hwSegments = cachedData.segments;
-                    (device as any).hwStripType = cachedData.ic_type;
-                    (device as any).hwSorting = cachedData.color_sorting;
-                    AppLogger.log('DEVICE_DISCOVERED', { context: 'restored_passive', deviceId: device.id });
-                    setAllDevices([...allDevicesRef.current]);
-                    classifyProbeResults([...allDevicesRef.current]);
-                    return; // BYPASS active probe
-                 }
-              }
-           } catch(e) {}
-        }
-
-        if (alreadyConn && ((device as any).hwPoints != null)) return;
-
-        AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_start', deviceName: device.name || device.id });
-        
-        const hwConfig = await probeDevice(device.id);
-        if (hwConfig) {
-          (device as any).hwPoints = hwConfig.ledPoints;
-          (device as any).hwSegments = hwConfig.segments;
-          (device as any).hwSorting = hwConfig.colorSortingName;
-          (device as any).hwStripType = hwConfig.icName;
-          (device as any).hwRfMode = hwConfig.rfMode;
-          (device as any).hwRfPairedCount = hwConfig.rfPairedCount;
-
-          if (hardwareProbedCallbackRef.current) {
-            hardwareProbedCallbackRef.current(device.id, hwConfig);
-          }
-          setAllDevices([...allDevicesRef.current]);
-          classifyProbeResults([...allDevicesRef.current]);
-        } else {
-          AppLogger.warn(`[BLE Scanner] Device ${device.id} silently failed to yield telemetry`);
-          failedIds.push(device.id);
-        }
-      } catch (probeErr: any) {
-        AppLogger.warn(`[BLE Probe] Hard crash on ${device.id}:`, probeErr?.message);
-        failedIds.push(device.id);
-        try { await bleManager.cancelDeviceConnection(device.id); } catch (e) {
-          AppLogger.warn('[Scanner] Failed to cancel probe connection', { deviceId: device.id, error: String(e) });
-        }
-      }
-    };
-
-    // Process in batches of CONCURRENCY
-    for (let i = 0; i < pending.length; i += CONCURRENCY) {
-      if (aborted || scannerStateRef.current !== 'PROBING') break;
-      const batch = pending.slice(i, i + CONCURRENCY);
-      await Promise.all(batch.map(probeOne));
-      // Inter-batch cooldown: let the GATT adapter breathe
-      if (i + CONCURRENCY < pending.length) {
-        await new Promise(r => setTimeout(r, 400));
-      }
-    }
-
-    if (aborted) return;
-
-    if (failedIds.length > 0 && retriesLeft > 0) {
-       AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_retry', failedCount: failedIds.length, delayMs: 2000 });
-       await new Promise(r => setTimeout(r, 2000));
-       if (scannerStateRef.current === 'PROBING') {
-         return probeAllDiscoveredDevices(retriesLeft - 1);
-       } else {
-         AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_aborted', reason: 'retry_cooldown' });
-         return;
-       }
-    }
-
-    setScannerState('IDLE');
-    scannerStateRef.current = 'IDLE';
-    AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_all_complete' });
-  };
+  // probeAllDiscoveredDevices() removed — perf/ble-probe-on-demand.
+  // Hardware identification now happens lazily: the Setup Wizard fires probeDevice()
+  // on-demand when the user taps BLINK on a device card. This eliminates the
+  // 3.5s-per-device GATT blocking phase that was delaying the wizard device list.
+  // The PROBING scanner state is no longer used.
 
 
   const stopScanner = () => {
@@ -303,17 +187,8 @@ export function useBLEScanner({
       allDevicesRef.current = [];
     }
 
-    const skipProbing = options?.disableProbing ?? disableProbing;
-
-    knownMacsRef.current.clear();
-
-    AsyncStorage.getItem('@Sk8lytz_registered_devices').then(cached => {
-      if (cached) {
-        try {
-          JSON.parse(cached).forEach((d: any) => knownMacsRef.current.add(d.device_mac));
-        } catch (e) { AppLogger.warn('[Scanner] Failed to parse registered_devices cache', { error: String(e) }); }
-      }
-    }).catch(() => {});
+    // disableProbing option retained in signature for backwards-compat but no longer used —
+    // probing is now exclusively on-demand (BLINK tap in HardwareSetupWizardScreen).
 
     if (__DEV__) {
       AsyncStorage.getItem('@Sk8lytz_demo_mode').then((isMock) => {
@@ -388,7 +263,7 @@ export function useBLEScanner({
         }
 
         const isKnownPrefix = nameLower.startsWith('lednet') || nameLower.startsWith('sk8') || nameLower.startsWith('zg') || nameLower.startsWith('halo') || nameLower.startsWith('soul');
-        const isMatch = isSymphony || isKnownPrefix || hasZenggeService || knownMacsRef.current.has(device.id);
+        const isMatch = isSymphony || isKnownPrefix || hasZenggeService;
         
         const logData = { id: device.id, name: device.name || 'Unknown', rssi: device.rssi, isSymphony, isKnownPrefix, hasZenggeService, serviceUUIDs: device.serviceUUIDs || [], manufacturerData: manufacturerData ? 'presents' : 'none' };
 
@@ -478,12 +353,9 @@ export function useBLEScanner({
     scanTimerRef.current = setTimeout(() => {
       bleManager.stopDeviceScan();
       scanTimerRef.current = null;
-      if (!skipProbing) {
-        probeAllDiscoveredDevices();
-      } else {
-        setScannerState('IDLE');
-        scannerStateRef.current = 'IDLE';
-      }
+      // Scan window closed — go IDLE immediately. Hardware probing is on-demand only.
+      setScannerState('IDLE');
+      scannerStateRef.current = 'IDLE';
     }, 5000);
   };
 

@@ -53,6 +53,8 @@ export interface BluetoothLowEnergyApi {
   setDroppedOutDeviceIds: React.Dispatch<React.SetStateAction<string[]>>;
   pendingRegistrations: PendingRegistration[];
   clearPendingRegistrations: () => void;
+  /** Setter for pendingRegistrations — passed to HardwareSetupWizardScreen for lazy BLINK probe enrichment */
+  setPendingRegistrations: React.Dispatch<React.SetStateAction<PendingRegistration[]>>;
   ghostedDeviceIds: string[];
   bleState: BleConnectionState;
   /** Global connection gate semaphore — exposed for consumers that need gate-awareness */
@@ -265,8 +267,6 @@ export default function useBLE(): BluetoothLowEnergyApi {
     bleManager,
     allDevices,
     setAllDevices,
-    probeDevice,
-    hardwareProbedCallbackRef
   });
 
   // ─── Per-device MTU map ────────────────────────────────────────────────────
@@ -648,6 +648,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     setDroppedOutDeviceIds,
     pendingRegistrations: scanner.pendingRegistrations,
     clearPendingRegistrations: () => scanner.setPendingRegistrations([]),
+    setPendingRegistrations: scanner.setPendingRegistrations,
     probeDevice,
     ghostedDeviceIds: autoRecovery.ghostedDeviceIds,
     bleState: derivedBleState,

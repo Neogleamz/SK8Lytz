@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -9,6 +10,7 @@ import { LOCAL_PRODUCT_CATALOG, getLocalProfileById } from '../../constants/Prod
 import { RegisteredDevice } from '../../hooks/useRegistration';
 import { HardwareStatusPills } from '../../components/dashboard/HardwareStatusPills';
 import { getDefaultGroupName } from '../../utils/NamingUtils';
+import { AppLogger } from '../../services/AppLogger';
 
 import type { BleConnectionState } from '../../types/dashboard.types';
 import type { PendingRegistration } from '../../types/dashboard.types';
@@ -22,8 +24,10 @@ interface HardwareSetupWizardScreenProps {
   isBluetoothSupported: boolean;
   isBluetoothEnabled: boolean;
   pendingRegistrations: PendingRegistration[];
+  /** Updater for pendingRegistrations — used to enrich entries in-place with EEPROM probe data */
+  setPendingRegistrations: React.Dispatch<React.SetStateAction<PendingRegistration[]>>;
   writeToDevice: (data: number[], deviceId?: string) => Promise<void | boolean | 'partial'>;
-  probeDevice: (deviceId: string) => Promise<void>;
+  probeDevice: (deviceId: string) => Promise<any>;
 }
 
 export default function HardwareSetupWizardScreen({
@@ -34,6 +38,7 @@ export default function HardwareSetupWizardScreen({
   isBluetoothSupported,
   isBluetoothEnabled,
   pendingRegistrations,
+  setPendingRegistrations,
   writeToDevice,
   probeDevice,
 }: HardwareSetupWizardScreenProps) {
@@ -63,8 +68,9 @@ export default function HardwareSetupWizardScreen({
     let timer: any;
     if (hasStartedScan && step < 3 && bleState !== 'SCANNING' && bleState !== 'PROBING') {
       // Keep continuously polling while the user is still looking for hardware (Wait 2s to let radio breathe)
+      // disableProbing is now a no-op — probing is on-demand only (BLINK tap)
       timer = setTimeout(() => {
-        scanForPeripherals({ keepAlive: true, disableProbing: false });
+        scanForPeripherals({ keepAlive: true });
       }, 2000);
     }
     return () => clearTimeout(timer);
@@ -74,7 +80,8 @@ export default function HardwareSetupWizardScreen({
     const granted = await requestPermissions();
     if (granted && bleState !== 'SCANNING') {
       setHasStartedScan(true);
-      scanForPeripherals({ disableProbing: false });
+      // disableProbing is now a no-op — probing is on-demand only (BLINK tap)
+      scanForPeripherals();
     }
   };
 
@@ -110,6 +117,30 @@ export default function HardwareSetupWizardScreen({
       const blinkPayload = ZenggeProtocol.setMultiColor(colorArray, blinkPoints, 1, 1, 0x00); 
       await writeToDevice(blinkPayload, deviceMac);
       
+      // ── ON-DEMAND PROBE (perf/ble-probe-on-demand) ────────────────────────────
+      // The blink write just opened a GATT connection to this device. Fire the
+      // hardware probe now while that channel is hot. This is non-blocking —
+      // the user sees the blink immediately and the card enriches in the background.
+      probeDevice(deviceMac).then((hwConfig: any) => {
+        if (!hwConfig) return;
+        // Update this registration entry in-place with real EEPROM data
+        setPendingRegistrations(prev => prev.map(r =>
+          r.device_mac === deviceMac
+            ? {
+                ...r,
+                led_points:    hwConfig.ledPoints    ?? r.led_points,
+                segments:      hwConfig.segments      ?? r.segments,
+                ic_type:       hwConfig.icName        ?? r.ic_type,
+                color_sorting: hwConfig.colorSortingName ?? r.color_sorting,
+                rf_mode:       hwConfig.rfMode        ?? r.rf_mode,
+              }
+            : r
+        ));
+        // Cache the result so repeat wizard visits are instant
+        AsyncStorage.setItem(`@sk8_hw_${deviceMac}`, JSON.stringify(hwConfig)).catch(() => {});
+        AppLogger.log('DEVICE_DISCOVERED', { context: 'on_demand_probe_complete', deviceId: deviceMac, ledPoints: hwConfig.ledPoints });
+      }).catch(() => { /* Non-fatal — registration defaults remain */ });
+
       // Keep it solid green for 10 seconds based on user request, then send Off command
       setTimeout(async () => {
         const offPayload = ZenggeProtocol.turnOff();

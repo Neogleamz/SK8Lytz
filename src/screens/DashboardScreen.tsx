@@ -87,6 +87,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     droppedOutDeviceIds,
     pendingRegistrations,
     clearPendingRegistrations,
+    setPendingRegistrations,
     bleState,
     bleGateRef,
     probeDevice,
@@ -731,6 +732,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           isBluetoothSupported={isBluetoothSupported}
           isBluetoothEnabled={isBluetoothEnabled}
           pendingRegistrations={pendingRegistrations}
+          setPendingRegistrations={setPendingRegistrations}
           writeToDevice={writeToDevice}
           probeDevice={probeDevice}
         />
