@@ -20,6 +20,7 @@ import type { BleConnectionState, PendingRegistration } from '../types/dashboard
 import { checkPermission, openGlobalPermissionsModal } from '../services/PermissionService';
 import { useBLEScanner } from './ble/useBLEScanner';
 import { useBLEAutoRecovery } from './ble/useBLEAutoRecovery';
+import { useBLESweeper } from './ble/useBLESweeper';
 
 let BleManager: any;
 let State: any;
@@ -65,9 +66,20 @@ export interface BluetoothLowEnergyApi {
   bleState: BleConnectionState;
   /** Global connection gate semaphore — exposed for consumers that need gate-awareness */
   bleGateRef: React.MutableRefObject<'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING'>;
+  // ── Overwatch BLE Engine API ───────────────────────────────────────────────
+  /** Start the Silent Sweeper. Call once on Dashboard mount after BT permissions confirmed. */
+  startSweeper(): void;
+  /** Stop the Silent Sweeper. Called by AppState listener on app background. */
+  stopSweeper(): void;
+  /** Elevate to LowLatency burst scan for durationMs, then revert to LowPower. Use when Sweeper is active instead of startDeviceScan(). */
+  burstScan(durationMs?: number): void;
+  /** True while the Silent Sweeper is actively scanning */
+  isSweeperActive: boolean;
+  /** In-memory EEPROM cache keyed by uppercase MAC — populated by the Interrogator Queue */
+  hwCache: Record<string, any>;
 }
 
-export default function useBLE(): BluetoothLowEnergyApi {
+export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnergyApi {
   const bleManager = useMemo(() => {
     if (Platform.OS === 'web') return null;
     return new BleManager();
@@ -376,11 +388,37 @@ export default function useBLE(): BluetoothLowEnergyApi {
     bleGateRef,
   });
 
+  // ── Overwatch: Silent Sweeper + Interrogator Queue ────────────────────────
+  // Declared BEFORE scanner so hwCache is available to feed into scanner props.
+  // setPendingRegistrations uses a ref forwarder so scanner.setPendingRegistrations can be
+  // wired in after scanner is initialized without violating hook ordering rules.
+  const pendingRegistrationsSetterRef = useRef<React.Dispatch<React.SetStateAction<PendingRegistration[]>>>(() => {});
+  const stablePendingRegistrationsSetter: React.Dispatch<React.SetStateAction<PendingRegistration[]>> = useCallback(
+    (value) => pendingRegistrationsSetterRef.current(value),
+    []
+  );
+
+  const sweeper = useBLESweeper({
+    bleManager,
+    setAllDevices,
+    setPendingRegistrations: stablePendingRegistrationsSetter,
+    bleGateRef,
+    registeredMacs,
+  });
+
   const scanner = useBLEScanner({
     bleManager,
     allDevices,
     setAllDevices,
+    hwCache: sweeper.hwCache,
   });
+
+  // Wire the real setter into the ref forwarder now that scanner is initialized.
+  // Sweeper's Interrogator is always async (2s+ delay) so this is always populated in time.
+  useEffect(() => {
+    pendingRegistrationsSetterRef.current = scanner.setPendingRegistrations;
+  }, [scanner.setPendingRegistrations]);
+
 
   // ─── Per-device MTU map ────────────────────────────────────────────────────
   // Each device may negotiate a different MTU. Using a single shared ref caused
@@ -786,6 +824,22 @@ export default function useBLE(): BluetoothLowEnergyApi {
     ghostedDeviceIds: autoRecovery.ghostedDeviceIds,
     bleState: derivedBleState,
     bleGateRef,
+    startSweeper: sweeper.startSweeper,
+    stopSweeper: sweeper.stopSweeper,
+    burstScan: sweeper.burstScan,
+    isSweeperActive: sweeper.isSweeperActive,
+    hwCache: sweeper.hwCache,
+    // ── Overwatch-aware scanForPeripherals ─────────────────────────────────
+    // When Sweeper is running: delegate to burstScan() (elevate scan mode 5s then revert).
+    // When Sweeper is idle: fall through to the original useBLEScanner.scanForPeripherals.
+    // This eliminates the dual startDeviceScan() conflict (single scan loop, all consumers).
+    scanForPeripherals: (options?: { keepAlive?: boolean; disableProbing?: boolean }) => {
+      if (sweeper.isSweeperActive) {
+        sweeper.burstScan(options?.keepAlive ? 10000 : 5000);
+      } else {
+        scanner.scanForPeripherals(options);
+      }
+    },
   }), [
     allDevices,
     connectedDevices,
@@ -795,6 +849,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
     isBluetoothEnabled,
     droppedOutDeviceIds,
     autoRecovery.ghostedDeviceIds,
-    bleGateState
+    bleGateState,
+    sweeper.isSweeperActive,
+    sweeper.hwCache,
+    sweeper.burstScan,
   ]);
 }
