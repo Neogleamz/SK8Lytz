@@ -50,7 +50,7 @@ import { VisualizerUnit } from './VisualizerUnit';
 
 const EMPTY_MULTI_COLORS: string[] = [];
 const EMPTY_BUILDER_NODES: any[] = [];
-const DEFAULT_STREET_DISTRIBUTION = [0.3, 0.4, 0.3];
+const DEFAULT_STREET_DISTRIBUTION: [number, number, number] = [0.3, 0.4, 0.3];
 
 const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, hwSettings, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = EMPTY_MULTI_COLORS, multiTransition = 0, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = EMPTY_BUILDER_NODES, builderFillMode = 'GRADIENT', builderTransitionType = 0x01, builderDirection = 1, fixedDirection = 1, streetDistribution = DEFAULT_STREET_DISTRIBUTION }: ProductVisualizerProps) => {
   const { isDark } = useTheme();
